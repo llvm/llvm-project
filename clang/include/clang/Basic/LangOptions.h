@@ -265,7 +265,7 @@ public:
 
   /// Do we need to track the owning module for a local declaration?
   bool trackLocalOwningModule() const {
-    return isCompilingModule() || ModulesLocalVisibility || ModulesTS;
+    return isCompilingModule() || ModulesLocalVisibility;
   }
 
   bool isSignedOverflowDefined() const {

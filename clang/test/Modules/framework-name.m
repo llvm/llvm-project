@@ -7,10 +7,10 @@
 
 // Sanity check that we won't somehow find non-canonical module names or
 // modules where we shouldn't search the framework.
-// RUN: echo '@import NameInModMap' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
-// RUN: echo '@import NameInDir' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
-// RUN: echo '@import NameInImport' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
-// RUN: echo '@import NameInImportInferred' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
+// RUN: echo '@import NameInModMap;' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
+// RUN: echo '@import NameInDir;' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
+// RUN: echo '@import NameInImport;' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
+// RUN: echo '@import NameInImportInferred;' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
 // CHECK: module '{{.*}}' not found
 
 // FIXME: We might want to someday lock down framework modules so that these

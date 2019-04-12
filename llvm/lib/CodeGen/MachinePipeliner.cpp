@@ -3167,12 +3167,14 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
 
   // This is the main test, which checks the offset values and the loop
   // increment value to determine if the accesses may be loop carried.
-  if (OffsetS >= OffsetD)
-    return OffsetS + AccessSizeS > DeltaS;
-  else
-    return OffsetD + AccessSizeD > DeltaD;
+  if (AccessSizeS == MemoryLocation::UnknownSize ||
+      AccessSizeD == MemoryLocation::UnknownSize)
+    return true;
 
-  return true;
+  if (DeltaS != DeltaD || DeltaS < AccessSizeS || DeltaD < AccessSizeD)
+    return true;
+
+  return (OffsetS + (int64_t)AccessSizeS < OffsetD + (int64_t)AccessSizeD);
 }
 
 void SwingSchedulerDAG::postprocessDAG() {

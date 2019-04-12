@@ -34,6 +34,9 @@ public:
 private:
   bool legalizeVaArg(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &MIRBuilder) const;
+  bool legalizeLoadStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &MIRBuilder,
+                         GISelChangeObserver &Observer) const;
 };
 } // End llvm namespace.
 #endif

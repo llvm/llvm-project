@@ -224,7 +224,7 @@ public:
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
                                 Optional<MD5::MD5Result> Checksum,
-                                Optional<StringRef> &Source,
+                                Optional<StringRef> Source,
                                 unsigned FileNumber = 0);
   std::pair<MCSymbol *, MCSymbol *>
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
@@ -247,8 +247,7 @@ public:
 
 private:
   void emitV2FileDirTables(MCStreamer *MCOS) const;
-  void emitV5FileDirTables(MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr,
-                           StringRef CtxCompilationDir) const;
+  void emitV5FileDirTables(MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const;
 };
 
 class MCDwarfDwoLineTable {
@@ -294,7 +293,7 @@ public:
                                 Optional<StringRef> Source,
                                 unsigned FileNumber = 0);
   unsigned getFile(StringRef &Directory, StringRef &FileName,
-                   Optional<MD5::MD5Result> Checksum, Optional<StringRef> &Source,
+                   Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source,
                    unsigned FileNumber = 0) {
     return cantFail(tryGetFile(Directory, FileName, Checksum, Source,
                                FileNumber));

@@ -285,6 +285,84 @@ class Preprocessor {
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
+  /// A position within a C++20 import-seq.
+  class ImportSeq {
+  public:
+    enum State : int {
+      // Positive values represent a number of unclosed brackets.
+      AtTopLevel = 0,
+      AfterTopLevelTokenSeq = -1,
+      AfterExport = -2,
+      AfterImportSeq = -3,
+    };
+
+    ImportSeq(State S) : S(S) {}
+
+    /// Saw any kind of open bracket.
+    void handleOpenBracket() {
+      S = static_cast<State>(std::max<int>(S, 0) + 1);
+    }
+    /// Saw any kind of close bracket other than '}'.
+    void handleCloseBracket() {
+      S = static_cast<State>(std::max<int>(S, 1) - 1);
+    }
+    /// Saw a close brace.
+    void handleCloseBrace() {
+      handleCloseBracket();
+      if (S == AtTopLevel && !AfterHeaderName)
+        S = AfterTopLevelTokenSeq;
+    }
+    /// Saw a semicolon.
+    void handleSemi() {
+      if (atTopLevel()) {
+        S = AfterTopLevelTokenSeq;
+        AfterHeaderName = false;
+      }
+    }
+
+    /// Saw an 'export' identifier.
+    void handleExport() {
+      if (S == AfterTopLevelTokenSeq)
+        S = AfterExport;
+      else if (S <= 0)
+        S = AtTopLevel;
+    }
+    /// Saw an 'import' identifier.
+    void handleImport() {
+      if (S == AfterTopLevelTokenSeq || S == AfterExport)
+        S = AfterImportSeq;
+      else if (S <= 0)
+        S = AtTopLevel;
+    }
+
+    /// Saw a 'header-name' token; do not recognize any more 'import' tokens
+    /// until we reach a top-level semicolon.
+    void handleHeaderName() {
+      if (S == AfterImportSeq)
+        AfterHeaderName = true;
+      handleMisc();
+    }
+
+    /// Saw any other token.
+    void handleMisc() {
+      if (S <= 0)
+        S = AtTopLevel;
+    }
+
+    bool atTopLevel() { return S <= 0; }
+    bool afterImportSeq() { return S == AfterImportSeq; }
+
+  private:
+    State S;
+    /// Whether we're in the pp-import-suffix following the header-name in a
+    /// pp-import. If so, a close-brace is not sufficient to end the
+    /// top-level-token-seq of an import-seq.
+    bool AfterHeaderName = false;
+  };
+
+  /// Our current position within a C++20 import-seq.
+  ImportSeq ImportSeqState = ImportSeq::AfterTopLevelTokenSeq;
+
   /// Whether the module import expects an identifier next. Otherwise,
   /// it expects a '.' or ';'.
   bool ModuleImportExpectsIdentifier = false;
@@ -322,6 +400,14 @@ class Preprocessor {
   /// Whether we hit an error due to reaching max allowed include depth. Allows
   /// to avoid hitting the same error over and over again.
   bool HasReachedMaxIncludeDepth = false;
+
+  /// The number of currently-active calls to Lex.
+  ///
+  /// Lex is reentrant, and asking for an (end-of-phase-4) token can often
+  /// require asking for multiple additional tokens. This counter makes it
+  /// possible for Lex to detect whether it's producing a token for the end
+  /// of phase 4 of translation or for some other situation.
+  unsigned LexLevel = 0;
 
 public:
   struct PreambleSkipInfo {
@@ -1244,24 +1330,6 @@ public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
-  struct CachedTokensRange {
-    CachedTokensTy::size_type Begin, End;
-  };
-
-private:
-  /// A range of cached tokens that should be erased after lexing
-  /// when backtracking requires the erasure of such cached tokens.
-  Optional<CachedTokensRange> CachedTokenRangeToErase;
-
-public:
-  /// Returns the range of cached tokens that were lexed since
-  /// EnableBacktrackAtThisPos() was previously called.
-  CachedTokensRange LastCachedTokenRange();
-
-  /// Erase the range of cached tokens that were lexed since
-  /// EnableBacktrackAtThisPos() was previously called.
-  void EraseCachedTokens(CachedTokensRange TokenRange);
-
   /// Make Preprocessor re-lex the tokens that were lexed since
   /// EnableBacktrackAtThisPos() was previously called.
   void Backtrack();
@@ -1276,7 +1344,8 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
-  void LexAfterModuleImport(Token &Result);
+  bool LexAfterModuleImport(Token &Result);
+  void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
   void makeModuleVisible(Module *M, SourceLocation Loc);
 
@@ -1353,6 +1422,7 @@ public:
   /// tokens after phase 5.  As such, it is equivalent to using
   /// 'Lex', not 'LexUnexpandedToken'.
   const Token &LookAhead(unsigned N) {
+    assert(LexLevel == 0 && "cannot use lookahead while lexing");
     if (CachedLexPos + N < CachedTokens.size())
       return CachedTokens[CachedLexPos+N];
     else
@@ -1379,8 +1449,16 @@ public:
   /// If BackTrack() is called afterwards, the token will remain at the
   /// insertion point.
   void EnterToken(const Token &Tok) {
-    EnterCachingLexMode();
-    CachedTokens.insert(CachedTokens.begin()+CachedLexPos, Tok);
+    if (LexLevel) {
+      // It's not correct in general to enter caching lex mode while in the
+      // middle of a nested lexing action.
+      auto TokCopy = llvm::make_unique<Token[]>(1);
+      TokCopy[0] = Tok;
+      EnterTokenStream(std::move(TokCopy), 1, true);
+    } else {
+      EnterCachingLexMode();
+      CachedTokens.insert(CachedTokens.begin()+CachedLexPos, Tok);
+    }
   }
 
   /// We notify the Preprocessor that if it is caching tokens (because
@@ -1814,7 +1892,11 @@ public:
   /// If not, emit a diagnostic and consume up until the eod.
   /// If \p EnableMacros is true, then we consider macros that expand to zero
   /// tokens as being ok.
-  void CheckEndOfDirective(const char *DirType, bool EnableMacros = false);
+  ///
+  /// \return The location of the end of the directive (the terminating
+  /// newline).
+  SourceLocation CheckEndOfDirective(const char *DirType,
+                                     bool EnableMacros = false);
 
   /// Read and discard all tokens remaining on the current line until
   /// the tok::eod token is found. Returns the range of the skipped tokens.
@@ -2053,7 +2135,7 @@ private:
 
   //===--------------------------------------------------------------------===//
   // Caching stuff.
-  void CachingLex(Token &Result);
+  void CachingLex(Token &Result, bool &IsNewToken);
 
   bool InCachingLexMode() const {
     // If the Lexer pointers are 0 and IncludeMacroStack is empty, it means
@@ -2062,6 +2144,7 @@ private:
   }
 
   void EnterCachingLexMode();
+  void EnterCachingLexModeUnchecked();
 
   void ExitCachingLexMode() {
     if (InCachingLexMode())
@@ -2082,12 +2165,31 @@ private:
   void HandleMacroPublicDirective(Token &Tok);
   void HandleMacroPrivateDirective();
 
+  /// An additional notification that can be produced by a header inclusion or
+  /// import to tell the parser what happened.
+  struct ImportAction {
+    enum ActionKind {
+      None,
+      ModuleBegin,
+      ModuleImport,
+    } Kind;
+    Module *ModuleForHeader = nullptr;
+
+    ImportAction(ActionKind AK, Module *Mod = nullptr)
+        : Kind(AK), ModuleForHeader(Mod) {
+      assert((AK == None || Mod) && "no module for module action");
+    }
+  };
+
   // File inclusion.
-  void HandleIncludeDirective(SourceLocation HashLoc,
-                              Token &Tok,
+  void HandleIncludeDirective(SourceLocation HashLoc, Token &Tok,
                               const DirectoryLookup *LookupFrom = nullptr,
-                              const FileEntry *LookupFromFile = nullptr,
-                              bool isImport = false);
+                              const FileEntry *LookupFromFile = nullptr);
+  ImportAction
+  HandleHeaderIncludeOrImport(SourceLocation HashLoc, Token &IncludeTok,
+                              Token &FilenameTok, SourceLocation EndLoc,
+                              const DirectoryLookup *LookupFrom = nullptr,
+                              const FileEntry *LookupFromFile = nullptr);
   void HandleIncludeNextDirective(SourceLocation HashLoc, Token &Tok);
   void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
   void HandleImportDirective(SourceLocation HashLoc, Token &Tok);

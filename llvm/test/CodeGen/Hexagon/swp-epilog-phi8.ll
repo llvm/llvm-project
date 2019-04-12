@@ -1,4 +1,5 @@
 ; RUN: llc -march=hexagon -mno-pairing -mno-compound -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; XFAIL: *
 
 ; Test that we generate the correct phi names in the epilog when the pipeliner
 ; schedules a phi and it's loop definition in different stages, e.g., a phi is

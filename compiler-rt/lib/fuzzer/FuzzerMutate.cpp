@@ -529,7 +529,7 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
 size_t MutationDispatcher::MutateWithMask(uint8_t *Data, size_t Size,
                                           size_t MaxSize,
                                           const Vector<uint8_t> &Mask) {
-  assert(Size <= Mask.size());
+  size_t MaskedSize = std::min(Size, Mask.size());
   // * Copy the worthy bytes into a temporary array T
   // * Mutate T
   // * Copy T back.
@@ -538,7 +538,7 @@ size_t MutationDispatcher::MutateWithMask(uint8_t *Data, size_t Size,
   if (T.size() < Size)
     T.resize(Size);
   size_t OneBits = 0;
-  for (size_t I = 0; I < Size; I++)
+  for (size_t I = 0; I < MaskedSize; I++)
     if (Mask[I])
       T[OneBits++] = Data[I];
 
@@ -548,7 +548,7 @@ size_t MutationDispatcher::MutateWithMask(uint8_t *Data, size_t Size,
   assert(NewSize <= OneBits);
   (void)NewSize;
   // Even if NewSize < OneBits we still use all OneBits bytes.
-  for (size_t I = 0, J = 0; I < Size; I++)
+  for (size_t I = 0, J = 0; I < MaskedSize; I++)
     if (Mask[I])
       Data[I] = T[J++];
   return Size;

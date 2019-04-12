@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Wno-objc-root-class -emit-llvm -o - %s | \
-// RUN: FileCheck %s
-// CHECK: @"OBJC_LABEL_NONLAZY_CLASS_$" = private global [2 x {{.*}}]{{.*}}@"OBJC_CLASS_$_A"{{.*}},{{.*}}@"OBJC_CLASS_$_D"{{.*}} section "__DATA,__objc_nlclslist,regular,no_dead_strip", align 8
-// CHECK: @"OBJC_LABEL_NONLAZY_CATEGORY_$" = private global [1 x {{.*}}] {{.*}}@"\01l_OBJC_$_CATEGORY_A_$_Cat"{{.*}}, section "__DATA,__objc_nlcatlist,regular,no_dead_strip", align 8
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Wno-objc-root-class -emit-llvm -o - %s | FileCheck %s
+
+// CHECK: @"OBJC_LABEL_NONLAZY_CLASS_$" = private global [3 x {{.*}}]{{.*}}@"OBJC_CLASS_$_A"{{.*}},{{.*}}@"OBJC_CLASS_$_D"{{.*}},{{.*}}"OBJC_CLASS_$_E"{{.*}} section "__DATA,__objc_nlclslist,regular,no_dead_strip", align 8
+// CHECK: @"OBJC_LABEL_NONLAZY_CATEGORY_$" = private global [2 x {{.*}}] {{.*}}@"\01l_OBJC_$_CATEGORY_A_$_Cat"{{.*}},{{.*}}@"\01l_OBJC_$_CATEGORY_E_$_MyCat"{{.*}}, section "__DATA,__objc_nlcatlist,regular,no_dead_strip", align 8
 
 @interface A @end
 @implementation A
@@ -35,3 +35,11 @@ __attribute__((objc_nonlazy_class))
 @interface D @end
 
 @implementation D @end
+
+@interface E @end
+
+__attribute__((objc_nonlazy_class))
+@implementation E @end
+
+__attribute__((objc_nonlazy_class))
+@implementation E (MyCat) @end

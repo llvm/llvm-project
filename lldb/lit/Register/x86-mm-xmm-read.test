@@ -1,3 +1,4 @@
+# XFAIL: system-darwin
 # XFAIL: system-windows
 # REQUIRES: native && (target-x86 || target-x86_64)
 # RUN: %clangxx %p/Inputs/x86-mm-xmm-read.cpp -o %t

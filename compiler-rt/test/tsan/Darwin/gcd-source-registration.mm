@@ -1,11 +1,15 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
+#include "dispatch/dispatch.h"
+
+#include <stdio.h>
 
 long global;
 
 int main(int argc, const char *argv[]) {
+  dispatch_semaphore_t done = dispatch_semaphore_create(0);
+
   dispatch_queue_t queue =
       dispatch_queue_create("my.queue", DISPATCH_QUEUE_CONCURRENT);
 
@@ -17,14 +21,12 @@ int main(int argc, const char *argv[]) {
   dispatch_source_set_registration_handler(source, ^{
     fprintf(stderr, "global = %ld\n", global);
 
-    dispatch_sync(dispatch_get_main_queue(), ^{
-      CFRunLoopStop(CFRunLoopGetCurrent());
-    });
+    dispatch_semaphore_signal(done);
   });
 
   dispatch_resume(source);
 
-  CFRunLoopRun();
+  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
 
   return 0;
 }

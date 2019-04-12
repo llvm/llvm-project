@@ -21,6 +21,7 @@
 static constexpr const char kIntegerPrefix[] = "i_0x";
 static constexpr const char kDoublePrefix[] = "f_";
 static constexpr const char kInvalidOperand[] = "INVALID";
+static constexpr llvm::StringLiteral kNoRegister("%noreg");
 
 namespace llvm {
 
@@ -47,7 +48,9 @@ struct YamlContext {
   llvm::StringMap<unsigned>
   generateRegNameToRegNoMapping(const llvm::MCRegisterInfo &RegInfo) {
     llvm::StringMap<unsigned> Map(RegInfo.getNumRegs());
-    for (unsigned I = 0, E = RegInfo.getNumRegs(); I < E; ++I)
+    // Special-case RegNo 0, which would otherwise be spelled as ''.
+    Map[kNoRegister] = 0;
+    for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)
       Map[RegInfo.getName(I)] = I;
     assert(Map.size() == RegInfo.getNumRegs() && "Size prediction failed");
     return Map;
@@ -83,18 +86,21 @@ struct YamlContext {
   llvm::raw_string_ostream &getErrorStream() { return ErrorStream; }
 
   llvm::StringRef getRegName(unsigned RegNo) {
+    // Special case: RegNo 0 is NoRegister. We have to deal with it explicitly.
+    if (RegNo == 0)
+      return kNoRegister;
     const llvm::StringRef RegName = State->getRegInfo().getName(RegNo);
     if (RegName.empty())
       ErrorStream << "No register with enum value '" << RegNo << "'\n";
     return RegName;
   }
 
-  unsigned getRegNo(llvm::StringRef RegName) {
+  llvm::Optional<unsigned> getRegNo(llvm::StringRef RegName) {
     auto Iter = RegNameToRegNo.find(RegName);
     if (Iter != RegNameToRegNo.end())
       return Iter->second;
     ErrorStream << "No register with name '" << RegName << "'\n";
-    return 0;
+    return llvm::None;
   }
 
 private:
@@ -142,8 +148,8 @@ private:
       return llvm::MCOperand::createImm(IntValue);
     if (tryDeserializeFPOperand(String, DoubleValue))
       return llvm::MCOperand::createFPImm(DoubleValue);
-    if (unsigned RegNo = getRegNo(String))
-      return llvm::MCOperand::createReg(RegNo);
+    if (auto RegNo = getRegNo(String))
+      return llvm::MCOperand::createReg(*RegNo);
     if (String != kInvalidOperand)
       ErrorStream << "Unknown Operand: '" << String << "'\n";
     return {};
@@ -258,8 +264,9 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
     String.split(Pieces, "=0x", /* MaxSplit */ -1,
                  /* KeepEmpty */ false);
     YamlContext &Context = getTypedContext(Ctx);
-    if (Pieces.size() == 2) {
-      RV.Register = Context.getRegNo(Pieces[0]);
+    llvm::Optional<unsigned> RegNo;
+    if (Pieces.size() == 2 && (RegNo = Context.getRegNo(Pieces[0]))) {
+      RV.Register = *RegNo;
       const unsigned BitsNeeded = llvm::APInt::getBitsNeeded(Pieces[1], kRadix);
       RV.Value = llvm::APInt(BitsNeeded, Pieces[1], kRadix);
     } else {
