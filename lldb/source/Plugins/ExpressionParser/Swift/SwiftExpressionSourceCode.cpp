@@ -15,6 +15,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "swift/Basic/LangOptions.h"
 
 using namespace lldb;
 using namespace lldb_private;
