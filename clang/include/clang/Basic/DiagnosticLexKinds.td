@@ -418,7 +418,8 @@ def warn_pp_hdrstop_filename_ignored : Warning<
   "/Fp can be used to specify precompiled header filename">,
   InGroup<ClangClPch>;
 def err_pp_file_not_found_angled_include_not_fatal : Error<
-  "'%0' file not found with <angled> include; use \"quotes\" instead">;
+  "'%0' file not found with <angled> %select{include|import}1; "
+  "use \"quotes\" instead">;
 def err_pp_file_not_found_typo_not_fatal
     : Error<"'%0' file not found, did you mean '%1'?">;
 def note_pp_framework_without_header : Note<
@@ -642,7 +643,8 @@ def err_pp_double_begin_of_arc_cf_code_audited : Error<
 def err_pp_unmatched_end_of_arc_cf_code_audited : Error<
   "not currently inside '#pragma clang arc_cf_code_audited'">;
 def err_pp_include_in_arc_cf_code_audited : Error<
-  "cannot #include files inside '#pragma clang arc_cf_code_audited'">;
+  "cannot %select{#include files|import headers}0 "
+  "inside '#pragma clang arc_cf_code_audited'">;
 def err_pp_eof_in_arc_cf_code_audited : Error<
   "'#pragma clang arc_cf_code_audited' was not ended within this file">;
 
@@ -776,6 +778,14 @@ def warn_module_conflict : Warning<
   "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
 
+// C++20 modules
+def err_header_import_semi_in_macro : Error<
+  "semicolon terminating header import declaration cannot be produced "
+  "by a macro">;
+def err_header_import_not_header_unit : Error<
+  "header file %0 (aka '%1') cannot be imported because "
+  "it is not known to be a header unit">;
+
 def warn_header_guard : Warning<
   "%0 is used as a header guard here, followed by #define of a different macro">,
   InGroup<DiagGroup<"header-guard">>;
@@ -797,7 +807,8 @@ def err_pp_double_begin_of_assume_nonnull : Error<
 def err_pp_unmatched_end_of_assume_nonnull : Error<
   "not currently inside '#pragma clang assume_nonnull'">;
 def err_pp_include_in_assume_nonnull : Error<
-  "cannot #include files inside '#pragma clang assume_nonnull'">;
+  "cannot %select{#include files|import headers}0 "
+  "inside '#pragma clang assume_nonnull'">;
 def err_pp_eof_in_assume_nonnull : Error<
   "'#pragma clang assume_nonnull' was not ended within this file">;
 

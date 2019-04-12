@@ -29,6 +29,11 @@ void foo();
 
 @interface E
 @end
+
 __attribute__((objc_nonlazy_class))
-@implementation E // expected-error {{prefix attribute must be followed by an interface or protocol}}
+@implementation E
+@end
+
+__attribute__((objc_nonlazy_class))
+@implementation E (MyCat)
 @end

@@ -827,6 +827,10 @@ ANNOTATION(module_include)
 ANNOTATION(module_begin)
 ANNOTATION(module_end)
 
+// Annotation for a header_name token that has been looked up and transformed
+// into the name of a header unit.
+ANNOTATION(header_unit)
+
 #undef ANNOTATION
 #undef TESTING_KEYWORD
 #undef OBJC_AT_KEYWORD

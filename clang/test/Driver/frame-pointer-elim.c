@@ -26,6 +26,15 @@
 // RUN:   FileCheck --check-prefix=NETBSD %s
 // NETBSD-NOT: "-momit-leaf-frame-pointer"
 
+// OpenBSD follows the same rules as Linux.
+// RUN: %clang -### -target x86_64-unknown-openbsd -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=OPENBSD-OPT %s
+// OPENBSD-OPT: "-momit-leaf-frame-pointer"
+
+// RUN: %clang -### -target x86_64-unknown-openbsd -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=OPENBSD %s
+// OPENBSD-NOT: "-momit-leaf-frame-pointer"
+
 // Darwin disables omitting the leaf frame pointer even under optimization
 // unless the command lines are given.
 // RUN: %clang -### -target i386-apple-darwin -S %s 2>&1 | \

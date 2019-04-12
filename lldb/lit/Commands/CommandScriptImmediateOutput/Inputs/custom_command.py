@@ -1,8 +1,11 @@
 from __future__ import print_function
 
 import sys
-import shlex
 
+
+def split(command):
+    command = command.strip()
+    return command.rsplit(' ', 1)
 
 def command_function(debugger, command, exe_ctx, result, internal_dict):
     result.SetImmediateOutputFile(sys.__stdout__)
@@ -10,7 +13,7 @@ def command_function(debugger, command, exe_ctx, result, internal_dict):
 
 
 def write_file(debugger, command, exe_ctx, result, internal_dict):
-    args = shlex.split(command)
+    args = split(command)
     path = args[0]
     mode = args[1]
     with open(path, mode) as f:

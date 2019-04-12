@@ -71,7 +71,7 @@ switch in SelectionDAGLegalize::LegalizeOp().::
 Other parts of the legalizer may need to be updated as well. Look for
 places where the non-STRICT counterpart is legalized and update as needed.
 Be careful of the chain since STRICT nodes use it but their counterparts
-often don't.::
+often don't.
 
 The code to do the conversion or mutation of the STRICT node to a non-STRICT
 version of the node happens in SelectionDAG::mutateStrictFPToFP(). Be

@@ -55,7 +55,7 @@ typedef enum {
   LLVMDIFlagEnumClass = 1 << 24,
   LLVMDIFlagFixedEnum = LLVMDIFlagEnumClass, // Deprecated.
   LLVMDIFlagThunk = 1 << 25,
-  LLVMDIFlagTrivial = 1 << 26,
+  LLVMDIFlagNonTrivial = 1 << 26,
   LLVMDIFlagBigEndian = 1 << 27,
   LLVMDIFlagLittleEndian = 1 << 28,
   LLVMDIFlagIndirectVirtualBase = (1 << 2) | (1 << 5),
