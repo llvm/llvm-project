@@ -11,9 +11,9 @@ int main(int argc, const char *argv[]) {
   dispatch_queue_t queue = dispatch_queue_create("my.queue", DISPATCH_QUEUE_SERIAL);
   dispatch_semaphore_t sem = dispatch_semaphore_create(0);
 
-  NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp-gcd-io.%d", getpid()]];
+  const char *path = tempnam(NULL, "libdispatch-fd-");
 
-  dispatch_io_t channel = dispatch_io_create_with_path(DISPATCH_IO_STREAM, path.fileSystemRepresentation, O_CREAT | O_WRONLY,
+  dispatch_io_t channel = dispatch_io_create_with_path(DISPATCH_IO_STREAM, path, O_CREAT | O_WRONLY,
       0666, queue, ^(int error) { });
   dispatch_io_set_high_water(channel, 1);
 
@@ -34,7 +34,7 @@ int main(int argc, const char *argv[]) {
   dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
   my_global++;
   dispatch_io_close(channel, 0);
-  channel = dispatch_io_create_with_path(DISPATCH_IO_STREAM, path.fileSystemRepresentation, O_RDONLY,
+  channel = dispatch_io_create_with_path(DISPATCH_IO_STREAM, path, O_RDONLY,
       0, queue, ^(int error) { });
   dispatch_io_set_high_water(channel, 1);
 
