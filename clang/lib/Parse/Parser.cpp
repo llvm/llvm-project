@@ -980,9 +980,10 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   if (getLangOpts().ObjC && Tok.is(tok::at)) {
     SourceLocation AtLoc = ConsumeToken(); // the "@"
     if (!Tok.isObjCAtKeyword(tok::objc_interface) &&
-        !Tok.isObjCAtKeyword(tok::objc_protocol)) {
+        !Tok.isObjCAtKeyword(tok::objc_protocol) &&
+        !Tok.isObjCAtKeyword(tok::objc_implementation)) {
       Diag(Tok, diag::err_objc_unexpected_attr);
-      SkipUntil(tok::semi); // FIXME: better skip?
+      SkipUntil(tok::semi);
       return nullptr;
     }
 
@@ -996,6 +997,9 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
 
     if (Tok.isObjCAtKeyword(tok::objc_protocol))
       return ParseObjCAtProtocolDeclaration(AtLoc, DS.getAttributes());
+
+    if (Tok.isObjCAtKeyword(tok::objc_implementation))
+      return ParseObjCAtImplementationDeclaration(AtLoc, DS.getAttributes());
 
     return Actions.ConvertDeclToDeclGroup(
             ParseObjCAtInterfaceDeclaration(AtLoc, DS.getAttributes()));

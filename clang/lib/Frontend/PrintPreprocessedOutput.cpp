@@ -769,6 +769,15 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
           reinterpret_cast<Module *>(Tok.getAnnotationValue()));
       PP.Lex(Tok);
       continue;
+    } else if (Tok.is(tok::annot_header_unit)) {
+      // This is a header-name that has been (effectively) converted into a
+      // module-name.
+      // FIXME: The module name could contain non-identifier module name
+      // components. We don't have a good way to round-trip those.
+      Module *M = reinterpret_cast<Module *>(Tok.getAnnotationValue());
+      std::string Name = M->getFullModuleName();
+      OS.write(Name.data(), Name.size());
+      Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
       // will be reproduced in the preprocessed output.
@@ -790,12 +799,12 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
         Callbacks->HandleNewlinesInToken(TokPtr, Len);
     } else {
       std::string S = PP.getSpelling(Tok);
-      OS.write(&S[0], S.size());
+      OS.write(S.data(), S.size());
 
       // Tokens that can contain embedded newlines need to adjust our current
       // line number.
       if (Tok.getKind() == tok::comment || Tok.getKind() == tok::unknown)
-        Callbacks->HandleNewlinesInToken(&S[0], S.size());
+        Callbacks->HandleNewlinesInToken(S.data(), S.size());
     }
     Callbacks->setEmittedTokensOnThisLine();
 

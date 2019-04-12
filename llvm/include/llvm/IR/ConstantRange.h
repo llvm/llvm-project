@@ -399,6 +399,9 @@ public:
   /// Return whether signed sub of the two ranges always/never overflows.
   OverflowResult signedSubMayOverflow(const ConstantRange &Other) const;
 
+  /// Return whether unsigned mul of the two ranges always/never overflows.
+  OverflowResult unsignedMulMayOverflow(const ConstantRange &Other) const;
+
   /// Print out the bounds to a stream.
   void print(raw_ostream &OS) const;
 

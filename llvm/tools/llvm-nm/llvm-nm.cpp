@@ -46,12 +46,15 @@ using namespace object;
 
 namespace {
 enum OutputFormatTy { bsd, sysv, posix, darwin };
+
+cl::OptionCategory NMCat("llvm-nm Options");
+
 cl::opt<OutputFormatTy> OutputFormat(
     "format", cl::desc("Specify output format"),
     cl::values(clEnumVal(bsd, "BSD format"), clEnumVal(sysv, "System V format"),
                clEnumVal(posix, "POSIX.2 format"),
                clEnumVal(darwin, "Darwin -m format")),
-    cl::init(bsd));
+    cl::init(bsd), cl::cat(NMCat));
 cl::alias OutputFormat2("f", cl::desc("Alias for --format"),
                         cl::aliasopt(OutputFormat));
 
@@ -59,50 +62,53 @@ cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
                                      cl::ZeroOrMore);
 
 cl::opt<bool> UndefinedOnly("undefined-only",
-                            cl::desc("Show only undefined symbols"));
+                            cl::desc("Show only undefined symbols"),
+                            cl::cat(NMCat));
 cl::alias UndefinedOnly2("u", cl::desc("Alias for --undefined-only"),
                          cl::aliasopt(UndefinedOnly), cl::Grouping);
 
 cl::opt<bool> DynamicSyms("dynamic",
                           cl::desc("Display the dynamic symbols instead "
-                                   "of normal symbols."));
+                                   "of normal symbols."),
+                          cl::cat(NMCat));
 cl::alias DynamicSyms2("D", cl::desc("Alias for --dynamic"),
                        cl::aliasopt(DynamicSyms), cl::Grouping);
 
-cl::opt<bool> DefinedOnly("defined-only",
-                          cl::desc("Show only defined symbols"));
+cl::opt<bool> DefinedOnly("defined-only", cl::desc("Show only defined symbols"),
+                          cl::cat(NMCat));
 cl::alias DefinedOnly2("U", cl::desc("Alias for --defined-only"),
                        cl::aliasopt(DefinedOnly), cl::Grouping);
 
 cl::opt<bool> ExternalOnly("extern-only",
                            cl::desc("Show only external symbols"),
-                           cl::ZeroOrMore);
+                           cl::ZeroOrMore, cl::cat(NMCat));
 cl::alias ExternalOnly2("g", cl::desc("Alias for --extern-only"),
                         cl::aliasopt(ExternalOnly), cl::Grouping,
                         cl::ZeroOrMore);
 
-cl::opt<bool> NoWeakSymbols("no-weak",
-                            cl::desc("Show only non-weak symbols"));
+cl::opt<bool> NoWeakSymbols("no-weak", cl::desc("Show only non-weak symbols"),
+                            cl::cat(NMCat));
 cl::alias NoWeakSymbols2("W", cl::desc("Alias for --no-weak"),
                          cl::aliasopt(NoWeakSymbols), cl::Grouping);
 
-cl::opt<bool> BSDFormat("B", cl::desc("Alias for --format=bsd"),
-                        cl::Grouping);
+cl::opt<bool> BSDFormat("B", cl::desc("Alias for --format=bsd"), cl::Grouping,
+                        cl::cat(NMCat));
 cl::opt<bool> POSIXFormat("P", cl::desc("Alias for --format=posix"),
-                          cl::Grouping);
+                          cl::Grouping, cl::cat(NMCat));
 cl::alias Portability("portability", cl::desc("Alias for --format=posix"),
                       cl::aliasopt(POSIXFormat), cl::NotHidden);
 cl::opt<bool> DarwinFormat("m", cl::desc("Alias for --format=darwin"),
-                           cl::Grouping);
+                           cl::Grouping, cl::cat(NMCat));
 
 static cl::list<std::string>
     ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
-              cl::ZeroOrMore);
+              cl::ZeroOrMore, cl::cat(NMCat));
 bool ArchAll = false;
 
 cl::opt<bool> PrintFileName(
     "print-file-name",
-    cl::desc("Precede each symbol with the object file it came from"));
+    cl::desc("Precede each symbol with the object file it came from"),
+    cl::cat(NMCat));
 
 cl::alias PrintFileNameA("A", cl::desc("Alias for --print-file-name"),
                          cl::aliasopt(PrintFileName), cl::Grouping);
@@ -110,43 +116,52 @@ cl::alias PrintFileNameo("o", cl::desc("Alias for --print-file-name"),
                          cl::aliasopt(PrintFileName), cl::Grouping);
 
 cl::opt<bool> DebugSyms("debug-syms",
-                        cl::desc("Show all symbols, even debugger only"));
+                        cl::desc("Show all symbols, even debugger only"),
+                        cl::cat(NMCat));
 cl::alias DebugSymsa("a", cl::desc("Alias for --debug-syms"),
                      cl::aliasopt(DebugSyms), cl::Grouping);
 
-cl::opt<bool> NumericSort("numeric-sort", cl::desc("Sort symbols by address"));
+cl::opt<bool> NumericSort("numeric-sort", cl::desc("Sort symbols by address"),
+                          cl::cat(NMCat));
 cl::alias NumericSortn("n", cl::desc("Alias for --numeric-sort"),
                        cl::aliasopt(NumericSort), cl::Grouping);
 cl::alias NumericSortv("v", cl::desc("Alias for --numeric-sort"),
                        cl::aliasopt(NumericSort), cl::Grouping);
 
-cl::opt<bool> NoSort("no-sort", cl::desc("Show symbols in order encountered"));
+cl::opt<bool> NoSort("no-sort", cl::desc("Show symbols in order encountered"),
+                     cl::cat(NMCat));
 cl::alias NoSortp("p", cl::desc("Alias for --no-sort"), cl::aliasopt(NoSort),
                   cl::Grouping);
 
 cl::opt<bool> Demangle("demangle", cl::ZeroOrMore,
-                       cl::desc("Demangle C++ symbol names"));
+                       cl::desc("Demangle C++ symbol names"), cl::cat(NMCat));
 cl::alias DemangleC("C", cl::desc("Alias for --demangle"),
                     cl::aliasopt(Demangle), cl::Grouping);
 cl::opt<bool> NoDemangle("no-demangle", cl::init(false), cl::ZeroOrMore,
-                         cl::desc("Don't demangle symbol names"));
+                         cl::desc("Don't demangle symbol names"),
+                         cl::cat(NMCat));
 
-cl::opt<bool> ReverseSort("reverse-sort", cl::desc("Sort in reverse order"));
+cl::opt<bool> ReverseSort("reverse-sort", cl::desc("Sort in reverse order"),
+                          cl::cat(NMCat));
 cl::alias ReverseSortr("r", cl::desc("Alias for --reverse-sort"),
                        cl::aliasopt(ReverseSort), cl::Grouping);
 
 cl::opt<bool> PrintSize("print-size",
-                        cl::desc("Show symbol size instead of address"));
+                        cl::desc("Show symbol size instead of address"),
+                        cl::cat(NMCat));
 cl::alias PrintSizeS("S", cl::desc("Alias for --print-size"),
                      cl::aliasopt(PrintSize), cl::Grouping);
 bool MachOPrintSizeWarning = false;
 
-cl::opt<bool> SizeSort("size-sort", cl::desc("Sort symbols by size"));
+cl::opt<bool> SizeSort("size-sort", cl::desc("Sort symbols by size"),
+                       cl::cat(NMCat));
 
 cl::opt<bool> WithoutAliases("without-aliases", cl::Hidden,
-                             cl::desc("Exclude aliases from output"));
+                             cl::desc("Exclude aliases from output"),
+                             cl::cat(NMCat));
 
-cl::opt<bool> ArchiveMap("print-armap", cl::desc("Print the archive map"));
+cl::opt<bool> ArchiveMap("print-armap", cl::desc("Print the archive map"),
+                         cl::cat(NMCat));
 cl::alias ArchiveMaps("M", cl::desc("Alias for --print-armap"),
                       cl::aliasopt(ArchiveMap), cl::Grouping);
 
@@ -155,12 +170,13 @@ cl::opt<Radix>
     AddressRadix("radix", cl::desc("Radix (o/d/x) for printing symbol Values"),
                  cl::values(clEnumVal(d, "decimal"), clEnumVal(o, "octal"),
                             clEnumVal(x, "hexadecimal")),
-                 cl::init(x));
+                 cl::init(x), cl::cat(NMCat));
 cl::alias RadixAlias("t", cl::desc("Alias for --radix"),
                      cl::aliasopt(AddressRadix));
 
 cl::opt<bool> JustSymbolName("just-symbol-name",
-                             cl::desc("Print just the symbol's name"));
+                             cl::desc("Print just the symbol's name"),
+                             cl::cat(NMCat));
 cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
                           cl::aliasopt(JustSymbolName), cl::Grouping);
 
@@ -170,23 +186,31 @@ cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
 // this work.  For now the "-s __TEXT __text" has to be last on the command
 // line.
 cl::list<std::string> SegSect("s", cl::Positional, cl::ZeroOrMore,
+                              cl::value_desc("segment section"), cl::Hidden,
                               cl::desc("Dump only symbols from this segment "
-                                       "and section name, Mach-O only"));
+                                       "and section name, Mach-O only"),
+                              cl::cat(NMCat));
 
-cl::opt<bool> FormatMachOasHex("x", cl::desc("Print symbol entry in hex, "
-                                             "Mach-O only"), cl::Grouping);
+cl::opt<bool> FormatMachOasHex("x",
+                               cl::desc("Print symbol entry in hex, "
+                                        "Mach-O only"),
+                               cl::Grouping, cl::cat(NMCat));
 cl::opt<bool> AddDyldInfo("add-dyldinfo",
                           cl::desc("Add symbols from the dyldinfo not already "
-                                   "in the symbol table, Mach-O only"));
+                                   "in the symbol table, Mach-O only"),
+                          cl::cat(NMCat));
 cl::opt<bool> NoDyldInfo("no-dyldinfo",
                          cl::desc("Don't add any symbols from the dyldinfo, "
-                                  "Mach-O only"));
+                                  "Mach-O only"),
+                         cl::cat(NMCat));
 cl::opt<bool> DyldInfoOnly("dyldinfo-only",
                            cl::desc("Show only symbols from the dyldinfo, "
-                                    "Mach-O only"));
+                                    "Mach-O only"),
+                           cl::cat(NMCat));
 
 cl::opt<bool> NoLLVMBitcode("no-llvm-bc",
-                            cl::desc("Disable LLVM bitcode reader"));
+                            cl::desc("Disable LLVM bitcode reader"),
+                            cl::cat(NMCat));
 
 cl::extrahelp HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
@@ -2078,6 +2102,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
+  cl::HideUnrelatedOptions(NMCat);
   cl::ParseCommandLineOptions(argc, argv, "llvm symbol table dumper\n");
 
   // llvm-nm only reads binary files.

@@ -20,6 +20,7 @@
 #include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -136,6 +137,25 @@ CodeCompleteResult completions(llvm::StringRef Text,
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   return completions(Server, Text, std::move(IndexSymbols), std::move(Opts),
                      FilePath);
+}
+
+// Builds a server and runs code completion.
+// If IndexSymbols is non-empty, an index will be built and passed to opts.
+CodeCompleteResult completionsNoCompile(llvm::StringRef Text,
+                                        std::vector<Symbol> IndexSymbols = {},
+                                        clangd::CodeCompleteOptions Opts = {},
+                                        PathRef FilePath = "foo.cpp") {
+  std::unique_ptr<SymbolIndex> OverrideIndex;
+  if (!IndexSymbols.empty()) {
+    assert(!Opts.Index && "both Index and IndexSymbols given!");
+    OverrideIndex = memIndex(std::move(IndexSymbols));
+    Opts.Index = OverrideIndex.get();
+  }
+
+  MockFSProvider FS;
+  Annotations Test(Text);
+  return codeComplete(FilePath, tooling::CompileCommand(), /*Preamble=*/nullptr,
+                      Test.code(), Test.point(), FS.getFileSystem(), Opts);
 }
 
 Symbol withReferences(int N, Symbol S) {
@@ -2399,6 +2419,33 @@ TEST(CompletionTest, NamespaceDoubleInsertion) {
                              {cls("foo::ns::ABCDE")}, Opts);
   EXPECT_THAT(Results.Completions,
               UnorderedElementsAre(AllOf(Qualifier(""), Named("ABCDE"))));
+}
+
+TEST(NoCompileCompletionTest, Basic) {
+  auto Results = completionsNoCompile(R"cpp(
+    void func() {
+      int xyz;
+      int abc;
+      ^
+    }
+  )cpp");
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(Named("void"), Named("func"), Named("int"),
+                                   Named("xyz"), Named("abc")));
+}
+
+TEST(NoCompileCompletionTest, WithFilter) {
+  auto Results = completionsNoCompile(R"cpp(
+    void func() {
+      int sym1;
+      int sym2;
+      int xyz1;
+      int xyz2;
+      sy^
+    }
+  )cpp");
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(Named("sym1"), Named("sym2")));
 }
 
 } // namespace

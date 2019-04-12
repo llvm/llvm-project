@@ -3034,10 +3034,8 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     else
       Flags |= llvm::DINode::FlagTypePassByValue;
 
-    // Record if a C++ record is trivial type.
-    if (CXXRD->isTrivial())
-      Flags |= llvm::DINode::FlagTrivial;
-    else
+    // Record if a C++ record is non-trivial type.
+    if (!CXXRD->isTrivial())
       Flags |= llvm::DINode::FlagNonTrivial;
   }
 

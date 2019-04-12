@@ -660,11 +660,6 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
     return;
   }
 
-  unsigned i = 0;
-  unsigned j = 0;
-  unsigned End = S.size();
-  const char *Base = S.data();
-
   const char *const Quote = MustQuote == QuotingType::Single ? "'" : "\"";
   output(Quote); // Starting quote.
 
@@ -672,10 +667,15 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
   // present, and will be escaped using a variety of unicode-scalar and special short-form
   // escapes. This is handled in yaml::escape.
   if (MustQuote == QuotingType::Double) {
-    output(yaml::escape(Base, /* EscapePrintable= */ false));
+    output(yaml::escape(S, /* EscapePrintable= */ false));
     outputUpToEndOfLine(Quote);
     return;
   }
+
+  unsigned i = 0;
+  unsigned j = 0;
+  unsigned End = S.size();
+  const char *Base = S.data();
 
   // When using single-quoted strings, any single quote ' must be doubled to be escaped.
   while (j < End) {

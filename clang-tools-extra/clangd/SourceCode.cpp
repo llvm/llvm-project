@@ -391,5 +391,29 @@ cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
   return formatReplacements(Code, std::move(*CleanReplaces), Style);
 }
 
+llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
+                                             const format::FormatStyle &Style) {
+  SourceManagerForFile FileSM("dummy.cpp", Content);
+  auto &SM = FileSM.get();
+  auto FID = SM.getMainFileID();
+  Lexer Lex(FID, SM.getBuffer(FID), SM, format::getFormattingLangOpts(Style));
+  Token Tok;
+
+  llvm::StringMap<unsigned> Identifiers;
+  while (!Lex.LexFromRawLexer(Tok)) {
+    switch (Tok.getKind()) {
+    case tok::identifier:
+      ++Identifiers[Tok.getIdentifierInfo()->getName()];
+      break;
+    case tok::raw_identifier:
+      ++Identifiers[Tok.getRawIdentifier()];
+      break;
+    default:
+      continue;
+    }
+  }
+  return Identifiers;
+}
+
 } // namespace clangd
 } // namespace clang

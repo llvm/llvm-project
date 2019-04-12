@@ -1,0 +1,51 @@
+# Test that LLDB correctly allows scripted commands to set immediate output to
+# a file.
+
+# RUN: echo "READ" > %t.read.txt
+# RUN: echo "WRITE" > %t.write.txt
+# RUN: echo "APPEND" > %t.append.txt
+# RUN: echo "READ PLUS" > %t.read_plus.txt
+# RUN: echo "WRITE PLUS" > %t.write_plus.txt
+# RUN: echo "APPEND PLUS" > %t.append_plus.txt
+
+# RUN: %lldb -s %s \
+# RUN:   -o 'command script import %S/Inputs/custom_command.py' \
+# RUN:   -o 'command script add -f custom_command.write_file mywrite' \
+# RUN:   -o 'mywrite %t.read.txt r' \
+# RUN:   -o 'mywrite %t.write.txt w' \
+# RUN:   -o 'mywrite %t.append.txt a' \
+# RUN:   -o 'mywrite %t.write_plus.txt w+' \
+# RUN:   -o 'mywrite %t.read_plus.txt r+' \
+# RUN:   -o 'mywrite %t.append_plus.txt a+' \
+# RUN:   -o 'command script delete mywrite'
+
+# RUN: cat %t.read.txt | FileCheck %s --check-prefix READ
+# READ: READ
+# READ-NOT: writing to file with mode
+
+# RUN: cat %t.write.txt | FileCheck %s --check-prefix WRITE
+# WRITE-NOT: WRITE
+# WRITE: writing to file with mode: w
+
+# RUN: cat %t.append.txt | FileCheck %s --check-prefix APPEND
+# APPEND: APPEND
+# APPEND-NEXT: writing to file with mode: a
+
+# RUN: cat %t.write_plus.txt | FileCheck %s --check-prefix WRITEPLUS
+# WRITEPLUS-NOT: WRITE PLUS
+# WRITEPLUS: writing to file with mode: w+
+
+# RUN: cat %t.read_plus.txt | FileCheck %s --check-prefix READPLUS
+# READPLUS-NOT: READ PLUS
+# READPLUS: writing to file with mode: r+
+
+# RUN: cat %t.append_plus.txt | FileCheck %s --check-prefix APPENDPLUS
+# APPENDPLUS: APPEND PLUS
+# APPENDPLUS-NEXT: writing to file with mode: a+
+
+# RUN: rm %t.read.txt
+# RUN: rm %t.write.txt
+# RUN: rm %t.append.txt
+# RUN: rm %t.write_plus.txt
+# RUN: rm %t.read_plus.txt
+# RUN: rm %t.append_plus.txt

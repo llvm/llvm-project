@@ -173,6 +173,34 @@ void test_vla(int size) {
   used(ptr);
 }
 
+// UNINIT-LABEL:  test_alloca(
+// ZERO-LABEL:    test_alloca(
+// ZERO:          %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// ZERO-NEXT:     %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align [[ALIGN:[0-9]+]]
+// ZERO-NEXT:     call void @llvm.memset{{.*}}(i8* align [[ALIGN]] %[[ALLOCA]], i8 0, i64 %[[SIZE]], i1 false)
+// PATTERN-LABEL: test_alloca(
+// PATTERN:       %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// PATTERN-NEXT:  %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align [[ALIGN:[0-9]+]]
+// PATTERN-NEXT:  call void @llvm.memset{{.*}}(i8* align [[ALIGN]] %[[ALLOCA]], i8 -86, i64 %[[SIZE]], i1 false)
+void test_alloca(int size) {
+  void *ptr = __builtin_alloca(size);
+  used(ptr);
+}
+
+// UNINIT-LABEL:  test_alloca_with_align(
+// ZERO-LABEL:    test_alloca_with_align(
+// ZERO:          %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// ZERO-NEXT:     %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align 128
+// ZERO-NEXT:     call void @llvm.memset{{.*}}(i8* align 128 %[[ALLOCA]], i8 0, i64 %[[SIZE]], i1 false)
+// PATTERN-LABEL: test_alloca_with_align(
+// PATTERN:       %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// PATTERN-NEXT:  %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align 128
+// PATTERN-NEXT:  call void @llvm.memset{{.*}}(i8* align 128 %[[ALLOCA]], i8 -86, i64 %[[SIZE]], i1 false)
+void test_alloca_with_align(int size) {
+  void *ptr = __builtin_alloca_with_align(size, 1024);
+  used(ptr);
+}
+
 // UNINIT-LABEL:  test_struct_vla(
 // ZERO-LABEL:    test_struct_vla(
 // ZERO:  %[[SIZE:[0-9]+]] = mul nuw i64 %{{.*}}, 16

@@ -267,6 +267,7 @@ For API clients and LLVM developers.
    Bugpoint
    CodeGenerator
    ExceptionHandling
+   AddingConstrainedIntrinsics
    LinkTimeOptimization
    SegmentedStacks
    TableGenFundamentals
@@ -344,6 +345,10 @@ For API clients and LLVM developers.
 :doc:`ExceptionHandling`
    This document describes the design and implementation of exception handling
    in LLVM.
+
+:doc:`AddingConstrainedIntrinsics`
+   Gives the steps necessary when adding a new constrained math intrinsic
+   to LLVM.
 
 :doc:`Bugpoint`
    Automatic bug finder and test-case reducer description and usage

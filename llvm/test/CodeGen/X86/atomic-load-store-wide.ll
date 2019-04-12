@@ -45,22 +45,21 @@ define i64 @test2(i64* %ptr) {
 ;
 ; NOSSE-LABEL: test2:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    pushl %ebx
+; NOSSE-NEXT:    pushl %ebp
 ; NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
-; NOSSE-NEXT:    .cfi_offset %esi, -12
-; NOSSE-NEXT:    .cfi_offset %ebx, -8
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; NOSSE-NEXT:    xorl %eax, %eax
-; NOSSE-NEXT:    xorl %edx, %edx
-; NOSSE-NEXT:    xorl %ecx, %ecx
-; NOSSE-NEXT:    xorl %ebx, %ebx
-; NOSSE-NEXT:    lock cmpxchg8b (%esi)
-; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
+; NOSSE-NEXT:    .cfi_offset %ebp, -8
+; NOSSE-NEXT:    movl %esp, %ebp
+; NOSSE-NEXT:    .cfi_def_cfa_register %ebp
+; NOSSE-NEXT:    andl $-8, %esp
+; NOSSE-NEXT:    subl $8, %esp
+; NOSSE-NEXT:    movl 8(%ebp), %eax
+; NOSSE-NEXT:    fildll (%eax)
+; NOSSE-NEXT:    fistpll (%esp)
+; NOSSE-NEXT:    movl (%esp), %eax
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOSSE-NEXT:    movl %ebp, %esp
+; NOSSE-NEXT:    popl %ebp
+; NOSSE-NEXT:    .cfi_def_cfa %esp, 4
 ; NOSSE-NEXT:    retl
   %val = load atomic i64, i64* %ptr seq_cst, align 8
   ret i64 %val
@@ -88,5 +87,36 @@ define i64 @test3(i64* %ptr) noimplicitfloat {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
   %val = load atomic i64, i64* %ptr seq_cst, align 8
+  ret i64 %val
+}
+
+define i64 @test4(i64* %ptr) {
+; SSE42-LABEL: test4:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE42-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE42-NEXT:    movd %xmm0, %eax
+; SSE42-NEXT:    pextrd $1, %xmm0, %edx
+; SSE42-NEXT:    retl
+;
+; NOSSE-LABEL: test4:
+; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    pushl %ebp
+; NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; NOSSE-NEXT:    .cfi_offset %ebp, -8
+; NOSSE-NEXT:    movl %esp, %ebp
+; NOSSE-NEXT:    .cfi_def_cfa_register %ebp
+; NOSSE-NEXT:    andl $-8, %esp
+; NOSSE-NEXT:    subl $8, %esp
+; NOSSE-NEXT:    movl 8(%ebp), %eax
+; NOSSE-NEXT:    fildll (%eax)
+; NOSSE-NEXT:    fistpll (%esp)
+; NOSSE-NEXT:    movl (%esp), %eax
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOSSE-NEXT:    movl %ebp, %esp
+; NOSSE-NEXT:    popl %ebp
+; NOSSE-NEXT:    .cfi_def_cfa %esp, 4
+; NOSSE-NEXT:    retl
+  %val = load atomic volatile i64, i64* %ptr seq_cst, align 8
   ret i64 %val
 }
