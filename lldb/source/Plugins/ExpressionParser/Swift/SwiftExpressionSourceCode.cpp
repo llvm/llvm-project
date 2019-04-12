@@ -20,16 +20,12 @@ using namespace lldb;
 using namespace lldb_private;
 
 /// Format the OS name the way that Swift availability attributes do.
-static llvm::StringRef getAvailabilityName(llvm::Triple::OSType os) {
-  switch (os) {
-  case llvm::Triple::MacOSX: return "macOS";
-  case llvm::Triple::IOS: return "iOS";
-  case llvm::Triple::TvOS: return "tvOS";
-  case llvm::Triple::WatchOS: return "watchOS";
-  default:
-    return llvm::Triple::getOSTypeName(os);
-  }
+static llvm::StringRef getAvailabilityName(const llvm::Triple &triple) {
+    swift::LangOptions lang_options;
+  lang_options.setTarget(triple);
+  return swift::platformString(swift::targetPlatform(lang_options));
 }
+
 uint32_t SwiftExpressionSourceCode::GetNumBodyLines() {
   if (m_num_body_lines == 0)
     // 2 = <one for zero indexing> + <one for the body start marker>
@@ -83,7 +79,7 @@ bool SwiftExpressionSourceCode::GetText(
     auto triple = arch_spec.GetTriple();
     if (triple.isOSDarwin()) {
       if (auto process_sp = exe_ctx.GetProcessSP()) {
-        os_vers << getAvailabilityName(triple.getOS()) << " ";
+        os_vers << getAvailabilityName(triple) << " ";
         auto platform = target->GetPlatform();
         bool is_simulator =
             platform->GetPluginName().GetStringRef().endswith("-simulator");
@@ -97,6 +93,7 @@ bool SwiftExpressionSourceCode::GetText(
         }
       }
     }
+
     SwiftPersistentExpressionState *persistent_state =
       llvm::cast<SwiftPersistentExpressionState>(target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift));
     std::vector<swift::ValueDecl *> persistent_results;
