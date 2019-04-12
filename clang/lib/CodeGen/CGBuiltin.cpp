@@ -18,6 +18,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -44,6 +45,25 @@ using namespace llvm;
 static
 int64_t clamp(int64_t Value, int64_t Low, int64_t High) {
   return std::min(High, std::max(Low, Value));
+}
+
+static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size, unsigned AlignmentInBytes) {
+  ConstantInt *Byte;
+  switch (CGF.getLangOpts().getTrivialAutoVarInit()) {
+  case LangOptions::TrivialAutoVarInitKind::Uninitialized:
+    // Nothing to initialize.
+    return;
+  case LangOptions::TrivialAutoVarInitKind::Zero:
+    Byte = CGF.Builder.getInt8(0x00);
+    break;
+  case LangOptions::TrivialAutoVarInitKind::Pattern: {
+    llvm::Type *Int8 = llvm::IntegerType::getInt8Ty(CGF.CGM.getLLVMContext());
+    Byte = llvm::dyn_cast<llvm::ConstantInt>(
+        initializationPatternFor(CGF.CGM, Int8));
+    break;
+  }
+  }
+  CGF.Builder.CreateMemSet(AI, Byte, Size, AlignmentInBytes);
 }
 
 /// getBuiltinLibFunction - Given a builtin id for a function like
@@ -2209,6 +2229,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
             .getQuantity();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(SuitableAlignmentInBytes);
+    initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
     return RValue::get(AI);
   }
 
@@ -2221,6 +2242,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getQuantity();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(AlignmentInBytes);
+    initializeAlloca(*this, AI, Size, AlignmentInBytes);
     return RValue::get(AI);
   }
 
