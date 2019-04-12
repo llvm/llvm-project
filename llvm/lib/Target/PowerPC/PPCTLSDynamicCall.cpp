@@ -34,10 +34,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-tls-dynamic-call"
 
-namespace llvm {
-  void initializePPCTLSDynamicCallPass(PassRegistry&);
-}
-
 namespace {
   struct PPCTLSDynamicCall : public MachineFunctionPass {
     static char ID;

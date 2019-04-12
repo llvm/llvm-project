@@ -229,8 +229,9 @@ define <4 x i64> @_mul4xi32toi64b(<4 x i32>, <4 x i32>) {
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    vpunpckhqdq {{.*#+}} xmm1 = xmm2[1],xmm0[1]
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %even0 = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
   %even1 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>

@@ -524,9 +524,11 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   Symbol S;
   S.ID = std::move(ID);
   std::string QName = printQualifiedName(ND);
-  std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
   // FIXME: this returns foo:bar: for objective-C methods, we prefer only foo:
   // for consistency with CodeCompletionString and a clean name/signature split.
+  std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
+  std::string TemplateSpecializationArgs = printTemplateSpecializationArgs(ND);
+  S.TemplateSpecializationArgs = TemplateSpecializationArgs;
 
   // We collect main-file symbols, but do not use them for code completion.
   if (!IsMainFileOnly && isIndexedForCodeCompletion(ND, Ctx))

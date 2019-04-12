@@ -9,6 +9,7 @@
 #include "SystemZMCTargetDesc.h"
 #include "InstPrinter/SystemZInstPrinter.h"
 #include "SystemZMCAsmInfo.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"

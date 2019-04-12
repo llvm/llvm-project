@@ -256,6 +256,14 @@ public:
     return child_range(ChildStorage, ChildStorage + 1);
   }
 
+  const_child_range children() const {
+    if (!hasAssociatedStmt())
+      return const_child_range(const_child_iterator(), const_child_iterator());
+    Stmt **ChildStorage = reinterpret_cast<Stmt **>(
+        const_cast<OMPExecutableDirective *>(this)->getClauses().end());
+    return const_child_range(ChildStorage, ChildStorage + 1);
+  }
+
   ArrayRef<OMPClause *> clauses() { return getClauses(); }
 
   ArrayRef<OMPClause *> clauses() const {
