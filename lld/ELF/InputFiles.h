@@ -263,11 +263,11 @@ private:
   // equal to or smaller than 65280.
   //
   // If an object file contains more than 65280 sections, the file must
-  // contain .symtab_shndxr section. The section contains an array of
+  // contain .symtab_shndx section. The section contains an array of
   // 32-bit integers whose size is the same as the number of symbols.
-  // Nth symbol's section index is in the Nth entry of .symtab_shndxr.
+  // Nth symbol's section index is in the Nth entry of .symtab_shndx.
   //
-  // The following variable contains the contents of .symtab_shndxr.
+  // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> ShndxTable;
 
