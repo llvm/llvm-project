@@ -1,7 +1,7 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %deflake %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
+#include <dispatch/dispatch.h>
 
 #import "../test.h"
 
