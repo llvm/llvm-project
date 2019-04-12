@@ -16,6 +16,7 @@ class TestMultilangFormatterCategories(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
+    @skipUnlessDarwin
     @add_test_categories(["swiftpr"])
     def test_multilang_formatter_categories(self):
         """Test that formatter categories can work for multiple languages"""
