@@ -2067,7 +2067,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 SymtabShndxSection::SymtabShndxSection()
-    : SyntheticSection(0, SHT_SYMTAB_SHNDX, 4, ".symtab_shndxr") {
+    : SyntheticSection(0, SHT_SYMTAB_SHNDX, 4, ".symtab_shndx") {
   this->Entsize = 4;
 }
 
@@ -2088,7 +2088,7 @@ bool SymtabShndxSection::isNeeded() const {
   // SHN_LORESERVE. If we need more, we want to use extension SHT_SYMTAB_SHNDX
   // section. Problem is that we reveal the final section indices a bit too
   // late, and we do not know them here. For simplicity, we just always create
-  // a .symtab_shndxr section when the amount of output sections is huge.
+  // a .symtab_shndx section when the amount of output sections is huge.
   size_t Size = 0;
   for (BaseCommand *Base : Script->SectionCommands)
     if (isa<OutputSection>(Base))

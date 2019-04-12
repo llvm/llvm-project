@@ -780,10 +780,12 @@ __half_positive(_Tp __value)
 template <class _Compare>
 struct __debug_less
 {
-    _Compare __comp_;
+    _Compare &__comp_;
+    _LIBCPP_CONSTEXPR_AFTER_CXX17
     __debug_less(_Compare& __c) : __comp_(__c) {}
 
     template <class _Tp, class _Up>
+    _LIBCPP_CONSTEXPR_AFTER_CXX17
     bool operator()(_Tp& __x,  _Up& __y)
     {
         bool __r = __comp_(__x, __y);
@@ -793,6 +795,7 @@ struct __debug_less
     }
 
     template <class _LHS, class _RHS>
+    _LIBCPP_CONSTEXPR_AFTER_CXX17
     inline _LIBCPP_INLINE_VISIBILITY
     decltype((void)_VSTD::declval<_Compare&>()(
         _VSTD::declval<_LHS &>(), _VSTD::declval<_RHS &>()))
@@ -802,11 +805,23 @@ struct __debug_less
     }
 
     template <class _LHS, class _RHS>
+    _LIBCPP_CONSTEXPR_AFTER_CXX17
     inline _LIBCPP_INLINE_VISIBILITY
     void __do_compare_assert(long, _LHS &, _RHS &) {}
 };
 
 #endif // _LIBCPP_DEBUG
+
+template <class _Comp>
+struct __comp_ref_type {
+  // Pass the comparator by lvalue reference. Or in debug mode, using a
+  // debugging wrapper that stores a reference.
+#ifndef _LIBCPP_DEBUG
+  typedef typename add_lvalue_reference<_Comp>::type type;
+#else
+  typedef __debug_less<_Comp> type;
+#endif
+};
 
 // all_of
 
@@ -4072,14 +4087,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __sort<_Comp_ref>(__first, __last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
-    __sort<_Comp_ref>(__first, __last, __comp);
-#endif  // _LIBCPP_DEBUG
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
+    _VSTD::__sort<_Comp_ref>(__first, __last, _Comp_ref(__comp));
 }
 
 template <class _RandomAccessIterator>
@@ -4279,14 +4288,8 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 pair<_ForwardIterator, _ForwardIterator>
 equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __equal_range<_Comp_ref>(__first, __last, __value_, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __equal_range<_Comp_ref>(__first, __last, __value_, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _ForwardIterator, class _Tp>
@@ -4316,14 +4319,8 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __binary_search<_Comp_ref>(__first, __last, __value_, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __binary_search<_Comp_ref>(__first, __last, __value_, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _ForwardIterator, class _Tp>
@@ -4367,14 +4364,8 @@ _OutputIterator
 merge(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return _VSTD::__merge<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return _VSTD::__merge<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
@@ -4549,17 +4540,9 @@ inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle, _
     difference_type __buf_size = _VSTD::min(__len1, __len2);
     pair<value_type*, ptrdiff_t> __buf = _VSTD::get_temporary_buffer<value_type>(__buf_size);
     unique_ptr<value_type, __return_temporary_buffer> __h(__buf.first);
-
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return _VSTD::__inplace_merge<_Comp_ref>(__first, __middle, __last, __c, __len1, __len2,
-                                            __buf.first, __buf.second);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return _VSTD::__inplace_merge<_Comp_ref>(__first, __middle, __last, __comp, __len1, __len2,
                                             __buf.first, __buf.second);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _BidirectionalIterator>
@@ -4761,14 +4744,8 @@ stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
         __buf = _VSTD::get_temporary_buffer<value_type>(__len);
         __h.reset(__buf.first);
     }
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __stable_sort<_Comp_ref>(__first, __last, __c, __len, __buf.first, __buf.second);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     __stable_sort<_Comp_ref>(__first, __last, __comp, __len, __buf.first, __buf.second);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _RandomAccessIterator>
@@ -4871,14 +4848,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __sift_up<_Comp_ref>(__first, __last, __c, __last - __first);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     __sift_up<_Comp_ref>(__first, __last, __comp, __last - __first);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _RandomAccessIterator>
@@ -4964,14 +4935,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __pop_heap<_Comp_ref>(__first, __last, __c, __last - __first);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     __pop_heap<_Comp_ref>(__first, __last, __comp, __last - __first);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _RandomAccessIterator>
@@ -5005,14 +4970,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __make_heap<_Comp_ref>(__first, __last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     __make_heap<_Comp_ref>(__first, __last, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _RandomAccessIterator>
@@ -5039,14 +4998,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __sort_heap<_Comp_ref>(__first, __last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     __sort_heap<_Comp_ref>(__first, __last, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _RandomAccessIterator>
@@ -5083,14 +5036,8 @@ void
 partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
              _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __partial_sort<_Comp_ref>(__first, __middle, __last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     __partial_sort<_Comp_ref>(__first, __middle, __last, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _RandomAccessIterator>
@@ -5133,14 +5080,8 @@ _RandomAccessIterator
 partial_sort_copy(_InputIterator __first, _InputIterator __last,
                   _RandomAccessIterator __result_first, _RandomAccessIterator __result_last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __partial_sort_copy<_Comp_ref>(__first, __last, __result_first, __result_last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __partial_sort_copy<_Comp_ref>(__first, __last, __result_first, __result_last, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator, class _RandomAccessIterator>
@@ -5347,14 +5288,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    __nth_element<_Comp_ref>(__first, __nth, __last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     __nth_element<_Comp_ref>(__first, __nth, __last, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _RandomAccessIterator>
@@ -5389,14 +5324,8 @@ bool
 includes(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2,
          _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __includes<_Comp_ref>(__first1, __last1, __first2, __last2, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __includes<_Comp_ref>(__first1, __last1, __first2, __last2, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator1, class _InputIterator2>
@@ -5443,14 +5372,8 @@ _OutputIterator
 set_union(_InputIterator1 __first1, _InputIterator1 __last1,
           _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __set_union<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __set_union<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
@@ -5495,14 +5418,8 @@ _OutputIterator
 set_intersection(_InputIterator1 __first1, _InputIterator1 __last1,
                  _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __set_intersection<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __set_intersection<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
@@ -5549,14 +5466,8 @@ _OutputIterator
 set_difference(_InputIterator1 __first1, _InputIterator1 __last1,
                _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __set_difference<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __set_difference<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
@@ -5608,14 +5519,8 @@ _OutputIterator
 set_symmetric_difference(_InputIterator1 __first1, _InputIterator1 __last1,
                          _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __set_symmetric_difference<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __set_symmetric_difference<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
@@ -5653,14 +5558,8 @@ bool
 lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
                         _InputIterator2 __first2, _InputIterator2 __last2, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __lexicographical_compare<_Comp_ref>(__first1, __last1, __first2, __last2, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __lexicographical_compare<_Comp_ref>(__first1, __last1, __first2, __last2, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _InputIterator1, class _InputIterator2>
@@ -5709,14 +5608,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __next_permutation<_Comp_ref>(__first, __last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __next_permutation<_Comp_ref>(__first, __last, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _BidirectionalIterator>
@@ -5762,14 +5655,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __prev_permutation<_Comp_ref>(__first, __last, __c);
-#else  // _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     return __prev_permutation<_Comp_ref>(__first, __last, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _BidirectionalIterator>
