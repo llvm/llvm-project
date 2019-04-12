@@ -434,6 +434,10 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       assert(LocationKind != Register);
       emitOp(dwarf::DW_OP_xderef);
       break;
+    case dwarf::DW_OP_deref_size:
+      emitOp(dwarf::DW_OP_deref_size);
+      emitUnsigned(Op->getArg(0));
+      break;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

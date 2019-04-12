@@ -1252,6 +1252,26 @@ ConstantRange::OverflowResult ConstantRange::signedSubMayOverflow(
   return OverflowResult::NeverOverflows;
 }
 
+ConstantRange::OverflowResult ConstantRange::unsignedMulMayOverflow(
+    const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return OverflowResult::MayOverflow;
+
+  APInt Min = getUnsignedMin(), Max = getUnsignedMax();
+  APInt OtherMin = Other.getUnsignedMin(), OtherMax = Other.getUnsignedMax();
+  bool Overflow;
+
+  (void) Min.umul_ov(OtherMin, Overflow);
+  if (Overflow)
+    return OverflowResult::AlwaysOverflows;
+
+  (void) Max.umul_ov(OtherMax, Overflow);
+  if (Overflow)
+    return OverflowResult::MayOverflow;
+
+  return OverflowResult::NeverOverflows;
+}
+
 void ConstantRange::print(raw_ostream &OS) const {
   if (isFullSet())
     OS << "full-set";

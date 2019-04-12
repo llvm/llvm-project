@@ -33,7 +33,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
@@ -790,10 +789,7 @@ public:
     return FrameInstructions;
   }
 
-  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst) {
-    FrameInstructions.push_back(Inst);
-    return FrameInstructions.size() - 1;
-  }
+  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst);
 
   /// \name Exception Handling
   /// \{

@@ -268,19 +268,20 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     ConstantInt *Amt = dyn_cast<ConstantInt>(CE->getOperand(1));
     if (!Amt)
       return nullptr;
-    unsigned ShAmt = Amt->getZExtValue();
+    APInt ShAmt = Amt->getValue();
     // Cannot analyze non-byte shifts.
     if ((ShAmt & 7) != 0)
       return nullptr;
-    ShAmt >>= 3;
+    ShAmt.lshrInPlace(3);
 
     // If the extract is known to be all zeros, return zero.
-    if (ByteStart >= CSize-ShAmt)
-      return Constant::getNullValue(IntegerType::get(CE->getContext(),
-                                                     ByteSize*8));
+    if (ShAmt.uge(CSize - ByteStart))
+      return Constant::getNullValue(
+          IntegerType::get(CE->getContext(), ByteSize * 8));
     // If the extract is known to be fully in the input, extract it.
-    if (ByteStart+ByteSize+ShAmt <= CSize)
-      return ExtractConstantBytes(CE->getOperand(0), ByteStart+ShAmt, ByteSize);
+    if (ShAmt.ule(CSize - (ByteStart + ByteSize)))
+      return ExtractConstantBytes(CE->getOperand(0),
+                                  ByteStart + ShAmt.getZExtValue(), ByteSize);
 
     // TODO: Handle the 'partially zero' case.
     return nullptr;
@@ -290,19 +291,20 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     ConstantInt *Amt = dyn_cast<ConstantInt>(CE->getOperand(1));
     if (!Amt)
       return nullptr;
-    unsigned ShAmt = Amt->getZExtValue();
+    APInt ShAmt = Amt->getValue();
     // Cannot analyze non-byte shifts.
     if ((ShAmt & 7) != 0)
       return nullptr;
-    ShAmt >>= 3;
+    ShAmt.lshrInPlace(3);
 
     // If the extract is known to be all zeros, return zero.
-    if (ByteStart+ByteSize <= ShAmt)
-      return Constant::getNullValue(IntegerType::get(CE->getContext(),
-                                                     ByteSize*8));
+    if (ShAmt.uge(ByteStart + ByteSize))
+      return Constant::getNullValue(
+          IntegerType::get(CE->getContext(), ByteSize * 8));
     // If the extract is known to be fully in the input, extract it.
-    if (ByteStart >= ShAmt)
-      return ExtractConstantBytes(CE->getOperand(0), ByteStart-ShAmt, ByteSize);
+    if (ShAmt.ule(ByteStart))
+      return ExtractConstantBytes(CE->getOperand(0),
+                                  ByteStart - ShAmt.getZExtValue(), ByteSize);
 
     // TODO: Handle the 'partially zero' case.
     return nullptr;
@@ -1572,7 +1574,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
     case Instruction::ZExt:
     case Instruction::SExt:
       // We can't evaluate floating point casts or truncations.
-      if (CE1Op0->getType()->isFloatingPointTy())
+      if (CE1Op0->getType()->isFPOrFPVectorTy())
         break;
 
       // If the cast is not actually changing bits, and the second operand is a

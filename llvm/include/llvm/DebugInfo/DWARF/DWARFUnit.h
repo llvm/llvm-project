@@ -462,9 +462,8 @@ public:
   DWARFDie getDIEForOffset(uint32_t Offset) {
     extractDIEsIfNeeded(false);
     assert(!DieArray.empty());
-    auto it = std::lower_bound(
-        DieArray.begin(), DieArray.end(), Offset,
-        [](const DWARFDebugInfoEntry &LHS, uint32_t Offset) {
+    auto it = llvm::lower_bound(
+        DieArray, Offset, [](const DWARFDebugInfoEntry &LHS, uint32_t Offset) {
           return LHS.getOffset() < Offset;
         });
     if (it != DieArray.end() && it->getOffset() == Offset)

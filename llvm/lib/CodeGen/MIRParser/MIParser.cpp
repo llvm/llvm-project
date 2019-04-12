@@ -1854,6 +1854,11 @@ bool MIParser::parseDIExpression(MDNode *&Expr) {
           Elements.push_back(Op);
           continue;
         }
+        if (unsigned Enc = dwarf::getAttributeEncoding(Token.stringValue())) {
+          lex();
+          Elements.push_back(Enc);
+          continue;
+        }
         return error(Twine("invalid DWARF op '") + Token.stringValue() + "'");
       }
 

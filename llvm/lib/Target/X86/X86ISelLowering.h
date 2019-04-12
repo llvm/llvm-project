@@ -608,16 +608,22 @@ namespace llvm {
       FILD,
       FILD_FLAG,
 
+      /// This instruction implements a fp->int store from FP stack
+      /// slots. This corresponds to the fist instruction. It takes a
+      /// chain operand, value to store, address, and glue. The memory VT
+      /// specifies the type to store as.
+      FIST,
+
       /// This instruction implements an extending load to FP stack slots.
       /// This corresponds to the X86::FLD32m / X86::FLD64m. It takes a chain
       /// operand, and ptr to load from. The memory VT specifies the type to
       /// load from.
       FLD,
 
-      /// This instruction implements a truncating store to FP stack
+      /// This instruction implements a truncating store from FP stack
       /// slots. This corresponds to the X86::FST32m / X86::FST64m. It takes a
-      /// chain operand, value to store, and address. The memory VT specifies
-      /// the type to store as.
+      /// chain operand, value to store, address, and glue. The memory VT
+      /// specifies the type to store as.
       FST,
 
       /// This instruction grabs the address of the next argument

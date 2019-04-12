@@ -5327,6 +5327,8 @@ def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 (sext_inreg FPR32:$Rn, i16)), v
           (SCVTFh (EXTRACT_SUBREG FPR32:$Rn, hsub), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 FPR32:$Rn), vecshiftR16:$imm)),
           (SCVTFh (EXTRACT_SUBREG FPR32:$Rn, hsub), vecshiftR16:$imm)>;
+def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn), vecshiftR16:$imm)),
+          (SCVTFh (EXTRACT_SUBREG FPR64:$Rn, hsub), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp
             (and FPR32:$Rn, (i32 65535)),
             vecshiftR16:$imm)),

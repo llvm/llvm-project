@@ -18,6 +18,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -115,6 +116,15 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::ST5, X86::FP5},
       {codeview::RegisterId::ST6, X86::FP6},
       {codeview::RegisterId::ST7, X86::FP7},
+
+      {codeview::RegisterId::MM0, X86::MM0},
+      {codeview::RegisterId::MM1, X86::MM1},
+      {codeview::RegisterId::MM2, X86::MM2},
+      {codeview::RegisterId::MM3, X86::MM3},
+      {codeview::RegisterId::MM4, X86::MM4},
+      {codeview::RegisterId::MM5, X86::MM5},
+      {codeview::RegisterId::MM6, X86::MM6},
+      {codeview::RegisterId::MM7, X86::MM7},
 
       {codeview::RegisterId::XMM0, X86::XMM0},
       {codeview::RegisterId::XMM1, X86::XMM1},
