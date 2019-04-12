@@ -20,10 +20,11 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=COM,NOFLUSHD
 
 
-// COM: [[LLVM_LINK:"*.llvm-link"]]
-// COM-SAME: "{{.*}}hip.amdgcn.bc" "{{.*}}opencl.amdgcn.bc"
-// COM-SAME: "{{.*}}ocml.amdgcn.bc" "{{.*}}ockl.amdgcn.bc"
-// FLUSHD-SAME: {{.*}} "{{.*}}oclc_daz_opt_on.amdgcn.bc"
-// NOFLUSHD-SAME: {{.*}} "{{.*}}oclc_daz_opt_off.amdgcn.bc"
-// COM-SAME: {{.*}} "-o" "{{.*}}-gfx900-linked-{{.*bc}}"
+// COM: {{"[^"]*clang[^"]*"}}
+// COM-SAME: "-mlink-builtin-bitcode" "{{.*}}hip.amdgcn.bc"
+// COM-SAME: "-mlink-builtin-bitcode" "{{.*}}opencl.amdgcn.bc"
+// COM-SAME: "-mlink-builtin-bitcode" "{{.*}}ocml.amdgcn.bc"
+// COM-SAME: "-mlink-builtin-bitcode" "{{.*}}ockl.amdgcn.bc"
+// FLUSHD-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_on.amdgcn.bc"
+// NOFLUSHD-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.amdgcn.bc"
 
