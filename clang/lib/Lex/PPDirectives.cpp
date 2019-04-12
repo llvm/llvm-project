@@ -336,7 +336,10 @@ void Preprocessor::ReadMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
 ///
 /// If not, emit a diagnostic and consume up until the eod.  If EnableMacros is
 /// true, then we consider macros that expand to zero tokens as being ok.
-void Preprocessor::CheckEndOfDirective(const char *DirType, bool EnableMacros) {
+///
+/// Returns the location of the end of the directive.
+SourceLocation Preprocessor::CheckEndOfDirective(const char *DirType,
+                                                 bool EnableMacros) {
   Token Tmp;
   // Lex unexpanded tokens for most directives: macros might expand to zero
   // tokens, causing us to miss diagnosing invalid lines.  Some directives (like
@@ -351,18 +354,19 @@ void Preprocessor::CheckEndOfDirective(const char *DirType, bool EnableMacros) {
   while (Tmp.is(tok::comment))  // Skip comments in -C mode.
     LexUnexpandedToken(Tmp);
 
-  if (Tmp.isNot(tok::eod)) {
-    // Add a fixit in GNU/C99/C++ mode.  Don't offer a fixit for strict-C89,
-    // or if this is a macro-style preprocessing directive, because it is more
-    // trouble than it is worth to insert /**/ and check that there is no /**/
-    // in the range also.
-    FixItHint Hint;
-    if ((LangOpts.GNUMode || LangOpts.C99 || LangOpts.CPlusPlus) &&
-        !CurTokenLexer)
-      Hint = FixItHint::CreateInsertion(Tmp.getLocation(),"//");
-    Diag(Tmp, diag::ext_pp_extra_tokens_at_eol) << DirType << Hint;
-    DiscardUntilEndOfDirective();
-  }
+  if (Tmp.is(tok::eod))
+    return Tmp.getLocation();
+
+  // Add a fixit in GNU/C99/C++ mode.  Don't offer a fixit for strict-C89,
+  // or if this is a macro-style preprocessing directive, because it is more
+  // trouble than it is worth to insert /**/ and check that there is no /**/
+  // in the range also.
+  FixItHint Hint;
+  if ((LangOpts.GNUMode || LangOpts.C99 || LangOpts.CPlusPlus) &&
+      !CurTokenLexer)
+    Hint = FixItHint::CreateInsertion(Tmp.getLocation(),"//");
+  Diag(Tmp, diag::ext_pp_extra_tokens_at_eol) << DirType << Hint;
+  return DiscardUntilEndOfDirective().getEnd();
 }
 
 /// SkipExcludedConditionalBlock - We just read a \#if or related directive and
@@ -827,10 +831,10 @@ void Preprocessor::HandleSkippedDirectiveWhileUsingPCH(Token &Result,
       return HandleIncludeDirective(HashLoc, Result);
     }
     if (SkippingUntilPragmaHdrStop && II->getPPKeywordID() == tok::pp_pragma) {
-      Token P = LookAhead(0);
-      auto *II = P.getIdentifierInfo();
+      Lex(Result);
+      auto *II = Result.getIdentifierInfo();
       if (II && II->getName() == "hdrstop")
-        return HandlePragmaDirective(HashLoc, PIK_HashPragma);
+        return HandlePragmaHdrstop(Result);
     }
   }
   DiscardUntilEndOfDirective();
@@ -1507,7 +1511,13 @@ static void diagnoseAutoModuleImport(
     Preprocessor &PP, SourceLocation HashLoc, Token &IncludeTok,
     ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> Path,
     SourceLocation PathEnd) {
-  assert(PP.getLangOpts().ObjC && "no import syntax available");
+  StringRef ImportKeyword;
+  if (PP.getLangOpts().ObjC)
+    ImportKeyword = "@import";
+  else if (PP.getLangOpts().ModulesTS || PP.getLangOpts().CPlusPlusModules)
+    ImportKeyword = "import";
+  else
+    return; // no import syntax available
 
   SmallString<128> PathString;
   for (size_t I = 0, N = Path.size(); I != N; ++I) {
@@ -1542,8 +1552,8 @@ static void diagnoseAutoModuleImport(
                                /*IsTokenRange=*/false);
   PP.Diag(HashLoc, diag::warn_auto_module_import)
       << IncludeKind << PathString
-      << FixItHint::CreateReplacement(ReplaceRange,
-                                      ("@import " + PathString + ";").str());
+      << FixItHint::CreateReplacement(
+             ReplaceRange, (ImportKeyword + " " + PathString + ";").str());
 }
 
 // Given a vector of path components and a string containing the real
@@ -1613,8 +1623,7 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
 void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
                                           Token &IncludeTok,
                                           const DirectoryLookup *LookupFrom,
-                                          const FileEntry *LookupFromFile,
-                                          bool isImport) {
+                                          const FileEntry *LookupFromFile) {
   Token FilenameTok;
   if (LexHeaderName(FilenameTok))
     return;
@@ -1626,32 +1635,66 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
   }
 
+  // Verify that there is nothing after the filename, other than EOD.  Note
+  // that we allow macros that expand to nothing after the filename, because
+  // this falls into the category of "#include pp-tokens new-line" specified
+  // in C99 6.10.2p4.
+  SourceLocation EndLoc =
+      CheckEndOfDirective(IncludeTok.getIdentifierInfo()->getNameStart(), true);
+
+  auto Action = HandleHeaderIncludeOrImport(HashLoc, IncludeTok, FilenameTok,
+                                            EndLoc, LookupFrom, LookupFromFile);
+  switch (Action.Kind) {
+  case ImportAction::None:
+    break;
+  case ImportAction::ModuleBegin:
+    EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
+                         tok::annot_module_begin, Action.ModuleForHeader);
+    break;
+  case ImportAction::ModuleImport:
+    EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
+                         tok::annot_module_include, Action.ModuleForHeader);
+    break;
+  }
+}
+
+/// Handle either a #include-like directive or an import declaration that names
+/// a header file.
+///
+/// \param HashLoc The location of the '#' token for an include, or
+///        SourceLocation() for an import declaration.
+/// \param IncludeTok The include / include_next / import token.
+/// \param FilenameTok The header-name token.
+/// \param EndLoc The location at which any imported macros become visible.
+/// \param LookupFrom For #include_next, the starting directory for the
+///        directory lookup.
+/// \param LookupFromFile For #include_next, the starting file for the directory
+///        lookup.
+Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
+    SourceLocation HashLoc, Token &IncludeTok, Token &FilenameTok,
+    SourceLocation EndLoc, const DirectoryLookup *LookupFrom,
+    const FileEntry *LookupFromFile) {
   SmallString<128> FilenameBuffer;
   StringRef Filename = getSpelling(FilenameTok, FilenameBuffer);
   SourceLocation CharEnd = FilenameTok.getEndLoc();
 
   CharSourceRange FilenameRange
     = CharSourceRange::getCharRange(FilenameTok.getLocation(), CharEnd);
-  SourceRange DirectiveRange(HashLoc, FilenameTok.getLocation());
   StringRef OriginalFilename = Filename;
   bool isAngled =
     GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  if (Filename.empty()) {
-    DiscardUntilEndOfDirective();
-    return;
-  }
+  if (Filename.empty())
+    return {ImportAction::None};
 
-  // Verify that there is nothing after the filename, other than EOD.  Note that
-  // we allow macros that expand to nothing after the filename, because this
-  // falls into the category of "#include pp-tokens new-line" specified in
-  // C99 6.10.2p4.
-  CheckEndOfDirective(IncludeTok.getIdentifierInfo()->getNameStart(), true);
+  bool IsImportDecl = HashLoc.isInvalid();
+  SourceLocation StartLoc = IsImportDecl ? IncludeTok.getLocation() : HashLoc;
 
   // Complain about attempts to #include files in an audit pragma.
   if (PragmaARCCFCodeAuditedLoc.isValid()) {
-    Diag(HashLoc, diag::err_pp_include_in_arc_cf_code_audited);
+    Diag(StartLoc, diag::err_pp_include_in_arc_cf_code_audited) << IsImportDecl;
     Diag(PragmaARCCFCodeAuditedLoc, diag::note_pragma_entered_here);
 
     // Immediately leave the pragma.
@@ -1660,7 +1703,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
   // Complain about attempts to #include files in an assume-nonnull pragma.
   if (PragmaAssumeNonNullLoc.isValid()) {
-    Diag(HashLoc, diag::err_pp_include_in_assume_nonnull);
+    Diag(StartLoc, diag::err_pp_include_in_assume_nonnull) << IsImportDecl;
     Diag(PragmaAssumeNonNullLoc, diag::note_pragma_entered_here);
 
     // Immediately leave the pragma.
@@ -1735,7 +1778,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         if (File) {
           Diag(FilenameTok,
                diag::err_pp_file_not_found_angled_include_not_fatal)
-              << Filename
+              << Filename << IsImportDecl
               << FixItHint::CreateReplacement(FilenameRange,
                                               "\"" + Filename.str() + "\"");
         }
@@ -1808,7 +1851,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
     if (isPCHThroughHeader(File))
       SkippingUntilPCHThroughHeader = false;
-    return;
+    return {ImportAction::None};
   }
 
   // Should we enter the source file? Set to Skip if either the source file is
@@ -1843,7 +1886,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       Diag(FilenameTok.getLocation(),
            diag::note_implicit_top_level_module_import_here)
           << SuggestedModule.getModule()->getTopLevelModuleName();
-      return;
+      return {ImportAction::None};
     }
 
     // Compute the module access path corresponding to this module.
@@ -1856,9 +1899,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     std::reverse(Path.begin(), Path.end());
 
     // Warn that we're replacing the include/import with a module import.
-    // We only do this in Objective-C, where we have a module-import syntax.
-    if (getLangOpts().ObjC)
-      diagnoseAutoModuleImport(*this, HashLoc, IncludeTok, Path, CharEnd);
+    if (!IsImportDecl)
+      diagnoseAutoModuleImport(*this, StartLoc, IncludeTok, Path, CharEnd);
 
     // Load the module to import its macros. We'll make the declarations
     // visible when the parser gets here.
@@ -1891,7 +1933,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
         CurLexer->cutOffLexing();
       }
-      return;
+      return {ImportAction::None};
     }
   }
 
@@ -1903,10 +1945,19 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (File)
     FileCharacter = std::max(HeaderInfo.getFileDirFlavor(File), FileCharacter);
 
+  // If this is a '#import' or an import-declaration, don't re-enter the file.
+  //
+  // FIXME: If we have a suggested module for a '#include', and we've already
+  // visited this file, don't bother entering it again. We know it has no
+  // further effect.
+  bool EnterOnce =
+      IsImportDecl ||
+      IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import;
+
   // Ask HeaderInfo if we should enter this #include file.  If not, #including
   // this file will have no effect.
   if (Action == Enter && File &&
-      !HeaderInfo.ShouldEnterIncludeFile(*this, File, isImport,
+      !HeaderInfo.ShouldEnterIncludeFile(*this, File, EnterOnce,
                                          getLangOpts().Modules,
                                          SuggestedModule.getModule())) {
     // Even if we've already preprocessed this header once and know that we
@@ -1919,8 +1970,9 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     Action = (SuggestedModule && !getLangOpts().CompilingPCH) ? Import : Skip;
   }
 
-  if (Callbacks) {
+  if (Callbacks && !IsImportDecl) {
     // Notify the callback object that we've seen an inclusion directive.
+    // FIXME: Use a different callback for a pp-import?
     Callbacks->InclusionDirective(
         HashLoc, IncludeTok,
         LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
@@ -1932,10 +1984,15 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   }
 
   if (!File)
-    return;
+    return {ImportAction::None};
 
-  // FIXME: If we have a suggested module, and we've already visited this file,
-  // don't bother entering it again. We know it has no further effect.
+  // If this is a C++20 pp-import declaration, diagnose if we didn't find any
+  // module corresponding to the named header.
+  if (IsImportDecl && !SuggestedModule) {
+    Diag(FilenameTok, diag::err_header_import_not_header_unit)
+      << OriginalFilename << File->getName();
+    return {ImportAction::None};
+  }
 
   // Issue a diagnostic if the name of the file on disk has a different case
   // than the one we're about to open.
@@ -1975,24 +2032,25 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   switch (Action) {
   case Skip:
     // If we don't need to enter the file, stop now.
-    return;
+    return {ImportAction::None};
 
   case IncludeLimitReached:
     // If we reached our include limit and don't want to enter any more files,
     // don't go any further.
-    return;
+    return {ImportAction::None};
 
   case Import: {
     // If this is a module import, make it visible if needed.
     Module *M = SuggestedModule.getModule();
     assert(M && "no module to import");
 
-    makeModuleVisible(M, HashLoc);
+    makeModuleVisible(M, EndLoc);
 
-    if (IncludeTok.getIdentifierInfo()->getPPKeywordID() !=
+    if (IncludeTok.getIdentifierInfo()->getPPKeywordID() ==
         tok::pp___include_macros)
-      EnterAnnotationToken(DirectiveRange, tok::annot_module_include, M);
-    return;
+      return {ImportAction::None};
+
+    return {ImportAction::ModuleImport, M};
   }
 
   case Enter:
@@ -2003,7 +2061,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (IncludeMacroStack.size() == MaxAllowedIncludeStackDepth-1) {
     Diag(FilenameTok, diag::err_pp_include_too_deep);
     HasReachedMaxIncludeDepth = true;
-    return;
+    return {ImportAction::None};
   }
 
   // Look up the file, create a File ID for it.
@@ -2017,7 +2075,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
   // If all is good, enter the new file!
   if (EnterSourceFile(FID, CurDir, FilenameTok.getLocation()))
-    return;
+    return {ImportAction::None};
 
   // Determine if we're switching to building a new submodule, and which one.
   if (auto *M = SuggestedModule.getModule()) {
@@ -2028,7 +2086,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         << M->getFullModuleName();
       Diag(M->getTopLevelModule()->ShadowingModule->DefinitionLoc,
            diag::note_previous_definition);
-      return;
+      return {ImportAction::None};
     }
     // When building a pch, -fmodule-name tells the compiler to textually
     // include headers in the specified module. We are not building the
@@ -2041,21 +2099,23 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     if (getLangOpts().CompilingPCH &&
         isForModuleBuilding(M, getLangOpts().CurrentModule,
                             getLangOpts().ModuleName))
-      return;
+      return {ImportAction::None};
 
     assert(!CurLexerSubmodule && "should not have marked this as a module yet");
     CurLexerSubmodule = M;
 
     // Let the macro handling code know that any future macros are within
     // the new submodule.
-    EnterSubmodule(M, HashLoc, /*ForPragma*/false);
+    EnterSubmodule(M, EndLoc, /*ForPragma*/false);
 
     // Let the parser know that any future declarations are within the new
     // submodule.
     // FIXME: There's no point doing this if we're handling a #__include_macros
     // directive.
-    EnterAnnotationToken(DirectiveRange, tok::annot_module_begin, M);
+    return {ImportAction::ModuleBegin, M};
   }
+
+  return {ImportAction::None};
 }
 
 /// HandleIncludeNextDirective - Implements \#include_next.
@@ -2120,7 +2180,7 @@ void Preprocessor::HandleImportDirective(SourceLocation HashLoc,
       return HandleMicrosoftImportDirective(ImportTok);
     Diag(ImportTok, diag::ext_pp_import_directive);
   }
-  return HandleIncludeDirective(HashLoc, ImportTok, nullptr, nullptr, true);
+  return HandleIncludeDirective(HashLoc, ImportTok);
 }
 
 /// HandleIncludeMacrosDirective - The -imacros command line option turns into a

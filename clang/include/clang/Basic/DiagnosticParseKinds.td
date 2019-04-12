@@ -433,7 +433,7 @@ def err_objc_expected_property_attr : Error<"unknown property attribute %0">;
 def err_objc_properties_require_objc2 : Error<
   "properties are an Objective-C 2 feature">;
 def err_objc_unexpected_attr : Error<
-  "prefix attribute must be followed by an interface or protocol">;
+  "prefix attribute must be followed by an interface, protocol, or implementation">;
 def err_objc_postfix_attribute : Error <
   "postfix attributes are not allowed on Objective-C directives">;
 def err_objc_postfix_attribute_hint : Error <
