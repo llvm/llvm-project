@@ -1893,7 +1893,8 @@ Decl *Sema::ActOnStartCategoryInterface(
 Decl *Sema::ActOnStartCategoryImplementation(
                       SourceLocation AtCatImplLoc,
                       IdentifierInfo *ClassName, SourceLocation ClassLoc,
-                      IdentifierInfo *CatName, SourceLocation CatLoc) {
+                      IdentifierInfo *CatName, SourceLocation CatLoc,
+                      const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
   ObjCCategoryDecl *CatIDecl = nullptr;
   if (IDecl && IDecl->hasDefinition()) {
@@ -1920,6 +1921,9 @@ Decl *Sema::ActOnStartCategoryImplementation(
                                  diag::err_undef_interface)) {
     CDecl->setInvalidDecl();
   }
+
+  ProcessDeclAttributeList(TUScope, CDecl, Attrs);
+  AddPragmaAttributes(TUScope, CDecl);
 
   // FIXME: PushOnScopeChains?
   CurContext->addDecl(CDecl);
@@ -1956,7 +1960,8 @@ Decl *Sema::ActOnStartClassImplementation(
                       SourceLocation AtClassImplLoc,
                       IdentifierInfo *ClassName, SourceLocation ClassLoc,
                       IdentifierInfo *SuperClassname,
-                      SourceLocation SuperClassLoc) {
+                      SourceLocation SuperClassLoc,
+                      const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = nullptr;
   // Check for another declaration kind with the same name.
   NamedDecl *PrevDecl
@@ -2048,6 +2053,9 @@ Decl *Sema::ActOnStartClassImplementation(
   ObjCImplementationDecl* IMPDecl =
     ObjCImplementationDecl::Create(Context, CurContext, IDecl, SDecl,
                                    ClassLoc, AtClassImplLoc, SuperClassLoc);
+
+  ProcessDeclAttributeList(TUScope, IMPDecl, Attrs);
+  AddPragmaAttributes(TUScope, IMPDecl);
 
   if (CheckObjCDeclScope(IMPDecl))
     return ActOnObjCContainerStartDefinition(IMPDecl);

@@ -424,6 +424,10 @@ def SubjectMatcherForObjCCategory : AttrSubjectMatcherRule<"objc_category",
                                                            [ObjCCategory]> {
   let LangOpts = [ObjC];
 }
+def SubjectMatcherForObjCImplementation :
+    AttrSubjectMatcherRule<"objc_implementation", [ObjCImpl]> {
+  let LangOpts = [ObjC];
+}
 def SubjectMatcherForObjCMethod : AttrSubjectMatcherRule<"objc_method",
                                                          [ObjCMethod], [
   AttrSubjectMatcherSubRule<"is_instance", [ObjCInstanceMethod]>
@@ -1751,7 +1755,7 @@ def ObjCRootClass : InheritableAttr {
 
 def ObjCNonLazyClass : Attr {
   let Spellings = [Clang<"objc_nonlazy_class">];
-  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
+  let Subjects = SubjectList<[ObjCInterface, ObjCImpl], ErrorDiag>;
   let LangOpts = [ObjC];
   let Documentation = [ObjCNonLazyClassDocs];
 }
