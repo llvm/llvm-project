@@ -1317,6 +1317,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
 SanitizerMask MSVCToolChain::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res &= ~SanitizerKind::CFIMFCall;

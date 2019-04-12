@@ -74,6 +74,14 @@ define <4 x i32> @test9(<1 x i64> %y) {
   ret <4 x i32> %c
 }
 
+define <1 x i1> @test10() {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:    ret <1 x i1> <i1 icmp eq (i64 bitcast (<1 x double> <double 0xFFFFFFFFFFFFFFFF> to i64), i64 0)>
+;
+  %ret = icmp eq <1 x i64> <i64 bitcast (<1 x double> <double 0xFFFFFFFFFFFFFFFF> to i64)>, zeroinitializer
+  ret <1 x i1> %ret
+}
+
 ; from MultiSource/Benchmarks/Bullet
 define <2 x float> @foo() {
 ; CHECK-LABEL: @foo(

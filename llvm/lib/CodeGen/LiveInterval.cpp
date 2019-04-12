@@ -296,9 +296,7 @@ private:
 
   iterator find(SlotIndex Pos) { return LR->find(Pos); }
 
-  iterator findInsertPos(Segment S) {
-    return std::upper_bound(LR->begin(), LR->end(), S.start);
-  }
+  iterator findInsertPos(Segment S) { return llvm::upper_bound(*LR, S.start); }
 };
 
 //===----------------------------------------------------------------------===//

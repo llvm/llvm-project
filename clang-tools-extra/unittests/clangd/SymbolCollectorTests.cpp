@@ -51,6 +51,9 @@ MATCHER_P(Snippet, S, "") {
   return (arg.Name + arg.CompletionSnippetSuffix).str() == S;
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
+MATCHER_P(TemplateArgs, TemplArgs, "") {
+  return arg.TemplateSpecializationArgs == TemplArgs;
+}
 MATCHER_P(DeclURI, P, "") {
   return StringRef(arg.CanonicalDeclaration.FileURI) == P;
 }
@@ -410,6 +413,71 @@ TEST_F(SymbolCollectorTest, Template) {
                         ForCodeCompletion(false)),
                   AllOf(QName("Tmpl::x"), DeclRange(Header.range("xdecl")),
                         ForCodeCompletion(false))));
+}
+
+TEST_F(SymbolCollectorTest, TemplateArgs) {
+  Annotations Header(R"(
+    template <class X> class $barclasstemp[[Bar]] {};
+    template <class T, class U, template<typename> class Z, int Q>
+    struct [[Tmpl]] { T $xdecl[[x]] = 0; };
+
+    // template-template, non-type and type full spec
+    template <> struct $specdecl[[Tmpl]]<int, bool, Bar, 3> {};
+
+    // template-template, non-type and type partial spec
+    template <class U, int T> struct $partspecdecl[[Tmpl]]<bool, U, Bar, T> {};
+    // instantiation
+    extern template struct Tmpl<float, bool, Bar, 8>;
+    // instantiation
+    template struct Tmpl<double, bool, Bar, 2>;
+
+    template <typename ...> class $fooclasstemp[[Foo]] {};
+    // parameter-packs full spec
+    template<> class $parampack[[Foo]]<Bar<int>, int, double> {};
+    // parameter-packs partial spec
+    template<class T> class $parampackpartial[[Foo]]<T, T> {};
+
+    template <int ...> class $bazclasstemp[[Baz]] {};
+    // non-type parameter-packs full spec
+    template<> class $parampacknontype[[Baz]]<3, 5, 8> {};
+    // non-type parameter-packs partial spec
+    template<int T> class $parampacknontypepartial[[Baz]]<T, T> {};
+
+    template <template <class> class ...> class $fozclasstemp[[Foz]] {};
+    // template-template parameter-packs full spec
+    template<> class $parampacktempltempl[[Foz]]<Bar, Bar> {};
+    // template-template parameter-packs partial spec
+    template<template <class> class T>
+    class $parampacktempltemplpartial[[Foz]]<T, T> {};
+  )");
+  runSymbolCollector(Header.code(), /*Main=*/"");
+  EXPECT_THAT(
+      Symbols,
+      AllOf(
+          Contains(AllOf(QName("Tmpl"), TemplateArgs("<int, bool, Bar, 3>"),
+                         DeclRange(Header.range("specdecl")),
+                         ForCodeCompletion(false))),
+          Contains(AllOf(QName("Tmpl"), TemplateArgs("<bool, U, Bar, T>"),
+                         DeclRange(Header.range("partspecdecl")),
+                         ForCodeCompletion(false))),
+          Contains(AllOf(QName("Foo"), TemplateArgs("<Bar<int>, int, double>"),
+                         DeclRange(Header.range("parampack")),
+                         ForCodeCompletion(false))),
+          Contains(AllOf(QName("Foo"), TemplateArgs("<T, T>"),
+                         DeclRange(Header.range("parampackpartial")),
+                         ForCodeCompletion(false))),
+          Contains(AllOf(QName("Baz"), TemplateArgs("<3, 5, 8>"),
+                         DeclRange(Header.range("parampacknontype")),
+                         ForCodeCompletion(false))),
+          Contains(AllOf(QName("Baz"), TemplateArgs("<T, T>"),
+                         DeclRange(Header.range("parampacknontypepartial")),
+                         ForCodeCompletion(false))),
+          Contains(AllOf(QName("Foz"), TemplateArgs("<Bar, Bar>"),
+                         DeclRange(Header.range("parampacktempltempl")),
+                         ForCodeCompletion(false))),
+          Contains(AllOf(QName("Foz"), TemplateArgs("<T, T>"),
+                         DeclRange(Header.range("parampacktempltemplpartial")),
+                         ForCodeCompletion(false)))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {

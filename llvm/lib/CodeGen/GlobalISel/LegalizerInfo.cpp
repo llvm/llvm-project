@@ -506,9 +506,8 @@ LegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Size) {
   // Find the last element in Vec that has a bitsize equal to or smaller than
   // the requested bit size.
   // That is the element just before the first element that is bigger than Size.
-  auto VecIt = std::upper_bound(
-      Vec.begin(), Vec.end(), Size,
-      [](const uint32_t Size, const SizeAndAction lhs) -> bool {
+  auto VecIt = llvm::upper_bound(
+      Vec, Size, [](const uint32_t Size, const SizeAndAction lhs) -> bool {
         return Size < lhs.first;
       });
   assert(VecIt != Vec.begin() && "Does Vec not start with size 1?");

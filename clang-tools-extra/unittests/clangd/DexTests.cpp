@@ -11,6 +11,7 @@
 #include "TestIndex.h"
 #include "index/Index.h"
 #include "index/Merge.h"
+#include "index/SymbolID.h"
 #include "index/dex/Dex.h"
 #include "index/dex/Iterator.h"
 #include "index/dex/Token.h"
@@ -24,6 +25,7 @@
 
 using ::testing::AnyOf;
 using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
 namespace clang {
@@ -719,30 +721,30 @@ TEST(DexTest, TemplateSpecialization) {
 
   S = symbol("TempSpec");
   S.ID = SymbolID("1");
+  S.TemplateSpecializationArgs = "<int, bool>";
   S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
       index::SymbolProperty::TemplateSpecialization);
   B.insert(S);
 
   S = symbol("TempSpec");
   S.ID = SymbolID("2");
+  S.TemplateSpecializationArgs = "<int, U>";
   S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
       index::SymbolProperty::TemplatePartialSpecialization);
   B.insert(S);
 
   auto I = dex::Dex::build(std::move(B).build(), RefSlab());
   FuzzyFindRequest Req;
-  Req.Query = "TempSpec";
   Req.AnyScope = true;
 
-  std::vector<Symbol> Symbols;
-  I->fuzzyFind(Req, [&Symbols](const Symbol &Sym) { Symbols.push_back(Sym); });
-  EXPECT_EQ(Symbols.size(), 1U);
-  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
-               static_cast<index::SymbolPropertySet>(
-                   index::SymbolProperty::TemplateSpecialization));
-  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
-               static_cast<index::SymbolPropertySet>(
-                   index::SymbolProperty::TemplatePartialSpecialization));
+  Req.Query = "TempSpec";
+  EXPECT_THAT(match(*I, Req),
+              UnorderedElementsAre("TempSpec", "TempSpec<int, bool>",
+                                   "TempSpec<int, U>"));
+
+  // FIXME: Add filtering for template argument list.
+  Req.Query = "TempSpec<int";
+  EXPECT_THAT(match(*I, Req), IsEmpty());
 }
 
 } // namespace

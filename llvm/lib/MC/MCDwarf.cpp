@@ -546,7 +546,7 @@ Expected<unsigned>
 MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    StringRef &FileName,
                                    Optional<MD5::MD5Result> Checksum,
-                                   Optional<StringRef> &Source,
+                                   Optional<StringRef> Source,
                                    unsigned FileNumber) {
   if (Directory == CompilationDir)
     Directory = "";
@@ -606,11 +606,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     // For FileNames with no directories a DirIndex of 0 is used.
     DirIndex = 0;
   } else {
-    DirIndex = 0;
-    for (unsigned End = MCDwarfDirs.size(); DirIndex < End; DirIndex++) {
-      if (Directory == MCDwarfDirs[DirIndex])
-        break;
-    }
+    DirIndex = llvm::find(MCDwarfDirs, Directory) - MCDwarfDirs.begin();
     if (DirIndex >= MCDwarfDirs.size())
       MCDwarfDirs.push_back(Directory);
     // The DirIndex is one based, as DirIndex of 0 is used for FileNames with

@@ -329,7 +329,6 @@ void HIPToolChain::addClangTargetOptions(
   for (auto Lib : BCLibs)
     addBCLib(getDriver(), DriverArgs, CC1Args, LibraryPaths, Lib);
 
-
   // Workaround for PyTorch sort index and put_accumulate issue.
   // pre-linking optimization causes sort index to fail. see JIRA ticket
   // SWDEV-176929. As a workaround, disable pre-linking optimization.

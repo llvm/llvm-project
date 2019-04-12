@@ -94,7 +94,8 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     std::string Scope = Sym.Scope;
     llvm::StringRef ScopeRef = Scope;
     ScopeRef.consume_back("::");
-    SymbolInformation Info = {Sym.Name, SK, L, ScopeRef};
+    SymbolInformation Info = {(Sym.Name + Sym.TemplateSpecializationArgs).str(),
+                              SK, L, ScopeRef};
 
     SymbolQualitySignals Quality;
     Quality.merge(Sym);

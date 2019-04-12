@@ -425,6 +425,8 @@ bool toolchains::PS4CPU::HasNativeLLVMSupport() const { return true; }
 SanitizerMask toolchains::PS4CPU::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
   return Res;
 }

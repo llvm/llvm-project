@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"

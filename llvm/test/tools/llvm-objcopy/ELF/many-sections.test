@@ -3,6 +3,7 @@ RUN: llvm-objcopy %t %t2
 RUN: llvm-readobj --file-headers %t2 | FileCheck --check-prefix=EHDR %s
 RUN: llvm-readobj --sections %t2 | FileCheck --check-prefix=SECS %s
 RUN: llvm-readobj --symbols %t2 | grep "Symbol {" | wc -l | FileCheck --check-prefix=SYMS %s
+RUN: llvm-readobj -symbols %t2 | FileCheck %s --check-prefix=SYM_SEC_IDS
 
 EHDR:      Format: ELF64-x86-64
 EHDR-NEXT: Arch: x86_64
@@ -51,3 +52,52 @@ SECS-NEXT: AddressAlignment: 4
 SECS-NEXT: EntrySize: 4
 SECS: Index: 65287
 SYMS: 65284
+
+SYM_SEC_IDS:         Section: s9 (0xFEFF)
+SYM_SEC_IDS-NEXT:  }
+SYM_SEC_IDS-NEXT:  Symbol {
+SYM_SEC_IDS-NEXT:    Name: s9 (37)
+SYM_SEC_IDS-NEXT:    Value: 0x0
+SYM_SEC_IDS-NEXT:    Size: 0
+SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
+SYM_SEC_IDS-NEXT:    Type: None (0x0)
+SYM_SEC_IDS-NEXT:    Other: 0
+SYM_SEC_IDS-NEXT:    Section: s9 (0xFF01)
+SYM_SEC_IDS-NEXT:  }
+SYM_SEC_IDS-NEXT:  Symbol {
+SYM_SEC_IDS-NEXT:    Name: s9 (37)
+SYM_SEC_IDS-NEXT:    Value: 0x0
+SYM_SEC_IDS-NEXT:    Size: 0
+SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
+SYM_SEC_IDS-NEXT:    Type: None (0x0)
+SYM_SEC_IDS-NEXT:    Other: 0
+SYM_SEC_IDS-NEXT:    Section: s9 (0xFF00)
+SYM_SEC_IDS-NEXT:  }
+SYM_SEC_IDS-NEXT:  Symbol {
+SYM_SEC_IDS-NEXT:    Name: s9 (37)
+SYM_SEC_IDS-NEXT:    Value: 0x0
+SYM_SEC_IDS-NEXT:    Size: 0
+SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
+SYM_SEC_IDS-NEXT:    Type: None (0x0)
+SYM_SEC_IDS-NEXT:    Other: 0
+SYM_SEC_IDS-NEXT:    Section: s9 (0x1982)
+SYM_SEC_IDS-NEXT:  }
+SYM_SEC_IDS-NEXT:  Symbol {
+SYM_SEC_IDS-NEXT:    Name: s9 (37)
+SYM_SEC_IDS-NEXT:    Value: 0x0
+SYM_SEC_IDS-NEXT:    Size: 0
+SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
+SYM_SEC_IDS-NEXT:    Type: None (0x0)
+SYM_SEC_IDS-NEXT:    Other: 0
+SYM_SEC_IDS-NEXT:    Section: s9 (0xFF03)
+SYM_SEC_IDS-NEXT:  }
+SYM_SEC_IDS-NEXT:  Symbol {
+SYM_SEC_IDS-NEXT:    Name: s9 (37)
+SYM_SEC_IDS-NEXT:    Value: 0x0
+SYM_SEC_IDS-NEXT:    Size: 0
+SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
+SYM_SEC_IDS-NEXT:    Type: None (0x0)
+SYM_SEC_IDS-NEXT:    Other: 0
+SYM_SEC_IDS-NEXT:    Section: s9 (0xFF04)
+SYM_SEC_IDS-NEXT:  }
+

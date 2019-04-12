@@ -282,6 +282,7 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   OS.write(static_cast<uint8_t>(Sym.SymInfo.Lang));
   writeVar(Strings.index(Sym.Name), OS);
   writeVar(Strings.index(Sym.Scope), OS);
+  writeVar(Strings.index(Sym.TemplateSpecializationArgs), OS);
   writeLocation(Sym.Definition, Strings, OS);
   writeLocation(Sym.CanonicalDeclaration, Strings, OS);
   writeVar(Sym.References, OS);
@@ -309,6 +310,7 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   Sym.SymInfo.Lang = static_cast<index::SymbolLanguage>(Data.consume8());
   Sym.Name = Data.consumeString(Strings);
   Sym.Scope = Data.consumeString(Strings);
+  Sym.TemplateSpecializationArgs = Data.consumeString(Strings);
   Sym.Definition = readLocation(Data, Strings);
   Sym.CanonicalDeclaration = readLocation(Data, Strings);
   Sym.References = Data.consumeVar();

@@ -1497,9 +1497,8 @@ bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {
   if (funcName.empty())
     return false;
 
-  std::vector<VecDesc>::const_iterator I = std::lower_bound(
-      VectorDescs.begin(), VectorDescs.end(), funcName,
-      compareWithScalarFnName);
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(VectorDescs, funcName, compareWithScalarFnName);
   return I != VectorDescs.end() && StringRef(I->ScalarFnName) == funcName;
 }
 
@@ -1508,8 +1507,8 @@ StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
   F = sanitizeFunctionName(F);
   if (F.empty())
     return F;
-  std::vector<VecDesc>::const_iterator I = std::lower_bound(
-      VectorDescs.begin(), VectorDescs.end(), F, compareWithScalarFnName);
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(VectorDescs, F, compareWithScalarFnName);
   while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == F) {
     if (I->VectorizationFactor == VF)
       return I->VectorFnName;
@@ -1524,8 +1523,8 @@ StringRef TargetLibraryInfoImpl::getScalarizedFunction(StringRef F,
   if (F.empty())
     return F;
 
-  std::vector<VecDesc>::const_iterator I = std::lower_bound(
-      ScalarDescs.begin(), ScalarDescs.end(), F, compareWithVectorFnName);
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(ScalarDescs, F, compareWithVectorFnName);
   if (I == VectorDescs.end() || StringRef(I->VectorFnName) != F)
     return StringRef();
   VF = I->VectorizationFactor;

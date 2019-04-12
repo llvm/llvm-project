@@ -457,6 +457,17 @@ def nonQuadwOffsetStore : PatFrag<(ops node:$val, node:$ptr),
   return !isOffsetMultipleOf(N, 16);
 }]>;
 
+// PatFrag for binary operation whose operands are both non-constant
+class BinOpWithoutSImm16Operand<SDNode opcode> :
+  PatFrag<(ops node:$left, node:$right), (opcode node:$left, node:$right), [{
+    int16_t Imm;
+    return !isIntS16Immediate(N->getOperand(0), Imm)
+             && !isIntS16Immediate(N->getOperand(1), Imm);
+}]>;
+
+def add_without_simm16 : BinOpWithoutSImm16Operand<add>;
+def mul_without_simm16 : BinOpWithoutSImm16Operand<mul>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Flag Definitions.
 

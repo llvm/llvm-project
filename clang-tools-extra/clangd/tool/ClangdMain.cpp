@@ -228,7 +228,7 @@ static llvm::cl::opt<std::string> ClangTidyChecks(
 static llvm::cl::opt<bool> EnableClangTidy(
     "clang-tidy",
     llvm::cl::desc("Enable clang-tidy diagnostics."),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 static llvm::cl::opt<bool> SuggestMissingIncludes(
     "suggest-missing-includes",

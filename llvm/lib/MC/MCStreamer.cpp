@@ -107,6 +107,11 @@ raw_ostream &MCStreamer::GetCommentOS() {
   return nulls();
 }
 
+unsigned MCStreamer::getNumFrameInfos() { return DwarfFrameInfos.size(); }
+ArrayRef<MCDwarfFrameInfo> MCStreamer::getDwarfFrameInfos() const {
+  return DwarfFrameInfos;
+}
+
 void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
 void MCStreamer::addExplicitComment(const Twine &T) {}

@@ -554,61 +554,65 @@ std::error_code createELFDumper(const object::ObjectFile *Obj,
 // Iterate through the versions needed section, and place each Elf_Vernaux
 // in the VersionMap according to its index.
 template <class ELFT>
-void ELFDumper<ELFT>::LoadVersionNeeds(const Elf_Shdr *sec) const {
-  unsigned vn_size = sec->sh_size;  // Size of section in bytes
-  unsigned vn_count = sec->sh_info; // Number of Verneed entries
-  const char *sec_start = reinterpret_cast<const char *>(
-      ObjF->getELFFile()->base() + sec->sh_offset);
-  const char *sec_end = sec_start + vn_size;
+void ELFDumper<ELFT>::LoadVersionNeeds(const Elf_Shdr *Sec) const {
+  unsigned VerneedSize = Sec->sh_size;    // Size of section in bytes
+  unsigned VerneedEntries = Sec->sh_info; // Number of Verneed entries
+  const uint8_t *VerneedStart = reinterpret_cast<const uint8_t *>(
+      ObjF->getELFFile()->base() + Sec->sh_offset);
+  const uint8_t *VerneedEnd = VerneedStart + VerneedSize;
   // The first Verneed entry is at the start of the section.
-  const char *p = sec_start;
-  for (unsigned i = 0; i < vn_count; i++) {
-    if (p + sizeof(Elf_Verneed) > sec_end)
+  const uint8_t *VerneedBuf = VerneedStart;
+  for (unsigned VerneedIndex = 0; VerneedIndex < VerneedEntries;
+       ++VerneedIndex) {
+    if (VerneedBuf + sizeof(Elf_Verneed) > VerneedEnd)
       report_fatal_error("Section ended unexpectedly while scanning "
                          "version needed records.");
-    const Elf_Verneed *vn = reinterpret_cast<const Elf_Verneed *>(p);
-    if (vn->vn_version != ELF::VER_NEED_CURRENT)
+    const Elf_Verneed *Verneed =
+        reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
+    if (Verneed->vn_version != ELF::VER_NEED_CURRENT)
       report_fatal_error("Unexpected verneed version");
     // Iterate through the Vernaux entries
-    const char *paux = p + vn->vn_aux;
-    for (unsigned j = 0; j < vn->vn_cnt; j++) {
-      if (paux + sizeof(Elf_Vernaux) > sec_end)
+    const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
+    for (unsigned VernauxIndex = 0; VernauxIndex < Verneed->vn_cnt;
+         ++VernauxIndex) {
+      if (VernauxBuf + sizeof(Elf_Vernaux) > VerneedEnd)
         report_fatal_error("Section ended unexpected while scanning auxiliary "
                            "version needed records.");
-      const Elf_Vernaux *vna = reinterpret_cast<const Elf_Vernaux *>(paux);
-      size_t index = vna->vna_other & ELF::VERSYM_VERSION;
-      if (index >= VersionMap.size())
-        VersionMap.resize(index + 1);
-      VersionMap[index] = VersionMapEntry(vna);
-      paux += vna->vna_next;
+      const Elf_Vernaux *Vernaux =
+          reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
+      size_t Index = Vernaux->vna_other & ELF::VERSYM_VERSION;
+      if (Index >= VersionMap.size())
+        VersionMap.resize(Index + 1);
+      VersionMap[Index] = VersionMapEntry(Vernaux);
+      VernauxBuf += Vernaux->vna_next;
     }
-    p += vn->vn_next;
+    VerneedBuf += Verneed->vn_next;
   }
 }
 
 // Iterate through the version definitions, and place each Elf_Verdef
 // in the VersionMap according to its index.
 template <class ELFT>
-void ELFDumper<ELFT>::LoadVersionDefs(const Elf_Shdr *sec) const {
-  unsigned vd_size = sec->sh_size;  // Size of section in bytes
-  unsigned vd_count = sec->sh_info; // Number of Verdef entries
-  const char *sec_start = reinterpret_cast<const char *>(
-      ObjF->getELFFile()->base() + sec->sh_offset);
-  const char *sec_end = sec_start + vd_size;
+void ELFDumper<ELFT>::LoadVersionDefs(const Elf_Shdr *Sec) const {
+  unsigned VerdefSize = Sec->sh_size;    // Size of section in bytes
+  unsigned VerdefEntries = Sec->sh_info; // Number of Verdef entries
+  const uint8_t *VerdefStart = reinterpret_cast<const uint8_t *>(
+      ObjF->getELFFile()->base() + Sec->sh_offset);
+  const uint8_t *VerdefEnd = VerdefStart + VerdefSize;
   // The first Verdef entry is at the start of the section.
-  const char *p = sec_start;
-  for (unsigned i = 0; i < vd_count; i++) {
-    if (p + sizeof(Elf_Verdef) > sec_end)
+  const uint8_t *VerdefBuf = VerdefStart;
+  for (unsigned VerdefIndex = 0; VerdefIndex < VerdefEntries; ++VerdefIndex) {
+    if (VerdefBuf + sizeof(Elf_Verdef) > VerdefEnd)
       report_fatal_error("Section ended unexpectedly while scanning "
                          "version definitions.");
-    const Elf_Verdef *vd = reinterpret_cast<const Elf_Verdef *>(p);
-    if (vd->vd_version != ELF::VER_DEF_CURRENT)
+    const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
+    if (Verdef->vd_version != ELF::VER_DEF_CURRENT)
       report_fatal_error("Unexpected verdef version");
-    size_t index = vd->vd_ndx & ELF::VERSYM_VERSION;
-    if (index >= VersionMap.size())
-      VersionMap.resize(index + 1);
-    VersionMap[index] = VersionMapEntry(vd);
-    p += vd->vd_next;
+    size_t Index = Verdef->vd_ndx & ELF::VERSYM_VERSION;
+    if (Index >= VersionMap.size())
+      VersionMap.resize(Index + 1);
+    VersionMap[Index] = VersionMapEntry(Verdef);
+    VerdefBuf += Verdef->vd_next;
   }
 }
 

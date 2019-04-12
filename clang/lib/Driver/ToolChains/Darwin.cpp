@@ -2375,6 +2375,8 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;

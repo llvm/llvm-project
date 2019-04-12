@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
@@ -43,6 +42,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 struct MCCodePaddingContext;
 class MCContext;
+struct MCDwarfFrameInfo;
 class MCExpr;
 class MCInst;
 class MCInstPrinter;
@@ -266,10 +266,8 @@ public:
   /// closed. Otherwise, issue an error and return null.
   WinEH::FrameInfo *EnsureValidWinFrameInfo(SMLoc Loc);
 
-  unsigned getNumFrameInfos() { return DwarfFrameInfos.size(); }
-  ArrayRef<MCDwarfFrameInfo> getDwarfFrameInfos() const {
-    return DwarfFrameInfos;
-  }
+  unsigned getNumFrameInfos();
+  ArrayRef<MCDwarfFrameInfo> getDwarfFrameInfos() const;
 
   bool hasUnfinishedDwarfFrameInfo();
 

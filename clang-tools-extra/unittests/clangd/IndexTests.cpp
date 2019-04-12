@@ -22,6 +22,7 @@ using testing::_;
 using testing::AllOf;
 using testing::AnyOf;
 using testing::ElementsAre;
+using testing::IsEmpty;
 using testing::Pair;
 using testing::Pointee;
 using testing::UnorderedElementsAre;
@@ -187,35 +188,35 @@ TEST(MemIndexTest, TemplateSpecialization) {
   SymbolSlab::Builder B;
 
   Symbol S = symbol("TempSpec");
-  S.ID = SymbolID("0");
+  S.ID = SymbolID("1");
   B.insert(S);
 
   S = symbol("TempSpec");
-  S.ID = SymbolID("1");
+  S.ID = SymbolID("2");
+  S.TemplateSpecializationArgs = "<int, bool>";
   S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
       index::SymbolProperty::TemplateSpecialization);
   B.insert(S);
 
   S = symbol("TempSpec");
-  S.ID = SymbolID("2");
+  S.ID = SymbolID("3");
+  S.TemplateSpecializationArgs = "<int, U>";
   S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
       index::SymbolProperty::TemplatePartialSpecialization);
   B.insert(S);
 
   auto I = MemIndex::build(std::move(B).build(), RefSlab());
   FuzzyFindRequest Req;
-  Req.Query = "TempSpec";
   Req.AnyScope = true;
 
-  std::vector<Symbol> Symbols;
-  I->fuzzyFind(Req, [&Symbols](const Symbol &Sym) { Symbols.push_back(Sym); });
-  EXPECT_EQ(Symbols.size(), 1U);
-  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
-               static_cast<index::SymbolPropertySet>(
-                   index::SymbolProperty::TemplateSpecialization));
-  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
-               static_cast<index::SymbolPropertySet>(
-                   index::SymbolProperty::TemplatePartialSpecialization));
+  Req.Query = "TempSpec";
+  EXPECT_THAT(match(*I, Req),
+              UnorderedElementsAre("TempSpec", "TempSpec<int, bool>",
+                                   "TempSpec<int, U>"));
+
+  // FIXME: Add filtering for template argument list.
+  Req.Query = "TempSpec<int";
+  EXPECT_THAT(match(*I, Req), IsEmpty());
 }
 
 TEST(MergeIndexTest, Lookup) {
