@@ -693,8 +693,7 @@ bool RegisterCoalescer::hasOtherReachingDefs(LiveInterval &IntA,
 
   for (LiveRange::Segment &ASeg : IntA.segments) {
     if (ASeg.valno != AValNo) continue;
-    LiveInterval::iterator BI =
-      std::upper_bound(IntB.begin(), IntB.end(), ASeg.start);
+    LiveInterval::iterator BI = llvm::upper_bound(IntB, ASeg.start);
     if (BI != IntB.begin())
       --BI;
     for (; BI != IntB.end() && ASeg.end >= BI->start; ++BI) {

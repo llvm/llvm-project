@@ -30,10 +30,6 @@ using namespace llvm;
 
 STATISTIC(NumSimplified, "Number of QPX load splats simplified");
 
-namespace llvm {
-  void initializePPCQPXLoadSplatPass(PassRegistry&);
-}
-
 namespace {
   struct PPCQPXLoadSplat : public MachineFunctionPass {
     static char ID;

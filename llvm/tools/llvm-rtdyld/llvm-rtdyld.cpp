@@ -270,7 +270,6 @@ uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
     outs() << "allocateCodeSection(Size = " << Size << ", Alignment = "
            << Alignment << ", SectionName = " << SectionName << ")\n";
 
-  dbgs() << "  Registering code section \"" << SectionName << "\"\n";
   if (SecIDMap)
     (*SecIDMap)[SectionName] = SectionID;
 
@@ -299,7 +298,6 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
     outs() << "allocateDataSection(Size = " << Size << ", Alignment = "
            << Alignment << ", SectionName = " << SectionName << ")\n";
 
-  dbgs() << "  Registering code section \"" << SectionName << "\"\n";
   if (SecIDMap)
     (*SecIDMap)[SectionName] = SectionID;
 
@@ -742,28 +740,39 @@ static int linkAndVerify() {
   TrivialMemoryManager MemMgr;
   doPreallocation(MemMgr);
 
-  using StubOffsets = StringMap<uint32_t>;
-  using SectionStubs = StringMap<StubOffsets>;
-  using FileStubs = StringMap<SectionStubs>;
+  struct StubID {
+    unsigned SectionID;
+    uint32_t Offset;
+  };
+  using StubInfos = StringMap<StubID>;
+  using StubContainers = StringMap<StubInfos>;
 
-  FileStubs StubMap;
+  StubContainers StubMap;
   RuntimeDyld Dyld(MemMgr, MemMgr);
   Dyld.setProcessAllSections(true);
 
-  Dyld.setNotifyStubEmitted(
-      [&StubMap](StringRef FilePath, StringRef SectionName,
-                 StringRef SymbolName, uint32_t StubOffset) {
-        StubMap[sys::path::filename(FilePath)][SectionName][SymbolName] =
-          StubOffset;
-      });
+  Dyld.setNotifyStubEmitted([&StubMap](StringRef FilePath,
+                                       StringRef SectionName,
+                                       StringRef SymbolName, unsigned SectionID,
+                                       uint32_t StubOffset) {
+    std::string ContainerName =
+        (sys::path::filename(FilePath) + "/" + SectionName).str();
+    StubMap[ContainerName][SymbolName] = {SectionID, StubOffset};
+  });
 
-  auto GetSymbolAddress =
-    [&Dyld, &MemMgr](StringRef Symbol) -> Expected<JITTargetAddress> {
-      if (auto InternalSymbol = Dyld.getSymbol(Symbol))
-        return InternalSymbol.getAddress();
+  auto GetSymbolInfo =
+      [&Dyld, &MemMgr](
+          StringRef Symbol) -> Expected<RuntimeDyldChecker::MemoryRegionInfo> {
+    RuntimeDyldChecker::MemoryRegionInfo SymInfo;
 
+    // First get the target address.
+    if (auto InternalSymbol = Dyld.getSymbol(Symbol))
+      SymInfo.TargetAddress = InternalSymbol.getAddress();
+    else {
+      // Symbol not found in RuntimeDyld. Fall back to external lookup.
 #ifdef _MSC_VER
-      using ExpectedLookupResult = MSVCPExpected<JITSymbolResolver::LookupResult>;
+      using ExpectedLookupResult =
+          MSVCPExpected<JITSymbolResolver::LookupResult>;
 #else
       using ExpectedLookupResult = Expected<JITSymbolResolver::LookupResult>;
 #endif
@@ -771,11 +780,10 @@ static int linkAndVerify() {
       auto ResultP = std::make_shared<std::promise<ExpectedLookupResult>>();
       auto ResultF = ResultP->get_future();
 
-      MemMgr.lookup(
-        JITSymbolResolver::LookupSet({Symbol}),
-        [=](Expected<JITSymbolResolver::LookupResult> Result) {
-          ResultP->set_value(std::move(Result));
-        });
+      MemMgr.lookup(JITSymbolResolver::LookupSet({Symbol}),
+                    [=](Expected<JITSymbolResolver::LookupResult> Result) {
+                      ResultP->set_value(std::move(Result));
+                    });
 
       auto Result = ResultF.get();
       if (!Result)
@@ -784,61 +792,67 @@ static int linkAndVerify() {
       auto I = Result->find(Symbol);
       assert(I != Result->end() &&
              "Expected symbol address if no error occurred");
-      return I->second.getAddress();
-    };
+      SymInfo.TargetAddress = I->second.getAddress();
+    }
 
-  auto IsSymbolValid =
-    [&Dyld, GetSymbolAddress](StringRef Symbol) {
-      if (Dyld.getSymbol(Symbol))
-        return true;
-      auto Addr = GetSymbolAddress(Symbol);
-      if (!Addr) {
-        logAllUnhandledErrors(Addr.takeError(), errs(), "RTDyldChecker: ");
-        return false;
+    // Now find the symbol content if possible (otherwise leave content as a
+    // default-constructed StringRef).
+    if (auto *SymAddr = Dyld.getSymbolLocalAddress(Symbol)) {
+      unsigned SectionID = Dyld.getSymbolSectionID(Symbol);
+      if (SectionID != ~0U) {
+        char *CSymAddr = static_cast<char *>(SymAddr);
+        StringRef SecContent = Dyld.getSectionContent(SectionID);
+        uint64_t SymSize = SecContent.size() - (CSymAddr - SecContent.data());
+        SymInfo.Content = StringRef(CSymAddr, SymSize);
       }
-      return *Addr != 0;
-    };
+    }
+    return SymInfo;
+  };
+
+  auto IsSymbolValid = [&Dyld, GetSymbolInfo](StringRef Symbol) {
+    if (Dyld.getSymbol(Symbol))
+      return true;
+    auto SymInfo = GetSymbolInfo(Symbol);
+    if (!SymInfo) {
+      logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
+      return false;
+    }
+    return SymInfo->TargetAddress != 0;
+  };
 
   FileToSectionIDMap FileToSecIDMap;
 
-  auto GetSectionAddress =
-    [&Dyld, &FileToSecIDMap](StringRef FileName, StringRef SectionName) {
-      unsigned SectionID =
-        ExitOnErr(getSectionId(FileToSecIDMap, FileName, SectionName));
-      return Dyld.getSectionLoadAddress(SectionID);
-    };
+  auto GetSectionInfo = [&Dyld, &FileToSecIDMap](StringRef FileName,
+                                                 StringRef SectionName)
+      -> Expected<RuntimeDyldChecker::MemoryRegionInfo> {
+    auto SectionID = getSectionId(FileToSecIDMap, FileName, SectionName);
+    if (!SectionID)
+      return SectionID.takeError();
+    RuntimeDyldChecker::MemoryRegionInfo SecInfo;
+    SecInfo.TargetAddress = Dyld.getSectionLoadAddress(*SectionID);
+    SecInfo.Content = Dyld.getSectionContent(*SectionID);
+    return SecInfo;
+  };
 
-  auto GetSectionContent =
-    [&Dyld, &FileToSecIDMap](StringRef FileName, StringRef SectionName) {
-      unsigned SectionID =
-        ExitOnErr(getSectionId(FileToSecIDMap, FileName, SectionName));
-      return Dyld.getSectionContent(SectionID);
-    };
-
-
-  auto GetSymbolContents =
-    [&Dyld](StringRef Symbol) {
-      auto *SymAddr = static_cast<char*>(Dyld.getSymbolLocalAddress(Symbol));
-      if (!SymAddr)
-        return StringRef();
-      unsigned SectionID = Dyld.getSymbolSectionID(Symbol);
-      if (SectionID == ~0U)
-        return StringRef();
-      StringRef SecContent = Dyld.getSectionContent(SectionID);
-      uint64_t SymSize = SecContent.size() - (SymAddr - SecContent.data());
-      return StringRef(SymAddr, SymSize);
-    };
-
-  auto GetStubOffset =
-    [&StubMap](StringRef FileName, StringRef SectionName, StringRef SymbolName) -> Expected<uint32_t> {
-      if (!StubMap.count(FileName))
-        return make_error<StringError>("File name not found", inconvertibleErrorCode());
-      if (!StubMap[FileName].count(SectionName))
-        return make_error<StringError>("Section name not found", inconvertibleErrorCode());
-      if (!StubMap[FileName][SectionName].count(SymbolName))
-        return make_error<StringError>("Symbol name not found", inconvertibleErrorCode());
-      return StubMap[FileName][SectionName][SymbolName];
-    };
+  auto GetStubInfo = [&Dyld, &StubMap](StringRef StubContainer,
+                                       StringRef SymbolName)
+      -> Expected<RuntimeDyldChecker::MemoryRegionInfo> {
+    if (!StubMap.count(StubContainer))
+      return make_error<StringError>("Stub container not found: " +
+                                         StubContainer,
+                                     inconvertibleErrorCode());
+    if (!StubMap[StubContainer].count(SymbolName))
+      return make_error<StringError>("Symbol name " + SymbolName +
+                                         " in stub container " + StubContainer,
+                                     inconvertibleErrorCode());
+    auto &SI = StubMap[StubContainer][SymbolName];
+    RuntimeDyldChecker::MemoryRegionInfo StubMemInfo;
+    StubMemInfo.TargetAddress =
+        Dyld.getSectionLoadAddress(SI.SectionID) + SI.Offset;
+    StubMemInfo.Content =
+        Dyld.getSectionContent(SI.SectionID).substr(SI.Offset);
+    return StubMemInfo;
+  };
 
   // We will initialize this below once we have the first object file and can
   // know the endianness.
@@ -869,19 +883,12 @@ static int linkAndVerify() {
     ObjectFile &Obj = **MaybeObj;
 
     if (!Checker)
-      Checker =
-        llvm::make_unique<RuntimeDyldChecker>(IsSymbolValid, GetSymbolAddress,
-                                              GetSymbolContents,
-                                              GetSectionAddress,
-                                              GetSectionContent, GetStubOffset,
-                                              Obj.isLittleEndian()
-                                                ? support::little
-                                                : support::big,
-                                              Disassembler.get(),
-                                              InstPrinter.get(), dbgs());
+      Checker = llvm::make_unique<RuntimeDyldChecker>(
+          IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo,
+          GetStubInfo, Obj.isLittleEndian() ? support::little : support::big,
+          Disassembler.get(), InstPrinter.get(), dbgs());
 
     auto FileName = sys::path::filename(InputFile);
-    dbgs() << "In " << FileName << ":\n";
     MemMgr.setSectionIDsMap(&FileToSecIDMap[FileName]);
 
     // Load the object file

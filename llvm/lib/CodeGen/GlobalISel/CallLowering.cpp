@@ -125,7 +125,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
     MVT CurVT = MVT::getVT(Args[i].Ty);
     if (Handler.assignArg(i, CurVT, CurVT, CCValAssign::Full, Args[i], CCInfo)) {
       // Try to use the register type if we couldn't assign the VT.
-      if (!Handler.isArgumentHandler())
+      if (!Handler.isArgumentHandler() || !CurVT.isValid())
         return false; 
       CurVT = TLI->getRegisterTypeForCallingConv(
           F.getContext(), F.getCallingConv(), EVT(CurVT));

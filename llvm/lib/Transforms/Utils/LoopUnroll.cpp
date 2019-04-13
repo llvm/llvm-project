@@ -335,8 +335,9 @@ LoopUnrollResult llvm::UnrollLoop(
     Loop *L, unsigned Count, unsigned TripCount, bool Force, bool AllowRuntime,
     bool AllowExpensiveTripCount, bool PreserveCondBr, bool PreserveOnlyFirst,
     unsigned TripMultiple, unsigned PeelCount, bool UnrollRemainder,
-    LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    OptimizationRemarkEmitter *ORE, bool PreserveLCSSA, Loop **RemainderLoop) {
+    bool ForgetAllSCEV, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+    AssumptionCache *AC, OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
+    Loop **RemainderLoop) {
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
@@ -469,8 +470,9 @@ LoopUnrollResult llvm::UnrollLoop(
 
   if (RuntimeTripCount && TripMultiple % Count != 0 &&
       !UnrollRuntimeLoopRemainder(L, Count, AllowExpensiveTripCount,
-                                  EpilogProfitability, UnrollRemainder, LI, SE,
-                                  DT, AC, PreserveLCSSA, RemainderLoop)) {
+                                  EpilogProfitability, UnrollRemainder,
+                                  ForgetAllSCEV, LI, SE, DT, AC, PreserveLCSSA,
+                                  RemainderLoop)) {
     if (Force)
       RuntimeTripCount = false;
     else {
@@ -554,8 +556,12 @@ LoopUnrollResult llvm::UnrollLoop(
   // and if something changes inside them then any of outer loops may also
   // change. When we forget outermost loop, we also forget all contained loops
   // and this is what we need here.
-  if (SE)
-    SE->forgetTopmostLoop(L);
+  if (SE) {
+    if (ForgetAllSCEV)
+      SE->forgetAllLoops();
+    else
+      SE->forgetTopmostLoop(L);
+  }
 
   bool ContinueOnTrue = L->contains(BI->getSuccessor(0));
   BasicBlock *LoopExit = BI->getSuccessor(ContinueOnTrue);

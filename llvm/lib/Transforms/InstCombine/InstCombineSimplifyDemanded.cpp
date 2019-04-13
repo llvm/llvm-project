@@ -1437,7 +1437,11 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     switch (II->getIntrinsicID()) {
     case Intrinsic::masked_gather: // fallthrough
     case Intrinsic::masked_load: {
-      APInt DemandedPtrs(DemandedElts), DemandedPassThrough(DemandedElts);
+      // Subtlety: If we load from a pointer, the pointer must be valid
+      // regardless of whether the element is demanded.  Doing otherwise risks
+      // segfaults which didn't exist in the original program.
+      APInt DemandedPtrs(APInt::getAllOnesValue(VWidth)),
+        DemandedPassThrough(DemandedElts);
       if (auto *CV = dyn_cast<ConstantVector>(II->getOperand(2)))
         for (unsigned i = 0; i < VWidth; i++) {
           Constant *CElt = CV->getAggregateElement(i);

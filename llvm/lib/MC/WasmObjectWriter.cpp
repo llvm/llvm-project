@@ -326,6 +326,7 @@ private:
   void writeFunctionSection(ArrayRef<WasmFunction> Functions);
   void writeExportSection(ArrayRef<wasm::WasmExport> Exports);
   void writeElemSection(ArrayRef<uint32_t> TableElems);
+  void writeDataCountSection();
   void writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
                         ArrayRef<WasmFunction> Functions);
   void writeDataSection();
@@ -846,6 +847,16 @@ void WasmObjectWriter::writeElemSection(ArrayRef<uint32_t> TableElems) {
   for (uint32_t Elem : TableElems)
     encodeULEB128(Elem, W.OS);
 
+  endSection(Section);
+}
+
+void WasmObjectWriter::writeDataCountSection() {
+  if (DataSegments.empty())
+    return;
+
+  SectionBookkeeping Section;
+  startSection(Section, wasm::WASM_SEC_DATACOUNT);
+  encodeULEB128(DataSegments.size(), W.OS);
   endSection(Section);
 }
 
@@ -1600,6 +1611,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeEventSection(Events);
   writeExportSection(Exports);
   writeElemSection(TableElems);
+  writeDataCountSection();
   writeCodeSection(Asm, Layout, Functions);
   writeDataSection();
   for (auto &CustomSection : CustomSections)

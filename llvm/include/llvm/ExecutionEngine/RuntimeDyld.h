@@ -61,10 +61,9 @@ protected:
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 
 public:
-
-  using NotifyStubEmittedFunction =
-    std::function<void(StringRef FileName, StringRef SectionName,
-                       StringRef SymbolName, uint32_t StubOffset)>;
+  using NotifyStubEmittedFunction = std::function<void(
+      StringRef FileName, StringRef SectionName, StringRef SymbolName,
+      unsigned SectionID, uint32_t StubOffset)>;
 
   /// Information about the loaded object.
   class LoadedObjectInfo : public llvm::LoadedObjectInfo {

@@ -1172,22 +1172,12 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         assert(i == 0 && "Frame indices can only appear as the first "
                          "operand of a DBG_VALUE machine instruction");
         unsigned Reg;
-        unsigned FrameIdx = MI.getOperand(0).getIndex();
-        unsigned Size = MF.getFrameInfo().getObjectSize(FrameIdx);
-
         int64_t Offset =
-            TFI->getFrameIndexReference(MF, FrameIdx, Reg);
+            TFI->getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg);
         MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
         MI.getOperand(0).setIsDebug();
-
-        const DIExpression *DIExpr = MI.getDebugExpression();
-        // If we already have a Implicit location expression we need to insert
-        // a deref before prepending a Memory location expression.
-        if (DIExpr->isImplicit()) {
-          SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
-          DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, DIExpression::WithStackValue);
-        }
-        DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset);
+        auto *DIExpr = DIExpression::prepend(MI.getDebugExpression(),
+                                             DIExpression::NoDeref, Offset);
         MI.getOperand(3).setMetadata(DIExpr);
         continue;
       }

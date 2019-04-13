@@ -247,6 +247,7 @@ private:
   Error parseElemSection(ReadContext &Ctx);
   Error parseCodeSection(ReadContext &Ctx);
   Error parseDataSection(ReadContext &Ctx);
+  Error parseDataCountSection(ReadContext &Ctx);
 
   // Custom section types
   Error parseDylinkSection(ReadContext &Ctx);
@@ -273,6 +274,7 @@ private:
   std::vector<wasm::WasmExport> Exports;
   std::vector<wasm::WasmElemSegment> ElemSegments;
   std::vector<WasmSegment> DataSegments;
+  llvm::Optional<size_t> DataCount;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
   std::vector<wasm::WasmFunctionName> DebugNames;
