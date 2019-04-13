@@ -248,6 +248,13 @@ TEST(ArrayRefTest, makeArrayRef) {
   EXPECT_TRUE(AR2.equals(AR2Ref));
 }
 
+TEST(ArrayRefTest, OwningArrayRef) {
+  static const int A1[] = {0, 1};
+  OwningArrayRef<int> A(makeArrayRef(A1));
+  OwningArrayRef<int> B(std::move(A));
+  EXPECT_EQ(A.data(), nullptr);
+}
+
 static_assert(is_trivially_copyable<ArrayRef<int>>::value,
               "trivially copyable");
 

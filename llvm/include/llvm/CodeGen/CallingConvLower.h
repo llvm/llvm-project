@@ -556,7 +556,7 @@ public:
 
     // Sort the locations of the arguments according to their original position.
     SmallVector<CCValAssign, 16> TmpArgLocs;
-    std::swap(TmpArgLocs, Locs);
+    TmpArgLocs.swap(Locs);
     auto B = TmpArgLocs.begin(), E = TmpArgLocs.end();
     std::merge(B, B + NumFirstPassLocs, B + NumFirstPassLocs, E,
                std::back_inserter(Locs),

@@ -175,7 +175,10 @@ enum MiscFlags {             // Miscellaneous flags to adjust argument
   // If this is enabled, multiple letter options are allowed to bunch together
   // with only a single hyphen for the whole group.  This allows emulation
   // of the behavior that ls uses for example: ls -la === ls -l -a
-  Grouping = 0x08
+  Grouping = 0x08,
+
+  // Default option
+  DefaultOption = 0x10
 };
 
 //===----------------------------------------------------------------------===//
@@ -270,7 +273,7 @@ class Option {
   unsigned Value : 2;
   unsigned HiddenFlag : 2; // enum OptionHidden
   unsigned Formatting : 2; // enum FormattingFlags
-  unsigned Misc : 4;
+  unsigned Misc : 5;
   unsigned Position = 0;       // Position of last occurrence of the option
   unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.
 
@@ -306,6 +309,7 @@ public:
   bool hasArgStr() const { return !ArgStr.empty(); }
   bool isPositional() const { return getFormattingFlag() == cl::Positional; }
   bool isSink() const { return getMiscFlags() & cl::Sink; }
+  bool isDefaultOption() const { return getMiscFlags() & cl::DefaultOption; }
 
   bool isConsumeAfter() const {
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
@@ -382,7 +386,7 @@ public:
   }
 
   inline int getNumOccurrences() const { return NumOccurrences; }
-  inline void reset() { NumOccurrences = 0; }
+  void reset();
 };
 
 //===----------------------------------------------------------------------===//
@@ -1732,7 +1736,10 @@ class alias : public Option {
       error("cl::alias must have argument name specified!");
     if (!AliasFor)
       error("cl::alias must have an cl::aliasopt(option) specified!");
+    if (!Subs.empty())
+      error("cl::alias must not have cl::sub(), aliased option's cl::sub() will be used!");
     Subs = AliasFor->Subs;
+    Category = AliasFor->Category;
     addArgument();
   }
 
