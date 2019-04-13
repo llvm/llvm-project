@@ -34,6 +34,7 @@ add_llvm_unittest(SupportTests
   Host.cpp
   ItaniumManglingCanonicalizerTest.cpp
   JSONTest.cpp
+  KnownBitsTest.cpp
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp

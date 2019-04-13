@@ -22,15 +22,15 @@ nextPC:
 # Check both the content of the stub, and the reference to the stub.
 # Stub should contain '0xe51ff004' (ldr pc, [pc, #-4]), followed by the target.
 #
-# rtdyld-check: *{4}(stub_addr(foo.o, __text, baz)) = 0xe51ff004
-# rtdyld-check: *{4}(stub_addr(foo.o, __text, baz) + 4) = baz
+# rtdyld-check: *{4}(stub_addr(foo.o/__text, baz)) = 0xe51ff004
+# rtdyld-check: *{4}(stub_addr(foo.o/__text, baz) + 4) = baz
 #
-# rtdyld-check: decode_operand(insn3, 0) = stub_addr(foo.o, __text, baz) - (insn3 + 8)
+# rtdyld-check: decode_operand(insn3, 0) = stub_addr(foo.o/__text, baz) - (insn3 + 8)
 insn3:
         bl      baz
 
 # Check stub generation for internal symbols by referencing 'bar'.
-# rtdyld-check: *{4}(stub_addr(foo.o, __text, bar) + 4) = bar
+# rtdyld-check: *{4}(stub_addr(foo.o/__text, bar) + 4) = bar
 insn4:
         bl      bar
         bx	lr

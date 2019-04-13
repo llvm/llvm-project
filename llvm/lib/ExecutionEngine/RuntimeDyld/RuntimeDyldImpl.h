@@ -312,7 +312,7 @@ protected:
     RuntimeDyld::NotifyStubEmittedFunction;
   NotifyStubEmittedFunction NotifyStubEmitted;
 
-  virtual unsigned getMaxStubSize() = 0;
+  virtual unsigned getMaxStubSize() const = 0;
   virtual unsigned getStubAlignment() = 0;
 
   bool HasError;
@@ -485,8 +485,8 @@ public:
   }
 
   StringRef getSectionContent(unsigned SectionID) const {
-    return StringRef(reinterpret_cast<char*>(Sections[SectionID].getAddress()),
-                     Sections[SectionID].getSize());
+    return StringRef(reinterpret_cast<char *>(Sections[SectionID].getAddress()),
+                     Sections[SectionID].getStubOffset() + getMaxStubSize());
   }
 
   uint8_t* getSymbolLocalAddress(StringRef Name) const {

@@ -659,6 +659,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.FocusFunction = Flags.focus_function;
   if (Flags.data_flow_trace)
     Options.DataFlowTrace = Flags.data_flow_trace;
+  if (Flags.features_dir)
+    Options.FeaturesDir = Flags.features_dir;
   Options.LazyCounters = Flags.lazy_counters;
 
   unsigned Seed = Flags.seed;

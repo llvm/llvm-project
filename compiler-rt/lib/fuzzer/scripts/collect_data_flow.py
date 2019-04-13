@@ -65,8 +65,8 @@ def main(argv):
     tmpfile = os.path.join(tmpdir, str(r[0]) + "-" + str(r[1]))
     ret = subprocess.call([exe, str(r[0]), str(r[1]), inp, tmpfile])
     if ret and r[1] - r[0] >= 2:
-      q.append([r[0], (r[1] + r[0]) / 2])
-      q.append([(r[1] + r[0]) / 2, r[1]])
+      q.append([r[0], (r[1] + r[0]) // 2])
+      q.append([(r[1] + r[0]) // 2, r[1]])
     else:
       outputs.append(tmpfile)
       print("******* Success: ", r)

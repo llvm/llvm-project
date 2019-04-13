@@ -119,9 +119,11 @@ public:
   /// Return the largest range containing all X such that "X BinOpC Y" is
   /// guaranteed not to wrap (overflow) for all Y in Other.
   ///
-  /// NB! The returned set does *not* contain **all** possible values of X for
-  /// which "X BinOpC Y" does not wrap -- some viable values of X may be
-  /// missing, so you cannot use this to constrain X's range.  E.g. in the
+  /// If only one of NoUnsignedWrap or NoSignedWrap is specified, the returned
+  /// range is exact: It contains *all* possible values of X for which
+  /// "X BinOpC Y" does not wrap. However, if both NUW and NSW are specified, it
+  /// may return only a subset of non-wrapping values. In this case the
+  /// returned region cannot be used to constrain X's range. E.g. in the
   /// fourth example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2),
   /// but (-2) is not in the set returned.
   ///

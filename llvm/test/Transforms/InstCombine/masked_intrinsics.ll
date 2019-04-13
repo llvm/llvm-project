@@ -4,6 +4,7 @@
 declare <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %ptrs, i32, <2 x i1> %mask, <2 x double> %src0)
 declare void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %val, <2 x double>* %ptrs, i32, <2 x i1> %mask)
 declare <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> %ptrs, i32, <2 x i1> %mask, <2 x double> %passthru)
+declare <4 x double> @llvm.masked.gather.v4f64.p0v4f64(<4 x double*> %ptrs, i32, <4 x i1> %mask, <4 x double> %passthru)
 declare void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %val, <2 x double*> %ptrs, i32, <2 x i1> %mask)
 
 define <2 x double> @load_zeromask(<2 x double>* %ptr, <2 x double> %passthru)  {
@@ -53,6 +54,19 @@ define <2 x double> @load_lane0(<2 x double>* %ptr, double %pt)  {
   %ptv2 = insertelement <2 x double> %ptv1, double %pt, i64 1
   %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %ptr, i32 2, <2 x i1> <i1 true, i1 false>, <2 x double> %ptv2)
   ret <2 x double> %res
+}
+
+define double @load_all(double* %base, double %pt)  {
+; CHECK-LABEL: @load_all(
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[BASE:%.*]], <4 x i64> <i64 0, i64 undef, i64 2, i64 3>
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x double> undef)
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <4 x double> [[RES]], i64 2
+; CHECK-NEXT:    ret double [[ELT]]
+;
+  %ptrs = getelementptr double, double* %base, <4 x i64> <i64 0, i64 1, i64 2, i64 3>
+  %res = call <4 x double> @llvm.masked.gather.v4f64.p0v4f64(<4 x double*> %ptrs, i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x double> undef)
+  %elt = extractelement <4 x double> %res, i64 2
+  ret double %elt
 }
 
 define <2 x double> @load_generic(<2 x double>* %ptr, double %pt,

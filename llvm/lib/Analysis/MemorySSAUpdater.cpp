@@ -156,8 +156,10 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefFromEnd(
     DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &CachedPreviousDef) {
   auto *Defs = MSSA->getWritableBlockDefs(BB);
 
-  if (Defs)
+  if (Defs) {
+    CachedPreviousDef.insert({BB, &*Defs->rbegin()});
     return &*Defs->rbegin();
+  }
 
   return getPreviousDefRecursive(BB, CachedPreviousDef);
 }

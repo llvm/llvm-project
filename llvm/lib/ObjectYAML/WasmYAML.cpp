@@ -153,6 +153,11 @@ static void sectionMapping(IO &IO, WasmYAML::DataSection &Section) {
   IO.mapRequired("Segments", Section.Segments);
 }
 
+static void sectionMapping(IO &IO, WasmYAML::DataCountSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapRequired("Count", Section.Count);
+}
+
 void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
     IO &IO, std::unique_ptr<WasmYAML::Section> &Section) {
   WasmYAML::SectionType SectionType;
@@ -257,6 +262,11 @@ void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
       Section.reset(new WasmYAML::DataSection());
     sectionMapping(IO, *cast<WasmYAML::DataSection>(Section.get()));
     break;
+  case wasm::WASM_SEC_DATACOUNT:
+    if (!IO.outputting())
+      Section.reset(new WasmYAML::DataCountSection());
+    sectionMapping(IO, *cast<WasmYAML::DataCountSection>(Section.get()));
+    break;
   default:
     llvm_unreachable("Unknown section type");
   }
@@ -278,6 +288,7 @@ void ScalarEnumerationTraits<WasmYAML::SectionType>::enumeration(
   ECase(ELEM);
   ECase(CODE);
   ECase(DATA);
+  ECase(DATACOUNT);
 #undef ECase
 }
 
