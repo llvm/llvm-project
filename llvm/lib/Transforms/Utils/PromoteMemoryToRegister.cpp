@@ -113,7 +113,6 @@ struct AllocaInfo {
   BasicBlock *OnlyBlock;
   bool OnlyUsedInOneBlock;
 
-  Value *AllocaPointerVal;
   TinyPtrVector<DbgVariableIntrinsic *> DbgDeclares;
 
   void clear() {
@@ -122,7 +121,6 @@ struct AllocaInfo {
     OnlyStore = nullptr;
     OnlyBlock = nullptr;
     OnlyUsedInOneBlock = true;
-    AllocaPointerVal = nullptr;
     DbgDeclares.clear();
   }
 
@@ -140,14 +138,12 @@ struct AllocaInfo {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         // Remember the basic blocks which define new values for the alloca
         DefiningBlocks.push_back(SI->getParent());
-        AllocaPointerVal = SI->getOperand(0);
         OnlyStore = SI;
       } else {
         LoadInst *LI = cast<LoadInst>(User);
         // Otherwise it must be a load instruction, keep track of variable
         // reads.
         UsingBlocks.push_back(LI->getParent());
-        AllocaPointerVal = LI;
       }
 
       if (OnlyUsedInOneBlock) {

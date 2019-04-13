@@ -1351,6 +1351,11 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
     }
   }
 
+  // -X srem Y --> -(X srem Y)
+  Value *X, *Y;
+  if (match(&I, m_SRem(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+    return BinaryOperator::CreateNSWNeg(Builder.CreateSRem(X, Y)); 
+
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a urem.
   APInt Mask(APInt::getSignMask(I.getType()->getScalarSizeInBits()));
