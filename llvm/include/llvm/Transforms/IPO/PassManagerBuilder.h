@@ -148,6 +148,7 @@ public:
   bool RerollLoops;
   bool NewGVN;
   bool DisableGVNLoadPRE;
+  bool ForgetAllSCEVInLoopUnroll;
   bool VerifyInput;
   bool VerifyOutput;
   bool MergeFunctions;

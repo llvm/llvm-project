@@ -43,6 +43,7 @@ private:
   int writeSectionContent(raw_ostream &OS, WasmYAML::ElemSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::CodeSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::DataSection &Section);
+  int writeSectionContent(raw_ostream &OS, WasmYAML::DataCountSection &Section);
 
   // Custom section types
   int writeSectionContent(raw_ostream &OS, WasmYAML::DylinkSection &Section);
@@ -514,6 +515,12 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
   return 0;
 }
 
+int WasmWriter::writeSectionContent(raw_ostream &OS,
+                                    WasmYAML::DataCountSection &Section) {
+  encodeULEB128(Section.Count, OS);
+  return 0;
+}
+
 int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
                                   uint32_t SectionIndex) {
   switch (Sec.Type) {
@@ -612,6 +619,9 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
       if (auto Err = writeSectionContent(StringStream, *S))
         return Err;
     } else if (auto S = dyn_cast<WasmYAML::DataSection>(Sec.get())) {
+      if (auto Err = writeSectionContent(StringStream, *S))
+        return Err;
+    } else if (auto S = dyn_cast<WasmYAML::DataCountSection>(Sec.get())) {
       if (auto Err = writeSectionContent(StringStream, *S))
         return Err;
     } else {

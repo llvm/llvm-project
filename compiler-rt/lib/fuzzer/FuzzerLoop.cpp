@@ -445,6 +445,23 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   }
 }
 
+static void WriteFeatureSetToFile(const std::string &FeaturesDir,
+                                  const std::string &FileName,
+                                  const Vector<uint32_t> &FeatureSet) {
+  if (FeaturesDir.empty() || FeatureSet.empty()) return;
+  WriteToFile(reinterpret_cast<const uint8_t *>(FeatureSet.data()),
+              FeatureSet.size() * sizeof(FeatureSet[0]),
+              DirPlusFile(FeaturesDir, FileName));
+}
+
+static void RenameFeatureSetFile(const std::string &FeaturesDir,
+                                 const std::string &OldFile,
+                                 const std::string &NewFile) {
+  if (FeaturesDir.empty()) return;
+  RenameFile(DirPlusFile(FeaturesDir, OldFile),
+             DirPlusFile(FeaturesDir, NewFile));
+}
+
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                     InputInfo *II, bool *FoundUniqFeatures) {
   if (!Size)
@@ -469,15 +486,21 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures) {
     TPC.UpdateObservedPCs();
-    Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
-                       TPC.ObservedFocusFunction(), UniqFeatureSetTmp, DFT, II);
+    auto NewII = Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures,
+                                    MayDeleteFile, TPC.ObservedFocusFunction(),
+                                    UniqFeatureSetTmp, DFT, II);
+    WriteFeatureSetToFile(Options.FeaturesDir, Sha1ToString(NewII->Sha1),
+                          NewII->UniqFeatureSet);
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
       II->DataFlowTraceForFocusFunction.empty() &&
       FoundUniqFeaturesOfII == II->UniqFeatureSet.size() &&
       II->U.size() > Size) {
+    auto OldFeaturesFile = Sha1ToString(II->Sha1);
     Corpus.Replace(II, {Data, Data + Size});
+    RenameFeatureSetFile(Options.FeaturesDir, OldFeaturesFile,
+                         Sha1ToString(II->Sha1));
     return true;
   }
   return false;

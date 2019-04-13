@@ -67,17 +67,17 @@ LoopUnrollResult UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
                             bool AllowExpensiveTripCount, bool PreserveCondBr,
                             bool PreserveOnlyFirst, unsigned TripMultiple,
                             unsigned PeelCount, bool UnrollRemainder,
-                            LoopInfo *LI, ScalarEvolution *SE,
-                            DominatorTree *DT, AssumptionCache *AC,
-                            OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
-                            Loop **RemainderLoop = nullptr);
+                            bool ForgetAllSCEV, LoopInfo *LI,
+                            ScalarEvolution *SE, DominatorTree *DT,
+                            AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
+                            bool PreserveLCSSA, Loop **RemainderLoop = nullptr);
 
 bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                 bool AllowExpensiveTripCount,
                                 bool UseEpilogRemainder, bool UnrollRemainder,
-                                LoopInfo *LI, ScalarEvolution *SE,
-                                DominatorTree *DT, AssumptionCache *AC,
-                                bool PreserveLCSSA,
+                                bool ForgetAllSCEV, LoopInfo *LI,
+                                ScalarEvolution *SE, DominatorTree *DT,
+                                AssumptionCache *AC, bool PreserveLCSSA,
                                 Loop **ResultLoop = nullptr);
 
 void computePeelCount(Loop *L, unsigned LoopSize,

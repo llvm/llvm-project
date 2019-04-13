@@ -11,6 +11,7 @@
 #include "FuzzerCommand.h"
 #include "FuzzerFork.h"
 #include "FuzzerIO.h"
+#include "FuzzerInternal.h"
 #include "FuzzerMerge.h"
 #include "FuzzerSHA1.h"
 #include "FuzzerTracePC.h"
@@ -63,6 +64,7 @@ struct FuzzJob {
   // Inputs.
   Command Cmd;
   std::string CorpusDir;
+  std::string FeaturesDir;
   std::string LogPath;
   std::string CFPath;
 
@@ -73,6 +75,7 @@ struct FuzzJob {
     RemoveFile(CFPath);
     RemoveFile(LogPath);
     RmDirRecursive(CorpusDir);
+    RmDirRecursive(FeaturesDir);
   }
 };
 
@@ -103,6 +106,7 @@ struct GlobalEnv {
   FuzzJob *CreateNewJob(size_t JobId) {
     Command Cmd(Args);
     Cmd.removeFlag("fork");
+    Cmd.removeFlag("runs");
     for (auto &C : CorpusDirs) // Remove all corpora from the args.
       Cmd.removeArgument(C);
     Cmd.addFlag("reload", "0");  // working in an isolated dir, no reload.
@@ -121,12 +125,17 @@ struct GlobalEnv {
       Cmd.addFlag("seed_inputs", Seeds);
     Job->LogPath = DirPlusFile(TempDir, std::to_string(JobId) + ".log");
     Job->CorpusDir = DirPlusFile(TempDir, "C" + std::to_string(JobId));
+    Job->FeaturesDir = DirPlusFile(TempDir, "F" + std::to_string(JobId));
     Job->CFPath = DirPlusFile(TempDir, std::to_string(JobId) + ".merge");
 
 
     Cmd.addArgument(Job->CorpusDir);
-    RmDirRecursive(Job->CorpusDir);
-    MkDir(Job->CorpusDir);
+    Cmd.addFlag("features_dir", Job->FeaturesDir);
+
+    for (auto &D : {Job->CorpusDir, Job->FeaturesDir}) {
+      RmDirRecursive(D);
+      MkDir(D);
+    }
 
     Cmd.setOutputFile(Job->LogPath);
     Cmd.combineOutAndErr();
@@ -141,12 +150,30 @@ struct GlobalEnv {
   }
 
   void RunOneMergeJob(FuzzJob *Job) {
-    Vector<SizedFile> TempFiles;
+    Vector<SizedFile> TempFiles, MergeCandidates;
+    // Read all newly created inputs and their feature sets.
+    // Choose only those inputs that have new features.
     GetSizedFilesFromDir(Job->CorpusDir, &TempFiles);
+    std::sort(TempFiles.begin(), TempFiles.end());
+    for (auto &F : TempFiles) {
+      auto FeatureFile = F.File;
+      FeatureFile.replace(0, Job->CorpusDir.size(), Job->FeaturesDir);
+      auto FeatureBytes = FileToVector(FeatureFile, 0, false);
+      assert((FeatureBytes.size() % sizeof(uint32_t)) == 0);
+      Vector<uint32_t> NewFeatures(FeatureBytes.size() / sizeof(uint32_t));
+      memcpy(NewFeatures.data(), FeatureBytes.data(), FeatureBytes.size());
+      for (auto Ft : NewFeatures) {
+        if (!Features.count(Ft)) {
+          MergeCandidates.push_back(F);
+          break;
+        }
+      }
+    }
+    if (MergeCandidates.empty()) return;
 
     Vector<std::string> FilesToAdd;
     Set<uint32_t> NewFeatures, NewCov;
-    CrashResistantMerge(Args, {}, TempFiles, &FilesToAdd, Features,
+    CrashResistantMerge(Args, {}, MergeCandidates, &FilesToAdd, Features,
                         &NewFeatures, Cov, &NewCov, Job->CFPath, false);
     for (auto &Path : FilesToAdd) {
       auto U = FileToVector(Path);
@@ -264,6 +291,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
       Stop = true;
       break;
     }
+    Fuzzer::MaybeExitGracefully();
 
     Env.RunOneMergeJob(Job.get());
 
@@ -278,7 +306,8 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
         std::ifstream In(Job->LogPath);
         std::string Line;
         while (std::getline(In, Line, '\n'))
-          if (Line.find("ERROR:") != Line.npos)
+          if (Line.find("ERROR:") != Line.npos ||
+              Line.find("runtime error:") != Line.npos)
             Printf("%s\n", Line.c_str());
       } else {
         // And exit if we don't ignore this crash.
@@ -296,6 +325,12 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
         Env.secondsSinceProcessStartUp() >= (size_t)Options.MaxTotalTimeSec) {
       Printf("INFO: fuzzed for %zd seconds, wrapping up soon\n",
              Env.secondsSinceProcessStartUp());
+      Stop = true;
+    }
+    if (Options.MaxNumberOfRuns >= 0 && !Stop &&
+        Env.NumRuns >= Options.MaxNumberOfRuns) {
+      Printf("INFO: fuzzed for %zd iterations, wrapping up soon\n",
+             Env.NumRuns);
       Stop = true;
     }
 

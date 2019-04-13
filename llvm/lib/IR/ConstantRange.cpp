@@ -869,8 +869,7 @@ ConstantRange::add(const ConstantRange &Other) const {
 ConstantRange ConstantRange::addWithNoSignedWrap(const APInt &Other) const {
   // Calculate the subset of this range such that "X + Other" is
   // guaranteed not to wrap (overflow) for all X in this subset.
-  // makeGuaranteedNoWrapRegion will produce an exact NSW range since we are
-  // passing a single element range.
+  // makeGuaranteedNoWrapRegion will produce an exact NSW range.
   auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(BinaryOperator::Add,
                                       ConstantRange(Other),
                                       OverflowingBinaryOperator::NoSignedWrap);

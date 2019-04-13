@@ -35,14 +35,14 @@ thumb_caller:
 # Check that stubs for thumb callers use thumb code (not arm), and that thumb
 # callees have the low bit set on their addresses.
 #
-# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o, __text, thumb_caller_thumb_callee)) = 0xf000f8df
-# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o, __text, thumb_caller_thumb_callee) + 4) = (thumb_caller_thumb_callee | 0x1)
+# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o/__text, thumb_caller_thumb_callee)) = 0xf000f8df
+# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o/__text, thumb_caller_thumb_callee) + 4) = (thumb_caller_thumb_callee | 0x1)
         bl thumb_caller_thumb_callee
 
 # Check that arm callees do not have the low bit set on their addresses.
 #
-# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o, __text, thumb_caller_arm_callee)) = 0xf000f8df
-# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o, __text, thumb_caller_arm_callee) + 4) = thumb_caller_arm_callee
+# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o/__text, thumb_caller_arm_callee)) = 0xf000f8df
+# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o/__text, thumb_caller_arm_callee) + 4) = thumb_caller_arm_callee
         bl thumb_caller_arm_callee
 
         .globl  arm_caller
@@ -53,8 +53,8 @@ arm_caller:
 
 # Check that stubs for arm callers use arm code (not thumb), and that thumb
 # callees have the low bit set on their addresses.
-# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o, __text, arm_caller_thumb_callee)) = 0xe51ff004
-# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o, __text, arm_caller_thumb_callee) + 4) = (arm_caller_thumb_callee | 0x1)
+# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o/__text, arm_caller_thumb_callee)) = 0xe51ff004
+# rtdyld-check: *{4}(stub_addr(MachO_Thumb.o/__text, arm_caller_thumb_callee) + 4) = (arm_caller_thumb_callee | 0x1)
         bl      arm_caller_thumb_callee
         nop
 

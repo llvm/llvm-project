@@ -964,7 +964,7 @@ static LoopUnrollResult tryToUnrollLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC,
     OptimizationRemarkEmitter &ORE, bool PreserveLCSSA, int OptLevel,
-    bool OnlyWhenForced, Optional<unsigned> ProvidedCount,
+    bool OnlyWhenForced, bool ForgetAllSCEV, Optional<unsigned> ProvidedCount,
     Optional<unsigned> ProvidedThreshold, Optional<bool> ProvidedAllowPartial,
     Optional<bool> ProvidedRuntime, Optional<bool> ProvidedUpperBound,
     Optional<bool> ProvidedAllowPeeling) {
@@ -1082,7 +1082,7 @@ static LoopUnrollResult tryToUnrollLoop(
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, UP.Count, TripCount, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
       UseUpperBound, MaxOrZero, TripMultiple, UP.PeelCount, UP.UnrollRemainder,
-      LI, &SE, &DT, &AC, &ORE, PreserveLCSSA, &RemainderLoop);
+      ForgetAllSCEV, LI, &SE, &DT, &AC, &ORE, PreserveLCSSA, &RemainderLoop);
   if (UnrollResult == LoopUnrollResult::Unmodified)
     return LoopUnrollResult::Unmodified;
 
@@ -1131,6 +1131,11 @@ public:
   /// metadata are considered. All other loops are skipped.
   bool OnlyWhenForced;
 
+  /// If false, when SCEV is invalidated, only forget everything in the
+  /// top-most loop (call forgetTopMostLoop), of the loop being processed.
+  /// Otherwise, forgetAllLoops and rebuild when needed next.
+  bool ForgetAllSCEV;
+
   Optional<unsigned> ProvidedCount;
   Optional<unsigned> ProvidedThreshold;
   Optional<bool> ProvidedAllowPartial;
@@ -1139,15 +1144,16 @@ public:
   Optional<bool> ProvidedAllowPeeling;
 
   LoopUnroll(int OptLevel = 2, bool OnlyWhenForced = false,
-             Optional<unsigned> Threshold = None,
+             bool ForgetAllSCEV = false, Optional<unsigned> Threshold = None,
              Optional<unsigned> Count = None,
              Optional<bool> AllowPartial = None, Optional<bool> Runtime = None,
              Optional<bool> UpperBound = None,
              Optional<bool> AllowPeeling = None)
       : LoopPass(ID), OptLevel(OptLevel), OnlyWhenForced(OnlyWhenForced),
-        ProvidedCount(std::move(Count)), ProvidedThreshold(Threshold),
-        ProvidedAllowPartial(AllowPartial), ProvidedRuntime(Runtime),
-        ProvidedUpperBound(UpperBound), ProvidedAllowPeeling(AllowPeeling) {
+        ForgetAllSCEV(ForgetAllSCEV), ProvidedCount(std::move(Count)),
+        ProvidedThreshold(Threshold), ProvidedAllowPartial(AllowPartial),
+        ProvidedRuntime(Runtime), ProvidedUpperBound(UpperBound),
+        ProvidedAllowPeeling(AllowPeeling) {
     initializeLoopUnrollPass(*PassRegistry::getPassRegistry());
   }
 
@@ -1171,8 +1177,8 @@ public:
 
     LoopUnrollResult Result = tryToUnrollLoop(
         L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel, OnlyWhenForced,
-        ProvidedCount, ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
-        ProvidedUpperBound, ProvidedAllowPeeling);
+        ForgetAllSCEV, ProvidedCount, ProvidedThreshold, ProvidedAllowPartial,
+        ProvidedRuntime, ProvidedUpperBound, ProvidedAllowPeeling);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
       LPM.markLoopAsDeleted(*L);
@@ -1202,14 +1208,14 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 
 Pass *llvm::createLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
-                                 int Threshold, int Count, int AllowPartial,
-                                 int Runtime, int UpperBound,
+                                 bool ForgetAllSCEV, int Threshold, int Count,
+                                 int AllowPartial, int Runtime, int UpperBound,
                                  int AllowPeeling) {
   // TODO: It would make more sense for this function to take the optionals
   // directly, but that's dangerous since it would silently break out of tree
   // callers.
   return new LoopUnroll(
-      OptLevel, OnlyWhenForced,
+      OptLevel, OnlyWhenForced, ForgetAllSCEV,
       Threshold == -1 ? None : Optional<unsigned>(Threshold),
       Count == -1 ? None : Optional<unsigned>(Count),
       AllowPartial == -1 ? None : Optional<bool>(AllowPartial),
@@ -1218,8 +1224,10 @@ Pass *llvm::createLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
       AllowPeeling == -1 ? None : Optional<bool>(AllowPeeling));
 }
 
-Pass *llvm::createSimpleLoopUnrollPass(int OptLevel, bool OnlyWhenForced) {
-  return createLoopUnrollPass(OptLevel, OnlyWhenForced, -1, -1, 0, 0, 0, 0);
+Pass *llvm::createSimpleLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
+                                       bool ForgetAllSCEV) {
+  return createLoopUnrollPass(OptLevel, OnlyWhenForced, ForgetAllSCEV, -1, -1,
+                              0, 0, 0, 0);
 }
 
 PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
@@ -1250,7 +1258,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   bool Changed =
       tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
                       /*PreserveLCSSA*/ true, OptLevel, OnlyWhenForced,
-                      /*Count*/ None,
+                      /*ForgetAllSCEV*/ false, /*Count*/ None,
                       /*Threshold*/ None, /*AllowPartial*/ false,
                       /*Runtime*/ false, /*UpperBound*/ false,
                       /*AllowPeeling*/ false) != LoopUnrollResult::Unmodified;
@@ -1388,7 +1396,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     LoopUnrollResult Result = tryToUnrollLoop(
         &L, DT, &LI, SE, TTI, AC, ORE,
         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, UnrollOpts.OnlyWhenForced,
-        /*Count*/ None,
+        /*ForgetAllSCEV*/ false, /*Count*/ None,
         /*Threshold*/ None, UnrollOpts.AllowPartial, UnrollOpts.AllowRuntime,
         UnrollOpts.AllowUpperBound, LocalAllowPeeling);
     Changed |= Result != LoopUnrollResult::Unmodified;

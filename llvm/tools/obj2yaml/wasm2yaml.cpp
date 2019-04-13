@@ -353,6 +353,12 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       S = std::move(DataSec);
       break;
     }
+    case wasm::WASM_SEC_DATACOUNT: {
+      auto DataCountSec = make_unique<WasmYAML::DataCountSection>();
+      DataCountSec->Count = Obj.dataSegments().size();
+      S = std::move(DataCountSec);
+      break;
+    }
     default:
       llvm_unreachable("Unknown section type");
       break;

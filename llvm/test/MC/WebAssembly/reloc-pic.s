@@ -84,6 +84,8 @@ hidden_func:
 # CHECK-NEXT:         GlobalMutable:   true
 # CHECK-NEXT:   - Type:            FUNCTION
 # CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
+# CHECK-NEXT:   - Type:            DATACOUNT
+# CHECK-NEXT:     Count:           1
 # CHECK-NEXT:   - Type:            CODE
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB

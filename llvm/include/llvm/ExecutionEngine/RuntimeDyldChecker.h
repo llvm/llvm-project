@@ -60,7 +60,8 @@ class raw_ostream;
 ///
 /// ident_expr = 'decode_operand' '(' symbol ',' operand-index ')'
 ///            | 'next_pc'        '(' symbol ')'
-///            | 'stub_addr' '(' file-name ',' section-name ',' symbol ')'
+///            | 'stub_addr' '(' stub-container-name ',' symbol ')'
+///            | 'got_addr' '(' stub-container-name ',' symbol ')'
 ///            | symbol
 ///
 /// binary_expr = expr '+' expr
@@ -72,32 +73,29 @@ class raw_ostream;
 ///
 class RuntimeDyldChecker {
 public:
+  struct MemoryRegionInfo {
+    StringRef Content;
+    JITTargetAddress TargetAddress;
+  };
 
   using IsSymbolValidFunction = std::function<bool(StringRef Symbol)>;
-  using GetSymbolAddressFunction =
-    std::function<Expected<JITTargetAddress>(StringRef Symbol)>;
-  using GetSymbolContentFunction =
-    std::function<Expected<StringRef>(StringRef Symbol)>;
-  using GetSectionLoadAddressFunction =
-    std::function<Optional<JITTargetAddress>(StringRef FileName,
-                                             StringRef SectionName)>;
-  using GetSectionContentFunction =
-    std::function<Expected<StringRef>(StringRef FileName,
-                                      StringRef SectionName)>;
-  using GetStubOffsetInSectionFunction =
-    std::function<Expected<uint32_t>(StringRef FileName,
-                                     StringRef SectionName,
-                                     StringRef SymbolName)>;
+  using GetSymbolInfoFunction =
+      std::function<Expected<MemoryRegionInfo>(StringRef SymbolName)>;
+  using GetSectionInfoFunction = std::function<Expected<MemoryRegionInfo>(
+      StringRef FileName, StringRef SectionName)>;
+  using GetStubInfoFunction = std::function<Expected<MemoryRegionInfo>(
+      StringRef StubContainer, StringRef TargetName)>;
+  using GetGOTInfoFunction = std::function<Expected<MemoryRegionInfo>(
+      StringRef GOTContainer, StringRef TargetName)>;
 
   RuntimeDyldChecker(IsSymbolValidFunction IsSymbolValid,
-                     GetSymbolAddressFunction GetSymbolAddress,
-                     GetSymbolContentFunction GetSymbolContent,
-                     GetSectionLoadAddressFunction GetSectionLoadAddresss,
-                     GetSectionContentFunction GetSectionContent,
-                     GetStubOffsetInSectionFunction GetStubOffsetInSection,
+                     GetSymbolInfoFunction GetSymbolInfo,
+                     GetSectionInfoFunction GetSectionInfo,
+                     GetStubInfoFunction GetStubInfo,
+                     GetGOTInfoFunction GetGOTInfo,
                      support::endianness Endianness,
-                     MCDisassembler *Disassembler,
-                     MCInstPrinter *InstPrinter, raw_ostream &ErrStream);
+                     MCDisassembler *Disassembler, MCInstPrinter *InstPrinter,
+                     raw_ostream &ErrStream);
   ~RuntimeDyldChecker();
 
   /// Check a single expression against the attached RuntimeDyld

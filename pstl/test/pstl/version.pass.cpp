@@ -14,4 +14,6 @@ static_assert(_PSTL_VERSION_MAJOR == 9);
 static_assert(_PSTL_VERSION_MINOR == 00);
 static_assert(_PSTL_VERSION_PATCH == 0);
 
-int main() { }
+int main() {
+    return 0;
+}

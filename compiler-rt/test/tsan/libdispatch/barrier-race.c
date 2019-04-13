@@ -43,5 +43,5 @@ int main() {
 // CHECK: Hello world.
 // CHECK: addr=[[ADDR:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK: Location is global 'global' {{(of size 8 )?}}at [[ADDR]] (gcd-barrier-race.mm.tmp+0x{{[0-9,a-f]+}})
+// CHECK: Location is global 'global' {{(of size 8 )?}}at [[ADDR]] (barrier-race.c.tmp+0x{{[0-9,a-f]+}})
 // CHECK: Done.

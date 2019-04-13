@@ -6789,6 +6789,28 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   return BackedgeTakenCounts.find(L)->second = std::move(Result);
 }
 
+void ScalarEvolution::forgetAllLoops() {
+  // This method is intended to forget all info about loops. It should
+  // invalidate caches as if the following happened:
+  // - The trip counts of all loops have changed arbitrarily
+  // - Every llvm::Value has been updated in place to produce a different
+  // result.
+  BackedgeTakenCounts.clear();
+  PredicatedBackedgeTakenCounts.clear();
+  LoopPropertiesCache.clear();
+  ConstantEvolutionLoopExitValue.clear();
+  ValueExprMap.clear();
+  ValuesAtScopes.clear();
+  LoopDispositions.clear();
+  BlockDispositions.clear();
+  UnsignedRanges.clear();
+  SignedRanges.clear();
+  ExprValueMap.clear();
+  HasRecMap.clear();
+  MinTrailingZerosCache.clear();
+  PredicatedSCEVRewrites.clear();
+}
+
 void ScalarEvolution::forgetLoop(const Loop *L) {
   // Drop any stored trip count value.
   auto RemoveLoopFromBackedgeMap =
