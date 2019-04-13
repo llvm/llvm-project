@@ -149,19 +149,17 @@ echo "@@@@@@"
 
 
 echo "@@@ Downloading dylibs for older deployment targets @@@"
-# TODO: The tarball should contain libc++abi.dylib too, we shouldn't be relying on the system's
 # TODO: We should also link against the libc++abi.dylib that was shipped in the SDK
 PREVIOUS_DYLIBS_DIR="${TEMP_DIR}/libcxx-dylibs"
 mkdir "${PREVIOUS_DYLIBS_DIR}"
 curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${PREVIOUS_DYLIBS_DIR}"
 LIBCXX_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/${DEPLOYMENT_TARGET}/libc++.dylib"
-LIBCXXABI_ON_DEPLOYMENT_TARGET="/usr/lib/libc++abi.dylib"
+LIBCXXABI_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/${DEPLOYMENT_TARGET}/libc++abi.dylib"
 LIBCXX_IN_SDK="${PREVIOUS_DYLIBS_DIR}/macOS/${MACOS_SDK_VERSION}/libc++.dylib"
 echo "@@@@@@"
 
 
 # TODO: We need to also run the tests for libc++abi.
-# TODO: Make sure lit will actually run against the libc++abi we specified
 echo "@@@ Running tests for libc++ @@@"
 "${LIBCXX_BUILD_DIR}/bin/llvm-lit" -sv "${LIBCXX_ROOT}/test" \
                                    --param=enable_experimental=false \

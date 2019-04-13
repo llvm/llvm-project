@@ -61,7 +61,7 @@ public:
   unsigned getStubAlignment() override { return 1; }
 
   // 2-byte jmp instruction + 32-bit relative address + 64-bit absolute jump
-  unsigned getMaxStubSize() override { return 14; }
+  unsigned getMaxStubSize() const override { return 14; }
 
   // The target location for the relocation is described by RE.SectionID and
   // RE.Offset.  RE.SectionID can be used to find the SectionEntry.  Each

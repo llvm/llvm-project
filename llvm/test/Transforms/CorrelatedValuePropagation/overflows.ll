@@ -24,7 +24,7 @@ define i32 @signed_add(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 2147483647, [[Y]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 2147483647, [[Y]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
@@ -40,7 +40,7 @@ define i32 @signed_add(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[Y]], 0
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LAND_LHS_TRUE3:%.*]], label [[COND_FALSE]]
 ; CHECK:       land.lhs.true3:
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 -2147483648, [[Y]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i32 -2147483648, [[Y]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 false, 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -104,7 +104,7 @@ cond.end:                                         ; preds = %cond.false, %cont, 
 define i32 @unsigned_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @unsigned_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nuw i32 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
@@ -156,7 +156,7 @@ define i32 @signed_sub(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[Y]], 2147483647
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
@@ -172,7 +172,7 @@ define i32 @signed_sub(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[COND_FALSE]], label [[LAND_LHS_TRUE3:%.*]]
 ; CHECK:       land.lhs.true3:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[Y]], -2147483648
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[Y]], -2147483648
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 false, 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -275,7 +275,7 @@ define i32 @signed_add_r1(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2147483647
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[X]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
@@ -313,7 +313,7 @@ define i32 @unsigned_add_r1(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[X]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
@@ -351,7 +351,7 @@ define i32 @signed_sub_r1(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], -2147483648
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[X]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 [[X]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
@@ -389,7 +389,7 @@ define i32 @unsigned_sub_r1(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[X]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nuw i32 [[X]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
@@ -427,7 +427,7 @@ define i32 @signed_add_rn1(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], -2147483648
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[X]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
@@ -465,7 +465,7 @@ define i32 @signed_sub_rn1(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2147483647
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[X]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 [[X]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
@@ -509,7 +509,7 @@ define void @unsigned_loop(i32 %i) {
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[I_ADDR_04:%.*]] = phi i32 [ [[TMP4:%.*]], [[CONT:%.*]] ], [ [[I]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @bar(i32 [[I_ADDR_04]])
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[I_ADDR_04]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nuw i32 [[I_ADDR_04]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
@@ -556,7 +556,7 @@ define void @intrinsic_into_phi(i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[DOTLCSSA:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[DOTLCSSA:%.*]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1

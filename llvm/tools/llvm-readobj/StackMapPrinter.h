@@ -47,24 +47,24 @@ void prettyPrintStackMap(ScopedPrinter &W, const StackMapParserT &SMP) {
       OS << "      #" << ++LocationIndex << ": ";
       switch (Loc.getKind()) {
       case StackMapParserT::LocationKind::Register:
-        OS << "Register R#" << Loc.getDwarfRegNum() << "\n";
+        OS << "Register R#" << Loc.getDwarfRegNum();
         break;
       case StackMapParserT::LocationKind::Direct:
-        OS << "Direct R#" << Loc.getDwarfRegNum() << " + " << Loc.getOffset()
-           << "\n";
+        OS << "Direct R#" << Loc.getDwarfRegNum() << " + " << Loc.getOffset();
         break;
       case StackMapParserT::LocationKind::Indirect:
         OS << "Indirect [R#" << Loc.getDwarfRegNum() << " + " << Loc.getOffset()
-           << "]\n";
+           << "]";
         break;
       case StackMapParserT::LocationKind::Constant:
-        OS << "Constant " << Loc.getSmallConstant() << "\n";
+        OS << "Constant " << Loc.getSmallConstant();
         break;
       case StackMapParserT::LocationKind::ConstantIndex:
         OS << "ConstantIndex #" << Loc.getConstantIndex() << " ("
-           << SMP.getConstant(Loc.getConstantIndex()).getValue() << ")\n";
+           << SMP.getConstant(Loc.getConstantIndex()).getValue() << ")";
         break;
       }
+      OS << ", size: " << Loc.getSizeInBytes() << "\n";
     }
 
     raw_ostream &OS = W.startLine();

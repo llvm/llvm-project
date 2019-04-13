@@ -37,6 +37,8 @@ TEST_P(ASTUtils, PrintTemplateArgs) {
   struct Visitor : RecursiveASTVisitor<Visitor> {
     Visitor(std::vector<Position> Points) : Points(std::move(Points)) {}
     bool VisitNamedDecl(const NamedDecl *ND) {
+      if (TemplateArgsAtPoints.size() == Points.size())
+        return true;
       auto Pos = sourceLocToPosition(ND->getASTContext().getSourceManager(),
                                      ND->getLocation());
       if (Pos != Points[TemplateArgsAtPoints.size()])

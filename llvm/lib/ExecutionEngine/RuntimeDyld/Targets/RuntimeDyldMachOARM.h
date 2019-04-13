@@ -29,7 +29,7 @@ public:
                       JITSymbolResolver &Resolver)
     : RuntimeDyldMachOCRTPBase(MM, Resolver) {}
 
-  unsigned getMaxStubSize() override { return 8; }
+  unsigned getMaxStubSize() const override { return 8; }
 
   unsigned getStubAlignment() override { return 4; }
 

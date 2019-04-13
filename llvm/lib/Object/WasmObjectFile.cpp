@@ -316,6 +316,8 @@ Error WasmObjectFile::parseSection(WasmSection &Sec) {
     return parseCodeSection(Ctx);
   case wasm::WASM_SEC_DATA:
     return parseDataSection(Ctx);
+  case wasm::WASM_SEC_DATACOUNT:
+    return parseDataCountSection(Ctx);
   default:
     return make_error<GenericBinaryError>("Bad section type",
                                           object_error::parse_failed);
@@ -1201,6 +1203,9 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
   DataSection = Sections.size();
   uint32_t Count = readVaruint32(Ctx);
+  if (DataCount && Count != DataCount.getValue())
+    return make_error<GenericBinaryError>(
+        "Number of data segments does not match DataCount section");
   DataSegments.reserve(Count);
   while (Count--) {
     WasmSegment Segment;
@@ -1231,6 +1236,11 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("Data section ended prematurely",
                                           object_error::parse_failed);
+  return Error::success();
+}
+
+Error WasmObjectFile::parseDataCountSection(ReadContext &Ctx) {
+  DataCount = readVaruint32(Ctx);
   return Error::success();
 }
 
@@ -1399,6 +1409,7 @@ std::error_code WasmObjectFile::getSectionName(DataRefImpl Sec,
     ECase(ELEM);
     ECase(CODE);
     ECase(DATA);
+    ECase(DATACOUNT);
   case wasm::WASM_SEC_CUSTOM:
     Res = S.Name;
     break;

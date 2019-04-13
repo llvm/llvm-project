@@ -1151,6 +1151,76 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {
       ConstantRange(APInt::getMinValue(32) + 1, APInt::getSignedMinValue(32)));
 }
 
+template<typename Fn>
+void TestNoWrapRegionExhaustive(Instruction::BinaryOps BinOp,
+                                unsigned NoWrapKind, Fn OverflowFn) {
+  // When using 4 bits this test needs ~3s on a debug build.
+  unsigned Bits = 3;
+  EnumerateTwoConstantRanges(Bits,
+      [&](const ConstantRange &CR1, const ConstantRange &CR2) {
+        if (CR2.isEmptySet())
+          return;
+
+        ConstantRange NoWrap =
+            ConstantRange::makeGuaranteedNoWrapRegion(BinOp, CR2, NoWrapKind);
+        ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+          bool NoOverflow = true;
+          ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+            if (OverflowFn(N1, N2))
+              NoOverflow = false;
+          });
+          EXPECT_EQ(NoOverflow, NoWrap.contains(N1));
+        });
+      });
+}
+
+// Show that makeGuaranteedNoWrapRegion is precise if only one of
+// NoUnsignedWrap or NoSignedWrap is used.
+TEST(ConstantRange, NoWrapRegionExhaustive) {
+  TestNoWrapRegionExhaustive(
+      Instruction::Add, OverflowingBinaryOperator::NoUnsignedWrap,
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.uadd_ov(N2, Overflow);
+        return Overflow;
+      });
+  TestNoWrapRegionExhaustive(
+      Instruction::Add, OverflowingBinaryOperator::NoSignedWrap,
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.sadd_ov(N2, Overflow);
+        return Overflow;
+      });
+  TestNoWrapRegionExhaustive(
+      Instruction::Sub, OverflowingBinaryOperator::NoUnsignedWrap,
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.usub_ov(N2, Overflow);
+        return Overflow;
+      });
+  TestNoWrapRegionExhaustive(
+      Instruction::Sub, OverflowingBinaryOperator::NoSignedWrap,
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.ssub_ov(N2, Overflow);
+        return Overflow;
+      });
+  TestNoWrapRegionExhaustive(
+      Instruction::Mul, OverflowingBinaryOperator::NoUnsignedWrap,
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.umul_ov(N2, Overflow);
+        return Overflow;
+      });
+  TestNoWrapRegionExhaustive(
+      Instruction::Mul, OverflowingBinaryOperator::NoSignedWrap,
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.smul_ov(N2, Overflow);
+        return Overflow;
+      });
+}
+
 TEST(ConstantRange, GetEquivalentICmp) {
   APInt RHS;
   CmpInst::Predicate Pred;

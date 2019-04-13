@@ -19,31 +19,18 @@ class RuntimeDyldCheckerImpl {
 
   using IsSymbolValidFunction =
     RuntimeDyldChecker::IsSymbolValidFunction;
-  using GetSymbolAddressFunction =
-    RuntimeDyldChecker::GetSymbolAddressFunction;
-  using GetSymbolContentFunction =
-    RuntimeDyldChecker::GetSymbolContentFunction;
-
-  using GetSectionLoadAddressFunction =
-    RuntimeDyldChecker::GetSectionLoadAddressFunction;
-  using GetSectionContentFunction =
-    RuntimeDyldChecker::GetSectionContentFunction;
-
-  using GetStubOffsetInSectionFunction =
-    RuntimeDyldChecker::GetStubOffsetInSectionFunction;
+  using GetSymbolInfoFunction = RuntimeDyldChecker::GetSymbolInfoFunction;
+  using GetSectionInfoFunction = RuntimeDyldChecker::GetSectionInfoFunction;
+  using GetStubInfoFunction = RuntimeDyldChecker::GetStubInfoFunction;
+  using GetGOTInfoFunction = RuntimeDyldChecker::GetGOTInfoFunction;
 
 public:
   RuntimeDyldCheckerImpl(
-                      IsSymbolValidFunction IsSymbolValid,
-                      GetSymbolAddressFunction GetSymbolAddress,
-                      GetSymbolContentFunction GetSymbolContent,
-                      GetSectionLoadAddressFunction GetSectionLoadAddress,
-                      GetSectionContentFunction GetSectionContent,
-                      GetStubOffsetInSectionFunction GetStubOffsetInSection,
-                      support::endianness Endianness,
-                      MCDisassembler *Disassembler,
-                      MCInstPrinter *InstPrinter,
-                      llvm::raw_ostream &ErrStream);
+      IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
+      GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
+      GetGOTInfoFunction GetGOTInfo, support::endianness Endianness,
+      MCDisassembler *Disassembler, MCInstPrinter *InstPrinter,
+      llvm::raw_ostream &ErrStream);
 
   bool check(StringRef CheckExpr) const;
   bool checkAllRulesInBuffer(StringRef RulePrefix, MemoryBuffer *MemBuf) const;
@@ -66,19 +53,17 @@ private:
                                                   StringRef SectionName,
                                                   bool IsInsideLoad) const;
 
-  std::pair<uint64_t, std::string> getStubAddrFor(StringRef FileName,
-                                                  StringRef SectionName,
-                                                  StringRef Symbol,
-                                                  bool IsInsideLoad) const;
+  std::pair<uint64_t, std::string>
+  getStubOrGOTAddrFor(StringRef StubContainerName, StringRef Symbol,
+                      bool IsInsideLoad, bool IsStubAddr) const;
 
   Optional<uint64_t> getSectionLoadAddress(void *LocalAddr) const;
 
   IsSymbolValidFunction IsSymbolValid;
-  GetSymbolAddressFunction GetSymbolAddress;
-  GetSymbolContentFunction GetSymbolContent;
-  GetSectionLoadAddressFunction GetSectionLoadAddress;
-  GetSectionContentFunction GetSectionContent;
-  GetStubOffsetInSectionFunction GetStubOffsetInSection;
+  GetSymbolInfoFunction GetSymbolInfo;
+  GetSectionInfoFunction GetSectionInfo;
+  GetStubInfoFunction GetStubInfo;
+  GetGOTInfoFunction GetGOTInfo;
   support::endianness Endianness;
   MCDisassembler *Disassembler;
   MCInstPrinter *InstPrinter;

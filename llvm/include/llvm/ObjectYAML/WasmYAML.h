@@ -379,6 +379,16 @@ struct DataSection : Section {
   std::vector<DataSegment> Segments;
 };
 
+struct DataCountSection : Section {
+  DataCountSection() : Section(wasm::WASM_SEC_DATACOUNT) {}
+
+  static bool classof(const Section *S) {
+    return S->Type == wasm::WASM_SEC_DATACOUNT;
+  }
+
+  uint32_t Count;
+};
+
 struct Object {
   FileHeader Header;
   std::vector<std::unique_ptr<Section>> Sections;

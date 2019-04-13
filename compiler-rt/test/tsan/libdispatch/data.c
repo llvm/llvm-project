@@ -4,6 +4,7 @@
 #include <dispatch/dispatch.h>
 
 #include <stdio.h>
+#include <string.h>
 
 long global = 42;
 

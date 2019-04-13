@@ -141,3 +141,26 @@ char* test_cxa_demangle(const char* sym) {
   }
   return funcname; // no-warning
 }
+
+namespace argument_leak {
+class A {
+  char *name;
+
+public:
+  char *getName() {
+    if (!name) {
+      name = static_cast<char *>(malloc(10));
+    }
+    return name;
+  }
+  ~A() {
+    if (name) {
+      delete[] name;
+    }
+  }
+};
+
+void test(A a) {
+  (void)a.getName();
+}
+} // namespace argument_leak

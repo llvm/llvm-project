@@ -435,12 +435,16 @@ static void processOverflowIntrinsic(IntrinsicInst *II) {
   default:
     llvm_unreachable("Unexpected instruction.");
   case Intrinsic::uadd_with_overflow:
+    NewOp = B.CreateNUWAdd(II->getOperand(0), II->getOperand(1), II->getName());
+    break;
   case Intrinsic::sadd_with_overflow:
-    NewOp = B.CreateAdd(II->getOperand(0), II->getOperand(1), II->getName());
+    NewOp = B.CreateNSWAdd(II->getOperand(0), II->getOperand(1), II->getName());
     break;
   case Intrinsic::usub_with_overflow:
+    NewOp = B.CreateNUWSub(II->getOperand(0), II->getOperand(1), II->getName());
+    break;
   case Intrinsic::ssub_with_overflow:
-    NewOp = B.CreateSub(II->getOperand(0), II->getOperand(1), II->getName());
+    NewOp = B.CreateNSWSub(II->getOperand(0), II->getOperand(1), II->getName());
     break;
   }
   ++NumOverflows;
