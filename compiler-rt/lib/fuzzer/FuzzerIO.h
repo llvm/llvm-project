@@ -24,6 +24,7 @@ std::string FileToString(const std::string &Path);
 
 void CopyFileToErr(const std::string &Path);
 
+void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path);
 void WriteToFile(const Unit &U, const std::string &Path);
 
 void ReadDirToVectorOfUnits(const char *Path, Vector<Unit> *V,
@@ -89,6 +90,7 @@ int CloseFile(int Fd);
 int DuplicateFile(int Fd);
 
 void RemoveFile(const std::string &Path);
+void RenameFile(const std::string &OldPath, const std::string &NewPath);
 
 void DiscardOutput(int Fd);
 

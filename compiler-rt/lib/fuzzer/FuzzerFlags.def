@@ -67,6 +67,10 @@ FUZZER_FLAG_INT(cleanse_crash, 0, "If 1, tries to cleanse the provided"
   " Use with -exact_artifact_path to specify the output."
   )
 FUZZER_FLAG_INT(minimize_crash_internal_step, 0, "internal flag")
+FUZZER_FLAG_STRING(features_dir, "internal flag. Used to dump feature sets on disk."
+  "Every time a new input is added to the corpus, a corresponding file in the features_dir"
+  " is created containing the unique features of that input."
+  " Features are stored in binary format.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_memmem, 1,
                 "Use hints from intercepting memmem, strstr, etc")

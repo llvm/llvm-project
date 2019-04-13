@@ -63,6 +63,9 @@ __attribute__((weak)) extern int LLVMFuzzerInitialize(int *argc, char ***argv);
 } // extern "C"
 
 static size_t InputLen;
+static size_t InputLabelBeg;
+static size_t InputLabelEnd;
+static size_t InputSizeLabel;
 static size_t NumFuncs;
 static const uintptr_t *FuncsBeg;
 static __thread size_t CurrentFunc;
@@ -95,8 +98,10 @@ void SetBytesForLabel(dfsan_label L, char *Bytes) {
     return;
   LabelSeen[L] = true;
   assert(L);
-  if (L <= InputLen + 1) {
-    Bytes[L - 1] = '1';
+  if (L < InputSizeLabel) {
+    Bytes[L + InputLabelBeg - 1] = '1';
+  } else if (L == InputSizeLabel) {
+    Bytes[InputLen] = '1';
   } else {
     auto *DLI = dfsan_get_label_info(L);
     SetBytesForLabel(DLI->l1, Bytes);
@@ -124,9 +129,9 @@ int main(int argc, char **argv) {
   if (argc == 1)
     return PrintFunctions();
   assert(argc == 4 || argc == 5);
-  size_t Beg = atoi(argv[1]);
-  size_t End = atoi(argv[2]);
-  assert(Beg < End);
+  InputLabelBeg = atoi(argv[1]);
+  InputLabelEnd = atoi(argv[2]);
+  assert(InputLabelBeg < InputLabelEnd);
 
   const char *Input = argv[3];
   fprintf(stderr, "INFO: reading '%s'\n", Input);
@@ -143,14 +148,16 @@ int main(int argc, char **argv) {
 
   fprintf(stderr, "INFO: running '%s'\n", Input);
   for (size_t I = 1; I <= InputLen; I++) {
-    dfsan_label L = dfsan_create_label("", nullptr);
-    assert(L == I);
     size_t Idx = I - 1;
-    if (Idx >= Beg && Idx < End)
+    if (Idx >= InputLabelBeg && Idx < InputLabelEnd) {
+      dfsan_label L = dfsan_create_label("", nullptr);
+      assert(L == I - InputLabelBeg);
       dfsan_set_label(L, Buf + Idx, 1);
+    }
   }
   dfsan_label SizeL = dfsan_create_label("", nullptr);
-  assert(SizeL == InputLen + 1);
+  InputSizeLabel = SizeL;
+  assert(InputSizeLabel == InputLabelEnd - InputLabelBeg + 1);
   dfsan_set_label(SizeL, &InputLen, sizeof(InputLen));
 
   LLVMFuzzerTestOneInput(Buf, InputLen);

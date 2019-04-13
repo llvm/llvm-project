@@ -1,7 +1,9 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan %s -o %t
+// RUN: %deflake %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
+#include <dispatch/dispatch.h>
+
+#import "../test.h"
 
 dispatch_queue_t queue;
 dispatch_data_t data;
@@ -12,11 +14,12 @@ long my_global = 0;
 
 int main(int argc, const char *argv[]) {
   fprintf(stderr, "Hello world.\n");
-  
+  print_address("addr=", 1, &my_global);
+  barrier_init(&barrier, 2);
+
   queue = dispatch_queue_create("my.queue", DISPATCH_QUEUE_CONCURRENT);
   sem = dispatch_semaphore_create(0);
-  NSString *ns_path = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp-gcd-io.%d", getpid()]];
-  path = ns_path.fileSystemRepresentation;
+  path = tempnam(NULL, "libdispatch-io-barrier-race-");
   char buf[1000];
   data = dispatch_data_create(buf, sizeof(buf), NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
   
@@ -24,13 +27,14 @@ int main(int argc, const char *argv[]) {
   if (! channel) abort();
   dispatch_io_set_high_water(channel, 1);
 
-  for (int i = 0; i < 1000; i++) {
-    dispatch_io_barrier(channel, ^{
-      my_global = 42;
-    });
-  }
+  dispatch_io_write(channel, 0, data, queue, ^(bool done, dispatch_data_t remainingData, int error) {
+    if (error) abort();
+    my_global = 42;
+    barrier_wait(&barrier);
+  });
 
   dispatch_io_barrier(channel, ^{
+    barrier_wait(&barrier);
     my_global = 43;
 
     dispatch_semaphore_signal(sem);
@@ -44,5 +48,7 @@ int main(int argc, const char *argv[]) {
 }
 
 // CHECK: Hello world.
-// CHECK-NOT: WARNING: ThreadSanitizer
+// CHECK: addr=[[ADDR:0x[0-9,a-f]+]]
+// CHECK: WARNING: ThreadSanitizer: data race
+// CHECK: Location is global 'my_global' {{(of size 8 )?}}at [[ADDR]] (io-barrier-race.c.tmp+0x{{[0-9,a-f]+}})
 // CHECK: Done.
