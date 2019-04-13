@@ -1124,8 +1124,11 @@ public:
     if (Style.Language == FormatStyle::LK_Proto && Line.Level == 0 &&
         CurrentToken->is(Keywords.kw_option)) {
       next();
-      if (CurrentToken && CurrentToken->is(tok::identifier))
+      if (CurrentToken && CurrentToken->is(tok::identifier)) {
+        while (CurrentToken)
+          next();
         return LT_ImportStatement;
+      }
     }
 
     bool KeywordVirtualFound = false;

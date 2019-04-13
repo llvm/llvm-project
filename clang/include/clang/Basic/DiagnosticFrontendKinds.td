@@ -121,6 +121,12 @@ def err_verify_missing_file : Error<
     "file '%0' could not be located in expected %1">;
 def err_verify_invalid_range : Error<
     "invalid range following '-' in expected %0">;
+def err_verify_ambiguous_marker : Error<
+    "reference to marker '%0' is ambiguous">;
+def note_verify_ambiguous_marker : Note<
+    "ambiguous marker '%0' is defined here">;
+def err_verify_no_such_marker : Error<
+    "use of undefined marker '%0'">;
 def err_verify_missing_start : Error<
     "cannot find start ('{{') of expected %0">;
 def err_verify_missing_end : Error<

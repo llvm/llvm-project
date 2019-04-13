@@ -459,6 +459,8 @@ toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
 SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   return Res;
 }
 

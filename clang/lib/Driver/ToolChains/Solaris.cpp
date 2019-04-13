@@ -199,6 +199,8 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
   // FIXME: Omit X86_64 until 64-bit support is figured out.
   if (IsX86) {
     Res |= SanitizerKind::Address;
+    Res |= SanitizerKind::PointerCompare;
+    Res |= SanitizerKind::PointerSubtract;
   }
   Res |= SanitizerKind::Vptr;
   return Res;

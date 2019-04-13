@@ -410,6 +410,8 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   const bool IsMIPS64 = getTriple().isMIPS64();
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
   if (IsX86_64 || IsMIPS64) {
     Res |= SanitizerKind::Leak;

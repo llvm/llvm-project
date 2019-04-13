@@ -81,6 +81,19 @@ class TextDiagnosticBuffer;
 /// the included file is, for example, a system header where the actual line
 /// number may change and is not critical).
 ///
+/// As an alternative to specifying a fixed line number, the location of a
+/// diagnostic can instead be indicated by a marker of the form "#<marker>".
+/// Markers are specified by including them in a comment, and then referenced
+/// by appending the marker to the diagnostic with "@#<marker>":
+///
+/// \code
+///   #warning some text  // #1
+///   // expected-warning@#1 {{some text}}
+/// \endcode
+///
+/// The name of a marker used in a directive must be unique within the
+/// compilation.
+///
 /// The simple syntax above allows each specification to match exactly one
 /// error.  You can use the extended syntax to customize this. The extended
 /// syntax is "expected-<type> <n> {{diag text}}", where \<type> is one of
@@ -212,11 +225,14 @@ public:
     HasOtherExpectedDirectives
   };
 
+  class MarkerTracker;
+
 private:
   DiagnosticsEngine &Diags;
   DiagnosticConsumer *PrimaryClient;
   std::unique_ptr<DiagnosticConsumer> PrimaryClientOwner;
   std::unique_ptr<TextDiagnosticBuffer> Buffer;
+  std::unique_ptr<MarkerTracker> Markers;
   const Preprocessor *CurrentPreprocessor = nullptr;
   const LangOptions *LangOpts = nullptr;
   SourceManager *SrcManager = nullptr;
