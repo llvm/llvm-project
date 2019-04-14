@@ -4011,14 +4011,6 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
 
   case OCF_UNSIGNED_MUL:
   case OCF_SIGNED_MUL: {
-    // X * undef -> undef
-    if (isa<UndefValue>(RHS))
-      return SetResult(RHS, UndefValue::get(Builder.getInt1Ty()), false);
-
-    // X * 0 -> {0, false}
-    if (match(RHS, m_Zero()))
-      return SetResult(RHS, Builder.getFalse(), false);
-
     // X * 1 -> {X, false}
     if (match(RHS, m_One()))
       return SetResult(LHS, Builder.getFalse(), false);

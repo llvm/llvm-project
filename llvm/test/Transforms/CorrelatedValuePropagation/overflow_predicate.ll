@@ -472,3 +472,255 @@ trap:
   call void @llvm.trap()
   unreachable
 }
+
+define i1 @uadd_val(i8 %x, i1* %pc) {
+; CHECK-LABEL: @uadd_val(
+; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[X:%.*]], i8 100)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
+; CHECK:       no_overflow:
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[VAL]], 100
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[VAL]], 100
+; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+  %val_ov = call {i8, i1} @llvm.uadd.with.overflow(i8 %x, i8 100)
+  %ov = extractvalue {i8, i1} %val_ov, 1
+  br i1 %ov, label %trap, label %no_overflow
+
+no_overflow:
+  %val = extractvalue {i8, i1} %val_ov, 0
+  br label %split
+
+split:
+  %c1 = icmp ugt i8 %val, 100
+  store i1 %c1, i1* %pc
+  %c2 = icmp uge i8 %val, 100
+  ret i1 %c2
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
+
+define i1 @sadd_val(i8 %x, i1* %pc) {
+; CHECK-LABEL: @sadd_val(
+; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 100)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
+; CHECK:       no_overflow:
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[VAL]], -28
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[VAL]], -28
+; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+  %val_ov = call {i8, i1} @llvm.sadd.with.overflow(i8 %x, i8 100)
+  %ov = extractvalue {i8, i1} %val_ov, 1
+  br i1 %ov, label %trap, label %no_overflow
+
+no_overflow:
+  %val = extractvalue {i8, i1} %val_ov, 0
+  br label %split
+
+split:
+  %c1 = icmp sgt i8 %val, -28
+  store i1 %c1, i1* %pc
+  %c2 = icmp sge i8 %val, -28
+  ret i1 %c2
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
+
+define i1 @usub_val(i8 %x, i1* %pc) {
+; CHECK-LABEL: @usub_val(
+; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X:%.*]], i8 100)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
+; CHECK:       no_overflow:
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[VAL]], -101
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[VAL]], -101
+; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+  %val_ov = call {i8, i1} @llvm.usub.with.overflow(i8 %x, i8 100)
+  %ov = extractvalue {i8, i1} %val_ov, 1
+  br i1 %ov, label %trap, label %no_overflow
+
+no_overflow:
+  %val = extractvalue {i8, i1} %val_ov, 0
+  br label %split
+
+split:
+  %c1 = icmp ult i8 %val, 155
+  store i1 %c1, i1* %pc
+  %c2 = icmp ule i8 %val, 155
+  ret i1 %c2
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
+
+define i1 @ssub_val(i8 %x, i1* %pc) {
+; CHECK-LABEL: @ssub_val(
+; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 100)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
+; CHECK:       no_overflow:
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[VAL]], 27
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sle i8 [[VAL]], 27
+; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+  %val_ov = call {i8, i1} @llvm.ssub.with.overflow(i8 %x, i8 100)
+  %ov = extractvalue {i8, i1} %val_ov, 1
+  br i1 %ov, label %trap, label %no_overflow
+
+no_overflow:
+  %val = extractvalue {i8, i1} %val_ov, 0
+  br label %split
+
+split:
+  %c1 = icmp slt i8 %val, 27
+  store i1 %c1, i1* %pc
+  %c2 = icmp sle i8 %val, 27
+  ret i1 %c2
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
+
+define i1 @umul_val(i8 %x, i1* %pc) {
+; CHECK-LABEL: @umul_val(
+; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X:%.*]], i8 10)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
+; CHECK:       no_overflow:
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[VAL]], -6
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[VAL]], -6
+; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+  %val_ov = call {i8, i1} @llvm.umul.with.overflow(i8 %x, i8 10)
+  %ov = extractvalue {i8, i1} %val_ov, 1
+  br i1 %ov, label %trap, label %no_overflow
+
+no_overflow:
+  %val = extractvalue {i8, i1} %val_ov, 0
+  br label %split
+
+split:
+  %c1 = icmp ult i8 %val, 250
+  store i1 %c1, i1* %pc
+  %c2 = icmp ule i8 %val, 250
+  ret i1 %c2
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
+
+define i1 @smul_val_bound1(i8 %x, i1* %pc) {
+; CHECK-LABEL: @smul_val_bound1(
+; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 10)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
+; CHECK:       no_overflow:
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[VAL]], 120
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sle i8 [[VAL]], 120
+; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+  %val_ov = call {i8, i1} @llvm.smul.with.overflow(i8 %x, i8 10)
+  %ov = extractvalue {i8, i1} %val_ov, 1
+  br i1 %ov, label %trap, label %no_overflow
+
+no_overflow:
+  %val = extractvalue {i8, i1} %val_ov, 0
+  br label %split
+
+split:
+  %c1 = icmp slt i8 %val, 120
+  store i1 %c1, i1* %pc
+  %c2 = icmp sle i8 %val, 120
+  ret i1 %c2
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
+
+define i1 @smul_val_bound2(i8 %x, i1* %pc) {
+; CHECK-LABEL: @smul_val_bound2(
+; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 10)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
+; CHECK:       no_overflow:
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[VAL]], -120
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[VAL]], -120
+; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+  %val_ov = call {i8, i1} @llvm.smul.with.overflow(i8 %x, i8 10)
+  %ov = extractvalue {i8, i1} %val_ov, 1
+  br i1 %ov, label %trap, label %no_overflow
+
+no_overflow:
+  %val = extractvalue {i8, i1} %val_ov, 0
+  br label %split
+
+split:
+  %c1 = icmp sgt i8 %val, -120
+  store i1 %c1, i1* %pc
+  %c2 = icmp sge i8 %val, -120
+  ret i1 %c2
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}

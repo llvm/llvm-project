@@ -214,8 +214,7 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
   assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
 
   assert((NoWrapKind == OBO::NoSignedWrap ||
-          NoWrapKind == OBO::NoUnsignedWrap ||
-          NoWrapKind == (OBO::NoUnsignedWrap | OBO::NoSignedWrap)) &&
+          NoWrapKind == OBO::NoUnsignedWrap) &&
          "NoWrapKind invalid!");
 
   unsigned BitWidth = Other.getBitWidth();
@@ -231,11 +230,12 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
       if (C->isNullValue())
         // Full set: nothing signed / unsigned wraps when added to 0.
         return getFull(BitWidth);
-    if (NoWrapKind & OBO::NoUnsignedWrap)
-      Result =
-          SubsetIntersect(Result, ConstantRange(APInt::getNullValue(BitWidth),
-                                                -Other.getUnsignedMax()));
-    if (NoWrapKind & OBO::NoSignedWrap) {
+
+    if (NoWrapKind == OBO::NoUnsignedWrap)
+      return ConstantRange(APInt::getNullValue(BitWidth),
+                           -Other.getUnsignedMax());
+
+    if (NoWrapKind == OBO::NoSignedWrap) {
       const APInt &SignedMin = Other.getSignedMin();
       const APInt &SignedMax = Other.getSignedMax();
       if (SignedMax.isStrictlyPositive())
@@ -256,11 +256,12 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
       if (C->isNullValue())
         // Full set: nothing signed / unsigned wraps when subtracting 0.
         return getFull(BitWidth);
-    if (NoWrapKind & OBO::NoUnsignedWrap)
-      Result =
-          SubsetIntersect(Result, ConstantRange(Other.getUnsignedMax(),
-                                                APInt::getMinValue(BitWidth)));
-    if (NoWrapKind & OBO::NoSignedWrap) {
+
+    if (NoWrapKind == OBO::NoUnsignedWrap)
+      return ConstantRange(Other.getUnsignedMax(),
+                           APInt::getMinValue(BitWidth));
+
+    if (NoWrapKind == OBO::NoSignedWrap) {
       const APInt &SignedMin = Other.getSignedMin();
       const APInt &SignedMax = Other.getSignedMax();
       if (SignedMax.isStrictlyPositive())
@@ -275,13 +276,8 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                           APInt::getSignedMinValue(BitWidth) + SignedMin));
     }
     return Result;
-  case Instruction::Mul: {
-    if (NoWrapKind == (OBO::NoSignedWrap | OBO::NoUnsignedWrap)) {
-      return SubsetIntersect(
-          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoSignedWrap),
-          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoUnsignedWrap));
-    }
 
+  case Instruction::Mul: {
     // Equivalent to calling makeGuaranteedNoWrapRegion() on [V, V+1).
     const bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
     const auto makeSingleValueRegion = [Unsigned,
@@ -351,14 +347,6 @@ bool ConstantRange::isSignWrappedSet() const {
 
 bool ConstantRange::isUpperSignWrapped() const {
   return Lower.sgt(Upper);
-}
-
-APInt ConstantRange::getSetSize() const {
-  if (isFullSet())
-    return APInt::getOneBitSet(getBitWidth()+1, getBitWidth());
-
-  // This is also correct for wrapped sets.
-  return (Upper - Lower).zext(getBitWidth()+1);
 }
 
 bool
