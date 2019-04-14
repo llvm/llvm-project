@@ -849,24 +849,11 @@ void Sema::ActOnStartOfTranslationUnit() {
   if (getLangOpts().ModulesTS &&
       (getLangOpts().getCompilingModule() == LangOptions::CMK_ModuleInterface ||
        getLangOpts().getCompilingModule() == LangOptions::CMK_None)) {
+    // We start in an implied global module fragment.
     SourceLocation StartOfTU =
         SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
-
-    // We start in the global module; all those declarations are implicitly
-    // module-private (though they do not have module linkage).
-    auto &Map = PP.getHeaderSearchInfo().getModuleMap();
-    auto *GlobalModule = Map.createGlobalModuleForInterfaceUnit(StartOfTU);
-    assert(GlobalModule && "module creation should not fail");
-
-    // Enter the scope of the global module.
-    ModuleScopes.push_back({});
-    ModuleScopes.back().Module = GlobalModule;
-    VisibleModules.setVisible(GlobalModule, StartOfTU);
-
-    // All declarations created from now on are owned by the global module.
-    auto *TU = Context.getTranslationUnitDecl();
-    TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::Visible);
-    TU->setLocalOwningModule(GlobalModule);
+    ActOnGlobalModuleFragmentDecl(StartOfTU);
+    ModuleScopes.back().ImplicitGlobalModuleFragment = true;
   }
 }
 
@@ -997,13 +984,24 @@ void Sema::ActOnEndOfTranslationUnit() {
     checkUndefinedButUsed(*this);
   }
 
+  // A global-module-fragment is only permitted within a module unit.
+  bool DiagnosedMissingModuleDeclaration = false;
+  if (!ModuleScopes.empty() &&
+      ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment &&
+      !ModuleScopes.back().ImplicitGlobalModuleFragment) {
+    Diag(ModuleScopes.back().BeginLoc,
+         diag::err_module_declaration_missing_after_global_module_introducer);
+    DiagnosedMissingModuleDeclaration = true;
+  }
+
   if (TUKind == TU_Module) {
     // If we are building a module interface unit, we need to have seen the
     // module declaration by now.
     if (getLangOpts().getCompilingModule() ==
             LangOptions::CMK_ModuleInterface &&
         (ModuleScopes.empty() ||
-         ModuleScopes.back().Module->Kind != Module::ModuleInterfaceUnit)) {
+         ModuleScopes.back().Module->Kind != Module::ModuleInterfaceUnit) &&
+        !DiagnosedMissingModuleDeclaration) {
       // FIXME: Make a better guess as to where to put the module declaration.
       Diag(getSourceManager().getLocForStartOfFile(
                getSourceManager().getMainFileID()),

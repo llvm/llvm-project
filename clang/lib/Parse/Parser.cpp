@@ -460,6 +460,8 @@ void Parser::Initialize() {
   Ident_sealed = nullptr;
   Ident_override = nullptr;
   Ident_GNU_final = nullptr;
+  Ident_import = nullptr;
+  Ident_module = nullptr;
 
   Ident_super = &PP.getIdentifierTable().get("super");
 
@@ -512,6 +514,11 @@ void Parser::Initialize() {
     PP.SetPoisonReason(Ident_AbnormalTermination,diag::err_seh___finally_block);
   }
 
+  if (getLangOpts().CPlusPlusModules) {
+    Ident_import = PP.getIdentifierInfo("import");
+    Ident_module = PP.getIdentifierInfo("module");
+  }
+
   Actions.Initialize();
 
   // Prime the lexer look-ahead.
@@ -525,6 +532,16 @@ void Parser::LateTemplateParserCleanupCallback(void *P) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(((Parser *)P)->TemplateIds);
 }
 
+/// Parse the first top-level declaration in a translation unit.
+///
+///   translation-unit:
+/// [C]     external-declaration
+/// [C]     translation-unit external-declaration
+/// [C++]   top-level-declaration-seq[opt]
+/// [C++20] global-module-fragment[opt] module-declaration
+///                 top-level-declaration-seq[opt] private-module-fragment[opt]
+///
+/// Note that in C, it is an error if there is no first declaration.
 bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
   Actions.ActOnStartOfTranslationUnit();
 
@@ -532,7 +549,7 @@ bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
   // declaration. C++ doesn't have this restriction. We also don't want to
   // complain if we have a precompiled header, although technically if the PCH
   // is empty we should still emit the (pedantic) diagnostic.
-  bool NoTopLevelDecls = ParseTopLevelDecl(Result);
+  bool NoTopLevelDecls = ParseTopLevelDecl(Result, true);
   if (NoTopLevelDecls && !Actions.getASTContext().getExternalSource() &&
       !getLangOpts().CPlusPlus)
     Diag(diag::ext_empty_translation_unit);
@@ -542,7 +559,11 @@ bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
 
 /// ParseTopLevelDecl - Parse one top-level declaration, return whatever the
 /// action tells us to.  This returns true if the EOF was encountered.
-bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
+///
+///   top-level-declaration:
+///           declaration
+/// [C++20]   module-import-declaration
+bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds);
 
   // Skip over the EOF token, flagging end of previous input for incremental
@@ -557,12 +578,45 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     return false;
 
   case tok::kw_export:
-    if (NextToken().isNot(tok::kw_module))
+    switch (NextToken().getKind()) {
+    case tok::kw_module:
+      goto module_decl;
+
+    // Note: no need to handle kw_import here. We only form kw_import under
+    // the Modules TS, and in that case 'export import' is parsed as an
+    // export-declaration containing an import-declaration.
+
+    // Recognize context-sensitive C++20 'export module' and 'export import'
+    // declarations.
+    case tok::identifier: {
+      IdentifierInfo *II = NextToken().getIdentifierInfo();
+      if ((II == Ident_module || II == Ident_import) &&
+          GetLookAheadToken(2).isNot(tok::coloncolon)) {
+        if (II == Ident_module)
+          goto module_decl;
+        else
+          goto import_decl;
+      }
       break;
-    LLVM_FALLTHROUGH;
+    }
+
+    default:
+      break;
+    }
+    break;
+
   case tok::kw_module:
-    Result = ParseModuleDecl();
+  module_decl:
+    Result = ParseModuleDecl(IsFirstDecl);
     return false;
+
+  // tok::kw_import is handled by ParseExternalDeclaration. (Under the Modules
+  // TS, an import can occur within an export block.)
+  import_decl: {
+    Decl *ImportDecl = ParseModuleImport(SourceLocation());
+    Result = Actions.ConvertDeclToDeclGroup(ImportDecl);
+    return false;
+  }
 
   case tok::annot_module_include:
     Actions.ActOnModuleInclude(Tok.getLocation(),
@@ -594,6 +648,21 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
       Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
+
+  case tok::identifier:
+    // C++2a [basic.link]p3:
+    //   A token sequence beginning with 'export[opt] module' or
+    //   'export[opt] import' and not immediately followed by '::'
+    //   is never interpreted as the declaration of a top-level-declaration.
+    if ((Tok.getIdentifierInfo() == Ident_module ||
+         Tok.getIdentifierInfo() == Ident_import) &&
+        NextToken().isNot(tok::coloncolon)) {
+      if (Tok.getIdentifierInfo() == Ident_module)
+        goto module_decl;
+      else
+        goto import_decl;
+    }
+    break;
 
   default:
     break;
@@ -2074,37 +2143,82 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   Braces.consumeClose();
 }
 
-/// Parse a C++ Modules TS module declaration, which appears at the beginning
-/// of a module interface, module partition, or module implementation file.
+/// Parse a declaration beginning with the 'module' keyword or C++20
+/// context-sensitive keyword (optionally preceded by 'export').
 ///
-///   module-declaration:   [Modules TS + P0273R0 + P0629R0]
-///     'export'[opt] 'module' 'partition'[opt]
-///            module-name attribute-specifier-seq[opt] ';'
+///   module-declaration:   [Modules TS + P0629R0]
+///     'export'[opt] 'module' module-name attribute-specifier-seq[opt] ';'
 ///
-/// Note that 'partition' is a context-sensitive keyword.
-Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
+///   global-module-fragment:  [C++2a]
+///     'module' ';' top-level-declaration-seq[opt]
+///   module-declaration:      [C++2a]
+///     'export'[opt] 'module' module-name module-partition[opt]
+///            attribute-specifier-seq[opt] ';'
+///   private-module-fragment: [C++2a]
+///     'module' ':' 'private' ';' top-level-declaration-seq[opt]
+Parser::DeclGroupPtrTy Parser::ParseModuleDecl(bool IsFirstDecl) {
   SourceLocation StartLoc = Tok.getLocation();
 
   Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
                                  ? Sema::ModuleDeclKind::Interface
                                  : Sema::ModuleDeclKind::Implementation;
 
-  assert(Tok.is(tok::kw_module) && "not a module declaration");
+  assert(
+      (Tok.is(tok::kw_module) ||
+       (Tok.is(tok::identifier) && Tok.getIdentifierInfo() == Ident_module)) &&
+      "not a module declaration");
   SourceLocation ModuleLoc = ConsumeToken();
 
-  if (Tok.is(tok::identifier) && NextToken().is(tok::identifier) &&
-      Tok.getIdentifierInfo()->isStr("partition")) {
-    // If 'partition' is present, this must be a module interface unit.
-    if (MDK != Sema::ModuleDeclKind::Interface)
-      Diag(Tok.getLocation(), diag::err_module_implementation_partition)
-        << FixItHint::CreateInsertion(ModuleLoc, "export ");
-    MDK = Sema::ModuleDeclKind::Partition;
+  // Attributes appear after the module name, not before.
+  if (Tok.is(tok::l_square))
+    CheckProhibitedCXX11Attribute();
+
+  // Parse a global-module-fragment, if present.
+  if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
+    SourceLocation SemiLoc = ConsumeToken();
+    if (!IsFirstDecl) {
+      Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
+        << SourceRange(StartLoc, SemiLoc);
+      return nullptr;
+    }
+    if (MDK == Sema::ModuleDeclKind::Interface) {
+      Diag(StartLoc, diag::err_module_fragment_exported)
+        << /*global*/0 << FixItHint::CreateRemoval(StartLoc);
+    }
+    return Actions.ActOnGlobalModuleFragmentDecl(ModuleLoc);
+  }
+
+  // Parse a private-module-fragment, if present.
+  if (getLangOpts().CPlusPlusModules && Tok.is(tok::colon) &&
+      NextToken().is(tok::kw_private)) {
+    if (MDK == Sema::ModuleDeclKind::Interface) {
+      Diag(StartLoc, diag::err_module_fragment_exported)
+        << /*private*/1 << FixItHint::CreateRemoval(StartLoc);
+    }
     ConsumeToken();
+    SourceLocation PrivateLoc = ConsumeToken();
+    if (Tok.is(tok::l_square))
+      CheckProhibitedCXX11Attribute();
+    ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
+    return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
   }
 
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
   if (ParseModuleName(ModuleLoc, Path, /*IsImport*/false))
     return nullptr;
+
+  // Parse the optional module-partition.
+  if (Tok.is(tok::colon)) {
+    SourceLocation ColonLoc = ConsumeToken();
+    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
+    if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/false))
+      return nullptr;
+
+    // FIXME: Support module partition declarations.
+    Diag(ColonLoc, diag::err_unsupported_module_partition)
+      << SourceRange(ColonLoc, Partition.back().second);
+    // Recover by parsing as a non-partition.
+  }
 
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributesWithRange Attrs(AttrFactory);
@@ -2113,7 +2227,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
-  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path);
+  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, IsFirstDecl);
 }
 
 /// Parse a module import declaration. This is essentially the same for
@@ -2124,17 +2238,50 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
 ///           '@' 'import' module-name ';'
 /// [ModTS] module-import-declaration:
 ///           'import' module-name attribute-specifier-seq[opt] ';'
+/// [C++2a] module-import-declaration:
+///           'export'[opt] 'import' module-name
+///                   attribute-specifier-seq[opt] ';'
+///           'export'[opt] 'import' module-partition
+///                   attribute-specifier-seq[opt] ';'
+///           'export'[opt] 'import' header-name
+///                   attribute-specifier-seq[opt] ';'
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
-  assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
+  SourceLocation StartLoc = AtLoc.isInvalid() ? Tok.getLocation() : AtLoc;
+
+  SourceLocation ExportLoc;
+  TryConsumeToken(tok::kw_export, ExportLoc);
+
+  assert((AtLoc.isInvalid() ? Tok.isOneOf(tok::kw_import, tok::identifier)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
   SourceLocation ImportLoc = ConsumeToken();
-  SourceLocation StartLoc = AtLoc.isInvalid() ? ImportLoc : AtLoc;
 
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-  if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+  Module *HeaderUnit = nullptr;
+
+  if (Tok.is(tok::header_name)) {
+    // This is a header import that the preprocessor decided we should skip
+    // because it was malformed in some way. Parse and ignore it; it's already
+    // been diagnosed.
+    ConsumeToken();
+  } else if (Tok.is(tok::annot_header_unit)) {
+    // This is a header import that the preprocessor mapped to a module import.
+    HeaderUnit = reinterpret_cast<Module *>(Tok.getAnnotationValue());
+    ConsumeAnnotationToken();
+  } else if (getLangOpts().CPlusPlusModules && Tok.is(tok::colon)) {
+    SourceLocation ColonLoc = ConsumeToken();
+    if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+      return nullptr;
+
+    // FIXME: Support module partition import.
+    Diag(ColonLoc, diag::err_unsupported_module_partition)
+      << SourceRange(ColonLoc, Path.back().second);
     return nullptr;
+  } else {
+    if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+      return nullptr;
+  }
 
   ParsedAttributesWithRange Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
@@ -2147,7 +2294,12 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
     return nullptr;
   }
 
-  DeclResult Import = Actions.ActOnModuleImport(StartLoc, ImportLoc, Path);
+  DeclResult Import;
+  if (HeaderUnit)
+    Import =
+        Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, HeaderUnit);
+  else if (!Path.empty())
+    Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path);
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
   if (Import.isInvalid())
     return nullptr;

@@ -51,17 +51,11 @@ static void EnumerateTwoConstantRanges(unsigned Bits, Fn TestFn) {
 
 template<typename Fn>
 static void ForeachNumInConstantRange(const ConstantRange &CR, Fn TestFn) {
-  if (CR.isFullSet()) {
-    for (APInt N = APInt::getNullValue(CR.getBitWidth());;) {
-      TestFn(N);
-      if (N == APInt::getAllOnesValue(CR.getBitWidth()))
-        break;
-      ++N;
-    }
-    return;
+  if (!CR.isEmptySet()) {
+    APInt N = CR.getLower();
+    do TestFn(N);
+    while (++N != CR.getUpper());
   }
-  for (APInt N = CR.getLower(); N != CR.getUpper(); ++N)
-    TestFn(N);
 }
 
 ConstantRange ConstantRangeTest::Full(16, true);
@@ -1465,31 +1459,18 @@ static void TestOverflowExhaustive(Fn1 OverflowFn, Fn2 MayOverflowFn) {
   unsigned Bits = 4;
   EnumerateTwoConstantRanges(Bits, [=](const ConstantRange &CR1,
                                        const ConstantRange &CR2) {
-    unsigned Size1 = CR1.isFullSet()
-                         ? 1u << CR1.getBitWidth()
-                         : (CR1.getUpper() - CR1.getLower()).getZExtValue();
-    unsigned Size2 = CR2.isFullSet()
-                         ? 1u << CR2.getBitWidth()
-                         : (CR2.getUpper() - CR2.getLower()).getZExtValue();
-
     // Loop over all N1 in CR1 and N2 in CR2 and check whether any of the
-    // operations have overflow / have no overflow. These loops are based
-    // on Size1/Size2 to properly handle empty/full ranges.
+    // operations have overflow / have no overflow.
     bool RangeHasOverflow = false;
     bool RangeHasNoOverflow = false;
-    APInt N1 = CR1.getLower();
-    for (unsigned I1 = 0; I1 < Size1; ++I1, ++N1) {
-      APInt N2 = CR2.getLower();
-      for (unsigned I2 = 0; I2 < Size2; ++I2, ++N2) {
-        assert(CR1.contains(N1));
-        assert(CR2.contains(N2));
-
+    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
         if (OverflowFn(N1, N2))
           RangeHasOverflow = true;
         else
           RangeHasNoOverflow = true;
-      }
-    }
+      });
+    });
 
     ConstantRange::OverflowResult OR = MayOverflowFn(CR1, CR2);
     switch (OR) {
