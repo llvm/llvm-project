@@ -9,8 +9,8 @@ target datalayout = "e-p:64:64-p1:16:16-p2:32:32:32-p3:64:64:64"
 %struct.C = type { [7 x i8] }
 
 
-@Global = constant [10 x i8] c"helloworld"
-@Global_as1 = addrspace(1) constant [10 x i8] c"helloworld"
+@Global = external global [10 x i8]
+@Global_as1 = external addrspace(1) global [10 x i8]
 
 ; Test noop elimination
 define i32* @test1(i32* %I) {
