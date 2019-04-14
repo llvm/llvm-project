@@ -968,27 +968,18 @@ define i1 @bool_reduction_v8f32(<8 x float> %x, <8 x float> %y) {
 ; SSE-NEXT:    cmpneqps %xmm3, %xmm1
 ; SSE-NEXT:    cmpneqps %xmm2, %xmm0
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    pextrb $0, %xmm1, %eax
-; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    packsswb %xmm0, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: bool_reduction_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpneqps %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    vmovmskps %ymm0, %eax
+; AVX-NEXT:    testb %al, %al
+; AVX-NEXT:    setne %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -1001,11 +992,15 @@ define i1 @bool_reduction_v8f32(<8 x float> %x, <8 x float> %y) {
 ; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
 ; AVX512-NEXT:    korw %k1, %k0, %k1
+; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
+; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
+; AVX512-NEXT:    korw %k1, %k0, %k1
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; AVX512-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512-NEXT:    vptestmd %ymm0, %ymm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -1017,7 +1012,7 @@ define i1 @bool_reduction_v8f32(<8 x float> %x, <8 x float> %y) {
   %s2 = shufflevector <8 x i1> %b, <8 x i1> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %c = or <8 x i1> %s2, %b
   %s3 = shufflevector <8 x i1> %c, <8 x i1> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %d = or <8 x i1> %s2, %c
+  %d = or <8 x i1> %s3, %c
   %e = extractelement <8 x i1> %d, i32 0
   ret i1 %e
 }

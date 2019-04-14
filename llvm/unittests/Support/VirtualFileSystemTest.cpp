@@ -401,8 +401,9 @@ struct ScopedFile {
       this->Path = "";
   }
   ~ScopedFile() {
-    if (Path != "")
+    if (Path != "") {
       EXPECT_FALSE(llvm::sys::fs::remove(Path.str()));
+    }
   }
 };
 } // end anonymous namespace

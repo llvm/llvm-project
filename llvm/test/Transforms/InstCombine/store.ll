@@ -291,6 +291,17 @@ define void @write_back7(i32* %p) {
   ret void
 }
 
+@Unknown = external constant i32
+
+define void @store_to_constant() {
+; CHECK-LABEL: @store_to_constant(
+; CHECK-NEXT:    store i32 0, i32* @Unknown, align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* @Unknown
+  ret void
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
