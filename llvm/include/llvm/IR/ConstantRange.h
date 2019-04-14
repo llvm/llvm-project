@@ -116,16 +116,10 @@ public:
   static ConstantRange makeExactICmpRegion(CmpInst::Predicate Pred,
                                            const APInt &Other);
 
-  /// Return the largest range containing all X such that "X BinOpC Y" is
+  /// Return the exact range containing all X such that "X BinOpC Y" is
   /// guaranteed not to wrap (overflow) for all Y in Other.
   ///
-  /// If only one of NoUnsignedWrap or NoSignedWrap is specified, the returned
-  /// range is exact: It contains *all* possible values of X for which
-  /// "X BinOpC Y" does not wrap. However, if both NUW and NSW are specified, it
-  /// may return only a subset of non-wrapping values. In this case the
-  /// returned region cannot be used to constrain X's range. E.g. in the
-  /// fourth example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2),
-  /// but (-2) is not in the set returned.
+  /// NoWrapKind must be one of OBO::NoUnsignedWrap or OBO::NoSignedWrap.
   ///
   /// Examples:
   ///  typedef OverflowingBinaryOperator OBO;
@@ -133,13 +127,9 @@ public:
   ///  MGNR(Add, [i8 1, 2), OBO::NoSignedWrap) == [-128, 127)
   ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap) == [0, -1)
   ///  MGNR(Add, [i8 0, 1), OBO::NoUnsignedWrap) == Full Set
-  ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap | OBO::NoSignedWrap)
-  ///    == [0,INT_MAX)
   ///  MGNR(Add, [i8 -1, 6), OBO::NoSignedWrap) == [INT_MIN+1, INT_MAX-4)
   ///  MGNR(Sub, [i8 1, 2), OBO::NoSignedWrap) == [-127, 128)
   ///  MGNR(Sub, [i8 1, 2), OBO::NoUnsignedWrap) == [1, 0)
-  ///  MGNR(Sub, [i8 1, 2), OBO::NoUnsignedWrap | OBO::NoSignedWrap)
-  ///    == [1,INT_MAX)
   static ConstantRange makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                                                   const ConstantRange &Other,
                                                   unsigned NoWrapKind);
@@ -214,9 +204,6 @@ public:
 
   /// Return true if this set contains exactly one member.
   bool isSingleElement() const { return getSingleElement() != nullptr; }
-
-  /// Return the number of elements in this set.
-  APInt getSetSize() const;
 
   /// Compare set size of this range with the range CR.
   bool isSizeStrictlySmallerThan(const ConstantRange &CR) const;

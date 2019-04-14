@@ -394,33 +394,6 @@ multiclass AVX512_maskable_cmp<bits<8> O, Format F, X86VectorVTInfo _,
                           OpcodeStr, AttSrcAsm, IntelSrcAsm, RHS,
                           (and _.KRCWM:$mask, RHS), IsCommutable>;
 
-multiclass AVX512_maskable_cmp_alt<bits<8> O, Format F, X86VectorVTInfo _,
-                           dag Outs, dag Ins, string OpcodeStr,
-                           string AttSrcAsm, string IntelSrcAsm> :
-   AVX512_maskable_custom_cmp<O, F, Outs,
-                             Ins, !con((ins _.KRCWM:$mask),Ins), OpcodeStr,
-                             AttSrcAsm, IntelSrcAsm, [], []>;
-
-// This multiclass generates the unconditional/non-masking, the masking and
-// the zero-masking variant of the vector instruction.  In the masking case, the
-// perserved vector elements come from a new dummy input operand tied to $dst.
-multiclass AVX512_maskable_logic<bits<8> O, Format F, X86VectorVTInfo _,
-                           dag Outs, dag Ins, string OpcodeStr,
-                           string AttSrcAsm, string IntelSrcAsm,
-                           dag RHS, dag MaskedRHS,
-                           bit IsCommutable = 0, SDNode Select = vselect> :
-   AVX512_maskable_custom<O, F, Outs, Ins,
-                          !con((ins _.RC:$src0, _.KRCWM:$mask), Ins),
-                          !con((ins _.KRCWM:$mask), Ins),
-                          OpcodeStr, AttSrcAsm, IntelSrcAsm,
-                          [(set _.RC:$dst, RHS)],
-                          [(set _.RC:$dst,
-                                (Select _.KRCWM:$mask, MaskedRHS, _.RC:$src0))],
-                          [(set _.RC:$dst,
-                                (Select _.KRCWM:$mask, MaskedRHS,
-                                        _.ImmAllZerosV))],
-                          "$src0 = $dst", IsCommutable>;
-
 
 // Alias instruction that maps zero vector to pxor / xorp* for AVX-512.
 // This is expanded by ExpandPostRAPseudos to an xorps / vxorps, and then
