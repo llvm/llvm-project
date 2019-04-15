@@ -407,7 +407,7 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
   if (checkRuntimeUninitialized(loc)) {
     ASSERT0(LT_FUSSY, checkSPMDMode(loc),
             "Expected SPMD mode with uninitialized runtime.");
-    return parallelLevel;
+    return parallelLevel + 1;
   }
 
   int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
