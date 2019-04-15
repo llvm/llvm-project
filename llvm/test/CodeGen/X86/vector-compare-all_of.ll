@@ -1246,7 +1246,7 @@ define i1 @bool_reduction_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0 {%k1}
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kshiftrw $4, %k0, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kshiftrw $2, %k0, %k1
@@ -1436,7 +1436,7 @@ define i1 @bool_reduction_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0
 ; AVX512-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0 {%k1}
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kshiftrw $4, %k0, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kshiftrw $2, %k0, %k1
@@ -1497,7 +1497,7 @@ define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
 ; AVX512-NEXT:    kshiftrd $16, %k0, %k1
-; AVX512-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0 {%k1}
+; AVX512-NEXT:    kandd %k0, %k1, %k0
 ; AVX512-NEXT:    kshiftrd $8, %k0, %k1
 ; AVX512-NEXT:    kandd %k0, %k1, %k0
 ; AVX512-NEXT:    kshiftrd $4, %k0, %k1

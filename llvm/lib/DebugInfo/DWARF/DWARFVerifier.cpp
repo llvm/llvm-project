@@ -85,23 +85,16 @@ bool DWARFVerifier::DieRangeInfo::contains(const DieRangeInfo &RHS) const {
 }
 
 bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS) const {
-  if (Ranges.empty() || RHS.Ranges.empty())
-    return false;
-
-  auto End = Ranges.end();
-  auto Iter = findRange(RHS.Ranges.front());
-  for (const auto &R : RHS.Ranges) {
-    if (Iter == End)
-      return false;
-    if (R.HighPC <= Iter->LowPC)
-      continue;
-    while (Iter != End) {
-      if (Iter->intersects(R))
-        return true;
-      ++Iter;
-    }
+  auto I1 = Ranges.begin(), E1 = Ranges.end();
+  auto I2 = RHS.Ranges.begin(), E2 = RHS.Ranges.end();
+  while (I1 != E1 && I2 != E2) {
+    if (I1->intersects(*I2))
+      return true;
+    if (I1->LowPC < I2->LowPC)
+      ++I1;
+    else
+      ++I2;
   }
-
   return false;
 }
 

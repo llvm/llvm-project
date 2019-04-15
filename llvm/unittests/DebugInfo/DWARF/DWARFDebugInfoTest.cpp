@@ -3188,6 +3188,9 @@ TEST(DWARFDebugInfo, TestDWARFDieRangeInfoIntersects) {
   AssertRangesIntersect(Ranges, {{0x3f, 0x40}});
   // Test range that starts at end of second range
   AssertRangesDontIntersect(Ranges, {{0x40, 0x41}});
+
+  AssertRangesDontIntersect(Ranges, {{0x20, 0x21}, {0x2f, 0x30}});
+  AssertRangesIntersect(Ranges, {{0x20, 0x21}, {0x2f, 0x31}});
 }
 
 } // end anonymous namespace

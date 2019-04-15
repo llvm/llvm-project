@@ -24,6 +24,7 @@ class LLVMTargetMachine;
 struct MachineSchedContext;
 class PassConfigImpl;
 class ScheduleDAGInstrs;
+class CSEConfigBase;
 
 // The old pass manager infrastructure is hidden in a legacy namespace now.
 namespace legacy {
@@ -318,6 +319,9 @@ public:
   /// Check whether continuous CSE should be enabled in GISel passes.
   /// By default, it's enabled for non O0 levels.
   virtual bool isGISelCSEEnabled() const;
+
+  /// Returns the CSEConfig object to use for the current optimization level.
+  virtual std::unique_ptr<CSEConfigBase> getCSEConfig() const;
 
 protected:
   // Helper to verify the analysis is really immutable.

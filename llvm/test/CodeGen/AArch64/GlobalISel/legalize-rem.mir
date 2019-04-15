@@ -49,10 +49,9 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC]], [[C]]
     ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[TRUNC1]], [[C1]]
-    ; CHECK: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]]
+    ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[TRUNC1]], [[C]]
+    ; CHECK: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C]]
     ; CHECK: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[ASHR]], [[ASHR1]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SDIV]](s32)
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)

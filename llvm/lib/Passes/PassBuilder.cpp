@@ -1422,6 +1422,40 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   return Result;
 }
 
+/// Parser of parameters for SimplifyCFG pass.
+Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
+  SimplifyCFGOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "forward-switch-cond") {
+      Result.forwardSwitchCondToPhi(Enable);
+    } else if (ParamName == "switch-to-lookup") {
+      Result.convertSwitchToLookupTable(Enable);
+    } else if (ParamName == "keep-loops") {
+      Result.needCanonicalLoops(Enable);
+    } else if (ParamName == "sink-common-insts") {
+      Result.sinkCommonInsts(Enable);
+    } else if (Enable && ParamName.consume_front("bonus-inst-threshold=")) {
+      APInt BonusInstThreshold;
+      if (ParamName.getAsInteger(0, BonusInstThreshold))
+        return make_error<StringError>(
+            formatv("invalid argument to SimplifyCFG pass bonus-threshold "
+                    "parameter: '{0}' ",
+                    ParamName).str(),
+            inconvertibleErrorCode());
+      Result.bonusInstThreshold(BonusInstThreshold.getSExtValue());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SimplifyCFG pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline

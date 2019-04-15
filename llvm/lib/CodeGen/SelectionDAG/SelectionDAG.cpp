@@ -2906,39 +2906,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     LLVM_FALLTHROUGH;
   case ISD::SUB:
   case ISD::SUBC: {
-    if (ConstantSDNode *CLHS = isConstOrConstSplat(Op.getOperand(0))) {
-      // We know that the top bits of C-X are clear if X contains less bits
-      // than C (i.e. no wrap-around can happen).  For example, 20-X is
-      // positive if we can prove that X is >= 0 and < 16.
-      if (CLHS->getAPIntValue().isNonNegative()) {
-        unsigned NLZ = (CLHS->getAPIntValue()+1).countLeadingZeros();
-        // NLZ can't be BitWidth with no sign bit
-        APInt MaskV = APInt::getHighBitsSet(BitWidth, NLZ+1);
-        Known2 = computeKnownBits(Op.getOperand(1), DemandedElts,
-                         Depth + 1);
-
-        // If all of the MaskV bits are known to be zero, then we know the
-        // output top bits are zero, because we now know that the output is
-        // from [0-C].
-        if ((Known2.Zero & MaskV) == MaskV) {
-          unsigned NLZ2 = CLHS->getAPIntValue().countLeadingZeros();
-          // Top bits known zero.
-          Known.Zero.setHighBits(NLZ2);
-        }
-      }
-    }
-
-    // If low bits are know to be zero in both operands, then we know they are
-    // going to be 0 in the result. Both addition and complement operations
-    // preserve the low zero bits.
-    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    unsigned KnownZeroLow = Known2.countMinTrailingZeros();
-    if (KnownZeroLow == 0)
-      break;
-
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    KnownZeroLow = std::min(KnownZeroLow, Known2.countMinTrailingZeros());
-    Known.Zero.setLowBits(KnownZeroLow);
+    Known = KnownBits::computeForAddSub(/* Add */ false, /* NSW */ false,
+                                        Known, Known2);
     break;
   }
   case ISD::UADDO:
@@ -2956,34 +2927,26 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ADD:
   case ISD::ADDC:
   case ISD::ADDE: {
-    // Output known-0 bits are known if clear or set in both the low clear bits
-    // common to both LHS & RHS.  For example, 8+(X<<3) is known to have the
-    // low 3 bits clear.
-    // Output known-0 bits are also known if the top bits of each input are
-    // known to be clear. For example, if one input has the top 10 bits clear
-    // and the other has the top 8 bits clear, we know the top 7 bits of the
-    // output must be clear.
-    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    unsigned KnownZeroHigh = Known2.countMinLeadingZeros();
-    unsigned KnownZeroLow = Known2.countMinTrailingZeros();
+    assert(Op.getResNo() == 0 && "We only compute knownbits for the sum here.");
 
+    // With ADDE and ADDCARRY, a carry bit may be added in.
+    KnownBits Carry(1);
+    if (Opcode == ISD::ADDE)
+      // Can't track carry from glue, set carry to unknown.
+      Carry.resetAll();
+    else if (Opcode == ISD::ADDCARRY)
+      // TODO: Compute known bits for the carry operand. Not sure if it is worth
+      // the trouble (how often will we find a known carry bit). And I haven't
+      // tested this very much yet, but something like this might work:
+      //   Carry = computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+      //   Carry = Carry.zextOrTrunc(1, false);
+      Carry.resetAll();
+    else
+      Carry.setAllZero();
+
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    KnownZeroHigh = std::min(KnownZeroHigh, Known2.countMinLeadingZeros());
-    KnownZeroLow = std::min(KnownZeroLow, Known2.countMinTrailingZeros());
-
-    if (Opcode == ISD::ADDE || Opcode == ISD::ADDCARRY) {
-      // With ADDE and ADDCARRY, a carry bit may be added in, so we can only
-      // use this information if we know (at least) that the low two bits are
-      // clear. We then return to the caller that the low bit is unknown but
-      // that other bits are known zero.
-      if (KnownZeroLow >= 2)
-        Known.Zero.setBits(1, KnownZeroLow);
-      break;
-    }
-
-    Known.Zero.setLowBits(KnownZeroLow);
-    if (KnownZeroHigh > 1)
-      Known.Zero.setHighBits(KnownZeroHigh - 1);
+    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
     break;
   }
   case ISD::SREM:

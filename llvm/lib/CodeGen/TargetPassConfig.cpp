@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -1225,5 +1226,9 @@ bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
 }
 
 bool TargetPassConfig::isGISelCSEEnabled() const {
-  return getOptLevel() != CodeGenOpt::Level::None;
+  return true;
+}
+
+std::unique_ptr<CSEConfigBase> TargetPassConfig::getCSEConfig() const {
+  return make_unique<CSEConfigBase>();
 }
