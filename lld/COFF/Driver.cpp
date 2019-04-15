@@ -91,6 +91,16 @@ static std::string getOutputPath(StringRef Path) {
   return (S.substr(0, S.rfind('.')) + E).str();
 }
 
+// Returns true if S matches /crtend.?\.o$/.
+static bool isCrtend(StringRef S) {
+  if (!S.endswith(".o"))
+    return false;
+  S = S.drop_back(2);
+  if (S.endswith("crtend"))
+    return true;
+  return !S.empty() && S.drop_back().endswith("crtend");
+}
+
 // ErrorOr is not default constructible, so it cannot be used as the type
 // parameter of a future.
 // FIXME: We could open the file in createFutureForFile and avoid needing to
@@ -1665,10 +1675,27 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       return;
   }
 
-  // In MinGW, all symbols are automatically exported if no symbols
-  // are chosen to be exported.
-  if (Config->MinGW)
+  if (Config->MinGW) {
+    // In MinGW, all symbols are automatically exported if no symbols
+    // are chosen to be exported.
     maybeExportMinGWSymbols(Args);
+
+    // Make sure the crtend.o object is the last object file. This object
+    // file can contain terminating section chunks that need to be placed
+    // last. GNU ld processes files and static libraries explicitly in the
+    // order provided on the command line, while lld will pull in needed
+    // files from static libraries only after the last object file on the
+    // command line.
+    for (auto I = ObjFile::Instances.begin(), E = ObjFile::Instances.end();
+         I != E; I++) {
+      ObjFile *File = *I;
+      if (isCrtend(File->getName())) {
+        ObjFile::Instances.erase(I);
+        ObjFile::Instances.push_back(File);
+        break;
+      }
+    }
+  }
 
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file.
