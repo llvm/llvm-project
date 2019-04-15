@@ -29,10 +29,14 @@ namespace bugprone {
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-too-small-loop-variable.html
 class TooSmallLoopVariableCheck : public ClangTidyCheck {
 public:
-  TooSmallLoopVariableCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  TooSmallLoopVariableCheck(StringRef Name, ClangTidyContext *Context);
+
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  const unsigned MagnitudeBitsUpperLimit;
 };
 
 } // namespace bugprone

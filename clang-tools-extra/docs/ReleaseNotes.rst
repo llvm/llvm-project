@@ -119,6 +119,12 @@ Improvements to clang-tidy
   `CommentUserDefiniedLiterals`, `CommentStringLiterals`,
   `CommentCharacterLiterals` & `CommentNullPtrs` options.
 
+- The :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone-too-small-loop-variable>` now supports
+  `MagnitudeBitsUpperLimit` option. The default value was set to 16,
+  which greatly reduces warnings related to loops which are unlikely to
+  cause an actual functional bug.
+
 - The :doc:`google-runtime-int <clang-tidy/checks/google-runtime-int>`
   check has been disabled in Objective-C++.
 
