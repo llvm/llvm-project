@@ -21,8 +21,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using ::testing::_;
-using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
@@ -103,7 +101,7 @@ Key<llvm::unique_function<void(PathRef File, std::vector<Diag>)>>
     TUSchedulerTests::DiagsCallbackKey;
 
 TEST_F(TUSchedulerTests, MissingFiles) {
-  TUScheduler S(getDefaultAsyncThreadsCount(),
+  TUScheduler S(CDB, getDefaultAsyncThreadsCount(),
                 /*StorePreamblesInMemory=*/true, /*ASTCallbacks=*/nullptr,
                 /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
                 ASTRetentionPolicy());
@@ -154,7 +152,7 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
     // thread until we've scheduled them all.
     Notification Ready;
     TUScheduler S(
-        getDefaultAsyncThreadsCount(),
+        CDB, getDefaultAsyncThreadsCount(),
         /*StorePreamblesInMemory=*/true, captureDiags(),
         /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
         ASTRetentionPolicy());
@@ -184,7 +182,7 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
 TEST_F(TUSchedulerTests, Debounce) {
   std::atomic<int> CallbackCount(0);
   {
-    TUScheduler S(getDefaultAsyncThreadsCount(),
+    TUScheduler S(CDB, getDefaultAsyncThreadsCount(),
                   /*StorePreamblesInMemory=*/true, captureDiags(),
                   /*UpdateDebounce=*/std::chrono::seconds(1),
                   ASTRetentionPolicy());
@@ -220,7 +218,7 @@ TEST_F(TUSchedulerTests, PreambleConsistency) {
   {
     Notification InconsistentReadDone; // Must live longest.
     TUScheduler S(
-        getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
+        CDB, getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
         /*ASTCallbacks=*/nullptr,
         /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
         ASTRetentionPolicy());
@@ -277,7 +275,7 @@ TEST_F(TUSchedulerTests, Cancellation) {
   {
     Notification Proceed; // Ensure we schedule everything.
     TUScheduler S(
-        getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
+        CDB, getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
         /*ASTCallbacks=*/captureDiags(),
         /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
         ASTRetentionPolicy());
@@ -346,7 +344,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 
   // Run TUScheduler and collect some stats.
   {
-    TUScheduler S(getDefaultAsyncThreadsCount(),
+    TUScheduler S(CDB, getDefaultAsyncThreadsCount(),
                   /*StorePreamblesInMemory=*/true, captureDiags(),
                   /*UpdateDebounce=*/std::chrono::milliseconds(50),
                   ASTRetentionPolicy());
@@ -437,10 +435,11 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   std::atomic<int> BuiltASTCounter(0);
   ASTRetentionPolicy Policy;
   Policy.MaxRetainedASTs = 2;
-  TUScheduler S(
-      /*AsyncThreadsCount=*/1, /*StorePreambleInMemory=*/true,
-      /*ASTCallbacks=*/nullptr,
-      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(), Policy);
+  TUScheduler S(CDB,
+                /*AsyncThreadsCount=*/1, /*StorePreambleInMemory=*/true,
+                /*ASTCallbacks=*/nullptr,
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                Policy);
 
   llvm::StringLiteral SourceContents = R"cpp(
     int* a;
@@ -487,11 +486,11 @@ TEST_F(TUSchedulerTests, EvictedAST) {
 }
 
 TEST_F(TUSchedulerTests, EmptyPreamble) {
-  TUScheduler S(
-      /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
-      /*ASTCallbacks=*/nullptr,
-      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-      ASTRetentionPolicy());
+  TUScheduler S(CDB,
+                /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
+                /*ASTCallbacks=*/nullptr,
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                ASTRetentionPolicy());
 
   auto Foo = testPath("foo.cpp");
   auto Header = testPath("foo.h");
@@ -532,11 +531,11 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
 TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
   // Testing strategy: we update the file and schedule a few preamble reads at
   // the same time. All reads should get the same non-null preamble.
-  TUScheduler S(
-      /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
-      /*ASTCallbacks=*/nullptr,
-      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-      ASTRetentionPolicy());
+  TUScheduler S(CDB,
+                /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
+                /*ASTCallbacks=*/nullptr,
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                ASTRetentionPolicy());
   auto Foo = testPath("foo.cpp");
   auto NonEmptyPreamble = R"cpp(
     #define FOO 1
@@ -564,11 +563,11 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
 }
 
 TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
-  TUScheduler S(
-      /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-      /*StorePreambleInMemory=*/true, captureDiags(),
-      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-      ASTRetentionPolicy());
+  TUScheduler S(CDB,
+                /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+                /*StorePreambleInMemory=*/true, captureDiags(),
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                ASTRetentionPolicy());
 
   auto Source = testPath("foo.cpp");
   auto Header = testPath("foo.h");
@@ -617,11 +616,11 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
 }
 
 TEST_F(TUSchedulerTests, NoChangeDiags) {
-  TUScheduler S(
-      /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-      /*StorePreambleInMemory=*/true, captureDiags(),
-      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-      ASTRetentionPolicy());
+  TUScheduler S(CDB,
+                /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+                /*StorePreambleInMemory=*/true, captureDiags(),
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                ASTRetentionPolicy());
 
   auto FooCpp = testPath("foo.cpp");
   auto Contents = "int a; int b;";
@@ -652,7 +651,7 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
 }
 
 TEST_F(TUSchedulerTests, Run) {
-  TUScheduler S(/*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+  TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
                 /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/nullptr,
                 /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
                 ASTRetentionPolicy());
