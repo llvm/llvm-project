@@ -837,7 +837,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     SingleDecl = ParseModuleImport(SourceLocation());
     break;
   case tok::kw_export:
-    if (getLangOpts().ModulesTS) {
+    if (getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS) {
       SingleDecl = ParseExportDeclaration();
       break;
     }

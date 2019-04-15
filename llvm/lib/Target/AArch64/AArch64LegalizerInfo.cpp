@@ -648,11 +648,10 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
       *MF.getMachineMemOperand(MachinePointerInfo(), MachineMemOperand::MOLoad,
                                ValSize, std::max(Align, PtrSize)));
 
-  unsigned SizeReg = MRI.createGenericVirtualRegister(IntPtrTy);
-  MIRBuilder.buildConstant(SizeReg, alignTo(ValSize, PtrSize));
+  auto Size = MIRBuilder.buildConstant(IntPtrTy, alignTo(ValSize, PtrSize));
 
   unsigned NewList = MRI.createGenericVirtualRegister(PtrTy);
-  MIRBuilder.buildGEP(NewList, DstPtr, SizeReg);
+  MIRBuilder.buildGEP(NewList, DstPtr, Size.getReg(0));
 
   MIRBuilder.buildStore(
       NewList, ListPtr,

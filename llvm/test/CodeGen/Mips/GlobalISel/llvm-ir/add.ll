@@ -94,10 +94,9 @@ define i64 @add_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    and $1, $1, $3
 ; MIPS32-NEXT:    addu $1, $2, $1
 ; MIPS32-NEXT:    sltu $2, $1, $6
-; MIPS32-NEXT:    addu $3, $7, $5
-; MIPS32-NEXT:    ori $4, $zero, 1
-; MIPS32-NEXT:    and $2, $2, $4
-; MIPS32-NEXT:    addu $3, $3, $2
+; MIPS32-NEXT:    addu $4, $7, $5
+; MIPS32-NEXT:    and $2, $2, $3
+; MIPS32-NEXT:    addu $3, $4, $2
 ; MIPS32-NEXT:    move $2, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -126,18 +125,15 @@ define i128 @add_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    addu $4, $4, $9
 ; MIPS32-NEXT:    sltu $1, $4, $1
 ; MIPS32-NEXT:    addu $5, $2, $5
-; MIPS32-NEXT:    ori $9, $zero, 1
-; MIPS32-NEXT:    and $1, $1, $9
+; MIPS32-NEXT:    and $1, $1, $10
 ; MIPS32-NEXT:    addu $1, $5, $1
 ; MIPS32-NEXT:    sltu $2, $1, $2
 ; MIPS32-NEXT:    addu $5, $3, $6
-; MIPS32-NEXT:    ori $6, $zero, 1
-; MIPS32-NEXT:    and $2, $2, $6
+; MIPS32-NEXT:    and $2, $2, $10
 ; MIPS32-NEXT:    addu $2, $5, $2
 ; MIPS32-NEXT:    sltu $3, $2, $3
 ; MIPS32-NEXT:    addu $5, $8, $7
-; MIPS32-NEXT:    ori $6, $zero, 1
-; MIPS32-NEXT:    and $3, $3, $6
+; MIPS32-NEXT:    and $3, $3, $10
 ; MIPS32-NEXT:    addu $5, $5, $3
 ; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $2, $4

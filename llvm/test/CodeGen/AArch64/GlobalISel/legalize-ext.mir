@@ -49,9 +49,8 @@ body:             |
     ; CHECK: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[TRUNC9]], [[C5]]
     ; CHECK: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[SHL2]], [[C5]]
     ; CHECK: $w0 = COPY [[ASHR2]](s32)
-    ; CHECK: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[TRUNC10:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC10]], [[C6]]
+    ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC10]], [[C4]]
     ; CHECK: $w0 = COPY [[AND3]](s32)
     ; CHECK: [[TRUNC11:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: $w0 = COPY [[TRUNC11]](s32)
@@ -61,8 +60,6 @@ body:             |
     ; CHECK: $x0 = COPY [[FPEXT]](s64)
     ; CHECK: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: $w0 = COPY [[C7]](s32)
-    ; CHECK: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $w0 = COPY [[C8]](s32)
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK: $w0 = COPY [[DEF]](s32)
     %0:_(s64) = COPY $x0

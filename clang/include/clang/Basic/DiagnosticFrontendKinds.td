@@ -173,10 +173,11 @@ def note_incompatible_analyzer_plugin_api : Note<
 
 def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
-def err_module_interface_requires_modules_ts : Error<
-  "module interface compilation requires '-fmodules-ts'">;
+def err_module_interface_requires_cpp_modules : Error<
+  "module interface compilation requires '-std=c++2a' or '-fmodules-ts'">;
 def err_header_module_requires_modules : Error<
-  "header module compilation requires '-fmodules' or '-fmodules-ts'">;
+  "header module compilation requires '-fmodules', '-std=c++2a', or "
+  "'-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;

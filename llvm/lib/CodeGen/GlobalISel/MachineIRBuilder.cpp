@@ -215,10 +215,8 @@ MachineIRBuilder::materializeGEP(unsigned &Res, unsigned Op0,
   }
 
   Res = getMRI()->createGenericVirtualRegister(getMRI()->getType(Op0));
-  unsigned TmpReg = getMRI()->createGenericVirtualRegister(ValueTy);
-
-  buildConstant(TmpReg, Value);
-  return buildGEP(Res, Op0, TmpReg);
+  auto Cst = buildConstant(ValueTy, Value);
+  return buildGEP(Res, Op0, Cst.getReg(0));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,

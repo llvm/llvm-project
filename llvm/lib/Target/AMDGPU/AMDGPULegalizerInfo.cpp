@@ -698,7 +698,6 @@ unsigned AMDGPULegalizerInfo::getSegmentAperture(
         Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
         WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
 
-    unsigned ShiftAmt = MRI.createGenericVirtualRegister(S32);
     unsigned ApertureReg = MRI.createGenericVirtualRegister(S32);
     unsigned GetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
@@ -707,11 +706,11 @@ unsigned AMDGPULegalizerInfo::getSegmentAperture(
       .addImm(Encoding);
     MRI.setType(GetReg, S32);
 
-    MIRBuilder.buildConstant(ShiftAmt, WidthM1 + 1);
+    auto ShiftAmt = MIRBuilder.buildConstant(S32, WidthM1 + 1);
     MIRBuilder.buildInstr(TargetOpcode::G_SHL)
       .addDef(ApertureReg)
       .addUse(GetReg)
-      .addUse(ShiftAmt);
+      .addUse(ShiftAmt.getReg(0));
 
     return ApertureReg;
   }
@@ -781,11 +780,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
            DestAS == AMDGPUAS::PRIVATE_ADDRESS);
     unsigned NullVal = TM.getNullPointerValue(DestAS);
 
-    unsigned SegmentNullReg = MRI.createGenericVirtualRegister(DstTy);
-    unsigned FlatNullReg = MRI.createGenericVirtualRegister(SrcTy);
-
-    MIRBuilder.buildConstant(SegmentNullReg, NullVal);
-    MIRBuilder.buildConstant(FlatNullReg, 0);
+    auto SegmentNull = MIRBuilder.buildConstant(DstTy, NullVal);
+    auto FlatNull = MIRBuilder.buildConstant(SrcTy, 0);
 
     unsigned PtrLo32 = MRI.createGenericVirtualRegister(DstTy);
 
@@ -793,8 +789,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     MIRBuilder.buildExtract(PtrLo32, Src, 0);
 
     unsigned CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
-    MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, FlatNullReg);
-    MIRBuilder.buildSelect(Dst, CmpRes, PtrLo32, SegmentNullReg);
+    MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, FlatNull.getReg(0));
+    MIRBuilder.buildSelect(Dst, CmpRes, PtrLo32, SegmentNull.getReg(0));
 
     MI.eraseFromParent();
     return true;
@@ -803,15 +799,15 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   assert(SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
          SrcAS == AMDGPUAS::PRIVATE_ADDRESS);
 
-  unsigned FlatNullReg = MRI.createGenericVirtualRegister(DstTy);
-  unsigned SegmentNullReg = MRI.createGenericVirtualRegister(SrcTy);
-  MIRBuilder.buildConstant(SegmentNullReg, TM.getNullPointerValue(SrcAS));
-  MIRBuilder.buildConstant(FlatNullReg, TM.getNullPointerValue(DestAS));
+  auto SegmentNull =
+      MIRBuilder.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
+  auto FlatNull =
+      MIRBuilder.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
 
   unsigned ApertureReg = getSegmentAperture(DestAS, MRI, MIRBuilder);
 
   unsigned CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
-  MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, SegmentNullReg);
+  MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, SegmentNull.getReg(0));
 
   unsigned BuildPtr = MRI.createGenericVirtualRegister(DstTy);
 
@@ -824,7 +820,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   // TODO: Should we allow mismatched types but matching sizes in merges to
   // avoid the ptrtoint?
   MIRBuilder.buildMerge(BuildPtr, {SrcAsInt, ApertureReg});
-  MIRBuilder.buildSelect(Dst, CmpRes, BuildPtr, FlatNullReg);
+  MIRBuilder.buildSelect(Dst, CmpRes, BuildPtr, FlatNull.getReg(0));
 
   MI.eraseFromParent();
   return true;

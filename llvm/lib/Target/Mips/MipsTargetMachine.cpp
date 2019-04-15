@@ -239,12 +239,18 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
 } // end anonymous namespace
 
 TargetPassConfig *MipsTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new MipsPassConfig(*this, PM);
+}
+
+std::unique_ptr<CSEConfigBase> MipsPassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
 void MipsPassConfig::addIRPasses() {
