@@ -200,7 +200,7 @@ ConstString::ConstString(const char *cstr, size_t cstr_len)
     : m_string(StringPool().GetConstCStringWithLength(cstr, cstr_len)) {}
 
 ConstString::ConstString(const llvm::StringRef &s)
-    : m_string(StringPool().GetConstCStringWithLength(s.data(), s.size())) {}
+    : m_string(StringPool().GetConstCStringWithStringRef(s)) {}
 
 bool ConstString::operator<(ConstString rhs) const {
   if (m_string == rhs.m_string)

@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"
 using namespace clang;
 using namespace clang::tooling;
@@ -123,7 +124,8 @@ static bool isFullyQualified(const NestedNameSpecifier *NNS) {
 // FIXME: consider using namespaces.
 static std::string disambiguateSpellingInScope(StringRef Spelling,
                                                StringRef QName,
-                                               const DeclContext &UseContext) {
+                                               const DeclContext &UseContext,
+                                               SourceLocation UseLoc) {
   assert(QName.startswith("::"));
   assert(QName.endswith(Spelling));
   if (Spelling.startswith("::"))
@@ -138,9 +140,10 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
       getAllNamedNamespaces(&UseContext);
   auto &AST = UseContext.getParentASTContext();
   StringRef TrimmedQName = QName.substr(2);
+  const auto &SM = UseContext.getParentASTContext().getSourceManager();
+  UseLoc = SM.getSpellingLoc(UseLoc);
 
-  auto IsAmbiguousSpelling = [&EnclosingNamespaces, &AST, &TrimmedQName](
-                                 const llvm::StringRef CurSpelling) {
+  auto IsAmbiguousSpelling = [&](const llvm::StringRef CurSpelling) {
     if (CurSpelling.startswith("::"))
       return false;
     // Lookup the first component of Spelling in all enclosing namespaces
@@ -151,7 +154,13 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
       auto LookupRes = NS->lookup(DeclarationName(&AST.Idents.get(Head)));
       if (!LookupRes.empty()) {
         for (const NamedDecl *Res : LookupRes)
-          if (!TrimmedQName.startswith(Res->getQualifiedNameAsString()))
+          // If `Res` is not visible in `UseLoc`, we don't consider it
+          // ambiguous. For example, a reference in a header file should not be
+          // affected by a potentially ambiguous name in some file that includes
+          // the header.
+          if (!TrimmedQName.startswith(Res->getQualifiedNameAsString()) &&
+              SM.isBeforeInTranslationUnit(
+                  SM.getSpellingLoc(Res->getLocation()), UseLoc))
             return true;
       }
     }
@@ -172,6 +181,7 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
 }
 
 std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
+                                       SourceLocation UseLoc,
                                        const DeclContext *UseContext,
                                        const NamedDecl *FromDecl,
                                        StringRef ReplacementString) {
@@ -206,5 +216,6 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
   StringRef Suggested = getBestNamespaceSubstr(UseContext, ReplacementString,
                                                isFullyQualified(Use));
 
-  return disambiguateSpellingInScope(Suggested, ReplacementString, *UseContext);
+  return disambiguateSpellingInScope(Suggested, ReplacementString, *UseContext,
+                                     UseLoc);
 }
