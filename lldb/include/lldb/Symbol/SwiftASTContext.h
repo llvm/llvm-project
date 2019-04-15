@@ -177,33 +177,28 @@ public:
 
   void SetGenerateDebugInfo(swift::IRGenDebugInfoLevel b);
 
-  bool AddModuleSearchPath(const char *path);
+  bool AddModuleSearchPath(llvm::StringRef path);
 
-  bool AddFrameworkSearchPath(const char *path);
+  bool AddFrameworkSearchPath(llvm::StringRef path);
 
   bool AddClangArgument(std::string arg, bool unique = true);
 
-  bool AddClangArgumentPair(const char *arg1, const char *arg2);
+  bool AddClangArgumentPair(llvm::StringRef arg1, llvm::StringRef arg2);
 
   /// Add a list of Clang arguments to the ClangImporter options and
   /// apply the working directory to any relative paths.
   void AddExtraClangArgs(std::vector<std::string> ExtraArgs);
 
-  const char *GetPlatformSDKPath() const {
-    if (m_platform_sdk_path.empty())
-      return NULL;
-    return m_platform_sdk_path.c_str();
+  llvm::StringRef GetPlatformSDKPath() const {
+    return m_platform_sdk_path;
   }
 
   void SetPlatformSDKPath(std::string &&sdk_path) {
     m_platform_sdk_path = sdk_path;
   }
 
-  void SetPlatformSDKPath(const char *path) {
-    if (path)
-      m_platform_sdk_path = path;
-    else
-      m_platform_sdk_path.clear();
+  void SetPlatformSDKPath(llvm::StringRef path) {
+    m_platform_sdk_path = path;
   }
 
   size_t GetNumModuleSearchPaths() const;

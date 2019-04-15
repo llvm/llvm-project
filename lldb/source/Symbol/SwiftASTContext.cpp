@@ -1047,7 +1047,7 @@ StringRef SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
 StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
   static std::mutex g_mutex;
   std::lock_guard<std::mutex> locker(g_mutex);
-  auto platform_sdk_path = StringRef::withNullAsEmpty(GetPlatformSDKPath());
+  StringRef platform_sdk_path = GetPlatformSDKPath();
   auto swift_stdlib_os_dir =
       GetSwiftStdlibOSDir(triple, HostInfo::GetArchitecture().GetTriple());
 
@@ -1673,16 +1673,16 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                     serialized_sdk_path.data());
       FileSpec sdk_spec(serialized_sdk_path.data());
       if (FileSystem::Instance().Exists(sdk_spec)) {
-        swift_ast_sp->SetPlatformSDKPath(serialized_sdk_path.data());
+        swift_ast_sp->SetPlatformSDKPath(serialized_sdk_path);
       }
     }
 
-    if (!got_serialized_options || !swift_ast_sp->GetPlatformSDKPath()) {
+    if (!got_serialized_options || swift_ast_sp->GetPlatformSDKPath().empty()) {
       std::string platform_sdk_path;
       if (sym_vendor->GetCompileOption("-sdk", platform_sdk_path)) {
         FileSpec sdk_spec(platform_sdk_path.c_str());
         if (FileSystem::Instance().Exists(sdk_spec)) {
-          swift_ast_sp->SetPlatformSDKPath(platform_sdk_path.c_str());
+          swift_ast_sp->SetPlatformSDKPath(platform_sdk_path);
         }
 
         if (sym_vendor->GetCompileOption("-target", target_triple)) {
@@ -1730,8 +1730,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       if (sym_vendor->GetCompileOptions("-Xcc", cc_options)) {
         for (size_t i = 0; i < cc_options.size(); ++i) {
           if (!cc_options[i].compare("-iquote") && i + 1 < cc_options.size()) {
-            swift_ast_sp->AddClangArgumentPair("-iquote",
-                                               cc_options[i + 1].c_str());
+            swift_ast_sp->AddClangArgumentPair("-iquote", cc_options[i + 1]);
           }
         }
       }
@@ -1828,8 +1827,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // create search path options we put in the wrong SDK path.
   FileSpec &target_sdk_spec = target.GetSDKPath();
   if (target_sdk_spec && FileSystem::Instance().Exists(target_sdk_spec)) {
-    std::string platform_sdk_path(target_sdk_spec.GetPath());
-    swift_ast_sp->SetPlatformSDKPath(std::move(platform_sdk_path));
+    swift_ast_sp->SetPlatformSDKPath(target_sdk_spec.GetPath());
     handled_sdk_path = true;
   }
 
@@ -1889,9 +1887,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     }
 
     if (!handled_sdk_path) {
-      const char *platform_sdk_path = module_swift_ast->GetPlatformSDKPath();
+      StringRef platform_sdk_path = module_swift_ast->GetPlatformSDKPath();
 
-      if (platform_sdk_path) {
+      if (!platform_sdk_path.empty()) {
         handled_sdk_path = true;
         swift_ast_sp->SetPlatformSDKPath(platform_sdk_path);
       }
@@ -3138,49 +3136,33 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
   return m_clang_importer;
 }
 
-bool SwiftASTContext::AddModuleSearchPath(const char *path) {
+bool SwiftASTContext::AddModuleSearchPath(StringRef path) {
   VALID_OR_RETURN(false);
+  if (path.empty())
+    return false;
 
-  if (path && path[0]) {
-    swift::ASTContext *ast = GetASTContext();
-    std::string path_str(path);
-    bool add_search_path = true;
-    for (auto path : ast->SearchPathOpts.ImportSearchPaths) {
-      if (path == path_str) {
-        add_search_path = false;
-        break;
-      }
-    }
+  swift::ASTContext *ast = GetASTContext();
+  for (auto p : ast->SearchPathOpts.ImportSearchPaths)
+    if (path.equals(p))
+      return false;
 
-    if (add_search_path) {
-      ast->SearchPathOpts.ImportSearchPaths.push_back(path);
-      return true;
-    }
-  }
-  return false;
+  ast->SearchPathOpts.ImportSearchPaths.push_back(path);
+  return true;
 }
 
-bool SwiftASTContext::AddFrameworkSearchPath(const char *path) {
+bool SwiftASTContext::AddFrameworkSearchPath(StringRef path) {
   VALID_OR_RETURN(false);
+  if (path.empty())
+    return false;
 
-  if (path && path[0]) {
-    swift::ASTContext *ast = GetASTContext();
-    std::string path_str(path);
-    bool add_search_path = true;
-    for (const auto &swift_path : ast->SearchPathOpts.FrameworkSearchPaths) {
-      if (swift_path.Path == path_str) {
-        add_search_path = false;
-        break;
-      }
-    }
+  swift::ASTContext *ast = GetASTContext();
+  for (const auto &p : ast->SearchPathOpts.FrameworkSearchPaths)
+    if (path.equals(p.Path))
+      return false;
 
-    if (add_search_path) {
-      ast->SearchPathOpts.FrameworkSearchPaths.push_back(
-          {path, /*isSystem=*/false});
-      return true;
-    }
-  }
-  return false;
+  ast->SearchPathOpts.FrameworkSearchPaths.push_back(
+      {path, /*isSystem=*/false});
+  return true;
 }
 
 bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
@@ -3198,31 +3180,24 @@ bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
   return true;
 }
 
-bool SwiftASTContext::AddClangArgumentPair(const char *clang_arg_1,
-                                           const char *clang_arg_2) {
-  if (clang_arg_1 && clang_arg_2 && clang_arg_1[0] && clang_arg_2[0]) {
-    swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+bool SwiftASTContext::AddClangArgumentPair(StringRef clang_arg_1,
+                                           StringRef clang_arg_2) {
+  if (clang_arg_1.empty() || clang_arg_2.empty())
+    return false;
 
-    bool add_hmap = true;
-
-    for (ssize_t ai = 0, ae = importer_options.ExtraArgs.size() -
-                              1; // -1 because we look at the next one too
-         ai < ae;
-         ++ai) {
-      if (!importer_options.ExtraArgs[ai].compare(clang_arg_1) &&
-          !importer_options.ExtraArgs[ai + 1].compare(clang_arg_2)) {
-        add_hmap = false;
-        break;
-      }
-    }
-
-    if (add_hmap) {
-      importer_options.ExtraArgs.push_back(clang_arg_1);
-      importer_options.ExtraArgs.push_back(clang_arg_2);
-      return true;
-    }
+  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+  bool add_hmap = true;
+  for (ssize_t ai = 0, ae = importer_options.ExtraArgs.size() -
+                            1; // -1 because we look at the next one too
+       ai < ae; ++ai) {
+    if (clang_arg_1.equals(importer_options.ExtraArgs[ai]) &&
+        clang_arg_2.equals(importer_options.ExtraArgs[ai + 1]))
+      return false;
   }
-  return false;
+
+  importer_options.ExtraArgs.push_back(clang_arg_1);
+  importer_options.ExtraArgs.push_back(clang_arg_2);
+  return true;
 }
 
 size_t SwiftASTContext::GetNumModuleSearchPaths() const {
