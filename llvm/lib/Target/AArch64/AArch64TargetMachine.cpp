@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -383,6 +384,8 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
 } // end anonymous namespace
@@ -394,6 +397,10 @@ AArch64TargetMachine::getTargetTransformInfo(const Function &F) {
 
 TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AArch64PassConfig(*this, PM);
+}
+
+std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
 void AArch64PassConfig::addIRPasses() {

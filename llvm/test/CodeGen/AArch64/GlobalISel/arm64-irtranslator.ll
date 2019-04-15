@@ -586,7 +586,7 @@ next:
 ; CHECK-LABEL: name: constant_int_start
 ; CHECK: [[TWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
 ; CHECK: [[ANSWER:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_ADD [[TWO]], [[ANSWER]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_CONSTANT i32 44
 define i32 @constant_int_start() {
   %res = add i32 2, 42
   ret i32 %res
@@ -727,8 +727,7 @@ define i8* @test_constant_null() {
 ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[ADDR]], [[CST1]](s64)
 ; CHECK: [[VAL2:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p0) :: (load 4 from %ir.addr + 4)
 ; CHECK: G_STORE [[VAL1]](s8), [[ADDR]](p0) :: (store 1 into %ir.addr, align 4)
-; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_GEP [[ADDR]], [[CST2]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_GEP [[ADDR]], [[CST1]](s64)
 ; CHECK: G_STORE [[VAL2]](s32), [[GEP2]](p0) :: (store 4 into %ir.addr + 4)
 define void @test_struct_memops({ i8, i32 }* %addr) {
   %val = load { i8, i32 }, { i8, i32 }* %addr
@@ -965,8 +964,7 @@ define i32 @test_extractvalue(%struct.nested* %addr) {
 ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_GEP %0, [[CST3]](s64)
 ; CHECK: [[LD4:%[0-9]+]]:_(s32) = G_LOAD [[GEP3]](p0) :: (load 4 from %ir.addr + 12)
 ; CHECK: G_STORE [[LD2]](s8), %1(p0) :: (store 1 into %ir.addr2, align 4)
-; CHECK: [[CST4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_GEP %1, [[CST4]](s64)
+; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_GEP %1, [[CST1]](s64)
 ; CHECK: G_STORE [[LD3]](s32), [[GEP4]](p0) :: (store 4 into %ir.addr2 + 4)
 define void @test_extractvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
   %struct = load %struct.nested, %struct.nested* %addr
@@ -989,14 +987,11 @@ define void @test_extractvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
 ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_GEP %0, [[CST3]](s64)
 ; CHECK: [[LD4:%[0-9]+]]:_(s32) = G_LOAD [[GEP3]](p0) :: (load 4 from %ir.addr + 12)
 ; CHECK: G_STORE [[LD1]](s8), %0(p0) :: (store 1 into %ir.addr, align 4)
-; CHECK: [[CST4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_GEP %0, [[CST4]](s64)
+; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_GEP %0, [[CST1]](s64)
 ; CHECK: G_STORE [[LD2]](s8), [[GEP4]](p0) :: (store 1 into %ir.addr + 4, align 4)
-; CHECK: [[CST5:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_GEP %0, [[CST5]](s64)
+; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_GEP %0, [[CST2]](s64)
 ; CHECK: G_STORE %1(s32), [[GEP5]](p0) :: (store 4 into %ir.addr + 8)
-; CHECK: [[CST6:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_GEP %0, [[CST6]](s64)
+; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_GEP %0, [[CST3]](s64)
 ; CHECK: G_STORE [[LD4]](s32), [[GEP6]](p0) :: (store 4 into %ir.addr + 12)
 define void @test_insertvalue(%struct.nested* %addr, i32 %val) {
   %struct = load %struct.nested, %struct.nested* %addr
@@ -1031,8 +1026,7 @@ define [1 x i8*] @test_trivial_insert_ptr([1 x i8*] %s, i8* %val) {
 ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP %1, [[CST1]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p0) :: (load 4 from %ir.addr2 + 4)
 ; CHECK: [[LD3:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr, align 4)
-; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_GEP %0, [[CST2]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_GEP %0, [[CST1]](s64)
 ; CHECK: [[LD4:%[0-9]+]]:_(s8) = G_LOAD [[GEP2]](p0) :: (load 1 from %ir.addr + 4, align 4)
 ; CHECK: [[CST3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
 ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_GEP %0, [[CST3]](s64)
@@ -1041,14 +1035,11 @@ define [1 x i8*] @test_trivial_insert_ptr([1 x i8*] %s, i8* %val) {
 ; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_GEP %0, [[CST4]](s64)
 ; CHECK: [[LD6:%[0-9]+]]:_(s32) = G_LOAD [[GEP4]](p0) :: (load 4 from %ir.addr + 12)
 ; CHECK: G_STORE [[LD3]](s8), %0(p0) :: (store 1 into %ir.addr, align 4)
-; CHECK: [[CST5:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_GEP %0, [[CST5]](s64)
+; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_GEP %0, [[CST1]](s64)
 ; CHECK: G_STORE [[LD1]](s8), [[GEP5]](p0) :: (store 1 into %ir.addr + 4, align 4)
-; CHECK: [[CST6:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_GEP %0, [[CST6]](s64)
+; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_GEP %0, [[CST3]](s64)
 ; CHECK: G_STORE [[LD2]](s32), [[GEP6]](p0) :: (store 4 into %ir.addr + 8)
-; CHECK: [[CST7:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-; CHECK: [[GEP7:%[0-9]+]]:_(p0) = G_GEP %0, [[CST7]](s64)
+; CHECK: [[GEP7:%[0-9]+]]:_(p0) = G_GEP %0, [[CST4]](s64)
 ; CHECK: G_STORE [[LD6]](s32), [[GEP7]](p0) :: (store 4 into %ir.addr + 12)
 define void @test_insertvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
   %smallstruct = load {i8, i32}, {i8, i32}* %addr2

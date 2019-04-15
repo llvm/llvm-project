@@ -120,7 +120,6 @@ body:             |
     ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SUB [[COUNT]], [[BITDIFF]]
     %2(s16) = G_CTLZ %1
 
-    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[RAGAIN:%[0-9]+]]:_(s32) = COPY [[R32]]
     ; CHECK: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[RAGAIN]], [[BITDIFF]]
     ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
@@ -167,7 +166,6 @@ body:             |
     ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SUB [[COUNT]], [[BITDIFF]]
     %2(s8) = G_CTLZ_ZERO_UNDEF %1
 
-    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK: [[RAGAIN:%[0-9]+]]:_(s32) = COPY [[R32]]
     ; CHECK: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[RAGAIN]], [[BITDIFF]]
     ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]

@@ -377,6 +377,8 @@ public:
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
   void addPreSched2() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
 class X86ExecutionDomainFix : public ExecutionDomainFix {
@@ -519,4 +521,8 @@ void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
   if (!TT.isOSDarwin() && !TT.isOSWindows())
     addPass(createCFIInstrInserter());
+}
+
+std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
 }

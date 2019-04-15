@@ -706,6 +706,32 @@ def NAME#64mr : RI<{RegOpc{7}, RegOpc{6}, RegOpc{5}, RegOpc{4},
                                "{$src2, $dst|$dst, $src2}"),
                     [(set EFLAGS, (Op addr:$dst, GR64:$src2))]>, LOCK;
 
+// NOTE: These are order specific, we want the mi8 forms to be listed
+// first so that they are slightly preferred to the mi forms.
+def NAME#16mi8 : Ii8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
+                      ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
+                      ImmMod, (outs), (ins i16mem :$dst, i16i8imm :$src2),
+                      !strconcat(mnemonic, "{w}\t",
+                                 "{$src2, $dst|$dst, $src2}"),
+                      [(set EFLAGS, (Op addr:$dst, i16immSExt8:$src2))]>,
+                      OpSize16, LOCK;
+
+def NAME#32mi8 : Ii8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
+                      ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
+                      ImmMod, (outs), (ins i32mem :$dst, i32i8imm :$src2),
+                      !strconcat(mnemonic, "{l}\t",
+                                 "{$src2, $dst|$dst, $src2}"),
+                      [(set EFLAGS, (Op addr:$dst, i32immSExt8:$src2))]>,
+                      OpSize32, LOCK;
+
+def NAME#64mi8 : RIi8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
+                       ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
+                       ImmMod, (outs), (ins i64mem :$dst, i64i8imm :$src2),
+                       !strconcat(mnemonic, "{q}\t",
+                                  "{$src2, $dst|$dst, $src2}"),
+                       [(set EFLAGS, (Op addr:$dst, i64immSExt8:$src2))]>,
+                       LOCK;
+
 def NAME#8mi : Ii8<{ImmOpc{7}, ImmOpc{6}, ImmOpc{5}, ImmOpc{4},
                     ImmOpc{3}, ImmOpc{2}, ImmOpc{1}, 0 },
                     ImmMod, (outs), (ins i8mem :$dst, i8imm :$src2),
@@ -736,30 +762,6 @@ def NAME#64mi32 : RIi32S<{ImmOpc{7}, ImmOpc{6}, ImmOpc{5}, ImmOpc{4},
                                      "{$src2, $dst|$dst, $src2}"),
                           [(set EFLAGS, (Op addr:$dst, i64immSExt32:$src2))]>,
                           LOCK;
-
-def NAME#16mi8 : Ii8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
-                      ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
-                      ImmMod, (outs), (ins i16mem :$dst, i16i8imm :$src2),
-                      !strconcat(mnemonic, "{w}\t",
-                                 "{$src2, $dst|$dst, $src2}"),
-                      [(set EFLAGS, (Op addr:$dst, i16immSExt8:$src2))]>,
-                      OpSize16, LOCK;
-
-def NAME#32mi8 : Ii8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
-                      ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
-                      ImmMod, (outs), (ins i32mem :$dst, i32i8imm :$src2),
-                      !strconcat(mnemonic, "{l}\t",
-                                 "{$src2, $dst|$dst, $src2}"),
-                      [(set EFLAGS, (Op addr:$dst, i32immSExt8:$src2))]>,
-                      OpSize32, LOCK;
-
-def NAME#64mi8 : RIi8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
-                       ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
-                       ImmMod, (outs), (ins i64mem :$dst, i64i8imm :$src2),
-                       !strconcat(mnemonic, "{q}\t",
-                                  "{$src2, $dst|$dst, $src2}"),
-                       [(set EFLAGS, (Op addr:$dst, i64immSExt8:$src2))]>,
-                       LOCK;
 }
 
 }
