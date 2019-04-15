@@ -1,0 +1,18 @@
+= SYCL Proposals: Ordered Queue
+James Brodman <james.brodman@intel.com>
+v0.1
+:source-highlighter: pygments
+:icons: font
+== Introduction
+This document presents an addition proposed for a future version of the SYCL Specification.  The goal of this proposal is to reduce the complexity and verbosity of using SYCL for programmers.
+
+== Ordered Queue
+Queues in SYCL are out-of-order by default.  SYCL constructs directed acyclic graphs to ensure tasks are properly ordered based on their data dependences.  However, many programs only require linear DAGs.  The overheads of constructing and managing DAGs are unnecessary for this class of program.  The `ordered_queue` class exists to serve this class of programs by providing simple in-order semantics.  `ordered_queue` otherwise functions identically to the normal SYCL `queue`.  Due to the simpler semantics and task dependences of an in-order queue, additional programming simplifications are also possible.
+[source,cpp]
+----
+include::ordered_queue.h[]
+----
+
+=== API Simplifications
+Since `ordered_queue` has simpler in-order semantics, programmers do not need to specify dependences between tasks by building DAGs based on data dependences.  Command group scope for tasks submitted to `ordered_queue` only needs to contain kernel definitions or explicit memory operations in order to define valid execution.  Consequently, the `single_task` and `parallel_for` APIs, normally used on the command group `handler` class, are available directly on the `ordered_queue` class.
+
