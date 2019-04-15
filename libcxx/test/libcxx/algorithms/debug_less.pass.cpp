@@ -236,13 +236,13 @@ void test_non_const_arg_cmp() {
 }
 
 struct ValueIterator {
-    using iterator_category = std::input_iterator_tag;
-    using value_type = size_t;
-    using difference_type = ptrdiff_t;
-    using reference = size_t;
-    using pointer = size_t*;
+    typedef std::input_iterator_tag iterator_category;
+    typedef size_t value_type;
+    typedef ptrdiff_t difference_type;
+    typedef size_t reference;
+    typedef size_t* pointer;
 
-    ValueIterator() = default;
+    ValueIterator() { }
 
     reference operator*() { return 0; }
     ValueIterator& operator++() { return *this; }
@@ -253,13 +253,13 @@ struct ValueIterator {
 
 void test_value_iterator() {
     // Ensure no build failures when iterators return values, not references.
-    assert(0 == std::lexicographical_compare(ValueIterator{}, ValueIterator{},
-                                             ValueIterator{}, ValueIterator{}));
+    assert(0 == std::lexicographical_compare(ValueIterator(), ValueIterator(),
+                                             ValueIterator(), ValueIterator()));
 }
 
 void test_value_categories() {
     std::less<int> l;
-    std::__debug_less<std::less<int>> dl(l);
+    std::__debug_less<std::less<int> > dl(l);
     int lvalue = 42;
     const int const_lvalue = 101;
 
