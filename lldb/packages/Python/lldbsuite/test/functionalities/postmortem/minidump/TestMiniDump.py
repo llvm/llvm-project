@@ -80,6 +80,16 @@ class MiniDumpTestCase(TestBase):
             self.assertEqual(module.file.fullpath, expected['filename'])
             self.assertEqual(module.GetUUIDString(), expected['uuid'])
 
+    def test_breakpad_uuid_matching(self):
+        """Test that the uuid computation algorithms in minidump and breakpad
+        files match."""
+        self.target = self.dbg.CreateTarget("")
+        self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        self.expect("target symbols add fizzbuzz.syms", substrs=["symbol file",
+            "fizzbuzz.syms", "has been added to", "fizzbuzz.exe"]),
+        self.assertTrue(self.target.modules[0].FindSymbol("main"))
+
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
         # target create -c fizzbuzz_no_heap.dmp

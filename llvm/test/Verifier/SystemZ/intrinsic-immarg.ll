@@ -91,6 +91,87 @@ define <4 x i32> @test_vstrcf(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2,
   ret <4 x i32> %ret
 }
 
+declare <16 x i8> @llvm.s390.vstrczb(<16 x i8>, <16 x i8>, <16 x i8>, i32)
+define <16 x i8> @test_vstrczb(<16 x i8> %arg0, <16 x i8> %arg1, <16 x i8> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call <16 x i8> @llvm.s390.vstrczb(<16 x i8> %arg0, <16 x i8> %arg1, <16 x i8> %arg2, i32 %arg3)
+  %ret = call <16 x i8> @llvm.s390.vstrczb(<16 x i8> %arg0, <16 x i8>%arg1, <16 x i8> %arg2, i32 %arg3)
+  ret <16 x i8> %ret
+}
+
+declare <8 x i16> @llvm.s390.vstrczh(<8 x i16>, <8 x i16>, <8 x i16>, i32)
+define <8 x i16> @test_vstrczh(<8 x i16> %arg0, <8 x i16> %arg1, <8 x i16> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call <8 x i16> @llvm.s390.vstrczh(<8 x i16> %arg0, <8 x i16> %arg1, <8 x i16> %arg2, i32 %arg3)
+  %ret = call <8 x i16> @llvm.s390.vstrczh(<8 x i16> %arg0, <8 x i16>%arg1, <8 x i16> %arg2, i32 %arg3)
+  ret <8 x i16> %ret
+}
+
+declare <4 x i32> @llvm.s390.vstrczf(<4 x i32>, <4 x i32>, <4 x i32>, i32)
+define <4 x i32> @test_vstrczf(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call <4 x i32> @llvm.s390.vstrczf(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2, i32 %arg3)
+  %ret = call <4 x i32> @llvm.s390.vstrczf(<4 x i32> %arg0, <4 x i32>%arg1, <4 x i32> %arg2, i32 %arg3)
+  ret <4 x i32> %ret
+}
+
+declare { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8>, <16 x i8>, <16 x i8>, i32)
+define { <16 x i8>, i32 } @test_vstrcbs(<16 x i8> %arg0, <16 x i8> %arg1, <16 x i8> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %arg0, <16 x i8> %arg1, <16 x i8> %arg2, i32 %arg3)
+  %ret = call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %arg0, <16 x i8>%arg1, <16 x i8> %arg2, i32 %arg3)
+  ret { <16 x i8>, i32 } %ret
+}
+
+declare { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16>, <8 x i16>, <8 x i16>, i32)
+define { <8 x i16>, i32 } @test_vstrchs(<8 x i16> %arg0, <8 x i16> %arg1, <8 x i16> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %arg0, <8 x i16> %arg1, <8 x i16> %arg2, i32 %arg3)
+  %ret = call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %arg0, <8 x i16>%arg1, <8 x i16> %arg2, i32 %arg3)
+  ret { <8 x i16>, i32 } %ret
+}
+
+declare { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32>, <4 x i32>, <4 x i32>, i32)
+define { <4 x i32>, i32 } @test_vstrcfs(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2, i32 %arg3)
+  %ret = call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %arg0, <4 x i32>%arg1, <4 x i32> %arg2, i32 %arg3)
+  ret { <4 x i32>, i32 } %ret
+}
+
+declare { <16 x i8>, i32 } @llvm.s390.vstrczbs(<16 x i8>, <16 x i8>, <16 x i8>, i32)
+define { <16 x i8>, i32 } @test_vstrczbs(<16 x i8> %arg0, <16 x i8> %arg1, <16 x i8> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call { <16 x i8>, i32 } @llvm.s390.vstrczbs(<16 x i8> %arg0, <16 x i8> %arg1, <16 x i8> %arg2, i32 %arg3)
+  %ret = call { <16 x i8>, i32 } @llvm.s390.vstrczbs(<16 x i8> %arg0, <16 x i8>%arg1, <16 x i8> %arg2, i32 %arg3)
+  ret { <16 x i8>, i32 } %ret
+}
+
+declare { <8 x i16>, i32 } @llvm.s390.vstrczhs(<8 x i16>, <8 x i16>, <8 x i16>, i32)
+define { <8 x i16>, i32 } @test_vstrczhs(<8 x i16> %arg0, <8 x i16> %arg1, <8 x i16> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call { <8 x i16>, i32 } @llvm.s390.vstrczhs(<8 x i16> %arg0, <8 x i16> %arg1, <8 x i16> %arg2, i32 %arg3)
+  %ret = call { <8 x i16>, i32 } @llvm.s390.vstrczhs(<8 x i16> %arg0, <8 x i16>%arg1, <8 x i16> %arg2, i32 %arg3)
+  ret { <8 x i16>, i32 } %ret
+}
+
+declare { <4 x i32>, i32 } @llvm.s390.vstrczfs(<4 x i32>, <4 x i32>, <4 x i32>, i32)
+define { <4 x i32>, i32 } @test_vstrczfs(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg3
+  ; CHECK-NEXT: %ret = call { <4 x i32>, i32 } @llvm.s390.vstrczfs(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2, i32 %arg3)
+  %ret = call { <4 x i32>, i32 } @llvm.s390.vstrczfs(<4 x i32> %arg0, <4 x i32>%arg1, <4 x i32> %arg2, i32 %arg3)
+  ret { <4 x i32>, i32 } %ret
+}
+
 declare <16 x i8> @llvm.s390.verimb(<16 x i8>, <16 x i8>, <16 x i8>, i32)
 define <16 x i8> @test_verimb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, i32 %d) {
   ; CHECK: immarg operand has non-immediate parameter
@@ -156,6 +237,24 @@ define <16 x i8> @test_vfaeb(<16 x i8> %a, <16 x i8> %b, i32 %c) {
   ret <16 x i8> %res
 }
 
+declare <8 x i16> @llvm.s390.vfaeh(<8 x i16>, <8 x i16>, i32)
+define <8 x i16> @test_vfaeh(<8 x i16> %a, <8 x i16> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  %res = call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  ret <8 x i16> %res
+}
+
+declare <4 x i32> @llvm.s390.vfaef(<4 x i32>, <4 x i32>, i32)
+define <4 x i32> @test_vfaef(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <4 x i32> @llvm.s390.vfaef(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  %res = call <4 x i32> @llvm.s390.vfaef(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  ret <4 x i32> %res
+}
+
 declare <16 x i8> @llvm.s390.vfaezb(<16 x i8>, <16 x i8>, i32)
 define <16 x i8> @test_vfaezb(<16 x i8> %a, <16 x i8> %b, i32 %c) {
   ; CHECK: immarg operand has non-immediate parameter
@@ -164,3 +263,121 @@ define <16 x i8> @test_vfaezb(<16 x i8> %a, <16 x i8> %b, i32 %c) {
   %res = call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %a, <16 x i8> %b, i32 %c)
   ret <16 x i8> %res
 }
+
+declare <8 x i16> @llvm.s390.vfaezh(<8 x i16>, <8 x i16>, i32)
+define <8 x i16> @test_vfaezh(<8 x i16> %a, <8 x i16> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  %res = call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  ret <8 x i16> %res
+}
+
+declare <4 x i32> @llvm.s390.vfaezf(<4 x i32>, <4 x i32>, i32)
+define <4 x i32> @test_vfaezf(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  %res = call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  ret <4 x i32> %res
+}
+
+declare { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8>, <16 x i8>, i32)
+define { <16 x i8>, i32 } @test_vfaebs(<16 x i8> %a, <16 x i8> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  %res = call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  ret { <16 x i8>, i32 } %res
+}
+
+declare { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16>, <8 x i16>, i32)
+define { <8 x i16>, i32 } @test_vfaehs(<8 x i16> %a, <8 x i16> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  %res = call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  ret { <8 x i16>, i32 } %res
+}
+
+declare { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32>, <4 x i32>, i32)
+define { <4 x i32>, i32 } @test_vfaefs(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  %res = call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  ret { <4 x i32>, i32 } %res
+}
+
+declare { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8>, <16 x i8>, i32)
+define { <16 x i8>, i32 } @test_vfaezbs(<16 x i8> %a, <16 x i8> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  %res = call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  ret { <16 x i8>, i32 } %res
+}
+
+declare { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16>, <8 x i16>, i32)
+define { <8 x i16>, i32 } @test_vfaezhs(<8 x i16> %a, <8 x i16> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  %res = call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  ret { <8 x i16>, i32 } %res
+}
+
+declare { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32>, <4 x i32>, i32)
+define { <4 x i32>, i32 } @test_vfaezfs(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  %res = call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  ret { <4 x i32>, i32 } %res
+}
+
+declare i32 @llvm.s390.lcbb(i8 *, i32)
+define i32 @test_lcbb(i8* %a, i32 %b) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %b
+  ; CHECK-NEXT: %res = call i32 @llvm.s390.lcbb(i8* %a, i32 %b)
+  %res = call i32 @llvm.s390.lcbb(i8* %a, i32 %b)
+  ret i32 %res
+}
+
+declare <16 x i8> @llvm.s390.vlbb(i8 *, i32)
+define <16 x i8> @test_vlbb(i8* %a, i32 %b) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %b
+  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vlbb(i8* %a, i32 %b)
+  %res = call <16 x i8> @llvm.s390.vlbb(i8* %a, i32 %b)
+  ret <16 x i8> %res
+}
+
+declare <2 x i64> @llvm.s390.vpdi(<2 x i64>, <2 x i64>, i32)
+define <2 x i64> @test_vpdi(<2 x i64> %a, <2 x i64> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <2 x i64> @llvm.s390.vpdi(<2 x i64> %a, <2 x i64> %b, i32 %c)
+  %res = call <2 x i64> @llvm.s390.vpdi(<2 x i64> %a, <2 x i64> %b, i32 %c)
+  ret <2 x i64> %res
+}
+
+declare <16 x i8> @llvm.s390.vmslg(<2 x i64>, <2 x i64>, <16 x i8>, i32)
+define <16 x i8> @test_vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 %d) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %d
+  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 %d)
+  %res = call <16 x i8> @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 %d)
+  ret <16 x i8> %res
+}
+
+declare <16 x i8> @llvm.s390.vsldb(<16 x i8>, <16 x i8>, i32)
+define <16 x i8> @test_vsldb(<16 x i8> %a, <16 x i8> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vsldb(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  %res = call <16 x i8> @llvm.s390.vsldb(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  ret <16 x i8> %res
+}
+

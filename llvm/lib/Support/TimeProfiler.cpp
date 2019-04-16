@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include <cassert>
 #include <chrono>
 #include <string>
@@ -31,30 +31,6 @@ static cl::opt<unsigned> TimeTraceGranularity(
     cl::init(500));
 
 TimeTraceProfiler *TimeTraceProfilerInstance = nullptr;
-
-static std::string escapeString(StringRef Src) {
-  std::string OS;
-  for (const unsigned char &C : Src) {
-    switch (C) {
-    case '"':
-    case '/':
-    case '\\':
-    case '\b':
-    case '\f':
-    case '\n':
-    case '\r':
-    case '\t':
-      OS += '\\';
-      OS += C;
-      break;
-    default:
-      if (isPrint(C)) {
-        OS += C;
-      }
-    }
-  }
-  return OS;
-}
 
 typedef duration<steady_clock::rep, steady_clock::period> DurationType;
 typedef std::pair<size_t, DurationType> CountAndDurationType;
@@ -112,16 +88,22 @@ struct TimeTraceProfiler {
     assert(Stack.empty() &&
            "All profiler sections should be ended when calling Write");
 
-    OS << "{ \"traceEvents\": [\n";
+    json::Array Events;
 
     // Emit all events for the main flame graph.
     for (const auto &E : Entries) {
       auto StartUs = duration_cast<microseconds>(E.Start - StartTime).count();
       auto DurUs = duration_cast<microseconds>(E.Duration).count();
-      OS << "{ \"pid\":1, \"tid\":0, \"ph\":\"X\", \"ts\":" << StartUs
-         << ", \"dur\":" << DurUs << ", \"name\":\"" << escapeString(E.Name)
-         << "\", \"args\":{ \"detail\":\"" << escapeString(E.Detail)
-         << "\"} },\n";
+
+      Events.emplace_back(json::Object{
+          {"pid", 1},
+          {"tid", 0},
+          {"ph", "X"},
+          {"ts", StartUs},
+          {"dur", DurUs},
+          {"name", E.Name},
+          {"args", json::Object{{"detail", E.Detail}}},
+      });
     }
 
     // Emit totals by section name as additional "thread" events, sorted from
@@ -140,17 +122,35 @@ struct TimeTraceProfiler {
     for (const auto &E : SortedTotals) {
       auto DurUs = duration_cast<microseconds>(E.second.second).count();
       auto Count = CountAndTotalPerName[E.first].first;
-      OS << "{ \"pid\":1, \"tid\":" << Tid << ", \"ph\":\"X\", \"ts\":" << 0
-         << ", \"dur\":" << DurUs << ", \"name\":\"Total "
-         << escapeString(E.first) << "\", \"args\":{ \"count\":" << Count
-         << ", \"avg ms\":" << (DurUs / Count / 1000) << "} },\n";
+
+      Events.emplace_back(json::Object{
+          {"pid", 1},
+          {"tid", Tid},
+          {"ph", "X"},
+          {"ts", 0},
+          {"dur", DurUs},
+          {"name", "Total " + E.first},
+          {"args", json::Object{{"count", static_cast<int64_t>(Count)},
+                                {"avg ms",
+                                 static_cast<int64_t>(DurUs / Count / 1000)}}},
+      });
+
       ++Tid;
     }
 
     // Emit metadata event with process name.
-    OS << "{ \"cat\":\"\", \"pid\":1, \"tid\":0, \"ts\":0, \"ph\":\"M\", "
-          "\"name\":\"process_name\", \"args\":{ \"name\":\"clang\" } }\n";
-    OS << "] }\n";
+    Events.emplace_back(json::Object{
+        {"cat", ""},
+        {"pid", 1},
+        {"tid", 0},
+        {"ts", 0},
+        {"ph", "M"},
+        {"name", "process_name"},
+        {"args", json::Object{{"name", "clang"}}},
+    });
+
+    OS << formatv("{0:2}", json::Value(json::Object(
+                               {{"traceEvents", std::move(Events)}})));
   }
 
   SmallVector<Entry, 16> Stack;

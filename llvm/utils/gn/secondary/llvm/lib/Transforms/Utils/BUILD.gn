@@ -57,6 +57,7 @@ static_library("Utils") {
     "SimplifyCFG.cpp",
     "SimplifyIndVar.cpp",
     "SimplifyLibCalls.cpp",
+    "SizeOpts.cpp",
     "SplitModule.cpp",
     "StripGCRelocates.cpp",
     "StripNonLineTableDebugInfo.cpp",

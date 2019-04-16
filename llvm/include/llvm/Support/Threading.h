@@ -167,6 +167,19 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
   /// purposes, and as with setting a thread's name no indication of whether
   /// the operation succeeded or failed is returned.
   void get_thread_name(SmallVectorImpl<char> &Name);
+
+  enum class ThreadPriority {
+    Background = 0,
+    Default = 1,
+  };
+  /// If priority is Background tries to lower current threads priority such
+  /// that it does not affect foreground tasks significantly. Can be used for
+  /// long-running, latency-insensitive tasks to make sure cpu is not hogged by
+  /// this task.
+  /// If the priority is default tries to restore current threads priority to
+  /// default scheduling priority.
+  enum class SetThreadPriorityResult { FAILURE, SUCCESS };
+  SetThreadPriorityResult set_thread_priority(ThreadPriority Priority);
 }
 
 #endif

@@ -15,7 +15,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -29,10 +31,12 @@ using namespace llvm;
 cl::opt<bool> DumpBackReferences("backrefs", cl::Optional,
                                  cl::desc("dump backreferences"), cl::Hidden,
                                  cl::init(false));
+cl::opt<std::string> RawFile("raw-file", cl::Optional,
+                             cl::desc("for fuzzer data"), cl::Hidden);
 cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
                               cl::ZeroOrMore);
 
-static void msDemangle(const std::string &S) {
+static bool msDemangle(const std::string &S) {
   int Status;
   MSDemangleFlags Flags = MSDF_None;
   if (DumpBackReferences)
@@ -47,6 +51,7 @@ static void msDemangle(const std::string &S) {
     WithColor::error() << "Invalid mangled name\n";
   }
   std::free(ResultBuf);
+  return Status == llvm::demangle_success;
 }
 
 int main(int argc, char **argv) {
@@ -54,6 +59,18 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "llvm-undname\n");
 
+  if (!RawFile.empty()) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+        MemoryBuffer::getFileOrSTDIN(RawFile);
+    if (std::error_code EC = FileOrErr.getError()) {
+      WithColor::error() << "Could not open input file \'" << RawFile
+                         << "\': " << EC.message() << '\n';
+      return 1;
+    }
+    return msDemangle(FileOrErr->get()->getBuffer()) ? 0 : 1;
+  }
+
+  bool Success = true;
   if (Symbols.empty()) {
     while (true) {
       std::string LineStr;
@@ -74,17 +91,19 @@ int main(int argc, char **argv) {
         outs() << Line << "\n";
         outs().flush();
       }
-      msDemangle(Line);
+      if (!msDemangle(Line))
+        Success = false;
       outs() << "\n";
     }
   } else {
     for (StringRef S : Symbols) {
       outs() << S << "\n";
       outs().flush();
-      msDemangle(S);
+      if (!msDemangle(S))
+        Success = false;
       outs() << "\n";
     }
   }
 
-  return 0;
+  return Success ? 0 : 1;
 }

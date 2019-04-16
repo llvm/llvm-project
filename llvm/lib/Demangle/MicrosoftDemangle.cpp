@@ -949,9 +949,10 @@ Demangler::demangleTemplateInstantiationName(StringView &MangledName,
 
   if (NBB & NBB_Template) {
     // NBB_Template is only set for types and non-leaf names ("a::" in "a::b").
-    // A conversion operator only makes sense in a leaf name , so reject it in
-    // NBB_Template contexts.
-    if (Identifier->kind() == NodeKind::ConversionOperatorIdentifier) {
+    // Structors and conversion operators only makes sense in a leaf name, so
+    // reject them in NBB_Template contexts.
+    if (Identifier->kind() == NodeKind::ConversionOperatorIdentifier ||
+        Identifier->kind() == NodeKind::StructorIdentifier) {
       Error = true;
       return nullptr;
     }
@@ -2055,7 +2056,7 @@ NodeArrayNode *
 Demangler::demangleFunctionParameterList(StringView &MangledName) {
   // Empty parameter list.
   if (MangledName.consumeFront('X'))
-    return {};
+    return nullptr;
 
   NodeList *Head = Arena.alloc<NodeList>();
   NodeList **Current = &Head;
@@ -2068,7 +2069,7 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
       size_t N = MangledName[0] - '0';
       if (N >= Backrefs.FunctionParamCount) {
         Error = true;
-        return {};
+        return nullptr;
       }
       MangledName = MangledName.dropFront();
 
@@ -2099,7 +2100,7 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
   }
 
   if (Error)
-    return {};
+    return nullptr;
 
   NodeArrayNode *NA = nodeListToNodeArray(Arena, Head, Count);
   // A non-empty parameter list is terminated by either 'Z' (variadic) parameter
@@ -2115,7 +2116,7 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
   }
 
   Error = true;
-  return {};
+  return nullptr;
 }
 
 NodeArrayNode *

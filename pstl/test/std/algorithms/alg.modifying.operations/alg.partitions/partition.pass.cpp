@@ -10,18 +10,12 @@
 // Tests for stable_partition and partition
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-#include "pstl/execution"
-#include "pstl/algorithm"
-#else
 #include <execution>
 #include <algorithm>
-#endif // PSTL_STANDALONE_TESTS
-
-#include "support/utils.h"
-
 #include <iterator>
 #include <type_traits>
+
+#include "support/utils.h"
 
 using namespace TestUtils;
 

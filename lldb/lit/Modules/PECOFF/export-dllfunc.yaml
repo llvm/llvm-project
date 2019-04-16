@@ -1,4 +1,4 @@
-# REQUIRES: system-windows
+# REQUIRES: lld
 # RUN: yaml2obj < %s > %t.obj
 #
 # RUN: lld-link /machine:x64 /out:%t.dll /noentry /nodefaultlib /dll %t.obj /export:DllFunc
