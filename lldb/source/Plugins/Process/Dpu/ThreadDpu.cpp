@@ -12,6 +12,9 @@
 #include <signal.h>
 #include <sstream>
 
+// For llvm::to_string
+#include "llvm/Support/ScopedPrinter.h"
+
 #include "ProcessDpu.h"
 #include "RegisterContextDpu.h"
 
@@ -27,12 +30,11 @@ using namespace lldb_private::process_dpu;
 
 ThreadDpu::ThreadDpu(ProcessDpu &process, lldb::tid_t tid, int index)
     : NativeThreadProtocol(process, tid), m_thread_index(index),
-      m_state(StateType::eStateStopped),
+      m_state(eStateStopped),
       m_reg_context_up(llvm::make_unique<RegisterContextDpu>(*this, process)) {}
 
 std::string ThreadDpu::GetName() {
-  // ProcessDpu &process = GetProcess();
-  return "TODO DPUthreadNN";
+  return "DPUthread" + llvm::to_string(m_thread_index);
 }
 
 lldb::StateType ThreadDpu::GetState() { return m_state; }
@@ -42,35 +44,11 @@ bool ThreadDpu::GetStopReason(ThreadStopInfo &stop_info,
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
 
   description.clear();
+  stop_info.details.signal.signo = 0;
+  m_state = GetProcess().GetThreadState(m_thread_index, description,
+                                        stop_info.reason);
 
-  switch (m_state) {
-  case eStateStopped:
-  case eStateCrashed:
-  case eStateExited:
-  case eStateSuspended:
-  case eStateUnloaded:
-    // TODO get info from Process (polling status + rank context)
-    // cached version will be in m_state ... ???
-    stop_info.reason = eStopReasonNone;
-    // eStopReasonBreakpoint, eStopReasonException, eStopReasonThreadExiting
-
-    return true;
-
-  case eStateInvalid:
-  case eStateConnected:
-  case eStateAttaching:
-  case eStateLaunching:
-  case eStateRunning:
-  case eStateStepping:
-  case eStateDetached:
-    if (log) {
-      log->Printf("ThreadDpu::%s tid %" PRIu64
-                  " in state %s cannot answer stop reason",
-                  __FUNCTION__, GetID(), StateAsCString(m_state));
-    }
-    return false;
-  }
-  llvm_unreachable("unhandled StateType!");
+  return true;
 }
 
 Status ThreadDpu::SetWatchpoint(lldb::addr_t addr, size_t size,

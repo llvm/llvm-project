@@ -88,7 +88,7 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
     return Status("Cannot get a DPU rank").ToError();
   rank->Reset();
 
-  assert(launch_info.GetArchitecture() == k_dpu_arch);
+  // assert(launch_info.GetArchitecture() == k_dpu_arch);
   Dpu *dpu = rank->GetDpu(0);
 
   dpu->LoadElf(launch_info.GetExecutableFile());
@@ -143,9 +143,8 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   timerfd_settime(tfd, 0, &polling_spec, nullptr);
   assert(m_timer_handle && status.Success());
 
-  for (int idx = 0; idx < m_dpu->GetNrThreads(); idx++) {
-    m_threads.push_back(llvm::make_unique<ThreadDpu>(*this, pid | idx, idx));
-    // ThreadWasCreated(thread);
+  for (int thread_id = 0; thread_id < m_dpu->GetNrThreads(); thread_id++) {
+    m_threads.push_back(llvm::make_unique<ThreadDpu>(*this, pid | thread_id, thread_id));
   }
   SetCurrentThreadID(pid);
 
@@ -155,14 +154,34 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   SetState(StateType::eStateStopped, false);
 }
 
-void ProcessDpu::InterfaceTimerCallback() { m_dpu->PollStatus(); }
+void ProcessDpu::InterfaceTimerCallback() {
+  unsigned int exit_status;
+  StateType current_state = m_dpu->PollStatus(&exit_status);
+  if (current_state != StateType::eStateInvalid) {
+    if (current_state == StateType::eStateExited)
+      SetExitStatus(WaitStatus(WaitStatus::Exit, (uint8_t)exit_status), true);
+    SetState(current_state, true);
+  }
+}
 
 bool ProcessDpu::SupportHardwareSingleStepping() const { return false; }
 
 Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  LLDB_LOG(log, "pid {0}", GetID());
+  lldb::tid_t thread_id = GetID();
+  LLDB_LOG(log, "pid {0}", thread_id);
 
+  const ResumeAction *action =
+      resume_actions.GetActionForThread(thread_id, true);
+  if (action == NULL) {
+    LLDB_LOG(log, "No action to perform...");
+    return Status();
+  }
+  assert(action->tid == thread_id || action->tid == LLDB_INVALID_THREAD_ID);
+  if (action->state != lldb::StateType::eStateRunning) {
+    LLDB_LOG(log, "Resume function is not asked to run the threads... weird");
+    return Status();
+  }
   if (!m_dpu->ResumeThreads())
     return Status("CNI cannot resume");
 
@@ -347,4 +366,10 @@ void ProcessDpu::GetThreadContext(int thread_index, uint32_t *&regs,
                                   uint16_t *&pc) {
   regs = m_dpu->ThreadContextRegs(thread_index);
   pc = m_dpu->ThreadContextPC(thread_index);
+}
+
+lldb::StateType ProcessDpu::GetThreadState(int thread_index,
+                                           std::string &description,
+                                           lldb::StopReason &stop_reason) {
+  return m_dpu->GetThreadState(thread_index, description, stop_reason);
 }

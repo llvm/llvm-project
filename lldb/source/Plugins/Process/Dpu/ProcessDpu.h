@@ -114,6 +114,9 @@ public:
   // ---------------------------------------------------------------------
   void GetThreadContext(int thread_index, uint32_t *&regs, uint16_t *&pc);
 
+  lldb::StateType GetThreadState(int thread_index, std::string &description,
+                                 lldb::StopReason &stop_reason);
+
 protected:
   // ---------------------------------------------------------------------
   // NativeProcessProtocol protected interface

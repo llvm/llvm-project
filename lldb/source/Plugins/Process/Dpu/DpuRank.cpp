@@ -24,6 +24,8 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 
+#include "RegisterContextDpu.h"
+
 extern "C" {
 #include <cni.h>
 #include <dpu.h>
@@ -53,10 +55,14 @@ bool DpuRank::Open() {
   std::lock_guard<std::mutex> guard(m_lock);
 
   int ret = dpu_cni_get_rank_of_type(m_type, m_profile, &m_link);
+  fprintf(stderr, "get_rank=>%d\n", ret);
   if (ret != DPU_CNI_SUCCESS)
     return false;
   dpu_cni_get_target_description(m_link, &m_desc);
 
+  fprintf(stderr, "rank desc threads %d dpus %d\n", m_desc.dpu.nr_of_threads,
+          m_desc.topology.nr_of_control_interfaces *
+              m_desc.topology.nr_of_dpus_per_control_interface);
   nr_threads = m_desc.dpu.nr_of_threads;
   nr_dpus = m_desc.topology.nr_of_control_interfaces *
             m_desc.topology.nr_of_dpus_per_control_interface;
@@ -127,8 +133,10 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
 
   DataExtractor text_content;
   exe->ReadSectionData(section_text, text_content);
+  fprintf(stderr, "text +%ld\n", text_content.GetByteSize());
   DataExtractor data_content;
   exe->ReadSectionData(section_data, data_content);
+  fprintf(stderr, "data +%ld\n", data_content.GetByteSize());
 
   {
     std::lock_guard<std::mutex> guard(m_rank->GetLock());
@@ -166,20 +174,36 @@ bool Dpu::Boot() {
   return true;
 }
 
-bool Dpu::PollStatus() {
+StateType Dpu::PollStatus(unsigned int *exit_status) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  StateType result_state = StateType::eStateRunning;
 
-  bool dpu_is_running = false;
-  bool dpu_is_in_fault = false;
+  if (!dpu_is_running)
+    return StateType::eStateInvalid;
 
   int res = dpu_cni_poll_for_dpu(m_link, m_slice_id, m_dpu_id, &dpu_is_running,
                                  &dpu_is_in_fault);
-  return res == DPU_CNI_SUCCESS && !dpu_is_in_fault;
+  if (dpu_is_in_fault) {
+    dpu_is_running = false;
+    result_state = StateType::eStateStopped;
+  } else if (!dpu_is_running) {
+    result_state = StateType::eStateExited;
+  } else {
+    return StateType::eStateRunning;
+  }
+
+  dpu_cni_initialize_fault_process_for_dpu(m_link, m_slice_id, m_dpu_id,
+                                           &m_context);
+  dpu_cni_extract_context_for_dpu(m_link, m_slice_id, m_dpu_id, &m_context);
+  *exit_status = m_context.registers[lldb_private::r21_dpu];
+
+  return result_state;
 }
 
 bool Dpu::StopThreads() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
+  dpu_is_running = false;
   for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
     m_context.scheduling[each_thread] = 0xFF;
   }
@@ -188,25 +212,23 @@ bool Dpu::StopThreads() {
   m_context.dma_fault = false;
   m_context.mem_fault = false;
 
-  int ret =
-      dpu_cni_stop_threads_for_dpu(m_link, m_slice_id, m_dpu_id, &m_context);
-  if (ret != DPU_CNI_SUCCESS)
-    return false;
-  // TODO: we can be more opportunistic here and just invalidate the
-  // RegisterContext cache, then do this (long) read only if the debugger asks
-  // for a register context
-  int ret1 =
-      dpu_cni_extract_pcs_for_dpu(m_link, m_slice_id, m_dpu_id, &m_context);
-  int ret2 =
+  int ret = DPU_CNI_SUCCESS;
+  ret |= dpu_cni_initialize_fault_process_for_dpu(m_link, m_slice_id, m_dpu_id,
+                                                  &m_context);
+  ret |=
       dpu_cni_extract_context_for_dpu(m_link, m_slice_id, m_dpu_id, &m_context);
-  return ret1 == DPU_CNI_SUCCESS && ret2 == DPU_CNI_SUCCESS;
+  return ret == DPU_CNI_SUCCESS;
 }
 
 bool Dpu::ResumeThreads() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-  int ret =
-      dpu_cni_resume_threads_for_dpu(m_link, m_slice_id, m_dpu_id, &m_context);
+  int ret = DPU_CNI_SUCCESS;
+  ret |= dpu_cni_clear_fault_on_all(m_link);
+  ret |= dpu_cni_finalize_fault_process_for_dpu(m_link, m_slice_id, m_dpu_id,
+                                                &m_context);
+
+  dpu_is_running = true;
   return ret == DPU_CNI_SUCCESS;
 }
 
@@ -274,4 +296,32 @@ uint32_t *Dpu::ThreadContextRegs(int thread_index) {
 
 uint16_t *Dpu::ThreadContextPC(int thread_index) {
   return m_context.pcs + thread_index;
+}
+
+lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
+                                    lldb::StopReason &stop_reason) {
+  if (m_context.bkp_fault && m_context.bkp_fault_thread_index == thread_index) {
+    description = "breakpoint hit";
+    stop_reason = eStopReasonBreakpoint;
+    return eStateStopped;
+  } else if (m_context.dma_fault && m_context.dma_fault_thread_index == thread_index) {
+    description = "dma fault";
+    stop_reason = eStopReasonBreakpoint;
+    return eStateStopped;
+  } else if (m_context.mem_fault && m_context.mem_fault_thread_index == thread_index) {
+    description = "memory fault";
+    stop_reason = eStopReasonBreakpoint;
+    return eStateStopped;
+  } else if (m_context.scheduling[thread_index] != 0xff) {
+    description = "suspended";
+    stop_reason = eStopReasonSignal;
+    return eStateStopped;
+  } else if (m_context.pcs[thread_index] != 0) {
+    description = "stopped";
+    stop_reason = eStopReasonNone;
+    return eStateStopped;
+  } else {
+    stop_reason = eStopReasonNone;
+    return eStateExited;
+  }
 }

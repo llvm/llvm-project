@@ -38,7 +38,7 @@ class Dpu;
 class DpuRank {
 public:
   DpuRank(dpu_type_t backend_type = FUNCTIONAL_SIMULATOR,
-          const char *profile = "");
+          const char *profile = "talkalot=false");
   bool Open();
   bool IsValid();
   bool Reset();
@@ -67,7 +67,7 @@ public:
 
   bool LoadElf(const FileSpec &elf_file_path);
   bool Boot();
-  bool PollStatus();
+  lldb::StateType PollStatus(unsigned int *exit_status);
   bool ResumeThreads();
   bool StopThreads();
 
@@ -83,6 +83,9 @@ public:
   uint32_t *ThreadContextRegs(int thread_index);
   uint16_t *ThreadContextPC(int thread_index);
 
+  lldb::StateType GetThreadState(int thread_index, std::string &description,
+                                 lldb::StopReason &stop_reason);
+
 private:
   DpuRank *m_rank;
   dpu_slice_id_t m_slice_id;
@@ -91,6 +94,8 @@ private:
   int nr_of_work_registers_per_thread;
   dpulink_t m_link;
   struct _dpu_context_t m_context;
+  bool dpu_is_running = false;
+  bool dpu_is_in_fault = false;
 };
 
 } // namespace dpu
