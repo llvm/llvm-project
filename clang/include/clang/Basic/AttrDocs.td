@@ -1670,7 +1670,7 @@ as ``-mlong-calls`` and ``-mno-long-calls``.
 
 def IntelFPGAMemoryAttrDocs : Documentation {
   let Category = DocCatVariable;
-  let Heading = "memory (IntelFGPA)";
+  let Heading = "memory (IntelFPGA)";
   let Content = [{
 This attribute may be attached to a variable or struct member declaration and
 instructs the backend to implement the variable or struct member in memory
@@ -1681,7 +1681,7 @@ it indicates what type of memory to use.
 
 def IntelFPGARegisterAttrDocs : Documentation {
   let Category = DocCatVariable;
-  let Heading = "register (IntelFGPA)";
+  let Heading = "register (IntelFPGA)";
   let Content = [{
 This attribute may be attached to a variable or struct member declaration and
 instructs the backend to promote the variable or struct member to register(s)
@@ -1691,7 +1691,7 @@ if possible.
 
 def IntelFPGABankWidthAttrDocs : Documentation {
   let Category = DocCatVariable;
-  let Heading = "bankwidth (IntelFGPA)";
+  let Heading = "bankwidth (IntelFPGA)";
   let Content = [{
 This attribute may be attached to a variable or struct member declaration and
 instructs the backend to implement the variable or struct member in a memory
@@ -1701,7 +1701,7 @@ with banks that are N bytes wide.
 
 def IntelFPGANumBanksAttrDocs : Documentation {
   let Category = DocCatVariable;
-  let Heading = "numbanks (IntelFGPA)";
+  let Heading = "numbanks (IntelFPGA)";
   let Content = [{
 This attribute may be attached to a variable or struct member declaration and
 instructs the backend to implement the variable or struct member in a memory
@@ -1711,7 +1711,7 @@ with N banks.
 
 def IntelFPGAMaxConcurrencyAttrDocs : Documentation {
   let Category = DocCatVariable;
-  let Heading = "max_concurrency (IntelFGPA)";
+  let Heading = "max_concurrency (IntelFPGA)";
   let Content = [{
 This attribute may be attached to a variable or struct member declaration and
 instructs the backend to replicate the memory generated for the variable or
