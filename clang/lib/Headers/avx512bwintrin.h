@@ -705,11 +705,7 @@ _mm512_maskz_adds_epu16 (__mmask32 __U, __m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_avg_epu8 (__m512i __A, __m512i __B)
 {
-  typedef unsigned short __v64hu __attribute__((__vector_size__(128)));
-  return (__m512i)__builtin_convertvector(
-              ((__builtin_convertvector((__v64qu) __A, __v64hu) +
-                __builtin_convertvector((__v64qu) __B, __v64hu)) + 1)
-                >> 1, __v64qu);
+  return (__m512i)__builtin_ia32_pavgb512((__v64qi)__A, (__v64qi)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -732,11 +728,7 @@ _mm512_maskz_avg_epu8 (__mmask64 __U, __m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_avg_epu16 (__m512i __A, __m512i __B)
 {
-  typedef unsigned int __v32su __attribute__((__vector_size__(128)));
-  return (__m512i)__builtin_convertvector(
-              ((__builtin_convertvector((__v32hu) __A, __v32su) +
-                __builtin_convertvector((__v32hu) __B, __v32su)) + 1)
-                >> 1, __v32hu);
+  return (__m512i)__builtin_ia32_pavgw512((__v32hi)__A, (__v32hi)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512

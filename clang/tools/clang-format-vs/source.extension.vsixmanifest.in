@@ -8,7 +8,7 @@
     <License>license.txt</License>
   </Metadata>
   <Installation InstalledByMsi="false">
-    <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[11.0, 15.0]" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[11.0, 16.0]" />
   </Installation>
   <Dependencies>
     <Dependency Id="Microsoft.VisualStudio.MPF" MinVersion="11.0" DisplayName="Visual Studio MPF" />

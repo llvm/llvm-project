@@ -11393,6 +11393,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpacesInCStyleCastParentheses);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
+  CHECK_PARSE_BOOL(SpaceAfterLogicalNot);
   CHECK_PARSE_BOOL(SpaceBeforeAssignmentOperators);
   CHECK_PARSE_BOOL(SpaceBeforeCpp11BracedList);
   CHECK_PARSE_BOOL(SpaceBeforeCtorInitializerColon);
@@ -11565,12 +11566,6 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::SBPO_Never);
   CHECK_PARSE("SpaceAfterControlStatementKeyword: true", SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatements);
-
-  Style.SpaceAfterLogicalNot = false;
-  CHECK_PARSE("SpaceAfterLogicalNot: true", SpaceAfterLogicalNot,
-              true);
-  CHECK_PARSE("SpaceAfterLogicalNot: false", SpaceAfterLogicalNot,
-              false);
 
   Style.ColumnLimit = 123;
   FormatStyle BaseStyle = getLLVMStyle();
