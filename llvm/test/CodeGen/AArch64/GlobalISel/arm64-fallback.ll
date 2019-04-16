@@ -54,7 +54,7 @@ false:
 
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(s32) = G_ZEXTLOAD %1:_(p0) :: (load 3 from `i24* undef`, align 1) (in function: odd_type_load)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s32) = G_LOAD %1:_(p0) :: (load 3 from `i24* undef`, align 1) (in function: odd_type_load)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_type_load
 ; FALLBACK-WITH-REPORT-OUT-LABEL: odd_type_load
 define i32 @odd_type_load() {

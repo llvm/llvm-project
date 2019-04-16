@@ -50,13 +50,14 @@
 # CHECK-NEXT: [ 3] null{{$}}
 # CHECK-NOT:  {{.}}
 
-# RUN: not llvm-readobj --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=ERR
-# RUN: not llvm-readobj --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-readobj --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: not llvm-readobj --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=ERR2
 
-# RUN: not llvm-readelf --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=ERR
-# RUN: not llvm-readelf --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-readelf --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: not llvm-readelf --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=ERR2
 
-# ERR: Error reading file: invalid section reference.
+# ERR1: error: could not find section 'does_not_exist'
+# ERR2: error: could not find section '42'
 
 --- !ELF
 FileHeader:

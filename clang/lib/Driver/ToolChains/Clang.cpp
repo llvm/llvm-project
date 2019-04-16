@@ -3295,9 +3295,10 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   // figure out if we need to "upgrade" it to standalone debug info.
   // We parse these two '-f' options whether or not they will be used,
   // to claim them even if you wrote "-fstandalone-debug -gline-tables-only"
-  bool NeedFullDebug = Args.hasFlag(options::OPT_fstandalone_debug,
-                                    options::OPT_fno_standalone_debug,
-                                    TC.GetDefaultStandaloneDebug());
+  bool NeedFullDebug = Args.hasFlag(
+      options::OPT_fstandalone_debug, options::OPT_fno_standalone_debug,
+      DebuggerTuning == llvm::DebuggerKind::LLDB ||
+          TC.GetDefaultStandaloneDebug());
   if (const Arg *A = Args.getLastArg(options::OPT_fstandalone_debug))
     (void)checkDebugInfoOption(A, Args, D, TC);
   if (DebugInfoKind == codegenoptions::LimitedDebugInfo && NeedFullDebug)

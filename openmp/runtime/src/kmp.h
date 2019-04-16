@@ -1144,7 +1144,76 @@ typedef struct kmp_cpuid {
   kmp_uint32 ecx;
   kmp_uint32 edx;
 } kmp_cpuid_t;
+
+typedef struct kmp_cpuinfo {
+  int initialized; // If 0, other fields are not initialized.
+  int signature; // CPUID(1).EAX
+  int family; // CPUID(1).EAX[27:20]+CPUID(1).EAX[11:8] (Extended Family+Family)
+  int model; // ( CPUID(1).EAX[19:16] << 4 ) + CPUID(1).EAX[7:4] ( ( Extended
+  // Model << 4 ) + Model)
+  int stepping; // CPUID(1).EAX[3:0] ( Stepping )
+  int sse2; // 0 if SSE2 instructions are not supported, 1 otherwise.
+  int rtm; // 0 if RTM instructions are not supported, 1 otherwise.
+  int cpu_stackoffset;
+  int apic_id;
+  int physical_id;
+  int logical_id;
+  kmp_uint64 frequency; // Nominal CPU frequency in Hz.
+  char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
+} kmp_cpuinfo_t;
+
+extern void __kmp_query_cpuid(kmp_cpuinfo_t *p);
+
+#if KMP_OS_UNIX
+// subleaf is only needed for cache and topology discovery and can be set to
+// zero in most cases
+static inline void __kmp_x86_cpuid(int leaf, int subleaf, struct kmp_cpuid *p) {
+  __asm__ __volatile__("cpuid"
+                       : "=a"(p->eax), "=b"(p->ebx), "=c"(p->ecx), "=d"(p->edx)
+                       : "a"(leaf), "c"(subleaf));
+}
+// Load p into FPU control word
+static inline void __kmp_load_x87_fpu_control_word(const kmp_int16 *p) {
+  __asm__ __volatile__("fldcw %0" : : "m"(*p));
+}
+// Store FPU control word into p
+static inline void __kmp_store_x87_fpu_control_word(kmp_int16 *p) {
+  __asm__ __volatile__("fstcw %0" : "=m"(*p));
+}
+static inline void __kmp_clear_x87_fpu_status_word() {
+#if KMP_MIC
+  // 32-bit protected mode x87 FPU state
+  struct x87_fpu_state {
+    unsigned cw;
+    unsigned sw;
+    unsigned tw;
+    unsigned fip;
+    unsigned fips;
+    unsigned fdp;
+    unsigned fds;
+  };
+  struct x87_fpu_state fpu_state = {0, 0, 0, 0, 0, 0, 0};
+  __asm__ __volatile__("fstenv %0\n\t" // store FP env
+                       "andw $0x7f00, %1\n\t" // clear 0-7,15 bits of FP SW
+                       "fldenv %0\n\t" // load FP env back
+                       : "+m"(fpu_state), "+m"(fpu_state.sw));
+#else
+  __asm__ __volatile__("fnclex");
+#endif // KMP_MIC
+}
+#else
+// Windows still has these as external functions in assembly file
 extern void __kmp_x86_cpuid(int mode, int mode2, struct kmp_cpuid *p);
+extern void __kmp_load_x87_fpu_control_word(const kmp_int16 *p);
+extern void __kmp_store_x87_fpu_control_word(kmp_int16 *p);
+extern void __kmp_clear_x87_fpu_status_word();
+#endif // KMP_OS_UNIX
+
+#define __kmp_load_mxcsr(p) _mm_setcsr(*(p))
+static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = _mm_getcsr(); }
+
+#define KMP_X86_MXCSR_MASK 0xffffffc0 /* ignore status flags (6 lsb) */
+
 #if KMP_ARCH_X86
 extern void __kmp_x86_pause(void);
 #elif KMP_MIC
@@ -1291,25 +1360,6 @@ typedef struct kmp_sys_info {
   long nvcsw; /* the number of times a context switch was voluntarily      */
   long nivcsw; /* the number of times a context switch was forced           */
 } kmp_sys_info_t;
-
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
-typedef struct kmp_cpuinfo {
-  int initialized; // If 0, other fields are not initialized.
-  int signature; // CPUID(1).EAX
-  int family; // CPUID(1).EAX[27:20]+CPUID(1).EAX[11:8] (Extended Family+Family)
-  int model; // ( CPUID(1).EAX[19:16] << 4 ) + CPUID(1).EAX[7:4] ( ( Extended
-  // Model << 4 ) + Model)
-  int stepping; // CPUID(1).EAX[3:0] ( Stepping )
-  int sse2; // 0 if SSE2 instructions are not supported, 1 otherwise.
-  int rtm; // 0 if RTM instructions are not supported, 1 otherwise.
-  int cpu_stackoffset;
-  int apic_id;
-  int physical_id;
-  int logical_id;
-  kmp_uint64 frequency; // Nominal CPU frequency in Hz.
-  char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
-} kmp_cpuinfo_t;
-#endif
 
 #if USE_ITT_BUILD
 // We cannot include "kmp_itt.h" due to circular dependency. Declare the only
@@ -3583,20 +3633,6 @@ extern int __kmp_read_from_file(char const *path, char const *format, ...);
 //
 // Assembly routines that have no compiler intrinsic replacement
 //
-
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
-
-extern void __kmp_query_cpuid(kmp_cpuinfo_t *p);
-
-#define __kmp_load_mxcsr(p) _mm_setcsr(*(p))
-static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = _mm_getcsr(); }
-
-extern void __kmp_load_x87_fpu_control_word(kmp_int16 *p);
-extern void __kmp_store_x87_fpu_control_word(kmp_int16 *p);
-extern void __kmp_clear_x87_fpu_status_word();
-#define KMP_X86_MXCSR_MASK 0xffffffc0 /* ignore status flags (6 lsb) */
-
-#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
 extern int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int npr, int argc,
                                   void *argv[]

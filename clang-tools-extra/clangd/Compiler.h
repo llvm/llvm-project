@@ -16,9 +16,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 
 #include "../clang-tidy/ClangTidyOptions.h"
+#include "GlobalCompilationDatabase.h"
 #include "index/Index.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
 

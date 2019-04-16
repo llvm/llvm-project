@@ -1,29 +1,34 @@
 //===-- TimeProfiler.cpp - Hierarchical Time Profiler ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file Hierarchical time profiler implementation.
+// This file implements hierarchical time profiler.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include <cassert>
 #include <chrono>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace std::chrono;
 
 namespace llvm {
+
+static cl::opt<unsigned> TimeTraceGranularity(
+    "time-trace-granularity",
+    cl::desc(
+        "Minimum time granularity (in microseconds) traced by time profiler"),
+    cl::init(500));
 
 TimeTraceProfiler *TimeTraceProfilerInstance = nullptr;
 
@@ -61,18 +66,21 @@ struct Entry {
   DurationType Duration;
   std::string Name;
   std::string Detail;
+
+  Entry(time_point<steady_clock> &&S, DurationType &&D, std::string &&N,
+        std::string &&Dt)
+      : Start(std::move(S)), Duration(std::move(D)), Name(std::move(N)),
+        Detail(std::move(Dt)){};
 };
 
 struct TimeTraceProfiler {
   TimeTraceProfiler() {
-    Stack.reserve(8);
-    Entries.reserve(128);
     StartTime = steady_clock::now();
   }
 
   void begin(std::string Name, llvm::function_ref<std::string()> Detail) {
-    Entry E = {steady_clock::now(), {}, Name, Detail()};
-    Stack.push_back(std::move(E));
+    Stack.emplace_back(steady_clock::now(), DurationType{}, std::move(Name),
+                       Detail());
   }
 
   void end() {
@@ -80,8 +88,8 @@ struct TimeTraceProfiler {
     auto &E = Stack.back();
     E.Duration = steady_clock::now() - E.Start;
 
-    // Only include sections longer than 500us.
-    if (duration_cast<microseconds>(E.Duration).count() > 500)
+    // Only include sections longer than TimeTraceGranularity msec.
+    if (duration_cast<microseconds>(E.Duration).count() > TimeTraceGranularity)
       Entries.emplace_back(E);
 
     // Track total time taken by each "name", but only the topmost levels of
@@ -100,20 +108,20 @@ struct TimeTraceProfiler {
     Stack.pop_back();
   }
 
-  void Write(std::unique_ptr<raw_pwrite_stream> &OS) {
+  void Write(raw_pwrite_stream &OS) {
     assert(Stack.empty() &&
            "All profiler sections should be ended when calling Write");
 
-    *OS << "{ \"traceEvents\": [\n";
+    OS << "{ \"traceEvents\": [\n";
 
     // Emit all events for the main flame graph.
     for (const auto &E : Entries) {
       auto StartUs = duration_cast<microseconds>(E.Start - StartTime).count();
       auto DurUs = duration_cast<microseconds>(E.Duration).count();
-      *OS << "{ \"pid\":1, \"tid\":0, \"ph\":\"X\", \"ts\":" << StartUs
-          << ", \"dur\":" << DurUs << ", \"name\":\"" << escapeString(E.Name)
-          << "\", \"args\":{ \"detail\":\"" << escapeString(E.Detail)
-          << "\"} },\n";
+      OS << "{ \"pid\":1, \"tid\":0, \"ph\":\"X\", \"ts\":" << StartUs
+         << ", \"dur\":" << DurUs << ", \"name\":\"" << escapeString(E.Name)
+         << "\", \"args\":{ \"detail\":\"" << escapeString(E.Detail)
+         << "\"} },\n";
     }
 
     // Emit totals by section name as additional "thread" events, sorted from
@@ -121,32 +129,32 @@ struct TimeTraceProfiler {
     int Tid = 1;
     std::vector<NameAndCountAndDurationType> SortedTotals;
     SortedTotals.reserve(CountAndTotalPerName.size());
-    for (const auto &E : CountAndTotalPerName) {
+    for (const auto &E : CountAndTotalPerName)
       SortedTotals.emplace_back(E.getKey(), E.getValue());
-    }
-    std::sort(SortedTotals.begin(), SortedTotals.end(),
-              [](const NameAndCountAndDurationType &A,
-                 const NameAndCountAndDurationType &B) {
-                return A.second.second > B.second.second;
-              });
+
+    llvm::sort(SortedTotals.begin(), SortedTotals.end(),
+               [](const NameAndCountAndDurationType &A,
+                  const NameAndCountAndDurationType &B) {
+                 return A.second.second > B.second.second;
+               });
     for (const auto &E : SortedTotals) {
       auto DurUs = duration_cast<microseconds>(E.second.second).count();
       auto Count = CountAndTotalPerName[E.first].first;
-      *OS << "{ \"pid\":1, \"tid\":" << Tid << ", \"ph\":\"X\", \"ts\":" << 0
-          << ", \"dur\":" << DurUs << ", \"name\":\"Total "
-          << escapeString(E.first) << "\", \"args\":{ \"count\":" << Count
-          << ", \"avg ms\":" << (DurUs / Count / 1000) << "} },\n";
+      OS << "{ \"pid\":1, \"tid\":" << Tid << ", \"ph\":\"X\", \"ts\":" << 0
+         << ", \"dur\":" << DurUs << ", \"name\":\"Total "
+         << escapeString(E.first) << "\", \"args\":{ \"count\":" << Count
+         << ", \"avg ms\":" << (DurUs / Count / 1000) << "} },\n";
       ++Tid;
     }
 
     // Emit metadata event with process name.
-    *OS << "{ \"cat\":\"\", \"pid\":1, \"tid\":0, \"ts\":0, \"ph\":\"M\", "
-           "\"name\":\"process_name\", \"args\":{ \"name\":\"clang\" } }\n";
-    *OS << "] }\n";
+    OS << "{ \"cat\":\"\", \"pid\":1, \"tid\":0, \"ts\":0, \"ph\":\"M\", "
+          "\"name\":\"process_name\", \"args\":{ \"name\":\"clang\" } }\n";
+    OS << "] }\n";
   }
 
-  std::vector<Entry> Stack;
-  std::vector<Entry> Entries;
+  SmallVector<Entry, 16> Stack;
+  SmallVector<Entry, 128> Entries;
   StringMap<CountAndDurationType> CountAndTotalPerName;
   time_point<steady_clock> StartTime;
 };
@@ -162,7 +170,7 @@ void timeTraceProfilerCleanup() {
   TimeTraceProfilerInstance = nullptr;
 }
 
-void timeTraceProfilerWrite(std::unique_ptr<raw_pwrite_stream> &OS) {
+void timeTraceProfilerWrite(raw_pwrite_stream &OS) {
   assert(TimeTraceProfilerInstance != nullptr &&
          "Profiler object can't be null");
   TimeTraceProfilerInstance->Write(OS);

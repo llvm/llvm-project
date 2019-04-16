@@ -209,6 +209,9 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
       llvm_unreachable("Repeated basic blocks in extraction input");
   }
 
+  LLVM_DEBUG(dbgs() << "Region front block: " << Result.front()->getName()
+                    << '\n');
+
   for (auto *BB : Result) {
     if (!isBlockValidForExtraction(*BB, Result, AllowVarArgs, AllowAlloca))
       return {};
@@ -226,9 +229,11 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
     // the subgraph which is being extracted.
     for (auto *PBB : predecessors(BB))
       if (!Result.count(PBB)) {
-        LLVM_DEBUG(
-            dbgs() << "No blocks in this region may have entries from "
-                      "outside the region except for the first block!\n");
+        LLVM_DEBUG(dbgs() << "No blocks in this region may have entries from "
+                             "outside the region except for the first block!\n"
+                          << "Problematic source BB: " << BB->getName() << "\n"
+                          << "Problematic destination BB: " << PBB->getName()
+                          << "\n");
         return {};
       }
   }

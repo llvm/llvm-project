@@ -2170,8 +2170,8 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl(bool IsFirstDecl) {
   SourceLocation ModuleLoc = ConsumeToken();
 
   // Attributes appear after the module name, not before.
-  if (Tok.is(tok::l_square))
-    CheckProhibitedCXX11Attribute();
+  // FIXME: Suggest moving the attributes later with a fixit.
+  DiagnoseAndSkipCXX11Attributes();
 
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
@@ -2197,8 +2197,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl(bool IsFirstDecl) {
     }
     ConsumeToken();
     SourceLocation PrivateLoc = ConsumeToken();
-    if (Tok.is(tok::l_square))
-      CheckProhibitedCXX11Attribute();
+    DiagnoseAndSkipCXX11Attributes();
     ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
     return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
   }

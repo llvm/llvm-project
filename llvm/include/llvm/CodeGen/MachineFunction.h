@@ -30,10 +30,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -51,6 +47,7 @@ namespace llvm {
 class BasicBlock;
 class BlockAddress;
 class DataLayout;
+class DebugLoc;
 class DIExpression;
 class DILocalVariable;
 class DILocation;
@@ -65,6 +62,7 @@ class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
+class MCSymbol;
 class Pass;
 class PseudoSourceValueManager;
 class raw_ostream;

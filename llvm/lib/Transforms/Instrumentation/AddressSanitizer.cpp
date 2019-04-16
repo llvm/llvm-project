@@ -1038,7 +1038,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
         !ConstantInt::isValueValidForType(IntptrTy, SizeValue))
       return;
     // Find alloca instruction that corresponds to llvm.lifetime argument.
-    AllocaInst *AI = findAllocaForValue(II.getArgOperand(1));
+    AllocaInst *AI =
+        llvm::findAllocaForValue(II.getArgOperand(1), AllocaForValue);
+    // We're interested only in allocas we can handle.
     if (!AI || !ASan.isInterestingAlloca(*AI))
       return;
     bool DoPoison = (ID == Intrinsic::lifetime_end);
@@ -1061,9 +1063,6 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
   // ---------------------- Helpers.
   void initializeCallbacks(Module &M);
-
-  /// Finds alloca where the value comes from.
-  AllocaInst *findAllocaForValue(Value *V);
 
   // Copies bytes from ShadowBytes into shadow memory for indexes where
   // ShadowMask is not zero. If ShadowMask[i] is zero, we assume that
@@ -3228,41 +3227,6 @@ void FunctionStackPoisoner::poisonAlloca(Value *V, uint64_t Size,
 //     variable may go in and out of scope several times, e.g. in loops).
 // (3) if we poisoned at least one %alloca in a function,
 //     unpoison the whole stack frame at function exit.
-
-AllocaInst *FunctionStackPoisoner::findAllocaForValue(Value *V) {
-  if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
-    // We're interested only in allocas we can handle.
-    return ASan.isInterestingAlloca(*AI) ? AI : nullptr;
-  // See if we've already calculated (or started to calculate) alloca for a
-  // given value.
-  AllocaForValueMapTy::iterator I = AllocaForValue.find(V);
-  if (I != AllocaForValue.end()) return I->second;
-  // Store 0 while we're calculating alloca for value V to avoid
-  // infinite recursion if the value references itself.
-  AllocaForValue[V] = nullptr;
-  AllocaInst *Res = nullptr;
-  if (CastInst *CI = dyn_cast<CastInst>(V))
-    Res = findAllocaForValue(CI->getOperand(0));
-  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
-    for (Value *IncValue : PN->incoming_values()) {
-      // Allow self-referencing phi-nodes.
-      if (IncValue == PN) continue;
-      AllocaInst *IncValueAI = findAllocaForValue(IncValue);
-      // AI for incoming values should exist and should all be equal.
-      if (IncValueAI == nullptr || (Res != nullptr && IncValueAI != Res))
-        return nullptr;
-      Res = IncValueAI;
-    }
-  } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
-    Res = findAllocaForValue(EP->getPointerOperand());
-  } else {
-    LLVM_DEBUG(dbgs() << "Alloca search canceled on unknown instruction: " << *V
-                      << "\n");
-  }
-  if (Res) AllocaForValue[V] = Res;
-  return Res;
-}
-
 void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   IRBuilder<> IRB(AI);
 

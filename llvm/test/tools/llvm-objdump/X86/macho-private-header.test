@@ -1,4 +1,4 @@
-// RUN: llvm-objdump -private-header %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
+// RUN: llvm-objdump -macho -private-header %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
 CHECK: Mach header
 CHECK:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags

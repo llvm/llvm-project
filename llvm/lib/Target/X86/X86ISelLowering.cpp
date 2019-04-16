@@ -43618,20 +43618,18 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // in the normal allocation?
     case 'k':
       if (Subtarget.hasAVX512()) {
-        //  Only supported in AVX512 or later.
-        switch (VT.SimpleTy) {
-        default: break;
-        case MVT::i32:
-          return std::make_pair(0U, &X86::VK32RegClass);
-        case MVT::i16:
-          return std::make_pair(0U, &X86::VK16RegClass);
-        case MVT::i8:
-          return std::make_pair(0U, &X86::VK8RegClass);
-        case MVT::i1:
+        if (VT == MVT::i1)
           return std::make_pair(0U, &X86::VK1RegClass);
-        case MVT::i64:
+        if (VT == MVT::i8)
+          return std::make_pair(0U, &X86::VK8RegClass);
+        if (VT == MVT::i16)
+          return std::make_pair(0U, &X86::VK16RegClass);
+      }
+      if (Subtarget.hasBWI()) {
+        if (VT == MVT::i32)
+          return std::make_pair(0U, &X86::VK32RegClass);
+        if (VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64RegClass);
-        }
       }
       break;
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
@@ -43732,7 +43730,9 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16f32:
       case MVT::v16i32:
       case MVT::v8i64:
-        return std::make_pair(0U, &X86::VR512RegClass);
+        if (VConstraint)
+          return std::make_pair(0U, &X86::VR512RegClass);
+        return std::make_pair(0U, &X86::VR512_0_15RegClass);
       }
       break;
     }
@@ -43753,20 +43753,19 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(X86::XMM0, &X86::VR128RegClass);
     case 'k':
       // This register class doesn't allocate k0 for masked vector operation.
-      if (Subtarget.hasAVX512()) { // Only supported in AVX512.
-        switch (VT.SimpleTy) {
-        default: break;
-        case MVT::i32:
-          return std::make_pair(0U, &X86::VK32WMRegClass);
-        case MVT::i16:
-          return std::make_pair(0U, &X86::VK16WMRegClass);
-        case MVT::i8:
-          return std::make_pair(0U, &X86::VK8WMRegClass);
-        case MVT::i1:
+      if (Subtarget.hasAVX512()) {
+        if (VT == MVT::i1)
           return std::make_pair(0U, &X86::VK1WMRegClass);
-        case MVT::i64:
+        if (VT == MVT::i8)
+          return std::make_pair(0U, &X86::VK8WMRegClass);
+        if (VT == MVT::i16)
+          return std::make_pair(0U, &X86::VK16WMRegClass);
+      }
+      if (Subtarget.hasBWI()) {
+        if (VT == MVT::i32)
+          return std::make_pair(0U, &X86::VK32WMRegClass);
+        if (VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64WMRegClass);
-        }
       }
       break;
     }

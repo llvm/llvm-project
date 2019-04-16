@@ -29,11 +29,14 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -54,6 +57,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
 #include <forward_list>
@@ -159,8 +163,9 @@ namespace {
 class LoadEliminationForLoop {
 public:
   LoadEliminationForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
-                         DominatorTree *DT)
-      : L(L), LI(LI), LAI(LAI), DT(DT), PSE(LAI.getPSE()) {}
+                         DominatorTree *DT, BlockFrequencyInfo *BFI,
+                         ProfileSummaryInfo* PSI)
+      : L(L), LI(LI), LAI(LAI), DT(DT), BFI(BFI), PSI(PSI), PSE(LAI.getPSE()) {}
 
   /// Look through the loop-carried and loop-independent dependences in
   /// this loop and find store->load dependences.
@@ -529,7 +534,11 @@ public:
     }
 
     if (!Checks.empty() || !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
-      if (L->getHeader()->getParent()->hasOptSize()) {
+      auto *HeaderBB = L->getHeader();
+      auto *F = HeaderBB->getParent();
+      bool OptForSize = F->hasOptSize() ||
+                        llvm::shouldOptimizeForSize(HeaderBB, PSI, BFI);
+      if (OptForSize) {
         LLVM_DEBUG(
             dbgs() << "Versioning is needed but not allowed when optimizing "
                       "for size.\n");
@@ -572,6 +581,8 @@ private:
   LoopInfo *LI;
   const LoopAccessInfo &LAI;
   DominatorTree *DT;
+  BlockFrequencyInfo *BFI;
+  ProfileSummaryInfo *PSI;
   PredicatedScalarEvolution PSE;
 };
 
@@ -579,6 +590,7 @@ private:
 
 static bool
 eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
+                          BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
                           function_ref<const LoopAccessInfo &(Loop &)> GetLAI) {
   // Build up a worklist of inner-loops to transform to avoid iterator
   // invalidation.
@@ -597,7 +609,7 @@ eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
   bool Changed = false;
   for (Loop *L : Worklist) {
     // The actual work is performed by LoadEliminationForLoop.
-    LoadEliminationForLoop LEL(L, &LI, GetLAI(*L), &DT);
+    LoadEliminationForLoop LEL(L, &LI, GetLAI(*L), &DT, BFI, PSI);
     Changed |= LEL.processLoop();
   }
   return Changed;
@@ -622,10 +634,14 @@ public:
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto &LAA = getAnalysis<LoopAccessLegacyAnalysis>();
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    auto *BFI = (PSI && PSI->hasProfileSummary()) ?
+                &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
+                nullptr;
 
     // Process each loop nest in the function.
     return eliminateLoadsAcrossLoops(
-        F, LI, DT,
+        F, LI, DT, BFI, PSI,
         [&LAA](Loop &L) -> const LoopAccessInfo & { return LAA.getInfo(&L); });
   }
 
@@ -638,6 +654,8 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   }
 };
 
@@ -653,6 +671,8 @@ INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_END(LoopLoadElimination, LLE_OPTION, LLE_name, false, false)
 
 FunctionPass *llvm::createLoopLoadEliminationPass() {
@@ -668,13 +688,17 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  auto &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  auto *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
+      &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
   MemorySSA *MSSA = EnableMSSALoopDependency
                         ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA()
                         : nullptr;
 
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   bool Changed = eliminateLoadsAcrossLoops(
-      F, LI, DT, [&](Loop &L) -> const LoopAccessInfo & {
+      F, LI, DT, BFI, PSI, [&](Loop &L) -> const LoopAccessInfo & {
         LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
         return LAM.getResult<LoopAccessAnalysis>(L, AR);
       });

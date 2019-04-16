@@ -430,6 +430,14 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       }
     }
 
+    Value *Z;
+    if (match(&I, m_c_FMul(m_OneUse(m_FDiv(m_Value(X), m_Value(Y))),
+                           m_Value(Z)))) {
+      // Sink division: (X / Y) * Z --> (X * Z) / Y
+      Value *NewFMul = Builder.CreateFMulFMF(X, Z, &I);
+      return BinaryOperator::CreateFDivFMF(NewFMul, Y, &I);
+    }
+
     // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
     // nnan disallows the possibility of returning a number if both operands are
     // negative (in that case, we should return NaN).

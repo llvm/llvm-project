@@ -5768,6 +5768,26 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  return a;\n"
                "}\n",
                Style);
+
+  Style = getGNUStyle();
+
+  // Test for comments at the end of function declarations.
+  verifyFormat("void\n"
+               "foo (int a, /*abc*/ int b) // def\n"
+               "{\n"
+               "}\n",
+               Style);
+
+  verifyFormat("void\n"
+               "foo (int a, /* abc */ int b) /* def */\n"
+               "{\n"
+               "}\n",
+               Style);
+
+  // Definitions that should not break after return type
+  verifyFormat("void foo (int a, int b); // def\n", Style);
+  verifyFormat("void foo (int a, int b); /* def */\n", Style);
+  verifyFormat("void foo (int a, int b);\n", Style);
 }
 
 TEST_F(FormatTest, AlwaysBreakBeforeMultilineStrings) {
@@ -11373,6 +11393,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpacesInCStyleCastParentheses);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
+  CHECK_PARSE_BOOL(SpaceAfterLogicalNot);
   CHECK_PARSE_BOOL(SpaceBeforeAssignmentOperators);
   CHECK_PARSE_BOOL(SpaceBeforeCpp11BracedList);
   CHECK_PARSE_BOOL(SpaceBeforeCtorInitializerColon);
@@ -11545,12 +11566,6 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::SBPO_Never);
   CHECK_PARSE("SpaceAfterControlStatementKeyword: true", SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatements);
-
-  Style.SpaceAfterLogicalNot = false;
-  CHECK_PARSE("SpaceAfterLogicalNot: true", SpaceAfterLogicalNot,
-              true);
-  CHECK_PARSE("SpaceAfterLogicalNot: false", SpaceAfterLogicalNot,
-              false);
 
   Style.ColumnLimit = 123;
   FormatStyle BaseStyle = getLLVMStyle();

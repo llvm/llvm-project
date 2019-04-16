@@ -105,6 +105,7 @@ def IIC_VecVSL       : InstrItinClass;
 def IIC_VecVSR       : InstrItinClass;
 def IIC_SprMTMSRD    : InstrItinClass;
 def IIC_SprSLIE      : InstrItinClass;
+def IIC_SprSLBFEE    : InstrItinClass;
 def IIC_SprSLBIE     : InstrItinClass;
 def IIC_SprSLBIEG    : InstrItinClass;
 def IIC_SprSLBMTE    : InstrItinClass;

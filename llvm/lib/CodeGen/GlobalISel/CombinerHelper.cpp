@@ -194,6 +194,11 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
   if (LoadValueTy.getSizeInBits() < 8)
     return false;
 
+  // For non power-of-2 types, they will very likely be legalized into multiple
+  // loads. Don't bother trying to match them into extending loads.
+  if (!isPowerOf2_32(LoadValueTy.getSizeInBits()))
+    return false;
+
   // Find the preferred type aside from the any-extends (unless it's the only
   // one) and non-extending ops. We'll emit an extending load to that type and
   // and emit a variant of (extend (trunc X)) for the others according to the
