@@ -3,7 +3,7 @@
 # RUN: not llvm-readobj --dynamic-table %t.bad-size 2>&1 | FileCheck %s --check-prefix ERR-SIZE
 # RUN: not llvm-readelf --dynamic-table %t.bad-size 2>&1 | FileCheck %s --check-prefix ERR-SIZE
 
-# ERR-SIZE: Error reading file: Invalid entity size.
+# ERR-SIZE: error: Invalid entity size
 
 --- !ELF
 FileHeader:
@@ -69,7 +69,7 @@ ProgramHeaders:
 # RUN: not llvm-readobj --dynamic-table %t.bad-string 2>&1 | FileCheck %s --check-prefix BAD-STRING
 # RUN: not llvm-readelf --dynamic-table %t.bad-string 2>&1 | FileCheck %s --check-prefix BAD-STRING
 
-# BAD-STRING: Error reading file: Invalid dynamic string table reference.
+# BAD-STRING: Invalid dynamic string table reference
 
 --- !ELF
 FileHeader:

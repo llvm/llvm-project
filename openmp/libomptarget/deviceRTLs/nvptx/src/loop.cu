@@ -205,8 +205,12 @@ public:
   INLINE static void dispatch_init(kmp_Ident *loc, int32_t threadId,
                                    kmp_sched_t schedule, T lb, T ub, ST st,
                                    ST chunk) {
-    ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
-            "Expected non-SPMD mode + initialized runtime.");
+    if (checkRuntimeUninitialized(loc)) {
+      // In SPMD mode no need to check parallelism level - dynamic scheduling
+      // may appear only in L2 parallel regions with lightweight runtime.
+      ASSERT0(LT_FUSSY, checkSPMDMode(loc), "Expected non-SPMD mode.");
+      return;
+    }
     int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(tid);
     T tnum = currTaskDescr->ThreadsInTeam();
@@ -439,8 +443,15 @@ public:
 
   INLINE static int dispatch_next(kmp_Ident *loc, int32_t gtid, int32_t *plast,
                                   T *plower, T *pupper, ST *pstride) {
-    ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
-            "Expected non-SPMD mode + initialized runtime.");
+    if (checkRuntimeUninitialized(loc)) {
+      // In SPMD mode no need to check parallelism level - dynamic scheduling
+      // may appear only in L2 parallel regions with lightweight runtime.
+      ASSERT0(LT_FUSSY, checkSPMDMode(loc), "Expected non-SPMD mode.");
+      if (*plast)
+        return DISPATCH_FINISHED;
+      *plast = 1;
+      return DISPATCH_NOTFINISHED;
+    }
     // ID of a thread in its own warp
 
     // automatically selects thread or warp ID based on selected implementation

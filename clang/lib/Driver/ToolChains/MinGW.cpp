@@ -252,16 +252,16 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                                     ToolChain::FT_Shared));
         CmdArgs.push_back(
             TC.getCompilerRTArgString(Args, "asan_dynamic_runtime_thunk"));
-        CmdArgs.push_back(Args.MakeArgString("--require-defined"));
-        CmdArgs.push_back(Args.MakeArgString(TC.getArch() == llvm::Triple::x86
-                                                 ? "___asan_seh_interceptor"
-                                                 : "__asan_seh_interceptor"));
+        CmdArgs.push_back("--require-defined");
+        CmdArgs.push_back(TC.getArch() == llvm::Triple::x86
+                              ? "___asan_seh_interceptor"
+                              : "__asan_seh_interceptor");
         // Make sure the linker consider all object files from the dynamic
         // runtime thunk.
-        CmdArgs.push_back(Args.MakeArgString("--whole-archive"));
-        CmdArgs.push_back(Args.MakeArgString(
-            TC.getCompilerRT(Args, "asan_dynamic_runtime_thunk")));
-        CmdArgs.push_back(Args.MakeArgString("--no-whole-archive"));
+        CmdArgs.push_back("--whole-archive");
+        CmdArgs.push_back(
+            TC.getCompilerRTArgString(Args, "asan_dynamic_runtime_thunk"));
+        CmdArgs.push_back("--no-whole-archive");
       }
 
       TC.addProfileRTLibs(Args, CmdArgs);

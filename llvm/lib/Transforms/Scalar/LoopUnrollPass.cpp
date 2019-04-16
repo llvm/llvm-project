@@ -23,7 +23,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -55,6 +57,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <algorithm>
 #include <cassert>
@@ -165,7 +168,8 @@ static const unsigned NoThreshold = std::numeric_limits<unsigned>::max();
 /// Gather the various unrolling parameters based on the defaults, compiler
 /// flags, TTI overrides and user specified parameters.
 TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
-    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI, int OptLevel,
+    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
     Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling) {
@@ -198,7 +202,9 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   TTI.getUnrollingPreferences(L, SE, UP);
 
   // Apply size attributes
-  if (L->getHeader()->getParent()->hasOptSize()) {
+  bool OptForSize = L->getHeader()->getParent()->hasOptSize() ||
+                    llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI);
+  if (OptForSize) {
     UP.Threshold = UP.OptSizeThreshold;
     UP.PartialThreshold = UP.PartialOptSizeThreshold;
   }
@@ -963,7 +969,9 @@ bool llvm::computeUnrollCount(
 static LoopUnrollResult tryToUnrollLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC,
-    OptimizationRemarkEmitter &ORE, bool PreserveLCSSA, int OptLevel,
+    OptimizationRemarkEmitter &ORE,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+    bool PreserveLCSSA, int OptLevel,
     bool OnlyWhenForced, bool ForgetAllSCEV, Optional<unsigned> ProvidedCount,
     Optional<unsigned> ProvidedThreshold, Optional<bool> ProvidedAllowPartial,
     Optional<bool> ProvidedRuntime, Optional<bool> ProvidedUpperBound,
@@ -989,7 +997,7 @@ static LoopUnrollResult tryToUnrollLoop(
   bool NotDuplicatable;
   bool Convergent;
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
-      L, SE, TTI, OptLevel, ProvidedThreshold, ProvidedCount,
+      L, SE, TTI, BFI, PSI, OptLevel, ProvidedThreshold, ProvidedCount,
       ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
       ProvidedAllowPeeling);
   // Exit early if unrolling is disabled.
@@ -1176,7 +1184,8 @@ public:
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
     LoopUnrollResult Result = tryToUnrollLoop(
-        L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel, OnlyWhenForced,
+        L, DT, LI, SE, TTI, AC, ORE, nullptr, nullptr,
+        PreserveLCSSA, OptLevel, OnlyWhenForced,
         ForgetAllSCEV, ProvidedCount, ProvidedThreshold, ProvidedAllowPartial,
         ProvidedRuntime, ProvidedUpperBound, ProvidedAllowPeeling);
 
@@ -1257,6 +1266,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
 
   bool Changed =
       tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
+                      /*BFI*/ nullptr, /*PSI*/ nullptr,
                       /*PreserveLCSSA*/ true, OptLevel, OnlyWhenForced,
                       /*ForgetAllSCEV*/ false, /*Count*/ None,
                       /*Threshold*/ None, /*AllowPartial*/ false,
@@ -1359,6 +1369,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
       AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
   ProfileSummaryInfo *PSI =
       MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
+      &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
   bool Changed = false;
 
@@ -1394,7 +1406,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     // The API here is quite complex to call and we allow to select some
     // flavors of unrolling during construction time (by setting UnrollOpts).
     LoopUnrollResult Result = tryToUnrollLoop(
-        &L, DT, &LI, SE, TTI, AC, ORE,
+        &L, DT, &LI, SE, TTI, AC, ORE, BFI, PSI,
         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, UnrollOpts.OnlyWhenForced,
         /*ForgetAllSCEV*/ false, /*Count*/ None,
         /*Threshold*/ None, UnrollOpts.AllowPartial, UnrollOpts.AllowRuntime,

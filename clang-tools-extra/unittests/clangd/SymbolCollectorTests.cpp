@@ -1241,6 +1241,14 @@ TEST_F(SymbolCollectorTest, CBuiltins) {
   EXPECT_THAT(Symbols, Contains(QName("printf")));
 }
 
+TEST_F(SymbolCollectorTest, InvalidSourceLoc) {
+  const char *Header = R"(
+      void operator delete(void*)
+        __attribute__((__externally_visible__));)";
+  runSymbolCollector(Header, /**/ "");
+  EXPECT_THAT(Symbols, Contains(QName("operator delete")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

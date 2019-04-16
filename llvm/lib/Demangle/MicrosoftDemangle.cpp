@@ -947,8 +947,17 @@ Demangler::demangleTemplateInstantiationName(StringView &MangledName,
   if (Error)
     return nullptr;
 
-  if (NBB & NBB_Template)
+  if (NBB & NBB_Template) {
+    // NBB_Template is only set for types and non-leaf names ("a::" in "a::b").
+    // A conversion operator only makes sense in a leaf name , so reject it in
+    // NBB_Template contexts.
+    if (Identifier->kind() == NodeKind::ConversionOperatorIdentifier) {
+      Error = true;
+      return nullptr;
+    }
+
     memorizeIdentifier(Identifier);
+  }
 
   return Identifier;
 }

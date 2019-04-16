@@ -30,7 +30,7 @@ RUN: llvm-readobj -mips-plt-got %p/Inputs/got-static.exe.mips \
 RUN:                  --elf-output-style=GNU | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-STATIC
 
-GOT-OBJ: Error reading file: Cannot find .got section.
+GOT-OBJ: error: Cannot find .got section
 
 GOT-EXE:      Primary GOT {
 GOT-EXE-NEXT:   Canonical gp value: 0x418880
@@ -386,7 +386,7 @@ GOT-STATIC-NEXT:     }
 GOT-STATIC-NEXT:   ]
 GOT-STATIC-NEXT: }
 
-GNU-GOT-OBJ: Error reading file: Cannot find .got section.
+GNU-GOT-OBJ: error: Cannot find .got section
 
 GNU-GOT-EXE:      Primary GOT:
 GNU-GOT-EXE-NEXT:  Canonical gp value: 00418880

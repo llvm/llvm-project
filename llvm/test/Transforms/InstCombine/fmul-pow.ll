@@ -27,9 +27,8 @@ define double @pow_ab_a_reassoc(double %a, double %b)  {
 
 define double @pow_ab_a_reassoc_commute(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_a_reassoc_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double 1.000000e+00, [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.pow.f64(double [[A]], double [[B:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv reassoc double [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
   %1 = fdiv double 1.0, %a

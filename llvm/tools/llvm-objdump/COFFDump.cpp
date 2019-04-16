@@ -24,10 +24,10 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace llvm;
-using namespace object;
+using namespace llvm::object;
 using namespace llvm::Win64EH;
 
+namespace llvm {
 // Returns the name of the unwind code.
 static StringRef getUnwindCodeTypeName(uint8_t Code) {
   switch(Code) {
@@ -218,7 +218,7 @@ static Error resolveSymbolName(const std::vector<RelocationRef> &Rels,
   return Error::success();
 }
 
-static void printCOFFSymbolAddress(llvm::raw_ostream &Out,
+static void printCOFFSymbolAddress(raw_ostream &Out,
                                    const std::vector<RelocationRef> &Rels,
                                    uint64_t Offset, uint32_t Disp) {
   StringRef Sym;
@@ -468,7 +468,7 @@ static bool getPDataSection(const COFFObjectFile *Obj,
   return false;
 }
 
-Error llvm::getCOFFRelocationValueString(const COFFObjectFile *Obj,
+Error getCOFFRelocationValueString(const COFFObjectFile *Obj,
                                          const RelocationRef &Rel,
                                          SmallVectorImpl<char> &Result) {
   symbol_iterator SymI = Rel.getSymbol();
@@ -589,7 +589,7 @@ static void printRuntimeFunctionRels(const COFFObjectFile *Obj,
   printWin64EHUnwindInfo(UI);
 }
 
-void llvm::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
+void printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   if (Obj->getMachine() != COFF::IMAGE_FILE_MACHINE_AMD64) {
     WithColor::error(errs(), "llvm-objdump")
         << "unsupported image machine type "
@@ -618,7 +618,7 @@ void llvm::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   }
 }
 
-void llvm::printCOFFFileHeader(const object::ObjectFile *Obj) {
+void printCOFFFileHeader(const object::ObjectFile *Obj) {
   const COFFObjectFile *file = dyn_cast<const COFFObjectFile>(Obj);
   printTLSDirectory(file);
   printLoadConfiguration(file);
@@ -626,7 +626,7 @@ void llvm::printCOFFFileHeader(const object::ObjectFile *Obj) {
   printExportTable(file);
 }
 
-void llvm::printCOFFSymbolTable(const object::COFFImportFile *i) {
+void printCOFFSymbolTable(const object::COFFImportFile *i) {
   unsigned Index = 0;
   bool IsCode = i->getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
 
@@ -649,7 +649,7 @@ void llvm::printCOFFSymbolTable(const object::COFFImportFile *i) {
   }
 }
 
-void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
+void printCOFFSymbolTable(const COFFObjectFile *coff) {
   for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
     Expected<COFFSymbolRef> Symbol = coff->getSymbol(SI);
     StringRef Name;
@@ -720,3 +720,4 @@ void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
     }
   }
 }
+} // namespace llvm

@@ -24,11 +24,13 @@ namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
+class BlockFrequencyInfo;
 class DependenceInfo;
 class DominatorTree;
 class Loop;
 class LoopInfo;
 class MDNode;
+class ProfileSummaryInfo;
 class OptimizationRemarkEmitter;
 class ScalarEvolution;
 
@@ -120,7 +122,8 @@ void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 
 TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
-    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI, int OptLevel,
+    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
     Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling);

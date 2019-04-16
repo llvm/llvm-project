@@ -55,8 +55,45 @@ extern "C" {
 }
 #endif
 
-using namespace llvm;
-using namespace object;
+using namespace llvm::object;
+
+namespace llvm {
+
+extern cl::opt<bool> ArchiveHeaders;
+extern cl::opt<bool> Disassemble;
+extern cl::opt<bool> DisassembleAll;
+extern cl::opt<DIDumpType> DwarfDumpType;
+extern cl::list<std::string> FilterSections;
+extern cl::list<std::string> MAttrs;
+extern cl::opt<std::string> MCPU;
+extern cl::opt<bool> NoShowRawInsn;
+extern cl::opt<bool> NoLeadingAddr;
+extern cl::opt<bool> PrintImmHex;
+extern cl::opt<bool> PrivateHeaders;
+extern cl::opt<bool> Relocations;
+extern cl::opt<bool> SectionHeaders;
+extern cl::opt<bool> SectionContents;
+extern cl::opt<bool> SymbolTable;
+extern cl::opt<std::string> TripleName;
+extern cl::opt<bool> UnwindInfo;
+
+cl::opt<bool>
+    FirstPrivateHeader("private-header",
+                       cl::desc("Display only the first format specific file "
+                                "header"));
+
+cl::opt<bool> ExportsTrie("exports-trie",
+                                 cl::desc("Display mach-o exported symbols"));
+
+cl::opt<bool> Rebase("rebase", cl::desc("Display mach-o rebasing info"));
+
+cl::opt<bool> Bind("bind", cl::desc("Display mach-o binding info"));
+
+cl::opt<bool> LazyBind("lazy-bind",
+                              cl::desc("Display mach-o lazy binding info"));
+
+cl::opt<bool> WeakBind("weak-bind",
+                              cl::desc("Display mach-o weak binding info"));
 
 static cl::opt<bool>
     UseDbg("g", cl::Grouping,
@@ -71,9 +108,9 @@ static cl::opt<bool> FullLeadingAddr("full-leading-addr",
 static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
                                       cl::desc("Print no leading headers"));
 
-cl::opt<bool> llvm::UniversalHeaders("universal-headers",
-                                     cl::desc("Print Mach-O universal headers "
-                                              "(requires -macho)"));
+cl::opt<bool> UniversalHeaders("universal-headers",
+                               cl::desc("Print Mach-O universal headers "
+                                        "(requires -macho)"));
 
 cl::opt<bool>
     ArchiveMemberOffsets("archive-member-offsets",
@@ -81,47 +118,43 @@ cl::opt<bool>
                                   "Mach-O archives (requires -macho and "
                                   "-archive-headers)"));
 
-cl::opt<bool>
-    llvm::IndirectSymbols("indirect-symbols",
-                          cl::desc("Print indirect symbol table for Mach-O "
-                                   "objects (requires -macho)"));
+cl::opt<bool> IndirectSymbols("indirect-symbols",
+                              cl::desc("Print indirect symbol table for Mach-O "
+                                       "objects (requires -macho)"));
 
 cl::opt<bool>
-    llvm::DataInCode("data-in-code",
-                     cl::desc("Print the data in code table for Mach-O objects "
-                              "(requires -macho)"));
+    DataInCode("data-in-code",
+               cl::desc("Print the data in code table for Mach-O objects "
+                        "(requires -macho)"));
+
+cl::opt<bool> LinkOptHints("link-opt-hints",
+                           cl::desc("Print the linker optimization hints for "
+                                    "Mach-O objects (requires -macho)"));
+
+cl::opt<bool> InfoPlist("info-plist",
+                        cl::desc("Print the info plist section as strings for "
+                                 "Mach-O objects (requires -macho)"));
+
+cl::opt<bool> DylibsUsed("dylibs-used",
+                         cl::desc("Print the shared libraries used for linked "
+                                  "Mach-O files (requires -macho)"));
 
 cl::opt<bool>
-    llvm::LinkOptHints("link-opt-hints",
-                       cl::desc("Print the linker optimization hints for "
-                                "Mach-O objects (requires -macho)"));
+    DylibId("dylib-id",
+            cl::desc("Print the shared library's id for the dylib Mach-O "
+                     "file (requires -macho)"));
 
 cl::opt<bool>
-    llvm::InfoPlist("info-plist",
-                    cl::desc("Print the info plist section as strings for "
-                             "Mach-O objects (requires -macho)"));
+    NonVerbose("non-verbose",
+               cl::desc("Print the info for Mach-O objects in "
+                        "non-verbose or numeric form (requires -macho)"));
 
 cl::opt<bool>
-    llvm::DylibsUsed("dylibs-used",
-                     cl::desc("Print the shared libraries used for linked "
-                              "Mach-O files (requires -macho)"));
+    ObjcMetaData("objc-meta-data",
+                 cl::desc("Print the Objective-C runtime meta data for "
+                          "Mach-O files (requires -macho)"));
 
-cl::opt<bool>
-    llvm::DylibId("dylib-id",
-                  cl::desc("Print the shared library's id for the dylib Mach-O "
-                           "file (requires -macho)"));
-
-cl::opt<bool>
-    llvm::NonVerbose("non-verbose",
-                     cl::desc("Print the info for Mach-O objects in "
-                              "non-verbose or numeric form (requires -macho)"));
-
-cl::opt<bool>
-    llvm::ObjcMetaData("objc-meta-data",
-                       cl::desc("Print the Objective-C runtime meta data for "
-                                "Mach-O files (requires -macho)"));
-
-cl::opt<std::string> llvm::DisSymName(
+cl::opt<std::string> DisSymName(
     "dis-symname",
     cl::desc("disassemble just this symbol's instructions (requires -macho)"));
 
@@ -141,7 +174,7 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
                                const char **McpuDefault,
                                const Target **ThumbTarget) {
   // Figure out the target triple.
-  llvm::Triple TT(TripleName);
+  Triple TT(TripleName);
   if (TripleName.empty()) {
     TT = MachOObj->getArchTriple(McpuDefault);
     TripleName = TT.str();
@@ -150,7 +183,7 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
   if (TT.getArch() == Triple::arm) {
     // We've inferred a 32-bit ARM target from the object file. All MachO CPUs
     // that support ARM are also capable of Thumb mode.
-    llvm::Triple ThumbTriple = TT;
+    Triple ThumbTriple = TT;
     std::string ThumbName = (Twine("thumb") + TT.getArchName().substr(3)).str();
     ThumbTriple.setArchName(ThumbName);
     ThumbTripleName = ThumbTriple.str();
@@ -410,9 +443,9 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   Fmt << S;
 }
 
-Error llvm::getMachORelocationValueString(const MachOObjectFile *Obj,
-                                          const RelocationRef &RelRef,
-                                          SmallVectorImpl<char> &Result) {
+Error getMachORelocationValueString(const MachOObjectFile *Obj,
+                                    const RelocationRef &RelRef,
+                                    SmallVectorImpl<char> &Result) {
   DataRefImpl Rel = RelRef.getRawDataRefImpl();
   MachO::any_relocation_info RE = Obj->getRelocation(Rel);
 
@@ -753,9 +786,8 @@ static void PrintRType(const uint64_t cputype, const unsigned r_type) {
 static void PrintRLength(const uint64_t cputype, const unsigned r_type,
                          const unsigned r_length, const bool previous_arm_half){
   if (cputype == MachO::CPU_TYPE_ARM &&
-      (r_type == llvm::MachO::ARM_RELOC_HALF ||
-       r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF ||
-       previous_arm_half == true)) {
+      (r_type == MachO::ARM_RELOC_HALF ||
+       r_type == MachO::ARM_RELOC_HALF_SECTDIFF || previous_arm_half == true)) {
     if ((r_length & 0x1) == 0)
       outs() << "lo/";
     else
@@ -816,9 +848,8 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
       if (verbose) {
         // scattered: address
         if ((cputype == MachO::CPU_TYPE_I386 &&
-             r_type == llvm::MachO::GENERIC_RELOC_PAIR) ||
-            (cputype == MachO::CPU_TYPE_ARM &&
-             r_type == llvm::MachO::ARM_RELOC_PAIR))
+             r_type == MachO::GENERIC_RELOC_PAIR) ||
+            (cputype == MachO::CPU_TYPE_ARM && r_type == MachO::ARM_RELOC_PAIR))
           outs() << "         ";
         else
           outs() << format("%08x ", (unsigned int)r_address);
@@ -840,29 +871,27 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
         outs() << format("True      0x%08x", (unsigned int)r_value);
         if (previous_sectdiff == false) {
           if ((cputype == MachO::CPU_TYPE_ARM &&
-               r_type == llvm::MachO::ARM_RELOC_PAIR))
+               r_type == MachO::ARM_RELOC_PAIR))
             outs() << format(" half = 0x%04x ", (unsigned int)r_address);
-        }
-        else if (cputype == MachO::CPU_TYPE_ARM &&
-                 sectdiff_r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF)
+        } else if (cputype == MachO::CPU_TYPE_ARM &&
+                   sectdiff_r_type == MachO::ARM_RELOC_HALF_SECTDIFF)
           outs() << format(" other_half = 0x%04x ", (unsigned int)r_address);
         if ((cputype == MachO::CPU_TYPE_I386 &&
-             (r_type == llvm::MachO::GENERIC_RELOC_SECTDIFF ||
-              r_type == llvm::MachO::GENERIC_RELOC_LOCAL_SECTDIFF)) ||
+             (r_type == MachO::GENERIC_RELOC_SECTDIFF ||
+              r_type == MachO::GENERIC_RELOC_LOCAL_SECTDIFF)) ||
             (cputype == MachO::CPU_TYPE_ARM &&
-             (sectdiff_r_type == llvm::MachO::ARM_RELOC_SECTDIFF ||
-              sectdiff_r_type == llvm::MachO::ARM_RELOC_LOCAL_SECTDIFF ||
-              sectdiff_r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF))) {
-               previous_sectdiff = true;
-               sectdiff_r_type = r_type;
-             }
-        else {
+             (sectdiff_r_type == MachO::ARM_RELOC_SECTDIFF ||
+              sectdiff_r_type == MachO::ARM_RELOC_LOCAL_SECTDIFF ||
+              sectdiff_r_type == MachO::ARM_RELOC_HALF_SECTDIFF))) {
+          previous_sectdiff = true;
+          sectdiff_r_type = r_type;
+        } else {
           previous_sectdiff = false;
           sectdiff_r_type = 0;
         }
         if (cputype == MachO::CPU_TYPE_ARM &&
-            (r_type == llvm::MachO::ARM_RELOC_HALF ||
-             r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF))
+            (r_type == MachO::ARM_RELOC_HALF ||
+             r_type == MachO::ARM_RELOC_HALF_SECTDIFF))
           previous_arm_half = true;
         else
           previous_arm_half = false;
@@ -878,8 +907,7 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
     else {
       if (verbose) {
         // plain: address
-        if (cputype == MachO::CPU_TYPE_ARM &&
-            r_type == llvm::MachO::ARM_RELOC_PAIR)
+        if (cputype == MachO::CPU_TYPE_ARM && r_type == MachO::ARM_RELOC_PAIR)
           outs() << "         ";
         else
           outs() << format("%08x ", (unsigned int)r_address);
@@ -921,21 +949,20 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           outs() << "False     ";
 
           // plain: symbolnum/value
-          if (cputype == MachO::CPU_TYPE_ARM &&
-                   r_type == llvm::MachO::ARM_RELOC_PAIR)
+          if (cputype == MachO::CPU_TYPE_ARM && r_type == MachO::ARM_RELOC_PAIR)
             outs() << format("other_half = 0x%04x\n", (unsigned int)r_address);
           else if (cputype == MachO::CPU_TYPE_ARM64 &&
-                   r_type == llvm::MachO::ARM64_RELOC_ADDEND)
+                   r_type == MachO::ARM64_RELOC_ADDEND)
             outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
           else {
             outs() << format("%d ", r_symbolnum);
-            if (r_symbolnum == llvm::MachO::R_ABS)
+            if (r_symbolnum == MachO::R_ABS)
               outs() << "R_ABS\n";
             else {
               // in this case, r_symbolnum is actually a 1-based section number
               uint32_t nsects = O->section_end()->getRawDataRefImpl().d.a;
               if (r_symbolnum > 0 && r_symbolnum <= nsects) {
-                llvm::object::DataRefImpl DRI;
+                object::DataRefImpl DRI;
                 DRI.d.a = r_symbolnum-1;
                 StringRef SegName = O->getSectionFinalSegmentName(DRI);
                 StringRef SectName;
@@ -951,8 +978,8 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           }
         }
         if (cputype == MachO::CPU_TYPE_ARM &&
-            (r_type == llvm::MachO::ARM_RELOC_HALF ||
-             r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF))
+            (r_type == MachO::ARM_RELOC_HALF ||
+             r_type == MachO::ARM_RELOC_HALF_SECTDIFF))
           previous_arm_half = true;
         else
           previous_arm_half = false;
@@ -2189,7 +2216,7 @@ static bool ValidateArchFlags() {
 // -arch flags selecting just those slices as specified by them and also parses
 // archive files.  Then for each individual Mach-O file ProcessMachO() is
 // called to process the file based on the command line options.
-void llvm::parseInputMachO(StringRef Filename) {
+void parseInputMachO(StringRef Filename) {
   if (!ValidateArchFlags())
     return;
 
@@ -2245,7 +2272,7 @@ void llvm::parseInputMachO(StringRef Filename) {
   llvm_unreachable("Input object can't be invalid at this point");
 }
 
-void llvm::parseInputMachO(MachOUniversalBinary *UB) {
+void parseInputMachO(MachOUniversalBinary *UB) {
   if (!ValidateArchFlags())
     return;
 
@@ -7970,7 +7997,7 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
   }
 }
 
-void llvm::printMachOUnwindInfo(const MachOObjectFile *Obj) {
+void printMachOUnwindInfo(const MachOObjectFile *Obj) {
   std::map<uint64_t, SymbolRef> Symbols;
   for (const SymbolRef &SymRef : Obj->symbols()) {
     // Discard any undefined or absolute symbols. They're not going to take part
@@ -9962,12 +9989,12 @@ static void PrintMachHeader(const MachOObjectFile *Obj, bool verbose) {
   }
 }
 
-void llvm::printMachOFileHeader(const object::ObjectFile *Obj) {
+void printMachOFileHeader(const object::ObjectFile *Obj) {
   const MachOObjectFile *file = dyn_cast<const MachOObjectFile>(Obj);
   PrintMachHeader(file, !NonVerbose);
 }
 
-void llvm::printMachOLoadCommands(const object::ObjectFile *Obj) {
+void printMachOLoadCommands(const object::ObjectFile *Obj) {
   const MachOObjectFile *file = dyn_cast<const MachOObjectFile>(Obj);
   uint32_t filetype = 0;
   uint32_t cputype = 0;
@@ -9989,7 +10016,7 @@ void llvm::printMachOLoadCommands(const object::ObjectFile *Obj) {
 // export trie dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
+void printMachOExportsTrie(const object::MachOObjectFile *Obj) {
   uint64_t BaseSegmentAddress = 0;
   for (const auto &Command : Obj->load_commands()) {
     if (Command.C.cmd == MachO::LC_SEGMENT) {
@@ -10007,7 +10034,7 @@ void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
     }
   }
   Error Err = Error::success();
-  for (const llvm::object::ExportEntry &Entry : Obj->exports(Err)) {
+  for (const object::ExportEntry &Entry : Obj->exports(Err)) {
     uint64_t Flags = Entry.flags();
     bool ReExport = (Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT);
     bool WeakDef = (Flags & MachO::EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION);
@@ -10068,10 +10095,10 @@ void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
 // rebase table dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachORebaseTable(object::MachOObjectFile *Obj) {
+void printMachORebaseTable(object::MachOObjectFile *Obj) {
   outs() << "segment  section            address     type\n";
   Error Err = Error::success();
-  for (const llvm::object::MachORebaseEntry &Entry : Obj->rebaseTable(Err)) {
+  for (const object::MachORebaseEntry &Entry : Obj->rebaseTable(Err)) {
     StringRef SegmentName = Entry.segmentName();
     StringRef SectionName = Entry.sectionName();
     uint64_t Address = Entry.address();
@@ -10110,12 +10137,12 @@ static StringRef ordinalName(const object::MachOObjectFile *Obj, int Ordinal) {
 // bind table dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachOBindTable(object::MachOObjectFile *Obj) {
+void printMachOBindTable(object::MachOObjectFile *Obj) {
   // Build table of sections so names can used in final output.
   outs() << "segment  section            address    type       "
             "addend dylib            symbol\n";
   Error Err = Error::success();
-  for (const llvm::object::MachOBindEntry &Entry : Obj->bindTable(Err)) {
+  for (const object::MachOBindEntry &Entry : Obj->bindTable(Err)) {
     StringRef SegmentName = Entry.segmentName();
     StringRef SectionName = Entry.sectionName();
     uint64_t Address = Entry.address();
@@ -10141,11 +10168,11 @@ void llvm::printMachOBindTable(object::MachOObjectFile *Obj) {
 // lazy bind table dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachOLazyBindTable(object::MachOObjectFile *Obj) {
+void printMachOLazyBindTable(object::MachOObjectFile *Obj) {
   outs() << "segment  section            address     "
             "dylib            symbol\n";
   Error Err = Error::success();
-  for (const llvm::object::MachOBindEntry &Entry : Obj->lazyBindTable(Err)) {
+  for (const object::MachOBindEntry &Entry : Obj->lazyBindTable(Err)) {
     StringRef SegmentName = Entry.segmentName();
     StringRef SectionName = Entry.sectionName();
     uint64_t Address = Entry.address();
@@ -10166,11 +10193,11 @@ void llvm::printMachOLazyBindTable(object::MachOObjectFile *Obj) {
 // weak bind table dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachOWeakBindTable(object::MachOObjectFile *Obj) {
+void printMachOWeakBindTable(object::MachOObjectFile *Obj) {
   outs() << "segment  section            address     "
             "type       addend   symbol\n";
   Error Err = Error::success();
-  for (const llvm::object::MachOBindEntry &Entry : Obj->weakBindTable(Err)) {
+  for (const object::MachOBindEntry &Entry : Obj->weakBindTable(Err)) {
     // Strong symbols don't have a location to update.
     if (Entry.flags() & MachO::BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION) {
       outs() << "                                        strong              "
@@ -10203,7 +10230,7 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
   if (info->bindtable == nullptr) {
     info->bindtable = llvm::make_unique<SymbolAddressMap>();
     Error Err = Error::success();
-    for (const llvm::object::MachOBindEntry &Entry : info->O->bindTable(Err)) {
+    for (const object::MachOBindEntry &Entry : info->O->bindTable(Err)) {
       uint64_t Address = Entry.address();
       StringRef name = Entry.symbolName();
       if (!name.empty())
@@ -10216,3 +10243,53 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
   return !name.empty() ? name.data() : nullptr;
 }
 
+void printLazyBindTable(ObjectFile *o) {
+  outs() << "Lazy bind table:\n";
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+    printMachOLazyBindTable(MachO);
+  else
+    WithColor::error()
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
+}
+
+void printWeakBindTable(ObjectFile *o) {
+  outs() << "Weak bind table:\n";
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+    printMachOWeakBindTable(MachO);
+  else
+    WithColor::error()
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
+}
+
+void printExportsTrie(const ObjectFile *o) {
+  outs() << "Exports trie:\n";
+  if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+    printMachOExportsTrie(MachO);
+  else
+    WithColor::error()
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
+}
+
+void printRebaseTable(ObjectFile *o) {
+  outs() << "Rebase table:\n";
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+    printMachORebaseTable(MachO);
+  else
+    WithColor::error()
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
+}
+
+void printBindTable(ObjectFile *o) {
+  outs() << "Bind table:\n";
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+    printMachOBindTable(MachO);
+  else
+    WithColor::error()
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
+}
+} // namespace llvm

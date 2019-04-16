@@ -16,6 +16,7 @@
 #include "llvm-readobj.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -54,8 +55,9 @@ getSecNameOrIndexAsSecRef(const object::ObjectFile *Obj, StringRef SecName) {
 
     SecIndex++;
   }
-  return make_error<StringError>("invalid section reference",
-                                 object::object_error::parse_failed);
+  return make_error<StringError>(
+      formatv("could not find section '{0}'", SecName),
+      object::object_error::parse_failed);
 }
 
 void ObjDumper::printSectionAsString(const object::ObjectFile *Obj,

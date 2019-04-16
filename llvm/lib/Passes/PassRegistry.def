@@ -218,7 +218,6 @@ FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(dbgs()))
 FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("sccp", SCCPPass())
-FUNCTION_PASS("simplify-cfg", SimplifyCFGPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
@@ -253,6 +252,11 @@ FUNCTION_PASS_WITH_PARAMS("msan",
                              return MemorySanitizerPass(Opts);
                            },
                            parseMSanPassOptions)
+FUNCTION_PASS_WITH_PARAMS("simplify-cfg",
+                           [](SimplifyCFGOptions Opts) {
+                             return SimplifyCFGPass(Opts);
+                           },
+                           parseSimplifyCFGOptions)
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS

@@ -542,8 +542,8 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
         if (!llvm::isa<clang::TranslationUnitDecl>(
                 RenameInfo.Context->getDeclContext())) {
           ReplacedName = tooling::replaceNestedName(
-              RenameInfo.Specifier, RenameInfo.Context->getDeclContext(),
-              RenameInfo.FromDecl,
+              RenameInfo.Specifier, RenameInfo.Begin,
+              RenameInfo.Context->getDeclContext(), RenameInfo.FromDecl,
               NewName.startswith("::") ? NewName.str()
                                        : ("::" + NewName).str());
         } else {

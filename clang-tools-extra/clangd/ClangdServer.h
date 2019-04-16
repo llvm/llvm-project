@@ -266,9 +266,6 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  tooling::CompileCommand getCompileCommand(PathRef File);
-
-  const GlobalCompilationDatabase &CDB;
   const FileSystemProvider &FSProvider;
 
   Path ResourceDir;
