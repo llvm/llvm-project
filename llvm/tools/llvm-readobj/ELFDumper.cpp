@@ -2961,9 +2961,10 @@ std::string GNUStyle<ELFT>::getSymbolSectionNdx(const ELFO *Obj,
   case ELF::SHN_COMMON:
     return "COM";
   case ELF::SHN_XINDEX:
-    SectionIndex = unwrapOrError(object::getExtendedSymbolTableIndex<ELFT>(
-        Symbol, FirstSym, this->dumper()->getShndxTable()));
-    LLVM_FALLTHROUGH;
+    return to_string(
+        format_decimal(unwrapOrError(object::getExtendedSymbolTableIndex<ELFT>(
+                           Symbol, FirstSym, this->dumper()->getShndxTable())),
+                       3));
   default:
     // Find if:
     // Processor specific

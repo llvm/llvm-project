@@ -705,6 +705,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         } else if (AMDGPU::VReg_512RegClass.contains(Reg)) {
           IsSGPR = false;
           Width = 16;
+        } else if (AMDGPU::SReg_96RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 3;
         } else {
           llvm_unreachable("Unknown register class");
         }

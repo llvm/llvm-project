@@ -67,96 +67,133 @@
 #include <unordered_map>
 #include <utility>
 
-using namespace llvm;
-using namespace object;
+using namespace llvm::object;
 
-cl::opt<unsigned long long> AdjustVMA(
+namespace llvm {
+
+// MachO specific
+extern cl::opt<bool> Bind;
+extern cl::opt<bool> DataInCode;
+extern cl::opt<bool> DylibsUsed;
+extern cl::opt<bool> DylibId;
+extern cl::opt<bool> ExportsTrie;
+extern cl::opt<bool> FirstPrivateHeader;
+extern cl::opt<bool> IndirectSymbols;
+extern cl::opt<bool> InfoPlist;
+extern cl::opt<bool> LazyBind;
+extern cl::opt<bool> LinkOptHints;
+extern cl::opt<bool> ObjcMetaData;
+extern cl::opt<bool> Rebase;
+extern cl::opt<bool> UniversalHeaders;
+extern cl::opt<bool> WeakBind;
+
+static cl::opt<unsigned long long> AdjustVMA(
     "adjust-vma",
     cl::desc("Increase the displayed address by the specified offset"),
     cl::value_desc("offset"), cl::init(0));
 
-cl::opt<bool>
-    llvm::AllHeaders("all-headers",
-                     cl::desc("Display all available header information"));
+static cl::opt<bool>
+    AllHeaders("all-headers",
+               cl::desc("Display all available header information"));
 static cl::alias AllHeadersShort("x", cl::desc("Alias for --all-headers"),
                                  cl::NotHidden, cl::Grouping,
                                  cl::aliasopt(AllHeaders));
 
-static cl::list<std::string>
-InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
+static cl::opt<std::string>
+    ArchName("arch-name", cl::desc("Target arch to disassemble for, "
+                                   "see -version for available targets"));
 
-cl::opt<bool>
-llvm::Disassemble("disassemble",
-  cl::desc("Display assembler mnemonics for the machine instructions"));
-static cl::alias Disassembled("d", cl::desc("Alias for --disassemble"),
-                              cl::NotHidden, cl::Grouping,
-                              cl::aliasopt(Disassemble));
+cl::opt<bool> ArchiveHeaders("archive-headers",
+                             cl::desc("Display archive header information"));
+static cl::alias ArchiveHeadersShort("a",
+                                     cl::desc("Alias for --archive-headers"),
+                                     cl::NotHidden, cl::Grouping,
+                                     cl::aliasopt(ArchiveHeaders));
 
-cl::opt<bool>
-llvm::DisassembleAll("disassemble-all",
-  cl::desc("Display assembler mnemonics for the machine instructions"));
-static cl::alias DisassembleAlld("D", cl::desc("Alias for --disassemble-all"),
-                                 cl::NotHidden, cl::Grouping,
-                                 cl::aliasopt(DisassembleAll));
-
-cl::opt<bool> llvm::Demangle("demangle", cl::desc("Demangle symbols names"),
-                             cl::init(false));
-
+cl::opt<bool> Demangle("demangle", cl::desc("Demangle symbols names"),
+                       cl::init(false));
 static cl::alias DemangleShort("C", cl::desc("Alias for --demangle"),
                                cl::NotHidden, cl::Grouping,
-                               cl::aliasopt(llvm::Demangle));
+                               cl::aliasopt(Demangle));
+
+cl::opt<bool> Disassemble(
+    "disassemble",
+    cl::desc("Display assembler mnemonics for the machine instructions"));
+static cl::alias DisassembleShort("d", cl::desc("Alias for --disassemble"),
+                                  cl::NotHidden, cl::Grouping,
+                                  cl::aliasopt(Disassemble));
+
+cl::opt<bool> DisassembleAll(
+    "disassemble-all",
+    cl::desc("Display assembler mnemonics for the machine instructions"));
+static cl::alias DisassembleAllShort("D",
+                                     cl::desc("Alias for --disassemble-all"),
+                                     cl::NotHidden, cl::Grouping,
+                                     cl::aliasopt(DisassembleAll));
 
 static cl::list<std::string>
 DisassembleFunctions("disassemble-functions",
                      cl::CommaSeparated,
                      cl::desc("List of functions to disassemble"));
-static StringSet<> DisasmFuncsSet;
 
-cl::opt<bool>
-llvm::Relocations("reloc",
-                  cl::desc("Display the relocation entries in the file"));
-static cl::alias RelocationsShort("r", cl::desc("Alias for --reloc"),
+static cl::opt<bool> DisassembleZeroes(
+    "disassemble-zeroes",
+    cl::desc("Do not skip blocks of zeroes when disassembling"));
+static cl::alias
+    DisassembleZeroesShort("z", cl::desc("Alias for --disassemble-zeroes"),
+                           cl::NotHidden, cl::Grouping,
+                           cl::aliasopt(DisassembleZeroes));
+
+static cl::list<std::string>
+    DisassemblerOptions("disassembler-options",
+                        cl::desc("Pass target specific disassembler options"),
+                        cl::value_desc("options"), cl::CommaSeparated);
+static cl::alias
+    DisassemblerOptionsShort("M", cl::desc("Alias for --disassembler-options"),
+                             cl::NotHidden, cl::Grouping, cl::Prefix,
+                             cl::CommaSeparated,
+                             cl::aliasopt(DisassemblerOptions));
+
+cl::opt<DIDumpType> DwarfDumpType(
+    "dwarf", cl::init(DIDT_Null), cl::desc("Dump of dwarf debug sections:"),
+    cl::values(clEnumValN(DIDT_DebugFrame, "frames", ".debug_frame")));
+
+static cl::opt<bool> DynamicRelocations(
+    "dynamic-reloc",
+    cl::desc("Display the dynamic relocation entries in the file"));
+static cl::alias DynamicRelocationShort("R",
+                                        cl::desc("Alias for --dynamic-reloc"),
+                                        cl::NotHidden, cl::Grouping,
+                                        cl::aliasopt(DynamicRelocations));
+
+static cl::opt<bool>
+    FaultMapSection("fault-map-section",
+                   cl::desc("Display contents of faultmap section"));
+
+static cl::opt<bool>
+    FileHeaders("file-headers",
+                cl::desc("Display the contents of the overall file header"));
+static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
                                   cl::NotHidden, cl::Grouping,
-                                  cl::aliasopt(llvm::Relocations));
+                                  cl::aliasopt(FileHeaders));
 
-cl::opt<bool>
-llvm::DynamicRelocations("dynamic-reloc",
-  cl::desc("Display the dynamic relocation entries in the file"));
-static cl::alias DynamicRelocationsd("R", cl::desc("Alias for --dynamic-reloc"),
-                                     cl::NotHidden, cl::Grouping,
-                                     cl::aliasopt(DynamicRelocations));
-
-cl::opt<bool>
-    llvm::SectionContents("full-contents",
-                          cl::desc("Display the content of each section"));
+cl::opt<bool> SectionContents("full-contents",
+                              cl::desc("Display the content of each section"));
 static cl::alias SectionContentsShort("s",
                                       cl::desc("Alias for --full-contents"),
                                       cl::NotHidden, cl::Grouping,
                                       cl::aliasopt(SectionContents));
 
-cl::opt<bool> llvm::SymbolTable("syms", cl::desc("Display the symbol table"));
-static cl::alias SymbolTableShort("t", cl::desc("Alias for --syms"),
-                                  cl::NotHidden, cl::Grouping,
-                                  cl::aliasopt(llvm::SymbolTable));
+static cl::list<std::string>
+InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
 
-cl::opt<bool>
-llvm::ExportsTrie("exports-trie", cl::desc("Display mach-o exported symbols"));
-
-cl::opt<bool>
-llvm::Rebase("rebase", cl::desc("Display mach-o rebasing info"));
-
-cl::opt<bool>
-llvm::Bind("bind", cl::desc("Display mach-o binding info"));
-
-cl::opt<bool>
-llvm::LazyBind("lazy-bind", cl::desc("Display mach-o lazy binding info"));
-
-cl::opt<bool>
-llvm::WeakBind("weak-bind", cl::desc("Display mach-o weak binding info"));
-
-cl::opt<bool>
-llvm::RawClangAST("raw-clang-ast",
-    cl::desc("Dump the raw binary contents of the clang AST section"));
+static cl::opt<bool>
+    PrintLines("line-numbers",
+               cl::desc("Display source line numbers with "
+                        "disassembly. Implies disassemble object"));
+static cl::alias PrintLinesShort("l", cl::desc("Alias for --line-numbers"),
+                                 cl::NotHidden, cl::Grouping,
+                                 cl::aliasopt(PrintLines));
 
 static cl::opt<bool>
 MachOOpt("macho", cl::desc("Use MachO specific object file parser"));
@@ -164,22 +201,55 @@ static cl::alias MachOm("m", cl::desc("Alias for --macho"), cl::NotHidden,
                         cl::Grouping, cl::aliasopt(MachOOpt));
 
 cl::opt<std::string>
-llvm::TripleName("triple", cl::desc("Target triple to disassemble for, "
-                                    "see -version for available targets"));
+    MCPU("mcpu",
+         cl::desc("Target a specific cpu type (-mcpu=help for details)"),
+         cl::value_desc("cpu-name"), cl::init(""));
 
-cl::opt<std::string>
-llvm::MCPU("mcpu",
-     cl::desc("Target a specific cpu type (-mcpu=help for details)"),
-     cl::value_desc("cpu-name"),
-     cl::init(""));
+cl::list<std::string> MAttrs("mattr", cl::CommaSeparated,
+                             cl::desc("Target specific attributes"),
+                             cl::value_desc("a1,+a2,-a3,..."));
 
-cl::opt<std::string>
-llvm::ArchName("arch-name", cl::desc("Target arch to disassemble for, "
-                                "see -version for available targets"));
+cl::opt<bool> NoShowRawInsn("no-show-raw-insn",
+                            cl::desc("When disassembling "
+                                     "instructions, do not print "
+                                     "the instruction bytes."));
+cl::opt<bool> NoLeadingAddr("no-leading-addr",
+                                   cl::desc("Print no leading address"));
+
+static cl::opt<bool> RawClangAST(
+    "raw-clang-ast",
+    cl::desc("Dump the raw binary contents of the clang AST section"));
 
 cl::opt<bool>
-llvm::SectionHeaders("section-headers", cl::desc("Display summaries of the "
-                                                 "headers for each section."));
+    Relocations("reloc",
+                cl::desc("Display the relocation entries in the file"));
+static cl::alias RelocationsShort("r", cl::desc("Alias for --reloc"),
+                                  cl::NotHidden, cl::Grouping,
+                                  cl::aliasopt(Relocations));
+
+cl::opt<bool>
+    PrintImmHex("print-imm-hex",
+                cl::desc("Use hex format for immediate values"));
+
+cl::opt<bool>
+    PrivateHeaders("private-headers",
+                   cl::desc("Display format specific file headers"));
+static cl::alias PrivateHeadersShort("p",
+                                     cl::desc("Alias for --private-headers"),
+                                     cl::NotHidden, cl::Grouping,
+                                     cl::aliasopt(PrivateHeaders));
+
+cl::list<std::string>
+    FilterSections("section",
+                   cl::desc("Operate on the specified sections only. "
+                            "With -macho dump segment,section"));
+static cl::alias FilterSectionsj("j", cl::desc("Alias for --section"),
+                                 cl::NotHidden, cl::Grouping, cl::Prefix,
+                                 cl::aliasopt(FilterSections));
+
+cl::opt<bool> SectionHeaders("section-headers",
+                             cl::desc("Display summaries of the "
+                                      "headers for each section."));
 static cl::alias SectionHeadersShort("headers",
                                      cl::desc("Alias for --section-headers"),
                                      cl::NotHidden,
@@ -193,130 +263,52 @@ static cl::opt<bool>
     ShowLMA("show-lma",
             cl::desc("Display LMA column when dumping ELF section headers"));
 
-cl::list<std::string>
-llvm::FilterSections("section", cl::desc("Operate on the specified sections only. "
-                                         "With -macho dump segment,section"));
-cl::alias static FilterSectionsj("j", cl::desc("Alias for --section"),
-                                 cl::NotHidden, cl::Grouping, cl::Prefix,
-                                 cl::aliasopt(llvm::FilterSections));
+static cl::opt<bool> PrintSource(
+    "source",
+    cl::desc(
+        "Display source inlined with disassembly. Implies disassemble object"));
+static cl::alias PrintSourceShort("S", cl::desc("Alias for -source"),
+                                  cl::NotHidden, cl::Grouping,
+                                  cl::aliasopt(PrintSource));
 
-cl::list<std::string>
-llvm::MAttrs("mattr",
-  cl::CommaSeparated,
-  cl::desc("Target specific attributes"),
-  cl::value_desc("a1,+a2,-a3,..."));
+static cl::opt<unsigned long long>
+    StartAddress("start-address", cl::desc("Disassemble beginning at address"),
+                 cl::value_desc("address"), cl::init(0));
+static cl::opt<unsigned long long>
+    StopAddress("stop-address", cl::desc("Stop disassembly at address"),
+                cl::value_desc("address"), cl::init(UINT64_MAX));
 
-cl::opt<bool>
-llvm::NoShowRawInsn("no-show-raw-insn", cl::desc("When disassembling "
-                                                 "instructions, do not print "
-                                                 "the instruction bytes."));
-cl::opt<bool>
-llvm::NoLeadingAddr("no-leading-addr", cl::desc("Print no leading address"));
+cl::opt<bool> SymbolTable("syms", cl::desc("Display the symbol table"));
+static cl::alias SymbolTableShort("t", cl::desc("Alias for --syms"),
+                                  cl::NotHidden, cl::Grouping,
+                                  cl::aliasopt(SymbolTable));
 
-cl::opt<bool>
-llvm::UnwindInfo("unwind-info", cl::desc("Display unwind information"));
+cl::opt<std::string> TripleName("triple",
+                                cl::desc("Target triple to disassemble for, "
+                                         "see -version for available targets"));
 
+cl::opt<bool> UnwindInfo("unwind-info",
+                                cl::desc("Display unwind information"));
 static cl::alias UnwindInfoShort("u", cl::desc("Alias for --unwind-info"),
                                  cl::NotHidden, cl::Grouping,
                                  cl::aliasopt(UnwindInfo));
 
-cl::opt<bool>
-llvm::PrivateHeaders("private-headers",
-                     cl::desc("Display format specific file headers"));
-
-cl::opt<bool>
-llvm::FirstPrivateHeader("private-header",
-                         cl::desc("Display only the first format specific file "
-                                  "header"));
-
-static cl::alias PrivateHeadersShort("p",
-                                     cl::desc("Alias for --private-headers"),
-                                     cl::NotHidden, cl::Grouping,
-                                     cl::aliasopt(PrivateHeaders));
-
-cl::opt<bool> llvm::FileHeaders(
-    "file-headers",
-    cl::desc("Display the contents of the overall file header"));
-
-static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
-                                  cl::NotHidden, cl::Grouping,
-                                  cl::aliasopt(FileHeaders));
-
-cl::opt<bool>
-    llvm::ArchiveHeaders("archive-headers",
-                         cl::desc("Display archive header information"));
-
-cl::alias ArchiveHeadersShort("a", cl::desc("Alias for --archive-headers"),
-                              cl::NotHidden, cl::Grouping,
-                              cl::aliasopt(ArchiveHeaders));
-
-cl::opt<bool>
-    llvm::PrintImmHex("print-imm-hex",
-                      cl::desc("Use hex format for immediate values"));
-
-cl::opt<bool> PrintFaultMaps("fault-map-section",
-                             cl::desc("Display contents of faultmap section"));
-
-cl::opt<DIDumpType> llvm::DwarfDumpType(
-    "dwarf", cl::init(DIDT_Null), cl::desc("Dump of dwarf debug sections:"),
-    cl::values(clEnumValN(DIDT_DebugFrame, "frames", ".debug_frame")));
-
-cl::opt<bool> PrintSource(
-    "source",
-    cl::desc(
-        "Display source inlined with disassembly. Implies disassemble object"));
-
-cl::alias PrintSourceShort("S", cl::desc("Alias for -source"), cl::NotHidden,
-                           cl::Grouping, cl::aliasopt(PrintSource));
-
-cl::opt<bool> PrintLines("line-numbers",
-                         cl::desc("Display source line numbers with "
-                                  "disassembly. Implies disassemble object"));
-
-cl::alias PrintLinesShort("l", cl::desc("Alias for -line-numbers"),
-                          cl::NotHidden, cl::Grouping,
-                          cl::aliasopt(PrintLines));
-
-cl::opt<unsigned long long>
-    StartAddress("start-address", cl::desc("Disassemble beginning at address"),
-                 cl::value_desc("address"), cl::init(0));
-cl::opt<unsigned long long>
-    StopAddress("stop-address",
-                cl::desc("Stop disassembly at address"),
-                cl::value_desc("address"), cl::init(UINT64_MAX));
-
-cl::opt<bool> DisassembleZeroes(
-                "disassemble-zeroes",
-                cl::desc("Do not skip blocks of zeroes when disassembling"));
-cl::alias DisassembleZeroesShort("z",
-                                 cl::desc("Alias for --disassemble-zeroes"),
-                                 cl::NotHidden, cl::Grouping,
-                                 cl::aliasopt(DisassembleZeroes));
-
-static cl::list<std::string>
-    DisassemblerOptions("disassembler-options",
-                        cl::desc("Pass target specific disassembler options"),
-                        cl::value_desc("options"), cl::CommaSeparated);
-static cl::alias
-    DisassemblerOptionsShort("M", cl::desc("Alias for --disassembler-options"),
-                             cl::NotHidden, cl::Grouping, cl::Prefix,
-                             cl::CommaSeparated,
-                             cl::aliasopt(DisassemblerOptions));
 
 static cl::opt<bool>
     Wide("wide", cl::desc("Ignored for compatibility with GNU objdump"));
 static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
 
+static StringSet<> DisasmFuncsSet;
 static StringRef ToolName;
 
 typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
 
-SectionFilter llvm::ToolSectionFilter(llvm::object::ObjectFile const &O) {
+SectionFilter ToolSectionFilter(object::ObjectFile const &O) {
   return SectionFilter(
-      [](llvm::object::SectionRef const &S) {
+      [](object::SectionRef const &S) {
         if (FilterSections.empty())
           return true;
-        llvm::StringRef String;
+        StringRef String;
         std::error_code error = S.getName(String);
         if (error)
           return false;
@@ -325,7 +317,7 @@ SectionFilter llvm::ToolSectionFilter(llvm::object::ObjectFile const &O) {
       O);
 }
 
-void llvm::error(std::error_code EC) {
+void error(std::error_code EC) {
   if (!EC)
     return;
   WithColor::error(errs(), ToolName)
@@ -334,32 +326,31 @@ void llvm::error(std::error_code EC) {
   exit(1);
 }
 
-void llvm::error(Error E) {
+void error(Error E) {
   if (!E)
     return;
   WithColor::error(errs(), ToolName) << toString(std::move(E));
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void llvm::error(Twine Message) {
+LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
   WithColor::error(errs(), ToolName) << Message << ".\n";
   errs().flush();
   exit(1);
 }
 
-void llvm::warn(StringRef Message) {
+void warn(StringRef Message) {
   WithColor::warning(errs(), ToolName) << Message << ".\n";
   errs().flush();
 }
 
-LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
-                                                Twine Message) {
+LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, Twine Message) {
   WithColor::error(errs(), ToolName)
       << "'" << File << "': " << Message << ".\n";
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void llvm::report_error(Error E, StringRef File) {
+LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File) {
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
@@ -369,9 +360,9 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(Error E, StringRef File) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void llvm::report_error(Error E, StringRef ArchiveName,
-                                                StringRef FileName,
-                                                StringRef ArchitectureName) {
+LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef ArchiveName,
+                                          StringRef FileName,
+                                          StringRef ArchitectureName) {
   assert(E);
   WithColor::error(errs(), ToolName);
   if (ArchiveName != "")
@@ -388,24 +379,23 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(Error E, StringRef ArchiveName,
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void llvm::report_error(Error E, StringRef ArchiveName,
-                                                const object::Archive::Child &C,
-                                                StringRef ArchitectureName) {
+LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef ArchiveName,
+                                          const object::Archive::Child &C,
+                                          StringRef ArchitectureName) {
   Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
   // the index of which archive member this is and or its offset in the
   // archive instead of "???" as the name.
   if (!NameOrErr) {
     consumeError(NameOrErr.takeError());
-    llvm::report_error(std::move(E), ArchiveName, "???", ArchitectureName);
+    report_error(std::move(E), ArchiveName, "???", ArchitectureName);
   } else
-    llvm::report_error(std::move(E), ArchiveName, NameOrErr.get(),
-                       ArchitectureName);
+    report_error(std::move(E), ArchiveName, NameOrErr.get(), ArchitectureName);
 }
 
 static const Target *getTarget(const ObjectFile *Obj = nullptr) {
   // Figure out the target triple.
-  llvm::Triple TheTriple("unknown-unknown-unknown");
+  Triple TheTriple("unknown-unknown-unknown");
   if (TripleName.empty()) {
     if (Obj)
       TheTriple = Obj->makeTriple();
@@ -436,7 +426,7 @@ static const Target *getTarget(const ObjectFile *Obj = nullptr) {
   return TheTarget;
 }
 
-bool llvm::isRelocAddressLess(RelocationRef A, RelocationRef B) {
+bool isRelocAddressLess(RelocationRef A, RelocationRef B) {
   return A.getOffset() < B.getOffset();
 }
 
@@ -605,12 +595,25 @@ public:
                          std::vector<RelocationRef> *Rels = nullptr) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
-    if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address.Address);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes, OS);
+
+    {
+      formatted_raw_ostream FOS(OS);
+      if (!NoLeadingAddr)
+        FOS << format("%8" PRIx64 ":", Address.Address);
+      if (!NoShowRawInsn) {
+        FOS << ' ';
+        dumpBytes(Bytes, FOS);
+      }
+      FOS.flush();
+      // The output of printInst starts with a tab. Print some spaces so that
+      // the tab has 1 column and advances to the target tab stop.
+      unsigned TabStop = NoShowRawInsn ? 16 : 40;
+      unsigned Column = FOS.getColumn();
+      FOS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+
+      // The dtor calls flush() to ensure the indent comes before printInst().
     }
+
     if (MI)
       IP.printInst(MI, OS, "", STI);
     else
@@ -886,7 +889,7 @@ static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
 
 // Returns a map from sections to their relocations.
 static std::map<SectionRef, std::vector<RelocationRef>>
-getRelocsMap(llvm::object::ObjectFile const &Obj) {
+getRelocsMap(object::ObjectFile const &Obj) {
   std::map<SectionRef, std::vector<RelocationRef>> Ret;
   for (const SectionRef &Section : ToolSectionFilter(Obj)) {
     section_iterator RelSec = Section.getRelocatedSection();
@@ -1446,7 +1449,7 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
                     STI.get(), PIP, SP, InlineRelocs);
 }
 
-void llvm::printRelocations(const ObjectFile *Obj) {
+void printRelocations(const ObjectFile *Obj) {
   StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 :
                                                  "%08" PRIx64;
   // Regular objdump doesn't print relocations in non-relocatable object
@@ -1475,7 +1478,7 @@ void llvm::printRelocations(const ObjectFile *Obj) {
   }
 }
 
-void llvm::printDynamicRelocations(const ObjectFile *Obj) {
+void printDynamicRelocations(const ObjectFile *Obj) {
   // For the moment, this option is for ELF only
   if (!Obj->isELF())
     return;
@@ -1519,7 +1522,7 @@ static bool shouldDisplayLMA(const ObjectFile *Obj) {
   return ShowLMA;
 }
 
-void llvm::printSectionHeaders(const ObjectFile *Obj) {
+void printSectionHeaders(const ObjectFile *Obj) {
   bool HasLMAColumn = shouldDisplayLMA(Obj);
   if (HasLMAColumn)
     outs() << "Sections:\n"
@@ -1556,7 +1559,7 @@ void llvm::printSectionHeaders(const ObjectFile *Obj) {
   outs() << "\n";
 }
 
-void llvm::printSectionContents(const ObjectFile *Obj) {
+void printSectionContents(const ObjectFile *Obj) {
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name;
     StringRef Contents;
@@ -1602,8 +1605,8 @@ void llvm::printSectionContents(const ObjectFile *Obj) {
   }
 }
 
-void llvm::printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
-                            StringRef ArchitectureName) {
+void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
+                      StringRef ArchitectureName) {
   outs() << "SYMBOL TABLE:\n";
 
   if (const COFFObjectFile *Coff = dyn_cast<const COFFObjectFile>(O)) {
@@ -1715,59 +1718,9 @@ static void printUnwindInfo(const ObjectFile *O) {
            "for COFF and MachO object files.\n";
 }
 
-void llvm::printExportsTrie(const ObjectFile *o) {
-  outs() << "Exports trie:\n";
-  if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOExportsTrie(MachO);
-  else
-    WithColor::error(errs(), ToolName)
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
-}
-
-void llvm::printRebaseTable(ObjectFile *o) {
-  outs() << "Rebase table:\n";
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachORebaseTable(MachO);
-  else
-    WithColor::error(errs(), ToolName)
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
-}
-
-void llvm::printBindTable(ObjectFile *o) {
-  outs() << "Bind table:\n";
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOBindTable(MachO);
-  else
-    WithColor::error(errs(), ToolName)
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
-}
-
-void llvm::printLazyBindTable(ObjectFile *o) {
-  outs() << "Lazy bind table:\n";
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOLazyBindTable(MachO);
-  else
-    WithColor::error(errs(), ToolName)
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
-}
-
-void llvm::printWeakBindTable(ObjectFile *o) {
-  outs() << "Weak bind table:\n";
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOWeakBindTable(MachO);
-  else
-    WithColor::error(errs(), ToolName)
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
-}
-
 /// Dump the raw contents of the __clangast section so the output can be piped
 /// into llvm-bcanalyzer.
-void llvm::printRawClangAST(const ObjectFile *Obj) {
+void printRawClangAST(const ObjectFile *Obj) {
   if (outs().is_displayed()) {
     WithColor::error(errs(), ToolName)
         << "The -raw-clang-ast option will dump the raw binary contents of "
@@ -1966,7 +1919,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     printWeakBindTable(O);
   if (RawClangAST)
     printRawClangAST(O);
-  if (PrintFaultMaps)
+  if (FaultMapSection)
     printFaultMaps(O);
   if (DwarfDumpType != DIDT_Null) {
     std::unique_ptr<DIContext> DICtx = DWARFContext::create(*O);
@@ -2039,14 +1992,16 @@ static void dumpInput(StringRef file) {
   else
     report_error(errorCodeToError(object_error::invalid_file_type), file);
 }
+} // namespace llvm
 
 int main(int argc, char **argv) {
+  using namespace llvm;
   InitLLVM X(argc, argv);
 
   // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllDisassemblers();
+  InitializeAllTargetInfos();
+  InitializeAllTargetMCs();
+  InitializeAllDisassemblers();
 
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
@@ -2066,34 +2021,15 @@ int main(int argc, char **argv) {
   if (DisassembleAll || PrintSource || PrintLines)
     Disassemble = true;
 
-  if (!Disassemble
-      && !Relocations
-      && !DynamicRelocations
-      && !SectionHeaders
-      && !SectionContents
-      && !SymbolTable
-      && !UnwindInfo
-      && !PrivateHeaders
-      && !FileHeaders
-      && !FirstPrivateHeader
-      && !ExportsTrie
-      && !Rebase
-      && !Bind
-      && !LazyBind
-      && !WeakBind
-      && !RawClangAST
-      && !(UniversalHeaders && MachOOpt)
-      && !ArchiveHeaders
-      && !(IndirectSymbols && MachOOpt)
-      && !(DataInCode && MachOOpt)
-      && !(LinkOptHints && MachOOpt)
-      && !(InfoPlist && MachOOpt)
-      && !(DylibsUsed && MachOOpt)
-      && !(DylibId && MachOOpt)
-      && !(ObjcMetaData && MachOOpt)
-      && !(!FilterSections.empty() && MachOOpt)
-      && !PrintFaultMaps
-      && DwarfDumpType == DIDT_Null) {
+  if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
+      !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
+      !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
+      !UnwindInfo && !FaultMapSection &&
+      !(MachOOpt &&
+        (Bind || DataInCode || DylibId || DylibsUsed || ExportsTrie ||
+         FirstPrivateHeader || IndirectSymbols || InfoPlist || LazyBind ||
+         LinkOptHints || ObjcMetaData || Rebase || UniversalHeaders ||
+         WeakBind || !FilterSections.empty()))) {
     cl::PrintHelpMessage();
     return 2;
   }

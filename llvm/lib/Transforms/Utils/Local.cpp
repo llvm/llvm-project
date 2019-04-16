@@ -1666,11 +1666,10 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
-    if (!CI->isNoopCast(DL))
-      return nullptr;
-
-    // No-op casts are irrelevant for debug info.
-    return SrcDIExpr;
+    // No-op casts and zexts are irrelevant for debug info.
+    if (CI->isNoopCast(DL) || isa<ZExtInst>(&I))
+      return SrcDIExpr;
+    return nullptr;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
         M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());

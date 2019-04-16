@@ -21,7 +21,7 @@
 # RUN: %python -c "with open(r'%t.truncated2', 'r+') as f: f.truncate(0xFFF)"
 # RUN: not llvm-readobj %t.truncated2 --dynamic-table 2>&1 | FileCheck %s
 
-# CHECK: Error reading file: Invalid data was encountered while parsing the file.
+# CHECK: error: Invalid data was encountered while parsing the file
 
 --- !ELF
 FileHeader:

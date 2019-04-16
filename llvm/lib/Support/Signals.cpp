@@ -131,8 +131,8 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
   // If we don't know argv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
   std::string MainExecutableName =
-      Argv0.empty() ? sys::fs::getMainExecutable(nullptr, nullptr)
-                    : (std::string)Argv0;
+      sys::fs::exists(Argv0) ? (std::string)Argv0
+                             : sys::fs::getMainExecutable(nullptr, nullptr);
   BumpPtrAllocator Allocator;
   StringSaver StrPool(Allocator);
   std::vector<const char *> Modules(Depth, nullptr);

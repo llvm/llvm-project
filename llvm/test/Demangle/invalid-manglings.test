@@ -129,3 +129,8 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ??_R4foo@@
 ; CHECK-NEXT: error: Invalid mangled name
+
+?foo@?$?BH@@QAEHXZ
+; CHECK-EMPTY:
+; CHECK-NEXT: ?foo@?$?BH@@QAEHXZ
+; CHECK-NEXT: error: Invalid mangled name

@@ -60,28 +60,27 @@ DWARFVerifier::DieRangeInfo::insert(const DieRangeInfo &RI) {
 }
 
 bool DWARFVerifier::DieRangeInfo::contains(const DieRangeInfo &RHS) const {
-  // Both list of ranges are sorted so we can make this fast.
+  auto I1 = Ranges.begin(), E1 = Ranges.end();
+  auto I2 = RHS.Ranges.begin(), E2 = RHS.Ranges.end();
+  if (I2 == E2)
+    return true;
 
-  if (Ranges.empty() || RHS.Ranges.empty())
-    return false;
-
-  // Since the ranges are sorted we can advance where we start searching with
-  // this object's ranges as we traverse RHS.Ranges.
-  auto End = Ranges.end();
-  auto Iter = findRange(RHS.Ranges.front());
-
-  // Now linearly walk the ranges in this object and see if they contain each
-  // ranges from RHS.Ranges.
-  for (const auto &R : RHS.Ranges) {
-    while (Iter != End) {
-      if (Iter->contains(R))
-        break;
-      ++Iter;
+  DWARFAddressRange R = *I2;
+  while (I1 != E1) {
+    bool Covered = I1->LowPC <= R.LowPC;
+    if (R.LowPC == R.HighPC || (Covered && R.HighPC <= I1->HighPC)) {
+      if (++I2 == E2)
+        return true;
+      R = *I2;
+      continue;
     }
-    if (Iter == End)
+    if (!Covered)
       return false;
+    if (R.LowPC < I1->HighPC)
+      R.LowPC = I1->HighPC;
+    ++I1;
   }
-  return true;
+  return false;
 }
 
 bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS) const {

@@ -1,9 +1,8 @@
 //===- llvm/Support/TimeProfiler.h - Hierarchical Time Profiler -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,7 +32,7 @@ inline bool timeTraceProfilerEnabled() {
 /// Write profiling data to output file.
 /// Data produced is JSON, in Chrome "Trace Event" format, see
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
-void timeTraceProfilerWrite(std::unique_ptr<raw_pwrite_stream> &OS);
+void timeTraceProfilerWrite(raw_pwrite_stream &OS);
 
 /// Manually begin a time section, with the given \p Name and \p Detail.
 /// Profiler copies the string data, so the pointers can be given into
@@ -51,6 +50,13 @@ void timeTraceProfilerEnd();
 /// the section; and when it is destroyed, it stops it. If the time profiler
 /// is not initialized, the overhead is a single branch.
 struct TimeTraceScope {
+
+  TimeTraceScope() = delete;
+  TimeTraceScope(const TimeTraceScope &) = delete;
+  TimeTraceScope &operator=(const TimeTraceScope &) = delete;
+  TimeTraceScope(TimeTraceScope &&) = delete;
+  TimeTraceScope &operator=(TimeTraceScope &&) = delete;
+
   TimeTraceScope(StringRef Name, StringRef Detail) {
     if (TimeTraceProfilerInstance != nullptr)
       timeTraceProfilerBegin(Name, Detail);

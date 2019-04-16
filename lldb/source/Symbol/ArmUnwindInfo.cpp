@@ -304,7 +304,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       // 11001yyy
       // Spare (yyy != 000, 001)
       return false;
-    } else if ((byte1 & 0xf8) == 0xc0) {
+    } else if ((byte1 & 0xf8) == 0xd0) {
       // 11010nnn
       // Pop VFP double-precision registers D[8]-D[8+nnn] saved (as if) by
       // FSTMFDD (see remark d)

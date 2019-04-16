@@ -6093,9 +6093,11 @@ SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Emit a library call.
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
+  Entry.Ty = Type::getInt8PtrTy(*getContext());
   Entry.Node = Dst; Args.push_back(Entry);
   Entry.Node = Src; Args.push_back(Entry);
+
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
   Entry.Node = Size; Args.push_back(Entry);
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
@@ -6195,9 +6197,11 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Emit a library call.
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
+  Entry.Ty = Type::getInt8PtrTy(*getContext());
   Entry.Node = Dst; Args.push_back(Entry);
   Entry.Node = Src; Args.push_back(Entry);
+
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
   Entry.Node = Size; Args.push_back(Entry);
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
@@ -6290,16 +6294,15 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
 
   // Emit a library call.
-  Type *IntPtrTy = getDataLayout().getIntPtrType(*getContext());
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
-  Entry.Node = Dst; Entry.Ty = IntPtrTy;
+  Entry.Node = Dst; Entry.Ty = Type::getInt8PtrTy(*getContext());
   Args.push_back(Entry);
   Entry.Node = Src;
   Entry.Ty = Src.getValueType().getTypeForEVT(*getContext());
   Args.push_back(Entry);
   Entry.Node = Size;
-  Entry.Ty = IntPtrTy;
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
   Args.push_back(Entry);
 
   // FIXME: pass in SDLoc

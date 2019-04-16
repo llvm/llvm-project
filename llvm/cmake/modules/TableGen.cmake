@@ -119,15 +119,6 @@ macro(add_tablegen target project)
   set(${project}_TABLEGEN "${target}" CACHE
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
 
-  # Upgrade existing LLVM_TABLEGEN setting.
-  if(${project} STREQUAL LLVM)
-    if(${LLVM_TABLEGEN} STREQUAL tblgen)
-      set(LLVM_TABLEGEN "${target}" CACHE
-          STRING "Native TableGen executable. Saves building one when cross-compiling."
-          FORCE)
-    endif()
-  endif()
-
   # Effective tblgen executable to be used:
   set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN} PARENT_SCOPE)
   set(${project}_TABLEGEN_TARGET ${${project}_TABLEGEN} PARENT_SCOPE)
