@@ -36,7 +36,14 @@ struct kernel_param_desc_t {
   int offset;
 };
 
-template <class KernelNameType> struct KernelInfo;
+template <class KernelNameType> struct KernelInfo {
+  static constexpr unsigned getNumParams() { return 0; }
+  static const kernel_param_desc_t &getParamDesc(int Idx) {
+    static kernel_param_desc_t Dummy;
+    return Dummy;
+  }
+  static constexpr const char *getName() { return ""; }
+};
 
 } // namespace detail
 } // namespace sycl

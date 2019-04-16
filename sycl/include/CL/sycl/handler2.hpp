@@ -513,11 +513,13 @@ public:
     using KI = sycl::detail::KernelInfo<KernelName>;
     // Empty name indicates that the compilation happens without integration
     // header, so don't perform things that require it.
-    MArgs.clear();
-    extractArgsAndReqsFromLambda(MHostKernel->getPtr(), KI::getNumParams(),
-                                 &KI::getParamDesc(0));
-    MKernelName = KI::getName();
-    MOSModuleHandle = csd::OSUtil::getOSModuleHandle(KI::getName());
+    if (KI::getName() != "") {
+      MArgs.clear();
+      extractArgsAndReqsFromLambda(MHostKernel->getPtr(), KI::getNumParams(),
+                                   &KI::getParamDesc(0));
+      MKernelName = KI::getName();
+      MOSModuleHandle = csd::OSUtil::getOSModuleHandle(KI::getName());
+    }
   }
 
   // single_task version with a kernel represented as a lambda.
