@@ -399,59 +399,38 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI,
 }
 
 // See if we can prove that the given overflow intrinsic will not overflow.
-static bool willNotOverflow(IntrinsicInst *II, LazyValueInfo *LVI) {
-  using OBO = OverflowingBinaryOperator;
-  auto NoWrap = [&] (Instruction::BinaryOps BinOp, unsigned NoWrapKind) {
-    Value *RHS = II->getOperand(1);
-    ConstantRange RRange = LVI->getConstantRange(RHS, II->getParent(), II);
-    ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
-        BinOp, RRange, NoWrapKind);
-    // As an optimization, do not compute LRange if we do not need it.
-    if (NWRegion.isEmptySet())
-      return false;
-    Value *LHS = II->getOperand(0);
-    ConstantRange LRange = LVI->getConstantRange(LHS, II->getParent(), II);
-    return NWRegion.contains(LRange);
-  };
-  switch (II->getIntrinsicID()) {
-  default:
-    break;
-  case Intrinsic::uadd_with_overflow:
-    return NoWrap(Instruction::Add, OBO::NoUnsignedWrap);
-  case Intrinsic::sadd_with_overflow:
-    return NoWrap(Instruction::Add, OBO::NoSignedWrap);
-  case Intrinsic::usub_with_overflow:
-    return NoWrap(Instruction::Sub, OBO::NoUnsignedWrap);
-  case Intrinsic::ssub_with_overflow:
-    return NoWrap(Instruction::Sub, OBO::NoSignedWrap);
-  }
-  return false;
+static bool willNotOverflow(WithOverflowInst *WO, LazyValueInfo *LVI) {
+  // TODO: Also support multiplication.
+  Instruction::BinaryOps BinOp = WO->getBinaryOp();
+  if (BinOp == Instruction::Mul)
+    return false;
+
+  Value *RHS = WO->getRHS();
+  ConstantRange RRange = LVI->getConstantRange(RHS, WO->getParent(), WO);
+  ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+      BinOp, RRange, WO->getNoWrapKind());
+  // As an optimization, do not compute LRange if we do not need it.
+  if (NWRegion.isEmptySet())
+    return false;
+  Value *LHS = WO->getLHS();
+  ConstantRange LRange = LVI->getConstantRange(LHS, WO->getParent(), WO);
+  return NWRegion.contains(LRange);
 }
 
-static void processOverflowIntrinsic(IntrinsicInst *II) {
-  IRBuilder<> B(II);
-  Value *NewOp = nullptr;
-  switch (II->getIntrinsicID()) {
-  default:
-    llvm_unreachable("Unexpected instruction.");
-  case Intrinsic::uadd_with_overflow:
-    NewOp = B.CreateNUWAdd(II->getOperand(0), II->getOperand(1), II->getName());
-    break;
-  case Intrinsic::sadd_with_overflow:
-    NewOp = B.CreateNSWAdd(II->getOperand(0), II->getOperand(1), II->getName());
-    break;
-  case Intrinsic::usub_with_overflow:
-    NewOp = B.CreateNUWSub(II->getOperand(0), II->getOperand(1), II->getName());
-    break;
-  case Intrinsic::ssub_with_overflow:
-    NewOp = B.CreateNSWSub(II->getOperand(0), II->getOperand(1), II->getName());
-    break;
-  }
+static void processOverflowIntrinsic(WithOverflowInst *WO) {
+  IRBuilder<> B(WO);
+  Value *NewOp = B.CreateBinOp(
+      WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), WO->getName());
+  if (WO->isSigned())
+    cast<Instruction>(NewOp)->setHasNoSignedWrap();
+  else
+    cast<Instruction>(NewOp)->setHasNoUnsignedWrap();
+
+  Value *NewI = B.CreateInsertValue(UndefValue::get(WO->getType()), NewOp, 0);
+  NewI = B.CreateInsertValue(NewI, ConstantInt::getFalse(WO->getContext()), 1);
+  WO->replaceAllUsesWith(NewI);
+  WO->eraseFromParent();
   ++NumOverflows;
-  Value *NewI = B.CreateInsertValue(UndefValue::get(II->getType()), NewOp, 0);
-  NewI = B.CreateInsertValue(NewI, ConstantInt::getFalse(II->getContext()), 1);
-  II->replaceAllUsesWith(NewI);
-  II->eraseFromParent();
 }
 
 /// Infer nonnull attributes for the arguments at the specified callsite.
@@ -459,9 +438,9 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
   SmallVector<unsigned, 4> ArgNos;
   unsigned ArgNo = 0;
 
-  if (auto *II = dyn_cast<IntrinsicInst>(CS.getInstruction())) {
-    if (willNotOverflow(II, LVI)) {
-      processOverflowIntrinsic(II);
+  if (auto *WO = dyn_cast<WithOverflowInst>(CS.getInstruction())) {
+    if (willNotOverflow(WO, LVI)) {
+      processOverflowIntrinsic(WO);
       return true;
     }
   }

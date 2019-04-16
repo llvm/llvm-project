@@ -958,7 +958,8 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllw $2, %ymm0, %ymm1
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
@@ -991,7 +992,8 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512DQ-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512DQ-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512DQ-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsllw $2, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
@@ -1013,7 +1015,8 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512DQVL-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512DQVL-NEXT:    vmovdqa {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512DQVL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512DQVL-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512DQVL-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpsllw $2, %ymm0, %ymm1
 ; AVX512DQVL-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
@@ -1058,7 +1061,8 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; X32-AVX2:       # %bb.0:
 ; X32-AVX2-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; X32-AVX2-NEXT:    vpand {{\.LCPI.*}}, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; X32-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; X32-AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; X32-AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    vpsllw $2, %ymm0, %ymm1
 ; X32-AVX2-NEXT:    vpand {{\.LCPI.*}}, %ymm1, %ymm1

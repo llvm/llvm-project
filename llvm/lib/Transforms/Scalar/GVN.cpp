@@ -329,36 +329,15 @@ GVN::Expression GVN::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
   e.type = EI->getType();
   e.opcode = 0;
 
-  IntrinsicInst *I = dyn_cast<IntrinsicInst>(EI->getAggregateOperand());
-  if (I != nullptr && EI->getNumIndices() == 1 && *EI->idx_begin() == 0 ) {
-    // EI might be an extract from one of our recognised intrinsics. If it
-    // is we'll synthesize a semantically equivalent expression instead on
-    // an extract value expression.
-    switch (I->getIntrinsicID()) {
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-        e.opcode = Instruction::Add;
-        break;
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::usub_with_overflow:
-        e.opcode = Instruction::Sub;
-        break;
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::umul_with_overflow:
-        e.opcode = Instruction::Mul;
-        break;
-      default:
-        break;
-    }
-
-    if (e.opcode != 0) {
-      // Intrinsic recognized. Grab its args to finish building the expression.
-      assert(I->getNumArgOperands() == 2 &&
-             "Expect two args for recognised intrinsics.");
-      e.varargs.push_back(lookupOrAdd(I->getArgOperand(0)));
-      e.varargs.push_back(lookupOrAdd(I->getArgOperand(1)));
-      return e;
-    }
+  WithOverflowInst *WO = dyn_cast<WithOverflowInst>(EI->getAggregateOperand());
+  if (WO != nullptr && EI->getNumIndices() == 1 && *EI->idx_begin() == 0) {
+    // EI is an extract from one of our with.overflow intrinsics. Synthesize
+    // a semantically equivalent expression instead of an extract value
+    // expression.
+    e.opcode = WO->getBinaryOp();
+    e.varargs.push_back(lookupOrAdd(WO->getLHS()));
+    e.varargs.push_back(lookupOrAdd(WO->getRHS()));
+    return e;
   }
 
   // Not a recognised intrinsic. Fall back to producing an extract value

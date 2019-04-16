@@ -11,9 +11,13 @@ declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
 
 declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
 
+declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32)
+
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
 
 declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
+
+declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 
 declare void @llvm.trap()
 
@@ -494,6 +498,82 @@ trap:                                             ; preds = %cond.false
 
 cond.end:                                         ; preds = %cond.false, %entry
   %cond = phi i32 [ 0, %entry ], [ %1, %cond.false ]
+  ret i32 %cond
+}
+
+define i32 @unsigned_mul(i32 %x) {
+; CHECK-LABEL: @unsigned_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 10000
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; CHECK:       cond.false:
+; CHECK-NEXT:    [[MULO:%.*]] = tail call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X]], i32 100)
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[MULO]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[MULO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[COND_END]]
+; CHECK:       trap:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RES]], [[COND_FALSE]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+entry:
+  %cmp = icmp ugt i32 %x, 10000
+  br i1 %cmp, label %cond.end, label %cond.false
+
+cond.false:                                       ; preds = %entry
+  %mulo = tail call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %x, i32 100)
+  %res = extractvalue { i32, i1 } %mulo, 0
+  %ov = extractvalue { i32, i1 } %mulo, 1
+  br i1 %ov, label %trap, label %cond.end
+
+trap:                                             ; preds = %cond.false
+  tail call void @llvm.trap()
+  unreachable
+
+cond.end:                                         ; preds = %cond.false, %entry
+  %cond = phi i32 [ 0, %entry ], [ %res, %cond.false ]
+  ret i32 %cond
+}
+
+define i32 @signed_mul(i32 %x) {
+; CHECK-LABEL: @signed_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X:%.*]], 10000
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], -10000
+; CHECK-NEXT:    [[CMP3:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; CHECK:       cond.false:
+; CHECK-NEXT:    [[MULO:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[X]], i32 100)
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[MULO]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[MULO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[COND_END]]
+; CHECK:       trap:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RES]], [[COND_FALSE]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+entry:
+  %cmp1 = icmp sgt i32 %x, 10000
+  %cmp2 = icmp slt i32 %x, -10000
+  %cmp3 = or i1 %cmp1, %cmp2
+  br i1 %cmp3, label %cond.end, label %cond.false
+
+cond.false:                                       ; preds = %entry
+  %mulo = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %x, i32 100)
+  %res = extractvalue { i32, i1 } %mulo, 0
+  %ov = extractvalue { i32, i1 } %mulo, 1
+  br i1 %ov, label %trap, label %cond.end
+
+trap:                                             ; preds = %cond.false
+  tail call void @llvm.trap()
+  unreachable
+
+cond.end:                                         ; preds = %cond.false, %entry
+  %cond = phi i32 [ 0, %entry ], [ %res, %cond.false ]
   ret i32 %cond
 }
 
