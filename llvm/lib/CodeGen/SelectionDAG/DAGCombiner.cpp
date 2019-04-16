@@ -12897,6 +12897,7 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use,
 
   TargetLowering::AddrMode AM;
   if (N->getOpcode() == ISD::ADD) {
+    AM.HasBaseReg = true;
     ConstantSDNode *Offset = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (Offset)
       // [reg +/- imm]
@@ -12905,6 +12906,7 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use,
       // [reg +/- reg]
       AM.Scale = 1;
   } else if (N->getOpcode() == ISD::SUB) {
+    AM.HasBaseReg = true;
     ConstantSDNode *Offset = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (Offset)
       // [reg +/- imm]

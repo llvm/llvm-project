@@ -1,5 +1,5 @@
 ; Run llvm-undname with invalid inputs and make sure it doesn't crash.
-; RUN: llvm-undname < %s 2>&1 | FileCheck %s
+; RUN: not llvm-undname < %s 2>&1 | FileCheck %s
 
 ?ff@@$$J0YAXAU?$AS_@$0A@PEAU?$AS_@$0A@H@__clang@@@__clang@@@Z
 ; CHECK: ?ff@@$$J0YAXAU?$AS_@$0A@PEAU?$AS_@$0A@H@__clang@@@__clang@@@Z
@@ -133,4 +133,9 @@
 ?foo@?$?BH@@QAEHXZ
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ?foo@?$?BH@@QAEHXZ
+; CHECK-NEXT: error: Invalid mangled name
+
+?foo@?$?0H@
+; CHECK-EMPTY:
+; CHECK-NEXT: ?foo@?$?0H@
 ; CHECK-NEXT: error: Invalid mangled name

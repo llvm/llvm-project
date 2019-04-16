@@ -884,6 +884,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   };
   SmallVector<AllocaPoisonCall, 8> DynamicAllocaPoisonCallVec;
   SmallVector<AllocaPoisonCall, 8> StaticAllocaPoisonCallVec;
+  bool HasUntracedLifetimeIntrinsic = false;
 
   SmallVector<AllocaInst *, 1> DynamicAllocaVec;
   SmallVector<IntrinsicInst *, 1> StackRestoreVec;
@@ -917,6 +918,14 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     if (AllocaVec.empty() && DynamicAllocaVec.empty()) return false;
 
     initializeCallbacks(*F.getParent());
+
+    if (HasUntracedLifetimeIntrinsic) {
+      // If there are lifetime intrinsics which couldn't be traced back to an
+      // alloca, we may not know exactly when a variable enters scope, and
+      // therefore should "fail safe" by not poisoning them.
+      StaticAllocaPoisonCallVec.clear();
+      DynamicAllocaPoisonCallVec.clear();
+    }
 
     processDynamicAllocas();
     processStaticAllocas();
@@ -1040,8 +1049,12 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     // Find alloca instruction that corresponds to llvm.lifetime argument.
     AllocaInst *AI =
         llvm::findAllocaForValue(II.getArgOperand(1), AllocaForValue);
+    if (!AI) {
+      HasUntracedLifetimeIntrinsic = true;
+      return;
+    }
     // We're interested only in allocas we can handle.
-    if (!AI || !ASan.isInterestingAlloca(*AI))
+    if (!ASan.isInterestingAlloca(*AI))
       return;
     bool DoPoison = (ID == Intrinsic::lifetime_end);
     AllocaPoisonCall APC = {&II, AI, SizeValue, DoPoison};

@@ -595,12 +595,25 @@ public:
                          std::vector<RelocationRef> *Rels = nullptr) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
-    if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address.Address);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes, OS);
+
+    {
+      formatted_raw_ostream FOS(OS);
+      if (!NoLeadingAddr)
+        FOS << format("%8" PRIx64 ":", Address.Address);
+      if (!NoShowRawInsn) {
+        FOS << ' ';
+        dumpBytes(Bytes, FOS);
+      }
+      FOS.flush();
+      // The output of printInst starts with a tab. Print some spaces so that
+      // the tab has 1 column and advances to the target tab stop.
+      unsigned TabStop = NoShowRawInsn ? 16 : 40;
+      unsigned Column = FOS.getColumn();
+      FOS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+
+      // The dtor calls flush() to ensure the indent comes before printInst().
     }
+
     if (MI)
       IP.printInst(MI, OS, "", STI);
     else
@@ -2008,34 +2021,15 @@ int main(int argc, char **argv) {
   if (DisassembleAll || PrintSource || PrintLines)
     Disassemble = true;
 
-  if (!Disassemble
-      && !Relocations
-      && !DynamicRelocations
-      && !SectionHeaders
-      && !SectionContents
-      && !SymbolTable
-      && !UnwindInfo
-      && !PrivateHeaders
-      && !FileHeaders
-      && !FirstPrivateHeader
-      && !ExportsTrie
-      && !Rebase
-      && !Bind
-      && !LazyBind
-      && !WeakBind
-      && !RawClangAST
-      && !(UniversalHeaders && MachOOpt)
-      && !ArchiveHeaders
-      && !(IndirectSymbols && MachOOpt)
-      && !(DataInCode && MachOOpt)
-      && !(LinkOptHints && MachOOpt)
-      && !(InfoPlist && MachOOpt)
-      && !(DylibsUsed && MachOOpt)
-      && !(DylibId && MachOOpt)
-      && !(ObjcMetaData && MachOOpt)
-      && !(!FilterSections.empty() && MachOOpt)
-      && !FaultMapSection
-      && DwarfDumpType == DIDT_Null) {
+  if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
+      !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
+      !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
+      !UnwindInfo && !FaultMapSection &&
+      !(MachOOpt &&
+        (Bind || DataInCode || DylibId || DylibsUsed || ExportsTrie ||
+         FirstPrivateHeader || IndirectSymbols || InfoPlist || LazyBind ||
+         LinkOptHints || ObjcMetaData || Rebase || UniversalHeaders ||
+         WeakBind || !FilterSections.empty()))) {
     cl::PrintHelpMessage();
     return 2;
   }

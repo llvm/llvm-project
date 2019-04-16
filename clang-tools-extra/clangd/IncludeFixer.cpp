@@ -142,15 +142,17 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
 std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   auto Inserted = [&](const Symbol &Sym, llvm::StringRef Header)
       -> llvm::Expected<std::pair<std::string, bool>> {
-    auto ResolvedDeclaring =
-        toHeaderFile(Sym.CanonicalDeclaration.FileURI, File);
+    auto DeclaringURI = URI::parse(Sym.CanonicalDeclaration.FileURI);
+    if (!DeclaringURI)
+      return DeclaringURI.takeError();
+    auto ResolvedDeclaring = URI::resolve(*DeclaringURI, File);
     if (!ResolvedDeclaring)
       return ResolvedDeclaring.takeError();
     auto ResolvedInserted = toHeaderFile(Header, File);
     if (!ResolvedInserted)
       return ResolvedInserted.takeError();
     return std::make_pair(
-        Inserter->calculateIncludePath(*ResolvedDeclaring, *ResolvedInserted),
+        Inserter->calculateIncludePath(*ResolvedInserted),
         Inserter->shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
   };
 
@@ -173,8 +175,8 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
                     {std::move(*Edit)}});
         }
       } else {
-        vlog("Failed to calculate include insertion for {0} into {1}: {2}",
-             File, Inc, ToInclude.takeError());
+        vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,
+             File, ToInclude.takeError());
       }
     }
   }

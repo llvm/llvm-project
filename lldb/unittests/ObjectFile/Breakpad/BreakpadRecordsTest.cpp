@@ -36,7 +36,7 @@ TEST(ModuleRecord, parse) {
   EXPECT_EQ(ModuleRecord(llvm::Triple::Linux, llvm::Triple::x86_64,
                          UUID::fromData("@ABCDEFGHIJKLMNO", 16)),
             ModuleRecord::parse(
-                "MODULE Linux x86_64 434241404544474648494a4b4c4d4e4f0 a.out"));
+                "MODULE Linux x86_64 404142434445464748494a4b4c4d4e4f0 a.out"));
 
   EXPECT_EQ(llvm::None, ModuleRecord::parse("MODULE"));
   EXPECT_EQ(llvm::None, ModuleRecord::parse("MODULE Linux"));

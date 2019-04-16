@@ -211,11 +211,20 @@ define i64 @sll(i64 %a, i64 %b) nounwind {
 ;
 ; RV32I-LABEL: sll:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    call __ashldi3
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    addi a3, a2, -32
+; RV32I-NEXT:    bltz a3, .LBB11_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sll a1, a0, a3
+; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB11_2:
+; RV32I-NEXT:    addi a3, zero, 31
+; RV32I-NEXT:    sub a3, a3, a2
+; RV32I-NEXT:    srli a4, a0, 1
+; RV32I-NEXT:    srl a3, a4, a3
+; RV32I-NEXT:    sll a1, a1, a2
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    sll a0, a0, a2
 ; RV32I-NEXT:    ret
   %1 = shl i64 %a, %b
   ret i64 %1
@@ -288,11 +297,20 @@ define i64 @srl(i64 %a, i64 %b) nounwind {
 ;
 ; RV32I-LABEL: srl:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    call __lshrdi3
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    addi a3, a2, -32
+; RV32I-NEXT:    bltz a3, .LBB15_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    srl a0, a1, a3
+; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB15_2:
+; RV32I-NEXT:    addi a3, zero, 31
+; RV32I-NEXT:    sub a3, a3, a2
+; RV32I-NEXT:    slli a4, a1, 1
+; RV32I-NEXT:    sll a3, a4, a3
+; RV32I-NEXT:    srl a0, a0, a2
+; RV32I-NEXT:    or a0, a0, a3
+; RV32I-NEXT:    srl a1, a1, a2
 ; RV32I-NEXT:    ret
   %1 = lshr i64 %a, %b
   ret i64 %1
@@ -306,11 +324,20 @@ define i64 @sra(i64 %a, i64 %b) nounwind {
 ;
 ; RV32I-LABEL: sra:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    call __ashrdi3
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    addi a3, a2, -32
+; RV32I-NEXT:    bltz a3, .LBB16_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sra a0, a1, a3
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB16_2:
+; RV32I-NEXT:    addi a3, zero, 31
+; RV32I-NEXT:    sub a3, a3, a2
+; RV32I-NEXT:    slli a4, a1, 1
+; RV32I-NEXT:    sll a3, a4, a3
+; RV32I-NEXT:    srl a0, a0, a2
+; RV32I-NEXT:    or a0, a0, a3
+; RV32I-NEXT:    sra a1, a1, a2
 ; RV32I-NEXT:    ret
   %1 = ashr i64 %a, %b
   ret i64 %1
