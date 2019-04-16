@@ -27,8 +27,8 @@ void UniqueMachineInstr::Profile(FoldingSetNodeID &ID) {
 }
 /// -----------------------------------------
 
-/// --------- CSEConfig ---------- ///
-bool CSEConfig::shouldCSEOpc(unsigned Opc) {
+/// --------- CSEConfigFull ---------- ///
+bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
   switch (Opc) {
   default:
     break;
@@ -60,6 +60,17 @@ bool CSEConfig::shouldCSEOpc(unsigned Opc) {
 bool CSEConfigConstantOnly::shouldCSEOpc(unsigned Opc) {
   return Opc == TargetOpcode::G_CONSTANT;
 }
+
+std::unique_ptr<CSEConfigBase>
+llvm::getStandardCSEConfigForOpt(CodeGenOpt::Level Level) {
+  std::unique_ptr<CSEConfigBase> Config;
+  if (Level == CodeGenOpt::None)
+    Config = make_unique<CSEConfigConstantOnly>();
+  else
+    Config = make_unique<CSEConfigFull>();
+  return Config;
+}
+
 /// -----------------------------------------
 
 /// -------- GISelCSEInfo -------------//
@@ -348,8 +359,9 @@ const GISelInstProfileBuilder &GISelInstProfileBuilder::addNodeIDMachineOperand(
   return *this;
 }
 
-GISelCSEInfo &GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfig> CSEOpt,
-                                           bool Recompute) {
+GISelCSEInfo &
+GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
+                             bool Recompute) {
   if (!AlreadyComputed || Recompute) {
     Info.setCSEConfig(std::move(CSEOpt));
     Info.analyze(*MF);

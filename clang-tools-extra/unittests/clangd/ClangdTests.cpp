@@ -1099,6 +1099,64 @@ TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
                                 Field(&CodeCompletion::Scope, "ns::"))));
 }
 
+TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  // Returns compile command only when notified.
+  class DelayedCompilationDatabase : public GlobalCompilationDatabase {
+  public:
+    DelayedCompilationDatabase(Notification &CanReturnCommand)
+        : CanReturnCommand(CanReturnCommand) {}
+
+    llvm::Optional<tooling::CompileCommand>
+    getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override {
+      // FIXME: make this timeout and fail instead of waiting forever in case
+      // something goes wrong.
+      CanReturnCommand.wait();
+      auto FileName = llvm::sys::path::filename(File);
+      std::vector<std::string> CommandLine = {"clangd", "-ffreestanding", File};
+      return {tooling::CompileCommand(llvm::sys::path::parent_path(File),
+                                      FileName, std::move(CommandLine), "")};
+    }
+
+    std::vector<std::string> ExtraClangFlags;
+
+  private:
+    Notification &CanReturnCommand;
+  };
+
+  Notification CanReturnCommand;
+  DelayedCompilationDatabase CDB(CanReturnCommand);
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto FooCpp = testPath("foo.cpp");
+  Annotations Code(R"cpp(
+    namespace ns { int xyz; }
+    using namespace ns;
+    int main() {
+       xy^
+    })cpp");
+  FS.Files[FooCpp] = FooCpp;
+  Server.addDocument(FooCpp, Code.code());
+
+  // Sleep for some time to make sure code completion is not run because update
+  // hasn't been scheduled.
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  auto Opts = clangd::CodeCompleteOptions();
+  Opts.AllowFallback = true;
+
+  auto Res = cantFail(runCodeComplete(Server, FooCpp, Code.point(), Opts));
+  EXPECT_EQ(Res.Context, CodeCompletionContext::CCC_Recovery);
+
+  CanReturnCommand.notify();
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Code.point(),
+                                       clangd::CodeCompleteOptions()))
+                  .Completions,
+              ElementsAre(AllOf(Field(&CodeCompletion::Name, "xyz"),
+                                Field(&CodeCompletion::Scope, "ns::"))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

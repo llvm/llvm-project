@@ -13,9 +13,8 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C1]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
     ; CHECK: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND]](s32), [[AND1]]
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ICMP1]](s32)
     ; CHECK: $w0 = COPY [[COPY3]](s32)

@@ -2087,8 +2087,7 @@ define i1 @allones_v4i32_and1(<4 x i32> %arg) {
 ; KNL-LABEL: allones_v4i32_and1:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    andb $15, %al
 ; KNL-NEXT:    cmpb $15, %al
@@ -2131,8 +2130,7 @@ define i1 @allzeros_v4i32_and1(<4 x i32> %arg) {
 ; KNL-LABEL: allzeros_v4i32_and1:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al
@@ -2192,8 +2190,7 @@ define i1 @allones_v8i32_and1(<8 x i32> %arg) {
 ; KNL-LABEL: allones_v8i32_and1:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    cmpb $-1, %al
 ; KNL-NEXT:    sete %al
@@ -2253,8 +2250,7 @@ define i1 @allzeros_v8i32_and1(<8 x i32> %arg) {
 ; KNL-LABEL: allzeros_v8i32_and1:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb %al, %al
 ; KNL-NEXT:    sete %al
@@ -2573,8 +2569,7 @@ define i1 @allones_v4i64_and1(<4 x i64> %arg) {
 ; KNL-LABEL: allones_v4i64_and1:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
-; KNL-NEXT:    vptestmq %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmq {{.*}}(%rip){1to8}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    andb $15, %al
 ; KNL-NEXT:    cmpb $15, %al
@@ -2640,8 +2635,7 @@ define i1 @allzeros_v4i64_and1(<4 x i64> %arg) {
 ; KNL-LABEL: allzeros_v4i64_and1:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
-; KNL-NEXT:    vptestmq %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmq {{.*}}(%rip){1to8}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al
@@ -3686,8 +3680,7 @@ define i1 @allones_v4i32_and4(<4 x i32> %arg) {
 ; KNL-LABEL: allones_v4i32_and4:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    andb $15, %al
 ; KNL-NEXT:    cmpb $15, %al
@@ -3730,8 +3723,7 @@ define i1 @allzeros_v4i32_and4(<4 x i32> %arg) {
 ; KNL-LABEL: allzeros_v4i32_and4:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al
@@ -3791,8 +3783,7 @@ define i1 @allones_v8i32_and4(<8 x i32> %arg) {
 ; KNL-LABEL: allones_v8i32_and4:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4,4,4,4,4,4,4,4]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    cmpb $-1, %al
 ; KNL-NEXT:    sete %al
@@ -3852,8 +3843,7 @@ define i1 @allzeros_v8i32_and4(<8 x i32> %arg) {
 ; KNL-LABEL: allzeros_v8i32_and4:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4,4,4,4,4,4,4,4]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb %al, %al
 ; KNL-NEXT:    sete %al
@@ -4172,8 +4162,7 @@ define i1 @allones_v4i64_and4(<4 x i64> %arg) {
 ; KNL-LABEL: allones_v4i64_and4:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
-; KNL-NEXT:    vptestmq %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmq {{.*}}(%rip){1to8}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    andb $15, %al
 ; KNL-NEXT:    cmpb $15, %al
@@ -4239,8 +4228,7 @@ define i1 @allzeros_v4i64_and4(<4 x i64> %arg) {
 ; KNL-LABEL: allzeros_v4i64_and4:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
-; KNL-NEXT:    vptestmq %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmq {{.*}}(%rip){1to8}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al

@@ -4,6 +4,12 @@
 ; RUN: opt -S -simplifycfg -switch-to-lookup -mtriple=arm -relocation-model=rwpi      < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 ; RUN: opt -S -simplifycfg -switch-to-lookup -mtriple=arm -relocation-model=ropi-rwpi < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 
+; RUN: opt -S -passes='simplify-cfg<switch-to-lookup>' -mtriple=arm -relocation-model=static    < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
+; RUN: opt -S -passes='simplify-cfg<switch-to-lookup>' -mtriple=arm -relocation-model=pic       < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
+; RUN: opt -S -passes='simplify-cfg<switch-to-lookup>' -mtriple=arm -relocation-model=ropi      < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
+; RUN: opt -S -passes='simplify-cfg<switch-to-lookup>' -mtriple=arm -relocation-model=rwpi      < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
+; RUN: opt -S -passes='simplify-cfg<switch-to-lookup>' -mtriple=arm -relocation-model=ropi-rwpi < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
+
 ; CHECK:       @{{.*}} = private unnamed_addr constant [3 x i32] [i32 1234, i32 5678, i32 15532]
 ; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x i32*] [i32* @c1, i32* @c2, i32* @c3]
 ; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x i32*] [i32* @c1, i32* @c2, i32* @c3]

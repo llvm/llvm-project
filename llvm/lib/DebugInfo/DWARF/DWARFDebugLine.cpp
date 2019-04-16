@@ -426,18 +426,18 @@ void DWARFDebugLine::ParsingState::resetRowAndSequence() {
 }
 
 void DWARFDebugLine::ParsingState::appendRowToMatrix() {
+  unsigned RowNumber = LineTable->Rows.size();
   if (Sequence.Empty) {
     // Record the beginning of instruction sequence.
     Sequence.Empty = false;
     Sequence.LowPC = Row.Address.Address;
     Sequence.FirstRowIndex = RowNumber;
   }
-  ++RowNumber;
   LineTable->appendRow(Row);
   if (Row.EndSequence) {
     // Record the end of instruction sequence.
     Sequence.HighPC = Row.Address.Address;
-    Sequence.LastRowIndex = RowNumber;
+    Sequence.LastRowIndex = RowNumber + 1;
     Sequence.SectionIndex = Row.Address.SectionIndex;
     if (Sequence.isValid())
       LineTable->appendSequence(Sequence);

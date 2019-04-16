@@ -285,6 +285,11 @@ bool SymbolCollector::handleDeclOccurence(
   assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
   assert(CompletionAllocator && CompletionTUInfo);
   assert(ASTNode.OrigD);
+  // Indexing API puts cannonical decl into D, which might not have a valid
+  // source location for implicit/built-in decls. Fallback to original decl in
+  // such cases.
+  if (D->getLocation().isInvalid())
+    D = ASTNode.OrigD;
   // If OrigD is an declaration associated with a friend declaration and it's
   // not a definition, skip it. Note that OrigD is the occurrence that the
   // collector is currently visiting.
@@ -540,6 +545,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   auto Loc = findNameLoc(&ND);
+  assert(Loc.isValid() && "Invalid source location for NamedDecl");
   // FIXME: use the result to filter out symbols.
   shouldIndexFile(SM, SM.getFileID(Loc), Opts, &FilesToIndexCache);
   if (auto DeclLoc =

@@ -1,11 +1,11 @@
 # Test case where input file does not exit.
 RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
-ENOENT: {{.*}}.blah: {{[Nn]}}o such file or directory
+ENOENT: '{{.*}}.blah': {{[Nn]}}o such file or directory
 
 # Test case where input file is too small to be a recognised object file.
 RUN: touch %t.empty
 RUN: not llvm-readobj %t.empty 2>&1 | FileCheck --check-prefix=EMPTY %s
-EMPTY: {{.*}}.empty: The file was not recognized as a valid object file
+EMPTY: '{{.*}}.empty': The file was not recognized as a valid object file
 
 # Test that unrecognised files in archives are ignored.
 RUN: rm -f %t.a

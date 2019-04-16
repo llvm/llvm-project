@@ -109,7 +109,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const FileSystemProvider &FSProvider,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
-    : CDB(CDB), FSProvider(FSProvider),
+    : FSProvider(FSProvider),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
@@ -121,7 +121,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // is parsed.
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
-      WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
+      WorkScheduler(CDB, Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
                     llvm::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(),
                                                             DiagConsumer),
                     Opts.UpdateDebounce, Opts.RetentionPolicy) {
@@ -155,12 +155,8 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
     Opts.ClangTidyOpts = ClangTidyOptProvider->getOptions(File);
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
-  // FIXME: some build systems like Bazel will take time to preparing
-  // environment to build the file, it would be nice if we could emit a
-  // "PreparingBuild" status to inform users, it is non-trivial given the
-  // current implementation.
+  // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
-  Inputs.CompileCommand = getCompileCommand(File);
   Inputs.FS = FSProvider.getFileSystem();
   Inputs.Contents = Contents;
   Inputs.Opts = std::move(Opts);
@@ -541,14 +537,6 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
   };
 
   WorkScheduler.runWithAST("Type Hierarchy", File, Bind(Action, std::move(CB)));
-}
-
-tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {
-  trace::Span Span("GetCompileCommand");
-  llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
-  if (!C) // FIXME: Suppress diagnostics? Let the user know?
-    C = CDB.getFallbackCommand(File);
-  return std::move(*C);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

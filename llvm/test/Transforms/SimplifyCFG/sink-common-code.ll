@@ -1,4 +1,5 @@
 ; RUN: opt < %s -simplifycfg -sink-common-insts -S | FileCheck -enable-var-scope %s
+; RUN: opt < %s -passes='simplify-cfg<sink-common-insts>' -S | FileCheck -enable-var-scope %s
 
 define zeroext i1 @test1(i1 zeroext %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
 entry:

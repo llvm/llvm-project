@@ -118,7 +118,7 @@ private:
 
   void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
-                        StringRef ParentName);
+                        StringRef ParentName, uint64_t OffsetInArchive);
 
   void enqueuePath(StringRef Path, bool WholeArchive);
 

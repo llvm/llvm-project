@@ -14,10 +14,10 @@
 #include "llvm-objdump.h"
 #include "llvm/Object/Wasm.h"
 
-using namespace llvm;
-using namespace object;
+using namespace llvm::object;
 
-void llvm::printWasmFileHeader(const object::ObjectFile *Obj) {
+namespace llvm {
+void printWasmFileHeader(const object::ObjectFile *Obj) {
   const auto *File = dyn_cast<const WasmObjectFile>(Obj);
 
   outs() << "Program Header:\n";
@@ -26,7 +26,7 @@ void llvm::printWasmFileHeader(const object::ObjectFile *Obj) {
   outs() << "\n";
 }
 
-Error llvm::getWasmRelocationValueString(const WasmObjectFile *Obj,
+Error getWasmRelocationValueString(const WasmObjectFile *Obj,
                                          const RelocationRef &RelRef,
                                          SmallVectorImpl<char> &Result) {
   const wasm::WasmRelocation &Rel = Obj->getWasmRelocation(RelRef);
@@ -49,3 +49,4 @@ Error llvm::getWasmRelocationValueString(const WasmObjectFile *Obj,
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }
+} // namespace llvm

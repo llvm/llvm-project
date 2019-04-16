@@ -37,7 +37,9 @@ COFF Improvements
 MinGW Improvements
 ------------------
 
-* ...
+* lld now correctly links crtend.o as the last object file, handling
+  terminators for the sections such as .eh_frame properly, fixing
+  DWARF exception handling with libgcc and gcc's crtend.o.
 
 MachO Improvements
 ------------------

@@ -976,11 +976,11 @@ define i32 @two_range_checks(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[N]], [[LENGTH_1:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 0, [[LENGTH_1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP6]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
@@ -1048,12 +1048,12 @@ define i32 @three_range_checks(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule i32 [[N]], [[LENGTH_1:%.*]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 0, [[LENGTH_1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = and i1 [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = and i1 [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP10]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]

@@ -138,11 +138,12 @@ body:             |
   ; CHECK:   [[COPY12:%[0-9]+]]:vk8 = COPY [[COPY11]]
   ; CHECK: bb.3.exit:
   ; CHECK:   [[PHI:%[0-9]+]]:vk8 = PHI [[COPY12]], %bb.2, [[COPY10]], %bb.1
+  ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY13:%[0-9]+]]:vk32 = COPY [[PHI]]
   ; CHECK:   [[COPY14:%[0-9]+]]:vk1wm = COPY [[COPY13]]
   ; CHECK:   [[COPY15:%[0-9]+]]:vr128x = COPY [[COPY4]]
-  ; CHECK:   [[DEF:%[0-9]+]]:vr128 = IMPLICIT_DEF
-  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF]], [[COPY5]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:vr128 = IMPLICIT_DEF
+  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF1]], [[COPY5]]
   ; CHECK:   [[COPY16:%[0-9]+]]:fr32x = COPY [[VMOVSSZrrk]]
   ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store 4 into %ir.fptr)
   ; CHECK:   RET 0
@@ -273,6 +274,7 @@ body:             |
   ; CHECK:   [[KANDBrr:%[0-9]+]]:vk8 = KANDBrr [[KORBrr]], [[KSHIFTLBri]]
   ; CHECK:   [[KXORBrr:%[0-9]+]]:vk8 = KXORBrr [[KANDBrr]], [[KSHIFTRBri]]
   ; CHECK:   [[KADDBrr:%[0-9]+]]:vk8 = KADDBrr [[KXORBrr]], [[KNOTBrr]]
+  ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY7:%[0-9]+]]:vk32 = COPY [[KADDBrr]]
   ; CHECK:   [[COPY8:%[0-9]+]]:vk8wm = COPY [[COPY7]]
   ; CHECK:   [[VMOVAPDZrrk:%[0-9]+]]:vr512 = VMOVAPDZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]
@@ -391,6 +393,7 @@ body:             |
   ; CHECK:   [[KORWrr:%[0-9]+]]:vk16 = KORWrr [[KNOTWrr]], [[KSHIFTRWri]]
   ; CHECK:   [[KANDWrr:%[0-9]+]]:vk16 = KANDWrr [[KORWrr]], [[KSHIFTLWri]]
   ; CHECK:   [[KXORWrr:%[0-9]+]]:vk16 = KXORWrr [[KANDWrr]], [[KSHIFTRWri]]
+  ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY7:%[0-9]+]]:vk32 = COPY [[KXORWrr]]
   ; CHECK:   [[COPY8:%[0-9]+]]:vk16wm = COPY [[COPY7]]
   ; CHECK:   [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]

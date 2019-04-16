@@ -11,6 +11,7 @@
 
 #include "ClangdUnit.h"
 #include "Function.h"
+#include "GlobalCompilationDatabase.h"
 #include "Threading.h"
 #include "index/CanonicalIncludes.h"
 #include "llvm/ADT/Optional.h"
@@ -125,7 +126,8 @@ public:
 /// FIXME(sammccall): pull out a scheduler options struct.
 class TUScheduler {
 public:
-  TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
+  TUScheduler(const GlobalCompilationDatabase &CDB, unsigned AsyncThreadsCount,
+              bool StorePreamblesInMemory,
               std::unique_ptr<ParsingCallbacks> ASTCallbacks,
               std::chrono::steady_clock::duration UpdateDebounce,
               ASTRetentionPolicy RetentionPolicy);
@@ -141,10 +143,11 @@ public:
   std::vector<Path> getFilesWithCachedAST() const;
 
   /// Schedule an update for \p File. Adds \p File to a list of tracked files if
-  /// \p File was not part of it before.
-  /// If diagnostics are requested (Yes), and the context is cancelled before
-  /// they are prepared, they may be skipped if eventual-consistency permits it
-  /// (i.e. WantDiagnostics is downgraded to Auto).
+  /// \p File was not part of it before. The compile command in \p Inputs is
+  /// ignored; worker queries CDB to get the actual compile command.
+  /// If diagnostics are requested (Yes), and the context is cancelled
+  /// before they are prepared, they may be skipped if eventual-consistency
+  /// permits it (i.e. WantDiagnostics is downgraded to Auto).
   void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
@@ -217,6 +220,7 @@ public:
   static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
 
 private:
+  const GlobalCompilationDatabase &CDB;
   const bool StorePreamblesInMemory;
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;

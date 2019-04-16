@@ -42,12 +42,6 @@ struct DWARFAddressRange {
     return LowPC < RHS.HighPC && RHS.LowPC < HighPC;
   }
 
-  /// Returns true if [LowPC, HighPC) fully contains [RHS.LowPC, RHS.HighPC).
-  bool contains(const DWARFAddressRange &RHS) const {
-    assert(valid() && RHS.valid());
-    return LowPC <= RHS.LowPC && RHS.HighPC <= HighPC;
-  }
-
   void dump(raw_ostream &OS, uint32_t AddressSize,
             DIDumpOptions DumpOpts = {}) const;
 };

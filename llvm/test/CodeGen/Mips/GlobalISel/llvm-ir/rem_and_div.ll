@@ -158,11 +158,10 @@ define signext i8 @udiv_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: udiv_i8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 255
-; MIPS32-NEXT:    and $1, $5, $1
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    and $2, $4, $2
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    and $2, $5, $1
+; MIPS32-NEXT:    and $1, $4, $1
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -177,11 +176,10 @@ define signext i16 @udiv_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: udiv_i16:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 65535
-; MIPS32-NEXT:    and $1, $5, $1
-; MIPS32-NEXT:    ori $2, $zero, 65535
-; MIPS32-NEXT:    and $2, $4, $2
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    and $2, $5, $1
+; MIPS32-NEXT:    and $1, $4, $1
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16
@@ -234,11 +232,10 @@ define signext i8 @urem_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: urem_i8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 255
-; MIPS32-NEXT:    and $1, $5, $1
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    and $2, $4, $2
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    and $2, $5, $1
+; MIPS32-NEXT:    and $1, $4, $1
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mfhi $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -253,11 +250,10 @@ define signext i16 @urem_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: urem_i16:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 65535
-; MIPS32-NEXT:    and $1, $5, $1
-; MIPS32-NEXT:    ori $2, $zero, 65535
-; MIPS32-NEXT:    and $2, $4, $2
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    and $2, $5, $1
+; MIPS32-NEXT:    and $1, $4, $1
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mfhi $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16

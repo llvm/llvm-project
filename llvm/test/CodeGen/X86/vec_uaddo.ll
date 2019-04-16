@@ -1202,14 +1202,13 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k2
-; AVX512-NEXT:    kxnorw %k1, %k0, %k1
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1 {%k1}
+; AVX512-NEXT:    vpslld $31, %xmm1, %xmm0
+; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; AVX512-NEXT:    kxorw %k1, %k0, %k1
+; AVX512-NEXT:    kandnw %k0, %k1, %k2
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    kmovd %k2, %eax
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k2} {z}
+; AVX512-NEXT:    kmovd %k1, %eax
 ; AVX512-NEXT:    movb %al, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<4 x i1>, <4 x i1>} @llvm.uadd.with.overflow.v4i1(<4 x i1> %a0, <4 x i1> %a1)

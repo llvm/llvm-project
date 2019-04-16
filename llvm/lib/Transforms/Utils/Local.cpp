@@ -1666,11 +1666,10 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
-    if (!CI->isNoopCast(DL))
-      return nullptr;
-
-    // No-op casts are irrelevant for debug info.
-    return SrcDIExpr;
+    // No-op casts and zexts are irrelevant for debug info.
+    if (CI->isNoopCast(DL) || isa<ZExtInst>(&I))
+      return SrcDIExpr;
+    return nullptr;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
         M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
@@ -2885,4 +2884,42 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
         return false;
     return true;
   }
+}
+
+using AllocaForValueMapTy = DenseMap<Value *, AllocaInst *>;
+AllocaInst *llvm::findAllocaForValue(Value *V,
+                                     AllocaForValueMapTy &AllocaForValue) {
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
+    return AI;
+  // See if we've already calculated (or started to calculate) alloca for a
+  // given value.
+  AllocaForValueMapTy::iterator I = AllocaForValue.find(V);
+  if (I != AllocaForValue.end())
+    return I->second;
+  // Store 0 while we're calculating alloca for value V to avoid
+  // infinite recursion if the value references itself.
+  AllocaForValue[V] = nullptr;
+  AllocaInst *Res = nullptr;
+  if (CastInst *CI = dyn_cast<CastInst>(V))
+    Res = findAllocaForValue(CI->getOperand(0), AllocaForValue);
+  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    for (Value *IncValue : PN->incoming_values()) {
+      // Allow self-referencing phi-nodes.
+      if (IncValue == PN)
+        continue;
+      AllocaInst *IncValueAI = findAllocaForValue(IncValue, AllocaForValue);
+      // AI for incoming values should exist and should all be equal.
+      if (IncValueAI == nullptr || (Res != nullptr && IncValueAI != Res))
+        return nullptr;
+      Res = IncValueAI;
+    }
+  } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
+    Res = findAllocaForValue(EP->getPointerOperand(), AllocaForValue);
+  } else {
+    LLVM_DEBUG(dbgs() << "Alloca search cancelled on unknown instruction: "
+                      << *V << "\n");
+  }
+  if (Res)
+    AllocaForValue[V] = Res;
+  return Res;
 }

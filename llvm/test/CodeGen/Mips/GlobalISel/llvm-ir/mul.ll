@@ -124,40 +124,34 @@ define i128 @mul_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    and $11, $11, $13
 ; MIPS32-NEXT:    addu $10, $10, $12
 ; MIPS32-NEXT:    sltu $12, $10, $12
-; MIPS32-NEXT:    ori $13, $zero, 1
 ; MIPS32-NEXT:    and $12, $12, $13
 ; MIPS32-NEXT:    addu $11, $11, $12
 ; MIPS32-NEXT:    mul $12, $3, $4
-; MIPS32-NEXT:    mul $13, $2, $5
-; MIPS32-NEXT:    mul $14, $1, $6
+; MIPS32-NEXT:    mul $14, $2, $5
+; MIPS32-NEXT:    mul $15, $1, $6
 ; MIPS32-NEXT:    multu $2, $4
-; MIPS32-NEXT:    mfhi $15
-; MIPS32-NEXT:    multu $1, $5
 ; MIPS32-NEXT:    mfhi $24
-; MIPS32-NEXT:    addu $12, $12, $13
-; MIPS32-NEXT:    sltu $13, $12, $13
-; MIPS32-NEXT:    ori $25, $zero, 1
-; MIPS32-NEXT:    and $13, $13, $25
+; MIPS32-NEXT:    multu $1, $5
+; MIPS32-NEXT:    mfhi $25
 ; MIPS32-NEXT:    addu $12, $12, $14
 ; MIPS32-NEXT:    sltu $14, $12, $14
-; MIPS32-NEXT:    ori $25, $zero, 1
-; MIPS32-NEXT:    and $14, $14, $25
-; MIPS32-NEXT:    addu $13, $13, $14
+; MIPS32-NEXT:    and $14, $14, $13
 ; MIPS32-NEXT:    addu $12, $12, $15
-; MIPS32-NEXT:    sltu $14, $12, $15
-; MIPS32-NEXT:    ori $15, $zero, 1
-; MIPS32-NEXT:    and $14, $14, $15
-; MIPS32-NEXT:    addu $13, $13, $14
+; MIPS32-NEXT:    sltu $15, $12, $15
+; MIPS32-NEXT:    and $15, $15, $13
+; MIPS32-NEXT:    addu $14, $14, $15
 ; MIPS32-NEXT:    addu $12, $12, $24
-; MIPS32-NEXT:    sltu $14, $12, $24
-; MIPS32-NEXT:    ori $15, $zero, 1
-; MIPS32-NEXT:    and $14, $14, $15
-; MIPS32-NEXT:    addu $13, $13, $14
+; MIPS32-NEXT:    sltu $15, $12, $24
+; MIPS32-NEXT:    and $15, $15, $13
+; MIPS32-NEXT:    addu $14, $14, $15
+; MIPS32-NEXT:    addu $12, $12, $25
+; MIPS32-NEXT:    sltu $15, $12, $25
+; MIPS32-NEXT:    and $15, $15, $13
+; MIPS32-NEXT:    addu $14, $14, $15
 ; MIPS32-NEXT:    addu $12, $12, $11
 ; MIPS32-NEXT:    sltu $11, $12, $11
-; MIPS32-NEXT:    ori $14, $zero, 1
-; MIPS32-NEXT:    and $11, $11, $14
-; MIPS32-NEXT:    addu $11, $13, $11
+; MIPS32-NEXT:    and $11, $11, $13
+; MIPS32-NEXT:    addu $11, $14, $11
 ; MIPS32-NEXT:    mul $8, $8, $4
 ; MIPS32-NEXT:    mul $13, $3, $5
 ; MIPS32-NEXT:    mul $14, $2, $6

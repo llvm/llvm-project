@@ -4092,6 +4092,10 @@ def SLBMFEV : XLForm_1_gen<31, 851, (outs gprc:$RT), (ins gprc:$RB),
 
 def SLBIA : XForm_0<31, 498, (outs), (ins), "slbia", IIC_SprSLBIA, []>;
 
+let Defs = [CR0] in
+def SLBFEEo : XForm_26<31, 979, (outs gprc:$RT), (ins gprc:$RB),
+                         "slbfee. $RT, $RB", IIC_SprSLBFEE, []>, isDOT;
+
 def TLBIA : XForm_0<31, 370, (outs), (ins),
                         "tlbia", IIC_SprTLBIA, []>;
 

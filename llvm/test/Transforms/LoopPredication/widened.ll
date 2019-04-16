@@ -20,6 +20,7 @@ define i64 @iv_wider_type_rc_two_narrow_types(i32 %offA, i16 %offB, i8* %arrA, i
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule i32 16, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[OFFA]], [[LENGTHA]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -27,7 +28,6 @@ define i64 @iv_wider_type_rc_two_narrow_types(i32 %offA, i16 %offB, i8* %arrA, i
 ; CHECK-NEXT:    [[IV_TRUNC_16:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[INDEXA:%.*]] = add i32 [[IV_TRUNC_32]], [[OFFA]]
 ; CHECK-NEXT:    [[INDEXB:%.*]] = add i16 [[IV_TRUNC_16]], [[OFFB]]
-; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP8]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDEXA_EXT:%.*]] = zext i32 [[INDEXA]] to i64
 ; CHECK-NEXT:    [[ADDRA:%.*]] = getelementptr inbounds i8, i8* [[ARRA]], i64 [[INDEXA_EXT]]
@@ -93,14 +93,14 @@ define i64 @iv_rc_different_types(i32 %offA, i32 %offB, i8* %arrA, i8* %arrB, i6
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ule i32 15, [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i32 [[OFFA]], [[LENGTHA]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = and i1 [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = and i1 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    [[INDEXA:%.*]] = add i32 [[IV_TRUNC]], [[OFFA]]
 ; CHECK-NEXT:    [[INDEXB:%.*]] = add i32 [[IV_TRUNC]], [[OFFB]]
-; CHECK-NEXT:    [[TMP14:%.*]] = and i1 [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP15:%.*]] = and i1 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP15]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDEXA_EXT:%.*]] = zext i32 [[INDEXA]] to i64
 ; CHECK-NEXT:    [[ADDRA:%.*]] = getelementptr inbounds i8, i8* [[ARRA]], i64 [[INDEXA_EXT]]
