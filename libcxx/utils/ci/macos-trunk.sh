@@ -144,8 +144,8 @@ echo "@@@@@@"
 
 
 echo "@@@ Building libc++.dylib and libc++abi.dylib from sources (just to make sure it works) @@@"
-ninja -C "${LIBCXX_BUILD_DIR}" install-cxx
-ninja -C "${LIBCXXABI_BUILD_DIR}" install-cxxabi
+ninja -C "${LIBCXX_BUILD_DIR}" install-cxx -v
+ninja -C "${LIBCXXABI_BUILD_DIR}" install-cxxabi -v
 echo "@@@@@@"
 
 

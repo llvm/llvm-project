@@ -1,10 +1,11 @@
 add_subdirectory(argdumper)
 add_subdirectory(driver)
 add_subdirectory(intel-features)
-add_subdirectory(lldb-instr)
 add_subdirectory(lldb-mi)
 add_subdirectory(lldb-test)
-add_subdirectory(lldb-vscode)
+
+add_lldb_tool_subdirectory(lldb-instr)
+add_lldb_tool_subdirectory(lldb-vscode)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   add_subdirectory(darwin-debug)
