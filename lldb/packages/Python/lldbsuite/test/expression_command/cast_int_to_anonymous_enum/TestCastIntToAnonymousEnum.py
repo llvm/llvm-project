@@ -1,0 +1,22 @@
+"""
+Test Expression Parser regression text to ensure that we handle anonymous
+enums importing correctly.
+"""
+
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+
+class TestCastIntToAnonymousEnum(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+
+    def test_cast_int_to_anonymous_enum(self):
+        self.build()
+
+        lldbutil.run_to_source_breakpoint(self, '// break here',
+                lldb.SBFileSpec("main.cpp", False))
+
+        self.expect("expr (flow_e)0", substrs=['(flow_e) $0 = A'])

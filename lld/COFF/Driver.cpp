@@ -169,13 +169,13 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
           CHECK(Archive::create(MBRef), Filename + ": failed to parse archive");
 
       for (MemoryBufferRef M : getArchiveMembers(File.get()))
-        addArchiveBuffer(M, "<whole-archive>", Filename);
+        addArchiveBuffer(M, "<whole-archive>", Filename, 0);
       return;
     }
     Symtab->addFile(make<ArchiveFile>(MBRef));
     break;
   case file_magic::bitcode:
-    Symtab->addFile(make<BitcodeFile>(MBRef));
+    Symtab->addFile(make<BitcodeFile>(MBRef, "", 0));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
@@ -211,7 +211,8 @@ void LinkerDriver::enqueuePath(StringRef Path, bool WholeArchive) {
 }
 
 void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
-                                    StringRef ParentName) {
+                                    StringRef ParentName,
+                                    uint64_t OffsetInArchive) {
   file_magic Magic = identify_magic(MB.getBuffer());
   if (Magic == file_magic::coff_import_library) {
     InputFile *Imp = make<ImportFile>(MB);
@@ -224,7 +225,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
   if (Magic == file_magic::coff_object) {
     Obj = make<ObjFile>(MB);
   } else if (Magic == file_magic::bitcode) {
-    Obj = make<BitcodeFile>(MB);
+    Obj = make<BitcodeFile>(MB, ParentName, OffsetInArchive);
   } else {
     error("unknown file type: " + MB.getBufferIdentifier());
     return;
@@ -247,11 +248,14 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
   };
 
   if (!C.getParent()->isThin()) {
+    uint64_t OffsetInArchive = C.getChildOffset();
     Expected<MemoryBufferRef> MBOrErr = C.getMemoryBufferRef();
     if (!MBOrErr)
       ReportBufferError(MBOrErr.takeError(), check(C.getFullName()));
     MemoryBufferRef MB = MBOrErr.get();
-    enqueueTask([=]() { Driver->addArchiveBuffer(MB, SymName, ParentName); });
+    enqueueTask([=]() {
+      Driver->addArchiveBuffer(MB, SymName, ParentName, OffsetInArchive);
+    });
     return;
   }
 
@@ -266,7 +270,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
     if (MBOrErr.second)
       ReportBufferError(errorCodeToError(MBOrErr.second), ChildName);
     Driver->addArchiveBuffer(takeBuffer(std::move(MBOrErr.first)), SymName,
-                             ParentName);
+                             ParentName, /* OffsetInArchive */ 0);
   });
 }
 
