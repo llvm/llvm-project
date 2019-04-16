@@ -125,8 +125,6 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromData(
   return valobj_sp;
 }
 
-#ifndef LLDB_DISABLE_PYTHON
-
 ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
                                               ValueObject &backend)
     : SyntheticChildrenFrontEnd(backend), m_python_class(pclass),
@@ -218,5 +216,3 @@ std::string ScriptedSyntheticChildren::GetDescription() {
 
   return sstr.GetString();
 }
-
-#endif // #ifndef LLDB_DISABLE_PYTHON

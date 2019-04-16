@@ -359,7 +359,6 @@ FormatManager::GetFilterForType(lldb::TypeNameSpecifierImplSP type_sp) {
   return filter_chosen_sp;
 }
 
-#ifndef LLDB_DISABLE_PYTHON
 lldb::ScriptedSyntheticChildrenSP
 FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
   if (!type_sp)
@@ -384,21 +383,6 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
   }
   return synth_chosen_sp;
 }
-#endif
-
-#ifndef LLDB_DISABLE_PYTHON
-lldb::SyntheticChildrenSP FormatManager::GetSyntheticChildrenForType(
-    lldb::TypeNameSpecifierImplSP type_sp) {
-  if (!type_sp)
-    return lldb::SyntheticChildrenSP();
-  lldb::TypeFilterImplSP filter_sp = GetFilterForType(type_sp);
-  lldb::ScriptedSyntheticChildrenSP synth_sp = GetSyntheticForType(type_sp);
-  if (filter_sp->GetRevision() > synth_sp->GetRevision())
-    return lldb::SyntheticChildrenSP(filter_sp.get());
-  else
-    return lldb::SyntheticChildrenSP(synth_sp.get());
-}
-#endif
 
 lldb::TypeValidatorImplSP
 FormatManager::GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp) {
@@ -789,7 +773,6 @@ FormatManager::GetSummaryFormat(ValueObject &valobj,
   return retval;
 }
 
-#ifndef LLDB_DISABLE_PYTHON
 lldb::SyntheticChildrenSP
 FormatManager::GetHardcodedSyntheticChildren(FormattersMatchData &match_data) {
   SyntheticChildrenSP retval_sp;
@@ -868,7 +851,6 @@ FormatManager::GetSyntheticChildren(ValueObject &valobj,
             m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
   return retval;
 }
-#endif
 
 lldb::TypeValidatorImplSP
 FormatManager::GetValidator(ValueObject &valobj,
@@ -1025,14 +1007,12 @@ void FormatManager::LoadSystemFormatters() {
   sys_category_sp->GetTypeSummariesContainer()->Add(ConstString("OSType"),
                                                     ostype_summary);
 
-#ifndef LLDB_DISABLE_PYTHON
   TypeFormatImpl::Flags fourchar_flags;
   fourchar_flags.SetCascades(true).SetSkipPointers(true).SetSkipReferences(
       true);
 
   AddFormat(sys_category_sp, lldb::eFormatOSType, ConstString("FourCharCode"),
             fourchar_flags);
-#endif
 }
 
 void FormatManager::LoadVectorFormatters() {
