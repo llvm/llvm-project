@@ -128,12 +128,6 @@ set(ppc_wrapper_files
   ppc_wrappers/mmintrin.h
 )
 
-set(sycl_wrapper_files
-  sycl_wrappers/algorithm
-  sycl_wrappers/random
-  sycl_wrappers/__config
-)
-
 set(openmp_wrapper_files
   openmp_wrappers/math.h
   openmp_wrappers/cmath
@@ -200,12 +194,6 @@ install(
   FILES ${ppc_wrapper_files}
   DESTINATION ${header_install_dir}/ppc_wrappers
   COMPONENT clang-resource-headers)
-
-install(
-  FILES ${sycl_wrapper_files}
-  COMPONENT clang-resource-headers
-  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-  DESTINATION lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include/sycl_wrappers)
 
 install(
   FILES ${openmp_wrapper_files}
