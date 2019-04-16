@@ -717,10 +717,12 @@ getDataSharingMode(CodeGenModule &CGM) {
 /// Check if the parallel directive has an 'if' clause with non-constant or
 /// false condition.
 static bool hasParallelIfClause(ASTContext &Ctx,
-                                const OMPExecutableDirective &D) {
+                                const OMPExecutableDirective &D,
+                                bool StandaloneParallel) {
   for (const auto *C : D.getClausesOfKind<OMPIfClause>()) {
     OpenMPDirectiveKind NameModifier = C->getNameModifier();
-    if (NameModifier != OMPD_parallel && NameModifier != OMPD_unknown)
+    if (NameModifier != OMPD_parallel &&
+        (!StandaloneParallel || NameModifier != OMPD_unknown))
       continue;
     const Expr *Cond = C->getCondition();
     bool Result;
@@ -744,7 +746,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     switch (D.getDirectiveKind()) {
     case OMPD_target:
       if (isOpenMPParallelDirective(DKind) &&
-          !hasParallelIfClause(Ctx, *NestedDir))
+          !hasParallelIfClause(Ctx, *NestedDir, /*StandaloneParallel=*/true))
         return true;
       if (DKind == OMPD_teams) {
         Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
@@ -756,14 +758,14 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
                 dyn_cast_or_null<OMPExecutableDirective>(ChildStmt)) {
           DKind = NND->getDirectiveKind();
           if (isOpenMPParallelDirective(DKind) &&
-              !hasParallelIfClause(Ctx, *NND))
+              !hasParallelIfClause(Ctx, *NND, /*StandaloneParallel=*/true))
             return true;
         }
       }
       return false;
     case OMPD_target_teams:
       return isOpenMPParallelDirective(DKind) &&
-             !hasParallelIfClause(Ctx, *NestedDir);
+             !hasParallelIfClause(Ctx, *NestedDir, /*StandaloneParallel=*/true);
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
@@ -837,7 +839,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target_parallel_for_simd:
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
-    return !hasParallelIfClause(Ctx, D);
+    return !hasParallelIfClause(Ctx, D, /*StandaloneParallel=*/false);
   case OMPD_target_simd:
   case OMPD_target_teams_distribute:
   case OMPD_target_teams_distribute_simd:

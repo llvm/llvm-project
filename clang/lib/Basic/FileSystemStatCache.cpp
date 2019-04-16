@@ -30,25 +30,24 @@ void FileSystemStatCache::anchor() {}
 /// success for directories (not files).  On a successful file lookup, the
 /// implementation can optionally fill in FileDescriptor with a valid
 /// descriptor and the client guarantees that it will close it.
-bool FileSystemStatCache::get(StringRef Path, llvm::vfs::Status &Status,
-                              bool isFile,
-                              std::unique_ptr<llvm::vfs::File> *F,
-                              FileSystemStatCache *Cache,
-                              llvm::vfs::FileSystem &FS) {
-  LookupResult R;
+std::error_code
+FileSystemStatCache::get(StringRef Path, llvm::vfs::Status &Status,
+                         bool isFile, std::unique_ptr<llvm::vfs::File> *F,
+                         FileSystemStatCache *Cache,
+                         llvm::vfs::FileSystem &FS) {
   bool isForDir = !isFile;
+  std::error_code RetCode;
 
   // If we have a cache, use it to resolve the stat query.
   if (Cache)
-    R = Cache->getStat(Path, Status, isFile, F, FS);
+    RetCode = Cache->getStat(Path, Status, isFile, F, FS);
   else if (isForDir || !F) {
     // If this is a directory or a file descriptor is not needed and we have
     // no cache, just go to the file system.
     llvm::ErrorOr<llvm::vfs::Status> StatusOrErr = FS.status(Path);
     if (!StatusOrErr) {
-      R = CacheMissing;
+      RetCode = StatusOrErr.getError();
     } else {
-      R = CacheExists;
       Status = *StatusOrErr;
     }
   } else {
@@ -63,27 +62,27 @@ bool FileSystemStatCache::get(StringRef Path, llvm::vfs::Status &Status,
 
     if (!OwnedFile) {
       // If the open fails, our "stat" fails.
-      R = CacheMissing;
+      RetCode = OwnedFile.getError();
     } else {
       // Otherwise, the open succeeded.  Do an fstat to get the information
       // about the file.  We'll end up returning the open file descriptor to the
       // client to do what they please with it.
       llvm::ErrorOr<llvm::vfs::Status> StatusOrErr = (*OwnedFile)->status();
       if (StatusOrErr) {
-        R = CacheExists;
         Status = *StatusOrErr;
         *F = std::move(*OwnedFile);
       } else {
         // fstat rarely fails.  If it does, claim the initial open didn't
         // succeed.
-        R = CacheMissing;
         *F = nullptr;
+        RetCode = StatusOrErr.getError();
       }
     }
   }
 
   // If the path doesn't exist, return failure.
-  if (R == CacheMissing) return true;
+  if (RetCode)
+    return RetCode;
 
   // If the path exists, make sure that its "directoryness" matches the clients
   // demands.
@@ -91,29 +90,31 @@ bool FileSystemStatCache::get(StringRef Path, llvm::vfs::Status &Status,
     // If not, close the file if opened.
     if (F)
       *F = nullptr;
-
-    return true;
+    return std::make_error_code(
+        Status.isDirectory() ?
+            std::errc::is_a_directory : std::errc::not_a_directory);
   }
 
-  return false;
+  return std::error_code();
 }
 
-MemorizeStatCalls::LookupResult
+std::error_code
 MemorizeStatCalls::getStat(StringRef Path, llvm::vfs::Status &Status,
                            bool isFile,
                            std::unique_ptr<llvm::vfs::File> *F,
                            llvm::vfs::FileSystem &FS) {
-  if (get(Path, Status, isFile, F, nullptr, FS)) {
+  auto err = get(Path, Status, isFile, F, nullptr, FS);
+  if (err) {
     // Do not cache failed stats, it is easy to construct common inconsistent
     // situations if we do, and they are not important for PCH performance
     // (which currently only needs the stats to construct the initial
     // FileManager entries).
-    return CacheMissing;
+    return err;
   }
 
   // Cache file 'stat' results and directories with absolutely paths.
   if (!Status.isDirectory() || llvm::sys::path::is_absolute(Path))
     StatCalls[Path] = Status;
 
-  return CacheExists;
+  return std::error_code();
 }
