@@ -244,6 +244,8 @@ module Opcode  = struct
   | CatchPad
   | CleanupPad
   | CatchSwitch
+  | FNeg
+  | CallBr
 end
 
 module LandingPadClauseTy = struct

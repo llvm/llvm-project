@@ -9,15 +9,8 @@
 
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-
-#include "pstl/execution"
-#include "pstl/memory"
-#include "pstl/algorithm"
-#else
 #include <execution>
-#include <algorithm>
-#endif // PSTL_STANDALONE_TESTS
+#include <memory>
 
 #include "support/utils.h"
 

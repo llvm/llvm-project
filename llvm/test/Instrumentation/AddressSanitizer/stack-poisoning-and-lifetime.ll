@@ -209,6 +209,42 @@ entry:
   ; CHECK: ret void
 }
 
+declare void @foo(i32*)
+define void @PR41481(i1 %b) sanitize_address {
+; CHECK-LABEL: @PR41481
+entry:
+  %p1 = alloca i32
+  %p2 = alloca i32
+  %q1 = bitcast i32* %p1 to i8*
+  %q2 = bitcast i32* %p2 to i8*
+  br label %bb1
+
+  ; Since we cannot account for all lifetime intrinsics in this function, we
+  ; might have missed a lifetime.start one and therefore shouldn't poison the
+  ; allocas at function entry.
+  ; ENTRY: store i64 -935356719533264399
+  ; ENTRY-UAS: store i64 -935356719533264399
+
+bb1:
+  %p = select i1 %b, i32* %p1, i32* %p2
+  %q = select i1 %b, i8*  %q1, i8*  %q2
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %q)
+  call void @foo(i32* %p)
+  br i1 %b, label %bb2, label %bb3
+
+bb2:
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %q1)
+  br label %end
+
+bb3:
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %q2)
+  br label %end
+
+end:
+  ret void
+}
+
+
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
