@@ -9,13 +9,8 @@
 
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-#include "pstl/execution"
-#include "pstl/numeric"
-#else
 #include <execution>
 #include <numeric>
-#endif // PSTL_STANDALONE_TESTS
 
 #include "support/utils.h"
 

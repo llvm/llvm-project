@@ -76,26 +76,11 @@ template <typename T> static constexpr size_t hex_digits() {
   return 2 * sizeof(T);
 }
 
-/// Consume the right number of digits from the input StringRef and convert it
-/// to the endian-specific integer N. Return true on success.
-template <typename T> static bool consume_hex_integer(llvm::StringRef &str, T &N) {
-  llvm::StringRef chunk = str.take_front(hex_digits<T>());
-  uintmax_t t;
-  if (!to_integer(chunk, t, 16))
-    return false;
-  N = t;
-  str = str.drop_front(hex_digits<T>());
-  return true;
-}
-
 static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
   struct data_t {
-    struct uuid_t {
-      llvm::support::ulittle32_t part1;
-      llvm::support::ulittle16_t part2[2];
-      uint8_t part3[8];
-    } uuid;
-    llvm::support::ulittle32_t age;
+    using uuid_t = uint8_t[16];
+    uuid_t uuid;
+    llvm::support::ubig32_t age;
   } data;
   static_assert(sizeof(data) == 20, "");
   // The textual module id encoding should be between 33 and 40 bytes long,
@@ -105,19 +90,17 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
   if (str.size() <= hex_digits<data_t::uuid_t>() ||
       str.size() > hex_digits<data_t>())
     return UUID();
-  if (!consume_hex_integer(str, data.uuid.part1))
+  if (!all_of(str, llvm::isHexDigit))
     return UUID();
-  for (auto &t : data.uuid.part2) {
-    if (!consume_hex_integer(str, t))
-      return UUID();
-  }
-  for (auto &t : data.uuid.part3) {
-    if (!consume_hex_integer(str, t))
-      return UUID();
-  }
+
+  llvm::StringRef uuid_str = str.take_front(hex_digits<data_t::uuid_t>());
+  llvm::StringRef age_str = str.drop_front(hex_digits<data_t::uuid_t>());
+
+  llvm::copy(fromHex(uuid_str), data.uuid);
   uint32_t age;
-  if (!to_integer(str, age, 16))
-    return UUID();
+  bool success = to_integer(age_str, age, 16);
+  assert(success);
+  (void)success;
   data.age = age;
 
   // On non-windows, the age field should always be zero, so we don't include to
