@@ -13,10 +13,9 @@ template<> struct import<0> {
 };
 
 // OK, not an import-declaration.
-// FIXME: This is valid, see PR41192
-struct A {} // FIXME expected-error {{expected ';'}}
+struct A {}
 ::import
-<empty.h>::a; // FIXME expected-error {{requires a type specifier}}
+<empty.h>::a;
 
 // This is invalid: the tokens after 'import' are a header-name, so cannot be
 // parsed as a template-argument-list.

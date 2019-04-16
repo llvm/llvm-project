@@ -1021,7 +1021,7 @@ define i64 @btr_64_mask_zeros(i64 %x, i64 %n) {
 ; X64-LABEL: btr_64_mask_zeros:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shlq $2, %rsi
+; X64-NEXT:    shll $2, %esi
 ; X64-NEXT:    btrq %rsi, %rax
 ; X64-NEXT:    retq
 ;
@@ -1056,7 +1056,7 @@ define i64 @bts_64_mask_zeros(i64 %x, i64 %n) {
 ; X64-LABEL: bts_64_mask_zeros:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shlq $2, %rsi
+; X64-NEXT:    shll $2, %esi
 ; X64-NEXT:    btsq %rsi, %rax
 ; X64-NEXT:    retq
 ;
@@ -1088,7 +1088,7 @@ define i64 @btc_64_mask_zeros(i64 %x, i64 %n) {
 ; X64-LABEL: btc_64_mask_zeros:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shlq $2, %rsi
+; X64-NEXT:    shll $2, %esi
 ; X64-NEXT:    btcq %rsi, %rax
 ; X64-NEXT:    retq
 ;

@@ -1179,101 +1179,49 @@ __m256i test_mm256_maskz_adds_epu16(__mmask16 __U, __m256i __A, __m256i __B) {
 }
 __m128i test_mm_mask_avg_epu8(__m128i __W, __mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_avg_epu8
-  // CHECK-NOT: @llvm.x86.sse2.pavg.b
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: add <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: add <16 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: lshr <16 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: @llvm.x86.sse2.pavg.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_mask_avg_epu8(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_avg_epu8(__mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_avg_epu8
-  // CHECK-NOT: @llvm.x86.sse2.pavg.b
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: add <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: add <16 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: lshr <16 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
-  // CHECK: store <2 x i64> zeroinitializer
+  // CHECK: @llvm.x86.sse2.pavg.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_maskz_avg_epu8(__U,__A,__B); 
 }
 __m256i test_mm256_mask_avg_epu8(__m256i __W, __mmask32 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_avg_epu8
-  // CHECK-NOT: @llvm.x86.avx2.pavg.b
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: add <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: add <32 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: lshr <32 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: @llvm.x86.avx2.pavg.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_mask_avg_epu8(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_avg_epu8(__mmask32 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_avg_epu8
-  // CHECK-NOT: @llvm.x86.avx2.pavg.b
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: add <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: add <32 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: lshr <32 x i16> %{{.*}}, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
-  // CHECK: store <4 x i64> zeroinitializer
+  // CHECK: @llvm.x86.avx2.pavg.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_maskz_avg_epu8(__U,__A,__B); 
 }
 __m128i test_mm_mask_avg_epu16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_avg_epu16
-  // CHECK-NOT: @llvm.x86.sse2.pavg.w
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: add <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: add <8 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: lshr <8 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
+  // CHECK: @llvm.x86.sse2.pavg.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_avg_epu16(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_avg_epu16(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_avg_epu16
-  // CHECK-NOT: @llvm.x86.sse2.pavg.w
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: add <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: add <8 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: lshr <8 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
-  // CHECK: store <2 x i64> zeroinitializer
+  // CHECK: @llvm.x86.sse2.pavg.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_avg_epu16(__U,__A,__B); 
 }
 __m256i test_mm256_mask_avg_epu16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_avg_epu16
-  // CHECK-NOT: @llvm.x86.avx2.pavg.w
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: add <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: add <16 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: lshr <16 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
+  // CHECK: @llvm.x86.avx2.pavg.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_avg_epu16(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_avg_epu16(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_avg_epu16
-  // CHECK-NOT: @llvm.x86.avx2.pavg.w
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: add <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: add <16 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: lshr <16 x i32> %{{.*}}, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
-  // CHECK: store <4 x i64> zeroinitializer
+  // CHECK: @llvm.x86.avx2.pavg.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_avg_epu16(__U,__A,__B); 
 }

@@ -71,6 +71,7 @@ class Loop;
 class LoopAccessInfo;
 class LoopInfo;
 class OptimizationRemarkEmitter;
+class ProfileSummaryInfo;
 class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
@@ -96,6 +97,7 @@ struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
   AssumptionCache *AC;
   std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
   OptimizationRemarkEmitter *ORE;
+  ProfileSummaryInfo *PSI;
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
@@ -105,7 +107,7 @@ struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
                BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
                DemandedBits &DB_, AliasAnalysis &AA_, AssumptionCache &AC_,
                std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
-               OptimizationRemarkEmitter &ORE);
+               OptimizationRemarkEmitter &ORE_, ProfileSummaryInfo *PSI_);
 
   bool processLoop(Loop *L);
 };

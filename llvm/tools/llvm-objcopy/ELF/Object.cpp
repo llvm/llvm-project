@@ -486,20 +486,28 @@ void SymbolTableSection::finalize() {
 }
 
 void SymbolTableSection::prepareForLayout() {
-  // Add all potential section indexes before file layout so that the section
-  // index section has the approprite size.
-  if (SectionIndexTable != nullptr) {
-    for (const auto &Sym : Symbols) {
-      if (Sym->DefinedIn != nullptr && Sym->DefinedIn->Index >= SHN_LORESERVE)
-        SectionIndexTable->addIndex(Sym->DefinedIn->Index);
-      else
-        SectionIndexTable->addIndex(SHN_UNDEF);
-    }
-  }
+  // Reserve proper amount of space in section index table, so we can
+  // layout sections correctly. We will fill the table with correct
+  // indexes later in fillShdnxTable.
+  if (SectionIndexTable)  
+    SectionIndexTable->reserve(Symbols.size());
   // Add all of our strings to SymbolNames so that SymbolNames has the right
   // size before layout is decided.
   for (auto &Sym : Symbols)
     SymbolNames->addString(Sym->Name);
+}
+
+void SymbolTableSection::fillShndxTable() {
+  if (SectionIndexTable == nullptr)
+    return;
+  // Fill section index table with real section indexes. This function must
+  // be called after assignOffsets.
+  for (const auto &Sym : Symbols) {
+    if (Sym->DefinedIn != nullptr && Sym->DefinedIn->Index >= SHN_LORESERVE)
+      SectionIndexTable->addIndex(Sym->DefinedIn->Index);
+    else
+      SectionIndexTable->addIndex(SHN_UNDEF);
+  }
 }
 
 const Symbol *SymbolTableSection::getSymbolByIndex(uint32_t Index) const {
@@ -1660,6 +1668,11 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
       StrTab->prepareForLayout();
 
   assignOffsets();
+
+  // layoutSections could have modified section indexes, so we need
+  // to fill the index table after assignOffsets.
+  if (Obj.SymbolTable != nullptr)
+    Obj.SymbolTable->fillShndxTable();
 
   // Finally now that all offsets and indexes have been set we can finalize any
   // remaining issues.

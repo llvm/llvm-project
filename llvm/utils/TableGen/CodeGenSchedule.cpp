@@ -1935,7 +1935,8 @@ void CodeGenSchedModels::checkCompleteness() {
         if (Inst->TheDef->isValueUnset("SchedRW") && !HadCompleteModel) {
           PrintError(Inst->TheDef->getLoc(),
                      "No schedule information for instruction '" +
-                         Inst->TheDef->getName() + "'");
+                         Inst->TheDef->getName() + "' in SchedMachineModel '" +
+                     ProcModel.ModelDef->getName() + "'");
           Complete = false;
         }
         continue;

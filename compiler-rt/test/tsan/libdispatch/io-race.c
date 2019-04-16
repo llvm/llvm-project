@@ -1,11 +1,11 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %deflake %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: disabled
 
-#import <Foundation/Foundation.h>
+#include <dispatch/dispatch.h>
 
-#import "../test.h"
+#include "../test.h"
 
 dispatch_queue_t queue;
 dispatch_data_t data;
@@ -21,8 +21,7 @@ int main(int argc, const char *argv[]) {
   
   queue = dispatch_queue_create("my.queue", DISPATCH_QUEUE_CONCURRENT);
   sem = dispatch_semaphore_create(0);
-  NSString *ns_path = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp-gcd-io.%d", getpid()]];
-  path = ns_path.fileSystemRepresentation;
+  path = tempnam(NULL, "libdispatch-io-race");
   char buf[1000];
   data = dispatch_data_create(buf, sizeof(buf), NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
   
@@ -52,5 +51,5 @@ int main(int argc, const char *argv[]) {
 // CHECK: Hello world.
 // CHECK: addr=[[ADDR:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK: Location is global 'my_global' {{(of size 8 )?}}at [[ADDR]] (gcd-io-race.mm.tmp+0x{{[0-9,a-f]+}})
+// CHECK: Location is global 'my_global' {{(of size 8 )?}}at [[ADDR]] (io-race.c.tmp+0x{{[0-9,a-f]+}})
 // CHECK: Done.

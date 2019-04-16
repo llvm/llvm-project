@@ -2621,43 +2621,39 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
   getCheckerManager().runCheckersForPostStmt(Dst, AfterInvalidateSet, AE, *this);
 }
 
-// A value escapes in three possible cases:
+// A value escapes in four possible cases:
 // (1) We are binding to something that is not a memory region.
-// (2) We are binding to a MemrRegion that does not have stack storage.
-// (3) We are binding to a MemRegion with stack storage that the store
+// (2) We are binding to a MemRegion that does not have stack storage.
+// (3) We are binding to a top-level parameter region with a non-trivial
+//     destructor. We won't see the destructor during analysis, but it's there.
+// (4) We are binding to a MemRegion with stack storage that the store
 //     does not understand.
-ProgramStateRef ExprEngine::processPointerEscapedOnBind(ProgramStateRef State,
-                                                        SVal Loc,
-                                                        SVal Val,
-                                                        const LocationContext *LCtx) {
-  // Are we storing to something that causes the value to "escape"?
-  bool escapes = true;
+ProgramStateRef
+ExprEngine::processPointerEscapedOnBind(ProgramStateRef State, SVal Loc,
+                                        SVal Val, const LocationContext *LCtx) {
 
-  // TODO: Move to StoreManager.
-  if (Optional<loc::MemRegionVal> regionLoc = Loc.getAs<loc::MemRegionVal>()) {
-    escapes = !regionLoc->getRegion()->hasStackStorage();
+  // Cases (1) and (2).
+  const MemRegion *MR = Loc.getAsRegion();
+  if (!MR || !MR->hasStackStorage())
+    return escapeValue(State, Val, PSK_EscapeOnBind);
 
-    if (!escapes) {
-      // To test (3), generate a new state with the binding added.  If it is
-      // the same state, then it escapes (since the store cannot represent
-      // the binding).
-      // Do this only if we know that the store is not supposed to generate the
-      // same state.
-      SVal StoredVal = State->getSVal(regionLoc->getRegion());
-      if (StoredVal != Val)
-        escapes = (State == (State->bindLoc(*regionLoc, Val, LCtx)));
-    }
-  }
+  // Case (3).
+  if (const auto *VR = dyn_cast<VarRegion>(MR->getBaseRegion()))
+    if (VR->hasStackParametersStorage() && VR->getStackFrame()->inTopFrame())
+      if (const auto *RD = VR->getValueType()->getAsCXXRecordDecl())
+        if (!RD->hasTrivialDestructor())
+          return escapeValue(State, Val, PSK_EscapeOnBind);
 
-  // If our store can represent the binding and we aren't storing to something
-  // that doesn't have local storage then just return and have the simulation
-  // state continue as is.
-  if (!escapes)
-    return State;
+  // Case (4): in order to test that, generate a new state with the binding
+  // added. If it is the same state, then it escapes (since the store cannot
+  // represent the binding).
+  // Do this only if we know that the store is not supposed to generate the
+  // same state.
+  SVal StoredVal = State->getSVal(MR);
+  if (StoredVal != Val)
+    if (State == (State->bindLoc(loc::MemRegionVal(MR), Val, LCtx)))
+      return escapeValue(State, Val, PSK_EscapeOnBind);
 
-  // Otherwise, find all symbols referenced by 'val' that we are tracking
-  // and stop tracking them.
-  State = escapeValue(State, Val, PSK_EscapeOnBind);
   return State;
 }
 

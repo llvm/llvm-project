@@ -93,7 +93,7 @@ private:
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   void collectShuffleMaskIndices(MachineInstr &I, MachineRegisterInfo &MRI,
-                                 SmallVectorImpl<int> &Idxs) const;
+                                 SmallVectorImpl<Optional<int>> &Idxs) const;
   bool selectShuffleVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectExtractElt(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectConcatVectors(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -2430,7 +2430,7 @@ bool AArch64InstructionSelector::selectConcatVectors(
 
 void AArch64InstructionSelector::collectShuffleMaskIndices(
     MachineInstr &I, MachineRegisterInfo &MRI,
-    SmallVectorImpl<int> &Idxs) const {
+    SmallVectorImpl<Optional<int>> &Idxs) const {
   MachineInstr *MaskDef = MRI.getVRegDef(I.getOperand(3).getReg());
   assert(
       MaskDef->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
@@ -2444,8 +2444,13 @@ void AArch64InstructionSelector::collectShuffleMaskIndices(
       ScalarDef = MRI.getVRegDef(ScalarDef->getOperand(1).getReg());
       assert(ScalarDef && "Could not find def of copy operand");
     }
-    assert(ScalarDef->getOpcode() == TargetOpcode::G_CONSTANT);
-    Idxs.push_back(ScalarDef->getOperand(1).getCImm()->getSExtValue());
+    if (ScalarDef->getOpcode() != TargetOpcode::G_CONSTANT) {
+      // This be an undef if not a constant.
+      assert(ScalarDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
+      Idxs.push_back(None);
+    } else {
+      Idxs.push_back(ScalarDef->getOperand(1).getCImm()->getSExtValue());
+    }
   }
 }
 
@@ -2692,8 +2697,10 @@ bool AArch64InstructionSelector::selectShuffleVector(
 
   // G_SHUFFLE_VECTOR doesn't really have a strictly enforced constant mask
   // operand, it comes in as a normal vector value which we have to analyze to
-  // find the mask indices.
-  SmallVector<int, 8> Mask;
+  // find the mask indices. If the mask element is undef, then
+  // collectShuffleMaskIndices() will add a None entry for that index into
+  // the list.
+  SmallVector<Optional<int>, 8> Mask;
   collectShuffleMaskIndices(I, MRI, Mask);
   assert(!Mask.empty() && "Expected to find mask indices");
 
@@ -2708,7 +2715,10 @@ bool AArch64InstructionSelector::selectShuffleVector(
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
 
   SmallVector<Constant *, 64> CstIdxs;
-  for (int Val : Mask) {
+  for (auto &MaybeVal : Mask) {
+    // For now, any undef indexes we'll just assume to be 0. This should be
+    // optimized in future, e.g. to select DUP etc.
+    int Val = MaybeVal.hasValue() ? *MaybeVal : 0;
     for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
       unsigned Offset = Byte + Val * BytesPerElt;
       CstIdxs.emplace_back(ConstantInt::get(Type::getInt8Ty(Ctx), Offset));

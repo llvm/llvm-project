@@ -79,9 +79,36 @@ public:
 
   std::string getDescription(StringRef Prefix) const;
 };
-}
+} // namespace Check
 
 struct FileCheckDiag;
+
+/// Class holding the FileCheckPattern global state, shared by all patterns:
+/// tables holding values of variables and whether they are defined or not at
+/// any given time in the matching process.
+class FileCheckPatternContext {
+  friend class FileCheckPattern;
+
+private:
+  /// When matching a given pattern, this holds the value of all the FileCheck
+  /// variables defined in previous patterns. In a pattern only the last
+  /// definition for a given variable is recorded in this table, back-references
+  /// are used for uses after any the other definition.
+  StringMap<StringRef> GlobalVariableTable;
+
+public:
+  /// Return the value of variable \p VarName or None if no such variable has
+  /// been defined.
+  llvm::Optional<StringRef> getVarValue(StringRef VarName);
+
+  /// Define variables from definitions given on the command line passed as a
+  /// vector of VAR=VAL strings in \p CmdlineDefines.
+  void defineCmdlineVariables(std::vector<std::string> &CmdlineDefines);
+
+  /// Undefine local variables (variables whose name does not start with a '$'
+  /// sign), i.e. remove them from GlobalVariableTable.
+  void clearLocalVars();
+};
 
 class FileCheckPattern {
   SMLoc PatternLoc;
@@ -106,27 +133,34 @@ class FileCheckPattern {
   /// 1.
   std::map<StringRef, unsigned> VariableDefs;
 
+  /// Pointer to the class instance shared by all patterns holding a table with
+  /// the values of live variables at the start of any given CHECK line.
+  FileCheckPatternContext *Context;
+
   Check::FileCheckType CheckTy;
 
   /// Contains the number of line this pattern is in.
   unsigned LineNumber;
 
 public:
-  explicit FileCheckPattern(Check::FileCheckType Ty)
-      : CheckTy(Ty) {}
+  explicit FileCheckPattern(Check::FileCheckType Ty,
+                            FileCheckPatternContext *Context)
+      : Context(Context), CheckTy(Ty) {}
 
   /// Returns the location in source code.
   SMLoc getLoc() const { return PatternLoc; }
 
+  /// Returns the pointer to the global state for all patterns in this
+  /// FileCheck instance.
+  FileCheckPatternContext *getContext() const { return Context; }
   bool ParsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
                     unsigned LineNumber, const FileCheckRequest &Req);
-  size_t Match(StringRef Buffer, size_t &MatchLen,
-               StringMap<StringRef> &VariableTable) const;
-  void PrintVariableUses(const SourceMgr &SM, StringRef Buffer,
-                         const StringMap<StringRef> &VariableTable,
+  size_t match(StringRef Buffer, size_t &MatchLen) const;
+  /// Print value of successful substitutions or name of undefined pattern
+  /// variables preventing such a successful substitution.
+  void printVariableUses(const SourceMgr &SM, StringRef Buffer,
                          SMRange MatchRange = None) const;
-  void PrintFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
-                       const StringMap<StringRef> &VariableTable,
+  void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
                        std::vector<FileCheckDiag> *Diags) const;
 
   bool hasVariable() const {
@@ -140,9 +174,7 @@ public:
 private:
   bool AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM);
   void AddBackrefToRegEx(unsigned BackrefNum);
-  unsigned
-  ComputeMatchDistance(StringRef Buffer,
-                       const StringMap<StringRef> &VariableTable) const;
+  unsigned computeMatchDistance(StringRef Buffer) const;
   bool EvaluateExpression(StringRef Expr, std::string &Value) const;
   size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
 };
@@ -223,19 +255,17 @@ struct FileCheckString {
       : Pat(P), Prefix(S), Loc(L) {}
 
   size_t Check(const SourceMgr &SM, StringRef Buffer, bool IsLabelScanMode,
-               size_t &MatchLen, StringMap<StringRef> &VariableTable,
-               FileCheckRequest &Req, std::vector<FileCheckDiag> *Diags) const;
+               size_t &MatchLen, FileCheckRequest &Req,
+               std::vector<FileCheckDiag> *Diags) const;
 
   bool CheckNext(const SourceMgr &SM, StringRef Buffer) const;
   bool CheckSame(const SourceMgr &SM, StringRef Buffer) const;
   bool CheckNot(const SourceMgr &SM, StringRef Buffer,
                 const std::vector<const FileCheckPattern *> &NotStrings,
-                StringMap<StringRef> &VariableTable,
                 const FileCheckRequest &Req,
                 std::vector<FileCheckDiag> *Diags) const;
   size_t CheckDag(const SourceMgr &SM, StringRef Buffer,
                   std::vector<const FileCheckPattern *> &NotStrings,
-                  StringMap<StringRef> &VariableTable,
                   const FileCheckRequest &Req,
                   std::vector<FileCheckDiag> *Diags) const;
 };
@@ -244,6 +274,7 @@ struct FileCheckString {
 /// use information from the request.
 class FileCheck {
   FileCheckRequest Req;
+  FileCheckPatternContext PatternContext;
 
 public:
   FileCheck(FileCheckRequest Req) : Req(Req) {}

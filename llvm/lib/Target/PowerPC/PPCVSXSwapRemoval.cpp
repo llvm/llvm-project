@@ -59,10 +59,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-vsx-swaps"
 
-namespace llvm {
-  void initializePPCVSXSwapRemovalPass(PassRegistry&);
-}
-
 namespace {
 
 // A PPCVSXSwapEntry is created for each machine instruction that

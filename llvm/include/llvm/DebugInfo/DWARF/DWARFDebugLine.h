@@ -355,9 +355,6 @@ private:
 
     /// Line table we're currently parsing.
     struct LineTable *LineTable;
-    /// The row number that starts at zero for the prologue, and increases for
-    /// each row added to the matrix.
-    unsigned RowNumber = 0;
     struct Row Row;
     struct Sequence Sequence;
   };

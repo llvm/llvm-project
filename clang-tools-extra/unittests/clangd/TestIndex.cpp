@@ -94,7 +94,7 @@ SymbolSlab generateNumSymbols(int Begin, int End) {
 }
 
 std::string getQualifiedName(const Symbol &Sym) {
-  return (Sym.Scope + Sym.Name).str();
+  return (Sym.Scope + Sym.Name + Sym.TemplateSpecializationArgs).str();
 }
 
 std::vector<std::string> match(const SymbolIndex &I,

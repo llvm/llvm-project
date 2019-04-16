@@ -210,7 +210,7 @@ Version 9.0
   Symbol added: __ZTSNSt3__14__fs10filesystem16filesystem_errorE
   Symbol added: __ZTVNSt3__14__fs10filesystem16filesystem_errorE
 
-* rTBD - Remove exception throwing debug mode handler support.
+* r356417 - Remove exception throwing debug mode handler support.
 
   The reason libc++ implemented a throwing debug mode handler was for ease of testing. Specifically,
   I thought that if a debug violation aborted, we could only test one violation per file. This made

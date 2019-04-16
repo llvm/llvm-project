@@ -35,6 +35,7 @@ add_extra_unittest(ClangdTests
   IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
+  PrintASTTests.cpp
   QualityTests.cpp
   RIFFTests.cpp
   SelectionTests.cpp

@@ -41,6 +41,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
@@ -60,6 +61,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -111,6 +113,7 @@ public:
     if (ConstHoistWithBlockFrequency)
       AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
@@ -126,6 +129,7 @@ INITIALIZE_PASS_BEGIN(ConstantHoistingLegacyPass, "consthoist",
                       "Constant Hoisting", false, false)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ConstantHoistingLegacyPass, "consthoist",
                     "Constant Hoisting", false, false)
@@ -148,7 +152,8 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
                    ConstHoistWithBlockFrequency
                        ? &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI()
                        : nullptr,
-                   Fn.getEntryBlock());
+                   Fn.getEntryBlock(),
+                   &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
 
   if (MadeChange) {
     LLVM_DEBUG(dbgs() << "********** Function after Constant Hoisting: "
@@ -548,7 +553,9 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                            ConstCandVecType::iterator &MaxCostItr) {
   unsigned NumUses = 0;
 
-  if(!Entry->getParent()->hasOptSize() || std::distance(S,E) > 100) {
+  bool OptForSize = Entry->getParent()->hasOptSize() ||
+                    llvm::shouldOptimizeForSize(Entry->getParent(), PSI, BFI);
+  if (!OptForSize || std::distance(S,E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
       if (ConstCand->CumulativeCost > MaxCostItr->CumulativeCost)
@@ -919,13 +926,14 @@ void ConstantHoistingPass::deleteDeadCastInst() const {
 /// Optimize expensive integer constants in the given function.
 bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
                                    DominatorTree &DT, BlockFrequencyInfo *BFI,
-                                   BasicBlock &Entry) {
+                                   BasicBlock &Entry, ProfileSummaryInfo *PSI) {
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
   this->DL = &Fn.getParent()->getDataLayout();
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
+  this->PSI = PSI;
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 
@@ -962,7 +970,9 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
   auto BFI = ConstHoistWithBlockFrequency
                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
                  : nullptr;
-  if (!runImpl(F, TTI, DT, BFI, F.getEntryBlock()))
+  auto &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  auto *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  if (!runImpl(F, TTI, DT, BFI, F.getEntryBlock(), PSI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

@@ -782,6 +782,13 @@ public:
   /// backedge-taken count.
   bool hasLoopInvariantBackedgeTakenCount(const Loop *L);
 
+  // This method should be called by the client when it made any change that
+  // would invalidate SCEV's answers, and the client wants to remove all loop
+  // information held internally by ScalarEvolution. This is intended to be used
+  // when the alternative to forget a loop is too expensive (i.e. large loop
+  // bodies).
+  void forgetAllLoops();
+
   /// This method should be called by the client when it has changed a loop in
   /// a way that may effect ScalarEvolution's ability to compute a trip count,
   /// or if the loop is deleted.  This call is potentially expensive for large

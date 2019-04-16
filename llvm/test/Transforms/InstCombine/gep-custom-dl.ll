@@ -8,8 +8,7 @@ target datalayout = "e-m:m-p:40:64:64:32-i32:32-i16:16-i8:8-n32"
 %struct.C = type { [7 x i8] }
 
 
-@Global = constant [10 x i8] c"helloworld"
-
+@Global = external global [10 x i8]
 
 ; Test that two array indexing geps fold
 define i32* @test1(i32* %I) {

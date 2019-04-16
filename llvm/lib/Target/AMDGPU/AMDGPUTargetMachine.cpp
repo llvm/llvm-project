@@ -552,7 +552,13 @@ public:
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addGCPasses() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
+
+std::unique_ptr<CSEConfigBase> AMDGPUPassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
+}
 
 class R600PassConfig final : public AMDGPUPassConfig {
 public:

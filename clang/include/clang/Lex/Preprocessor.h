@@ -2172,6 +2172,7 @@ private:
       None,
       ModuleBegin,
       ModuleImport,
+      SkippedModuleImport,
     } Kind;
     Module *ModuleForHeader = nullptr;
 

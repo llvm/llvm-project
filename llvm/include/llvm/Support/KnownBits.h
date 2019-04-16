@@ -202,6 +202,10 @@ public:
     return getBitWidth() - Zero.countPopulation();
   }
 
+  /// Compute known bits resulting from adding LHS, RHS and a 1-bit Carry.
+  static KnownBits computeForAddCarry(
+      const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry);
+
   /// Compute known bits resulting from adding LHS and RHS.
   static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
                                     KnownBits RHS);

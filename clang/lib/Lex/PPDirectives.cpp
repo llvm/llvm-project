@@ -1648,6 +1648,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
                                             EndLoc, LookupFrom, LookupFromFile);
   switch (Action.Kind) {
   case ImportAction::None:
+  case ImportAction::SkippedModuleImport:
     break;
   case ImportAction::ModuleBegin:
     EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
@@ -2034,6 +2035,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   switch (Action) {
   case Skip:
     // If we don't need to enter the file, stop now.
+    if (Module *M = SuggestedModule.getModule())
+      return {ImportAction::SkippedModuleImport, M};
     return {ImportAction::None};
 
   case IncludeLimitReached:
@@ -2117,6 +2120,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     return {ImportAction::ModuleBegin, M};
   }
 
+  assert(!IsImportDecl && "failed to diagnose missing module for import decl");
   return {ImportAction::None};
 }
 

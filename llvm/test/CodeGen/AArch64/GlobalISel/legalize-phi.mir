@@ -451,9 +451,8 @@ body:             |
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
   ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C4]]
-  ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
-  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C5]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C4]]
   ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[AND]], [[AND1]]
   ; CHECK:   $w0 = COPY [[ADD2]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0

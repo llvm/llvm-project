@@ -544,10 +544,15 @@ template <class AliasAnalysisType> class ClobberWalker {
                      const MemoryAccess *SkipStopAt = nullptr) const {
     assert(!isa<MemoryUse>(Desc.Last) && "Uses don't exist in my world");
     assert(UpwardWalkLimit && "Need a valid walk limit");
-    // This will not do any alias() calls. It returns in the first iteration in
-    // the loop below.
-    if (*UpwardWalkLimit == 0)
-      (*UpwardWalkLimit)++;
+    bool LimitAlreadyReached = false;
+    // (*UpwardWalkLimit) may be 0 here, due to the loop in tryOptimizePhi. Set
+    // it to 1. This will not do any alias() calls. It either returns in the
+    // first iteration in the loop below, or is set back to 0 if all def chains
+    // are free of MemoryDefs.
+    if (!*UpwardWalkLimit) {
+      *UpwardWalkLimit = 1;
+      LimitAlreadyReached = true;
+    }
 
     for (MemoryAccess *Current : def_chain(Desc.Last)) {
       Desc.Last = Current;
@@ -567,6 +572,9 @@ template <class AliasAnalysisType> class ClobberWalker {
           return {MD, true, CA.AR};
       }
     }
+
+    if (LimitAlreadyReached)
+      *UpwardWalkLimit = 0;
 
     assert(isa<MemoryPhi>(Desc.Last) &&
            "Ended at a non-clobber that's not a phi?");

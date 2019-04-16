@@ -36,8 +36,6 @@
 using namespace llvm;
 using namespace llvm::yaml;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
 static cl::OptionCategory
@@ -439,11 +437,6 @@ int main(int argc, const char **argv) {
       argc, argv,
       "A tool to generate an optimization report from YAML optimization"
       " record files.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   LocationInfoTy LocationInfo;
   if (!readLocationInfo(LocationInfo))

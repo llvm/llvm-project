@@ -273,6 +273,12 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
+LLVM_NODISCARD unsigned
+MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
+  FrameInstructions.push_back(Inst);
+  return FrameInstructions.size() - 1;
+}
+
 /// This discards all of the MachineBasicBlock numbers and recomputes them.
 /// This guarantees that the MBB numbers are sequential, dense, and match the
 /// ordering of the blocks within the function.  If a specific MachineBasicBlock

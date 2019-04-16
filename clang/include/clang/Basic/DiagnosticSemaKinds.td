@@ -9199,7 +9199,7 @@ let CategoryName = "Modules Issue" in {
 def err_module_decl_in_module_map_module : Error<
   "'module' declaration found while building module from module map">;
 def err_module_decl_in_header_module : Error<
-  "'module' declaration found while building header module">;
+  "'module' declaration found while building header unit">;
 def err_module_interface_implementation_mismatch : Error<
   "missing 'export' specifier in module declaration while "
   "building module interface">;
@@ -9217,6 +9217,9 @@ def err_module_redeclaration : Error<
 def note_prev_module_declaration : Note<"previous module declaration is here">;
 def err_module_declaration_missing : Error<
   "missing 'export module' declaration in module interface unit">;
+def err_module_declaration_missing_after_global_module_introducer : Error<
+  "missing 'module' declaration at end of global module fragment "
+  "introduced here">;
 def err_module_private_specialization : Error<
   "%select{template|partial|member}0 specialization cannot be "
   "declared __module_private__">;
@@ -9254,7 +9257,12 @@ def err_module_self_import : Error<
 def err_module_import_in_implementation : Error<
   "@import of module '%0' in implementation of '%1'; use #import">;
 
-// C++ Modules TS
+// C++ Modules
+def err_module_decl_not_at_start : Error<
+  "module declaration must occur at the start of the translation unit">;
+def note_global_module_introducer_missing : Note<
+  "add 'module;' to the start of the file to introduce a "
+  "global module fragment">;
 def err_export_within_export : Error<
   "export declaration appears within another export declaration">;
 def err_export_not_in_module_interface : Error<

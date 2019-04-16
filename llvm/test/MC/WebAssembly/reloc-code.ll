@@ -24,7 +24,7 @@ entry:
 
 ; CHECK: Format: WASM
 ; CHECK: Relocations [
-; CHECK-NEXT:   Section (4) CODE {
+; CHECK-NEXT:   Section (5) CODE {
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x9

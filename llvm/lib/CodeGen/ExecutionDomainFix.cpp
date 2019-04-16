@@ -336,11 +336,10 @@ void ExecutionDomainFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
     }
     // Sorted insertion.
     // Enables giving priority to the latest domains during merging.
-    auto I = std::upper_bound(
-        Regs.begin(), Regs.end(), rx, [&](int LHS, const int RHS) {
-          return RDA->getReachingDef(mi, RC->getRegister(LHS)) <
-                 RDA->getReachingDef(mi, RC->getRegister(RHS));
-        });
+    auto I = llvm::upper_bound(Regs, rx, [&](int LHS, const int RHS) {
+      return RDA->getReachingDef(mi, RC->getRegister(LHS)) <
+             RDA->getReachingDef(mi, RC->getRegister(RHS));
+    });
     Regs.insert(I, rx);
   }
 

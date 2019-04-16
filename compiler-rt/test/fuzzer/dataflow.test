@@ -82,3 +82,14 @@ USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: reading from {{.*}}/OUT
 USE_DATA_FLOW_TRACE-DAG: a8eefe2fd5d6b32028f355fafa3e739a6bf5edc => |000001|
 USE_DATA_FLOW_TRACE-DGA: d28cb407e8e1a702c72d25473f0553d3ec172262 => |0000011|
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: 6 trace files, 3 functions, 2 traces with focus function
+
+# Test that we can run collect_data_flow on a long input (>2**16 bytes)
+RUN: rm -rf %t/OUT
+RUN: printf "%0.sA" {1..150001} > %t/IN/very_long_input
+RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/very_long_input %t/OUT | FileCheck %s --check-prefix=COLLECT_TRACE_FOR_LONG_INPUT
+RUN: rm %t/IN/very_long_input
+COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[0, 150001]
+COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[75000, 150001]
+COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[112500, 150001]
+COLLECT_TRACE_FOR_LONG_INPUT: ******* Success:{{[ ]+}}[{{[0123456789]+}}, 150001]
+COLLECT_TRACE_FOR_LONG_INPUT: ******* Success:{{[ ]+}}[0, {{[0123456789]+}}]

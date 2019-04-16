@@ -98,6 +98,11 @@ public:
   // This collects additional help to be printed.
   std::vector<StringRef> MoreHelp;
 
+  // This collects Options added with the cl::DefaultOption flag. Since they can
+  // be overridden, they are not added to the appropriate SubCommands until
+  // ParseCommandLineOptions actually runs.
+  SmallVector<Option*, 4> DefaultOptions;
+
   // This collects the different option categories that have been registered.
   SmallPtrSet<OptionCategory *, 16> RegisteredOptionCategories;
 
@@ -146,6 +151,11 @@ public:
   void addOption(Option *O, SubCommand *SC) {
     bool HadErrors = false;
     if (O->hasArgStr()) {
+      // If it's a DefaultOption, check to make sure it isn't already there.
+      if (O->isDefaultOption() &&
+          SC->OptionsMap.find(O->ArgStr) != SC->OptionsMap.end())
+        return;
+
       // Add argument to the argument map!
       if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
@@ -185,7 +195,12 @@ public:
     }
   }
 
-  void addOption(Option *O) {
+  void addOption(Option *O, bool ProcessDefaultOption = false) {
+    if (!ProcessDefaultOption && O->isDefaultOption()) {
+      DefaultOptions.push_back(O);
+      return;
+    }
+
     if (O->Subs.empty()) {
       addOption(O, &*TopLevelSubCommand);
     } else {
@@ -201,8 +216,12 @@ public:
       OptionNames.push_back(O->ArgStr);
 
     SubCommand &Sub = *SC;
-    for (auto Name : OptionNames)
-      Sub.OptionsMap.erase(Name);
+    auto End = Sub.OptionsMap.end();
+    for (auto Name : OptionNames) {
+      auto I = Sub.OptionsMap.find(Name);
+      if (I != End && I->getValue() == O)
+        Sub.OptionsMap.erase(I);
+      }
 
     if (O->getFormattingFlag() == cl::Positional)
       for (auto Opt = Sub.PositionalOpts.begin();
@@ -266,8 +285,13 @@ public:
     if (O->Subs.empty())
       updateArgStr(O, NewName, &*TopLevelSubCommand);
     else {
-      for (auto SC : O->Subs)
-        updateArgStr(O, NewName, SC);
+      if (O->isInAllSubCommands()) {
+        for (auto SC : RegisteredSubCommands)
+          updateArgStr(O, NewName, SC);
+      } else {
+        for (auto SC : O->Subs)
+          updateArgStr(O, NewName, SC);
+      }
     }
   }
 
@@ -331,6 +355,8 @@ public:
     AllSubCommands->reset();
     registerSubCommand(&*TopLevelSubCommand);
     registerSubCommand(&*AllSubCommands);
+
+    DefaultOptions.clear();
   }
 
 private:
@@ -364,6 +390,13 @@ void Option::setArgStr(StringRef S) {
     GlobalParser->updateArgStr(this, S);
   assert((S.empty() || S[0] != '-') && "Option can't start with '-");
   ArgStr = S;
+}
+
+void Option::reset() {
+  NumOccurrences = 0;
+  setDefault();
+  if (isDefaultOption())
+    removeArgument();
 }
 
 // Initialise the general option category.
@@ -1007,7 +1040,7 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv,
                              bool MarkEOLs, bool RelativeNames) {
-  unsigned RspFiles = 0;
+  unsigned ExpandedRspFiles = 0;
   bool AllExpanded = true;
 
   // Don't cache Argv.size() because it can change.
@@ -1025,14 +1058,16 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 
     // If we have too many response files, leave some unexpanded.  This avoids
     // crashing on self-referential response files.
-    if (RspFiles++ > 20)
+    if (ExpandedRspFiles > 20)
       return false;
 
     // Replace this response file argument with the tokenization of its
     // contents.  Nested response files are expanded in subsequent iterations.
     SmallVector<const char *, 0> ExpandedArgv;
-    if (!ExpandResponseFile(Arg + 1, Saver, Tokenizer, ExpandedArgv,
-                            MarkEOLs, RelativeNames)) {
+    if (ExpandResponseFile(Arg + 1, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
+                           RelativeNames)) {
+      ++ExpandedRspFiles;
+    } else {
       // We couldn't read this file, so we leave it in the argument stream and
       // move on.
       AllExpanded = false;
@@ -1166,6 +1201,10 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   auto &PositionalOpts = ChosenSubCommand->PositionalOpts;
   auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
+
+  for (auto O: DefaultOptions) {
+    addOption(O, true);
+  }
 
   if (ConsumeAfterOpt) {
     assert(PositionalOpts.size() > 0 &&
@@ -2145,6 +2184,9 @@ static cl::opt<HelpPrinterWrapper, true, parser<bool>>
     HOp("help", cl::desc("Display available options (-help-hidden for more)"),
         cl::location(WrappedNormalPrinter), cl::ValueDisallowed,
         cl::cat(GenericCategory), cl::sub(*AllSubCommands));
+
+static cl::alias HOpA("h", cl::desc("Alias for -help"), cl::aliasopt(HOp),
+                      cl::DefaultOption);
 
 static cl::opt<HelpPrinterWrapper, true, parser<bool>>
     HHOp("help-hidden", cl::desc("Display all available options"),

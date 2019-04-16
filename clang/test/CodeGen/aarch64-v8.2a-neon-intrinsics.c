@@ -1618,3 +1618,16 @@ float16x8_t test_vtrn2q_f16(float16x8_t a, float16x8_t b) {
   return vtrn2q_f16(a, b);
 }
 
+// CHECK-LABEL: @test_vduph_laneq_f16(
+// CHECK:        [[V:%.*]] = extractelement <8 x half> [[V2:%.*]], i32 7
+// CHECK-NEXT:   ret half [[V]]
+float16_t test_vduph_laneq_f16(float16x8_t vec) {
+  return vduph_laneq_f16(vec, 7);
+}
+
+// CHECK-LABEL: @test_vduph_lane_f16(
+// CHECK:        [[V:%.*]] = extractelement <4 x half> [[V2:%.*]], i32 3
+// CHECK-NEXT:   ret half [[V]]
+float16_t test_vduph_lane_f16(float16x4_t vec) {
+  return vduph_lane_f16(vec, 3);
+}

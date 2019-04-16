@@ -319,31 +319,23 @@ private:
     return std::make_pair(EvalResult(NextPC), RemainingExpr);
   }
 
-  // Evaluate a call to stub_addr.
+  // Evaluate a call to stub_addr/got_addr.
   // Look up and return the address of the stub for the given
   // (<file name>, <section name>, <symbol name>) tuple.
   // On success, returns a pair containing the stub address, plus the expression
   // remaining to be evaluated.
-  std::pair<EvalResult, StringRef> evalStubAddr(StringRef Expr,
-                                                ParseContext PCtx) const {
+  std::pair<EvalResult, StringRef>
+  evalStubOrGOTAddr(StringRef Expr, ParseContext PCtx, bool IsStubAddr) const {
     if (!Expr.startswith("("))
       return std::make_pair(unexpectedToken(Expr, Expr, "expected '('"), "");
     StringRef RemainingExpr = Expr.substr(1).ltrim();
 
     // Handle file-name specially, as it may contain characters that aren't
     // legal for symbols.
-    StringRef FileName;
+    StringRef StubContainerName;
     size_t ComaIdx = RemainingExpr.find(',');
-    FileName = RemainingExpr.substr(0, ComaIdx).rtrim();
+    StubContainerName = RemainingExpr.substr(0, ComaIdx).rtrim();
     RemainingExpr = RemainingExpr.substr(ComaIdx).ltrim();
-
-    if (!RemainingExpr.startswith(","))
-      return std::make_pair(
-          unexpectedToken(RemainingExpr, Expr, "expected ','"), "");
-    RemainingExpr = RemainingExpr.substr(1).ltrim();
-
-    StringRef SectionName;
-    std::tie(SectionName, RemainingExpr) = parseSymbol(RemainingExpr);
 
     if (!RemainingExpr.startswith(","))
       return std::make_pair(
@@ -360,8 +352,8 @@ private:
 
     uint64_t StubAddr;
     std::string ErrorMsg = "";
-    std::tie(StubAddr, ErrorMsg) = Checker.getStubAddrFor(
-        FileName, SectionName, Symbol, PCtx.IsInsideLoad);
+    std::tie(StubAddr, ErrorMsg) = Checker.getStubOrGOTAddrFor(
+        StubContainerName, Symbol, PCtx.IsInsideLoad, IsStubAddr);
 
     if (ErrorMsg != "")
       return std::make_pair(EvalResult(ErrorMsg), "");
@@ -421,7 +413,9 @@ private:
     else if (Symbol == "next_pc")
       return evalNextPC(RemainingExpr, PCtx);
     else if (Symbol == "stub_addr")
-      return evalStubAddr(RemainingExpr, PCtx);
+      return evalStubOrGOTAddr(RemainingExpr, PCtx, true);
+    else if (Symbol == "got_addr")
+      return evalStubOrGOTAddr(RemainingExpr, PCtx, false);
     else if (Symbol == "section_addr")
       return evalSectionAddr(RemainingExpr, PCtx);
 
@@ -676,22 +670,15 @@ private:
 }
 
 RuntimeDyldCheckerImpl::RuntimeDyldCheckerImpl(
-                      IsSymbolValidFunction IsSymbolValid,
-                      GetSymbolAddressFunction GetSymbolAddress,
-                      GetSymbolContentFunction GetSymbolContent,
-                      GetSectionLoadAddressFunction GetSectionLoadAddress,
-                      GetSectionContentFunction GetSectionContent,
-                      GetStubOffsetInSectionFunction GetStubOffsetInSection,
-                      support::endianness Endianness,
-                      MCDisassembler *Disassembler,
-                      MCInstPrinter *InstPrinter,
-                      raw_ostream &ErrStream)
+    IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
+    GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
+    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness,
+    MCDisassembler *Disassembler, MCInstPrinter *InstPrinter,
+    raw_ostream &ErrStream)
     : IsSymbolValid(std::move(IsSymbolValid)),
-      GetSymbolAddress(std::move(GetSymbolAddress)),
-      GetSymbolContent(std::move(GetSymbolContent)),
-      GetSectionLoadAddress(std::move(GetSectionLoadAddress)),
-      GetSectionContent(std::move(GetSectionContent)),
-      GetStubOffsetInSection(std::move(GetStubOffsetInSection)),
+      GetSymbolInfo(std::move(GetSymbolInfo)),
+      GetSectionInfo(std::move(GetSectionInfo)),
+      GetStubInfo(std::move(GetStubInfo)), GetGOTInfo(std::move(GetGOTInfo)),
       Endianness(Endianness), Disassembler(Disassembler),
       InstPrinter(InstPrinter), ErrStream(ErrStream) {}
 
@@ -743,22 +730,23 @@ bool RuntimeDyldCheckerImpl::isSymbolValid(StringRef Symbol) const {
 }
 
 uint64_t RuntimeDyldCheckerImpl::getSymbolLocalAddr(StringRef Symbol) const {
-  auto Contents = GetSymbolContent(Symbol);
-  if (!Contents) {
-    logAllUnhandledErrors(Contents.takeError(), errs(), "RTDyldChecker: ");
+  auto SymInfo = GetSymbolInfo(Symbol);
+  if (!SymInfo) {
+    logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return 0;
   }
-  return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Contents->data()));
+  return static_cast<uint64_t>(
+      reinterpret_cast<uintptr_t>(SymInfo->Content.data()));
 }
 
 uint64_t RuntimeDyldCheckerImpl::getSymbolRemoteAddr(StringRef Symbol) const {
-  auto Addr = GetSymbolAddress(Symbol);
-  if (!Addr) {
-    logAllUnhandledErrors(Addr.takeError(), errs(), "RTDyldChecker: ");
+  auto SymInfo = GetSymbolInfo(Symbol);
+  if (!SymInfo) {
+    logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return 0;
   }
 
-  return *Addr;
+  return SymInfo->TargetAddress;
 }
 
 uint64_t RuntimeDyldCheckerImpl::readMemoryAtAddr(uint64_t SrcAddr,
@@ -781,87 +769,79 @@ uint64_t RuntimeDyldCheckerImpl::readMemoryAtAddr(uint64_t SrcAddr,
 }
 
 StringRef RuntimeDyldCheckerImpl::getSymbolContent(StringRef Symbol) const {
-  auto Content = GetSymbolContent(Symbol);
-  if (!Content) {
-    logAllUnhandledErrors(Content.takeError(), errs(), "RTDyldChecker: ");
+  auto SymInfo = GetSymbolInfo(Symbol);
+  if (!SymInfo) {
+    logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return StringRef();
   }
-  return *Content;
+  return SymInfo->Content;
 }
 
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(
     StringRef FileName, StringRef SectionName, bool IsInsideLoad) const {
 
-  uint64_t Addr = 0;
-  std::string ErrMsg;
-
-  // If this address is being looked up in "load" mode, return the content
-  // pointer.
-  if (IsInsideLoad) {
-    if (auto Content = GetSectionContent(FileName, SectionName))
-      Addr = pointerToJITTargetAddress(Content->data());
-    else {
-      raw_string_ostream ErrMsgStream(ErrMsg);
-      logAllUnhandledErrors(Content.takeError(), ErrMsgStream,
-                            "RTDyldChecker: ");
-    }
-    return std::make_pair(Addr, std::move(ErrMsg));
-  }
-
-  // ... otherwise return the target pointer.
-  if (auto LoadAddr = GetSectionLoadAddress(FileName, SectionName))
-    Addr = *LoadAddr;
-  else
-    return std::make_pair(Addr, ("Section (" + FileName + ", " +
-                                 SectionName + ") does not exist").str());
-
-  return std::make_pair(Addr, std::move(ErrMsg));
-}
-
-std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubAddrFor(
-    StringRef FileName, StringRef SectionName, StringRef SymbolName,
-    bool IsInsideLoad) const {
-
-  auto SectionAddr = getSectionAddr(FileName, SectionName, IsInsideLoad);
-
-  if (!SectionAddr.second.empty())
-    return SectionAddr;
-
-  auto StubOffset = GetStubOffsetInSection(FileName, SectionName, SymbolName);
-
-  if (!StubOffset) {
+  auto SecInfo = GetSectionInfo(FileName, SectionName);
+  if (!SecInfo) {
     std::string ErrMsg;
     {
       raw_string_ostream ErrMsgStream(ErrMsg);
-      logAllUnhandledErrors(StubOffset.takeError(), ErrMsgStream,
+      logAllUnhandledErrors(SecInfo.takeError(), ErrMsgStream,
+                            "RTDyldChecker: ");
+    }
+    return std::make_pair(0, std::move(ErrMsg));
+  }
+
+  // If this address is being looked up in "load" mode, return the content
+  // pointer, otherwise return the target address.
+
+  uint64_t Addr = 0;
+
+  if (IsInsideLoad)
+    Addr = pointerToJITTargetAddress(SecInfo->Content.data());
+  else
+    Addr = SecInfo->TargetAddress;
+
+  return std::make_pair(Addr, "");
+}
+
+std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubOrGOTAddrFor(
+    StringRef StubContainerName, StringRef SymbolName, bool IsInsideLoad,
+    bool IsStubAddr) const {
+
+  auto StubInfo = IsStubAddr ? GetStubInfo(StubContainerName, SymbolName)
+                             : GetGOTInfo(StubContainerName, SymbolName);
+
+  if (!StubInfo) {
+    std::string ErrMsg;
+    {
+      raw_string_ostream ErrMsgStream(ErrMsg);
+      logAllUnhandledErrors(StubInfo.takeError(), ErrMsgStream,
                             "RTDyldChecker: ");
     }
     return std::make_pair((uint64_t)0, std::move(ErrMsg));
   }
 
-  return std::make_pair(SectionAddr.first + *StubOffset, "");
+  uint64_t Addr = 0;
+
+  if (IsInsideLoad)
+    Addr = pointerToJITTargetAddress(StubInfo->Content.data());
+  else
+    Addr = StubInfo->TargetAddress;
+
+  return std::make_pair(Addr, "");
 }
 
 RuntimeDyldChecker::RuntimeDyldChecker(
-                      IsSymbolValidFunction IsSymbolValid,
-                      GetSymbolAddressFunction GetSymbolAddress,
-                      GetSymbolContentFunction GetSymbolContent,
-                      GetSectionLoadAddressFunction GetSectionLoadAddress,
-                      GetSectionContentFunction GetSectionContent,
-                      GetStubOffsetInSectionFunction GetStubOffsetInSection,
-                      support::endianness Endianness,
-                      MCDisassembler *Disassembler,
-                      MCInstPrinter *InstPrinter,
-                      raw_ostream &ErrStream)
+    IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
+    GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
+    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness,
+    MCDisassembler *Disassembler, MCInstPrinter *InstPrinter,
+    raw_ostream &ErrStream)
     : Impl(::llvm::make_unique<RuntimeDyldCheckerImpl>(
-                                            std::move(IsSymbolValid),
-                                            std::move(GetSymbolAddress),
-                                            std::move(GetSymbolContent),
-                                            std::move(GetSectionLoadAddress),
-                                            std::move(GetSectionContent),
-                                            std::move(GetStubOffsetInSection),
-                                            Endianness, Disassembler,
-                                            InstPrinter, ErrStream)) {}
+          std::move(IsSymbolValid), std::move(GetSymbolInfo),
+          std::move(GetSectionInfo), std::move(GetStubInfo),
+          std::move(GetGOTInfo), Endianness, Disassembler, InstPrinter,
+          ErrStream)) {}
 
 RuntimeDyldChecker::~RuntimeDyldChecker() {}
 

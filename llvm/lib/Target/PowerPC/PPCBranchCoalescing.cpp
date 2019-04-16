@@ -33,10 +33,6 @@ STATISTIC(NumBlocksCoalesced, "Number of blocks coalesced");
 STATISTIC(NumPHINotMoved, "Number of PHI Nodes that cannot be merged");
 STATISTIC(NumBlocksNotCoalesced, "Number of blocks not coalesced");
 
-namespace llvm {
-    void initializePPCBranchCoalescingPass(PassRegistry&);
-}
-
 //===----------------------------------------------------------------------===//
 //                               PPCBranchCoalescing
 //===----------------------------------------------------------------------===//

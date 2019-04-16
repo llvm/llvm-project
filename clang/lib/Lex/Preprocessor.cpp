@@ -1168,6 +1168,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       LLVM_FALLTHROUGH;
 
     case ImportAction::ModuleImport:
+    case ImportAction::SkippedModuleImport:
       // We chose to import (or textually enter) the file. Convert the
       // header-name token into a header unit annotation token.
       Suffix[0].setKind(tok::annot_header_unit);

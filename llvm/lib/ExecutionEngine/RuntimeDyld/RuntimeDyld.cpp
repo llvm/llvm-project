@@ -386,7 +386,8 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
 
         // If this is a named stub, just call NotifyStubEmitted.
         if (VR.SymbolName) {
-          NotifyStubEmitted(FileName, SectionName, VR.SymbolName, StubAddr);
+          NotifyStubEmitted(FileName, SectionName, VR.SymbolName, SectionID,
+                            StubAddr);
           continue;
         }
 
@@ -396,7 +397,8 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
           auto &GSTEntry = GSTMapEntry.second;
           if (GSTEntry.getSectionID() == VR.SectionID &&
               GSTEntry.getOffset() == VR.Offset) {
-            NotifyStubEmitted(FileName, SectionName, SymbolName, StubAddr);
+            NotifyStubEmitted(FileName, SectionName, SymbolName, SectionID,
+                              StubAddr);
             break;
           }
         }
