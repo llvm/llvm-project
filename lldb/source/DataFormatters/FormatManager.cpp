@@ -11,7 +11,6 @@
 #include "llvm/ADT/STLExtras.h"
 
 
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
