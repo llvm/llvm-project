@@ -418,7 +418,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
-#ifndef LLDB_DISABLE_PYTHON
   lldb::TypeSummaryImplSP std_string_summary_sp(new CXXFunctionSummaryFormat(
       stl_summary_flags,
       lldb_private::formatters::LibcxxStringSummaryProviderASCII,
@@ -687,7 +686,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "std::map iterator synthetic children",
       ConstString("^std::__(ndk)?1::__map_iterator<.+>$"), stl_synth_flags,
       true);
-#endif
 }
 
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -757,8 +755,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       ConstString("std::__cxx11::basic_string<wchar_t, "
                   "std::char_traits<wchar_t>, std::allocator<wchar_t> >"),
       cxx11_wstring_summary_sp);
-
-#ifndef LLDB_DISABLE_PYTHON
 
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
@@ -848,7 +844,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libstdc++ std::weak_ptr summary provider",
                 ConstString("^std::weak_ptr<.+>(( )?&)?$"), stl_summary_flags,
                 true);
-#endif
 }
 
 static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -873,7 +868,6 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
-#ifndef LLDB_DISABLE_PYTHON
   // FIXME because of a bug in the FormattersContainer we need to add a summary
   // for both X* and const X* (<rdar://problem/12717717>)
   AddCXXSummary(
@@ -926,7 +920,6 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char16SummaryProvider,
       "unichar summary provider", ConstString("unichar"), widechar_flags);
-#endif
 }
 
 std::unique_ptr<Language::TypeScavenger> CPlusPlusLanguage::GetTypeScavenger() {

@@ -73,7 +73,6 @@ void lldb_private::formatters::AddOneLineSummary(
     category_sp->GetTypeSummariesContainer()->Add(type_name, summary_sp);
 }
 
-#ifndef LLDB_DISABLE_PYTHON
 void lldb_private::formatters::AddCXXSummary(
     TypeCategoryImpl::SharedPointer category_sp,
     CXXFunctionSummaryFormat::Callback funct, const char *description,
@@ -117,7 +116,6 @@ void lldb_private::formatters::AddFilter(
   else
     category_sp->GetTypeFiltersContainer()->Add(type_name, filter_sp);
 }
-#endif
 
 size_t lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
   if (!item_name || !*item_name)

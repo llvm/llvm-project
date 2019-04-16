@@ -1472,7 +1472,6 @@ SBTypeFormat SBDebugger::GetFormatForType(SBTypeNameSpecifier type_name) {
   return LLDB_RECORD_RESULT(SBTypeFormat());
 }
 
-#ifndef LLDB_DISABLE_PYTHON
 SBTypeSummary SBDebugger::GetSummaryForType(SBTypeNameSpecifier type_name) {
   LLDB_RECORD_METHOD(lldb::SBTypeSummary, SBDebugger, GetSummaryForType,
                      (lldb::SBTypeNameSpecifier), type_name);
@@ -1482,7 +1481,6 @@ SBTypeSummary SBDebugger::GetSummaryForType(SBTypeNameSpecifier type_name) {
   return LLDB_RECORD_RESULT(
       SBTypeSummary(DataVisualization::GetSummaryForType(type_name.GetSP())));
 }
-#endif // LLDB_DISABLE_PYTHON
 
 SBTypeFilter SBDebugger::GetFilterForType(SBTypeNameSpecifier type_name) {
   LLDB_RECORD_METHOD(lldb::SBTypeFilter, SBDebugger, GetFilterForType,
@@ -1494,7 +1492,6 @@ SBTypeFilter SBDebugger::GetFilterForType(SBTypeNameSpecifier type_name) {
       SBTypeFilter(DataVisualization::GetFilterForType(type_name.GetSP())));
 }
 
-#ifndef LLDB_DISABLE_PYTHON
 SBTypeSynthetic SBDebugger::GetSyntheticForType(SBTypeNameSpecifier type_name) {
   LLDB_RECORD_METHOD(lldb::SBTypeSynthetic, SBDebugger, GetSyntheticForType,
                      (lldb::SBTypeNameSpecifier), type_name);
@@ -1504,7 +1501,6 @@ SBTypeSynthetic SBDebugger::GetSyntheticForType(SBTypeNameSpecifier type_name) {
   return LLDB_RECORD_RESULT(SBTypeSynthetic(
       DataVisualization::GetSyntheticForType(type_name.GetSP())));
 }
-#endif // LLDB_DISABLE_PYTHON
 
 static llvm::ArrayRef<const char *> GetCategoryArray(const char **categories) {
   if (categories == nullptr)

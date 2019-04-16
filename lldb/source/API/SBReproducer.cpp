@@ -819,12 +819,10 @@ SBRegistry::SBRegistry() {
                          ());
     LLDB_REGISTER_METHOD(lldb::SBTypeFormat, SBDebugger, GetFormatForType,
                          (lldb::SBTypeNameSpecifier));
-#ifndef LLDB_DISABLE_PYTHON
     LLDB_REGISTER_METHOD(lldb::SBTypeSummary, SBDebugger, GetSummaryForType,
                          (lldb::SBTypeNameSpecifier));
     LLDB_REGISTER_METHOD(lldb::SBTypeSynthetic, SBDebugger, GetSyntheticForType,
                          (lldb::SBTypeNameSpecifier));
-#endif
     LLDB_REGISTER_METHOD(lldb::SBTypeFilter, SBDebugger, GetFilterForType,
                          (lldb::SBTypeNameSpecifier));
     LLDB_REGISTER_METHOD(bool, SBDebugger, EnableLog,
@@ -2420,7 +2418,6 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumFormats, ());
     LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumSummaries, ());
     LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumFilters, ());
-#ifndef LLDB_DISABLE_PYTHON
     LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumSynthetics, ());
     LLDB_REGISTER_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
                          GetTypeNameSpecifierForSyntheticAtIndex, (uint32_t));
@@ -2440,7 +2437,6 @@ SBRegistry::SBRegistry() {
                          (lldb::SBTypeNameSpecifier, lldb::SBTypeSynthetic));
     LLDB_REGISTER_METHOD(bool, SBTypeCategory, DeleteTypeSynthetic,
                          (lldb::SBTypeNameSpecifier));
-#endif
     LLDB_REGISTER_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
                          GetTypeNameSpecifierForFilterAtIndex, (uint32_t));
     LLDB_REGISTER_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
@@ -2614,7 +2610,6 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(bool,
                          SBTypeSummary, operator!=,(lldb::SBTypeSummary &));
   }
-#ifndef LLDB_DISABLE_PYTHON
   {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeSynthetic, ());
     LLDB_REGISTER_STATIC_METHOD(lldb::SBTypeSynthetic, SBTypeSynthetic,
@@ -2642,7 +2637,6 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(bool,
                          SBTypeSynthetic, operator!=,(lldb::SBTypeSynthetic &));
   }
-#endif
   {
     LLDB_REGISTER_CONSTRUCTOR(SBUnixSignals, ());
     LLDB_REGISTER_CONSTRUCTOR(SBUnixSignals, (const lldb::SBUnixSignals &));
@@ -2698,9 +2692,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(lldb::SBTypeFormat, SBValue, GetTypeFormat, ());
     LLDB_REGISTER_METHOD(lldb::SBTypeSummary, SBValue, GetTypeSummary, ());
     LLDB_REGISTER_METHOD(lldb::SBTypeFilter, SBValue, GetTypeFilter, ());
-#ifndef LLDB_DISABLE_PYTHON
     LLDB_REGISTER_METHOD(lldb::SBTypeSynthetic, SBValue, GetTypeSynthetic, ());
-#endif
     LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, CreateChildAtOffset,
                          (const char *, uint32_t, lldb::SBType));
     LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, Cast, (lldb::SBType));

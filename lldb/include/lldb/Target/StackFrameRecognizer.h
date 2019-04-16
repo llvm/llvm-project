@@ -58,9 +58,7 @@ public:
   virtual ~StackFrameRecognizer(){};
 };
 
-#ifndef LLDB_DISABLE_PYTHON
-
-/// @class ScriptedStackFrameRecognizer
+/// \class ScriptedStackFrameRecognizer
 ///
 /// Python implementation for frame recognizers. An instance of this class
 /// tracks a particular Python classobject, which will be asked to recognize
@@ -89,9 +87,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ScriptedStackFrameRecognizer);
 };
 
-#endif
-
-/// @class StackFrameRecognizerManager
+/// \class StackFrameRecognizerManager
 ///
 /// Static class that provides a registry of known stack frame recognizers.
 /// Has static methods to add, enumerate, remove, query and invoke recognizers.
