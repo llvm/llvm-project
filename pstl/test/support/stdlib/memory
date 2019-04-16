@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- algorithm ---------------------------------------------------------===//
+//===-- memory ------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,18 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _PSTL_ALGORITHM
-#define _PSTL_ALGORITHM
+#ifndef _TEST_SUPPORT_STDLIB_MEMORY
+#define _TEST_SUPPORT_STDLIB_MEMORY
 
-#include "internal/pstl_config.h"
+#include_next <memory>
+
+#include <pstl/internal/pstl_config.h>
 
 #if _PSTL_EXECUTION_POLICIES_DEFINED
 // If <execution> has already been included, pull in implementations
-#    include "internal/glue_algorithm_impl.h"
+#    include <pstl/internal/glue_memory_impl.h>
 #else
 // Otherwise just pull in forward declarations
-#    include "internal/glue_algorithm_defs.h"
-#    define _PSTL_ALGORITHM_FORWARD_DECLARED 1
+#    include <pstl/internal/glue_memory_defs.h>
+#    define _PSTL_MEMORY_FORWARD_DECLARED 1
 #endif
 
-#endif /* _PSTL_ALGORITHM */
+#endif /* _TEST_SUPPORT_STDLIB_MEMORY */
