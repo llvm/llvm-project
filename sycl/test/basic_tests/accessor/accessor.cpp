@@ -174,4 +174,50 @@ int main() {
       }
     }
   }
+
+  // Discard write accessor.
+  {
+    try {
+      sycl::queue Queue;
+      sycl::buffer<int, 1> buf(sycl::range<1>(3));
+
+      Queue.submit([&](sycl::handler& cgh) {
+        auto dev_acc = buf.get_access<sycl::access::mode::discard_write>(cgh);
+
+        cgh.parallel_for<class test_discard_write>(
+            sycl::range<1>{3},
+            [=](sycl::id<1> index) { dev_acc[index] = 42; });
+      });
+
+      auto host_acc = buf.get_access<sycl::access::mode::read>();
+      for (int i = 0; i != 3; ++i)
+        assert(host_acc[i] == 42);
+
+    } catch (cl::sycl::exception e) {
+      std::cout << "SYCL exception caught: " << e.what();
+      return 1;
+    }
+  }
+
+  // Discard read-write accessor.
+  {
+    try {
+      sycl::queue Queue;
+      sycl::buffer<int, 1> buf(sycl::range<1>(3));
+
+      Queue.submit([&](sycl::handler& cgh) {
+        auto dev_acc = buf.get_access<sycl::access::mode::write>(cgh);
+
+        cgh.parallel_for<class test_discard_read_write>(
+            sycl::range<1>{3},
+            [=](sycl::id<1> index) { dev_acc[index] = 42; });
+      });
+
+      auto host_acc =
+        buf.get_access<sycl::access::mode::discard_read_write>();
+    } catch (cl::sycl::exception e) {
+      std::cout << "SYCL exception caught: " << e.what();
+      return 1;
+    }
+  }
 }

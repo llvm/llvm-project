@@ -262,7 +262,7 @@ public:
 
 public:
   void moveMemoryTo(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
-                    EventImplPtr Event);
+                    EventImplPtr Event, cl::sycl::access::mode Mode);
 
   void fill(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
             EventImplPtr Event, const void *Pattern, size_t PatternSize,
@@ -281,7 +281,7 @@ public:
   bool isValidAccessToMem(cl::sycl::access::mode AccessMode);
 
   void allocate(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
-                EventImplPtr Event, cl::sycl::access::mode mode);
+                EventImplPtr Event);
 
   cl_mem getOpenCLMem() const;
 
@@ -409,7 +409,7 @@ void buffer_impl<AllocatorT>::copy(
 template <typename AllocatorT>
 void buffer_impl<AllocatorT>::moveMemoryTo(
     QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
-    EventImplPtr Event) {
+    EventImplPtr Event, cl::sycl::access::mode Mode) {
 
   ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
@@ -431,6 +431,10 @@ void buffer_impl<AllocatorT>::moveMemoryTo(
 
   // Copy from OCL device to host device.
   if (!OCLState.Queue->is_host() && Queue->is_host()) {
+    if (Mode == cl::sycl::access::mode::discard_write &&
+        Mode == cl::sycl::access::mode::discard_read_write)
+      return;
+
     const size_t ByteSize = get_size();
 
     std::vector<cl_event> CLEvents =
@@ -484,13 +488,18 @@ void buffer_impl<AllocatorT>::moveMemoryTo(
 
     std::vector<cl_event> CLEvents =
         detail::getOrWaitEvents(std::move(DepEvents), Context);
+    if (Mode == cl::sycl::access::mode::discard_write &&
+        Mode == cl::sycl::access::mode::discard_read_write)
+      return;
+
     cl_event &WriteBufEvent = Event->getHandleRef();
     // Enqueue copying from host to new OCL buffer.
     Error =
         clEnqueueWriteBuffer(OCLState.Queue->getHandleRef(), OCLState.Mem,
                              /*blocking_write=*/CL_FALSE, /*offset=*/0,
-                             ByteSize, BufPtr, CLEvents.size(), CLEvents.data(),
-                             &WriteBufEvent); // replace &WriteBufEvent to NULL
+                             ByteSize, BufPtr, CLEvents.size(),
+                             CLEvents.data(), /*replace &WriteBufEvent
+                                                to NULL*/ &WriteBufEvent);
     CHECK_OCL_CODE(Error);
     Event->setContextImpl(Context);
 
@@ -507,8 +516,10 @@ buffer_impl<AllocatorT>::convertSycl2OCLMode(cl::sycl::access::mode mode) {
   case cl::sycl::access::mode::read:
     return CL_MEM_READ_ONLY;
   case cl::sycl::access::mode::write:
+  case cl::sycl::access::mode::discard_write:
     return CL_MEM_WRITE_ONLY;
   case cl::sycl::access::mode::read_write:
+  case cl::sycl::access::mode::discard_read_write:
   case cl::sycl::access::mode::atomic:
     return CL_MEM_READ_WRITE;
   default:
@@ -534,8 +545,7 @@ bool buffer_impl<AllocatorT>::isValidAccessToMem(
 template <typename AllocatorT>
 void buffer_impl<AllocatorT>::allocate(QueueImplPtr Queue,
                                        std::vector<cl::sycl::event> DepEvents,
-                                       EventImplPtr Event,
-                                       cl::sycl::access::mode mode) {
+                                       EventImplPtr Event) {
 
   detail::waitEvents(DepEvents);
 
@@ -556,7 +566,7 @@ void buffer_impl<AllocatorT>::allocate(QueueImplPtr Queue,
     cl_int Error;
 
     cl_mem Mem =
-        clCreateBuffer(Context->getHandleRef(), convertSycl2OCLMode(mode),
+        clCreateBuffer(Context->getHandleRef(), CL_MEM_READ_WRITE,
                        ByteSize, nullptr, &Error);
     CHECK_OCL_CODE(Error);
 

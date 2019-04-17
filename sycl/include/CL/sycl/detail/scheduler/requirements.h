@@ -105,15 +105,15 @@ public:
   void allocate(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
                 EventImplPtr Event) override {
     assert(m_Buffer != nullptr && "BufferStorage::m_Buffer is nullptr");
-    m_Buffer->allocate(std::move(Queue), std::move(DepEvents), std::move(Event),
-                       Mode);
+    m_Buffer->allocate(std::move(Queue), std::move(DepEvents),
+                       std::move(Event));
   }
 
   void moveMemoryTo(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
                     EventImplPtr Event) override {
     assert(m_Buffer != nullptr && "BufferStorage::m_Buffer is nullptr");
     m_Buffer->moveMemoryTo(std::move(Queue), std::move(DepEvents),
-                           std::move(Event));
+                           std::move(Event), Mode);
   }
 
   void fill(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
