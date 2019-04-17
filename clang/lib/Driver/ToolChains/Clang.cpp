@@ -3170,35 +3170,24 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     SplitDWARFInlining = false;
   }
 
-  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
-    if (checkDebugInfoOption(A, Args, D, TC)) {
-      // If the last option explicitly specified a debug-info level, use it.
-      if (A->getOption().matches(options::OPT_gN_Group)) {
-        DebugInfoKind = DebugLevelToInfoKind(*A);
-        // If you say "-gsplit-dwarf -gline-tables-only", -gsplit-dwarf loses.
-        // But -gsplit-dwarf is not a g_group option, hence we have to check the
-        // order explicitly. If -gsplit-dwarf wins, we fix DebugInfoKind later.
-        // This gets a bit more complicated if you've disabled inline info in
-        // the skeleton CUs (SplitDWARFInlining) - then there's value in
-        // composing split-dwarf and line-tables-only, so let those compose
-        // naturally in that case. And if you just turned off debug info,
-        // (-gsplit-dwarf -g0) - do that.
-        if (DwarfFission != DwarfFissionKind::None) {
-          if (A->getIndex() > SplitDWARFArg->getIndex()) {
-            if (DebugInfoKind == codegenoptions::NoDebugInfo ||
-                DebugInfoKind == codegenoptions::DebugDirectivesOnly ||
-                (DebugInfoKind == codegenoptions::DebugLineTablesOnly &&
-                 SplitDWARFInlining))
-              DwarfFission = DwarfFissionKind::None;
-          } else if (SplitDWARFInlining)
-            DebugInfoKind = codegenoptions::NoDebugInfo;
-        }
-      } else {
-        // For any other 'g' option, use Limited.
-        DebugInfoKind = codegenoptions::LimitedDebugInfo;
-      }
-    } else {
-      DebugInfoKind = codegenoptions::LimitedDebugInfo;
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_g_Group, options::OPT_gsplit_dwarf,
+                          options::OPT_gsplit_dwarf_EQ)) {
+    DebugInfoKind = codegenoptions::LimitedDebugInfo;
+
+    // If the last option explicitly specified a debug-info level, use it.
+    if (checkDebugInfoOption(A, Args, D, TC) &&
+        A->getOption().matches(options::OPT_gN_Group)) {
+      DebugInfoKind = DebugLevelToInfoKind(*A);
+      // For -g0 or -gline-tables-only, drop -gsplit-dwarf. This gets a bit more
+      // complicated if you've disabled inline info in the skeleton CUs
+      // (SplitDWARFInlining) - then there's value in composing split-dwarf and
+      // line-tables-only, so let those compose naturally in that case.
+      if (DebugInfoKind == codegenoptions::NoDebugInfo ||
+          DebugInfoKind == codegenoptions::DebugDirectivesOnly ||
+          (DebugInfoKind == codegenoptions::DebugLineTablesOnly &&
+           SplitDWARFInlining))
+        DwarfFission = DwarfFissionKind::None;
     }
   }
 
@@ -3273,16 +3262,12 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       }
     }
 
-  // -gsplit-dwarf should turn on -g and enable the backend dwarf
-  // splitting and extraction.
+  // -gsplit-dwarf enables the backend dwarf splitting and extraction.
   if (T.isOSBinFormatELF()) {
     if (!SplitDWARFInlining)
       CmdArgs.push_back("-fno-split-dwarf-inlining");
 
     if (DwarfFission != DwarfFissionKind::None) {
-      if (DebugInfoKind == codegenoptions::NoDebugInfo)
-        DebugInfoKind = codegenoptions::LimitedDebugInfo;
-
       if (DwarfFission == DwarfFissionKind::Single)
         CmdArgs.push_back("-enable-split-dwarf=single");
       else

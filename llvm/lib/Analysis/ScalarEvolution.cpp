@@ -4575,52 +4575,21 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
     if (EVI->getNumIndices() != 1 || EVI->getIndices()[0] != 0)
       break;
 
-    auto *CI = dyn_cast<CallInst>(EVI->getAggregateOperand());
-    if (!CI)
+    auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand());
+    if (!WO)
       break;
 
-    if (auto *F = CI->getCalledFunction())
-      switch (F->getIntrinsicID()) {
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-        if (!isOverflowIntrinsicNoWrap(cast<IntrinsicInst>(CI), DT))
-          return BinaryOp(Instruction::Add, CI->getArgOperand(0),
-                          CI->getArgOperand(1));
+    Instruction::BinaryOps BinOp = WO->getBinaryOp();
+    bool Signed = WO->isSigned();
+    // TODO: Should add nuw/nsw flags for mul as well.
+    if (BinOp == Instruction::Mul || !isOverflowIntrinsicNoWrap(WO, DT))
+      return BinaryOp(BinOp, WO->getLHS(), WO->getRHS());
 
-        // Now that we know that all uses of the arithmetic-result component of
-        // CI are guarded by the overflow check, we can go ahead and pretend
-        // that the arithmetic is non-overflowing.
-        if (F->getIntrinsicID() == Intrinsic::sadd_with_overflow)
-          return BinaryOp(Instruction::Add, CI->getArgOperand(0),
-                          CI->getArgOperand(1), /* IsNSW = */ true,
-                          /* IsNUW = */ false);
-        else
-          return BinaryOp(Instruction::Add, CI->getArgOperand(0),
-                          CI->getArgOperand(1), /* IsNSW = */ false,
-                          /* IsNUW*/ true);
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::usub_with_overflow:
-        if (!isOverflowIntrinsicNoWrap(cast<IntrinsicInst>(CI), DT))
-          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
-                          CI->getArgOperand(1));
-
-        // The same reasoning as sadd/uadd above.
-        if (F->getIntrinsicID() == Intrinsic::ssub_with_overflow)
-          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
-                          CI->getArgOperand(1), /* IsNSW = */ true,
-                          /* IsNUW = */ false);
-        else
-          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
-                          CI->getArgOperand(1), /* IsNSW = */ false,
-                          /* IsNUW = */ true);
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::umul_with_overflow:
-        return BinaryOp(Instruction::Mul, CI->getArgOperand(0),
-                        CI->getArgOperand(1));
-      default:
-        break;
-      }
-    break;
+    // Now that we know that all uses of the arithmetic-result component of
+    // CI are guarded by the overflow check, we can go ahead and pretend
+    // that the arithmetic is non-overflowing.
+    return BinaryOp(BinOp, WO->getLHS(), WO->getRHS(),
+                    /* IsNSW = */ Signed, /* IsNUW = */ !Signed);
   }
 
   default:

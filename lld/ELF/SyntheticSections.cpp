@@ -36,9 +36,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/RandomNumberGenerator.h"
-#include "llvm/Support/SHA1.h"
-#include "llvm/Support/xxhash.h"
 #include <cstdlib>
 #include <thread>
 
@@ -303,71 +300,15 @@ void BuildIdSection::writeTo(uint8_t *Buf) {
   HashBuf = Buf + 16;
 }
 
-// Split one uint8 array into small pieces of uint8 arrays.
-static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,
-                                            size_t ChunkSize) {
-  std::vector<ArrayRef<uint8_t>> Ret;
-  while (Arr.size() > ChunkSize) {
-    Ret.push_back(Arr.take_front(ChunkSize));
-    Arr = Arr.drop_front(ChunkSize);
-  }
-  if (!Arr.empty())
-    Ret.push_back(Arr);
-  return Ret;
-}
-
-// Computes a hash value of Data using a given hash function.
-// In order to utilize multiple cores, we first split data into 1MB
-// chunks, compute a hash for each chunk, and then compute a hash value
-// of the hash values.
-void BuildIdSection::computeHash(
-    llvm::ArrayRef<uint8_t> Data,
-    std::function<void(uint8_t *Dest, ArrayRef<uint8_t> Arr)> HashFn) {
-  std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
-  std::vector<uint8_t> Hashes(Chunks.size() * HashSize);
-
-  // Compute hash values.
-  parallelForEachN(0, Chunks.size(), [&](size_t I) {
-    HashFn(Hashes.data() + I * HashSize, Chunks[I]);
-  });
-
-  // Write to the final output buffer.
-  HashFn(HashBuf, Hashes);
+void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
+  assert(Buf.size() == HashSize);
+  memcpy(HashBuf, Buf.data(), HashSize);
 }
 
 BssSection::BssSection(StringRef Name, uint64_t Size, uint32_t Alignment)
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Name) {
   this->Bss = true;
   this->Size = Size;
-}
-
-void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
-  switch (Config->BuildId) {
-  case BuildIdKind::Fast:
-    computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      write64le(Dest, xxHash64(Arr));
-    });
-    break;
-  case BuildIdKind::Md5:
-    computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, MD5::hash(Arr).data(), 16);
-    });
-    break;
-  case BuildIdKind::Sha1:
-    computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, SHA1::hash(Arr).data(), 20);
-    });
-    break;
-  case BuildIdKind::Uuid:
-    if (auto EC = getRandomBytes(HashBuf, HashSize))
-      error("entropy source failure: " + EC.message());
-    break;
-  case BuildIdKind::Hexstring:
-    memcpy(HashBuf, Config->BuildIdVector.data(), Config->BuildIdVector.size());
-    break;
-  default:
-    llvm_unreachable("unknown BuildIdKind");
-  }
 }
 
 EhFrameSection::EhFrameSection()

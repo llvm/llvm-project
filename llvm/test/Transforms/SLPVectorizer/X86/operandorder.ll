@@ -28,19 +28,16 @@ define void @shuffle_operands1(double * noalias %from, double * noalias %to, dou
   ret void
 }
 
-define void @shuffle_preserve_broadcast(double * noalias %from, double * noalias %to, double %v1, double %v2) {
-; CHECK-LABEL: @shuffle_preserve_broadcast(
+define void @vecload_vs_broadcast(double * noalias %from, double * noalias %to, double %v1, double %v2) {
+; CHECK-LABEL: @vecload_vs_broadcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, double* [[FROM:%.*]], i32 1
-; CHECK-NEXT:    [[V0_1:%.*]] = load double, double* [[FROM]], align 4
-; CHECK-NEXT:    [[V0_2:%.*]] = load double, double* [[FROM_1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[V0_1]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[P]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V0_2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
@@ -67,20 +64,17 @@ ext:
   ret void
 }
 
-define void @shuffle_preserve_broadcast2(double * noalias %from, double * noalias %to, double %v1, double %v2) {
-; CHECK-LABEL: @shuffle_preserve_broadcast2(
+define void @vecload_vs_broadcast2(double * noalias %from, double * noalias %to, double %v1, double %v2) {
+; CHECK-LABEL: @vecload_vs_broadcast2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, double* [[FROM:%.*]], i32 1
-; CHECK-NEXT:    [[V0_1:%.*]] = load double, double* [[FROM]], align 4
-; CHECK-NEXT:    [[V0_2:%.*]] = load double, double* [[FROM_1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[P]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V0_2]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[V0_1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[P]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
@@ -106,20 +100,17 @@ ext:
   ret void
 }
 
-define void @shuffle_preserve_broadcast3(double * noalias %from, double * noalias %to, double %v1, double %v2) {
-; CHECK-LABEL: @shuffle_preserve_broadcast3(
+define void @vecload_vs_broadcast3(double * noalias %from, double * noalias %to, double %v1, double %v2) {
+; CHECK-LABEL: @vecload_vs_broadcast3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, double* [[FROM:%.*]], i32 1
-; CHECK-NEXT:    [[V0_1:%.*]] = load double, double* [[FROM]], align 4
-; CHECK-NEXT:    [[V0_2:%.*]] = load double, double* [[FROM_1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[P]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V0_2]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[V0_1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[P]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
@@ -184,22 +175,21 @@ ext:
   ret void
 }
 
-define void @shuffle_preserve_broadcast5(double * noalias %from, double * noalias %to, double %v1, double %v2) {
-; CHECK-LABEL: @shuffle_preserve_broadcast5(
+define void @vecload_vs_broadcast5(double * noalias %from, double * noalias %to, double %v1, double %v2) {
+; CHECK-LABEL: @vecload_vs_broadcast5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, double* [[FROM:%.*]], i32 1
-; CHECK-NEXT:    [[V0_1:%.*]] = load double, double* [[FROM]], align 4
-; CHECK-NEXT:    [[V0_2:%.*]] = load double, double* [[FROM_1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[V0_1]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[V0_2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[P]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[P]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP6]], <2 x double>* [[TMP7]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void

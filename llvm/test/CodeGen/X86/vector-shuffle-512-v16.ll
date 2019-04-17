@@ -325,7 +325,7 @@ define <4 x i32> @test_v16i32_0_4_8_12(<16 x i32> %v) {
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; ALL-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; ALL-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,0,4,u,u,u,u>
+; ALL-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [17179869184,17179869184,17179869184,17179869184]
 ; ALL-NEXT:    vpermps %ymm0, %ymm2, %ymm0
 ; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; ALL-NEXT:    vzeroupper

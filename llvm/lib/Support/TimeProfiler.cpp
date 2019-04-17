@@ -89,6 +89,9 @@ struct TimeTraceProfiler {
            "All profiler sections should be ended when calling Write");
 
     json::Array Events;
+    const size_t ExpectedEntryCount =
+        Entries.size() + CountAndTotalPerName.size() + 1;
+    Events.reserve(ExpectedEntryCount);
 
     // Emit all events for the main flame graph.
     for (const auto &E : Entries) {
@@ -148,6 +151,8 @@ struct TimeTraceProfiler {
         {"name", "process_name"},
         {"args", json::Object{{"name", "clang"}}},
     });
+
+    assert(Events.size() == ExpectedEntryCount && "Size prediction failed!");
 
     OS << formatv("{0:2}", json::Value(json::Object(
                                {{"traceEvents", std::move(Events)}})));

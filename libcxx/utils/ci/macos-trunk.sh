@@ -121,6 +121,7 @@ mkdir -p "${LIBCXX_BUILD_DIR}"
     -DLLVM_PATH="${LLVM_ROOT}" \
     -DCMAKE_INSTALL_PREFIX="${LIBCXX_INSTALL_DIR}" \
     -DLIBCXX_ENABLE_EXCEPTIONS="${LIBCXX_EXCEPTIONS}" \
+    -DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=OFF \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" # Build a universal dylib
 )
@@ -135,6 +136,7 @@ mkdir -p "${LIBCXXABI_BUILD_DIR}"
     -DLLVM_PATH="${LLVM_ROOT}" \
     -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_INSTALL_DIR}" \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=ON \
+    -DLIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS=ON \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" # Build a universal dylib
 )
@@ -142,8 +144,8 @@ echo "@@@@@@"
 
 
 echo "@@@ Building libc++.dylib and libc++abi.dylib from sources (just to make sure it works) @@@"
-ninja -C "${LIBCXX_BUILD_DIR}" install-cxx
-ninja -C "${LIBCXXABI_BUILD_DIR}" install-cxxabi
+ninja -C "${LIBCXX_BUILD_DIR}" install-cxx -v
+ninja -C "${LIBCXXABI_BUILD_DIR}" install-cxxabi -v
 echo "@@@@@@"
 
 

@@ -22,12 +22,8 @@
 #   include "support/runtime/new_handler_fallback.ipp"
 #elif defined(__GLIBCXX__)
     // nothing to do
-#else
-#   if defined(__APPLE__) && !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
-#       include <cxxabi.h> // FIXME: remove this once buildit is gone.
-#   else
-#       include "support/runtime/new_handler_fallback.ipp"
-#   endif
+#elif !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
+#   include "support/runtime/new_handler_fallback.ipp"
 #endif
 
 namespace std
