@@ -22,7 +22,7 @@
 #   include "support/runtime/new_handler_fallback.ipp"
 #elif defined(__GLIBCXX__)
     // nothing to do
-#elif !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
+#else
 #   include "support/runtime/new_handler_fallback.ipp"
 #endif
 
