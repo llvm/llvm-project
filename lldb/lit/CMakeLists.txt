@@ -36,6 +36,8 @@ endif()
 # the value is not canonicalized within LLVM
 llvm_canonicalize_cmake_booleans(
   LLDB_DISABLE_PYTHON
+  LLDB_TOOL_LLDB_INSTR_BUILD
+  LLDB_TOOL_LLDB_VSCODE_BUILD
   LLVM_ENABLE_ZLIB
   LLDB_IS_64_BITS)
 

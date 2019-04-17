@@ -12,7 +12,7 @@
 
 // Check compiling a .pcm file to a .o file.
 //
-// RUN: %clang -std=c++2a %t/module.pcm -c -o %t/module.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-COMPILE
+// RUN: %clang -std=c++2a %t/module.pcm -S -o %t/module.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-COMPILE
 //
 // CHECK-COMPILE: -cc1 {{.*}} {{-emit-obj|-S}}
 // CHECK-COMPILE-SAME: -o {{.*}}.{{pcm.o|s}}
@@ -21,7 +21,7 @@
 
 // Check use of a .pcm file in another compilation.
 //
-// RUN: %clang -std=c++2a -fmodule-file=%t/module.pcm -Dexport= %s -c -o %t/module.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-USE
+// RUN: %clang -std=c++2a -fmodule-file=%t/module.pcm -Dexport= %s -S -o %t/module.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-USE
 //
 // CHECK-USE: -cc1
 // CHECK-USE-SAME: {{-emit-obj|-S}}
@@ -31,7 +31,7 @@
 
 // Check combining precompile and compile steps works.
 //
-// RUN: %clang -std=c++2a -x c++-module %s -c -o %t/module2.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
+// RUN: %clang -std=c++2a -x c++-module %s -S -o %t/module2.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
 
 // Check that .cppm is treated as a module implicitly.
 //

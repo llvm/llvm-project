@@ -141,6 +141,11 @@ function(add_lldb_executable name)
   endif()
 endfunction(add_lldb_executable)
 
+
+macro(add_lldb_tool_subdirectory name)
+  add_llvm_subdirectory(LLDB TOOL ${name})
+endmacro()
+
 function(add_lldb_tool name)
   add_lldb_executable(${name} GENERATE_INSTALL ${ARGN})
 endfunction()

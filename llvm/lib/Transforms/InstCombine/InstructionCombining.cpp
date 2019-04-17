@@ -2667,53 +2667,28 @@ Instruction *InstCombiner::visitExtractValueInst(ExtractValueInst &EV) {
       return ExtractValueInst::Create(IV->getInsertedValueOperand(),
                                       makeArrayRef(exti, exte));
   }
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Agg)) {
-    // We're extracting from an intrinsic, see if we're the only user, which
-    // allows us to simplify multiple result intrinsics to simpler things that
-    // just get one value.
-    if (II->hasOneUse()) {
-      // Check if we're grabbing the overflow bit or the result of a 'with
-      // overflow' intrinsic.  If it's the latter we can remove the intrinsic
+  if (WithOverflowInst *WO = dyn_cast<WithOverflowInst>(Agg)) {
+    // We're extracting from an overflow intrinsic, see if we're the only user,
+    // which allows us to simplify multiple result intrinsics to simpler
+    // things that just get one value.
+    if (WO->hasOneUse()) {
+      // Check if we're grabbing only the result of a 'with overflow' intrinsic
       // and replace it with a traditional binary instruction.
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::uadd_with_overflow:
-      case Intrinsic::sadd_with_overflow:
-        if (*EV.idx_begin() == 0) {  // Normal result.
-          Value *LHS = II->getArgOperand(0), *RHS = II->getArgOperand(1);
-          replaceInstUsesWith(*II, UndefValue::get(II->getType()));
-          eraseInstFromFunction(*II);
-          return BinaryOperator::CreateAdd(LHS, RHS);
-        }
-
-        // If the normal result of the add is dead, and the RHS is a constant,
-        // we can transform this into a range comparison.
-        // overflow = uadd a, -4  -->  overflow = icmp ugt a, 3
-        if (II->getIntrinsicID() == Intrinsic::uadd_with_overflow)
-          if (ConstantInt *CI = dyn_cast<ConstantInt>(II->getArgOperand(1)))
-            return new ICmpInst(ICmpInst::ICMP_UGT, II->getArgOperand(0),
-                                ConstantExpr::getNot(CI));
-        break;
-      case Intrinsic::usub_with_overflow:
-      case Intrinsic::ssub_with_overflow:
-        if (*EV.idx_begin() == 0) {  // Normal result.
-          Value *LHS = II->getArgOperand(0), *RHS = II->getArgOperand(1);
-          replaceInstUsesWith(*II, UndefValue::get(II->getType()));
-          eraseInstFromFunction(*II);
-          return BinaryOperator::CreateSub(LHS, RHS);
-        }
-        break;
-      case Intrinsic::umul_with_overflow:
-      case Intrinsic::smul_with_overflow:
-        if (*EV.idx_begin() == 0) {  // Normal result.
-          Value *LHS = II->getArgOperand(0), *RHS = II->getArgOperand(1);
-          replaceInstUsesWith(*II, UndefValue::get(II->getType()));
-          eraseInstFromFunction(*II);
-          return BinaryOperator::CreateMul(LHS, RHS);
-        }
-        break;
-      default:
-        break;
+      if (*EV.idx_begin() == 0) {
+        Instruction::BinaryOps BinOp = WO->getBinaryOp();
+        Value *LHS = WO->getLHS(), *RHS = WO->getRHS();
+        replaceInstUsesWith(*WO, UndefValue::get(WO->getType()));
+        eraseInstFromFunction(*WO);
+        return BinaryOperator::Create(BinOp, LHS, RHS);
       }
+
+      // If the normal result of the add is dead, and the RHS is a constant,
+      // we can transform this into a range comparison.
+      // overflow = uadd a, -4  -->  overflow = icmp ugt a, 3
+      if (WO->getIntrinsicID() == Intrinsic::uadd_with_overflow)
+        if (ConstantInt *CI = dyn_cast<ConstantInt>(WO->getRHS()))
+          return new ICmpInst(ICmpInst::ICMP_UGT, WO->getLHS(),
+                              ConstantExpr::getNot(CI));
     }
   }
   if (LoadInst *L = dyn_cast<LoadInst>(Agg))

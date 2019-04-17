@@ -50,17 +50,30 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X86-SSE42-NEXT:    pextrd $1, %xmm2, %edx
 ; X86-SSE42-NEXT:    retl
 ;
-; X86-AVX-LABEL: test_reduce_v2i64:
-; X86-AVX:       ## %bb.0:
-; X86-AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X86-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
-; X86-AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm3
-; X86-AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm2
-; X86-AVX-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
-; X86-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X86-AVX-NEXT:    vmovd %xmm0, %eax
-; X86-AVX-NEXT:    vpextrd $1, %xmm0, %edx
-; X86-AVX-NEXT:    retl
+; X86-AVX1-LABEL: test_reduce_v2i64:
+; X86-AVX1:       ## %bb.0:
+; X86-AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; X86-AVX1-NEXT:    ## xmm2 = mem[0,0]
+; X86-AVX1-NEXT:    vxorps %xmm2, %xmm0, %xmm3
+; X86-AVX1-NEXT:    vxorps %xmm2, %xmm1, %xmm2
+; X86-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
+; X86-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; X86-AVX1-NEXT:    vmovd %xmm0, %eax
+; X86-AVX1-NEXT:    vpextrd $1, %xmm0, %edx
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: test_reduce_v2i64:
+; X86-AVX2:       ## %bb.0:
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; X86-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; X86-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
+; X86-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
+; X86-AVX2-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
+; X86-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; X86-AVX2-NEXT:    vmovd %xmm0, %eax
+; X86-AVX2-NEXT:    vpextrd $1, %xmm0, %edx
+; X86-AVX2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_reduce_v2i64:
 ; X64-SSE2:       ## %bb.0:
@@ -524,9 +537,10 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X86-AVX1-LABEL: test_reduce_v4i64:
 ; X86-AVX1:       ## %bb.0:
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
-; X86-AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
-; X86-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm4
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; X86-AVX1-NEXT:    ## xmm2 = mem[0,0]
+; X86-AVX1-NEXT:    vxorps %xmm2, %xmm1, %xmm3
+; X86-AVX1-NEXT:    vxorps %xmm2, %xmm0, %xmm4
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm4
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm3
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
@@ -544,7 +558,7 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X86-AVX2-LABEL: test_reduce_v4i64:
 ; X86-AVX2:       ## %bb.0:
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
+; X86-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm3
 ; X86-AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm4
 ; X86-AVX2-NEXT:    vpcmpgtq %ymm4, %ymm3, %ymm3
@@ -1239,18 +1253,19 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-AVX1-LABEL: test_reduce_v8i64:
 ; X86-AVX1:       ## %bb.0:
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,2147483648,0,2147483648]
-; X86-AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0]
+; X86-AVX1-NEXT:    ## xmm3 = mem[0,0]
+; X86-AVX1-NEXT:    vxorps %xmm3, %xmm2, %xmm2
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; X86-AVX1-NEXT:    vpxor %xmm3, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vxorps %xmm3, %xmm4, %xmm4
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm2
-; X86-AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm4
-; X86-AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm5
+; X86-AVX1-NEXT:    vxorps %xmm3, %xmm1, %xmm4
+; X86-AVX1-NEXT:    vxorps %xmm3, %xmm0, %xmm5
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
 ; X86-AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm2
+; X86-AVX1-NEXT:    vxorps %xmm3, %xmm1, %xmm2
 ; X86-AVX1-NEXT:    vxorpd %xmm3, %xmm0, %xmm4
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm4
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm2
@@ -1268,7 +1283,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ;
 ; X86-AVX2-LABEL: test_reduce_v8i64:
 ; X86-AVX2:       ## %bb.0:
-; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
+; X86-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm3
 ; X86-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm4
 ; X86-AVX2-NEXT:    vpcmpgtq %ymm3, %ymm4, %ymm3

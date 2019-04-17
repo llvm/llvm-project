@@ -38,6 +38,46 @@ void test(int N)
         assert(*j == i);
 }
 
+struct Payload
+{
+    int val;
+    int side;
+    Payload(int v) : val(v), side(0) {}
+    Payload(int v, int s) : val(v), side(s) {}
+    bool operator< (const Payload &rhs) const { return val <  rhs.val;}
+//     bool operator==(const Payload &rhs) const { return val == rhs.val;}
+};
+
+void test_stable(int N)
+{
+    typedef Payload T;
+    typedef std::forward_list<T> C;
+    typedef std::vector<T> V;
+    V v;
+    for (int i = 0; i < N; ++i)
+        v.push_back(Payload(i/2));
+    std::shuffle(v.begin(), v.end(), randomness);
+    for (int i = 0; i < N; ++i)
+        v[i].side = i;
+
+    C c(v.begin(), v.end());
+    c.sort();
+    assert(distance(c.begin(), c.end()) == N);
+
+//  Are we sorted?
+    typename C::const_iterator j = c.begin();
+    for (int i = 0; i < N; ++i, ++j)
+        assert(j->val == i/2);
+
+//  Are we stable?
+    for (C::const_iterator it = c.begin(); it != c.end(); ++it)
+    {
+        C::const_iterator next = std::next(it);
+        if (next != c.end() && it->val == next->val)
+            assert(it->side < next->side);
+    }
+}
+
 int main(int, char**)
 {
     for (int i = 0; i < 40; ++i)
@@ -46,6 +86,9 @@ int main(int, char**)
     for (int i = 0; i < 40; ++i)
         test<std::forward_list<int, min_allocator<int>> >(i);
 #endif
+
+    for (int i = 0; i < 40; ++i)
+        test_stable(i);
 
   return 0;
 }

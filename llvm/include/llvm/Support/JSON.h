@@ -179,6 +179,7 @@ public:
 
   bool empty() const { return V.empty(); }
   size_t size() const { return V.size(); }
+  void reserve(size_t S) { V.reserve(S); }
 
   void clear() { V.clear(); }
   void push_back(const Value &E) { V.push_back(E); }

@@ -215,7 +215,8 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vptestnmb %ymm0, %ymm0, %k0
 ; AVX512VLBW-NEXT:    vpmovm2w %k0, %zmm0
-; AVX512VLBW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; AVX512VLBW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; AVX512VLBW-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; AVX512VLBW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; AVX512VLBW-NEXT:    vpmovw2m %zmm0, %k0
 ; AVX512VLBW-NEXT:    vpmovm2b %k0, %ymm0
@@ -226,7 +227,8 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BW-NEXT:    vptestnmb %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; AVX512BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; AVX512BW-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vpmovw2m %zmm0, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0

@@ -1391,7 +1391,8 @@ define <4 x i64> @f4xi64_i128(<4 x i64> %a) {
 ;
 ; ALL32-LABEL: f4xi64_i128:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,0,1,0,0,0,1,0]
+; ALL32-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,0,1,0,0,0,1,0]
+; ALL32-NEXT:    # ymm1 = mem[0,1,0,1]
 ; ALL32-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; ALL32-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; ALL32-NEXT:    retl
@@ -1431,14 +1432,15 @@ define <8 x i64> @f8xi64_i128(<8 x i64> %a) {
 ; AVX-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddq %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX-NEXT:    vmovaps {{.*#+}} ymm2 = [0,0,1,0,0,0,1,0]
+; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm2
 ; AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX-NEXT:    retl
 ;
 ; AVX2-LABEL: f8xi64_i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,0,1,0,0,0,1,0]
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,0,1,0,0,0,1,0]
+; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-NEXT:    vpaddq %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
@@ -1447,7 +1449,8 @@ define <8 x i64> @f8xi64_i128(<8 x i64> %a) {
 ;
 ; AVX512-LABEL: f8xi64_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]
+; AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]
+; AVX512-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retl
@@ -1521,7 +1524,8 @@ define <8 x i64> @f8xi64_i256(<8 x i64> %a) {
 ;
 ; AVX512-LABEL: f8xi64_i256:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,1,0,2,0,3,0,0,0,1,0,2,0,3,0]
+; AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [0,0,1,0,2,0,3,0,0,0,1,0,2,0,3,0]
+; AVX512-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retl

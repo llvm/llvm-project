@@ -1184,7 +1184,8 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpsllw $2, %ymm1, %ymm3
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm3, %ymm3
@@ -1208,7 +1209,8 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512F-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; AVX512F-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512F-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm1
 ; AVX512F-NEXT:    vpsllw $2, %ymm1, %ymm3
 ; AVX512F-NEXT:    vpand {{.*}}(%rip), %ymm3, %ymm3
@@ -1232,7 +1234,8 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; AVX512VL-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vpsllw $2, %ymm1, %ymm3
 ; AVX512VL-NEXT:    vpand {{.*}}(%rip), %ymm3, %ymm3
