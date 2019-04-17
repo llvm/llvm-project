@@ -839,6 +839,14 @@ bool GCNPassConfig::addPreISel() {
     addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
   }
   addPass(createSinkingPass());
+  // This is a temporary fix for the issue of dealing with in loop uniform values
+  // where the uses out of the loop are non-uniform. LCSSA creates a PHI at the
+  // loop exit such that can be marked divergent and can be passed onto ISEL
+  // Ideally, we will add LCSSA as preserved to AMDGPUDAGToDAGISel class, but
+  // for the moment it conflicts with StackProtector which is in CodeGen and
+  // therefore can't be preserved in LCSSA as needed. The linking/preserving
+  // outside of the same library needs to be resolved in llvm core code.
+  addPass(createLCSSAPass());
   addPass(createAMDGPUAnnotateUniformValues());
   if (!LateCFGStructurize) {
     addPass(createSIAnnotateControlFlowPass());

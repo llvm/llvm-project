@@ -37,8 +37,8 @@ define float @test_atomicrmw_fsub(float addrspace(3)* %addr) {
   ; CHECK:   G_BRCOND [[INT1]](s1), %bb.3
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.3.atomicrmw.end:
-  ; CHECK:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32), %bb.2
-  ; CHECK:   [[PHI3:%[0-9]+]]:_(s64) = G_PHI [[INT]](s64), %bb.2
+  ; CHECK-DAG:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32), %bb.2
+  ; CHECK-DAG:   [[PHI3:%[0-9]+]]:_(s64) = G_PHI [[INT]](s64), %bb.2
   ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI3]](s64)
   ; CHECK:   $vgpr0 = COPY [[PHI2]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]

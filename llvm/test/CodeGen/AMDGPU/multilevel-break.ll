@@ -1,5 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-- -structurizecfg -si-annotate-control-flow < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; Temporarily removed: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; OPT-LABEL: {{^}}define amdgpu_vs void @multi_else_break(
 ; OPT: main_body:
