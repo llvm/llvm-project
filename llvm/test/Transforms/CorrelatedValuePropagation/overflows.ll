@@ -507,9 +507,11 @@ define i32 @unsigned_mul(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 10000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[MULO:%.*]] = tail call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X]], i32 100)
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[MULO]], 0
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[MULO]], 1
+; CHECK-NEXT:    [[MULO1:%.*]] = mul nuw i32 [[X]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i32, i1 } undef, i32 [[MULO1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } [[TMP0]], i1 false, 1
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[COND_END]]
 ; CHECK:       trap:
 ; CHECK-NEXT:    tail call void @llvm.trap()
@@ -545,9 +547,11 @@ define i32 @signed_mul(i32 %x) {
 ; CHECK-NEXT:    [[CMP3:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[MULO:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[X]], i32 100)
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[MULO]], 0
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[MULO]], 1
+; CHECK-NEXT:    [[MULO1:%.*]] = mul nsw i32 [[X]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i32, i1 } undef, i32 [[MULO1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } [[TMP0]], i1 false, 1
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[COND_END]]
 ; CHECK:       trap:
 ; CHECK-NEXT:    tail call void @llvm.trap()
@@ -711,3 +715,12 @@ while.end:                                        ; preds = %while.cond, %cont
 cleanup2:                                         ; preds = %while.end
   ret void
 }
+
+define { i8, i1 } @signed_mul_constant_folding() {
+; CHECK-LABEL: @signed_mul_constant_folding(
+; CHECK-NEXT:    ret { i8, i1 } { i8 2, i1 false }
+  %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 2)
+  ret { i8, i1 } %mul
+}
+
+declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8)

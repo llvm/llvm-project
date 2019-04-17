@@ -877,7 +877,7 @@ public:
           // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or
           // RHS operand. The LHS operand of both add and sub is never attached
           // to an inversese operation in the linearized form, therefore its APO
-          // is false. The RHS is ture only if VL[Lane] is an inverse operation.
+          // is false. The RHS is true only if VL[Lane] is an inverse operation.
 
           // Since operand reordering is performed on groups of commutative
           // operations or alternating sequences (e.g., +, -), we can safely

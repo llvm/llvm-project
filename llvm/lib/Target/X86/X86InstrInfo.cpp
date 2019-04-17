@@ -2723,22 +2723,22 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
       return X86::MMX_MOVD64to64rr;
   }
 
-  // SrcReg(FR32) -> DestReg(GR32)
-  // SrcReg(GR32) -> DestReg(FR32)
+  // SrcReg(VR128) -> DestReg(GR32)
+  // SrcReg(GR32)  -> DestReg(VR128)
 
   if (X86::GR32RegClass.contains(DestReg) &&
-      X86::FR32XRegClass.contains(SrcReg))
-    // Copy from a FR32 register to a GR32 register.
-    return HasAVX512 ? X86::VMOVSS2DIZrr :
-           HasAVX    ? X86::VMOVSS2DIrr  :
-                       X86::MOVSS2DIrr;
+      X86::VR128XRegClass.contains(SrcReg))
+    // Copy from a VR128 register to a GR32 register.
+    return HasAVX512 ? X86::VMOVPDI2DIZrr :
+           HasAVX    ? X86::VMOVPDI2DIrr  :
+                       X86::MOVPDI2DIrr;
 
-  if (X86::FR32XRegClass.contains(DestReg) &&
+  if (X86::VR128XRegClass.contains(DestReg) &&
       X86::GR32RegClass.contains(SrcReg))
-    // Copy from a GR32 register to a FR32 register.
-    return HasAVX512 ? X86::VMOVDI2SSZrr :
-           HasAVX    ? X86::VMOVDI2SSrr  :
-                       X86::MOVDI2SSrr;
+    // Copy from a VR128 register to a VR128 register.
+    return HasAVX512 ? X86::VMOVDI2PDIZrr :
+           HasAVX    ? X86::VMOVDI2PDIrr  :
+                       X86::MOVDI2PDIrr;
   return 0;
 }
 

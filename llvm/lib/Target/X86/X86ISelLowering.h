@@ -814,7 +814,7 @@ namespace llvm {
 
     bool hasAndNot(SDValue Y) const override;
 
-    bool preferShiftsToClearExtremeBits(SDValue Y) const override;
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
     bool
     shouldTransformSignedTruncationCheck(EVT XVT,

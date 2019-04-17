@@ -290,15 +290,13 @@ define i8 @nabs_different_constants(i8 %a) {
 }
 
 ; https://bugs.llvm.org/show_bug.cgi?id=41101
-; TODO: Detect equivalence of selects with commuted operands: 'not' cond.
+; Detect equivalence of selects with commuted operands: 'not' cond.
 
 define i32 @select_not_cond(i1 %cond, i32 %t, i32 %f) {
 ; CHECK-LABEL: @select_not_cond(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[COND:%.*]], true
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[COND]], i32 [[T:%.*]], i32 [[F:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[NOT]], i32 [[F]], i32 [[T]]
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[M2]], [[M1]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %not = xor i1 %cond, -1
   %m1 = select i1 %cond, i32 %t, i32 %f
@@ -307,15 +305,13 @@ define i32 @select_not_cond(i1 %cond, i32 %t, i32 %f) {
   ret i32 %r
 }
 
-; TODO: Detect equivalence of selects with commuted operands: 'not' cond with vector select.
+; Detect equivalence of selects with commuted operands: 'not' cond with vector select.
 
 define <2 x double> @select_not_cond_commute_vec(<2 x i1> %cond, <2 x double> %t, <2 x double> %f) {
 ; CHECK-LABEL: @select_not_cond_commute_vec(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[COND:%.*]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[M1:%.*]] = select <2 x i1> [[COND]], <2 x double> [[T:%.*]], <2 x double> [[F:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = select <2 x i1> [[NOT]], <2 x double> [[F]], <2 x double> [[T]]
-; CHECK-NEXT:    [[R:%.*]] = fdiv nnan <2 x double> [[M1]], [[M2]]
-; CHECK-NEXT:    ret <2 x double> [[R]]
+; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
 ;
   %not = xor <2 x i1> %cond, <i1 -1, i1 -1>
   %m1 = select <2 x i1> %cond, <2 x double> %t, <2 x double> %f
@@ -357,16 +353,14 @@ define i32 @select_not_cond_wrong_cond(i1 %cond, i32 %t, i32 %f) {
   ret i32 %r
 }
 
-; TODO: Detect equivalence of selects with commuted operands: inverted pred with fcmps.
+; Detect equivalence of selects with commuted operands: inverted pred with fcmps.
 
 define i32 @select_invert_pred_cond(float %x, i32 %t, i32 %f) {
 ; CHECK-LABEL: @select_invert_pred_cond(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp ueq float [[X:%.*]], 4.200000e+01
 ; CHECK-NEXT:    [[INVCOND:%.*]] = fcmp one float [[X]], 4.200000e+01
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[COND]], i32 [[T:%.*]], i32 [[F:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[INVCOND]], i32 [[F]], i32 [[T]]
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[M2]], [[M1]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %cond = fcmp ueq float %x, 42.0
   %invcond = fcmp one float %x, 42.0
@@ -376,16 +370,14 @@ define i32 @select_invert_pred_cond(float %x, i32 %t, i32 %f) {
   ret i32 %r
 }
 
-; TODO: Detect equivalence of selects with commuted operands: inverted pred with icmps and vectors.
+; Detect equivalence of selects with commuted operands: inverted pred with icmps and vectors.
 
 define <2 x i32> @select_invert_pred_cond_commute_vec(<2 x i8> %x, <2 x i32> %t, <2 x i32> %f) {
 ; CHECK-LABEL: @select_invert_pred_cond_commute_vec(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 42, i8 -1>
 ; CHECK-NEXT:    [[INVCOND:%.*]] = icmp sle <2 x i8> [[X]], <i8 42, i8 -1>
 ; CHECK-NEXT:    [[M1:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[T:%.*]], <2 x i32> [[F:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = select <2 x i1> [[INVCOND]], <2 x i32> [[F]], <2 x i32> [[T]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[M1]], [[M2]]
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %cond = icmp sgt <2 x i8> %x, <i8 42, i8 -1>
   %invcond = icmp sle <2 x i8> %x, <i8 42, i8 -1>
@@ -452,7 +444,7 @@ define i32 @select_invert_pred_wrong_cmp_ops(float %x, i32 %t, i32 %f) {
   ret i32 %r
 }
 
-; TODO: If we have both an inverted predicate and a 'not' op, recognize the double-negation.
+; If we have both an inverted predicate and a 'not' op, recognize the double-negation.
 
 define i32 @select_not_invert_pred_cond(i8 %x, i32 %t, i32 %f) {
 ; CHECK-LABEL: @select_not_invert_pred_cond(
@@ -460,9 +452,7 @@ define i32 @select_not_invert_pred_cond(i8 %x, i32 %t, i32 %f) {
 ; CHECK-NEXT:    [[INVCOND:%.*]] = icmp ule i8 [[X]], 42
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[INVCOND]], true
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[COND]], i32 [[T:%.*]], i32 [[F:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[NOT]], i32 [[T]], i32 [[F]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[M1]], [[M2]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %cond = icmp ugt i8 %x, 42
   %invcond = icmp ule i8 %x, 42
@@ -473,7 +463,7 @@ define i32 @select_not_invert_pred_cond(i8 %x, i32 %t, i32 %f) {
   ret i32 %r
 }
 
-; TODO: If we have both an inverted predicate and a 'not' op, recognize the double-negation.
+; If we have both an inverted predicate and a 'not' op, recognize the double-negation.
 
 define i32 @select_not_invert_pred_cond_commute(i8 %x, i8 %y, i32 %t, i32 %f) {
 ; CHECK-LABEL: @select_not_invert_pred_cond_commute(
@@ -481,9 +471,7 @@ define i32 @select_not_invert_pred_cond_commute(i8 %x, i8 %y, i32 %t, i32 %f) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[INVCOND]], true
 ; CHECK-NEXT:    [[M2:%.*]] = select i1 [[NOT]], i32 [[T:%.*]], i32 [[F:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[M1:%.*]] = select i1 [[COND]], i32 [[T]], i32 [[F]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[M2]], [[M1]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %invcond = icmp ule i8 %x, %y
   %not = xor i1 %invcond, -1

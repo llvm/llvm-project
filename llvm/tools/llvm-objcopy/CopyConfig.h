@@ -30,6 +30,13 @@ namespace objcopy {
 // lets us map architecture names to ELF types and the e_machine value of the
 // ELF file.
 struct MachineInfo {
+  MachineInfo(uint16_t EM, uint8_t ABI, bool Is64, bool IsLittle)
+      : EMachine(EM), OSABI(ABI), Is64Bit(Is64), IsLittleEndian(IsLittle) {}
+  // Alternative constructor that defaults to NONE for OSABI.
+  MachineInfo(uint16_t EM, bool Is64, bool IsLittle)
+      : MachineInfo(EM, ELF::ELFOSABI_NONE, Is64, IsLittle) {}
+  // Default constructor for unset fields.
+  MachineInfo() : MachineInfo(0, 0, false, false) {}
   uint16_t EMachine;
   uint8_t OSABI;
   bool Is64Bit;

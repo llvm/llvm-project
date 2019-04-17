@@ -400,15 +400,10 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI,
 
 // See if we can prove that the given overflow intrinsic will not overflow.
 static bool willNotOverflow(WithOverflowInst *WO, LazyValueInfo *LVI) {
-  // TODO: Also support multiplication.
-  Instruction::BinaryOps BinOp = WO->getBinaryOp();
-  if (BinOp == Instruction::Mul)
-    return false;
-
   Value *RHS = WO->getRHS();
   ConstantRange RRange = LVI->getConstantRange(RHS, WO->getParent(), WO);
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
-      BinOp, RRange, WO->getNoWrapKind());
+      WO->getBinaryOp(), RRange, WO->getNoWrapKind());
   // As an optimization, do not compute LRange if we do not need it.
   if (NWRegion.isEmptySet())
     return false;
@@ -421,10 +416,13 @@ static void processOverflowIntrinsic(WithOverflowInst *WO) {
   IRBuilder<> B(WO);
   Value *NewOp = B.CreateBinOp(
       WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), WO->getName());
-  if (WO->isSigned())
-    cast<Instruction>(NewOp)->setHasNoSignedWrap();
-  else
-    cast<Instruction>(NewOp)->setHasNoUnsignedWrap();
+  // Constant-holing could have happened.
+  if (auto *Inst = dyn_cast<Instruction>(NewOp)) {
+    if (WO->isSigned())
+      Inst->setHasNoSignedWrap();
+    else
+      Inst->setHasNoUnsignedWrap();
+  }
 
   Value *NewI = B.CreateInsertValue(UndefValue::get(WO->getType()), NewOp, 0);
   NewI = B.CreateInsertValue(NewI, ConstantInt::getFalse(WO->getContext()), 1);

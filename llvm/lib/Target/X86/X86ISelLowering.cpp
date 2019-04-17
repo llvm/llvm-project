@@ -5007,7 +5007,7 @@ bool X86TargetLowering::hasAndNot(SDValue Y) const {
   return Subtarget.hasSSE2();
 }
 
-bool X86TargetLowering::preferShiftsToClearExtremeBits(SDValue Y) const {
+bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   EVT VT = Y.getValueType();
 
   // For vectors, we don't have a preference, but we probably want a mask.
