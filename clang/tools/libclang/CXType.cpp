@@ -109,6 +109,7 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(VariableArray);
     TKCASE(DependentSizedArray);
     TKCASE(Vector);
+    TKCASE(ExtVector);
     TKCASE(MemberPointer);
     TKCASE(Auto);
     TKCASE(Elaborated);
@@ -600,6 +601,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(VariableArray);
     TKIND(DependentSizedArray);
     TKIND(Vector);
+    TKIND(ExtVector);
     TKIND(MemberPointer);
     TKIND(Auto);
     TKIND(Elaborated);
@@ -804,6 +806,9 @@ CXType clang_getElementType(CXType CT) {
     case Type::Vector:
       ET = cast<VectorType> (TP)->getElementType();
       break;
+    case Type::ExtVector:
+      ET = cast<ExtVectorType>(TP)->getElementType();
+      break;
     case Type::Complex:
       ET = cast<ComplexType> (TP)->getElementType();
       break;
@@ -826,6 +831,9 @@ long long clang_getNumElements(CXType CT) {
       break;
     case Type::Vector:
       result = cast<VectorType> (TP)->getNumElements();
+      break;
+    case Type::ExtVector:
+      result = cast<ExtVectorType>(TP)->getNumElements();
       break;
     default:
       break;

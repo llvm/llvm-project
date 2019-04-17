@@ -371,11 +371,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   // So just inform the preprocessor of EOF, while keeping everything alive.
   Clang->getPreprocessor().EndSourceFile();
 
-  std::vector<Diag> Diags = ASTDiags.take();
-  // Populate diagnostic source.
-  for (auto &D : Diags)
-    D.S =
-        !CTContext->getCheckName(D.ID).empty() ? Diag::ClangTidy : Diag::Clang;
+  std::vector<Diag> Diags = ASTDiags.take(CTContext.getPointer());
   // Add diagnostics from the preamble, if any.
   if (Preamble)
     Diags.insert(Diags.begin(), Preamble->Diags.begin(), Preamble->Diags.end());
@@ -544,8 +540,6 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
     vlog("Built preamble of size {0} for file {1}", BuiltPreamble->getSize(),
          FileName);
     std::vector<Diag> Diags = PreambleDiagnostics.take();
-    for (auto &Diag : Diags)
-      Diag.S = Diag::Clang;
     return std::make_shared<PreambleData>(
         std::move(*BuiltPreamble), std::move(Diags),
         SerializedDeclsCollector.takeIncludes(), std::move(StatCache),

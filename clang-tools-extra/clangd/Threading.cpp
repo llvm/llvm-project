@@ -10,7 +10,7 @@
 #elif defined(__APPLE__)
 #include <sys/resource.h>
 #elif defined (_WIN32)
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 namespace clang {

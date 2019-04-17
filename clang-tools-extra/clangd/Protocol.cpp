@@ -429,6 +429,10 @@ llvm::json::Value toJSON(const Diagnostic &D) {
     Diag["category"] = *D.category;
   if (D.codeActions)
     Diag["codeActions"] = D.codeActions;
+  if (!D.code.empty())
+    Diag["code"] = D.code;
+  if (!D.source.empty())
+    Diag["source"] = D.source;
   return std::move(Diag);
 }
 
@@ -438,6 +442,8 @@ bool fromJSON(const llvm::json::Value &Params, Diagnostic &R) {
     return false;
   O.map("severity", R.severity);
   O.map("category", R.category);
+  O.map("code", R.code);
+  O.map("source", R.source);
   return true;
 }
 

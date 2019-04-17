@@ -416,10 +416,13 @@ static void processOverflowIntrinsic(WithOverflowInst *WO) {
   IRBuilder<> B(WO);
   Value *NewOp = B.CreateBinOp(
       WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), WO->getName());
-  if (WO->isSigned())
-    cast<Instruction>(NewOp)->setHasNoSignedWrap();
-  else
-    cast<Instruction>(NewOp)->setHasNoUnsignedWrap();
+  // Constant-holing could have happened.
+  if (auto *Inst = dyn_cast<Instruction>(NewOp)) {
+    if (WO->isSigned())
+      Inst->setHasNoSignedWrap();
+    else
+      Inst->setHasNoUnsignedWrap();
+  }
 
   Value *NewI = B.CreateInsertValue(UndefValue::get(WO->getType()), NewOp, 0);
   NewI = B.CreateInsertValue(NewI, ConstantInt::getFalse(WO->getContext()), 1);

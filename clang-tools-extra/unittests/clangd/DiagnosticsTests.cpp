@@ -12,6 +12,7 @@
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -58,7 +59,8 @@ MATCHER_P(EqualToLSPDiag, LSPDiag,
          std::tie(LSPDiag.range, LSPDiag.severity, LSPDiag.message);
 }
 
-MATCHER_P(DiagSource, Source, "") { return arg.S == Source; }
+MATCHER_P(DiagSource, S, "") { return arg.Source == S; }
+MATCHER_P(DiagName, N, "") { return arg.Name == N; }
 
 MATCHER_P(EqualToFix, Fix, "LSP fix " + llvm::to_string(Fix)) {
   if (arg.Message != Fix.Message)
@@ -105,6 +107,7 @@ o]]();
           AllOf(Diag(Test.range("typo"),
                      "use of undeclared identifier 'goo'; did you mean 'foo'?"),
                 DiagSource(Diag::Clang),
+                DiagName("err_undeclared_var_use_suggest"),
                 WithFix(
                     Fix(Test.range("typo"), "foo", "change 'go\\ o' to 'foo'")),
                 // This is a pretty normal range.
@@ -149,7 +152,7 @@ TEST(DiagnosticsTest, DiagnosticPreamble) {
   EXPECT_THAT(TU.build().getDiagnostics(),
               ElementsAre(testing::AllOf(
                   Diag(Test.range(), "'not-found.h' file not found"),
-                  DiagSource(Diag::Clang))));
+                  DiagSource(Diag::Clang), DiagName("err_pp_file_not_found"))));
 }
 
 TEST(DiagnosticsTest, ClangTidy) {
@@ -175,6 +178,7 @@ TEST(DiagnosticsTest, ClangTidy) {
                      "inclusion of deprecated C++ header 'assert.h'; consider "
                      "using 'cassert' instead [modernize-deprecated-headers]"),
                 DiagSource(Diag::ClangTidy),
+                DiagName("modernize-deprecated-headers"),
                 WithFix(Fix(Test.range("deprecated"), "<cassert>",
                             "change '\"assert.h\"' to '<cassert>'"))),
           Diag(Test.range("doubled"),
@@ -185,6 +189,7 @@ TEST(DiagnosticsTest, ClangTidy) {
                    "side effects in the 1st macro argument 'X' are repeated in "
                    "macro expansion [bugprone-macro-repeated-side-effects]"),
               DiagSource(Diag::ClangTidy),
+              DiagName("bugprone-macro-repeated-side-effects"),
               WithNote(Diag(Test.range("macrodef"),
                             "macro 'SQUARE' defined here "
                             "[bugprone-macro-repeated-side-effects]"))),
@@ -246,6 +251,9 @@ TEST(DiagnosticsTest, NoFixItInMacro) {
 
 TEST(DiagnosticsTest, ToLSP) {
   clangd::Diag D;
+  D.ID = clang::diag::err_enum_class_reference;
+  D.Name = "err_enum_class_reference";
+  D.Source = clangd::Diag::Clang;
   D.Message = "something terrible happened";
   D.Range = {pos(1, 2), pos(3, 4)};
   D.InsideMainFile = true;
@@ -314,6 +322,10 @@ main.cpp:2:3: error: something terrible happened)");
       LSPDiags,
       ElementsAre(Pair(EqualToLSPDiag(MainLSP), ElementsAre(EqualToFix(F))),
                   Pair(EqualToLSPDiag(NoteInMainLSP), IsEmpty())));
+  EXPECT_EQ(LSPDiags[0].first.code, "err_enum_class_reference");
+  EXPECT_EQ(LSPDiags[0].first.source, "clang");
+  EXPECT_EQ(LSPDiags[1].first.code, "");
+  EXPECT_EQ(LSPDiags[1].first.source, "");
 }
 
 struct SymbolWithHeader {
