@@ -19,6 +19,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Regex.h"
 #include <functional>
 
 namespace clang {
@@ -117,6 +118,15 @@ private:
                                bool IsMainFileSymbol);
   void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
 
+  llvm::Optional<std::string> getIncludeHeader(llvm::StringRef QName, FileID);
+  bool isSelfContainedHeader(FileID);
+  // Heuristic to detect headers that aren't self-contained, usually because
+  // they need to be included via an umbrella header. e.g. GTK matches this.
+  llvm::Regex DontIncludeMePattern = {
+      "^[ \t]*#[ \t]*if.*\n"         // An #if, #ifndef etc directive, then
+      "[ \t]*#[ \t]*error.*include", // an #error directive mentioning "include"
+      llvm::Regex::Newline};
+
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
   // All refs collected from the AST.
@@ -141,6 +151,7 @@ private:
   llvm::DenseMap<const Decl *, const Decl *> CanonicalDecls;
   // Cache whether to index a file or not.
   llvm::DenseMap<FileID, bool> FilesToIndexCache;
+  llvm::DenseMap<FileID, bool> HeaderIsSelfContainedCache;
 };
 
 } // namespace clangd

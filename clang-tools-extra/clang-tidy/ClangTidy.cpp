@@ -35,6 +35,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
+#include "clang/Tooling/Core/Diagnostic.h"
 #if CLANG_ENABLE_STATIC_ANALYZER
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
@@ -125,15 +126,17 @@ public:
       }
       auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
                   << Message.Message << Name;
-      for (const auto &FileAndReplacements : Error.Fix) {
-        for (const auto &Repl : FileAndReplacements.second) {
-          SourceLocation FixLoc;
-          ++TotalFixes;
-          bool CanBeApplied = false;
-          if (Repl.isApplicable()) {
-            SmallString<128> FixAbsoluteFilePath = Repl.getFilePath();
-            Files.makeAbsolutePath(FixAbsoluteFilePath);
-            if (ApplyFixes) {
+      // FIXME: explore options to support interactive fix selection.
+      const llvm::StringMap<Replacements> *ChosenFix = selectFirstFix(Error);
+      if (ApplyFixes && ChosenFix) {
+        for (const auto &FileAndReplacements : *ChosenFix) {
+          for (const auto &Repl : FileAndReplacements.second) {
+            ++TotalFixes;
+            bool CanBeApplied = false;
+            if (Repl.isApplicable()) {
+              SourceLocation FixLoc;
+              SmallString<128> FixAbsoluteFilePath = Repl.getFilePath();
+              Files.makeAbsolutePath(FixAbsoluteFilePath);
               tooling::Replacement R(FixAbsoluteFilePath, Repl.getOffset(),
                                      Repl.getLength(),
                                      Repl.getReplacementText());
@@ -158,28 +161,17 @@ public:
                   llvm::errs()
                       << "Can't resolve conflict, skipping the replacement.\n";
                 }
-
               } else {
                 CanBeApplied = true;
                 ++AppliedFixes;
               }
+              FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
+              FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
             }
-            FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
-            SourceLocation FixEndLoc =
-                FixLoc.getLocWithOffset(Repl.getLength());
-            // Retrieve the source range for applicable fixes. Macro definitions
-            // on the command line have locations in a virtual buffer and don't
-            // have valid file paths and are therefore not applicable.
-            CharSourceRange Range =
-                CharSourceRange::getCharRange(SourceRange(FixLoc, FixEndLoc));
-            Diag << FixItHint::CreateReplacement(Range,
-                                                 Repl.getReplacementText());
           }
-
-          if (ApplyFixes)
-            FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
         }
       }
+      reportFix(Diag, Error.Message.Fix);
     }
     for (auto Fix : FixLocations) {
       Diags.Report(Fix.first, Fix.second ? diag::note_fixit_applied
@@ -250,10 +242,33 @@ private:
     return SourceMgr.getLocForStartOfFile(ID).getLocWithOffset(Offset);
   }
 
+  void reportFix(const DiagnosticBuilder &Diag,
+                 const llvm::StringMap<Replacements> &Fix) {
+    for (const auto &FileAndReplacements : Fix) {
+      for (const auto &Repl : FileAndReplacements.second) {
+        if (!Repl.isApplicable())
+          continue;
+        SmallString<128> FixAbsoluteFilePath = Repl.getFilePath();
+        Files.makeAbsolutePath(FixAbsoluteFilePath);
+        SourceLocation FixLoc =
+            getLocation(FixAbsoluteFilePath, Repl.getOffset());
+        SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Repl.getLength());
+        // Retrieve the source range for applicable fixes. Macro definitions
+        // on the command line have locations in a virtual buffer and don't
+        // have valid file paths and are therefore not applicable.
+        CharSourceRange Range =
+            CharSourceRange::getCharRange(SourceRange(FixLoc, FixEndLoc));
+        Diag << FixItHint::CreateReplacement(Range, Repl.getReplacementText());
+      }
+    }
+  }
+
   void reportNote(const tooling::DiagnosticMessage &Message) {
     SourceLocation Loc = getLocation(Message.FilePath, Message.FileOffset);
-    Diags.Report(Loc, Diags.getCustomDiagID(DiagnosticsEngine::Note, "%0"))
+    auto Diag =
+        Diags.Report(Loc, Diags.getCustomDiagID(DiagnosticsEngine::Note, "%0"))
         << Message.Message;
+    reportFix(Diag, Message.Fix);
   }
 
   FileManager Files;

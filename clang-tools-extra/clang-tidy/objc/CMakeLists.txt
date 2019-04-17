@@ -6,6 +6,7 @@ add_clang_library(clangTidyObjCModule
   ForbiddenSubclassingCheck.cpp
   ObjCTidyModule.cpp
   PropertyDeclarationCheck.cpp
+  SuperSelfCheck.cpp
 
   LINK_LIBS
   clangAST

@@ -684,6 +684,7 @@ TEST(CompletionTest, DynamicIndexIncludeInsertion) {
   ClangdServer Server(CDB, FS, DiagConsumer, Opts);
 
   FS.Files[testPath("foo_header.h")] = R"cpp(
+    #pragma once
     struct Foo {
        // Member doc
        int foo();

@@ -2,12 +2,13 @@
 MainSourceFile:     order-dependent.cpp
 Diagnostics:
   - DiagnosticName: test-order-dependent-insertion
-    Message: Fix
-    FilePath: $(path)/order-dependent.cpp
-    FileOffset: 12
-    Replacements:
-      - FilePath:        $(path)/order-dependent.cpp
-        Offset:          12
-        Length:          0
-        ReplacementText: '1'
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/order-dependent.cpp
+      FileOffset: 12
+      Replacements:
+        - FilePath:        $(path)/order-dependent.cpp
+          Offset:          12
+          Length:          0
+          ReplacementText: '1'
 ...

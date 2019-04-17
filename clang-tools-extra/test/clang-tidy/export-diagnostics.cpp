@@ -13,16 +13,19 @@ X(f)
 // CHECK-YAML-NEXT: MainSourceFile:  '{{.*}}-input.cpp'
 // CHECK-YAML-NEXT: Diagnostics:
 // CHECK-YAML-NEXT:   - DiagnosticName:  clang-diagnostic-missing-prototypes
-// CHECK-YAML-NEXT:     Message:         'no previous prototype for function ''ff'''
-// CHECK-YAML-NEXT:     FileOffset:      30
-// CHECK-YAML-NEXT:     FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:     DiagnosticMessage:
+// CHECK-YAML-NEXT:       Message:         'no previous prototype for function
+// ''ff'''
+// CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:       FileOffset:      30
+// CHECK-YAML-NEXT:       Replacements:      []
 // CHECK-YAML-NEXT:     Notes:
 // CHECK-YAML-NEXT:       - Message:         'expanded from macro ''X'''
 // CHECK-YAML-NEXT:         FilePath:        '{{.*}}-input.cpp'
 // CHECK-YAML-NEXT:         FileOffset:      18
+// CHECK-YAML-NEXT:         Replacements:    []
 // CHECK-YAML-NEXT:       - Message:         expanded from here
 // CHECK-YAML-NEXT:         FilePath:        ''
 // CHECK-YAML-NEXT:         FileOffset:      0
-// CHECK-YAML-NEXT:     Replacements:    []
+// CHECK-YAML-NEXT:         Replacements:    []
 // CHECK-YAML-NEXT: ...
-
