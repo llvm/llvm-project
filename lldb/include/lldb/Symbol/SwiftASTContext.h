@@ -150,6 +150,10 @@ public:
 
   static void Terminate();
 
+  void SetDescription(const std::string &description) {
+    m_description = description;
+  }
+
   bool SupportsLanguage(lldb::LanguageType language) override;
 
   Status IsCompatible() override;
@@ -350,7 +354,7 @@ public:
 
   void ClearModuleDependentCaches();
 
-  void DumpConfiguration(Log *log);
+  void LogConfiguration();
 
   bool HasTarget() const;
 
@@ -873,6 +877,9 @@ protected:
 
   typedef ThreadSafeDenseMap<const char *, lldb::TypeSP> SwiftTypeMap;
   SwiftTypeMap m_swift_type_map;
+
+  /// Used in the logs.
+  std::string m_description;
   /// @}
 
   ExtraTypeInformation GetExtraTypeInformation(void *type);
