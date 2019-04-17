@@ -330,6 +330,12 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto B = Buffer.get_access<access::mode::write>(cgh);
+        cgh.parallel_for<class bufferByRange2Init>(
+            range<2>{20, 20}, [=](id<2> index) { B[index] = 0; });
+      });
+
+      myQueue.submit([&](handler &cgh) {
+        auto B = Buffer.get_access<access::mode::write>(cgh);
         cgh.parallel_for<class bufferByRange2>(
             range<2>{10, 10}, [=](id<2> index) { B[index] = 1; });
       });
@@ -362,6 +368,12 @@ int main() {
       buffer<int, 2> Buffer(range<2>(20, 20));
       Buffer.set_final_data((int *)result);
       queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto B = Buffer.get_access<access::mode::write>(cgh);
+        cgh.parallel_for<class bufferByRangeOffsetInit>(
+            range<2>{20, 20}, [=](id<2> index) { B[index] = 0; });
+      });
+
       myQueue.submit([&](handler &cgh) {
         accessor<int, 2, access::mode::write, access::target::global_buffer,
                access::placeholder::false_t>

@@ -25,6 +25,16 @@ void check(queue Queue, const int G, const int L, const int D, const int R) {
     buffer<int, 1> sganybuf(G);
     buffer<int, 1> sgallbuf(G);
 
+    // Initialise buffer with zeros
+    Queue.submit([&](handler &cgh) {
+      auto sganyacc = sganybuf.get_access<access::mode::read_write>(cgh);
+      auto sgallacc = sgallbuf.get_access<access::mode::read_write>(cgh);
+      cgh.parallel_for<class init>(range<1>{(unsigned)G}, [=](id<1> index) {
+        sganyacc[index] = 0;
+        sgallacc[index] = 0;
+      });
+    });
+
     Queue.submit([&](handler &cgh) {
       auto sganyacc = sganybuf.get_access<access::mode::read_write>(cgh);
       auto sgallacc = sgallbuf.get_access<access::mode::read_write>(cgh);
@@ -32,12 +42,12 @@ void check(queue Queue, const int G, const int L, const int D, const int R) {
         intel::sub_group SG = NdItem.get_sub_group();
         /* Set to 1 if any local ID in subgroup devided by D has remainder R */
         if (SG.any(SG.get_local_id().get(0) % D == R)) {
-          sganyacc[NdItem.get_global_id()]++;
+          sganyacc[NdItem.get_global_id()] = 1;
         }
         /* Set to 1 if remainder of division of subgroup local ID by D is less
          * than R for all work items in subgroup */
         if (SG.all(SG.get_local_id().get(0) % D < R)) {
-          sgallacc[NdItem.get_global_id()]++;
+          sgallacc[NdItem.get_global_id()] = 1;
         }
       });
     });

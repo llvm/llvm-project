@@ -12,6 +12,7 @@
 #include <CL/sycl/access/access.hpp>
 #include <CL/sycl/context.hpp>
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/detail/aligned_allocator.hpp>
 #include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/detail/scheduler/scheduler.h>
 #include <CL/sycl/event.hpp>
@@ -54,6 +55,7 @@ class queue;
 template <typename DataT, int Dimensions, access::mode AccessMode,
           access::target AccessTarget, access::placeholder IsPlaceholder>
 class accessor;
+using buffer_allocator = aligned_allocator<char, /*alignment*/ 64>;
 template <typename T, int Dimensions, typename AllocatorT> class buffer;
 namespace detail {
 
@@ -587,8 +589,7 @@ public:
     range<dim> Range =
         getAccessorRangeHelper<T_src, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(src);
-    // TODO use buffer_allocator when it is possible
-    buffer<T_src, dim, std::allocator<char>> Buffer(
+    buffer<T_src, dim, buffer_allocator> Buffer(
         (shared_ptr_class<T_src>)dest, Range,
         {property::buffer::use_host_ptr()});
     accessor<T_src, dim, access::mode::write, access::target::global_buffer,
@@ -608,8 +609,7 @@ public:
     range<dim> Range =
         getAccessorRangeHelper<T_dest, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(dest);
-    // TODO use buffer_allocator when it is possible
-    buffer<T_dest, dim, std::allocator<char>> Buffer(
+    buffer<T_dest, dim, buffer_allocator> Buffer(
         (shared_ptr_class<T_dest>)src, Range,
         {property::buffer::use_host_ptr()});
     accessor<T_dest, dim, access::mode::read, access::target::global_buffer,
@@ -628,8 +628,7 @@ public:
     range<dim> Range =
         getAccessorRangeHelper<T_src, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(src);
-    // TODO use buffer_allocator when it is possible
-    buffer<T_src, dim, std::allocator<char>> Buffer(
+    buffer<T_src, dim, buffer_allocator> Buffer(
         (T_src *)dest, Range, {property::buffer::use_host_ptr()});
     accessor<T_src, dim, access::mode::write, access::target::global_buffer,
              access::placeholder::false_t>
@@ -647,8 +646,7 @@ public:
     range<dim> Range =
         getAccessorRangeHelper<T_dest, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(dest);
-    // TODO use buffer_allocator when it is possible
-    buffer<T_dest, dim, std::allocator<char>> Buffer(
+    buffer<T_dest, dim, buffer_allocator> Buffer(
         (T_dest *)src, Range, {property::buffer::use_host_ptr()});
     accessor<T_dest, dim, access::mode::read, access::target::global_buffer,
              access::placeholder::false_t>
