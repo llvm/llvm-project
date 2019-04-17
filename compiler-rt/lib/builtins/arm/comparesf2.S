@@ -175,6 +175,11 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__lesf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__ltsf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__nesf2, __eqsf2)
 
+#if defined(__ELF__)
+// Alias for libgcc compatibility
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__cmpsf2, __lesf2)
+#endif
+
 @ int __gtsf2(float a, float b)
 
     .p2align 2

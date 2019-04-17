@@ -327,8 +327,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
              Env.secondsSinceProcessStartUp());
       Stop = true;
     }
-    if (Options.MaxNumberOfRuns >= 0 && !Stop &&
-        Env.NumRuns >= Options.MaxNumberOfRuns) {
+    if (!Stop && Env.NumRuns >= Options.MaxNumberOfRuns) {
       Printf("INFO: fuzzed for %zd iterations, wrapping up soon\n",
              Env.NumRuns);
       Stop = true;

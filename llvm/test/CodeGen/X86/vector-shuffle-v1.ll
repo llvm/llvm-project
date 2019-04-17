@@ -254,7 +254,8 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; VL_BW_DQ-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; VL_BW_DQ-NEXT:    vpmovb2m %ymm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
-; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovw2m %zmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2b %k0, %ymm0
@@ -308,7 +309,8 @@ define <32 x i16> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    vptestnmw %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
-; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm3, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovw2m %zmm0, %k1
 ; VL_BW_DQ-NEXT:    vpblendmw %zmm1, %zmm2, %zmm0 {%k1}
@@ -364,7 +366,8 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    vptestnmb %ymm0, %ymm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
-; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm3, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovw2m %zmm0, %k1
 ; VL_BW_DQ-NEXT:    vpblendmb %ymm1, %ymm2, %ymm0 {%k1}
@@ -412,7 +415,8 @@ define <32 x i16> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_
 ; VL_BW_DQ-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; VL_BW_DQ-NEXT:    kunpckwd %k0, %k1, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
-; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovw2m %zmm0, %k1
 ; VL_BW_DQ-NEXT:    vpblendmw %zmm2, %zmm3, %zmm0 {%k1}
@@ -462,7 +466,8 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; VL_BW_DQ-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; VL_BW_DQ-NEXT:    kunpckwd %k0, %k1, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
-; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovw2m %zmm0, %k1
 ; VL_BW_DQ-NEXT:    vpblendmb %ymm2, %ymm3, %ymm0 {%k1}

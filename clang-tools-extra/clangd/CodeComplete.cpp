@@ -349,15 +349,18 @@ struct CodeCompletionBuilder {
     // Turn absolute path into a literal string that can be #included.
     auto Inserted = [&](llvm::StringRef Header)
         -> llvm::Expected<std::pair<std::string, bool>> {
-      auto ResolvedDeclaring =
-          toHeaderFile(C.IndexResult->CanonicalDeclaration.FileURI, FileName);
+      auto DeclaringURI =
+          URI::parse(C.IndexResult->CanonicalDeclaration.FileURI);
+      if (!DeclaringURI)
+        return DeclaringURI.takeError();
+      auto ResolvedDeclaring = URI::resolve(*DeclaringURI, FileName);
       if (!ResolvedDeclaring)
         return ResolvedDeclaring.takeError();
       auto ResolvedInserted = toHeaderFile(Header, FileName);
       if (!ResolvedInserted)
         return ResolvedInserted.takeError();
       return std::make_pair(
-          Includes.calculateIncludePath(*ResolvedDeclaring, *ResolvedInserted),
+          Includes.calculateIncludePath(*ResolvedInserted),
           Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
     };
     bool ShouldInsert = C.headerToInsertIfAllowed(Opts).hasValue();

@@ -595,12 +595,25 @@ public:
                          std::vector<RelocationRef> *Rels = nullptr) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
-    if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address.Address);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes, OS);
+
+    {
+      formatted_raw_ostream FOS(OS);
+      if (!NoLeadingAddr)
+        FOS << format("%8" PRIx64 ":", Address.Address);
+      if (!NoShowRawInsn) {
+        FOS << ' ';
+        dumpBytes(Bytes, FOS);
+      }
+      FOS.flush();
+      // The output of printInst starts with a tab. Print some spaces so that
+      // the tab has 1 column and advances to the target tab stop.
+      unsigned TabStop = NoShowRawInsn ? 16 : 40;
+      unsigned Column = FOS.getColumn();
+      FOS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+
+      // The dtor calls flush() to ensure the indent comes before printInst().
     }
+
     if (MI)
       IP.printInst(MI, OS, "", STI);
     else

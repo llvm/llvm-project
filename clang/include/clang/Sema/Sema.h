@@ -2487,14 +2487,6 @@ public:
   /// Add this decl to the scope shadowed decl chains.
   void PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext = true);
 
-  /// Make the given externally-produced declaration visible at the
-  /// top level scope.
-  ///
-  /// \param D The externally-produced declaration to push.
-  ///
-  /// \param Name The name of the externally-produced declaration.
-  void pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name);
-
   /// isDeclInScope - If 'Ctx' is a function/method, isDeclInScope returns true
   /// if 'D' is in Scope 'S', otherwise 'S' is ignored and isDeclInScope returns
   /// true if 'D' belongs to the given declaration context.

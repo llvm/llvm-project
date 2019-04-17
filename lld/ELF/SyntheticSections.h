@@ -154,9 +154,6 @@ public:
   void writeBuildId(llvm::ArrayRef<uint8_t> Buf);
 
 private:
-  void computeHash(llvm::ArrayRef<uint8_t> Buf,
-                   std::function<void(uint8_t *, ArrayRef<uint8_t>)> Hash);
-
   size_t HashSize;
   uint8_t *HashBuf;
 };

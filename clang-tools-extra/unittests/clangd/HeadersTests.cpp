@@ -93,11 +93,10 @@ protected:
                              &Clang->getPreprocessor().getHeaderSearchInfo());
     for (const auto &Inc : Inclusions)
       Inserter.addExisting(Inc);
-    auto Declaring = ToHeaderFile(Original);
     auto Inserted = ToHeaderFile(Preferred);
-    if (!Inserter.shouldInsertInclude(Declaring, Inserted))
+    if (!Inserter.shouldInsertInclude(Original, Inserted))
       return "";
-    std::string Path = Inserter.calculateIncludePath(Declaring, Inserted);
+    std::string Path = Inserter.calculateIncludePath(Inserted);
     Action.EndSourceFile();
     return Path;
   }
@@ -258,16 +257,15 @@ TEST(Headers, NoHeaderSearchInfo) {
                            /*BuildDir=*/"", /*HeaderSearchInfo=*/nullptr);
 
   auto HeaderPath = testPath("sub/bar.h");
-  auto Declaring = HeaderFile{HeaderPath, /*Verbatim=*/false};
   auto Inserting = HeaderFile{HeaderPath, /*Verbatim=*/false};
   auto Verbatim = HeaderFile{"<x>", /*Verbatim=*/true};
 
-  EXPECT_EQ(Inserter.calculateIncludePath(Declaring, Inserting),
+  EXPECT_EQ(Inserter.calculateIncludePath(Inserting),
             "\"" + HeaderPath + "\"");
-  EXPECT_EQ(Inserter.shouldInsertInclude(Declaring, Inserting), false);
+  EXPECT_EQ(Inserter.shouldInsertInclude(HeaderPath, Inserting), false);
 
-  EXPECT_EQ(Inserter.calculateIncludePath(Declaring, Verbatim), "<x>");
-  EXPECT_EQ(Inserter.shouldInsertInclude(Declaring, Verbatim), true);
+  EXPECT_EQ(Inserter.calculateIncludePath(Verbatim), "<x>");
+  EXPECT_EQ(Inserter.shouldInsertInclude(HeaderPath, Verbatim), true);
 }
 
 } // namespace

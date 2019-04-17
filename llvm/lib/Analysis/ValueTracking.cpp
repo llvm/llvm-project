@@ -4206,23 +4206,12 @@ OverflowResult llvm::computeOverflowForSignedSub(const Value *LHS,
   return mapOverflowResult(LHSRange.signedSubMayOverflow(RHSRange));
 }
 
-bool llvm::isOverflowIntrinsicNoWrap(const IntrinsicInst *II,
+bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
                                      const DominatorTree &DT) {
-#ifndef NDEBUG
-  auto IID = II->getIntrinsicID();
-  assert((IID == Intrinsic::sadd_with_overflow ||
-          IID == Intrinsic::uadd_with_overflow ||
-          IID == Intrinsic::ssub_with_overflow ||
-          IID == Intrinsic::usub_with_overflow ||
-          IID == Intrinsic::smul_with_overflow ||
-          IID == Intrinsic::umul_with_overflow) &&
-         "Not an overflow intrinsic!");
-#endif
-
   SmallVector<const BranchInst *, 2> GuardingBranches;
   SmallVector<const ExtractValueInst *, 2> Results;
 
-  for (const User *U : II->users()) {
+  for (const User *U : WO->users()) {
     if (const auto *EVI = dyn_cast<ExtractValueInst>(U)) {
       assert(EVI->getNumIndices() == 1 && "Obvious from CI's type");
 

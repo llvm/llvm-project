@@ -7,7 +7,7 @@ define void @compressstore_v16f32_const(float* %base, <16 x float> %V) {
 ; HSW-LABEL: compressstore_v16f32_const:
 ; HSW:       # %bb.0: # %cond.store
 ; HSW-NEXT:    vmovups %ymm0, (%rdi)
-; HSW-NEXT:    vmovaps {{.*#+}} ymm0 = <0,1,2,4,u,u,u,u>
+; HSW-NEXT:    vmovaps {{.*#+}} xmm0 = [0,1,2,4]
 ; HSW-NEXT:    vpermps %ymm1, %ymm0, %ymm0
 ; HSW-NEXT:    vmovups %xmm0, 32(%rdi)
 ; HSW-NEXT:    vextractf128 $1, %ymm1, %xmm0
