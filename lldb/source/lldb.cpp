@@ -19,10 +19,6 @@ using namespace lldb_private;
 #include "SVNVersion.inc"
 #endif
 
-#ifdef HAVE_APPLE_VERSION_INC
-#include "AppleVersion.inc"
-#endif
-
 static const char *GetLLDBRevision() {
 #ifdef LLDB_REVISION
   return LLDB_REVISION;
