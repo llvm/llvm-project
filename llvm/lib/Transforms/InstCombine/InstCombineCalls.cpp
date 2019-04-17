@@ -2085,6 +2085,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
                                           ConstantExpr::getSub(WidthC, ShAmtC));
     }
 
+    // Left or right might be masked.
+    if (SimplifyDemandedInstructionBits(*II))
+      return &CI;
+
     // The shift amount (operand 2) of a funnel shift is modulo the bitwidth,
     // so only the low bits of the shift amount are demanded if the bitwidth is
     // a power-of-2.

@@ -126,14 +126,15 @@ entry:
 define fastcc void @dct36(double* %inbuf) {
 ; CHECK-LABEL: @dct36(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds double, double* [[INBUF:%.*]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds double, double* [[INBUF]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[ARRAYIDX44]], align 8
-; CHECK-NEXT:    [[ADD46:%.*]] = fadd double [[TMP0]], undef
-; CHECK-NEXT:    store double [[ADD46]], double* [[ARRAYIDX41]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[INBUF]], align 8
-; CHECK-NEXT:    [[ADD49:%.*]] = fadd double [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    store double [[ADD49]], double* [[ARRAYIDX44]], align 8
+; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds double, double* [[INBUF:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[INBUF]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double undef, i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX44]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

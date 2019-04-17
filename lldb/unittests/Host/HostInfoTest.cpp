@@ -50,3 +50,9 @@ TEST_F(HostInfoTest, GetAugmentedArchSpec) {
   EXPECT_EQ(HostInfo::GetAugmentedArchSpec(LLDB_ARCH_DEFAULT).GetTriple(),
             HostInfo::GetArchitecture(HostInfo::eArchKindDefault).GetTriple());
 }
+
+TEST_F(HostInfoTest, GetHostname) {
+  // Check non-empty string input works correctly.
+  std::string s("abc");
+  EXPECT_TRUE(HostInfo::GetHostname(s));
+}

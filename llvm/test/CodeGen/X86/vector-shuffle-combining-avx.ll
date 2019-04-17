@@ -373,7 +373,7 @@ define void @PR39483() {
 ; X86-AVX512:       # %bb.0: # %entry
 ; X86-AVX512-NEXT:    vmovups 0, %zmm0
 ; X86-AVX512-NEXT:    vmovups 64, %ymm1
-; X86-AVX512-NEXT:    vmovaps {{.*#+}} zmm2 = <2,5,8,11,14,17,20,23,u,u,u,u,u,u,u,u>
+; X86-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
 ; X86-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
 ; X86-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1
@@ -416,7 +416,7 @@ define void @PR39483() {
 ; X64-AVX512:       # %bb.0: # %entry
 ; X64-AVX512-NEXT:    vmovups 0, %zmm0
 ; X64-AVX512-NEXT:    vmovups 64, %ymm1
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} zmm2 = <2,5,8,11,14,17,20,23,u,u,u,u,u,u,u,u>
+; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
 ; X64-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
 ; X64-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1

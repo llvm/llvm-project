@@ -527,9 +527,9 @@ public:
   /// There are two ways to clear extreme bits (either low or high):
   /// Mask:    x &  (-1 << y)  (the instcombine canonical form)
   /// Shifts:  x >> y << y
-  /// Return true if the variant with 2 shifts is preferred.
+  /// Return true if the variant with 2 variable shifts is preferred.
   /// Return false if there is no preference.
-  virtual bool preferShiftsToClearExtremeBits(SDValue X) const {
+  virtual bool shouldFoldMaskToVariableShiftPair(SDValue X) const {
     // By default, let's assume that no one prefers shifts.
     return false;
   }
@@ -538,8 +538,8 @@ public:
   /// This is usually true on most targets. But some targets, like Thumb1,
   /// have immediate shift instructions, but no immediate "and" instruction;
   /// this makes the fold unprofitable.
-  virtual bool shouldFoldShiftPairToMask(const SDNode *N,
-                                         CombineLevel Level) const {
+  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N,
+                                                 CombineLevel Level) const {
     return true;
   }
 

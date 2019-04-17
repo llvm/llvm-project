@@ -95,6 +95,8 @@ bool HostInfoWindows::GetHostname(std::string &s) {
   if (!::GetComputerNameW(buffer, &dwSize))
     return false;
 
+  // The conversion requires an empty string.
+  s.clear();
   return llvm::convertWideToUTF8(buffer, s);
 }
 

@@ -32,6 +32,7 @@ class DataLayout;
 class DominatorTree;
 class GEPOperator;
 class IntrinsicInst;
+class WithOverflowInst;
 struct KnownBits;
 class Loop;
 class LoopInfo;
@@ -454,10 +455,10 @@ class Value;
                                              const Instruction *CxtI,
                                              const DominatorTree *DT);
 
-  /// Returns true if the arithmetic part of the \p II 's result is
+  /// Returns true if the arithmetic part of the \p WO 's result is
   /// used only along the paths control dependent on the computation
-  /// not overflowing, \p II being an <op>.with.overflow intrinsic.
-  bool isOverflowIntrinsicNoWrap(const IntrinsicInst *II,
+  /// not overflowing, \p WO being an <op>.with.overflow intrinsic.
+  bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
                                  const DominatorTree &DT);
 
 

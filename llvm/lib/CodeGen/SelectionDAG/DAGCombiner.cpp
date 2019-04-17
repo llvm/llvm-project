@@ -4677,7 +4677,7 @@ SDValue DAGCombiner::unfoldExtremeBitClearingToShifts(SDNode *N) {
   SDValue N1 = N->getOperand(1);
 
   // Do we actually prefer shifts over mask?
-  if (!TLI.preferShiftsToClearExtremeBits(N0))
+  if (!TLI.shouldFoldMaskToVariableShiftPair(N0))
     return SDValue();
 
   // Try to match  (-1 '[outer] logical shift' y)
@@ -6850,7 +6850,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // Only fold this if the inner shift has no other uses -- if it does, folding
   // this will increase the total number of instructions.
   if (N1C && N0.getOpcode() == ISD::SRL && N0.hasOneUse() &&
-      TLI.shouldFoldShiftPairToMask(N, Level)) {
+      TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
     if (ConstantSDNode *N0C1 = isConstOrConstSplat(N0.getOperand(1))) {
       if (N0C1->getAPIntValue().ult(OpSizeInBits)) {
         uint64_t c1 = N0C1->getZExtValue();

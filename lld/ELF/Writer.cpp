@@ -24,6 +24,9 @@
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/xxhash.h"
 #include <climits>
 
 using namespace llvm;
@@ -2495,12 +2498,82 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
       Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 }
 
+// Split one uint8 array into small pieces of uint8 arrays.
+static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,
+                                            size_t ChunkSize) {
+  std::vector<ArrayRef<uint8_t>> Ret;
+  while (Arr.size() > ChunkSize) {
+    Ret.push_back(Arr.take_front(ChunkSize));
+    Arr = Arr.drop_front(ChunkSize);
+  }
+  if (!Arr.empty())
+    Ret.push_back(Arr);
+  return Ret;
+}
+
+// Computes a hash value of Data using a given hash function.
+// In order to utilize multiple cores, we first split data into 1MB
+// chunks, compute a hash for each chunk, and then compute a hash value
+// of the hash values.
+static void
+computeHash(llvm::MutableArrayRef<uint8_t> HashBuf,
+            llvm::ArrayRef<uint8_t> Data,
+            std::function<void(uint8_t *Dest, ArrayRef<uint8_t> Arr)> HashFn) {
+  std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
+  std::vector<uint8_t> Hashes(Chunks.size() * HashBuf.size());
+
+  // Compute hash values.
+  parallelForEachN(0, Chunks.size(), [&](size_t I) {
+    HashFn(Hashes.data() + I * HashBuf.size(), Chunks[I]);
+  });
+
+  // Write to the final output buffer.
+  HashFn(HashBuf.data(), Hashes);
+}
+
+static std::vector<uint8_t> computeBuildId(llvm::ArrayRef<uint8_t> Buf) {
+  std::vector<uint8_t> BuildId;
+  switch (Config->BuildId) {
+  case BuildIdKind::Fast:
+    BuildId.resize(8);
+    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      write64le(Dest, xxHash64(Arr));
+    });
+    break;
+  case BuildIdKind::Md5:
+    BuildId.resize(16);
+    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, MD5::hash(Arr).data(), 16);
+    });
+    break;
+  case BuildIdKind::Sha1:
+    BuildId.resize(20);
+    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, SHA1::hash(Arr).data(), 20);
+    });
+    break;
+  case BuildIdKind::Uuid:
+    BuildId.resize(16);
+    if (auto EC = llvm::getRandomBytes(BuildId.data(), 16))
+      error("entropy source failure: " + EC.message());
+    break;
+  case BuildIdKind::Hexstring:
+    BuildId = Config->BuildIdVector;
+    break;
+  default:
+    llvm_unreachable("unknown BuildIdKind");
+  }
+  return BuildId;
+}
+
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
   if (!In.BuildId || !In.BuildId->getParent())
     return;
 
   // Compute a hash of all sections of the output file.
-  In.BuildId->writeBuildId({Out::BufferStart, size_t(FileSize)});
+  std::vector<uint8_t> BuildId =
+      computeBuildId({Out::BufferStart, size_t(FileSize)});
+  In.BuildId->writeBuildId(BuildId);
 }
 
 template void elf::writeResult<ELF32LE>();

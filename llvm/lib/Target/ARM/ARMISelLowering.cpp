@@ -10483,9 +10483,8 @@ ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   return false;
 }
 
-bool
-ARMTargetLowering::shouldFoldShiftPairToMask(const SDNode *N,
-                                             CombineLevel Level) const {
+bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
+    const SDNode *N, CombineLevel Level) const {
   if (!Subtarget->isThumb1Only())
     return true;
 

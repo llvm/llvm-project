@@ -469,4 +469,25 @@ TEST(STLExtrasTest, to_address) {
   EXPECT_EQ(V1, to_address(V3));
 }
 
+TEST(STLExtrasTest, bsearch) {
+  // Integer version.
+  EXPECT_EQ(7u, bsearch(5, 10, [](unsigned X) { return X >= 7; }));
+  EXPECT_EQ(5u, bsearch(5, 10, [](unsigned X) { return X >= 0; }));
+  EXPECT_EQ(10u, bsearch(5, 10, [](unsigned X) { return X >= 50; }));
+
+  // Iterator version.
+  std::vector<int> V = {1, 3, 5, 7, 9};
+  EXPECT_EQ(V.begin() + 3,
+            bsearch(V.begin(), V.end(), [](unsigned X) { return X >= 7; }));
+  EXPECT_EQ(V.begin(),
+            bsearch(V.begin(), V.end(), [](unsigned X) { return X >= 0; }));
+  EXPECT_EQ(V.end(),
+            bsearch(V.begin(), V.end(), [](unsigned X) { return X >= 50; }));
+
+  // Range version.
+  EXPECT_EQ(V.begin() + 3, bsearch(V, [](unsigned X) { return X >= 7; }));
+  EXPECT_EQ(V.begin(), bsearch(V, [](unsigned X) { return X >= 0; }));
+  EXPECT_EQ(V.end(), bsearch(V, [](unsigned X) { return X >= 50; }));
+}
+
 } // namespace
