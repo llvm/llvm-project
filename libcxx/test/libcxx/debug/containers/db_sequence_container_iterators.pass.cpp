@@ -22,6 +22,9 @@
 #include <list>
 #include <vector>
 #include <deque>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#   include <thread>
+#endif
 #include "container_debug_tests.hpp"
 #include "debug_mode_helper.h"
 
@@ -51,6 +54,7 @@ public:
         InsertIterIterIter();
         EmplaceIterValue();
         EraseIterIter();
+        ThreadUseIter();
       }
     else {
       SpliceFirstElemAfter();
@@ -183,6 +187,36 @@ private:
     C.clear();
     EXPECT_DEATH( C.front() );
     EXPECT_DEATH( CC.front() );
+  }
+
+  static void ThreadUseIter() {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+    CHECKPOINT("thread iter use");
+    const size_t maxRounds = 7;
+    struct TestRunner{
+     void operator()() {
+        for (size_t count = 0; count < maxRounds; count++) {
+          const size_t containerCount = 21;
+          std::vector<Container> containers;
+          std::vector<typename Container::iterator> iterators;
+          for (size_t containerIndex = 0; containerIndex < containerCount; containerIndex++) {
+              containers.push_back(makeContainer(3));
+              Container &c = containers.back();
+              iterators.push_back(c.begin());
+              iterators.push_back(c.end());
+          }
+        }
+      }
+    };
+    TestRunner r;
+    const size_t threadCount = 13;
+    std::vector<std::thread> threads;
+    for (size_t count = 0; count < threadCount; count++)
+        threads.emplace_back(r);
+    r();
+    for (size_t count = 0; count < threadCount; count++)
+        threads[count].join();
+#endif
   }
 
   static void EraseIterIter() {
