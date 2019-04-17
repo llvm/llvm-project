@@ -137,6 +137,10 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
       if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
         return true;
 
+      // These instructions are potentially expensive even if EXEC = 0.
+      if (TII->isSMRD(*I) || TII->isVMEM(*I) || I->getOpcode() == AMDGPU::S_WAITCNT)
+        return true;
+
       ++NumInstr;
       if (NumInstr >= SkipThreshold)
         return true;

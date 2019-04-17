@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -33,7 +34,7 @@ namespace {
 using testing::_;
 using testing::AllOf;
 using testing::Contains;
-using testing::Eq;
+using testing::ElementsAre;
 using testing::Field;
 using testing::IsEmpty;
 using testing::Not;
@@ -58,6 +59,7 @@ MATCHER_P(DeclURI, P, "") {
   return StringRef(arg.CanonicalDeclaration.FileURI) == P;
 }
 MATCHER_P(DefURI, P, "") { return StringRef(arg.Definition.FileURI) == P; }
+MATCHER(IncludeHeader, "") { return !arg.IncludeHeaders.empty(); }
 MATCHER_P(IncludeHeader, P, "") {
   return (arg.IncludeHeaders.size() == 1) &&
          (arg.IncludeHeaders.begin()->IncludeHeader == P);
@@ -249,6 +251,8 @@ public:
     TestFileURI = URI::create(TestFileName).toString();
   }
 
+  // Note that unlike TestTU, no automatic header guard is added.
+  // HeaderCode should start with #pragma once to be treated as modular.
   bool runSymbolCollector(llvm::StringRef HeaderCode, llvm::StringRef MainCode,
                           const std::vector<std::string> &ExtraArgs = {}) {
     llvm::IntrusiveRefCntPtr<FileManager> Files(
@@ -920,7 +924,7 @@ TEST_F(SymbolCollectorTest, Snippet) {
 
 TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {
   CollectorOpts.CollectIncludePath = true;
-  runSymbolCollector("class Foo {};", /*Main=*/"");
+  runSymbolCollector("#pragma once\nclass Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
   EXPECT_THAT(Symbols.begin()->IncludeHeaders,
@@ -1020,53 +1024,54 @@ TEST_F(SymbolCollectorTest, SkipIncFileWhenCanonicalizeHeaders) {
 
 TEST_F(SymbolCollectorTest, MainFileIsHeaderWhenSkipIncFile) {
   CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  CollectorOpts.Includes = &Includes;
-  TestFileName = testPath("main.h");
-  TestFileURI = URI::create(TestFileName).toString();
-  auto IncFile = testPath("test.inc");
-  auto IncURI = URI::create(IncFile).toString();
-  InMemoryFileSystem->addFile(IncFile, 0,
-                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
-  runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
-                     /*ExtraArgs=*/{"-I", testRoot()});
-  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
-                                                  IncludeHeader(TestFileURI))));
-}
-
-TEST_F(SymbolCollectorTest, MainFileIsHeaderWithoutExtensionWhenSkipIncFile) {
-  CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  CollectorOpts.Includes = &Includes;
+  // To make this case as hard as possible, we won't tell clang main is a
+  // header. No extension, no -x c++-header.
   TestFileName = testPath("no_ext_main");
   TestFileURI = URI::create(TestFileName).toString();
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
                               llvm::MemoryBuffer::getMemBuffer("class X {};"));
-  runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
+  runSymbolCollector("", R"cpp(
+    // Can't use #pragma once in a main file clang doesn't think is a header.
+    #ifndef MAIN_H_
+    #define MAIN_H_
+    #include "test.inc"
+    #endif
+  )cpp",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
                                                   IncludeHeader(TestFileURI))));
 }
 
-TEST_F(SymbolCollectorTest, FallbackToIncFileWhenIncludingFileIsCC) {
+TEST_F(SymbolCollectorTest, IncFileInNonHeader) {
   CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  CollectorOpts.Includes = &Includes;
+  TestFileName = testPath("main.cc");
+  TestFileURI = URI::create(TestFileName).toString();
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
                               llvm::MemoryBuffer::getMemBuffer("class X {};"));
-  runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
+  runSymbolCollector("", R"cpp(
+    #include "test.inc"
+  )cpp",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
-                                                  IncludeHeader(IncURI))));
+                                                  Not(IncludeHeader()))));
+}
+
+TEST_F(SymbolCollectorTest, NonModularHeader) {
+  auto TU = TestTU::withHeaderCode("int x();");
+  EXPECT_THAT(TU.headerSymbols(), ElementsAre(IncludeHeader()));
+
+  TU.ImplicitHeaderGuard = false;
+  EXPECT_THAT(TU.headerSymbols(), ElementsAre(Not(IncludeHeader())));
 }
 
 TEST_F(SymbolCollectorTest, AvoidUsingFwdDeclsAsCanonicalDecls) {
   CollectorOpts.CollectIncludePath = true;
   Annotations Header(R"(
+    #pragma once
     // Forward declarations of TagDecls.
     class C;
     struct S;
@@ -1100,7 +1105,8 @@ TEST_F(SymbolCollectorTest, AvoidUsingFwdDeclsAsCanonicalDecls) {
 
 TEST_F(SymbolCollectorTest, ClassForwardDeclarationIsCanonical) {
   CollectorOpts.CollectIncludePath = true;
-  runSymbolCollector(/*Header=*/"class X;", /*Main=*/"class X {};");
+  runSymbolCollector(/*Header=*/"#pragma once\nclass X;",
+                     /*Main=*/"class X {};");
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(
                            QName("X"), DeclURI(TestHeaderURI),
                            IncludeHeader(TestHeaderURI), DefURI(TestFileURI))));
@@ -1167,6 +1173,7 @@ TEST_F(SymbolCollectorTest, Origin) {
 TEST_F(SymbolCollectorTest, CollectMacros) {
   CollectorOpts.CollectIncludePath = true;
   Annotations Header(R"(
+    #pragma once
     #define X 1
     #define $mac[[MAC]](x) int x
     #define $used[[USED]](y) float y;

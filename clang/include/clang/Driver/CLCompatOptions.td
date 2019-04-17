@@ -428,6 +428,7 @@ def _SLASH_kernel : CLFlag<"kernel">;
 def _SLASH_LN : CLFlag<"LN">;
 def _SLASH_MP : CLJoined<"MP">;
 def _SLASH_openmp : CLFlag<"openmp">;
+def _SLASH_openmp_experimental : CLFlag<"openmp:experimental">;
 def _SLASH_Qfast_transcendentals : CLFlag<"Qfast_transcendentals">;
 def _SLASH_QIfist : CLFlag<"QIfist">;
 def _SLASH_Qimprecise_fwaits : CLFlag<"Qimprecise_fwaits">;

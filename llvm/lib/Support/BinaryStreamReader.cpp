@@ -10,6 +10,7 @@
 
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 using endianness = llvm::support::endianness;
@@ -37,6 +38,36 @@ Error BinaryStreamReader::readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size) {
   if (auto EC = Stream.readBytes(Offset, Size, Buffer))
     return EC;
   Offset += Size;
+  return Error::success();
+}
+
+Error BinaryStreamReader::readULEB128(uint64_t &Dest) {
+  SmallVector<uint8_t, 10> EncodedBytes;
+  ArrayRef<uint8_t> NextByte;
+
+  // Copy the encoded ULEB into the buffer.
+  do {
+    if (auto Err = readBytes(NextByte, 1))
+      return Err;
+    EncodedBytes.push_back(NextByte[0]);
+  } while (NextByte[0] & 0x80);
+
+  Dest = decodeULEB128(EncodedBytes.begin(), nullptr, EncodedBytes.end());
+  return Error::success();
+}
+
+Error BinaryStreamReader::readSLEB128(int64_t &Dest) {
+  SmallVector<uint8_t, 10> EncodedBytes;
+  ArrayRef<uint8_t> NextByte;
+
+  // Copy the encoded ULEB into the buffer.
+  do {
+    if (auto Err = readBytes(NextByte, 1))
+      return Err;
+    EncodedBytes.push_back(NextByte[0]);
+  } while (NextByte[0] & 0x80);
+
+  Dest = decodeSLEB128(EncodedBytes.begin(), nullptr, EncodedBytes.end());
   return Error::success();
 }
 

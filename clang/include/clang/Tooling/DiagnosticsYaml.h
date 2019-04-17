@@ -31,6 +31,20 @@ template <> struct MappingTraits<clang::tooling::DiagnosticMessage> {
     Io.mapRequired("Message", M.Message);
     Io.mapOptional("FilePath", M.FilePath);
     Io.mapOptional("FileOffset", M.FileOffset);
+    std::vector<clang::tooling::Replacement> Fixes;
+    for (auto &Replacements : M.Fix) {
+      for (auto &Replacement : Replacements.second)
+        Fixes.push_back(Replacement);
+    }
+    Io.mapRequired("Replacements", Fixes);
+    for (auto &Fix : Fixes) {
+      llvm::Error Err = M.Fix[Fix.getFilePath()].add(Fix);
+      if (Err) {
+        // FIXME: Implement better conflict handling.
+        llvm::errs() << "Fix conflicts with existing fix: "
+                     << llvm::toString(std::move(Err)) << "\n";
+      }
+    }
   }
 };
 
@@ -43,12 +57,11 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
         : DiagLevel(clang::tooling::Diagnostic::Level::Warning) {}
 
     NormalizedDiagnostic(const IO &, const clang::tooling::Diagnostic &D)
-        : DiagnosticName(D.DiagnosticName), Message(D.Message), Fix(D.Fix),
-          Notes(D.Notes), DiagLevel(D.DiagLevel),
-          BuildDirectory(D.BuildDirectory) {}
+        : DiagnosticName(D.DiagnosticName), Message(D.Message), Notes(D.Notes),
+          DiagLevel(D.DiagLevel), BuildDirectory(D.BuildDirectory) {}
 
     clang::tooling::Diagnostic denormalize(const IO &) {
-      return clang::tooling::Diagnostic(DiagnosticName, Message, Fix, Notes,
+      return clang::tooling::Diagnostic(DiagnosticName, Message, Notes,
                                         DiagLevel, BuildDirectory);
     }
 
@@ -64,28 +77,10 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
     MappingNormalization<NormalizedDiagnostic, clang::tooling::Diagnostic> Keys(
         Io, D);
     Io.mapRequired("DiagnosticName", Keys->DiagnosticName);
-    Io.mapRequired("Message", Keys->Message.Message);
-    Io.mapRequired("FileOffset", Keys->Message.FileOffset);
-    Io.mapRequired("FilePath", Keys->Message.FilePath);
+    Io.mapRequired("DiagnosticMessage", Keys->Message);
     Io.mapOptional("Notes", Keys->Notes);
 
     // FIXME: Export properly all the different fields.
-
-    std::vector<clang::tooling::Replacement> Fixes;
-    for (auto &Replacements : Keys->Fix) {
-      for (auto &Replacement : Replacements.second) {
-        Fixes.push_back(Replacement);
-      }
-    }
-    Io.mapRequired("Replacements", Fixes);
-    for (auto &Fix : Fixes) {
-      llvm::Error Err = Keys->Fix[Fix.getFilePath()].add(Fix);
-      if (Err) {
-        // FIXME: Implement better conflict handling.
-        llvm::errs() << "Fix conflicts with existing fix: "
-                     << llvm::toString(std::move(Err)) << "\n";
-      }
-    }
   }
 };
 

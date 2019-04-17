@@ -35,9 +35,8 @@ float quality(const Symbol &S) {
 }
 
 SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
-  auto It = std::lower_bound(
-      Symbols.begin(), Symbols.end(), ID,
-      [](const Symbol &S, const SymbolID &I) { return S.ID < I; });
+  auto It =
+      llvm::bsearch(Symbols, [&](const Symbol &S) { return !(S.ID < ID); });
   if (It != Symbols.end() && It->ID == ID)
     return It;
   return Symbols.end();

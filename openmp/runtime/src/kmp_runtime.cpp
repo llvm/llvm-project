@@ -3982,12 +3982,19 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
 
   TCW_4(__kmp_nth,
         __kmp_nth - 1); // __kmp_reap_thread will decrement __kmp_all_nth.
-  root->r.r_uber_thread->th.th_cg_roots->cg_nthreads--;
+  i = root->r.r_uber_thread->th.th_cg_roots->cg_nthreads--;
   KA_TRACE(100, ("__kmp_reset_root: Thread %p decrement cg_nthreads on node %p"
                  " to %d\n",
                  root->r.r_uber_thread, root->r.r_uber_thread->th.th_cg_roots,
                  root->r.r_uber_thread->th.th_cg_roots->cg_nthreads));
-
+  if (i == 1) {
+    // need to free contention group structure
+    KMP_DEBUG_ASSERT(root->r.r_uber_thread ==
+                     root->r.r_uber_thread->th.th_cg_roots->cg_root);
+    KMP_DEBUG_ASSERT(root->r.r_uber_thread->th.th_cg_roots->up == NULL);
+    __kmp_free(root->r.r_uber_thread->th.th_cg_roots);
+    root->r.r_uber_thread->th.th_cg_roots = NULL;
+  }
   __kmp_reap_thread(root->r.r_uber_thread, 1);
 
   // We canot put root thread to __kmp_thread_pool, so we have to reap it istead

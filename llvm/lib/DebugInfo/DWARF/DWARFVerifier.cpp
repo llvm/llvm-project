@@ -638,9 +638,9 @@ unsigned DWARFVerifier::verifyDebugInfoReferences() {
   // getting the DIE by offset and emitting an error
   OS << "Verifying .debug_info references...\n";
   unsigned NumErrors = 0;
-  for (auto Pair : ReferenceToDIEOffsets) {
-    auto Die = DCtx.getDIEForOffset(Pair.first);
-    if (Die)
+  for (const std::pair<uint64_t, std::set<uint32_t>> &Pair :
+       ReferenceToDIEOffsets) {
+    if (DCtx.getDIEForOffset(Pair.first))
       continue;
     ++NumErrors;
     error() << "invalid DIE reference " << format("0x%08" PRIx64, Pair.first)

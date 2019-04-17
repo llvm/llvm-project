@@ -903,6 +903,31 @@ LLVMMetadataRef LLVMDILocationGetInlinedAt(LLVMMetadataRef Location) {
   return wrap(unwrapDI<DILocation>(Location)->getInlinedAt());
 }
 
+LLVMMetadataRef LLVMDIScopeGetFile(LLVMMetadataRef Scope) {
+  return wrap(unwrapDI<DIScope>(Scope)->getFile());
+}
+
+const char *LLVMDIFileGetDirectory(LLVMMetadataRef File, unsigned *Len) {
+  auto Dir = unwrapDI<DIFile>(File)->getDirectory();
+  *Len = Dir.size();
+  return Dir.data();
+}
+
+const char *LLVMDIFileGetFilename(LLVMMetadataRef File, unsigned *Len) {
+  auto Name = unwrapDI<DIFile>(File)->getFilename();
+  *Len = Name.size();
+  return Name.data();
+}
+
+const char *LLVMDIFileGetSource(LLVMMetadataRef File, unsigned *Len) {
+  if (auto Src = unwrapDI<DIFile>(File)->getSource()) {
+    *Len = Src->size();
+    return Src->data();
+  }
+  *Len = 0;
+  return "";
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               const char *Name, size_t NameLen,
                                               int64_t Value,

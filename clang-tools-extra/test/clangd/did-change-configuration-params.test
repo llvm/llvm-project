@@ -24,6 +24,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
+# CHECK-NEXT:        "code": "warn_uninit_var",
 # CHECK-NEXT:        "message": "Variable 'i' is uninitialized when used here (fix available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
@@ -35,7 +36,8 @@
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "severity": 1
+# CHECK-NEXT:        "severity": 1,
+# CHECK-NEXT:        "source": "clang"
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"

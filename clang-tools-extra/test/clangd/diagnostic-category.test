@@ -7,6 +7,7 @@
 # CHECK-NEXT:     "diagnostics": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "category": "Semantic Issue",
+# CHECK-NEXT:        "code": "err_use_with_wrong_tag",
 # CHECK-NEXT:        "message": "Use of 'Point' with tag type that does not match previous declaration (fix available)\n\nfoo.c:1:8: note: previous use is here",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
@@ -18,7 +19,8 @@
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "severity": 1
+# CHECK-NEXT:        "severity": 1,
+# CHECK-NEXT:        "source": "clang"
 # CHECK-NEXT:      },
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "message": "Previous use is here\n\nfoo.c:1:18: error: use of 'Point' with tag type that does not match previous declaration",

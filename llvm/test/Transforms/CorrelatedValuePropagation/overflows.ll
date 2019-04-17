@@ -715,3 +715,12 @@ while.end:                                        ; preds = %while.cond, %cont
 cleanup2:                                         ; preds = %while.end
   ret void
 }
+
+define { i8, i1 } @signed_mul_constant_folding() {
+; CHECK-LABEL: @signed_mul_constant_folding(
+; CHECK-NEXT:    ret { i8, i1 } { i8 2, i1 false }
+  %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 2)
+  ret { i8, i1 } %mul
+}
+
+declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8)

@@ -115,9 +115,7 @@ void DWARFDebugAranges::construct() {
 
 uint32_t DWARFDebugAranges::findAddress(uint64_t Address) const {
   RangeCollIterator It =
-      llvm::upper_bound(Aranges, Address, [](uint64_t LHS, Range RHS) {
-        return LHS < RHS.HighPC();
-      });
+      llvm::bsearch(Aranges, [=](Range RHS) { return Address < RHS.HighPC(); });
   if (It != Aranges.end() && It->LowPC <= Address)
     return It->CUOffset;
   return -1U;

@@ -592,13 +592,11 @@ struct Diagnostic {
   int severity = 0;
 
   /// The diagnostic's code. Can be omitted.
-  /// Note: Not currently used by clangd
-  // std::string code;
+  std::string code;
 
   /// A human-readable string describing the source of this
   /// diagnostic, e.g. 'typescript' or 'super lint'.
-  /// Note: Not currently used by clangd
-  // std::string source;
+  std::string source;
 
   /// The diagnostic's message.
   std::string message;
