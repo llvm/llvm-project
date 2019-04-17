@@ -24,14 +24,17 @@
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 4062, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 6112, 7 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_sampler, 8, 16 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- _ZTSN16second_namespace13second_kernelIcEE
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 6112, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_sampler, 8, 8 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- _ZTS12third_kernelILi1Ei5pointIZ4mainE1XEE
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 6112, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_sampler, 8, 8 },
 // CHECK-EMPTY:
 // CHECK-NEXT: };
 //
@@ -65,6 +68,7 @@ int main() {
                      cl::sycl::access::placeholder::true_t>
       acc2;
   int i = 13;
+  cl::sycl::sampler smplr;
   // TODO: Uncomemnt when structures in kernel arguments are correctly processed
   //       by SYCL compiler
   /*  struct {
@@ -77,17 +81,20 @@ int main() {
 
       acc1.use();
       acc2.use();
+      smplr.use();
     }
   });
 
   kernel_single_task<class second_namespace::second_kernel<char>>([=]() {
     if (i == 13) {
       acc2.use();
+      smplr.use();
     }
   });
   kernel_single_task<class third_kernel<1, int,point<struct X>>>([=]() {
     if (i == 13) {
       acc2.use();
+      smplr.use();
     }
   });
 

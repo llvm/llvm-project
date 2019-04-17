@@ -159,9 +159,16 @@ void ExecuteKernelCommand<
         }
         break;
       }
-      // TODO implement
-      case csd::kernel_param_kind_t::kind_sampler:
-        assert(0);
+      case csd::kernel_param_kind_t::kind_sampler: {
+        sampler *SamplerPtr =
+            const_cast<sampler *>(getParamAddress<cl::sycl::sampler>(
+                &m_HostKernel, m_KernelArgs[I].offset));
+        cl_sampler clSampler =
+            detail::getSyclObjImpl(*SamplerPtr)->getOrCreateSampler(Context);
+        CHECK_OCL_CODE(clSetKernelArg(m_ClKernel, ArgumentID,
+                                      sizeof(cl_sampler), &clSampler));
+        ArgumentID++;
+      }
       }
     }
   }

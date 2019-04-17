@@ -43,6 +43,9 @@ enum MemorySemantics {
 // Only in such cases the class is recognized as SPIRV type OpTypeEvent.
 class OpTypeEvent;
 
+// SPIRV type for sampler class
+class OpTypeSampler;
+
 enum GroupOperation { Reduce = 0, InclusiveScan = 1, ExclusiveScan = 2 };
 } // namespace __spirv
 } // namespace cl

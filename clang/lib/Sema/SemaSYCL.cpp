@@ -63,6 +63,10 @@ public:
   /// accessor class.
   static bool isSyclAccessorType(const QualType &Ty);
 
+  /// Checks whether given clang type is a full specialization of the sycl
+  /// sampler class.
+  static bool isSyclSamplerType(const QualType &Ty);
+
   /// Checks whether given clang type is the sycl stream class.
   static bool isSyclStreamType(const QualType &Ty);
 
@@ -516,6 +520,59 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
             S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
         BodyStmts.push_back(Call);
+      } else if (CRD && Util::isSyclSamplerType(FieldType)) {
+
+        // Sampler has only one TargetFuncParam, which should be set in
+        // __init method: _ValueType
+        const size_t NumParams = 1;
+        llvm::SmallVector<DeclRefExpr *, NumParams> ParamDREs(NumParams);
+        auto TFP = TargetFuncParam;
+        QualType ParamType = (*TFP)->getOriginalType();
+        ParamDREs[0] = DeclRefExpr::Create(
+            S.Context, NestedNameSpecifierLoc(), SourceLocation(), *TFP,
+            false, DeclarationNameInfo(), ParamType, VK_LValue);
+        DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
+
+        // kernel_obj.sampler
+        auto SamplerME = MemberExpr::Create(
+            S.Context, CloneRef, false, SourceLocation(),
+            NestedNameSpecifierLoc(), SourceLocation(), Field, FieldDAP,
+            DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
+            nullptr, Field->getType(), VK_LValue, OK_Ordinary);
+
+        CXXMethodDecl *InitMethod = nullptr;
+        for (auto Method : CRD->methods()) {
+          if (Method->getNameInfo().getName().getAsString() == "__init") {
+            InitMethod = Method;
+            break;
+          }
+        }
+        assert(InitMethod && "The sampler must have the __init method");
+
+        // kernel_obj.sampler.__init
+        DeclAccessPair MethodDAP = DeclAccessPair::make(InitMethod, AS_none);
+        auto ME = MemberExpr::Create(
+            S.Context, SamplerME, false, SourceLocation(),
+            NestedNameSpecifierLoc(), SourceLocation(), InitMethod, MethodDAP,
+            InitMethod->getNameInfo(), nullptr, InitMethod->getType(),
+            VK_LValue, OK_Ordinary);
+
+        // Not referenced -> not emitted
+        S.MarkFunctionReferenced(SourceLocation(), InitMethod, true);
+
+        QualType ResultTy = InitMethod->getReturnType();
+        ExprValueKind VK = Expr::getValueKindForType(ResultTy);
+        ResultTy = ResultTy.getNonLValueExprType(S.Context);
+
+        // __init needs one parameter
+        auto ParamItr = InitMethod->param_begin();
+        // kernel_parameters
+        llvm::SmallVector<Expr *, NumParams> ParamStmts;
+        ParamStmts.push_back(getExprForPointer(
+            S, (*ParamItr)->getOriginalType(), ParamDREs[0]));
+        CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
+            S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
+        BodyStmts.push_back(Call);
       } else if (CRD || FieldType->isScalarType()) {
         // If field have built-in or a structure/class type just initialize
         // this field with corresponding kernel argument using '=' binary
@@ -668,6 +725,15 @@ static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
           getFieldDeclByName(RecordDecl, {"impl", "Offset"});
       assert(OffsetFld && "The accessor.impl must contain the Offset field");
       CreateAndAddPrmDsc(OffsetFld, OffsetFld->getType());
+    } else if (Util::isSyclSamplerType(ArgTy)) {
+      // the parameter is a SYCL sampler object
+      const auto *RecordDecl = ArgTy->getAsCXXRecordDecl();
+      assert(RecordDecl && "sampler must be of a record type");
+
+      FieldDecl *ImplFld =
+          getFieldDeclByName(RecordDecl, {"impl", "m_Sampler"});
+      assert(ImplFld && "The sampler must contain impl field");
+      CreateAndAddPrmDsc(ImplFld, ImplFld->getType());
     } else if (Util::isSyclStreamType(ArgTy)) {
       // the parameter is a SYCL stream object
       llvm_unreachable("streams not supported yet");
@@ -724,6 +790,17 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
           AccTmplTy->getTemplateArgs()[1].getAsIntegral().getExtValue());
       int Info = getAccessTarget(AccTmplTy) | (Dims << 11);
       H.addParamDesc(SYCLIntegrationHeader::kind_accessor, Info, Offset);
+    } else if (Util::isSyclSamplerType(ArgTy)) {
+      // The parameter is a SYCL sampler object
+      // It has only one descriptor, "m_Sampler"
+      const auto *SamplerTy = ArgTy->getAsCXXRecordDecl();
+      assert(SamplerTy && "sampler must be of a record type");
+      FieldDecl *ImplFld =
+          getFieldDeclByName(SamplerTy, {"impl", "m_Sampler"}, &Offset);
+      uint64_t Sz =
+          Ctx.getTypeSizeInChars(ImplFld->getType()).getQuantity();
+      H.addParamDesc(SYCLIntegrationHeader::kind_sampler,
+                     static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
     } else if (Util::isSyclStreamType(ArgTy)) {
       // the parameter is a SYCL stream object
       llvm_unreachable("streams not supported yet");
@@ -1122,6 +1199,14 @@ bool Util::isSyclAccessorType(const QualType &Ty) {
       Util::DeclContextDesc{clang::Decl::Kind::Namespace, "sycl"},
       Util::DeclContextDesc{clang::Decl::Kind::ClassTemplateSpecialization,
                             "accessor"}};
+  return matchQualifiedTypeName(Ty, Scopes);
+}
+
+bool Util::isSyclSamplerType(const QualType &Ty) {
+  static std::array<DeclContextDesc, 3> Scopes = {
+      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "cl"},
+      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "sycl"},
+      Util::DeclContextDesc{clang::Decl::Kind::CXXRecord, "sampler"}};
   return matchQualifiedTypeName(Ty, Scopes);
 }
 

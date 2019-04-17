@@ -135,6 +135,7 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/detail/program_manager/program_manager.cpp"
   "${sourceRootPath}/detail/queue_impl.cpp"
   "${sourceRootPath}/detail/os_util.cpp"
+  "${sourceRootPath}/detail/sampler_impl.cpp"
   "${sourceRootPath}/detail/scheduler/commands.cpp"
   "${sourceRootPath}/detail/scheduler/printers.cpp"
   "${sourceRootPath}/detail/scheduler/scheduler.cpp"
@@ -148,6 +149,7 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/kernel.cpp"
   "${sourceRootPath}/platform.cpp"
   "${sourceRootPath}/queue.cpp"
+  "${sourceRootPath}/sampler.cpp"
   "${sourceRootPath}/spirv_ops.cpp"
 )
 

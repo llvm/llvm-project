@@ -8,6 +8,9 @@
 #endif
 
 namespace cl {
+namespace __spirv {
+class OpTypeSampler;
+}
 namespace sycl {
 namespace access {
 
@@ -65,9 +68,22 @@ public:
   void use(void) const {}
   void use(void*) const {}
   _ImplT<dimensions> impl;
+
 private:
   void __init(__global dataT *Ptr, range<dimensions> AccessRange,
               range<dimensions> MemRange, id<dimensions> Offset) {}
+};
+
+struct sampler_impl {
+  __spirv::OpTypeSampler *m_Sampler;
+};
+
+class sampler {
+  struct sampler_impl impl;
+  void __init(__spirv::OpTypeSampler *Sampler) { impl.m_Sampler = Sampler; }
+
+public:
+  void use(void) const {}
 };
 
 } // namespace sycl
