@@ -172,12 +172,8 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
 
   dataT *Data;
 
-  // Device accessors must be associated with a command group handler.
-  // The handler though can be nullptr at the creation point if the
-  // accessor is a placeholder accessor.
-  accessor_impl(dataT *Data, handler *Handler = nullptr)
-      : Data(Data)
-  {}
+  // Device accessor constructor.
+  accessor_impl(dataT *Data) : Data(Data) {}
 
   // Returns the number of accessed elements.
   size_t get_count() const { return 1; }
@@ -216,12 +212,9 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   range<dimensions> MemRange;
   id<dimensions> Offset;
 
-  // Device accessors must be associated with a command group handler.
-  // The handler though can be nullptr at the creation point if the
-  // accessor is a placeholder accessor.
+  // Device accessor constructor.
   accessor_impl(dataT * Data, range<dimensions> AccessRange,
-                range<dimensions> MemRange, handler *Handler = nullptr,
-                id<dimensions> Offset = {})
+                range<dimensions> MemRange, id<dimensions> Offset = {})
       : Data(Data), AccessRange(AccessRange), MemRange(MemRange),
         Offset(Offset) {}
 
@@ -259,12 +252,10 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
 
   dataT *Data;
 
-  accessor_impl(handler * Handler)
-      : ByteSize(sizeof(dataT))
-  {
+  accessor_impl(handler &Handler)
+      : ByteSize(sizeof(dataT)) {
 #ifndef __SYCL_DEVICE_ONLY__
-    assert(Handler != nullptr && "Handler is nullptr");
-    if (Handler->is_host()) {
+    if (Handler.is_host()) {
       dataBuf = std::make_shared<vector_class<dataT>>(1);
       Data = dataBuf->data();
     }
@@ -315,12 +306,11 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
   // duplication and complication of the code even more.
   id<dimensions> Offset;
 
-  accessor_impl(range<dimensions> Range, handler * Handler)
+  accessor_impl(range<dimensions> Range, handler &Handler)
       : AccessRange(Range), MemRange(Range),
         ByteSize(Range.size() * sizeof(dataT)) {
 #ifndef __SYCL_DEVICE_ONLY__
-    assert(Handler != nullptr && "Handler is nullptr");
-    if (Handler->is_host()) {
+    if (Handler.is_host()) {
       dataBuf = std::make_shared<vector_class<dataT>>(Range.size());
       Data = dataBuf->data();
     }
@@ -723,10 +713,12 @@ public:
             Dimensions == 0),
            buffer<DataT, 1>>::type &bufferRef)
 #ifdef __SYCL_DEVICE_ONLY__
-      : impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr) {
+      : impl(reinterpret_cast<_ValueType *>(
+                 detail::getSyclObjImpl(bufferRef)->BufPtr)) {
 #else
       : impl(std::make_shared<_ImplT>(
-                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr)) {
+                 reinterpret_cast<_ValueType *>(
+                     detail::getSyclObjImpl(bufferRef)->BufPtr))) {
 #endif
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
@@ -765,11 +757,11 @@ public:
       // Pass nullptr as a pointer to mem and use buffers from the ctor
       // arguments to avoid the need in adding utility functions for
       // dummy/default initialization of range fields.
-      : impl(nullptr, (handler *)nullptr) {}
+      : impl(nullptr) {}
 #else // !__SYCL_DEVICE_ONLY__
       : impl(std::make_shared<_ImplT>(
-                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-                 &commandGroupHandlerRef)) {
+                 reinterpret_cast<_ValueType *>(
+                     detail::getSyclObjImpl(bufferRef)->BufPtr))) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -804,11 +796,13 @@ public:
             Dimensions > 0),
            buffer<DataT, Dimensions>>::type &bufferRef)
 #ifdef __SYCL_DEVICE_ONLY__
-      : impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+      : impl(reinterpret_cast<_ValueType *>(
+                 detail::getSyclObjImpl(bufferRef)->BufPtr),
              bufferRef.MemRange, bufferRef.MemRange) {
 #else
       : impl(std::make_shared<_ImplT>(
-                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+                 reinterpret_cast<_ValueType *>(
+                     detail::getSyclObjImpl(bufferRef)->BufPtr),
                  bufferRef.MemRange, bufferRef.MemRange)) {
 #endif
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
@@ -848,13 +842,12 @@ public:
       // Pass nullptr as a pointer to mem and use buffers from the ctor
       // arguments to avoid the need in adding utility functions for
       // dummy/default initialization of range fields.
-      : impl(nullptr, bufferRef.MemRange, bufferRef.MemRange,
-             &commandGroupHandlerRef) {}
+      : impl(nullptr, bufferRef.MemRange, bufferRef.MemRange) {}
 #else
       : impl(std::make_shared<_ImplT>(
-                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-                 bufferRef.MemRange, bufferRef.MemRange,
-                 &commandGroupHandlerRef)) {
+                 reinterpret_cast<_ValueType *>(
+                     detail::getSyclObjImpl(bufferRef)->BufPtr),
+                 bufferRef.MemRange, bufferRef.MemRange)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -899,8 +892,9 @@ public:
       : impl(nullptr, Range, bufferRef.MemRange, Offset) {}
 #else   // !__SYCL_DEVICE_ONLY__
       : impl(std::make_shared<_ImplT>(
-                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
-                 bufferRef.MemRange, Offset)) {
+                 reinterpret_cast<_ValueType *>(
+                     detail::getSyclObjImpl(bufferRef)->BufPtr),
+                 Range, bufferRef.MemRange, Offset)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
       simple_scheduler::Scheduler::getInstance()
@@ -941,12 +935,12 @@ public:
       // arguments to avoid the need in adding utility functions for
       // dummy/default initialization of range<Dimensions> and
       // id<Dimension> fields.
-      : impl(nullptr, Range, bufferRef.MemRange,
-             &commandGroupHandlerRef, Offset) {}
+      : impl(nullptr, Range, bufferRef.MemRange, Offset) {}
 #else   // !__SYCL_DEVICE_ONLY__
       : impl(std::make_shared<_ImplT>(
-                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
-                 bufferRef.MemRange, &commandGroupHandlerRef, Offset)) {
+                 reinterpret_cast<_ValueType *>(
+                     detail::getSyclObjImpl(bufferRef)->BufPtr),
+                 Range, bufferRef.MemRange, Offset)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -958,24 +952,27 @@ public:
   }
 #endif // !__SYCL_DEVICE_ONLY__
 
-  // TODO:
   // local accessor ctor #1
-  // accessor(handler &);
+  //   accessor(handler &);
   // Available only when:
   //   AccessTarget == access::target::local && Dimensions == 0
-  //
-  // template <typename DataT = dataT, int Dimensions = dimensions,
-  //           access::mode AccessMode = accessMode,
-  //           access::target AccessTarget = accessTarget,
-  //           access::placeholder IsPlaceholder = isPlaceholder>
-  // accessor(typename std::enable_if<(AccessTarget == access::target::local &&
-  // Dimensions == 0), handler>::type &commandGroupHandlerRef);
-
+  template <typename DataT = dataT, int Dimensions = dimensions,
+            access::mode AccessMode = accessMode,
+            access::target AccessTarget = accessTarget,
+            access::placeholder IsPlaceholder = isPlaceholder>
+  accessor(typename std::enable_if<
+               (AccessTarget == access::target::local &&
+                Dimensions == 0), handler>::type &commandGroupHandlerRef)
+#ifdef __SYCL_DEVICE_ONLY__
+      : impl(commandGroupHandlerRef) {}
+#else
+      : impl(std::make_shared<_ImplT>(commandGroupHandlerRef)) {}
+#endif
 
   // local accessor ctor #2
-  // accessor(range allocationSize, handler &);
+  //   accessor(range allocationSize, handler &);
   // Available only when:
-  //   AccessTarget == access::target::local && Dimensions => 0
+  //   AccessTarget == access::target::local && Dimensions > 0
   template <typename DataT = dataT, int Dimensions = dimensions,
             access::mode AccessMode = accessMode,
             access::target AccessTarget = accessTarget,
@@ -985,10 +982,10 @@ public:
                                    range<Dimensions>>::type allocationSize,
            handler &commandGroupHandlerRef)
 #ifdef __SYCL_DEVICE_ONLY__
-      : impl(allocationSize, &commandGroupHandlerRef) {}
+      : impl(allocationSize, commandGroupHandlerRef) {}
 #else
       : impl(std::make_shared<_ImplT>(allocationSize,
-                                      &commandGroupHandlerRef)) {}
+                                      commandGroupHandlerRef)) {}
 #endif
 
   accessor(const accessor &rhs) = default;
