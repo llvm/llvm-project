@@ -53,13 +53,17 @@ static bool trySerializeSmallLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC, TaskInfo *TI,
     OptimizationRemarkEmitter &ORE, TargetLibraryInfo *TLI) {
+  bool Changed = false;
+  for (Loop *SubL : *L)
+    Changed |= trySerializeSmallLoop(SubL, DT, LI, SE, TTI, AC, TI, ORE, TLI);
+
   Task *T = getTaskIfTapirLoop(L, TI);
   if (!T)
-    return false;
+    return Changed;
 
   // Skip any loop for which stripmining is explicitly disabled.
   if (HasStripMineDisablePragma(L))
-    return false;
+    return Changed;
 
   TapirLoopHints Hints(L);
 
@@ -75,16 +79,19 @@ static bool trySerializeSmallLoop(
   // If the work in the loop is larger than the maximum value we can deal with,
   // then it's not small.
   if (LoopCost.UnknownCost)
-    return false;
+    return Changed;
 
   computeStripMineCount(L, TTI, LoopCost.Work, SMP);
+  // Make sure the count is a power of 2.
+  if (!isPowerOf2_32(SMP.Count))
+    SMP.Count = NextPowerOf2(SMP.Count);
+
   // Find a constant trip count if available
-  int64_t ConstTripCount = getConstTripCount(L, SE);
+  unsigned ConstTripCount = getConstTripCount(L, SE);
 
   if (!ConstTripCount || SMP.Count < ConstTripCount)
-    return false;
+    return Changed;
 
-  // FIXME: Produce nice ORE message for success.
   ORE.emit([&]() {
              return OptimizationRemark("serialize-small-tasks",
                                        "SerializingSmallLoop",
@@ -95,8 +102,6 @@ static bool trySerializeSmallLoop(
   SerializeDetach(cast<DetachInst>(L->getHeader()->getTerminator()), T, &DT);
   Hints.clearHintsMetadata();
   L->setDerivedFromTapirLoop();
-  // Recalculate TaskInfo
-  TI->recalculate(*DT.getRoot()->getParent(), DT);
   return true;
 }
 
@@ -172,6 +177,11 @@ bool SerializeSmallTasks::runOnFunction(Function &F) {
   if (SerializeUnprofitableLoops)
     for (Loop *L : *LI)
       Changed |= trySerializeSmallLoop(L, DT, LI, SE, TTI, AC, &TI, ORE, &TLI);
+
+  if (Changed)
+    // Recalculate TaskInfo
+    TI.recalculate(*DT.getRoot()->getParent(), DT);
+
   return Changed;
 }
 
@@ -203,6 +213,10 @@ PreservedAnalyses SerializeSmallTasksPass::run(Function &F,
 
   if (!Changed)
     return PreservedAnalyses::all();
+
+  // Recalculate TaskInfo
+  TI.recalculate(*DT.getRoot()->getParent(), DT);
+
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
