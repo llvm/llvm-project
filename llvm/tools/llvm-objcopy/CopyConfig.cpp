@@ -253,14 +253,14 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
 }
 
 static const StringMap<MachineInfo> ArchMap{
-    // Name, {EMachine, OS/ABI, 64bit, LittleEndian}
-    {"aarch64", {ELF::EM_AARCH64, ELF::ELFOSABI_NONE, true, true}},
-    {"arm", {ELF::EM_ARM, ELF::ELFOSABI_NONE, false, true}},
-    {"i386", {ELF::EM_386, ELF::ELFOSABI_NONE, false, true}},
-    {"i386:x86-64", {ELF::EM_X86_64, ELF::ELFOSABI_NONE, true, true}},
-    {"powerpc:common64", {ELF::EM_PPC64, ELF::ELFOSABI_NONE, true, true}},
-    {"sparc", {ELF::EM_SPARC, ELF::ELFOSABI_NONE, false, true}},
-    {"x86-64", {ELF::EM_X86_64, ELF::ELFOSABI_NONE, true, true}},
+    // Name, {EMachine, 64bit, LittleEndian}
+    {"aarch64", {ELF::EM_AARCH64, true, true}},
+    {"arm", {ELF::EM_ARM, false, true}},
+    {"i386", {ELF::EM_386, false, true}},
+    {"i386:x86-64", {ELF::EM_X86_64, true, true}},
+    {"powerpc:common64", {ELF::EM_PPC64, true, true}},
+    {"sparc", {ELF::EM_SPARC, false, true}},
+    {"x86-64", {ELF::EM_X86_64, true, true}},
 };
 
 static Expected<const MachineInfo &> getMachineInfo(StringRef Arch) {
@@ -271,26 +271,41 @@ static Expected<const MachineInfo &> getMachineInfo(StringRef Arch) {
   return Iter->getValue();
 }
 
+// FIXME: consolidate with the bfd parsing used by lld.
 static const StringMap<MachineInfo> OutputFormatMap{
-    // Name, {EMachine, OSABI, 64bit, LittleEndian}
-    {"elf32-i386", {ELF::EM_386, ELF::ELFOSABI_NONE, false, true}},
-    {"elf32-i386-freebsd", {ELF::EM_386, ELF::ELFOSABI_FREEBSD, false, true}},
-    {"elf32-powerpcle", {ELF::EM_PPC, ELF::ELFOSABI_NONE, false, true}},
-    {"elf32-x86-64", {ELF::EM_X86_64, ELF::ELFOSABI_NONE, false, true}},
-    {"elf64-powerpcle", {ELF::EM_PPC64, ELF::ELFOSABI_NONE, true, true}},
-    {"elf64-x86-64", {ELF::EM_X86_64, ELF::ELFOSABI_NONE, true, true}},
-    {"elf64-x86-64-freebsd",
-     {ELF::EM_X86_64, ELF::ELFOSABI_FREEBSD, true, true}},
+    // Name, {EMachine, 64bit, LittleEndian}
+    {"elf32-i386", {ELF::EM_386, false, true}},
+    {"elf32-iamcu", {ELF::EM_IAMCU, false, true}},
+    {"elf32-littlearm", {ELF::EM_ARM, false, true}},
+    {"elf32-x86-64", {ELF::EM_X86_64, false, true}},
+    {"elf64-aarch64", {ELF::EM_AARCH64, true, true}},
+    {"elf64-littleaarch64", {ELF::EM_AARCH64, true, true}},
+    {"elf32-powerpc", {ELF::EM_PPC, false, false}},
+    {"elf32-powerpcle", {ELF::EM_PPC, false, true}},
+    {"elf64-powerpc", {ELF::EM_PPC64, true, false}},
+    {"elf64-powerpcle", {ELF::EM_PPC64, true, true}},
+    {"elf64-x86-64", {ELF::EM_X86_64, true, true}},
+    {"elf32-tradbigmips", {ELF::EM_MIPS, false, false}},
+    {"elf32-bigmips", {ELF::EM_MIPS, false, false}},
+    {"elf32-ntradbigmips", {ELF::EM_MIPS, false, false}},
+    {"elf32-tradlittlemips", {ELF::EM_MIPS, false, true}},
+    {"elf32-ntradlittlemips", {ELF::EM_MIPS, false, true}},
+    {"elf64-tradbigmips", {ELF::EM_MIPS, true, false}},
+    {"elf64-tradlittlemips", {ELF::EM_MIPS, true, true}},
 };
 
-static Expected<const MachineInfo &>
-getOutputFormatMachineInfo(StringRef Format) {
+static Expected<MachineInfo> getOutputFormatMachineInfo(StringRef Format) {
+  StringRef OriginalFormat = Format;
+  bool IsFreeBSD = Format.consume_back("-freebsd");
   auto Iter = OutputFormatMap.find(Format);
   if (Iter == std::end(OutputFormatMap))
     return createStringError(errc::invalid_argument,
                              "Invalid output format: '%s'",
-                             Format.str().c_str());
-  return Iter->getValue();
+                             OriginalFormat.str().c_str());
+  MachineInfo MI = Iter->getValue();
+  if (IsFreeBSD)
+    MI.OSABI = ELF::ELFOSABI_FREEBSD;
+  return {MI};
 }
 
 static Error addSymbolsFromFile(std::vector<NameOrRegex> &Symbols,
@@ -431,8 +446,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Config.BinaryArch = *MI;
   }
   if (!Config.OutputFormat.empty() && Config.OutputFormat != "binary") {
-    Expected<const MachineInfo &> MI =
-        getOutputFormatMachineInfo(Config.OutputFormat);
+    Expected<MachineInfo> MI = getOutputFormatMachineInfo(Config.OutputFormat);
     if (!MI)
       return MI.takeError();
     Config.OutputArch = *MI;

@@ -1,0 +1,5 @@
+foo:30000:100
+ 2: 28000
+ 3: 1000
+# This profile is stale. Function foo() does not have a line 8 anymore.
+ 8: 1700
