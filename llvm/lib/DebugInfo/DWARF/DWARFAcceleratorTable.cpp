@@ -41,7 +41,7 @@ static Atom formatAtom(unsigned Atom) { return {Atom}; }
 
 DWARFAcceleratorTable::~DWARFAcceleratorTable() = default;
 
-llvm::Error AppleAcceleratorTable::extract() {
+Error AppleAcceleratorTable::extract() {
   uint32_t Offset = 0;
 
   // Check that we can at least read the header.
@@ -376,7 +376,7 @@ void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
   W.startLine() << "Augmentation: '" << AugmentationString << "'\n";
 }
 
-llvm::Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
+Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
                                              uint32_t *Offset) {
   // Check that we can read the fixed-size part.
   if (!AS.isValidOffset(*Offset + sizeof(HeaderPOD) - 1))
@@ -518,6 +518,7 @@ Error DWARFDebugNames::NameIndex::extract() {
                                "Duplicate abbreviation code.");
   }
 }
+
 DWARFDebugNames::Entry::Entry(const NameIndex &NameIdx, const Abbrev &Abbr)
     : NameIdx(&NameIdx), Abbr(&Abbr) {
   // This merely creates form values. It is up to the caller
@@ -753,11 +754,11 @@ LLVM_DUMP_METHOD void DWARFDebugNames::NameIndex::dump(ScopedPrinter &W) const {
     dumpName(W, NTE, None);
 }
 
-llvm::Error DWARFDebugNames::extract() {
+Error DWARFDebugNames::extract() {
   uint32_t Offset = 0;
   while (AccelSection.isValidOffset(Offset)) {
     NameIndex Next(*this, Offset);
-    if (llvm::Error E = Next.extract())
+    if (Error E = Next.extract())
       return E;
     Offset = Next.getNextUnitOffset();
     NameIndices.push_back(std::move(Next));

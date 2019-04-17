@@ -8,7 +8,7 @@ void foo2();
     foo1();   \
     foo2();
 
-int main()
+void f()
 {
   bool cond1 = true;
   bool cond2 = true;
@@ -90,7 +90,7 @@ int main()
        else {
   }
   // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
-  
+
   if (cond1) {
     if (cond1) {
     }
@@ -108,4 +108,13 @@ int main()
   }
 
   BLOCK
+}
+
+void g(bool x) {
+  if (x)
+    #pragma unroll
+    for (int k = 0; k < 1; ++k) {}
+
+  #pragma unroll
+  for (int k = 0; k < 1; ++k) {}
 }

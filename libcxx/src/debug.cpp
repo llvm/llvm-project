@@ -171,7 +171,7 @@ __libcpp_db::__insert_c(void* __c, __libcpp_db::_InsertConstruct *__fn)
     if (__csz_ + 1 > static_cast<size_t>(__cend_ - __cbeg_))
     {
         size_t nc = __next_prime(2*static_cast<size_t>(__cend_ - __cbeg_) + 1);
-        __c_node** cbeg = static_cast<__c_node**>(calloc(nc, sizeof(void*)));
+        __c_node** cbeg = static_cast<__c_node**>(calloc(nc, sizeof(__c_node*)));
         if (cbeg == nullptr)
             __throw_bad_alloc();
 
@@ -508,7 +508,7 @@ __libcpp_db::__insert_iterator(void* __i)
     if (__isz_ + 1 > static_cast<size_t>(__iend_ - __ibeg_))
     {
         size_t nc = __next_prime(2*static_cast<size_t>(__iend_ - __ibeg_) + 1);
-        __i_node** ibeg = static_cast<__i_node**>(calloc(nc, sizeof(void*)));
+        __i_node** ibeg = static_cast<__i_node**>(calloc(nc, sizeof(__i_node*)));
         if (ibeg == nullptr)
             __throw_bad_alloc();
 

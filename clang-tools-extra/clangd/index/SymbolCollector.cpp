@@ -25,6 +25,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -127,34 +128,46 @@ bool shouldCollectIncludePath(index::SymbolKind Kind) {
   }
 }
 
-/// Gets a canonical include (URI of the header or <header>  or "header") for
-/// header of \p Loc.
-/// Returns None if fails to get include header for \p Loc.
+bool isSelfContainedHeader(FileID FID, const SourceManager &SM,
+                           const Preprocessor &PP) {
+  const FileEntry *FE = SM.getFileEntryForID(FID);
+  if (!FE)
+    return false;
+  return PP.getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE);
+}
+
+/// Gets a canonical include (URI of the header or <header> or "header") for
+/// header of \p FID (which should usually be the *expansion* file).
+/// Returns None if includes should not be inserted for this file.
 llvm::Optional<std::string>
 getIncludeHeader(llvm::StringRef QName, const SourceManager &SM,
-                 SourceLocation Loc, const SymbolCollector::Options &Opts) {
-  std::vector<std::string> Headers;
-  // Collect the #include stack.
-  while (true) {
-    if (!Loc.isValid())
-      break;
-    auto FilePath = SM.getFilename(Loc);
-    if (FilePath.empty())
-      break;
-    Headers.push_back(FilePath);
-    if (SM.isInMainFile(Loc))
-      break;
-    Loc = SM.getIncludeLoc(SM.getFileID(Loc));
-  }
-  if (Headers.empty())
-    return None;
-  llvm::StringRef Header = Headers[0];
+                 const Preprocessor &PP, FileID FID,
+                 const SymbolCollector::Options &Opts) {
+  const FileEntry *FE = SM.getFileEntryForID(FID);
+  if (!FE || FE->getName().empty())
+    return llvm::None;
+  llvm::StringRef Filename = FE->getName();
+  // If a file is mapped by canonical headers, use that mapping, regardless
+  // of whether it's an otherwise-good header (header guards etc).
   if (Opts.Includes) {
-    Header = Opts.Includes->mapHeader(Headers, QName);
-    if (Header.startswith("<") || Header.startswith("\""))
-      return Header.str();
+    llvm::StringRef Canonical = Opts.Includes->mapHeader(Filename, QName);
+    // If we had a mapping, always use it.
+    if (Canonical.startswith("<") || Canonical.startswith("\""))
+      return Canonical.str();
+    if (Canonical != Filename)
+      return toURI(SM, Canonical, Opts);
   }
-  return toURI(SM, Header, Opts);
+  if (!isSelfContainedHeader(FID, SM, PP)) {
+    // A .inc or .def file is often included into a real header to define
+    // symbols (e.g. LLVM tablegen files).
+    if (Filename.endswith(".inc") || Filename.endswith(".def"))
+      return getIncludeHeader(QName, SM, PP,
+                              SM.getFileID(SM.getIncludeLoc(FID)), Opts);
+    // Conservatively refuse to insert #includes to files without guards.
+    return llvm::None;
+  }
+  // Standard case: just insert the file itself.
+  return toURI(SM, Filename, Opts);
 }
 
 // Return the symbol range of the token at \p TokLoc.
@@ -439,8 +452,9 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
 
   std::string Include;
   if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
-    if (auto Header = getIncludeHeader(Name->getName(), SM,
-                                       SM.getExpansionLoc(DefLoc), Opts))
+    if (auto Header =
+            getIncludeHeader(Name->getName(), SM, *PP,
+                             SM.getDecomposedExpansionLoc(DefLoc).first, Opts))
       Include = std::move(*Header);
   }
   S.Signature = Signature;
@@ -588,7 +602,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
     // Use the expansion location to get the #include header since this is
     // where the symbol is exposed.
     if (auto Header = getIncludeHeader(
-            QName, SM, SM.getExpansionLoc(ND.getLocation()), Opts))
+            QName, SM, *PP,
+            SM.getDecomposedExpansionLoc(ND.getLocation()).first, Opts))
       Include = std::move(*Header);
   }
   if (!Include.empty())

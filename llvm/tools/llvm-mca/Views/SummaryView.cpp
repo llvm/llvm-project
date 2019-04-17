@@ -23,18 +23,13 @@ namespace mca {
 #define DEBUG_TYPE "llvm-mca"
 
 SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
-                         unsigned Width, bool EmitBottleneckAnalysis)
+                         unsigned Width)
     : SM(Model), Source(S), DispatchWidth(Width?Width: Model.IssueWidth),
       LastInstructionIdx(0),
-      TotalCycles(0), NumMicroOps(0), BPI({0, 0, 0, 0, 0}),
-      ResourcePressureDistribution(Model.getNumProcResourceKinds(), 0),
+      TotalCycles(0), NumMicroOps(0),
       ProcResourceUsage(Model.getNumProcResourceKinds(), 0),
       ProcResourceMasks(Model.getNumProcResourceKinds()),
-      ResIdx2ProcResID(Model.getNumProcResourceKinds(), 0),
-      PressureIncreasedBecauseOfResources(false),
-      PressureIncreasedBecauseOfDataDependencies(false),
-      SeenStallCycles(false),
-      ShouldEmitBottleneckAnalysis(EmitBottleneckAnalysis) {
+      ResIdx2ProcResID(Model.getNumProcResourceKinds(), 0) {
   computeProcResourceMasks(SM, ProcResourceMasks);
   for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     unsigned Index = getResourceStateIndex(ProcResourceMasks[I]);
@@ -67,100 +62,6 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
   }
 }
 
-void SummaryView::onEvent(const HWPressureEvent &Event) {
-  assert(Event.Reason != HWPressureEvent::INVALID &&
-         "Unexpected invalid event!");
-
-  switch (Event.Reason) {
-  default:
-    break;
-
-  case HWPressureEvent::RESOURCES: {
-    PressureIncreasedBecauseOfResources = true;
-    ++BPI.ResourcePressureCycles;
-    uint64_t ResourceMask = Event.ResourceMask;
-    while (ResourceMask) {
-      uint64_t Current = ResourceMask & (-ResourceMask);
-      unsigned Index = getResourceStateIndex(Current);
-      unsigned ProcResID = ResIdx2ProcResID[Index];
-      const MCProcResourceDesc &PRDesc = *SM.getProcResource(ProcResID);
-      if (!PRDesc.SubUnitsIdxBegin) {
-        ResourcePressureDistribution[Index]++;
-        ResourceMask ^= Current;
-        continue;
-      }
-
-      for (unsigned I = 0, E = PRDesc.NumUnits; I < E; ++I) {
-        unsigned OtherProcResID = PRDesc.SubUnitsIdxBegin[I];
-        unsigned OtherMask = ProcResourceMasks[OtherProcResID];
-        ResourcePressureDistribution[getResourceStateIndex(OtherMask)]++;
-      }
-
-      ResourceMask ^= Current;
-    }
-  }
-
-  break;
-  case HWPressureEvent::REGISTER_DEPS:
-    PressureIncreasedBecauseOfDataDependencies = true;
-    ++BPI.RegisterDependencyCycles;
-    break;
-  case HWPressureEvent::MEMORY_DEPS:
-    PressureIncreasedBecauseOfDataDependencies = true;
-    ++BPI.MemoryDependencyCycles;
-    break;
-  }
-}
-
-void SummaryView::printBottleneckHints(raw_ostream &OS) const {
-  if (!SeenStallCycles || !BPI.PressureIncreaseCycles) {
-    OS << "\nNo resource or data dependency bottlenecks discovered.\n";
-    return;
-  }
-
-  double PressurePerCycle =
-      (double)BPI.PressureIncreaseCycles * 100 / TotalCycles;
-  double ResourcePressurePerCycle =
-      (double)BPI.ResourcePressureCycles * 100 / TotalCycles;
-  double DDPerCycle = (double)BPI.DataDependencyCycles * 100 / TotalCycles;
-  double RegDepPressurePerCycle =
-      (double)BPI.RegisterDependencyCycles * 100 / TotalCycles;
-  double MemDepPressurePerCycle =
-      (double)BPI.MemoryDependencyCycles * 100 / TotalCycles;
-
-  OS << "\nCycles with backend pressure increase [ "
-     << format("%.2f", floor((PressurePerCycle * 100) + 0.5) / 100) << "% ]";
-
-  OS << "\nThroughput Bottlenecks: "
-     << "\n  Resource Pressure       [ "
-     << format("%.2f", floor((ResourcePressurePerCycle * 100) + 0.5) / 100)
-     << "% ]";
-
-  if (BPI.PressureIncreaseCycles) {
-    for (unsigned I = 0, E = ResourcePressureDistribution.size(); I < E; ++I) {
-      if (ResourcePressureDistribution[I]) {
-        double Frequency =
-            (double)ResourcePressureDistribution[I] * 100 / TotalCycles;
-        unsigned Index = ResIdx2ProcResID[getResourceStateIndex(1ULL << I)];
-        const MCProcResourceDesc &PRDesc = *SM.getProcResource(Index);
-        OS << "\n  - " << PRDesc.Name << "  [ "
-           << format("%.2f", floor((Frequency * 100) + 0.5) / 100) << "% ]";
-      }
-    }
-  }
-
-  OS << "\n  Data Dependencies:      [ "
-     << format("%.2f", floor((DDPerCycle * 100) + 0.5) / 100) << "% ]";
-
-  OS << "\n  - Register Dependencies [ "
-     << format("%.2f", floor((RegDepPressurePerCycle * 100) + 0.5) / 100)
-     << "% ]";
-
-  OS << "\n  - Memory Dependencies   [ "
-     << format("%.2f", floor((MemDepPressurePerCycle * 100) + 0.5) / 100)
-     << "% ]\n\n";
-}
-
 void SummaryView::printView(raw_ostream &OS) const {
   unsigned Instructions = Source.size();
   unsigned Iterations = (LastInstructionIdx / Instructions) + 1;
@@ -185,10 +86,9 @@ void SummaryView::printView(raw_ostream &OS) const {
   TempStream << "\nBlock RThroughput: "
              << format("%.1f", floor((BlockRThroughput * 10) + 0.5) / 10)
              << '\n';
-  if (ShouldEmitBottleneckAnalysis)
-    printBottleneckHints(TempStream);
   TempStream.flush();
   OS << Buffer;
 }
+
 } // namespace mca.
 } // namespace llvm

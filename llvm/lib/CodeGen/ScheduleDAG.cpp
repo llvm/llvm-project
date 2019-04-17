@@ -462,6 +462,11 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   // On insertion of the edge X->Y, the algorithm first marks by calling DFS
   // the nodes reachable from Y, and then shifts them using Shift to lie
   // immediately after X in Index2Node.
+
+  // Cancel pending updates, mark as valid.
+  Dirty = false;
+  Updates.clear();
+
   unsigned DAGSize = SUnits.size();
   std::vector<SUnit*> WorkList;
   WorkList.reserve(DAGSize);
@@ -513,6 +518,31 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
     }
   }
 #endif
+}
+
+void ScheduleDAGTopologicalSort::FixOrder() {
+  // Recompute from scratch after new nodes have been added.
+  if (Dirty) {
+    InitDAGTopologicalSorting();
+    return;
+  }
+
+  // Otherwise apply updates one-by-one.
+  for (auto &U : Updates)
+    AddPred(U.first, U.second);
+  Updates.clear();
+}
+
+void ScheduleDAGTopologicalSort::AddPredQueued(SUnit *Y, SUnit *X) {
+  // Recomputing the order from scratch is likely more efficient than applying
+  // updates one-by-one for too many updates. The current cut-off is arbitrarily
+  // chosen.
+  Dirty = Dirty || Updates.size() > 10;
+
+  if (Dirty)
+    return;
+
+  Updates.emplace_back(Y, X);
 }
 
 void ScheduleDAGTopologicalSort::AddPred(SUnit *Y, SUnit *X) {
@@ -672,6 +702,7 @@ void ScheduleDAGTopologicalSort::Shift(BitVector& Visited, int LowerBound,
 }
 
 bool ScheduleDAGTopologicalSort::WillCreateCycle(SUnit *TargetSU, SUnit *SU) {
+  FixOrder();
   // Is SU reachable from TargetSU via successor edges?
   if (IsReachable(SU, TargetSU))
     return true;
@@ -684,6 +715,7 @@ bool ScheduleDAGTopologicalSort::WillCreateCycle(SUnit *TargetSU, SUnit *SU) {
 
 bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
                                              const SUnit *TargetSU) {
+  FixOrder();
   // If insertion of the edge SU->TargetSU would create a cycle
   // then there is a path from TargetSU to SU.
   int UpperBound, LowerBound;

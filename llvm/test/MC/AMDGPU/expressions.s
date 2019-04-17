@@ -1,4 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI
 
 
 .globl global
@@ -57,3 +58,17 @@ s_sub_u32 s0, s0, -t
 t=-1
 s_sub_u32 s0, s0, -t
 // VI: s_sub_u32 s0, s0, 1             ; encoding: [0x00,0x81,0x80,0x80]
+
+s_sub_u32 s0, s0, -2+1
+// VI: s_sub_u32 s0, s0, -1            ; encoding: [0x00,0xc1,0x80,0x80]
+
+t=1
+s_sub_u32 s0, s0, -2+t
+// VI: s_sub_u32 s0, s0, -1            ; encoding: [0x00,0xc1,0x80,0x80]
+
+s_sub_u32 s0, s0, -1.0 + 10000000000
+// NOVI: error: invalid operand for instruction
+
+t=10000000000
+s_sub_u32 s0, s0, 1.0 + t
+// NOVI: error: invalid operand for instruction

@@ -6657,6 +6657,47 @@ static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
       CGF.getContext(), CS->getCapturedStmt());
   if (const auto *Dir = dyn_cast_or_null<OMPExecutableDirective>(Child)) {
     if (isOpenMPParallelDirective(Dir->getDirectiveKind())) {
+      llvm::Value *NumThreads = nullptr;
+      llvm::Value *CondVal = nullptr;
+      // Handle if clause. If if clause present, the number of threads is
+      // calculated as <cond> ? (<numthreads> ? <numthreads> : 0 ) : 1.
+      if (Dir->hasClausesOfKind<OMPIfClause>()) {
+        CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
+        CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
+        const OMPIfClause *IfClause = nullptr;
+        for (const auto *C : Dir->getClausesOfKind<OMPIfClause>()) {
+          if (C->getNameModifier() == OMPD_unknown ||
+              C->getNameModifier() == OMPD_parallel) {
+            IfClause = C;
+            break;
+          }
+        }
+        if (IfClause) {
+          const Expr *Cond = IfClause->getCondition();
+          bool Result;
+          if (Cond->EvaluateAsBooleanCondition(Result, CGF.getContext())) {
+            if (!Result)
+              return CGF.Builder.getInt32(1);
+          } else {
+            CodeGenFunction::LexicalScope Scope(CGF, Cond->getSourceRange());
+            if (const auto *PreInit =
+                    cast_or_null<DeclStmt>(IfClause->getPreInitStmt())) {
+              for (const auto *I : PreInit->decls()) {
+                if (!I->hasAttr<OMPCaptureNoInitAttr>()) {
+                  CGF.EmitVarDecl(cast<VarDecl>(*I));
+                } else {
+                  CodeGenFunction::AutoVarEmission Emission =
+                      CGF.EmitAutoVarAlloca(cast<VarDecl>(*I));
+                  CGF.EmitAutoVarCleanups(Emission);
+                }
+              }
+            }
+            CondVal = CGF.EvaluateExprAsBool(Cond);
+          }
+        }
+      }
+      // Check the value of num_threads clause iff if clause was not specified
+      // or is not evaluated to false.
       if (Dir->hasClausesOfKind<OMPNumThreadsClause>()) {
         CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
@@ -6676,19 +6717,23 @@ static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
             }
           }
         }
-        llvm::Value *NumThreads =
-            CGF.EmitScalarExpr(NumThreadsClause->getNumThreads());
+        NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads());
         NumThreads = CGF.Builder.CreateIntCast(NumThreads, CGF.Int32Ty,
-                                               /*IsSigned=*/true);
-        return DefaultThreadLimitVal
-                   ? CGF.Builder.CreateSelect(
-                         CGF.Builder.CreateICmpULT(DefaultThreadLimitVal,
-                                                   NumThreads),
-                         DefaultThreadLimitVal, NumThreads)
-                   : NumThreads;
+                                               /*IsSigned=*/false);
+        if (DefaultThreadLimitVal)
+          NumThreads = CGF.Builder.CreateSelect(
+              CGF.Builder.CreateICmpULT(DefaultThreadLimitVal, NumThreads),
+              DefaultThreadLimitVal, NumThreads);
+      } else {
+        NumThreads = DefaultThreadLimitVal ? DefaultThreadLimitVal
+                                           : CGF.Builder.getInt32(0);
       }
-      return DefaultThreadLimitVal ? DefaultThreadLimitVal
-                                   : CGF.Builder.getInt32(0);
+      // Process condition of the if clause.
+      if (CondVal) {
+        NumThreads = CGF.Builder.CreateSelect(CondVal, NumThreads,
+                                              CGF.Builder.getInt32(1));
+      }
+      return NumThreads;
     }
     if (isOpenMPSimdDirective(Dir->getDirectiveKind()))
       return CGF.Builder.getInt32(1);
@@ -6748,7 +6793,7 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
         llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
             ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
         ThreadLimitVal =
-            Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/true);
+            Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/false);
       }
       if (isOpenMPTeamsDirective(Dir->getDirectiveKind()) &&
           !isOpenMPDistributeDirective(Dir->getDirectiveKind())) {
@@ -6775,7 +6820,7 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
       llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
           ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
       ThreadLimitVal =
-          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/true);
+          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/false);
     }
     const CapturedStmt *CS = D.getInnermostCapturedStmt();
     if (llvm::Value *NumThreads = getNumThreads(CGF, CS, ThreadLimitVal))
@@ -6798,21 +6843,45 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
       llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
           ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
       ThreadLimitVal =
-          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/true);
+          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/false);
     }
     return getNumThreads(CGF, D.getInnermostCapturedStmt(), ThreadLimitVal);
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
   case OMPD_target_teams_distribute_parallel_for:
-  case OMPD_target_teams_distribute_parallel_for_simd:
+  case OMPD_target_teams_distribute_parallel_for_simd: {
+    llvm::Value *CondVal = nullptr;
+    // Handle if clause. If if clause present, the number of threads is
+    // calculated as <cond> ? (<numthreads> ? <numthreads> : 0 ) : 1.
+    if (D.hasClausesOfKind<OMPIfClause>()) {
+      const OMPIfClause *IfClause = nullptr;
+      for (const auto *C : D.getClausesOfKind<OMPIfClause>()) {
+        if (C->getNameModifier() == OMPD_unknown ||
+            C->getNameModifier() == OMPD_parallel) {
+          IfClause = C;
+          break;
+        }
+      }
+      if (IfClause) {
+        const Expr *Cond = IfClause->getCondition();
+        bool Result;
+        if (Cond->EvaluateAsBooleanCondition(Result, CGF.getContext())) {
+          if (!Result)
+            return Bld.getInt32(1);
+        } else {
+          CodeGenFunction::RunCleanupsScope Scope(CGF);
+          CondVal = CGF.EvaluateExprAsBool(Cond);
+        }
+      }
+    }
     if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
       CodeGenFunction::RunCleanupsScope ThreadLimitScope(CGF);
       const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
       llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
           ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
       ThreadLimitVal =
-          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/true);
+          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*IsSigned=*/false);
     }
     if (D.hasClausesOfKind<OMPNumThreadsClause>()) {
       CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
@@ -6820,14 +6889,19 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
       llvm::Value *NumThreads = CGF.EmitScalarExpr(
           NumThreadsClause->getNumThreads(), /*IgnoreResultAssign=*/true);
       NumThreadsVal =
-          Bld.CreateIntCast(NumThreads, CGF.Int32Ty, /*IsSigned=*/true);
+          Bld.CreateIntCast(NumThreads, CGF.Int32Ty, /*IsSigned=*/false);
       ThreadLimitVal = ThreadLimitVal
                            ? Bld.CreateSelect(Bld.CreateICmpULT(NumThreadsVal,
                                                                 ThreadLimitVal),
                                               NumThreadsVal, ThreadLimitVal)
                            : NumThreadsVal;
     }
-    return ThreadLimitVal ? ThreadLimitVal : Bld.getInt32(0);
+    if (!ThreadLimitVal)
+      ThreadLimitVal = Bld.getInt32(0);
+    if (CondVal)
+      return Bld.CreateSelect(CondVal, ThreadLimitVal, Bld.getInt32(1));
+    return ThreadLimitVal;
+  }
   case OMPD_target_teams_distribute_simd:
   case OMPD_target_simd:
     return Bld.getInt32(1);

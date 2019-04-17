@@ -28,7 +28,7 @@ s_mov_b64 s[0:1], s1
 
 // FIXME: This shoudl probably say failed to parse.
 s_mov_b32 s
-// GCN: error: not a valid operand
+// GCN: error: invalid operand for instruction
 // Out of range register
 
 s_mov_b32 s102, 1

@@ -1045,10 +1045,9 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       error(ExportEntry.getExportRVA(RVA));
 
       uint64_t VA = COFFObj->getImageBase() + RVA;
-      auto Sec = llvm::upper_bound(
-          SectionAddresses, VA,
-          [](uint64_t LHS, const std::pair<uint64_t, SectionRef> &RHS) {
-            return LHS < RHS.first;
+      auto Sec = llvm::bsearch(
+          SectionAddresses, [VA](const std::pair<uint64_t, SectionRef> &RHS) {
+            return VA < RHS.first;
           });
       if (Sec != SectionAddresses.begin()) {
         --Sec;
@@ -1302,35 +1301,33 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             // N.B. We don't walk the relocations in the relocatable case yet.
             auto *TargetSectionSymbols = &Symbols;
             if (!Obj->isRelocatableObject()) {
-              auto SectionAddress = llvm::upper_bound(
-                  SectionAddresses, Target,
-                  [](uint64_t LHS, const std::pair<uint64_t, SectionRef> &RHS) {
-                    return LHS < RHS.first;
+              auto It = llvm::bsearch(
+                  SectionAddresses,
+                  [=](const std::pair<uint64_t, SectionRef> &RHS) {
+                    return Target < RHS.first;
                   });
-              if (SectionAddress != SectionAddresses.begin()) {
-                --SectionAddress;
-                TargetSectionSymbols = &AllSymbols[SectionAddress->second];
+              if (It != SectionAddresses.begin()) {
+                --It;
+                TargetSectionSymbols = &AllSymbols[It->second];
               } else {
                 TargetSectionSymbols = &AbsoluteSymbols;
               }
             }
 
-            // Find the first symbol in the section whose offset is less than
+            // Find the last symbol in the section whose offset is less than
             // or equal to the target. If there isn't a section that contains
             // the target, find the nearest preceding absolute symbol.
-            auto TargetSym = llvm::upper_bound(
-                *TargetSectionSymbols, Target,
-                [](uint64_t LHS,
-                   const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
-                  return LHS < std::get<0>(RHS);
+            auto TargetSym = llvm::bsearch(
+                *TargetSectionSymbols,
+                [=](const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
+                  return Target < std::get<0>(RHS);
                 });
             if (TargetSym == TargetSectionSymbols->begin()) {
               TargetSectionSymbols = &AbsoluteSymbols;
-              TargetSym = llvm::upper_bound(
-                  AbsoluteSymbols, Target,
-                  [](uint64_t LHS,
-                     const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
-                    return LHS < std::get<0>(RHS);
+              TargetSym = llvm::bsearch(
+                  AbsoluteSymbols,
+                  [=](const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
+                    return Target < std::get<0>(RHS);
                   });
             }
             if (TargetSym != TargetSectionSymbols->begin()) {

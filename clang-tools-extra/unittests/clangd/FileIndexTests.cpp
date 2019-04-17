@@ -212,33 +212,11 @@ TEST(FileIndexTest, IncludeCollected) {
 }
 
 TEST(FileIndexTest, HasSystemHeaderMappingsInPreamble) {
-  FileIndex Index;
-  const std::string Header = R"cpp(
-    class Foo {};
-  )cpp";
-  auto MainFile = testPath("foo.cpp");
-  auto HeaderFile = testPath("algorithm");
-  std::vector<const char *> Cmd = {"clang", "-xc++", MainFile.c_str(),
-                                   "-include", HeaderFile.c_str()};
-  // Preparse ParseInputs.
-  ParseInputs PI;
-  PI.CompileCommand.Directory = testRoot();
-  PI.CompileCommand.Filename = MainFile;
-  PI.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
-  PI.Contents = "";
-  PI.FS = buildTestFS({{MainFile, ""}, {HeaderFile, Header}});
+  TestTU TU;
+  TU.HeaderCode = "class Foo{};";
+  TU.HeaderFilename = "algorithm";
 
-  // Prepare preamble.
-  auto CI = buildCompilerInvocation(PI);
-  auto PreambleData =
-      buildPreamble(MainFile, *buildCompilerInvocation(PI),
-                    /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
-                    /*StoreInMemory=*/true,
-                    [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
-                        const CanonicalIncludes &Includes) {
-                      Index.updatePreamble(MainFile, Ctx, PP, Includes);
-                    });
-  auto Symbols = runFuzzyFind(Index, "");
+  auto Symbols = runFuzzyFind(*TU.index(), "");
   EXPECT_THAT(Symbols, ElementsAre(_));
   EXPECT_THAT(Symbols.begin()->IncludeHeaders.front().IncludeHeader,
               "<algorithm>");
@@ -369,50 +347,23 @@ TEST(FileIndexTest, CollectMacros) {
 }
 
 TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
-  const std::string Header = R"cpp(
-    class Foo {};
-  )cpp";
+  TestTU TU;
+  TU.HeaderCode = "class Foo{};";
   Annotations Main(R"cpp(
     #include "foo.h"
     void f() {
       [[Foo]] foo;
     }
   )cpp");
-  auto MainFile = testPath("foo.cpp");
-  auto HeaderFile = testPath("foo.h");
-  std::vector<const char *> Cmd = {"clang", "-xc++", MainFile.c_str()};
-  // Preparse ParseInputs.
-  ParseInputs PI;
-  PI.CompileCommand.Directory = testRoot();
-  PI.CompileCommand.Filename = MainFile;
-  PI.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
-  PI.Contents = Main.code();
-  PI.FS = buildTestFS({{MainFile, Main.code()}, {HeaderFile, Header}});
-
-  // Prepare preamble.
-  auto CI = buildCompilerInvocation(PI);
-  auto PreambleData =
-      buildPreamble(MainFile, *buildCompilerInvocation(PI),
-                    /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
-                    /*StoreInMemory=*/true,
-                    [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
-                        const CanonicalIncludes &) {});
-  // Build AST for main file with preamble.
-  auto AST =
-      ParsedAST::build(createInvocationFromCommandLine(Cmd), PreambleData,
-                       llvm::MemoryBuffer::getMemBufferCopy(Main.code()), PI.FS,
-                       /*Index=*/nullptr, ParseOptions());
-  ASSERT_TRUE(AST);
+  TU.Code = Main.code();
+  auto AST = TU.build();
   FileIndex Index;
-  Index.updateMain(MainFile, *AST);
-
-  auto Foo = findSymbol(TestTU::withHeaderCode(Header).headerSymbols(), "Foo");
-  RefsRequest Request;
-  Request.IDs.insert(Foo.ID);
+  Index.updateMain(testPath(TU.Filename), AST);
 
   // Expect to see references in main file, references in headers are excluded
   // because we only index main AST.
-  EXPECT_THAT(getRefs(Index, Foo.ID), RefsAre({RefRange(Main.range())}));
+  EXPECT_THAT(getRefs(Index, findSymbol(TU.headerSymbols(), "Foo").ID),
+              RefsAre({RefRange(Main.range())}));
 }
 
 } // namespace

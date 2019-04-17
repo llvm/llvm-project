@@ -6,6 +6,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
+# CHECK-NEXT:        "code": "warn_condition_is_assignment",
 # CHECK-NEXT:        "message": "Using the result of an assignment as a condition without parentheses (fixes available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
@@ -17,7 +18,8 @@
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "severity": 2
+# CHECK-NEXT:        "severity": 2,
+# CHECK-NEXT:        "source": "clang"
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"

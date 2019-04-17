@@ -20,6 +20,9 @@
 #include <string>
 
 namespace clang {
+namespace tidy {
+class ClangTidyContext;
+} // namespace tidy
 namespace clangd {
 
 struct ClangdDiagnosticOptions {
@@ -68,14 +71,14 @@ struct Note : DiagBase {};
 
 /// A top-level diagnostic that may have Notes and Fixes.
 struct Diag : DiagBase {
-  // Diagnostic enum ID.
-  unsigned ID;
+  unsigned ID;      // e.g. member of clang::diag, or clang-tidy assigned ID.
+  std::string Name; // if ID was recognized.
   // The source of this diagnostic.
-  enum Source {
+  enum {
+    Unknown,
     Clang,
     ClangTidy,
-  };
-  Source S = Clang;
+  } Source = Unknown;
   /// Elaborate on the problem, usually pointing to a related piece of code.
   std::vector<Note> Notes;
   /// *Alternative* fixes for this diagnostic, one should be chosen.
@@ -104,7 +107,8 @@ int getSeverity(DiagnosticsEngine::Level L);
 /// the diag itself nor its notes are in the main file).
 class StoreDiags : public DiagnosticConsumer {
 public:
-  std::vector<Diag> take();
+  // The ClangTidyContext populates Source and Name for clang-tidy diagnostics.
+  std::vector<Diag> take(const clang::tidy::ClangTidyContext *Tidy = nullptr);
 
   void BeginSourceFile(const LangOptions &Opts, const Preprocessor *) override;
   void EndSourceFile() override;

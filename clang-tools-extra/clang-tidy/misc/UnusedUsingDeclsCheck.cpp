@@ -154,7 +154,10 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
   for (const auto &Context : Contexts) {
     if (!Context.IsUsed) {
       diag(Context.FoundUsingDecl->getLocation(), "using decl %0 is unused")
-          << Context.FoundUsingDecl
+          << Context.FoundUsingDecl;
+      // Emit a fix and a fix description of the check;
+      diag(Context.FoundUsingDecl->getLocation(),
+           /*FixDescription=*/"remove the using", DiagnosticIDs::Note)
           << FixItHint::CreateRemoval(Context.UsingDeclRange);
     }
   }

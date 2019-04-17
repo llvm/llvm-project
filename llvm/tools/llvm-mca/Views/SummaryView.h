@@ -46,24 +46,6 @@ class SummaryView : public View {
   // The total number of micro opcodes contributed by a block of instructions.
   unsigned NumMicroOps;
 
-  struct BackPressureInfo {
-    // Cycles where backpressure increased.
-    unsigned PressureIncreaseCycles;
-    // Cycles where backpressure increased because of pipeline pressure.
-    unsigned ResourcePressureCycles;
-    // Cycles where backpressure increased because of data dependencies.
-    unsigned DataDependencyCycles;
-    // Cycles where backpressure increased because of register dependencies.
-    unsigned RegisterDependencyCycles;
-    // Cycles where backpressure increased because of memory dependencies.
-    unsigned MemoryDependencyCycles;
-  };
-  BackPressureInfo BPI;
-
-  // Resource pressure distribution. There is an element for every processor
-  // resource declared by the scheduling model. Quantities are number of cycles.
-  llvm::SmallVector<unsigned, 8> ResourcePressureDistribution;
-
   // For each processor resource, this vector stores the cumulative number of
   // resource cycles consumed by the analyzed code block.
   llvm::SmallVector<unsigned, 8> ProcResourceUsage;
@@ -77,49 +59,21 @@ class SummaryView : public View {
   // Used to map resource indices to actual processor resource IDs.
   llvm::SmallVector<unsigned, 8> ResIdx2ProcResID;
 
-  // True if resource pressure events were notified during this cycle.
-  bool PressureIncreasedBecauseOfResources;
-  bool PressureIncreasedBecauseOfDataDependencies;
-
-  // True if throughput was affected by dispatch stalls.
-  bool SeenStallCycles;
-
-  // True if the bottleneck analysis should be displayed.
-  bool ShouldEmitBottleneckAnalysis;
-
   // Compute the reciprocal throughput for the analyzed code block.
   // The reciprocal block throughput is computed as the MAX between:
   //   - NumMicroOps / DispatchWidth
   //   - Total Resource Cycles / #Units   (for every resource consumed).
   double getBlockRThroughput() const;
 
-  // Prints a bottleneck message to OS.
-  void printBottleneckHints(llvm::raw_ostream &OS) const;
-
 public:
   SummaryView(const llvm::MCSchedModel &Model, llvm::ArrayRef<llvm::MCInst> S,
-              unsigned Width, bool EmitBottleneckAnalysis);
+              unsigned Width);
 
-  void onCycleEnd() override {
-    ++TotalCycles;
-    if (PressureIncreasedBecauseOfResources ||
-        PressureIncreasedBecauseOfDataDependencies) {
-      ++BPI.PressureIncreaseCycles;
-      if (PressureIncreasedBecauseOfDataDependencies)
-        ++BPI.DataDependencyCycles;
-      PressureIncreasedBecauseOfResources = false;
-      PressureIncreasedBecauseOfDataDependencies = false;
-    }
-  }
+  void onCycleEnd() override { ++TotalCycles; }
   void onEvent(const HWInstructionEvent &Event) override;
-  void onEvent(const HWStallEvent &Event) override {
-    SeenStallCycles = true;
-  }
-
-  void onEvent(const HWPressureEvent &Event) override;
-
   void printView(llvm::raw_ostream &OS) const override;
 };
+
 } // namespace mca
 } // namespace llvm
 

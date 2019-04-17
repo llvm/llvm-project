@@ -71,7 +71,7 @@ public:
       : AccelSection(AccelSection), StringSection(StringSection) {}
   virtual ~DWARFAcceleratorTable();
 
-  virtual llvm::Error extract() = 0;
+  virtual Error extract() = 0;
   virtual void dump(raw_ostream &OS) const = 0;
 
   DWARFAcceleratorTable(const DWARFAcceleratorTable &) = delete;
@@ -174,7 +174,7 @@ public:
                         DataExtractor StringSection)
       : DWARFAcceleratorTable(AccelSection, StringSection) {}
 
-  llvm::Error extract() override;
+  Error extract() override;
   uint32_t getNumBuckets();
   uint32_t getNumHashes();
   uint32_t getSizeHdr();
@@ -459,7 +459,7 @@ public:
     NameIterator begin() const { return NameIterator(this, 1); }
     NameIterator end() const { return NameIterator(this, getNameCount() + 1); }
 
-    llvm::Error extract();
+    Error extract();
     uint32_t getUnitOffset() const { return Base; }
     uint32_t getNextUnitOffset() const { return Base + 4 + Hdr.UnitLength; }
     void dump(ScopedPrinter &W) const;
@@ -579,7 +579,7 @@ public:
                   DataExtractor StringSection)
       : DWARFAcceleratorTable(AccelSection, StringSection) {}
 
-  llvm::Error extract() override;
+  Error extract() override;
   void dump(raw_ostream &OS) const override;
 
   /// Look up all entries in the accelerator table matching \c Key.
