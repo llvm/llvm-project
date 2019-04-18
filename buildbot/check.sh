@@ -33,4 +33,4 @@ if [ -z "${TESTCASE}" ]; then
     exit 1
 fi
 
-make ${TESTCASE} VERBOSE=1 LIT_ARGS="-v -j `nproc`"
+make ${TESTCASE} VERBOSE=1 -j`nproc` LIT_ARGS="-v"
