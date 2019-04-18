@@ -47,10 +47,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#ifndef LLDB_DISABLE_PYTHON
 using lldb_private::formatters::AddCXXSummary;
 using lldb_private::formatters::AddCXXSynthetic;
-#endif
 using lldb_private::formatters::AddFormat;
 using lldb_private::formatters::AddStringSummary;
 using lldb_private::formatters::AddSummary;
@@ -139,7 +137,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   basic_synth_flags.SetCascades(true).SetSkipPointers(true).SetSkipReferences(
       true);
 
-#ifndef LLDB_DISABLE_PYTHON
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::ObjC_Selector_SummaryProvider,
                 "ObjectiveC.Selector", ConstString("ObjectiveC.Selector"),
@@ -570,7 +567,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                    ConstString("CoreGraphics.CGFloat"), summary_flags);
   AddStringSummary(swift_category_sp, "${var.native}",
                    ConstString("Foundation.CGFloat"), summary_flags);
-#endif // LLDB_DISABLE_PYTHON
 }
 
 static void
@@ -586,7 +582,6 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       .SetHideItemNames(false)
       .SetShowMembersOneLiner(false);
 
-#ifndef LLDB_DISABLE_PYTHON
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::Date_SummaryProvider,
       "Foundation.Date summary provider", ConstString("Foundation.Date"),
@@ -648,7 +643,6 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                                                    .SetCascades(true)
                                                    .SetSkipReferences(false)
                                                    .SetNonCacheable(false));
-#endif
 }
 
 lldb::TypeCategoryImplSP SwiftLanguage::GetFormatters() {
