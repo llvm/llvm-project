@@ -1792,17 +1792,7 @@ public:
 
   /// Return this DeclContext if it is a BlockDecl. Otherwise, return the
   /// innermost enclosing BlockDecl or null if there are no enclosing blocks.
-  const BlockDecl *getInnermostBlockDecl() const {
-    const DeclContext *Ctx = this;
-
-    do {
-      if (Ctx->isClosure())
-        return cast<BlockDecl>(Ctx);
-      Ctx = Ctx->getParent();
-    } while (Ctx);
-
-    return nullptr;
-  }
+  const BlockDecl *getInnermostBlockDecl() const;
 
   bool isObjCContainer() const {
     switch (getDeclKind()) {
