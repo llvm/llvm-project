@@ -29,7 +29,7 @@
 {"jsonrpc":"2.0","id":2,"method":"textDocument/rename","params":{"textDocument":{"uri":"test:///foo.cpp"},"position":{"line":0,"character":2},"newName":"bar"}}
 #      CHECK:  "error": {
 # CHECK-NEXT:    "code": -32001,
-# CHECK-NEXT:    "message": "clang diagnostic"
+# CHECK-NEXT:    "message": "there is no symbol at the given location"
 # CHECK-NEXT:  },
 # CHECK-NEXT:  "id": 2,
 # CHECK-NEXT:  "jsonrpc": "2.0"

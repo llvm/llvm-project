@@ -133,41 +133,40 @@ public:
           for (const auto &Repl : FileAndReplacements.second) {
             ++TotalFixes;
             bool CanBeApplied = false;
-            if (Repl.isApplicable()) {
-              SourceLocation FixLoc;
-              SmallString<128> FixAbsoluteFilePath = Repl.getFilePath();
-              Files.makeAbsolutePath(FixAbsoluteFilePath);
-              tooling::Replacement R(FixAbsoluteFilePath, Repl.getOffset(),
-                                     Repl.getLength(),
-                                     Repl.getReplacementText());
-              Replacements &Replacements = FileReplacements[R.getFilePath()];
-              llvm::Error Err = Replacements.add(R);
-              if (Err) {
-                // FIXME: Implement better conflict handling.
-                llvm::errs() << "Trying to resolve conflict: "
-                             << llvm::toString(std::move(Err)) << "\n";
-                unsigned NewOffset =
-                    Replacements.getShiftedCodePosition(R.getOffset());
-                unsigned NewLength = Replacements.getShiftedCodePosition(
-                                         R.getOffset() + R.getLength()) -
-                                     NewOffset;
-                if (NewLength == R.getLength()) {
-                  R = Replacement(R.getFilePath(), NewOffset, NewLength,
-                                  R.getReplacementText());
-                  Replacements = Replacements.merge(tooling::Replacements(R));
-                  CanBeApplied = true;
-                  ++AppliedFixes;
-                } else {
-                  llvm::errs()
-                      << "Can't resolve conflict, skipping the replacement.\n";
-                }
-              } else {
+            if (!Repl.isApplicable())
+              continue;
+            SourceLocation FixLoc;
+            SmallString<128> FixAbsoluteFilePath = Repl.getFilePath();
+            Files.makeAbsolutePath(FixAbsoluteFilePath);
+            tooling::Replacement R(FixAbsoluteFilePath, Repl.getOffset(),
+                                   Repl.getLength(), Repl.getReplacementText());
+            Replacements &Replacements = FileReplacements[R.getFilePath()];
+            llvm::Error Err = Replacements.add(R);
+            if (Err) {
+              // FIXME: Implement better conflict handling.
+              llvm::errs() << "Trying to resolve conflict: "
+                           << llvm::toString(std::move(Err)) << "\n";
+              unsigned NewOffset =
+                  Replacements.getShiftedCodePosition(R.getOffset());
+              unsigned NewLength = Replacements.getShiftedCodePosition(
+                                       R.getOffset() + R.getLength()) -
+                                   NewOffset;
+              if (NewLength == R.getLength()) {
+                R = Replacement(R.getFilePath(), NewOffset, NewLength,
+                                R.getReplacementText());
+                Replacements = Replacements.merge(tooling::Replacements(R));
                 CanBeApplied = true;
                 ++AppliedFixes;
+              } else {
+                llvm::errs()
+                    << "Can't resolve conflict, skipping the replacement.\n";
               }
-              FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
-              FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
+            } else {
+              CanBeApplied = true;
+              ++AppliedFixes;
             }
+            FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
+            FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
           }
         }
       }

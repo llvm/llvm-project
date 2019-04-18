@@ -366,6 +366,10 @@ struct ClientCapabilities {
   /// textDocument.publishDiagnostics.codeActionsInline.
   bool DiagnosticFixes = false;
 
+  /// Whether the client accepts diagnostics with related locations.
+  /// textDocument.publishDiagnostics.relatedInformation.
+  bool DiagnosticRelatedInformation = false;
+
   /// Whether the client accepts diagnostics with category attached to it
   /// using the "category" extension.
   /// textDocument.publishDiagnostics.categorySupport
@@ -582,6 +586,18 @@ struct DocumentSymbolParams {
 };
 bool fromJSON(const llvm::json::Value &, DocumentSymbolParams &);
 
+
+/// Represents a related message and source code location for a diagnostic.
+/// This should be used to point to code locations that cause or related to a
+/// diagnostics, e.g when duplicating a symbol in a scope.
+struct DiagnosticRelatedInformation {
+  /// The location of this related diagnostic information.
+  Location location;
+  /// The message of this related diagnostic information.
+  std::string message;
+};
+llvm::json::Value toJSON(const DiagnosticRelatedInformation &);
+
 struct CodeAction;
 struct Diagnostic {
   /// The range at which the message applies.
@@ -600,6 +616,10 @@ struct Diagnostic {
 
   /// The diagnostic's message.
   std::string message;
+
+  /// An array of related diagnostic information, e.g. when symbol-names within
+  /// a scope collide all definitions can be marked via this property.
+  llvm::Optional<std::vector<DiagnosticRelatedInformation>> relatedInformation;
 
   /// The diagnostic's category. Can be omitted.
   /// An LSP extension that's used to send the name of the category over to the

@@ -70,7 +70,7 @@ public:
 
 class BackgroundIndexTest : public ::testing::Test {
 protected:
-  BackgroundIndexTest() { preventThreadStarvationInTests(); }
+  BackgroundIndexTest() { BackgroundIndex::preventThreadStarvationInTests(); }
 };
 
 TEST_F(BackgroundIndexTest, NoCrashOnErrorFile) {

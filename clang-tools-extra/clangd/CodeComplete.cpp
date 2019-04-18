@@ -701,8 +701,7 @@ static bool isBlacklistedMember(const NamedDecl &D) {
 struct CompletionRecorder : public CodeCompleteConsumer {
   CompletionRecorder(const CodeCompleteOptions &Opts,
                      llvm::unique_function<void()> ResultsCallback)
-      : CodeCompleteConsumer(Opts.getClangCompleteOpts(),
-                             /*OutputIsBinary=*/false),
+      : CodeCompleteConsumer(Opts.getClangCompleteOpts()),
         CCContext(CodeCompletionContext::CCC_Other), Opts(Opts),
         CCAllocator(std::make_shared<GlobalCodeCompletionAllocator>()),
         CCTUInfo(CCAllocator), ResultsCallback(std::move(ResultsCallback)) {
@@ -823,8 +822,7 @@ class SignatureHelpCollector final : public CodeCompleteConsumer {
 public:
   SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
                          const SymbolIndex *Index, SignatureHelp &SigHelp)
-      : CodeCompleteConsumer(CodeCompleteOpts,
-                             /*OutputIsBinary=*/false),
+      : CodeCompleteConsumer(CodeCompleteOpts),
         SigHelp(SigHelp),
         Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
         CCTUInfo(Allocator), Index(Index) {}

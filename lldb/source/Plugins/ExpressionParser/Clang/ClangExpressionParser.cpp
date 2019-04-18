@@ -703,7 +703,7 @@ public:
   ///
   CodeComplete(CompletionRequest &request, clang::LangOptions ops,
                std::string expr, unsigned position)
-      : CodeCompleteConsumer(CodeCompleteOptions(), false),
+      : CodeCompleteConsumer(CodeCompleteOptions()),
         m_info(std::make_shared<GlobalCodeCompletionAllocator>()), m_expr(expr),
         m_position(position), m_request(request), m_desc_policy(ops) {
 

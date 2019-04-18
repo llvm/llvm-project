@@ -13,6 +13,7 @@
 #include "Protocol.h"
 #include "Trace.h"
 #include "Transport.h"
+#include "index/Background.h"
 #include "index/Serialization.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/Optional.h"
@@ -93,7 +94,7 @@ static llvm::cl::opt<Logger::Level> LogLevel(
 static llvm::cl::opt<bool>
     Test("lit-test",
          llvm::cl::desc("Abbreviation for -input-style=delimited -pretty "
-                        "-run-synchronously -enable-test-scheme. "
+                        "-run-synchronously -enable-test-scheme -log=verbose. "
                         "Intended to simplify lit tests."),
          llvm::cl::init(false), llvm::cl::Hidden);
 
@@ -330,8 +331,10 @@ int main(int argc, char *argv[]) {
   if (Test) {
     RunSynchronously = true;
     InputStyle = JSONStreamStyle::Delimited;
+    LogLevel = Logger::Verbose;
     PrettyPrint = true;
-    preventThreadStarvationInTests(); // Ensure background index makes progress.
+    // Ensure background index makes progress.
+    BackgroundIndex::preventThreadStarvationInTests();
   }
   if (Test || EnableTestScheme) {
     static URISchemeRegistry::Add<TestScheme> X(
