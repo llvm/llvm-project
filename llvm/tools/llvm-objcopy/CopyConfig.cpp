@@ -621,6 +621,8 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Config.SymbolsToAdd.push_back(*NSI);
   }
 
+  Config.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
+
   Config.DeterministicArchives = InputArgs.hasFlag(
       OBJCOPY_enable_deterministic_archives,
       OBJCOPY_disable_deterministic_archives, /*default=*/true);
@@ -707,6 +709,7 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   CopyConfig Config;
   bool UseRegexp = InputArgs.hasArg(STRIP_regex);
+  Config.AllowBrokenLinks = InputArgs.hasArg(STRIP_allow_broken_links);
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
 
   if (InputArgs.hasArg(STRIP_discard_all, STRIP_discard_locals))

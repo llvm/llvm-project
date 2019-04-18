@@ -367,6 +367,7 @@ bb7:                                              ; preds = %bb4
 ; CHECK: v_cmp_neq_f32_e32 vcc, 0,
 ; CHECK: s_and_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc
 ; CHECK: mask branch [[END:BB[0-9]+_[0-9]+]]
+; CHECK-NEXT: s_cbranch_execz [[END]]
 ; CHECK-NOT: branch
 
 ; CHECK: BB{{[0-9]+_[0-9]+}}: ; %bb8

@@ -21,10 +21,10 @@ define i16 @and_i8_zext_shl_add_i16(i16 %t0, i8 %t1) {
 define i16 @and_i8_shl_zext_add_i16(i16 %t0, i8 %t1) {
 ; CHECK-LABEL: and_i8_shl_zext_add_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andb $8, %sil
-; CHECK-NEXT:    shlb $2, %sil
 ; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    leal (%rdi,%rax,4), %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %t4 = and i8 %t1, 8
@@ -52,10 +52,10 @@ define i32 @and_i8_zext_shl_add_i32(i32 %t0, i8 %t1) {
 define i32 @and_i8_shl_zext_add_i32(i32 %t0, i8 %t1) {
 ; CHECK-LABEL: and_i8_shl_zext_add_i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andb $8, %sil
-; CHECK-NEXT:    shlb $3, %sil
 ; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    leal (%rdi,%rax,8), %eax
 ; CHECK-NEXT:    retq
   %t4 = and i8 %t1, 8
   %sh = shl i8 %t4, 3
@@ -112,9 +112,8 @@ define i64 @and_i8_shl_zext_add_i64(i64 %t0, i8 %t1) {
 ; CHECK-LABEL: and_i8_shl_zext_add_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $8, %sil
-; CHECK-NEXT:    addb %sil, %sil
 ; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    leaq (%rdi,%rax,2), %rax
 ; CHECK-NEXT:    retq
   %t4 = and i8 %t1, 8
   %sh = shl i8 %t4, 1
@@ -142,8 +141,7 @@ define i64 @and_i32_shl_zext_add_i64(i64 %t0, i32 %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    leal (,%rsi,8), %eax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    leaq (%rdi,%rsi,8), %rax
 ; CHECK-NEXT:    retq
   %t4 = and i32 %t1, 8
   %sh = shl i32 %t4, 3
@@ -151,6 +149,8 @@ define i64 @and_i32_shl_zext_add_i64(i64 %t0, i32 %t1) {
   %t6 = add i64 %t5, %t0
   ret i64 %t6
 }
+
+; Negative test - shift can't be converted to scale factor.
 
 define i64 @and_i32_zext_shl_add_i64_overshift(i64 %t0, i32 %t1) {
 ; CHECK-LABEL: and_i32_zext_shl_add_i64_overshift:

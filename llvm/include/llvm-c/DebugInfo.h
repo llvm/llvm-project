@@ -459,6 +459,40 @@ LLVMMetadataRef LLVMDILocationGetScope(LLVMMetadataRef Location);
  */
 LLVMMetadataRef LLVMDILocationGetInlinedAt(LLVMMetadataRef Location);
 
+/**
+ * Get the metadata of the file associated with a given scope.
+ * \param Scope     The scope object.
+ *
+ * @see DIScope::getFile()
+ */
+LLVMMetadataRef LLVMDIScopeGetFile(LLVMMetadataRef Scope);
+
+/**
+ * Get the directory of a given file.
+ * \param File     The file object.
+ * \param Len      The length of the returned string.
+ *
+ * @see DIFile::getDirectory()
+ */
+const char *LLVMDIFileGetDirectory(LLVMMetadataRef File, unsigned *Len);
+
+/**
+ * Get the name of a given file.
+ * \param File     The file object.
+ * \param Len      The length of the returned string.
+ *
+ * @see DIFile::getFilename()
+ */
+const char *LLVMDIFileGetFilename(LLVMMetadataRef File, unsigned *Len);
+
+/**
+ * Get the source of a given file.
+ * \param File     The file object.
+ * \param Len      The length of the returned string.
+ *
+ * @see DIFile::getSource()
+ */
+const char *LLVMDIFileGetSource(LLVMMetadataRef File, unsigned *Len);
 
 /**
  * Create a type array.

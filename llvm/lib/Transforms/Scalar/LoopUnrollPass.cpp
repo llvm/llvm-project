@@ -207,6 +207,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   if (OptForSize) {
     UP.Threshold = UP.OptSizeThreshold;
     UP.PartialThreshold = UP.PartialOptSizeThreshold;
+    UP.MaxPercentThresholdBoost = 100;
   }
 
   // Apply any user values specified by cl::opt
@@ -993,6 +994,7 @@ static LoopUnrollResult tryToUnrollLoop(
   if (OnlyWhenForced && !(TM & TM_Enable))
     return LoopUnrollResult::Unmodified;
 
+  bool OptForSize = L->getHeader()->getParent()->hasOptSize();
   unsigned NumInlineCandidates;
   bool NotDuplicatable;
   bool Convergent;
@@ -1000,8 +1002,11 @@ static LoopUnrollResult tryToUnrollLoop(
       L, SE, TTI, BFI, PSI, OptLevel, ProvidedThreshold, ProvidedCount,
       ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
       ProvidedAllowPeeling);
-  // Exit early if unrolling is disabled.
-  if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
+
+  // Exit early if unrolling is disabled. For OptForSize, we pick the loop size
+  // as threshold later on.
+  if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0) &&
+      !OptForSize)
     return LoopUnrollResult::Unmodified;
 
   SmallPtrSet<const Value *, 32> EphValues;
@@ -1016,6 +1021,12 @@ static LoopUnrollResult tryToUnrollLoop(
                       << " instructions.\n");
     return LoopUnrollResult::Unmodified;
   }
+
+  // When optimizing for size, use LoopSize as threshold, to (fully) unroll
+  // loops, if it does not increase code size.
+  if (OptForSize)
+    UP.Threshold = std::max(UP.Threshold, LoopSize);
+
   if (NumInlineCandidates != 0) {
     LLVM_DEBUG(dbgs() << "  Not unrolling loop with inlinable calls.\n");
     return LoopUnrollResult::Unmodified;

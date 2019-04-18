@@ -275,6 +275,13 @@ namespace {
       return SimplifyDemandedBits(Op, DemandedBits);
     }
 
+    bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits) {
+      EVT VT = Op.getValueType();
+      unsigned NumElts = VT.isVector() ? VT.getVectorNumElements() : 1;
+      APInt DemandedElts = APInt::getAllOnesValue(NumElts);
+      return SimplifyDemandedBits(Op, DemandedBits, DemandedElts);
+    }
+
     /// Check the specified vector node value to see if it can be simplified or
     /// if things it uses can be simplified as it only uses some of the
     /// elements. If so, return true.
@@ -284,8 +291,9 @@ namespace {
       return SimplifyDemandedVectorElts(Op, DemandedElts);
     }
 
-    bool SimplifyDemandedBits(SDValue Op, const APInt &Demanded);
-    bool SimplifyDemandedVectorElts(SDValue Op, const APInt &Demanded,
+    bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
+                              const APInt &DemandedElts);
+    bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
                                     bool AssumeSingleUse = false);
 
     bool CombineToPreIndexedLoadStore(SDNode *N);
@@ -1093,10 +1101,11 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
 
 /// Check the specified integer node value to see if it can be simplified or if
 /// things it uses can be simplified by bit propagation. If so, return true.
-bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits) {
+bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
+                                       const APInt &DemandedElts) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   KnownBits Known;
-  if (!TLI.SimplifyDemandedBits(Op, DemandedBits, Known, TLO))
+  if (!TLI.SimplifyDemandedBits(Op, DemandedBits, DemandedElts, Known, TLO))
     return false;
 
   // Revisit the node.

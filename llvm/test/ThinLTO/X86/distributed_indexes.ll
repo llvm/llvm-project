@@ -46,6 +46,8 @@
 ; RUN: llvm-dis %t1.bc.thinlto.bc -o - | FileCheck %s --check-prefix=DIS
 ; DIS: aliasee: null
 
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+
 declare void @g(...)
 declare void @analias(...)
 

@@ -656,6 +656,16 @@ public:
     return InsertValueInst::Create(Struct, Result, 0);
   }
 
+  /// Create and insert the idiom we use to indicate a block is unreachable
+  /// without having to rewrite the CFG from within InstCombine.
+  void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
+    auto &Ctx = InsertAt->getContext();
+    new StoreInst(ConstantInt::getTrue(Ctx),
+                  UndefValue::get(Type::getInt1PtrTy(Ctx)),
+                  InsertAt);
+  }
+
+
   /// Combiner aware instruction erasure.
   ///
   /// When dealing with an instruction that has side effects or produces a void

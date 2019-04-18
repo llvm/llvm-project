@@ -2475,9 +2475,8 @@ Instruction *InstCombiner::visitFree(CallInst &FI) {
 
   // free undef -> unreachable.
   if (isa<UndefValue>(Op)) {
-    // Insert a new store to null because we cannot modify the CFG here.
-    Builder.CreateStore(ConstantInt::getTrue(FI.getContext()),
-                        UndefValue::get(Type::getInt1PtrTy(FI.getContext())));
+    // Leave a marker since we can't modify the CFG here.
+    CreateNonTerminatorUnreachable(&FI);
     return eraseInstFromFunction(FI);
   }
 
