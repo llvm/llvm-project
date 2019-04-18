@@ -258,6 +258,7 @@ static const StringMap<MachineInfo> ArchMap{
     {"arm", {ELF::EM_ARM, false, true}},
     {"i386", {ELF::EM_386, false, true}},
     {"i386:x86-64", {ELF::EM_X86_64, true, true}},
+    {"mips", {ELF::EM_MIPS, false, false}},
     {"powerpc:common64", {ELF::EM_PPC64, true, true}},
     {"sparc", {ELF::EM_SPARC, false, true}},
     {"x86-64", {ELF::EM_X86_64, true, true}},
@@ -621,6 +622,8 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Config.SymbolsToAdd.push_back(*NSI);
   }
 
+  Config.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
+
   Config.DeterministicArchives = InputArgs.hasFlag(
       OBJCOPY_enable_deterministic_archives,
       OBJCOPY_disable_deterministic_archives, /*default=*/true);
@@ -707,6 +710,7 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   CopyConfig Config;
   bool UseRegexp = InputArgs.hasArg(STRIP_regex);
+  Config.AllowBrokenLinks = InputArgs.hasArg(STRIP_allow_broken_links);
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
 
   if (InputArgs.hasArg(STRIP_discard_all, STRIP_discard_locals))

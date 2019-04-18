@@ -608,7 +608,7 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
   unsigned Op = getOrCreateVReg(*U.getOperand(0));
   unsigned Res = getOrCreateVReg(U);
-  MIRBuilder.buildInstr(Opcode).addDef(Res).addUse(Op);
+  MIRBuilder.buildInstr(Opcode, {Res}, {Op});
   return true;
 }
 

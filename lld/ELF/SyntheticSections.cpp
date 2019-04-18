@@ -2876,8 +2876,10 @@ void MergeNoTailSection::finalizeContents() {
   parallelForEachN(0, Concurrency, [&](size_t ThreadId) {
     for (MergeInputSection *Sec : Sections) {
       for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
+        if (!Sec->Pieces[I].Live)
+          continue;
         size_t ShardId = getShardId(Sec->Pieces[I].Hash);
-        if ((ShardId & (Concurrency - 1)) == ThreadId && Sec->Pieces[I].Live)
+        if ((ShardId & (Concurrency - 1)) == ThreadId)
           Sec->Pieces[I].OutputOff = Shards[ShardId].add(Sec->getData(I));
       }
     }

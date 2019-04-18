@@ -108,6 +108,12 @@ Improvements to clang-tidy
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
 
+- New :doc:`objc-super-self <clang-tidy/checks/objc-super-self>` check.
+
+  Finds invocations of ``-self`` on super instances in initializers of
+  subclasses of ``NSObject`` and recommends calling a superclass initializer
+  instead.
+
 - New alias :doc:`cppcoreguidelines-explicit-virtual-functions
   <clang-tidy/checks/cppcoreguidelines-explicit-virtual-functions>` to
   :doc:`modernize-use-override

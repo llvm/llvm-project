@@ -236,6 +236,16 @@ namespace dr1560 { // dr1560: 3.5
   const X &x = true ? get() : throw 0;
 }
 
+namespace dr1563 { // dr1563: yes
+#if __cplusplus >= 201103L
+  double bar(double) { return 0.0; }
+  float bar(float) { return 0.0f; }
+
+  using fun = double(double);
+  fun &foo{bar}; // ok
+#endif
+}
+
 namespace dr1573 { // dr1573: 3.9
 #if __cplusplus >= 201103L
   // ellipsis is inherited (p0136r1 supersedes this part).

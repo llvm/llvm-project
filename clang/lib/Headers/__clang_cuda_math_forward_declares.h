@@ -84,14 +84,18 @@ __DEVICE__ double hypot(double, double);
 __DEVICE__ float hypot(float, float);
 __DEVICE__ int ilogb(double);
 __DEVICE__ int ilogb(float);
+#ifdef _MSC_VER
 __DEVICE__ bool isfinite(long double);
+#endif
 __DEVICE__ bool isfinite(double);
 __DEVICE__ bool isfinite(float);
 __DEVICE__ bool isgreater(double, double);
 __DEVICE__ bool isgreaterequal(double, double);
 __DEVICE__ bool isgreaterequal(float, float);
 __DEVICE__ bool isgreater(float, float);
+#ifdef _MSC_VER
 __DEVICE__ bool isinf(long double);
+#endif
 __DEVICE__ bool isinf(double);
 __DEVICE__ bool isinf(float);
 __DEVICE__ bool isless(double, double);
@@ -100,7 +104,9 @@ __DEVICE__ bool islessequal(float, float);
 __DEVICE__ bool isless(float, float);
 __DEVICE__ bool islessgreater(double, double);
 __DEVICE__ bool islessgreater(float, float);
+#ifdef _MSC_VER
 __DEVICE__ bool isnan(long double);
+#endif
 __DEVICE__ bool isnan(double);
 __DEVICE__ bool isnan(float);
 __DEVICE__ bool isnormal(double);

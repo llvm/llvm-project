@@ -227,13 +227,12 @@ protected:
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t Off, uint32_t Hash, bool Live)
-      : InputOff(Off), Hash(Hash), OutputOff(0),
-        Live(Live || !Config->GcSections) {}
+      : InputOff(Off), Live(Live || !Config->GcSections), Hash(Hash >> 1) {}
 
   uint32_t InputOff;
-  uint32_t Hash;
-  int64_t OutputOff : 63;
-  uint64_t Live : 1;
+  uint32_t Live : 1;
+  uint32_t Hash : 31;
+  uint64_t OutputOff = 0;
 };
 
 static_assert(sizeof(SectionPiece) == 16, "SectionPiece is too big");

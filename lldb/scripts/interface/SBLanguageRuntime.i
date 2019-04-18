@@ -13,7 +13,7 @@ class SBLanguageRuntime
 public:
     static lldb::LanguageType
     GetLanguageTypeFromString (const char *string);
-    
+
     static const char *
     GetNameForLanguageType (lldb::LanguageType language);
 };

@@ -1057,6 +1057,18 @@ DeclContext *DeclContext::getLookupParent() {
   return getParent();
 }
 
+const BlockDecl *DeclContext::getInnermostBlockDecl() const {
+  const DeclContext *Ctx = this;
+
+  do {
+    if (Ctx->isClosure())
+      return cast<BlockDecl>(Ctx);
+    Ctx = Ctx->getParent();
+  } while (Ctx);
+
+  return nullptr;
+}
+
 bool DeclContext::isInlineNamespace() const {
   return isNamespace() &&
          cast<NamespaceDecl>(this)->isInline();

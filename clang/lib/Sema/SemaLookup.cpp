@@ -5073,7 +5073,7 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
   auto Merged = Context.getModulesWithMergedDefinition(Def);
   OwningModules.insert(OwningModules.end(), Merged.begin(), Merged.end());
 
-  diagnoseMissingImport(Loc, Decl, Decl->getLocation(), OwningModules, MIK,
+  diagnoseMissingImport(Loc, Def, Def->getLocation(), OwningModules, MIK,
                         Recover);
 }
 
@@ -5093,12 +5093,58 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
                                  MissingImportKind MIK, bool Recover) {
   assert(!Modules.empty());
 
+  auto NotePrevious = [&] {
+    unsigned DiagID;
+    switch (MIK) {
+    case MissingImportKind::Declaration:
+      DiagID = diag::note_previous_declaration;
+      break;
+    case MissingImportKind::Definition:
+      DiagID = diag::note_previous_definition;
+      break;
+    case MissingImportKind::DefaultArgument:
+      DiagID = diag::note_default_argument_declared_here;
+      break;
+    case MissingImportKind::ExplicitSpecialization:
+      DiagID = diag::note_explicit_specialization_declared_here;
+      break;
+    case MissingImportKind::PartialSpecialization:
+      DiagID = diag::note_partial_specialization_declared_here;
+      break;
+    }
+    Diag(DeclLoc, DiagID);
+  };
+
   // Weed out duplicates from module list.
   llvm::SmallVector<Module*, 8> UniqueModules;
   llvm::SmallDenseSet<Module*, 8> UniqueModuleSet;
-  for (auto *M : Modules)
+  for (auto *M : Modules) {
+    if (M->Kind == Module::GlobalModuleFragment)
+      continue;
     if (UniqueModuleSet.insert(M).second)
       UniqueModules.push_back(M);
+  }
+
+  if (UniqueModules.empty()) {
+    // All candidates were global module fragments. Try to suggest a #include.
+    const FileEntry *E =
+        PP.getModuleHeaderToIncludeForDiagnostics(UseLoc, Modules[0], DeclLoc);
+    // FIXME: Find a smart place to suggest inserting a #include, and add
+    // a FixItHint there.
+    Diag(UseLoc, diag::err_module_unimported_use_global_module_fragment)
+        << (int)MIK << Decl << !!E
+        << (E ? getIncludeStringForHeader(PP, E) : "");
+    // Produce a "previous" note if it will point to a header rather than some
+    // random global module fragment.
+    // FIXME: Suppress the note backtrace even under
+    // -fdiagnostics-show-note-include-stack.
+    if (E)
+      NotePrevious();
+    if (Recover)
+      createImplicitModuleImportForErrorRecovery(UseLoc, Modules[0]);
+    return;
+  }
+
   Modules = UniqueModules;
 
   if (Modules.size() > 1) {
@@ -5131,25 +5177,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
       << (int)MIK << Decl << Modules[0]->getFullModuleName();
   }
 
-  unsigned DiagID;
-  switch (MIK) {
-  case MissingImportKind::Declaration:
-    DiagID = diag::note_previous_declaration;
-    break;
-  case MissingImportKind::Definition:
-    DiagID = diag::note_previous_definition;
-    break;
-  case MissingImportKind::DefaultArgument:
-    DiagID = diag::note_default_argument_declared_here;
-    break;
-  case MissingImportKind::ExplicitSpecialization:
-    DiagID = diag::note_explicit_specialization_declared_here;
-    break;
-  case MissingImportKind::PartialSpecialization:
-    DiagID = diag::note_partial_specialization_declared_here;
-    break;
-  }
-  Diag(DeclLoc, DiagID);
+  NotePrevious();
 
   // Try to recover by implicitly importing this module.
   if (Recover)

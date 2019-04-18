@@ -1120,6 +1120,12 @@ template <unsigned> struct __static_assert_check {};
 #endif
 #endif
 
+#if __has_attribute(no_destroy)
+#  define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
+#else
+#  define _LIBCPP_NO_DESTROY
+#endif
+
 #ifndef _LIBCPP_HAS_NO_ASAN
 _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
   const void *, const void *, const void *, const void *);

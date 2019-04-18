@@ -43,10 +43,7 @@ public:
     GetID ();
 
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// With -1 representing an invalid hardware index.
-    //------------------------------------------------------------------
-    ") GetHardwareIndex;
+    With -1 representing an invalid hardware index.") GetHardwareIndex;
     int32_t
     GetHardwareIndex ();
 
@@ -72,27 +69,21 @@ public:
     SetIgnoreCount (uint32_t n);
 
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// Get the condition expression for the watchpoint.
-    //------------------------------------------------------------------
-    ") GetCondition;
+    Get the condition expression for the watchpoint.") GetCondition;
     const char *
     GetCondition ();
 
     %feature("docstring", "
-    //--------------------------------------------------------------------------
-    /// The watchpoint stops only if the condition expression evaluates to true.
-    //--------------------------------------------------------------------------
-    ") SetCondition;
-    void 
+    The watchpoint stops only if the condition expression evaluates to true.") SetCondition;
+    void
     SetCondition (const char *condition);
-    
+
     bool
     GetDescription (lldb::SBStream &description, DescriptionLevel level);
 
     static bool
     EventIsWatchpointEvent (const lldb::SBEvent &event);
-    
+
     static lldb::WatchpointEventType
     GetWatchpointEventTypeFromEvent (const lldb::SBEvent& event);
 

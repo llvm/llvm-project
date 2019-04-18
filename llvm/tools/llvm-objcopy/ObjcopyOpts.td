@@ -9,6 +9,12 @@ multiclass Eq<string name, string help> {
 
 def help : Flag<["-", "--"], "help">;
 
+def allow_broken_links
+    : Flag<["-", "--"], "allow-broken-links">,
+      HelpText<"Allow llvm-objcopy to remove sections even if it would leave "
+               "invalid section references. The appropriate sh_link fields"
+               "will be set to zero.">;
+
 defm binary_architecture
     : Eq<"binary-architecture", "Used when transforming an architecture-less "
                                 "format (such as binary) to another format">;

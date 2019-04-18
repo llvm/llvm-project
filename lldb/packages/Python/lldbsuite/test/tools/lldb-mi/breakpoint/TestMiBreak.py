@@ -304,6 +304,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @expectedFlakeyNetBSD
     def test_lldbmi_break_enable_disable(self):
         """Test that 'lldb-mi --interpreter' works for enabling / disabling breakpoints."""
 

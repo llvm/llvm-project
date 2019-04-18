@@ -421,6 +421,11 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
   if (E == R_SIZE)
     return true;
 
+  // We set the final symbols values for linker script defined symbols later.
+  // They always can be computed as a link time constant.
+  if (Sym.ScriptDefined)
+    return true;
+
   // For the target and the relocation, we want to know if they are
   // absolute or relative.
   bool AbsVal = isAbsoluteValue(Sym);
