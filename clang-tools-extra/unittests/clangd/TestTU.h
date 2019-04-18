@@ -52,6 +52,9 @@ struct TestTU {
   // Index to use when building AST.
   const SymbolIndex *ExternalIndex = nullptr;
 
+  // Simulate a header guard of the header (using an #import directive).
+  bool ImplicitHeaderGuard = true;
+
   ParsedAST build() const;
   SymbolSlab headerSymbols() const;
   std::unique_ptr<SymbolIndex> index() const;

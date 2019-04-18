@@ -13,6 +13,7 @@
 #include "AvoidSpinlockCheck.h"
 #include "ForbiddenSubclassingCheck.h"
 #include "PropertyDeclarationCheck.h"
+#include "SuperSelfCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -31,6 +32,8 @@ public:
         "objc-forbidden-subclassing");
     CheckFactories.registerCheck<PropertyDeclarationCheck>(
         "objc-property-declaration");
+    CheckFactories.registerCheck<SuperSelfCheck>(
+        "objc-super-self");
   }
 };
 

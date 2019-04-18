@@ -227,6 +227,7 @@ OPTIONS
  value.
 
 .. option:: -showcs
+
  Only show context sensitive profile counts. The default is to filter all
  context sensitive profile counts.
 

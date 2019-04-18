@@ -2,12 +2,13 @@
 MainSourceFile: source1.cpp
 Diagnostics:
   - DiagnosticName:  test-conflict
-    Message: Fix
-    FilePath: $(path)/common.h
-    FileOffset: 169
-    Replacements:
-      - FilePath:        $(path)/common.h
-        Offset:          169
-        Length:          0
-        ReplacementText: "(int*)"
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/common.h
+      FileOffset: 169
+      Replacements:
+        - FilePath:        $(path)/common.h
+          Offset:          169
+          Length:          0
+          ReplacementText: "(int*)"
 ...

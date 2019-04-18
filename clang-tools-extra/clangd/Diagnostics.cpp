@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Diagnostics.h"
+#include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
 #include "Logger.h"
 #include "SourceCode.h"
+#include "clang/Basic/AllDiagnostics.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/Capacity.h"
@@ -18,8 +21,30 @@
 
 namespace clang {
 namespace clangd {
-
 namespace {
+
+const char *getDiagnosticCode(unsigned ID) {
+  switch (ID) {
+#define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
+             SHOWINSYSHEADER, CATEGORY)                                        \
+  case clang::diag::ENUM:                                                      \
+    return #ENUM;
+#include "clang/Basic/DiagnosticASTKinds.inc"
+#include "clang/Basic/DiagnosticAnalysisKinds.inc"
+#include "clang/Basic/DiagnosticCommentKinds.inc"
+#include "clang/Basic/DiagnosticCommonKinds.inc"
+#include "clang/Basic/DiagnosticDriverKinds.inc"
+#include "clang/Basic/DiagnosticFrontendKinds.inc"
+#include "clang/Basic/DiagnosticLexKinds.inc"
+#include "clang/Basic/DiagnosticParseKinds.inc"
+#include "clang/Basic/DiagnosticRefactoringKinds.inc"
+#include "clang/Basic/DiagnosticSemaKinds.inc"
+#include "clang/Basic/DiagnosticSerializationKinds.inc"
+#undef DIAG
+  default:
+    return nullptr;
+  }
+}
 
 bool mentionsMainFile(const Diag &D) {
   if (D.InsideMainFile)
@@ -253,6 +278,18 @@ void toLSPDiags(
   {
     clangd::Diagnostic Main = FillBasicFields(D);
     Main.message = mainMessage(D, Opts.DisplayFixesCount);
+    if (!D.Name.empty())
+      Main.code = D.Name;
+    switch (D.Source) {
+    case Diag::Clang:
+      Main.source = "clang";
+      break;
+    case Diag::ClangTidy:
+      Main.source = "clang-tidy";
+      break;
+    case Diag::Unknown:
+      break;
+    }
     if (Opts.EmbedFixesInDiagnostics) {
       Main.codeActions.emplace();
       for (const auto &Fix : D.Fixes)
@@ -290,7 +327,46 @@ int getSeverity(DiagnosticsEngine::Level L) {
   llvm_unreachable("Unknown diagnostic level!");
 }
 
-std::vector<Diag> StoreDiags::take() { return std::move(Output); }
+std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
+  // Fill in name/source now that we have all the context needed to map them.
+  for (auto &Diag : Output) {
+    if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
+      // Warnings controlled by -Wfoo are better recognized by that name.
+      StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
+      if (!Warning.empty()) {
+        Diag.Name = ("-W" + Warning).str();
+      } else {
+        StringRef Name(ClangDiag);
+        // Almost always an error, with a name like err_enum_class_reference.
+        // Drop the err_ prefix for brevity.
+        Name.consume_front("err_");
+        Diag.Name = Name;
+      }
+      Diag.Source = Diag::Clang;
+      continue;
+    }
+    if (Tidy != nullptr) {
+      std::string TidyDiag = Tidy->getCheckName(Diag.ID);
+      if (!TidyDiag.empty()) {
+        Diag.Name = std::move(TidyDiag);
+        Diag.Source = Diag::ClangTidy;
+        // clang-tidy bakes the name into diagnostic messages. Strip it out.
+        // It would be much nicer to make clang-tidy not do this.
+        auto CleanMessage = [&](std::string &Msg) {
+          StringRef Rest(Msg);
+          if (Rest.consume_back("]") && Rest.consume_back(Diag.Name) &&
+              Rest.consume_back(" ["))
+            Msg.resize(Rest.size());
+        };
+        CleanMessage(Diag.Message);
+        for (auto& Note : Diag.Notes)
+          CleanMessage(Note.Message);
+        continue;
+      }
+    }
+  }
+  return std::move(Output);
+}
 
 void StoreDiags::BeginSourceFile(const LangOptions &Opts,
                                  const Preprocessor *) {

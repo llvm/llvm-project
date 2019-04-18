@@ -460,6 +460,12 @@ FunctionPass *createLoopDistributePass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopFuse - Fuse loops.
+//
+FunctionPass *createLoopFusePass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopLoadElimination - Perform loop-aware load elimination.
 //
 FunctionPass *createLoopLoadEliminationPass();

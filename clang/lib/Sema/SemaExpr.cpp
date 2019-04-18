@@ -2575,11 +2575,9 @@ Sema::LookupInObjCMethod(LookupResult &Lookup, Scope *S,
             !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
           getCurFunction()->recordUseOfWeak(Result);
       }
-      if (getLangOpts().ObjCAutoRefCount) {
-        if (CurContext->isClosure())
-          Diag(Loc, diag::warn_implicitly_retains_self)
-            << FixItHint::CreateInsertion(Loc, "self->");
-      }
+      if (getLangOpts().ObjCAutoRefCount)
+        if (const BlockDecl *BD = CurContext->getInnermostBlockDecl())
+          ImplicitlyRetainedSelfLocs.push_back({Loc, BD});
 
       return Result;
     }

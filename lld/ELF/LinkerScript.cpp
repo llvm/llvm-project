@@ -135,7 +135,7 @@ void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
   // Update to location counter means update to section size.
   if (InSec)
     expandOutputSection(Val - Dot);
-  else
+  else if (Val > Dot)
     expandMemoryRegions(Val - Dot);
 
   Dot = Val;
@@ -760,13 +760,14 @@ static OutputSection *findFirstSection(PhdrEntry *Load) {
 void LinkerScript::assignOffsets(OutputSection *Sec) {
   if (!(Sec->Flags & SHF_ALLOC))
     Dot = 0;
-  else if (Sec->AddrExpr)
-    setDot(Sec->AddrExpr, Sec->Location, false);
 
   Ctx->MemRegion = Sec->MemRegion;
   Ctx->LMARegion = Sec->LMARegion;
   if (Ctx->MemRegion)
     Dot = Ctx->MemRegion->CurPos;
+
+  if ((Sec->Flags & SHF_ALLOC) && Sec->AddrExpr)
+    setDot(Sec->AddrExpr, Sec->Location, false);
 
   switchTo(Sec);
 
@@ -886,7 +887,8 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     // in case it is empty.
     bool IsEmpty = getInputSections(Sec).empty();
     if (IsEmpty)
-      Sec->Flags = Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
+      Sec->Flags =
+          Flags & ((Sec->NonAlloc ? 0 : SHF_ALLOC) | SHF_WRITE | SHF_EXECINSTR);
 
     if (IsEmpty && isDiscardable(*Sec)) {
       Sec->Live = false;

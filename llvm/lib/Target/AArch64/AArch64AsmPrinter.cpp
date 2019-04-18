@@ -504,9 +504,6 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     switch (ExtraCode[0]) {
     default:
       return true; // Unknown modifier.
-    case 'a':      // Print 'a' modifier
-      PrintAsmMemoryOperand(MI, OpNum, ExtraCode, O);
-      return false;
     case 'w':      // Print W register
     case 'x':      // Print X register
       if (MO.isReg())

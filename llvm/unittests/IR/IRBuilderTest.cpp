@@ -374,7 +374,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
 
   Builder.clearFastMathFlags();
 
-  // To test a copy, make sure that a '0' and a '1' change state. 
+  // To test a copy, make sure that a '0' and a '1' change state.
   F = Builder.CreateFDiv(F, F);
   ASSERT_TRUE(isa<Instruction>(F));
   FDiv = cast<Instruction>(F);

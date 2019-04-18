@@ -423,6 +423,7 @@ END:
 ;CHECK-NEXT: s_and_b64 [[SAVED]], exec, [[SAVED]]
 ;CHECK-NEXT: s_xor_b64 exec, exec, [[SAVED]]
 ;CHECK-NEXT: mask branch [[END_BB:BB[0-9]+_[0-9]+]]
+;CHECK-NEXT: s_cbranch_execz [[END_BB]]
 ;CHECK-NEXT: BB{{[0-9]+_[0-9]+}}: ; %ELSE
 ;CHECK: store_dword
 ;CHECK: [[END_BB]]: ; %END

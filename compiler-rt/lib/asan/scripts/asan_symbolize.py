@@ -9,6 +9,15 @@
 """
 Example of use:
   asan_symbolize.py -c "$HOME/opt/cross/bin/arm-linux-gnueabi-" -s "$HOME/SymbolFiles" < asan.log
+
+PLUGINS
+
+This script provides a way for external plug-ins to hook into the behaviour of
+various parts of this script (see `--plugins`). This is useful for situations
+where it is necessary to handle site-specific quirks (e.g. binaries with debug
+symbols only accessible via a remote service) without having to modify the
+script itself.
+  
 """
 import argparse
 import bisect
@@ -22,8 +31,6 @@ import sys
 symbolizers = {}
 demangle = False
 binutils_prefix = None
-sysroot_path = None
-binary_name_filter = None
 fix_filename_patterns = None
 logfile = sys.stdin
 allow_system_symbolizer = True
@@ -37,9 +44,6 @@ def fix_filename(file_name):
   file_name = re.sub('.*asan_[a-z_]*.cc:[0-9]*', '_asan_rtl_', file_name)
   file_name = re.sub('.*crtstuff.c:0', '???:0', file_name)
   return file_name
-
-def sysroot_path_filter(binary_name):
-  return sysroot_path + binary_name
 
 def is_valid_arch(s):
   return s in ["i386", "x86_64", "x86_64h", "arm", "armv6", "armv7", "armv7s",
@@ -361,7 +365,8 @@ class BreakpadSymbolizer(Symbolizer):
 
 
 class SymbolizationLoop(object):
-  def __init__(self, binary_name_filter=None, dsym_hint_producer=None):
+  def __init__(self, plugin_proxy=None, dsym_hint_producer=None):
+    self.plugin_proxy = plugin_proxy
     if sys.platform == 'win32':
       # ASan on Windows uses dbghelp.dll to symbolize in-process, which works
       # even in sandboxed processes.  Nothing needs to be done here.
@@ -369,7 +374,6 @@ class SymbolizationLoop(object):
     else:
       # Used by clients who may want to supply a different binary name.
       # E.g. in Chrome several binaries may share a single .dSYM.
-      self.binary_name_filter = binary_name_filter
       self.dsym_hint_producer = dsym_hint_producer
       self.system = os.uname()[0]
       if self.system not in ['Linux', 'Darwin', 'FreeBSD', 'NetBSD','SunOS']:
@@ -469,13 +473,182 @@ class SymbolizationLoop(object):
       # Assume that frame #0 is the first frame of new stack trace.
       self.frame_no = 0
     original_binary = binary
-    if self.binary_name_filter:
-      binary = self.binary_name_filter(binary)
+    binary = self.plugin_proxy.filter_binary_path(binary)
+    if binary is None:
+      # The binary filter has told us this binary can't be symbolized.
+      logging.debug('Skipping symbolication of binary "%s"', original_binary)
+      return [self.current_line]
     symbolized_line = self.symbolize_address(addr, binary, offset, arch)
     if not symbolized_line:
       if original_binary != binary:
         symbolized_line = self.symbolize_address(addr, original_binary, offset, arch)
     return self.get_symbolized_lines(symbolized_line)
+
+class AsanSymbolizerPlugInProxy(object):
+  """
+    Serves several purposes:
+    - Manages the lifetime of plugins (must be used a `with` statement).
+    - Provides interface for calling into plugins from within this script.
+  """
+  def __init__(self):
+    self._plugins = [ ]
+    self._plugin_names = set()
+
+  def load_plugin_from_file(self, file_path):
+    logging.info('Loading plugins from "{}"'.format(file_path))
+    globals_space = dict(globals())
+    # Provide function to register plugins
+    def register_plugin(plugin):
+      logging.info('Registering plugin %s', plugin.get_name())
+      self.add_plugin(plugin)
+    globals_space['register_plugin'] = register_plugin
+    if sys.version_info.major < 3:
+      execfile(file_path, globals_space, None)
+    else:
+      with open(file_path, 'r') as f:
+        exec(f.read(), globals_space, None)
+
+  def add_plugin(self, plugin):
+    assert isinstance(plugin, AsanSymbolizerPlugIn)
+    self._plugins.append(plugin)
+    self._plugin_names.add(plugin.get_name())
+    plugin._receive_proxy(self)
+
+  def remove_plugin(self, plugin):
+    assert isinstance(plugin, AsanSymbolizerPlugIn)
+    self._plugins.remove(plugin)
+    self._plugin_names.remove(plugin.get_name())
+    logging.debug('Removing plugin %s', plugin.get_name())
+    plugin.destroy()
+
+  def has_plugin(self, name):
+    """
+      Returns true iff the plugin name is currently
+      being managed by AsanSymbolizerPlugInProxy.
+    """
+    return name in self._plugin_names
+
+  def register_cmdline_args(self, parser):
+    plugins = list(self._plugins)
+    for plugin in plugins:
+      plugin.register_cmdline_args(parser)
+
+  def process_cmdline_args(self, pargs):
+    # Use copy so we can remove items as we iterate.
+    plugins = list(self._plugins)
+    for plugin in plugins:
+      keep = plugin.process_cmdline_args(pargs)
+      assert isinstance(keep, bool)
+      if not keep:
+        self.remove_plugin(plugin)
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, exc_type, exc_val, exc_tb):
+    for plugin in self._plugins:
+      plugin.destroy()
+    # Don't suppress raised exceptions
+    return False
+
+  def _filter_single_value(self, function_name, input_value):
+    """
+      Helper for filter style plugin functions.
+    """
+    new_value = input_value
+    for plugin in self._plugins:
+      result = getattr(plugin, function_name)(new_value)
+      if result is None:
+        return None
+      new_value = result
+    return new_value
+
+  def filter_binary_path(self, binary_path):
+    """
+      Consult available plugins to filter the path to a binary
+      to make it suitable for symbolication.
+
+      Returns `None` if symbolication should not be attempted for this
+      binary.
+    """
+    return self._filter_single_value('filter_binary_path', binary_path)
+
+class AsanSymbolizerPlugIn(object):
+  """
+    This is the interface the `asan_symbolize.py` code uses to talk
+    to plugins.
+  """
+  @classmethod
+  def get_name(cls):
+    """
+      Returns the name of the plugin.
+    """
+    return cls.__name__
+
+  def _receive_proxy(self, proxy):
+    assert isinstance(proxy, AsanSymbolizerPlugInProxy)
+    self.proxy = proxy
+
+  def register_cmdline_args(self, parser):
+    """
+      Hook for registering command line arguments to be
+      consumed in `process_cmdline_args()`.
+
+      `parser` - Instance of `argparse.ArgumentParser`.
+    """
+    pass
+
+  def process_cmdline_args(self, pargs):
+    """
+      Hook for handling parsed arguments. Implementations
+      should not modify `pargs`.
+
+      `pargs` - Instance of `argparse.Namespace` containing
+      parsed command line arguments.
+
+      Return `True` if plug-in should be used, otherwise
+      return `False`.
+    """
+    return True
+
+  def destroy(self):
+    """
+      Hook called when a plugin is about to be destroyed.
+      Implementations should free any allocated resources here.
+    """
+    pass
+
+  # Symbolization hooks
+  def filter_binary_path(self, binary_path):
+    """
+      Given a binary path return a binary path suitable for symbolication.
+
+      Implementations should return `None` if symbolication of this binary
+      should be skipped.
+    """
+    return binary_path
+
+class SysRootFilterPlugIn(AsanSymbolizerPlugIn):
+  """
+    Simple plug-in to add sys root prefix to all binary paths
+    used for symbolication.
+  """
+  def __init__(self):
+    self.sysroot_path = ""
+
+  def register_cmdline_args(self, parser):
+    parser.add_argument('-s', dest='sys_root', metavar='SYSROOT',
+                      help='set path to sysroot for sanitized binaries')
+
+  def process_cmdline_args(self, pargs):
+    if pargs.sys_root is None:
+      # Not being used so remove ourselves.
+      return False
+    self.sysroot_path = pargs.sys_root
+    return True
+
+  def filter_binary_path(self, path):
+    return self.sysroot_path + path
 
 def add_logging_args(parser):
   parser.add_argument('--log-dest',
@@ -515,45 +688,59 @@ def setup_logging():
   )
   return unparsed_args
 
+def add_load_plugin_args(parser):
+  parser.add_argument('-p', '--plugins',
+    help='Load plug-in', nargs='+', default=[])
+
+def setup_plugins(plugin_proxy, args):
+  parser = argparse.ArgumentParser(add_help=False)
+  add_load_plugin_args(parser)
+  pargs , unparsed_args = parser.parse_known_args()
+  for plugin_path in pargs.plugins:
+    plugin_proxy.load_plugin_from_file(plugin_path)
+  # Add built-in plugins.
+  plugin_proxy.add_plugin(SysRootFilterPlugIn())
+  return unparsed_args
 
 if __name__ == '__main__':
   remaining_args = setup_logging()
-  parser = argparse.ArgumentParser(
-      formatter_class=argparse.RawDescriptionHelpFormatter,
-      description='ASan symbolization script',
-      epilog=__doc__)
-  parser.add_argument('path_to_cut', nargs='*',
-                      help='pattern to be cut from the result file path ')
-  parser.add_argument('-d','--demangle', action='store_true',
-                      help='demangle function names')
-  parser.add_argument('-s', metavar='SYSROOT',
-                      help='set path to sysroot for sanitized binaries')
-  parser.add_argument('-c', metavar='CROSS_COMPILE',
-                      help='set prefix for binutils')
-  parser.add_argument('-l','--logfile', default=sys.stdin,
-                      type=argparse.FileType('r'),
-                      help='set log file name to parse, default is stdin')
-  parser.add_argument('--force-system-symbolizer', action='store_true',
-                      help='don\'t use llvm-symbolizer')
-  # Add logging arguments so that `--help` shows them.
-  add_logging_args(parser)
-  args = parser.parse_args(remaining_args)
-  if args.path_to_cut:
-    fix_filename_patterns = args.path_to_cut
-  if args.demangle:
-    demangle = True
-  if args.s:
-    binary_name_filter = sysroot_path_filter
-    sysroot_path = args.s
-  if args.c:
-    binutils_prefix = args.c
-  if args.logfile:
-    logfile = args.logfile
-  else:
-    logfile = sys.stdin
-  if args.force_system_symbolizer:
-    force_system_symbolizer = True
-  if force_system_symbolizer:
-    assert(allow_system_symbolizer)
-  loop = SymbolizationLoop(binary_name_filter)
-  loop.process_logfile()
+  with AsanSymbolizerPlugInProxy() as plugin_proxy:
+    remaining_args = setup_plugins(plugin_proxy, remaining_args)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='ASan symbolization script',
+        epilog=__doc__)
+    parser.add_argument('path_to_cut', nargs='*',
+                        help='pattern to be cut from the result file path ')
+    parser.add_argument('-d','--demangle', action='store_true',
+                        help='demangle function names')
+    parser.add_argument('-c', metavar='CROSS_COMPILE',
+                        help='set prefix for binutils')
+    parser.add_argument('-l','--logfile', default=sys.stdin,
+                        type=argparse.FileType('r'),
+                        help='set log file name to parse, default is stdin')
+    parser.add_argument('--force-system-symbolizer', action='store_true',
+                        help='don\'t use llvm-symbolizer')
+    # Add logging arguments so that `--help` shows them.
+    add_logging_args(parser)
+    # Add load plugin arguments so that `--help` shows them.
+    add_load_plugin_args(parser)
+    plugin_proxy.register_cmdline_args(parser)
+    args = parser.parse_args(remaining_args)
+    plugin_proxy.process_cmdline_args(args)
+    if args.path_to_cut:
+      fix_filename_patterns = args.path_to_cut
+    if args.demangle:
+      demangle = True
+    if args.c:
+      binutils_prefix = args.c
+    if args.logfile:
+      logfile = args.logfile
+    else:
+      logfile = sys.stdin
+    if args.force_system_symbolizer:
+      force_system_symbolizer = True
+    if force_system_symbolizer:
+      assert(allow_system_symbolizer)
+    loop = SymbolizationLoop(plugin_proxy)
+    loop.process_logfile()

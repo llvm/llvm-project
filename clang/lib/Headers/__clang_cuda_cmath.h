@@ -64,16 +64,13 @@ __DEVICE__ float frexp(float __arg, int *__exp) {
 #ifndef _MSC_VER
 __DEVICE__ bool isinf(float __x) { return ::__isinff(__x); }
 __DEVICE__ bool isinf(double __x) { return ::__isinf(__x); }
-__DEVICE__ bool isinf(long double __x) { return ::__isinfl(__x); }
 __DEVICE__ bool isfinite(float __x) { return ::__finitef(__x); }
 // For inscrutable reasons, __finite(), the double-precision version of
 // __finitef, does not exist when compiling for MacOS.  __isfinited is available
 // everywhere and is just as good.
 __DEVICE__ bool isfinite(double __x) { return ::__isfinited(__x); }
-__DEVICE__ bool isfinite(long double __x) { return ::__finitel(__x); }
 __DEVICE__ bool isnan(float __x) { return ::__isnanf(__x); }
 __DEVICE__ bool isnan(double __x) { return ::__isnan(__x); }
-__DEVICE__ bool isnan(long double __x) { return ::__isnanl(__x); }
 #endif
 
 __DEVICE__ bool isgreater(float __x, float __y) {

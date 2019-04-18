@@ -276,7 +276,8 @@ public:
   virtual void finalize();
   // Remove references to these sections. The list of sections must be sorted.
   virtual Error
-  removeSectionReferences(function_ref<bool(const SectionBase *)> ToRemove);
+  removeSectionReferences(bool AllowBrokenLinks,
+                          function_ref<bool(const SectionBase *)> ToRemove);
   virtual Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   virtual void accept(SectionVisitor &Visitor) const = 0;
   virtual void accept(MutableSectionVisitor &Visitor) = 0;
@@ -341,7 +342,7 @@ public:
 
   void accept(SectionVisitor &Visitor) const override;
   void accept(MutableSectionVisitor &Visitor) override;
-  Error removeSectionReferences(
+  Error removeSectionReferences(bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
@@ -535,7 +536,7 @@ public:
   Symbol *getSymbolByIndex(uint32_t Index);
   void updateSymbols(function_ref<void(Symbol &)> Callable);
 
-  Error removeSectionReferences(
+  Error removeSectionReferences(bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
@@ -605,7 +606,7 @@ public:
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
   void accept(SectionVisitor &Visitor) const override;
   void accept(MutableSectionVisitor &Visitor) override;
-  Error removeSectionReferences(
+  Error removeSectionReferences(bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
@@ -835,7 +836,8 @@ public:
   Range<Segment> segments() { return make_pointee_range(Segments); }
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }
 
-  Error removeSections(std::function<bool(const SectionBase &)> ToRemove);
+  Error removeSections(bool AllowBrokenLinks,
+                       std::function<bool(const SectionBase &)> ToRemove);
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   template <class T, class... Ts> T &addSection(Ts &&... Args) {
     auto Sec = llvm::make_unique<T>(std::forward<Ts>(Args)...);

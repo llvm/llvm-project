@@ -1134,6 +1134,28 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   return ValueLatticeElement::getOverdefined();
 }
 
+// Handle conditions of the form
+// extractvalue(op.with.overflow(%x, C), 1).
+static ValueLatticeElement getValueFromOverflowCondition(
+    Value *Val, WithOverflowInst *WO, bool IsTrueDest) {
+  // TODO: This only works with a constant RHS for now. We could also compute
+  // the range of the RHS, but this doesn't fit into the current structure of
+  // the edge value calculation.
+  const APInt *C;
+  if (WO->getLHS() != Val || !match(WO->getRHS(), m_APInt(C)))
+    return ValueLatticeElement::getOverdefined();
+
+  // Calculate the possible values of %x for which no overflow occurs.
+  ConstantRange NWR = ConstantRange::makeGuaranteedNoWrapRegion(
+      WO->getBinaryOp(), ConstantRange(*C), WO->getNoWrapKind());
+
+  // If overflow is false, %x is constrained to NWR. If overflow is true, %x is
+  // constrained to it's inverse (all values that might cause overflow).
+  if (IsTrueDest)
+    NWR = NWR.inverse();
+  return ValueLatticeElement::getRange(NWR);
+}
+
 static ValueLatticeElement
 getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
                       DenseMap<Value*, ValueLatticeElement> &Visited);
@@ -1143,6 +1165,11 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
                           DenseMap<Value*, ValueLatticeElement> &Visited) {
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
     return getValueFromICmpCondition(Val, ICI, isTrueDest);
+
+  if (auto *EVI = dyn_cast<ExtractValueInst>(Cond))
+    if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
+      if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 1)
+        return getValueFromOverflowCondition(Val, WO, isTrueDest);
 
   // Handle conditions in the form of (cond1 && cond2), we know that on the
   // true dest path both of the conditions hold. Similarly for conditions of

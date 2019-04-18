@@ -35,10 +35,6 @@ namespace format {
 
 class Environment {
 public:
-  Environment(SourceManager &SM, FileID ID, ArrayRef<CharSourceRange> Ranges)
-      : SM(SM), ID(ID), CharRanges(Ranges.begin(), Ranges.end()),
-        FirstStartColumn(0), NextStartColumn(0), LastStartColumn(0) {}
-
   // This sets up an virtual file system with file \p FileName containing the
   // fragment \p Code. Assumes that \p Code starts at \p FirstStartColumn,
   // that the next lines of \p Code should start at \p NextStartColumn, and

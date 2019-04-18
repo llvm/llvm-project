@@ -9238,6 +9238,12 @@ def err_module_unimported_use_header : Error<
   "%select{declaration|definition|default argument|"
   "explicit specialization|partial specialization}0 of %1 must be imported "
   "from module '%2' before it is required">;
+def err_module_unimported_use_global_module_fragment : Error<
+  "%select{missing '#include'|missing '#include %3'}2; "
+  "%select{||default argument of |explicit specialization of |"
+  "partial specialization of }0%1 must be "
+  "%select{declared|defined|defined|declared|declared}0 "
+  "before it is used">;
 def err_module_unimported_use_multiple : Error<
   "%select{declaration|definition|default argument|"
   "explicit specialization|partial specialization}0 of %1 must be imported "

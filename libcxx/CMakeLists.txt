@@ -129,10 +129,6 @@ option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 set(LIBCXX_LIBCPPABI_VERSION "2" CACHE STRING "Version of libc++abi's ABI to re-export from libc++ when re-exporting is enabled.
                                                Note that this is not related to the version of libc++'s ABI itself!")
 
-if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
-  message(FATAL_ERROR "libc++ must be built as either a shared or static library.")
-endif()
-
 # ABI Library options ---------------------------------------------------------
 set(LIBCXX_CXX_ABI "default" CACHE STRING
     "Specify C++ ABI library to use.")

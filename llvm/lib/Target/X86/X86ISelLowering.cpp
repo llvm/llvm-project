@@ -19873,10 +19873,6 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   assert((Subtarget.hasAVX512() || (VT == VTOp0)) &&
          "Value types for source and destination must be the same!");
 
-  // Break 256-bit integer vector compare into smaller ones.
-  if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return Lower256IntVSETCC(Op, DAG);
-
   // The result is boolean, but operands are int/float
   if (VT.getVectorElementType() == MVT::i1) {
     // In AVX-512 architecture setcc returns mask with i1 elements,
@@ -19929,6 +19925,27 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       }
     }
   }
+
+  // ICMP_EQ(AND(X,C),C) -> SRA(SHL(X,LOG2(C)),BW-1) iff C is power-of-2.
+  if (Cond == ISD::SETEQ && Op0.getOpcode() == ISD::AND &&
+      Op0.getOperand(1) == Op1 && Op0.hasOneUse()) {
+    ConstantSDNode *C1 = isConstOrConstSplat(Op1);
+    if (C1 && C1->getAPIntValue().isPowerOf2()) {
+      unsigned BitWidth = VT.getScalarSizeInBits();
+      unsigned ShiftAmt = BitWidth - C1->getAPIntValue().logBase2() - 1;
+
+      SDValue Result = Op0.getOperand(0);
+      Result = DAG.getNode(ISD::SHL, dl, VT, Result,
+                           DAG.getConstant(ShiftAmt, dl, VT));
+      Result = DAG.getNode(ISD::SRA, dl, VT, Result,
+                           DAG.getConstant(BitWidth - 1, dl, VT));
+      return Result;
+    }
+  }
+
+  // Break 256-bit integer vector compare into smaller ones.
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
+    return Lower256IntVSETCC(Op, DAG);
 
   // If this is a SETNE against the signed minimum value, change it to SETGT.
   // If this is a SETNE against the signed maximum value, change it to SETLT.
@@ -40996,39 +41013,6 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   APInt DemandedMask(APInt::getAllOnesValue(VT.getScalarSizeInBits()));
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), DemandedMask, DCI))
     return SDValue(N, 0);
-
-  // Combine (movmsk (setne (and X, (1 << C)), 0)) -> (movmsk (X << C)).
-  // Only do this when the setcc input and output types are the same and the
-  // setcc and the 'and' node have a single use.
-  // FIXME: Support 256-bits with AVX1. The movmsk is split, but the and isn't.
-  APInt SplatVal;
-  if (Src.getOpcode() == ISD::SETCC && Src.hasOneUse() &&
-      Src.getOperand(0).getValueType() == Src.getValueType() &&
-      cast<CondCodeSDNode>(Src.getOperand(2))->get() == ISD::SETNE &&
-      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode()) &&
-      Src.getOperand(0).getOpcode() == ISD::AND) {
-    SDValue And = Src.getOperand(0);
-    if (And.hasOneUse() &&
-        ISD::isConstantSplatVector(And.getOperand(1).getNode(), SplatVal) &&
-        SplatVal.isPowerOf2()) {
-      MVT VT = Src.getSimpleValueType();
-      unsigned BitWidth = VT.getScalarSizeInBits();
-      unsigned ShAmt = BitWidth - SplatVal.logBase2() - 1;
-      SDLoc DL(And);
-      SDValue X = And.getOperand(0);
-      // If the element type is i8, we need to bitcast to i16 to use a legal
-      // shift. If we wait until lowering we end up with an extra and to bits
-      // from crossing the 8-bit elements, but we don't care about that here.
-      if (VT.getVectorElementType() == MVT::i8) {
-        VT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements() / 2);
-        X = DAG.getBitcast(VT, X);
-      }
-      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
-                                DAG.getConstant(ShAmt, DL, VT));
-      SDValue Cast = DAG.getBitcast(SrcVT, Shl);
-      return DAG.getNode(X86ISD::MOVMSK, SDLoc(N), N->getValueType(0), Cast);
-    }
-  }
 
   return SDValue();
 }

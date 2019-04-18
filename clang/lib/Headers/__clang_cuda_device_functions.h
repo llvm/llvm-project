@@ -223,7 +223,9 @@ __DEVICE__ int __ffs(int __a) { return __nv_ffs(__a); }
 __DEVICE__ int __ffsll(long long __a) { return __nv_ffsll(__a); }
 __DEVICE__ int __finite(double __a) { return __nv_isfinited(__a); }
 __DEVICE__ int __finitef(float __a) { return __nv_finitef(__a); }
+#ifdef _MSC_VER
 __DEVICE__ int __finitel(long double __a);
+#endif
 __DEVICE__ int __float2int_rd(float __a) { return __nv_float2int_rd(__a); }
 __DEVICE__ int __float2int_rn(float __a) { return __nv_float2int_rn(__a); }
 __DEVICE__ int __float2int_ru(float __a) { return __nv_float2int_ru(__a); }
@@ -432,10 +434,14 @@ __DEVICE__ float __int_as_float(int __a) { return __nv_int_as_float(__a); }
 __DEVICE__ int __isfinited(double __a) { return __nv_isfinited(__a); }
 __DEVICE__ int __isinf(double __a) { return __nv_isinfd(__a); }
 __DEVICE__ int __isinff(float __a) { return __nv_isinff(__a); }
+#ifdef _MSC_VER
 __DEVICE__ int __isinfl(long double __a);
+#endif
 __DEVICE__ int __isnan(double __a) { return __nv_isnand(__a); }
 __DEVICE__ int __isnanf(float __a) { return __nv_isnanf(__a); }
+#ifdef _MSC_VER
 __DEVICE__ int __isnanl(long double __a);
+#endif
 __DEVICE__ double __ll2double_rd(long long __a) {
   return __nv_ll2double_rd(__a);
 }

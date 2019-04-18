@@ -227,6 +227,7 @@ Clang-Tidy Checks
    objc-avoid-spinlock
    objc-forbidden-subclassing
    objc-property-declaration
+   objc-super-self
    openmp-exception-escape
    openmp-use-default-none
    performance-faster-string-find

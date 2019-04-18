@@ -17,11 +17,11 @@ void kernel testFloatTypes() {
 }
 
 // CHECK: VarDecl=scalarHalf:11:8 (Definition){{( \(invalid\))?}} [type=half] [typekind=Half] [isPOD=1]
-// CHECK: VarDecl=vectorHalf:12:9 (Definition) [type=half4] [typekind=Typedef] [canonicaltype=half __attribute__((ext_vector_type(4)))] [canonicaltypekind=Unexposed] [isPOD=1]
+// CHECK: VarDecl=vectorHalf:12:9 (Definition) [type=half4] [typekind=Typedef] [canonicaltype=half __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
 // CHECK: VarDecl=scalarFloat:13:9 (Definition) [type=float] [typekind=Float] [isPOD=1]
-// CHECK: VarDecl=vectorFloat:14:10 (Definition) [type=float4] [typekind=Typedef] [canonicaltype=float __attribute__((ext_vector_type(4)))] [canonicaltypekind=Unexposed] [isPOD=1]
+// CHECK: VarDecl=vectorFloat:14:10 (Definition) [type=float4] [typekind=Typedef] [canonicaltype=float __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
 // CHECK: VarDecl=scalarDouble:15:10 (Definition){{( \(invalid\))?}} [type=double] [typekind=Double] [isPOD=1]
-// CHECK: VarDecl=vectorDouble:16:11 (Definition){{( \(invalid\))?}} [type=double4] [typekind=Typedef] [canonicaltype=double __attribute__((ext_vector_type(4)))] [canonicaltypekind=Unexposed] [isPOD=1]
+// CHECK: VarDecl=vectorDouble:16:11 (Definition){{( \(invalid\))?}} [type=double4] [typekind=Typedef] [canonicaltype=double __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
 
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
 

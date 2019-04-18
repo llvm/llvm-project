@@ -36,7 +36,8 @@ public:
         IgnoreCommandLineMacros(IgnoreCommandLine) {}
   void MacroDefined(const Token &MacroNameTok,
                     const MacroDirective *MD) override {
-    if (MD->getMacroInfo()->isUsedForHeaderGuard() ||
+    if (SM.isWrittenInBuiltinFile(MD->getLocation()) ||
+        MD->getMacroInfo()->isUsedForHeaderGuard() ||
         MD->getMacroInfo()->getNumTokens() == 0)
       return;
 

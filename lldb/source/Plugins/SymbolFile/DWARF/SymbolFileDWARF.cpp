@@ -2036,6 +2036,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
 
   llvm::StringRef basename;
   llvm::StringRef context;
+  bool name_is_mangled = (bool)Mangled(name);
 
   if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetCString(),
                                                       context, basename))
@@ -2085,7 +2086,8 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
                          &variables);
           while (pruned_idx < variables.GetSize()) {
             VariableSP var_sp = variables.GetVariableAtIndex(pruned_idx);
-            if (var_sp->GetName().GetStringRef().contains(name.GetStringRef()))
+            if (name_is_mangled ||
+                var_sp->GetName().GetStringRef().contains(name.GetStringRef()))
               ++pruned_idx;
             else
               variables.RemoveVariableAtIndex(pruned_idx);

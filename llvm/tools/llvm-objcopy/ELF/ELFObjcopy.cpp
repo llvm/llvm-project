@@ -250,7 +250,8 @@ static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
     return onlyKeepDWOPred(*DWOFile, Sec);
   };
-  if (Error E = DWOFile->removeSections(OnlyKeepDWOPred))
+  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks,
+                                        OnlyKeepDWOPred))
     return E;
   if (Config.OutputArch) {
     DWOFile->Machine = Config.OutputArch.getValue().EMachine;
@@ -547,7 +548,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
           return &Obj.addSection<DecompressedSection>(*CS);
         });
 
-  return Obj.removeSections(RemovePred);
+  return Obj.removeSections(Config.AllowBrokenLinks, RemovePred);
 }
 
 // This function handles the high level operations of GNU objcopy including

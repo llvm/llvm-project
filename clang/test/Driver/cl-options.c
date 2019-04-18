@@ -442,6 +442,7 @@
 // RUN:     /o foo.obj \
 // RUN:     /ofoo.obj \
 // RUN:     /openmp \
+// RUN:     /openmp:experimental \
 // RUN:     /Qfast_transcendentals \
 // RUN:     /QIfist \
 // RUN:     /Qimprecise_fwaits \
