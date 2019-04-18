@@ -286,6 +286,10 @@ class Reduce(object):
                                     opts_startswith=["-gcodeview",
                                                      "-debug-info-kind=",
                                                      "-debugger-tuning="])
+
+    new_args = self.try_remove_args(new_args,
+                                    msg="Removed --show-includes",
+                                    opts_startswith=["--show-includes"])
     # Not suppressing warnings (-w) sometimes prevents the crash from occurring
     # after preprocessing
     new_args = self.try_remove_args(new_args,

@@ -612,9 +612,16 @@ Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
                                                      SourceLocation Loc) {
   assert(M && "no module to include");
 
+  // If the context is the global module fragment of some module, we never
+  // want to return that file; instead, we want the innermost include-guarded
+  // header that it included.
+  bool InGlobalModuleFragment = M->Kind == Module::GlobalModuleFragment;
+
   // If we have a module import syntax, we shouldn't include a header to
   // make a particular module visible.
-  if (getLangOpts().ObjC)
+  if ((getLangOpts().ObjC || getLangOpts().CPlusPlusModules ||
+       getLangOpts().ModulesTS) &&
+      !InGlobalModuleFragment)
     return nullptr;
 
   Module *TopM = M->getTopLevelModule();
@@ -630,6 +637,13 @@ Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
     auto *FE = SM.getFileEntryForID(ID);
     if (!FE)
       break;
+
+    if (InGlobalModuleFragment) {
+      if (getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE))
+        return FE;
+      Loc = SM.getIncludeLoc(ID);
+      continue;
+    }
 
     bool InTextualHeader = false;
     for (auto Header : HeaderInfo.getModuleMap().findAllModulesForHeader(FE)) {

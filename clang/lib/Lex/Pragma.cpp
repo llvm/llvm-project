@@ -1010,7 +1010,7 @@ struct PragmaDebugHandler : public PragmaHandler {
   PragmaDebugHandler() : PragmaHandler("__debug") {}
 
   void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
-                    Token &DepToken) override {
+                    Token &DebugToken) override {
     Token Tok;
     PP.LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::identifier)) {
@@ -1072,6 +1072,22 @@ struct PragmaDebugHandler : public PragmaHandler {
       else
         PP.Diag(MacroName, diag::warn_pragma_debug_missing_argument)
             << II->getName();
+    } else if (II->isStr("module_map")) {
+      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 8>
+          ModuleName;
+      if (LexModuleName(PP, Tok, ModuleName))
+        return;
+      ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
+      Module *M = nullptr;
+      for (auto IIAndLoc : ModuleName) {
+        M = MM.lookupModuleQualified(IIAndLoc.first->getName(), M);
+        if (!M) {
+          PP.Diag(IIAndLoc.second, diag::warn_pragma_debug_unknown_module)
+              << IIAndLoc.first;
+          return;
+        }
+      }
+      M->dump();
     } else if (II->isStr("overflow_stack")) {
       DebugOverflowStack();
     } else if (II->isStr("handle_crash")) {
