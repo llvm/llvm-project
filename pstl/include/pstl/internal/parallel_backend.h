@@ -10,7 +10,9 @@
 #ifndef _PSTL_PARALLEL_BACKEND_H
 #define _PSTL_PARALLEL_BACKEND_H
 
-#if _PSTL_PAR_BACKEND_TBB
+#if defined(_PSTL_PAR_BACKEND_SERIAL)
+#    include "parallel_backend_serial.h"
+#elif defined(_PSTL_PAR_BACKEND_TBB)
 #    include "parallel_backend_tbb.h"
 #else
 _PSTL_PRAGMA_MESSAGE("Parallel backend was not specified");
