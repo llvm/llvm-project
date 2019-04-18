@@ -21,7 +21,7 @@
 # CHECK-NEXT:   "params": {
 # CHECK-NEXT:     "diagnostics": [
 # CHECK-NEXT:       {
-# CHECK-NEXT:         "code": "warn_pragma_message",
+# CHECK-NEXT:         "code": "-W#pragma-messages",
 # CHECK-NEXT:         "message": "MACRO is one",
 ---
 {"jsonrpc":"2.0","id":10000,"method":"shutdown"}

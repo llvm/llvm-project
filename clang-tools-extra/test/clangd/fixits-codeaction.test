@@ -6,7 +6,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "code": "warn_condition_is_assignment",
+# CHECK-NEXT:        "code": "-Wparentheses",
 # CHECK-NEXT:        "message": "Using the result of an assignment as a condition without parentheses (fixes available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
@@ -25,14 +25,14 @@
 # CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
 # CHECK-NEXT:  }
 ---
-{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":0,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"Using the result of an assignment as a condition without parentheses (fixes available)", "code": "warn_condition_is_assignment", "source": "clang"}]}}}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":0,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"Using the result of an assignment as a condition without parentheses (fixes available)", "code": "-Wparentheses", "source": "clang"}]}}}
 #      CHECK:  "id": 2,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "diagnostics": [
 # CHECK-NEXT:        {
-# CHECK-NEXT:          "code": "warn_condition_is_assignment",
+# CHECK-NEXT:          "code": "-Wparentheses",
 # CHECK-NEXT:          "message": "Using the result of an assignment as a condition without parentheses (fixes available)",
 # CHECK-NEXT:          "range": {
 # CHECK-NEXT:            "end": {
@@ -86,7 +86,7 @@
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "diagnostics": [
 # CHECK-NEXT:        {
-# CHECK-NEXT:          "code": "warn_condition_is_assignment",
+# CHECK-NEXT:          "code": "-Wparentheses",
 # CHECK-NEXT:          "message": "Using the result of an assignment as a condition without parentheses (fixes available)",
 # CHECK-NEXT:          "range": {
 # CHECK-NEXT:            "end": {

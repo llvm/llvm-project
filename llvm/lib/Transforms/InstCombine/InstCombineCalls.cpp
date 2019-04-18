@@ -4324,9 +4324,7 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
         // variety of reasons (e.g. it may be written in assembly).
         !CalleeF->isDeclaration()) {
       Instruction *OldCall = &Call;
-      new StoreInst(ConstantInt::getTrue(Callee->getContext()),
-                UndefValue::get(Type::getInt1PtrTy(Callee->getContext())),
-                                  OldCall);
+      CreateNonTerminatorUnreachable(OldCall);
       // If OldCall does not return void then replaceAllUsesWith undef.
       // This allows ValueHandlers and custom metadata to adjust itself.
       if (!OldCall->getType()->isVoidTy())
@@ -4356,13 +4354,8 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
       return nullptr;
     }
 
-    // This instruction is not reachable, just remove it.  We insert a store to
-    // undef so that we know that this code is not reachable, despite the fact
-    // that we can't modify the CFG here.
-    new StoreInst(ConstantInt::getTrue(Callee->getContext()),
-                  UndefValue::get(Type::getInt1PtrTy(Callee->getContext())),
-                  &Call);
-
+    // This instruction is not reachable, just remove it.
+    CreateNonTerminatorUnreachable(&Call);
     return eraseInstFromFunction(Call);
   }
 

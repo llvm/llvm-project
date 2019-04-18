@@ -111,6 +111,12 @@ public:
     return getScalarSizeInBits() * getNumElements();
   }
 
+  /// Returns the total size of the type in bytes, i.e. number of whole bytes
+  /// needed to represent the size in bits. Must only be called on sized types.
+  unsigned getSizeInBytes() const {
+    return (getSizeInBits() + 7) / 8;
+  }
+
   LLT getScalarType() const {
     return isVector() ? getElementType() : *this;
   }

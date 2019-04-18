@@ -24,7 +24,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "code": "warn_uninit_var",
+# CHECK-NEXT:        "code": "-Wuninitialized",
 # CHECK-NEXT:        "message": "Variable 'i' is uninitialized when used here (fix available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {

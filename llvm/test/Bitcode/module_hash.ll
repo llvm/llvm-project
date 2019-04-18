@@ -28,6 +28,7 @@
 ; COMBINED-DAG: <HASH abbrevid={{[0-9]*}} op0=[[HASH1_1]] op1=[[HASH1_2]] op2=[[HASH1_3]] op3=[[HASH1_4]] op4=[[HASH1_5]]/>
 ; COMBINED-DAG: <HASH abbrevid={{[0-9]*}} op0=[[HASH2_1]] op1=[[HASH2_2]] op2=[[HASH2_3]] op3=[[HASH2_4]] op4=[[HASH2_5]]/>
 
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Need a function for the combined index to be populated.
 define void @foo() {
