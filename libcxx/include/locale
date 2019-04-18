@@ -1372,10 +1372,6 @@ __pad_and_output(_OutputIterator __s,
     return __s;
 }
 
-#if !defined(__APPLE__) || \
-    (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED > __MAC_10_8) || \
-    (defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_0)
-
 template <class _CharT, class _Traits>
 _LIBCPP_HIDDEN
 ostreambuf_iterator<_CharT, _Traits>
@@ -1421,8 +1417,6 @@ __pad_and_output(ostreambuf_iterator<_CharT, _Traits> __s,
     __iob.width(0);
     return __s;
 }
-
-#endif
 
 template <class _CharT, class _OutputIterator>
 _OutputIterator

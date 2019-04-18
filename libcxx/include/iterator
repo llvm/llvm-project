@@ -1090,10 +1090,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator& operator++(int) {return *this;}
     _LIBCPP_INLINE_VISIBILITY bool failed() const _NOEXCEPT {return __sbuf_ == 0;}
 
-#if !defined(__APPLE__) || \
-    (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED > __MAC_10_8) || \
-    (defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_0)
-
     template <class _Ch, class _Tr>
     friend
     _LIBCPP_HIDDEN
@@ -1101,7 +1097,6 @@ public:
     __pad_and_output(ostreambuf_iterator<_Ch, _Tr> __s,
                      const _Ch* __ob, const _Ch* __op, const _Ch* __oe,
                      ios_base& __iob, _Ch __fl);
-#endif
 };
 
 template <class _Iter>
