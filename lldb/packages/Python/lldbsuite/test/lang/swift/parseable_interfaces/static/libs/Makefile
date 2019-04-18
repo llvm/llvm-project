@@ -1,4 +1,4 @@
-LEVEL = ../../../make
+LEVEL = ../../../../make
 
 # Set the dylib variables so the rules for generating swift objects and
 # modules are active.

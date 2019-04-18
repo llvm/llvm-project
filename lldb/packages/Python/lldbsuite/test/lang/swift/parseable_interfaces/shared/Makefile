@@ -1,13 +1,13 @@
-LEVEL := ../../../make
+LEVEL := ../../../../make
 
 EXE := main
 SWIFT_SOURCES := main.swift
-LD_EXTRAS = -L$(BUILDDIR) -lAA -lBB -lCC
+LD_EXTRAS = -L$(BUILDDIR) -lAA -lBB -lCC -Xlinker -rpath -Xlinker $(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 SWIFT_MODULE_CACHE_FLAGS = -module-cache-path MCP
 
 # setup `all` to run each of the below before building the main executable
-all: setup staticA staticB staticC clear_modules
+all: setup sharedA sharedB sharedC clear_modules
 
 include $(LEVEL)/Makefile.rules
 
@@ -19,26 +19,23 @@ setup:
 	cp $(SRCDIR)/libs/B.swift libs/BB.swift
 	cp $(SRCDIR)/libs/C.swift libs/CC.swift
 
-staticA:
-	# Because we override VPATH to point to the build directory, we need to pass
-	# down SWIFTC too (it's default value is relative to VPATH)
-	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+sharedA:
+	$(MAKE) MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) SWIFTSDKROOT=$(SWIFTSDKROOT) \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \
-		BASENAME=AA -f $(SRCDIR)/libs/Makefile static_only
+		BASENAME=AA -f $(SRCDIR)/libs/Makefile
 
-staticB:
-	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+sharedB:
+	$(MAKE) MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) SWIFTSDKROOT=$(SWIFTSDKROOT) \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \
-		BASENAME=BB SWIFTFLAGS_EXTRAS="-I$(BUILDDIR)" \
-		LD_EXTRAS="-L$(BUILDDIR)" -f $(SRCDIR)/libs/Makefile static_only
+		BASENAME=BB SWIFTFLAGS_EXTRAS="-I$(BUILDDIR)" LD_EXTRAS="-L$(BUILDDIR) -lAA" -f $(SRCDIR)/libs/Makefile
 
-staticC:
-	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+sharedC:
+	$(MAKE) MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) SWIFTSDKROOT=$(SWIFTSDKROOT) \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \
-		BASENAME=CC -f $(SRCDIR)/libs/Makefile static_only
+		BASENAME=CC -f $(SRCDIR)/libs/Makefile
 
 clear_modules:
 	# make sure we only have .swiftinterface files for the generated modules:
