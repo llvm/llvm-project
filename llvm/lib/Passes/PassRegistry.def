@@ -199,7 +199,6 @@ FUNCTION_PASS("loop-data-prefetch", LoopDataPrefetchPass())
 FUNCTION_PASS("loop-load-elim", LoopLoadEliminationPass())
 FUNCTION_PASS("loop-fuse", LoopFusePass())
 FUNCTION_PASS("loop-distribute", LoopDistributePass())
-FUNCTION_PASS("loop-vectorize", LoopVectorizePass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
 FUNCTION_PASS("print", PrintFunctionPass(dbgs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
@@ -258,6 +257,11 @@ FUNCTION_PASS_WITH_PARAMS("simplify-cfg",
                              return SimplifyCFGPass(Opts);
                            },
                            parseSimplifyCFGOptions)
+FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
+                           [](LoopVectorizeOptions Opts) {
+                             return LoopVectorizePass(Opts);
+                           },
+                           parseLoopVectorizeOptions)
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS

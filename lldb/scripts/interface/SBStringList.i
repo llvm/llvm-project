@@ -15,7 +15,7 @@ public:
     SBStringList ();
 
     SBStringList (const lldb::SBStringList &rhs);
-    
+
     ~SBStringList ();
 
     bool

@@ -2347,6 +2347,24 @@ bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE) {
 
 bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
                       ScalarEvolution &SE) {
-  return isSafeToExpand(S, SE) && SE.dominates(S, InsertionPoint->getParent());
+  if (!isSafeToExpand(S, SE))
+    return false;
+  // We have to prove that the expanded site of S dominates InsertionPoint.
+  // This is easy when not in the same block, but hard when S is an instruction
+  // to be expanded somewhere inside the same block as our insertion point.
+  // What we really need here is something analogous to an OrderedBasicBlock,
+  // but for the moment, we paper over the problem by handling two common and
+  // cheap to check cases.
+  if (SE.properlyDominates(S, InsertionPoint->getParent()))
+    return true;
+  if (SE.dominates(S, InsertionPoint->getParent())) {
+    if (InsertionPoint->getParent()->getTerminator() == InsertionPoint)
+      return true;
+    if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S))
+      for (const Value *V : InsertionPoint->operand_values())
+        if (V == U->getValue())
+          return true;
+  }
+  return false;
 }
 }

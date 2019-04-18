@@ -3,6 +3,19 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
+namespace dr705 { // dr705: yes
+  namespace N {
+    struct S {};
+    void f(S); // expected-note {{declared here}}
+  }
+
+  void g() {
+    N::S s;
+    f(s);      // ok
+    (f)(s);    // expected-error {{use of undeclared}}
+  }
+}
+
 namespace dr727 { // dr727: partial
   struct A {
     template<typename T> struct C; // expected-note 6{{here}}

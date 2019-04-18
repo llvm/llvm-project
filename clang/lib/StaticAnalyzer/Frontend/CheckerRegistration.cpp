@@ -50,7 +50,8 @@ void ento::printCheckerHelp(raw_ostream &out, ArrayRef<std::string> plugins,
   out << "OVERVIEW: Clang Static Analyzer Checkers List\n\n";
   out << "USAGE: -analyzer-checker <CHECKER or PACKAGE,...>\n\n";
 
-  CheckerRegistry(plugins, diags, anopts, langOpts).printHelp(out);
+  CheckerRegistry(plugins, diags, anopts, langOpts)
+      .printCheckerWithDescList(out);
 }
 
 void ento::printEnabledCheckerList(raw_ostream &out,
@@ -60,7 +61,8 @@ void ento::printEnabledCheckerList(raw_ostream &out,
                                    const LangOptions &langOpts) {
   out << "OVERVIEW: Clang Static Analyzer Enabled Checkers List\n\n";
 
-  CheckerRegistry(plugins, diags, anopts, langOpts).printList(out);
+  CheckerRegistry(plugins, diags, anopts, langOpts)
+      .printEnabledCheckerList(out);
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {

@@ -88,6 +88,10 @@ public:
   LLVM_NODISCARD bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
+  // Disables thread priority lowering in background index to make sure it can
+  // progress on loaded systems. Only affects tasks that run after the call.
+  static void preventThreadStarvationInTests();
+
 private:
   /// Given index results from a TU, only update symbols coming from files with
   /// different digests than \p DigestsSnapshot. Also stores new index
@@ -134,14 +138,14 @@ private:
   // queue management
   using Task = std::function<void()>;
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
-  void enqueueTask(Task T, ThreadPriority Prioirty);
+  void enqueueTask(Task T, llvm::ThreadPriority Prioirty);
   void enqueueLocked(tooling::CompileCommand Cmd,
                      BackgroundIndexStorage *IndexStorage);
   std::mutex QueueMu;
   unsigned NumActiveTasks = 0; // Only idle when queue is empty *and* no tasks.
   std::condition_variable QueueCV;
   bool ShouldStop = false;
-  std::deque<std::pair<Task, ThreadPriority>> Queue;
+  std::deque<std::pair<Task, llvm::ThreadPriority>> Queue;
   std::vector<std::thread> ThreadPool; // FIXME: Abstract this away.
   GlobalCompilationDatabase::CommandChanged::Subscription CommandsChanged;
 };

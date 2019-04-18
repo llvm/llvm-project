@@ -209,6 +209,8 @@ static cl::opt<bool> EnableSyntheticCounts(
 static Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
 
+// This option is used in simplifying testing SampleFDO optimizations for
+// profile loading.
 static cl::opt<bool>
     EnableCHR("enable-chr-npm", cl::init(true), cl::Hidden,
               cl::desc("Enable control height reduction optimization (CHR)"));
@@ -1465,6 +1467,27 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
     }
   }
   return Result;
+}
+
+/// Parser of parameters for LoopVectorize pass.
+Expected<LoopVectorizeOptions> parseLoopVectorizeOptions(StringRef Params) {
+  LoopVectorizeOptions Opts;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "interleave-forced-only") {
+      Opts.setInterleaveOnlyWhenForced(Enable);
+    } else if (ParamName == "vectorize-forced-only") {
+      Opts.setVectorizeOnlyWhenForced(Enable);
+    } else {
+      return make_error<StringError>(
+          formatv("invalid LoopVectorize parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Opts;
 }
 
 } // namespace

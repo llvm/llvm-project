@@ -196,7 +196,7 @@ std::string lld::toString(const WasmSignature &Sig) {
     S += toString(Type);
   }
   S += ") -> ";
-  if (Sig.Returns.size() == 0)
+  if (Sig.Returns.empty())
     S += "void";
   else
     S += toString(Sig.Returns[0]);

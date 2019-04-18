@@ -55,7 +55,7 @@ private:
   void forEachRelSec(llvm::function_ref<void(InputSectionBase &)> Fn);
   void sortSections();
   void resolveShfLinkOrder();
-  void maybeAddThunks();
+  void finalizeAddressDependentContent();
   void sortInputSections();
   void finalizeSections();
   void checkExecuteOnly();
@@ -1460,19 +1460,15 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
   }
 }
 
-// For most RISC ISAs, we need to generate content that depends on the address
-// of InputSections. For example some architectures such as AArch64 use small
-// displacements for jump instructions that is the linker's responsibility for
-// creating range extension thunks for. As the generation of the content may
-// also alter InputSection addresses we must converge to a fixed point.
-template <class ELFT> void Writer<ELFT>::maybeAddThunks() {
-  if (!Target->NeedsThunks && !Config->AndroidPackDynRelocs &&
-      !Config->RelrPackDynRelocs)
-    return;
-
+// We need to generate and finalize the content that depends on the address of
+// InputSections. As the generation of the content may also alter InputSection
+// addresses we must converge to a fixed point. We do that here. See the comment
+// in Writer<ELFT>::finalizeSections().
+template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   ThunkCreator TC;
   AArch64Err843419Patcher A64P;
 
+  // For some targets, like x86, this loop iterates only once.
   for (;;) {
     bool Changed = false;
 
@@ -1756,19 +1752,30 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // known but before addresses are allocated.
   resolveShfLinkOrder();
 
-  // Jump instructions in many ISAs have small displacements, and therefore they
-  // cannot jump to arbitrary addresses in memory. For example, RISC-V JAL
-  // instruction can target only +-1 MiB from PC. It is a linker's
-  // responsibility to create and insert small pieces of code between sections
-  // to extend the ranges if jump targets are out of range. Such code pieces are
-  // called "thunks".
+  // This is used to:
+  // 1) Create "thunks":
+  //    Jump instructions in many ISAs have small displacements, and therefore
+  //    they cannot jump to arbitrary addresses in memory. For example, RISC-V
+  //    JAL instruction can target only +-1 MiB from PC. It is a linker's
+  //    responsibility to create and insert small pieces of code between
+  //    sections to extend the ranges if jump targets are out of range. Such
+  //    code pieces are called "thunks".
   //
-  // We add thunks at this stage. We couldn't do this before this point because
-  // this is the earliest point where we know sizes of sections and their
-  // layouts (that are needed to determine if jump targets are in range).
-  maybeAddThunks();
+  //    We add thunks at this stage. We couldn't do this before this point
+  //    because this is the earliest point where we know sizes of sections and
+  //    their layouts (that are needed to determine if jump targets are in
+  //    range).
+  //
+  // 2) Update the sections. We need to generate content that depends on the
+  //    address of InputSections. For example, MIPS GOT section content or
+  //    android packed relocations sections content.
+  //
+  // 3) Assign the final values for the linker script symbols. Linker scripts
+  //    sometimes using forward symbol declarations. We want to set the correct
+  //    values. They also might change after adding the thunks.
+  finalizeAddressDependentContent();
 
-  // maybeAddThunks may have added local symbols to the static symbol table.
+  // finalizeAddressDependentContent may have added local symbols to the static symbol table.
   finalizeSynthetic(In.SymTab);
   finalizeSynthetic(In.PPC64LongBranchTarget);
 

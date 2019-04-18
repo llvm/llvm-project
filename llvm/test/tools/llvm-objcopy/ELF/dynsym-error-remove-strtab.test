@@ -1,3 +1,16 @@
-# RUN: not llvm-objcopy -R .dynstr %p/Inputs/dynsym.so %t 2>&1 >/dev/null | FileCheck %s
+# RUN: not llvm-objcopy -R .dynstr %p/Inputs/dynsym.so %t 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
+# RUN: cp  %p/Inputs/dynsym.so %t2
+## Use --strip-debug to suppress the default --strip-all behavior of llvm-strip.
+## TODO: Implement a better way to suppress --strip-all behavior.
+# RUN: not llvm-strip --strip-debug -R .dynstr %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
 
-# CHECK: Section .dynstr cannot be removed because it is referenced by the section .dynsym
+# ERR: Section .dynstr cannot be removed because it is referenced by the section .dynsym
+
+# RUN: llvm-objcopy --allow-broken-links -R .dynstr %p/Inputs/dynsym.so %t3
+# RUN: llvm-objdump --section-headers %t3 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.dynstr
+# RUN: cp  %p/Inputs/dynsym.so %t4
+# RUN: llvm-strip --strip-debug --allow-broken-links -R .dynstr %t4
+# RUN: llvm-objdump --section-headers %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.dynstr
+
+# SECTIONS: .dynsym
+# SECTIONS: .dynamic

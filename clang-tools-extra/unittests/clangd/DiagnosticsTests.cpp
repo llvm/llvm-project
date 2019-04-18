@@ -8,10 +8,14 @@
 
 #include "Annotations.h"
 #include "ClangdUnit.h"
+#include "Diagnostics.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "TestIndex.h"
+#include "TestFS.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
@@ -55,8 +59,12 @@ MATCHER_P3(Fix, Range, Replacement, Message,
 
 MATCHER_P(EqualToLSPDiag, LSPDiag,
           "LSP diagnostic " + llvm::to_string(LSPDiag)) {
-  return std::tie(arg.range, arg.severity, arg.message) ==
-         std::tie(LSPDiag.range, LSPDiag.severity, LSPDiag.message);
+  if (toJSON(arg) != toJSON(LSPDiag)) {
+    *result_listener << llvm::formatv("expected:\n{0:2}\ngot\n{1:2}",
+                                      toJSON(LSPDiag), toJSON(arg)).str();
+    return false;
+  }
+  return true;
 }
 
 MATCHER_P(DiagSource, S, "") { return arg.Source == S; }
@@ -248,6 +256,11 @@ TEST(DiagnosticsTest, NoFixItInMacro) {
 }
 
 TEST(DiagnosticsTest, ToLSP) {
+  URIForFile MainFile =
+      URIForFile::canonicalize(testPath("foo/bar/main.cpp"), "");
+  URIForFile HeaderFile =
+      URIForFile::canonicalize(testPath("foo/bar/header.h"), "");
+
   clangd::Diag D;
   D.ID = clang::diag::err_enum_class_reference;
   D.Name = "enum_class_reference";
@@ -257,6 +270,7 @@ TEST(DiagnosticsTest, ToLSP) {
   D.InsideMainFile = true;
   D.Severity = DiagnosticsEngine::Error;
   D.File = "foo/bar/main.cpp";
+  D.AbsFile = MainFile.file();
 
   clangd::Note NoteInMain;
   NoteInMain.Message = "declared somewhere in the main file";
@@ -264,6 +278,8 @@ TEST(DiagnosticsTest, ToLSP) {
   NoteInMain.Severity = DiagnosticsEngine::Remark;
   NoteInMain.File = "../foo/bar/main.cpp";
   NoteInMain.InsideMainFile = true;
+  NoteInMain.AbsFile = MainFile.file();
+
   D.Notes.push_back(NoteInMain);
 
   clangd::Note NoteInHeader;
@@ -272,44 +288,37 @@ TEST(DiagnosticsTest, ToLSP) {
   NoteInHeader.Severity = DiagnosticsEngine::Note;
   NoteInHeader.File = "../foo/baz/header.h";
   NoteInHeader.InsideMainFile = false;
+  NoteInHeader.AbsFile = HeaderFile.file();
   D.Notes.push_back(NoteInHeader);
 
   clangd::Fix F;
   F.Message = "do something";
   D.Fixes.push_back(F);
 
-  auto MatchingLSP = [](const DiagBase &D, StringRef Message) {
-    clangd::Diagnostic Res;
-    Res.range = D.Range;
-    Res.severity = getSeverity(D.Severity);
-    Res.message = Message;
-    return Res;
-  };
-
   // Diagnostics should turn into these:
-  clangd::Diagnostic MainLSP =
-      MatchingLSP(D, R"(Something terrible happened (fix available)
+  clangd::Diagnostic MainLSP;
+  MainLSP.range = D.Range;
+  MainLSP.severity = getSeverity(DiagnosticsEngine::Error);
+  MainLSP.code = "enum_class_reference";
+  MainLSP.source = "clang";
+  MainLSP.message = R"(Something terrible happened (fix available)
 
 main.cpp:6:7: remark: declared somewhere in the main file
 
 ../foo/baz/header.h:10:11:
-note: declared somewhere in the header file)");
+note: declared somewhere in the header file)";
 
-  clangd::Diagnostic NoteInMainLSP =
-      MatchingLSP(NoteInMain, R"(Declared somewhere in the main file
+  clangd::Diagnostic NoteInMainLSP;
+  NoteInMainLSP.range = NoteInMain.Range;
+  NoteInMainLSP.severity = getSeverity(DiagnosticsEngine::Remark);
+  NoteInMainLSP.message = R"(Declared somewhere in the main file
 
-main.cpp:2:3: error: something terrible happened)");
+main.cpp:2:3: error: something terrible happened)";
 
-  // Transform dianostics and check the results.
+  ClangdDiagnosticOptions Opts;
+  // Transform diagnostics and check the results.
   std::vector<std::pair<clangd::Diagnostic, std::vector<clangd::Fix>>> LSPDiags;
-  toLSPDiags(D,
-#ifdef _WIN32
-             URIForFile::canonicalize("c:\\path\\to\\foo\\bar\\main.cpp",
-                                      /*TUPath=*/""),
-#else
-      URIForFile::canonicalize("/path/to/foo/bar/main.cpp", /*TUPath=*/""),
-#endif
-             ClangdDiagnosticOptions(),
+  toLSPDiags(D, MainFile, Opts,
              [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix> Fixes) {
                LSPDiags.push_back(
                    {std::move(LSPDiag),
@@ -324,6 +333,30 @@ main.cpp:2:3: error: something terrible happened)");
   EXPECT_EQ(LSPDiags[0].first.source, "clang");
   EXPECT_EQ(LSPDiags[1].first.code, "");
   EXPECT_EQ(LSPDiags[1].first.source, "");
+
+  // Same thing, but don't flatten notes into the main list.
+  LSPDiags.clear();
+  Opts.EmitRelatedLocations = true;
+  toLSPDiags(D, MainFile, Opts,
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix> Fixes) {
+               LSPDiags.push_back(
+                   {std::move(LSPDiag),
+                    std::vector<clangd::Fix>(Fixes.begin(), Fixes.end())});
+             });
+  MainLSP.message = "Something terrible happened (fix available)";
+  DiagnosticRelatedInformation NoteInMainDRI;
+  NoteInMainDRI.message = "Declared somewhere in the main file";
+  NoteInMainDRI.location.range = NoteInMain.Range;
+  NoteInMainDRI.location.uri = MainFile;
+  MainLSP.relatedInformation = {NoteInMainDRI};
+  DiagnosticRelatedInformation NoteInHeaderDRI;
+  NoteInHeaderDRI.message = "Declared somewhere in the header file";
+  NoteInHeaderDRI.location.range = NoteInHeader.Range;
+  NoteInHeaderDRI.location.uri = HeaderFile;
+  MainLSP.relatedInformation = {NoteInMainDRI, NoteInHeaderDRI};
+  EXPECT_THAT(
+      LSPDiags,
+      ElementsAre(Pair(EqualToLSPDiag(MainLSP), ElementsAre(EqualToFix(F)))));
 }
 
 struct SymbolWithHeader {
