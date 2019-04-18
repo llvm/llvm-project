@@ -42,6 +42,7 @@ namespace clang {
 class ASTContext;
 class ASTMutationListener;
 class Attr;
+class BlockDecl;
 class DeclContext;
 class ExternalSourceSymbolAttr;
 class FunctionDecl;
@@ -1788,6 +1789,20 @@ public:
   }
 
   bool isClosure() const { return getDeclKind() == Decl::Block; }
+
+  /// Return this DeclContext if it is a BlockDecl. Otherwise, return the
+  /// innermost enclosing BlockDecl or null if there are no enclosing blocks.
+  const BlockDecl *getInnermostBlockDecl() const {
+    const DeclContext *Ctx = this;
+
+    do {
+      if (Ctx->isClosure())
+        return cast<BlockDecl>(Ctx);
+      Ctx = Ctx->getParent();
+    } while (Ctx);
+
+    return nullptr;
+  }
 
   bool isObjCContainer() const {
     switch (getDeclKind()) {
