@@ -3089,7 +3089,7 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
       if (dwarf_importer_ap) {
         m_dwarf_importer = dwarf_importer_ap.get();
         m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap),
-                                          is_clang);
+                                          !is_clang);
       }
     }
   }
