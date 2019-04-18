@@ -218,13 +218,8 @@ struct DivergencePropagator {
   template <typename SuccessorIterable>
   std::unique_ptr<ConstBlockSet>
   computeJoinPoints(const BasicBlock &RootBlock,
-                    SuccessorIterable NodeSuccessors, const Loop *ParentLoop) {
+                    SuccessorIterable NodeSuccessors, const Loop *ParentLoop, const BasicBlock * PdBoundBlock) {
     assert(JoinBlocks);
-
-    // immediate post dominator (no join block beyond that block)
-    const auto *PdNode = PDT.getNode(const_cast<BasicBlock *>(&RootBlock));
-    const auto *IpdNode = PdNode->getIDom();
-    const auto *PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
 
     // bootstrap with branch targets
     for (const auto *SuccBlock : NodeSuccessors) {
@@ -340,13 +335,23 @@ const ConstBlockSet &SyncDependenceAnalysis::join_blocks(const Loop &Loop) {
 
   // already available in cache?
   auto ItCached = CachedLoopExitJoins.find(&Loop);
-  if (ItCached != CachedLoopExitJoins.end())
+  if (ItCached != CachedLoopExitJoins.end()) {
     return *ItCached->second;
+  }
+
+  // dont propagte beyond the immediate post dom of the loop
+  const auto *PdNode = PDT.getNode(const_cast<BasicBlock *>(Loop.getHeader()));
+  const auto *IpdNode = PdNode->getIDom();
+  const auto *PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
+  while (PdBoundBlock && Loop.contains(PdBoundBlock)) {
+    IpdNode = IpdNode->getIDom();
+    PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
+  }
 
   // compute all join points
   DivergencePropagator Propagator{FuncRPOT, DT, PDT, LI};
   auto JoinBlocks = Propagator.computeJoinPoints<const LoopExitVec &>(
-      *Loop.getHeader(), LoopExits, Loop.getParentLoop());
+      *Loop.getHeader(), LoopExits, Loop.getParentLoop(), PdBoundBlock);
 
   auto ItInserted = CachedLoopExitJoins.emplace(&Loop, std::move(JoinBlocks));
   assert(ItInserted.second);
@@ -365,11 +370,16 @@ SyncDependenceAnalysis::join_blocks(const Instruction &Term) {
   if (ItCached != CachedBranchJoins.end())
     return *ItCached->second;
 
+  // dont propagate beyond the immediate post dominator of the branch
+  const auto *PdNode = PDT.getNode(const_cast<BasicBlock *>(Term.getParent()));
+  const auto *IpdNode = PdNode->getIDom();
+  const auto *PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
+
   // compute all join points
   DivergencePropagator Propagator{FuncRPOT, DT, PDT, LI};
   const auto &TermBlock = *Term.getParent();
   auto JoinBlocks = Propagator.computeJoinPoints<succ_const_range>(
-      TermBlock, successors(Term.getParent()), LI.getLoopFor(&TermBlock));
+      TermBlock, successors(Term.getParent()), LI.getLoopFor(&TermBlock), PdBoundBlock);
 
   auto ItInserted = CachedBranchJoins.emplace(&Term, std::move(JoinBlocks));
   assert(ItInserted.second);

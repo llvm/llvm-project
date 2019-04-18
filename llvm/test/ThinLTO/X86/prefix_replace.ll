@@ -10,6 +10,7 @@
 ; RUN: llvm-lto -thinlto-action=distributedindexes -thinlto-prefix-replace="%t/oldpath/;%t/newpath/" -thinlto-index %t.index.bc %t/oldpath/prefix_replace.o
 
 ; RUN: ls %t/newpath/prefix_replace.o.thinlto.bc
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f() {
 entry:

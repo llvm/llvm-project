@@ -220,6 +220,9 @@ public:
   /// Return the size in bytes of the memory reference.
   uint64_t getSize() const { return Size; }
 
+  /// Return the size in bits of the memory reference.
+  uint64_t getSizeInBits() const { return Size * 8; }
+
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
   uint64_t getAlignment() const;

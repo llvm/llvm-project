@@ -981,6 +981,20 @@ int f() {
 })test", Style));
 }
 
+TEST_F(FormatTestRawStrings, IndentsLastParamAfterNewline) {
+  FormatStyle Style = getRawStringPbStyleWithColumns(60);
+  expect_eq(R"test(
+fffffffffffffffffffff("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      R"pb(
+                        b: c
+                      )pb");)test",
+            format(R"test(
+fffffffffffffffffffff("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      R"pb(
+                      b: c
+                      )pb");)test",
+                   Style));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang

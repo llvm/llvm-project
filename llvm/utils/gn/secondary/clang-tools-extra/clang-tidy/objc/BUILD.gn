@@ -16,5 +16,6 @@ static_library("objc") {
     "ForbiddenSubclassingCheck.cpp",
     "ObjCTidyModule.cpp",
     "PropertyDeclarationCheck.cpp",
+    "SuperSelfCheck.cpp",
   ]
 }

@@ -6,7 +6,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "code": "warn_condition_is_assignment",
+# CHECK-NEXT:        "code": "-Wparentheses",
 # CHECK-NEXT:        "message": "Using the result of an assignment as a condition without parentheses (fixes available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {

@@ -20,7 +20,7 @@ public:
     SBInstruction ();
 
     SBInstruction (const SBInstruction &rhs);
-    
+
     ~SBInstruction ();
 
     bool
@@ -31,19 +31,19 @@ public:
     lldb::SBAddress
     GetAddress();
 
-    
+
     const char *
     GetMnemonic (lldb::SBTarget target);
-    
+
     const char *
     GetOperands (lldb::SBTarget target);
-    
+
     const char *
     GetComment (lldb::SBTarget target);
-    
+
     lldb::SBData
     GetData (lldb::SBTarget target);
-    
+
     size_t
     GetByteSize ();
 
@@ -67,10 +67,10 @@ public:
 
     bool
     DumpEmulation (const char * triple); // triple is to specify the architecture, e.g. 'armv6' or 'armv7-apple-ios'
-    
+
     bool
     TestEmulation (lldb::SBStream &output_stream, const char *test_file);
-    
+
     %pythoncode %{
         def __mnemonic_property__ (self):
             return self.GetMnemonic (target)
@@ -94,14 +94,14 @@ public:
 
         __swig_getmethods__["addr"] = GetAddress
         if _newclass: addr = property(GetAddress, None, doc='''A read only property that returns an lldb object that represents the address (lldb.SBAddress) for this instruction.''')
-        
+
         __swig_getmethods__["size"] = GetByteSize
         if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
 
         __swig_getmethods__["is_branch"] = DoesBranch
         if _newclass: is_branch = property(DoesBranch, None, doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
     %}
-    
+
 
 };
 

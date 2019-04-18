@@ -6,7 +6,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "code": "err_use_with_wrong_tag",
+# CHECK-NEXT:        "code": "use_with_wrong_tag",
 # CHECK-NEXT:        "codeActions": [
 # CHECK-NEXT:          {
 # CHECK-NEXT:            "edit": {

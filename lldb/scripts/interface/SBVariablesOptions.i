@@ -7,24 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 namespace lldb {
-    
+
 class SBVariablesOptions
 {
 public:
     SBVariablesOptions ();
-    
+
     SBVariablesOptions (const SBVariablesOptions& options);
-    
+
     ~SBVariablesOptions ();
-    
+
     bool
     IsValid () const;
 
     explicit operator bool() const;
-    
+
     bool
     GetIncludeArguments ()  const;
-    
+
     void
     SetIncludeArguments (bool);
 
@@ -36,33 +36,33 @@ public:
 
     bool
     GetIncludeLocals ()  const;
-    
+
     void
     SetIncludeLocals (bool);
-    
+
     bool
     GetIncludeStatics ()  const;
-    
+
     void
     SetIncludeStatics (bool);
-    
+
     bool
     GetInScopeOnly ()  const;
-    
+
     void
     SetInScopeOnly (bool);
-    
+
     bool
     GetIncludeRuntimeSupportValues () const;
-    
+
     void
     SetIncludeRuntimeSupportValues (bool);
-    
+
     lldb::DynamicValueType
     GetUseDynamic () const;
-    
+
     void
     SetUseDynamic (lldb::DynamicValueType);
 };
-    
+
 } // namespace lldb

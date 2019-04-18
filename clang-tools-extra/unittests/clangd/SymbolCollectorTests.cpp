@@ -272,8 +272,8 @@ public:
         Args, Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
-    InMemoryFileSystem->addFile(TestHeaderName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(HeaderCode));
+    InMemoryFileSystem->addFile(
+        TestHeaderName, 0, llvm::MemoryBuffer::getMemBuffer(HeaderCode));
     InMemoryFileSystem->addFile(TestFileName, 0,
                                 llvm::MemoryBuffer::getMemBuffer(MainCode));
     Invocation.run();
@@ -1064,7 +1064,18 @@ TEST_F(SymbolCollectorTest, NonModularHeader) {
   auto TU = TestTU::withHeaderCode("int x();");
   EXPECT_THAT(TU.headerSymbols(), ElementsAre(IncludeHeader()));
 
+  // Files missing include guards aren't eligible for insertion.
   TU.ImplicitHeaderGuard = false;
+  EXPECT_THAT(TU.headerSymbols(), ElementsAre(Not(IncludeHeader())));
+
+  // We recognize some patterns of trying to prevent insertion.
+  TU = TestTU::withHeaderCode(R"cpp(
+#ifndef SECRET
+#error "This file isn't safe to include directly"
+#endif
+    int x();
+    )cpp");
+  TU.ExtraArgs.push_back("-DSECRET"); // *we're* able to include it.
   EXPECT_THAT(TU.headerSymbols(), ElementsAre(Not(IncludeHeader())));
 }
 

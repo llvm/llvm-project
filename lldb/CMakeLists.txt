@@ -79,6 +79,9 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS darwin-debug)
   endif()
 
+  # lldb-test is an hard dependency for the testsuite.
+  list(APPEND LLDB_TEST_DEPS lldb-test)
+
   if(TARGET lldb-server)
     list(APPEND LLDB_TEST_DEPS lldb-server)
   endif()

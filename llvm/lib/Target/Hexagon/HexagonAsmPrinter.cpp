@@ -124,10 +124,6 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
-    case 'c': // Don't print "$" before a global var name or constant.
-      // Hexagon never has a prefix.
-      printOperand(MI, OpNo, OS);
-      return false;
     case 'L':
     case 'H': { // The highest-numbered register of a pair.
       const MachineOperand &MO = MI->getOperand(OpNo);

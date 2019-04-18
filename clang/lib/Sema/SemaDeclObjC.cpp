@@ -359,6 +359,7 @@ HasExplicitOwnershipAttr(Sema &S, ParmVarDecl *Param) {
 /// ActOnStartOfObjCMethodDef - This routine sets up parameters; invisible
 /// and user declared, in the method definition's AST.
 void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
+  ImplicitlyRetainedSelfLocs.clear();
   assert((getCurMethodDecl() == nullptr) && "Methodparsing confused");
   ObjCMethodDecl *MDecl = dyn_cast_or_null<ObjCMethodDecl>(D);
 

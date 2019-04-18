@@ -19,8 +19,7 @@ define i1 @uadd_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], -102
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[X]], -101
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -52,8 +51,7 @@ define i1 @uadd_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], -100
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[X]], -101
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -85,8 +83,7 @@ define i1 @sadd_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[X]], 26
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i8 [[X]], 27
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -118,8 +115,7 @@ define i1 @sadd_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[X]], 28
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i8 [[X]], 27
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -151,8 +147,7 @@ define i1 @usub_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], 101
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i8 [[X]], 100
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -184,8 +179,7 @@ define i1 @usub_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], 99
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i8 [[X]], 100
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -217,8 +211,7 @@ define i1 @ssub_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], -27
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], -28
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -250,8 +243,7 @@ define i1 @ssub_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], -29
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], -28
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -283,8 +275,7 @@ define i1 @umul_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], 24
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[X]], 25
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -316,8 +307,7 @@ define i1 @umul_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], 26
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[X]], 25
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -350,8 +340,7 @@ define i1 @smul_ov_false_bound1(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], -11
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], -12
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -383,8 +372,7 @@ define i1 @smul_ov_false_bound2(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[X]], 11
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i8 [[X]], 12
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -417,8 +405,7 @@ define i1 @smul_ov_true_bound1(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], -13
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X]], -12
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -450,8 +437,7 @@ define i1 @smul_ov_true_bound2(i8 %x, i8* %px, i1* %pc) {
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], 13
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X]], 12
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable

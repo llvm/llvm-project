@@ -76,15 +76,42 @@ class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
+struct LoopVectorizeOptions {
+  /// If false, consider all loops for interleaving.
+  /// If true, only loops that explicitly request interleaving are considered.
+  bool InterleaveOnlyWhenForced;
+
+  /// If false, consider all loops for vectorization.
+  /// If true, only loops that explicitly request vectorization are considered.
+  bool VectorizeOnlyWhenForced;
+
+  LoopVectorizeOptions()
+      : InterleaveOnlyWhenForced(false), VectorizeOnlyWhenForced(false) {}
+
+  LoopVectorizeOptions &setInterleaveOnlyWhenForced(bool Value) {
+    InterleaveOnlyWhenForced = Value;
+    return *this;
+  }
+
+  LoopVectorizeOptions &setVectorizeOnlyWhenForced(bool Value) {
+    VectorizeOnlyWhenForced = Value;
+    return *this;
+  }
+};
+
 /// The LoopVectorize Pass.
 struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
   /// If false, consider all loops for interleaving.
   /// If true, only loops that explicitly request interleaving are considered.
-  bool InterleaveOnlyWhenForced = false;
+  bool InterleaveOnlyWhenForced;
 
   /// If false, consider all loops for vectorization.
   /// If true, only loops that explicitly request vectorization are considered.
-  bool VectorizeOnlyWhenForced = false;
+  bool VectorizeOnlyWhenForced;
+
+  LoopVectorizePass(LoopVectorizeOptions Opts = {})
+      : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced),
+        VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced) {}
 
   ScalarEvolution *SE;
   LoopInfo *LI;

@@ -61,6 +61,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test_cwd(self):
         '''
@@ -89,6 +90,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test_debuggerRoot(self):
         '''

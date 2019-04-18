@@ -718,12 +718,12 @@ void Writer::createProducersSection() {
 }
 
 void Writer::createTargetFeaturesSection() {
-  if (TargetFeatures.size() == 0)
+  if (TargetFeatures.empty())
     return;
 
   SmallVector<std::string, 8> Emitted(TargetFeatures.begin(),
                                       TargetFeatures.end());
-  std::sort(Emitted.begin(), Emitted.end());
+  llvm::sort(Emitted);
   SyntheticSection *Section =
       createSyntheticSection(WASM_SEC_CUSTOM, "target_features");
   auto &OS = Section->getStream();

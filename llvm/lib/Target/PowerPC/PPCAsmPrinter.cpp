@@ -231,8 +231,6 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
-    case 'c': // Don't print "$" before a global var name or constant.
-      break; // PPC never has a prefix.
     case 'L': // Write second word of DImode reference.
       // Verify that this operand has two consecutive registers.
       if (!MI->getOperand(OpNo).isReg() ||

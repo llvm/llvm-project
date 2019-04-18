@@ -42,7 +42,7 @@ _LIBCPP_FUNC_VIS
 __libcpp_db*
 __get_db()
 {
-    static __libcpp_db db;
+    static _LIBCPP_NO_DESTROY __libcpp_db db;
     return &db;
 }
 
@@ -64,7 +64,7 @@ typedef lock_guard<mutex_type> RLock;
 mutex_type&
 mut()
 {
-    static mutex_type m;
+    static _LIBCPP_NO_DESTROY mutex_type m;
     return m;
 }
 #endif // !_LIBCPP_HAS_NO_THREADS

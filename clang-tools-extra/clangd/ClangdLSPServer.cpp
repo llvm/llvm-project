@@ -348,6 +348,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
   DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
   DiagOpts.SendDiagnosticCategory = Params.capabilities.DiagnosticCategory;
+  DiagOpts.EmitRelatedLocations =
+      Params.capabilities.DiagnosticRelatedInformation;
   if (Params.capabilities.WorkspaceSymbolKinds)
     SupportedSymbolKinds |= *Params.capabilities.WorkspaceSymbolKinds;
   if (Params.capabilities.CompletionItemKinds)

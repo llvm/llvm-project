@@ -10,6 +10,7 @@
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
 #include "Logger.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticIDs.h"
@@ -175,9 +176,7 @@ std::string capitalize(std::string Message) {
 }
 
 /// Returns a message sent to LSP for the main diagnostic in \p D.
-/// The message includes all the notes with their corresponding locations.
-/// However, notes with fix-its are excluded as those usually only contain a
-/// fix-it message and just add noise if included in the message for diagnostic.
+/// This message may include notes, if they're not emited in some other way.
 /// Example output:
 ///
 ///     no matching function for call to 'foo'
@@ -186,29 +185,34 @@ std::string capitalize(std::string Message) {
 ///
 ///     dir1/dir2/dir3/../../dir4/header.h:12:23
 ///     note: candidate function not viable: requires 3 arguments
-std::string mainMessage(const Diag &D, bool DisplayFixesCount) {
+std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << D.Message;
-  if (DisplayFixesCount && !D.Fixes.empty())
+  if (Opts.DisplayFixesCount && !D.Fixes.empty())
     OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)";
-  for (auto &Note : D.Notes) {
-    OS << "\n\n";
-    printDiag(OS, Note);
-  }
+  // If notes aren't emitted as structured info, add them to the message.
+  if (!Opts.EmitRelatedLocations)
+    for (auto &Note : D.Notes) {
+      OS << "\n\n";
+      printDiag(OS, Note);
+    }
   OS.flush();
   return capitalize(std::move(Result));
 }
 
 /// Returns a message sent to LSP for the note of the main diagnostic.
-/// The message includes the main diagnostic to provide the necessary context
-/// for the user to understand the note.
-std::string noteMessage(const Diag &Main, const DiagBase &Note) {
+std::string noteMessage(const Diag &Main, const DiagBase &Note,
+                        const ClangdDiagnosticOptions &Opts) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << Note.Message;
-  OS << "\n\n";
-  printDiag(OS, Main);
+  // If the client doesn't support structured links between the note and the
+  // original diagnostic, then emit the main diagnostic to give context.
+  if (!Opts.EmitRelatedLocations) {
+    OS << "\n\n";
+    printDiag(OS, Main);
+  }
   OS.flush();
   return capitalize(std::move(Result));
 }
@@ -275,39 +279,54 @@ void toLSPDiags(
     return Res;
   };
 
-  {
-    clangd::Diagnostic Main = FillBasicFields(D);
-    Main.message = mainMessage(D, Opts.DisplayFixesCount);
-    if (!D.Name.empty())
-      Main.code = D.Name;
-    switch (D.Source) {
-    case Diag::Clang:
-      Main.source = "clang";
-      break;
-    case Diag::ClangTidy:
-      Main.source = "clang-tidy";
-      break;
-    case Diag::Unknown:
-      break;
-    }
-    if (Opts.EmbedFixesInDiagnostics) {
-      Main.codeActions.emplace();
-      for (const auto &Fix : D.Fixes)
-        Main.codeActions->push_back(toCodeAction(Fix, File));
-    }
-    if (Opts.SendDiagnosticCategory && !D.Category.empty())
-      Main.category = D.Category;
-
-    OutFn(std::move(Main), D.Fixes);
+  clangd::Diagnostic Main = FillBasicFields(D);
+  Main.code = D.Name;
+  switch (D.Source) {
+  case Diag::Clang:
+    Main.source = "clang";
+    break;
+  case Diag::ClangTidy:
+    Main.source = "clang-tidy";
+    break;
+  case Diag::Unknown:
+    break;
   }
-
-  for (auto &Note : D.Notes) {
-    if (!Note.InsideMainFile)
-      continue;
-    clangd::Diagnostic Res = FillBasicFields(Note);
-    Res.message = noteMessage(D, Note);
-    OutFn(std::move(Res), llvm::ArrayRef<Fix>());
+  if (Opts.EmbedFixesInDiagnostics) {
+    Main.codeActions.emplace();
+    for (const auto &Fix : D.Fixes)
+      Main.codeActions->push_back(toCodeAction(Fix, File));
   }
+  if (Opts.SendDiagnosticCategory && !D.Category.empty())
+    Main.category = D.Category;
+
+  Main.message = mainMessage(D, Opts);
+  if (Opts.EmitRelatedLocations) {
+    Main.relatedInformation.emplace();
+    for (auto &Note : D.Notes) {
+      if (!Note.AbsFile) {
+        vlog("Dropping note from unknown file: {0}", Note);
+        continue;
+      }
+      DiagnosticRelatedInformation RelInfo;
+      RelInfo.location.range = Note.Range;
+      RelInfo.location.uri =
+          URIForFile::canonicalize(*Note.AbsFile, File.file());
+      RelInfo.message = noteMessage(D, Note, Opts);
+      Main.relatedInformation->push_back(std::move(RelInfo));
+    }
+  }
+  OutFn(std::move(Main), D.Fixes);
+
+  // If we didn't emit the notes as relatedLocations, emit separate diagnostics
+  // so the user can find the locations easily.
+  if (!Opts.EmitRelatedLocations)
+    for (auto &Note : D.Notes) {
+      if (!Note.InsideMainFile)
+        continue;
+      clangd::Diagnostic Res = FillBasicFields(Note);
+      Res.message = noteMessage(D, Note, Opts);
+      OutFn(std::move(Res), llvm::ArrayRef<Fix>());
+    }
 }
 
 int getSeverity(DiagnosticsEngine::Level L) {
@@ -331,7 +350,17 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   // Fill in name/source now that we have all the context needed to map them.
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
-      Diag.Name = ClangDiag;
+      // Warnings controlled by -Wfoo are better recognized by that name.
+      StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
+      if (!Warning.empty()) {
+        Diag.Name = ("-W" + Warning).str();
+      } else {
+        StringRef Name(ClangDiag);
+        // Almost always an error, with a name like err_enum_class_reference.
+        // Drop the err_ prefix for brevity.
+        Name.consume_front("err_");
+        Diag.Name = Name;
+      }
       Diag.Source = Diag::Clang;
       continue;
     }
@@ -340,6 +369,17 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
       if (!TidyDiag.empty()) {
         Diag.Name = std::move(TidyDiag);
         Diag.Source = Diag::ClangTidy;
+        // clang-tidy bakes the name into diagnostic messages. Strip it out.
+        // It would be much nicer to make clang-tidy not do this.
+        auto CleanMessage = [&](std::string &Msg) {
+          StringRef Rest(Msg);
+          if (Rest.consume_back("]") && Rest.consume_back(Diag.Name) &&
+              Rest.consume_back(" ["))
+            Msg.resize(Rest.size());
+        };
+        CleanMessage(Diag.Message);
+        for (auto& Note : Diag.Notes)
+          CleanMessage(Note.Message);
         continue;
       }
     }
@@ -375,6 +415,9 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     D.Message = Message.str();
     D.InsideMainFile = InsideMainFile;
     D.File = Info.getSourceManager().getFilename(Info.getLocation());
+    auto &SM = Info.getSourceManager();
+    D.AbsFile = getCanonicalPath(
+        SM.getFileEntryForID(SM.getFileID(Info.getLocation())), SM);
     D.Severity = DiagLevel;
     D.Category = DiagnosticIDs::getCategoryNameFromID(
                      DiagnosticIDs::getCategoryNumberForDiag(Info.getID()))

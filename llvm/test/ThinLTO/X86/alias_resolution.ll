@@ -43,6 +43,7 @@
 ; PROMOTE_MOD1: @weakfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @weakfunc.mod1 to void (...)*)
 ; PROMOTE_MOD2: @weakfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @weakfunc to void (...)*)
 
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc.mod1 to void (...)*)
 @linkonceODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc.mod1 to void (...)*)

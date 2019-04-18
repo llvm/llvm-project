@@ -141,6 +141,10 @@ struct VSFixedFileInfo {
 };
 static_assert(sizeof(VSFixedFileInfo) == 52, "");
 
+inline bool operator==(const VSFixedFileInfo &LHS, const VSFixedFileInfo &RHS) {
+  return memcmp(&LHS, &RHS, sizeof(VSFixedFileInfo)) == 0;
+}
+
 struct Module {
   support::ulittle64_t BaseOfImage;
   support::ulittle32_t SizeOfImage;

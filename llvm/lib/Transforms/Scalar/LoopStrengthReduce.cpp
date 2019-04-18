@@ -5356,7 +5356,7 @@ void LSRInstance::RewriteForPHI(
         Pair.first->second = FullV;
       }
 
-      // If LSR split critical edge and phi node has other pending
+      // If LSR splits critical edge and phi node has other pending
       // fixup operands, we need to update those pending fixups. Otherwise
       // formulae will not be implemented completely and some instructions
       // will not be eliminated.

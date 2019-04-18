@@ -437,15 +437,15 @@ bool InstructionSelector::executeMatchTable(
 
       unsigned Size = MRI.getType(MO.getReg()).getSizeInBits();
       if (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT &&
-          MMO->getSize() * 8 != Size) {
+          MMO->getSizeInBits() != Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeLessThanLLT &&
-                 MMO->getSize() * 8 >= Size) {
+                 MMO->getSizeInBits() >= Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT &&
-                 MMO->getSize() * 8 <= Size)
+                 MMO->getSizeInBits() <= Size)
         if (handleReject() == RejectAndGiveUp)
           return false;
 

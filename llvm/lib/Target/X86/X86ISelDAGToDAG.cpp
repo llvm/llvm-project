@@ -1906,6 +1906,42 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
 
     break;
   }
+  case ISD::ZERO_EXTEND: {
+    // Try to widen a zexted shift left to the same size as its use, so we can
+    // match the shift as a scale factor.
+    if (AM.IndexReg.getNode() != nullptr || AM.Scale != 1)
+      break;
+    if (N.getOperand(0).getOpcode() != ISD::SHL || !N.getOperand(0).hasOneUse())
+      break;
+
+    // Give up if the shift is not a valid scale factor [1,2,3].
+    SDValue Shl = N.getOperand(0);
+    auto *ShAmtC = dyn_cast<ConstantSDNode>(Shl.getOperand(1));
+    if (!ShAmtC || ShAmtC->getZExtValue() > 3)
+      break;
+
+    // The narrow shift must only shift out zero bits (it must be 'nuw').
+    // That makes it safe to widen to the destination type.
+    APInt HighZeros = APInt::getHighBitsSet(Shl.getValueSizeInBits(),
+                                            ShAmtC->getZExtValue());
+    if (!CurDAG->MaskedValueIsZero(Shl.getOperand(0), HighZeros))
+      break;
+
+    // zext (shl nuw i8 %x, C) to i32 --> shl (zext i8 %x to i32), (zext C)
+    MVT VT = N.getSimpleValueType();
+    SDLoc DL(N);
+    SDValue Zext = CurDAG->getNode(ISD::ZERO_EXTEND, DL, VT, Shl.getOperand(0));
+    SDValue NewShl = CurDAG->getNode(ISD::SHL, DL, VT, Zext, Shl.getOperand(1));
+
+    // Convert the shift to scale factor.
+    AM.Scale = 1 << ShAmtC->getZExtValue();
+    AM.IndexReg = Zext;
+
+    insertDAGNode(*CurDAG, N, Zext);
+    insertDAGNode(*CurDAG, N, NewShl);
+    CurDAG->ReplaceAllUsesWith(N, NewShl);
+    return false;
+  }
   }
 
   return matchAddressBase(N, AM);

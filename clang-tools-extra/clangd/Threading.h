@@ -117,16 +117,6 @@ private:
   std::size_t InFlightTasks = 0;
 };
 
-enum class ThreadPriority {
-  Low = 0,
-  Normal = 1,
-};
-void setCurrentThreadPriority(ThreadPriority Priority);
-// Avoid the use of scheduler policies that may starve low-priority threads.
-// This prevents tests from timing out on loaded systems.
-// Affects subsequent setThreadPriority() calls.
-void preventThreadStarvationInTests();
-
 } // namespace clangd
 } // namespace clang
 #endif

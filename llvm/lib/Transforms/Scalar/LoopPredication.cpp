@@ -178,6 +178,7 @@
 
 #include "llvm/Transforms/Scalar/LoopPredication.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -246,6 +247,7 @@ class LoopPredication {
     }
   };
 
+  AliasAnalysis *AA;
   ScalarEvolution *SE;
   BranchProbabilityInfo *BPI;
 
@@ -275,7 +277,11 @@ class LoopPredication {
   /// passed to SCEVExpander!
   Instruction *findInsertPt(Instruction *User, ArrayRef<const SCEV*> Ops);
 
-  bool CanExpand(const SCEV* S);
+  /// Return true if the value is known to produce a single fixed value across
+  /// all iterations on which it executes.  Note that this does not imply
+  /// speculation safety.  That must be established seperately.  
+  bool isLoopInvariantValue(const SCEV* S);
+
   Value *expandCheck(SCEVExpander &Expander, Instruction *Guard,
                      ICmpInst::Predicate Pred, const SCEV *LHS,
                      const SCEV *RHS);
@@ -318,8 +324,9 @@ class LoopPredication {
   Optional<LoopICmp> generateLoopLatchCheck(Type *RangeCheckType);
 
 public:
-  LoopPredication(ScalarEvolution *SE, BranchProbabilityInfo *BPI)
-      : SE(SE), BPI(BPI){};
+  LoopPredication(AliasAnalysis *AA, ScalarEvolution *SE,
+                  BranchProbabilityInfo *BPI)
+    : AA(AA), SE(SE), BPI(BPI){};
   bool runOnLoop(Loop *L);
 };
 
@@ -341,7 +348,8 @@ public:
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     BranchProbabilityInfo &BPI =
         getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-    LoopPredication LP(SE, &BPI);
+    auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+    LoopPredication LP(AA, SE, &BPI);
     return LP.runOnLoop(L);
   }
 };
@@ -367,7 +375,7 @@ PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
   Function *F = L.getHeader()->getParent();
   auto *BPI = FAM.getCachedResult<BranchProbabilityAnalysis>(*F);
-  LoopPredication LP(&AR.SE, BPI);
+  LoopPredication LP(&AR.AA, &AR.SE, BPI);
   if (!LP.runOnLoop(&L))
     return PreservedAnalyses::all();
 
@@ -462,15 +470,51 @@ Instruction *LoopPredication::findInsertPt(Instruction *Use,
 
 Instruction *LoopPredication::findInsertPt(Instruction *Use,
                                            ArrayRef<const SCEV*> Ops) {
+  // Subtlety: SCEV considers things to be invariant if the value produced is
+  // the same across iterations.  This is not the same as being able to
+  // evaluate outside the loop, which is what we actually need here.
   for (const SCEV *Op : Ops)
-    if (!SE->isLoopInvariant(Op, L))
+    if (!SE->isLoopInvariant(Op, L) ||
+        !isSafeToExpandAt(Op, Preheader->getTerminator(), *SE))
       return Use;
   return Preheader->getTerminator();
 }
 
+bool LoopPredication::isLoopInvariantValue(const SCEV* S) { 
+  // Handling expressions which produce invariant results, but *haven't* yet
+  // been removed from the loop serves two important purposes.
+  // 1) Most importantly, it resolves a pass ordering cycle which would
+  // otherwise need us to iteration licm, loop-predication, and either
+  // loop-unswitch or loop-peeling to make progress on examples with lots of
+  // predicable range checks in a row.  (Since, in the general case,  we can't
+  // hoist the length checks until the dominating checks have been discharged
+  // as we can't prove doing so is safe.)
+  // 2) As a nice side effect, this exposes the value of peeling or unswitching
+  // much more obviously in the IR.  Otherwise, the cost modeling for other
+  // transforms would end up needing to duplicate all of this logic to model a
+  // check which becomes predictable based on a modeled peel or unswitch.
+  // 
+  // The cost of doing so in the worst case is an extra fill from the stack  in
+  // the loop to materialize the loop invariant test value instead of checking
+  // against the original IV which is presumable in a register inside the loop.
+  // Such cases are presumably rare, and hint at missing oppurtunities for
+  // other passes. 
 
-bool LoopPredication::CanExpand(const SCEV* S) {
-  return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
+  if (SE->isLoopInvariant(S, L))
+    // Note: This the SCEV variant, so the original Value* may be within the
+    // loop even though SCEV has proven it is loop invariant.
+    return true;
+
+  // Handle a particular important case which SCEV doesn't yet know about which
+  // shows up in range checks on arrays with immutable lengths.  
+  // TODO: This should be sunk inside SCEV.
+  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S))
+    if (const auto *LI = dyn_cast<LoadInst>(U->getValue()))
+      if (LI->isUnordered() && L->hasLoopInvariantOperands(LI))
+        if (AA->pointsToConstantMemory(LI->getOperand(0)) ||
+            LI->getMetadata(LLVMContext::MD_invariant_load) != nullptr)
+          return true;
+  return false;
 }
 
 Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
@@ -487,16 +531,26 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
   const SCEV *GuardLimit = RangeCheck.Limit;
   const SCEV *LatchStart = LatchCheck.IV->getStart();
   const SCEV *LatchLimit = LatchCheck.Limit;
+  // Subtlety: We need all the values to be *invariant* across all iterations,
+  // but we only need to check expansion safety for those which *aren't*
+  // already guaranteed to dominate the guard.  
+  if (!isLoopInvariantValue(GuardStart) ||
+      !isLoopInvariantValue(GuardLimit) ||
+      !isLoopInvariantValue(LatchStart) ||
+      !isLoopInvariantValue(LatchLimit)) {
+    LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
+    return None;
+  }
+  if (!isSafeToExpandAt(LatchStart, Guard, *SE) ||
+      !isSafeToExpandAt(LatchLimit, Guard, *SE)) {
+    LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
+    return None;
+  }
 
   // guardLimit - guardStart + latchStart - 1
   const SCEV *RHS =
       SE->getAddExpr(SE->getMinusSCEV(GuardLimit, GuardStart),
                      SE->getMinusSCEV(LatchStart, SE->getOne(Ty)));
-  if (!CanExpand(GuardStart) || !CanExpand(GuardLimit) ||
-      !CanExpand(LatchLimit) || !CanExpand(RHS)) {
-    LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
-    return None;
-  }
   auto LimitCheckPred =
       ICmpInst::getFlippedStrictnessPredicate(LatchCheck.Pred);
 
@@ -518,9 +572,20 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
   auto *Ty = RangeCheck.IV->getType();
   const SCEV *GuardStart = RangeCheck.IV->getStart();
   const SCEV *GuardLimit = RangeCheck.Limit;
+  const SCEV *LatchStart = LatchCheck.IV->getStart();
   const SCEV *LatchLimit = LatchCheck.Limit;
-  if (!CanExpand(GuardStart) || !CanExpand(GuardLimit) ||
-      !CanExpand(LatchLimit)) {
+  // Subtlety: We need all the values to be *invariant* across all iterations,
+  // but we only need to check expansion safety for those which *aren't*
+  // already guaranteed to dominate the guard.  
+  if (!isLoopInvariantValue(GuardStart) ||
+      !isLoopInvariantValue(GuardLimit) ||
+      !isLoopInvariantValue(LatchStart) ||
+      !isLoopInvariantValue(LatchLimit)) {
+    LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
+    return None;
+  }
+  if (!isSafeToExpandAt(LatchStart, Guard, *SE) ||
+      !isSafeToExpandAt(LatchLimit, Guard, *SE)) {
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }

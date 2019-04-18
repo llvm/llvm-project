@@ -44,14 +44,24 @@ namespace clang {
 namespace clangd {
 namespace {
 
+// Expand a DiagnosticError to make it print-friendly (print the detailed
+// message, rather than "clang diagnostic").
+llvm::Error expandDiagnostics(llvm::Error Err, DiagnosticsEngine &DE) {
+  if (auto Diag = DiagnosticError::take(Err)) {
+    llvm::cantFail(std::move(Err));
+    SmallVector<char, 128> DiagMessage;
+    Diag->second.EmitToString(DE, DiagMessage);
+    return llvm::make_error<llvm::StringError>(DiagMessage,
+                                               llvm::inconvertibleErrorCode());
+  }
+  return Err;
+}
+
 class RefactoringResultCollector final
     : public tooling::RefactoringResultConsumer {
 public:
   void handleError(llvm::Error Err) override {
     assert(!Result.hasValue());
-    // FIXME: figure out a way to return better message for DiagnosticError.
-    // clangd uses llvm::toString to convert the Err to string, however, for
-    // DiagnosticError, only "clang diagnostic" will be generated.
     Result = std::move(Err);
   }
 
@@ -301,13 +311,15 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     auto Rename = clang::tooling::RenameOccurrences::initiate(
         Context, SourceRange(SourceLocationBeg), NewName);
     if (!Rename)
-      return CB(Rename.takeError());
+      return CB(expandDiagnostics(Rename.takeError(),
+                                  AST.getASTContext().getDiagnostics()));
 
     Rename->invoke(ResultCollector, Context);
 
     assert(ResultCollector.Result.hasValue());
     if (!ResultCollector.Result.getValue())
-      return CB(ResultCollector.Result->takeError());
+      return CB(expandDiagnostics(ResultCollector.Result->takeError(),
+                                  AST.getASTContext().getDiagnostics()));
 
     std::vector<TextEdit> Replacements;
     for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
