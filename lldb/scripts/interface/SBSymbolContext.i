@@ -72,16 +72,16 @@ public:
     void SetBlock       (lldb::SBBlock block);
     void SetLineEntry   (lldb::SBLineEntry line_entry);
     void SetSymbol      (lldb::SBSymbol symbol);
-    
+
     lldb::SBSymbolContext
-    GetParentOfInlinedScope (const lldb::SBAddress &curr_frame_pc, 
+    GetParentOfInlinedScope (const lldb::SBAddress &curr_frame_pc,
                              lldb::SBAddress &parent_frame_addr) const;
-    
+
 
     bool
     GetDescription (lldb::SBStream &description);
-    
-    
+
+
     %pythoncode %{
         __swig_getmethods__["module"] = GetModule
         __swig_setmethods__["module"] = SetModule
@@ -98,7 +98,7 @@ public:
         __swig_getmethods__["block"] = GetBlock
         __swig_setmethods__["block"] = SetBlock
         if _newclass: block = property(GetBlock, SetBlock, doc='''A read/write property that allows the getting/setting of the block (lldb.SBBlock) in this symbol context.''')
-            
+
         __swig_getmethods__["symbol"] = GetSymbol
         __swig_setmethods__["symbol"] = SetSymbol
         if _newclass: symbol = property(GetSymbol, SetSymbol, doc='''A read/write property that allows the getting/setting of the symbol (lldb.SBSymbol) in this symbol context.''')
