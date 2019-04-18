@@ -190,7 +190,6 @@ HashedCollectionConfig::RegisterSummaryProviders(
   lldb::TypeCategoryImplSP swift_category_sp,
   TypeSummaryImpl::Flags flags
 ) const {
-#ifndef LLDB_DISABLE_PYTHON
   using lldb_private::formatters::AddCXXSummary;
 
   auto summaryProvider = GetSummaryProvider();
@@ -218,8 +217,6 @@ HashedCollectionConfig::RegisterSummaryProviders(
   AddCXXSummary(swift_category_sp, summaryProvider,
                 m_summaryProviderName.AsCString(),
                 m_deferredBridgedStorage_mangledRegex_ObjC, flags, true);
-
-#endif // LLDB_DISABLE_PYTHON
 }
 
 void
@@ -227,7 +224,6 @@ HashedCollectionConfig::RegisterSyntheticChildrenCreators(
   lldb::TypeCategoryImplSP swift_category_sp,
   SyntheticChildren::Flags flags
 ) const {
-#ifndef LLDB_DISABLE_PYTHON
   using lldb_private::formatters::AddCXXSynthetic;
 
   auto creator = GetSyntheticChildrenCreator();
@@ -255,7 +251,6 @@ HashedCollectionConfig::RegisterSyntheticChildrenCreators(
   AddCXXSynthetic(swift_category_sp, creator,
                   m_syntheticChildrenName.AsCString(),
                   m_deferredBridgedStorage_mangledRegex_ObjC, flags, true);
-#endif // LLDB_DISABLE_PYTHON
 }
 
 bool
