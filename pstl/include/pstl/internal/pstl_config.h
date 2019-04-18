@@ -25,12 +25,8 @@
 #    define _PSTL_USE_PAR_POLICIES 1
 #endif
 
-#if _PSTL_USE_PAR_POLICIES
-#    if !defined(_PSTL_PAR_BACKEND_TBB)
-#        define _PSTL_PAR_BACKEND_TBB 1
-#    endif
-#else
-#    undef _PSTL_PAR_BACKEND_TBB
+#if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB)
+#   error "The parallel backend is neither serial nor TBB"
 #endif
 
 // Check the user-defined macro for warnings
