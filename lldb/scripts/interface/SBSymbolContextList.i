@@ -27,8 +27,7 @@ For example (from test/python_api/target/TestTargetAPI.py),
 
         for sc in list:
             self.assertTrue(sc.GetModule().GetFileSpec().GetFilename() == exe_name)
-            self.assertTrue(sc.GetSymbol().GetName() == 'c')                
-") SBSymbolContextList;
+            self.assertTrue(sc.GetSymbol().GetName() == 'c')") SBSymbolContextList;
 class SBSymbolContextList
 {
 public:
@@ -51,7 +50,7 @@ public:
 
     void
     Append (lldb::SBSymbolContext &sc);
-    
+
     void
     Append (lldb::SBSymbolContextList &sc_list);
 
@@ -60,7 +59,7 @@ public:
 
     void
     Clear();
-    
+
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all symbol contexts in a lldb.SBSymbolContextList
@@ -78,7 +77,7 @@ public:
                 else:
                     raise IndexError
             raise TypeError
-        
+
         def get_module_array(self):
             a = []
             for i in range(len(self)):
@@ -86,7 +85,7 @@ public:
                 if obj:
                     a.append(obj)
             return a
-            
+
         def get_compile_unit_array(self):
             a = []
             for i in range(len(self)):
@@ -124,19 +123,19 @@ public:
             return a
         __swig_getmethods__["modules"] = get_module_array
         if _newclass: modules = property(get_module_array, None, doc='''Returns a list() of lldb.SBModule objects, one for each module in each SBSymbolContext object in this list.''')
-        
+
         __swig_getmethods__["compile_units"] = get_compile_unit_array
         if _newclass: compile_units = property(get_compile_unit_array, None, doc='''Returns a list() of lldb.SBCompileUnit objects, one for each compile unit in each SBSymbolContext object in this list.''')
-        
+
         __swig_getmethods__["functions"] = get_function_array
         if _newclass: functions = property(get_function_array, None, doc='''Returns a list() of lldb.SBFunction objects, one for each function in each SBSymbolContext object in this list.''')
-        
+
         __swig_getmethods__["blocks"] = get_block_array
         if _newclass: blocks = property(get_block_array, None, doc='''Returns a list() of lldb.SBBlock objects, one for each block in each SBSymbolContext object in this list.''')
-        
+
         __swig_getmethods__["line_entries"] = get_line_entry_array
         if _newclass: line_entries = property(get_line_entry_array, None, doc='''Returns a list() of lldb.SBLineEntry objects, one for each line entry in each SBSymbolContext object in this list.''')
-        
+
         __swig_getmethods__["symbols"] = get_symbol_array
         if _newclass: symbols = property(get_symbol_array, None, doc='''Returns a list() of lldb.SBSymbol objects, one for each symbol in each SBSymbolContext object in this list.''')
     %}

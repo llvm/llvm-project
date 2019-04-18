@@ -156,15 +156,6 @@ class DarwinLocalTI(DefaultTargetInfo):
             env['DYLD_LIBRARY_PATH'] = ':'.join(library_paths)
 
     def allow_cxxabi_link(self):
-        # FIXME: PR27405
-        # libc++ *should* export all of the symbols found in libc++abi on OS X.
-        # For this reason LibcxxConfiguration will not link libc++abi in OS X.
-        # However __cxa_throw_bad_new_array_length doesn't get exported into
-        # libc++ yet so we still need to explicitly link libc++abi when testing
-        # libc++abi
-        # See PR22654.
-        if(self.full_config.get_lit_conf('name', '') == 'libc++abi'):
-            return True
         # Don't link libc++abi explicitly on OS X because the symbols
         # should be available in libc++ directly.
         return False

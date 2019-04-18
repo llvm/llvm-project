@@ -27,7 +27,7 @@ public:
     SBBroadcaster (const char *name);
 
     SBBroadcaster (const SBBroadcaster &rhs);
-    
+
     ~SBBroadcaster();
 
     bool
@@ -58,10 +58,10 @@ public:
 
     bool
     RemoveListener (const lldb::SBListener &listener, uint32_t event_mask = UINT32_MAX);
-    
+
     bool
     operator == (const lldb::SBBroadcaster &rhs) const;
-    
+
     bool
     operator != (const lldb::SBBroadcaster &rhs) const;
 };

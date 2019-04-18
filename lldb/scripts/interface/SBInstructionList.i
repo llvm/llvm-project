@@ -31,7 +31,7 @@ public:
     SBInstructionList ();
 
     SBInstructionList (const SBInstructionList &rhs);
-    
+
     ~SBInstructionList ();
 
     bool
@@ -59,7 +59,7 @@ public:
 
     bool
     GetDescription (lldb::SBStream &description);
-    
+
     bool
     DumpEmulationForAllInstructions (const char *triple);
 
@@ -92,7 +92,7 @@ public:
                         return closest_inst
                     else:
                         closest_inst = inst
-            return None        
+            return None
     %}
 
 };

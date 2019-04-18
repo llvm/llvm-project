@@ -8,20 +8,27 @@
 
 // UNSUPPORTED: libcxxabi-no-exceptions
 
+// This tests that libc++abi still provides __cxa_uncaught_exception() for
+// ABI compatibility, even though the Standard doesn't require it to.
+//
+// We need to explicitly link against libc++abi, because libc++ does not
+// re-export this symbol.
+
+// RUN: %build -lc++abi -o %t.exe
+// RUN: %t.exe
+
 #include <cxxabi.h>
 #include <cassert>
 
 // namespace __cxxabiv1 {
-//      extern unsigned int __cxa_uncaught_exceptions() throw();
+//      extern bool __cxa_uncaught_exception () throw();
 // }
 
 struct A {
-    A(unsigned cnt) : data_(cnt) {}
-    ~A() { assert( data_ == __cxxabiv1::__cxa_uncaught_exceptions()); }
-    unsigned data_;
+    ~A() { assert( __cxxabiv1::__cxa_uncaught_exception()); }
 };
 
 int main () {
-    try { A a(1); throw 3; assert(false); }
+    try { A a; throw 3; assert(false); }
     catch (int) {}
 }

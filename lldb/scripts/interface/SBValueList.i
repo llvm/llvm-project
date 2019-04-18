@@ -79,8 +79,8 @@ public:
     IsValid() const;
 
     explicit operator bool() const;
-    
-    void 
+
+    void
     Clear();
 
     void
@@ -97,10 +97,10 @@ public:
 
     lldb::SBValue
     FindValueObjectByUID (lldb::user_id_t uid);
-    
+
     lldb::SBValue
     GetFirstValueByName (const char* name) const;
-    
+
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all values in a lldb.SBValueList object.'''
