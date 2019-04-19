@@ -55,6 +55,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -1427,13 +1428,10 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
     // Move the new node to the destination block, before its terminator.
     moveInstructionBefore(I, *Dest->getTerminator(), *SafetyInfo);
 
-  // Do not retain debug locations when we are moving instructions to different
-  // basic blocks, because we want to avoid jumpy line tables. Calls, however,
-  // need to retain their debug locs because they may be inlined.
-  // FIXME: How do we retain source locations without causing poor debugging
-  // behavior?
-  if (!isa<CallInst>(I))
-    I.setDebugLoc(DebugLoc());
+  // Apply line 0 debug locations when we are moving instructions to different
+  // basic blocks because we want to avoid jumpy line tables.
+  if (const DebugLoc &DL = I.getDebugLoc())
+    I.setDebugLoc(DebugLoc::get(0, 0, DL.getScope(), DL.getInlinedAt()));
 
   if (isa<LoadInst>(I))
     ++NumMovedLoads;
