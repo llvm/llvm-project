@@ -1554,3 +1554,9 @@ void memset28() {
   // This should be true.
   clang_analyzer_eval(x == 0x101); // expected-warning{{UNKNOWN}}
 }
+
+void memset29_plain_int_zero() {
+  short x;
+  memset(&x, 0, sizeof(short));
+  clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
+}

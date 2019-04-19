@@ -1461,12 +1461,17 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
 
   Module *NewM = New->getOwningModule();
   Module *OldM = Old->getOwningModule();
+
+  if (NewM && NewM->Kind == Module::PrivateModuleFragment)
+    NewM = NewM->Parent;
+  if (OldM && OldM->Kind == Module::PrivateModuleFragment)
+    OldM = OldM->Parent;
+
   if (NewM == OldM)
     return false;
 
-  // FIXME: Check proclaimed-ownership-declarations here too.
-  bool NewIsModuleInterface = NewM && NewM->Kind == Module::ModuleInterfaceUnit;
-  bool OldIsModuleInterface = OldM && OldM->Kind == Module::ModuleInterfaceUnit;
+  bool NewIsModuleInterface = NewM && NewM->isModulePurview();
+  bool OldIsModuleInterface = OldM && OldM->isModulePurview();
   if (NewIsModuleInterface || OldIsModuleInterface) {
     // C++ Modules TS [basic.def.odr] 6.2/6.7 [sic]:
     //   if a declaration of D [...] appears in the purview of a module, all
@@ -9618,9 +9623,7 @@ static bool CheckMultiVersionAdditionalRules(Sema &S, const FunctionDecl *OldFD,
 /// Returns true if there was an error, false otherwise.
 static bool CheckMultiVersionFirstFunction(Sema &S, FunctionDecl *FD,
                                            MultiVersionKind MVType,
-                                           const TargetAttr *TA,
-                                           const CPUDispatchAttr *CPUDisp,
-                                           const CPUSpecificAttr *CPUSpec) {
+                                           const TargetAttr *TA) {
   assert(MVType != MultiVersionKind::None &&
          "Function lacks multiversion attribute");
 
@@ -9927,8 +9930,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     // multiversioning, this isn't an error condition.
     if (MVType == MultiVersionKind::None)
       return false;
-    return CheckMultiVersionFirstFunction(S, NewFD, MVType, NewTA, NewCPUDisp,
-                                          NewCPUSpec);
+    return CheckMultiVersionFirstFunction(S, NewFD, MVType, NewTA);
   }
 
   FunctionDecl *OldFD = OldDecl->getAsFunction();
@@ -11783,7 +11785,6 @@ Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
   D.SetIdentifier(Ident, IdentLoc);
   D.takeAttributes(Attrs, AttrEnd);
 
-  ParsedAttributes EmptyAttrs(Attrs.getPool().getFactory());
   D.AddTypeInfo(DeclaratorChunk::getReference(0, IdentLoc, /*lvalue*/ false),
                 IdentLoc);
   Decl *Var = ActOnDeclarator(S, D);

@@ -93,8 +93,8 @@ struct TranslationUnitDiagnostics {
   std::vector<Diagnostic> Diagnostics;
 };
 
-// Get the first fix to apply for this diagnostic.
-// Return nullptr if no fixes attached to the diagnostic.
+/// Get the first fix to apply for this diagnostic.
+/// \returns nullptr if no fixes are attached to the diagnostic.
 const llvm::StringMap<Replacements> *selectFirstFix(const Diagnostic& D);
 
 } // end namespace tooling

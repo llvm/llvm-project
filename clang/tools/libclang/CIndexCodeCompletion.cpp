@@ -568,9 +568,8 @@ namespace {
     CaptureCompletionResults(const CodeCompleteOptions &Opts,
                              AllocatedCXCodeCompleteResults &Results,
                              CXTranslationUnit *TranslationUnit)
-      : CodeCompleteConsumer(Opts, false), 
-        AllocatedResults(Results), CCTUInfo(Results.CodeCompletionAllocator),
-        TU(TranslationUnit) { }
+        : CodeCompleteConsumer(Opts), AllocatedResults(Results),
+          CCTUInfo(Results.CodeCompletionAllocator), TU(TranslationUnit) {}
     ~CaptureCompletionResults() override { Finish(); }
 
     void ProcessCodeCompleteResults(Sema &S, 

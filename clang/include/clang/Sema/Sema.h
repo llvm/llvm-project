@@ -1393,8 +1393,21 @@ public:
 
   void emitAndClearUnusedLocalTypedefWarnings();
 
+  enum TUFragmentKind {
+    /// The global module fragment, between 'module;' and a module-declaration.
+    Global,
+    /// A normal translation unit fragment. For a non-module unit, this is the
+    /// entire translation unit. Otherwise, it runs from the module-declaration
+    /// to the private-module-fragment (if any) or the end of the TU (if not).
+    Normal,
+    /// The private module fragment, between 'module :private;' and the end of
+    /// the translation unit.
+    Private
+  };
+
   void ActOnStartOfTranslationUnit();
   void ActOnEndOfTranslationUnit();
+  void ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind);
 
   void CheckDelegatingCtorCycles();
 
@@ -2208,10 +2221,7 @@ public:
   /// \param ModuleLoc The location of the 'module' keyword.
   /// \param PrivateLoc The location of the 'private' keyword.
   DeclGroupPtrTy ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
-                                                SourceLocation PrivateLoc) {
-    // FIXME
-    return DeclGroupPtrTy();
-  }
+                                                SourceLocation PrivateLoc);
 
   /// The parser has processed a module import declaration.
   ///

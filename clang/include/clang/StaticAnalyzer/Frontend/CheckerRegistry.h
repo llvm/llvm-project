@@ -81,11 +81,10 @@ namespace ento {
 /// "core.builtin", or the full name "core.builtin.NoReturnFunctionChecker".
 class CheckerRegistry {
 public:
-  CheckerRegistry(
-      ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
-      AnalyzerOptions &AnOpts, const LangOptions &LangOpts,
-      ArrayRef<std::function<void(CheckerRegistry &)>>
-          checkerRegistrationFns = {});
+  CheckerRegistry(ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
+                  AnalyzerOptions &AnOpts, const LangOptions &LangOpts,
+                  ArrayRef<std::function<void(CheckerRegistry &)>>
+                      checkerRegistrationFns = {});
 
   /// Initialization functions perform any necessary setup for a checker.
   /// They should include a call to CheckerManager::registerChecker.
@@ -109,8 +108,8 @@ public:
       State_Enabled
     };
 
-    InitializationFunction Initialize;
-    ShouldRegisterFunction ShouldRegister;
+    InitializationFunction Initialize = nullptr;
+    ShouldRegisterFunction ShouldRegister = nullptr;
     StringRef FullName;
     StringRef Desc;
     StringRef DocumentationUri;
@@ -130,19 +129,19 @@ public:
                 StringRef Name, StringRef Desc, StringRef DocsUri)
         : Initialize(Fn), ShouldRegister(sfn), FullName(Name), Desc(Desc),
           DocumentationUri(DocsUri) {}
+
+    // Used for lower_bound.
+    explicit CheckerInfo(StringRef FullName) : FullName(FullName) {}
   };
 
   using StateFromCmdLine = CheckerInfo::StateFromCmdLine;
 
 private:
-  template <typename T>
-  static void initializeManager(CheckerManager &mgr) {
+  template <typename T> static void initializeManager(CheckerManager &mgr) {
     mgr.registerChecker<T>();
   }
 
-
-  template <typename T>
-  static bool returnTrue(const LangOptions &LO) {
+  template <typename T> static bool returnTrue(const LangOptions &LO) {
     return true;
   }
 
@@ -164,40 +163,23 @@ public:
 
   /// Makes the checker with the full name \p fullName depends on the checker
   /// called \p dependency.
-  void addDependency(StringRef fullName, StringRef dependency) {
-    auto CheckerThatNeedsDeps =
-       [&fullName](const CheckerInfo &Chk) { return Chk.FullName == fullName; };
-    auto Dependency =
-      [&dependency](const CheckerInfo &Chk) {
-        return Chk.FullName == dependency;
-      };
-
-    auto CheckerIt = llvm::find_if(Checkers, CheckerThatNeedsDeps);
-    assert(CheckerIt != Checkers.end() &&
-           "Failed to find the checker while attempting to set up it's "
-           "dependencies!");
-
-    auto DependencyIt = llvm::find_if(Checkers, Dependency);
-    assert(DependencyIt != Checkers.end() &&
-           "Failed to find the dependency of a checker!");
-
-    CheckerIt->Dependencies.push_back(&*DependencyIt);
-  }
+  void addDependency(StringRef FullName, StringRef Dependency);
 
   // FIXME: This *really* should be added to the frontend flag descriptions.
   /// Initializes a CheckerManager by calling the initialization functions for
   /// all checkers specified by the given CheckerOptInfo list. The order of this
   /// list is significant; later options can be used to reverse earlier ones.
   /// This can be used to exclude certain checkers in an included package.
-  void initializeManager(CheckerManager &mgr) const;
+  void initializeManager(CheckerManager &CheckerMgr) const;
 
   /// Check if every option corresponds to a specific checker or package.
   void validateCheckerOptions() const;
 
   /// Prints the name and description of all checkers in this registry.
   /// This output is not intended to be machine-parseable.
-  void printHelp(raw_ostream &out, size_t maxNameChars = 30) const;
-  void printList(raw_ostream &out) const;
+  void printCheckerWithDescList(raw_ostream &Out,
+                                size_t MaxNameChars = 30) const;
+  void printEnabledCheckerList(raw_ostream &Out) const;
 
 private:
   /// Collect all enabled checkers. The returned container preserves the order
@@ -211,7 +193,7 @@ private:
   CheckerInfoListRange getMutableCheckersForCmdLineArg(StringRef CmdLineArg);
 
   CheckerInfoList Checkers;
-  llvm::StringMap<size_t> Packages;
+  llvm::StringMap<size_t> PackageSizes;
 
   DiagnosticsEngine &Diags;
   AnalyzerOptions &AnOpts;

@@ -77,9 +77,11 @@ public:
     /// This is a C++ Modules TS module interface unit.
     ModuleInterfaceUnit,
 
-    /// This is a fragment of the global module within some C++ Modules
-    /// TS module.
+    /// This is a fragment of the global module within some C++ module.
     GlobalModuleFragment,
+
+    /// This is the private module fragment within some C++ module.
+    PrivateModuleFragment,
   };
 
   /// The kind of this module.
@@ -110,6 +112,11 @@ public:
   /// The module through which entities defined in this module will
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
+
+  /// Does this Module scope describe part of the purview of a named C++ module?
+  bool isModulePurview() const {
+    return Kind == ModuleInterfaceUnit || Kind == PrivateModuleFragment;
+  }
 
 private:
   /// The submodules of this module, indexed by name.
