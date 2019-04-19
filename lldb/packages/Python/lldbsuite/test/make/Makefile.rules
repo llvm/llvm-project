@@ -749,7 +749,9 @@ endif
 #----------------------------------------------------------------------
 # Make the dylib
 #----------------------------------------------------------------------
+#----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
+#----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
 	 -Xlinker -dylib \
@@ -767,7 +769,15 @@ ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
 else
 	$(SWIFTC) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
 endif
-else
+ifneq "$(MAKE_DSYM)" "NO"
+ifneq "$(DS)" ""
+	"$(DS)" $(DSFLAGS) "$(DYLIB_FILENAME)"
+endif
+endif
+
+#----------------------------------------------------------------------
+else # Non-Swift llvm.org part.
+#----------------------------------------------------------------------
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
 
 ifneq "$(OS)" "Windows_NT"
