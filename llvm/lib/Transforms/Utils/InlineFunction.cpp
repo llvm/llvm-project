@@ -1215,14 +1215,14 @@ static void UpdateCallGraphAfterInlining(CallSite CS,
 
     // If the call was inlined, but then constant folded, there is no edge to
     // add.  Check for this case.
-    Instruction *NewCall = dyn_cast<Instruction>(VMI->second);
+    auto *NewCall = dyn_cast<CallBase>(VMI->second);
     if (!NewCall)
       continue;
 
     // We do not treat intrinsic calls like real function calls because we
     // expect them to become inline code; do not add an edge for an intrinsic.
-    CallSite CS = CallSite(NewCall);
-    if (CS && CS.getCalledFunction() && CS.getCalledFunction()->isIntrinsic())
+    if (NewCall->getCalledFunction() &&
+        NewCall->getCalledFunction()->isIntrinsic())
       continue;
 
     // Remember that this call site got inlined for the client of
@@ -1235,19 +1235,19 @@ static void UpdateCallGraphAfterInlining(CallSite CS,
     // destination.  This can also happen if the call graph node of the caller
     // was just unnecessarily imprecise.
     if (!I->second->getFunction())
-      if (Function *F = CallSite(NewCall).getCalledFunction()) {
+      if (Function *F = NewCall->getCalledFunction()) {
         // Indirect call site resolved to direct call.
-        CallerNode->addCalledFunction(CallSite(NewCall), CG[F]);
+        CallerNode->addCalledFunction(NewCall, CG[F]);
 
         continue;
       }
 
-    CallerNode->addCalledFunction(CallSite(NewCall), I->second);
+    CallerNode->addCalledFunction(NewCall, I->second);
   }
 
   // Update the call graph by deleting the edge from Callee to Caller.  We must
   // do this after the loop above in case Caller and Callee are the same.
-  CallerNode->removeCallEdgeFor(CS);
+  CallerNode->removeCallEdgeFor(*cast<CallBase>(CS.getInstruction()));
 }
 
 static void HandleByValArgumentInit(Value *Dst, Value *Src, Module *M,

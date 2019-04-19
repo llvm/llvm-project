@@ -215,6 +215,11 @@ static cl::opt<bool>
     EnableCHR("enable-chr-npm", cl::init(true), cl::Hidden,
               cl::desc("Enable control height reduction optimization (CHR)"));
 
+PipelineTuningOptions::PipelineTuningOptions() {
+  LoopInterleaving = EnableLoopInterleaving;
+  LoopVectorization = EnableLoopVectorization;
+}
+
 extern cl::opt<bool> EnableHotColdSplit;
 extern cl::opt<bool> EnableOrderFileInstrumentation;
 
@@ -857,7 +862,8 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   OptimizePM.addPass(LoopDistributePass());
 
   // Now run the core loop vectorizer.
-  OptimizePM.addPass(LoopVectorizePass());
+  OptimizePM.addPass(LoopVectorizePass(
+      LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
   // of the current iteration.

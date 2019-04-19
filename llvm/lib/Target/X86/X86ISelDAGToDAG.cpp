@@ -4009,6 +4009,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         ShiftedVal = (uint64_t)Val >> ShAmt;
         if (NVT == MVT::i64 && !isUInt<32>(Val) && isUInt<32>(ShiftedVal))
           return true;
+        // Also swap order when the AND can become MOVZX.
+        if (ShiftedVal == UINT8_MAX || ShiftedVal == UINT16_MAX)
+          return true;
       }
       ShiftedVal = Val >> ShAmt;
       if ((!isInt<8>(Val) && isInt<8>(ShiftedVal)) ||

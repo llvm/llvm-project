@@ -41,16 +41,13 @@
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
 using namespace llvm;
 
 static cl::opt<bool>
     RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
                        cl::ZeroOrMore, cl::desc("Run Partial inlinining pass"));
-
-static cl::opt<bool>
-    RunLoopVectorization("vectorize-loops", cl::Hidden,
-                         cl::desc("Run the Loop vectorization passes"));
 
 static cl::opt<bool>
 RunSLPVectorization("vectorize-slp", cl::Hidden,
@@ -167,7 +164,10 @@ PassManagerBuilder::PassManagerBuilder() {
     Inliner = nullptr;
     DisableUnrollLoops = false;
     SLPVectorize = RunSLPVectorization;
-    LoopVectorize = RunLoopVectorization;
+    LoopVectorize = EnableLoopVectorization;
+    // FIXME: Add: LoopsInterleaved = EnableLoopInterleaving;
+    // Replace usage of DisableUnrollLoops with LoopsInterleaved when creating
+    // the LoopVectorize pass, to be consistent with the new pass manager.
     RerollLoops = RunLoopRerolling;
     NewGVN = RunNewGVN;
     DisableGVNLoadPRE = false;

@@ -885,16 +885,10 @@ Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
                                   isPrevailing, Conf.OptLevel > 0);
 
   // Setup output file to emit statistics.
-  std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
-  if (!Conf.StatsFile.empty()) {
-    EnableStatistics(false);
-    std::error_code EC;
-    StatsFile =
-        llvm::make_unique<ToolOutputFile>(Conf.StatsFile, EC, sys::fs::F_None);
-    if (EC)
-      return errorCodeToError(EC);
-    StatsFile->keep();
-  }
+  auto StatsFileOrErr = setupStatsFile(Conf.StatsFile);
+  if (!StatsFileOrErr)
+    return StatsFileOrErr.takeError();
+  std::unique_ptr<ToolOutputFile> StatsFile = std::move(StatsFileOrErr.get());
 
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
@@ -1342,4 +1336,21 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
 
   DiagnosticFile->keep();
   return std::move(DiagnosticFile);
+}
+
+Expected<std::unique_ptr<ToolOutputFile>>
+lto::setupStatsFile(StringRef StatsFilename) {
+  // Setup output file to emit statistics.
+  if (StatsFilename.empty())
+    return nullptr;
+
+  llvm::EnableStatistics(false);
+  std::error_code EC;
+  auto StatsFile =
+      llvm::make_unique<ToolOutputFile>(StatsFilename, EC, sys::fs::F_None);
+  if (EC)
+    return errorCodeToError(EC);
+
+  StatsFile->keep();
+  return std::move(StatsFile);
 }

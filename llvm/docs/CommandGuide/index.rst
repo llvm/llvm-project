@@ -31,6 +31,7 @@ Basic Commands
    llvm-profdata
    llvm-stress
    llvm-symbolizer
+   llvm-addr2line
    llvm-dwarfdump
    dsymutil
    llvm-mca

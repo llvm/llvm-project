@@ -671,7 +671,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         LLVM_DEBUG(dbgs() << "    -> Deleting dead call: " << *Instr << "\n");
         // Update the call graph by deleting the edge from Callee to Caller.
         setInlineRemark(CS, "trivially dead");
-        CG[Caller]->removeCallEdgeFor(CS);
+        CG[Caller]->removeCallEdgeFor(*cast<CallBase>(CS.getInstruction()));
         Instr->eraseFromParent();
         ++NumCallsDeleted;
       } else {

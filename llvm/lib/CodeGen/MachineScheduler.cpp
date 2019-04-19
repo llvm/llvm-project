@@ -1466,10 +1466,10 @@ namespace {
 class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   struct MemOpInfo {
     SUnit *SU;
-    MachineOperand *BaseOp;
+    const MachineOperand *BaseOp;
     int64_t Offset;
 
-    MemOpInfo(SUnit *su, MachineOperand *Op, int64_t ofs)
+    MemOpInfo(SUnit *su, const MachineOperand *Op, int64_t ofs)
         : SU(su), BaseOp(Op), Offset(ofs) {}
 
     bool operator<(const MemOpInfo &RHS) const {
@@ -1555,7 +1555,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
   for (SUnit *SU : MemOps) {
-    MachineOperand *BaseOp;
+    const MachineOperand *BaseOp;
     int64_t Offset;
     if (TII->getMemOperandWithOffset(*SU->getInstr(), BaseOp, Offset, TRI))
       MemOpRecords.push_back(MemOpInfo(SU, BaseOp, Offset));
@@ -2159,6 +2159,8 @@ void SchedBoundary::bumpNode(SUnit *SU) {
       HazardRec->Reset();
     }
     HazardRec->EmitInstruction(SU);
+    // Scheduling an instruction may have made pending instructions available.
+    CheckPending = true;
   }
   // checkHazard should prevent scheduling multiple instructions per cycle that
   // exceed the issue width.

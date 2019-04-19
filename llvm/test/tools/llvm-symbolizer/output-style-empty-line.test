@@ -1,0 +1,28 @@
+This test checks that with --output-style=GNU the tool does not print an empty
+line after the report for an address. The current behavior is preserved for
+--output-style=LLVM or if the option is omitted.
+
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe < %p/Inputs/addr.inp \
+RUN:   | FileCheck %s --check-prefix=LLVM
+
+RUN: llvm-symbolizer --output-style=LLVM -e %p/Inputs/addr.exe < %p/Inputs/addr.inp \
+RUN:   | FileCheck %s --check-prefix=LLVM
+
+RUN: llvm-symbolizer --output-style=GNU -e %p/Inputs/addr.exe < %p/Inputs/addr.inp \
+RUN:   | FileCheck %s --check-prefix=GNU
+
+RUN: llvm-addr2line -i -e %p/Inputs/addr.exe < %p/Inputs/addr.inp \
+RUN:   | FileCheck %s --check-prefix=GNU
+
+RUN: llvm-addr2line --output-style=GNU -i -e %p/Inputs/addr.exe < %p/Inputs/addr.inp \
+RUN:   | FileCheck %s --check-prefix=GNU
+
+RUN: llvm-addr2line --output-style=LLVM -i -e %p/Inputs/addr.exe < %p/Inputs/addr.inp \
+RUN:   | FileCheck %s --check-prefix=LLVM
+
+LLVM: x.c:14:0
+LLVM-EMPTY:
+LLVM-NEXT: some text2
+
+GNU: x.c:14
+GNU-NEXT: some text2

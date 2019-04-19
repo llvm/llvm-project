@@ -197,3 +197,60 @@ define i64 @test16(i64 %x, i64* %y) nounwind {
   %shl = xor i64 %xor, 1095216660480
   ret i64 %shl
 }
+
+define i32 @test17(i32 %x) nounwind {
+; CHECK-LABEL: test17:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    shll $10, %eax
+; CHECK-NEXT:    retq
+  %and = shl i32 %x, 10
+  %shl = and i32 %and, 261120
+  ret i32 %shl
+}
+
+define i64 @test18(i64 %x) nounwind {
+; CHECK-LABEL: test18:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shll $10, %eax
+; CHECK-NEXT:    andl $261120, %eax # imm = 0x3FC00
+; CHECK-NEXT:    retq
+  %and = shl i64 %x, 10
+  %shl = and i64 %and, 261120
+  ret i64 %shl
+}
+
+define i32 @test19(i32 %x) nounwind {
+; CHECK-LABEL: test19:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    shll $10, %eax
+; CHECK-NEXT:    retq
+  %and = shl i32 %x, 10
+  %shl = and i32 %and, 67107840
+  ret i32 %shl
+}
+
+define i64 @test20(i64 %x) nounwind {
+; CHECK-LABEL: test20:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shll $10, %eax
+; CHECK-NEXT:    andl $67107840, %eax # imm = 0x3FFFC00
+; CHECK-NEXT:    retq
+  %and = shl i64 %x, 10
+  %shl = and i64 %and, 67107840
+  ret i64 %shl
+}
+
+define i64 @test21(i64 %x) nounwind {
+; CHECK-LABEL: test21:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shlq $10, %rax
+; CHECK-NEXT:    retq
+  %and = shl i64 %x, 10
+  %shl = and i64 %and, 4398046510080
+  ret i64 %shl
+}

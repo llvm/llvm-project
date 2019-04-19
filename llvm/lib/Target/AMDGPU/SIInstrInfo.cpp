@@ -256,8 +256,8 @@ static bool isStride64(unsigned Opc) {
   }
 }
 
-bool SIInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
-                                          MachineOperand *&BaseOp,
+bool SIInstrInfo::getMemOperandWithOffset(const MachineInstr &LdSt,
+                                          const MachineOperand *&BaseOp,
                                           int64_t &Offset,
                                           const TargetRegisterInfo *TRI) const {
   unsigned Opc = LdSt.getOpcode();
@@ -321,7 +321,7 @@ bool SIInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
     if (SOffset && SOffset->isReg())
       return false;
 
-    MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (!AddrReg)
       return false;
 
@@ -344,7 +344,7 @@ bool SIInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
     if (!OffsetImm)
       return false;
 
-    MachineOperand *SBaseReg = getNamedOperand(LdSt, AMDGPU::OpName::sbase);
+    const MachineOperand *SBaseReg = getNamedOperand(LdSt, AMDGPU::OpName::sbase);
     BaseOp = SBaseReg;
     Offset = OffsetImm->getImm();
     assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
@@ -353,7 +353,7 @@ bool SIInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
   }
 
   if (isFLAT(LdSt)) {
-    MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    const MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (VAddr) {
       // Can't analyze 2 offsets.
       if (getNamedOperand(LdSt, AMDGPU::OpName::saddr))
@@ -409,11 +409,11 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
   return Base1 == Base2;
 }
 
-bool SIInstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
-                                      MachineOperand &BaseOp2,
+bool SIInstrInfo::shouldClusterMemOps(const MachineOperand &BaseOp1,
+                                      const MachineOperand &BaseOp2,
                                       unsigned NumLoads) const {
-  MachineInstr &FirstLdSt = *BaseOp1.getParent();
-  MachineInstr &SecondLdSt = *BaseOp2.getParent();
+  const MachineInstr &FirstLdSt = *BaseOp1.getParent();
+  const MachineInstr &SecondLdSt = *BaseOp2.getParent();
 
   if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOp1, SecondLdSt, BaseOp2))
     return false;
@@ -2223,9 +2223,9 @@ static bool offsetsDoNotOverlap(int WidthA, int OffsetA,
   return LowOffset + LowWidth <= HighOffset;
 }
 
-bool SIInstrInfo::checkInstOffsetsDoNotOverlap(MachineInstr &MIa,
-                                               MachineInstr &MIb) const {
-  MachineOperand *BaseOp0, *BaseOp1;
+bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
+                                               const MachineInstr &MIb) const {
+  const MachineOperand *BaseOp0, *BaseOp1;
   int64_t Offset0, Offset1;
 
   if (getMemOperandWithOffset(MIa, BaseOp0, Offset0, &RI) &&
@@ -2247,8 +2247,8 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(MachineInstr &MIa,
   return false;
 }
 
-bool SIInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
-                                                  MachineInstr &MIb,
+bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                                  const MachineInstr &MIb,
                                                   AliasAnalysis *AA) const {
   assert((MIa.mayLoad() || MIa.mayStore()) &&
          "MIa must load from or modify a memory location");
