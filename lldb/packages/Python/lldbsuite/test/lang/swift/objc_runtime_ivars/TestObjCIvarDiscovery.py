@@ -111,9 +111,3 @@ class TestObjCIVarDiscovery(TestBase):
         self.assertTrue(
             silly_url.GetSummary() == '"http://www.apple.com"',
             "url != apple.com")
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
