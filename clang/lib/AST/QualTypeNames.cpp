@@ -109,6 +109,11 @@ static bool getFullyQualifiedTemplateArgument(const ASTContext &Ctx,
       Arg = TemplateArgument(QTFQ);
       Changed = true;
     }
+  } else if (Arg.getKind() == TemplateArgument::Pack) {
+    for (const auto &It : Arg.pack_elements()) {
+      Changed |= getFullyQualifiedTemplateArgument(
+          Ctx, const_cast<TemplateArgument &>(It), WithGlobalNsPrefix);
+    }
   }
   return Changed;
 }

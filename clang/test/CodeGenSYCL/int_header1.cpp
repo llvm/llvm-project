@@ -11,6 +11,7 @@
 // CHECK:template <> struct KernelInfo<::nm1::KernelName4< ::nm1::KernelName1>> {
 // CHECK:template <> struct KernelInfo<::nm1::KernelName3<KernelName5>> {
 // CHECK:template <> struct KernelInfo<::nm1::KernelName4<KernelName7>> {
+// CHECK:template <> struct KernelInfo<::nm1::KernelName8< ::nm1::nm2::C>> {
 // CHECK:template <> struct KernelInfo<class TmplClassInAnonNS<class ClassInAnonNS>> {
 
 // This test checks if the SYCL device compiler is able to generate correct
@@ -34,6 +35,7 @@ namespace nm1 {
 
   template <typename T> class KernelName3;
   template <typename T> class KernelName4;
+  template <typename... T> class KernelName8;
 
   template <> class KernelName3<nm1::nm2::KernelName0>;
   template <> class KernelName3<KernelName1>;
@@ -142,6 +144,12 @@ struct MyWrapper {
     kernel_single_task<nm1::KernelName4<class KernelName7>>(
       [=]() { acc.use(); });
 
+    // TPITD
+    // a defined template pack specialization class with defined class
+    // as argument declared in a namespace at translation unit scope
+    kernel_single_task<nm1::KernelName8<nm1::nm2::C>>(
+      [=]() { acc.use(); });
+
 #ifdef TDLI
     // TODO unexpected compilation error when host code + integration header
     // is compiled TDLI a defined template specialization class with
@@ -202,6 +210,7 @@ int main() {
   KernelInfo<class nm1::KernelName4<class nm1::KernelName1>>::getName();
   KernelInfo<class nm1::KernelName3<class KernelName5>>::getName();
   KernelInfo<class nm1::KernelName4<class KernelName7>>::getName();
+  KernelInfo<class nm1::KernelName8<nm1::nm2::C>>::getName();
   KernelInfo<class TmplClassInAnonNS<class ClassInAnonNS>>::getName();
 #endif //__SYCL_DEVICE_ONLY__
 }
