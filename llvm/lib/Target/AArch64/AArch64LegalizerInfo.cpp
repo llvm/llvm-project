@@ -224,6 +224,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                                  {s32, p0, 32, 8},
                                  {s64, p0, 64, 8},
                                  {p0, p0, 64, 8},
+                                 {v8s8, p0, 64, 8},
                                  {v16s8, p0, 128, 8},
                                  {v4s16, p0, 64, 8},
                                  {v8s16, p0, 128, 8},
@@ -315,7 +316,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   // Extensions
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalForCartesianProduct({s8, s16, s32, s64}, {s1, s8, s16, s32});
+      .legalForCartesianProduct({s8, s16, s32, s64}, {s1, s8, s16, s32})
+      .legalFor({v8s16, v8s8});
 
   getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 

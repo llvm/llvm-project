@@ -805,7 +805,7 @@ void UnwrappedLineParser::parsePPEndIf() {
 void UnwrappedLineParser::parsePPDefine() {
   nextToken();
 
-  if (FormatTok->Tok.getKind() != tok::identifier) {
+  if (!FormatTok->Tok.getIdentifierInfo()) {
     IncludeGuard = IG_Rejected;
     IncludeGuardToken = nullptr;
     parsePPUnknown();

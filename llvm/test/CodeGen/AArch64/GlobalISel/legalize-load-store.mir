@@ -48,6 +48,11 @@
     ret <16 x i8> %res
   }
 
+  define <8 x i8> @load_8xi8(<8 x i8>* %ptr) {
+    %res = load <8 x i8>, <8 x i8>* %ptr
+    ret <8 x i8> %res
+  }
+
 ...
 ---
 name:            test_load
@@ -317,5 +322,25 @@ body:             |
     %1:_(<16 x s8>) = G_LOAD %0(p0) :: (load 16 from %ir.ptr)
     $q0 = COPY %1(<16 x s8>)
     RET_ReallyLR implicit $q0
+
+...
+---
+name:            load_8xi8
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $x0
+    ; CHECK-LABEL: name: load_8xi8
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.ptr)
+    ; CHECK: $d0 = COPY [[LOAD]](<8 x s8>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:_(p0) = COPY $x0
+    %1:_(<8 x s8>) = G_LOAD %0(p0) :: (load 8 from %ir.ptr)
+    $d0 = COPY %1(<8 x s8>)
+    RET_ReallyLR implicit $d0
 
 ...

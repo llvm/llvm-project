@@ -144,60 +144,79 @@ getTargetRange(StringRef Target, const DynTypedNode &Node, ASTNodeKind Kind,
   llvm_unreachable("Unexpected case in NodePart type.");
 }
 
-Expected<Transformation>
-tooling::applyRewriteRule(const RewriteRule &Rule,
-                          const ast_matchers::MatchFinder::MatchResult &Match) {
-  if (Match.Context->getDiagnostics().hasErrorOccurred())
-    return Transformation();
+Expected<SmallVector<Transformation, 1>>
+tooling::translateEdits(const MatchResult &Result,
+                        llvm::ArrayRef<ASTEdit> Edits) {
+  SmallVector<Transformation, 1> Transformations;
+  auto &NodesMap = Result.Nodes.getMap();
+  for (const auto &Edit : Edits) {
+    auto It = NodesMap.find(Edit.Target);
+    assert(It != NodesMap.end() && "Edit target must be bound in the match.");
 
-  auto &NodesMap = Match.Nodes.getMap();
-  auto It = NodesMap.find(Rule.Target);
-  assert (It != NodesMap.end() && "Rule.Target must be bound in the match.");
+    Expected<CharSourceRange> RangeOrErr = getTargetRange(
+        Edit.Target, It->second, Edit.Kind, Edit.Part, *Result.Context);
+    if (auto Err = RangeOrErr.takeError())
+      return std::move(Err);
+    Transformation T;
+    T.Range = *RangeOrErr;
+    if (T.Range.isInvalid() ||
+        isOriginMacroBody(*Result.SourceManager, T.Range.getBegin()))
+      return SmallVector<Transformation, 0>();
+    T.Replacement = Edit.Replacement(Result);
+    Transformations.push_back(std::move(T));
+  }
+  return Transformations;
+}
 
-  Expected<CharSourceRange> TargetOrErr =
-      getTargetRange(Rule.Target, It->second, Rule.TargetKind, Rule.TargetPart,
-                     *Match.Context);
-  if (auto Err = TargetOrErr.takeError())
-    return std::move(Err);
-  auto &Target = *TargetOrErr;
-  if (Target.isInvalid() ||
-      isOriginMacroBody(*Match.SourceManager, Target.getBegin()))
-    return Transformation();
-
-  return Transformation{Target, Rule.Replacement(Match)};
+RewriteRule tooling::makeRule(ast_matchers::internal::DynTypedMatcher M,
+                              SmallVector<ASTEdit, 1> Edits) {
+  M.setAllowBind(true);
+  // `tryBind` is guaranteed to succeed, because `AllowBind` was set to true.
+  return RewriteRule{*M.tryBind(RewriteRule::RootId), std::move(Edits),
+                     nullptr};
 }
 
 constexpr llvm::StringLiteral RewriteRule::RootId;
-
-RewriteRuleBuilder RewriteRuleBuilder::replaceWith(TextGenerator T) {
-  Rule.Replacement = std::move(T);
-  return *this;
-}
-
-RewriteRuleBuilder RewriteRuleBuilder::because(TextGenerator T) {
-  Rule.Explanation = std::move(T);
-  return *this;
-}
 
 void Transformer::registerMatchers(MatchFinder *MatchFinder) {
   MatchFinder->addDynamicMatcher(Rule.Matcher, this);
 }
 
 void Transformer::run(const MatchResult &Result) {
-  auto ChangeOrErr = applyRewriteRule(Rule, Result);
-  if (auto Err = ChangeOrErr.takeError()) {
-    llvm::errs() << "Rewrite failed: " << llvm::toString(std::move(Err))
+  if (Result.Context->getDiagnostics().hasErrorOccurred())
+    return;
+
+  // Verify the existence and validity of the AST node that roots this rule.
+  auto &NodesMap = Result.Nodes.getMap();
+  auto Root = NodesMap.find(RewriteRule::RootId);
+  assert(Root != NodesMap.end() && "Transformation failed: missing root node.");
+  SourceLocation RootLoc = Result.SourceManager->getExpansionLoc(
+      Root->second.getSourceRange().getBegin());
+  assert(RootLoc.isValid() && "Invalid location for Root node of match.");
+
+  auto TransformationsOrErr = translateEdits(Result, Rule.Edits);
+  if (auto Err = TransformationsOrErr.takeError()) {
+    llvm::errs() << "Transformation failed: " << llvm::toString(std::move(Err))
                  << "\n";
     return;
   }
-  auto &Change = *ChangeOrErr;
-  auto &Range = Change.Range;
-  if (Range.isInvalid()) {
+  auto &Transformations = *TransformationsOrErr;
+  if (Transformations.empty()) {
     // No rewrite applied (but no error encountered either).
+    RootLoc.print(llvm::errs() << "note: skipping match at loc ",
+                  *Result.SourceManager);
+    llvm::errs() << "\n";
     return;
   }
-  AtomicChange AC(*Result.SourceManager, Range.getBegin());
-  if (auto Err = AC.replace(*Result.SourceManager, Range, Change.Replacement))
-    AC.setError(llvm::toString(std::move(Err)));
+
+  // Convert the result to an AtomicChange.
+  AtomicChange AC(*Result.SourceManager, RootLoc);
+  for (const auto &T : Transformations) {
+    if (auto Err = AC.replace(*Result.SourceManager, T.Range, T.Replacement)) {
+      AC.setError(llvm::toString(std::move(Err)));
+      break;
+    }
+  }
+
   Consumer(AC);
 }

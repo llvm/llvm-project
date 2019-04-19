@@ -1,9 +1,13 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-eabi -aarch64-neon-syntax=apple 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
 
-
+; FALLBACK-NOT: remark:{{.*}}(<8 x s16>) = G_ZEXT %4:_(<8 x s8>)
+; FALLBACK-NOT: remark:{{.*}} sabdl8h
 define <8 x i16> @sabdl8h(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: sabdl8h:
 ;CHECK: sabdl.8h
+;GISEL-LABEL: sabdl8h:
+;GISEL: sabdl.8h
         %tmp1 = load <8 x i8>, <8 x i8>* %A
         %tmp2 = load <8 x i8>, <8 x i8>* %B
         %tmp3 = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)

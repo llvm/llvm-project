@@ -13,6 +13,8 @@
 // _Tp midpoint(_Tp __a, _Tp __b) noexcept
 //
 
+#include <stdint.h>
+#include <limits>
 #include <numeric>
 #include <cassert>
 #include "test_macros.h"

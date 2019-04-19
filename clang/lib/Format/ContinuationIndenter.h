@@ -111,12 +111,12 @@ private:
   unsigned reformatRawStringLiteral(const FormatToken &Current,
                                     LineState &State,
                                     const FormatStyle &RawStringStyle,
-                                    bool DryRun);
+                                    bool DryRun, bool Newline);
 
   /// If the current token is at the end of the current line, handle
   /// the transition to the next line.
   unsigned handleEndOfLine(const FormatToken &Current, LineState &State,
-                           bool DryRun, bool AllowBreak);
+                           bool DryRun, bool AllowBreak, bool Newline);
 
   /// If \p Current is a raw string that is configured to be reformatted,
   /// return the style to be used.

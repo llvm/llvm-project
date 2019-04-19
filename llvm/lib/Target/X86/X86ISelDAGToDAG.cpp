@@ -210,7 +210,7 @@ namespace {
     bool matchWrapper(SDValue N, X86ISelAddressMode &AM);
     bool matchAddress(SDValue N, X86ISelAddressMode &AM);
     bool matchVectorAddress(SDValue N, X86ISelAddressMode &AM);
-    bool matchAdd(SDValue N, X86ISelAddressMode &AM, unsigned Depth);
+    bool matchAdd(SDValue &N, X86ISelAddressMode &AM, unsigned Depth);
     bool matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                  unsigned Depth);
     bool matchAddressBase(SDValue N, X86ISelAddressMode &AM);
@@ -1283,7 +1283,7 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
   return false;
 }
 
-bool X86DAGToDAGISel::matchAdd(SDValue N, X86ISelAddressMode &AM,
+bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
                                unsigned Depth) {
   // Add an artificial use to this node so that we can keep track of
   // it if it gets CSE'd with a different node.
@@ -1795,9 +1795,11 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // Test if the LHS of the sub can be folded.
     X86ISelAddressMode Backup = AM;
     if (matchAddressRecursively(N.getOperand(0), AM, Depth+1)) {
+      N = Handle.getValue();
       AM = Backup;
       break;
     }
+    N = Handle.getValue();
     // Test if the index field is free for use.
     if (AM.IndexReg.getNode() || AM.isRIPRelative()) {
       AM = Backup;
@@ -1805,7 +1807,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     }
 
     int Cost = 0;
-    SDValue RHS = Handle.getValue().getOperand(1);
+    SDValue RHS = N.getOperand(1);
     // If the RHS involves a register with multiple uses, this
     // transformation incurs an extra mov, due to the neg instruction
     // clobbering its operand.
@@ -1818,9 +1820,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       ++Cost;
     // If the base is a register with multiple uses, this
     // transformation may save a mov.
-    // FIXME: Don't rely on DELETED_NODEs.
     if ((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
-         AM.Base_Reg->getOpcode() != ISD::DELETED_NODE &&
          !AM.Base_Reg.getNode()->hasOneUse()) ||
         AM.BaseType == X86ISelAddressMode::FrameIndexBase)
       --Cost;
@@ -1843,8 +1843,8 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     AM.Scale = 1;
 
     // Insert the new nodes into the topological ordering.
-    insertDAGNode(*CurDAG, Handle.getValue(), Zero);
-    insertDAGNode(*CurDAG, Handle.getValue(), Neg);
+    insertDAGNode(*CurDAG, N, Zero);
+    insertDAGNode(*CurDAG, N, Neg);
     return false;
   }
 

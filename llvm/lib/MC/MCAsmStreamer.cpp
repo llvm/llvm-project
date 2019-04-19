@@ -1190,7 +1190,8 @@ Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   unsigned NumFiles = Table.getMCDwarfFiles().size();
   Expected<unsigned> FileNoOrErr =
-      Table.tryGetFile(Directory, Filename, Checksum, Source, FileNo);
+      Table.tryGetFile(Directory, Filename, Checksum, Source,
+                       getContext().getDwarfVersion(), FileNo);
   if (!FileNoOrErr)
     return FileNoOrErr.takeError();
   FileNo = FileNoOrErr.get();

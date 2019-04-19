@@ -225,7 +225,7 @@ class CrashLog(symbolication.Symbolicator):
         if not os.path.exists(dsymForUUIDBinary):
             try:
                 dsymForUUIDBinary = subprocess.check_output('which dsymForUUID',
-                                                            shell=True)
+                                                            shell=True).rstrip('\n')
             except:
                 dsymForUUIDBinary = ""
 

@@ -605,7 +605,8 @@ Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
                                            Optional<StringRef> Source,
                                            unsigned CUID) {
   MCDwarfLineTable &Table = MCDwarfLineTablesCUMap[CUID];
-  return Table.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
+  return Table.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
+                          FileNumber);
 }
 
 /// isValidDwarfFileNumber - takes a dwarf file number and returns true if it
@@ -613,7 +614,7 @@ Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
 bool MCContext::isValidDwarfFileNumber(unsigned FileNumber, unsigned CUID) {
   const MCDwarfLineTable &LineTable = getMCDwarfLineTable(CUID);
   if (FileNumber == 0)
-    return getDwarfVersion() >= 5 && LineTable.hasRootFile();
+    return getDwarfVersion() >= 5;
   if (FileNumber >= LineTable.getMCDwarfFiles().size())
     return false;
 

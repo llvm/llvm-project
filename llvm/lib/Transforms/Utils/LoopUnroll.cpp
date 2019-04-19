@@ -331,13 +331,11 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 ///
 /// If RemainderLoop is non-null, it will receive the remainder loop (if
 /// required and not fully unrolled).
-LoopUnrollResult llvm::UnrollLoop(
-    Loop *L, unsigned Count, unsigned TripCount, bool Force, bool AllowRuntime,
-    bool AllowExpensiveTripCount, bool PreserveCondBr, bool PreserveOnlyFirst,
-    unsigned TripMultiple, unsigned PeelCount, bool UnrollRemainder,
-    bool ForgetAllSCEV, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-    AssumptionCache *AC, OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
-    Loop **RemainderLoop) {
+LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
+                                  ScalarEvolution *SE, DominatorTree *DT,
+                                  AssumptionCache *AC,
+                                  OptimizationRemarkEmitter *ORE,
+                                  bool PreserveLCSSA, Loop **RemainderLoop) {
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
@@ -389,28 +387,28 @@ LoopUnrollResult llvm::UnrollLoop(
     return LoopUnrollResult::Unmodified;
   }
 
-  if (TripCount != 0)
-    LLVM_DEBUG(dbgs() << "  Trip Count = " << TripCount << "\n");
-  if (TripMultiple != 1)
-    LLVM_DEBUG(dbgs() << "  Trip Multiple = " << TripMultiple << "\n");
+  if (ULO.TripCount != 0)
+    LLVM_DEBUG(dbgs() << "  Trip Count = " << ULO.TripCount << "\n");
+  if (ULO.TripMultiple != 1)
+    LLVM_DEBUG(dbgs() << "  Trip Multiple = " << ULO.TripMultiple << "\n");
 
   // Effectively "DCE" unrolled iterations that are beyond the tripcount
   // and will never be executed.
-  if (TripCount != 0 && Count > TripCount)
-    Count = TripCount;
+  if (ULO.TripCount != 0 && ULO.Count > ULO.TripCount)
+    ULO.Count = ULO.TripCount;
 
   // Don't enter the unroll code if there is nothing to do.
-  if (TripCount == 0 && Count < 2 && PeelCount == 0) {
+  if (ULO.TripCount == 0 && ULO.Count < 2 && ULO.PeelCount == 0) {
     LLVM_DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
     return LoopUnrollResult::Unmodified;
   }
 
-  assert(Count > 0);
-  assert(TripMultiple > 0);
-  assert(TripCount == 0 || TripCount % TripMultiple == 0);
+  assert(ULO.Count > 0);
+  assert(ULO.TripMultiple > 0);
+  assert(ULO.TripCount == 0 || ULO.TripCount % ULO.TripMultiple == 0);
 
   // Are we eliminating the loop control altogether?
-  bool CompletelyUnroll = Count == TripCount;
+  bool CompletelyUnroll = ULO.Count == ULO.TripCount;
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
   std::vector<BasicBlock*> OriginalLoopBlocks = L->getBlocks();
@@ -429,15 +427,16 @@ LoopUnrollResult llvm::UnrollLoop(
   // We assume a run-time trip count if the compiler cannot
   // figure out the loop trip count and the unroll-runtime
   // flag is specified.
-  bool RuntimeTripCount = (TripCount == 0 && Count > 0 && AllowRuntime);
+  bool RuntimeTripCount =
+      (ULO.TripCount == 0 && ULO.Count > 0 && ULO.AllowRuntime);
 
-  assert((!RuntimeTripCount || !PeelCount) &&
+  assert((!RuntimeTripCount || !ULO.PeelCount) &&
          "Did not expect runtime trip-count unrolling "
          "and peeling for the same loop");
 
   bool Peeled = false;
-  if (PeelCount) {
-    Peeled = peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
+  if (ULO.PeelCount) {
+    Peeled = peelLoop(L, ULO.PeelCount, LI, SE, DT, AC, PreserveLCSSA);
 
     // Successful peeling may result in a change in the loop preheader/trip
     // counts. If we later unroll the loop, we want these to be updated.
@@ -445,8 +444,8 @@ LoopUnrollResult llvm::UnrollLoop(
       BasicBlock *ExitingBlock = L->getExitingBlock();
       assert(ExitingBlock && "Loop without exiting block?");
       Preheader = L->getLoopPreheader();
-      TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
-      TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
+      ULO.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
+      ULO.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     }
   }
 
@@ -459,7 +458,7 @@ LoopUnrollResult llvm::UnrollLoop(
           for (auto &I : *BB)
             if (auto CS = CallSite(&I))
               HasConvergent |= CS.isConvergent();
-        assert((!HasConvergent || TripMultiple % Count == 0) &&
+        assert((!HasConvergent || ULO.TripMultiple % ULO.Count == 0) &&
                "Unroll count must divide trip multiple if loop contains a "
                "convergent operation.");
       });
@@ -468,12 +467,12 @@ LoopUnrollResult llvm::UnrollLoop(
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
                                               : isEpilogProfitable(L);
 
-  if (RuntimeTripCount && TripMultiple % Count != 0 &&
-      !UnrollRuntimeLoopRemainder(L, Count, AllowExpensiveTripCount,
-                                  EpilogProfitability, UnrollRemainder,
-                                  ForgetAllSCEV, LI, SE, DT, AC, PreserveLCSSA,
-                                  RemainderLoop)) {
-    if (Force)
+  if (RuntimeTripCount && ULO.TripMultiple % ULO.Count != 0 &&
+      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
+                                  EpilogProfitability, ULO.UnrollRemainder,
+                                  ULO.ForgetAllSCEV, LI, SE, DT, AC,
+                                  PreserveLCSSA, RemainderLoop)) {
+    if (ULO.Force)
       RuntimeTripCount = false;
     else {
       LLVM_DEBUG(dbgs() << "Won't unroll; remainder loop could not be "
@@ -484,35 +483,35 @@ LoopUnrollResult llvm::UnrollLoop(
 
   // If we know the trip count, we know the multiple...
   unsigned BreakoutTrip = 0;
-  if (TripCount != 0) {
-    BreakoutTrip = TripCount % Count;
-    TripMultiple = 0;
+  if (ULO.TripCount != 0) {
+    BreakoutTrip = ULO.TripCount % ULO.Count;
+    ULO.TripMultiple = 0;
   } else {
     // Figure out what multiple to use.
-    BreakoutTrip = TripMultiple =
-      (unsigned)GreatestCommonDivisor64(Count, TripMultiple);
+    BreakoutTrip = ULO.TripMultiple =
+        (unsigned)GreatestCommonDivisor64(ULO.Count, ULO.TripMultiple);
   }
 
   using namespace ore;
   // Report the unrolling decision.
   if (CompletelyUnroll) {
     LLVM_DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
-                      << " with trip count " << TripCount << "!\n");
+                      << " with trip count " << ULO.TripCount << "!\n");
     if (ORE)
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
                                   L->getHeader())
                << "completely unrolled loop with "
-               << NV("UnrollCount", TripCount) << " iterations";
+               << NV("UnrollCount", ULO.TripCount) << " iterations";
       });
-  } else if (PeelCount) {
+  } else if (ULO.PeelCount) {
     LLVM_DEBUG(dbgs() << "PEELING loop %" << Header->getName()
-                      << " with iteration count " << PeelCount << "!\n");
+                      << " with iteration count " << ULO.PeelCount << "!\n");
     if (ORE)
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
                                   L->getHeader())
-               << " peeled loop by " << NV("PeelCount", PeelCount)
+               << " peeled loop by " << NV("PeelCount", ULO.PeelCount)
                << " iterations";
       });
   } else {
@@ -520,24 +519,25 @@ LoopUnrollResult llvm::UnrollLoop(
       OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
                               L->getHeader());
       return Diag << "unrolled loop by a factor of "
-                  << NV("UnrollCount", Count);
+                  << NV("UnrollCount", ULO.Count);
     };
 
     LLVM_DEBUG(dbgs() << "UNROLLING loop %" << Header->getName() << " by "
-                      << Count);
-    if (TripMultiple == 0 || BreakoutTrip != TripMultiple) {
+                      << ULO.Count);
+    if (ULO.TripMultiple == 0 || BreakoutTrip != ULO.TripMultiple) {
       LLVM_DEBUG(dbgs() << " with a breakout at trip " << BreakoutTrip);
       if (ORE)
         ORE->emit([&]() {
           return DiagBuilder() << " with a breakout at trip "
                                << NV("BreakoutTrip", BreakoutTrip);
         });
-    } else if (TripMultiple != 1) {
-      LLVM_DEBUG(dbgs() << " with " << TripMultiple << " trips per branch");
+    } else if (ULO.TripMultiple != 1) {
+      LLVM_DEBUG(dbgs() << " with " << ULO.TripMultiple << " trips per branch");
       if (ORE)
         ORE->emit([&]() {
-          return DiagBuilder() << " with " << NV("TripMultiple", TripMultiple)
-                               << " trips per branch";
+          return DiagBuilder()
+                 << " with " << NV("TripMultiple", ULO.TripMultiple)
+                 << " trips per branch";
         });
     } else if (RuntimeTripCount) {
       LLVM_DEBUG(dbgs() << " with run-time trip count");
@@ -557,7 +557,7 @@ LoopUnrollResult llvm::UnrollLoop(
   // change. When we forget outermost loop, we also forget all contained loops
   // and this is what we need here.
   if (SE) {
-    if (ForgetAllSCEV)
+    if (ULO.ForgetAllSCEV)
       SE->forgetAllLoops();
     else
       SE->forgetTopmostLoop(L);
@@ -604,7 +604,7 @@ LoopUnrollResult llvm::UnrollLoop(
       for (Instruction &I : *BB)
         if (!isa<DbgInfoIntrinsic>(&I))
           if (const DILocation *DIL = I.getDebugLoc()) {
-            auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(Count);
+            auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(ULO.Count);
             if (NewDIL)
               I.setDebugLoc(NewDIL.getValue());
             else
@@ -613,7 +613,7 @@ LoopUnrollResult llvm::UnrollLoop(
                          << DIL->getFilename() << " Line: " << DIL->getLine());
           }
 
-  for (unsigned It = 1; It != Count; ++It) {
+  for (unsigned It = 1; It != ULO.Count; ++It) {
     std::vector<BasicBlock*> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
     NewLoops[L] = L;
@@ -704,8 +704,7 @@ LoopUnrollResult llvm::UnrollLoop(
     if (CompletelyUnroll) {
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       Header->getInstList().erase(PN);
-    }
-    else if (Count > 1) {
+    } else if (ULO.Count > 1) {
       Value *InVal = PN->removeIncomingValue(LatchBlock, false);
       // If this value was defined in the loop, take the value defined by the
       // last iteration of the loop.
@@ -744,8 +743,10 @@ LoopUnrollResult llvm::UnrollLoop(
       assert(NeedConditional &&
              "NeedCondition cannot be modified by both complete "
              "unrolling and runtime unrolling");
-      NeedConditional = (PreserveCondBr && j && !(PreserveOnlyFirst && i != 0));
-    } else if (j != BreakoutTrip && (TripMultiple == 0 || j % TripMultiple != 0)) {
+      NeedConditional =
+          (ULO.PreserveCondBr && j && !(ULO.PreserveOnlyFirst && i != 0));
+    } else if (j != BreakoutTrip &&
+               (ULO.TripMultiple == 0 || j % ULO.TripMultiple != 0)) {
       // If we know the trip count or a multiple of it, we can safely use an
       // unconditional branch for some iterations.
       NeedConditional = false;
@@ -776,7 +777,7 @@ LoopUnrollResult llvm::UnrollLoop(
   // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
   // iterations too.
-  if (DT && Count > 1) {
+  if (DT && ULO.Count > 1) {
     for (auto *BB : OriginalLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
       SmallVector<BasicBlock *, 16> ChildrenToUpdate;
@@ -834,8 +835,8 @@ LoopUnrollResult llvm::UnrollLoop(
 
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
-  simplifyLoopAfterUnroll(L, !CompletelyUnroll && (Count > 1 || Peeled), LI, SE,
-                          DT, AC);
+  simplifyLoopAfterUnroll(L, !CompletelyUnroll && (ULO.Count > 1 || Peeled), LI,
+                          SE, DT, AC);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
