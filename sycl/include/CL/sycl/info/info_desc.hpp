@@ -97,7 +97,7 @@ enum class device : cl_device_info {
   is_compiler_available = CL_DEVICE_COMPILER_AVAILABLE,
   is_linker_available = CL_DEVICE_LINKER_AVAILABLE,
   execution_capabilities = CL_DEVICE_EXECUTION_CAPABILITIES,
-  queue_profiling = CL_DEVICE_QUEUE_ON_DEVICE_PROPERTIES,
+  queue_profiling = CL_DEVICE_QUEUE_PROPERTIES,
   built_in_kernels = CL_DEVICE_BUILT_IN_KERNELS,
   platform = CL_DEVICE_PLATFORM,
   name = CL_DEVICE_NAME,
