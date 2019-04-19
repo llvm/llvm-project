@@ -26,6 +26,7 @@ namespace MinidumpYAML {
 /// from Types to Kinds is fixed and given by the static getKind function.
 struct Stream {
   enum class StreamKind {
+    ModuleList,
     RawContent,
     SystemInfo,
     TextContent,
@@ -47,6 +48,30 @@ struct Stream {
   static Expected<std::unique_ptr<Stream>>
   create(const minidump::Directory &StreamDesc,
          const object::MinidumpFile &File);
+};
+
+/// A stream representing the list of modules loaded in the process. On disk, it
+/// is represented as a sequence of minidump::Module structures. These contain
+/// pointers to other data structures, like the module's name and CodeView
+/// record. In memory, we represent these as the ParsedModule struct, which
+/// groups minidump::Module with all of its dependant structures in a single
+/// entity.
+struct ModuleListStream : public Stream {
+  struct ParsedModule {
+    minidump::Module Module;
+    std::string Name;
+    yaml::BinaryRef CvRecord;
+    yaml::BinaryRef MiscRecord;
+  };
+  std::vector<ParsedModule> Modules;
+
+  ModuleListStream(std::vector<ParsedModule> Modules = {})
+      : Stream(StreamKind::ModuleList, minidump::StreamType::ModuleList),
+        Modules(std::move(Modules)) {}
+
+  static bool classof(const Stream *S) {
+    return S->Kind == StreamKind::ModuleList;
+  }
 };
 
 /// A minidump stream represented as a sequence of hex bytes. This is used as a
@@ -162,8 +187,12 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::minidump::StreamType)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::ArmInfo)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::OtherInfo)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::X86Info)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::VSFixedFileInfo)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(
+    llvm::MinidumpYAML::ModuleListStream::ParsedModule)
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::MinidumpYAML::Stream>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::ModuleListStream::ParsedModule)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::MinidumpYAML::Object)
 

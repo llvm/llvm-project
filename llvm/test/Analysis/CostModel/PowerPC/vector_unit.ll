@@ -1,6 +1,5 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+vsx | FileCheck %s
 ; RUN: opt < %s -cost-model -analyze -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -mattr=+vsx | FileCheck --check-prefix=CHECK-P9 %s
-; RUN: opt < %s -cost-model -analyze -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -mattr=+vsx | FileCheck --check-prefix=CHECK-LE %s
 
 define void @testi16(i16 %arg1, i16 %arg2, i16* %arg3) {
 
@@ -51,18 +50,4 @@ define void @test4xi32(<4 x i32> %arg1, <4 x i32> %arg2, <4 x i32>* %arg3) {
   ; CHECK: cost of 1 {{.*}} store
   ; CHECK-P9: cost of 2 {{.*}} load
   ; CHECK-P9: cost of 2 {{.*}} store
-}
-
-define void @test2xdouble(<2 x double> %arg1) {
-  %v1 = extractelement <2 x double> %arg1, i32 0
-  %v2 = extractelement <2 x double> %arg1, i32 1
-
-  ret void
-  ; CHECK: cost of 0 {{.*}} extractelement
-  ; CHECK: cost of 1 {{.*}} extractelement
-  ; CHECK-P9: cost of 0 {{.*}} extractelement
-  ; CHECK-P9: cost of 2 {{.*}} extractelement
-  ; CHECK-LE-LABEL: test2xdouble
-  ; CHECK-LE: cost of 2 {{.*}} extractelement
-  ; CHECK-LE: cost of 0 {{.*}} extractelement
 }

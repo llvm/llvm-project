@@ -1099,9 +1099,11 @@ static LoopUnrollResult tryToUnrollLoop(
   // Unroll the loop.
   Loop *RemainderLoop = nullptr;
   LoopUnrollResult UnrollResult = UnrollLoop(
-      L, UP.Count, TripCount, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
-      UseUpperBound, MaxOrZero, TripMultiple, UP.PeelCount, UP.UnrollRemainder,
-      ForgetAllSCEV, LI, &SE, &DT, &AC, &ORE, PreserveLCSSA, &RemainderLoop);
+      L,
+      {UP.Count, TripCount, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
+       UseUpperBound, MaxOrZero, TripMultiple, UP.PeelCount, UP.UnrollRemainder,
+       ForgetAllSCEV},
+      LI, &SE, &DT, &AC, &ORE, PreserveLCSSA, &RemainderLoop);
   if (UnrollResult == LoopUnrollResult::Unmodified)
     return LoopUnrollResult::Unmodified;
 

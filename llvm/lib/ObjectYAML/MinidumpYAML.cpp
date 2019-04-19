@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/MinidumpYAML.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;
@@ -14,6 +15,16 @@ using namespace llvm::MinidumpYAML;
 using namespace llvm::minidump;
 
 namespace {
+/// A helper class to manage the placement of various structures into the final
+/// minidump binary. Space for objects can be allocated via various allocate***
+/// methods, while the final minidump file is written by calling the writeTo
+/// method. The plain versions of allocation functions take a reference to the
+/// data which is to be written (and hence the data must be available until
+/// writeTo is called), while the "New" versions allocate the data in an
+/// allocator-managed buffer, which is available until the allocator object is
+/// destroyed. For both kinds of functions, it is possible to modify the
+/// data for which the space has been "allocated" until the final writeTo call.
+/// This is useful for "linking" the allocated structures via their offsets.
 class BlobAllocator {
 public:
   size_t tell() const { return NextOffset; }
@@ -31,13 +42,29 @@ public:
         Data.size(), [Data](raw_ostream &OS) { OS << toStringRef(Data); });
   }
 
+  size_t allocateBytes(yaml::BinaryRef Data) {
+    return allocateCallback(Data.binary_size(), [Data](raw_ostream &OS) {
+      Data.writeAsBinary(OS);
+    });
+  }
+
   template <typename T> size_t allocateArray(ArrayRef<T> Data) {
     return allocateBytes({reinterpret_cast<const uint8_t *>(Data.data()),
                           sizeof(T) * Data.size()});
   }
 
+  template <typename T, typename RangeType>
+  std::pair<size_t, MutableArrayRef<T>>
+  allocateNewArray(const iterator_range<RangeType> &Range);
+
   template <typename T> size_t allocateObject(const T &Data) {
     return allocateArray(makeArrayRef(Data));
+  }
+
+  template <typename T, typename... Types>
+  std::pair<size_t, T *> allocateNewObject(Types &&... Args) {
+    T *Object = new (Temporaries.Allocate<T>()) T(std::forward<Types>(Args)...);
+    return {allocateObject(*Object), Object};
   }
 
   size_t allocateString(StringRef Str);
@@ -47,9 +74,19 @@ public:
 private:
   size_t NextOffset = 0;
 
+  BumpPtrAllocator Temporaries;
   std::vector<std::function<void(raw_ostream &)>> Callbacks;
 };
 } // namespace
+
+template <typename T, typename RangeType>
+std::pair<size_t, MutableArrayRef<T>>
+BlobAllocator::allocateNewArray(const iterator_range<RangeType> &Range) {
+  size_t Num = std::distance(Range.begin(), Range.end());
+  MutableArrayRef<T> Array(Temporaries.Allocate<T>(Num), Num);
+  std::uninitialized_copy(Range.begin(), Range.end(), Array.begin());
+  return {allocateArray(Array), Array};
+}
 
 size_t BlobAllocator::allocateString(StringRef Str) {
   SmallVector<UTF16, 32> WStr;
@@ -57,18 +94,13 @@ size_t BlobAllocator::allocateString(StringRef Str) {
   assert(OK && "Invalid UTF8 in Str?");
   (void)OK;
 
-  SmallVector<support::ulittle16_t, 32> EndianStr(WStr.size() + 1,
-                                                  support::ulittle16_t());
-  copy(WStr, EndianStr.begin());
-  return allocateCallback(
-      sizeof(uint32_t) + EndianStr.size() * sizeof(support::ulittle16_t),
-      [EndianStr](raw_ostream &OS) {
-        // Length does not include the null-terminator.
-        support::ulittle32_t Length(2 * (EndianStr.size() - 1));
-        OS.write(reinterpret_cast<const char *>(&Length), sizeof(Length));
-        OS.write(reinterpret_cast<const char *>(EndianStr.begin()),
-                 sizeof(support::ulittle16_t) * EndianStr.size());
-      });
+  // The utf16 string is null-terminated, but the terminator is not counted in
+  // the string size.
+  WStr.push_back(0);
+  size_t Result =
+      allocateNewObject<support::ulittle32_t>(2 * (WStr.size() - 1)).first;
+  allocateNewArray<support::ulittle16_t>(make_range(WStr.begin(), WStr.end()));
+  return Result;
 }
 
 void BlobAllocator::writeTo(raw_ostream &OS) const {
@@ -136,6 +168,8 @@ Stream::~Stream() = default;
 
 Stream::StreamKind Stream::getKind(StreamType Type) {
   switch (Type) {
+  case StreamType::ModuleList:
+    return StreamKind::ModuleList;
   case StreamType::SystemInfo:
     return StreamKind::SystemInfo;
   case StreamType::LinuxCPUInfo:
@@ -154,6 +188,8 @@ Stream::StreamKind Stream::getKind(StreamType Type) {
 std::unique_ptr<Stream> Stream::create(StreamType Type) {
   StreamKind Kind = getKind(Type);
   switch (Kind) {
+  case StreamKind::ModuleList:
+    return llvm::make_unique<ModuleListStream>();
   case StreamKind::RawContent:
     return llvm::make_unique<RawContentStream>(Type);
   case StreamKind::SystemInfo:
@@ -270,6 +306,38 @@ void yaml::MappingTraits<CPUInfo::X86Info>::mapping(IO &IO,
   mapOptionalHex(IO, "AMD Extended Features", Info.AMDExtendedFeatures, 0);
 }
 
+void yaml::MappingTraits<VSFixedFileInfo>::mapping(IO &IO,
+                                                   VSFixedFileInfo &Info) {
+  mapOptionalHex(IO, "Signature", Info.Signature, 0);
+  mapOptionalHex(IO, "Struct Version", Info.StructVersion, 0);
+  mapOptionalHex(IO, "File Version High", Info.FileVersionHigh, 0);
+  mapOptionalHex(IO, "File Version Low", Info.FileVersionLow, 0);
+  mapOptionalHex(IO, "Product Version High", Info.ProductVersionHigh, 0);
+  mapOptionalHex(IO, "Product Version Low", Info.ProductVersionLow, 0);
+  mapOptionalHex(IO, "File Flags Mask", Info.FileFlagsMask, 0);
+  mapOptionalHex(IO, "File Flags", Info.FileFlags, 0);
+  mapOptionalHex(IO, "File OS", Info.FileOS, 0);
+  mapOptionalHex(IO, "File Type", Info.FileType, 0);
+  mapOptionalHex(IO, "File Subtype", Info.FileSubtype, 0);
+  mapOptionalHex(IO, "File Date High", Info.FileDateHigh, 0);
+  mapOptionalHex(IO, "File Date Low", Info.FileDateLow, 0);
+}
+
+void yaml::MappingTraits<ModuleListStream::ParsedModule>::mapping(
+    IO &IO, ModuleListStream::ParsedModule &M) {
+  mapRequiredHex(IO, "Base of Image", M.Module.BaseOfImage);
+  mapRequiredHex(IO, "Size of Image", M.Module.SizeOfImage);
+  mapOptionalHex(IO, "Checksum", M.Module.Checksum, 0);
+  IO.mapOptional("Time Date Stamp", M.Module.TimeDateStamp,
+                 support::ulittle32_t(0));
+  IO.mapRequired("Module Name", M.Name);
+  IO.mapOptional("Version Info", M.Module.VersionInfo, VSFixedFileInfo());
+  IO.mapRequired("CodeView Record", M.CvRecord);
+  IO.mapOptional("Misc Record", M.MiscRecord, yaml::BinaryRef());
+  mapOptionalHex(IO, "Reserved0", M.Module.Reserved0, 0);
+  mapOptionalHex(IO, "Reserved1", M.Module.Reserved1, 0);
+}
+
 static void streamMapping(yaml::IO &IO, RawContentStream &Stream) {
   IO.mapOptional("Content", Stream.Content);
   IO.mapOptional("Size", Stream.Size, Stream.Content.binary_size());
@@ -279,6 +347,10 @@ static StringRef streamValidate(RawContentStream &Stream) {
   if (Stream.Size.value < Stream.Content.binary_size())
     return "Stream size must be greater or equal to the content size";
   return "";
+}
+
+static void streamMapping(yaml::IO &IO, ModuleListStream &Stream) {
+  IO.mapRequired("Modules", Stream.Modules);
 }
 
 static void streamMapping(yaml::IO &IO, SystemInfoStream &Stream) {
@@ -324,6 +396,9 @@ void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
   if (!IO.outputting())
     S = MinidumpYAML::Stream::create(Type);
   switch (S->Kind) {
+  case MinidumpYAML::Stream::StreamKind::ModuleList:
+    streamMapping(IO, llvm::cast<ModuleListStream>(*S));
+    break;
   case MinidumpYAML::Stream::StreamKind::RawContent:
     streamMapping(IO, llvm::cast<RawContentStream>(*S));
     break;
@@ -341,6 +416,7 @@ StringRef yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
   switch (S->Kind) {
   case MinidumpYAML::Stream::StreamKind::RawContent:
     return streamValidate(cast<RawContentStream>(*S));
+  case MinidumpYAML::Stream::StreamKind::ModuleList:
   case MinidumpYAML::Stream::StreamKind::SystemInfo:
   case MinidumpYAML::Stream::StreamKind::TextContent:
     return "";
@@ -362,6 +438,26 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   Result.Location.RVA = File.tell();
   Optional<size_t> DataEnd;
   switch (S.Kind) {
+  case Stream::StreamKind::ModuleList: {
+    ModuleListStream &List = cast<ModuleListStream>(S);
+
+    File.allocateNewObject<support::ulittle32_t>(List.Modules.size());
+    for (ModuleListStream::ParsedModule &M : List.Modules)
+      File.allocateObject(M.Module);
+
+    // Module names and CodeView/Misc records are not a part of the stream.
+    DataEnd = File.tell();
+    for (ModuleListStream::ParsedModule &M : List.Modules) {
+      M.Module.ModuleNameRVA = File.allocateString(M.Name);
+
+      M.Module.CvRecord.RVA = File.allocateBytes(M.CvRecord);
+      M.Module.CvRecord.DataSize = M.CvRecord.binary_size();
+
+      M.Module.MiscRecord.RVA = File.allocateBytes(M.MiscRecord);
+      M.Module.MiscRecord.DataSize = M.MiscRecord.binary_size();
+    }
+    break;
+  }
   case Stream::StreamKind::RawContent: {
     RawContentStream &Raw = cast<RawContentStream>(S);
     File.allocateCallback(Raw.Size, [&Raw](raw_ostream &OS) {
@@ -420,6 +516,26 @@ Expected<std::unique_ptr<Stream>>
 Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   StreamKind Kind = getKind(StreamDesc.Type);
   switch (Kind) {
+  case StreamKind::ModuleList: {
+    auto ExpectedList = File.getModuleList();
+    if (!ExpectedList)
+      return ExpectedList.takeError();
+    std::vector<ModuleListStream::ParsedModule> Modules;
+    for (const Module &M : *ExpectedList) {
+      auto ExpectedName = File.getString(M.ModuleNameRVA);
+      if (!ExpectedName)
+        return ExpectedName.takeError();
+      auto ExpectedCv = File.getRawData(M.CvRecord);
+      if (!ExpectedCv)
+        return ExpectedCv.takeError();
+      auto ExpectedMisc = File.getRawData(M.MiscRecord);
+      if (!ExpectedMisc)
+        return ExpectedMisc.takeError();
+      Modules.push_back(
+          {M, std::move(*ExpectedName), *ExpectedCv, *ExpectedMisc});
+    }
+    return llvm::make_unique<ModuleListStream>(std::move(Modules));
+  }
   case StreamKind::RawContent:
     return llvm::make_unique<RawContentStream>(StreamDesc.Type,
                                                File.getRawStream(StreamDesc));

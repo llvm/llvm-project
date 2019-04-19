@@ -258,6 +258,7 @@ static const StringMap<MachineInfo> ArchMap{
     {"arm", {ELF::EM_ARM, false, true}},
     {"i386", {ELF::EM_386, false, true}},
     {"i386:x86-64", {ELF::EM_X86_64, true, true}},
+    {"mips", {ELF::EM_MIPS, false, false}},
     {"powerpc:common64", {ELF::EM_PPC64, true, true}},
     {"sparc", {ELF::EM_SPARC, false, true}},
     {"x86-64", {ELF::EM_X86_64, true, true}},

@@ -6,16 +6,19 @@
 
   define void @anyext_s64_from_s32() { ret void }
   define void @anyext_s32_from_s8() { ret void }
+  define void @anyext_v8s16_from_v8s8() { ret void }
 
   define void @zext_s64_from_s32() { ret void }
   define void @zext_s32_from_s16() { ret void }
   define void @zext_s32_from_s8() { ret void }
   define void @zext_s16_from_s8() { ret void }
+  define void @zext_v8s16_from_v8s8() { ret void }
 
   define void @sext_s64_from_s32() { ret void }
   define void @sext_s32_from_s16() { ret void }
   define void @sext_s32_from_s8() { ret void }
   define void @sext_s16_from_s8() { ret void }
+  define void @sext_v8s16_from_v8s8() { ret void }
 ...
 
 ---
@@ -62,6 +65,31 @@ body:             |
     %1(s32) = G_ANYEXT %0
     $w0 = COPY %1(s32)
 ...
+
+---
+name:            anyext_v8s16_from_v8s8
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: anyext_v8s16_from_v8s8
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[USHLLv8i8_shift:%[0-9]+]]:fpr128 = USHLLv8i8_shift [[COPY]], 0
+    ; CHECK: $q0 = COPY [[USHLLv8i8_shift]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<8 x s8>) = COPY $d0
+    %1:fpr(<8 x s16>) = G_ANYEXT %0(<8 x s8>)
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
 
 ---
 name:            zext_s64_from_s32
@@ -158,6 +186,33 @@ body:             |
 ...
 
 ---
+name:            zext_v8s16_from_v8s8
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: zext_v8s16_from_v8s8
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[USHLLv8i8_shift:%[0-9]+]]:fpr128 = USHLLv8i8_shift [[COPY]], 0
+    ; CHECK: $q0 = COPY [[USHLLv8i8_shift]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<8 x s8>) = COPY $d0
+    %1:fpr(<8 x s16>) = G_ZEXT %0(<8 x s8>)
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+
+---
 name:            sext_s64_from_s32
 legalized:       true
 regBankSelected: true
@@ -249,4 +304,31 @@ body:             |
     %1(s16) = G_SEXT %0
     %3:gpr(s32) = G_ANYEXT %1
     $w0 = COPY %3(s32)
+...
+
+---
+name:            sext_v8s16_from_v8s8
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: sext_v8s16_from_v8s8
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[SSHLLv8i8_shift:%[0-9]+]]:fpr128 = SSHLLv8i8_shift [[COPY]], 0
+    ; CHECK: $q0 = COPY [[SSHLLv8i8_shift]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<8 x s8>) = COPY $d0
+    %1:fpr(<8 x s16>) = G_SEXT %0(<8 x s8>)
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
 ...

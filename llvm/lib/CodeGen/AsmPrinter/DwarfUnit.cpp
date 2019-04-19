@@ -315,7 +315,9 @@ unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
     addSectionOffset(getUnitDie(), dwarf::DW_AT_stmt_list, 0);
   }
   return SplitLineTable->getFile(File->getDirectory(), File->getFilename(),
-                                 getMD5AsBytes(File), File->getSource());
+                                 getMD5AsBytes(File),
+                                 Asm->OutContext.getDwarfVersion(),
+                                 File->getSource());
 }
 
 void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
@@ -397,7 +399,6 @@ void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
     return;
 
   unsigned FileID = getOrCreateSourceID(File);
-  assert(FileID && "Invalid file id");
   addUInt(Die, dwarf::DW_AT_decl_file, None, FileID);
   addUInt(Die, dwarf::DW_AT_decl_line, None, Line);
 }

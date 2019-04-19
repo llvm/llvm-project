@@ -242,12 +242,12 @@ static void DeleteBasicBlock(BasicBlock *BB, CallGraph &CG) {
       break;
     }
 
-    if (auto CS = CallSite (&*I)) {
-      const Function *Callee = CS.getCalledFunction();
+    if (auto *Call = dyn_cast<CallBase>(&*I)) {
+      const Function *Callee = Call->getCalledFunction();
       if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
-        CGN->removeCallEdgeFor(CS);
+        CGN->removeCallEdgeFor(*Call);
       else if (!Callee->isIntrinsic())
-        CGN->removeCallEdgeFor(CS);
+        CGN->removeCallEdgeFor(*Call);
     }
 
     if (!I->use_empty())

@@ -278,8 +278,9 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
         // For relocation section set link to .symtab by default.
         SHeader.sh_link = getDotSymTabSecNo();
 
-      unsigned Index;
-      if (!convertSectionIndex(SN2I, S->Name, S->RelocatableSec, Index))
+      unsigned Index = 0;
+      if (!S->RelocatableSec.empty() &&
+          !convertSectionIndex(SN2I, S->Name, S->RelocatableSec, Index))
         return false;
       SHeader.sh_info = Index;
       if (!writeSectionContent(SHeader, *S, CBA))
