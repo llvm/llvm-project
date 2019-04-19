@@ -348,6 +348,7 @@ public:
   /// selection is complete to determine if the stack frame for this function
   /// contains any variable sized objects.
   bool hasVarSizedObjects() const { return HasVarSizedObjects; }
+  void setHasVarSizedObjects(bool v = true) { HasVarSizedObjects = v; }
 
   /// Return the index for the stack protector object.
   int getStackProtectorIndex() const { return StackProtectorIdx; }

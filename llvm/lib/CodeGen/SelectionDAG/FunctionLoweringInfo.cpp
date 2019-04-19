@@ -126,9 +126,15 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     calculateWasmEHInfo(&fn, EHInfo);
   }
 
-  // If the function might be stolen, note that the SP might change opaquely.
+  // If the function might be stolen, then several optimizations involving SP
+  // and FP aren't generally allowed.  For example, the Cilk runtime system
+  // might change the stack a function uses after it performs a spawn, meaning
+  // that SP can't be used to index stack variables or temporary storage.  The
+  // semantics for the stack memory of such a function most closely resemble
+  // those of a function with dynamic allocas, so we simply set this flag in
+  // MachineFrameInfo.
   if (Fn->hasFnAttribute(Attribute::Stealable))
-    MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
+    MF->getFrameInfo().setHasVarSizedObjects();
 
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
