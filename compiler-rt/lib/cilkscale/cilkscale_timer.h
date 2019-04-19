@@ -12,7 +12,7 @@
 
 #ifndef CSCALETIMER
 // Valid cilkscale timer values are RDTSC, CLOCK, and INST
-#define CSCALETIMER RDTSC
+#define CSCALETIMER CLOCK
 #endif
 
 #if CSCALETIMER == RDTSC
@@ -58,6 +58,10 @@ static inline void gettime(cilkscale_timer_t *timer) {
 #endif
 }
 
+static inline void settime(cilkscale_timer_t *timer, cilkscale_timer_t val) {
+  *timer = val;
+}
+
 static inline void printtime(uint64_t timeval) {
 #if CSCALETIMER == RDTSC
   fprintf(stderr, "%f Gcycles", timeval/(1000000000.0));
@@ -65,6 +69,7 @@ static inline void printtime(uint64_t timeval) {
   fprintf(stderr, "%fs", timeval/(1000000000.0));
 #elif CSCALETIMER == INST
   fprintf(stderr, "%f Minstructions", timeval/(1000000.0));
+  /* fprintf(stderr, "%ld inst", timeval); */
 #endif
 }
 
