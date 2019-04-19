@@ -29,14 +29,12 @@ class TestObjCIVarDiscovery(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
-    @expectedFailureAll(bugnumber="rdar://45929100")
     def test_nodbg(self):
         self.build()
         shutil.rmtree(self.getBuildArtifact("aTestFramework.framework.dSYM"))
         self.do_test(False)
 
     @skipUnlessDarwin
-    @expectedFailureAll(bugnumber="rdar://45929100")
     def test_dbg(self):
         self.build()
         self.do_test(True)
@@ -48,9 +46,6 @@ class TestObjCIVarDiscovery(TestBase):
 
     def do_test(self, dbg):
         """Test that we can correctly see ivars from the Objective-C runtime"""
-        if dbg:
-            self.runCmd("type category disable runtime-synthetics")
-
         # Launch the process, and do not stop at the entry point.
         envp = ['DYLD_FRAMEWORK_PATH=.']
         lldbutil.run_to_source_breakpoint(
@@ -90,8 +85,8 @@ class TestObjCIVarDiscovery(TestBase):
             myclass.GetChildMemberWithName("m_myclass_numbers"))
 
         self.assertTrue(
-            m_numbers.GetSummary() == '"3 values"',
-            "m_myclass_numbers != 3 values")
+            m_numbers.GetSummary() == '3 elements',
+            "m_myclass_numbers != 3 elements")
 
         m_subclass_ivar = mysubclass.GetChildMemberWithName("m_subclass_ivar")
         self.assertTrue(
@@ -102,14 +97,6 @@ class TestObjCIVarDiscovery(TestBase):
         self.assertTrue(
             m_mysubclass_s.GetSummary() == '"an NSString here"',
             'm_subclass_s != "an NSString here"')
-
-        m_mysubclass_r = mysubclass.GetChildMemberWithName("m_mysubclass_r")
-        self.assertTrue(
-            re.search(
-                '.*x=0[, ]+y=0.*width=30[, ]+height=40.*',
-                m_mysubclass_r.GetSummary()
-            ) is not None,
-            'm_subclass_r != origin=(x=0, y=0) size=(width=30, height=40)')
 
         swiftivar = obj.GetChildMemberWithName("swiftivar")
         self.assertTrue(
