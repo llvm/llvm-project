@@ -927,9 +927,9 @@ bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 }
 
 bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
-    MachineInstr &MIa, MachineInstr &MIb, AliasAnalysis *AA) const {
+    const MachineInstr &MIa, const MachineInstr &MIb, AliasAnalysis *AA) const {
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
+  const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   unsigned WidthA = 0, WidthB = 0;
 
@@ -1894,7 +1894,7 @@ unsigned AArch64InstrInfo::convertToFlagSettingOpc(unsigned Opc,
 
 // Is this a candidate for ld/st merging or pairing?  For example, we don't
 // touch volatiles or load/stores that have a hint to avoid pair formation.
-bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
+bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // If this is a volatile load/store, don't mess with it.
   if (MI.hasOrderedMemoryRef())
     return false;
@@ -1936,8 +1936,8 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
   return true;
 }
 
-bool AArch64InstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
-                                          MachineOperand *&BaseOp,
+bool AArch64InstrInfo::getMemOperandWithOffset(const MachineInstr &LdSt,
+                                          const MachineOperand *&BaseOp,
                                           int64_t &Offset,
                                           const TargetRegisterInfo *TRI) const {
   unsigned Width;
@@ -1945,7 +1945,7 @@ bool AArch64InstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
 }
 
 bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
-    MachineInstr &LdSt, MachineOperand *&BaseOp, int64_t &Offset,
+    const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
     unsigned &Width, const TargetRegisterInfo *TRI) const {
   assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
   // Handle only loads/stores with base register followed by immediate offset.
@@ -2244,11 +2244,11 @@ static bool shouldClusterFI(const MachineFrameInfo &MFI, int FI1,
 /// Detect opportunities for ldp/stp formation.
 ///
 /// Only called for LdSt for which getMemOperandWithOffset returns true.
-bool AArch64InstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
-                                           MachineOperand &BaseOp2,
+bool AArch64InstrInfo::shouldClusterMemOps(const MachineOperand &BaseOp1,
+                                           const MachineOperand &BaseOp2,
                                            unsigned NumLoads) const {
-  MachineInstr &FirstLdSt = *BaseOp1.getParent();
-  MachineInstr &SecondLdSt = *BaseOp2.getParent();
+  const MachineInstr &FirstLdSt = *BaseOp1.getParent();
+  const MachineInstr &SecondLdSt = *BaseOp2.getParent();
   if (BaseOp1.getType() != BaseOp2.getType())
     return false;
 
@@ -4918,8 +4918,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // At this point, we have a stack instruction that we might need to
     // fix up. We'll handle it if it's a load or store.
     if (MI.mayLoadOrStore()) {
-      MachineOperand *Base; // Filled with the base operand of MI.
-      int64_t Offset;       // Filled with the offset of MI.
+      const MachineOperand *Base; // Filled with the base operand of MI.
+      int64_t Offset;             // Filled with the offset of MI.
 
       // Does it allow us to offset the base operand and is the base the
       // register SP?
@@ -5288,7 +5288,7 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 
 void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
   for (MachineInstr &MI : MBB) {
-    MachineOperand *Base;
+    const MachineOperand *Base;
     unsigned Width;
     int64_t Offset;
 

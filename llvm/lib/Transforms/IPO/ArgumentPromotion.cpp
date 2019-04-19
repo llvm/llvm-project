@@ -1104,7 +1104,9 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
         CallGraphNode *NewCalleeNode =
             CG.getOrInsertFunction(NewCS.getCalledFunction());
         CallGraphNode *CallerNode = CG[Caller];
-        CallerNode->replaceCallEdge(OldCS, NewCS, NewCalleeNode);
+        CallerNode->replaceCallEdge(*cast<CallBase>(OldCS.getInstruction()),
+                                    *cast<CallBase>(NewCS.getInstruction()),
+                                    NewCalleeNode);
       };
 
       const TargetTransformInfo &TTI =

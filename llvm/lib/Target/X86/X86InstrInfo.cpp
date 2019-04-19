@@ -2958,7 +2958,7 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
 }
 
 bool X86InstrInfo::getMemOperandWithOffset(
-    MachineInstr &MemOp, MachineOperand *&BaseOp, int64_t &Offset,
+    const MachineInstr &MemOp, const MachineOperand *&BaseOp, int64_t &Offset,
     const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp.getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);

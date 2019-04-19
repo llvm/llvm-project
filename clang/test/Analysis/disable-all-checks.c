@@ -12,7 +12,7 @@
 //
 // expected-no-diagnostics
 
-// CHECK: no analyzer checkers are associated with 'non.existant.Checker'
+// CHECK: no analyzer checkers or packages are associated with 'non.existant.Checker'
 // CHECK: use -analyzer-disable-all-checks to disable all static analyzer checkers
 int buggy() {
   int x = 0;

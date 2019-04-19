@@ -76,6 +76,9 @@ class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
+extern cl::opt<bool> EnableLoopInterleaving;
+extern cl::opt<bool> EnableLoopVectorization;
+
 struct LoopVectorizeOptions {
   /// If false, consider all loops for interleaving.
   /// If true, only loops that explicitly request interleaving are considered.
@@ -85,8 +88,21 @@ struct LoopVectorizeOptions {
   /// If true, only loops that explicitly request vectorization are considered.
   bool VectorizeOnlyWhenForced;
 
+  /// The current defaults when creating the pass with no arguments are:
+  /// EnableLoopInterleaving = true and EnableLoopVectorization = true. This
+  /// means that interleaving default is consistent with the cl::opt flag, while
+  /// vectorization is not.
+  /// FIXME: The default for EnableLoopVectorization in the cl::opt should be
+  /// set to true, and the corresponding change to account for this be made in
+  /// opt.cpp. The initializations below will become:
+  /// InterleaveOnlyWhenForced(!EnableLoopInterleaving)
+  /// VectorizeOnlyWhenForced(!EnableLoopVectorization).
   LoopVectorizeOptions()
       : InterleaveOnlyWhenForced(false), VectorizeOnlyWhenForced(false) {}
+  LoopVectorizeOptions(bool InterleaveOnlyWhenForced,
+                       bool VectorizeOnlyWhenForced)
+      : InterleaveOnlyWhenForced(InterleaveOnlyWhenForced),
+        VectorizeOnlyWhenForced(VectorizeOnlyWhenForced) {}
 
   LoopVectorizeOptions &setInterleaveOnlyWhenForced(bool Value) {
     InterleaveOnlyWhenForced = Value;

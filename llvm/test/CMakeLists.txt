@@ -45,6 +45,7 @@ set(LLVM_TEST_DEPENDS
           llc
           lli
           lli-child-target
+          llvm-addr2line
           llvm-ar
           llvm-as
           llvm-bcanalyzer

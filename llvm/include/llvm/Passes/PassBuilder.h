@@ -66,6 +66,22 @@ struct PGOOptions {
   bool SamplePGOSupport;
 };
 
+/// Tunable parameters for passes in the default pipelines.
+class PipelineTuningOptions {
+public:
+  /// Constructor sets pipeline tuning defaults based on cl::opts. Each option
+  /// can be set in the PassBuilder when using a LLVM as a library.
+  PipelineTuningOptions();
+
+  /// Tuning option to set loop interleaving on/off. Its default value is that
+  /// of the flag: `-interleave-loops`.
+  bool LoopInterleaving;
+
+  /// Tuning option to enable/disable loop vectorization. Its default value is
+  /// that of the flag: `-vectorize-loops`.
+  bool LoopVectorization;
+};
+
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -74,6 +90,7 @@ struct PGOOptions {
 /// construction.
 class PassBuilder {
   TargetMachine *TM;
+  PipelineTuningOptions PTO;
   Optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
 
@@ -190,9 +207,10 @@ public:
   };
 
   explicit PassBuilder(TargetMachine *TM = nullptr,
+                       PipelineTuningOptions PTO = PipelineTuningOptions(),
                        Optional<PGOOptions> PGOOpt = None,
                        PassInstrumentationCallbacks *PIC = nullptr)
-      : TM(TM), PGOOpt(PGOOpt), PIC(PIC) {}
+      : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {}
 
   /// Cross register the analysis managers through their proxies.
   ///

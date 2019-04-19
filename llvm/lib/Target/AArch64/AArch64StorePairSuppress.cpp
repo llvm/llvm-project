@@ -147,7 +147,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : MBB) {
       if (!isNarrowFPStore(MI))
         continue;
-      MachineOperand *BaseOp;
+      const MachineOperand *BaseOp;
       int64_t Offset;
       if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI) &&
           BaseOp->isReg()) {
