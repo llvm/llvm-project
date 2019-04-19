@@ -239,6 +239,7 @@ set(x86_ARCH_SOURCES
 
 if (NOT MSVC)
   set(x86_64_SOURCES
+    ${GENERIC_TF_SOURCES}
     x86_64/floatdidf.c
     x86_64/floatdisf.c
     x86_64/floatdixf.c
