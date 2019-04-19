@@ -5,7 +5,7 @@
 // The class is declared with objc_class_stub, so LSB of the class pointer
 // must be set to 1.
 //
-// CHECK-LABEL: @"OBJC_CLASSLIST_REFERENCES_$_" = private global i8* getelementptr (i8, i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_Base" to i8*), i32 1), section "__DATA,__objc_classrefs,regular,no_dead_strip", align 8
+// CHECK-LABEL: @"OBJC_CLASSLIST_REFERENCES_$_" = private global i8* getelementptr (i8, i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_Base" to i8*), i32 1), align 8
 
 // -- classref for the super message send in anotherClassMethod()
 //

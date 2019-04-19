@@ -7331,7 +7331,9 @@ CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
         getLinkageTypeForObjCMetadata(CGM, SectionName), ClassGV,
         "OBJC_CLASSLIST_REFERENCES_$_");
     Entry->setAlignment(CGF.getPointerAlign().getQuantity());
-    Entry->setSection(SectionName);
+    if (!ID || !ID->hasAttr<ObjCClassStubAttr>())
+      Entry->setSection(SectionName);
+
     CGM.addCompilerUsedGlobal(Entry);
   }
 
