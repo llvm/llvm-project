@@ -50,6 +50,7 @@ add_clang_unittest(ToolingTests
   ReplacementsYamlTest.cpp
   RewriterTest.cpp
   SourceCodeTest.cpp
+  StencilTest.cpp
   ToolingTest.cpp
   TransformerTest.cpp
   )

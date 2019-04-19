@@ -1437,10 +1437,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     ConstantFP &ZeroForNegation =
         *cast<ConstantFP>(ConstantFP::getZeroValueForNegation(ZeroTy));
     auto Zero = MIRBuilder.buildFConstant(Ty, ZeroForNegation);
-    MIRBuilder.buildInstr(TargetOpcode::G_FSUB)
-        .addDef(Res)
-        .addUse(Zero->getOperand(0).getReg())
-        .addUse(MI.getOperand(1).getReg());
+    unsigned SubByReg = MI.getOperand(1).getReg();
+    unsigned ZeroReg = Zero->getOperand(0).getReg();
+    MachineInstr *SrcMI = MRI.getVRegDef(SubByReg);
+    MIRBuilder.buildInstr(TargetOpcode::G_FSUB, {Res}, {ZeroReg, SubByReg},
+                          SrcMI->getFlags());
     MI.eraseFromParent();
     return Legalized;
   }
@@ -1455,10 +1456,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     unsigned RHS = MI.getOperand(2).getReg();
     unsigned Neg = MRI.createGenericVirtualRegister(Ty);
     MIRBuilder.buildInstr(TargetOpcode::G_FNEG).addDef(Neg).addUse(RHS);
-    MIRBuilder.buildInstr(TargetOpcode::G_FADD)
-        .addDef(Res)
-        .addUse(LHS)
-        .addUse(Neg);
+    MIRBuilder.buildInstr(TargetOpcode::G_FADD, {Res}, {LHS, Neg}, MI.getFlags());
     MI.eraseFromParent();
     return Legalized;
   }

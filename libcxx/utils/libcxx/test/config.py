@@ -818,7 +818,11 @@ class Configuration(object):
         elif cxx_abi == 'libsupc++':
             self.cxx.link_flags += ['-lsupc++']
         elif cxx_abi == 'libcxxabi':
-            if self.target_info.allow_cxxabi_link():
+            # If the C++ library requires explicitly linking to libc++abi, or
+            # if we're testing libc++abi itself (the test configs are shared),
+            # then link it.
+            testing_libcxxabi = self.get_lit_conf('name', '') == 'libc++abi'
+            if self.target_info.allow_cxxabi_link() or testing_libcxxabi:
                 libcxxabi_shared = self.get_lit_bool('libcxxabi_shared', default=True)
                 if libcxxabi_shared:
                     self.cxx.link_flags += ['-lc++abi']

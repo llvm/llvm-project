@@ -7,7 +7,7 @@ int a;
 
 #pragma omp requires unified_shared_memory, unified_shared_memory // expected-error {{Only one unified_shared_memory clause can appear on a requires directive in a single translation unit}} expected-error {{directive '#pragma omp requires' cannot contain more than one 'unified_shared_memory' clause}}
 
-#pragma omp requires unified_address // expected-error {{Only one unified_address clause can appear on a requires directive in a single translation unit}} 
+#pragma omp requires unified_address // expected-error {{Only one unified_address clause can appear on a requires directive in a single translation unit}}
 
 #pragma omp requires unified_address, unified_address // expected-error {{Only one unified_address clause can appear on a requires directive in a single translation unit}} expected-error {{directive '#pragma omp requires' cannot contain more than one 'unified_address' clause}}
 
@@ -29,13 +29,13 @@ int a;
 
 #pragma omp requires atomic_default_mem_order( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'seq_cst', 'acq_rel' or 'relaxed' in OpenMP clause 'atomic_default_mem_order'}} expected-error {{expected at least one clause on '#pragma omp requires' directive}}
 
-#pragma omp requires atomic_default_mem_order(seq_cst // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{Only one atomic_default_mem_order clause can appear on a requires directive in a single translation unit}} 
+#pragma omp requires atomic_default_mem_order(seq_cst // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{Only one atomic_default_mem_order clause can appear on a requires directive in a single translation unit}}
 
-#pragma omp requires atomic_default_mem_order(invalid_modifier) // expected-error {{expected 'seq_cst', 'acq_rel' or 'relaxed' in OpenMP clause 'atomic_default_mem_order'}} expected-error {{expected at least one clause on '#pragma omp requires' directive}} 
+#pragma omp requires atomic_default_mem_order(invalid_modifier) // expected-error {{expected 'seq_cst', 'acq_rel' or 'relaxed' in OpenMP clause 'atomic_default_mem_order'}} expected-error {{expected at least one clause on '#pragma omp requires' directive}}
 
 #pragma omp requires atomic_default_mem_order(shared) // expected-error {{expected 'seq_cst', 'acq_rel' or 'relaxed' in OpenMP clause 'atomic_default_mem_order'}} expected-error {{expected at least one clause on '#pragma omp requires' directive}}
 
-#pragma omp requires atomic_default_mem_order(acq_rel), atomic_default_mem_order(relaxed) // expected-error {{directive '#pragma omp requires' cannot contain more than one 'atomic_default_mem_order' claus}} expected-error {{Only one atomic_default_mem_order clause can appear on a requires directive in a single translation unit}} 
+#pragma omp requires atomic_default_mem_order(acq_rel), atomic_default_mem_order(relaxed) // expected-error {{directive '#pragma omp requires' cannot contain more than one 'atomic_default_mem_order' claus}} expected-error {{Only one atomic_default_mem_order clause can appear on a requires directive in a single translation unit}}
 
 #pragma omp requires // expected-error {{expected at least one clause on '#pragma omp requires' directive}}
 
