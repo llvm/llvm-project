@@ -142,16 +142,22 @@ bool constexpr IsLambda(const char *name) {
          name[6] == 'o' && name[7] && name[7] == 'r' && name[8] &&
          name[8] == '(' && name[9] && name[9] == ')';
 }
+
+/// Used to sort the log output.
+std::recursive_mutex g_log_mutex;
+
 } // namespace
 
 /// Similar to LLDB_LOG, but with richer contextual information.
 #define LOG_PRINTF(CHANNEL, FMT, ...)                                          \
   do {                                                                         \
-    if (Log *log = lldb_private::GetLogIfAllCategoriesSet(CHANNEL))            \
+    if (Log *log = lldb_private::GetLogIfAllCategoriesSet(CHANNEL)) {          \
+      std::lock_guard<std::recursive_mutex> locker(g_log_mutex);               \
       /* The format string is optimized for code size, not speed. */           \
       log->Printf("%s::%s%s" FMT, m_description.c_str(),                       \
                   IsLambda(__FUNCTION__) ? "" : __FUNCTION__,                  \
                   (FMT && FMT[0] == '(') ? "" : "() -- ", ##__VA_ARGS__);      \
+    }                                                                          \
   } while (0)
 
 using namespace lldb;
@@ -1757,11 +1763,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   swift_ast_sp->RegisterSectionModules(module, module_names);
   swift_ast_sp->ValidateSectionModules(module, module_names);
 
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Module*)%p, \"%s\") = %p",
-             static_cast<void *>(&module),
-             module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
-             static_cast<void *>(swift_ast_sp.get()));
-  swift_ast_sp->LogConfiguration();
+  if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES)) {
+    std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Module*)%p, \"%s\") = %p",
+               static_cast<void *>(&module),
+               module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
+               static_cast<void *>(swift_ast_sp.get()));
+    swift_ast_sp->LogConfiguration();
+  }
   return swift_ast_sp;
 }
 
@@ -7502,7 +7511,6 @@ LazyBool SwiftASTContext::ShouldPrintAsOneLiner(void *type,
 }
 
 bool SwiftASTContext::IsMeaninglessWithoutDynamicResolution(void *type) {
-  //  ((swift::TypeBase*)type)->dump();
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     return swift_can_type->hasTypeParameter();
