@@ -33,6 +33,7 @@ public:
     DebianJessie,
     DebianStretch,
     DebianBuster,
+    DebianBullseye,
     Exherbo,
     RHEL5,
     RHEL6,
@@ -63,6 +64,7 @@ public:
     UbuntuBionic,
     UbuntuCosmic,
     UbuntuDisco,
+    UbuntuEoan,
     UnknownDistro
   };
 
@@ -112,11 +114,11 @@ public:
   }
 
   bool IsDebian() const {
-    return DistroVal >= DebianLenny && DistroVal <= DebianBuster;
+    return DistroVal >= DebianLenny && DistroVal <= DebianBullseye;
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuDisco;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuEoan;
   }
 
   bool IsAlpineLinux() const {

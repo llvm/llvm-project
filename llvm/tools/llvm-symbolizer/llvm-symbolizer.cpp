@@ -43,7 +43,7 @@ static cl::opt<FunctionNameKind> ClPrintFunctions(
                clEnumValN(FunctionNameKind::ShortName, "short",
                           "print short function name"),
                clEnumValN(FunctionNameKind::LinkageName, "linkage",
-                          "print function linkage name (default)"),
+                          "print function linkage name"),
                // Sentinel value for unspecified value.
                clEnumValN(FunctionNameKind::LinkageName, "", "")));
 static cl::alias ClPrintFunctionsShort("f", cl::desc("Alias for -functions"),
@@ -148,7 +148,7 @@ static cl::opt<std::string>
 
 static cl::opt<DIPrinter::OutputStyle>
     ClOutputStyle("output-style", cl::init(DIPrinter::OutputStyle::LLVM),
-                  cl::desc("Specify print style"), cl::Hidden,
+                  cl::desc("Specify print style"),
                   cl::values(clEnumValN(DIPrinter::OutputStyle::LLVM, "LLVM",
                                         "LLVM default style"),
                              clEnumValN(DIPrinter::OutputStyle::GNU, "GNU",
@@ -227,21 +227,43 @@ static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
         ModuleName, {Offset, object::SectionedAddress::UndefSection},
         ClDwpName);
     Printer << (error(ResOrErr) ? DIInliningInfo() : ResOrErr.get());
+  } else if (ClOutputStyle == DIPrinter::OutputStyle::GNU) {
+    // With ClPrintFunctions == FunctionNameKind::LinkageName (default)
+    // and ClUseSymbolTable == true (also default), Symbolizer.symbolizeCode()
+    // may override the name of an inlined function with the name of the topmost
+    // caller function in the inlining chain. This contradicts the existing
+    // behavior of addr2line. Symbolizer.symbolizeInlinedCode() overrides only
+    // the topmost function, which suits our needs better.
+    auto ResOrErr = Symbolizer.symbolizeInlinedCode(
+        ModuleName, {Offset, object::SectionedAddress::UndefSection},
+        ClDwpName);
+    Printer << (error(ResOrErr) ? DILineInfo() : ResOrErr.get().getFrame(0));
   } else {
     auto ResOrErr = Symbolizer.symbolizeCode(
         ModuleName, {Offset, object::SectionedAddress::UndefSection},
         ClDwpName);
     Printer << (error(ResOrErr) ? DILineInfo() : ResOrErr.get());
   }
-  outs() << "\n";
+  if (ClOutputStyle == DIPrinter::OutputStyle::LLVM)
+    outs() << "\n";
   outs().flush();
 }
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
+  bool IsAddr2Line = sys::path::stem(argv[0]).contains("addr2line");
+
+  if (IsAddr2Line) {
+    ClDemangle.setInitialValue(false);
+    ClPrintFunctions.setInitialValue(FunctionNameKind::None);
+    ClPrintInlining.setInitialValue(false);
+    ClOutputStyle.setInitialValue(DIPrinter::OutputStyle::GNU);
+  }
+
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
-  cl::ParseCommandLineOptions(argc, argv, "llvm-symbolizer\n");
+  cl::ParseCommandLineOptions(argc, argv, IsAddr2Line ? "llvm-addr2line\n"
+                                                      : "llvm-symbolizer\n");
 
   // If both --demangle and --no-demangle are specified then pick the last one.
   if (ClNoDemangle.getPosition() > ClDemangle.getPosition())

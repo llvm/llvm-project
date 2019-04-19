@@ -95,6 +95,11 @@ cl::opt<bool> LTOPassRemarksWithHotness(
     "lto-pass-remarks-with-hotness",
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
+
+cl::opt<std::string> LTOStatsFile(
+    "lto-stats-file",
+    cl::desc("Save statistics to the specified file"),
+    cl::Hidden);
 }
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -518,6 +523,14 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
   }
   DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
+  // Setup output file to emit statistics.
+  auto StatsFileOrErr = lto::setupStatsFile(LTOStatsFile);
+  if (!StatsFileOrErr) {
+    errs() << "Error: " << toString(StatsFileOrErr.takeError()) << "\n";
+    report_fatal_error("Can't get an output file for the statistics");
+  }
+  StatsFile = std::move(StatsFileOrErr.get());
+
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.
   verifyMergedModuleOnce();
@@ -584,9 +597,13 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
                               [&]() { return createTargetMachine(); }, FileType,
                               ShouldRestoreGlobalsLinkage);
 
-  // If statistics were requested, print them out after codegen.
-  if (llvm::AreStatisticsEnabled())
-    llvm::PrintStatistics();
+  // If statistics were requested, save them to the specified file or
+  // print them out after codegen.
+  if (StatsFile)
+    PrintStatisticsJSON(StatsFile->os());
+  else if (AreStatisticsEnabled())
+    PrintStatistics();
+
   reportAndResetTimings();
 
   finishOptimizationRemarks();

@@ -422,7 +422,7 @@ static void initOption(AnalyzerOptions::ConfigTable &Config,
 
   OptionField = DefaultVal;
   bool HasFailed = getStringOption(Config, Name, std::to_string(DefaultVal))
-                     .getAsInteger(10, OptionField);
+                     .getAsInteger(0, OptionField);
   if (Diags && HasFailed)
     Diags->Report(diag::err_analyzer_config_invalid_input)
       << Name << "an unsigned";

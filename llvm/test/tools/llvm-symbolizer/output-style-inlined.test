@@ -1,0 +1,26 @@
+This test checks that when inlined frames are not shown (-i=0) and the output
+style is set to GNU (--output-style=GNU) the name of an inlined function is not
+replaced with the name of the top caller function. At the same time, the current
+behavior of llvm-symbolizer is preserved with --output-style=LLVM or when
+the option is not specified.
+
+RUN: llvm-symbolizer -i=0 -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
+
+RUN: llvm-symbolizer --output-style=LLVM -i=0 -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
+
+RUN: llvm-symbolizer --output-style=GNU -i=0 -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=GNU --implicit-check-not=main
+
+RUN: llvm-addr2line -f -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=GNU --implicit-check-not=main
+
+RUN: llvm-addr2line --output-style=GNU -f -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=GNU --implicit-check-not=main
+
+RUN: llvm-addr2line --output-style=LLVM -f -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
+
+LLVM: main
+GNU: inctwo

@@ -603,8 +603,8 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   //   - A name declared at namespace scope that does not have internal linkage
   //     by the previous rules and that is introduced by a non-exported
   //     declaration has module linkage.
-  if (isInModulePurview(D) &&
-      !isExportedFromModuleInterfaceUnit(cast<NamedDecl>(D->getCanonicalDecl())))
+  if (isInModulePurview(D) && !isExportedFromModuleInterfaceUnit(
+                                  cast<NamedDecl>(D->getCanonicalDecl())))
     return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
 
   return LinkageInfo::external();

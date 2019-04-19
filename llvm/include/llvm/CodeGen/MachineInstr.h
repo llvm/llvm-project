@@ -1378,7 +1378,7 @@ public:
   /// @param AA Optional alias analysis, used to compare memory operands.
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
-  bool mayAlias(AliasAnalysis *AA, MachineInstr &Other, bool UseTBAA);
+  bool mayAlias(AliasAnalysis *AA, const MachineInstr &Other, bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered
   /// or volatile memory reference, or if the information describing the memory

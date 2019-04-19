@@ -1181,8 +1181,8 @@ bool MachineInstr::isSafeToMove(AliasAnalysis *AA, bool &SawStore) const {
   return true;
 }
 
-bool MachineInstr::mayAlias(AliasAnalysis *AA, MachineInstr &Other,
-                            bool UseTBAA) {
+bool MachineInstr::mayAlias(AliasAnalysis *AA, const MachineInstr &Other,
+                            bool UseTBAA) const {
   const MachineFunction *MF = getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
