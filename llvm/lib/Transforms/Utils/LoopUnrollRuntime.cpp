@@ -949,11 +949,12 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   if (remainderLoop && UnrollRemainder) {
     LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
     UnrollResult =
-        UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
-                   /*Force*/ false, /*AllowRuntime*/ false,
-                   /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
-                   /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
-                   /*PeelCount*/ 0, /*UnrollRemainder*/ false, ForgetAllSCEV,
+        UnrollLoop(remainderLoop,
+                   {/*Count*/ Count - 1, /*TripCount*/ Count - 1,
+                    /*Force*/ false, /*AllowRuntime*/ false,
+                    /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
+                    /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
+                    /*PeelCount*/ 0, /*UnrollRemainder*/ false, ForgetAllSCEV},
                    LI, SE, DT, AC, /*ORE*/ nullptr, PreserveLCSSA);
   }
 

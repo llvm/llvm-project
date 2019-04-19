@@ -6,63 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/CrossTU/CrossTranslationUnit.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
+#include "Reusables.h"
+
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace ento {
 namespace {
-
-using namespace ast_matchers;
-
-// A re-usable consumer that constructs ExprEngine out of CompilerInvocation.
-// TODO: Actually re-use it when we write our second test.
-class ExprEngineConsumer : public ASTConsumer {
-protected:
-  CompilerInstance &C;
-
-private:
-  // We need to construct all of these in order to construct ExprEngine.
-  CheckerManager ChkMgr;
-  cross_tu::CrossTranslationUnitContext CTU;
-  PathDiagnosticConsumers Consumers;
-  AnalysisManager AMgr;
-  SetOfConstDecls VisitedCallees;
-  FunctionSummariesTy FS;
-
-protected:
-  ExprEngine Eng;
-
-  // Find a declaration in the current AST by name. This has nothing to do
-  // with ExprEngine but turns out to be handy.
-  // TODO: There's probably a better place for it.
-  template <typename T>
-  const T *findDeclByName(const Decl *Where, StringRef Name) {
-    auto Matcher = decl(hasDescendant(namedDecl(hasName(Name)).bind("d")));
-    auto Matches = match(Matcher, *Where, Eng.getContext());
-    assert(Matches.size() == 1 && "Ambiguous name!");
-    const T *Node = selectFirst<T>("d", Matches);
-    assert(Node && "Name not found!");
-    return Node;
-  }
-
-public:
-  ExprEngineConsumer(CompilerInstance &C)
-      : C(C), ChkMgr(C.getASTContext(), *C.getAnalyzerOpts()), CTU(C),
-        Consumers(),
-        AMgr(C.getASTContext(), C.getDiagnostics(), Consumers,
-             CreateRegionStoreManager, CreateRangeConstraintManager, &ChkMgr,
-             *C.getAnalyzerOpts()),
-        VisitedCallees(), FS(),
-        Eng(CTU, AMgr, &VisitedCallees, &FS, ExprEngine::Inline_Regular) {}
-};
 
 class SuperRegionLivenessConsumer : public ExprEngineConsumer {
   void performTest(const Decl *D) {
@@ -99,7 +50,7 @@ public:
   }
 };
 
-class SuperRegionLivenessAction: public ASTFrontendAction {
+class SuperRegionLivenessAction : public ASTFrontendAction {
 public:
   SuperRegionLivenessAction() {}
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,

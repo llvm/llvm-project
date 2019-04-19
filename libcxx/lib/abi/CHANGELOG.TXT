@@ -16,6 +16,23 @@ New entries should be added directly below the "Version" header.
 Version 9.0
 -----------
 
+* rXXXXX - Re-rexport missing symbols from libc++abi
+
+  libc++ now re-exports `__cxa_throw_bad_array_new_length` and `__cxa_uncaught_exceptions`,
+  both of which are provided by libc++abi. This is not an ABI break because
+  we're just adding symbols. Also, this does mean that libc++ can't be linked
+  against an older version of libc++abi that doesn't provide those symbols,
+  however doing so is not supported anyway.
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  TODO
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: ___cxa_throw_bad_array_new_length
+  Symbol added: ___cxa_uncaught_exceptions
+
 * r356518 - Integrate <filesystem> support into the shared library
 
   This patch introduces support for <filesystem> into the shared library,

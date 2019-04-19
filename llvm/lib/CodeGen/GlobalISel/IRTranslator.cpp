@@ -1166,6 +1166,8 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   MachineInstrBuilder MIB =
       MIRBuilder.buildIntrinsic(ID, ResultRegs, !CI.doesNotAccessMemory());
+  if (isa<FPMathOperator>(CI))
+    MIB->copyIRFlags(CI);
 
   for (auto &Arg : CI.arg_operands()) {
     // Some intrinsics take metadata parameters. Reject them.

@@ -806,12 +806,22 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
   return std::make_pair(Result, true);
 }
 
-Module *ModuleMap::createGlobalModuleForInterfaceUnit(SourceLocation Loc) {
+Module *ModuleMap::createGlobalModuleFragmentForModuleUnit(SourceLocation Loc) {
   PendingSubmodules.emplace_back(
       new Module("<global>", Loc, nullptr, /*IsFramework*/ false,
                  /*IsExplicit*/ true, NumCreatedModules++));
   PendingSubmodules.back()->Kind = Module::GlobalModuleFragment;
   return PendingSubmodules.back().get();
+}
+
+Module *
+ModuleMap::createPrivateModuleFragmentForInterfaceUnit(Module *Parent,
+                                                       SourceLocation Loc) {
+  auto *Result =
+      new Module("<private>", Loc, Parent, /*IsFramework*/ false,
+                 /*IsExplicit*/ true, NumCreatedModules++);
+  Result->Kind = Module::PrivateModuleFragment;
+  return Result;
 }
 
 Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,

@@ -14,11 +14,7 @@ import optparse
 import os
 import platform
 import sys
-
-if sys.version_info.major == 2:
-    import commands as subprocess
-else:
-    import subprocess
+import subprocess
 
 #----------------------------------------------------------------------
 # Code that auto imports LLDB
@@ -32,7 +28,7 @@ except ImportError:
     platform_system = platform.system()
     if platform_system == 'Darwin':
         # On Darwin, try the currently selected Xcode directory
-        xcode_dir = subprocess.getoutput("xcode-select --print-path")
+        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True)
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(

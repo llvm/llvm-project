@@ -567,7 +567,14 @@ static bool isSingleLineLanguageLinkage(const Decl &D) {
   return false;
 }
 
-static bool isExportedFromModuleIntefaceUnit(const NamedDecl *D) {
+/// Determine whether D is declared in the purview of a named module.
+static bool isInModulePurview(const NamedDecl *D) {
+  if (auto *M = D->getOwningModule())
+    return M->isModulePurview();
+  return false;
+}
+
+static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
   // FIXME: Handle isModulePrivate.
   switch (D->getModuleOwnershipKind()) {
   case Decl::ModuleOwnershipKind::Unowned:
@@ -575,8 +582,7 @@ static bool isExportedFromModuleIntefaceUnit(const NamedDecl *D) {
     return false;
   case Decl::ModuleOwnershipKind::Visible:
   case Decl::ModuleOwnershipKind::VisibleWhenImported:
-    if (auto *M = D->getOwningModule())
-      return M->Kind == Module::ModuleInterfaceUnit;
+    return isInModulePurview(D);
   }
   llvm_unreachable("unexpected module ownership kind");
 }
@@ -586,9 +592,8 @@ static LinkageInfo getInternalLinkageFor(const NamedDecl *D) {
   // as "module-internal linkage", which means that they have internal linkage
   // formally but can be indirectly accessed from outside the module via inline
   // functions and templates defined within the module.
-  if (auto *M = D->getOwningModule())
-    if (M->Kind == Module::ModuleInterfaceUnit)
-      return LinkageInfo(ModuleInternalLinkage, DefaultVisibility, false);
+  if (isInModulePurview(D))
+    return LinkageInfo(ModuleInternalLinkage, DefaultVisibility, false);
 
   return LinkageInfo::internal();
 }
@@ -598,11 +603,9 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   //   - A name declared at namespace scope that does not have internal linkage
   //     by the previous rules and that is introduced by a non-exported
   //     declaration has module linkage.
-  if (auto *M = D->getOwningModule())
-    if (M->Kind == Module::ModuleInterfaceUnit)
-      if (!isExportedFromModuleIntefaceUnit(
-              cast<NamedDecl>(D->getCanonicalDecl())))
-        return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
+  if (isInModulePurview(D) && !isExportedFromModuleInterfaceUnit(
+                                  cast<NamedDecl>(D->getCanonicalDecl())))
+    return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
 
   return LinkageInfo::external();
 }
@@ -635,7 +638,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
         Var->getType().isConstQualified() &&
         !Var->getType().isVolatileQualified() &&
         !Var->isInline() &&
-        !isExportedFromModuleIntefaceUnit(Var)) {
+        !isExportedFromModuleInterfaceUnit(Var)) {
       const VarDecl *PrevVar = Var->getPreviousDecl();
       if (PrevVar)
         return getLVForDecl(PrevVar, computation);
@@ -1507,6 +1510,11 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
     }
     return InternalLinkage ? M->Parent : nullptr;
   }
+
+  case Module::PrivateModuleFragment:
+    // The private module fragment is part of its containing module for linkage
+    // purposes.
+    return M->Parent;
   }
 
   llvm_unreachable("unknown module kind");
