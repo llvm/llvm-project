@@ -55,10 +55,10 @@ public:
 
     const char *
     GetPluginName ();
-    
+
     const char *
     GetShortPluginName ();
-    
+
     void
     Clear ();
 
@@ -75,30 +75,27 @@ public:
 
     %feature("autodoc", "
     Writes data into the current process's stdin. API client specifies a Python
-    string as the only argument.
-    ") PutSTDIN;
+    string as the only argument.") PutSTDIN;
     size_t
     PutSTDIN (const char *src, size_t src_len);
 
     %feature("autodoc", "
     Reads data from the current process's stdout stream. API client specifies
     the size of the buffer to read data into. It returns the byte buffer in a
-    Python string.
-    ") GetSTDOUT;
+    Python string.") GetSTDOUT;
     size_t
     GetSTDOUT (char *dst, size_t dst_len) const;
 
     %feature("autodoc", "
     Reads data from the current process's stderr stream. API client specifies
     the size of the buffer to read data into. It returns the byte buffer in a
-    Python string.
-    ") GetSTDERR;
+    Python string.") GetSTDERR;
     size_t
     GetSTDERR (char *dst, size_t dst_len) const;
 
     size_t
     GetAsyncProfileData(char *dst, size_t dst_len) const;
-    
+
     void
     ReportEventState (const lldb::SBEvent &event, FILE *out) const;
 
@@ -106,16 +103,13 @@ public:
     AppendEventStateReport (const lldb::SBEvent &event, lldb::SBCommandReturnObject &result);
 
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// Remote connection related functions. These will fail if the
-    /// process is not in eStateConnected. They are intended for use
-    /// when connecting to an externally managed debugserver instance.
-    //------------------------------------------------------------------
-    ") RemoteAttachToProcessWithID;
+    Remote connection related functions. These will fail if the
+    process is not in eStateConnected. They are intended for use
+    when connecting to an externally managed debugserver instance.") RemoteAttachToProcessWithID;
     bool
     RemoteAttachToProcessWithID (lldb::pid_t pid,
                                  lldb::SBError& error);
-    
+
     %feature("docstring",
     "See SBTarget.Launch for argument description and usage."
     ) RemoteLaunch;
@@ -129,7 +123,7 @@ public:
                   uint32_t launch_flags,
                   bool stop_at_entry,
                   lldb::SBError& error);
-    
+
     //------------------------------------------------------------------
     // Thread related functions
     //------------------------------------------------------------------
@@ -140,32 +134,27 @@ public:
     Returns the INDEX'th thread from the list of current threads.  The index
     of a thread is only valid for the current stop.  For a persistent thread
     identifier use either the thread ID or the IndexID.  See help on SBThread
-    for more details.
-    ") GetThreadAtIndex;
+    for more details.") GetThreadAtIndex;
     lldb::SBThread
     GetThreadAtIndex (size_t index);
 
     %feature("autodoc", "
-    Returns the thread with the given thread ID.
-    ") GetThreadByID;
+    Returns the thread with the given thread ID.") GetThreadByID;
     lldb::SBThread
     GetThreadByID (lldb::tid_t sb_thread_id);
-    
+
     %feature("autodoc", "
-    Returns the thread with the given thread IndexID.
-    ") GetThreadByIndexID;
+    Returns the thread with the given thread IndexID.") GetThreadByIndexID;
     lldb::SBThread
     GetThreadByIndexID (uint32_t index_id);
 
     %feature("autodoc", "
-    Returns the currently selected thread.
-    ") GetSelectedThread;
+    Returns the currently selected thread.") GetSelectedThread;
     lldb::SBThread
     GetSelectedThread () const;
 
     %feature("autodoc", "
-    Lazily create a thread on demand through the current OperatingSystem plug-in, if the current OperatingSystem plug-in supports it.
-    ") CreateOSPluginThread;
+    Lazily create a thread on demand through the current OperatingSystem plug-in, if the current OperatingSystem plug-in supports it.") CreateOSPluginThread;
     lldb::SBThread
     CreateOSPluginThread (lldb::tid_t tid, lldb::addr_t context);
 
@@ -177,7 +166,7 @@ public:
 
     bool
     SetSelectedThreadByIndexID (uint32_t index_id);
-    
+
     //------------------------------------------------------------------
     // Queue related functions
     //------------------------------------------------------------------
@@ -201,14 +190,12 @@ public:
     GetExitDescription ();
 
     %feature("autodoc", "
-    Returns the process ID of the process.
-    ") GetProcessID;
+    Returns the process ID of the process.") GetProcessID;
     lldb::pid_t
     GetProcessID ();
-    
+
     %feature("autodoc", "
-    Returns an integer ID that is guaranteed to be unique across all process instances. This is not the process ID, just a unique integer for comparison and caching purposes.
-    ") GetUniqueID;
+    Returns an integer ID that is guaranteed to be unique across all process instances. This is not the process ID, just a unique integer for comparison and caching purposes.") GetUniqueID;
     uint32_t
     GetUniqueID();
 
@@ -217,8 +204,7 @@ public:
 
     %feature("docstring", "
     Kills the process and shuts down all threads that were spawned to
-    track and monitor process.
-    ") Destroy;
+    track and monitor process.") Destroy;
     lldb::SBError
     Destroy ();
 
@@ -247,14 +233,13 @@ public:
     include_expression_stops is true, then stops caused by expression evaluation
     will cause the returned value to increase, otherwise the counter returned will
     only increase when execution is continued explicitly by the user.  Note, the value
-    will always increase, but may increase by more than one per stop.
-    ") GetStopID;
+    will always increase, but may increase by more than one per stop.") GetStopID;
     uint32_t
     GetStopID(bool include_expression_stops = false);
-    
+
     void
     SendAsyncInterrupt();
-    
+
     %feature("autodoc", "
     Reads memory from the current process's address space and removes any
     traps that may have been inserted into the memory. It returns the byte
@@ -262,8 +247,7 @@ public:
 
     # Read 4 bytes from address 'addr' and assume error.Success() is True.
     content = process.ReadMemory(addr, 4, error)
-    new_bytes = bytearray(content)
-    ") ReadMemory;
+    new_bytes = bytearray(content)") ReadMemory;
     size_t
     ReadMemory (addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
@@ -275,8 +259,7 @@ public:
     new_value = str(bytes)
     result = process.WriteMemory(addr, new_value, error)
     if not error.Success() or result != len(bytes):
-        print('SBProcess.WriteMemory() failed!')
-    ") WriteMemory;
+        print('SBProcess.WriteMemory() failed!')") WriteMemory;
     size_t
     WriteMemory (addr_t addr, const void *buf, size_t size, lldb::SBError &error);
 
@@ -284,23 +267,22 @@ public:
     Reads a NULL terminated C string from the current process's address space.
     It returns a python string of the exact length, or truncates the string if
     the maximum character limit is reached. Example:
-    
-    # Read a C string of at most 256 bytes from address '0x1000' 
+
+    # Read a C string of at most 256 bytes from address '0x1000'
     error = lldb.SBError()
     cstring = process.ReadCStringFromMemory(0x1000, 256, error)
     if error.Success():
         print('cstring: ', cstring)
     else
-        print('error: ', error)
-    ") ReadCStringFromMemory;
+        print('error: ', error)") ReadCStringFromMemory;
 
     size_t
     ReadCStringFromMemory (addr_t addr, void *char_buf, size_t size, lldb::SBError &error);
 
     %feature("autodoc", "
-    Reads an unsigned integer from memory given a byte size and an address. 
+    Reads an unsigned integer from memory given a byte size and an address.
     Returns the unsigned integer that was read. Example:
-    
+
     # Read a 4 byte unsigned integer from address 0x1000
     error = lldb.SBError()
     uint = ReadUnsignedFromMemory(0x1000, 4, error)
@@ -308,15 +290,14 @@ public:
         print('integer: %u' % uint)
     else
         print('error: ', error)
-
-    ") ReadUnsignedFromMemory;
+") ReadUnsignedFromMemory;
 
     uint64_t
     ReadUnsignedFromMemory (addr_t addr, uint32_t byte_size, lldb::SBError &error);
-    
+
     %feature("autodoc", "
     Reads a pointer from memory from an address and returns the value. Example:
-    
+
     # Read a pointer from address 0x1000
     error = lldb.SBError()
     ptr = ReadPointerFromMemory(0x1000, error)
@@ -324,12 +305,11 @@ public:
         print('pointer: 0x%x' % ptr)
     else
         print('error: ', error)
-    
-    ") ReadPointerFromMemory;
-    
+") ReadPointerFromMemory;
+
     lldb::addr_t
     ReadPointerFromMemory (addr_t addr, lldb::SBError &error);
-    
+
 
     // Events
     static lldb::StateType
@@ -340,7 +320,7 @@ public:
 
     static size_t
     GetNumRestartedReasonsFromEvent (const lldb::SBEvent &event);
-    
+
     static const char *
     GetRestartedReasonAtIndexFromEvent (const lldb::SBEvent &event, size_t idx);
 
@@ -370,23 +350,22 @@ public:
 
     uint32_t
     LoadImage (lldb::SBFileSpec &image_spec, lldb::SBError &error);
-    
+
     %feature("autodoc", "
     Load the library whose filename is given by image_spec looking in all the
     paths supplied in the paths argument.  If successful, return a token that
     can be passed to UnloadImage and fill loaded_path with the path that was
-    successfully loaded.  On failure, return 
-    lldb.LLDB_INVALID_IMAGE_TOKEN.
-    ") LoadImageUsingPaths;
-    uint32_t 
+    successfully loaded.  On failure, return
+    lldb.LLDB_INVALID_IMAGE_TOKEN.") LoadImageUsingPaths;
+    uint32_t
     LoadImageUsingPaths(const lldb::SBFileSpec &image_spec,
                         SBStringList &paths,
-                        lldb::SBFileSpec &loaded_path, 
+                        lldb::SBFileSpec &loaded_path,
                         SBError &error);
 
     lldb::SBError
     UnloadImage (uint32_t image_token);
-    
+
     lldb::SBError
     SendEventData (const char *event_data);
 
@@ -395,24 +374,22 @@ public:
     this process can support as a uint32_t.
     When the process is stopped and you have an SBThread, lldb may be
     able to show a backtrace of when that thread was originally created,
-    or the work item was enqueued to it (in the case of a libdispatch 
-    queue).
-    ") GetNumExtendedBacktraceTypes;
-    
+    or the work item was enqueued to it (in the case of a libdispatch
+    queue).") GetNumExtendedBacktraceTypes;
+
     uint32_t
     GetNumExtendedBacktraceTypes ();
 
     %feature("autodoc", "
-    Takes an index argument, returns the name of one of the thread-origin 
-    extended backtrace methods as a str.
-    ") GetExtendedBacktraceTypeAtIndex;
+    Takes an index argument, returns the name of one of the thread-origin
+    extended backtrace methods as a str.") GetExtendedBacktraceTypeAtIndex;
 
     const char *
     GetExtendedBacktraceTypeAtIndex (uint32_t idx);
 
     lldb::SBThreadCollection
     GetHistoryThreads (addr_t addr);
-             
+
     bool
     IsInstrumentationRuntimePresent(lldb::InstrumentationRuntimeType type);
 
@@ -435,8 +412,7 @@ public:
 
     process_info = process.GetProcessInfo()
     if process_info.IsValid():
-        process_info.GetProcessID()
-    ") GetProcessInfo;
+        process_info.GetProcessID()") GetProcessInfo;
     lldb::SBProcessInfo
     GetProcessInfo();
 
@@ -444,12 +420,12 @@ public:
         def __get_is_alive__(self):
             '''Returns "True" if the process is currently alive, "False" otherwise'''
             s = self.GetState()
-            if (s == eStateAttaching or 
-                s == eStateLaunching or 
-                s == eStateStopped or 
-                s == eStateRunning or 
-                s == eStateStepping or 
-                s == eStateCrashed or 
+            if (s == eStateAttaching or
+                s == eStateLaunching or
+                s == eStateStopped or
+                s == eStateRunning or
+                s == eStateStepping or
+                s == eStateCrashed or
                 s == eStateSuspended):
                 return True
             return False
@@ -472,21 +448,21 @@ public:
             '''A helper object that will lazily hand out thread for a process when supplied an index.'''
             def __init__(self, sbprocess):
                 self.sbprocess = sbprocess
-        
+
             def __len__(self):
                 if self.sbprocess:
                     return int(self.sbprocess.GetNumThreads())
                 return 0
-        
+
             def __getitem__(self, key):
                 if type(key) is int and key < len(self):
                     return self.sbprocess.GetThreadAtIndex(key)
                 return None
-        
+
         def get_threads_access_object(self):
             '''An accessor function that returns a modules_access() object which allows lazy thread access from a lldb.SBProcess object.'''
             return self.threads_access (self)
-        
+
         def get_process_thread_list(self):
             '''An accessor function that returns a list() that contains all threads in a lldb.SBProcess object.'''
             threads = []
@@ -498,15 +474,15 @@ public:
         def __iter__(self):
             '''Iterate over all threads in a lldb.SBProcess object.'''
             return lldb_iter(self, 'GetNumThreads', 'GetThreadAtIndex')
- 
+
         def __len__(self):
             '''Return the number of threads in a lldb.SBProcess object.'''
             return self.GetNumThreads()
 
-        
+
         __swig_getmethods__["threads"] = get_process_thread_list
         if _newclass: threads = property(get_process_thread_list, None, doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')
-        
+
         __swig_getmethods__["thread"] = get_threads_access_object
         if _newclass: thread = property(get_threads_access_object, None, doc='''A read only property that returns an object that can access threads by thread index (thread = lldb.process.thread[12]).''')
 
@@ -521,26 +497,26 @@ public:
 
         __swig_getmethods__["id"] = GetProcessID
         if _newclass: id = property(GetProcessID, None, doc='''A read only property that returns the process ID as an integer.''')
-        
+
         __swig_getmethods__["target"] = GetTarget
         if _newclass: target = property(GetTarget, None, doc='''A read only property that an lldb object that represents the target (lldb.SBTarget) that owns this process.''')
-        
+
         __swig_getmethods__["num_threads"] = GetNumThreads
         if _newclass: num_threads = property(GetNumThreads, None, doc='''A read only property that returns the number of threads in this process as an integer.''')
-        
+
         __swig_getmethods__["selected_thread"] = GetSelectedThread
         __swig_setmethods__["selected_thread"] = SetSelectedThread
         if _newclass: selected_thread = property(GetSelectedThread, SetSelectedThread, doc='''A read/write property that gets/sets the currently selected thread in this process. The getter returns a lldb.SBThread object and the setter takes an lldb.SBThread object.''')
-        
+
         __swig_getmethods__["state"] = GetState
         if _newclass: state = property(GetState, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eState") that represents the current state of this process (running, stopped, exited, etc.).''')
-        
+
         __swig_getmethods__["exit_state"] = GetExitStatus
         if _newclass: exit_state = property(GetExitStatus, None, doc='''A read only property that returns an exit status as an integer of this process when the process state is lldb.eStateExited.''')
-        
+
         __swig_getmethods__["exit_description"] = GetExitDescription
         if _newclass: exit_description = property(GetExitDescription, None, doc='''A read only property that returns an exit description as a string of this process when the process state is lldb.eStateExited.''')
-        
+
         __swig_getmethods__["broadcaster"] = GetBroadcaster
         if _newclass: broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this process.''')
     %}

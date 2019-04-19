@@ -2321,7 +2321,10 @@
 {'is_defined': False, 'name': '___cxa_rethrow_primary_exception', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_throw', 'type': 'U'}
 {'is_defined': True, 'name': '___cxa_throw', 'type': 'I'}
+{'is_defined': False, 'name': '___cxa_throw_bad_array_new_length', 'type': 'U'}
+{'is_defined': True, 'name': '___cxa_throw_bad_array_new_length', 'type': 'I'}
 {'is_defined': False, 'name': '___cxa_uncaught_exceptions', 'type': 'U'}
+{'is_defined': True, 'name': '___cxa_uncaught_exceptions', 'type': 'I'}
 {'is_defined': False, 'name': '___cxa_vec_cctor', 'type': 'U'}
 {'is_defined': True, 'name': '___cxa_vec_cctor', 'type': 'I'}
 {'is_defined': False, 'name': '___cxa_vec_cleanup', 'type': 'U'}

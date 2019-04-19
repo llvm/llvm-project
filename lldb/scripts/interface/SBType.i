@@ -9,8 +9,7 @@
 namespace lldb {
 
     %feature("docstring",
-"Represents a member of a type in lldb.
-") SBTypeMember;
+"Represents a member of a type in lldb.") SBTypeMember;
 
 class SBTypeMember
 {
@@ -28,32 +27,32 @@ public:
 
     const char *
     GetName ();
-    
+
     lldb::SBType
     GetType ();
 
     uint64_t
     GetOffsetInBytes();
-    
+
     uint64_t
     GetOffsetInBits();
-    
+
     bool
     IsBitfield();
-    
+
     uint32_t
     GetBitfieldSizeInBits();
 
     %pythoncode %{
         __swig_getmethods__["name"] = GetName
         if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
-        
+
         __swig_getmethods__["type"] = GetType
         if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
-        
+
         __swig_getmethods__["byte_offset"] = GetOffsetInBytes
         if _newclass: byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
-        
+
         __swig_getmethods__["bit_offset"] = GetOffsetInBits
         if _newclass: bit_offset = property(GetOffsetInBits, None, doc='''A read only property that returns offset in bits for this member as an integer.''')
 
@@ -68,24 +67,24 @@ public:
 protected:
     std::unique_ptr<lldb_private::TypeMemberImpl> m_opaque_ap;
 };
-             
+
 class SBTypeMemberFunction
 {
 public:
     SBTypeMemberFunction ();
-    
+
     SBTypeMemberFunction (const lldb::SBTypeMemberFunction& rhs);
-    
+
     ~SBTypeMemberFunction();
-    
+
     bool
     IsValid() const;
 
     explicit operator bool() const;
-    
+
     const char *
     GetName ();
-    
+
     const char *
     GetDemangledName ();
 
@@ -94,23 +93,23 @@ public:
 
     lldb::SBType
     GetType ();
-    
+
     lldb::SBType
     GetReturnType ();
-    
+
     uint32_t
     GetNumberOfArguments ();
-    
+
     lldb::SBType
     GetArgumentTypeAtIndex (uint32_t);
-    
+
     lldb::MemberFunctionKind
     GetKind();
-    
+
     bool
     GetDescription (lldb::SBStream &description,
                     lldb::DescriptionLevel description_level);
-    
+
 protected:
     lldb::TypeMemberFunctionImplSP m_opaque_sp;
 };
@@ -186,8 +185,7 @@ find_type.py:
         # id_type and int_type should be the same type!
         self.assertTrue(id_type == int_type)
 
-...
-") SBType;
+...") SBType;
 class SBType
 {
 public:
@@ -210,25 +208,25 @@ public:
 
     bool
     IsReferenceType();
-    
+
     bool
     IsFunctionType ();
 
     bool
     IsPolymorphicClass ();
-    
+
     bool
     IsArrayType ();
-    
+
     bool
     IsVectorType ();
-    
+
     bool
     IsTypedefType ();
-    
+
     bool
     IsAnonymousType ();
-    
+
     lldb::SBType
     GetPointerType();
 
@@ -240,22 +238,22 @@ public:
 
     lldb::SBType
     SBType::GetTypedefedType();
-    
+
     lldb::SBType
     GetDereferencedType();
 
     lldb::SBType
     GetUnqualifiedType();
-    
+
     lldb::SBType
     GetCanonicalType();
-    
+
     lldb::SBType
     GetArrayElementType ();
 
     lldb::SBType
     GetArrayType (uint64_t size);
-    
+
     lldb::SBType
     GetVectorElementType ();
 
@@ -267,19 +265,19 @@ public:
 
     uint32_t
     GetNumberOfFields ();
-    
+
     uint32_t
     GetNumberOfDirectBaseClasses ();
-    
+
     uint32_t
     GetNumberOfVirtualBaseClasses ();
-    
+
     lldb::SBTypeMember
     GetFieldAtIndex (uint32_t idx);
-    
+
     lldb::SBTypeMember
     GetDirectBaseClassAtIndex (uint32_t idx);
-    
+
     lldb::SBTypeMember
     GetVirtualBaseClassAtIndex (uint32_t idx);
 
@@ -288,37 +286,37 @@ public:
 
     const char*
     GetName();
-    
+
     const char *
     GetDisplayTypeName ();
-    
+
     lldb::TypeClass
     GetTypeClass ();
-    
+
     uint32_t
     GetNumberOfTemplateArguments ();
-    
+
     lldb::SBType
     GetTemplateArgumentType (uint32_t idx);
-    
+
     lldb::TemplateArgumentKind
     GetTemplateArgumentKind (uint32_t idx);
-    
+
     lldb::SBType
     GetFunctionReturnType ();
-    
+
     lldb::SBTypeList
     GetFunctionArgumentTypes ();
-    
+
     uint32_t
     GetNumberOfMemberFunctions ();
-    
+
     lldb::SBTypeMemberFunction
     GetMemberFunctionAtIndex (uint32_t idx);
 
     bool
     IsTypeComplete ();
-    
+
     uint32_t
     GetTypeFlags ();
 
@@ -335,31 +333,31 @@ public:
                     template_args.append(self.GetTemplateArgumentType(i))
                 return template_args
             return None
-            
+
         __swig_getmethods__["name"] = GetName
         if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
-        
+
         __swig_getmethods__["size"] = GetByteSize
         if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
-        
+
         __swig_getmethods__["is_pointer"] = IsPointerType
         if _newclass: is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
-        
+
         __swig_getmethods__["is_reference"] = IsReferenceType
         if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
-        
+
         __swig_getmethods__["is_function"] = IsFunctionType
         if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
-        
+
         __swig_getmethods__["num_fields"] = GetNumberOfFields
         if _newclass: num_fields = property(GetNumberOfFields, None, doc='''A read only property that returns number of fields in this type as an integer.''')
-        
+
         __swig_getmethods__["num_bases"] = GetNumberOfDirectBaseClasses
         if _newclass: num_bases = property(GetNumberOfDirectBaseClasses, None, doc='''A read only property that returns number of direct base classes in this type as an integer.''')
-        
+
         __swig_getmethods__["num_vbases"] = GetNumberOfVirtualBaseClasses
         if _newclass: num_vbases = property(GetNumberOfVirtualBaseClasses, None, doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
-        
+
         __swig_getmethods__["num_template_args"] = GetNumberOfTemplateArguments
         if _newclass: num_template_args = property(GetNumberOfTemplateArguments, None, doc='''A read only property that returns number of template arguments in this type as an integer.''')
 
@@ -368,7 +366,7 @@ public:
 
         __swig_getmethods__["type"] = GetTypeClass
         if _newclass: type = property(GetTypeClass, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eTypeClass") that represents a classification for this type.''')
-        
+
         __swig_getmethods__["is_complete"] = IsTypeComplete
         if _newclass: is_complete = property(IsTypeComplete, None, doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
 
@@ -441,10 +439,10 @@ public:
 
         __swig_getmethods__["bases"] = get_bases_array
         if _newclass: bases = property(get_bases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
-        
+
         __swig_getmethods__["vbases"] = get_vbases_array
         if _newclass: vbases = property(get_vbases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
-        
+
         __swig_getmethods__["fields"] = get_fields_array
         if _newclass: fields = property(get_fields_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
 
@@ -487,8 +485,7 @@ find_type.py:
         for type in type_list:
             # do something with type
 
-...
-") SBTypeList;
+...") SBTypeList;
 class SBTypeList
 {
 public:

@@ -1877,8 +1877,7 @@ namespace {
   public:
     AugmentedCodeCompleteConsumer(ASTUnit &AST, CodeCompleteConsumer &Next,
                                   const CodeCompleteOptions &CodeCompleteOpts)
-        : CodeCompleteConsumer(CodeCompleteOpts, Next.isOutputBinary()),
-          AST(AST), Next(Next) {
+        : CodeCompleteConsumer(CodeCompleteOpts), AST(AST), Next(Next) {
       // Compute the set of contexts in which we will look when we don't have
       // any information about the specific context.
       NormalContexts

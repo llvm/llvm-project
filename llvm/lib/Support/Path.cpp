@@ -935,6 +935,7 @@ std::error_code create_directories(const Twine &Path, bool IgnoreExisting,
   return create_directory(P, IgnoreExisting, Perms);
 }
 
+#ifndef __APPLE__
 static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   const size_t BufSize = 4096;
   char *Buf = new char[BufSize];
@@ -988,6 +989,7 @@ std::error_code copy_file(const Twine &From, int ToFD) {
 
   return EC;
 }
+#endif
 
 ErrorOr<MD5::MD5Result> md5_contents(int FD) {
   MD5 Hash;

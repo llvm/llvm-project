@@ -703,6 +703,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   } else {
     NewG = Function::Create(G->getFunctionType(), G->getLinkage(),
                             G->getAddressSpace(), "", G->getParent());
+    NewG->setComdat(G->getComdat());
     BB = BasicBlock::Create(F->getContext(), "", NewG);
   }
 

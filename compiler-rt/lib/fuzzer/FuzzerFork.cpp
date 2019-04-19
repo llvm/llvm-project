@@ -150,6 +150,9 @@ struct GlobalEnv {
   }
 
   void RunOneMergeJob(FuzzJob *Job) {
+    auto Stats = ParseFinalStatsFromLog(Job->LogPath);
+    NumRuns += Stats.number_of_executed_units;
+
     Vector<SizedFile> TempFiles, MergeCandidates;
     // Read all newly created inputs and their feature sets.
     // Choose only those inputs that have new features.
@@ -189,8 +192,6 @@ struct GlobalEnv {
           PrintPC("  NEW_FUNC: %p %F %L\n", "",
                   TPC.GetNextInstructionPc(TE->PC));
 
-    auto Stats = ParseFinalStatsFromLog(Job->LogPath);
-    NumRuns += Stats.number_of_executed_units;
     if (!FilesToAdd.empty() || Job->ExitCode != 0)
       Printf("#%zd: cov: %zd ft: %zd corp: %zd exec/s %zd "
              "oom/timeout/crash: %zd/%zd/%zd time: %zds\n", NumRuns,

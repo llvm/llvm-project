@@ -113,8 +113,7 @@ target = debugger.CreateTarget('')
 error = lldb.SBError()
 process = target.AttachToProcessWithName(debugger.GetListener(), 'PROCESS_NAME', False, error)
 
-or the equivalent arguments for AttachToProcessWithID.
-") SBDebugger;
+or the equivalent arguments for AttachToProcessWithID.") SBDebugger;
 class SBDebugger
 {
 public:
@@ -279,8 +278,7 @@ public:
 
     @param idx Zero-based index of the platform for which info should be
                retrieved, must be less than the value returned by
-               GetNumAvailablePlatforms().
-    ") GetAvailablePlatformInfoAtIndex;
+               GetNumAvailablePlatforms().") GetAvailablePlatformInfoAtIndex;
     lldb::SBStructuredData
     GetAvailablePlatformInfoAtIndex (uint32_t idx);
 

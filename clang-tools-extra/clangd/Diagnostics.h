@@ -30,6 +30,11 @@ struct ClangdDiagnosticOptions {
   /// diagnostics that are sent to the client.
   bool EmbedFixesInDiagnostics = false;
 
+  /// If true, Clangd uses the relatedInformation field to include other
+  /// locations (in particular attached notes).
+  /// Otherwise, these are flattened into the diagnostic message.
+  bool EmitRelatedLocations = false;
+
   /// If true, Clangd uses an LSP extension to send the diagnostic's
   /// category to the client. The category typically describes the compilation
   /// stage during which the issue was produced, e.g. "Semantic Issue" or "Parse
@@ -47,6 +52,9 @@ struct DiagBase {
   // Intended to be used only in error messages.
   // May be relative, absolute or even artifically constructed.
   std::string File;
+  // Absolute path to containing file, if available.
+  llvm::Optional<std::string> AbsFile;
+
   clangd::Range Range;
   DiagnosticsEngine::Level Severity = DiagnosticsEngine::Note;
   std::string Category;

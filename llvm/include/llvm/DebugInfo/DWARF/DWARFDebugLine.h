@@ -243,6 +243,9 @@ public:
     bool hasFileAtIndex(uint64_t FileIndex) const;
 
     /// Extracts filename by its index in filename table in prologue.
+    /// In Dwarf 4, the files are 1-indexed and the current compilation file
+    /// name is not represented in the list. In Dwarf 5, the files are
+    /// 0-indexed and the primary source file has the index 0.
     /// Returns true on success.
     bool getFileNameByIndex(uint64_t FileIndex, const char *CompDir,
                             DILineInfoSpecifier::FileLineInfoKind Kind,
@@ -275,6 +278,8 @@ public:
     SequenceVector Sequences;
 
   private:
+    const llvm::DWARFDebugLine::FileNameEntry &
+    getFileNameEntry(uint64_t Index) const;
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           object::SectionedAddress Address) const;
     Optional<StringRef>

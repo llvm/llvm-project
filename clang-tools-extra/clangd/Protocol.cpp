@@ -277,6 +277,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
         R.DiagnosticCategory = *CategorySupport;
       if (auto CodeActions = Diagnostics->getBoolean("codeActionsInline"))
         R.DiagnosticFixes = *CodeActions;
+      if (auto RelatedInfo = Diagnostics->getBoolean("relatedInformation"))
+        R.DiagnosticRelatedInformation = *RelatedInfo;
     }
     if (auto *Completion = TextDocument->getObject("completion")) {
       if (auto *Item = Completion->getObject("completionItem")) {
@@ -419,6 +421,13 @@ bool fromJSON(const llvm::json::Value &Params, DocumentSymbolParams &R) {
   return O && O.map("textDocument", R.textDocument);
 }
 
+llvm::json::Value toJSON(const DiagnosticRelatedInformation &DRI) {
+  return llvm::json::Object{
+    {"location", DRI.location},
+    {"message", DRI.message},
+  };
+}
+
 llvm::json::Value toJSON(const Diagnostic &D) {
   llvm::json::Object Diag{
       {"range", D.range},
@@ -433,6 +442,8 @@ llvm::json::Value toJSON(const Diagnostic &D) {
     Diag["code"] = D.code;
   if (!D.source.empty())
     Diag["source"] = D.source;
+  if (D.relatedInformation)
+    Diag["relatedInformation"] = *D.relatedInformation;
   return std::move(Diag);
 }
 

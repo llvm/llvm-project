@@ -38,9 +38,7 @@ struct CompletionContext {
 class VisitedContextFinder : public CodeCompleteConsumer {
 public:
   VisitedContextFinder(CompletionContext &ResultCtx)
-      : CodeCompleteConsumer(/*CodeCompleteOpts=*/{},
-                             /*CodeCompleteConsumer*/ false),
-        ResultCtx(ResultCtx),
+      : CodeCompleteConsumer(/*CodeCompleteOpts=*/{}), ResultCtx(ResultCtx),
         CCTUInfo(std::make_shared<GlobalCodeCompletionAllocator>()) {}
 
   void ProcessCodeCompleteResults(Sema &S, CodeCompletionContext Context,

@@ -2468,6 +2468,12 @@ TEST_F(FormatTest, HashInMacroDefinition) {
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
   EXPECT_EQ("#define A (x)", format("#define A (x)"));
   EXPECT_EQ("#define A(x)", format("#define A(x)"));
+
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Never;
+  verifyFormat("#define true ((foo)1)", Style);
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
+  verifyFormat("#define false((foo)0)", Style);
 }
 
 TEST_F(FormatTest, EmptyLinesInMacroDefinitions) {

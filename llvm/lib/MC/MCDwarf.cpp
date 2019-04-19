@@ -259,7 +259,7 @@ void MCDwarfLineTable::Emit(MCObjectStreamer *MCOS,
 
 void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
                                MCSection *Section) const {
-  if (Header.MCDwarfFiles.empty())
+  if (!HasSplitLineTable)
     return;
   Optional<MCDwarfLineStr> NoLineStr(None);
   MCOS.SwitchSection(Section);
@@ -538,8 +538,17 @@ Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
                                                 StringRef &FileName,
                                                 Optional<MD5::MD5Result> Checksum,
                                                 Optional<StringRef> Source,
+                                                uint16_t DwarfVersion,
                                                 unsigned FileNumber) {
-  return Header.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
+  return Header.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
+                           FileNumber);
+}
+
+bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
+                StringRef &FileName, Optional<MD5::MD5Result> Checksum) {
+  if (RootFile.Name.empty() || RootFile.Name != FileName.data())
+    return false;
+  return RootFile.Checksum == Checksum;
 }
 
 Expected<unsigned>
@@ -547,6 +556,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    StringRef &FileName,
                                    Optional<MD5::MD5Result> Checksum,
                                    Optional<StringRef> Source,
+                                   uint16_t DwarfVersion,
                                    unsigned FileNumber) {
   if (Directory == CompilationDir)
     Directory = "";
@@ -561,6 +571,8 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     trackMD5Usage(Checksum.hasValue());
     HasSource = (Source != None);
   }
+  if (isRootFile(RootFile, Directory, FileName, Checksum) && DwarfVersion >= 5)
+    return 0;
   if (FileNumber == 0) {
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.

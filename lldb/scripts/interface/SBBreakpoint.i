@@ -117,13 +117,13 @@ public:
 
     bool
     IsEnabled ();
-    
+
     void
     SetOneShot (bool one_shot);
 
     bool
     IsOneShot ();
-    
+
     bool
     IsInternal ();
 
@@ -135,20 +135,14 @@ public:
 
     uint32_t
     GetIgnoreCount () const;
-    
+
     %feature("docstring", "
-    //--------------------------------------------------------------------------
-    /// The breakpoint stops only if the condition expression evaluates to true.
-    //--------------------------------------------------------------------------
-    ") SetCondition;
-    void 
+    The breakpoint stops only if the condition expression evaluates to true.") SetCondition;
+    void
     SetCondition (const char *condition);
-    
+
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// Get the condition expression for the breakpoint.
-    //------------------------------------------------------------------
-    ") GetCondition;
+    Get the condition expression for the breakpoint.") GetCondition;
     const char *
     GetCondition ();
 
@@ -161,52 +155,46 @@ public:
 
     lldb::tid_t
     GetThreadID ();
-    
+
     void
     SetThreadIndex (uint32_t index);
-    
+
     uint32_t
     GetThreadIndex() const;
-    
+
     void
     SetThreadName (const char *thread_name);
-    
+
     const char *
     GetThreadName () const;
-    
-    void 
+
+    void
     SetQueueName (const char *queue_name);
-    
+
     const char *
     GetQueueName () const;
 
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// Set the name of the script function to be called when the breakpoint is hit.
-    //------------------------------------------------------------------
-    ") SetScriptCallbackFunction;
+    Set the name of the script function to be called when the breakpoint is hit.") SetScriptCallbackFunction;
     void
     SetScriptCallbackFunction (const char *callback_function_name);
 
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// Provide the body for the script function to be called when the breakpoint is hit.
-    /// The body will be wrapped in a function, which be passed two arguments:
-    /// 'frame' - which holds the bottom-most SBFrame of the thread that hit the breakpoint
-    /// 'bpno'  - which is the SBBreakpointLocation to which the callback was attached.
-    ///
-    /// The error parameter is currently ignored, but will at some point hold the Python
-    /// compilation diagnostics.
-    /// Returns true if the body compiles successfully, false if not.
-    //------------------------------------------------------------------
-    ") SetScriptCallbackBody;
+    Provide the body for the script function to be called when the breakpoint is hit.
+    The body will be wrapped in a function, which be passed two arguments:
+    'frame' - which holds the bottom-most SBFrame of the thread that hit the breakpoint
+    'bpno'  - which is the SBBreakpointLocation to which the callback was attached.
+
+    The error parameter is currently ignored, but will at some point hold the Python
+    compilation diagnostics.
+    Returns true if the body compiles successfully, false if not.") SetScriptCallbackBody;
     SBError
     SetScriptCallbackBody (const char *script_body_text);
-    
+
     void SetCommandLineCommands(SBStringList &commands);
 
     bool GetCommandLineCommands(SBStringList &commands);
-    
+
     bool
     AddName (const char *new_name);
 
@@ -215,10 +203,10 @@ public:
 
     bool
     MatchesName (const char *name);
-    
+
     void
     GetNames (SBStringList &names);
-    
+
     size_t
     GetNumResolvedLocations() const;
 
@@ -228,7 +216,7 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
-    bool 
+    bool
     GetDescription(lldb::SBStream &description, bool include_locations);
 
     // Can only be called from a ScriptedBreakpointResolver...
@@ -237,49 +225,49 @@ public:
 
     bool
     operator == (const lldb::SBBreakpoint& rhs);
-           
+
     bool
     operator != (const lldb::SBBreakpoint& rhs);
 
     static bool
     EventIsBreakpointEvent (const lldb::SBEvent &event);
-    
+
     static lldb::BreakpointEventType
     GetBreakpointEventTypeFromEvent (const lldb::SBEvent& event);
 
     static lldb::SBBreakpoint
     GetBreakpointFromEvent (const lldb::SBEvent& event);
-    
+
     static lldb::SBBreakpointLocation
     GetBreakpointLocationAtIndexFromEvent (const lldb::SBEvent& event, uint32_t loc_idx);
-    
+
     static uint32_t
     GetNumBreakpointLocationsFromEvent (const lldb::SBEvent &event_sp);
-    
+
     bool
     IsHardware ();
 
     %pythoncode %{
-        
+
         class locations_access(object):
             '''A helper object that will lazily hand out locations for a breakpoint when supplied an index.'''
             def __init__(self, sbbreakpoint):
                 self.sbbreakpoint = sbbreakpoint
-        
+
             def __len__(self):
                 if self.sbbreakpoint:
                     return int(self.sbbreakpoint.GetNumLocations())
                 return 0
-        
+
             def __getitem__(self, key):
                 if type(key) is int and key < len(self):
                     return self.sbbreakpoint.GetLocationAtIndex(key)
                 return None
-        
+
         def get_locations_access_object(self):
             '''An accessor function that returns a locations_access() object which allows lazy location access from a lldb.SBBreakpoint object.'''
             return self.locations_access (self)
-        
+
         def get_breakpoint_location_list(self):
             '''An accessor function that returns a list() that contains all locations in a lldb.SBBreakpoint object.'''
             locations = []
@@ -300,13 +288,13 @@ public:
 
         __swig_getmethods__["locations"] = get_breakpoint_location_list
         if _newclass: locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
-        
+
         __swig_getmethods__["location"] = get_locations_access_object
         if _newclass: location = property(get_locations_access_object, None, doc='''A read only property that returns an object that can access locations by index (not location ID) (location = bkpt.location[12]).''')
 
         __swig_getmethods__["id"] = GetID
         if _newclass: id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')
-            
+
         __swig_getmethods__["enabled"] = IsEnabled
         __swig_setmethods__["enabled"] = SetEnabled
         if _newclass: enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
@@ -314,13 +302,13 @@ public:
         __swig_getmethods__["one_shot"] = IsOneShot
         __swig_setmethods__["one_shot"] = SetOneShot
         if _newclass: one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
-            
+
         __swig_getmethods__["num_locations"] = GetNumLocations
         if _newclass: num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
 
     %}
 
-    
+
 };
 
 class SBBreakpointListImpl;
@@ -329,14 +317,14 @@ class LLDB_API SBBreakpointList
 {
 public:
   SBBreakpointList(SBTarget &target);
-    
+
   ~SBBreakpointList();
 
   size_t GetSize() const;
-  
+
   SBBreakpoint
   GetBreakpointAtIndex(size_t idx);
-  
+
   SBBreakpoint
   FindBreakpointByID(lldb::break_id_t);
 

@@ -39268,36 +39268,19 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
 }
 
 /// Truncate using ISD::AND mask and X86ISD::PACKUS.
+/// e.g. trunc <8 x i32> X to <8 x i16> -->
+/// MaskX = X & 0xffff (clear high bits to prevent saturation)
+/// packus (extract_subv MaskX, 0), (extract_subv MaskX, 1)
 static SDValue combineVectorTruncationWithPACKUS(SDNode *N, const SDLoc &DL,
                                                  const X86Subtarget &Subtarget,
                                                  SelectionDAG &DAG) {
   SDValue In = N->getOperand(0);
   EVT InVT = In.getValueType();
-  EVT InSVT = InVT.getVectorElementType();
   EVT OutVT = N->getValueType(0);
-  EVT OutSVT = OutVT.getVectorElementType();
 
-  // Split a long vector into vectors of legal type and mask to unset all bits
-  // that won't appear in the result to prevent saturation.
-  // TODO - we should be doing this at the maximum legal size but this is
-  // causing regressions where we're concatenating back to max width just to
-  // perform the AND and then extracting back again.....
-  unsigned NumSubRegs = InVT.getSizeInBits() / 128;
-  unsigned NumSubRegElts = 128 / InSVT.getSizeInBits();
-  EVT SubRegVT = EVT::getVectorVT(*DAG.getContext(), InSVT, NumSubRegElts);
-  SmallVector<SDValue, 8> SubVecs(NumSubRegs);
-
-  APInt Mask =
-      APInt::getLowBitsSet(InSVT.getSizeInBits(), OutSVT.getSizeInBits());
-  SDValue MaskVal = DAG.getConstant(Mask, DL, SubRegVT);
-
-  for (unsigned i = 0; i < NumSubRegs; i++) {
-    SDValue Sub = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubRegVT, In,
-                              DAG.getIntPtrConstant(i * NumSubRegElts, DL));
-    SubVecs[i] = DAG.getNode(ISD::AND, DL, SubRegVT, Sub, MaskVal);
-  }
-  In = DAG.getNode(ISD::CONCAT_VECTORS, DL, InVT, SubVecs);
-
+  APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
+                                    OutVT.getScalarSizeInBits());
+  In = DAG.getNode(ISD::AND, DL, InVT, In, DAG.getConstant(Mask, DL, InVT));
   return truncateVectorWithPACK(X86ISD::PACKUS, OutVT, In, DL, DAG, Subtarget);
 }
 

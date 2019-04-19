@@ -25,20 +25,19 @@ For example (from test/source-manager/TestSourceManager.py),
                                                      '=>', # prefix for current line
                                                      stream)
 
-        #    2    
+        #    2
         #    3    int main(int argc, char const *argv[]) {
         # => 4        printf('Hello world.\\n'); // Set break point at this line.
         #    5        return 0;
         #    6    }
         self.expect(stream.GetData(), 'Source code displayed correctly',
                     exe=False,
-            patterns = ['=> %d.*Hello world' % self.line])
-") SBSourceManager;
+            patterns = ['=> %d.*Hello world' % self.line])") SBSourceManager;
 class SBSourceManager
 {
 public:
     SBSourceManager (const lldb::SBSourceManager &rhs);
-    
+
     ~SBSourceManager();
 
     size_t

@@ -69,7 +69,7 @@ Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
   // We start in the global module; all those declarations are implicitly
   // module-private (though they do not have module linkage).
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
-  auto *GlobalModule = Map.createGlobalModuleForInterfaceUnit(ModuleLoc);
+  auto *GlobalModule = Map.createGlobalModuleFragmentForModuleUnit(ModuleLoc);
   assert(GlobalModule && "module creation should not fail");
 
   // Enter the scope of the global module.
@@ -128,7 +128,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   // Only one module-declaration is permitted per source file.
   if (!ModuleScopes.empty() &&
-      ModuleScopes.back().Module->Kind == Module::ModuleInterfaceUnit) {
+      ModuleScopes.back().Module->isModulePurview()) {
     Diag(ModuleLoc, diag::err_module_redeclaration);
     Diag(VisibleModules.getImportLoc(ModuleScopes.back().Module),
          diag::note_prev_module_declaration);
@@ -220,6 +220,9 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     ModuleScopes.push_back({});
     if (getLangOpts().ModulesLocalVisibility)
       ModuleScopes.back().OuterVisibleModules = std::move(VisibleModules);
+  } else {
+    // We're done with the global module fragment now.
+    ActOnEndOfTranslationUnitFragment(TUFragmentKind::Global);
   }
 
   // Switch from the global module fragment (if any) to the named module.
@@ -236,6 +239,68 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   TU->setLocalOwningModule(Mod);
 
   // FIXME: Create a ModuleDecl.
+  return nullptr;
+}
+
+Sema::DeclGroupPtrTy
+Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
+                                     SourceLocation PrivateLoc) {
+  // C++20 [basic.link]/2:
+  //   A private-module-fragment shall appear only in a primary module
+  //   interface unit.
+  switch (ModuleScopes.empty() ? Module::GlobalModuleFragment
+                               : ModuleScopes.back().Module->Kind) {
+  case Module::ModuleMapModule:
+  case Module::GlobalModuleFragment:
+    Diag(PrivateLoc, diag::err_private_module_fragment_not_module);
+    return nullptr;
+
+  case Module::PrivateModuleFragment:
+    Diag(PrivateLoc, diag::err_private_module_fragment_redefined);
+    Diag(ModuleScopes.back().BeginLoc, diag::note_previous_definition);
+    return nullptr;
+
+  case Module::ModuleInterfaceUnit:
+    break;
+  }
+
+  if (!ModuleScopes.back().ModuleInterface) {
+    Diag(PrivateLoc, diag::err_private_module_fragment_not_module_interface);
+    Diag(ModuleScopes.back().BeginLoc,
+         diag::note_not_module_interface_add_export)
+        << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
+    return nullptr;
+  }
+
+  // FIXME: Check this isn't a module interface partition.
+  // FIXME: Check that this translation unit does not import any partitions;
+  // such imports would violate [basic.link]/2's "shall be the only module unit"
+  // restriction.
+
+  // We've finished the public fragment of the translation unit.
+  ActOnEndOfTranslationUnitFragment(TUFragmentKind::Normal);
+
+  auto &Map = PP.getHeaderSearchInfo().getModuleMap();
+  Module *PrivateModuleFragment =
+      Map.createPrivateModuleFragmentForInterfaceUnit(
+          ModuleScopes.back().Module, PrivateLoc);
+  assert(PrivateModuleFragment && "module creation should not fail");
+
+  // Enter the scope of the private module fragment.
+  ModuleScopes.push_back({});
+  ModuleScopes.back().BeginLoc = ModuleLoc;
+  ModuleScopes.back().Module = PrivateModuleFragment;
+  ModuleScopes.back().ModuleInterface = true;
+  VisibleModules.setVisible(PrivateModuleFragment, ModuleLoc);
+
+  // All declarations created from now on are scoped to the private module
+  // fragment (and are neither visible nor reachable in importers of the module
+  // interface).
+  auto *TU = Context.getTranslationUnitDecl();
+  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
+  TU->setLocalOwningModule(PrivateModuleFragment);
+
+  // FIXME: Consider creating an explicit representation of this declaration.
   return nullptr;
 }
 
@@ -451,17 +516,26 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
                                  SourceLocation LBraceLoc) {
   ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
 
-  // C++ Modules TS draft:
-  //   An export-declaration shall appear in the purview of a module other than
-  //   the global module.
-  if (ModuleScopes.empty() || !ModuleScopes.back().ModuleInterface)
-    Diag(ExportLoc, diag::err_export_not_in_module_interface);
+  // C++20 [module.interface]p1:
+  //   An export-declaration shall appear only [...] in the purview of a module
+  //   interface unit. An export-declaration shall not appear directly or
+  //   indirectly within an unnamed namespace or a private-module-fragment.
+  // FIXME: Check for the unnamed namespace case.
+  if (ModuleScopes.empty() || !ModuleScopes.back().Module->isModulePurview()) {
+    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
+  } else if (!ModuleScopes.back().ModuleInterface) {
+    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
+    Diag(ModuleScopes.back().BeginLoc,
+         diag::note_not_module_interface_add_export)
+        << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
+  } else if (ModuleScopes.back().Module->Kind ==
+             Module::PrivateModuleFragment) {
+    Diag(ExportLoc, diag::err_export_in_private_module_fragment);
+    Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
+  }
 
-  //   An export-declaration [...] shall not contain more than one
-  //   export keyword.
-  //
-  // The intent here is that an export-declaration cannot appear within another
-  // export-declaration.
+  //   [...] its declaration or declaration-seq shall not contain an
+  //   export-declaration.
   if (D->isExported())
     Diag(ExportLoc, diag::err_export_within_export);
 

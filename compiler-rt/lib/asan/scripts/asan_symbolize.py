@@ -494,6 +494,10 @@ class AsanSymbolizerPlugInProxy(object):
     self._plugins = [ ]
     self._plugin_names = set()
 
+  def _load_plugin_from_file_impl_py_gt_2(self, file_path, globals_space):
+      with open(file_path, 'r') as f:
+        exec(f.read(), globals_space, None)
+
   def load_plugin_from_file(self, file_path):
     logging.info('Loading plugins from "{}"'.format(file_path))
     globals_space = dict(globals())
@@ -505,8 +509,9 @@ class AsanSymbolizerPlugInProxy(object):
     if sys.version_info.major < 3:
       execfile(file_path, globals_space, None)
     else:
-      with open(file_path, 'r') as f:
-        exec(f.read(), globals_space, None)
+      # Indirection here is to avoid a bug in older Python 2 versions:
+      # `SyntaxError: unqualified exec is not allowed in function ...`
+      self._load_plugin_from_file_impl_py_gt_2(file_path, globals_space)
 
   def add_plugin(self, plugin):
     assert isinstance(plugin, AsanSymbolizerPlugIn)

@@ -54,6 +54,7 @@ Resources
    resources/build
    resources/source
    resources/test
+   resources/bots
    resources/sbapi
    resources/external
 

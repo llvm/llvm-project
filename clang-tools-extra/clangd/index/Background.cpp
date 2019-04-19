@@ -26,7 +26,9 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/Threading.h"
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <numeric>
@@ -38,6 +40,9 @@
 namespace clang {
 namespace clangd {
 namespace {
+
+static std::atomic<bool> PreventStarvation = {false};
+
 // Resolves URI to file paths with cache.
 class URIToFileCache {
 public:
@@ -172,7 +177,7 @@ void BackgroundIndex::run() {
   WithContext Background(BackgroundContext.clone());
   while (true) {
     llvm::Optional<Task> Task;
-    ThreadPriority Priority;
+    llvm::ThreadPriority Priority;
     {
       std::unique_lock<std::mutex> Lock(QueueMu);
       QueueCV.wait(Lock, [&] { return ShouldStop || !Queue.empty(); });
@@ -186,11 +191,11 @@ void BackgroundIndex::run() {
       Queue.pop_front();
     }
 
-    if (Priority != ThreadPriority::Normal)
-      setCurrentThreadPriority(Priority);
+    if (Priority != llvm::ThreadPriority::Default && !PreventStarvation.load())
+      llvm::set_thread_priority(Priority);
     (*Task)();
-    if (Priority != ThreadPriority::Normal)
-      setCurrentThreadPriority(ThreadPriority::Normal);
+    if (Priority != llvm::ThreadPriority::Default)
+      llvm::set_thread_priority(llvm::ThreadPriority::Default);
 
     {
       std::unique_lock<std::mutex> Lock(QueueMu);
@@ -223,7 +228,7 @@ void BackgroundIndex::enqueue(const std::vector<std::string> &ChangedFiles) {
         for (auto &Elem : NeedsReIndexing)
           enqueue(std::move(Elem.first), Elem.second);
       },
-      ThreadPriority::Normal);
+      llvm::ThreadPriority::Default);
 }
 
 void BackgroundIndex::enqueue(tooling::CompileCommand Cmd,
@@ -238,10 +243,10 @@ void BackgroundIndex::enqueue(tooling::CompileCommand Cmd,
                            std::move(Error));
                   },
                   std::move(Cmd)),
-              ThreadPriority::Low);
+              llvm::ThreadPriority::Background);
 }
 
-void BackgroundIndex::enqueueTask(Task T, ThreadPriority Priority) {
+void BackgroundIndex::enqueueTask(Task T, llvm::ThreadPriority Priority) {
   {
     std::lock_guard<std::mutex> Lock(QueueMu);
     auto I = Queue.end();
@@ -249,10 +254,11 @@ void BackgroundIndex::enqueueTask(Task T, ThreadPriority Priority) {
     // Then we store low priority tasks. Normal priority tasks are pretty rare,
     // they should not grow beyond single-digit numbers, so it is OK to do
     // linear search and insert after that.
-    if (Priority == ThreadPriority::Normal) {
-      I = llvm::find_if(Queue, [](const std::pair<Task, ThreadPriority> &Elem) {
-        return Elem.second == ThreadPriority::Low;
-      });
+    if (Priority == llvm::ThreadPriority::Default) {
+      I = llvm::find_if(
+          Queue, [](const std::pair<Task, llvm::ThreadPriority> &Elem) {
+            return Elem.second == llvm::ThreadPriority::Background;
+          });
     }
     Queue.insert(I, {std::move(T), Priority});
   }
@@ -609,6 +615,10 @@ BackgroundIndex::loadShards(std::vector<std::string> ChangedFiles) {
        "bytes.",
        estimateMemoryUsage());
   return NeedsReIndexing;
+}
+
+void BackgroundIndex::preventThreadStarvationInTests() {
+  PreventStarvation.store(true);
 }
 
 } // namespace clangd

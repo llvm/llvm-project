@@ -1604,14 +1604,21 @@ function(llvm_externalize_debuginfo name)
     endif()
   endif()
 
-  if(LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR)
-    if(APPLE)
-      set(output_name "$<TARGET_FILE_NAME:${name}>.dSYM")
-      set(output_path "-o=${LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR}/${output_name}")
-    endif()
-  endif()
-
   if(APPLE)
+    if(LLVM_EXTERNALIZE_DEBUGINFO_EXTENSION)
+      set(file_ext ${LLVM_EXTERNALIZE_DEBUGINFO_EXTENSION})
+    else()
+      set(file_ext dSYM)
+    endif()
+
+    set(output_name "$<TARGET_FILE_NAME:${name}>.${file_ext}")
+
+    if(LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR)
+      set(output_path "-o=${LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR}/${output_name}")
+    else()
+      set(output_path "-o=${output_name}")
+    endif()
+
     if(CMAKE_CXX_FLAGS MATCHES "-flto"
       OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
 

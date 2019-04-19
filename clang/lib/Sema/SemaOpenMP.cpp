@@ -193,6 +193,8 @@ private:
   /// Expression for the predefined allocators.
   Expr *OMPPredefinedAllocators[OMPAllocateDeclAttr::OMPUserDefinedMemAlloc] = {
       nullptr};
+  /// Vector of previously encountered target directives
+  SmallVector<SourceLocation, 2> TargetLocations;
 
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
@@ -452,6 +454,16 @@ public:
       }
     }
     return IsDuplicate;
+  }
+
+  /// Add location of previously encountered target to internal vector
+  void addTargetDirLocation(SourceLocation LocStart) {
+    TargetLocations.push_back(LocStart);
+  }
+
+  // Return previously encountered target region locations.
+  ArrayRef<SourceLocation> getEncounteredTargetLocs() const {
+    return TargetLocations;
   }
 
   /// Set default data sharing attribute to none.
@@ -2418,6 +2430,27 @@ Sema::ActOnOpenMPRequiresDirective(SourceLocation Loc,
 
 OMPRequiresDecl *Sema::CheckOMPRequiresDecl(SourceLocation Loc,
                                             ArrayRef<OMPClause *> ClauseList) {
+  /// For target specific clauses, the requires directive cannot be
+  /// specified after the handling of any of the target regions in the
+  /// current compilation unit.
+  ArrayRef<SourceLocation> TargetLocations =
+      DSAStack->getEncounteredTargetLocs();
+  if (!TargetLocations.empty()) {
+    for (const OMPClause *CNew : ClauseList) {
+      // Check if any of the requires clauses affect target regions.
+      if (isa<OMPUnifiedSharedMemoryClause>(CNew) ||
+          isa<OMPUnifiedAddressClause>(CNew) ||
+          isa<OMPReverseOffloadClause>(CNew) ||
+          isa<OMPDynamicAllocatorsClause>(CNew)) {
+        Diag(Loc, diag::err_omp_target_before_requires)
+            << getOpenMPClauseName(CNew->getClauseKind());
+        for (SourceLocation TargetLoc : TargetLocations) {
+          Diag(TargetLoc, diag::note_omp_requires_encountered_target);
+        }
+      }
+    }
+  }
+
   if (!DSAStack->hasDuplicateRequiresClause(ClauseList))
     return OMPRequiresDecl::Create(Context, getCurLexicalContext(), Loc,
                                    ClauseList);
@@ -4165,6 +4198,16 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     Res.getAs<OMPExecutableDirective>()
         ->getStructuredBlock()
         ->setIsOMPStructuredBlock(true);
+  }
+
+  if (!CurContext->isDependentContext() &&
+      isOpenMPTargetExecutionDirective(Kind) &&
+      !(DSAStack->hasRequiresDeclWithClause<OMPUnifiedSharedMemoryClause>() ||
+        DSAStack->hasRequiresDeclWithClause<OMPUnifiedAddressClause>() ||
+        DSAStack->hasRequiresDeclWithClause<OMPReverseOffloadClause>() ||
+        DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())) {
+    // Register target to DSA Stack.
+    DSAStack->addTargetDirLocation(StartLoc);
   }
 
   return Res;

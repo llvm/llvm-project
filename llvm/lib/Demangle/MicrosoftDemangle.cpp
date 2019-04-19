@@ -838,7 +838,7 @@ VariableSymbolNode *Demangler::demangleVariableEncoding(StringView &MangledName,
 // <number>               ::= [?] <non-negative integer>
 //
 // <non-negative integer> ::= <decimal digit> # when 1 <= Number <= 10
-//                        ::= <hex digit>+ @  # when Numbrer == 0 or >= 10
+//                        ::= <hex digit>+ @  # when Number == 0 or >= 10
 //
 // <hex-digit>            ::= [A-P]           # A = 0, B = 1, ...
 std::pair<uint64_t, bool> Demangler::demangleNumber(StringView &MangledName) {
@@ -982,6 +982,7 @@ static uint8_t rebasedHexDigitToNumber(char C) {
 }
 
 uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
+  assert(!MangledName.empty());
   if (!MangledName.startsWith('?'))
     return MangledName.popFront();
 
@@ -1248,7 +1249,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
 
   // Encoded Length
   std::tie(StringByteSize, IsNegative) = demangleNumber(MangledName);
-  if (Error || IsNegative)
+  if (Error || IsNegative || StringByteSize < (IsWcharT ? 2 : 1))
     goto StringLiteralError;
 
   // CRC 32 (always 8 characters plus a terminator)
@@ -1269,7 +1270,8 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
       Result->IsTruncated = true;
 
     while (!MangledName.consumeFront('@')) {
-      assert(StringByteSize >= 2);
+      if (MangledName.size() < 2)
+        goto StringLiteralError;
       wchar_t W = demangleWcharLiteral(MangledName);
       if (StringByteSize != 2 || Result->IsTruncated)
         outputEscapedChar(OS, W);
@@ -1285,7 +1287,8 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
 
     unsigned BytesDecoded = 0;
     while (!MangledName.consumeFront('@')) {
-      assert(StringByteSize >= 1);
+      if (MangledName.size() < 1)
+        goto StringLiteralError;
       StringBytes[BytesDecoded++] = demangleCharLiteral(MangledName);
     }
 

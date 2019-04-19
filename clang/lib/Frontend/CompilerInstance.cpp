@@ -585,12 +585,6 @@ void CompilerInstance::createCodeCompletionConsumer() {
     setCodeCompletionConsumer(nullptr);
     return;
   }
-
-  if (CompletionConsumer->isOutputBinary() &&
-      llvm::sys::ChangeStdoutToBinary()) {
-    getPreprocessor().getDiagnostics().Report(diag::err_fe_stdout_binary);
-    setCodeCompletionConsumer(nullptr);
-  }
 }
 
 void CompilerInstance::createFrontendTimer() {
