@@ -369,7 +369,7 @@ TEST_F(TransformerTest, OverlappingEditsInRule) {
   // The rewrite process fails...
   EXPECT_TRUE(rewrite(Input));
   // ... but one AtomicChange was consumed:
-  ASSERT_EQ(Changes.size(), 1);
+  ASSERT_EQ(Changes.size(), 1u);
   EXPECT_TRUE(Changes[0].hasError());
 }
 
@@ -384,7 +384,7 @@ TEST_F(TransformerTest, OverlappingEditsMultipleMatches) {
   // The rewrite process fails because the changes conflict with each other...
   EXPECT_FALSE(rewrite(Input));
   // ... but all changes are (individually) fine:
-  ASSERT_EQ(Changes.size(), 2);
+  ASSERT_EQ(Changes.size(), 2u);
   EXPECT_FALSE(Changes[0].hasError());
   EXPECT_FALSE(Changes[1].hasError());
 }

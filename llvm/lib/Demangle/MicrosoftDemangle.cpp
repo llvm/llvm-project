@@ -1230,6 +1230,11 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
 
   EncodedStringLiteralNode *Result = Arena.alloc<EncodedStringLiteralNode>();
 
+  // Must happen before the first `goto StringLiteralError`.
+  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
+    // FIXME: Propagate out-of-memory as an error?
+    std::terminate();
+
   // Prefix indicating the beginning of a string literal
   if (!MangledName.consumeFront("@_"))
     goto StringLiteralError;
@@ -1261,9 +1266,6 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   if (MangledName.empty())
     goto StringLiteralError;
 
-  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
-    // FIXME: Propagate out-of-memory as an error?
-    std::terminate();
   if (IsWcharT) {
     Result->Char = CharKind::Wchar;
     if (StringByteSize > 64)
@@ -1328,6 +1330,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
 
 StringLiteralError:
   Error = true;
+  std::free(OS.getBuffer());
   return nullptr;
 }
 

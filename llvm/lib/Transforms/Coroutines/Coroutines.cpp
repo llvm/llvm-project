@@ -176,15 +176,15 @@ static void buildCGN(CallGraph &CG, CallGraphNode *Node) {
 
   // Look for calls by this function.
   for (Instruction &I : instructions(F))
-    if (CallSite CS = CallSite(cast<Value>(&I))) {
-      const Function *Callee = CS.getCalledFunction();
+    if (auto *Call = dyn_cast<CallBase>(&I)) {
+      const Function *Callee = Call->getCalledFunction();
       if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
         // Indirect calls of intrinsics are not allowed so no need to check.
         // We can be more precise here by using TargetArg returned by
         // Intrinsic::isLeaf.
-        Node->addCalledFunction(CS, CG.getCallsExternalNode());
+        Node->addCalledFunction(Call, CG.getCallsExternalNode());
       else if (!Callee->isIntrinsic())
-        Node->addCalledFunction(CS, CG.getOrInsertFunction(Callee));
+        Node->addCalledFunction(Call, CG.getOrInsertFunction(Callee));
     }
 }
 

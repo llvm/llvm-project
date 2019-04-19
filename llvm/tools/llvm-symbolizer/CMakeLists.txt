@@ -16,6 +16,8 @@ add_llvm_tool(llvm-symbolizer
   llvm-symbolizer.cpp
   )
 
+add_llvm_tool_symlink(llvm-addr2line llvm-symbolizer)
+
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(addr2line llvm-symbolizer)
 endif()

@@ -164,7 +164,7 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
                         PGOOptions::IRUse, PGOOptions::CSIRUse);
   }
 
-  PassBuilder PB(TM, PGOOpt);
+  PassBuilder PB(TM, PipelineTuningOptions(), PGOOpt);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.

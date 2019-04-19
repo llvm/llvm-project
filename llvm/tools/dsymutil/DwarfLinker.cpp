@@ -121,8 +121,7 @@ static DWARFDie resolveDIEReference(const DwarfLinker &Linker,
                                     const DebugMapObject &DMO,
                                     const UnitListTy &Units,
                                     const DWARFFormValue &RefValue,
-                                    const DWARFUnit &Unit, const DWARFDie &DIE,
-                                    CompileUnit *&RefCU) {
+                                    const DWARFDie &DIE, CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
   uint64_t RefOffset = *RefValue.getAsReference();
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
@@ -756,8 +755,8 @@ void DwarfLinker::keepDIEAndDependencies(
 
     Val.extractValue(Data, &Offset, Unit.getFormParams(), &Unit);
     CompileUnit *ReferencedCU;
-    if (auto RefDie = resolveDIEReference(*this, DMO, Units, Val, Unit, Die,
-                                          ReferencedCU)) {
+    if (auto RefDie =
+            resolveDIEReference(*this, DMO, Units, Val, Die, ReferencedCU)) {
       uint32_t RefIdx = ReferencedCU->getOrigUnit().getDIEIndex(RefDie);
       CompileUnit::DIEInfo &Info = ReferencedCU->getInfo(RefIdx);
       bool IsModuleRef = Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset() &&
@@ -993,7 +992,7 @@ unsigned DwarfLinker::DIECloner::cloneDieReferenceAttribute(
   DeclContext *Ctxt = nullptr;
 
   DWARFDie RefDie =
-      resolveDIEReference(Linker, DMO, CompileUnits, Val, U, InputDIE, RefUnit);
+      resolveDIEReference(Linker, DMO, CompileUnits, Val, InputDIE, RefUnit);
 
   // If the referenced DIE is not found,  drop the attribute.
   if (!RefDie || AttrSpec.Attr == dwarf::DW_AT_sibling)
@@ -2073,8 +2072,8 @@ uint32_t DwarfLinker::DIECloner::hashFullyQualifiedName(
       break;
 
     CompileUnit *RefCU;
-    if (auto RefDIE = resolveDIEReference(Linker, DMO, CompileUnits, *Ref,
-                                          U.getOrigUnit(), DIE, RefCU)) {
+    if (auto RefDIE =
+            resolveDIEReference(Linker, DMO, CompileUnits, *Ref, DIE, RefCU)) {
       CU = RefCU;
       OrigUnit = &RefCU->getOrigUnit();
       DIE = RefDIE;
