@@ -45,6 +45,7 @@ template <class T> struct FullNameLT {
   }
 };
 
+using PackageNameLT = FullNameLT<CheckerRegistry::PackageInfo>;
 using CheckerNameLT = FullNameLT<CheckerRegistry::CheckerInfo>;
 } // end of anonymous namespace
 
@@ -118,6 +119,9 @@ CheckerRegistry::CheckerRegistry(
   addChecker(register##CLASS, shouldRegister##CLASS, FULLNAME, HELPTEXT,       \
              DOC_URI);
 
+#define GET_PACKAGES
+#define PACKAGE(FULLNAME) addPackage(FULLNAME);
+
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
@@ -166,6 +170,7 @@ CheckerRegistry::CheckerRegistry(
   // FIXME: Alphabetical sort puts 'experimental' in the middle.
   // Would it be better to name it '~experimental' or something else
   // that's ASCIIbetically last?
+  llvm::sort(Packages, PackageNameLT{});
   llvm::sort(Checkers, CheckerNameLT{});
 
 #define GET_CHECKER_DEPENDENCIES
@@ -173,9 +178,24 @@ CheckerRegistry::CheckerRegistry(
 #define CHECKER_DEPENDENCY(FULLNAME, DEPENDENCY)                               \
   addDependency(FULLNAME, DEPENDENCY);
 
+#define GET_CHECKER_OPTIONS
+#define CHECKER_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL)             \
+  addCheckerOption(TYPE, FULLNAME, CMDFLAG, DEFAULT_VAL, DESC);
+
+#define GET_PACKAGE_OPTIONS
+#define PACKAGE_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL)             \
+  addPackageOption(TYPE, FULLNAME, CMDFLAG, DEFAULT_VAL, DESC);
+
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER_DEPENDENCY
 #undef GET_CHECKER_DEPENDENCIES
+#undef CHECKER_OPTION
+#undef GET_CHECKER_OPTIONS
+#undef PACKAGE_OPTION
+#undef GET_PACKAGE_OPTIONS
+
+  resolveDependencies();
+  resolveCheckerAndPackageOptions();
 
   // Parse '-analyzer-checker' and '-analyzer-disable-checker' options from the
   // command line.
@@ -264,6 +284,70 @@ CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers() const {
   return EnabledCheckers;
 }
 
+void CheckerRegistry::resolveDependencies() {
+  for (const std::pair<StringRef, StringRef> &Entry : Dependencies) {
+    auto CheckerIt = binaryFind(Checkers, Entry.first);
+    assert(CheckerIt != Checkers.end() && CheckerIt->FullName == Entry.first &&
+           "Failed to find the checker while attempting to set up its "
+           "dependencies!");
+
+    auto DependencyIt = binaryFind(Checkers, Entry.second);
+    assert(DependencyIt != Checkers.end() &&
+           DependencyIt->FullName == Entry.second &&
+           "Failed to find the dependency of a checker!");
+
+    CheckerIt->Dependencies.emplace_back(&*DependencyIt);
+  }
+
+  Dependencies.clear();
+}
+
+void CheckerRegistry::addDependency(StringRef FullName, StringRef Dependency) {
+  Dependencies.emplace_back(FullName, Dependency);
+}
+
+template <class T>
+static void
+insertOptionToCollection(StringRef FullName, T &Collection,
+                         const CheckerRegistry::CmdLineOption &&Option) {
+  auto It = binaryFind(Collection, FullName);
+  assert(It != Collection.end() &&
+         "Failed to find the checker while attempting to add a command line "
+         "option to it!");
+
+  It->CmdLineOptions.emplace_back(std::move(Option));
+}
+
+void CheckerRegistry::resolveCheckerAndPackageOptions() {
+  for (const std::pair<StringRef, CmdLineOption> &CheckerOptEntry :
+       CheckerOptions) {
+    insertOptionToCollection(CheckerOptEntry.first, Checkers,
+                             std::move(CheckerOptEntry.second));
+  }
+  CheckerOptions.clear();
+
+  for (const std::pair<StringRef, CmdLineOption> &PackageOptEntry :
+       PackageOptions) {
+    insertOptionToCollection(PackageOptEntry.first, Checkers,
+                             std::move(PackageOptEntry.second));
+  }
+  PackageOptions.clear();
+}
+
+void CheckerRegistry::addPackage(StringRef FullName) {
+  Packages.emplace_back(PackageInfo(FullName));
+}
+
+void CheckerRegistry::addPackageOption(StringRef OptionType,
+                                       StringRef PackageFullName,
+                                       StringRef OptionName,
+                                       StringRef DefaultValStr,
+                                       StringRef Description) {
+  PackageOptions.emplace_back(
+      PackageFullName,
+      CmdLineOption{OptionType, OptionName, DefaultValStr, Description});
+}
+
 void CheckerRegistry::addChecker(InitializationFunction Rfn,
                                  ShouldRegisterFunction Sfn, StringRef Name,
                                  StringRef Desc, StringRef DocsUri) {
@@ -278,18 +362,14 @@ void CheckerRegistry::addChecker(InitializationFunction Rfn,
   }
 }
 
-void CheckerRegistry::addDependency(StringRef FullName, StringRef Dependency) {
-  auto CheckerIt = binaryFind(Checkers, FullName);
-  assert(CheckerIt != Checkers.end() && CheckerIt->FullName == FullName &&
-         "Failed to find the checker while attempting to set up its "
-         "dependencies!");
-
-  auto DependencyIt = binaryFind(Checkers, Dependency);
-  assert(DependencyIt != Checkers.end() &&
-         DependencyIt->FullName == Dependency &&
-         "Failed to find the dependency of a checker!");
-
-  CheckerIt->Dependencies.emplace_back(&*DependencyIt);
+void CheckerRegistry::addCheckerOption(StringRef OptionType,
+                                       StringRef CheckerFullName,
+                                       StringRef OptionName,
+                                       StringRef DefaultValStr,
+                                       StringRef Description) {
+  CheckerOptions.emplace_back(
+      CheckerFullName,
+      CmdLineOption{OptionType, OptionName, DefaultValStr, Description});
 }
 
 void CheckerRegistry::initializeManager(CheckerManager &CheckerMgr) const {

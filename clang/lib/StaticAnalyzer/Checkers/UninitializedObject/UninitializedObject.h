@@ -17,7 +17,7 @@
 //     won't emit warnings for objects that don't have at least one initialized
 //     field. This may be set with
 //
-//     `-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true`.
+//     `-analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true`.
 //
 //   - "NotesAsWarnings" (boolean). If set to true, the checker will emit a
 //     warning for each uninitialized field, as opposed to emitting one warning
@@ -25,14 +25,14 @@
 //     to it in notes. Defaults to false.
 //
 //     `-analyzer-config \
-//         alpha.cplusplus.UninitializedObject:NotesAsWarnings=true`.
+//         optin.cplusplus.UninitializedObject:NotesAsWarnings=true`.
 //
 //   - "CheckPointeeInitialization" (boolean). If set to false, the checker will
 //     not analyze the pointee of pointer/reference fields, and will only check
 //     whether the object itself is initialized. Defaults to false.
 //
 //     `-analyzer-config \
-//         alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
+//         optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
 //
 //     TODO: With some clever heuristics, some pointers should be dereferenced
 //     by default. For example, if the pointee is constructed within the
@@ -45,14 +45,14 @@
 //     matches the given pattern. Defaults to "".
 //
 //     `-analyzer-config \
-// alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"`.
+// optin.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"`.
 //
 //   - "IgnoreGuardedFields" (boolean). If set to true, the checker will analyze
 //     _syntactically_ whether the found uninitialized object is used without a
 //     preceding assert call. Defaults to false.
 //
 //     `-analyzer-config \
-//         alpha.cplusplus.UninitializedObject:IgnoreGuardedFields=true`.
+//         optin.cplusplus.UninitializedObject:IgnoreGuardedFields=true`.
 //
 // Most of the following methods as well as the checker itself is defined in
 // UninitializedObjectChecker.cpp.

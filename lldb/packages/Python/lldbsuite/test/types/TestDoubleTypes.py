@@ -14,7 +14,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class FloatTypesTestCase(AbstractBase.GenericTester):
+class DoubleTypesTestCase(AbstractBase.GenericTester):
 
     mydir = AbstractBase.GenericTester.compute_mydir(__file__)
 
@@ -26,11 +26,11 @@ class FloatTypesTestCase(AbstractBase.GenericTester):
         self.addTearDownHook(
             lambda: self.runCmd("settings clear auto-confirm"))
 
-    def test_float_type(self):
-        """Test that float-type variables are displayed correctly."""
-        self.build_and_run('float.cpp', set(['float']))
+    def test_double_type(self):
+        """Test that double-type variables are displayed correctly."""
+        self.build_and_run('double.cpp', set(['double']))
 
     @skipUnlessDarwin
-    def test_float_type_from_block(self):
-        """Test that float-type variables are displayed correctly from a block."""
-        self.build_and_run('float.cpp', set(['float']), bc=True)
+    def test_double_type_from_block(self):
+        """Test that double-type variables are displayed correctly from a block."""
+        self.build_and_run('double.cpp', set(['double']), bc=True)

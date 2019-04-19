@@ -538,6 +538,7 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     switch (Triple.getArch()) {
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
+    case llvm::Triple::ppc:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       return !areOptimizationsEnabled(Args);

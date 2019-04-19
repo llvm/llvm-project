@@ -29,9 +29,13 @@
 // OpenBSD follows the same rules as Linux.
 // RUN: %clang -### -target x86_64-unknown-openbsd -S -O1 %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=OPENBSD-OPT %s
+// RUN: %clang -### -target powerpc-unknown-openbsd -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=OPENBSD-OPT %s
 // OPENBSD-OPT: "-momit-leaf-frame-pointer"
 
 // RUN: %clang -### -target x86_64-unknown-openbsd -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=OPENBSD %s
+// RUN: %clang -### -target powerpc-unknown-openbsd -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=OPENBSD %s
 // OPENBSD-NOT: "-momit-leaf-frame-pointer"
 
