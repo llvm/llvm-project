@@ -7325,8 +7325,11 @@ CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
                                      false, llvm::GlobalValue::PrivateLinkage,
                                      ClassGV, "OBJC_CLASSLIST_REFERENCES_$_");
     Entry->setAlignment(CGF.getPointerAlign().getQuantity());
-    Entry->setSection(GetSectionName("__objc_classrefs",
-                                     "regular,no_dead_strip"));
+
+    if (!ID || !ID->hasAttr<ObjCClassStubAttr>())
+      Entry->setSection(GetSectionName("__objc_classrefs",
+                                       "regular,no_dead_strip"));
+
     CGM.addCompilerUsedGlobal(Entry);
   }
 
