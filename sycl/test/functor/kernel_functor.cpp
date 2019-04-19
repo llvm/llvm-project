@@ -1,8 +1,9 @@
-// RUN: %clang -fsycl -o %t.out %s -lstdc++ -lOpenCL
+// RUN: %clang -fsycl -o %t.out %s -lstdc++ -lOpenCL -lsycl
 // RUN: cd %T
-// RUN: env SYCL_DEVICE_TYPE=HOST %t.out
-// RUN: %CPU_RUN_PLACEHOLDER %t.out
-// RUN: %GPU_RUN_PLACEHOLDER %t.out
+// RUN: env SYCL_DEVICE_TYPE=HOST %t.out | FileCheck %s
+// RUNx: %CPU_RUN_PLACEHOLDER %t.out
+// RUNx: %GPU_RUN_PLACEHOLDER %t.out
+// CHECK:Passed.
 
 //==--- kernel_functor.cpp - Functors as SYCL kernel test ------------------==//
 //
@@ -13,8 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <CL/sycl.hpp>
-
-#include <cassert>
+#include <iostream>
 
 constexpr auto sycl_read_write = cl::sycl::access::mode::read_write;
 constexpr auto sycl_global_buffer = cl::sycl::access::target::global_buffer;
@@ -172,8 +172,14 @@ int main() {
   const int Gold1 = 40;
   const int Gold2 = 80;
 
-  assert(Res1 == Gold1);
-  assert(Res2 == Gold2);
-
+  if (Res1 != Gold1) {
+    std::cout << "FAILED. " << Res1 << "!=" << Gold1 << "\n";
+    return 1;
+  }
+  if (Res2 != Gold2) {
+    std::cout << "FAILED. " << Res2 << "!=" << Gold2 << "\n";
+    return 1;
+  }
+  std::cout << "Passed.\n";
   return 0;
 }
