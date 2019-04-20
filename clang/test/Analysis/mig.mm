@@ -100,6 +100,14 @@ kern_return_t release_twice(mach_port_name_t port, vm_address_t addr1, vm_addres
                      // expected-note@-1{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
 }
 
+MIG_SERVER_ROUTINE
+kern_return_t no_unrelated_notes(mach_port_name_t port, vm_address_t address, vm_size_t size) {
+  vm_deallocate(port, address, size); // no-note
+  1 / 0; // expected-warning{{Division by zero}}
+         // expected-note@-1{{Division by zero}}
+  return KERN_SUCCESS;
+}
+
 // Make sure we find the bug when the object is destroyed within an
 // automatic destructor.
 MIG_SERVER_ROUTINE

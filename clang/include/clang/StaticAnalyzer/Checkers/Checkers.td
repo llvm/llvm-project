@@ -493,6 +493,43 @@ def MoveChecker: Checker<"Move">,
 
 let ParentPackage = CplusplusOptIn in {
 
+def UninitializedObjectChecker: Checker<"UninitializedObject">,
+  HelpText<"Reports uninitialized fields after object construction">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If set to false, the checker won't emit warnings "
+                  "for objects that don't have at least one initialized "
+                  "field.",
+                  "false">,
+    CmdLineOption<Boolean,
+                  "NotesAsWarnings",
+                  "If set to true, the checker will emit a warning "
+                  "for each uninitalized field, as opposed to emitting one "
+                  "warning per constructor call, and listing the uninitialized "
+                  "fields that belongs to it in notes.",
+                  "false">,
+    CmdLineOption<Boolean,
+                  "CheckPointeeInitialization",
+                  "If set to false, the checker will not analyze "
+                  "the pointee of pointer/reference fields, and will only "
+                  "check whether the object itself is initialized.",
+                  "false">,
+    CmdLineOption<String,
+                  "IgnoreRecordsWithField",
+                  "If supplied, the checker will not analyze "
+                  "structures that have a field with a name or type name that "
+                  "matches the given pattern.",
+                  "\"\"">,
+    CmdLineOption<Boolean,
+                  "IgnoreGuardedFields",
+                  "If set to true, the checker will analyze _syntactically_ "
+                  "whether the found uninitialized object is used without a "
+                  "preceding assert call. Defaults to false.",
+                  "false">
+  ]>,
+  Documentation<HasAlphaDocumentation>;
+
 def VirtualCallChecker : Checker<"VirtualCall">,
   HelpText<"Check virtual function calls during construction or destruction">,
   CheckerOptions<[
@@ -534,43 +571,6 @@ def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
   HelpText<"Check for use of iterators of different containers where iterators "
            "of the same container are expected">,
   Dependencies<[IteratorModeling]>,
-  Documentation<HasAlphaDocumentation>;
-
-def UninitializedObjectChecker: Checker<"UninitializedObject">,
-  HelpText<"Reports uninitialized fields after object construction">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "Pedantic",
-                  "If set to false, the checker won't emit warnings "
-                  "for objects that don't have at least one initialized "
-                  "field.",
-                  "false">,
-    CmdLineOption<Boolean,
-                  "NotesAsWarnings",
-                  "If set to true, the checker will emit a warning "
-                  "for each uninitalized field, as opposed to emitting one "
-                  "warning per constructor call, and listing the uninitialized "
-                  "fields that belongs to it in notes.",
-                  "false">,
-    CmdLineOption<Boolean,
-                  "CheckPointeeInitialization",
-                  "If set to false, the checker will not analyze "
-                  "the pointee of pointer/reference fields, and will only "
-                  "check whether the object itself is initialized.",
-                  "false">,
-    CmdLineOption<String,
-                  "IgnoreRecordsWithField",
-                  "If supplied, the checker will not analyze "
-                  "structures that have a field with a name or type name that "
-                  "matches the given pattern.",
-                  "\"\"">,
-    CmdLineOption<Boolean,
-                  "IgnoreGuardedFields",
-                  "If set to true, the checker will analyze _syntactically_ "
-                  "whether the found uninitialized object is used without a "
-                  "preceding assert call. Defaults to false.",
-                  "false">
-  ]>,
   Documentation<HasAlphaDocumentation>;
 
 } // end: "alpha.cplusplus"

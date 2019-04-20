@@ -235,12 +235,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .legalForTypesWithMemDesc({{s32, p0, 8, 8},
                                  {s32, p0, 16, 8}})
       .clampScalar(0, s8, s64)
-      .lowerIfMemSizeNotPow2()
+      .widenScalarToNextPow2(0)
+      // TODO: We could support sum-of-pow2's but the lowering code doesn't know
+      //       how to do that yet.
+      .unsupportedIfMemSizeNotPow2()
       // Lower any any-extending loads left into G_ANYEXT and G_LOAD
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
-      .widenScalarToNextPow2(0)
       .clampMaxNumElements(0, s32, 2)
       .clampMaxNumElements(0, s64, 1)
       .customIf(IsPtrVecPred);
@@ -248,8 +250,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder(G_STORE)
       .legalForTypesWithMemDesc({{s8, p0, 8, 8},
                                  {s16, p0, 16, 8},
-                                 {s32, p0, 8, 8},
-                                 {s32, p0, 16, 8},
                                  {s32, p0, 32, 8},
                                  {s64, p0, 64, 8},
                                  {p0, p0, 64, 8},
@@ -260,7 +260,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                                  {v4s32, p0, 128, 8},
                                  {v2s64, p0, 128, 8}})
       .clampScalar(0, s8, s64)
-      .lowerIfMemSizeNotPow2()
+      .widenScalarToNextPow2(0)
+      // TODO: We could support sum-of-pow2's but the lowering code doesn't know
+      //       how to do that yet.
+      .unsupportedIfMemSizeNotPow2()
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
                Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;

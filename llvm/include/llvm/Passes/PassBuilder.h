@@ -80,6 +80,14 @@ public:
   /// Tuning option to enable/disable loop vectorization. Its default value is
   /// that of the flag: `-vectorize-loops`.
   bool LoopVectorization;
+
+  /// Tuning option to cap the number of calls to retrive clobbering accesses in
+  /// MemorySSA, in LICM.
+  unsigned LicmMssaOptCap;
+
+  /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
+  /// the number of access is too large.
+  unsigned LicmMssaNoAccForPromotionCap;
 };
 
 /// This class provides access to building LLVM's passes.

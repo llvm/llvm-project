@@ -956,6 +956,7 @@ VarTemplateDecl *VarTemplateDecl::Create(ASTContext &C, DeclContext *DC,
                                          SourceLocation L, DeclarationName Name,
                                          TemplateParameterList *Params,
                                          VarDecl *Decl) {
+  AdoptTemplateParameterList(Params, DC);
   return new (C, DC) VarTemplateDecl(C, DC, L, Name, Params, Decl);
 }
 

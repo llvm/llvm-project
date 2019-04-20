@@ -1,17 +1,17 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind" \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind" \
 // RUN:   -std=c++11 -verify  %s
 
 // RUN: not %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.cplusplus.UninitializedObject \
+// RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config \
-// RUN:     alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="([)]" \
+// RUN:     optin.cplusplus.UninitializedObject:IgnoreRecordsWithField="([)]" \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-UNINIT-INVALID-REGEX
 
 // CHECK-UNINIT-INVALID-REGEX: (frontend): invalid input for checker option
-// CHECK-UNINIT-INVALID-REGEX-SAME: 'alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField',
+// CHECK-UNINIT-INVALID-REGEX-SAME: 'optin.cplusplus.UninitializedObject:IgnoreRecordsWithField',
 // CHECK-UNINIT-INVALID-REGEX-SAME: that expects a valid regex, building failed
 // CHECK-UNINIT-INVALID-REGEX-SAME: with error message "parentheses not
 // CHECK-UNINIT-INVALID-REGEX-SAME: balanced"

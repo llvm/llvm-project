@@ -43,6 +43,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -804,6 +805,16 @@ try_next:;
   FilterEnds.push_back(FilterIds.size());
   FilterIds.push_back(0); // terminator
   return FilterID;
+}
+
+void MachineFunction::addCodeViewHeapAllocSite(MachineInstr *I, MDNode *MD) {
+  MCSymbol *BeginLabel = Ctx.createTempSymbol("heapallocsite", true);
+  MCSymbol *EndLabel = Ctx.createTempSymbol("heapallocsite", true);
+  I->setPreInstrSymbol(*this, BeginLabel);
+  I->setPostInstrSymbol(*this, EndLabel);
+
+  DIType *DI = dyn_cast<DIType>(MD);
+  CodeViewHeapAllocSites.push_back(std::make_tuple(BeginLabel, EndLabel, DI));
 }
 
 /// \}

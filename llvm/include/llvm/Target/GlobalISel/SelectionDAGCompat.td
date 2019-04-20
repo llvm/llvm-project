@@ -95,6 +95,7 @@ def : GINodeEquiv<G_FSIN, fsin>;
 def : GINodeEquiv<G_FABS, fabs>;
 def : GINodeEquiv<G_FSQRT, fsqrt>;
 def : GINodeEquiv<G_FFLOOR, ffloor>;
+def : GINodeEquiv<G_FRINT, frint>;
 
 // Broadly speaking G_LOAD is equivalent to ISD::LOAD but there are some
 // complications that tablegen must take care of. For example, Predicates such
