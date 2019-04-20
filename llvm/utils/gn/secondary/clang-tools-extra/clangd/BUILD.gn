@@ -19,6 +19,7 @@ static_library("clangd") {
     "//clang-tools-extra/clang-tidy/portability",
     "//clang-tools-extra/clang-tidy/readability",
     "//clang-tools-extra/clang-tidy/zircon",
+    "//clang-tools-extra/clangd/tool:features",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
@@ -37,7 +38,12 @@ static_library("clangd") {
     "//llvm/utils/gn/build/libs/atomic",
     "//llvm/utils/gn/build/libs/pthread",
   ]
-  include_dirs = [ "." ]
+  include_dirs = [
+    ".",
+
+    # To pick up the generated inc files.
+    "$target_gen_dir/tool",
+  ]
   sources = [
     "AST.cpp",
     "Cancellation.cpp",

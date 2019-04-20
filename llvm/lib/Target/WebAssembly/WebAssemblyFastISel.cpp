@@ -851,6 +851,13 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     Args.push_back(Reg);
   }
 
+  unsigned CalleeReg = 0;
+  if (!IsDirect) {
+    CalleeReg = getRegForValue(Call->getCalledValue());
+    if (!CalleeReg)
+      return false;
+  }
+
   auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc));
 
   if (!IsVoid)
@@ -858,12 +865,8 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (IsDirect)
     MIB.addGlobalAddress(Func);
-  else {
-    unsigned Reg = getRegForValue(Call->getCalledValue());
-    if (Reg == 0)
-      return false;
-    MIB.addReg(Reg);
-  }
+  else
+    MIB.addReg(CalleeReg);
 
   for (unsigned ArgReg : Args)
     MIB.addReg(ArgReg);

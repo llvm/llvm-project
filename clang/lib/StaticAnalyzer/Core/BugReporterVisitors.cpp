@@ -2499,6 +2499,30 @@ FalsePositiveRefutationBRVisitor::VisitNode(const ExplodedNode *N,
   return nullptr;
 }
 
+int NoteTag::Kind = 0;
+
+void TagVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
+  static int Tag = 0;
+  ID.AddPointer(&Tag);
+}
+
+std::shared_ptr<PathDiagnosticPiece>
+TagVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
+                      BugReport &R) {
+  ProgramPoint PP = N->getLocation();
+  const NoteTag *T = dyn_cast_or_null<NoteTag>(PP.getTag());
+  if (!T)
+    return nullptr;
+
+  if (Optional<std::string> Msg = T->generateMessage(BRC, R)) {
+    PathDiagnosticLocation Loc =
+        PathDiagnosticLocation::create(PP, BRC.getSourceManager());
+    return std::make_shared<PathDiagnosticEventPiece>(Loc, *Msg);
+  }
+
+  return nullptr;
+}
+
 void FalsePositiveRefutationBRVisitor::Profile(
     llvm::FoldingSetNodeID &ID) const {
   static int Tag = 0;

@@ -405,7 +405,7 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
   }
 }
 
-#if !SANITIZER_MAC && !SANITIZER_ANDROID && !SANITIZER_GO
+#if !SANITIZER_GO
 void FiberSwitchImpl(ThreadState *from, ThreadState *to) {
   Processor *proc = from->proc();
   ProcUnwire(proc, from);

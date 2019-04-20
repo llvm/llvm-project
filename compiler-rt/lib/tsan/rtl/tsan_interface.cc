@@ -125,7 +125,6 @@ void __sanitizer_unaligned_store64(uu64 *addr, u64 v) {
   *addr = v;
 }
 
-#if !SANITIZER_MAC && !SANITIZER_ANDROID
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_get_current_fiber() {
   return cur_thread();
@@ -150,7 +149,6 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_set_fiber_name(void *fiber, const char *name) {
   ThreadSetName(static_cast<ThreadState *>(fiber), name);
 }
-#endif // !SANITIZER_MAC && !SANITIZER_ANDROID
 }  // extern "C"
 
 void __tsan_acquire(void *addr) {

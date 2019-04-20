@@ -72,8 +72,9 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
     // atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
     #define _ENABLE_ATOMIC_ALIGNMENT_FIX
 
-    // Silence warnings about features that are deprecated in C++17.
+    // Silence warnings about features that are deprecated in C++17 and C++20.
     #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+    #define _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS
 #endif // _LIBCXX_IN_DEVCRT
 
 #include <ciso646>
