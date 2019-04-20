@@ -1499,14 +1499,16 @@ public:
 
   bool isSplat() const { return isSplatMask(Mask, getValueType(0)); }
 
-  int  getSplatIndex() const {
+  int getSplatIndex() const {
     assert(isSplat() && "Cannot get splat index for non-splat!");
     EVT VT = getValueType(0);
-    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
       if (Mask[i] >= 0)
         return Mask[i];
-    }
-    llvm_unreachable("Splat with all undef indices?");
+
+    // We can choose any index value here and be correct because all elements
+    // are undefined. Return 0 for better potential for callers to simplify.
+    return 0;
   }
 
   static bool isSplatMask(const int *Mask, EVT VT);

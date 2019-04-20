@@ -87,6 +87,10 @@ setupOptimizationRemarks(LLVMContext &Context, StringRef LTORemarksFilename,
                          StringRef LTORemarksPasses,
                          bool LTOPassRemarksWithHotness, int Count = -1);
 
+/// Setups the output file for saving statistics.
+Expected<std::unique_ptr<ToolOutputFile>>
+setupStatsFile(StringRef StatsFilename);
+
 class LTO;
 struct SymbolResolution;
 class ThinBackendProc;

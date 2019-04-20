@@ -1315,9 +1315,11 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FPOW:
     assert(TypeIdx == 0);
     Observer.changingInstr(MI);
 
@@ -1496,8 +1498,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
         // E.g. v1 = i24 load =>
         // v2 = i32 load (2 byte)
         // v3 = i32 load (1 byte)
-        // v4 = i32 shl v2, 16
-        // v5 = i32 or v4, v3
+        // v4 = i32 shl v3, 16
+        // v5 = i32 or v4, v2
         // v1 = i24 trunc v5
         // By doing this we generate the correct truncate which should get
         // combined away as an artifact with a matching extend.
@@ -1526,8 +1528,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
                                               *SmallMMO);
 
         auto ShiftAmt = MIRBuilder.buildConstant(AnyExtTy, LargeSplitSize);
-        auto Shift = MIRBuilder.buildShl(AnyExtTy, LargeLoad, ShiftAmt);
-        auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, SmallLoad);
+        auto Shift = MIRBuilder.buildShl(AnyExtTy, SmallLoad, ShiftAmt);
+        auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
         MIRBuilder.buildTrunc(DstReg, {Or.getReg(0)});
         MI.eraseFromParent();
         return Legalized;
@@ -2273,6 +2275,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FLOG10:
   case G_FCEIL:
   case G_FFLOOR:
+  case G_FRINT:
   case G_INTRINSIC_ROUND:
   case G_INTRINSIC_TRUNC:
   case G_FCOS:

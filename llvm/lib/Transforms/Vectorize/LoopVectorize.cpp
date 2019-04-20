@@ -277,6 +277,13 @@ static cl::opt<bool> VPlanBuildStressTest(
         "out right after the build (stress test the VPlan H-CFG construction "
         "in the VPlan-native vectorization path)."));
 
+cl::opt<bool> llvm::EnableLoopInterleaving(
+    "interleave-loops", cl::init(true), cl::Hidden,
+    cl::desc("Enable loop interleaving in Loop vectorization passes"));
+cl::opt<bool> llvm::EnableLoopVectorization(
+    "vectorize-loops", cl::init(false), cl::Hidden,
+    cl::desc("Run the Loop vectorization passes"));
+
 /// A helper function for converting Scalar types to vector types.
 /// If the incoming type is void, we return void. If the VF is 1, we return
 /// the scalar type.
@@ -6062,6 +6069,8 @@ INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(LoopVectorize, LV_NAME, lv_name, false, false)
 
 namespace llvm {
+
+Pass *createLoopVectorizePass() { return new LoopVectorize(); }
 
 Pass *createLoopVectorizePass(bool InterleaveOnlyWhenForced,
                               bool VectorizeOnlyWhenForced) {

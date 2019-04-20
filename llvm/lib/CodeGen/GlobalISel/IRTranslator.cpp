@@ -790,6 +790,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FLOG10;
     case Intrinsic::pow:
       return TargetOpcode::G_FPOW;
+    case Intrinsic::rint:
+      return TargetOpcode::G_FRINT;
     case Intrinsic::round:
       return TargetOpcode::G_INTRINSIC_ROUND;
     case Intrinsic::sin:
