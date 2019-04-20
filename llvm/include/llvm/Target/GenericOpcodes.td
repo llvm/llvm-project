@@ -592,6 +592,13 @@ def G_FFLOOR : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Floating point round to next integer.
+def G_FRINT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Opcodes for LLVM Intrinsics
 //------------------------------------------------------------------------------

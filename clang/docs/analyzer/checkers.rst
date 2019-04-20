@@ -339,6 +339,110 @@ optin
 
 Checkers for portability, performance or coding style specific rules.
 
+optin.cplusplus.UninitializedObject (C++)
+"""""""""""""""""""""""""""""""""""
+
+This checker reports uninitialized fields in objects created after a constructor
+call. It doesn't only find direct uninitialized fields, but rather makes a deep
+inspection of the object, analyzing all of it's fields subfields.
+The checker regards inherited fields as direct fields, so one will recieve
+warnings for uninitialized inherited data members as well.
+
+.. code-block:: cpp
+
+ // With Pedantic and CheckPointeeInitialization set to true
+
+ struct A {
+   struct B {
+     int x; // note: uninitialized field 'this->b.x'
+     // note: uninitialized field 'this->bptr->x'
+     int y; // note: uninitialized field 'this->b.y'
+     // note: uninitialized field 'this->bptr->y'
+   };
+   int *iptr; // note: uninitialized pointer 'this->iptr'
+   B b;
+   B *bptr;
+   char *cptr; // note: uninitialized pointee 'this->cptr'
+
+   A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
+ };
+
+ void f() {
+   A::B b;
+   char c;
+   A a(&b, &c); // warning: 6 uninitialized fields
+  //          after the constructor call
+ }
+
+ // With Pedantic set to false and
+ // CheckPointeeInitialization set to true
+ // (every field is uninitialized)
+
+ struct A {
+   struct B {
+     int x;
+     int y;
+   };
+   int *iptr;
+   B b;
+   B *bptr;
+   char *cptr;
+
+   A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
+ };
+
+ void f() {
+   A::B b;
+   char c;
+   A a(&b, &c); // no warning
+ }
+
+ // With Pedantic set to true and
+ // CheckPointeeInitialization set to false
+ // (pointees are regarded as initialized)
+
+ struct A {
+   struct B {
+     int x; // note: uninitialized field 'this->b.x'
+     int y; // note: uninitialized field 'this->b.y'
+   };
+   int *iptr; // note: uninitialized pointer 'this->iptr'
+   B b;
+   B *bptr;
+   char *cptr;
+
+   A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
+ };
+
+ void f() {
+   A::B b;
+   char c;
+   A a(&b, &c); // warning: 3 uninitialized fields
+  //          after the constructor call
+ }
+
+
+**Options**
+
+This checker has several options which can be set from command line (e.g.
+``-analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true``):
+
+* ``Pedantic`` (boolean). If to false, the checker won't emit warnings for
+  objects that don't have at least one initialized field. Defaults to false.
+
+* ``NotesAsWarnings``  (boolean). If set to true, the checker will emit a
+  warning for each uninitalized field, as opposed to emitting one warning per
+  constructor call, and listing the uninitialized fields that belongs to it in
+  notes. *Defaults to false*.
+
+* ``CheckPointeeInitialization`` (boolean). If set to false, the checker will
+  not analyze the pointee of pointer/reference fields, and will only check
+  whether the object itself is initialized. *Defaults to false*.
+
+* ``IgnoreRecordsWithField`` (string). If supplied, the checker will not analyze
+  structures that have a field with a name or type name that matches  the given
+  pattern. *Defaults to ""*.
+
 optin.cplusplus.VirtualCall (C++)
 """""""""""""""""""""""""""""""""
 Check virtual function calls during construction or destruction.
@@ -1382,102 +1486,6 @@ Method calls on a moved-from object and copying a moved-from object will be repo
    A b = std::move(a); // note: 'a' became 'moved-from' here
    a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
-
-alpha.cplusplus.UninitializedObject (C++)
-"""""""""""""""""""""""""""""""""""""""""
-
-This checker reports uninitialized fields in objects created after a constructor call.
-It doesn't only find direct uninitialized fields, but rather makes a deep inspection
-of the object, analyzing all of it's fields subfields.
-The checker regards inherited fields as direct fields, so one will
-recieve warnings for uninitialized inherited data members as well.
-
-.. code-block:: cpp
-
- // With Pedantic and CheckPointeeInitialization set to true
-
- struct A {
-   struct B {
-     int x; // note: uninitialized field 'this->b.x'
-     // note: uninitialized field 'this->bptr->x'
-     int y; // note: uninitialized field 'this->b.y'
-     // note: uninitialized field 'this->bptr->y'
-   };
-   int *iptr; // note: uninitialized pointer 'this->iptr'
-   B b;
-   B *bptr;
-   char *cptr; // note: uninitialized pointee 'this->cptr'
-
-   A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
- };
-
- void f() {
-   A::B b;
-   char c;
-   A a(&b, &c); // warning: 6 uninitialized fields
-  //          after the constructor call
- }
-
- // With Pedantic set to false and
- // CheckPointeeInitialization set to true
- // (every field is uninitialized)
-
- struct A {
-   struct B {
-     int x;
-     int y;
-   };
-   int *iptr;
-   B b;
-   B *bptr;
-   char *cptr;
-
-   A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
- };
-
- void f() {
-   A::B b;
-   char c;
-   A a(&b, &c); // no warning
- }
-
- // With Pedantic set to true and
- // CheckPointeeInitialization set to false
- // (pointees are regarded as initialized)
-
- struct A {
-   struct B {
-     int x; // note: uninitialized field 'this->b.x'
-     int y; // note: uninitialized field 'this->b.y'
-   };
-   int *iptr; // note: uninitialized pointer 'this->iptr'
-   B b;
-   B *bptr;
-   char *cptr;
-
-   A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
- };
-
- void f() {
-   A::B b;
-   char c;
-   A a(&b, &c); // warning: 3 uninitialized fields
-  //          after the constructor call
- }
-
-
-**Options**
-
-This checker has several options which can be set from command line (e.g. ``-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true``):
-
-* ``Pedantic`` (boolean). If to false, the checker won't emit warnings for objects that don't have at least one initialized field. Defaults to false.
-
-* ``NotesAsWarnings``  (boolean). If set to true, the checker will emit a warning for each uninitalized field, as opposed to emitting one warning per constructor call, and listing the uninitialized fields that belongs to it in notes. *Defaults to false.*.
-
-* ``CheckPointeeInitialization`` (boolean). If set to false, the checker will not analyze the pointee of pointer/reference fields, and will only check whether the object itself is initialized. *Defaults to false.*.
-
-* ``IgnoreRecordsWithField`` (string). If supplied, the checker will not analyze  structures that have a field with a name or type name that matches  the given pattern. *Defaults to ""*.  Can be set with ``-analyzer-config alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"``.
-
 
 alpha.deadcode
 ^^^^^^^^^^^^^^

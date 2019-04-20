@@ -58,10 +58,14 @@ define %v4f16 @test_v4f16.cos(%v4f16 %a) {
   %1 = call %v4f16 @llvm.cos.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v4f16.pow
 define %v4f16 @test_v4f16.pow(%v4f16 %a, %v4f16 %b) {
   ; This operation is expanded, whether with or without +fullfp16.
   ; CHECK-LABEL:   test_v4f16.pow:
+  ; GISEL-LABEL:   test_v4f16.pow:
   ; CHECK-COUNT-4: bl pow
+  ; GISEL-COUNT-4: bl pow
   %1 = call %v4f16 @llvm.pow.v4f16(%v4f16 %a, %v4f16 %b)
   ret %v4f16 %1
 }
@@ -252,6 +256,8 @@ define %v8f16 @test_v8f16.powi(%v8f16 %a, i32 %b) {
   ; This operation is expanded, whether with or without +fullfp16.
   ; CHECK-LABEL:   test_v8f16.powi:
   ; CHECK-COUNT-8: bl __powi
+  ; GISEL-LABEL:   test_v8f16.powi:
+  ; GISEL-COUNT-8: bl __powi
   %1 = call %v8f16 @llvm.powi.v8f16(%v8f16 %a, i32 %b)
   ret %v8f16 %1
 }
@@ -277,10 +283,14 @@ define %v8f16 @test_v8f16.cos(%v8f16 %a) {
   %1 = call %v8f16 @llvm.cos.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v8f16.pow
 define %v8f16 @test_v8f16.pow(%v8f16 %a, %v8f16 %b) {
   ; This operation is expanded, whether with or without +fullfp16.
   ; CHECK-LABEL:   test_v8f16.pow:
   ; CHECK-COUNT-8: bl pow
+  ; GISEL-LABEL:   test_v8f16.pow:
+  ; GISEL-COUNT-8: bl pow
   %1 = call %v8f16 @llvm.pow.v8f16(%v8f16 %a, %v8f16 %b)
   ret %v8f16 %1
 }
@@ -485,9 +495,13 @@ define %v2f32 @test_v2f32.cos(%v2f32 %a) {
   %1 = call %v2f32 @llvm.cos.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v2f32.pow
 ; CHECK: test_v2f32.pow:
+; GISEL-LABEL: test_v2f32.pow:
 define %v2f32 @test_v2f32.pow(%v2f32 %a, %v2f32 %b) {
   ; CHECK: pow
+  ; GISEL: pow
   %1 = call %v2f32 @llvm.pow.v2f32(%v2f32 %a, %v2f32 %b)
   ret %v2f32 %1
 }
@@ -645,9 +659,13 @@ define %v4f32 @test_v4f32.cos(%v4f32 %a) {
   %1 = call %v4f32 @llvm.cos.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v4f32.pow
 ; CHECK: test_v4f32.pow:
+; GISEL-LABEL: test_v4f32.pow:
 define %v4f32 @test_v4f32.pow(%v4f32 %a, %v4f32 %b) {
   ; CHECK: pow
+  ; GISEL: pow
   %1 = call %v4f32 @llvm.pow.v4f32(%v4f32 %a, %v4f32 %b)
   ret %v4f32 %1
 }
@@ -803,9 +821,13 @@ define %v2f64 @test_v2f64.cos(%v2f64 %a) {
   %1 = call %v2f64 @llvm.cos.v2f64(%v2f64 %a)
   ret %v2f64 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v2f64.pow
 ; CHECK: test_v2f64.pow:
+; GISEL-LABEL: test_v2f64.pow:
 define %v2f64 @test_v2f64.pow(%v2f64 %a, %v2f64 %b) {
   ; CHECK: pow
+  ; GISEL: pow
   %1 = call %v2f64 @llvm.pow.v2f64(%v2f64 %a, %v2f64 %b)
   ret %v2f64 %1
 }

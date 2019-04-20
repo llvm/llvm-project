@@ -20,7 +20,12 @@ unittest("ClangdTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]
-  include_dirs = [ "//clang-tools-extra/clangd" ]
+  include_dirs = [
+    "//clang-tools-extra/clangd",
+
+    # To pick up the generated inc files.
+    "$target_gen_dir/../../clangd/tool",
+  ]
   sources = [
     "Annotations.cpp",
     "BackgroundIndexTests.cpp",

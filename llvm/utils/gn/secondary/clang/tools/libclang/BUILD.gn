@@ -73,6 +73,7 @@ target(libclang_target_type, "libclang") {
     "CXType.h",
     "Index_Internal.h",
     "Indexing.cpp",
+    "../../include/clang-c/Index.h",
   ]
   if (host_os == "mac") {
     ldflags = [

@@ -232,21 +232,6 @@ On NetBSD one might run:
   > pkgin install swig python27 cmake ninja-build
 
 
-If you wish to build the optional reference documentation, additional dependencies are required:
-
-* Graphviz (for the 'dot' tool).
-* doxygen (only if you wish to build the C++ API reference)
-* epydoc (only if you wish to build the Python API reference)
-
-
-To install the prerequisites for building the documentation (on Debian/Ubuntu) do:
-
-::
-
-  > sudo apt-get install doxygen graphviz
-  > sudo pip install epydoc # or install package python-epydoc
-
-
 **Building LLDB**
 
 We first need to checkout the source trees into the appropriate locations. Both
@@ -514,3 +499,30 @@ arm64 build:
 
 Note that currently only lldb-server is functional on android. The lldb client
 is not supported and unlikely to work.
+
+Building The Documentation
+--------------------------
+
+If you wish to build the optional (reference) documentation, additional
+dependencies are required:
+
+* Sphinx (for the website)
+* Graphviz (for the 'dot' tool)
+* doxygen (if you wish to build the C++ API reference)
+* epydoc (if you wish to build the Python API reference)
+
+To install the prerequisites for building the documentation (on Debian/Ubuntu)
+do:
+
+::
+
+  > sudo apt-get install doxygen graphviz python3-sphinx
+  > sudo pip install epydoc
+
+To build the documentation, build the desired target(s).
+
+::
+
+  > cmake --build . --target docs-lldb-html
+  > cmake --build . --target lldb-cpp-doc
+  > cmake --build . --target lldb-python-doc
