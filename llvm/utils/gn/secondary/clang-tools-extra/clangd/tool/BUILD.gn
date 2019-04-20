@@ -13,6 +13,7 @@ write_cmake_config("features") {
   }
 }
 
+
 executable("clangd") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [

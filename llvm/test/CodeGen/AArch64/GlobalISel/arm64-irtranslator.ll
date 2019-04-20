@@ -2362,3 +2362,11 @@ define void @test_stacksaverestore() {
   call void @llvm.stackrestore(i8* %sp)
   ret void
 }
+
+declare float @llvm.rint.f32(float)
+define float @test_rint_f32(float %x) {
+  ; CHECK-LABEL: name:            test_rint_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FRINT %{{[0-9]+}}
+  %y = call float @llvm.rint.f32(float %x)
+  ret float %y
+}

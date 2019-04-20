@@ -29,8 +29,8 @@ body:             |
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C1]](s64)
     ; CHECK: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p0) :: (load 1 from %ir.ptr + 2, align 4)
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C2]](s32)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LOAD1]]
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD1]], [[C2]](s32)
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LOAD]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
     ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C1]](s64)

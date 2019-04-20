@@ -1543,8 +1543,21 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
     // and in C we must not because each declaration of a function gets its own
     // set of declarations for tags in prototype scope.
     bool VisibleWithinParent;
-    if (D->isTemplateParameter() || isa<ParmVarDecl>(D) ||
-        (isa<FunctionDecl>(DC) && !SemaRef.getLangOpts().CPlusPlus))
+    if (D->isTemplateParameter()) {
+      bool SearchDefinitions = true;
+      if (const auto *DCD = dyn_cast<Decl>(DC)) {
+        if (const auto *TD = DCD->getDescribedTemplate()) {
+          TemplateParameterList *TPL = TD->getTemplateParameters();
+          auto Index = getDepthAndIndex(D).second;
+          SearchDefinitions = Index >= TPL->size() || TPL->getParam(Index) != D;
+        }
+      }
+      if (SearchDefinitions)
+        VisibleWithinParent = SemaRef.hasVisibleDefinition(cast<NamedDecl>(DC));
+      else
+        VisibleWithinParent = isVisible(SemaRef, cast<NamedDecl>(DC));
+    } else if (isa<ParmVarDecl>(D) ||
+               (isa<FunctionDecl>(DC) && !SemaRef.getLangOpts().CPlusPlus))
       VisibleWithinParent = isVisible(SemaRef, cast<NamedDecl>(DC));
     else if (D->isModulePrivate()) {
       // A module-private declaration is only visible if an enclosing lexical
