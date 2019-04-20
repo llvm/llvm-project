@@ -73,22 +73,22 @@ static void *SignalSafeGetOrAllocate(uptr *dst, uptr size) {
 // shadow memory is set up.
 static uptr main_thread_identity = 0;
 ALIGNED(64) static char main_thread_state[sizeof(ThreadState)];
+static ThreadState *main_thread_state_loc = (ThreadState *)main_thread_state;
 
-ThreadState **cur_thread_location() {
-  ThreadState **thread_identity = (ThreadState **)pthread_self();
-  return ((uptr)thread_identity == main_thread_identity) ? nullptr
-                                                         : thread_identity;
+static ThreadState **cur_thread_location() {
+  uptr thread_identity = (uptr)pthread_self();
+  if (thread_identity == main_thread_identity || main_thread_identity == 0)
+    return &main_thread_state_loc;
+  return (ThreadState **)MemToShadow(thread_identity);
 }
 
 ThreadState *cur_thread() {
-  ThreadState **thr_state_loc = cur_thread_location();
-  if (thr_state_loc == nullptr || main_thread_identity == 0) {
-    return (ThreadState *)&main_thread_state;
-  }
-  ThreadState **fake_tls = (ThreadState **)MemToShadow((uptr)thr_state_loc);
-  ThreadState *thr = (ThreadState *)SignalSafeGetOrAllocate(
-      (uptr *)fake_tls, sizeof(ThreadState));
-  return thr;
+  return (ThreadState *)SignalSafeGetOrAllocate(
+      (uptr *)cur_thread_location(), sizeof(ThreadState));
+}
+
+void set_cur_thread(ThreadState *thr) {
+  *cur_thread_location() = thr;
 }
 
 // TODO(kuba.brecka): This is not async-signal-safe. In particular, we call
@@ -96,14 +96,13 @@ ThreadState *cur_thread() {
 // handler will try to access the unmapped ThreadState.
 void cur_thread_finalize() {
   ThreadState **thr_state_loc = cur_thread_location();
-  if (thr_state_loc == nullptr) {
+  if (thr_state_loc == &main_thread_state_loc) {
     // Calling dispatch_main() or xpc_main() actually invokes pthread_exit to
     // exit the main thread. Let's keep the main thread's ThreadState.
     return;
   }
-  ThreadState **fake_tls = (ThreadState **)MemToShadow((uptr)thr_state_loc);
-  internal_munmap(*fake_tls, sizeof(ThreadState));
-  *fake_tls = nullptr;
+  internal_munmap(*thr_state_loc, sizeof(ThreadState));
+  *thr_state_loc = nullptr;
 }
 #endif
 
@@ -265,11 +264,11 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // The pointer to the ThreadState object is stored in the shadow memory
   // of the tls.
   uptr tls_end = tls_addr + tls_size;
-  ThreadState **thr_state_loc = cur_thread_location();
-  if (thr_state_loc == nullptr) {
+  uptr thread_identity = (uptr)pthread_self();
+  if (thread_identity == main_thread_identity) {
     MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, tls_size);
   } else {
-    uptr thr_state_start = (uptr)thr_state_loc;
+    uptr thr_state_start = thread_identity;
     uptr thr_state_end = thr_state_start + sizeof(uptr);
     CHECK_GE(thr_state_start, tls_addr);
     CHECK_LE(thr_state_start, tls_addr + tls_size);

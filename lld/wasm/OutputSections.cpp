@@ -51,6 +51,8 @@ static StringRef sectionTypeToString(uint32_t SectionType) {
     return "CODE";
   case WASM_SEC_DATA:
     return "DATA";
+  case WASM_SEC_DATACOUNT:
+    return "DATACOUNT";
   default:
     fatal("invalid section type");
   }
