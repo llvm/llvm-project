@@ -118,6 +118,53 @@ public:
                 Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
+  // The following constructors are necessary to create multi_ptr<const
+  // ElementType, Space> from accessor<ElementType, ...>. Constructors above
+  // could not be used for this purpose because it will require 2 implicit
+  // conversions of user types which is not allowed by C++:
+  //    1. from accessor<ElementType, ...> to multi_ptr<ElementType, Space>
+  //    2. from multi_ptr<ElementType, Space> to multi_ptr<const ElementType,
+  //    Space>
+
+  // Only if Space == global_space and element type is const
+  template <
+      int dimensions, access::mode Mode, access::placeholder isPlaceholder,
+      access::address_space _Space = Space, typename ET = ElementType,
+      typename = typename std::enable_if<
+          _Space == Space && Space == access::address_space::global_space &&
+          std::is_const<ET>::value &&
+          std::is_same<ET, ElementType>::value>::type>
+  multi_ptr(accessor<typename std::remove_const<ET>::type, dimensions, Mode,
+                     access::target::global_buffer, isPlaceholder>
+                Accessor)
+      : multi_ptr(Accessor.get_pointer()) {}
+
+  // Only if Space == local_space and element type is const
+  template <
+      int dimensions, access::mode Mode, access::placeholder isPlaceholder,
+      access::address_space _Space = Space, typename ET = ElementType,
+      typename = typename std::enable_if<
+          _Space == Space && Space == access::address_space::local_space &&
+          std::is_const<ET>::value &&
+          std::is_same<ET, ElementType>::value>::type>
+  multi_ptr(accessor<typename std::remove_const<ET>::type, dimensions, Mode,
+                     access::target::local, isPlaceholder>
+                Accessor)
+      : multi_ptr(Accessor.get_pointer()) {}
+
+  // Only if Space == constant_space and element type is const
+  template <
+      int dimensions, access::mode Mode, access::placeholder isPlaceholder,
+      access::address_space _Space = Space, typename ET = ElementType,
+      typename = typename std::enable_if<
+          _Space == Space && Space == access::address_space::constant_space &&
+          std::is_const<ET>::value &&
+          std::is_same<ET, ElementType>::value>::type>
+  multi_ptr(accessor<typename std::remove_const<ET>::type, dimensions, Mode,
+                     access::target::constant_buffer, isPlaceholder>
+                Accessor)
+      : multi_ptr(Accessor.get_pointer()) {}
+
   // Returns the underlying OpenCL C pointer
   pointer_t get() const { return m_Pointer; }
 
