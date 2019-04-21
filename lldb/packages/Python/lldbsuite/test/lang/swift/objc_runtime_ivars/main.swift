@@ -13,7 +13,7 @@ import aTestFramework
 
 class SwiftSubclass: MySubclass {
   var swiftivar: String = "Hey Swift!"
-  var silly: AnyObject = MySillyOtherClass()
+  var silly = MySillyOtherClass()
 }
 
 func main() {
