@@ -5,6 +5,7 @@ unittest("ClangdTests") {
   deps = [
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clangd",
+    "//clang-tools-extra/clangd:features",
     "//clang-tools-extra/clangd/refactor/tweaks",
     "//clang/lib/AST",
     "//clang/lib/Basic",

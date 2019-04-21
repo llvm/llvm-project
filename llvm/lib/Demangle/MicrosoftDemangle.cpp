@@ -1088,6 +1088,9 @@ static void outputHex(OutputStream &OS, unsigned C) {
 
 static void outputEscapedChar(OutputStream &OS, unsigned C) {
   switch (C) {
+  case '\0': // nul
+    OS << "\\0";
+    return;
   case '\'': // single quote
     OS << "\\\'";
     return;
@@ -1165,7 +1168,7 @@ static unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
   // 2-byte, or 4-byte null terminator.
   if (NumBytes < 32) {
     unsigned TrailingNulls = countTrailingNullBytes(StringBytes, NumChars);
-    if (TrailingNulls >= 4)
+    if (TrailingNulls >= 4 && NumBytes % 4 == 0)
       return 4;
     if (TrailingNulls >= 2)
       return 2;
@@ -1179,7 +1182,7 @@ static unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
   // perfect and is biased towards languages that have ascii alphabets, but this
   // was always going to be best effort since the encoding is lossy.
   unsigned Nulls = countEmbeddedNulls(StringBytes, NumChars);
-  if (Nulls >= 2 * NumChars / 3)
+  if (Nulls >= 2 * NumChars / 3 && NumBytes % 4 == 0)
     return 4;
   if (Nulls >= NumChars / 3)
     return 2;

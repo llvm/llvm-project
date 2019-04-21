@@ -5875,7 +5875,7 @@ define <2 x double> @test_mm_mask3_fmsub_round_sd(<2 x double> %__W, <2 x double
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    vxorpd {{\.LCPI.*}}, %xmm2, %xmm3
-; X86-NEXT:    vfmadd213sd %xmm3, %xmm0, %xmm1
+; X86-NEXT:    vfmadd213sd {rn-sae}, %xmm3, %xmm0, %xmm1
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
 ; X86-NEXT:    vmovapd %xmm2, %xmm0
@@ -5884,7 +5884,7 @@ define <2 x double> @test_mm_mask3_fmsub_round_sd(<2 x double> %__W, <2 x double
 ; X64-LABEL: test_mm_mask3_fmsub_round_sd:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vxorpd {{.*}}(%rip), %xmm2, %xmm3
-; X64-NEXT:    vfmadd213sd %xmm3, %xmm0, %xmm1
+; X64-NEXT:    vfmadd213sd {rn-sae}, %xmm3, %xmm0, %xmm1
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
 ; X64-NEXT:    vmovapd %xmm2, %xmm0

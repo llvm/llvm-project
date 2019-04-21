@@ -1,7 +1,29 @@
+import("//clang-tools-extra/clangd/xpc/enable.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+config("features_config") {
+  # To pick up the generated inc files.
+  include_dirs = [ target_gen_dir ]
+  visibility = [ ":features" ]
+}
+
+write_cmake_config("features") {
+  input = "Features.inc.in"
+  output = "$target_gen_dir/Features.inc"
+  values = []
+  if (clangd_build_xpc) {
+    values += [ "CLANGD_BUILD_XPC=1" ]
+  } else {
+    values += [ "CLANGD_BUILD_XPC=0" ]
+  }
+  public_configs = [ ":features_config" ]
+}
+
 static_library("clangd") {
   output_name = "clangDaemon"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":features",
     "//clang-tools-extra/clang-tidy/abseil",
     "//clang-tools-extra/clang-tidy/android",
     "//clang-tools-extra/clang-tidy/boost",

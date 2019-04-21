@@ -26,17 +26,17 @@ namespace {
 
 #ifndef NDEBUG
 
-cl::opt<bool> PrintHidden("debug-orc-print-hidden", cl::init(false),
+cl::opt<bool> PrintHidden("debug-orc-print-hidden", cl::init(true),
                           cl::desc("debug print hidden symbols defined by "
                                    "materialization units"),
                           cl::Hidden);
 
-cl::opt<bool> PrintCallable("debug-orc-print-callable", cl::init(false),
+cl::opt<bool> PrintCallable("debug-orc-print-callable", cl::init(true),
                             cl::desc("debug print callable symbols defined by "
                                      "materialization units"),
                             cl::Hidden);
 
-cl::opt<bool> PrintData("debug-orc-print-data", cl::init(false),
+cl::opt<bool> PrintData("debug-orc-print-data", cl::init(true),
                         cl::desc("debug print data symbols defined by "
                                  "materialization units"),
                         cl::Hidden);
@@ -1051,9 +1051,11 @@ void JITDylib::notifyFailed(const SymbolNameSet &FailedSymbols) {
 void JITDylib::setSearchOrder(JITDylibSearchList NewSearchOrder,
                               bool SearchThisJITDylibFirst,
                               bool MatchNonExportedInThisDylib) {
-  if (SearchThisJITDylibFirst && NewSearchOrder.front().first != this)
-    NewSearchOrder.insert(NewSearchOrder.begin(),
-                          {this, MatchNonExportedInThisDylib});
+  if (SearchThisJITDylibFirst) {
+    if (NewSearchOrder.empty() || NewSearchOrder.front().first != this)
+      NewSearchOrder.insert(NewSearchOrder.begin(),
+                            {this, MatchNonExportedInThisDylib});
+  }
 
   ES.runSessionLocked([&]() { SearchOrder = std::move(NewSearchOrder); });
 }
@@ -1450,77 +1452,55 @@ JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
 
 Error JITDylib::defineImpl(MaterializationUnit &MU) {
   SymbolNameSet Duplicates;
-  SymbolNameSet MUDefsOverridden;
+  std::vector<SymbolStringPtr> ExistingDefsOverridden;
+  std::vector<SymbolStringPtr> MUDefsOverridden;
 
-  struct ExistingDefOverriddenEntry {
-    SymbolMap::iterator ExistingDefItr;
-    JITSymbolFlags NewFlags;
-  };
-  std::vector<ExistingDefOverriddenEntry> ExistingDefsOverridden;
-
-  for (auto &KV : MU.getSymbols()) {
+  for (const auto &KV : MU.getSymbols()) {
     assert(!KV.second.isLazy() && "Lazy flag should be managed internally.");
     assert(!KV.second.isMaterializing() &&
            "Materializing flags should be managed internally.");
 
-    SymbolMap::iterator EntryItr;
-    bool Added;
+    auto I = Symbols.find(KV.first);
 
-    auto NewFlags = KV.second;
-    NewFlags |= JITSymbolFlags::Lazy;
-
-    std::tie(EntryItr, Added) = Symbols.insert(
-        std::make_pair(KV.first, JITEvaluatedSymbol(0, NewFlags)));
-
-    if (!Added) {
+    if (I != Symbols.end()) {
       if (KV.second.isStrong()) {
-        if (EntryItr->second.getFlags().isStrong() ||
-            (EntryItr->second.getFlags() & JITSymbolFlags::Materializing))
+        if (I->second.getFlags().isStrong() ||
+            I->second.getFlags().isMaterializing())
           Duplicates.insert(KV.first);
-        else
-          ExistingDefsOverridden.push_back({EntryItr, NewFlags});
+        else {
+          assert(I->second.getFlags().isLazy() &&
+                 !I->second.getFlags().isMaterializing() &&
+                 "Overridden existing def should be in the Lazy state");
+          ExistingDefsOverridden.push_back(KV.first);
+        }
       } else
-        MUDefsOverridden.insert(KV.first);
+        MUDefsOverridden.push_back(KV.first);
     }
   }
 
-  if (!Duplicates.empty()) {
-    // We need to remove the symbols we added.
-    for (auto &KV : MU.getSymbols()) {
-      if (Duplicates.count(KV.first))
-        continue;
-
-      bool Found = false;
-      for (const auto &EDO : ExistingDefsOverridden)
-        if (EDO.ExistingDefItr->first == KV.first)
-          Found = true;
-
-      if (!Found)
-        Symbols.erase(KV.first);
-    }
-
-    // FIXME: Return all duplicates.
+  // If there were any duplicate definitions then bail out.
+  if (!Duplicates.empty())
     return make_error<DuplicateDefinition>(**Duplicates.begin());
-  }
 
-  // Update flags on existing defs and call discard on their materializers.
-  for (auto &EDO : ExistingDefsOverridden) {
-    assert(EDO.ExistingDefItr->second.getFlags().isLazy() &&
-           !EDO.ExistingDefItr->second.getFlags().isMaterializing() &&
-           "Overridden existing def should be in the Lazy state");
+  // Discard any overridden defs in this MU.
+  for (auto &S : MUDefsOverridden)
+    MU.doDiscard(*this, S);
 
-    EDO.ExistingDefItr->second.setFlags(EDO.NewFlags);
+  // Discard existing overridden defs.
+  for (auto &S : ExistingDefsOverridden) {
 
-    auto UMII = UnmaterializedInfos.find(EDO.ExistingDefItr->first);
+    auto UMII = UnmaterializedInfos.find(S);
     assert(UMII != UnmaterializedInfos.end() &&
            "Overridden existing def should have an UnmaterializedInfo");
-
-    UMII->second->MU->doDiscard(*this, EDO.ExistingDefItr->first);
+    UMII->second->MU->doDiscard(*this, S);
   }
 
-  // Discard overridden symbols povided by MU.
-  for (auto &Sym : MUDefsOverridden)
-    MU.doDiscard(*this, Sym);
+  // Finally, add the defs from this MU.
+  for (auto &KV : MU.getSymbols()) {
+    auto NewFlags = KV.second;
+    NewFlags |= JITSymbolFlags::Lazy;
+    Symbols[KV.first] = JITEvaluatedSymbol(0, NewFlags);
+  }
 
   return Error::success();
 }

@@ -771,3 +771,13 @@
 
 ??_C@_0CG@HJGBPLNO@l?$AAo?$AAo?$AAk?$AAA?$AAh?$AAe?$AAa?$AAd?$AAH?$AAa?$AAr?$AAd?$AAB?$AAr?$AAe?$AA@
 ; CHECK: u"lookAheadHardBre"...
+
+
+; These are u16 strings that the diagnostic would classify as u32 -- except
+; that their byte length % 4 is 2, so they can't be u32.
+
+??_C@_05LABPAAN@b?$AA?$AA?$AA?$AA?$AA@
+; CHECK: u"b\0"
+
+??_C@_0CC@MBPKDIAM@a?$AA?$AA?$AAb?$AA?$AA?$AAc?$AA?$AA?$AAd?$AA?$AA?$AAe?$AA?$AA?$AAf?$AA?$AA?$AAg?$AA?$AA?$AAh?$AA?$AA?$AA@
+; CHECK: u"a\0b\0c\0d\0e\0f\0g\0h\0"...
