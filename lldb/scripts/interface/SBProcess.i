@@ -289,8 +289,7 @@ public:
     if error.Success():
         print('integer: %u' % uint)
     else
-        print('error: ', error)
-") ReadUnsignedFromMemory;
+        print('error: ', error)") ReadUnsignedFromMemory;
 
     uint64_t
     ReadUnsignedFromMemory (addr_t addr, uint32_t byte_size, lldb::SBError &error);
@@ -304,8 +303,7 @@ public:
     if error.Success():
         print('pointer: 0x%x' % ptr)
     else
-        print('error: ', error)
-") ReadPointerFromMemory;
+        print('error: ', error)") ReadPointerFromMemory;
 
     lldb::addr_t
     ReadPointerFromMemory (addr_t addr, lldb::SBError &error);

@@ -18,7 +18,7 @@
 
 ## Because of a bug we had a different behavior (different symbol 'foo' value)
 ## on a platforms that might use thunks, like AArch64. Check that issue is fixed.
-# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnux /dev/null -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu /dev/null -o %t.o
 # RUN: ld.lld -o %t.so --script %s %t.o -shared
 # RUN: llvm-readobj --symbols %t.so | FileCheck %s
 

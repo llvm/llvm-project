@@ -43,9 +43,6 @@ else:
 #
 # Residues to be removed.
 #
-c_comment_marker = "//------------"
-# The pattern for recognizing the doxygen comment block line.
-doxygen_comment_start = re.compile("^\s*(/// ?)")
 # The demarcation point for turning on/off residue removal state.
 # When bracketed by the lines, the CLEANUP_DOCSTRING state (see below) is ON.
 toggle_docstring_cleanup_line = '        """'
@@ -119,25 +116,14 @@ for line in content.splitlines():
 
     if line == toggle_docstring_cleanup_line:
         if state & CLEANUP_DOCSTRING:
-            # Special handling of the trailing blank line right before the '"""'
-            # end docstring marker.
-            new_content.del_blank_line()
             state ^= CLEANUP_DOCSTRING
         else:
             state |= CLEANUP_DOCSTRING
 
     if (state & CLEANUP_DOCSTRING):
-        # Remove the comment marker line.
-        if c_comment_marker in line:
-            continue
-
-        # Also remove the '\a ' and '\b 'substrings.
+        # Remove the '\a ' and '\b 'substrings.
         line = line.replace('\a ', '')
         line = line.replace('\b ', '')
-        # And the leading '///' substring.
-        doxygen_comment_match = doxygen_comment_start.match(line)
-        if doxygen_comment_match:
-            line = line.replace(doxygen_comment_match.group(1), '', 1)
 
         line = char_to_str_xform(line)
 
