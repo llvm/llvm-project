@@ -41,6 +41,7 @@ class SILModule;
 class VarDecl;
 class ModuleDecl;
 struct PrintOptions;
+class MemoryBufferSerializedModuleLoader;
 namespace irgen {
 class FixedTypeInfo;
 class TypeInfo;
@@ -797,7 +798,7 @@ protected:
 
   swift::SILModule *GetSILModule();
 
-  swift::SerializedModuleLoader *GetSerializeModuleLoader();
+  swift::MemoryBufferSerializedModuleLoader *GetMemoryBufferModuleLoader();
 
   swift::ModuleDecl *GetCachedModule(const SourceModule &module);
 
@@ -835,8 +836,8 @@ protected:
   swift::ModuleDecl *m_scratch_module = nullptr;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
   /// Owned by the AST.
-  swift::SerializedModuleLoader *m_serialized_module_loader = nullptr;
-  swift::ParseableInterfaceModuleLoader *m_parseable_module_loader = nullptr;
+  swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
+      nullptr;
   swift::ClangImporter *m_clang_importer = nullptr;
   swift::DWARFImporter *m_dwarf_importer = nullptr;
   SwiftModuleMap m_swift_module_cache;
