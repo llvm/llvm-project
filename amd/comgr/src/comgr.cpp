@@ -252,7 +252,7 @@ dispatch_add_action(amd_comgr_action_kind_t action_kind,
 }
 
 static bool symbol_info_is_valid(amd_comgr_symbol_info_t attr) {
-  if (attr >= AMD_COMGR_SYMBOL_INFO_NAME_LENGTH ||
+  if (attr >= AMD_COMGR_SYMBOL_INFO_NAME_LENGTH &&
       attr <= AMD_COMGR_SYMBOL_INFO_LAST)
     return true;
   return false;
@@ -489,8 +489,8 @@ DataMeta::dump() {
 amd_comgr_status_t AMD_API amd_comgr_status_string(amd_comgr_status_t status,
                                                    const char **status_string) {
   if (status_string == NULL ||
-      ((int)status < AMD_COMGR_STATUS_SUCCESS &&
-       (int)status > AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES))
+      (status < AMD_COMGR_STATUS_SUCCESS ||
+       status > AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
   switch(status) {
