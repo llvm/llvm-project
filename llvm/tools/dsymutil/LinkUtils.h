@@ -63,6 +63,9 @@ struct LinkOptions {
   /// -oso-prepend-path
   std::string PrependPath;
 
+  /// The Resources directory in the .dSYM bundle.
+  Optional<std::string> ResourceDir;
+
   /// Symbol map translator.
   SymbolMapTranslator Translator;
 
