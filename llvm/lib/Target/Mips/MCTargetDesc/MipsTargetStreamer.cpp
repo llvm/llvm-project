@@ -700,8 +700,11 @@ void MipsTargetAsmStreamer::emitDirectiveCpreturn(unsigned SaveLocation,
 }
 
 void MipsTargetAsmStreamer::emitDirectiveModuleFP() {
-  OS << "\t.module\tfp=";
-  OS << ABIFlagsSection.getFpABIString(ABIFlagsSection.getFpABI()) << "\n";
+  MipsABIFlagsSection::FpABIKind FpABI = ABIFlagsSection.getFpABI();
+  if (FpABI == MipsABIFlagsSection::FpABIKind::SOFT)
+    OS << "\t.module\tsoftfloat\n";
+  else
+    OS << "\t.module\tfp=" << ABIFlagsSection.getFpABIString(FpABI) << "\n";
 }
 
 void MipsTargetAsmStreamer::emitDirectiveSetFp(
