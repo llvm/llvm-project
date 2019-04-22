@@ -13289,38 +13289,36 @@ static bool isLegalT1AddressImmediate(int64_t V, EVT VT) {
 
   if ((V & (Scale - 1)) != 0)
     return false;
-  V /= Scale;
-  return V == (V & ((1LL << 5) - 1));
+  return isUInt<5>(V / Scale);
 }
 
 static bool isLegalT2AddressImmediate(int64_t V, EVT VT,
                                       const ARMSubtarget *Subtarget) {
-  bool isNeg = false;
+  if (!VT.isInteger() && !VT.isFloatingPoint())
+    return false;
+  if (Subtarget->hasNEON() && VT.isVector())
+    return false;
+
+  bool IsNeg = false;
   if (V < 0) {
-    isNeg = true;
-    V = - V;
+    IsNeg = true;
+    V = -V;
   }
 
-  switch (VT.getSimpleVT().SimpleTy) {
-  default: return false;
-  case MVT::i1:
-  case MVT::i8:
-  case MVT::i16:
-  case MVT::i32:
+  unsigned NumBytes = std::max(VT.getSizeInBits() / 8, 1U);
+
+  // VLDR and LDRD: 4 * imm8
+  if ((VT.isFloatingPoint() && Subtarget->hasVFP2()) || NumBytes == 8)
+    return isShiftedUInt<8, 2>(V);
+
+  if (NumBytes == 1 || NumBytes == 2 || NumBytes == 4) {
     // + imm12 or - imm8
-    if (isNeg)
-      return V == (V & ((1LL << 8) - 1));
-    return V == (V & ((1LL << 12) - 1));
-  case MVT::f32:
-  case MVT::f64:
-    // Same as ARM mode. FIXME: NEON?
-    if (!Subtarget->hasVFP2())
-      return false;
-    if ((V & 3) != 0)
-      return false;
-    V >>= 2;
-    return V == (V & ((1LL << 8) - 1));
+    if (IsNeg)
+      return isUInt<8>(V);
+    return isUInt<12>(V);
   }
+
+  return false;
 }
 
 /// isLegalAddressImmediate - Return true if the integer value can be used
@@ -13348,18 +13346,15 @@ static bool isLegalAddressImmediate(int64_t V, EVT VT,
   case MVT::i8:
   case MVT::i32:
     // +- imm12
-    return V == (V & ((1LL << 12) - 1));
+    return isUInt<12>(V);
   case MVT::i16:
     // +- imm8
-    return V == (V & ((1LL << 8) - 1));
+    return isUInt<8>(V);
   case MVT::f32:
   case MVT::f64:
     if (!Subtarget->hasVFP2()) // FIXME: NEON?
       return false;
-    if ((V & 3) != 0)
-      return false;
-    V >>= 2;
-    return V == (V & ((1LL << 8) - 1));
+    return isShiftedUInt<8, 2>(V);
   }
 }
 

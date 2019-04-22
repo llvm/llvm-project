@@ -1071,23 +1071,26 @@ static void outputHex(OutputStream &OS, unsigned C) {
   char TempBuffer[17];
 
   ::memset(TempBuffer, 0, sizeof(TempBuffer));
-  constexpr int MaxPos = 15;
+  constexpr int MaxPos = sizeof(TempBuffer) - 1;
 
-  int Pos = MaxPos - 1;
+  int Pos = MaxPos - 1; // TempBuffer[MaxPos] is the terminating \0.
   while (C != 0) {
     for (int I = 0; I < 2; ++I) {
       writeHexDigit(&TempBuffer[Pos--], C % 16);
       C /= 16;
     }
-    TempBuffer[Pos--] = 'x';
-    TempBuffer[Pos--] = '\\';
-    assert(Pos >= 0);
   }
+  TempBuffer[Pos--] = 'x';
+  assert(Pos >= 0);
+  TempBuffer[Pos--] = '\\';
   OS << StringView(&TempBuffer[Pos + 1]);
 }
 
 static void outputEscapedChar(OutputStream &OS, unsigned C) {
   switch (C) {
+  case '\0': // nul
+    OS << "\\0";
+    return;
   case '\'': // single quote
     OS << "\\\'";
     return;
@@ -1165,7 +1168,7 @@ static unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
   // 2-byte, or 4-byte null terminator.
   if (NumBytes < 32) {
     unsigned TrailingNulls = countTrailingNullBytes(StringBytes, NumChars);
-    if (TrailingNulls >= 4)
+    if (TrailingNulls >= 4 && NumBytes % 4 == 0)
       return 4;
     if (TrailingNulls >= 2)
       return 2;
@@ -1179,7 +1182,7 @@ static unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
   // perfect and is biased towards languages that have ascii alphabets, but this
   // was always going to be best effort since the encoding is lossy.
   unsigned Nulls = countEmbeddedNulls(StringBytes, NumChars);
-  if (Nulls >= 2 * NumChars / 3)
+  if (Nulls >= 2 * NumChars / 3 && NumBytes % 4 == 0)
     return 4;
   if (Nulls >= NumChars / 3)
     return 2;
@@ -1289,7 +1292,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
 
     unsigned BytesDecoded = 0;
     while (!MangledName.consumeFront('@')) {
-      if (MangledName.size() < 1)
+      if (MangledName.size() < 1 || BytesDecoded >= MaxStringByteLength)
         goto StringLiteralError;
       StringBytes[BytesDecoded++] = demangleCharLiteral(MangledName);
     }

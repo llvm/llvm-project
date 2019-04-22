@@ -876,19 +876,38 @@ declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND) {
   return THI;
 }
 
-static Optional<TypeHierarchyItem> getTypeAncestors(const CXXRecordDecl &CXXRD,
-                                                    ASTContext &ASTCtx) {
+using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
+
+static Optional<TypeHierarchyItem>
+getTypeAncestors(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
+                 RecursionProtectionSet &RPSet) {
   Optional<TypeHierarchyItem> Result = declToTypeHierarchyItem(ASTCtx, CXXRD);
   if (!Result)
     return Result;
 
   Result->parents.emplace();
 
+  // typeParents() will replace dependent template specializations
+  // with their class template, so to avoid infinite recursion for
+  // certain types of hierarchies, keep the templates encountered
+  // along the parent chain in a set, and stop the recursion if one
+  // starts to repeat.
+  auto *Pattern = CXXRD.getDescribedTemplate() ? &CXXRD : nullptr;
+  if (Pattern) {
+    if (!RPSet.insert(Pattern).second) {
+      return Result;
+    }
+  }
+
   for (const CXXRecordDecl *ParentDecl : typeParents(&CXXRD)) {
     if (Optional<TypeHierarchyItem> ParentSym =
-            getTypeAncestors(*ParentDecl, ASTCtx)) {
+            getTypeAncestors(*ParentDecl, ASTCtx, RPSet)) {
       Result->parents->emplace_back(std::move(*ParentSym));
     }
+  }
+
+  if (Pattern) {
+    RPSet.erase(Pattern);
   }
 
   return Result;
@@ -933,10 +952,17 @@ std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD) {
       ParentDecl = RT->getAsCXXRecordDecl();
     }
 
-    // For now, do not handle dependent bases such as "Base<T>".
-    // We would like to handle them by heuristically choosing the
-    // primary template declaration, but we need to take care to
-    // avoid infinite recursion.
+    if (!ParentDecl) {
+      // Handle a dependent base such as "Base<T>" by using the primary
+      // template.
+      if (const TemplateSpecializationType *TS =
+              Type->getAs<TemplateSpecializationType>()) {
+        TemplateName TN = TS->getTemplateName();
+        if (TemplateDecl *TD = TN.getAsTemplateDecl()) {
+          ParentDecl = dyn_cast<CXXRecordDecl>(TD->getTemplatedDecl());
+        }
+      }
+    }
 
     if (ParentDecl)
       Result.push_back(ParentDecl);
@@ -952,10 +978,13 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   if (!CXXRD)
     return llvm::None;
 
+  RecursionProtectionSet RPSet;
   Optional<TypeHierarchyItem> Result =
-      getTypeAncestors(*CXXRD, AST.getASTContext());
+      getTypeAncestors(*CXXRD, AST.getASTContext(), RPSet);
+
   // FIXME(nridge): Resolve type descendants if direction is Children or Both,
   // and ResolveLevels > 0.
+
   return Result;
 }
 

@@ -161,7 +161,7 @@ RelExpr X86::adjustRelaxExpr(RelType Type, const uint8_t *Data,
   default:
     return Expr;
   case R_RELAX_TLS_GD_TO_IE:
-    return R_RELAX_TLS_GD_TO_IE_END;
+    return R_RELAX_TLS_GD_TO_IE_GOTPLT;
   case R_RELAX_TLS_GD_TO_LE:
     return R_RELAX_TLS_GD_TO_LE_NEG;
   }

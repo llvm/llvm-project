@@ -102,6 +102,8 @@ define <4 x i32> @splat2_after_mul_constant(<4 x i32> %a) {
   ret <4 x i32> %splat
 }
 
+; Different type, lane, and 2 variable operands.
+
 define <8 x i16> @splat1_before_mul(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: splat1_before_mul:
 ; CHECK:       // %bb.0:
@@ -125,3 +127,34 @@ define <8 x i16> @splat1_after_mul(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %splat
 }
 
+; Multiple multiplies.
+
+define <4 x float> @splat0_before_fmul_fmul_constant(<4 x float> %a) {
+; CHECK-LABEL: splat0_before_fmul_fmul_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v1.4s, #3.00000000
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.s[0]
+; CHECK-NEXT:    fmov v1.4s, #6.00000000
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.s[0]
+; CHECK-NEXT:    ret
+  %splat1 = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> zeroinitializer
+  %mul1 = fmul <4 x float> %splat1, <float 3.0, float 3.0, float 3.0, float 3.0>
+  %splat2 = shufflevector <4 x float> %mul1, <4 x float> undef, <4 x i32> zeroinitializer
+  %mul2 = fmul <4 x float> %splat2, <float 6.0, float 6.0, float 6.0, float 6.0>
+  ret <4 x float> %mul2
+}
+
+define <4 x float> @splat0_after_fmul_fmul_constant(<4 x float> %a) {
+; CHECK-LABEL: splat0_after_fmul_fmul_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v1.4s, #3.00000000
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmov v1.4s, #6.00000000
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ret
+  %mul1 = fmul <4 x float> %a, <float 3.0, float 42.0, float 3.0, float 3.0>
+  %mul2 = fmul <4 x float> %mul1, <float 6.0, float 42.0, float 3.0, float 3.0>
+  %splat = shufflevector <4 x float> %mul2, <4 x float> undef, <4 x i32> zeroinitializer
+  ret <4 x float> %splat
+}

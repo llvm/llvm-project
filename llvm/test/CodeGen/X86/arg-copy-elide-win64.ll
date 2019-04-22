@@ -13,12 +13,12 @@ define void @baz(<16 x double> %arg, <16 x double> %arg1) #0 {
 ; CHECK-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    andq $-128, %rsp
 ; CHECK-NEXT:    movq 288(%rbp), %rax
-; CHECK-NEXT:    movq 320(%rbp), %r10
 ; CHECK-NEXT:    vmovaps (%rax), %ymm0
-; CHECK-NEXT:    vmovaps (%r10), %ymm1
-; CHECK-NEXT:    movq 352(%rbp), %rax
+; CHECK-NEXT:    movq 296(%rbp), %rax
+; CHECK-NEXT:    vmovaps (%rax), %ymm1
+; CHECK-NEXT:    movq 304(%rbp), %rax
 ; CHECK-NEXT:    vmovaps (%rax), %ymm2
-; CHECK-NEXT:    movq 384(%rbp), %rax
+; CHECK-NEXT:    movq 312(%rbp), %rax
 ; CHECK-NEXT:    vmovaps (%rax), %ymm3
 ; CHECK-NEXT:    vmovaps (%rcx), %ymm4
 ; CHECK-NEXT:    vmovaps (%rdx), %ymm5

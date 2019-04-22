@@ -1,0 +1,17 @@
+executable("llvm-jitlink") {
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/ExecutionEngine",
+    "//llvm/lib/ExecutionEngine/JITLink",
+    "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/RuntimeDyld",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:TargetsToBuild",
+  ]
+  sources = [
+    "llvm-jitlink-macho.cpp",
+    "llvm-jitlink.cpp",
+  ]
+}

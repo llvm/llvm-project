@@ -1629,13 +1629,13 @@ bool FPPassManager::runOnFunction(Function &F) {
     FunctionSize = F.getInstructionCount();
   }
 
-  bool ProfileTime = llvm::timeTraceProfilerEnabled();
-  if (ProfileTime)
-    llvm::timeTraceProfilerBegin("OptFunction", F.getName());
+  llvm::TimeTraceScope FunctionScope("OptFunction", F.getName());
 
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     FunctionPass *FP = getContainedPass(Index);
     bool LocalChanged = false;
+
+    llvm::TimeTraceScope PassScope("RunPass", FP->getPassName());
 
     dumpPassInfo(FP, EXECUTION_MSG, ON_FUNCTION_MSG, F.getName());
     dumpRequiredSet(FP);
@@ -1673,9 +1673,6 @@ bool FPPassManager::runOnFunction(Function &F) {
     recordAvailableAnalysis(FP);
     removeDeadPasses(FP, F.getName(), ON_FUNCTION_MSG);
   }
-
-  if (ProfileTime)
-    llvm::timeTraceProfilerEnd();
 
   return Changed;
 }
