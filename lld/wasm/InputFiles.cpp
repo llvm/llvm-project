@@ -117,12 +117,13 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
     return Segment.Data.Offset.Value.Int32 + Sym.Info.DataRef.Offset +
            Reloc.Addend;
   }
-  case R_WASM_FUNCTION_OFFSET_I32:
-    if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
-      return Sym->Function->getFunctionInputOffset() +
-             Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
-    }
-    return 0;
+  case R_WASM_FUNCTION_OFFSET_I32: {
+    const WasmSymbol &Sym = WasmObj->syms()[Reloc.Index];
+    InputFunction *F =
+        Functions[Sym.Info.ElementIndex - WasmObj->getNumImportedFunctions()];
+    return F->getFunctionInputOffset() + F->getFunctionCodeOffset() +
+           Reloc.Addend;
+  }
   case R_WASM_SECTION_OFFSET_I32:
     return Reloc.Addend;
   case R_WASM_TYPE_INDEX_LEB:

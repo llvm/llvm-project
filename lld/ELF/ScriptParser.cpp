@@ -636,7 +636,7 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
 
     std::vector<StringRef> V;
     while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE")
-      V.push_back(next());
+      V.push_back(unquote(next()));
 
     if (!V.empty())
       Ret.push_back({std::move(ExcludeFilePat), StringMatcher(V)});
