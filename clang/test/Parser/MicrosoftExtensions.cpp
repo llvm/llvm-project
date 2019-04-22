@@ -288,6 +288,18 @@ struct pure_virtual_dtor_inline {
   virtual ~pure_virtual_dtor_inline() = 0 { }// expected-warning {{function definition with pure-specifier is a Microsoft extension}}
 };
 
+template<typename T> struct pure_virtual_dtor_template {
+  virtual ~pure_virtual_dtor_template() = 0;
+};
+template<typename T> pure_virtual_dtor_template<T>::~pure_virtual_dtor_template() {}
+template struct pure_virtual_dtor_template<int>;
+
+template<typename T> struct pure_virtual_dtor_template_inline {
+    virtual ~pure_virtual_dtor_template_inline() = 0 {}
+    // expected-warning@-1 2{{function definition with pure-specifier is a Microsoft extension}}
+};
+template struct pure_virtual_dtor_template_inline<int>;
+// expected-note@-1 {{in instantiation of member function}}
 
 int main () {
   // Necessary to force instantiation in -fdelayed-template-parsing mode.

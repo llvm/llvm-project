@@ -47,7 +47,7 @@ extern "C" void __deregister_frame(void *);
 // it may be found at runtime in a dynamically-loaded library.
 // For example, this happens when building LLVM with Visual C++
 // but using the MingW runtime.
-void __register_frame(void *p) {
+static void __register_frame(void *p) {
   static bool Searched = false;
   static void((*rf)(void *)) = 0;
 
@@ -60,7 +60,7 @@ void __register_frame(void *p) {
     rf(p);
 }
 
-void __deregister_frame(void *p) {
+static void __deregister_frame(void *p) {
   static bool Searched = false;
   static void((*df)(void *)) = 0;
 

@@ -291,9 +291,7 @@ struct Child<int> : Parent {};
   EXPECT_THAT(typeParents(ChildSpec), ElementsAre(Parent));
 }
 
-// This is disabled for now, because support for dependent bases
-// requires additional measures to avoid infinite recursion.
-TEST(DISABLED_TypeParents, DependentBase) {
+TEST(TypeParents, DependentBase) {
   Annotations Source(R"cpp(
 template <typename T>
 struct Parent {};
@@ -383,10 +381,10 @@ int main() {
   }
 }
 
-TEST(TypeHierarchy, RecursiveHierarchy1) {
+TEST(TypeHierarchy, RecursiveHierarchyUnbounded) {
   Annotations Source(R"cpp(
   template <int N>
-  struct S : S<N + 1> {};
+  struct $SDef[[S]] : S<N + 1> {};
 
   S^<0> s;
   )cpp");
@@ -399,62 +397,57 @@ TEST(TypeHierarchy, RecursiveHierarchy1) {
   ASSERT_TRUE(!AST.getDiagnostics().empty());
 
   // Make sure getTypeHierarchy() doesn't get into an infinite recursion.
+  // FIXME(nridge): It would be preferable if the type hierarchy gave us type
+  // names (e.g. "S<0>" for the child and "S<1>" for the parent) rather than
+  // template names (e.g. "S").
   llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
       AST, Source.points()[0], 0, TypeHierarchyDirection::Parents);
   ASSERT_TRUE(bool(Result));
-  EXPECT_THAT(*Result,
-              AllOf(WithName("S"), WithKind(SymbolKind::Struct), Parents()));
+  EXPECT_THAT(
+      *Result,
+      AllOf(WithName("S"), WithKind(SymbolKind::Struct),
+            Parents(AllOf(WithName("S"), WithKind(SymbolKind::Struct),
+                          SelectionRangeIs(Source.range("SDef")), Parents()))));
 }
 
-TEST(TypeHierarchy, RecursiveHierarchy2) {
+TEST(TypeHierarchy, RecursiveHierarchyBounded) {
   Annotations Source(R"cpp(
   template <int N>
-  struct S : S<N - 1> {};
+  struct $SDef[[S]] : S<N - 1> {};
 
   template <>
   struct S<0>{};
 
-  S^<2> s;
-  )cpp");
-
-  TestTU TU = TestTU::withCode(Source.code());
-  auto AST = TU.build();
-
-  ASSERT_TRUE(AST.getDiagnostics().empty());
-
-  // Make sure getTypeHierarchy() doesn't get into an infinite recursion.
-  llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
-      AST, Source.points()[0], 0, TypeHierarchyDirection::Parents);
-  ASSERT_TRUE(bool(Result));
-  EXPECT_THAT(*Result,
-              AllOf(WithName("S"), WithKind(SymbolKind::Struct), Parents()));
-}
-
-TEST(TypeHierarchy, RecursiveHierarchy3) {
-  Annotations Source(R"cpp(
-  template <int N>
-  struct S : S<N - 1> {};
-
-  template <>
-  struct S<0>{};
+  S$SRefConcrete^<2> s;
 
   template <int N>
   struct Foo {
-    S^<N> s;
-  };
-  )cpp");
+    S$SRefDependent^<N> s;
+  };)cpp");
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
 
   ASSERT_TRUE(AST.getDiagnostics().empty());
 
-  // Make sure getTypeHierarchy() doesn't get into an infinite recursion.
+  // Make sure getTypeHierarchy() doesn't get into an infinite recursion
+  // for either a concrete starting point or a dependent starting point.
   llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
-      AST, Source.points()[0], 0, TypeHierarchyDirection::Parents);
+      AST, Source.point("SRefConcrete"), 0, TypeHierarchyDirection::Parents);
   ASSERT_TRUE(bool(Result));
-  EXPECT_THAT(*Result,
-              AllOf(WithName("S"), WithKind(SymbolKind::Struct), Parents()));
+  EXPECT_THAT(
+      *Result,
+      AllOf(WithName("S"), WithKind(SymbolKind::Struct),
+            Parents(AllOf(WithName("S"), WithKind(SymbolKind::Struct),
+                          SelectionRangeIs(Source.range("SDef")), Parents()))));
+  Result = getTypeHierarchy(AST, Source.point("SRefDependent"), 0,
+                            TypeHierarchyDirection::Parents);
+  ASSERT_TRUE(bool(Result));
+  EXPECT_THAT(
+      *Result,
+      AllOf(WithName("S"), WithKind(SymbolKind::Struct),
+            Parents(AllOf(WithName("S"), WithKind(SymbolKind::Struct),
+                          SelectionRangeIs(Source.range("SDef")), Parents()))));
 }
 
 } // namespace

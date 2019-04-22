@@ -800,7 +800,8 @@ int runOrcLazyJIT(const char *ProgName) {
     return Dump(std::move(TSM), R);
   });
   J->getMainJITDylib().setGenerator(
-      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          DL.getGlobalPrefix())));
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
