@@ -19,6 +19,7 @@ class MiSignalTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfFreeBSD  # llvm.org/pr22411: Fails on FreeBSD apparently due to thread race conditions
     @expectedFailureNetBSD
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfLinux
     def test_lldbmi_stopped_when_interrupt(self):
         """Test that 'lldb-mi --interpreter' interrupt and resume a looping app."""
 
