@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -398,6 +399,7 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   const std::pair<unsigned, SmallVector<unsigned, 4>> &Hints_MRI =
     MRI.getRegAllocationHints(VirtReg);
 
+  SmallSet<unsigned, 32> HintedRegs;
   // First hint may be a target hint.
   bool Skip = (Hints_MRI.first != 0);
   for (auto Reg : Hints_MRI.second) {
@@ -411,6 +413,10 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     if (VRM && isVirtualRegister(Phys))
       Phys = VRM->getPhys(Phys);
 
+    // Don't add the same reg twice (Hints_MRI may contain multiple virtual
+    // registers allocated to the same physreg).
+    if (!HintedRegs.insert(Phys).second)
+      continue;
     // Check that Phys is a valid hint in VirtReg's register class.
     if (!isPhysicalRegister(Phys))
       continue;
