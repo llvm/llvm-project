@@ -3976,22 +3976,37 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     // For operations of the form (x << C1) op C2, check if we can use a smaller
     // encoding for C2 by transforming it into (x op (C2>>C1)) << C1.
-    SDValue N0 = Node->getOperand(0);
+    SDValue Shift = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
-    if (N0->getOpcode() != ISD::SHL || !N0->hasOneUse())
+    ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(N1);
+    if (!Cst)
+      break;
+
+    int64_t Val = Cst->getSExtValue();
+
+    // If we have an any_extend feeding the AND, look through it to see if there
+    // is a shift behind it. But only if the AND doesn't use the extended bits.
+    // FIXME: Generalize this to other ANY_EXTEND than i32 to i64?
+    bool FoundAnyExtend = false;
+    if (Shift.getOpcode() == ISD::ANY_EXTEND && Shift.hasOneUse() &&
+        Shift.getOperand(0).getSimpleValueType() == MVT::i32 &&
+        isUInt<32>(Val)) {
+      FoundAnyExtend = true;
+      Shift = Shift.getOperand(0);
+    }
+
+    if (Shift.getOpcode() != ISD::SHL || !Shift.hasOneUse())
       break;
 
     // i8 is unshrinkable, i16 should be promoted to i32.
     if (NVT != MVT::i32 && NVT != MVT::i64)
       break;
 
-    ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(N1);
-    ConstantSDNode *ShlCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
-    if (!Cst || !ShlCst)
+    ConstantSDNode *ShlCst = dyn_cast<ConstantSDNode>(Shift.getOperand(1));
+    if (!ShlCst)
       break;
 
-    int64_t Val = Cst->getSExtValue();
     uint64_t ShAmt = ShlCst->getZExtValue();
 
     // Make sure that we don't change the operation by removing bits.
@@ -4027,20 +4042,44 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     };
 
     int64_t ShiftedVal;
-    if (CanShrinkImmediate(ShiftedVal)) {
-      SDValue NewCst = CurDAG->getConstant(ShiftedVal, dl, NVT);
-      insertDAGNode(*CurDAG, SDValue(Node, 0), NewCst);
-      SDValue NewBinOp = CurDAG->getNode(Opcode, dl, NVT, N0->getOperand(0),
-                                         NewCst);
-      insertDAGNode(*CurDAG, SDValue(Node, 0), NewBinOp);
-      SDValue NewSHL = CurDAG->getNode(ISD::SHL, dl, NVT, NewBinOp,
-                                       N0->getOperand(1));
-      ReplaceNode(Node, NewSHL.getNode());
-      SelectCode(NewSHL.getNode());
-      return;
+    if (!CanShrinkImmediate(ShiftedVal))
+      break;
+
+    // Ok, we can reorder to get a smaller immediate.
+
+    // But, its possible the original immediate allowed an AND to become MOVZX.
+    // Doing this late due to avoid the MakedValueIsZero call as late as
+    // possible.
+    if (Opcode == ISD::AND) {
+      // Find the smallest zext this could possibly be.
+      unsigned ZExtWidth = Cst->getAPIntValue().getActiveBits();
+      ZExtWidth = PowerOf2Ceil(std::max(ZExtWidth, 8U));
+
+      // Figure out which bits need to be zero to achieve that mask.
+      APInt NeededMask = APInt::getLowBitsSet(NVT.getSizeInBits(),
+                                              ZExtWidth);
+      NeededMask &= ~Cst->getAPIntValue();
+
+      if (CurDAG->MaskedValueIsZero(Node->getOperand(0), NeededMask))
+        break;
     }
 
-    break;
+    SDValue X = Shift.getOperand(0);
+    if (FoundAnyExtend) {
+      SDValue NewX = CurDAG->getNode(ISD::ANY_EXTEND, dl, NVT, X);
+      insertDAGNode(*CurDAG, SDValue(Node, 0), NewX);
+      X = NewX;
+    }
+
+    SDValue NewCst = CurDAG->getConstant(ShiftedVal, dl, NVT);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), NewCst);
+    SDValue NewBinOp = CurDAG->getNode(Opcode, dl, NVT, X, NewCst);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), NewBinOp);
+    SDValue NewSHL = CurDAG->getNode(ISD::SHL, dl, NVT, NewBinOp,
+                                     Shift.getOperand(1));
+    ReplaceNode(Node, NewSHL.getNode());
+    SelectCode(NewSHL.getNode());
+    return;
   }
   case X86ISD::SMUL:
     // i16/i32/i64 are handled with isel patterns.

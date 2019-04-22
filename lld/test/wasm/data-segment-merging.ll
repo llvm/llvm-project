@@ -12,6 +12,8 @@ target triple = "wasm32-unknown-unknown"
 
 ; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.wasm %t.data-segment-merging.o
 ; RUN: obj2yaml %t.merged.wasm | FileCheck %s --check-prefix=MERGE
+
+; MERGE-NOT:                  DATACOUNT
 ; MERGE:   - Type:            DATA
 ; MERGE:     Segments:
 ; MERGE:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
@@ -20,6 +22,8 @@ target triple = "wasm32-unknown-unknown"
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --no-merge-data-segments -o %t.separate.wasm %t.data-segment-merging.o
 ; RUN: obj2yaml %t.separate.wasm | FileCheck %s --check-prefix=SEPARATE
+
+; SEPARATE-NOT:                  DATACOUNT
 ; SEPARATE:   - Type:            DATA
 ; SEPARATE:     Segments:
 ; SEPARATE:        Content:         68656C6C6F00
@@ -29,3 +33,15 @@ target triple = "wasm32-unknown-unknown"
 ; SEPARATE:        Content:         636F6E7374616E7400
 ; SEPARATE:        Content:         2B
 ; SEPARATE-NOT:    Content:
+
+; RUN: llc -filetype=obj %s -mattr=+bulk-memory -o %t.data-segment-merging.bulk-memory.o
+; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.bulk-memory.wasm %t.data-segment-merging.bulk-memory.o
+; RUN: obj2yaml %t.merged.bulk-memory.wasm | FileCheck %s --check-prefix=BULK-MEMORY
+
+; BULK-MEMORY:   - Type:            DATACOUNT
+; BULK-MEMORY:     Count:           2
+; BULK-MEMORY:   - Type:            DATA
+; BULK-MEMORY:     Segments:
+; BULK-MEMORY:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
+; BULK-MEMORY:        Content:         636F6E7374616E74000000002B
+; BULK-MEMORY-NOT:    Content:

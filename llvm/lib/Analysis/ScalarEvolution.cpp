@@ -5808,12 +5808,8 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
       Descending ? std::move(StartUpper) : std::move(MovedBoundary);
   NewUpper += 1;
 
-  // If we end up with full range, return a proper full range.
-  if (NewLower == NewUpper)
-    return ConstantRange::getFull(BitWidth);
-
   // No overflow detected, return [StartLower, StartUpper + Offset + 1) range.
-  return ConstantRange(std::move(NewLower), std::move(NewUpper));
+  return ConstantRange::getNonEmpty(std::move(NewLower), std::move(NewUpper));
 }
 
 ConstantRange ScalarEvolution::getRangeForAffineAR(const SCEV *Start,

@@ -20,14 +20,21 @@
 #include "tsan_interface_ann.h"
 #include "sanitizer_common/sanitizer_addrhashmap.h"
 
+#include <errno.h>
 #include <libkern/OSAtomic.h>
 #include <objc/objc-sync.h>
+#include <sys/ucontext.h>
 
 #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 #include <xpc/xpc.h>
 #endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
 typedef long long_t;  // NOLINT
+
+extern "C" {
+int getcontext(ucontext_t *ucp) __attribute__((returns_twice));
+int setcontext(const ucontext_t *ucp);
+}
 
 namespace __tsan {
 
@@ -351,6 +358,31 @@ TSAN_INTERCEPTOR(int, objc_sync_exit, id obj) {
   int result = REAL(objc_sync_exit)(obj);
   if (result != OBJC_SYNC_SUCCESS) MutexInvalidAccess(thr, pc, addr);
   return result;
+}
+
+TSAN_INTERCEPTOR(int, swapcontext, ucontext_t *oucp, const ucontext_t *ucp) {
+  {
+    SCOPED_INTERCEPTOR_RAW(swapcontext, oucp, ucp);
+  }
+  // Bacause of swapcontext() semantics we have no option but to copy its
+  // impementation here
+  if (!oucp || !ucp) {
+    errno = EINVAL;
+    return -1;
+  }
+  ThreadState *thr = cur_thread();
+  const int UCF_SWAPPED = 0x80000000;
+  oucp->uc_onstack &= ~UCF_SWAPPED;
+  thr->ignore_interceptors++;
+  int ret = getcontext(oucp);
+  if (!(oucp->uc_onstack & UCF_SWAPPED)) {
+    thr->ignore_interceptors--;
+    if (!ret) {
+      oucp->uc_onstack |= UCF_SWAPPED;
+      ret = setcontext(ucp);
+    }
+  }
+  return ret;
 }
 
 // On macOS, libc++ is always linked dynamically, so intercepting works the

@@ -1647,4 +1647,98 @@ TEST_F(ConstantRangeTest, Negative) {
   });
 }
 
+template<typename Fn1, typename Fn2>
+static void TestUnsignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn) {
+  unsigned Bits = 4;
+  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
+                                       const ConstantRange &CR2) {
+    ConstantRange CR = RangeFn(CR1, CR2);
+    if (CR1.isEmptySet() || CR2.isEmptySet()) {
+      EXPECT_TRUE(CR.isEmptySet());
+      return;
+    }
+
+    APInt Min = APInt::getMaxValue(Bits);
+    APInt Max = APInt::getMinValue(Bits);
+    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+        APInt N = IntFn(N1, N2);
+        if (N.ult(Min))
+          Min = N;
+        if (N.ugt(Max))
+          Max = N;
+      });
+    });
+
+    EXPECT_EQ(ConstantRange::getNonEmpty(Min, Max + 1), CR);
+  });
+}
+
+template<typename Fn1, typename Fn2>
+static void TestSignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn) {
+  unsigned Bits = 4;
+  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
+                                       const ConstantRange &CR2) {
+    ConstantRange CR = RangeFn(CR1, CR2);
+    if (CR1.isEmptySet() || CR2.isEmptySet()) {
+      EXPECT_TRUE(CR.isEmptySet());
+      return;
+    }
+
+    APInt Min = APInt::getSignedMaxValue(Bits);
+    APInt Max = APInt::getSignedMinValue(Bits);
+    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+        APInt N = IntFn(N1, N2);
+        if (N.slt(Min))
+          Min = N;
+        if (N.sgt(Max))
+          Max = N;
+      });
+    });
+
+    EXPECT_EQ(ConstantRange::getNonEmpty(Min, Max + 1), CR);
+  });
+}
+
+TEST_F(ConstantRangeTest, UAddSat) {
+  TestUnsignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.uadd_sat(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1.uadd_sat(N2);
+      });
+}
+
+TEST_F(ConstantRangeTest, USubSat) {
+  TestUnsignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.usub_sat(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1.usub_sat(N2);
+      });
+}
+
+TEST_F(ConstantRangeTest, SAddSat) {
+  TestSignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.sadd_sat(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1.sadd_sat(N2);
+      });
+}
+
+TEST_F(ConstantRangeTest, SSubSat) {
+  TestSignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.ssub_sat(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1.ssub_sat(N2);
+      });
+}
+
 }  // anonymous namespace

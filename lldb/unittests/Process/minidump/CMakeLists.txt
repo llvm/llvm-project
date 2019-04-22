@@ -23,10 +23,6 @@ set(test_inputs
    linux-x86_64_not_crashed.dmp
    memory-list-not-padded.dmp
    memory-list-padded.dmp
-   module-list-not-padded.dmp
-   module-list-padded.dmp
-   modules-dup-min-addr.dmp
-   modules-order.dmp
    regions-linux-map.dmp
    regions-memlist.dmp
    regions-memlist64.dmp
