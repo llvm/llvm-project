@@ -1315,6 +1315,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
@@ -2183,6 +2184,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FLOG10:
   case G_FCEIL:
   case G_FFLOOR:
+  case G_FRINT:
   case G_INTRINSIC_ROUND:
   case G_INTRINSIC_TRUNC:
   case G_FCOS:

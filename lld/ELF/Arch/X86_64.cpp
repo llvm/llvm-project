@@ -82,9 +82,10 @@ RelExpr X86_64::getRelExpr(RelType Type, const Symbol &S,
   case R_X86_64_32:
   case R_X86_64_32S:
   case R_X86_64_64:
+    return R_ABS;
   case R_X86_64_DTPOFF32:
   case R_X86_64_DTPOFF64:
-    return R_ABS;
+    return R_DTPREL;
   case R_X86_64_TPOFF32:
     return R_TLS;
   case R_X86_64_TLSLD:

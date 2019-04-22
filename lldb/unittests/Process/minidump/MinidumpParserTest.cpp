@@ -126,30 +126,6 @@ TEST_F(MinidumpParserTest, GetThreadListPadded) {
   EXPECT_EQ(0x55667788UL, thread_list[1].thread_id);
 }
 
-TEST_F(MinidumpParserTest, GetModuleListNotPadded) {
-  // Verify that we can load a module list that doesn't have 4 bytes of padding
-  // after the module count.
-  SetUpData("module-list-not-padded.dmp");
-  auto module_list = parser->GetModuleList();
-  ASSERT_EQ(2UL, module_list.size());
-  EXPECT_EQ(0x1000UL, module_list[0].BaseOfImage);
-  EXPECT_EQ(0x2000UL, module_list[0].SizeOfImage);
-  EXPECT_EQ(0x5000UL, module_list[1].BaseOfImage);
-  EXPECT_EQ(0x3000UL, module_list[1].SizeOfImage);
-}
-
-TEST_F(MinidumpParserTest, GetModuleListPadded) {
-  // Verify that we can load a module list that has 4 bytes of padding
-  // after the module count as found in breakpad minidump files.
-  SetUpData("module-list-padded.dmp");
-  auto module_list = parser->GetModuleList();
-  ASSERT_EQ(2UL, module_list.size());
-  EXPECT_EQ(0x1000UL, module_list[0].BaseOfImage);
-  EXPECT_EQ(0x2000UL, module_list[0].SizeOfImage);
-  EXPECT_EQ(0x5000UL, module_list[1].BaseOfImage);
-  EXPECT_EQ(0x3000UL, module_list[1].SizeOfImage);
-}
-
 TEST_F(MinidumpParserTest, GetMemoryListNotPadded) {
   // Verify that we can load a memory list that doesn't have 4 bytes of padding
   // after the memory range count.
@@ -218,47 +194,31 @@ TEST_F(MinidumpParserTest, GetPid) {
   ASSERT_EQ(16001UL, pid.getValue());
 }
 
-TEST_F(MinidumpParserTest, GetModuleList) {
-  SetUpData("linux-x86_64.dmp");
-  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
-  ASSERT_EQ(8UL, modules.size());
-  const auto &getName = [&](size_t i) {
-    return parser->GetMinidumpFile().getString(modules[i].ModuleNameRVA);
-  };
-
-  EXPECT_THAT_EXPECTED(
-      getName(0),
-      llvm::HasValue(
-          "/usr/local/google/home/dvlahovski/projects/test_breakpad/a.out"));
-  EXPECT_THAT_EXPECTED(getName(1),
-                       llvm::HasValue("/lib/x86_64-linux-gnu/libm-2.19.so"));
-  EXPECT_THAT_EXPECTED(getName(2),
-                       llvm::HasValue("/lib/x86_64-linux-gnu/libc-2.19.so"));
-  EXPECT_THAT_EXPECTED(getName(3),
-                       llvm::HasValue("/lib/x86_64-linux-gnu/libgcc_s.so.1"));
-  EXPECT_THAT_EXPECTED(
-      getName(4),
-      llvm::HasValue("/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19"));
-  EXPECT_THAT_EXPECTED(
-      getName(5), llvm::HasValue("/lib/x86_64-linux-gnu/libpthread-2.19.so"));
-  EXPECT_THAT_EXPECTED(getName(6),
-                       llvm::HasValue("/lib/x86_64-linux-gnu/ld-2.19.so"));
-  EXPECT_THAT_EXPECTED(getName(7), llvm::HasValue("linux-gate.so"));
-}
-
 TEST_F(MinidumpParserTest, GetFilteredModuleList) {
-  SetUpData("linux-x86_64_not_crashed.dmp");
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000400000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/test/linux-x86_64_not_crashed'
+        CodeView Record: 4C4570426CCF3F60FFA7CC4B86AE8FF44DB2576A68983611
+      - Base of Image:   0x0000000000600000
+        Size of Image:   0x00002000
+        Module Name:     '/tmp/test/linux-x86_64_not_crashed'
+        CodeView Record: 4C4570426CCF3F60FFA7CC4B86AE8FF44DB2576A68983611
+...
+)"),
+                    llvm::Succeeded());
   llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
   std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
-  EXPECT_EQ(10UL, modules.size());
-  EXPECT_EQ(9UL, filtered_modules.size());
-  std::vector<std::string> names;
-  for (const minidump::Module *m : filtered_modules)
-    names.push_back(
-        cantFail(parser->GetMinidumpFile().getString(m->ModuleNameRVA)));
-
-  EXPECT_EQ(1u, llvm::count(names, "/tmp/test/linux-x86_64_not_crashed"));
+  EXPECT_EQ(2u, modules.size());
+  ASSERT_EQ(1u, filtered_modules.size());
+  const minidump::Module &M = *filtered_modules[0];
+  EXPECT_THAT_EXPECTED(parser->GetMinidumpFile().getString(M.ModuleNameRVA),
+                       llvm::HasValue("/tmp/test/linux-x86_64_not_crashed"));
 }
 
 TEST_F(MinidumpParserTest, GetExceptionStream) {
@@ -494,56 +454,6 @@ TEST_F(MinidumpParserTest, GetPidWow64) {
   ASSERT_EQ(7836UL, pid.getValue());
 }
 
-TEST_F(MinidumpParserTest, GetModuleListWow64) {
-  SetUpData("fizzbuzz_wow64.dmp");
-  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
-  ASSERT_EQ(16UL, modules.size());
-  const auto &getName = [&](size_t i) {
-    return parser->GetMinidumpFile().getString(modules[i].ModuleNameRVA);
-  };
-
-  EXPECT_THAT_EXPECTED(
-      getName(0),
-      llvm::HasValue(
-          R"(D:\src\llvm\llvm\tools\lldb\packages\Python\lldbsuite\test\functionalities\postmortem\wow64_minidump\fizzbuzz.exe)"));
-  EXPECT_THAT_EXPECTED(getName(1), llvm::HasValue(
-                                       R"(C:\Windows\System32\ntdll.dll)"));
-  EXPECT_THAT_EXPECTED(getName(2), llvm::HasValue(
-                                       R"(C:\Windows\System32\wow64.dll)"));
-  EXPECT_THAT_EXPECTED(getName(3), llvm::HasValue(
-                                       R"(C:\Windows\System32\wow64win.dll)"));
-  EXPECT_THAT_EXPECTED(getName(4), llvm::HasValue(
-                                       R"(C:\Windows\System32\wow64cpu.dll)"));
-  EXPECT_THAT_EXPECTED(
-      getName(5),
-      llvm::HasValue(
-          R"(D:\src\llvm\llvm\tools\lldb\packages\Python\lldbsuite\test\functionalities\postmortem\wow64_minidump\fizzbuzz.exe)"));
-  EXPECT_THAT_EXPECTED(getName(6), llvm::HasValue(
-                                       R"(C:\Windows\SysWOW64\ntdll.dll)"));
-  EXPECT_THAT_EXPECTED(getName(7), llvm::HasValue(
-                                       R"(C:\Windows\SysWOW64\kernel32.dll)"));
-  EXPECT_THAT_EXPECTED(getName(8),
-                       llvm::HasValue(
-                           R"(C:\Windows\SysWOW64\KERNELBASE.dll)"));
-  EXPECT_THAT_EXPECTED(getName(9), llvm::HasValue(
-                                       R"(C:\Windows\SysWOW64\advapi32.dll)"));
-  EXPECT_THAT_EXPECTED(getName(10), llvm::HasValue(
-                                        R"(C:\Windows\SysWOW64\msvcrt.dll)"));
-  EXPECT_THAT_EXPECTED(getName(11), llvm::HasValue(
-                                        R"(C:\Windows\SysWOW64\sechost.dll)"));
-  EXPECT_THAT_EXPECTED(getName(12), llvm::HasValue(
-                                        R"(C:\Windows\SysWOW64\rpcrt4.dll)"));
-  EXPECT_THAT_EXPECTED(getName(13), llvm::HasValue(
-                                        R"(C:\Windows\SysWOW64\sspicli.dll)"));
-  EXPECT_THAT_EXPECTED(getName(14),
-                       llvm::HasValue(
-                           R"(C:\Windows\SysWOW64\CRYPTBASE.dll)"));
-  EXPECT_THAT_EXPECTED(
-      getName(15),
-      llvm::HasValue(
-          R"(C:\Windows\System32\api-ms-win-core-synch-l1-2-0.DLL)"));
-}
-
 // Register tests
 #define REG_VAL32(x) *(reinterpret_cast<uint32_t *>(x))
 #define REG_VAL64(x) *(reinterpret_cast<uint64_t *>(x))
@@ -647,33 +557,53 @@ TEST_F(MinidumpParserTest, GetThreadContext_x86_32_wow64) {
 }
 
 TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMinAddress) {
-  SetUpData("modules-dup-min-addr.dmp");
-  // Test that if we have two modules in the module list:
-  //    /tmp/a with range [0x2000-0x3000)
-  //    /tmp/a with range [0x1000-0x2000)
-  // That we end up with one module in the filtered list with the
-  // range [0x1000-0x2000). MinidumpParser::GetFilteredModuleList() is
-  // trying to ensure that if we have the same module mentioned more than
-  // one time, we pick the one with the lowest BaseOfImage.
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000002000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/a'
+        CodeView Record: ''
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/a'
+        CodeView Record: ''
+...
+)"),
+                    llvm::Succeeded());
+  // If we have a module mentioned twice in the module list, the filtered
+  // module list should contain the instance with the lowest BaseOfImage.
   std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
-  EXPECT_EQ(1u, filtered_modules.size());
+  ASSERT_EQ(1u, filtered_modules.size());
   EXPECT_EQ(0x0000000000001000u, filtered_modules[0]->BaseOfImage);
 }
 
 TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
-  SetUpData("modules-order.dmp");
-  // Test that if we have two modules in the module list:
-  //    /tmp/a with range [0x2000-0x3000)
-  //    /tmp/b with range [0x1000-0x2000)
-  // That we end up with two modules in the filtered list with the same ranges
-  // and in the same order. Previous versions of the
-  // MinidumpParser::GetFilteredModuleList() function would sort all images
-  // by address and modify the order of the modules.
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000002000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/a'
+        CodeView Record: ''
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/b'
+        CodeView Record: ''
+...
+)"),
+                    llvm::Succeeded());
+  // Test module filtering does not affect the overall module order.  Previous
+  // versions of the MinidumpParser::GetFilteredModuleList() function would sort
+  // all images by address and modify the order of the modules.
   std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
-  llvm::Optional<std::string> name;
-  EXPECT_EQ(2u, filtered_modules.size());
+  ASSERT_EQ(2u, filtered_modules.size());
   EXPECT_EQ(0x0000000000002000u, filtered_modules[0]->BaseOfImage);
   EXPECT_THAT_EXPECTED(
       parser->GetMinidumpFile().getString(filtered_modules[0]->ModuleNameRVA),

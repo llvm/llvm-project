@@ -1,6 +1,6 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // REQUIRES: x86_64-target-arch
-// UNSUPPORTED: darwin
+// UNSUPPORTED: tvos, watchos
 #include "test.h"
 
 struct ucontext {
@@ -13,8 +13,8 @@ extern "C" {
   void ucontext_trampoline();
 }
 
-__asm__(".global ucontext_do_switch\n"
-        "ucontext_do_switch:\n\t"
+__asm__(".global " ASM_SYMBOL(ucontext_do_switch) "\n"
+        ASM_SYMBOL(ucontext_do_switch) ":\n\t"
         "pushq %rbp\n\t"
         "pushq %r15\n\t"
         "pushq %r14\n\t"
@@ -31,8 +31,8 @@ __asm__(".global ucontext_do_switch\n"
         "popq %rbp\n\t"
         "retq");
 
-__asm__(".global ucontext_trampoline\n"
-        "ucontext_trampoline:\n\t"
+__asm__(".global " ASM_SYMBOL(ucontext_trampoline) "\n"
+        ASM_SYMBOL(ucontext_trampoline) ":\n\t"
         ".cfi_startproc\n\t"
         ".cfi_undefined rip\n\t"
         "movq %r12, %rdi\n\t"

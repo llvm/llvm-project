@@ -35,15 +35,8 @@ struct FileInfo {
   /// Used to determine which files to prune first. Also used to determine
   /// set membership, so must take into account all fields.
   bool operator<(const FileInfo &Other) const {
-    if (Time < Other.Time)
-      return true;
-    else if (Other.Time < Time)
-      return false;
-    if (Other.Size < Size)
-      return true;
-    else if (Size < Other.Size)
-      return false;
-    return Path < Other.Path;
+    return std::tie(Time, Other.Size, Path) <
+           std::tie(Other.Time, Size, Other.Path);
   }
 };
 } // anonymous namespace

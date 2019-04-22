@@ -79,6 +79,14 @@ public:
     return ConstantRange(BitWidth, true);
   }
 
+  /// Create non-empty constant range with the given bounds. If Lower and
+  /// Upper are the same, a full range is returned.
+  static ConstantRange getNonEmpty(APInt Lower, APInt Upper) {
+    if (Lower == Upper)
+      return getFull(Lower.getBitWidth());
+    return ConstantRange(std::move(Lower), std::move(Upper));
+  }
+
   /// Initialize a range based on a known bits constraint. The IsSigned flag
   /// indicates whether the constant range should not wrap in the signed or
   /// unsigned domain.
@@ -368,6 +376,18 @@ public:
   /// Return a new range representing the possible values resulting from a
   /// arithmetic right shift of a value in this range and a value in \p Other.
   ConstantRange ashr(const ConstantRange &Other) const;
+
+  /// Perform an unsigned saturating addition of two constant ranges.
+  ConstantRange uadd_sat(const ConstantRange &Other) const;
+
+  /// Perform a signed saturating addition of two constant ranges.
+  ConstantRange sadd_sat(const ConstantRange &Other) const;
+
+  /// Perform an unsigned saturating subtraction of two constant ranges.
+  ConstantRange usub_sat(const ConstantRange &Other) const;
+
+  /// Perform a signed saturating subtraction of two constant ranges.
+  ConstantRange ssub_sat(const ConstantRange &Other) const;
 
   /// Return a new range that is the logical not of the current set.
   ConstantRange inverse() const;

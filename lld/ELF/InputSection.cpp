@@ -616,6 +616,8 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Sym.getVA(A);
+  case R_DTPREL:
+    return Sym.getVA(A);
   case R_ADDEND:
     return A;
   case R_ARM_SBREL:
@@ -632,7 +634,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_GOTPLTREL:
     return Sym.getVA(A) - In.GotPlt->getVA();
   case R_GOTPLT:
-  case R_RELAX_TLS_GD_TO_IE_END:
+  case R_RELAX_TLS_GD_TO_IE_GOTPLT:
     return Sym.getGotVA() + A - In.GotPlt->getVA();
   case R_TLSLD_GOT_OFF:
   case R_GOT_OFF:
@@ -806,7 +808,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Expr == R_NONE)
       continue;
 
-    if (Expr != R_ABS) {
+    if (Expr != R_ABS && Expr != R_DTPREL) {
       std::string Msg = getLocation<ELFT>(Offset) +
                         ": has non-ABS relocation " + toString(Type) +
                         " against symbol '" + toString(Sym) + "'";
@@ -908,7 +910,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
     case R_RELAX_TLS_GD_TO_IE:
     case R_RELAX_TLS_GD_TO_IE_ABS:
     case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
-    case R_RELAX_TLS_GD_TO_IE_END:
+    case R_RELAX_TLS_GD_TO_IE_GOTPLT:
       Target->relaxTlsGdToIe(BufLoc, Type, TargetVA);
       break;
     case R_PPC_CALL:

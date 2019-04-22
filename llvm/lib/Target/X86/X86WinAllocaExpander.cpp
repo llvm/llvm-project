@@ -209,15 +209,18 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
     return;
   }
 
+  // These two variables differ on x32, which is a 64-bit target with a
+  // 32-bit alloca.
   bool Is64Bit = STI->is64Bit();
+  bool Is64BitAlloca = MI->getOpcode() == X86::WIN_ALLOCA_64;
   assert(SlotSize == 4 || SlotSize == 8);
-  unsigned RegA = (SlotSize == 8) ? X86::RAX : X86::EAX;
 
   switch (L) {
-  case TouchAndSub:
+  case TouchAndSub: {
     assert(Amount >= SlotSize);
 
     // Use a push to touch the top of the stack.
+    unsigned RegA = Is64Bit ? X86::RAX : X86::EAX;
     BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
         .addReg(RegA, RegState::Undef);
     Amount -= SlotSize;
@@ -226,15 +229,18 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
 
     // Fall through to make any remaining adjustment.
     LLVM_FALLTHROUGH;
+  }
   case Sub:
     assert(Amount > 0);
     if (Amount == SlotSize) {
       // Use push to save size.
+      unsigned RegA = Is64Bit ? X86::RAX : X86::EAX;
       BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
           .addReg(RegA, RegState::Undef);
     } else {
       // Sub.
-      BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64Bit, Amount)), StackPtr)
+      BuildMI(*MBB, I, DL,
+              TII->get(getSubOpcode(Is64BitAlloca, Amount)), StackPtr)
           .addReg(StackPtr)
           .addImm(Amount);
     }
@@ -242,6 +248,7 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
   case Probe:
     if (!NoStackArgProbe) {
       // The probe lowering expects the amount in RAX/EAX.
+      unsigned RegA = Is64BitAlloca ? X86::RAX : X86::EAX;
       BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegA)
           .addReg(MI->getOperand(0).getReg());
 
@@ -250,8 +257,8 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
                                               /*InPrologue=*/false);
     } else {
       // Sub
-      BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::SUB64rr : X86::SUB32rr),
-              StackPtr)
+      BuildMI(*MBB, I, DL,
+              TII->get(Is64BitAlloca ? X86::SUB64rr : X86::SUB32rr), StackPtr)
           .addReg(StackPtr)
           .addReg(MI->getOperand(0).getReg());
     }

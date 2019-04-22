@@ -313,9 +313,8 @@ uint64_t SymbolizableObjectFile::getModuleSectionIndexForAddress(
       continue;
 
     if (Address >= Sec.getAddress() &&
-        Address <= Sec.getAddress() + Sec.getSize()) {
+        Address < Sec.getAddress() + Sec.getSize())
       return Sec.getIndex();
-    }
   }
 
   return object::SectionedAddress::UndefSection;

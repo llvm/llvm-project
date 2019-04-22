@@ -101,18 +101,10 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
       return getEmpty(W);
     return ConstantRange(APInt::getSignedMinValue(W), std::move(SMax));
   }
-  case CmpInst::ICMP_ULE: {
-    APInt UMax(CR.getUnsignedMax());
-    if (UMax.isMaxValue())
-      return getFull(W);
-    return ConstantRange(APInt::getMinValue(W), std::move(UMax) + 1);
-  }
-  case CmpInst::ICMP_SLE: {
-    APInt SMax(CR.getSignedMax());
-    if (SMax.isMaxSignedValue())
-      return getFull(W);
-    return ConstantRange(APInt::getSignedMinValue(W), std::move(SMax) + 1);
-  }
+  case CmpInst::ICMP_ULE:
+    return getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
+  case CmpInst::ICMP_SLE:
+    return getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1);
   case CmpInst::ICMP_UGT: {
     APInt UMin(CR.getUnsignedMin());
     if (UMin.isMaxValue())
@@ -125,18 +117,10 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
       return getEmpty(W);
     return ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W));
   }
-  case CmpInst::ICMP_UGE: {
-    APInt UMin(CR.getUnsignedMin());
-    if (UMin.isMinValue())
-      return getFull(W);
-    return ConstantRange(std::move(UMin), APInt::getNullValue(W));
-  }
-  case CmpInst::ICMP_SGE: {
-    APInt SMin(CR.getSignedMin());
-    if (SMin.isMinSignedValue())
-      return getFull(W);
-    return ConstantRange(std::move(SMin), APInt::getSignedMinValue(W));
-  }
+  case CmpInst::ICMP_UGE:
+    return getNonEmpty(CR.getUnsignedMin(), APInt::getNullValue(W));
+  case CmpInst::ICMP_SGE:
+    return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
   }
 }
 
@@ -948,9 +932,7 @@ ConstantRange::smax(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::smax(getSignedMin(), Other.getSignedMin());
   APInt NewU = APIntOps::smax(getSignedMax(), Other.getSignedMax()) + 1;
-  if (NewU == NewL)
-    return getFull();
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
@@ -961,9 +943,7 @@ ConstantRange::umax(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin());
   APInt NewU = APIntOps::umax(getUnsignedMax(), Other.getUnsignedMax()) + 1;
-  if (NewU == NewL)
-    return getFull();
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
@@ -974,9 +954,7 @@ ConstantRange::smin(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::smin(getSignedMin(), Other.getSignedMin());
   APInt NewU = APIntOps::smin(getSignedMax(), Other.getSignedMax()) + 1;
-  if (NewU == NewL)
-    return getFull();
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
@@ -987,9 +965,7 @@ ConstantRange::umin(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::umin(getUnsignedMin(), Other.getUnsignedMin());
   APInt NewU = APIntOps::umin(getUnsignedMax(), Other.getUnsignedMax()) + 1;
-  if (NewU == NewL)
-    return getFull();
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
@@ -1012,13 +988,7 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
   }
 
   APInt Upper = getUnsignedMax().udiv(RHS_umin) + 1;
-
-  // If the LHS is Full and the RHS is a wrapped interval containing 1 then
-  // this could occur.
-  if (Lower == Upper)
-    return getFull();
-
-  return ConstantRange(std::move(Lower), std::move(Upper));
+  return getNonEmpty(std::move(Lower), std::move(Upper));
 }
 
 ConstantRange
@@ -1029,9 +999,7 @@ ConstantRange::binaryAnd(const ConstantRange &Other) const {
   // TODO: replace this with something less conservative
 
   APInt umin = APIntOps::umin(Other.getUnsignedMax(), getUnsignedMax());
-  if (umin.isAllOnesValue())
-    return getFull();
-  return ConstantRange(APInt::getNullValue(getBitWidth()), std::move(umin) + 1);
+  return getNonEmpty(APInt::getNullValue(getBitWidth()), std::move(umin) + 1);
 }
 
 ConstantRange
@@ -1042,9 +1010,7 @@ ConstantRange::binaryOr(const ConstantRange &Other) const {
   // TODO: replace this with something less conservative
 
   APInt umax = APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin());
-  if (umax.isNullValue())
-    return getFull();
-  return ConstantRange(std::move(umax), APInt::getNullValue(getBitWidth()));
+  return getNonEmpty(std::move(umax), APInt::getNullValue(getBitWidth()));
 }
 
 ConstantRange
@@ -1079,10 +1045,7 @@ ConstantRange::lshr(const ConstantRange &Other) const {
 
   APInt max = getUnsignedMax().lshr(Other.getUnsignedMin()) + 1;
   APInt min = getUnsignedMin().lshr(Other.getUnsignedMax());
-  if (min == max)
-    return getFull();
-
-  return ConstantRange(std::move(min), std::move(max));
+  return getNonEmpty(std::move(min), std::move(max));
 }
 
 ConstantRange
@@ -1133,10 +1096,43 @@ ConstantRange::ashr(const ConstantRange &Other) const {
     min = NegMin;
     max = PosMax;
   }
-  if (min == max)
-    return getFull();
+  return getNonEmpty(std::move(min), std::move(max));
+}
 
-  return ConstantRange(std::move(min), std::move(max));
+ConstantRange ConstantRange::uadd_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getUnsignedMin().uadd_sat(Other.getUnsignedMin());
+  APInt NewU = getUnsignedMax().uadd_sat(Other.getUnsignedMax()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
+ConstantRange ConstantRange::sadd_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getSignedMin().sadd_sat(Other.getSignedMin());
+  APInt NewU = getSignedMax().sadd_sat(Other.getSignedMax()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
+ConstantRange ConstantRange::usub_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getUnsignedMin().usub_sat(Other.getUnsignedMax());
+  APInt NewU = getUnsignedMax().usub_sat(Other.getUnsignedMin()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
+ConstantRange ConstantRange::ssub_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getSignedMin().ssub_sat(Other.getSignedMax());
+  APInt NewU = getSignedMax().ssub_sat(Other.getSignedMin()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange ConstantRange::inverse() const {

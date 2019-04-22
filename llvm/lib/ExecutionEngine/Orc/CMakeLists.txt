@@ -11,6 +11,7 @@ add_llvm_library(LLVMOrcJIT
   Layer.cpp
   LLJIT.cpp
   NullResolver.cpp
+  ObjectLinkingLayer.cpp
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
   OrcCBindings.cpp

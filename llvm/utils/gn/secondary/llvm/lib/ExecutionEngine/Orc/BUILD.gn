@@ -21,6 +21,7 @@ static_library("Orc") {
     "LazyReexports.cpp",
     "Legacy.cpp",
     "NullResolver.cpp",
+    "ObjectLinkingLayer.cpp",
     "ObjectTransformLayer.cpp",
     "OrcABISupport.cpp",
     "OrcCBindings.cpp",
