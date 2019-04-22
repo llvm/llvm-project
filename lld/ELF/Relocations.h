@@ -31,6 +31,7 @@ using RelType = uint32_t;
 enum RelExpr {
   R_ABS,
   R_ADDEND,
+  R_DTPREL,
   R_GOT,
   R_GOT_OFF,
   R_GOT_PC,

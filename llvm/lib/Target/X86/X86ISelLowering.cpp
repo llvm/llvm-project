@@ -43676,7 +43676,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // Scalar SSE types.
       case MVT::f32:
       case MVT::i32:
-        if (VConstraint && Subtarget.hasAVX512() && Subtarget.hasVLX())
+        if (VConstraint && Subtarget.hasVLX())
           return std::make_pair(0U, &X86::FR32XRegClass);
         return std::make_pair(0U, &X86::FR32RegClass);
       case MVT::f64:
@@ -43704,11 +43704,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v4f64:
         if (VConstraint && Subtarget.hasVLX())
           return std::make_pair(0U, &X86::VR256XRegClass);
-        return std::make_pair(0U, &X86::VR256RegClass);
+        if (Subtarget.hasAVX())
+          return std::make_pair(0U, &X86::VR256RegClass);
+        break;
       case MVT::v8f64:
       case MVT::v16f32:
       case MVT::v16i32:
       case MVT::v8i64:
+        if (!Subtarget.hasAVX512()) break;
         if (VConstraint)
           return std::make_pair(0U, &X86::VR512RegClass);
         return std::make_pair(0U, &X86::VR512_0_15RegClass);
