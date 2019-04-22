@@ -1170,6 +1170,20 @@ void Writer::processRelocations(InputChunk *Chunk) {
         Sym->setGOTIndex(NumImportedGlobals++);
         GOTSymbols.push_back(Sym);
       }
+      break;
+    }
+    case R_WASM_MEMORY_ADDR_SLEB:
+    case R_WASM_MEMORY_ADDR_LEB:
+    case R_WASM_MEMORY_ADDR_REL_SLEB: {
+      if (!Config->Relocatable) {
+        auto* Sym = File->getSymbols()[Reloc.Index];
+        if (Sym->isUndefined() && !Sym->isWeak()) {
+          error(toString(File) + ": cannot resolve relocation of type " +
+                relocTypeToString(Reloc.Type) +
+                " against undefined (non-weak) data symbol: " + toString(*Sym));
+        }
+      }
+      break;
     }
     }
 

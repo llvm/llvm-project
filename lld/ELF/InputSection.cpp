@@ -253,6 +253,7 @@ void InputSectionBase::parseCompressedHeader() {
     }
 
     UncompressedSize = Hdr->ch_size;
+    Alignment = std::max<uint64_t>(Hdr->ch_addralign, 1);
     RawData = RawData.slice(sizeof(*Hdr));
     return;
   }
@@ -270,6 +271,7 @@ void InputSectionBase::parseCompressedHeader() {
   }
 
   UncompressedSize = Hdr->ch_size;
+  Alignment = std::max<uint64_t>(Hdr->ch_addralign, 1);
   RawData = RawData.slice(sizeof(*Hdr));
 }
 

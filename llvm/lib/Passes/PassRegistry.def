@@ -290,9 +290,18 @@ LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("irce", IRCEPass())
 LOOP_PASS("unroll-and-jam", LoopUnrollAndJamPass())
 LOOP_PASS("unroll-full", LoopFullUnrollPass())
-LOOP_PASS("unswitch", SimpleLoopUnswitchPass())
 LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
 LOOP_PASS("print<ivusers>", IVUsersPrinterPass(dbgs()))
 LOOP_PASS("loop-predication", LoopPredicationPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
 #undef LOOP_PASS
+
+#ifndef LOOP_PASS_WITH_PARAMS
+#define LOOP_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)
+#endif
+LOOP_PASS_WITH_PARAMS("unswitch",
+                           [](bool NonTrivial) {
+                             return SimpleLoopUnswitchPass(NonTrivial);
+                           },
+                           parseLoopUnswitchOptions)
+#undef LOOP_PASS_WITH_PARAMS

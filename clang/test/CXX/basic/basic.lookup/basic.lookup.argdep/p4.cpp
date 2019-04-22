@@ -67,3 +67,96 @@ namespace test1 {
     foo(a, 10); // expected-error {{no matching function for call to 'foo'}}
   }
 }
+
+
+// Check the rules described in p4:
+//  When considering an associated namespace, the lookup is the same as the lookup
+//  performed when the associated namespace is used as a qualifier (6.4.3.2) except that:
+
+//  - Any using-directives in the associated namespace are ignored.
+namespace test_using_directives {
+  namespace M { struct S; }
+  namespace N {
+    void f(M::S); // expected-note {{declared here}}
+  }
+  namespace M {
+    using namespace N;
+    struct S {};
+  }
+  void test() {
+    M::S s;
+    f(s); // expected-error {{use of undeclared}}
+    M::f(s); // ok
+  }
+}
+
+//  - Any namespace-scope friend functions or friend function templates declared in
+//    associated classes are visible within their respective namespaces even if
+//    they are not visible during an ordinary lookup
+// (Note: For the friend declaration to be visible, the corresponding class must be
+//  included in the set of associated classes. Merely including the namespace in
+//  the set of associated namespaces is not enough.)
+namespace test_friend1 {
+  namespace N {
+    struct S;
+    struct T {
+      friend void f(S); // #1
+    };
+    struct S { S(); S(T); };
+  }
+
+  void test() {
+    N::S s;
+    N::T t;
+    f(s); // expected-error {{use of undeclared}}
+    f(t); // ok, #1
+  }
+}
+
+// credit: Arthur O’Dwyer
+namespace test_friend2 {
+  struct A {
+    struct B {
+        struct C {};
+    };
+    friend void foo(...); // #1
+  };
+
+  struct D {
+    friend void foo(...); // #2
+  };
+  template<class> struct E {
+    struct F {};
+  };
+
+  template<class> struct G {};
+  template<class> struct H {};
+  template<class> struct I {};
+  struct J { friend void foo(...) {} }; // #3
+
+  void test() {
+    A::B::C c;
+    foo(c); // #1 is not visible since A is not an associated class
+            // expected-error@-1 {{use of undeclared}}
+    E<D>::F f;
+    foo(f); // #2 is not visible since D is not an associated class
+            // expected-error@-1 {{use of undeclared}}
+    G<H<I<J> > > j;
+    foo(j);  // ok, #3.
+  }
+}
+
+//  - All names except those of (possibly overloaded) functions and
+//    function templates are ignored.
+namespace test_other_names {
+  namespace N {
+    struct S {};
+    struct Callable { void operator()(S); };
+    static struct Callable Callable;
+  }
+
+  void test() {
+    N::S s;
+    Callable(s); // expected-error {{use of undeclared}}
+  }
+}

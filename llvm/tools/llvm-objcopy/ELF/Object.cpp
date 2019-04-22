@@ -1468,11 +1468,9 @@ Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
 void Object::sortSections() {
   // Put all sections in offset order. Maintain the ordering as closely as
   // possible while meeting that demand however.
-  auto CompareSections = [](const SecPtr &A, const SecPtr &B) {
+  llvm::stable_sort(Sections, [](const SecPtr &A, const SecPtr &B) {
     return A->OriginalOffset < B->OriginalOffset;
-  };
-  std::stable_sort(std::begin(this->Sections), std::end(this->Sections),
-                   CompareSections);
+  });
 }
 
 static uint64_t alignToAddr(uint64_t Offset, uint64_t Addr, uint64_t Align) {
@@ -1490,8 +1488,7 @@ static uint64_t alignToAddr(uint64_t Offset, uint64_t Addr, uint64_t Align) {
 
 // Orders segments such that if x = y->ParentSegment then y comes before x.
 static void orderSegments(std::vector<Segment *> &Segments) {
-  std::stable_sort(std::begin(Segments), std::end(Segments),
-                   compareSegmentsByOffset);
+  llvm::stable_sort(Segments, compareSegmentsByOffset);
 }
 
 // This function finds a consistent layout for a list of segments starting from
@@ -1746,8 +1743,7 @@ Error BinaryWriter::finalize() {
     for (Segment *Seg : OrderedSegments)
       Seg->PAddr = Seg->VAddr;
 
-  std::stable_sort(std::begin(OrderedSegments), std::end(OrderedSegments),
-                   compareSegmentsByPAddr);
+  llvm::stable_sort(OrderedSegments, compareSegmentsByPAddr);
 
   // Because we add a ParentSegment for each section we might have duplicate
   // segments in OrderedSegments. If there were duplicates then LayoutSegments

@@ -561,7 +561,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
           return (LitTy.getScalarSizeInBits() < 16);
         },
         LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
-      .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx));
+      .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
+      .widenScalarToNextPow2(BigTyIdx, 32);
+
   }
 
   // TODO: vectors of pointers
