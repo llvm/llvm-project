@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "JITLink_EHFrameSupportImpl.h"
+#include "EHFrameSupportImpl.h"
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -516,6 +516,9 @@ AtomGraphPassFunction createEHFrameRecorderPass(const Triple &TT,
     for (auto &S : G.sections())
       if (S.getName() == EHFrameSectionName && !S.atoms_empty()) {
         Addr = (*S.atoms().begin())->getAddress();
+        for (auto *DA : S.atoms())
+          if (DA->getAddress() < Addr)
+            Addr = DA->getAddress();
         break;
       }
 

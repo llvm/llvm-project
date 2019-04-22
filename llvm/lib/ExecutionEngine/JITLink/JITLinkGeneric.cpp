@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "JITLinkGeneric.h"
-#include "JITLink_EHFrameSupportImpl.h"
+#include "EHFrameSupportImpl.h"
 
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/MemoryBuffer.h"

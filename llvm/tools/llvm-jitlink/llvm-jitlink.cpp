@@ -36,8 +36,6 @@
 #include <list>
 #include <string>
 
-#include "dlfcn.h"
-
 #define DEBUG_TYPE "llvm-jitlink"
 
 using namespace llvm;
@@ -71,10 +69,10 @@ static cl::opt<bool>
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
                      cl::init(false));
 
-static cl::list<std::string>
-AbsoluteDefs("define-abs",
-             cl::desc("Inject absolute symbol definitions (syntax: <name>=<addr>)"),
-             cl::ZeroOrMore);
+static cl::list<std::string> AbsoluteDefs(
+    "define-abs",
+    cl::desc("Inject absolute symbol definitions (syntax: <name>=<addr>)"),
+    cl::ZeroOrMore);
 
 static cl::opt<bool> ShowAddrs(
     "show-addrs",
@@ -87,9 +85,14 @@ static cl::opt<bool> ShowAtomGraph(
     cl::init(false));
 
 static cl::opt<bool> ShowSizes(
-                               "show-sizes",
-                               cl::desc("Show sizes: pre- and post-dead stripping, and allocations"),
-                               cl::init(false));
+    "show-sizes",
+    cl::desc("Show sizes pre- and post-dead stripping, and allocations"),
+    cl::init(false));
+
+static cl::opt<bool> ShowRelocatedSectionContents(
+    "show-relocated-section-contents",
+    cl::desc("show section contents after fixups have been applied"),
+    cl::init(false));
 
 ExitOnError ExitOnErr;
 
@@ -139,6 +142,74 @@ static uint64_t computeTotalAtomSizes(AtomGraph &G) {
   return TotalSize;
 }
 
+static void dumpSectionContents(raw_ostream &OS, AtomGraph &G) {
+  constexpr JITTargetAddress DumpWidth = 16;
+  static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
+
+  // Put sections in address order.
+  std::vector<Section *> Sections;
+  for (auto &S : G.sections())
+    Sections.push_back(&S);
+
+  std::sort(Sections.begin(), Sections.end(),
+            [](const Section *LHS, const Section *RHS) {
+              if (LHS->atoms_empty() && RHS->atoms_empty())
+                return false;
+              if (LHS->atoms_empty())
+                return false;
+              if (RHS->atoms_empty())
+                return true;
+              return (*LHS->atoms().begin())->getAddress() <
+                     (*RHS->atoms().begin())->getAddress();
+            });
+
+  for (auto *S : Sections) {
+    OS << S->getName() << " content:";
+    if (S->atoms_empty()) {
+      OS << "\n  section empty\n";
+      continue;
+    }
+
+    // Sort atoms into order, then render.
+    std::vector<DefinedAtom *> Atoms(S->atoms().begin(), S->atoms().end());
+    std::sort(Atoms.begin(), Atoms.end(),
+              [](const DefinedAtom *LHS, const DefinedAtom *RHS) {
+                return LHS->getAddress() < RHS->getAddress();
+              });
+
+    JITTargetAddress NextAddr = Atoms.front()->getAddress() & ~(DumpWidth - 1);
+    for (auto *DA : Atoms) {
+      bool IsZeroFill = DA->isZeroFill();
+      JITTargetAddress AtomStart = DA->getAddress();
+      JITTargetAddress AtomSize =
+          IsZeroFill ? DA->getZeroFillSize() : DA->getContent().size();
+      JITTargetAddress AtomEnd = AtomStart + AtomSize;
+      const uint8_t *AtomData =
+          IsZeroFill ? nullptr : DA->getContent().bytes_begin();
+
+      // Pad any space before the atom starts.
+      while (NextAddr != AtomStart) {
+        if (NextAddr % DumpWidth == 0)
+          OS << formatv("\n{0:x16}:", NextAddr);
+        OS << "   ";
+        ++NextAddr;
+      }
+
+      // Render the atom content.
+      while (NextAddr != AtomEnd) {
+        if (NextAddr % DumpWidth == 0)
+          OS << formatv("\n{0:x16}:", NextAddr);
+        if (IsZeroFill)
+          OS << " 00";
+        else
+          OS << formatv(" {0:x-2}", AtomData[NextAddr - AtomStart]);
+        ++NextAddr;
+      }
+    }
+    OS << "\n";
+  }
+}
+
 Session::Session(Triple TT)
     : ObjLayer(ES, MemMgr, ObjectLinkingLayer::NotifyLoadedFunction(),
                ObjectLinkingLayer::NotifyEmittedFunction(),
@@ -181,6 +252,12 @@ void Session::modifyPassConfig(const Triple &FTT,
       });
   }
 
+  if (ShowRelocatedSectionContents)
+    PassConfig.PostFixupPasses.push_back([](AtomGraph &G) -> Error {
+      outs() << "Relocated section contents for " << G.getName() << ":\n";
+      dumpSectionContents(outs(), G);
+      return Error::success();
+    });
 }
 
 Expected<Session::FileInfo &> Session::findFileInfo(StringRef FileName) {

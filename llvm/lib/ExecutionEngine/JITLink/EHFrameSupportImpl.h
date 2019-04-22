@@ -1,4 +1,4 @@
-//===----- JITLink_EHFrameSupport.h - JITLink eh-frame utils ----*- C++ -*-===//
+//===------- EHFrameSupportImpl.h - JITLink eh-frame utils ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_EXECUTIONENGINE_JITLINK_JITLINK_EHFRAMESUPPORTIMPL_H
-#define LLVM_LIB_EXECUTIONENGINE_JITLINK_JITLINK_EHFRAMESUPPORTIMPL_H
+#ifndef LLVM_LIB_EXECUTIONENGINE_JITLINK_EHFRAMESUPPORTIMPL_H
+#define LLVM_LIB_EXECUTIONENGINE_JITLINK_EHFRAMESUPPORTIMPL_H
 
-#include "llvm/ExecutionEngine/JITLink/JITLink_EHFrameSupport.h"
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -62,4 +62,4 @@ Error addEHFrame(AtomGraph &G, Section &EHFrameSection,
 } // end namespace jitlink
 } // end namespace llvm
 
-#endif // LLVM_LIB_EXECUTIONENGINE_JITLINK_JITLINK_EHFRAMESUPPORTIMPL_H
+#endif // LLVM_LIB_EXECUTIONENGINE_JITLINK_EHFRAMESUPPORTIMPL_H

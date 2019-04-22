@@ -41,7 +41,6 @@ static_library("clangd") {
     "//clang-tools-extra/clang-tidy/portability",
     "//clang-tools-extra/clang-tidy/readability",
     "//clang-tools-extra/clang-tidy/zircon",
-    "//clang-tools-extra/clangd/tool:features",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",

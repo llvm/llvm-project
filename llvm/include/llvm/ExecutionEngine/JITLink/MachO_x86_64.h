@@ -1,4 +1,4 @@
-//===--- JITLink_MachO_x86_64.h - JIT link functions for MachO --*- C++ -*-===//
+//===--- MachO_x86_64.h - JIT link functions for MachO/x86-64 ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINK_MACHO_X86_64_H
-#define LLVM_EXECUTIONENGINE_JITLINK_JITLINK_MACHO_X86_64_H
+#ifndef LLVM_EXECUTIONENGINE_JITLINK_MACHO_X86_64_H
+#define LLVM_EXECUTIONENGINE_JITLINK_MACHO_X86_64_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
@@ -60,4 +60,4 @@ StringRef getMachOX86RelocationKindName(Edge::Kind R);
 } // end namespace jitlink
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_JITLINK_MACHO_X86_64_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_MACHO_X86_64_H

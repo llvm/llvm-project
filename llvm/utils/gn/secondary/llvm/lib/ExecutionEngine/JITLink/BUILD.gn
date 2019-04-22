@@ -1,0 +1,16 @@
+static_library("JITLink") {
+  output_name = "LLVMJITLink"
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "JITLink.cpp",
+    "JITLinkGeneric.cpp",
+    "JITLink_EHFrameSupport.cpp",
+    "JITLink_MachO.cpp",
+    "JITLink_MachO_x86_64.cpp",
+    "MachOAtomGraphBuilder.cpp",
+  ]
+}

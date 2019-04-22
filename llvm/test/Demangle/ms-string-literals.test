@@ -730,7 +730,10 @@
 ; CHECK: L"012345678901234567890123456789AB"...
 
 ??_C@_13IIHIAFKH@?W?$PP?$AA?$AA@
-; CHECK: L"\xD7\xFF"
+; CHECK: L"\xD7FF"
+
+??_C@_03IIHIAFKH@?$PP?W?$AA?$AA@
+; CHECK: u"\xD7FF"
 
 ??_C@_02PCEFGMJL@hi?$AA@
 ; CHECK: "hi"
@@ -781,3 +784,11 @@
 
 ??_C@_0CC@MBPKDIAM@a?$AA?$AA?$AAb?$AA?$AA?$AAc?$AA?$AA?$AAd?$AA?$AA?$AAe?$AA?$AA?$AAf?$AA?$AA?$AAg?$AA?$AA?$AAh?$AA?$AA?$AA@
 ; CHECK: u"a\0b\0c\0d\0e\0f\0g\0h\0"...
+
+; This is technically not a valid u32 string since the character in it is not
+; <= 0x10FFFF like unicode demands. (Also, the crc doesn't match the contents.)
+; It's here because this input used to cause a stack overflow in outputHex().
+; Both cl.exe and clang-cl produce it for `const char32_t* s = U"\x11223344";`
+
+??_C@_07LJGFEJEB@D3?$CC?$BB?$AA?$AA?$AA?$AA@)
+; CHECK: U"\x11223344"

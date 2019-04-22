@@ -9,7 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/ExecutionEngine/JITLink/JITLink_EHFrameSupport.h"
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 
 #include <vector>
 

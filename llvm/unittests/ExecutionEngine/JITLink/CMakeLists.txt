@@ -12,7 +12,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(JITLinkTests
     JITLinkTestCommon.cpp
-    JITLinkTest_MachO_x86_64_Tests.cpp
+    MachO_x86_64_Tests.cpp
   )
 
 target_link_libraries(JITLinkTests PRIVATE LLVMTestingSupport)

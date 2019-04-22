@@ -1,4 +1,4 @@
-//===------------ JITLink.cpp - Run-time JIT linker for MachO -------------===//
+//===-------------- MachO.cpp - JIT linker function for MachO -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,11 +6,15 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// MachO jit-link function.
+//
+//===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/JITLink/JITLink_MachO.h"
+#include "llvm/ExecutionEngine/JITLink/MachO.h"
 
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/ExecutionEngine/JITLink/JITLink_MachO_x86_64.h"
+#include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"

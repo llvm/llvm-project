@@ -1,4 +1,4 @@
-//===----- JITLink_EHFrameSupport.h - JITLink eh-frame utils ----*- C++ -*-===//
+//===--------- EHFrameSupport.h - JITLink eh-frame utils --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINK_EHFRAMESUPPORT_H
-#define LLVM_EXECUTIONENGINE_JITLINK_JITLINK_EHFRAMESUPPORT_H
+#ifndef LLVM_EXECUTIONENGINE_JITLINK_EHFRAMESUPPORT_H
+#define LLVM_EXECUTIONENGINE_JITLINK_EHFRAMESUPPORT_H
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
@@ -39,4 +39,4 @@ AtomGraphPassFunction createEHFrameRecorderPass(const Triple &TT,
 } // end namespace jitlink
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_JITLINK_EHFRAMESUPPORT_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_EHFRAMESUPPORT_H

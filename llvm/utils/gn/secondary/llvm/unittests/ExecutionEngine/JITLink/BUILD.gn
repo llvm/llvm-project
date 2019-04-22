@@ -1,0 +1,20 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("JITLinkTests") {
+  deps = [
+    "//llvm/lib/ExecutionEngine/JITLink",
+    "//llvm/lib/ExecutionEngine/RuntimeDyld",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "JITLinkTestCommon.cpp",
+    "JITLinkTest_MachO_x86_64_Tests.cpp",
+  ]
+}
