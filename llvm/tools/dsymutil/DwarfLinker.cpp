@@ -245,18 +245,55 @@ bool DwarfLinker::createStreamer(const Triple &TheTriple,
   return Streamer->init(TheTriple);
 }
 
+/// Resolve the relative path to a build artifact referenced by DWARF by
+/// applying DW_AT_comp_dir.
+static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
+  sys::path::append(Buf, dwarf::toString(CU.find(dwarf::DW_AT_comp_dir), ""));
+}
+
+/// Collect references to parseable Swift interfaces in imported
+/// DW_TAG_module blocks.
+static void analyzeImportedModule(
+    const DWARFDie &DIE, CompileUnit &CU,
+    std::map<std::string, std::string> &ParseableSwiftInterfaces,
+    std::function<void(const Twine &, const DWARFDie &)> ReportWarning) {
+  if (CU.getLanguage() != dwarf::DW_LANG_Swift)
+    return;
+
+  StringRef Path = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_include_path));
+  if (!Path.endswith(".swiftinterface"))
+    return;
+  if (Optional<DWARFFormValue> Val = DIE.find(dwarf::DW_AT_name))
+    if (Optional<const char *> Name = Val->getAsCString()) {
+      auto &Entry = ParseableSwiftInterfaces[*Name];
+      // The prepend path is applied later when copying.
+      DWARFDie CUDie = CU.getOrigUnit().getUnitDIE();
+      SmallString<128> ResolvedPath;
+      if (sys::path::is_relative(Path))
+        resolveRelativeObjectPath(ResolvedPath, CUDie);
+      sys::path::append(ResolvedPath, Path);
+      if (!Entry.empty() && Entry != ResolvedPath)
+        ReportWarning(
+            Twine("Conflicting parseable interfaces for Swift Module ") +
+                *Name + ": " + Entry + " and " + Path,
+            DIE);
+      Entry = ResolvedPath.str();
+    }
+}
+
 /// Recursive helper to build the global DeclContext information and
 /// gather the child->parent relationships in the original compile unit.
 ///
 /// \return true when this DIE and all of its children are only
 /// forward declarations to types defined in external clang modules
 /// (i.e., forward declarations that are children of a DW_TAG_module).
-static bool analyzeContextInfo(const DWARFDie &DIE, unsigned ParentIdx,
-                               CompileUnit &CU, DeclContext *CurrentDeclContext,
-                               UniquingStringPool &StringPool,
-                               DeclContextTree &Contexts,
-                               uint64_t ModulesEndOffset,
-                               bool InImportedModule = false) {
+static bool analyzeContextInfo(
+    const DWARFDie &DIE, unsigned ParentIdx, CompileUnit &CU,
+    DeclContext *CurrentDeclContext, UniquingStringPool &StringPool,
+    DeclContextTree &Contexts, uint64_t ModulesEndOffset,
+    std::map<std::string, std::string> &ParseableSwiftInterfaces,
+    std::function<void(const Twine &, const DWARFDie &)> ReportWarning,
+    bool InImportedModule = false) {
   unsigned MyIdx = CU.getOrigUnit().getDIEIndex(DIE);
   CompileUnit::DIEInfo &Info = CU.getInfo(MyIdx);
 
@@ -276,6 +313,7 @@ static bool analyzeContextInfo(const DWARFDie &DIE, unsigned ParentIdx,
       dwarf::toString(DIE.find(dwarf::DW_AT_name), "") !=
           CU.getClangModuleName()) {
     InImportedModule = true;
+    analyzeImportedModule(DIE, CU, ParseableSwiftInterfaces, ReportWarning);
   }
 
   Info.ParentIdx = ParentIdx;
@@ -296,9 +334,10 @@ static bool analyzeContextInfo(const DWARFDie &DIE, unsigned ParentIdx,
   Info.Prune = InImportedModule;
   if (DIE.hasChildren())
     for (auto Child : DIE.children())
-      Info.Prune &=
-          analyzeContextInfo(Child, MyIdx, CU, CurrentDeclContext, StringPool,
-                             Contexts, ModulesEndOffset, InImportedModule);
+      Info.Prune &= analyzeContextInfo(Child, MyIdx, CU, CurrentDeclContext,
+                                       StringPool, Contexts, ModulesEndOffset,
+                                       ParseableSwiftInterfaces, ReportWarning,
+                                       InImportedModule);
 
   // Prune this DIE if it is either a forward declaration inside a
   // DW_TAG_module or a DW_TAG_module that contains nothing but
@@ -2108,7 +2147,7 @@ static uint64_t getDwoId(const DWARFDie &CUDie, const DWARFUnit &Unit) {
 }
 
 bool DwarfLinker::registerModuleReference(
-    const DWARFDie &CUDie, const DWARFUnit &Unit, DebugMap &ModuleMap,
+    DWARFDie CUDie, const DWARFUnit &Unit, DebugMap &ModuleMap,
     const DebugMapObject &DMO, RangesTy &Ranges, OffsetsStringPool &StringPool,
     UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
     uint64_t ModulesEndOffset, unsigned &UnitID, bool IsLittleEndian,
@@ -2119,7 +2158,6 @@ bool DwarfLinker::registerModuleReference(
     return false;
 
   // Clang module DWARF skeleton CUs abuse this for the path to the module.
-  std::string PCMpath = dwarf::toString(CUDie.find(dwarf::DW_AT_comp_dir), "");
   uint64_t DwoId = getDwoId(CUDie, Unit);
 
   std::string Name = dwarf::toString(CUDie.find(dwarf::DW_AT_name), "");
@@ -2154,7 +2192,8 @@ bool DwarfLinker::registerModuleReference(
   // Cyclic dependencies are disallowed by Clang, but we still
   // shouldn't run into an infinite loop, so mark it as processed now.
   ClangModules.insert({PCMfile, DwoId});
-  if (Error E = loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap, DMO,
+
+  if (Error E = loadClangModule(CUDie, PCMfile, Name, DwoId, ModuleMap, DMO,
                                 Ranges, StringPool, UniquingStringPool,
                                 ODRContexts, ModulesEndOffset, UnitID,
                                 IsLittleEndian, Indent + 2, Quiet)) {
@@ -2187,17 +2226,16 @@ DwarfLinker::loadObject(const DebugMapObject &Obj, const DebugMap &Map) {
 }
 
 Error DwarfLinker::loadClangModule(
-    StringRef Filename, StringRef ModulePath, StringRef ModuleName,
-    uint64_t DwoId, DebugMap &ModuleMap, const DebugMapObject &DMO,
-    RangesTy &Ranges, OffsetsStringPool &StringPool,
-    UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
-    uint64_t ModulesEndOffset, unsigned &UnitID, bool IsLittleEndian,
-    unsigned Indent, bool Quiet) {
-  SmallString<80> Path(Options.PrependPath);
+    DWARFDie CUDie, StringRef Filename, StringRef ModuleName, uint64_t DwoId,
+    DebugMap &ModuleMap, const DebugMapObject &DMO, RangesTy &Ranges,
+    OffsetsStringPool &StringPool, UniquingStringPool &UniquingStringPool,
+    DeclContextTree &ODRContexts, uint64_t ModulesEndOffset, unsigned &UnitID,
+    bool IsLittleEndian, unsigned Indent, bool Quiet) {
+  /// Using a SmallString<0> because loadClangModule() is recursive.
+  SmallString<0> Path(Options.PrependPath);
   if (sys::path::is_relative(Filename))
-    sys::path::append(Path, ModulePath, Filename);
-  else
-    sys::path::append(Path, Filename);
+    resolveRelativeObjectPath(Path, CUDie);
+  sys::path::append(Path, Filename);
   // Don't use the cached binary holder because we have no thread-safety
   // guarantee and the lifetime is limited.
   auto &Obj = ModuleMap.addDebugMapObject(
@@ -2284,7 +2322,11 @@ Error DwarfLinker::loadClangModule(
                                             ModuleName);
       Unit->setHasInterestingContent();
       analyzeContextInfo(CUDie, 0, *Unit, &ODRContexts.getRoot(),
-                         UniquingStringPool, ODRContexts, ModulesEndOffset);
+                         UniquingStringPool, ODRContexts, ModulesEndOffset,
+                         ParseableSwiftInterfaces,
+                         [&](const Twine &Warning, const DWARFDie &DIE) {
+                           reportWarning(Warning, DMO, &DIE);
+                         });
       // Keep everything.
       Unit->markEverythingAsKept();
     }
@@ -2449,6 +2491,43 @@ bool DwarfLinker::emitPaperTrailWarnings(const DebugMapObject &DMO,
   OutputDebugInfoSize += 11 /* Header */ + Size;
 
   return true;
+}
+
+static Error copySwiftInterfaces(
+    const std::map<std::string, std::string> &ParseableSwiftInterfaces,
+    StringRef Architecture, const LinkOptions &Options) {
+  std::error_code EC;
+  SmallString<128> InputPath;
+  SmallString<128> Path;
+  sys::path::append(Path, *Options.ResourceDir, "Swift");
+  if ((EC = sys::fs::create_directories(Path.str(), true,
+                                        sys::fs::perms::all_all)))
+    return make_error<StringError>(
+        "cannot create directory: " + toString(errorCodeToError(EC)), EC);
+  unsigned BaseLength = Path.size();
+
+  for (auto &I : ParseableSwiftInterfaces) {
+    StringRef ModuleName = I.first;
+    StringRef InterfaceFile = I.second;
+    if (!Options.PrependPath.empty()) {
+      InputPath.clear();
+      sys::path::append(InputPath, Options.PrependPath, InterfaceFile);
+      InterfaceFile = InputPath;
+    }
+    sys::path::append(Path, ModuleName);
+    Path.append(".swiftinterface");
+    if (Options.Verbose)
+      outs() << "copy parseable Swift interface " << InterfaceFile << " -> "
+             << Path.str() << '\n';
+
+    // copy_file attempts an APFS clone first, so this should be cheap.
+    if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
+      warn(Twine("cannot copy parseable Swift interface ") +
+           InterfaceFile + ": " +
+           toString(errorCodeToError(EC)));
+    Path.resize(BaseLength);
+  }
+  return Error::success();
 }
 
 bool DwarfLinker::link(const DebugMap &Map) {
@@ -2638,7 +2717,11 @@ bool DwarfLinker::link(const DebugMap &Map) {
         continue;
       analyzeContextInfo(CurrentUnit->getOrigUnit().getUnitDIE(), 0,
                          *CurrentUnit, &ODRContexts.getRoot(),
-                         UniquingStringPool, ODRContexts, ModulesEndOffset);
+                         UniquingStringPool, ODRContexts, ModulesEndOffset,
+                         ParseableSwiftInterfaces,
+                         [&](const Twine &Warning, const DWARFDie &DIE) {
+                           reportWarning(Warning, LinkContext.DMO, &DIE);
+                         });
     }
   };
 
@@ -2751,7 +2834,17 @@ bool DwarfLinker::link(const DebugMap &Map) {
     pool.wait();
   }
 
-  return Options.NoOutput ? true : Streamer->finish(Map, Options.Translator);
+  if (Options.NoOutput)
+    return true;
+
+  if (Options.ResourceDir && !ParseableSwiftInterfaces.empty()) {
+    StringRef ArchName = Triple::getArchTypeName(Map.getTriple().getArch());
+    if (auto E =
+            copySwiftInterfaces(ParseableSwiftInterfaces, ArchName, Options))
+      return error(toString(std::move(E)));
+  }
+  
+  return Streamer->finish(Map, Options.Translator);
 } // namespace dsymutil
 
 bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
