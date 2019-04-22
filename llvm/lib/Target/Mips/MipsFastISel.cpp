@@ -954,21 +954,34 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
   //
   MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
   MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
-  // For now, just try the simplest case where it's fed by a compare.
+
+  // Fold the common case of a conditional branch with a comparison
+  // in the same block.
+  unsigned ZExtCondReg = 0;
   if (const CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition())) {
-    MVT CIMVT =
-        TLI.getValueType(DL, CI->getOperand(0)->getType(), true).getSimpleVT();
-    if (CIMVT == MVT::i1)
+    if (CI->hasOneUse() && CI->getParent() == I->getParent()) {
+      ZExtCondReg = createResultReg(&Mips::GPR32RegClass);
+      if (!emitCmp(ZExtCondReg, CI))
+        return false;
+    }
+  }
+
+  // For the general case, we need to mask with 1.
+  if (ZExtCondReg == 0) {
+    unsigned CondReg = getRegForValue(BI->getCondition());
+    if (CondReg == 0)
       return false;
 
-    unsigned CondReg = getRegForValue(CI);
-    BuildMI(*BrBB, FuncInfo.InsertPt, DbgLoc, TII.get(Mips::BGTZ))
-        .addReg(CondReg)
-        .addMBB(TBB);
-    finishCondBranch(BI->getParent(), TBB, FBB);
-    return true;
+    ZExtCondReg = emitIntExt(MVT::i1, CondReg, MVT::i32, true);
+    if (ZExtCondReg == 0)
+      return false;
   }
-  return false;
+
+  BuildMI(*BrBB, FuncInfo.InsertPt, DbgLoc, TII.get(Mips::BGTZ))
+      .addReg(ZExtCondReg)
+      .addMBB(TBB);
+  finishCondBranch(BI->getParent(), TBB, FBB);
+  return true;
 }
 
 bool MipsFastISel::selectCmp(const Instruction *I) {
