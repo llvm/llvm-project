@@ -64,7 +64,7 @@ namespace SPIRV {
 
 cl::opt<bool> SPIRVLowerConst(
     "spirv-lower-const-expr", cl::init(true),
-    cl::desc("LLVM/SPIR-V translation enalbe lowering constant expression"));
+    cl::desc("LLVM/SPIR-V translation enable lowering constant expression"));
 
 class SPIRVLowerConstExpr : public ModulePass {
 public:

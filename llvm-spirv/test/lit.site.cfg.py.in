@@ -15,7 +15,7 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.test_run_dir = "@CMAKE_CURRENT_BINARY_DIR@"
-config.skip_spirv_debug_info_tests = @SKIP_SPIRV_DEBUG_INFO_TESTS@
+config.spirv_skip_debug_info_tests = @SPIRV_SKIP_DEBUG_INFO_TESTS@
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

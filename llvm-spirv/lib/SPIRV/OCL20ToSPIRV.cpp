@@ -827,16 +827,28 @@ void OCL20ToSPIRV::transAtomicBuiltin(CallInst *CI, OCLBuiltinTransInfo &Info) {
         const size_t ArgsCount = Args.size();
         const size_t ScopeIdx = ArgsCount - 1;
         const size_t OrderIdx = ScopeIdx - NumOrder;
-        Args[ScopeIdx] =
-            mapUInt(M, cast<ConstantInt>(Args[ScopeIdx]), [](unsigned I) {
-              return map<Scope>(static_cast<OCLScopeKind>(I));
+        if (auto ScopeInt = dyn_cast_or_null<ConstantInt>(Args[ScopeIdx])) {
+          Args[ScopeIdx] = mapUInt(M, ScopeInt, [](unsigned I) {
+            return map<Scope>(static_cast<OCLScopeKind>(I));
+          });
+        } else {
+          // SPIR-V 1.3 r6 s2.16.2: All <id> used for Scope and Memory
+          // Semantics must be of an OpConstant.
+          Ctx->emitError(CI, "memory_scope argument needs to be constant");
+        }
+        for (size_t I = 0; I < NumOrder; ++I) {
+          if (auto OrderInt =
+                  dyn_cast_or_null<ConstantInt>(Args[OrderIdx + I])) {
+            Args[OrderIdx + I] = mapUInt(M, OrderInt, [](unsigned Ord) {
+              return mapOCLMemSemanticToSPIRV(
+                  0, static_cast<OCLMemOrderKind>(Ord));
             });
-        for (size_t I = 0; I < NumOrder; ++I)
-          Args[OrderIdx + I] = mapUInt(
-              M, cast<ConstantInt>(Args[OrderIdx + I]), [](unsigned Ord) {
-                return mapOCLMemSemanticToSPIRV(
-                    0, static_cast<OCLMemOrderKind>(Ord));
-              });
+          } else {
+            // SPIR-V 1.3 r6 s2.16.2: All <id> used for Scope and Memory
+            // Semantics must be of an OpConstant.
+            Ctx->emitError(CI, "memory_order argument needs to be constant");
+          }
+        }
         // Order of args in SPIR-V:
         // object, scope, 1-2 order, 0-2 other args
         std::swap(Args[1], Args[ScopeIdx]);
@@ -1229,9 +1241,9 @@ void OCL20ToSPIRV::transWorkItemBuiltinsToVariables() {
     bool IsVec = I.getFunctionType()->getNumParams() > 0;
     Type *GVType =
         IsVec ? VectorType::get(I.getReturnType(), 3) : I.getReturnType();
-    auto BV = new GlobalVariable(
-        *M, GVType, true, GlobalValue::ExternalLinkage, nullptr, BuiltinVarName,
-        0, GlobalVariable::NotThreadLocal, SPIRAS_Constant);
+    auto BV = new GlobalVariable(*M, GVType, true, GlobalValue::ExternalLinkage,
+                                 nullptr, BuiltinVarName, 0,
+                                 GlobalVariable::NotThreadLocal, SPIRAS_Input);
     std::vector<Instruction *> InstList;
     for (auto UI = I.user_begin(), UE = I.user_end(); UI != UE; ++UI) {
       auto CI = dyn_cast<CallInst>(*UI);

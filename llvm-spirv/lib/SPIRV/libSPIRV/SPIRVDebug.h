@@ -60,7 +60,7 @@ extern bool SPIRVDbgEnable;
 extern bool SPIRVDbgErrorMsgIncludesSourceInfo;
 
 // Enable assert on error
-extern bool SPIRVDbgAssertOnError;
+extern bool SPIRVDbgAbortOnError;
 
 // Output stream for SPIRV debug information.
 inline spv_ostream &spvdbgs() {

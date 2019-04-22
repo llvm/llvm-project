@@ -107,6 +107,8 @@ public:
   // Error handling functions
   virtual SPIRVErrorLog &getErrorLog() = 0;
   virtual SPIRVErrorCode getError(std::string &) = 0;
+  void setInvalid() { IsValid = false; }
+  bool isModuleValid() { return IsValid; }
 
   // Module query functions
   virtual SPIRVAddressingModelKind getAddressingModel() = 0;
@@ -380,6 +382,9 @@ public:
 protected:
   bool AutoAddCapability;
   bool ValidateCapability;
+
+private:
+  bool IsValid;
 };
 
 

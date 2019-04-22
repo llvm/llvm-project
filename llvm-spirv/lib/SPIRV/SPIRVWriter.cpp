@@ -55,6 +55,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -89,10 +90,6 @@
 using namespace llvm;
 using namespace SPIRV;
 using namespace OCLUtil;
-
-namespace llvm {
-FunctionPass *createPromoteMemoryToRegisterPass();
-} // namespace llvm
 
 namespace SPIRV {
 
@@ -342,13 +339,22 @@ SPIRVType *LLVMToSPIRV::transType(Type *T) {
     return mapType(T, BM->addVectorType(transType(T->getVectorElementType()),
                                         T->getVectorNumElements()));
 
-  if (T->isArrayTy())
+  if (T->isArrayTy()) {
+    // SPIR-V 1.3 s3.32.6: Length is the number of elements in the array.
+    //                     It must be at least 1.
+    if (T->getArrayNumElements() < 1) {
+      std::string Str;
+      llvm::raw_string_ostream OS(Str);
+      OS << *T;
+      SPIRVCK(T->getArrayNumElements() >= 1, InvalidArraySize, OS.str());
+    }
     return mapType(T, BM->addArrayType(
                           transType(T->getArrayElementType()),
                           static_cast<SPIRVConstant *>(transValue(
                               ConstantInt::get(getSizetType(),
                                                T->getArrayNumElements(), false),
                               nullptr))));
+  }
 
   if (T->isStructTy() && !T->isSized()) {
     auto ST = dyn_cast<StructType>(T);
@@ -1106,6 +1112,65 @@ SPIRVValue *LLVMToSPIRV::oclTransSpvcCastSampler(CallInst *CI,
   return BV;
 }
 
+std::vector<std::pair<Decoration, std::string>>
+parseAnnotations(StringRef AnnotatedCode) {
+  std::vector<std::pair<Decoration, std::string>> Decorates;
+
+  size_t OpenBracketNum = AnnotatedCode.count('{');
+  size_t CloseBracketNum = AnnotatedCode.count('}');
+  if (OpenBracketNum != CloseBracketNum)
+    return {};
+
+  for (size_t I = 0; I < OpenBracketNum; ++I) {
+    size_t From = AnnotatedCode.find('{');
+    size_t To = AnnotatedCode.find('}', From);
+    StringRef AnnotatedDecoration = AnnotatedCode.substr(From + 1, To - 1);
+    std::pair<StringRef, StringRef> D = AnnotatedDecoration.split(':');
+
+    StringRef F = D.first;
+    Decoration Dec =
+        llvm::StringSwitch<Decoration>(F)
+            .Case("memory", DecorationMemoryINTEL)
+            .Case("register", DecorationRegisterINTEL)
+            .Case("numbanks", DecorationNumbanksINTEL)
+            .Case("bankwidth", DecorationBankwidthINTEL)
+            .Case("max_concurrency", DecorationMaxconcurrencyINTEL);
+
+    Decorates.push_back({Dec, D.second});
+    AnnotatedCode = AnnotatedCode.drop_front(To + 1);
+  }
+  return Decorates;
+}
+
+void addIntelFPGADecorations(
+    SPIRVEntry *E,
+    std::vector<std::pair<Decoration, std::string>> &Decorations) {
+  for (const auto &I : Decorations) {
+    if (I.first == DecorationMemoryINTEL)
+      E->addDecorate(new SPIRVDecorateMemoryINTELAttr(E, I.second));
+    else {
+      SPIRVWord Result = 0;
+      StringRef(I.second).getAsInteger(10, Result);
+      E->addDecorate(I.first, Result);
+    }
+  }
+}
+
+void addIntelFPGADecorationsForStructMember(
+    SPIRVEntry *E, SPIRVWord MemberNumber,
+    std::vector<std::pair<Decoration, std::string>> &Decorations) {
+  for (const auto &I : Decorations) {
+    if (I.first == DecorationMemoryINTEL)
+      E->addMemberDecorate(
+          new SPIRVMemberDecorateMemoryINTELAttr(E, MemberNumber, I.second));
+    else {
+      SPIRVWord Result = 0;
+      StringRef(I.second).getAsInteger(10, Result);
+      E->addMemberDecorate(MemberNumber, I.first, Result);
+    }
+  }
+}
+
 SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
                                             SPIRVBasicBlock *BB) {
   auto GetMemoryAccess = [](MemIntrinsic *MI) -> std::vector<SPIRVWord> {
@@ -1192,11 +1257,56 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
     return DbgTran->createDebugDeclarePlaceholder(cast<DbgDeclareInst>(II), BB);
   case Intrinsic::dbg_value:
     return DbgTran->createDebugValuePlaceholder(cast<DbgValueInst>(II), BB);
+  case Intrinsic::var_annotation: {
+    SPIRVValue *SV;
+    if (auto *BI = dyn_cast<BitCastInst>(II->getArgOperand(0))) {
+      SV = transValue(BI->getOperand(0), BB);
+    } else {
+      SV = transValue(II->getOperand(0), BB);
+    }
+
+    GetElementPtrInst *GEP = cast<GetElementPtrInst>(II->getArgOperand(1));
+    Constant *C = cast<Constant>(GEP->getOperand(0));
+    StringRef AnnotationString =
+        cast<ConstantDataArray>(C->getOperand(0))->getAsString();
+
+    std::vector<std::pair<Decoration, std::string>> Decorations =
+        parseAnnotations(AnnotationString);
+
+    addIntelFPGADecorations(SV, Decorations);
+    return SV;
+  }
+  case Intrinsic::ptr_annotation: {
+    GetElementPtrInst *GI;
+    if (auto *BI = dyn_cast<BitCastInst>(II->getArgOperand(0))) {
+      GI = dyn_cast<GetElementPtrInst>(BI->getOperand(0));
+    } else {
+      GI = dyn_cast<GetElementPtrInst>(II->getOperand(0));
+    }
+    SPIRVType *Ty = transType(GI->getSourceElementType());
+
+    SPIRVWord MemberNumber =
+        dyn_cast<ConstantInt>(GI->getOperand(2))->getZExtValue();
+
+    GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(II->getArgOperand(1));
+    Constant *C = dyn_cast<Constant>(GEP->getOperand(0));
+    StringRef AnnotationString =
+        dyn_cast<ConstantDataArray>(C->getOperand(0))->getAsString();
+
+    std::vector<std::pair<Decoration, std::string>> Decorations =
+        parseAnnotations(AnnotationString);
+
+    addIntelFPGADecorationsForStructMember(Ty, MemberNumber, Decorations);
+
+    II->replaceAllUsesWith(II->getOperand(0));
+    return 0;
+  }
   default:
     // LLVM intrinsic functions shouldn't get to SPIRV, because they
     // would have no definition there.
     BM->getErrorLog().checkError(false, SPIRVEC_InvalidFunctionCall,
-                                 II->getName().str(), "", __FILE__, __LINE__);
+                                 II->getCalledValue()->getName().str(), "",
+                                 __FILE__, __LINE__);
   }
   return nullptr;
 }

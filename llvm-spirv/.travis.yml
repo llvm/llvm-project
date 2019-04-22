@@ -93,9 +93,11 @@ script:
         -DLLVM_BUILD_TOOLS=ON \
         -DLLVM_BUILD_TESTS=ON \
         -DLLVM_INCLUDE_TESTS=ON \
-        -DSKIP_SPIRV_DEBUG_INFO_TESTS=ON \
+        -DSPIRV_SKIP_CLANG_BUILD=ON \
+        -DSPIRV_SKIP_DEBUG_INFO_TESTS=ON \
         -DLLVM_LIT_ARGS="-sv --no-progress-bar" \
         -G "Unix Makefiles"
+      ln -s /usr/lib/llvm-9/bin/clang bin/
     fi
   - if [ $CHECK_FORMAT == "1" ]; then
       cd ..;

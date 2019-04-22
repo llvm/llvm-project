@@ -1,6 +1,3 @@
-#ifndef SPIRV_LIBSPIRV_SPIRVERRORENUM_H
-#define SPIRV_LIBSPIRV_SPIRVERRORENUM_H
-
 /* The error code name should be meaningful since it is part of error message */
 _SPIRV_OP(Success, "")
 _SPIRV_OP(InvalidTargetTriple,
@@ -10,5 +7,5 @@ _SPIRV_OP(InvalidMemoryModel, "Expects 0-3.")
 _SPIRV_OP(InvalidFunctionControlMask, "")
 _SPIRV_OP(InvalidBuiltinSetName, "Expects OpenCL.std.")
 _SPIRV_OP(InvalidFunctionCall, "Unexpected llvm intrinsic:")
-
-#endif
+_SPIRV_OP(InvalidArraySize, "Array size must be at least 1:")
+_SPIRV_OP(InvalidModule, "Invalid SPIR-V module:")

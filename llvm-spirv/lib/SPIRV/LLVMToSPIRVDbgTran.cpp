@@ -352,6 +352,18 @@ SPIRVEntry *LLVMToSPIRVDbgTran::getScope(DIScope *S) {
   }
 }
 
+SPIRVEntry *LLVMToSPIRVDbgTran::getGlobalVariable(const DIGlobalVariable *GV) {
+  for (GlobalVariable &V : M->globals()) {
+    SmallVector<DIGlobalVariableExpression *, 4> GVs;
+    V.getDebugInfo(GVs);
+    for (DIGlobalVariableExpression *GVE : GVs) {
+      if (GVE->getVariable() == GV)
+        return SPIRVWriter->transValue(&V, nullptr);
+    }
+  }
+  return getDebugInfoNone();
+}
+
 SPIRVWord mapDebugFlags(DINode::DIFlags DFlags) {
   SPIRVWord Flags = 0;
   if ((DFlags & DINode::FlagAccessibility) == DINode::FlagPublic)
@@ -758,20 +770,15 @@ LLVMToSPIRVDbgTran::transDbgGlobalVariable(const DIGlobalVariable *GV) {
   if (Context && (isa<DINamespace>(Context) || isa<DISubprogram>(Context)))
     Parent = transDbgEntry(Context);
   Ops[ParentIdx] = Parent->getId();
+
   Ops[LinkageNameIdx] = BM->getString(GV->getLinkageName())->getId();
-
-  // Variable
-  SPIRVEntry *Var = getDebugInfoNone();
-  llvm::GlobalVariable *V = M->getGlobalVariable(GV->getName());
-  if (!V)
-    V = M->getGlobalVariable(GV->getLinkageName());
-  if (V)
-    Var = SPIRVWriter->transValue(V, nullptr);
-  Ops[VariableIdx] = Var->getId();
-
+  Ops[VariableIdx] = getGlobalVariable(GV)->getId();
   Ops[FlagsIdx] = transDebugFlags(GV);
+
+  // Check if GV is the definition of previously declared static member
   if (DIDerivedType *StaticMember = GV->getStaticDataMemberDeclaration())
     Ops.push_back(transDbgEntry(StaticMember)->getId());
+
   return BM->addDebugInfo(SPIRVDebug::GlobalVariable, getVoidTy(), Ops);
 }
 

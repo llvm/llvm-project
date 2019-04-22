@@ -67,7 +67,7 @@ enum SPIRVErrorCode {
 #undef _SPIRV_OP
 };
 
-// Defines OpErorMap which maps error code to a string describing the error.
+// Defines SPIRVErrorMap which maps error code to a string describing the error.
 template <> inline void SPIRVMap<SPIRVErrorCode, std::string>::init() {
 #define _SPIRV_OP(x, y) add(SPIRVEC_##x, std::string(#x) + ": " + (y));
 #include "SPIRVErrorEnum.h"
@@ -110,13 +110,13 @@ inline bool SPIRVErrorLog::checkError(bool Cond, SPIRVErrorCode ErrCode,
   if (ErrorCode != SPIRVEC_Success)
     return Cond;
   SS << SPIRVErrorMap::map(ErrCode) << " " << Msg;
-  if (SPIRVDbgErrorMsgIncludesSourceInfo)
+  if (SPIRVDbgErrorMsgIncludesSourceInfo && FileName)
     SS << " [Src: " << FileName << ":" << LineNo << " " << CondString << " ]";
   setError(ErrCode, SS.str());
-  if (SPIRVDbgAssertOnError) {
+  if (SPIRVDbgAbortOnError) {
     spvdbgs() << SS.str() << '\n';
     spvdbgs().flush();
-    assert(0);
+    abort();
   }
   return Cond;
 }

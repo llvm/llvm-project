@@ -89,6 +89,8 @@ void SPIRVDecorate::encode(spv_ostream &O) const {
   Encoder << Target << Dec;
   if (Dec == DecorationLinkageAttributes)
     SPIRVDecorateLinkageAttr::encodeLiterals(Encoder, Literals);
+  else if (Dec == DecorationMemoryINTEL)
+    SPIRVDecorateMemoryINTELAttr::encodeLiterals(Encoder, Literals);
   else
     Encoder << Literals;
 }
@@ -103,13 +105,20 @@ void SPIRVDecorate::decode(std::istream &I) {
   Decoder >> Target >> Dec;
   if (Dec == DecorationLinkageAttributes)
     SPIRVDecorateLinkageAttr::decodeLiterals(Decoder, Literals);
+  else if (Dec == DecorationMemoryINTEL)
+    SPIRVDecorateMemoryINTELAttr::decodeLiterals(Decoder, Literals);
   else
     Decoder >> Literals;
   getOrCreateTarget()->addDecorate(this);
 }
 
 void SPIRVMemberDecorate::encode(spv_ostream &O) const {
-  getEncoder(O) << Target << MemberNumber << Dec << Literals;
+  SPIRVEncoder Encoder = getEncoder(O);
+  Encoder << Target << MemberNumber << Dec;
+  if (Dec == DecorationMemoryINTEL)
+    SPIRVDecorateMemoryINTELAttr::encodeLiterals(Encoder, Literals);
+  else
+    Encoder << Literals;
 }
 
 void SPIRVMemberDecorate::setWordCount(SPIRVWord Count) {
@@ -118,7 +127,12 @@ void SPIRVMemberDecorate::setWordCount(SPIRVWord Count) {
 }
 
 void SPIRVMemberDecorate::decode(std::istream &I) {
-  getDecoder(I) >> Target >> MemberNumber >> Dec >> Literals;
+  SPIRVDecoder Decoder = getDecoder(I);
+  Decoder >> Target >> MemberNumber >> Dec;
+  if (Dec == DecorationMemoryINTEL)
+    SPIRVDecorateMemoryINTELAttr::decodeLiterals(Decoder, Literals);
+  else
+    Decoder >> Literals;
   getOrCreateTarget()->addMemberDecorate(this);
 }
 
@@ -197,6 +211,12 @@ bool operator==(const SPIRVDecorateGeneric &A, const SPIRVDecorateGeneric &B) {
     return false;
   if (A.getOpCode() != B.getOpCode())
     return false;
+  if (B.isMemberDecorate()) {
+    auto &MDA = static_cast<SPIRVMemberDecorate const &>(A);
+    auto &MDB = static_cast<SPIRVMemberDecorate const &>(B);
+    if (MDA.getMemberNumber() != MDB.getMemberNumber())
+      return false;
+  }
   if (A.getDecorateKind() != B.getDecorateKind())
     return false;
   if (A.getLiteralCount() != B.getLiteralCount())

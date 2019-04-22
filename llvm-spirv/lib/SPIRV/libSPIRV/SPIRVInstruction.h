@@ -1084,10 +1084,12 @@ public:
   SPIRVBasicBlock *getDefault() const {
     return static_cast<SPIRVBasicBlock *>(getValue(Default));
   }
-  size_t getLiteralsCount() const {
-    return getSelect()->getType()->getBitWidth() / (sizeof(SPIRVWord) * 8);
+  size_t getLiteralSize() const {
+    unsigned ByteWidth = getSelect()->getType()->getBitWidth() / 8;
+    unsigned Remainder = (ByteWidth % sizeof(SPIRVWord)) != 0;
+    return (ByteWidth / sizeof(SPIRVWord)) + Remainder;
   }
-  size_t getPairSize() const { return getLiteralsCount() + 1; }
+  size_t getPairSize() const { return getLiteralSize() + 1; }
   size_t getNumPairs() const { return Pairs.size() / getPairSize(); }
   void
   foreachPair(std::function<void(LiteralTy, SPIRVBasicBlock *)> Func) const {
@@ -1095,10 +1097,10 @@ public:
     for (size_t I = 0, E = getNumPairs(); I != E; ++I) {
       SPIRVEntry *BB;
       LiteralTy Literals;
-      if (!Module->exist(Pairs[PairSize * I + getLiteralsCount()], &BB))
+      if (!Module->exist(Pairs[PairSize * I + getLiteralSize()], &BB))
         continue;
 
-      for (size_t J = 0; J < getLiteralsCount(); ++J) {
+      for (size_t J = 0; J < getLiteralSize(); ++J) {
         Literals.push_back(Pairs.at(PairSize * I + J));
       }
       Func(Literals, static_cast<SPIRVBasicBlock *>(BB));

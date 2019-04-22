@@ -94,6 +94,7 @@ private:
   SPIRVType *getVoidTy();
   SPIRVEntry *getScope(DIScopeRef SR);
   SPIRVEntry *getScope(DIScope *SR);
+  SPIRVEntry *getGlobalVariable(const DIGlobalVariable *GV);
 
   // No debug info
   SPIRVEntry *getDebugInfoNone();

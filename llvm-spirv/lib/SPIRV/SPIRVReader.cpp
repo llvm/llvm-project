@@ -109,8 +109,6 @@ const static char *Restrict = "restrict";
 const static char *Pipe = "pipe";
 } // namespace kOCLTypeQualifierName
 
-typedef std::pair<unsigned, AttributeList> AttributeWithIndex;
-
 static bool isOpenCLKernel(SPIRVFunction *BF) {
   return BF->getModule()->isEntryPoint(ExecutionModelKernel, BF->getId());
 }
@@ -168,13 +166,6 @@ static void addOCLKernelArgumentMetadata(
   BF->foreachArgument(
       [&](SPIRVFunctionParameter *Arg) { ValueVec.push_back(Func(Arg)); });
   Fn->setMetadata(MDName, MDNode::get(*Context, ValueVec));
-}
-
-Type *SPIRVToLLVM::getTranslatedType(SPIRVType *BV) {
-  auto Loc = TypeMap.find(BV);
-  if (Loc != TypeMap.end())
-    return Loc->second;
-  return nullptr;
 }
 
 Value *SPIRVToLLVM::getTranslatedValue(SPIRVValue *BV) {
@@ -1258,8 +1249,11 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
     auto BR = static_cast<SPIRVBranch *>(BV);
     auto BI = BranchInst::Create(
         dyn_cast<BasicBlock>(transValue(BR->getTargetLabel(), F, BB)), BB);
-    if (auto LM = static_cast<SPIRVLoopMerge *>(BR->getPrevious()))
+    auto Prev = BR->getPrevious();
+    if (Prev && Prev->getOpCode() == OpLoopMerge) {
+      auto LM = static_cast<SPIRVLoopMerge *>(Prev);
       setLLVMLoopMetadata(LM, BI);
+    }
     return mapValue(BV, BI);
   }
 
@@ -1269,8 +1263,11 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
         dyn_cast<BasicBlock>(transValue(BR->getTrueLabel(), F, BB)),
         dyn_cast<BasicBlock>(transValue(BR->getFalseLabel(), F, BB)),
         transValue(BR->getCondition(), F, BB), BB);
-    if (auto LM = static_cast<SPIRVLoopMerge *>(BR->getPrevious()))
+    auto Prev = BR->getPrevious();
+    if (Prev && Prev->getOpCode() == OpLoopMerge) {
+      auto LM = static_cast<SPIRVLoopMerge *>(Prev);
       setLLVMLoopMetadata(LM, BC);
+    }
     return mapValue(BV, BC);
   }
 
@@ -1310,7 +1307,7 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
       S = Builder.getInt64(Size);
     Value *Var = transValue(LTStart->getObject(), F, BB);
     CallInst *Start = Builder.CreateLifetimeStart(Var, S);
-    return mapValue(BV, Start->getOperand(1));
+    return mapValue(BV, Start);
   }
 
   case OpLifetimeStop: {
@@ -1999,8 +1996,7 @@ Instruction *SPIRVToLLVM::transBuiltinFromInst(const std::string &FuncName,
   setAttrByCalledFunc(Call);
   SPIRVDBG(spvdbgs() << "[transInstToBuiltinCall] " << *BI << " -> ";
            dbgs() << *Call << '\n';)
-  Instruction *Inst = Call;
-  Inst = transOCLBuiltinPostproc(BI, Call, BB, FuncName);
+  Instruction *Inst = transOCLBuiltinPostproc(BI, Call, BB, FuncName);
   return Inst;
 }
 
@@ -2189,9 +2185,108 @@ bool SPIRVToLLVM::transAddressingModel() {
   return true;
 }
 
+void generateIntelFPGAAnnotation(const SPIRVEntry *E,
+                                 llvm::SmallString<256> &AnnotStr) {
+  llvm::raw_svector_ostream Out(AnnotStr);
+  if (E->hasDecorate(DecorationRegisterINTEL))
+    Out << "{register:1}";
+
+  SPIRVWord Result = 0;
+  if (E->hasDecorate(DecorationMemoryINTEL)) {
+    Out << "{memory:" << E->getDecorationStringLiteral(DecorationMemoryINTEL)
+        << '}';
+  }
+  if (E->hasDecorate(DecorationBankwidthINTEL, 0, &Result))
+    Out << "{bankwidth:" << Result << '}';
+  if (E->hasDecorate(DecorationNumbanksINTEL, 0, &Result))
+    Out << "{numbanks:" << Result << '}';
+  if (E->hasDecorate(DecorationMaxconcurrencyINTEL, 0, &Result))
+    Out << "{max_concurrency:" << Result << '}';
+}
+
+void generateIntelFPGAAnnotationForStructMember(
+    const SPIRVEntry *E, SPIRVWord MemberNumber,
+    llvm::SmallString<256> &AnnotStr) {
+  llvm::raw_svector_ostream Out(AnnotStr);
+  if (E->hasMemberDecorate(DecorationRegisterINTEL, 0, MemberNumber))
+    Out << "{register:1}";
+
+  SPIRVWord Result = 0;
+  if (E->hasMemberDecorate(DecorationMemoryINTEL, 0, MemberNumber, &Result))
+    Out << "{memory:"
+        << E->getMemberDecorationStringLiteral(DecorationMemoryINTEL,
+                                               MemberNumber)
+        << '}';
+  if (E->hasMemberDecorate(DecorationBankwidthINTEL, 0, MemberNumber, &Result))
+    Out << "{bankwidth:" << Result << '}';
+  if (E->hasMemberDecorate(DecorationNumbanksINTEL, 0, MemberNumber, &Result))
+    Out << "{numbanks:" << Result << '}';
+  if (E->hasMemberDecorate(DecorationMaxconcurrencyINTEL, 0, MemberNumber,
+                           &Result))
+    Out << "{max_concurrency:" << Result << '}';
+}
+
+void SPIRVToLLVM::transIntelFPGADecorations(SPIRVValue *BV, Value *V) {
+  if (BV->isVariable()) {
+    if (auto AL = dyn_cast<AllocaInst>(V)) {
+      IRBuilder<> Builder(AL->getParent());
+
+      SPIRVType *ST = BV->getType()->getPointerElementType();
+
+      Type *Int8PtrTyPrivate = Type::getInt8PtrTy(*Context, SPIRAS_Private);
+      IntegerType *Int32Ty = IntegerType::get(*Context, 32);
+
+      Value *UndefInt8Ptr = UndefValue::get(Int8PtrTyPrivate);
+      Value *UndefInt32 = UndefValue::get(Int32Ty);
+
+      if (ST->isTypeStruct()) {
+        SPIRVTypeStruct *STS = static_cast<SPIRVTypeStruct *>(ST);
+
+        for (SPIRVWord I = 0; I < STS->getMemberCount(); ++I) {
+          SmallString<256> AnnotStr;
+          generateIntelFPGAAnnotationForStructMember(ST, I, AnnotStr);
+          if (!AnnotStr.empty()) {
+            auto *GS = Builder.CreateGlobalStringPtr(AnnotStr);
+
+            auto AnnotationFn = llvm::Intrinsic::getDeclaration(
+                M, Intrinsic::ptr_annotation, Int8PtrTyPrivate);
+
+            auto GEP = Builder.CreateConstInBoundsGEP2_32(
+                AL->getAllocatedType(), AL, 0, I);
+
+            llvm::Value *Args[] = {
+                Builder.CreateBitCast(GEP, Int8PtrTyPrivate, GEP->getName()),
+                Builder.CreateBitCast(GS, Int8PtrTyPrivate), UndefInt8Ptr,
+                UndefInt32};
+            Builder.CreateCall(AnnotationFn, Args);
+          }
+        }
+      } else {
+        SmallString<256> AnnotStr;
+        generateIntelFPGAAnnotation(BV, AnnotStr);
+        if (!AnnotStr.empty()) {
+          auto *GS = Builder.CreateGlobalStringPtr(AnnotStr);
+
+          auto AnnotationFn =
+              llvm::Intrinsic::getDeclaration(M, Intrinsic::var_annotation);
+
+          llvm::Value *Args[] = {
+              Builder.CreateBitCast(V, Int8PtrTyPrivate, V->getName()),
+              Builder.CreateBitCast(GS, Int8PtrTyPrivate), UndefInt8Ptr,
+              UndefInt32};
+          Builder.CreateCall(AnnotationFn, Args);
+        }
+      }
+    }
+  }
+}
+
 bool SPIRVToLLVM::transDecoration(SPIRVValue *BV, Value *V) {
   if (!transAlign(BV, V))
     return false;
+
+  transIntelFPGADecorations(BV, V);
+
   DbgTran->transDbgInfo(BV, V);
   return true;
 }
@@ -2805,11 +2900,15 @@ Instruction *SPIRVToLLVM::transOCLRelational(SPIRVInstruction *I,
 
 bool llvm::readSpirv(LLVMContext &C, std::istream &IS, Module *&M,
                      std::string &ErrMsg) {
-  M = new Module("", C);
   std::unique_ptr<SPIRVModule> BM(SPIRVModule::createSPIRVModule());
 
   IS >> *BM;
+  if (!BM->isModuleValid()) {
+    M = nullptr;
+    return false;
+  }
 
+  M = new Module("", C);
   SPIRVToLLVM BTL(M, BM.get());
   bool Succeed = true;
   if (!BTL.translate()) {

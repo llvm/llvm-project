@@ -940,7 +940,7 @@ MDNode *SPIRVToLLVMDbgTran::transDebugInlined(const SPIRVExtInst *Inst) {
     InlinedAt =
         transDebugInst<DILocation>(BM->get<SPIRVExtInst>(Ops[InlinedIdx]));
   }
-  return DILocation::get(M->getContext(), Line, Col, Scope, InlinedAt);
+  return DILocation::getDistinct(M->getContext(), Line, Col, Scope, InlinedAt);
 }
 
 void SPIRVToLLVMDbgTran::finalize() {

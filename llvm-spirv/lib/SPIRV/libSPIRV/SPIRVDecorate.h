@@ -310,6 +310,58 @@ public:
   void decorateTargets() override;
 };
 
+class SPIRVDecorateMemoryINTELAttr : public SPIRVDecorate {
+public:
+  // Complete constructor for MemoryINTEL decoration
+  SPIRVDecorateMemoryINTELAttr(SPIRVEntry *TheTarget,
+                               const std::string &MemoryType)
+      : SPIRVDecorate(DecorationMemoryINTEL, TheTarget) {
+    for (auto &I : getVec(MemoryType))
+      Literals.push_back(I);
+    WordCount += Literals.size();
+  }
+  // Incomplete constructor
+  SPIRVDecorateMemoryINTELAttr() : SPIRVDecorate() {}
+
+  static void encodeLiterals(SPIRVEncoder &Encoder,
+                             const std::vector<SPIRVWord> &Literals) {
+#ifdef _SPIRV_SUPPORT_TEXT_FMT
+    if (SPIRVUseTextFormat) {
+      Encoder << getString(Literals.cbegin(), Literals.cend());
+    } else
+#endif
+      Encoder << Literals;
+  }
+
+  static void decodeLiterals(SPIRVDecoder &Decoder,
+                             std::vector<SPIRVWord> &Literals) {
+#ifdef _SPIRV_SUPPORT_TEXT_FMT
+    if (SPIRVUseTextFormat) {
+      std::string MemoryType;
+      Decoder >> MemoryType;
+      std::copy_n(getVec(MemoryType).begin(), Literals.size(),
+                  Literals.begin());
+    } else
+#endif
+      Decoder >> Literals;
+  }
+};
+
+class SPIRVMemberDecorateMemoryINTELAttr : public SPIRVMemberDecorate {
+public:
+  // Complete constructor for MemoryINTEL decoration
+  SPIRVMemberDecorateMemoryINTELAttr(SPIRVEntry *TheTarget,
+                                     SPIRVWord MemberNumber,
+                                     const std::string &MemoryType)
+      : SPIRVMemberDecorate(DecorationMemoryINTEL, MemberNumber, TheTarget) {
+    for (auto &I : getVec(MemoryType))
+      Literals.push_back(I);
+    WordCount += Literals.size();
+  }
+  // Incomplete constructor
+  SPIRVMemberDecorateMemoryINTELAttr() : SPIRVMemberDecorate() {}
+};
+
 } // namespace SPIRV
 
 #endif // SPIRV_LIBSPIRV_SPIRVDECORATE_H

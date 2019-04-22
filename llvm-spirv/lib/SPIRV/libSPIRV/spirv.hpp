@@ -388,6 +388,11 @@ enum Decoration {
     DecorationPassthroughNV = 5250,
     DecorationViewportRelativeNV = 5252,
     DecorationSecondaryViewportRelativeNV = 5256,
+    DecorationRegisterINTEL = 5825,
+    DecorationMemoryINTEL = 5826,
+    DecorationNumbanksINTEL = 5827,
+    DecorationBankwidthINTEL = 5828,
+    DecorationMaxconcurrencyINTEL = 5829,
     DecorationMax = 0x7fffffff,
 };
 
@@ -656,6 +661,7 @@ enum Capability {
   CapabilitySubgroupAvcMotionEstimationINTEL = 5696,
   CapabilitySubgroupAvcMotionEstimationIntraINTEL = 5697,
   CapabilitySubgroupAvcMotionEstimationChromaINTEL = 5698,
+  CapabilityFPGAMemoryAttributesINTEL = 5824,
   CapabilityMax = 0x7fffffff,
 };
 

@@ -54,7 +54,7 @@
 namespace SPIRV {
 
 SPIRVModule::SPIRVModule()
-    : AutoAddCapability(true), ValidateCapability(false) {}
+    : AutoAddCapability(true), ValidateCapability(false), IsValid(true) {}
 
 SPIRVModule::~SPIRVModule() {}
 
@@ -1529,10 +1529,19 @@ std::istream &operator>>(std::istream &I, SPIRVModule &M) {
 
   SPIRVWord Magic;
   Decoder >> Magic;
-  assert(Magic == MagicNumber && "Invalid magic number");
+  if (!M.getErrorLog().checkError(Magic == MagicNumber, SPIRVEC_InvalidModule,
+                                  "invalid magic number")) {
+    M.setInvalid();
+    return I;
+  }
 
   Decoder >> MI.SPIRVVersion;
-  assert(MI.SPIRVVersion <= SPV_VERSION && "Unsupported SPIRV version number");
+  if (!M.getErrorLog().checkError(MI.SPIRVVersion <= SPV_VERSION,
+                                  SPIRVEC_InvalidModule,
+                                  "unsupported SPIRV version number")) {
+    M.setInvalid();
+    return I;
+  }
 
   SPIRVWord Generator = 0;
   Decoder >> Generator;
@@ -1543,8 +1552,12 @@ std::istream &operator>>(std::istream &I, SPIRVModule &M) {
   Decoder >> MI.NextId;
 
   Decoder >> MI.InstSchema;
-  assert(MI.InstSchema == SPIRVISCH_Default &&
-         "Unsupported instruction schema");
+  if (!M.getErrorLog().checkError(MI.InstSchema == SPIRVISCH_Default,
+                                  SPIRVEC_InvalidModule,
+                                  "unsupported instruction schema")) {
+    M.setInvalid();
+    return I;
+  }
 
   while (Decoder.getWordCountAndOpCode()) {
     SPIRVEntry *Entry = Decoder.getEntry();

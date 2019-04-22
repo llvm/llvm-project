@@ -291,9 +291,6 @@ const static char TypePrefix[] = "opencl.intel_sub_group_avc_";
 ///   function is translated to an extended instruction, otherwise ~0U.
 unsigned getExtOp(StringRef MangledName, const std::string &DemangledName = "");
 
-/// Get an empty SPIR-V instruction.
-std::unique_ptr<SPIRVEntry> getSPIRVInst(const OCLBuiltinTransInfo &Info);
-
 /// Get literal arguments of call of atomic_work_item_fence.
 AtomicWorkItemFenceLiterals getAtomicWorkItemFenceLiterals(CallInst *CI);
 
@@ -381,12 +378,6 @@ Instruction *mutateCallInstOCL(
     std::function<std::string(CallInst *, std::vector<Value *> &, Type *&RetTy)>
         ArgMutate,
     std::function<Instruction *(CallInst *)> RetMutate,
-    AttributeList *Attrs = nullptr);
-
-/// Mutate a function to OpenCL builtin function.
-void mutateFunctionOCL(
-    Function *F,
-    std::function<std::string(CallInst *, std::vector<Value *> &)> ArgMutate,
     AttributeList *Attrs = nullptr);
 
 /// Check if instruction is bitcast from spirv.ConstantSampler to spirv.Sampler

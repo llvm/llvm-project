@@ -42,5 +42,5 @@
 using namespace SPIRV;
 
 bool SPIRV::SPIRVDbgEnable = false;
-bool SPIRV::SPIRVDbgAssertOnError = true;
+bool SPIRV::SPIRVDbgAbortOnError = true;
 bool SPIRV::SPIRVDbgErrorMsgIncludesSourceInfo = true;

@@ -44,7 +44,7 @@ add_llvm_library(LLVMSPIRVLib
 
 target_include_directories(LLVMSPIRVLib
   PRIVATE
-    ${LLVM_INCLUDE_DIR}
+    ${LLVM_INCLUDE_DIRS}
     ${LLVM_SPIRV_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/libSPIRV
