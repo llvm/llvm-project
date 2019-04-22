@@ -860,21 +860,13 @@ VersionTuple Decl::getVersionIntroduced() const {
 bool Decl::isDeprecatedInAnyTargetPlatform(std::string *Message) const {
   const TargetInfo &TI = getASTContext().getTargetInfo();
   return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
-             AR_Deprecated ||
-         (TI.hasTargetVariantPlatform() &&
-          getAvailability(TI.getTargetVariantPlatform(),
-                          TI.getTargetVariantPlatformMinVersion()) ==
-              AR_Deprecated);
+         AR_Deprecated;
 }
 
 bool Decl::isUnavailableForAllTargetPlatforms() const {
   const TargetInfo &TI = getASTContext().getTargetInfo();
   return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
-             AR_Unavailable &&
-         (!getASTContext().getTargetInfo().hasTargetVariantPlatform() ||
-          getAvailability(TI.getTargetVariantPlatform(),
-                          TI.getTargetVariantPlatformMinVersion()) ==
-              AR_Unavailable);
+         AR_Unavailable;
 }
 
 bool Decl::canBeWeakImported(bool &IsDefinition) const {
