@@ -281,12 +281,13 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
 
 namespace {
 struct OutputLocation {
-  OutputLocation(std::string DWARFFile, Optional<std::string> ResourceDir = {})
+  OutputLocation(std::string DWARFFile,
+                 llvm::Optional<std::string> ResourceDir = {})
       : DWARFFile(DWARFFile), ResourceDir(ResourceDir) {}
   /// This method is a workaround for older compilers.
-  Optional<std::string> getResourceDir() const { return ResourceDir; }
+  llvm::Optional<std::string> getResourceDir() const { return ResourceDir; }
   std::string DWARFFile;
-  Optional<std::string> ResourceDir;
+  llvm::Optional<std::string> ResourceDir;
 };
 }
 
