@@ -1305,6 +1305,16 @@ auto upper_bound(R &&Range, T &&Value, Compare C)
                           std::forward<T>(Value), C);
 }
 
+template <typename R>
+void stable_sort(R &&Range) {
+  std::stable_sort(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare>
+void stable_sort(R &&Range, Compare C) {
+  std::stable_sort(adl_begin(Range), adl_end(Range), C);
+}
+
 /// Binary search for the first index where a predicate is true.
 /// Returns the first I in [Lo, Hi) where C(I) is true, or Hi if it never is.
 /// Requires that C is always false below some limit, and always true above it.

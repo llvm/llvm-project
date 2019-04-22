@@ -17936,11 +17936,17 @@ static SDValue combineTruncationShuffle(ShuffleVectorSDNode *SVN,
 // If splat-mask contains undef elements, we need to be careful about
 // introducing undef's in the folded mask which are not the result of composing
 // the masks of the shuffles.
-static SDValue combineShuffleOfSplat(ArrayRef<int> UserMask,
-                                     ShuffleVectorSDNode *Splat,
-                                     SelectionDAG &DAG) {
+static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
+                                        SelectionDAG &DAG) {
+  if (!Shuf->getOperand(1).isUndef())
+    return SDValue();
+  auto *Splat = dyn_cast<ShuffleVectorSDNode>(Shuf->getOperand(0));
+  if (!Splat || !Splat->isSplat())
+    return SDValue();
+
+  ArrayRef<int> ShufMask = Shuf->getMask();
   ArrayRef<int> SplatMask = Splat->getMask();
-  assert(UserMask.size() == SplatMask.size() && "Mask length mismatch");
+  assert(ShufMask.size() == SplatMask.size() && "Mask length mismatch");
 
   // Prefer simplifying to the splat-shuffle, if possible. This is legal if
   // every undef mask element in the splat-shuffle has a corresponding undef
@@ -17966,13 +17972,13 @@ static SDValue combineShuffleOfSplat(ArrayRef<int> UserMask,
         return false;
     return true;
   };
-  if (CanSimplifyToExistingSplat(UserMask, SplatMask))
-    return SDValue(Splat, 0);
+  if (CanSimplifyToExistingSplat(ShufMask, SplatMask))
+    return Shuf->getOperand(0);
 
   // Create a new shuffle with a mask that is composed of the two shuffles'
   // masks.
   SmallVector<int, 32> NewMask;
-  for (int Idx : UserMask)
+  for (int Idx : ShufMask)
     NewMask.push_back(Idx == -1 ? -1 : SplatMask[Idx]);
 
   return DAG.getVectorShuffle(Splat->getValueType(0), SDLoc(Splat),
@@ -18135,10 +18141,9 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
   if (SDValue InsElt = replaceShuffleOfInsert(SVN, DAG))
     return InsElt;
 
-  // A shuffle of a single vector that is a splat can always be folded.
-  if (auto *N0Shuf = dyn_cast<ShuffleVectorSDNode>(N0))
-    if (N1->isUndef() && N0Shuf->isSplat())
-      return combineShuffleOfSplat(SVN->getMask(), N0Shuf, DAG);
+  // A shuffle of a single vector that is a splatted value can always be folded.
+  if (SDValue V = combineShuffleOfSplatVal(SVN, DAG))
+    return V;
 
   // If it is a splat, check if the argument vector is another splat or a
   // build_vector.

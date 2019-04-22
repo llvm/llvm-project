@@ -694,7 +694,7 @@ void MachODumper::printNeededLibraries() {
     }
   }
 
-  std::stable_sort(Libs.begin(), Libs.end());
+  llvm::stable_sort(Libs);
 
   for (const auto &L : Libs) {
     outs() << "  " << L << "\n";

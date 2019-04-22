@@ -11,7 +11,7 @@ if (llvm_install_binutils_symlinks) {
   }
 }
 
-# //:llvm-nm depends on this symlink target, see comment in //BUILD.gn.
+# //:llvm-objdump depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
   deps = [
     ":llvm-objdump",

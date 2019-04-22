@@ -84,8 +84,9 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
   case R_386_8:
   case R_386_16:
   case R_386_32:
-  case R_386_TLS_LDO_32:
     return R_ABS;
+  case R_386_TLS_LDO_32:
+    return R_DTPREL;
   case R_386_TLS_GD:
     return R_TLSGD_GOTPLT;
   case R_386_TLS_LDM:
@@ -161,7 +162,7 @@ RelExpr X86::adjustRelaxExpr(RelType Type, const uint8_t *Data,
   default:
     return Expr;
   case R_RELAX_TLS_GD_TO_IE:
-    return R_RELAX_TLS_GD_TO_IE_END;
+    return R_RELAX_TLS_GD_TO_IE_GOTPLT;
   case R_RELAX_TLS_GD_TO_LE:
     return R_RELAX_TLS_GD_TO_LE_NEG;
   }

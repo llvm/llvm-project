@@ -68,6 +68,7 @@ set(LLVM_TEST_DEPENDS
           llvm-exegesis
           llvm-extract
           llvm-isel-fuzzer
+          llvm-jitlink
           llvm-lib
           llvm-link
           llvm-lto2

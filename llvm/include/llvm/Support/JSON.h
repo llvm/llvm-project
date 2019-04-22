@@ -310,8 +310,8 @@ public:
     create<std::string>(std::move(V));
   }
   Value(const llvm::SmallVectorImpl<char> &V)
-      : Value(std::string(V.begin(), V.end())){};
-  Value(const llvm::formatv_object_base &V) : Value(V.str()){};
+      : Value(std::string(V.begin(), V.end())) {}
+  Value(const llvm::formatv_object_base &V) : Value(V.str()) {}
   // Strings: types with reference semantics. Must be valid UTF-8.
   Value(StringRef V) : Type(T_StringRef) {
     create<llvm::StringRef>(V);

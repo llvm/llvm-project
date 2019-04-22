@@ -164,3 +164,8 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ??_C@_0601234567@abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZabcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZabcdefghijklmnopqrtsuvwxyz
 ; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_12@?z
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_12@?z
+; CHECK-NEXT: error: Invalid mangled name

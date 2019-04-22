@@ -88,7 +88,12 @@ static bool isEndCF(const MachineInstr& MI, const SIRegisterInfo* TRI) {
 }
 
 static bool isFullExecCopy(const MachineInstr& MI) {
-  return MI.getOperand(1).getReg() == AMDGPU::EXEC;
+  if (MI.isCopy() && MI.getOperand(1).getReg() == AMDGPU::EXEC) {
+    assert(MI.isFullCopy());
+    return true;
+  }
+
+  return false;
 }
 
 static unsigned getOrNonExecReg(const MachineInstr &MI,

@@ -1,4 +1,4 @@
-//===--- JITLink_MachO.h - Generic JIT link function for MachO --*- C++ -*-===//
+//===------- MachO.h - Generic JIT link function for MachO ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINK_MACHO_H
-#define LLVM_EXECUTIONENGINE_JITLINK_JITLINK_MACHO_H
+#ifndef LLVM_EXECUTIONENGINE_JITLINK_MACHO_H
+#define LLVM_EXECUTIONENGINE_JITLINK_MACHO_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
@@ -27,4 +27,4 @@ void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx);
 } // end namespace jitlink
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_JITLINK_MACHO_X86_64_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_MACHO_H
