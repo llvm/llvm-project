@@ -84,8 +84,9 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
   case R_386_8:
   case R_386_16:
   case R_386_32:
-  case R_386_TLS_LDO_32:
     return R_ABS;
+  case R_386_TLS_LDO_32:
+    return R_DTPREL;
   case R_386_TLS_GD:
     return R_TLSGD_GOTPLT;
   case R_386_TLS_LDM:

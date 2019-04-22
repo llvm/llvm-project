@@ -48,16 +48,6 @@ mailing list</a> to notify other members of the community.</p>
       <p><i>(Difficulty: Medium)</i></p></p>
       </li>
 
-      <li><code>alpha.cplusplus.MisusedMovedObject</code>
-        <p>The checker emits a warning on objects which were used after
-        <a href="https://en.cppreference.com/w/cpp/utility/move">move</a>.
-        Currently it has an overly high false positive rate due to classes
-        which have a well-defined semantics for use-after-move.
-        This property does not hold for STL objects, but is often the case
-        for custom containers.
-      <p><i>(Difficulty: Medium)</i></p></p>
-      </li>
-
       <li><code>alpha.unix.StreamChecker</code>
         <p>A SimpleStreamChecker has been presented in the Building a Checker in 24 
         Hours talk 

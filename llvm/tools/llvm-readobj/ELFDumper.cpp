@@ -1877,7 +1877,7 @@ void ELFDumper<ELFT>::printNeededLibraries() {
     if (Entry.d_tag == ELF::DT_NEEDED)
       Libs.push_back(getDynamicString(Entry.d_un.d_val));
 
-  std::stable_sort(Libs.begin(), Libs.end());
+  llvm::stable_sort(Libs);
 
   for (const auto &L : Libs)
      W.startLine() << L << "\n";

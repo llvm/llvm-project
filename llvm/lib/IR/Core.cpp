@@ -3033,6 +3033,18 @@ void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {
   unwrap(Builder)->SetInstDebugLocation(unwrap<Instruction>(Inst));
 }
 
+void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
+                                    LLVMMetadataRef FPMathTag) {
+
+  unwrap(Builder)->setDefaultFPMathTag(FPMathTag
+                                       ? unwrap<MDNode>(FPMathTag)
+                                       : nullptr);
+}
+
+LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder) {
+  return wrap(unwrap(Builder)->getDefaultFPMathTag());
+}
+
 /*--.. Instruction builders ................................................--*/
 
 LLVMValueRef LLVMBuildRetVoid(LLVMBuilderRef B) {

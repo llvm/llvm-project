@@ -1040,7 +1040,7 @@ wchar_t Demangler::demangleWcharLiteral(StringView &MangledName) {
   uint8_t C1, C2;
 
   C1 = demangleCharLiteral(MangledName);
-  if (Error)
+  if (Error || MangledName.empty())
     goto WCharLiteralError;
   C2 = demangleCharLiteral(MangledName);
   if (Error)

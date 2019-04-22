@@ -311,9 +311,6 @@ public:
   /// Returns false if no metadata was found.
   bool extractProfTotalWeight(uint64_t &TotalVal) const;
 
-  /// Updates branch_weights metadata by scaling it by \p S / \p T.
-  void updateProfWeight(uint64_t S, uint64_t T);
-
   /// Sets the branch_weights metadata to \p W for CallInst.
   void setProfWeight(uint64_t W);
 

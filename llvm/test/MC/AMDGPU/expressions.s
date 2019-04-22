@@ -72,3 +72,31 @@ s_sub_u32 s0, s0, -1.0 + 10000000000
 t=10000000000
 s_sub_u32 s0, s0, 1.0 + t
 // NOVI: error: invalid operand for instruction
+
+//===----------------------------------------------------------------------===//
+// Symbols may look like registers.
+// They should be allowed in expressions if there is no ambiguity.
+//===----------------------------------------------------------------------===//
+
+v=1
+v_sin_f32 v0, -v
+// VI: v_sin_f32_e32 v0, -1            ; encoding: [0xc1,0x52,0x00,0x7e]
+
+v_sin_f32 v0, -v[0]
+// VI: v_sin_f32_e64 v0, -v0           ; encoding: [0x00,0x00,0x69,0xd1,0x00,0x01,0x00,0x20]
+
+s=1
+v_sin_f32 v0, -s
+// VI: v_sin_f32_e32 v0, -1            ; encoding: [0xc1,0x52,0x00,0x7e]
+
+s0=1
+v_sin_f32 v0, -s0
+// VI: v_sin_f32_e64 v0, -s0           ; encoding: [0x00,0x00,0x69,0xd1,0x00,0x00,0x00,0x20]
+
+ttmp=1
+v_sin_f32 v0, -ttmp
+// VI: v_sin_f32_e32 v0, -1            ; encoding: [0xc1,0x52,0x00,0x7e]
+
+ttmp0=1
+v_sin_f32 v0, -[ttmp0]
+// VI: v_sin_f32_e64 v0, -ttmp0        ; encoding: [0x00,0x00,0x69,0xd1,0x70,0x00,0x00,0x20]
