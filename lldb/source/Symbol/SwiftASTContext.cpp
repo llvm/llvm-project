@@ -2986,84 +2986,87 @@ private:
 } // namespace lldb_private
 
 swift::ASTContext *SwiftASTContext::GetASTContext() {
-  if (m_ast_context_ap.get() == NULL) {
-    m_ast_context_ap.reset(
-        swift::ASTContext::get(GetLanguageOptions(), GetSearchPathOptions(),
-                               GetSourceManager(), GetDiagnosticEngine()));
-    m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
+  swift::DependencyTracker *tracker = nullptr;
+  if (m_ast_context_ap.get())
+    return m_ast_context_ap.get();
 
-    if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
-      // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but
-      // this only gets enabled when the above environment variable is
-      // set.
-      GetDiagnosticEngine().addConsumer(
-          *new swift::PrintingDiagnosticConsumer());
-    }
+  m_ast_context_ap.reset(
+      swift::ASTContext::get(GetLanguageOptions(), GetSearchPathOptions(),
+                             GetSourceManager(), GetDiagnosticEngine()));
+  m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 
-    // Install the parseable interface module loader.
-    std::string ModuleCachePath = GetClangImporterOptions().ModuleCachePath;
-    StringRef PrebuiltModuleCachePath =
-        GetCompilerInvocation().getFrontendOptions().PrebuiltModuleCachePath;
-
-    auto props = ModuleList::GetGlobalModuleListProperties();
-    swift::ModuleLoadingMode loading_mode;
-    switch (props.GetSwiftModuleLoadingMode()) {
-    case eSwiftModuleLoadingModePreferSerialized:
-      loading_mode = swift::ModuleLoadingMode::PreferSerialized;
-      break;
-    case eSwiftModuleLoadingModePreferParseable:
-      loading_mode = swift::ModuleLoadingMode::PreferParseable;
-      break;
-    case eSwiftModuleLoadingModeOnlySerialized:
-      loading_mode = swift::ModuleLoadingMode::OnlySerialized;
-      break;
-    case eSwiftModuleLoadingModeOnlyParseable:
-      loading_mode = swift::ModuleLoadingMode::OnlyParseable;
-      break;
-    }
-
-    if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
-      std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
-          swift::ParseableInterfaceModuleLoader::create(
-              *m_ast_context_ap, ModuleCachePath, PrebuiltModuleCachePath,
-              /*tracker=*/nullptr, loading_mode));
-
-      if (parseable_module_loader_ap) {
-        m_parseable_module_loader = (swift::ParseableInterfaceModuleLoader *)
-                                        parseable_module_loader_ap.get();
-        m_ast_context_ap->addModuleLoader(
-            std::move(parseable_module_loader_ap));
-      }
-    }
-
-    // Install the serialized module loader.
-    std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
-        swift::SerializedModuleLoader::create(*m_ast_context_ap,
-                                              /*tracker=*/nullptr,
-                                              loading_mode));
-
-    if (serialized_module_loader_ap) {
-      m_serialized_module_loader =
-          (swift::SerializedModuleLoader *)serialized_module_loader_ap.get();
-      m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
-    }
-
-    // Set up the required state for the evaluator in the TypeChecker.
-    registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
-
-    GetASTMap().Insert(m_ast_context_ap.get(), this);
+  if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
+    // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but
+    // this only gets enabled when the above environment variable is
+    // set.
+    GetDiagnosticEngine().addConsumer(*new swift::PrintingDiagnosticConsumer());
   }
 
-  VALID_OR_RETURN(nullptr);
+  // Install the parseable interface module loader.
+  std::string ModuleCachePath = GetClangImporterOptions().ModuleCachePath;
+  StringRef PrebuiltModuleCachePath =
+      GetCompilerInvocation().getFrontendOptions().PrebuiltModuleCachePath;
 
+  auto props = ModuleList::GetGlobalModuleListProperties();
+  swift::ModuleLoadingMode loading_mode;
+  switch (props.GetSwiftModuleLoadingMode()) {
+  case eSwiftModuleLoadingModePreferSerialized:
+    loading_mode = swift::ModuleLoadingMode::PreferSerialized;
+    break;
+  case eSwiftModuleLoadingModePreferParseable:
+    loading_mode = swift::ModuleLoadingMode::PreferParseable;
+    break;
+  case eSwiftModuleLoadingModeOnlySerialized:
+    loading_mode = swift::ModuleLoadingMode::OnlySerialized;
+    break;
+  case eSwiftModuleLoadingModeOnlyParseable:
+    loading_mode = swift::ModuleLoadingMode::OnlyParseable;
+    break;
+  }
+
+  // Install the memory buffer serialized module loader.
+  std::unique_ptr<swift::ModuleLoader> memory_buffer_loader_ap(
+      swift::MemoryBufferSerializedModuleLoader::create(*m_ast_context_ap,
+                                                        tracker, loading_mode));
+  if (memory_buffer_loader_ap) {
+    m_memory_buffer_module_loader =
+        static_cast<swift::MemoryBufferSerializedModuleLoader *>(
+            memory_buffer_loader_ap.get());
+    m_ast_context_ap->addModuleLoader(std::move(memory_buffer_loader_ap));
+  }
+
+  // Install the parseable interface module loader.
+  if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
+    std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
+        swift::ParseableInterfaceModuleLoader::create(
+            *m_ast_context_ap, ModuleCachePath, PrebuiltModuleCachePath,
+            tracker, loading_mode));
+    if (parseable_module_loader_ap)
+      m_ast_context_ap->addModuleLoader(std::move(parseable_module_loader_ap));
+  }
+
+  // Install the serialized module loader.
+  std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
+      swift::SerializedModuleLoader::create(*m_ast_context_ap, tracker,
+                                            loading_mode));
+  if (serialized_module_loader_ap)
+    m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
+
+  // Set up the required state for the evaluator in the TypeChecker.
+  registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
+
+  GetASTMap().Insert(m_ast_context_ap.get(), this);
+
+  VALID_OR_RETURN(nullptr);
   return m_ast_context_ap.get();
 }
 
-swift::SerializedModuleLoader *SwiftASTContext::GetSerializeModuleLoader() {
+swift::MemoryBufferSerializedModuleLoader *
+SwiftASTContext::GetMemoryBufferModuleLoader() {
   VALID_OR_RETURN(nullptr);
 
   GetASTContext();
-  return m_serialized_module_loader;
+  return m_memory_buffer_module_loader;
 }
 
 swift::ClangImporter *SwiftASTContext::GetClangImporter() {
@@ -3798,79 +3801,80 @@ bool SwiftASTContext::RegisterSectionModules(
     Module &module, std::vector<std::string> &module_names) {
   VALID_OR_RETURN(false);
 
-  swift::SerializedModuleLoader *sml = GetSerializeModuleLoader();
-  if (sml) {
-    SectionList *section_list = module.GetSectionList();
-    if (section_list) {
-      SectionSP section_sp(
-          section_list->FindSectionByType(eSectionTypeSwiftModules, true));
-      if (section_sp) {
-        DataExtractor section_data;
+  swift::MemoryBufferSerializedModuleLoader *loader =
+      GetMemoryBufferModuleLoader();
+  if (!loader)
+    return false;
 
-        if (section_sp->GetSectionData(section_data)) {
-          llvm::StringRef section_data_ref(
-              (const char *)section_data.GetDataStart(),
-              section_data.GetByteSize());
-          llvm::SmallVector<std::string, 4> llvm_modules;
-          if (swift::parseASTSection(sml, section_data_ref, llvm_modules)) {
-            for (auto module_name : llvm_modules)
-              module_names.push_back(module_name);
-            return true;
+  SectionList *section_list = module.GetSectionList();
+  if (!section_list)
+    return false;
+
+  SectionSP section_sp(
+      section_list->FindSectionByType(eSectionTypeSwiftModules, true));
+  if (section_sp) {
+    DataExtractor section_data;
+
+    if (section_sp->GetSectionData(section_data)) {
+      llvm::StringRef section_data_ref(
+          (const char *)section_data.GetDataStart(),
+          section_data.GetByteSize());
+      llvm::SmallVector<std::string, 4> llvm_modules;
+      if (swift::parseASTSection(*loader, section_data_ref, llvm_modules)) {
+        for (auto module_name : llvm_modules)
+          module_names.push_back(module_name);
+        return true;
+      }
+    }
+  } else {
+    if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
+      return true;
+
+    SymbolVendor *sym_vendor = module.GetSymbolVendor();
+    if (sym_vendor) {
+      // Grab all the AST blobs from the symbol vendor.
+      auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+      LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                 "retrieved %zu AST Data blobs from the symbol vendor.",
+                 ast_file_datas.size());
+
+      // Add each of the AST blobs to the vector of AST blobs for
+      // the module.
+      auto &ast_vector = GetASTVectorForModule(&module);
+      ast_vector.insert(ast_vector.end(), ast_file_datas.begin(),
+                        ast_file_datas.end());
+
+      // Retrieve the module names from the AST blobs retrieved
+      // from the symbol vendor.
+      size_t parse_fail_count = 0;
+      size_t ast_number = 0;
+      for (auto ast_file_data_sp : ast_file_datas) {
+        // Parse the AST section info from the AST blob.
+        ++ast_number;
+        llvm::StringRef section_data_ref(
+            (const char *)ast_file_data_sp->GetBytes(),
+            ast_file_data_sp->GetByteSize());
+        llvm::SmallVector<std::string, 4> swift_modules;
+        if (swift::parseASTSection(*loader, section_data_ref, swift_modules)) {
+          // Collect the Swift module names referenced by the AST.
+          for (auto module_name : swift_modules) {
+            module_names.push_back(module_name);
+            LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                       "parsed module %s from Swift AST section %zu of %zu.",
+                       module_name.c_str(), ast_number, ast_file_datas.size());
           }
-        }
-      } else {
-        if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
-          return true;
-
-        SymbolVendor *sym_vendor = module.GetSymbolVendor();
-        if (sym_vendor) {
-          // Grab all the AST blobs from the symbol vendor.
-          auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+        } else {
+          // Keep track of the fact that we failed to parse the AST section
+          // info.
           LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                     "retrieved %zu AST Data blobs from the symbol vendor.",
+                     "failed to parse AST section %zu of %zu.", ast_number,
                      ast_file_datas.size());
-
-          // Add each of the AST blobs to the vector of AST blobs for
-          // the module.
-          auto &ast_vector = GetASTVectorForModule(&module);
-          ast_vector.insert(ast_vector.end(), ast_file_datas.begin(),
-                            ast_file_datas.end());
-
-          // Retrieve the module names from the AST blobs retrieved
-          // from the symbol vendor.
-          size_t parse_fail_count = 0;
-          size_t ast_number = 0;
-          for (auto ast_file_data_sp : ast_file_datas) {
-            // Parse the AST section info from the AST blob.
-            ++ast_number;
-            llvm::StringRef section_data_ref(
-                (const char *)ast_file_data_sp->GetBytes(),
-                ast_file_data_sp->GetByteSize());
-            llvm::SmallVector<std::string, 4> swift_modules;
-            if (swift::parseASTSection(sml, section_data_ref, swift_modules)) {
-              // Collect the Swift module names referenced by the AST.
-              for (auto module_name : swift_modules) {
-                module_names.push_back(module_name);
-                LOG_PRINTF(
-                    LIBLLDB_LOG_TYPES,
-                    "parsed module %s from Swift AST section %zu of %zu.",
-                    module_name.c_str(), ast_number, ast_file_datas.size());
-              }
-            } else {
-              // Keep track of the fact that we failed to parse the
-              // AST section info.
-              LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                         "failed to parse AST section %zu of %zu.", ast_number,
-                         ast_file_datas.size());
-              ++parse_fail_count;
-            }
-          }
-          if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
-            // We found AST data entries and we successfully parsed
-            // all of them.
-            return true;
-          }
+          ++parse_fail_count;
         }
+      }
+      if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
+        // We found AST data entries and we successfully parsed all of them.
+        return true;
       }
     }
   }
