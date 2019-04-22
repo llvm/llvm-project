@@ -726,6 +726,7 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     // but we don't have enough information to make that decision.
      if (InMicroMipsMode && TII->getInstSizeInBytes(*CurrI) == 2 &&
         (Opcode == Mips::JR || Opcode == Mips::PseudoIndirectBranch ||
+         Opcode == Mips::PseudoIndirectBranch_MM ||
          Opcode == Mips::PseudoReturn || Opcode == Mips::TAILCALL))
       continue;
      // Instructions LWP/SWP and MOVEP should not be in a delay slot as that
