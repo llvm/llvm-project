@@ -2299,14 +2299,6 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
       break;
     }
 
-    case FILE_SYSTEM_OPTIONS: {
-      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
-      if (!AllowCompatibleConfigurationMismatch &&
-          ParseFileSystemOptions(Record, Complain, Listener))
-        Result = ConfigurationMismatch;
-      break;
-    }
-
     case HEADER_SEARCH_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
       if (!AllowCompatibleConfigurationMismatch &&
@@ -4378,6 +4370,14 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
         Result = ConfigurationMismatch;
       break;
     }
+    case FILE_SYSTEM_OPTIONS: {
+      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
+      if (!AllowCompatibleConfigurationMismatch &&
+          ParseFileSystemOptions(Record, Complain, *Listener))
+        Result = ConfigurationMismatch;
+      break;
+    }
+
     case DIAG_PRAGMA_MAPPINGS:
       if (!F)
         break;
