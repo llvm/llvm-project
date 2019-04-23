@@ -1594,8 +1594,9 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
                   arch_spec.GetArchitectureName(),
                   arch_spec.GetTriple().getTriple().c_str());
     ModuleSpec module_spec(executable_sp->GetFileSpec(), other);
+    FileSpecList search_paths = GetExecutableSearchPaths();
     Status error = ModuleList::GetSharedModule(module_spec, executable_sp,
-                                               &GetExecutableSearchPaths(),
+                                               &search_paths,
                                                nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
@@ -2055,7 +2056,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
     ModuleSP old_module_sp; // This will get filled in if we have a new version
                             // of the library
     bool did_create_module = false;
-
+    FileSpecList search_paths = GetExecutableSearchPaths();
     // If there are image search path entries, try to use them first to acquire
     // a suitable image.
     if (m_image_search_paths.GetSize()) {
@@ -2066,7 +2067,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         transformed_spec.GetFileSpec().GetFilename() =
             module_spec.GetFileSpec().GetFilename();
         error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                            &GetExecutableSearchPaths(),
+                                            &search_paths,
                                             &old_module_sp, &did_create_module);
       }
     }
@@ -2083,7 +2084,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
         error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                            &GetExecutableSearchPaths(),
+                                            &search_paths,
                                             &old_module_sp, &did_create_module);
       }
 
@@ -2093,7 +2094,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
               module_spec, m_process_sp.get(), module_sp,
-              &GetExecutableSearchPaths(), &old_module_sp, &did_create_module);
+              &search_paths, &old_module_sp, &did_create_module);
         } else {
           error.SetErrorString("no platform is currently set");
         }
@@ -4216,18 +4217,27 @@ PathMappingList &TargetProperties::GetSourcePathMap() const {
   return option_value->GetCurrentValue();
 }
 
-FileSpecList &TargetProperties::GetExecutableSearchPaths() {
+void TargetProperties::AppendExecutableSearchPaths(const FileSpec& dir) {
   const uint32_t idx = ePropertyExecutableSearchPaths;
   OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
+                                                                   false, idx);
+  assert(option_value);
+  option_value->AppendCurrentValue(dir);
+}
+
+FileSpecList TargetProperties::GetExecutableSearchPaths() {
+  const uint32_t idx = ePropertyExecutableSearchPaths;
+  const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                                    false, idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
 
-FileSpecList &TargetProperties::GetDebugFileSearchPaths() {
+FileSpecList TargetProperties::GetDebugFileSearchPaths() {
   const uint32_t idx = ePropertyDebugFileSearchPaths;
-  OptionValueFileSpecList *option_value =
+  const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                                    false, idx);
   assert(option_value);
@@ -4243,7 +4253,7 @@ FileSpec &TargetProperties::GetSDKPath() {
   return option_value->GetCurrentValue();
 }
 
-FileSpecList &TargetProperties::GetSwiftFrameworkSearchPaths() {
+FileSpecList TargetProperties::GetSwiftFrameworkSearchPaths() {
   const uint32_t idx = ePropertySwiftFrameworkSearchPaths;
   OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, false,
@@ -4252,7 +4262,7 @@ FileSpecList &TargetProperties::GetSwiftFrameworkSearchPaths() {
   return option_value->GetCurrentValue();
 }
 
-FileSpecList &TargetProperties::GetSwiftModuleSearchPaths() {
+FileSpecList TargetProperties::GetSwiftModuleSearchPaths() {
   const uint32_t idx = ePropertySwiftModuleSearchPaths;
   OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, false,
@@ -4261,9 +4271,9 @@ FileSpecList &TargetProperties::GetSwiftModuleSearchPaths() {
   return option_value->GetCurrentValue();
 }
 
-FileSpecList &TargetProperties::GetClangModuleSearchPaths() {
+FileSpecList TargetProperties::GetClangModuleSearchPaths() {
   const uint32_t idx = ePropertyClangModuleSearchPaths;
-  OptionValueFileSpecList *option_value =
+  const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                                    false, idx);
   assert(option_value);

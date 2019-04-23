@@ -129,17 +129,19 @@ public:
 
   PathMappingList &GetSourcePathMap() const;
 
-  FileSpecList &GetExecutableSearchPaths();
+  FileSpecList GetExecutableSearchPaths();
 
-  FileSpecList &GetDebugFileSearchPaths();
+  void AppendExecutableSearchPaths(const FileSpec&);
 
   FileSpec &GetSDKPath();
 
-  FileSpecList &GetClangModuleSearchPaths();
+  FileSpecList GetDebugFileSearchPaths();
 
-  FileSpecList &GetSwiftFrameworkSearchPaths();
+  FileSpecList GetClangModuleSearchPaths();
 
-  FileSpecList &GetSwiftModuleSearchPaths();
+  FileSpecList GetSwiftFrameworkSearchPaths();
+
+  FileSpecList GetSwiftModuleSearchPaths();
 
   bool GetSwiftCreateModuleContextsInParallel() const;
 

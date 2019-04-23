@@ -208,9 +208,9 @@ public:
         NULL, idx, g_properties[idx].default_uint_value != 0);
   }
 
-  FileSpecList &GetKextDirectories() const {
+  FileSpecList GetKextDirectories() const {
     const uint32_t idx = ePropertyKextDirectories;
-    OptionValueFileSpecList *option_value =
+    const OptionValueFileSpecList *option_value =
         m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(
             NULL, false, idx);
     assert(option_value);
