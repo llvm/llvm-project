@@ -4,13 +4,13 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s \
 ; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=PUB %s
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=GNU %s
 
 ; Linux does has debug_names tables only if we explicitly tune for lldb
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=PUB %s
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=GNU %s
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=DEBUG_NAMES %s
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=GNU %s
 
 ; No accelerator tables if type units are enabled, as DWARF v4 type units are
 ; not compatible with accelerator tables.
@@ -28,20 +28,14 @@
 ; APPLE-NOT: debug_names
 ; APPLE-NOT: pubnames
 
-; PUB-NOT: apple_names
-; PUB-NOT: debug_names
-; PUB: pubnames
-; PUB-NOT: apple_names
-; PUB-NOT: debug_names
+; GNU-NOT: apple_names
+; GNU-NOT: debug_names
+; GNU: gnu_pub
+; GNU-NOT: apple_names
+; GNU-NOT: debug_names
 
 ; NONE-NOT: apple_names
 ; NONE-NOT: debug_names
-
-; DEBUG_NAMES-NOT: apple_names
-; DEBUG_NAMES-NOT: pubnames
-; DEBUG_NAMES: debug_names
-; DEBUG_NAMES-NOT: apple_names
-; DEBUG_NAMES-NOT: pubnames
 
 @var = thread_local global i32 0, align 4, !dbg !0
 
@@ -64,7 +58,7 @@ attributes #1 = { norecurse uwtable }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "var", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 7.0.0 (trunk 322268) (llvm/trunk 322267)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 7.0.0 (trunk 322268) (llvm/trunk 322267)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, nameTableKind: GNU)
 !3 = !DIFile(filename: "debugger-tune.cpp", directory: "/tmp")
 !4 = !{}
 !5 = !{!0}

@@ -159,6 +159,19 @@ inline Optional<const char *> toString(const Optional<DWARFFormValue> &V) {
   return None;
 }
 
+/// Take an optional DWARFFormValue and try to extract a string value from it.
+///
+/// \param V and optional DWARFFormValue to attempt to extract the value from.
+/// \returns an optional value that contains a value if the form value
+/// was valid and was a string.
+inline StringRef toStringRef(const Optional<DWARFFormValue> &V,
+                             StringRef Default = {}) {
+  if (V)
+    if (auto S = V->getAsCString())
+      return *S;
+  return Default;
+}
+
 /// Take an optional DWARFFormValue and extract a string value from it.
 ///
 /// \param V and optional DWARFFormValue to attempt to extract the value from.

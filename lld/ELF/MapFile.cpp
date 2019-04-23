@@ -72,12 +72,10 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> Syms) {
   // Sort symbols by address. We want to print out symbols in the
   // order in the output file rather than the order they appeared
   // in the input files.
-  for (auto &It : Ret) {
-    SmallVectorImpl<Defined *> &V = It.second;
-    std::stable_sort(V.begin(), V.end(), [](Defined *A, Defined *B) {
+  for (auto &It : Ret)
+    llvm::stable_sort(It.second, [](Defined *A, Defined *B) {
       return A->getVA() < B->getVA();
     });
-  }
   return Ret;
 }
 

@@ -2938,10 +2938,59 @@ AST_MATCHER_P(ObjCMessageExpr, hasReceiverType, internal::Matcher<QualType>,
   return InnerMatcher.matches(TypeDecl, Finder, Builder);
 }
 
+/// Returns true when the Objective-C method declaration is a class method.
+///
+/// Example
+/// matcher = objcMethodDecl(isClassMethod())
+/// matches
+/// \code
+/// @interface I + (void)foo; @end
+/// \endcode
+/// but not
+/// \code
+/// @interface I - (void)bar; @end
+/// \endcode
+AST_MATCHER(ObjCMethodDecl, isClassMethod) {
+  return Node.isClassMethod();
+}
+
+/// Returns true when the Objective-C method declaration is an instance method.
+///
+/// Example
+/// matcher = objcMethodDecl(isInstanceMethod())
+/// matches
+/// \code
+/// @interface I - (void)bar; @end
+/// \endcode
+/// but not
+/// \code
+/// @interface I + (void)foo; @end
+/// \endcode
+AST_MATCHER(ObjCMethodDecl, isInstanceMethod) {
+  return Node.isInstanceMethod();
+}
+
+/// Returns true when the Objective-C message is sent to a class.
+///
+/// Example
+/// matcher = objcMessageExpr(isClassMessage())
+/// matches
+/// \code
+///   [NSString stringWithFormat:@"format"];
+/// \endcode
+/// but not
+/// \code
+///   NSString *x = @"hello";
+///   [x containsString:@"h"];
+/// \endcode
+AST_MATCHER(ObjCMessageExpr, isClassMessage) {
+  return Node.isClassMessage();
+}
+
 /// Returns true when the Objective-C message is sent to an instance.
 ///
 /// Example
-/// matcher = objcMessagaeExpr(isInstanceMessage())
+/// matcher = objcMessageExpr(isInstanceMessage())
 /// matches
 /// \code
 ///   NSString *x = @"hello";

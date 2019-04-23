@@ -15,6 +15,6 @@ unittest("JITLinkTests") {
   ]
   sources = [
     "JITLinkTestCommon.cpp",
-    "JITLinkTest_MachO_x86_64_Tests.cpp",
+    "MachO_x86_64_Tests.cpp",
   ]
 }
