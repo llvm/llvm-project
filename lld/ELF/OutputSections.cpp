@@ -138,13 +138,10 @@ void OutputSection::addSection(InputSection *IS) {
 
 static void sortByOrder(MutableArrayRef<InputSection *> In,
                         llvm::function_ref<int(InputSectionBase *S)> Order) {
-  using Pair = std::pair<int, InputSection *>;
-  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
-
-  std::vector<Pair> V;
+  std::vector<std::pair<int, InputSection *>> V;
   for (InputSection *S : In)
     V.push_back({Order(S), S});
-  std::stable_sort(V.begin(), V.end(), Comp);
+  llvm::stable_sort(V, less_first());
 
   for (size_t I = 0; I < V.size(); ++I)
     In[I] = V[I].second;
@@ -369,7 +366,7 @@ static bool compCtors(const InputSection *A, const InputSection *B) {
 void OutputSection::sortCtorsDtors() {
   assert(SectionCommands.size() == 1);
   auto *ISD = cast<InputSectionDescription>(SectionCommands[0]);
-  std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(), compCtors);
+  llvm::stable_sort(ISD->Sections, compCtors);
 }
 
 // If an input string is in the form of "foo.N" where N is a number,

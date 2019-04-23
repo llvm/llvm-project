@@ -279,10 +279,9 @@ void ICF::run(ArrayRef<Chunk *> Vec) {
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
-  std::stable_sort(Chunks.begin(), Chunks.end(),
-                   [](SectionChunk *A, SectionChunk *B) {
-                     return A->Class[0] < B->Class[0];
-                   });
+  llvm::stable_sort(Chunks, [](const SectionChunk *A, const SectionChunk *B) {
+    return A->Class[0] < B->Class[0];
+  });
 
   // Compare static contents and assign unique IDs for each static content.
   forEachClass([&](size_t Begin, size_t End) { segregate(Begin, End, true); });

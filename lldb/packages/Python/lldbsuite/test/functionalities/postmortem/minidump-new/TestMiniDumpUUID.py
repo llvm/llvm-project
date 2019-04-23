@@ -33,6 +33,13 @@ class MiniDumpUUIDTestCase(TestBase):
         self.assertEqual(verify_path, module.GetFileSpec().fullpath)
         self.assertEqual(verify_uuid, uuid)
 
+    def get_minidump_modules(self, yaml_file):
+        minidump_path = self.getBuildArtifact(yaml_file + ".dmp")
+        self.yaml2obj(yaml_file, minidump_path)
+        self.target = self.dbg.CreateTarget(None)
+        self.process = self.target.LoadCore(minidump_path)
+        return self.target.modules
+
     def test_zero_uuid_modules(self):
         """
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
@@ -42,10 +49,7 @@ class MiniDumpUUIDTestCase(TestBase):
             ensure that the UUID is not valid for each module and that we have
             each of the modules in the target after loading the core
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-arm-zero-uuids.dmp")
-        modules = self.target.modules
+        modules = self.get_minidump_modules("linux-arm-zero-uuids.yaml")
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/file/does/not/exist/a", None)
         self.verify_module(modules[1], "/file/does/not/exist/b", None)
@@ -56,9 +60,7 @@ class MiniDumpUUIDTestCase(TestBase):
             and contains a PDB70 value whose age is zero and whose UUID values are 
             valid. Ensure we decode the UUID and don't include the age field in the UUID.
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-arm-uuids-no-age.dmp")
+        modules = self.get_minidump_modules("linux-arm-uuids-no-age.yaml")
         modules = self.target.modules
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/tmp/a", "01020304-0506-0708-090A-0B0C0D0E0F10")
@@ -73,9 +75,7 @@ class MiniDumpUUIDTestCase(TestBase):
             two uint16_t values. Breakpad incorrectly byte swaps these values when it
             saves Darwin minidump files.
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("macos-arm-uuids-no-age.dmp")
+        modules = self.get_minidump_modules("macos-arm-uuids-no-age.yaml")
         modules = self.target.modules
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/tmp/a", "04030201-0605-0807-090A-0B0C0D0E0F10")
@@ -87,10 +87,7 @@ class MiniDumpUUIDTestCase(TestBase):
             and contains a PDB70 value whose age is valid and whose UUID values are 
             valid. Ensure we decode the UUID and include the age field in the UUID.
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-arm-uuids-with-age.dmp")
-        modules = self.target.modules
+        modules = self.get_minidump_modules("linux-arm-uuids-with-age.yaml")
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/tmp/a", "01020304-0506-0708-090A-0B0C0D0E0F10-10101010")
         self.verify_module(modules[1], "/tmp/b", "0A141E28-323C-4650-5A64-6E78828C96A0-20202020")
@@ -100,10 +97,7 @@ class MiniDumpUUIDTestCase(TestBase):
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
             and contains a ELF build ID whose value is valid and is 16 bytes long.
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-arm-uuids-elf-build-id-16.dmp")
-        modules = self.target.modules
+        modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-16.yaml")
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/tmp/a", "01020304-0506-0708-090A-0B0C0D0E0F10")
         self.verify_module(modules[1], "/tmp/b", "0A141E28-323C-4650-5A64-6E78828C96A0")
@@ -113,10 +107,7 @@ class MiniDumpUUIDTestCase(TestBase):
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
             and contains a ELF build ID whose value is valid and is 20 bytes long.
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-arm-uuids-elf-build-id-20.dmp")
-        modules = self.target.modules
+        modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-20.yaml")
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/tmp/a", "01020304-0506-0708-090A-0B0C0D0E0F10-11121314")
         self.verify_module(modules[1], "/tmp/b", "0A141E28-323C-4650-5A64-6E78828C96A0-AAB4BEC8")
@@ -126,10 +117,7 @@ class MiniDumpUUIDTestCase(TestBase):
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
             and contains a ELF build ID whose value is all zero.
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-arm-uuids-elf-build-id-zero.dmp")
-        modules = self.target.modules
+        modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-zero.yaml")
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/not/exist/a", None)
         self.verify_module(modules[1], "/not/exist/b", None)
@@ -150,12 +138,9 @@ class MiniDumpUUIDTestCase(TestBase):
         """
         so_path = self.getBuildArtifact("libuuidmatch.so")
         self.yaml2obj("libuuidmatch.yaml", so_path)
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
         cmd = 'settings set target.exec-search-paths "%s"' % (os.path.dirname(so_path))
         self.dbg.HandleCommand(cmd)
-        self.process = self.target.LoadCore("linux-arm-partial-uuids-match.dmp")
-        modules = self.target.modules
+        modules = self.get_minidump_modules("linux-arm-partial-uuids-match.yaml")
         self.assertEqual(1, len(modules))
         self.verify_module(modules[0], so_path, 
                            "7295E17C-6668-9E05-CBB5-DEE5003865D5-5267C116")
@@ -174,12 +159,9 @@ class MiniDumpUUIDTestCase(TestBase):
         """
         so_path = self.getBuildArtifact("libuuidmismatch.so")
         self.yaml2obj("libuuidmismatch.yaml", so_path)
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
         cmd = 'settings set target.exec-search-paths "%s"' % (os.path.dirname(so_path))
         self.dbg.HandleCommand(cmd)
-        self.process = self.target.LoadCore("linux-arm-partial-uuids-mismatch.dmp")
-        modules = self.target.modules
+        modules = self.get_minidump_modules("linux-arm-partial-uuids-mismatch.yaml")
         self.assertEqual(1, len(modules))
         self.verify_module(modules[0],
                            "/invalid/path/on/current/system/libuuidmismatch.so", 

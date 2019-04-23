@@ -615,10 +615,9 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
   case R_ABS:
+  case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
-    return Sym.getVA(A);
-  case R_DTPREL:
     return Sym.getVA(A);
   case R_ADDEND:
     return A;

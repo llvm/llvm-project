@@ -1280,11 +1280,11 @@ static void sortSection(OutputSection *Sec,
       return;
     assert(Sec->SectionCommands.size() == 1);
     auto *ISD = cast<InputSectionDescription>(Sec->SectionCommands[0]);
-    std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(),
-                     [](const InputSection *A, const InputSection *B) -> bool {
-                       return A->File->PPC64SmallCodeModelTocRelocs &&
-                              !B->File->PPC64SmallCodeModelTocRelocs;
-                     });
+    llvm::stable_sort(ISD->Sections,
+                      [](const InputSection *A, const InputSection *B) -> bool {
+                        return A->File->PPC64SmallCodeModelTocRelocs &&
+                               !B->File->PPC64SmallCodeModelTocRelocs;
+                      });
     return;
   }
 
@@ -1453,7 +1453,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
         Sec->Type == SHT_ARM_EXIDX)
       continue;
 
-    std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
+    llvm::stable_sort(Sections, compareByFilePosition);
 
     for (int I = 0, N = Sections.size(); I < N; ++I)
       *ScriptSections[I] = Sections[I];
