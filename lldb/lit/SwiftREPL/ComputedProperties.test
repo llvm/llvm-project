@@ -11,7 +11,7 @@ var x : Int {
   } 
 }
 
-// CHECK: Welcome to Swift
+// CHECK: Welcome to {{.*}} Swift
 // CHECK: Type :help
 // CHECK: {{x}}: Int
 
