@@ -163,5 +163,6 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
 }
 
 lldb::OptionValueSP OptionValueFileSpecList::DeepCopy() const {
-  return OptionValueSP(new OptionValueFileSpecList(*this));
+  std::lock_guard<std::mutex> lock(m_mutex);
+  return OptionValueSP(new OptionValueFileSpecList(m_current_value));
 }
