@@ -10,12 +10,6 @@
 
 // This tests that libc++abi still provides __cxa_uncaught_exception() for
 // ABI compatibility, even though the Standard doesn't require it to.
-//
-// We need to explicitly link against libc++abi, because libc++ does not
-// re-export this symbol.
-
-// RUN: %build -lc++abi -o %t.exe
-// RUN: %t.exe
 
 #include <cxxabi.h>
 #include <cassert>
