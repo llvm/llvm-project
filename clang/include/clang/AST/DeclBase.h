@@ -600,10 +600,6 @@ public:
     return getModuleOwnershipKind() == ModuleOwnershipKind::ModulePrivate;
   }
 
-  /// Whether this declaration is exported (by virtue of being lexically
-  /// within an ExportDecl or by being a NamespaceDecl).
-  bool isExported() const;
-
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
   bool hasDefiningAttr() const;

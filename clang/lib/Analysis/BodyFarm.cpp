@@ -665,8 +665,6 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
 }
 
 Stmt *BodyFarm::getBody(const FunctionDecl *D) {
-  D = D->getCanonicalDecl();
-
   Optional<Stmt *> &Val = Bodies[D];
   if (Val.hasValue())
     return Val.getValue();

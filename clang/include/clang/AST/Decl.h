@@ -4239,8 +4239,10 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
 
+  bool hasBraces() const { return RBraceLoc.isValid(); }
+
   SourceLocation getEndLoc() const LLVM_READONLY {
-    if (RBraceLoc.isValid())
+    if (hasBraces())
       return RBraceLoc;
     // No braces: get the end location of the (only) declaration in context
     // (if present).

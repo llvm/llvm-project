@@ -463,9 +463,9 @@ void AArch64Err843419Patcher::init() {
     std::vector<const Defined *> &MapSyms = KV.second;
     if (MapSyms.size() <= 1)
       continue;
-    std::stable_sort(
-        MapSyms.begin(), MapSyms.end(),
-        [](const Defined *A, const Defined *B) { return A->Value < B->Value; });
+    llvm::stable_sort(MapSyms, [](const Defined *A, const Defined *B) {
+      return A->Value < B->Value;
+    });
     MapSyms.erase(
         std::unique(MapSyms.begin(), MapSyms.end(),
                     [=](const Defined *A, const Defined *B) {

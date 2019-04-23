@@ -227,6 +227,18 @@ private:
 
 REGISTER_MAP_WITH_PROGRAMSTATE(TrackedRegionMap, const MemRegion *, RegionState)
 
+// Define the inter-checker API.
+namespace clang {
+namespace ento {
+namespace move {
+bool isMovedFrom(ProgramStateRef State, const MemRegion *Region) {
+  const RegionState *RS = State->get<TrackedRegionMap>(Region);
+  return RS && (RS->isMoved() || RS->isReported());
+}
+} // namespace move
+} // namespace ento
+} // namespace clang
+
 // If a region is removed all of the subregions needs to be removed too.
 static ProgramStateRef removeFromState(ProgramStateRef State,
                                        const MemRegion *Region) {

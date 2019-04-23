@@ -5711,13 +5711,6 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-// Peek through EXTRACT_SUBVECTORs - typically used for AVX1 256-bit intops.
-static SDValue peekThroughEXTRACT_SUBVECTORs(SDValue V) {
-  while (V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
-    V = V.getOperand(0);
-  return V;
-}
-
 static const Constant *getTargetConstantFromNode(SDValue Op) {
   Op = peekThroughBitcasts(Op);
 
@@ -24722,54 +24715,6 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
-// If V is a splat value, return the source vector and splat index;
-static SDValue IsSplatVector(SDValue V, int &SplatIdx, SelectionDAG &DAG) {
-  V = peekThroughEXTRACT_SUBVECTORs(V);
-
-  EVT VT = V.getValueType();
-  unsigned Opcode = V.getOpcode();
-  switch (Opcode) {
-  default: {
-    APInt UndefElts;
-    APInt DemandedElts = APInt::getAllOnesValue(VT.getVectorNumElements());
-    if (DAG.isSplatValue(V, DemandedElts, UndefElts)) {
-      // Handle case where all demanded elements are UNDEF.
-      if (DemandedElts.isSubsetOf(UndefElts)) {
-        SplatIdx = 0;
-        return DAG.getUNDEF(VT);
-      }
-      SplatIdx = (UndefElts & DemandedElts).countTrailingOnes();
-      return V;
-    }
-    break;
-  }
-  case ISD::VECTOR_SHUFFLE: {
-    // Check if this is a shuffle node doing a splat.
-    // TODO - remove this and rely purely on SelectionDAG::isSplatValue,
-    // getTargetVShiftNode currently struggles without the splat source.
-    auto *SVN = cast<ShuffleVectorSDNode>(V);
-    if (!SVN->isSplat())
-      break;
-    int Idx = SVN->getSplatIndex();
-    int NumElts = V.getValueType().getVectorNumElements();
-    SplatIdx = Idx % NumElts;
-    return V.getOperand(Idx / NumElts);
-  }
-  }
-
-  return SDValue();
-}
-
-static SDValue GetSplatValue(SDValue V, const SDLoc &dl,
-                             SelectionDAG &DAG) {
-  int SplatIdx;
-  if (SDValue SrcVector = IsSplatVector(V, SplatIdx, DAG))
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-                       SrcVector.getValueType().getScalarType(), SrcVector,
-                       DAG.getIntPtrConstant(SplatIdx, dl));
-  return SDValue();
-}
-
 static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -24780,7 +24725,7 @@ static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
   unsigned X86OpcI = getTargetVShiftUniformOpcode(Opcode, false);
   unsigned X86OpcV = getTargetVShiftUniformOpcode(Opcode, true);
 
-  if (SDValue BaseShAmt = GetSplatValue(Amt, dl, DAG)) {
+  if (SDValue BaseShAmt = DAG.getSplatValue(Amt)) {
     if (SupportedVectorShiftWithBaseAmnt(VT, Subtarget, Opcode)) {
       MVT EltVT = VT.getVectorElementType();
       assert(EltVT.bitsLE(MVT::i64) && "Unexpected element type!");

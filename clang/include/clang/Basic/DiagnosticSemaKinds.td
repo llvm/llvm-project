@@ -9273,8 +9273,27 @@ def err_module_decl_not_at_start : Error<
 def note_global_module_introducer_missing : Note<
   "add 'module;' to the start of the file to introduce a "
   "global module fragment">;
+def err_export_within_anonymous_namespace : Error<
+  "export declaration appears within anonymous namespace">;
+def note_anonymous_namespace : Note<"anonymous namespace begins here">;
+def ext_export_no_name_block : ExtWarn<
+  "ISO C++20 does not permit %select{an empty|a static_assert}0 declaration "
+  "to appear in an export block">, InGroup<ExportUnnamed>;
+def ext_export_no_names : ExtWarn<
+  "ISO C++20 does not permit a declaration that does not introduce any names "
+  "to be exported">, InGroup<ExportUnnamed>;
+def note_export : Note<"export block begins here">;
+def err_export_no_name : Error<
+  "%select{empty|static_assert|asm}0 declaration cannot be exported">;
+def ext_export_using_directive : ExtWarn<
+  "ISO C++20 does not permit using directive to be exported">,
+  InGroup<DiagGroup<"export-using-directive">>;
 def err_export_within_export : Error<
   "export declaration appears within another export declaration">;
+def err_export_internal : Error<
+  "declaration of %0 with internal linkage cannot be exported">;
+def err_export_using_internal : Error<
+  "using declaration referring to %0 with internal linkage cannot be exported">;
 def err_export_not_in_module_interface : Error<
   "export declaration can only be used within a module interface unit"
   "%select{ after the module declaration|}0">;

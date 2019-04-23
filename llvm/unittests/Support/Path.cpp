@@ -700,10 +700,18 @@ TEST_F(FileSystemTest, TempFileCollisions) {
     }
   };
 
-  // We should be able to create exactly 16 temporary files.
-  for (int i = 0; i < 16; ++i)
-    EXPECT_TRUE(TryCreateTempFile());
-  EXPECT_FALSE(TryCreateTempFile());
+  // Our single-character template allows for 16 unique names. Check that
+  // calling TryCreateTempFile repeatedly results in 16 successes.
+  // Because the test depends on random numbers, it could theoretically fail.
+  // However, the probability of this happening is tiny: with 32 calls, each
+  // of which will retry up to 128 times, to not get a given digit we would
+  // have to fail at least 15 + 17 * 128 = 2191 attempts. The probability of
+  // 2191 attempts not producing a given hexadecimal digit is
+  // (1 - 1/16) ** 2191 or 3.88e-62.
+  int Successes = 0;
+  for (int i = 0; i < 32; ++i)
+    if (TryCreateTempFile()) ++Successes;
+  EXPECT_EQ(Successes, 16);
 
   for (fs::TempFile &T : TempFiles)
     cantFail(T.discard());

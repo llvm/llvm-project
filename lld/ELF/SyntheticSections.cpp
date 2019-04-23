@@ -472,7 +472,7 @@ std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
   auto Less = [](const FdeData &A, const FdeData &B) {
     return A.PcRel < B.PcRel;
   };
-  std::stable_sort(Ret.begin(), Ret.end(), Less);
+  llvm::stable_sort(Ret, Less);
   auto Eq = [](const FdeData &A, const FdeData &B) {
     return A.PcRel == B.PcRel;
   };
@@ -1498,7 +1498,7 @@ static bool compRelocations(const DynamicReloc &A, const DynamicReloc &B) {
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   if (Sort)
-    std::stable_sort(Relocs.begin(), Relocs.end(), compRelocations);
+    llvm::stable_sort(Relocs, compRelocations);
 
   for (const DynamicReloc &Rel : Relocs) {
     encodeDynamicReloc<ELFT>(reinterpret_cast<Elf_Rela *>(Buf), Rel);
@@ -1831,7 +1831,7 @@ void SymbolTableBaseSection::finalizeContents() {
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
     In.GnuHashTab->addSymbols(Symbols);
   } else if (Config->EMachine == EM_MIPS) {
-    std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
+    llvm::stable_sort(Symbols, sortMipsSymbols);
   }
 
   size_t I = 0;
@@ -2199,9 +2199,9 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
     Symbols.push_back({B, Ent.StrTabOffset, Hash, BucketIdx});
   }
 
-  std::stable_sort(
-      Symbols.begin(), Symbols.end(),
-      [](const Entry &L, const Entry &R) { return L.BucketIdx < R.BucketIdx; });
+  llvm::stable_sort(Symbols, [](const Entry &L, const Entry &R) {
+    return L.BucketIdx < R.BucketIdx;
+  });
 
   V.erase(Mid, V.end());
   for (const Entry &Ent : Symbols)
@@ -3088,8 +3088,7 @@ void ARMExidxSyntheticSection::finalizeContents() {
       return AOut->SectionIndex < BOut->SectionIndex;
     return A->OutSecOff < B->OutSecOff;
   };
-  std::stable_sort(ExecutableSections.begin(), ExecutableSections.end(),
-                   CompareByFilePosition);
+  llvm::stable_sort(ExecutableSections, CompareByFilePosition);
   Sentinel = ExecutableSections.back();
   // Optionally merge adjacent duplicate entries.
   if (Config->MergeArmExidx) {

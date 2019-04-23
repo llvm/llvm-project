@@ -33,7 +33,33 @@ class TextDiagnosticBuffer;
 /// markers in the input source to check that all the emitted diagnostics match
 /// those expected.
 ///
-/// USING THE DIAGNOSTIC CHECKER:
+/// INVOKING THE DIAGNOSTIC CHECKER:
+///
+/// VerifyDiagnosticConsumer is typically invoked via the "-verify" option to
+/// "clang -cc1".  "-verify" is equivalent to "-verify=expected", so all
+/// diagnostics are typically specified with the prefix "expected".  For
+/// example:
+///
+/// \code
+///   int A = B; // expected-error {{use of undeclared identifier 'B'}}
+/// \endcode
+///
+/// Custom prefixes can be specified as a comma-separated sequence.  Each
+/// prefix must start with a letter and contain only alphanumeric characters,
+/// hyphens, and underscores.  For example, given just "-verify=foo,bar",
+/// the above diagnostic would be ignored, but the following diagnostics would
+/// be recognized:
+///
+/// \code
+///   int A = B; // foo-error {{use of undeclared identifier 'B'}}
+///   int C = D; // bar-error {{use of undeclared identifier 'D'}}
+/// \endcode
+///
+/// Multiple occurrences accumulate prefixes.  For example,
+/// "-verify -verify=foo,bar -verify=baz" is equivalent to
+/// "-verify=expected,foo,bar,baz".
+///
+/// SPECIFYING DIAGNOSTICS:
 ///
 /// Indicating that a line expects an error or a warning is simple. Put a
 /// comment on the line that has the diagnostic, use:
