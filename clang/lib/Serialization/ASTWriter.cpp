@@ -1082,7 +1082,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   BLOCK(OPTIONS_BLOCK);
   RECORD(LANGUAGE_OPTIONS);
   RECORD(TARGET_OPTIONS);
-  RECORD(FILE_SYSTEM_OPTIONS);
   RECORD(HEADER_SEARCH_OPTIONS);
   RECORD(PREPROCESSOR_OPTIONS);
 
@@ -1315,6 +1314,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SIGNATURE);
   RECORD(DIAGNOSTIC_OPTIONS);
   RECORD(HEADER_SEARCH_PATHS);
+  RECORD(FILE_SYSTEM_OPTIONS);
   RECORD(DIAG_PRAGMA_MAPPINGS);
 
 #undef RECORD
@@ -1456,6 +1456,13 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
   }
   Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
+
+  // File system options.
+  Record.clear();
+  const FileSystemOptions &FSOpts =
+      Context.getSourceManager().getFileManager().getFileSystemOpts();
+  AddString(FSOpts.WorkingDir, Record);
+  Stream.EmitRecord(FILE_SYSTEM_OPTIONS, Record);
 
   // Write out the diagnostic/pragma mappings.
   WritePragmaDiagnosticMappings(Diags, /* IsModule = */ WritingModule);
@@ -1648,13 +1655,6 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     AddString(TargetOpts.Features[I], Record);
   }
   Stream.EmitRecord(TARGET_OPTIONS, Record);
-
-  // File system options.
-  Record.clear();
-  const FileSystemOptions &FSOpts =
-      Context.getSourceManager().getFileManager().getFileSystemOpts();
-  AddString(FSOpts.WorkingDir, Record);
-  Stream.EmitRecord(FILE_SYSTEM_OPTIONS, Record);
 
   // Header search options.
   Record.clear();

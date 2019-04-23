@@ -329,9 +329,6 @@ namespace serialization {
       /// Record code for the target options table.
       TARGET_OPTIONS,
 
-      /// Record code for the filesystem options table.
-      FILE_SYSTEM_OPTIONS,
-
       /// Record code for the headers search options table.
       HEADER_SEARCH_OPTIONS,
 
@@ -349,6 +346,9 @@ namespace serialization {
 
       /// Record code for the headers search paths.
       HEADER_SEARCH_PATHS,
+
+      /// Record code for the filesystem options table.
+      FILE_SYSTEM_OPTIONS,
 
       /// Record code for \#pragma diagnostic mappings.
       DIAG_PRAGMA_MAPPINGS,
