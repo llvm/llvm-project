@@ -10,8 +10,7 @@ int main(int argc, const char *argv[]) {
   
   dispatch_queue_t queue = dispatch_queue_create("my.queue", DISPATCH_QUEUE_CONCURRENT);
   dispatch_semaphore_t sem = dispatch_semaphore_create(0);
-  NSString *ns_path = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp-gcd-io.%d", getpid()]];
-  const char *path = ns_path.fileSystemRepresentation;
+  const char *path = tempnam(NULL, "libdispatch-io-cleanup-");
   dispatch_io_t channel;
   
   dispatch_fd_t fd = open(path, O_CREAT | O_WRONLY, 0666);

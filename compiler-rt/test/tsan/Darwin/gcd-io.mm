@@ -98,8 +98,7 @@ int main(int argc, const char *argv[]) {
   
   queue = dispatch_queue_create("my.queue", DISPATCH_QUEUE_SERIAL);
   sem = dispatch_semaphore_create(0);
-  NSString *ns_path = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp-gcd-io.%d", getpid()]];
-  path = ns_path.fileSystemRepresentation;
+  path = tempnam(NULL, "libdispatch-io-");
   char buf[1000];
   data = dispatch_data_create(buf, sizeof(buf), NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
   
