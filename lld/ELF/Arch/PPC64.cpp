@@ -496,7 +496,7 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_DTPREL16_LO:
   case R_PPC64_DTPREL16_LO_DS:
   case R_PPC64_DTPREL64:
-    return R_ABS;
+    return R_DTPREL;
   case R_PPC64_TLSGD:
     return R_TLSDESC_CALL;
   case R_PPC64_TLSLD:

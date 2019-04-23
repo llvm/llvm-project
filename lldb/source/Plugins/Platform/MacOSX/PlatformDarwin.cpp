@@ -68,8 +68,6 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
     // precisely that. Ideally, we should have a per-platform list of
     // extensions (".exe", ".app", ".dSYM", ".framework") which should be
     // stripped while leaving "this.binary.file" as-is.
-    ScriptInterpreter *script_interpreter =
-        target->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
 
     FileSpec module_spec = module.GetFileSpec();
 
@@ -81,7 +79,10 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
           ObjectFile *objfile = symfile->GetObjectFile();
           if (objfile) {
             FileSpec symfile_spec(objfile->GetFileSpec());
-            if (symfile_spec && FileSystem::Instance().Exists(symfile_spec)) {
+            if (symfile_spec && 
+                strcasestr (symfile_spec.GetPath().c_str(), 
+                        ".dSYM/Contents/Resources/DWARF") != nullptr &&
+                FileSystem::Instance().Exists(symfile_spec)) {
               while (module_spec.GetFilename()) {
                 std::string module_basename(
                     module_spec.GetFilename().GetCString());
@@ -103,6 +104,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                              ' ', '_');
                 std::replace(module_basename.begin(), module_basename.end(),
                              '-', '_');
+                ScriptInterpreter *script_interpreter =
+                  target->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
                 if (script_interpreter &&
                     script_interpreter->IsReservedWord(
                         module_basename.c_str())) {

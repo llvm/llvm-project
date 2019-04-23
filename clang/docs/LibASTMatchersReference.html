@@ -3567,16 +3567,53 @@ represent an error condition in the tree!
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('isClassMessage0')"><a name="isClassMessage0Anchor">isClassMessage</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isClassMessage0"><pre>Returns true when the Objective-C message is sent to a class.
+
+Example
+matcher = objcMessageExpr(isClassMessage())
+matches
+  [NSString stringWithFormat:@"format"];
+but not
+  NSString *x = @"hello";
+  [x containsString:@"h"];
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('isInstanceMessage0')"><a name="isInstanceMessage0Anchor">isInstanceMessage</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isInstanceMessage0"><pre>Returns true when the Objective-C message is sent to an instance.
 
 Example
-matcher = objcMessagaeExpr(isInstanceMessage())
+matcher = objcMessageExpr(isInstanceMessage())
 matches
   NSString *x = @"hello";
   [x containsString:@"h"];
 but not
   [NSString stringWithFormat:@"format"];
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isClassMethod0')"><a name="isClassMethod0Anchor">isClassMethod</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isClassMethod0"><pre>Returns true when the Objective-C method declaration is a class method.
+
+Example
+matcher = objcMethodDecl(isClassMethod())
+matches
+  @interface I + (void)foo; @end
+but not
+  @interface I - (void)bar; @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isInstanceMessage0')"><a name="isInstanceMessage0Anchor">isInstanceMethod</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInstanceMethod0"><pre>Returns true when the Objective-C method declaration is an instance method.
+
+Example
+matcher = objcMethodDecl(isInstanceMethod())
+matches
+  @interface I - (void)bar; @end
+but not
+  @interface I + (void)foo; @end
 </pre></td></tr>
 
 

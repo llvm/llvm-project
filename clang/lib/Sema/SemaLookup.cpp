@@ -2471,30 +2471,38 @@ namespace {
 static void
 addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType T);
 
+// Given the declaration context \param Ctx of a class, class template or
+// enumeration, add the associated namespaces to \param Namespaces as described
+// in [basic.lookup.argdep]p2.
 static void CollectEnclosingNamespace(Sema::AssociatedNamespaceSet &Namespaces,
                                       DeclContext *Ctx) {
-  // Add the associated namespace for this class.
+  // The exact wording has been changed in C++14 as a result of
+  // CWG 1691 (see also CWG 1690 and CWG 1692). We apply it unconditionally
+  // to all language versions since it is possible to return a local type
+  // from a lambda in C++11.
+  //
+  // C++14 [basic.lookup.argdep]p2:
+  //   If T is a class type [...]. Its associated namespaces are the innermost
+  //   enclosing namespaces of its associated classes. [...]
+  //
+  //   If T is an enumeration type, its associated namespace is the innermost
+  //   enclosing namespace of its declaration. [...]
 
-  // We don't use DeclContext::getEnclosingNamespaceContext() as this may
-  // be a locally scoped record.
-
-  // We skip out of inline namespaces. The innermost non-inline namespace
+  // We additionally skip inline namespaces. The innermost non-inline namespace
   // contains all names of all its nested inline namespaces anyway, so we can
   // replace the entire inline namespace tree with its root.
-  while (Ctx->isRecord() || Ctx->isTransparentContext() ||
-         Ctx->isInlineNamespace())
+  while (!Ctx->isFileContext() || Ctx->isInlineNamespace())
     Ctx = Ctx->getParent();
 
-  if (Ctx->isFileContext())
-    Namespaces.insert(Ctx->getPrimaryContext());
+  Namespaces.insert(Ctx->getPrimaryContext());
 }
 
 // Add the associated classes and namespaces for argument-dependent
-// lookup that involves a template argument (C++ [basic.lookup.koenig]p2).
+// lookup that involves a template argument (C++ [basic.lookup.argdep]p2).
 static void
 addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
                                   const TemplateArgument &Arg) {
-  // C++ [basic.lookup.koenig]p2, last bullet:
+  // C++ [basic.lookup.argdep]p2, last bullet:
   //   -- [...] ;
   switch (Arg.getKind()) {
     case TemplateArgument::Null:
@@ -2539,9 +2547,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
   }
 }
 
-// Add the associated classes and namespaces for
-// argument-dependent lookup with an argument of class type
-// (C++ [basic.lookup.koenig]p2).
+// Add the associated classes and namespaces for argument-dependent lookup
+// with an argument of class type (C++ [basic.lookup.argdep]p2).
 static void
 addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
                                   CXXRecordDecl *Class) {
@@ -2550,18 +2557,19 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
   if (Class->getDeclName() == Result.S.VAListTagName)
     return;
 
-  // C++ [basic.lookup.koenig]p2:
+  // C++ [basic.lookup.argdep]p2:
   //   [...]
   //     -- If T is a class type (including unions), its associated
   //        classes are: the class itself; the class of which it is a
-  //        member, if any; and its direct and indirect base
-  //        classes. Its associated namespaces are the namespaces in
-  //        which its associated classes are defined.
+  //        member, if any; and its direct and indirect base classes.
+  //        Its associated namespaces are the innermost enclosing
+  //        namespaces of its associated classes.
 
   // Add the class of which it is a member, if any.
   DeclContext *Ctx = Class->getDeclContext();
   if (CXXRecordDecl *EnclosingClass = dyn_cast<CXXRecordDecl>(Ctx))
     Result.Classes.insert(EnclosingClass);
+
   // Add the associated namespace for this class.
   CollectEnclosingNamespace(Result.Namespaces, Ctx);
 
@@ -2682,10 +2690,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
       break;
 
     //     -- If T is a class type (including unions), its associated
-    //        classes are: the class itself; the class of which it is a
-    //        member, if any; and its direct and indirect base
-    //        classes. Its associated namespaces are the namespaces in
-    //        which its associated classes are defined.
+    //        classes are: the class itself; the class of which it is
+    //        a member, if any; and its direct and indirect base classes.
+    //        Its associated namespaces are the innermost enclosing
+    //        namespaces of its associated classes.
     case Type::Record: {
       CXXRecordDecl *Class =
           cast<CXXRecordDecl>(cast<RecordType>(T)->getDecl());
@@ -2693,10 +2701,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
       break;
     }
 
-    //     -- If T is an enumeration type, its associated namespace is
-    //        the namespace in which it is defined. If it is class
-    //        member, its associated class is the member's class; else
-    //        it has no associated class.
+    //     -- If T is an enumeration type, its associated namespace
+    //        is the innermost enclosing namespace of its declaration.
+    //        If it is a class member, its associated class is the
+    //        member’s class; else it has no associated class.
     case Type::Enum: {
       EnumDecl *Enum = cast<EnumType>(T)->getDecl();
 
@@ -2704,7 +2712,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
       if (CXXRecordDecl *EnclosingClass = dyn_cast<CXXRecordDecl>(Ctx))
         Result.Classes.insert(EnclosingClass);
 
-      // Add the associated namespace for this class.
+      // Add the associated namespace for this enumeration.
       CollectEnclosingNamespace(Result.Namespaces, Ctx);
 
       break;

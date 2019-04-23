@@ -437,9 +437,10 @@ Decl *Parser::ParseExportDeclaration() {
 
   // The Modules TS draft says "An export-declaration shall declare at least one
   // entity", but the intent is that it shall contain at least one declaration.
-  if (Tok.is(tok::r_brace))
+  if (Tok.is(tok::r_brace) && getLangOpts().ModulesTS) {
     Diag(ExportLoc, diag::err_export_empty)
         << SourceRange(ExportLoc, Tok.getLocation());
+  }
 
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {

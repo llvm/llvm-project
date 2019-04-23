@@ -132,3 +132,19 @@ namespace test8 {
     test8_function(ref);
   }
 }
+
+
+
+// [...] Typedef names and using-declarations used to specify the types
+// do not contribute to this set.
+namespace typedef_names_and_using_declarations {
+  namespace N { struct S {}; void f(S); }
+  namespace M { typedef N::S S; void g1(S); } // expected-note {{declared here}}
+  namespace L { using N::S; void g2(S); } // expected-note {{declared here}}
+  void test() {
+	  M::S s;
+    f(s);    // ok
+    g1(s);   // expected-error {{use of undeclared}}
+    g2(s);   // expected-error {{use of undeclared}}
+  }
+}

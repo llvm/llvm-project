@@ -344,6 +344,8 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isBitField);
   REGISTER_MATCHER(isCatchAll);
   REGISTER_MATCHER(isClass);
+  REGISTER_MATCHER(isClassMessage);
+  REGISTER_MATCHER(isClassMethod);
   REGISTER_MATCHER(isConst);
   REGISTER_MATCHER(isConstQualified);
   REGISTER_MATCHER(isConstexpr);
@@ -367,6 +369,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isInTemplateInstantiation);
   REGISTER_MATCHER(isInline);
   REGISTER_MATCHER(isInstanceMessage);
+  REGISTER_MATCHER(isInstanceMethod);
   REGISTER_MATCHER(isInstantiated);
   REGISTER_MATCHER(isInstantiationDependent);
   REGISTER_MATCHER(isInteger);

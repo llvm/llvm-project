@@ -330,6 +330,14 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   return ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Mod, Path);
 }
 
+/// Determine whether \p D is lexically within an export-declaration.
+static const ExportDecl *getEnclosingExportDecl(const Decl *D) {
+  for (auto *DC = D->getLexicalDeclContext(); DC; DC = DC->getLexicalParent())
+    if (auto *ED = dyn_cast<ExportDecl>(DC))
+      return ED;
+  return nullptr;
+}
+
 DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ExportLoc,
                                    SourceLocation ImportLoc,
@@ -384,7 +392,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
 
   // Re-export the module if needed.
   if (!ModuleScopes.empty() && ModuleScopes.back().ModuleInterface) {
-    if (ExportLoc.isValid() || Import->isExported())
+    if (ExportLoc.isValid() || getEnclosingExportDecl(Import))
       getCurrentModule()->Exports.emplace_back(Mod, false);
   } else if (ExportLoc.isValid()) {
     Diag(ExportLoc, diag::err_export_not_in_module_interface);
@@ -516,11 +524,13 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
                                  SourceLocation LBraceLoc) {
   ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
 
-  // C++20 [module.interface]p1:
+  // Set this temporarily so we know the export-declaration was braced.
+  D->setRBraceLoc(LBraceLoc);
+
+  // C++2a [module.interface]p1:
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
-  //   indirectly within an unnamed namespace or a private-module-fragment.
-  // FIXME: Check for the unnamed namespace case.
+  //   indirectly within [...] a private-module-fragment.
   if (ModuleScopes.empty() || !ModuleScopes.back().Module->isModulePurview()) {
     Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
   } else if (!ModuleScopes.back().ModuleInterface) {
@@ -534,15 +544,145 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
     Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
   }
 
+  for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC)) {
+      //   An export-declaration shall not appear directly or indirectly within
+      //   an unnamed namespace [...]
+      if (ND->isAnonymousNamespace()) {
+        Diag(ExportLoc, diag::err_export_within_anonymous_namespace);
+        Diag(ND->getLocation(), diag::note_anonymous_namespace);
+        // Don't diagnose internal-linkage declarations in this region.
+        D->setInvalidDecl();
+        break;
+      }
+
+      //   A declaration is exported if it is [...] a namespace-definition
+      //   that contains an exported declaration.
+      //
+      // Defer exporting the namespace until after we leave it, in order to
+      // avoid marking all subsequent declarations in the namespace as exported.
+      if (!DeferredExportedNamespaces.insert(ND).second)
+        break;
+    }
+  }
+
   //   [...] its declaration or declaration-seq shall not contain an
   //   export-declaration.
-  if (D->isExported())
+  if (auto *ED = getEnclosingExportDecl(D)) {
     Diag(ExportLoc, diag::err_export_within_export);
+    if (ED->hasBraces())
+      Diag(ED->getLocation(), diag::note_export);
+  }
 
   CurContext->addDecl(D);
   PushDeclContext(S, D);
   D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
   return D;
+}
+
+static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
+                                     SourceLocation BlockStart);
+
+namespace {
+enum class UnnamedDeclKind {
+  Empty,
+  StaticAssert,
+  Asm,
+  UsingDirective,
+  Context
+};
+}
+
+static llvm::Optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
+  if (isa<EmptyDecl>(D))
+    return UnnamedDeclKind::Empty;
+  if (isa<StaticAssertDecl>(D))
+    return UnnamedDeclKind::StaticAssert;
+  if (isa<FileScopeAsmDecl>(D))
+    return UnnamedDeclKind::Asm;
+  if (isa<UsingDirectiveDecl>(D))
+    return UnnamedDeclKind::UsingDirective;
+  // Everything else either introduces one or more names or is ill-formed.
+  return llvm::None;
+}
+
+unsigned getUnnamedDeclDiag(UnnamedDeclKind UDK, bool InBlock) {
+  switch (UDK) {
+  case UnnamedDeclKind::Empty:
+  case UnnamedDeclKind::StaticAssert:
+    // Allow empty-declarations and static_asserts in an export block as an
+    // extension.
+    return InBlock ? diag::ext_export_no_name_block : diag::err_export_no_name;
+
+  case UnnamedDeclKind::UsingDirective:
+    // Allow exporting using-directives as an extension.
+    return diag::ext_export_using_directive;
+
+  case UnnamedDeclKind::Context:
+    // Allow exporting DeclContexts that transitively contain no declarations
+    // as an extension.
+    return diag::ext_export_no_names;
+
+  case UnnamedDeclKind::Asm:
+    return diag::err_export_no_name;
+  }
+  llvm_unreachable("unknown kind");
+}
+
+static void diagExportedUnnamedDecl(Sema &S, UnnamedDeclKind UDK, Decl *D,
+                                    SourceLocation BlockStart) {
+  S.Diag(D->getLocation(), getUnnamedDeclDiag(UDK, BlockStart.isValid()))
+      << (unsigned)UDK;
+  if (BlockStart.isValid())
+    S.Diag(BlockStart, diag::note_export);
+}
+
+/// Check that it's valid to export \p D.
+static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
+  // C++2a [module.interface]p3:
+  //   An exported declaration shall declare at least one name
+  if (auto UDK = getUnnamedDeclKind(D))
+    diagExportedUnnamedDecl(S, *UDK, D, BlockStart);
+
+  //   [...] shall not declare a name with internal linkage.
+  if (auto *ND = dyn_cast<NamedDecl>(D)) {
+    // Don't diagnose anonymous union objects; we'll diagnose their members
+    // instead.
+    if (ND->getDeclName() && ND->getFormalLinkage() == InternalLinkage) {
+      S.Diag(ND->getLocation(), diag::err_export_internal) << ND;
+      if (BlockStart.isValid())
+        S.Diag(BlockStart, diag::note_export);
+    }
+  }
+
+  // C++2a [module.interface]p5:
+  //   all entities to which all of the using-declarators ultimately refer
+  //   shall have been introduced with a name having external linkage
+  if (auto *USD = dyn_cast<UsingShadowDecl>(D)) {
+    NamedDecl *Target = USD->getUnderlyingDecl();
+    if (Target->getFormalLinkage() == InternalLinkage) {
+      S.Diag(USD->getLocation(), diag::err_export_using_internal) << Target;
+      S.Diag(Target->getLocation(), diag::note_using_decl_target);
+      if (BlockStart.isValid())
+        S.Diag(BlockStart, diag::note_export);
+    }
+  }
+
+  // Recurse into namespace-scope DeclContexts. (Only namespace-scope
+  // declarations are exported.)
+  if (auto *DC = dyn_cast<DeclContext>(D))
+    if (DC->getRedeclContext()->isFileContext() && !isa<EnumDecl>(D))
+      return checkExportedDeclContext(S, DC, BlockStart);
+  return false;
+}
+
+/// Check that it's valid to export all the declarations in \p DC.
+static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
+                                     SourceLocation BlockStart) {
+  bool AllUnnamed = true;
+  for (auto *D : DC->decls())
+    AllUnnamed &= checkExportedDecl(S, D, BlockStart);
+  return AllUnnamed;
 }
 
 /// Complete the definition of an export declaration.
@@ -551,9 +691,20 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
   if (RBraceLoc.isValid())
     ED->setRBraceLoc(RBraceLoc);
 
-  // FIXME: Diagnose export of internal-linkage declaration (including
-  // anonymous namespace).
-
   PopDeclContext();
+
+  if (!D->isInvalidDecl()) {
+    SourceLocation BlockStart =
+        ED->hasBraces() ? ED->getBeginLoc() : SourceLocation();
+    for (auto *Child : ED->decls()) {
+      if (checkExportedDecl(*this, Child, BlockStart)) {
+        // If a top-level child is a linkage-spec declaration, it might contain
+        // no declarations (transitively), in which case it's ill-formed.
+        diagExportedUnnamedDecl(*this, UnnamedDeclKind::Context, Child,
+                                BlockStart);
+      }
+    }
+  }
+
   return D;
 }
