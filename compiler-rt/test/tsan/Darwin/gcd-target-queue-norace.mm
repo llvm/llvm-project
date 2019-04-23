@@ -1,11 +1,14 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
+#include "dispatch/dispatch.h"
+
+#include <stdio.h>
 
 long global;
 
 int main(int argc, const char *argv[]) {
+  dispatch_semaphore_t done = dispatch_semaphore_create(0);
   dispatch_queue_t target_queue = dispatch_queue_create(NULL, DISPATCH_QUEUE_SERIAL);
   dispatch_queue_t q1 = dispatch_queue_create(NULL, DISPATCH_QUEUE_CONCURRENT);
   dispatch_queue_t q2 = dispatch_queue_create(NULL, DISPATCH_QUEUE_CONCURRENT);
@@ -17,25 +20,22 @@ int main(int argc, const char *argv[]) {
       global++;
 
       if (global == 200000) {
-        dispatch_sync(dispatch_get_main_queue(), ^{
-          CFRunLoopStop(CFRunLoopGetCurrent());
-        });
+        dispatch_semaphore_signal(done);
       }
     });
     dispatch_async(q2, ^{
       global++;
 
       if (global == 200000) {
-        dispatch_sync(dispatch_get_main_queue(), ^{
-          CFRunLoopStop(CFRunLoopGetCurrent());
-        });
+        dispatch_semaphore_signal(done);
       }
     });
   }
 
-  CFRunLoopRun();
-  NSLog(@"Done.");
+  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
+  fprintf(stderr, "Done.\n");
   return 0;
 }
 
 // CHECK-NOT: WARNING: ThreadSanitizer
+// CHECK: Done.
