@@ -1,7 +1,10 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
+#include <dispatch/dispatch.h>
+
+#include <stdio.h>
+#include <stdlib.h>
 
 dispatch_queue_t queue;
 dispatch_data_t data;

@@ -1,9 +1,7 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %deflake %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: disabled
-
-#import <Foundation/Foundation.h>
 
 #import "../test.h"
 
