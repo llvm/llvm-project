@@ -329,7 +329,7 @@ static Expected<OutputLocation> getOutputFileName(llvm::StringRef InputFile) {
     return std::move(E);
 
   llvm::sys::path::append(Path, "Contents", "Resources");
-  std::string ResourceDir = Path;
+  StringRef ResourceDir = Path;
   llvm::sys::path::append(Path, "DWARF", llvm::sys::path::filename(DwarfFile));
   return OutputLocation(Path.str(), ResourceDir.str());
 }
