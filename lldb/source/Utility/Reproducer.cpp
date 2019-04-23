@@ -259,8 +259,6 @@ void CommandProvider::Keep() {
     return;
   yaml::Output yout(os);
   yout << files;
-
-  m_data_recorders.clear();
 }
 
 void CommandProvider::Discard() { m_data_recorders.clear(); }

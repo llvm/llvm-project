@@ -464,6 +464,10 @@ def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
   HelpText<"Checks C++ copy and move assignment operators for self assignment">,
   Documentation<NotDocumented>;
 
+def SmartPtrModeling: Checker<"SmartPtr">,
+  HelpText<"Model behavior of C++ smart pointers">,
+  Documentation<NotDocumented>;
+
 def MoveChecker: Checker<"Move">,
   HelpText<"Find use-after-move bugs in C++">,
   CheckerOptions<[

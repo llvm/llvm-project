@@ -1730,6 +1730,9 @@ public:
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
+  /// Updates profile metadata by scaling it by \p S / \p T.
+  void updateProfWeight(uint64_t S, uint64_t T);
+
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.

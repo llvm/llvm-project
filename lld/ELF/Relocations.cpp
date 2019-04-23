@@ -1243,10 +1243,10 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
   // Sort relocations by offset to binary search for R_RISCV_PCREL_HI20
   if (Config->EMachine == EM_RISCV)
-    std::stable_sort(Sec.Relocations.begin(), Sec.Relocations.end(),
-                     [](const Relocation &LHS, const Relocation &RHS) {
-                       return LHS.Offset < RHS.Offset;
-                     });
+    llvm::stable_sort(Sec.Relocations,
+                      [](const Relocation &LHS, const Relocation &RHS) {
+                        return LHS.Offset < RHS.Offset;
+                      });
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
@@ -1418,10 +1418,10 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> OutputSections) {
         for (const std::pair<ThunkSection *, uint32_t> TS : ISD->ThunkSections)
           if (TS.second == Pass)
             NewThunks.push_back(TS.first);
-        std::stable_sort(NewThunks.begin(), NewThunks.end(),
-                         [](const ThunkSection *A, const ThunkSection *B) {
-                           return A->OutSecOff < B->OutSecOff;
-                         });
+        llvm::stable_sort(NewThunks,
+                          [](const ThunkSection *A, const ThunkSection *B) {
+                            return A->OutSecOff < B->OutSecOff;
+                          });
 
         // Merge sorted vectors of Thunks and InputSections by OutSecOff
         std::vector<InputSection *> Tmp;

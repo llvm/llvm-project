@@ -141,6 +141,30 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
 
 // Translate from the relocation's index into the final linked output value.
 uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
+  const Symbol* Sym = nullptr;
+  if (Reloc.Type != R_WASM_TYPE_INDEX_LEB) {
+    Sym = Symbols[Reloc.Index];
+
+    // We can end up with relocations against non-live symbols.  For example
+    // in debug sections.
+    if ((isa<FunctionSymbol>(Sym) || isa<DataSymbol>(Sym)) && !Sym->isLive())
+      return 0;
+
+    // Special handling for undefined data symbols.  Most relocations against
+    // such symbols cannot be resolved.
+    if (isa<DataSymbol>(Sym) && Sym->isUndefined()) {
+      if (Sym->isWeak() || Config->Relocatable)
+        return 0;
+      if (Config->Shared && Reloc.Type == R_WASM_MEMORY_ADDR_I32)
+        return 0;
+      if (Reloc.Type != R_WASM_GLOBAL_INDEX_LEB) {
+        llvm_unreachable(
+          ("invalid relocation against undefined data symbol: " + toString(*Sym))
+              .c_str());
+      }
+    }
+  }
+
   switch (Reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
   case R_WASM_TABLE_INDEX_SLEB:
@@ -150,28 +174,22 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_REL_SLEB:
-    if (auto *Sym = dyn_cast<DefinedData>(getDataSymbol(Reloc.Index)))
-      if (Sym->isLive())
-        return Sym->getVirtualAddress() + Reloc.Addend;
-    return 0;
+    return cast<DefinedData>(Sym)->getVirtualAddress() + Reloc.Addend;
   case R_WASM_TYPE_INDEX_LEB:
     return TypeMap[Reloc.Index];
   case R_WASM_FUNCTION_INDEX_LEB:
     return getFunctionSymbol(Reloc.Index)->getFunctionIndex();
-  case R_WASM_GLOBAL_INDEX_LEB: {
-    const Symbol* Sym = Symbols[Reloc.Index];
+  case R_WASM_GLOBAL_INDEX_LEB:
     if (auto GS = dyn_cast<GlobalSymbol>(Sym))
       return GS->getGlobalIndex();
     return Sym->getGOTIndex();
-  } case R_WASM_EVENT_INDEX_LEB:
+  case R_WASM_EVENT_INDEX_LEB:
     return getEventSymbol(Reloc.Index)->getEventIndex();
-  case R_WASM_FUNCTION_OFFSET_I32:
-    if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
-      if (Sym->isLive())
-        return Sym->Function->OutputOffset +
-               Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
-    }
-    return 0;
+  case R_WASM_FUNCTION_OFFSET_I32: {
+    auto *F = cast<DefinedFunction>(Sym);
+    return F->Function->OutputOffset + F->Function->getFunctionCodeOffset() +
+           Reloc.Addend;
+  }
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(Reloc.Index)->Section->OutputOffset + Reloc.Addend;
   default:

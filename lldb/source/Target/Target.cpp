@@ -1651,12 +1651,10 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
 
 
 void Target::ModulesDidLoad(ModuleList &module_list) {
-  if (m_valid && module_list.GetSize()) {
-
-    const ModuleList &modules = GetImages();
-    const size_t num_images = modules.GetSize();
+  const size_t num_images = module_list.GetSize();
+  if (m_valid && num_images) {
     for (size_t idx = 0; idx < num_images; ++idx) {
-      ModuleSP module_sp(modules.GetModuleAtIndex(idx));
+      ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
       LoadScriptingResourceForModule(module_sp, this);
     }
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);

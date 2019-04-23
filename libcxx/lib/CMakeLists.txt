@@ -230,7 +230,8 @@ if (LIBCXX_ENABLE_SHARED)
       COMMAND
         ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
       ARGS
-        "$<TARGET_LINKER_FILE:cxx_shared>"
+        --input "$<TARGET_SONAME_FILE:cxx_shared>"
+        --output "$<TARGET_LINKER_FILE:cxx_shared>"
         ${LIBCXX_INTERFACE_LIBRARY_NAMES}
       WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
     )

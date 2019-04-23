@@ -11,7 +11,6 @@
 // can discard this global and its initializer (if any), and other TUs are not
 // permitted to run the initializer for this variable.
 // CHECK-DAG: @inline_var_exported = linkonce_odr {{(dso_local )?}}global
-// CHECK-DAG: @_ZW6ModuleE19static_var_exported = {{(dso_local )?}}global
 // CHECK-DAG: @const_var_exported = {{(dso_local )?}}constant
 //
 // CHECK-DAG: @_ZW6ModuleE25extern_var_module_linkage = external {{(dso_local )?}}global
@@ -58,32 +57,17 @@ void noninline_global_module() {
 export module Module;
 
 export {
-  // FIXME: These should be ill-formed: you can't export an internal linkage
-  // symbol, per [dcl.module.interface]p2.
-  // CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6ModuleE22unused_static_exportedv
-  static void unused_static_exported() {}
-  // CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6ModuleE20used_static_exportedv
-  static void used_static_exported() {}
-
   inline void unused_inline_exported() {}
   inline void used_inline_exported() {}
 
   extern int extern_var_exported;
   inline int inline_var_exported;
-  // FIXME: This should be ill-formed: you can't export an internal linkage
-  // symbol.
-  static int static_var_exported;
   const int const_var_exported = 3;
 
   // CHECK: define {{(dso_local )?}}void {{.*}}@_Z18noninline_exportedv
   void noninline_exported() {
-    used_static_exported();
-    // CHECK: define linkonce_odr {{.*}}@_Z20used_inline_exportedv
-    used_inline_exported();
-
     (void)&extern_var_exported;
     (void)&inline_var_exported;
-    (void)&static_var_exported;
     (void)&const_var_exported;
   }
 }
