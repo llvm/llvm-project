@@ -189,15 +189,24 @@ static bool updateOperand(FoldCandidate &Fold,
       unsigned Val = Mod.getImm();
       if ((Val & SISrcMods::OP_SEL_0) || !(Val & SISrcMods::OP_SEL_1))
         return false;
-      // If upper part is all zero we do not need op_sel_hi.
-      if (!isUInt<16>(Fold.ImmToFold)) {
-        if (!(Fold.ImmToFold & 0xffff)) {
-          Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
+      // Only apply the following transformation if that operand requries
+      // a packed immediate.
+      switch (TII.get(Opcode).OpInfo[OpNo].OperandType) {
+      case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+      case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+        // If upper part is all zero we do not need op_sel_hi.
+        if (!isUInt<16>(Fold.ImmToFold)) {
+          if (!(Fold.ImmToFold & 0xffff)) {
+            Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
+            Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+            Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
+            return true;
+          }
           Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-          Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
-          return true;
         }
-        Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+        break;
+      default:
+        break;
       }
     }
 

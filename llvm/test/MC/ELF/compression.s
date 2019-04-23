@@ -10,9 +10,11 @@
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple x86_64-pc-linux-gnu < %s -o %t
 // RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-ZLIB-STYLE %s
 // RUN: llvm-dwarfdump -debug-str %t | FileCheck --check-prefix=STR %s
-// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple i386-pc-linux-gnu < %s \
-// RUN:     | llvm-readobj -symbols - | FileCheck --check-prefix=386-SYMBOLS-ZLIB %s
-// RUN: llvm-readobj -sections %t | FileCheck --check-prefix=ZLIB-STYLE-FLAGS %s
+// RUN: llvm-readobj -sections %t | FileCheck --check-prefixes=ZLIB-STYLE-FLAGS,ZLIB-STYLE-FLAGS64 %s
+
+// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple i386-pc-linux-gnu < %s -o %t
+// RUN: llvm-readobj -symbols -sections %t \
+// RUN:   | FileCheck --check-prefixes=386-SYMBOLS-ZLIB,ZLIB-STYLE-FLAGS,ZLIB-STYLE-FLAGS32 %s
 
 // Don't compress small sections, such as this simple debug_abbrev example
 // CHECK-GNU-STYLE: Contents of section .debug_abbrev:
@@ -60,6 +62,16 @@
 // ZLIB-STYLE-FLAGS-NEXT:   Type: SHT_PROGBITS
 // ZLIB-STYLE-FLAGS-NEXT:   Flags [
 // ZLIB-STYLE-FLAGS-NEXT:     SHF_COMPRESSED
+// ZLIB-STYLE-FLAGS-NEXT:     SHF_MERGE
+// ZLIB-STYLE-FLAGS-NEXT:     SHF_STRINGS
+// ZLIB-STYLE-FLAGS-NEXT:   ]
+// ZLIB-STYLE-FLAGS-NEXT:   Address:
+// ZLIB-STYLE-FLAGS-NEXT:   Offset:
+// ZLIB-STYLE-FLAGS-NEXT:   Size:
+// ZLIB-STYLE-FLAGS-NEXT:   Link:
+// ZLIB-STYLE-FLAGS-NEXT:   Info:
+// ZLIB-STYLE-FLAGS32-NEXT: AddressAlignment: 4
+// ZLIB-STYLE-FLAGS64-NEXT: AddressAlignment: 8
 
 // 386-SYMBOLS-ZLIB: Name: .Linfo_string0
 // 386-SYMBOLS-ZLIB-NOT: }

@@ -91,6 +91,12 @@ public:
   bool SelectAddrModeIndexed7S128(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 16, Base, OffImm);
   }
+  bool SelectAddrModeIndexedS9S128(SDValue N, SDValue &Base, SDValue &OffImm) {
+    return SelectAddrModeIndexedBitWidth(N, true, 9, 16, Base, OffImm);
+  }
+  bool SelectAddrModeIndexedU6S128(SDValue N, SDValue &Base, SDValue &OffImm) {
+    return SelectAddrModeIndexedBitWidth(N, false, 6, 16, Base, OffImm);
+  }
   bool SelectAddrModeIndexed8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed(N, 1, Base, OffImm);
   }
@@ -179,7 +185,12 @@ private:
   bool SelectShiftedRegister(SDValue N, bool AllowROR, SDValue &Reg,
                              SDValue &Shift);
   bool SelectAddrModeIndexed7S(SDValue N, unsigned Size, SDValue &Base,
-                               SDValue &OffImm);
+                               SDValue &OffImm) {
+    return SelectAddrModeIndexedBitWidth(N, true, 7, Size, Base, OffImm);
+  }
+  bool SelectAddrModeIndexedBitWidth(SDValue N, bool IsSignedImm, unsigned BW,
+                                     unsigned Size, SDValue &Base,
+                                     SDValue &OffImm);
   bool SelectAddrModeIndexed(SDValue N, unsigned Size, SDValue &Base,
                              SDValue &OffImm);
   bool SelectAddrModeUnscaled(SDValue N, unsigned Size, SDValue &Base,
@@ -675,12 +686,13 @@ static bool isWorthFoldingADDlow(SDValue N) {
   return true;
 }
 
-/// SelectAddrModeIndexed7S - Select a "register plus scaled signed 7-bit
+/// SelectAddrModeIndexedBitWidth - Select a "register plus scaled (un)signed BW-bit
 /// immediate" address.  The "Size" argument is the size in bytes of the memory
 /// reference, which determines the scale.
-bool AArch64DAGToDAGISel::SelectAddrModeIndexed7S(SDValue N, unsigned Size,
-                                                  SDValue &Base,
-                                                  SDValue &OffImm) {
+bool AArch64DAGToDAGISel::SelectAddrModeIndexedBitWidth(SDValue N, bool IsSignedImm,
+                                                        unsigned BW, unsigned Size,
+                                                        SDValue &Base,
+                                                        SDValue &OffImm) {
   SDLoc dl(N);
   const DataLayout &DL = CurDAG->getDataLayout();
   const TargetLowering *TLI = getTargetLowering();
@@ -693,24 +705,41 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed7S(SDValue N, unsigned Size,
 
   // As opposed to the (12-bit) Indexed addressing mode below, the 7-bit signed
   // selected here doesn't support labels/immediates, only base+offset.
-
   if (CurDAG->isBaseWithConstantOffset(N)) {
     if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-      int64_t RHSC = RHS->getSExtValue();
-      unsigned Scale = Log2_32(Size);
-      if ((RHSC & (Size - 1)) == 0 && RHSC >= -(0x40 << Scale) &&
-          RHSC < (0x40 << Scale)) {
-        Base = N.getOperand(0);
-        if (Base.getOpcode() == ISD::FrameIndex) {
-          int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-          Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
+      if (IsSignedImm) {
+        int64_t RHSC = RHS->getSExtValue();
+        unsigned Scale = Log2_32(Size);
+        int64_t Range = 0x1 << (BW-1);
+
+        if ((RHSC & (Size - 1)) == 0 && RHSC >= -(Range << Scale) &&
+            RHSC < (Range << Scale)) {
+          Base = N.getOperand(0);
+          if (Base.getOpcode() == ISD::FrameIndex) {
+            int FI = cast<FrameIndexSDNode>(Base)->getIndex();
+            Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
+          }
+          OffImm = CurDAG->getTargetConstant(RHSC >> Scale, dl, MVT::i64);
+          return true;
         }
-        OffImm = CurDAG->getTargetConstant(RHSC >> Scale, dl, MVT::i64);
-        return true;
+      } else {
+        // unsigned Immediate
+        uint64_t RHSC = RHS->getZExtValue();
+        unsigned Scale = Log2_32(Size);
+        uint64_t Range = 0x1 << BW;
+
+        if ((RHSC & (Size - 1)) == 0 && RHSC < (Range << Scale)) {
+          Base = N.getOperand(0);
+          if (Base.getOpcode() == ISD::FrameIndex) {
+            int FI = cast<FrameIndexSDNode>(Base)->getIndex();
+            Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
+          }
+          OffImm = CurDAG->getTargetConstant(RHSC >> Scale, dl, MVT::i64);
+          return true;
+        }
       }
     }
   }
-
   // Base only. The address will be materialized into a register before
   // the memory is accessed.
   //    add x0, Xbase, #offset

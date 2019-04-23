@@ -26,7 +26,6 @@ define i32 @test([1024 x i8]* %target) {
 
 define void @memset_to_constant() {
 ; CHECK-LABEL: @memset_to_constant(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (i128* @Unknown to i8*), i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %p = bitcast i128* @Unknown to i8*

@@ -1233,11 +1233,11 @@ defm : STOPregister<"stumin","LDUMIN">;// STUMINx
 // v8.5 Memory Tagging Extension
 let Predicates = [HasMTE] in {
 
-def IRG   : BaseTwoOperand<0b0100, GPR64sp, "irg", null_frag, GPR64sp, GPR64>,
+def IRG   : BaseTwoOperand<0b0100, GPR64sp, "irg", int_aarch64_irg, GPR64sp, GPR64>,
             Sched<[]>{
   let Inst{31} = 1;
 }
-def GMI   : BaseTwoOperand<0b0101, GPR64, "gmi", null_frag, GPR64sp>, Sched<[]>{
+def GMI   : BaseTwoOperand<0b0101, GPR64, "gmi", int_aarch64_gmi, GPR64sp>, Sched<[]>{
   let Inst{31} = 1;
   let isNotDuplicable = 1;
 }
@@ -1246,7 +1246,7 @@ def SUBG  : AddSubG<1, "subg", null_frag>;
 
 def : InstAlias<"irg $dst, $src", (IRG GPR64sp:$dst, GPR64sp:$src, XZR), 1>;
 
-def SUBP : SUBP<0, "subp", null_frag>, Sched<[]>;
+def SUBP : SUBP<0, "subp", int_aarch64_subp>, Sched<[]>;
 def SUBPS : SUBP<1, "subps", null_frag>, Sched<[]>{
   let Defs = [NZCV];
 }
@@ -1254,13 +1254,18 @@ def SUBPS : SUBP<1, "subps", null_frag>, Sched<[]>{
 def : InstAlias<"cmpp $lhs, $rhs", (SUBPS XZR, GPR64sp:$lhs, GPR64sp:$rhs), 0>;
 
 def LDG : MemTagLoad<"ldg", "\t$Rt, [$Rn, $offset]">;
+
+def : Pat<(int_aarch64_addg (am_indexedu6s128 GPR64sp:$Rn, uimm6s16:$imm6), imm0_15:$imm4),
+          (ADDG GPR64sp:$Rn, imm0_63:$imm6, imm0_15:$imm4)>;
+def : Pat<(int_aarch64_ldg GPR64:$Rt, (am_indexeds9s128 GPR64sp:$Rn,  simm9s16:$offset)),
+          (LDG GPR64:$Rt, GPR64sp:$Rn,  simm9s16:$offset)>;
+
 def : InstAlias<"ldg $Rt, [$Rn]", (LDG GPR64:$Rt, GPR64sp:$Rn, 0), 1>;
 
 def LDGM : MemTagVector<1, "ldgm", "\t$Rt, [$Rn]",
                    (outs GPR64:$Rt), (ins GPR64sp:$Rn)>;
 def STGM : MemTagVector<0, "stgm", "\t$Rt, [$Rn]",
                    (outs), (ins GPR64:$Rt, GPR64sp:$Rn)>;
-
 def STZGM : MemTagVector<0, "stzgm", "\t$Rt, [$Rn]",
                    (outs), (ins GPR64:$Rt, GPR64sp:$Rn)> {
   let Inst{23} = 0;
@@ -1274,6 +1279,9 @@ defm STZ2G : MemTagStore<0b11, "stz2g">;
 defm STGP     : StorePairOffset <0b01, 0, GPR64z, simm7s16, "stgp">;
 def  STGPpre  : StorePairPreIdx <0b01, 0, GPR64z, simm7s16, "stgp">;
 def  STGPpost : StorePairPostIdx<0b01, 0, GPR64z, simm7s16, "stgp">;
+
+def : Pat<(int_aarch64_stg GPR64:$Rt, (am_indexeds9s128 GPR64sp:$Rn, simm9s16:$offset)),
+          (STGOffset GPR64:$Rt, GPR64sp:$Rn,  simm9s16:$offset)>;
 
 } // Predicates = [HasMTE]
 

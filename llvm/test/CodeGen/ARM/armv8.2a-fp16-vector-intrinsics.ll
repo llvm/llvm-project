@@ -1319,3 +1319,115 @@ declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>)
 declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)
 declare <8 x i8> @llvm.arm.neon.vbsl.v8i8(<8 x i8>, <8 x i8>, <8 x i8>)
 declare <16 x i8> @llvm.arm.neon.vbsl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
+declare { <8 x half>, <8 x half> } @llvm.arm.neon.vld2lane.v8f16.p0i8(i8*, <8 x half>, <8 x half>, i32, i32)
+declare { <4 x half>, <4 x half> } @llvm.arm.neon.vld2lane.v4f16.p0i8(i8*, <4 x half>, <4 x half>, i32, i32)
+declare { <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld3lane.v8f16.p0i8(i8*, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare { <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld3lane.v4f16.p0i8(i8*, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+declare { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld4lane.v8f16.p0i8(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld4lane.v4f16.p0i8(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+declare void @llvm.arm.neon.vst2lane.p0i8.v8f16(i8*, <8 x half>, <8 x half>, i32, i32)
+declare void @llvm.arm.neon.vst2lane.p0i8.v4f16(i8*, <4 x half>, <4 x half>, i32, i32)
+declare void @llvm.arm.neon.vst3lane.p0i8.v8f16(i8*, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare void @llvm.arm.neon.vst3lane.p0i8.v4f16(i8*, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+declare void @llvm.arm.neon.vst4lane.p0i8.v8f16(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare void @llvm.arm.neon.vst4lane.p0i8.v4f16(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+
+define { <8 x half>, <8 x half> } @test_vld2q_lane_f16(i8*, <8 x half>, <8 x half>) {
+; CHECK-LABEL: test_vld2q_lane_f16:
+; CHECK:    vld2.16 {d1[3], d3[3]}, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %3 = tail call { <8 x half>, <8 x half> } @llvm.arm.neon.vld2lane.v8f16.p0i8(i8* %0, <8 x half> %1, <8 x half> %2, i32 7, i32 2)
+  ret { <8 x half>, <8 x half> } %3
+}
+
+define { <4 x half>, <4 x half> } @test_vld2_lane_f16(i8*, <4 x half>, <4 x half>) {
+; CHECK-LABEL: test_vld2_lane_f16:
+; CHECK:       vld2.16 {d0[3], d1[3]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+  %3 = tail call { <4 x half>, <4 x half> } @llvm.arm.neon.vld2lane.v4f16.p0i8(i8* %0, <4 x half> %1, <4 x half> %2, i32 3, i32 2)
+  ret { <4 x half>, <4 x half> } %3
+}
+
+define { <8 x half>, <8 x half>, <8 x half> } @test_vld3q_lane_f16(i8*, <8 x half>, <8 x half>, <8 x half>) {
+; CHECK-LABEL: test_vld3q_lane_f16:
+; CHECK:       vld3.16 {d1[3], d3[3], d5[3]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+  %4 = tail call { <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld3lane.v8f16.p0i8(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, i32 7, i32 2)
+  ret { <8 x half>, <8 x half>, <8 x half> } %4
+}
+
+define { <4 x half>, <4 x half>, <4 x half> } @test_vld3_lane_f16(i8*, <4 x half>, <4 x half>, <4 x half>) {
+; CHECK-LABEL: test_vld3_lane_f16:
+; CHECK:       vld3.16 {d0[3], d1[3], d2[3]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+  %4 = tail call { <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld3lane.v4f16.p0i8(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, i32 3, i32 2)
+  ret { <4 x half>, <4 x half>, <4 x half> } %4
+}
+define { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @test_vld4lane_v8f16_p0i8(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>) {
+; CHECK-LABEL: test_vld4lane_v8f16_p0i8:
+; CHECK:       vld4.16 {d1[3], d3[3], d5[3], d7[3]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+  %5 = tail call { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld4lane.v8f16.p0i8(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, <8 x half> %4, i32 7, i32 2)
+  ret { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %5
+}
+define { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @test_vld4lane_v4f16_p0i8(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>) {
+; CHECK-LABEL: test_vld4lane_v4f16_p0i8:
+; CHECK:       vld4.16 {d0[3], d1[3], d2[3], d3[3]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+ %5 = tail call { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld4lane.v4f16.p0i8(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, <4 x half> %4, i32 3, i32 2)
+ ret { <4 x half>, <4 x half>, <4 x half>, <4 x half> } %5
+}
+define void @test_vst2lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>) {
+; CHECK-LABEL: test_vst2lane_p0i8_v8f16:
+; CHECK:       vst2.16 {d0[0], d2[0]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+  tail call void @llvm.arm.neon.vst2lane.p0i8.v8f16(i8* %0, <8 x half> %1, <8 x half> %2, i32 0, i32 1)
+  ret void
+}
+define void @test_vst2lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>) {
+; CHECK-LABEL: test_vst2lane_p0i8_v4f16:
+; CHECK:       vst2.16 {d0[0], d1[0]}, [r0:32]
+; CHECK-NEXT:  bx lr
+entry:
+  tail call void @llvm.arm.neon.vst2lane.p0i8.v4f16(i8* %0, <4 x half> %1, <4 x half> %2, i32 0, i32 0)
+  ret void
+}
+define void @test_vst3lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>, <8 x half>) {
+; CHECK-LABEL: test_vst3lane_p0i8_v8f16:
+; CHECK:       vst3.16 {d0[0], d2[0], d4[0]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+  tail call void @llvm.arm.neon.vst3lane.p0i8.v8f16(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, i32 0, i32 0)
+  ret void
+}
+define void @test_vst3lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>, <4 x half>) {
+; CHECK-LABEL: test_vst3lane_p0i8_v4f16:
+; CHECK:       vst3.16 {d0[0], d1[0], d2[0]}, [r0]
+; CHECK-NEXT:  bx lr
+entry:
+  tail call void @llvm.arm.neon.vst3lane.p0i8.v4f16(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, i32 0, i32 0)
+  ret void
+}
+define void @test_vst4lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>) {
+; CHECK-LABEL: test_vst4lane_p0i8_v8f16:
+; CHECK:       vst4.16 {d0[0], d2[0], d4[0], d6[0]}, [r0:64]
+; CHECK-NEXT:  bx lr
+entry:
+  tail call void @llvm.arm.neon.vst4lane.p0i8.v8f16(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, <8 x half> %4, i32 0, i32 0)
+  ret void
+}
+define void @test_vst4lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>) {
+; CHECK-LABEL: test_vst4lane_p0i8_v4f16:
+; CHECK:       vst4.16 {d0[0], d1[0], d2[0], d3[0]}, [r0:64]
+; CHECK-NEXT:  bx lr
+entry:
+  tail call void @llvm.arm.neon.vst4lane.p0i8.v4f16(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, <4 x half> %4, i32 0, i32 0)
+  ret void
+}
