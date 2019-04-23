@@ -3530,14 +3530,14 @@ protected:
           funcname.AsCString(), start_addr);
 
       UnwindPlanSP non_callsite_unwind_plan =
-          func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread, -1);
+          func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread);
       if (non_callsite_unwind_plan) {
         result.GetOutputStream().Printf(
             "Asynchronous (not restricted to call-sites) UnwindPlan is '%s'\n",
             non_callsite_unwind_plan->GetSourceName().AsCString());
       }
       UnwindPlanSP callsite_unwind_plan =
-          func_unwinders_sp->GetUnwindPlanAtCallSite(*target, -1);
+          func_unwinders_sp->GetUnwindPlanAtCallSite(*target);
       if (callsite_unwind_plan) {
         result.GetOutputStream().Printf(
             "Synchronous (restricted to call-sites) UnwindPlan is '%s'\n",
@@ -3554,7 +3554,7 @@ protected:
       result.GetOutputStream().Printf("\n");
 
       UnwindPlanSP assembly_sp =
-          func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread, 0);
+          func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread);
       if (assembly_sp) {
         result.GetOutputStream().Printf(
             "Assembly language inspection UnwindPlan:\n");
@@ -3564,7 +3564,7 @@ protected:
       }
 
       UnwindPlanSP ehframe_sp =
-          func_unwinders_sp->GetEHFrameUnwindPlan(*target, 0);
+          func_unwinders_sp->GetEHFrameUnwindPlan(*target);
       if (ehframe_sp) {
         result.GetOutputStream().Printf("eh_frame UnwindPlan:\n");
         ehframe_sp->Dump(result.GetOutputStream(), thread.get(),
@@ -3573,7 +3573,7 @@ protected:
       }
 
       UnwindPlanSP ehframe_augmented_sp =
-          func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target, *thread, 0);
+          func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target, *thread);
       if (ehframe_augmented_sp) {
         result.GetOutputStream().Printf("eh_frame augmented UnwindPlan:\n");
         ehframe_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
@@ -3582,7 +3582,7 @@ protected:
       }
 
       if (UnwindPlanSP plan_sp =
-              func_unwinders_sp->GetDebugFrameUnwindPlan(*target, 0)) {
+              func_unwinders_sp->GetDebugFrameUnwindPlan(*target)) {
         result.GetOutputStream().Printf("debug_frame UnwindPlan:\n");
         plan_sp->Dump(result.GetOutputStream(), thread.get(),
                       LLDB_INVALID_ADDRESS);
@@ -3591,7 +3591,7 @@ protected:
 
       if (UnwindPlanSP plan_sp =
               func_unwinders_sp->GetDebugFrameAugmentedUnwindPlan(*target,
-                                                                  *thread, 0)) {
+                                                                  *thread)) {
         result.GetOutputStream().Printf("debug_frame augmented UnwindPlan:\n");
         plan_sp->Dump(result.GetOutputStream(), thread.get(),
                       LLDB_INVALID_ADDRESS);
@@ -3599,7 +3599,7 @@ protected:
       }
 
       UnwindPlanSP arm_unwind_sp =
-          func_unwinders_sp->GetArmUnwindUnwindPlan(*target, 0);
+          func_unwinders_sp->GetArmUnwindUnwindPlan(*target);
       if (arm_unwind_sp) {
         result.GetOutputStream().Printf("ARM.exidx unwind UnwindPlan:\n");
         arm_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
@@ -3608,7 +3608,7 @@ protected:
       }
 
       UnwindPlanSP compact_unwind_sp =
-          func_unwinders_sp->GetCompactUnwindUnwindPlan(*target, 0);
+          func_unwinders_sp->GetCompactUnwindUnwindPlan(*target);
       if (compact_unwind_sp) {
         result.GetOutputStream().Printf("Compact unwind UnwindPlan:\n");
         compact_unwind_sp->Dump(result.GetOutputStream(), thread.get(),

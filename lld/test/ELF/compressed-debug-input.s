@@ -16,7 +16,7 @@
 # ZLIB-NEXT:   Size:
 # ZLIB-NEXT:   Link:
 # ZLIB-NEXT:   Info:
-# ZLIB-NEXT:   AddressAlignment: 1
+# ZLIB-NEXT:   AddressAlignment: 8
 # ZLIB-NEXT:   EntrySize: 1
 # ZLIB-NEXT: }
 
