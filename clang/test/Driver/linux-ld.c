@@ -1632,6 +1632,11 @@
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=mips64-unknown-linux-gnu \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64-GNUABI %s
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64-linux-gnuabi64 -mabi=n64 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
@@ -1651,6 +1656,11 @@
 // CHECK-DEBIAN-ML-MIPS64-GNUABI: "{{.*}}/usr/lib/gcc/mips64-linux-gnuabi64/4.9{{/|\\\\}}crtend.o"
 // CHECK-DEBIAN-ML-MIPS64-GNUABI: "{{.*}}/usr/lib/gcc/mips64-linux-gnuabi64/4.9/../../../mips64-linux-gnuabi64{{/|\\\\}}crtn.o"
 //
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=mips64el-unknown-linux-gnu \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64EL-GNUABI %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64el-linux-gnuabi64 -mabi=n64 \
 // RUN:     --gcc-toolchain="" \

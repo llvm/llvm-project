@@ -45,6 +45,7 @@ static std::string getMultiarchTriple(const Driver &D,
       TargetTriple.getEnvironment();
   bool IsAndroid = TargetTriple.isAndroid();
   bool IsMipsR6 = TargetTriple.getSubArch() == llvm::Triple::MipsSubArch_r6;
+  bool IsMipsN32Abi = TargetTriple.getEnvironment() == llvm::Triple::GNUABIN32;
 
   // For most architectures, just use whatever we have rather than trying to be
   // clever.
@@ -103,33 +104,37 @@ static std::string getMultiarchTriple(const Driver &D,
       return "aarch64_be-linux-gnu";
     break;
   case llvm::Triple::mips: {
-    std::string Arch = IsMipsR6 ? "mipsisa32r6" : "mips";
-    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-gnu"))
-      return Arch + "-linux-gnu";
+    std::string MT = IsMipsR6 ? "mipsisa32r6-linux-gnu" : "mips-linux-gnu";
+    if (D.getVFS().exists(SysRoot + "/lib/" + MT))
+      return MT;
     break;
   }
   case llvm::Triple::mipsel: {
     if (IsAndroid)
       return "mipsel-linux-android";
-    std::string Arch = IsMipsR6 ? "mipsisa32r6el" : "mipsel";
-    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-gnu"))
-      return Arch + "-linux-gnu";
+    std::string MT = IsMipsR6 ? "mipsisa32r6el-linux-gnu" : "mipsel-linux-gnu";
+    if (D.getVFS().exists(SysRoot + "/lib/" + MT))
+      return MT;
     break;
   }
   case llvm::Triple::mips64: {
-    std::string Arch = IsMipsR6 ? "mipsisa64r6" : "mips64";
-    std::string ABI = llvm::Triple::getEnvironmentTypeName(TargetEnvironment);
-    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-" + ABI))
-      return Arch + "-linux-" + ABI;
+    std::string MT = std::string(IsMipsR6 ? "mipsisa64r6" : "mips64") +
+                     "-linux-" + (IsMipsN32Abi ? "gnuabin32" : "gnuabi64");
+    if (D.getVFS().exists(SysRoot + "/lib/" + MT))
+      return MT;
+    if (D.getVFS().exists(SysRoot + "/lib/mips64-linux-gnu"))
+      return "mips64-linux-gnu";
     break;
   }
   case llvm::Triple::mips64el: {
     if (IsAndroid)
       return "mips64el-linux-android";
-    std::string Arch = IsMipsR6 ? "mipsisa64r6el" : "mips64el";
-    std::string ABI = llvm::Triple::getEnvironmentTypeName(TargetEnvironment);
-    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-" + ABI))
-      return Arch + "-linux-" + ABI;
+    std::string MT = std::string(IsMipsR6 ? "mipsisa64r6el" : "mips64el") +
+                     "-linux-" + (IsMipsN32Abi ? "gnuabin32" : "gnuabi64");
+    if (D.getVFS().exists(SysRoot + "/lib/" + MT))
+      return MT;
+    if (D.getVFS().exists(SysRoot + "/lib/mips64el-linux-gnu"))
+      return "mips64el-linux-gnu";
     break;
   }
   case llvm::Triple::ppc:
