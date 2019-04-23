@@ -1144,10 +1144,9 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
   std::iota(SortedIndices.begin(), SortedIndices.end(), 0);
 
   // Sort the memory accesses and keep the order of their uses in UseOrder.
-  std::stable_sort(SortedIndices.begin(), SortedIndices.end(),
-                   [&OffValPairs](unsigned Left, unsigned Right) {
-                     return OffValPairs[Left].first < OffValPairs[Right].first;
-                   });
+  llvm::stable_sort(SortedIndices, [&](unsigned Left, unsigned Right) {
+    return OffValPairs[Left].first < OffValPairs[Right].first;
+  });
 
   // Check if the order is consecutive already.
   if (llvm::all_of(SortedIndices, [&SortedIndices](const unsigned I) {

@@ -135,8 +135,7 @@ bool llvm::AreStatisticsEnabled() {
 }
 
 void StatisticInfo::sort() {
-  std::stable_sort(Stats.begin(), Stats.end(),
-                   [](const Statistic *LHS, const Statistic *RHS) {
+  llvm::stable_sort(Stats, [](const Statistic *LHS, const Statistic *RHS) {
     if (int Cmp = std::strcmp(LHS->getDebugType(), RHS->getDebugType()))
       return Cmp < 0;
 

@@ -713,36 +713,6 @@ void MetadataStreamerV3::emitKernelArgs(const Function &Func,
 
   emitHiddenKernelArgs(Func, Offset, Args);
 
-  // TODO: What about other languages?
-  if (Func.getParent()->getNamedMetadata("opencl.ocl.version")) {
-    auto &DL = Func.getParent()->getDataLayout();
-    auto Int64Ty = Type::getInt64Ty(Func.getContext());
-
-    emitKernelArg(DL, Int64Ty, "hidden_global_offset_x", Offset, Args);
-    emitKernelArg(DL, Int64Ty, "hidden_global_offset_y", Offset, Args);
-    emitKernelArg(DL, Int64Ty, "hidden_global_offset_z", Offset, Args);
-
-    auto Int8PtrTy =
-        Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
-
-    // Emit "printf buffer" argument if printf is used, otherwise emit dummy
-    // "none" argument.
-    if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
-      emitKernelArg(DL, Int8PtrTy, "hidden_printf_buffer", Offset, Args);
-    else
-      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
-
-    // Emit "default queue" and "completion action" arguments if enqueue kernel
-    // is used, otherwise emit dummy "none" arguments.
-    if (Func.hasFnAttribute("calls-enqueue-kernel")) {
-      emitKernelArg(DL, Int8PtrTy, "hidden_default_queue", Offset, Args);
-      emitKernelArg(DL, Int8PtrTy, "hidden_completion_action", Offset, Args);
-    } else {
-      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
-      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
-    }
-  }
-
   Kern[".args"] = Args;
 }
 

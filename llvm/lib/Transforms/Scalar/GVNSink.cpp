@@ -790,10 +790,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
     --LRI;
   }
 
-  std::stable_sort(
-      Candidates.begin(), Candidates.end(),
-      [](const SinkingInstructionCandidate &A,
-         const SinkingInstructionCandidate &B) { return A > B; });
+  llvm::stable_sort(Candidates, std::greater<SinkingInstructionCandidate>());
   LLVM_DEBUG(dbgs() << " -- Sinking candidates:\n"; for (auto &C
                                                          : Candidates) dbgs()
                                                     << "  " << C << "\n";);

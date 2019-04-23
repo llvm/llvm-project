@@ -1655,7 +1655,7 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
     const VarDecl *VD = VR->getDecl();
     // Either the array or the array element has to be const.
     if (VD->getType().isConstQualified() || R->getElementType().isConstQualified()) {
-      if (const Expr *Init = VD->getInit()) {
+      if (const Expr *Init = VD->getAnyInitializer()) {
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           // The array index has to be known.
           if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
@@ -1745,7 +1745,7 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
     unsigned Index = FD->getFieldIndex();
     // Either the record variable or the field has to be const qualified.
     if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
-      if (const Expr *Init = VD->getInit())
+      if (const Expr *Init = VD->getAnyInitializer())
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           if (Index < InitList->getNumInits()) {
             if (const Expr *FieldInit = InitList->getInit(Index))
@@ -1943,7 +1943,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
   // Is 'VD' declared constant?  If so, retrieve the constant value.
   if (VD->getType().isConstQualified()) {
-    if (const Expr *Init = VD->getInit()) {
+    if (const Expr *Init = VD->getAnyInitializer()) {
       if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
 

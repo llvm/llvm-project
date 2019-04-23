@@ -204,8 +204,8 @@ public:
 
     Pointers differ depending on what they point to. If the pointer
     points to a simple type, the child at index zero
-    is the only child value available, unless \a synthetic_allowed
-    is \b true, in which case the pointer will be used as an array
+    is the only child value available, unless synthetic_allowed
+    is true, in which case the pointer will be used as an array
     and can create 'synthetic' child values using positive or
     negative indexes. If the pointer points to an aggregate type
     (an array, class, union, struct), then the pointee is
@@ -223,7 +223,7 @@ public:
 
     Arrays have a preset number of children that can be accessed by
     index and will returns invalid child values for indexes that are
-    out of bounds unless the \a synthetic_allowed is \b true. In this
+    out of bounds unless the synthetic_allowed is true. In this
     case the array can create 'synthetic' child values for indexes
     that aren't in the array bounds using positive or negative
     indexes.
@@ -237,7 +237,7 @@ public:
         type of the child value.
 
     @param[in] synthetic_allowed
-        If \b true, then allow child values to be created by index
+        If true, then allow child values to be created by index
         for pointers and arrays for indexes that normally wouldn't
         be allowed.
 

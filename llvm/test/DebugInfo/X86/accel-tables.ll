@@ -4,11 +4,11 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s \
 ; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=PUB %s
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
 
 ; Linux does has debug_names tables only if we explicitly tune for lldb
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=PUB %s
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s \
 ; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=DEBUG_NAMES %s
 
@@ -23,25 +23,15 @@
 ; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
 
 ; APPLE-NOT: debug_names
-; APPLE-NOT: pubnames
 ; APPLE: apple_names
 ; APPLE-NOT: debug_names
-; APPLE-NOT: pubnames
-
-; PUB-NOT: apple_names
-; PUB-NOT: debug_names
-; PUB: pubnames
-; PUB-NOT: apple_names
-; PUB-NOT: debug_names
 
 ; NONE-NOT: apple_names
 ; NONE-NOT: debug_names
 
 ; DEBUG_NAMES-NOT: apple_names
-; DEBUG_NAMES-NOT: pubnames
 ; DEBUG_NAMES: debug_names
 ; DEBUG_NAMES-NOT: apple_names
-; DEBUG_NAMES-NOT: pubnames
 
 @var = thread_local global i32 0, align 4, !dbg !0
 

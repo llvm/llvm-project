@@ -886,12 +886,16 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     return;
   }
 
-  if (ZlibStyle)
+  if (ZlibStyle) {
     // Set the compressed flag. That is zlib style.
     Section.setFlags(Section.getFlags() | ELF::SHF_COMPRESSED);
-  else
+    // Alignment field should reflect the requirements of
+    // the compressed section header.
+    Section.setAlignment(is64Bit() ? 8 : 4);
+  } else {
     // Add "z" prefix to section name. This is zlib-gnu style.
     MC.renameELFSection(&Section, (".z" + SectionName.drop_front(1)).str());
+  }
   W.OS << CompressedContents;
 }
 

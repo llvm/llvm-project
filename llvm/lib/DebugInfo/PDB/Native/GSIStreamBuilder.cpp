@@ -262,8 +262,7 @@ static std::vector<ulittle32_t> computeAddrMap(ArrayRef<CVSymbol> Records) {
     SymOffsets.push_back(SymOffset);
     SymOffset += Sym.length();
   }
-  std::stable_sort(PublicsByAddr.begin(), PublicsByAddr.end(),
-                   comparePubSymByAddrAndName);
+  llvm::stable_sort(PublicsByAddr, comparePubSymByAddrAndName);
 
   // Fill in the symbol offsets in the appropriate order.
   std::vector<ulittle32_t> AddrMap;

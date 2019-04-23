@@ -195,11 +195,10 @@ public:
 
   // Sort CFG edges based on its weight.
   void sortEdgesByWeight() {
-    std::stable_sort(AllEdges.begin(), AllEdges.end(),
-                     [](const std::unique_ptr<Edge> &Edge1,
-                        const std::unique_ptr<Edge> &Edge2) {
-                       return Edge1->Weight > Edge2->Weight;
-                     });
+    llvm::stable_sort(AllEdges, [](const std::unique_ptr<Edge> &Edge1,
+                                   const std::unique_ptr<Edge> &Edge2) {
+      return Edge1->Weight > Edge2->Weight;
+    });
   }
 
   // Traverse all the edges and compute the Minimum Weight Spanning Tree

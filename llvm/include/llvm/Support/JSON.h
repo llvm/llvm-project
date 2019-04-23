@@ -95,7 +95,7 @@ public:
   using iterator = Storage::iterator;
   using const_iterator = Storage::const_iterator;
 
-  explicit Object() = default;
+  Object() = default;
   // KV is a trivial key-value struct for list-initialization.
   // (using std::pair forces extra copies).
   struct KV;
@@ -156,7 +156,7 @@ public:
   using iterator = std::vector<Value>::iterator;
   using const_iterator = std::vector<Value>::const_iterator;
 
-  explicit Array() = default;
+  Array() = default;
   explicit Array(std::initializer_list<Value> Elements);
   template <typename Collection> explicit Array(const Collection &C) {
     for (const auto &V : C)

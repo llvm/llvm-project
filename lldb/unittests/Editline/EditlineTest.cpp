@@ -244,19 +244,17 @@ private:
   EditlineAdapter _el_adapter;
   std::shared_ptr<std::thread> _sp_output_thread;
 
-protected:
-  bool _has_term = true;
-
 public:
   void SetUp() {
     FileSystem::Initialize();
 
     // We need a TERM set properly for editline to work as expected.
-    if (setenv("TERM", "vt100", 1) != 0)
-      _has_term = false;
+    setenv("TERM", "vt100", 1);
 
     // Validate the editline adapter.
     EXPECT_TRUE(_el_adapter.IsValid());
+    if (!_el_adapter.IsValid())
+      return;
 
     // Dump output.
     _sp_output_thread =
@@ -275,10 +273,6 @@ public:
 };
 
 TEST_F(EditlineTestFixture, EditlineReceivesSingleLineText) {
-  // Skip if we don't have a TERM.
-  if (!_has_term)
-    return;
-
   // Send it some text via our virtual keyboard.
   const std::string input_text("Hello, world");
   EXPECT_TRUE(GetEditlineAdapter().SendLine(input_text));
@@ -295,10 +289,6 @@ TEST_F(EditlineTestFixture, EditlineReceivesSingleLineText) {
 }
 
 TEST_F(EditlineTestFixture, EditlineReceivesMultiLineText) {
-  // Skip if we don't have a TERM.
-  if (!_has_term)
-    return;
-
   // Send it some text via our virtual keyboard.
   std::vector<std::string> input_lines;
   input_lines.push_back("int foo()");

@@ -1198,11 +1198,10 @@ bool MachineOutliner::outline(Module &M,
   unsigned OutlinedFunctionNum = 0;
 
   // Sort by benefit. The most beneficial functions should be outlined first.
-  std::stable_sort(
-      FunctionList.begin(), FunctionList.end(),
-      [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
-        return LHS.getBenefit() > RHS.getBenefit();
-      });
+  llvm::stable_sort(FunctionList, [](const OutlinedFunction &LHS,
+                                     const OutlinedFunction &RHS) {
+    return LHS.getBenefit() > RHS.getBenefit();
+  });
 
   // Walk over each function, outlining them as we go along. Functions are
   // outlined greedily, based off the sort above.

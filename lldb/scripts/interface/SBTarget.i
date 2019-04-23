@@ -130,14 +130,14 @@ public:
 
     Launch a new process by spawning a new process using the
     target object's executable module's file as the file to launch.
-    Arguments are given in \a argv, and the environment variables
-    are in \a envp. Standard input and output files can be
-    optionally re-directed to \a stdin_path, \a stdout_path, and
-    \a stderr_path.
+    Arguments are given in argv, and the environment variables
+    are in envp. Standard input and output files can be
+    optionally re-directed to stdin_path, stdout_path, and
+    stderr_path.
 
     @param[in] listener
         An optional listener that will receive all process events.
-        If \a listener is valid then \a listener will listen to all
+        If listener is valid then listener will listen to all
         process events. If not valid, then this target's debugger
         (SBTarget::GetDebugger()) will listen to all process events.
 
@@ -278,7 +278,7 @@ public:
 
     @param[in] listener
         An optional listener that will receive all process events.
-        If \a listener is valid then \a listener will listen to all
+        If listener is valid then listener will listen to all
         process events. If not valid, then this target's debugger
         (SBTarget::GetDebugger()) will listen to all process events.
 
@@ -300,7 +300,7 @@ public:
 
     @param[in] listener
         An optional listener that will receive all process events.
-        If \a listener is valid then \a listener will listen to all
+        If listener is valid then listener will listen to all
         process events. If not valid, then this target's debugger
         (SBTarget::GetDebugger()) will listen to all process events.
 
@@ -326,7 +326,7 @@ public:
 
     @param[in] listener
         An optional listener that will receive all process events.
-        If \a listener is valid then \a listener will listen to all
+        If listener is valid then listener will listen to all
         process events. If not valid, then this target's debugger
         (SBTarget::GetDebugger()) will listen to all process events.
 
@@ -484,7 +484,7 @@ public:
         for.
 
     @param[in] max_matches
-        Allow the number of matches to be limited to \a max_matches.
+        Allow the number of matches to be limited to max_matches.
 
     @return
         A list of matched variables in an SBValueList.") FindGlobalVariables;
@@ -834,7 +834,7 @@ public:
        Only write breakpoints from this list.
 
     @param[in] append
-       If \btrue, append the breakpoints in bkpt_list to the others
+       If true, append the breakpoints in bkpt_list to the others
        serialized in dest_file.  If dest_file doesn't exist, then a new
        file will be created and the breakpoints in bkpt_list written to it.
 

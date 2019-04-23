@@ -941,8 +941,8 @@ MachineBlockPlacement::getBestNonConflictingEdges(
   // Sort for highest frequency.
   auto Cmp = [](WeightedEdge A, WeightedEdge B) { return A.Weight > B.Weight; };
 
-  std::stable_sort(Edges[0].begin(), Edges[0].end(), Cmp);
-  std::stable_sort(Edges[1].begin(), Edges[1].end(), Cmp);
+  llvm::stable_sort(Edges[0], Cmp);
+  llvm::stable_sort(Edges[1], Cmp);
   auto BestA = Edges[0].begin();
   auto BestB = Edges[1].begin();
   // Arrange for the correct answer to be in BestA and BestB
@@ -1530,15 +1530,12 @@ MachineBlockPlacement::selectBestSuccessor(
   // profitable than BestSucc. Position is important because we preserve it and
   // prefer first best match. Here we aren't comparing in order, so we capture
   // the position instead.
-  if (DupCandidates.size() != 0) {
-    auto cmp =
-        [](const std::tuple<BranchProbability, MachineBasicBlock *> &a,
-           const std::tuple<BranchProbability, MachineBasicBlock *> &b) {
-          return std::get<0>(a) > std::get<0>(b);
-        };
-    std::stable_sort(DupCandidates.begin(), DupCandidates.end(), cmp);
-  }
-  for(auto &Tup : DupCandidates) {
+  llvm::stable_sort(DupCandidates,
+                    [](std::tuple<BranchProbability, MachineBasicBlock *> L,
+                       std::tuple<BranchProbability, MachineBasicBlock *> R) {
+                      return std::get<0>(L) > std::get<0>(R);
+                    });
+  for (auto &Tup : DupCandidates) {
     BranchProbability DupProb;
     MachineBasicBlock *Succ;
     std::tie(DupProb, Succ) = Tup;

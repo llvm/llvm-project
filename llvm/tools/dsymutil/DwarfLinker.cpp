@@ -2497,7 +2497,7 @@ static Error copySwiftInterfaces(
   std::error_code EC;
   SmallString<128> InputPath;
   SmallString<128> Path;
-  sys::path::append(Path, *Options.ResourceDir, "Swift");
+  sys::path::append(Path, *Options.ResourceDir, "Swift", Architecture);
   if ((EC = sys::fs::create_directories(Path.str(), true,
                                         sys::fs::perms::all_all)))
     return make_error<StringError>(
