@@ -100,8 +100,8 @@ int main(int argc, const char *argv[]) {
   sem = dispatch_semaphore_create(0);
   NSString *ns_path = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp-gcd-io.%d", getpid()]];
   path = ns_path.fileSystemRepresentation;
-  NSData *ns_data = [NSMutableData dataWithLength:1000];
-  data = dispatch_data_create(ns_data.bytes, ns_data.length, NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+  char buf[1000];
+  data = dispatch_data_create(buf, sizeof(buf), NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
   
   test_dispatch_io_write();
   test_dispatch_write();
