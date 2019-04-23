@@ -1303,7 +1303,7 @@ static FileSpec CheckPathForXcode(const FileSpec &fspec) {
 
 static FileSpec GetXcodeContentsPath() {
   static FileSpec g_xcode_filespec;
-  static std::once_flag g_once_flag;
+  static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
     FileSpec fspec;
