@@ -270,7 +270,7 @@ public:
     GetBasicType(lldb::BasicType type);
 
     %feature("docstring", "
-    Get all types matching \a type_mask from debug info in this
+    Get all types matching type_mask from debug info in this
     module.
 
     @param[in] type_mask
@@ -281,7 +281,7 @@ public:
         all types found in the debug information for this module.
 
     @return
-        A list of types in this module that match \a type_mask") GetTypes;
+        A list of types in this module that match type_mask") GetTypes;
     lldb::SBTypeList
     GetTypes (uint32_t type_mask = lldb::eTypeClassAny);
 
@@ -296,7 +296,7 @@ public:
         for.
 
     @param[in] max_matches
-        Allow the number of matches to be limited to \a max_matches.
+        Allow the number of matches to be limited to max_matches.
 
     @return
         A list of matched variables in an SBValueList.") FindGlobalVariables;
