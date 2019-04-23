@@ -4876,7 +4876,8 @@ static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
-  case Intrinsic::masked_load: {
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_gather: {
     Value *MaskArg = ArgBegin[2];
     Value *PassthruArg = ArgBegin[3];
     // If the mask is all zeros or undef, the "passthru" argument is the result.

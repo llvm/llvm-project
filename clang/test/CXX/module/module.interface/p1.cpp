@@ -23,15 +23,15 @@ namespace N {
 }
 
 #ifdef ERRORS
-namespace {
-  export int d1; // FIXME: invalid
+namespace { // expected-note 2{{anonymous namespace begins here}}
+  export int d1; // expected-error {{export declaration appears within anonymous namespace}}
   namespace X {
-    export int d2; // FIXME: invalid
+    export int d2; // expected-error {{export declaration appears within anonymous namespace}}
   }
 }
 
 export export int e; // expected-error {{within another export declaration}}
-export { export int f; } // expected-error {{within another export declaration}}
+export { export int f; } // expected-error {{within another export declaration}} expected-note {{export block begins here}}
 
 module :private; // expected-note {{private module fragment begins here}}
 export int priv; // expected-error {{export declaration cannot be used in a private module fragment}}

@@ -1,12 +1,6 @@
 External Resources
 ==================
 
-Documentation
--------------
-
-* `Python API Documentation <https://lldb.llvm.org/python_reference/index.html>`_
-* `C++ API Documentation <https://lldb.llvm.org/cpp_reference/html/index.html>`_
-
 Bugs
 ----
 

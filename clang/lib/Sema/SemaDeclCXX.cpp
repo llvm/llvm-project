@@ -9037,6 +9037,9 @@ void Sema::ActOnFinishNamespaceDef(Decl *Dcl, SourceLocation RBrace) {
   PopDeclContext();
   if (Namespc->hasAttr<VisibilityAttr>())
     PopPragmaVisibility(true, RBrace);
+  // If this namespace contains an export-declaration, export it now.
+  if (DeferredExportedNamespaces.erase(Namespc))
+    Dcl->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
 }
 
 CXXRecordDecl *Sema::getStdBadAlloc() const {

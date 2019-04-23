@@ -642,10 +642,9 @@ static void sortBySectionOrder(std::vector<Chunk *> &Chunks) {
     return 0;
   };
 
-  std::stable_sort(Chunks.begin(), Chunks.end(),
-                   [=](const Chunk *A, const Chunk *B) {
-                     return GetPriority(A) < GetPriority(B);
-                   });
+  llvm::stable_sort(Chunks, [=](const Chunk *A, const Chunk *B) {
+    return GetPriority(A) < GetPriority(B);
+  });
 }
 
 // Sort concrete section chunks from GNU import libraries.
@@ -683,10 +682,9 @@ bool Writer::fixGnuImportChunks() {
     if (!PSec->Name.startswith(".idata"))
       continue;
 
-    std::vector<Chunk *> &Chunks = PSec->Chunks;
-    if (!Chunks.empty())
+    if (!PSec->Chunks.empty())
       HasIdata = true;
-    std::stable_sort(Chunks.begin(), Chunks.end(), [&](Chunk *S, Chunk *T) {
+    llvm::stable_sort(PSec->Chunks, [&](Chunk *S, Chunk *T) {
       SectionChunk *SC1 = dyn_cast_or_null<SectionChunk>(S);
       SectionChunk *SC2 = dyn_cast_or_null<SectionChunk>(T);
       if (!SC1 || !SC2) {
@@ -845,7 +843,7 @@ void Writer::createSections() {
   }
 
   // Finally, move some output sections to the end.
-  auto SectionOrder = [&](OutputSection *S) {
+  auto SectionOrder = [&](const OutputSection *S) {
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
     // the loader cannot handle holes. Stripping can remove other discardable ones
     // than .reloc, which is first of them (created early).
@@ -858,10 +856,10 @@ void Writer::createSections() {
       return 1;
     return 0;
   };
-  std::stable_sort(OutputSections.begin(), OutputSections.end(),
-                   [&](OutputSection *S, OutputSection *T) {
-                     return SectionOrder(S) < SectionOrder(T);
-                   });
+  llvm::stable_sort(OutputSections,
+                    [&](const OutputSection *S, const OutputSection *T) {
+                      return SectionOrder(S) < SectionOrder(T);
+                    });
 }
 
 void Writer::createMiscChunks() {
@@ -1779,7 +1777,7 @@ void Writer::sortCRTSectionChunks(std::vector<Chunk *> &Chunks) {
 
     return SAObj == SBObj && SA->getSectionNumber() < SB->getSectionNumber();
   };
-  std::stable_sort(Chunks.begin(), Chunks.end(), SectionChunkOrder);
+  llvm::stable_sort(Chunks, SectionChunkOrder);
 
   if (Config->Verbose) {
     for (auto &C : Chunks) {

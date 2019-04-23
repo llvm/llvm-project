@@ -430,22 +430,6 @@ bool Decl::isReferenced() const {
   return false;
 }
 
-bool Decl::isExported() const {
-  if (isModulePrivate())
-    return false;
-  // Namespaces are always exported.
-  if (isa<TranslationUnitDecl>(this) || isa<NamespaceDecl>(this))
-    return true;
-  // Otherwise, this is a strictly lexical check.
-  for (auto *DC = getLexicalDeclContext(); DC; DC = DC->getLexicalParent()) {
-    if (cast<Decl>(DC)->isModulePrivate())
-      return false;
-    if (isa<ExportDecl>(DC))
-      return true;
-  }
-  return false;
-}
-
 ExternalSourceSymbolAttr *Decl::getExternalSourceSymbolAttr() const {
   const Decl *Definition = nullptr;
   if (auto *ID = dyn_cast<ObjCInterfaceDecl>(this)) {

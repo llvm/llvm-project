@@ -121,6 +121,8 @@ public:
   Create(FileSpec filename);
 
   template <typename T> void Record(const T &t, bool newline = false) {
+    if (!m_record)
+      return;
     m_os << t;
     if (newline)
       m_os << '\n';

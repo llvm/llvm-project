@@ -2765,6 +2765,9 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
       CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::None)
     return;
 
+  if (CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::GNU)
+    return;
+
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
   DwarfStringPoolEntryRef Ref = Holder.getStringPool().getEntry(*Asm, Name);
 

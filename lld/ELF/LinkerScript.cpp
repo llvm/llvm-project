@@ -345,7 +345,7 @@ static bool matchConstraints(ArrayRef<InputSection *> Sections,
 static void sortSections(MutableArrayRef<InputSection *> Vec,
                          SortSectionPolicy K) {
   if (K != SortSectionPolicy::Default && K != SortSectionPolicy::None)
-    std::stable_sort(Vec.begin(), Vec.end(), getComparator(K));
+    llvm::stable_sort(Vec, getComparator(K));
 }
 
 // Sort sections as instructed by SORT-family commands and --sort-section

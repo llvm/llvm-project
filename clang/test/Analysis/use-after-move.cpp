@@ -1,36 +1,36 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
-// RUN:  -analyzer-checker debug.ExprInspection\
+// RUN:  -analyzer-checker core,cplusplus.SmartPtr,debug.ExprInspection\
 // RUN:  -verify=expected,peaceful,non-aggressive
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS\
-// RUN:  -analyzer-checker debug.ExprInspection\
+// RUN:  -analyzer-checker core,cplusplus.SmartPtr,debug.ExprInspection\
 // RUN:  -verify=expected,peaceful,non-aggressive
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
 // RUN:  -analyzer-config cplusplus.Move:WarnOn=KnownsOnly\
-// RUN:  -analyzer-checker debug.ExprInspection\
+// RUN:  -analyzer-checker core,cplusplus.SmartPtr,debug.ExprInspection\
 // RUN:  -verify=expected,non-aggressive
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS\
 // RUN:  -analyzer-config cplusplus.Move:WarnOn=KnownsOnly\
-// RUN:  -analyzer-checker debug.ExprInspection\
+// RUN:  -analyzer-checker core,cplusplus.SmartPtr,debug.ExprInspection\
 // RUN:  -verify=expected,non-aggressive
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
 // RUN:  -analyzer-config cplusplus.Move:WarnOn=All\
-// RUN:  -analyzer-checker debug.ExprInspection\
+// RUN:  -analyzer-checker core,cplusplus.SmartPtr,debug.ExprInspection\
 // RUN:  -verify=expected,peaceful,aggressive
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS\
 // RUN:  -analyzer-config cplusplus.Move:WarnOn=All\
-// RUN:  -analyzer-checker debug.ExprInspection\
+// RUN:  -analyzer-checker core,cplusplus.SmartPtr,debug.ExprInspection\
 // RUN:  -verify=expected,peaceful,aggressive
 
 // RUN: not %clang_analyze_cc1 -verify %s \
@@ -932,4 +932,18 @@ void localUniquePtrWithArrow(std::unique_ptr<A> P) {
   std::unique_ptr<A> Q = std::move(P); // expected-note{{Smart pointer 'P' of type 'std::unique_ptr' is reset to null when moved from}}
   P->foo(); // expected-warning{{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
             // expected-note@-1{{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
+}
+
+void getAfterMove(std::unique_ptr<A> P) {
+  std::unique_ptr<A> Q = std::move(P); // peaceful-note {{Object 'P' is moved}}
+
+  // TODO: Explain why (bool)P is false.
+  if (P) // peaceful-note{{Taking false branch}}
+    clang_analyzer_warnIfReached(); // no-warning
+
+  A *a = P.get(); // peaceful-warning {{Method called on moved-from object 'P'}}
+                  // peaceful-note@-1 {{Method called on moved-from object 'P'}}
+
+  // TODO: Warn on a null dereference here.
+  a->foo();
 }

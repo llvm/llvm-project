@@ -6,11 +6,11 @@ static_library("JITLink") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "EHFrameSupport.cpp",
     "JITLink.cpp",
     "JITLinkGeneric.cpp",
-    "JITLink_EHFrameSupport.cpp",
-    "JITLink_MachO.cpp",
-    "JITLink_MachO_x86_64.cpp",
+    "MachO.cpp",
     "MachOAtomGraphBuilder.cpp",
+    "MachO_x86_64.cpp",
   ]
 }

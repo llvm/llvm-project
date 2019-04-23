@@ -40,7 +40,6 @@ define void @test3(i8* %d, i8* %s) {
 
 define void @memcpy_to_constant(i8* %src) {
 ; CHECK-LABEL: @memcpy_to_constant(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (i128* @UnknownConstant to i8*), i8* align 1 [[SRC:%.*]], i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %dest = bitcast i128* @UnknownConstant to i8*

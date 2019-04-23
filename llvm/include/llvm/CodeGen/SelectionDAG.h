@@ -1539,6 +1539,13 @@ public:
   /// Test whether \p V has a splatted value.
   bool isSplatValue(SDValue V, bool AllowUndefs = false);
 
+  /// If V is a splatted value, return the source vector and its splat index.
+  SDValue getSplatSourceVector(SDValue V, int &SplatIndex);
+
+  /// If V is a splat vector, return its scalar source operand by extracting
+  /// that element from the source vector.
+  SDValue getSplatValue(SDValue V);
+
   /// Match a binop + shuffle pyramid that represents a horizontal reduction
   /// over the elements of a vector starting from the EXTRACT_VECTOR_ELT node /p
   /// Extract. The reduction must use one of the opcodes listed in /p

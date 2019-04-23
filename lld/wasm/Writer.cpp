@@ -1402,10 +1402,10 @@ void Writer::calculateInitFunctions() {
 
   // Sort in order of priority (lowest first) so that they are called
   // in the correct order.
-  std::stable_sort(InitFunctions.begin(), InitFunctions.end(),
-                   [](const WasmInitEntry &L, const WasmInitEntry &R) {
-                     return L.Priority < R.Priority;
-                   });
+  llvm::stable_sort(InitFunctions,
+                    [](const WasmInitEntry &L, const WasmInitEntry &R) {
+                      return L.Priority < R.Priority;
+                    });
 }
 
 void Writer::run() {
