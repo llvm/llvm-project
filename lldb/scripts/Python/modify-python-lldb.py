@@ -121,10 +121,6 @@ for line in content.splitlines():
             state |= CLEANUP_DOCSTRING
 
     if (state & CLEANUP_DOCSTRING):
-        # Remove the '\a ' and '\b 'substrings.
-        line = line.replace('\a ', '')
-        line = line.replace('\b ', '')
-
         line = char_to_str_xform(line)
 
         # Note that the transition out of CLEANUP_DOCSTRING is handled at the

@@ -624,6 +624,7 @@ struct RangeData : public Range<B, S> {
 template <typename B, typename S, typename T, unsigned N = 0>
 class RangeDataVector {
 public:
+  typedef lldb_private::Range<B, S> Range;
   typedef RangeData<B, S, T> Entry;
   typedef llvm::SmallVector<Entry, N> Collection;
 
