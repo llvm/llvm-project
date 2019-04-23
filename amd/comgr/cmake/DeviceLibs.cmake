@@ -48,7 +48,7 @@ file(APPEND ${INC_DIR}/libraries.inc "#include \"opencl2.0-c.inc\"\n")
 
 # Generate function to select libraries for a given GFXIP number.
 file(APPEND ${INC_DIR}/libraries.inc
-  "static std::tuple<const char*, const void*, size_t> get_oclc_isa_version(uint gfxip) { \
+  "static std::tuple<const char*, const void*, size_t> get_oclc_isa_version(unsigned int gfxip) { \
    switch (gfxip) {")
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
   if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_isa_version_[0-9]+_lib$")

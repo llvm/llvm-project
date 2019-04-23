@@ -23,9 +23,6 @@ find_package(AMDDeviceLibs CONFIG)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# FIXME: Remove when yaml-cpp is removed from the build.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-
 if (ENABLE_ASAN)
   set(ASAN_LINKER_FLAGS "-fsanitize=address")
   set(ASAN_COMPILER_FLAGS "-fno-omit-frame-pointer ${ASAN_LINKER_FLAGS}")
@@ -64,8 +61,12 @@ if (UNIX)
         -Wl,--no-undefined)
     endif()
   endif()
+  # FIXME: Remove when yaml-cpp is removed from the build.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 else()
-  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "/W0")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "/W0" "/wd4244")
+  # FIXME: Make this private once yaml-cpp is removed from the build.
+  add_definitions(-D_HAS_EXCEPTIONS=0)
 endif()
 
 # Windows is strict about visibility of exports in shared libraries, so we ask

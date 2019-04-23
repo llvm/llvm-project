@@ -45,7 +45,7 @@ macro(add_comgr_test name)
   # Windows binaries have no equivalent to RPATH, so we must set their PATH to
   # include the .lib/.dll directory.
   if (NOT(UNIX))
-    set_test_properties("${name}"
+    set_tests_properties("${name}"
       PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
   endif()
 endmacro()
