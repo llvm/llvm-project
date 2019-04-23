@@ -410,7 +410,7 @@ protected:
             }
             FileSpec core_file_dir;
             core_file_dir.GetDirectory() = core_file.GetDirectory();
-            target_sp->GetExecutableSearchPaths().Append(core_file_dir);
+            target_sp->AppendExecutableSearchPaths(core_file_dir);
 
             ProcessSP process_sp(target_sp->CreateProcess(
                 m_interpreter.GetDebugger().GetListener(), llvm::StringRef(),
