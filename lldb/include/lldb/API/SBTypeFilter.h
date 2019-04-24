@@ -24,6 +24,8 @@ public:
 
   ~SBTypeFilter();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   uint32_t GetNumberOfExpressionPaths();

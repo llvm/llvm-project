@@ -26,6 +26,8 @@ public:
 
   bool IsEqual(const lldb::SBFrame &that) const;
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   uint32_t GetFrameID() const;

@@ -116,10 +116,32 @@ void SBTrace::SetSP(const ProcessSP &process_sp) { m_opaque_wp = process_sp; }
 
 bool SBTrace::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTrace, IsValid);
+  return this->operator bool();
+}
+SBTrace::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTrace, operator bool);
 
   if (!m_trace_impl_sp)
     return false;
   if (!GetSP())
     return false;
   return true;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTrace>(Registry &R) {
+  LLDB_REGISTER_METHOD(void, SBTrace, StopTrace,
+                       (lldb::SBError &, lldb::tid_t));
+  LLDB_REGISTER_METHOD(void, SBTrace, GetTraceConfig,
+                       (lldb::SBTraceOptions &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::user_id_t, SBTrace, GetTraceUID, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTrace, ());
+  LLDB_REGISTER_METHOD(bool, SBTrace, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTrace, operator bool, ());
+}
+
+}
 }

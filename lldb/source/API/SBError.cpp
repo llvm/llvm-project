@@ -139,6 +139,10 @@ int SBError::SetErrorStringWithFormat(const char *format, ...) {
 
 bool SBError::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, IsValid);
+  return this->operator bool();
+}
+SBError::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, operator bool);
 
   return m_opaque_up != NULL;
 }
@@ -177,4 +181,31 @@ bool SBError::GetDescription(SBStream &description) {
     description.Printf("error: <NULL>");
 
   return true;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBError>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBError, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBError, (const lldb::SBError &));
+  LLDB_REGISTER_METHOD(const lldb::SBError &,
+                       SBError, operator=,(const lldb::SBError &));
+  LLDB_REGISTER_METHOD_CONST(const char *, SBError, GetCString, ());
+  LLDB_REGISTER_METHOD(void, SBError, Clear, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBError, Fail, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBError, Success, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBError, GetError, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::ErrorType, SBError, GetType, ());
+  LLDB_REGISTER_METHOD(void, SBError, SetError, (uint32_t, lldb::ErrorType));
+  LLDB_REGISTER_METHOD(void, SBError, SetErrorToErrno, ());
+  LLDB_REGISTER_METHOD(void, SBError, SetErrorToGenericError, ());
+  LLDB_REGISTER_METHOD(void, SBError, SetErrorString, (const char *));
+  LLDB_REGISTER_METHOD_CONST(bool, SBError, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBError, operator bool, ());
+  LLDB_REGISTER_METHOD(bool, SBError, GetDescription, (lldb::SBStream &));
+}
+
+}
 }

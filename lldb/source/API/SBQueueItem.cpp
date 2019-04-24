@@ -40,6 +40,10 @@ SBQueueItem::~SBQueueItem() { m_queue_item_sp.reset(); }
 
 bool SBQueueItem::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, IsValid);
+  return this->operator bool();
+}
+SBQueueItem::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, operator bool);
 
   return m_queue_item_sp.get() != NULL;
 }
@@ -114,4 +118,27 @@ SBThread SBQueueItem::GetExtendedBacktraceThread(const char *type) {
     }
   }
   return LLDB_RECORD_RESULT(result);
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBQueueItem>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBQueueItem, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBQueueItem, (const lldb::QueueItemSP &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBQueueItem, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBQueueItem, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBQueueItem, Clear, ());
+  LLDB_REGISTER_METHOD(void, SBQueueItem, SetQueueItem,
+                       (const lldb::QueueItemSP &));
+  LLDB_REGISTER_METHOD_CONST(lldb::QueueItemKind, SBQueueItem, GetKind, ());
+  LLDB_REGISTER_METHOD(void, SBQueueItem, SetKind, (lldb::QueueItemKind));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBQueueItem, GetAddress, ());
+  LLDB_REGISTER_METHOD(void, SBQueueItem, SetAddress, (lldb::SBAddress));
+  LLDB_REGISTER_METHOD(lldb::SBThread, SBQueueItem,
+                       GetExtendedBacktraceThread, (const char *));
+}
+
+}
 }

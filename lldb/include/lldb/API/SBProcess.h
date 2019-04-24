@@ -51,6 +51,8 @@ public:
 
   void Clear();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBTarget GetTarget() const;

@@ -107,6 +107,8 @@ public:
     bool
     IsValid () const;
 
+    explicit operator bool() const;
+
     void
     Clear();
 

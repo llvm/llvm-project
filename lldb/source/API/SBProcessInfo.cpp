@@ -50,6 +50,10 @@ void SBProcessInfo::SetProcessInfo(const ProcessInstanceInfo &proc_info_ref) {
 
 bool SBProcessInfo::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBProcessInfo, IsValid);
+  return this->operator bool();
+}
+SBProcessInfo::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBProcessInfo, operator bool);
 
   return m_opaque_up != nullptr;
 }
@@ -173,4 +177,34 @@ lldb::pid_t SBProcessInfo::GetParentProcessID() {
     proc_id = m_opaque_up->GetParentProcessID();
   }
   return proc_id;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBProcessInfo>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBProcessInfo, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBProcessInfo, (const lldb::SBProcessInfo &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBProcessInfo &,
+      SBProcessInfo, operator=,(const lldb::SBProcessInfo &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBProcessInfo, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBProcessInfo, operator bool, ());
+  LLDB_REGISTER_METHOD(const char *, SBProcessInfo, GetName, ());
+  LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBProcessInfo, GetExecutableFile,
+                       ());
+  LLDB_REGISTER_METHOD(lldb::pid_t, SBProcessInfo, GetProcessID, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetUserID, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetGroupID, ());
+  LLDB_REGISTER_METHOD(bool, SBProcessInfo, UserIDIsValid, ());
+  LLDB_REGISTER_METHOD(bool, SBProcessInfo, GroupIDIsValid, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetEffectiveUserID, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetEffectiveGroupID, ());
+  LLDB_REGISTER_METHOD(bool, SBProcessInfo, EffectiveUserIDIsValid, ());
+  LLDB_REGISTER_METHOD(bool, SBProcessInfo, EffectiveGroupIDIsValid, ());
+  LLDB_REGISTER_METHOD(lldb::pid_t, SBProcessInfo, GetParentProcessID, ());
+}
+
+}
 }

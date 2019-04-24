@@ -48,6 +48,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     %feature("docstring", "
     //--------------------------------------------------------------------------
     /// If this stream is not redirected to a file, it will maintain a local
