@@ -87,7 +87,6 @@ struct __policy_traits<unsequenced_policy>
     typedef std::true_type allow_vector;
 };
 
-#if _PSTL_USE_PAR_POLICIES
 template <>
 struct __policy_traits<parallel_policy>
 {
@@ -103,7 +102,6 @@ struct __policy_traits<parallel_unsequenced_policy>
     typedef std::true_type allow_unsequenced;
     typedef std::true_type allow_vector;
 };
-#endif
 
 template <typename _ExecutionPolicy>
 using __collector_t =

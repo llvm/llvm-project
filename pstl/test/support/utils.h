@@ -606,13 +606,6 @@ multiply_matrix(const Matrix2x2<T>& left, const Matrix2x2<T>& right)
     return result;
 }
 
-// Check that Intel(R) Threading Building Blocks header files are not used when parallel policies are off
-#if !_PSTL_USE_PAR_POLICIES
-#if defined(TBB_INTERFACE_VERSION)
-#error The parallel backend is used while it should not (_PSTL_USE_PAR_POLICIES==0)
-#endif
-#endif
-
 //============================================================================
 // Adapters for creating different types of iterators.
 //
@@ -1051,10 +1044,8 @@ invoke_on_all_policies(Op op, T&&... rest)
     // Try static execution policies
     invoke_on_all_iterator_types()(seq, op, std::forward<T>(rest)...);
     invoke_on_all_iterator_types()(unseq, op, std::forward<T>(rest)...);
-#if _PSTL_USE_PAR_POLICIES
     invoke_on_all_iterator_types()(par, op, std::forward<T>(rest)...);
     invoke_on_all_iterator_types()(par_unseq, op, std::forward<T>(rest)...);
-#endif
 }
 
 template <typename F>

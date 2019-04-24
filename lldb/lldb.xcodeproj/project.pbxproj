@@ -642,6 +642,7 @@
 		26B7564E14F89356008D9CB3 /* PlatformiOSSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26B7564C14F89356008D9CB3 /* PlatformiOSSimulator.cpp */; };
 		AFF81FB320D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = AFF81FB220D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */; };
 		2689004713353E0400698AC0 /* PluginManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8A10F1B85900F91463 /* PluginManager.cpp */; };
+		AFC4ADB12270F4C700042167 /* PostfixExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC4ADB02270F4C600042167 /* PostfixExpression.cpp */; };
 		4C639ECE21FA684900A7B957 /* PredicateTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C639EC021FA684700A7B957 /* PredicateTest.cpp */; };
 		268900F013353E6F00698AC0 /* Process.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F3610F1B90C00F91463 /* Process.cpp */; };
 		26BC17AB18C7F4CB00D2196D /* ProcessElfCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC17A218C7F4CB00D2196D /* ProcessElfCore.cpp */; };
@@ -2518,6 +2519,7 @@
 		26BC7D7010F1B77400F91463 /* PluginInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PluginInterface.h; path = include/lldb/Core/PluginInterface.h; sourceTree = "<group>"; };
 		26BC7E8A10F1B85900F91463 /* PluginManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginManager.cpp; path = source/Core/PluginManager.cpp; sourceTree = "<group>"; };
 		26BC7D7110F1B77400F91463 /* PluginManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PluginManager.h; path = include/lldb/Core/PluginManager.h; sourceTree = "<group>"; };
+		AFC4ADB02270F4C600042167 /* PostfixExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PostfixExpression.cpp; path = source/Symbol/PostfixExpression.cpp; sourceTree = "<group>"; };
 		4C639EC021FA684700A7B957 /* PredicateTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PredicateTest.cpp; sourceTree = "<group>"; };
 		26BC7F3610F1B90C00F91463 /* Process.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Process.cpp; path = source/Target/Process.cpp; sourceTree = "<group>"; };
 		26BC7DF310F1B81A00F91463 /* Process.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Process.h; path = include/lldb/Target/Process.h; sourceTree = "<group>"; };
@@ -5321,6 +5323,7 @@
 				26BC7C5D10F1B6E900F91463 /* ObjectContainer.h */,
 				26BC7C5E10F1B6E900F91463 /* ObjectFile.h */,
 				26BC7F4C10F1BC1A00F91463 /* ObjectFile.cpp */,
+				AFC4ADB02270F4C600042167 /* PostfixExpression.cpp */,
 				26BC7C5F10F1B6E900F91463 /* Symbol.h */,
 				26BC7F1B10F1B8EC00F91463 /* Symbol.cpp */,
 				26BC7C6010F1B6E900F91463 /* SymbolContext.h */,
@@ -8065,6 +8068,7 @@
 				AF1729D7182C907200E0AB97 /* HistoryUnwind.cpp in Sources */,
 				4C0B95802238342C0026C840 /* ASTUtils.cpp in Sources */,
 				AF77E0A11A033D360096C0EA /* RegisterContextFreeBSD_powerpc.cpp in Sources */,
+				AFC4ADB12270F4C700042167 /* PostfixExpression.cpp in Sources */,
 				26764CA01E48F528008D3573 /* RegularExpression.cpp in Sources */,
 				2689003B13353E0400698AC0 /* EmulateInstruction.cpp in Sources */,
 				AFC2DCE91E6E2F2C00283714 /* Baton.cpp in Sources */,

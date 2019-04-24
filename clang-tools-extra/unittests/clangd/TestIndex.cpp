@@ -29,15 +29,9 @@ Symbol symbol(llvm::StringRef QName) {
 
 static std::string replace(llvm::StringRef Haystack, llvm::StringRef Needle,
                            llvm::StringRef Repl) {
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  std::pair<llvm::StringRef, llvm::StringRef> Split;
-  for (Split = Haystack.split(Needle); !Split.second.empty();
-       Split = Split.first.split(Needle))
-    OS << Split.first << Repl;
-  Result += Split.first;
-  OS.flush();
-  return Result;
+  llvm::SmallVector<llvm::StringRef, 8> Parts;
+  Haystack.split(Parts, Needle);
+  return llvm::join(Parts, Repl);
 }
 
 // Helpers to produce fake index symbols for memIndex() or completions().

@@ -2869,7 +2869,8 @@ bool ScriptInterpreterPythonImpl::IsReservedWord(const char *word) {
 
   // filter out a few characters that would just confuse us and that are
   // clearly not keyword material anyway
-  if (word_sr.find_first_of("'\"") != llvm::StringRef::npos)
+  if (word_sr.find('"') != llvm::StringRef::npos ||
+      word_sr.find('\'') != llvm::StringRef::npos)
     return false;
 
   StreamString command_stream;
