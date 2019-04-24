@@ -184,19 +184,23 @@ public:
     static std::unique_ptr<TreeNode> createIDNode();
     static std::unique_ptr<TreeNode> createDataNode(uint16_t MajorVersion,
                                                     uint16_t MinorVersion,
-                                                    uint32_t Characteristics);
+                                                    uint32_t Characteristics,
+                                                    uint32_t Origin);
 
     explicit TreeNode(bool IsStringNode);
     TreeNode(uint16_t MajorVersion, uint16_t MinorVersion,
-             uint32_t Characteristics);
+             uint32_t Characteristics, uint32_t Origin);
 
-    void addEntry(const ResourceEntryRef &Entry, bool &IsNewTypeString,
-                  bool &IsNewNameString);
+    bool addEntry(const ResourceEntryRef &Entry, uint32_t Origin,
+                  bool &IsNewTypeString, bool &IsNewNameString,
+                  TreeNode *&Result);
     TreeNode &addTypeNode(const ResourceEntryRef &Entry, bool &IsNewTypeString);
     TreeNode &addNameNode(const ResourceEntryRef &Entry, bool &IsNewNameString);
-    TreeNode &addLanguageNode(const ResourceEntryRef &Entry);
-    TreeNode &addDataChild(uint32_t ID, uint16_t MajorVersion,
-                           uint16_t MinorVersion, uint32_t Characteristics);
+    bool addLanguageNode(const ResourceEntryRef &Entry, uint32_t Origin,
+                         TreeNode *&Result);
+    bool addDataChild(uint32_t ID, uint16_t MajorVersion, uint16_t MinorVersion,
+                      uint32_t Characteristics, uint32_t Origin,
+                      TreeNode *&Result);
     TreeNode &addIDChild(uint32_t ID);
     TreeNode &addNameChild(ArrayRef<UTF16> NameRef, bool &IsNewString);
 
@@ -208,12 +212,18 @@ public:
     uint16_t MajorVersion = 0;
     uint16_t MinorVersion = 0;
     uint32_t Characteristics = 0;
+
+    // The .res file that defined this TreeNode, for diagnostics.
+    // Index into InputFilenames.
+    uint32_t Origin;
   };
 
 private:
   TreeNode Root;
   std::vector<std::vector<uint8_t>> Data;
   std::vector<std::vector<UTF16>> StringTable;
+
+  std::vector<std::string> InputFilenames;
 };
 
 Expected<std::unique_ptr<MemoryBuffer>>

@@ -129,7 +129,7 @@ int main() {
 #if defined(__APPLE__) || defined(__linux__)
     assert(PlatformThreadID);
 #endif
-    if (+PlatformThreadID) {
+    if (PlatformSupportsThreadID()) {
       assert(PlatformThreadID() != 0);
       assert(PlatformThreadID() == PlatformThreadID());
     }

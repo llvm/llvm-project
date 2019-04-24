@@ -2281,12 +2281,12 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // come from a pointer that cannot overlap with dynamically-allocated
     // memory within the lifetime of the current function (allocas, byval
     // arguments, globals), then determine the comparison result here.
-    SmallVector<Value *, 8> LHSUObjs, RHSUObjs;
+    SmallVector<const Value *, 8> LHSUObjs, RHSUObjs;
     GetUnderlyingObjects(LHS, LHSUObjs, DL);
     GetUnderlyingObjects(RHS, RHSUObjs, DL);
 
     // Is the set of underlying objects all noalias calls?
-    auto IsNAC = [](ArrayRef<Value *> Objects) {
+    auto IsNAC = [](ArrayRef<const Value *> Objects) {
       return all_of(Objects, isNoAliasCall);
     };
 
@@ -2296,8 +2296,8 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // live with the compared-to allocation). For globals, we exclude symbols
     // that might be resolve lazily to symbols in another dynamically-loaded
     // library (and, thus, could be malloc'ed by the implementation).
-    auto IsAllocDisjoint = [](ArrayRef<Value *> Objects) {
-      return all_of(Objects, [](Value *V) {
+    auto IsAllocDisjoint = [](ArrayRef<const Value *> Objects) {
+      return all_of(Objects, [](const Value *V) {
         if (const AllocaInst *AI = dyn_cast<AllocaInst>(V))
           return AI->getParent() && AI->getFunction() && AI->isStaticAlloca();
         if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))

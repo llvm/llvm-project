@@ -435,11 +435,21 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   Header.kernarg_segment_alignment = 4;
   Header.group_segment_alignment = 4;
   Header.private_segment_alignment = 4;
+
+  if (Version.Major >= 10) {
+    Header.compute_pgm_resource_registers |=
+      S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
+      S_00B848_MEM_ORDERED(1);
+  }
 }
 
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor() {
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
+    const MCSubtargetInfo *STI) {
+  IsaVersion Version = getIsaVersion(STI->getCPU());
+
   amdhsa::kernel_descriptor_t KD;
   memset(&KD, 0, sizeof(KD));
+
   AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
                   amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
                   amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
@@ -449,6 +459,13 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor() {
                   amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE, 1);
   AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
                   amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
+  if (Version.Major >= 10) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE,
+                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED, 1);
+  }
   return KD;
 }
 
@@ -679,6 +696,10 @@ bool isGFX9(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
 }
 
+bool isGFX10(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
+}
+
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
 }
@@ -704,46 +725,46 @@ bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
   CASE_CI_VI(FLAT_SCR) \
   CASE_CI_VI(FLAT_SCR_LO) \
   CASE_CI_VI(FLAT_SCR_HI) \
-  CASE_VI_GFX9(TTMP0) \
-  CASE_VI_GFX9(TTMP1) \
-  CASE_VI_GFX9(TTMP2) \
-  CASE_VI_GFX9(TTMP3) \
-  CASE_VI_GFX9(TTMP4) \
-  CASE_VI_GFX9(TTMP5) \
-  CASE_VI_GFX9(TTMP6) \
-  CASE_VI_GFX9(TTMP7) \
-  CASE_VI_GFX9(TTMP8) \
-  CASE_VI_GFX9(TTMP9) \
-  CASE_VI_GFX9(TTMP10) \
-  CASE_VI_GFX9(TTMP11) \
-  CASE_VI_GFX9(TTMP12) \
-  CASE_VI_GFX9(TTMP13) \
-  CASE_VI_GFX9(TTMP14) \
-  CASE_VI_GFX9(TTMP15) \
-  CASE_VI_GFX9(TTMP0_TTMP1) \
-  CASE_VI_GFX9(TTMP2_TTMP3) \
-  CASE_VI_GFX9(TTMP4_TTMP5) \
-  CASE_VI_GFX9(TTMP6_TTMP7) \
-  CASE_VI_GFX9(TTMP8_TTMP9) \
-  CASE_VI_GFX9(TTMP10_TTMP11) \
-  CASE_VI_GFX9(TTMP12_TTMP13) \
-  CASE_VI_GFX9(TTMP14_TTMP15) \
-  CASE_VI_GFX9(TTMP0_TTMP1_TTMP2_TTMP3) \
-  CASE_VI_GFX9(TTMP4_TTMP5_TTMP6_TTMP7) \
-  CASE_VI_GFX9(TTMP8_TTMP9_TTMP10_TTMP11) \
-  CASE_VI_GFX9(TTMP12_TTMP13_TTMP14_TTMP15) \
-  CASE_VI_GFX9(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7) \
-  CASE_VI_GFX9(TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11) \
-  CASE_VI_GFX9(TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
-  CASE_VI_GFX9(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
+  CASE_VI_GFX9_GFX10(TTMP0) \
+  CASE_VI_GFX9_GFX10(TTMP1) \
+  CASE_VI_GFX9_GFX10(TTMP2) \
+  CASE_VI_GFX9_GFX10(TTMP3) \
+  CASE_VI_GFX9_GFX10(TTMP4) \
+  CASE_VI_GFX9_GFX10(TTMP5) \
+  CASE_VI_GFX9_GFX10(TTMP6) \
+  CASE_VI_GFX9_GFX10(TTMP7) \
+  CASE_VI_GFX9_GFX10(TTMP8) \
+  CASE_VI_GFX9_GFX10(TTMP9) \
+  CASE_VI_GFX9_GFX10(TTMP10) \
+  CASE_VI_GFX9_GFX10(TTMP11) \
+  CASE_VI_GFX9_GFX10(TTMP12) \
+  CASE_VI_GFX9_GFX10(TTMP13) \
+  CASE_VI_GFX9_GFX10(TTMP14) \
+  CASE_VI_GFX9_GFX10(TTMP15) \
+  CASE_VI_GFX9_GFX10(TTMP0_TTMP1) \
+  CASE_VI_GFX9_GFX10(TTMP2_TTMP3) \
+  CASE_VI_GFX9_GFX10(TTMP4_TTMP5) \
+  CASE_VI_GFX9_GFX10(TTMP6_TTMP7) \
+  CASE_VI_GFX9_GFX10(TTMP8_TTMP9) \
+  CASE_VI_GFX9_GFX10(TTMP10_TTMP11) \
+  CASE_VI_GFX9_GFX10(TTMP12_TTMP13) \
+  CASE_VI_GFX9_GFX10(TTMP14_TTMP15) \
+  CASE_VI_GFX9_GFX10(TTMP0_TTMP1_TTMP2_TTMP3) \
+  CASE_VI_GFX9_GFX10(TTMP4_TTMP5_TTMP6_TTMP7) \
+  CASE_VI_GFX9_GFX10(TTMP8_TTMP9_TTMP10_TTMP11) \
+  CASE_VI_GFX9_GFX10(TTMP12_TTMP13_TTMP14_TTMP15) \
+  CASE_VI_GFX9_GFX10(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7) \
+  CASE_VI_GFX9_GFX10(TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11) \
+  CASE_VI_GFX9_GFX10(TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
+  CASE_VI_GFX9_GFX10(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
   }
 
 #define CASE_CI_VI(node) \
   assert(!isSI(STI)); \
   case node: return isCI(STI) ? node##_ci : node##_vi;
 
-#define CASE_VI_GFX9(node) \
-  case node: return isGFX9(STI) ? node##_gfx9 : node##_vi;
+#define CASE_VI_GFX9_GFX10(node) \
+  case node: return (isGFX9(STI) || isGFX10(STI)) ? node##_gfx9_gfx10 : node##_vi;
 
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
   if (STI.getTargetTriple().getArch() == Triple::r600)
@@ -752,17 +773,17 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 }
 
 #undef CASE_CI_VI
-#undef CASE_VI_GFX9
+#undef CASE_VI_GFX9_GFX10
 
 #define CASE_CI_VI(node)   case node##_ci: case node##_vi:   return node;
-#define CASE_VI_GFX9(node) case node##_vi: case node##_gfx9: return node;
+#define CASE_VI_GFX9_GFX10(node) case node##_vi: case node##_gfx9_gfx10: return node;
 
 unsigned mc2PseudoReg(unsigned Reg) {
   MAP_REG2REG
 }
 
 #undef CASE_CI_VI
-#undef CASE_VI_GFX9
+#undef CASE_VI_GFX9_GFX10
 #undef MAP_REG2REG
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
@@ -1030,5 +1051,6 @@ const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
   return lookupSourceOfDivergence(IntrID);
 }
+
 } // namespace AMDGPU
 } // namespace llvm

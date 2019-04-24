@@ -14,7 +14,7 @@ static union { int sg1, sg2; }; // expected-note {{target}}
 namespace NS {}
 
 template<typename> int ta;
-template<typename> static int sta; // expected-note {{target}}
+template<typename> static int sta;
 template<typename> void tb();
 template<typename> static void stb(); // expected-note {{target}}
 template<typename> struct tc {};
@@ -44,7 +44,7 @@ namespace UnnamedNS {
   }
 }
 
-export { // expected-note 19{{here}}
+export { // expected-note 18{{here}}
   using ::a;
   using ::sa; // expected-error {{using declaration referring to 'sa' with internal linkage}}
   using ::b;
@@ -56,7 +56,7 @@ export { // expected-note 19{{here}}
   using ::sg1; // expected-error {{using declaration referring to 'sg1' with internal linkage}}
 
   using ::ta;
-  using ::sta; // expected-error {{using declaration referring to 'sta' with internal linkage}}
+  using ::sta; // FIXME {{using declaration referring to 'sta' with internal linkage}}
   using ::tb;
   using ::stb; // expected-error {{using declaration referring to 'stb' with internal linkage}}
   using ::tc;

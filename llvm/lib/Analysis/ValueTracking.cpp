@@ -3771,26 +3771,27 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
   return V;
 }
 
-void llvm::GetUnderlyingObjects(Value *V, SmallVectorImpl<Value *> &Objects,
+void llvm::GetUnderlyingObjects(const Value *V,
+                                SmallVectorImpl<const Value *> &Objects,
                                 const DataLayout &DL, LoopInfo *LI,
                                 unsigned MaxLookup) {
-  SmallPtrSet<Value *, 4> Visited;
-  SmallVector<Value *, 4> Worklist;
+  SmallPtrSet<const Value *, 4> Visited;
+  SmallVector<const Value *, 4> Worklist;
   Worklist.push_back(V);
   do {
-    Value *P = Worklist.pop_back_val();
+    const Value *P = Worklist.pop_back_val();
     P = GetUnderlyingObject(P, DL, MaxLookup);
 
     if (!Visited.insert(P).second)
       continue;
 
-    if (SelectInst *SI = dyn_cast<SelectInst>(P)) {
+    if (auto *SI = dyn_cast<SelectInst>(P)) {
       Worklist.push_back(SI->getTrueValue());
       Worklist.push_back(SI->getFalseValue());
       continue;
     }
 
-    if (PHINode *PN = dyn_cast<PHINode>(P)) {
+    if (auto *PN = dyn_cast<PHINode>(P)) {
       // If this PHI changes the underlying object in every iteration of the
       // loop, don't look through it.  Consider:
       //   int **A;
@@ -3851,10 +3852,10 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
   do {
     V = Working.pop_back_val();
 
-    SmallVector<Value *, 4> Objs;
-    GetUnderlyingObjects(const_cast<Value *>(V), Objs, DL);
+    SmallVector<const Value *, 4> Objs;
+    GetUnderlyingObjects(V, Objs, DL);
 
-    for (Value *V : Objs) {
+    for (const Value *V : Objs) {
       if (!Visited.insert(V).second)
         continue;
       if (Operator::getOpcode(V) == Instruction::IntToPtr) {

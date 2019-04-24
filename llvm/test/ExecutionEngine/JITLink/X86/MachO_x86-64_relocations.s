@@ -1,6 +1,6 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t/test_x86-64.o %s
-# RUN: llvm-jitlink -noexec -define-abs external_data=0xdeadbeef -define-abs external_func=0xcafef00d -check=%s %t/test_x86-64.o
+# RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t/macho_reloc.o %s
+# RUN: llvm-jitlink -noexec -define-abs external_data=0xdeadbeef -define-abs external_func=0xcafef00d -check=%s %t/macho_reloc.o
 
         .section        __TEXT,__text,regular,pure_instructions
 
@@ -32,8 +32,8 @@ _main:
 # Validate both the reference to the GOT entry, and also the content of the GOT
 # entry.
 #
-# jitlink-check: decode_operand(test_gotld, 4) = got_addr(test_x86-64.o, external_data) - next_pc(test_gotld)
-# jitlink-check: *{8}(got_addr(test_x86-64.o, external_data)) = external_data
+# jitlink-check: decode_operand(test_gotld, 4) = got_addr(macho_reloc.o, external_data) - next_pc(test_gotld)
+# jitlink-check: *{8}(got_addr(macho_reloc.o, external_data)) = external_data
         .globl  test_gotld
         .align  4, 0x90
 test_gotld:
@@ -43,8 +43,8 @@ test_gotld:
 # Check that calls to external functions trigger the generation of stubs and GOT
 # entries.
 #
-# jitlink-check: decode_operand(test_external_call, 0) = stub_addr(test_x86-64.o, external_func) - next_pc(test_external_call)
-# jitlink-check: *{8}(got_addr(test_x86-64.o, external_func)) = external_func
+# jitlink-check: decode_operand(test_external_call, 0) = stub_addr(macho_reloc.o, external_func) - next_pc(test_external_call)
+# jitlink-check: *{8}(got_addr(macho_reloc.o, external_func)) = external_func
         .globl  test_external_call
         .align  4, 0x90
 test_external_call:
@@ -84,22 +84,22 @@ signed4:
         movl $0xAAAAAAAA, named_data(%rip)
 
         .globl signedanon
-# jitlink-check: decode_operand(signedanon, 4) = section_addr(test_x86-64.o, __data) - next_pc(signedanon)
+# jitlink-check: decode_operand(signedanon, 4) = section_addr(macho_reloc.o, __data) - next_pc(signedanon)
 signedanon:
         movq Lanon_data(%rip), %rax
 
         .globl signed1anon
-# jitlink-check: decode_operand(signed1anon, 3) = section_addr(test_x86-64.o, __data) - next_pc(signed1anon)
+# jitlink-check: decode_operand(signed1anon, 3) = section_addr(macho_reloc.o, __data) - next_pc(signed1anon)
 signed1anon:
         movb $0xAA, Lanon_data(%rip)
 
         .globl signed2anon
-# jitlink-check: decode_operand(signed2anon, 3) = section_addr(test_x86-64.o, __data) - next_pc(signed2anon)
+# jitlink-check: decode_operand(signed2anon, 3) = section_addr(macho_reloc.o, __data) - next_pc(signed2anon)
 signed2anon:
         movw $0xAAAA, Lanon_data(%rip)
 
         .globl signed4anon
-# jitlink-check: decode_operand(signed4anon, 3) = section_addr(test_x86-64.o, __data) - next_pc(signed4anon)
+# jitlink-check: decode_operand(signed4anon, 3) = section_addr(macho_reloc.o, __data) - next_pc(signed4anon)
 signed4anon:
         movl $0xAAAAAAAA, Lanon_data(%rip)
 
@@ -117,13 +117,13 @@ Lanon_data:
 # invalid because the minuend can not be local.
 #
 # Note: +8 offset in expression below to accounts for sizeof(Lanon_data).
-# jitlink-check: *{8}(section_addr(test_x86-64.o, __data) + 8) = (section_addr(test_x86-64.o, __data) + 8) - named_data + 2
+# jitlink-check: *{8}(section_addr(macho_reloc.o, __data) + 8) = (section_addr(macho_reloc.o, __data) + 8) - named_data + 2
         .p2align  3
 Lanon_minuend_quad:
         .quad Lanon_minuend_quad - named_data + 2
 
 # Note: +16 offset in expression below to accounts for sizeof(Lanon_data) + sizeof(Lanon_minuend_long).
-# jitlink-check: *{4}(section_addr(test_x86-64.o, __data) + 16) = ((section_addr(test_x86-64.o, __data) + 16) - named_data + 2)[31:0]
+# jitlink-check: *{4}(section_addr(macho_reloc.o, __data) + 16) = ((section_addr(macho_reloc.o, __data) + 16) - named_data + 2)[31:0]
         .p2align  2
 Lanon_minuend_long:
         .long Lanon_minuend_long - named_data + 2
@@ -147,7 +147,7 @@ named_func_addr:
 # Check X86_64_RELOC_UNSIGNED / non-extern handling by putting the address of a
 # local anonymous function in a pointer variable.
 #
-# jitlink-check: *{8}anon_func_addr = section_addr(test_x86-64.o, __text)
+# jitlink-check: *{8}anon_func_addr = section_addr(macho_reloc.o, __text)
         .globl  anon_func_addr
         .p2align  3
 anon_func_addr:
@@ -155,7 +155,7 @@ anon_func_addr:
 
 # X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with anonymous minuend
 #
-# jitlink-check: *{8}minuend_quad1 = section_addr(test_x86-64.o, __data) - minuend_quad1 + 2
+# jitlink-check: *{8}minuend_quad1 = section_addr(macho_reloc.o, __data) - minuend_quad1 + 2
 # Only the form "B: .quad LA - B + C" is tested. The form "B: .quad B - LA + C" is
 # invalid because the minuend can not be local.
         .globl  minuend_quad1
@@ -163,7 +163,7 @@ anon_func_addr:
 minuend_quad1:
         .quad Lanon_data - minuend_quad1 + 2
 
-# jitlink-check: *{4}minuend_long1 = (section_addr(test_x86-64.o, __data) - minuend_long1 + 2)[31:0]
+# jitlink-check: *{4}minuend_long1 = (section_addr(macho_reloc.o, __data) - minuend_long1 + 2)[31:0]
         .globl  minuend_long1
         .p2align  2
 minuend_long1:

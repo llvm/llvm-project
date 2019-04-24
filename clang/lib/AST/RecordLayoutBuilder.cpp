@@ -3287,10 +3287,10 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     }
 
     // Sort nvbases by offset.
-    std::stable_sort(Bases.begin(), Bases.end(),
-                     [&](const CXXRecordDecl *L, const CXXRecordDecl *R) {
-      return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
-    });
+    llvm::stable_sort(
+        Bases, [&](const CXXRecordDecl *L, const CXXRecordDecl *R) {
+          return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
+        });
 
     // Dump (non-virtual) bases
     for (const CXXRecordDecl *Base : Bases) {

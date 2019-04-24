@@ -1485,9 +1485,7 @@ void printDynamicRelocations(const ObjectFile *Obj) {
 
   outs() << "DYNAMIC RELOCATION RECORDS\n";
   StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
-  for (const SectionRef &Section : DynRelSec) {
-    if (Section.relocation_begin() == Section.relocation_end())
-      continue;
+  for (const SectionRef &Section : DynRelSec)
     for (const RelocationRef &Reloc : Section.relocations()) {
       uint64_t Address = Reloc.getOffset();
       SmallString<32> RelocName;
@@ -1497,7 +1495,6 @@ void printDynamicRelocations(const ObjectFile *Obj) {
       outs() << format(Fmt.data(), Address) << " " << RelocName << " "
              << ValueStr << "\n";
     }
-  }
 }
 
 // Returns true if we need to show LMA column when dumping section headers. We

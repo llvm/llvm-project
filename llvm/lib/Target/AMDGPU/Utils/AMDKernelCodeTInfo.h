@@ -82,6 +82,9 @@ COMPPGM1(priv,                            compute_pgm_rsrc1_priv,           PRIV
 COMPPGM1(enable_dx10_clamp,               compute_pgm_rsrc1_dx10_clamp,     DX10_CLAMP),
 COMPPGM1(debug_mode,                      compute_pgm_rsrc1_debug_mode,     DEBUG_MODE),
 COMPPGM1(enable_ieee_mode,                compute_pgm_rsrc1_ieee_mode,      IEEE_MODE),
+COMPPGM1(enable_wgp_mode,                 compute_pgm_rsrc1_wgp_mode,       WGP_MODE),
+COMPPGM1(enable_mem_ordered,              compute_pgm_rsrc1_mem_ordered,    MEM_ORDERED),
+COMPPGM1(enable_fwd_progress,             compute_pgm_rsrc1_fwd_progress,   FWD_PROGRESS),
 // TODO: bulky
 // TODO: cdbg_user
 COMPPGM2(enable_sgpr_private_segment_wave_byte_offset, compute_pgm_rsrc2_scratch_en, SCRATCH_EN),

@@ -3368,7 +3368,6 @@
 		AF90106315AB7C5700FF120D /* lldb.1 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.man; name = lldb.1; path = docs/lldb.1; sourceTree = "<group>"; };
 		26BC7E7410F1B85900F91463 /* lldb.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = lldb.cpp; path = source/lldb.cpp; sourceTree = "<group>"; };
 		2669605E1199F4230075C61A /* lldb.swig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = lldb.swig; sourceTree = "<group>"; };
-		94E367CC140C4EC4001C7A5A /* modify-python-lldb.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "modify-python-lldb.py"; sourceTree = "<group>"; };
 		26792616211CA3E100EE1D10 /* package.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = package.json; path = "tools/lldb-vscode/package.json"; sourceTree = "<group>"; };
 		9A48A3A7124AAA5A00922451 /* python-extensions.swig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "python-extensions.swig"; sourceTree = "<group>"; };
 		944DC3481774C99000D7D884 /* python-swigsafecast.swig */ = {isa = PBXFileReference; lastKnownFileType = text; path = "python-swigsafecast.swig"; sourceTree = "<group>"; };
@@ -4592,7 +4591,6 @@
 				266960601199F4230075C61A /* build-swig-Python.sh */,
 				266960611199F4230075C61A /* edit-swig-python-wrapper-file.py */,
 				94FE476613FC1DA8001F8475 /* finish-swig-Python-LLDB.sh */,
-				94E367CC140C4EC4001C7A5A /* modify-python-lldb.py */,
 				9A48A3A7124AAA5A00922451 /* python-extensions.swig */,
 				944DC3481774C99000D7D884 /* python-swigsafecast.swig */,
 				94E367CE140C4EEA001C7A5A /* python-typemaps.swig */,

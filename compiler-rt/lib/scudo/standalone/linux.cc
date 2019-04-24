@@ -44,7 +44,7 @@ uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
 void NORETURN die() { abort(); }
 
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
-          UNUSED u64 *Extra) {
+          UNUSED MapPlatformData *Data) {
   int MmapFlags = MAP_PRIVATE | MAP_ANON;
   if (Flags & MAP_NOACCESS)
     MmapFlags |= MAP_NORESERVE;
@@ -68,13 +68,14 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   return P;
 }
 
-void unmap(void *Addr, uptr Size, UNUSED uptr Flags, UNUSED u64 *Extra) {
+void unmap(void *Addr, uptr Size, UNUSED uptr Flags,
+           UNUSED MapPlatformData *Data) {
   if (munmap(Addr, Size) != 0)
     dieOnMapUnmapError();
 }
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
-                      UNUSED u64 *Extra) {
+                      UNUSED MapPlatformData *Data) {
   void *Addr = reinterpret_cast<void *>(BaseAddress + Offset);
   while (madvise(Addr, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
   }

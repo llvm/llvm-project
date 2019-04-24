@@ -99,7 +99,7 @@ static void
 deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
                       MemoryDependenceResults &MD, const TargetLibraryInfo &TLI,
                       InstOverlapIntervalsTy &IOL, OrderedBasicBlock &OBB,
-                      SmallSetVector<Value *, 16> *ValueSet = nullptr) {
+                      SmallSetVector<const Value *, 16> *ValueSet = nullptr) {
   SmallVector<Instruction*, 32> NowDeadInsts;
 
   NowDeadInsts.push_back(I);
@@ -713,7 +713,7 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
 /// the DeadStackObjects set. If so, they become live because the location is
 /// being loaded.
 static void removeAccessedObjects(const MemoryLocation &LoadedLoc,
-                                  SmallSetVector<Value *, 16> &DeadStackObjects,
+                                  SmallSetVector<const Value *, 16> &DeadStackObjects,
                                   const DataLayout &DL, AliasAnalysis *AA,
                                   const TargetLibraryInfo *TLI,
                                   const Function *F) {
@@ -726,12 +726,12 @@ static void removeAccessedObjects(const MemoryLocation &LoadedLoc,
   // If the kill pointer can be easily reduced to an alloca, don't bother doing
   // extraneous AA queries.
   if (isa<AllocaInst>(UnderlyingPointer) || isa<Argument>(UnderlyingPointer)) {
-    DeadStackObjects.remove(const_cast<Value*>(UnderlyingPointer));
+    DeadStackObjects.remove(UnderlyingPointer);
     return;
   }
 
   // Remove objects that could alias LoadedLoc.
-  DeadStackObjects.remove_if([&](Value *I) {
+  DeadStackObjects.remove_if([&](const Value *I) {
     // See if the loaded location could alias the stack location.
     MemoryLocation StackLoc(I, getPointerSize(I, DL, *TLI, F));
     return !AA->isNoAlias(StackLoc, LoadedLoc);
@@ -753,7 +753,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
   // Keep track of all of the stack objects that are dead at the end of the
   // function.
-  SmallSetVector<Value*, 16> DeadStackObjects;
+  SmallSetVector<const Value*, 16> DeadStackObjects;
 
   // Find all of the alloca'd pointers in the entry block.
   BasicBlock &Entry = BB.getParent()->front();
@@ -782,12 +782,12 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
     // If we find a store, check to see if it points into a dead stack value.
     if (hasAnalyzableMemoryWrite(&*BBI, *TLI) && isRemovable(&*BBI)) {
       // See through pointer-to-pointer bitcasts
-      SmallVector<Value *, 4> Pointers;
+      SmallVector<const Value *, 4> Pointers;
       GetUnderlyingObjects(getStoredPointerOperand(&*BBI), Pointers, DL);
 
       // Stores to stack values are valid candidates for removal.
       bool AllDead = true;
-      for (Value *Pointer : Pointers)
+      for (const Value *Pointer : Pointers)
         if (!DeadStackObjects.count(Pointer)) {
           AllDead = false;
           break;
@@ -798,7 +798,8 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
         LLVM_DEBUG(dbgs() << "DSE: Dead Store at End of Block:\n  DEAD: "
                           << *Dead << "\n  Objects: ";
-                   for (SmallVectorImpl<Value *>::iterator I = Pointers.begin(),
+                   for (SmallVectorImpl<const Value *>::iterator I =
+                            Pointers.begin(),
                         E = Pointers.end();
                         I != E; ++I) {
                      dbgs() << **I;
@@ -847,7 +848,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
       // If the call might load from any of our allocas, then any store above
       // the call is live.
-      DeadStackObjects.remove_if([&](Value *I) {
+      DeadStackObjects.remove_if([&](const Value *I) {
         // See if the call site touches the value.
         return isRefSet(AA->getModRefInfo(
             Call, I, getPointerSize(I, DL, *TLI, BB.getParent())));

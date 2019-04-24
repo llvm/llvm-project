@@ -887,8 +887,8 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     // in case it is empty.
     bool IsEmpty = getInputSections(Sec).empty();
     if (IsEmpty)
-      Sec->Flags =
-          Flags & ((Sec->NonAlloc ? 0 : SHF_ALLOC) | SHF_WRITE | SHF_EXECINSTR);
+      Sec->Flags = Flags & ((Sec->NonAlloc ? 0 : (uint64_t)SHF_ALLOC) |
+                            SHF_WRITE | SHF_EXECINSTR);
 
     if (IsEmpty && isDiscardable(*Sec)) {
       Sec->Live = false;

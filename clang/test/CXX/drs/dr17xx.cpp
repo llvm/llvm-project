@@ -77,7 +77,7 @@ namespace dr1758 { // dr1758: 3.7
 #endif
 }
 
-namespace dr1722 { // dr1722: 9
+namespace dr1722 { // dr1722: 9.0
 #if __cplusplus >= 201103L
 void f() {
   const auto lambda = [](int x) { return x + 1; };

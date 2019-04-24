@@ -70,6 +70,13 @@
 # error "Either BUILDING_CXA_GUARD or TESTING_CXA_GUARD must be defined"
 #endif
 
+#if __has_feature(thread_sanitizer)
+extern "C" void __tsan_acquire(void*);
+extern "C" void __tsan_release(void*);
+#else
+#define __tsan_acquire(addr) ((void)0)
+#define __tsan_release(addr) ((void)0)
+#endif
 
 namespace __cxxabiv1 {
 // Use an anonymous namespace to ensure that the tests and actual implementation
@@ -116,7 +123,7 @@ constexpr uint32_t (*PlatformThreadID)() = nullptr;
 #endif
 
 
-constexpr bool DoesPlatformSupportThreadID() {
+constexpr bool PlatformSupportsThreadID() {
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wtautological-pointer-compare"
@@ -265,7 +272,7 @@ struct InitByteGlobalMutex
   explicit InitByteGlobalMutex(uint32_t *g)
     : BaseT(g), has_thread_id_support(false) {}
   explicit InitByteGlobalMutex(uint64_t *g)
-    : BaseT(g), has_thread_id_support(DoesPlatformSupportThreadID()) {}
+    : BaseT(g), has_thread_id_support(PlatformSupportsThreadID()) {}
 
 public:
   AcquireResult acquire_init_byte() {
@@ -358,9 +365,11 @@ private:
 void PlatformFutexWait(int* addr, int expect) {
   constexpr int WAIT = 0;
   syscall(SYS_futex, addr, WAIT, expect, 0);
+  __tsan_acquire(addr);
 }
 void PlatformFutexWake(int* addr) {
   constexpr int WAKE = 1;
+  __tsan_release(addr);
   syscall(SYS_futex, addr, WAKE, INT_MAX);
 }
 #else
@@ -368,7 +377,7 @@ constexpr void (*PlatformFutexWait)(int*, int) = nullptr;
 constexpr void (*PlatformFutexWake)(int*) = nullptr;
 #endif
 
-constexpr bool DoesPlatformSupportFutex() {
+constexpr bool PlatformSupportsFutex() {
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wtautological-pointer-compare"
@@ -539,7 +548,7 @@ constexpr Implementation CurrentImplementation =
 #endif
 
 static_assert(CurrentImplementation != Implementation::Futex
-           || DoesPlatformSupportFutex(), "Futex selected but not supported");
+           || PlatformSupportsFutex(), "Futex selected but not supported");
 
 using SelectedImplementation =
     SelectImplementation<CurrentImplementation>::type;

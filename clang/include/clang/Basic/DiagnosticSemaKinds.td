@@ -4384,8 +4384,6 @@ def err_explicit_instantiation_of_typedef : Error<
   "explicit instantiation of typedef %0">;
 def err_explicit_instantiation_storage_class : Error<
   "explicit instantiation cannot have a storage class">;
-def err_explicit_instantiation_internal_linkage : Error<
-  "explicit instantiation declaration of %0 with internal linkage">;
 def err_explicit_instantiation_not_known : Error<
   "explicit instantiation of %0 does not refer to a function template, "
   "variable template, member function, member class, or static data member">;

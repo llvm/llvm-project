@@ -814,6 +814,9 @@ namespace llvm {
 
     bool hasAndNot(SDValue Y) const override;
 
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
+                                           CombineLevel Level) const override;
+
     bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
     bool

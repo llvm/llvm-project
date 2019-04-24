@@ -2574,10 +2574,9 @@ void CodeGenModule::emitMultiVersionFunctions() {
       ResolverFunc->setComdat(
           getModule().getOrInsertComdat(ResolverFunc->getName()));
 
-    std::stable_sort(
-        Options.begin(), Options.end(),
-        [&TI](const CodeGenFunction::MultiVersionResolverOption &LHS,
-              const CodeGenFunction::MultiVersionResolverOption &RHS) {
+    llvm::stable_sort(
+        Options, [&TI](const CodeGenFunction::MultiVersionResolverOption &LHS,
+                       const CodeGenFunction::MultiVersionResolverOption &RHS) {
           return TargetMVPriority(TI, LHS) > TargetMVPriority(TI, RHS);
         });
     CodeGenFunction CGF(*this);

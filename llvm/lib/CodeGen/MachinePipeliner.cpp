@@ -541,16 +541,16 @@ static bool isDependenceBarrier(MachineInstr &MI, AliasAnalysis *AA) {
 /// Return the underlying objects for the memory references of an instruction.
 /// This function calls the code in ValueTracking, but first checks that the
 /// instruction has a memory operand.
-static void getUnderlyingObjects(MachineInstr *MI,
-                                 SmallVectorImpl<Value *> &Objs,
+static void getUnderlyingObjects(const MachineInstr *MI,
+                                 SmallVectorImpl<const Value *> &Objs,
                                  const DataLayout &DL) {
   if (!MI->hasOneMemOperand())
     return;
   MachineMemOperand *MM = *MI->memoperands_begin();
   if (!MM->getValue())
     return;
-  GetUnderlyingObjects(const_cast<Value *>(MM->getValue()), Objs, DL);
-  for (Value *V : Objs) {
+  GetUnderlyingObjects(MM->getValue(), Objs, DL);
+  for (const Value *V : Objs) {
     if (!isIdentifiedObject(V)) {
       Objs.clear();
       return;
@@ -564,7 +564,7 @@ static void getUnderlyingObjects(MachineInstr *MI,
 /// dependence. This code is very similar to the code in ScheduleDAGInstrs
 /// but that code doesn't create loop carried dependences.
 void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
-  MapVector<Value *, SmallVector<SUnit *, 4>> PendingLoads;
+  MapVector<const Value *, SmallVector<SUnit *, 4>> PendingLoads;
   Value *UnknownValue =
     UndefValue::get(Type::getVoidTy(MF.getFunction().getContext()));
   for (auto &SU : SUnits) {
@@ -572,7 +572,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
     if (isDependenceBarrier(MI, AA))
       PendingLoads.clear();
     else if (MI.mayLoad()) {
-      SmallVector<Value *, 4> Objs;
+      SmallVector<const Value *, 4> Objs;
       getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
       if (Objs.empty())
         Objs.push_back(UnknownValue);
@@ -581,12 +581,12 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
         SUs.push_back(&SU);
       }
     } else if (MI.mayStore()) {
-      SmallVector<Value *, 4> Objs;
+      SmallVector<const Value *, 4> Objs;
       getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
       if (Objs.empty())
         Objs.push_back(UnknownValue);
       for (auto V : Objs) {
-        MapVector<Value *, SmallVector<SUnit *, 4>>::iterator I =
+        MapVector<const Value *, SmallVector<SUnit *, 4>>::iterator I =
             PendingLoads.find(V);
         if (I == PendingLoads.end())
           continue;

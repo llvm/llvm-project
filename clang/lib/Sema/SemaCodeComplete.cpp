@@ -4789,22 +4789,19 @@ typedef CodeCompleteConsumer::OverloadCandidate ResultCandidate;
 static void mergeCandidatesWithResults(
     Sema &SemaRef, SmallVectorImpl<ResultCandidate> &Results,
     OverloadCandidateSet &CandidateSet, SourceLocation Loc) {
-  if (!CandidateSet.empty()) {
-    // Sort the overload candidate set by placing the best overloads first.
-    std::stable_sort(
-        CandidateSet.begin(), CandidateSet.end(),
-        [&](const OverloadCandidate &X, const OverloadCandidate &Y) {
-          return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
-                                           CandidateSet.getKind());
-        });
+  // Sort the overload candidate set by placing the best overloads first.
+  llvm::stable_sort(CandidateSet, [&](const OverloadCandidate &X,
+                                      const OverloadCandidate &Y) {
+    return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
+                                     CandidateSet.getKind());
+  });
 
-    // Add the remaining viable overload candidates as code-completion results.
-    for (OverloadCandidate &Candidate : CandidateSet) {
-      if (Candidate.Function && Candidate.Function->isDeleted())
-        continue;
-      if (Candidate.Viable)
-        Results.push_back(ResultCandidate(Candidate.Function));
-    }
+  // Add the remaining viable overload candidates as code-completion results.
+  for (OverloadCandidate &Candidate : CandidateSet) {
+    if (Candidate.Function && Candidate.Function->isDeleted())
+      continue;
+    if (Candidate.Viable)
+      Results.push_back(ResultCandidate(Candidate.Function));
   }
 }
 

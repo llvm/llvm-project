@@ -846,13 +846,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     // Get the underlying objects for the location passed on the lifetime
     // marker.
-    SmallVector<Value *, 4> Allocas;
+    SmallVector<const Value *, 4> Allocas;
     GetUnderlyingObjects(CI.getArgOperand(1), Allocas, *DL);
 
     // Iterate over each underlying object, creating lifetime markers for each
     // static alloca. Quit if we find a non-static alloca.
-    for (Value *V : Allocas) {
-      AllocaInst *AI = dyn_cast<AllocaInst>(V);
+    for (const Value *V : Allocas) {
+      const AllocaInst *AI = dyn_cast<AllocaInst>(V);
       if (!AI)
         continue;
 
