@@ -2761,7 +2761,7 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&
-      CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::None)
+      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Default)
     return;
 
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;

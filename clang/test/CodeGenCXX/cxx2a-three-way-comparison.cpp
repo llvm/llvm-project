@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple %ms_abi_triple 2>&1 | FileCheck %s --check-prefix=MSABI
+// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple x86_64-pc-win32 2>&1 | FileCheck %s --check-prefix=MSABI
 // RUN: not %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple -DBUILTIN 2>&1 | FileCheck %s --check-prefix=BUILTIN
 
 struct A {

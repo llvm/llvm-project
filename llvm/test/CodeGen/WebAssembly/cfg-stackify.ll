@@ -18,13 +18,13 @@ declare void @something()
 ; CHECK:      i32.lt_s
 ; CHECK-NEXT: br_if
 ; CHECK-NEXT: return
-; CHECK-NEXT: .LBB0_3:
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block
 ; CHECK-NEXT: i32.const
 ; CHECK-NEXT: i32.add
 ; CHECK-NEXT: call
 ; CHECK-NEXT: br
-; CHECK-NEXT: .LBB0_4:
+; CHECK-NEXT: .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT: end_loop
 define void @test0(i32 %n) {
 entry:
@@ -53,13 +53,13 @@ back:
 ; CHECK:      i32.lt_s
 ; CHECK-NEXT: br_if
 ; CHECK-NEXT: return
-; CHECK-NEXT: .LBB1_3:
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block
 ; CHECK-NEXT: i32.const
 ; CHECK-NEXT: i32.add
 ; CHECK-NEXT: call
 ; CHECK-NEXT: br
-; CHECK-NEXT: .LBB1_4:
+; CHECK-NEXT: .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT: end_loop
 define void @test1(i32 %n) {
 entry:
@@ -86,10 +86,10 @@ back:
 ; CHECK-NOT: local
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, {{[^,]+}}{{$}}
-; CHECK: .LBB2_{{[0-9]+}}:
+; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
 ; CHECK: loop
 ; CHECK: br_if 0, $pop{{[0-9]+}}{{$}}
-; CHECK: .LBB2_{{[0-9]+}}:
+; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
 ; CHECK: end_loop
 ; CHECK: end_block
 ; CHECK: return{{$}}
@@ -123,14 +123,14 @@ for.end:
 ; CHECK-NEXT: block   {{$}}
 ; CHECK: br_if 0, ${{[^,]+}}{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB3_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, ${{[^,]+}}{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB3_4:
+; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT: end_block{{$}}
-; CHECK: .LBB3_5:
+; CHECK: .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
@@ -160,7 +160,7 @@ exit:
 ; CHECK-LABEL: triangle:
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $1{{$}}
-; CHECK: .LBB4_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 ; CHECK: return
 define i32 @triangle(i32* %p, i32 %a) {
 entry:
@@ -180,8 +180,8 @@ exit:
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $1{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB5_2:
-; CHECK: .LBB5_3:
+; CHECK: .LBB{{[0-9]+}}_2:
+; CHECK: .LBB{{[0-9]+}}_3:
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
 define i32 @diamond(i32* %p, i32 %a) {
@@ -211,11 +211,11 @@ entry:
 
 ; CHECK-LABEL: minimal_loop:
 ; CHECK-NOT: br
-; CHECK: .LBB7_1:
+; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: loop i32
 ; CHECK: i32.store 0($0), $pop{{[0-9]+}}{{$}}
 ; CHECK: br 0{{$}}
-; CHECK: .LBB7_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 define i32 @minimal_loop(i32* %p) {
 entry:
   store volatile i32 0, i32* %p
@@ -227,7 +227,7 @@ loop:
 
 ; CHECK-LABEL: simple_loop:
 ; CHECK-NOT: br
-; CHECK: .LBB8_1:
+; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: loop    {{$}}
 ; CHECK: br_if 0, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT: end_loop{{$}}
@@ -251,8 +251,8 @@ exit:
 ; CHECK: br_if 0, $0{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $1{{$}}
-; CHECK: .LBB9_3:
-; CHECK: .LBB9_4:
+; CHECK: .LBB{{[0-9]+}}_3:
+; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK: return
 define i32 @doubletriangle(i32 %a, i32 %b, i32* %p) {
 entry:
@@ -279,9 +279,9 @@ exit:
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $0{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB10_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 ; CHECK: br_if 0, $1{{$}}
-; CHECK: .LBB10_4:
+; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
 define i32 @ifelse_earlyexits(i32 %a, i32 %b, i32* %p) {
@@ -305,19 +305,19 @@ exit:
 }
 
 ; CHECK-LABEL: doublediamond_in_a_loop:
-; CHECK: .LBB11_1:
+; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: loop i32{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if           0, $0{{$}}
 ; CHECK: br              1{{$}}
-; CHECK: .LBB11_3:
+; CHECK: .LBB{{[0-9]+}}_3:
 ; CHECK: end_block{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if           0, $1{{$}}
 ; CHECK: br              1{{$}}
-; CHECK: .LBB11_5:
+; CHECK: .LBB{{[0-9]+}}_5:
 ; CHECK: br              0{{$}}
-; CHECK: .LBB11_6:
+; CHECK: .LBB{{[0-9]+}}_6:
 ; CHECK-NEXT: end_loop{{$}}
 define i32 @doublediamond_in_a_loop(i32 %a, i32 %b, i32* %p) {
 entry:
@@ -384,18 +384,12 @@ if.end:
 ; CHECK-NEXT: .functype test4 (i32) -> (){{$}}
 ; CHECK:      block   {{$}}
 ; CHECK-NEXT: block   {{$}}
-; CHECK:      br_if       0, $pop{{[0-9]+}}{{$}}
-; CHECK:      br_if       1, $pop{{[0-9]+}}{{$}}
-; CHECK:      br          1{{$}}
-; CHECK-NEXT: .LBB13_3:
+; CHECK:      br_if     0, $pop{{[0-9]+}}{{$}}
+; CHECK:      br        1{{$}}
+; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: block   {{$}}
-; CHECK:      br_if 0, $pop{{[0-9]+}}{{$}}
-; CHECK:      br_if 1, $pop{{[0-9]+}}{{$}}
-; CHECK-NEXT: .LBB13_5:
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: return{{$}}
-; CHECK-NEXT: .LBB13_6:
+; CHECK-NEXT: br_table   $0, 0, 0, 0, 0, 0, 0{{$}}
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @test4(i32 %t) {
@@ -424,14 +418,14 @@ default:
 ; same basic block.
 
 ; CHECK-LABEL: test5:
-; CHECK:       .LBB14_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK:       br_if 1, {{[^,]+}}{{$}}
 ; CHECK:       br_if 0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB14_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK:       return{{$}}
 define void @test5(i1 %p, i1 %q) {
 entry:
@@ -459,7 +453,7 @@ return:
 ; which has another predecessor.
 
 ; CHECK-LABEL: test6:
-; CHECK:       .LBB15_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
@@ -472,10 +466,10 @@ return:
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB15_5:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
-; CHECK:       .LBB15_6:
+; CHECK:       .LBB{{[0-9]+}}_6:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
@@ -512,7 +506,7 @@ second:
 ; that end in unreachable.
 
 ; CHECK-LABEL: test7:
-; CHECK:       .LBB16_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NOT:   block
 ; CHECK:       block   {{$}}
@@ -521,7 +515,7 @@ second:
 ; CHECK:       br_if 1, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       unreachable
-; CHECK-NEXT:  .LBB16_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if 0, {{[^,]+}}{{$}}
@@ -557,12 +551,12 @@ u1:
 ; Test an interesting case using nested loops and switches.
 
 ; CHECK-LABEL: test8:
-; CHECK:       .LBB17_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop i32{{$}}
 ; CHECK-NEXT:  i32.const $push{{[^,]+}}, 0{{$}}
 ; CHECK-NEXT:  br_if    0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  br       0{{$}}
-; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:  end_loop{{$}}
 define i32 @test8() {
 bb:
@@ -585,12 +579,12 @@ bb3:
 ; Test an interesting case using nested loops that share a bottom block.
 
 ; CHECK-LABEL: test9:
-; CHECK:       .LBB18_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if     1, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB18_2:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NOT:   block
 ; CHECK:       block   {{$}}
@@ -599,12 +593,12 @@ bb3:
 ; CHECK-NOT:   block
 ; CHECK:       br_if     2, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  br        1{{$}}
-; CHECK-NEXT:  .LBB18_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if     1, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  br        0{{$}}
-; CHECK-NEXT:  .LBB18_5:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NOT:   block
 ; CHECK:       end_block
 ; CHECK-NOT:   block
@@ -644,31 +638,32 @@ end:
 ; and loop exits to a block with unreachable.
 
 ; CHECK-LABEL: test10:
-; CHECK:       .LBB19_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    0, {{[^,]+}}{{$}}
-; CHECK:       .LBB19_3:
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
+; CHECK:       .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       .LBB19_4:
+; CHECK:       .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    0, {{[^,]+}}{{$}}
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
-; CHECK:       br_if    1, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    0, {{[^,]+}}{{$}}
-; CHECK-NEXT:  end_loop{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    1, {{[^,]+}}{{$}}
-; CHECK-NEXT:  return{{$}}
-; CHECK-NEXT:  .LBB19_9:
+; CHECK-NEXT:  block   {{$}}
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
+; CHECK:       br        3{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
 ; CHECK-NEXT:  end_block{{$}}
-; CHECK-NOT:   block
-; CHECK:       br       0{{$}}
-; CHECK-NEXT:  .LBB19_10:
+; CHECK:       block   {{$}}
+; CHECK-NEXT:  br_table   $0, 0, 3, 1, 2, 0
+; CHECK-NEXT:  .LBB{{[0-9]+}}_8:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK-NEXT:  end_loop{{$}}
+; CHECK-NEXT:  return{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_9:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK:       br        0{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_10:
+; CHECK-NEXT:  end_loop{{$}}
 define void @test10() {
 bb0:
   br label %bb1
@@ -718,25 +713,25 @@ bb6:
 ; CHECK-NEXT:  br_if        0, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        2, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB20_3:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB20_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        1, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        2, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB20_6:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_6:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB20_7:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB20_8:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_8:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
@@ -771,32 +766,26 @@ bb8:
 }
 
 ; CHECK-LABEL: test12:
-; CHECK:       .LBB21_1:
-; CHECK-NEXT:  block   {{$}}
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       block   {{$}}
 ; CHECK-NEXT:  block   {{$}}
-; CHECK:       br_if       0, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       1, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       1, {{[^,]+}}{{$}}
-; CHECK-NEXT:  br          3{{$}}
-; CHECK-NEXT:  .LBB21_4:
+; CHECK-NEXT:  block   {{$}}
+; CHECK-NEXT:  block   {{$}}
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
+; CHECK:       br_if     2, {{[^,]+}}{{$}}
+; CHECK:       br_if     1, {{[^,]+}}{{$}}
+; CHECK-NEXT:  br        2{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       0, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       2, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB21_6:
-; CHECK-NEXT:  end_block{{$}}
-; CHECK-NOT:   block
-; CHECK:       br          0{{$}}
-; CHECK-NEXT:  .LBB21_7:
-; CHECK-NEXT:  end_loop{{$}}
+; CHECK-NEXT:  br_table   $2, 1, 0, 0, 0, 1, 1{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  return{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_6:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK:       br        0{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
+; CHECK-NEXT:  end_loop{{$}}
 define void @test12(i8* %arg) {
 bb:
   br label %bb1
@@ -830,14 +819,14 @@ bb7:
 ; CHECK:       br_if 0, $pop0{{$}}
 ; CHECK:       block   {{$}}
 ; CHECK:       br_if 0, $pop3{{$}}
-; CHECK:       .LBB22_3:
+; CHECK:       .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK:       br_if 1, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT:  br 1{{$}}
-; CHECK-NEXT:  .LBB22_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  return{{$}}
-; CHECK-NEXT:  .LBB22_5:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  unreachable{{$}}
 define void @test13() noinline optnone {
@@ -861,12 +850,12 @@ bb5:
 ; before the loop for the second.
 
 ; CHECK-LABEL: test14:
-; CHECK:      .LBB23_1:{{$}}
+; CHECK:      .LBB{{[0-9]+}}_1:{{$}}
 ; CHECK-NEXT:     loop    {{$}}
 ; CHECK-NEXT:     i32.const   $push0=, 0{{$}}
 ; CHECK-NEXT:     br_if       0, $pop0{{$}}
 ; CHECK-NEXT:     end_loop{{$}}
-; CHECK-NEXT: .LBB23_3:{{$}}
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:{{$}}
 ; CHECK-NEXT:     loop    {{$}}
 ; CHECK-NEXT:     i32.const   $push1=, 0{{$}}
 ; CHECK-NEXT:     br_if       0, $pop1{{$}}
@@ -925,22 +914,22 @@ bb50:
 ; CHECK:        block
 ; CHECK-NEXT:   block
 ; CHECK:        br_if       0, $pop{{.*}}{{$}}
-; CHECK:        .LBB24_2:
+; CHECK:        .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:   block   {{$}}
 ; CHECK-NEXT:   block   {{$}}
 ; CHECK-NEXT:   loop    {{$}}
 ; CHECK:        br_if       1, $pop{{.*}}{{$}}
 ; CHECK:        br_if       0, ${{.*}}{{$}}
 ; CHECK-NEXT:   br          2{{$}}
-; CHECK-NEXT:   .LBB24_4:
+; CHECK-NEXT:   .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:   end_loop{{$}}
-; CHECK:        .LBB24_5:
+; CHECK:        .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:   end_block{{$}}
 ; CHECK:        br_if       1, $pop{{.*}}{{$}}
 ; CHECK:        return{{$}}
-; CHECK:        .LBB24_7:
+; CHECK:        .LBB{{[0-9]+}}_7:
 ; CHECK-NEXT:   end_block{{$}}
-; CHECK:        .LBB24_8:
+; CHECK:        .LBB{{[0-9]+}}_8:
 ; CHECK-NEXT:   end_block{{$}}
 ; CHECK-NEXT:   return{{$}}
 %0 = type { i8, i32 }

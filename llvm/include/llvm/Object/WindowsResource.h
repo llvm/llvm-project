@@ -195,10 +195,10 @@ public:
     TreeNode &addTypeNode(const ResourceEntryRef &Entry, bool &IsNewTypeString);
     TreeNode &addNameNode(const ResourceEntryRef &Entry, bool &IsNewNameString);
     TreeNode &addLanguageNode(const ResourceEntryRef &Entry);
-    TreeNode &addChild(uint32_t ID, bool IsDataNode = false,
-                       uint16_t MajorVersion = 0, uint16_t MinorVersion = 0,
-                       uint32_t Characteristics = 0);
-    TreeNode &addChild(ArrayRef<UTF16> NameRef, bool &IsNewString);
+    TreeNode &addDataChild(uint32_t ID, uint16_t MajorVersion,
+                           uint16_t MinorVersion, uint32_t Characteristics);
+    TreeNode &addIDChild(uint32_t ID);
+    TreeNode &addNameChild(ArrayRef<UTF16> NameRef, bool &IsNewString);
 
     bool IsDataNode = false;
     uint32_t StringIndex;

@@ -794,6 +794,8 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
     return multiply(Other);
   case Instruction::UDiv:
     return udiv(Other);
+  case Instruction::URem:
+    return urem(Other);
   case Instruction::Shl:
     return shl(Other);
   case Instruction::LShr:
@@ -989,6 +991,19 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
 
   APInt Upper = getUnsignedMax().udiv(RHS_umin) + 1;
   return getNonEmpty(std::move(Lower), std::move(Upper));
+}
+
+ConstantRange ConstantRange::urem(const ConstantRange &RHS) const {
+  if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax().isNullValue())
+    return getEmpty();
+
+  // L % R for L < R is L.
+  if (getUnsignedMax().ult(RHS.getUnsignedMin()))
+    return *this;
+
+  // L % R is <= L and < R.
+  APInt Upper = APIntOps::umin(getUnsignedMax(), RHS.getUnsignedMax() - 1) + 1;
+  return getNonEmpty(APInt::getNullValue(getBitWidth()), std::move(Upper));
 }
 
 ConstantRange

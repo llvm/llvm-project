@@ -1036,7 +1036,9 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
     return true;
   case DICompileUnit::DebugNameTableKind::Default:
     return DD->tuneForGDB() && !includeMinimalInlineScopes() &&
-           !CUNode->isDebugDirectivesOnly();
+           !CUNode->isDebugDirectivesOnly() &&
+           DD->getAccelTableKind() != AccelTableKind::Apple &&
+           DD->getDwarfVersion() < 5;
   }
   llvm_unreachable("Unhandled DICompileUnit::DebugNameTableKind enum");
 }

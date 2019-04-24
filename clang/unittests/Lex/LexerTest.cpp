@@ -513,4 +513,23 @@ TEST_F(LexerTest, StringizingRasString) {
   EXPECT_EQ(String6, R"(a\\\n\n\n    \\\\b)");
 }
 
+TEST_F(LexerTest, CharRangeOffByOne) {
+  std::vector<Token> toks = Lex(R"(#define MOO 1
+    void foo() { MOO; })");
+  const Token &moo = toks[5];
+
+  EXPECT_EQ(getSourceText(moo, moo), "MOO");
+
+  SourceRange R{moo.getLocation(), moo.getLocation()};
+
+  EXPECT_TRUE(
+      Lexer::isAtStartOfMacroExpansion(R.getBegin(), SourceMgr, LangOpts));
+  EXPECT_TRUE(
+      Lexer::isAtEndOfMacroExpansion(R.getEnd(), SourceMgr, LangOpts));
+
+  CharSourceRange CR = Lexer::getAsCharRange(R, SourceMgr, LangOpts);
+
+  EXPECT_EQ(Lexer::getSourceText(CR, SourceMgr, LangOpts), "MOO"); // Was "MO".
+}
+
 } // anonymous namespace

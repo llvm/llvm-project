@@ -12857,6 +12857,12 @@ TEST_F(FormatTest, SupportsCRLF) {
                    "should not introduce\r\n"
                    "an extra carriage return\r\n"
                    "*/\r\n"));
+  EXPECT_EQ("/*\r\n"
+            "\r\n"
+            "*/",
+            format("/*\r\n"
+                   "    \r\r\r\n"
+                   "*/"));
 }
 
 TEST_F(FormatTest, MunchSemicolonAfterBlocks) {

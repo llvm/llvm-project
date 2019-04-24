@@ -1911,8 +1911,8 @@ def note_var_declared_here : Note<"variable %0 is declared here">;
 def note_uninit_var_use : Note<
   "%select{uninitialized use occurs|variable is captured by block}0 here">;
 def warn_uninit_byref_blockvar_captured_by_block : Warning<
-  "block pointer variable %0 is uninitialized when captured by block">,
-  InGroup<Uninitialized>, DefaultIgnore;
+  "block pointer variable %0 is %select{uninitialized|null}1 when captured by "
+  "block">, InGroup<Uninitialized>, DefaultIgnore;
 def note_block_var_fixit_add_initialization : Note<
   "did you mean to use __block %0?">;
 def note_in_omitted_aggregate_initializer : Note<
@@ -4384,6 +4384,8 @@ def err_explicit_instantiation_of_typedef : Error<
   "explicit instantiation of typedef %0">;
 def err_explicit_instantiation_storage_class : Error<
   "explicit instantiation cannot have a storage class">;
+def err_explicit_instantiation_internal_linkage : Error<
+  "explicit instantiation declaration of %0 with internal linkage">;
 def err_explicit_instantiation_not_known : Error<
   "explicit instantiation of %0 does not refer to a function template, "
   "variable template, member function, member class, or static data member">;

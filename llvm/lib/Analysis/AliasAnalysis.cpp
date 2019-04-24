@@ -79,10 +79,12 @@ AAResults::~AAResults() {
 
 bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv) {
-  // AAResults preserves the AAManager by default, due to the stateless nature
-  // of AliasAnalysis. There is no need to check whether it has been preserved
-  // explicitly. However, we still need to check if any of the dependencies end
-  // up being invalidated, and invalidate ourselves in that case.
+  // Check if the AA manager itself has been invalidated.
+  auto PAC = PA.getChecker<AAManager>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
+    return true; // The manager needs to be blown away, clear everything.
+
+  // Check all of the dependencies registered.
   for (AnalysisKey *ID : AADeps)
     if (Inv.invalidate(ID, F, PA))
       return true;

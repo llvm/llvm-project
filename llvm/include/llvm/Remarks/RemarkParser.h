@@ -13,6 +13,7 @@
 #ifndef LLVM_REMARKS_REMARK_PARSER_H
 #define LLVM_REMARKS_REMARK_PARSER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/Error.h"
@@ -32,12 +33,29 @@ struct Parser {
   /// This constructor should be only used for parsing YAML remarks.
   Parser(StringRef Buffer);
 
+  /// Create a parser parsing \p Buffer to Remark objects, using \p StrTabBuf as
+  /// string table.
+  /// This constructor should be only used for parsing YAML remarks.
+  Parser(StringRef Buffer, StringRef StrTabBuf);
+
   // Needed because ParserImpl is an incomplete type.
   ~Parser();
 
   /// Returns an empty Optional if it reached the end.
   /// Returns a valid remark otherwise.
   Expected<const Remark *> getNext() const;
+};
+
+/// In-memory representation of the string table parsed from a buffer (e.g. the
+/// remarks section).
+struct ParsedStringTable {
+  /// The buffer mapped from the section contents.
+  StringRef Buffer;
+  /// Collection of offsets in the buffer for each string entry.
+  SmallVector<size_t, 8> Offsets;
+
+  Expected<StringRef> operator[](size_t Index);
+  ParsedStringTable(StringRef Buffer);
 };
 
 } // end namespace remarks

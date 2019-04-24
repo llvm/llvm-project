@@ -355,11 +355,13 @@
 ; CHECK-AA-MODULE-INVALIDATE: Running analysis: AAManager
 ; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Function pass manager run
 ; CHECK-AA-MODULE-INVALIDATE: Running pass: InvalidateAnalysisPass
+; CHECK-AA-MODULE-INVALIDATE: Invalidating analysis: AAManager
 ; CHECK-AA-MODULE-INVALIDATE: Invalidating analysis: GlobalsAA
 ; CHECK-AA-MODULE-INVALIDATE: Running pass: RequireAnalysisPass
 ; CHECK-AA-MODULE-INVALIDATE: Running analysis: GlobalsAA
 ; CHECK-AA-MODULE-INVALIDATE: Starting llvm::Function pass manager run
 ; CHECK-AA-MODULE-INVALIDATE: Running pass: AAEvaluator
+; CHECK-AA-MODULE-INVALIDATE: Running analysis: AAManager
 ; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Function pass manager run
 ; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Module pass manager run
 

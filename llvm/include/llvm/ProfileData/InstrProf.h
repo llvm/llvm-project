@@ -234,7 +234,7 @@ bool isIRPGOFlagSet(const Module *M);
 bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken = false);
 
 enum InstrProfValueKind : uint32_t {
-#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 

@@ -1046,9 +1046,15 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     //
     // Also, WPD has access to more precise information than ICP and can
     // devirtualize more effectively, so it should operate on the IR first.
+    //
+    // The WPD and LowerTypeTest passes need to run at -O0 to lower type
+    // metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(nullptr, ImportSummary));
     MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
+
+  if (Level == O0)
+    return MPM;
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
@@ -1075,8 +1081,15 @@ PassBuilder::buildLTOPreLinkDefaultPipeline(OptimizationLevel Level,
 ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
                                      ModuleSummaryIndex *ExportSummary) {
-  assert(Level != O0 && "Must request optimizations for the default pipeline!");
   ModulePassManager MPM(DebugLogging);
+
+  if (Level == O0) {
+    // The WPD and LowerTypeTest passes need to run at -O0 to lower type
+    // metadata and intrinsics.
+    MPM.addPass(WholeProgramDevirtPass(ExportSummary, nullptr));
+    MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
+    return MPM;
+  }
 
   if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
     // Load sample profile before running the LTO optimization pipeline.

@@ -1969,6 +1969,7 @@ void CGDebugInfo::addHeapAllocSiteMetadata(llvm::Instruction *CI,
     QualType PointeeTy = D.getTypePtr()->getPointeeType();
     node = getOrCreateType(PointeeTy, getOrCreateFile(Loc));
   }
+
   CI->setMetadata("heapallocsite", node);
 }
 

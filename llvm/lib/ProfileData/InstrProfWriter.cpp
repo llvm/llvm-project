@@ -357,7 +357,7 @@ std::unique_ptr<MemoryBuffer> InstrProfWriter::writeBuffer() {
 }
 
 static const char *ValueProfKindStr[] = {
-#define VALUE_PROF_KIND(Enumerator, Value) #Enumerator,
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) #Enumerator,
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 

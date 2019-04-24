@@ -1362,6 +1362,29 @@ void AsmPrinter::emitRemarksSection(Module &M) {
   support::endian::write64le(Version.data(), remarks::Version);
   OutStreamer->EmitBinaryData(StringRef(Version.data(), Version.size()));
 
+  // Emit the string table in the section.
+  // Note: we need to use the streamer here to emit it in the section. We can't
+  // just use the serialize function with a raw_ostream because of the way
+  // MCStreamers work.
+  const remarks::StringTable &StrTab = RS->getStringTable();
+  std::vector<StringRef> StrTabStrings = StrTab.serialize();
+  uint64_t StrTabSize = StrTab.SerializedSize;
+  // Emit the total size of the string table (the size itself excluded):
+  // little-endian uint64_t.
+  // The total size is located after the version number.
+  std::array<char, 8> StrTabSizeBuf;
+  support::endian::write64le(StrTabSizeBuf.data(), StrTabSize);
+  OutStreamer->EmitBinaryData(
+      StringRef(StrTabSizeBuf.data(), StrTabSizeBuf.size()));
+  // Emit a list of null-terminated strings.
+  // Note: the order is important here: the ID used in the remarks corresponds
+  // to the position of the string in the section.
+  for (StringRef Str : StrTabStrings) {
+    OutStreamer->EmitBytes(Str);
+    // Explicitly emit a '\0'.
+    OutStreamer->EmitIntValue(/*Value=*/0, /*Size=*/1);
+  }
+
   // Emit the null-terminated absolute path to the remark file.
   // The path is located at the offset 0x4 in the section.
   StringRef FilenameRef = RS->getFilename();

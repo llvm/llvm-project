@@ -22,6 +22,9 @@ using namespace llvm::remarks;
 
 Parser::Parser(StringRef Buf) : Impl(llvm::make_unique<YAMLParserImpl>(Buf)) {}
 
+Parser::Parser(StringRef Buf, StringRef StrTabBuf)
+    : Impl(llvm::make_unique<YAMLParserImpl>(Buf, StrTabBuf)) {}
+
 Parser::~Parser() = default;
 
 static Expected<const Remark *> getNextYAML(YAMLParserImpl &Impl) {
@@ -54,6 +57,31 @@ Expected<const Remark *> Parser::getNext() const {
   if (auto *Impl = dyn_cast<YAMLParserImpl>(this->Impl.get()))
     return getNextYAML(*Impl);
   llvm_unreachable("Get next called with an unknown parsing implementation.");
+}
+
+ParsedStringTable::ParsedStringTable(StringRef InBuffer) : Buffer(InBuffer) {
+  while (!InBuffer.empty()) {
+    // Strings are separated by '\0' bytes.
+    std::pair<StringRef, StringRef> Split = InBuffer.split('\0');
+    // We only store the offset from the beginning of the buffer.
+    Offsets.push_back(Split.first.data() - Buffer.data());
+    InBuffer = Split.second;
+  }
+}
+
+Expected<StringRef> ParsedStringTable::operator[](size_t Index) {
+  if (Index >= Offsets.size())
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "String with index %u is out of bounds (size = %u).", Index,
+        Offsets.size());
+
+  size_t Offset = Offsets[Index];
+  // If it's the last offset, we can't use the next offset to know the size of
+  // the string.
+  size_t NextOffset =
+      (Index == Offsets.size() - 1) ? Buffer.size() : Offsets[Index + 1];
+  return StringRef(Buffer.data() + Offset, NextOffset - Offset - 1);
 }
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

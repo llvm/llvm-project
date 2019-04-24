@@ -36,7 +36,7 @@ namespace PR14054_original {
   struct ParseNode {
     union {
       struct {
-        union {};
+        union {}; // expected-warning {{does not declare anything}}
         Definition *lexdef;
       } name;
       class {

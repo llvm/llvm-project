@@ -500,6 +500,7 @@ BUILTIN(__builtin_vsprintf, "ic*cC*a", "nFP:1:")
 BUILTIN(__builtin_vsnprintf, "ic*zcC*a", "nFP:2:")
 BUILTIN(__builtin_thread_pointer, "v*", "nc")
 BUILTIN(__builtin_launder, "v*v*", "nt")
+LANGBUILTIN(__builtin_is_constant_evaluated, "b", "n", CXX_LANG)
 
 // GCC exception builtins
 BUILTIN(__builtin_eh_return, "vzv*", "r") // FIXME: Takes intptr_t, not size_t!
