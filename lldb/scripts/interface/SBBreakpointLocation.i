@@ -34,6 +34,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     lldb::SBAddress
     GetAddress();
     

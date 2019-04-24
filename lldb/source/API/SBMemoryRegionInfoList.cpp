@@ -139,3 +139,28 @@ const MemoryRegionInfoListImpl &SBMemoryRegionInfoList::operator*() const {
   assert(m_opaque_up.get());
   return *m_opaque_up;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBMemoryRegionInfoList>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfoList, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfoList,
+                            (const lldb::SBMemoryRegionInfoList &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBMemoryRegionInfoList &,
+      SBMemoryRegionInfoList, operator=,(
+                                  const lldb::SBMemoryRegionInfoList &));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBMemoryRegionInfoList, GetSize, ());
+  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfoList, GetMemoryRegionAtIndex,
+                       (uint32_t, lldb::SBMemoryRegionInfo &));
+  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Clear, ());
+  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Append,
+                       (lldb::SBMemoryRegionInfo &));
+  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Append,
+                       (lldb::SBMemoryRegionInfoList &));
+}
+
+}
+}

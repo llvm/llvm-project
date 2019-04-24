@@ -26,6 +26,8 @@ public:
 
   const lldb::SBSymbol &operator=(const lldb::SBSymbol &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetName() const;

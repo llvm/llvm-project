@@ -57,6 +57,8 @@ public:
     bool
     IsValid () const;
 
+    explicit operator bool() const;
+
     lldb::SBModule        GetModule ();
     lldb::SBCompileUnit   GetCompileUnit ();
     lldb::SBFunction      GetFunction ();

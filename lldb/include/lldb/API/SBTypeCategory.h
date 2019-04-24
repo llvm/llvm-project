@@ -22,6 +22,8 @@ public:
 
   ~SBTypeCategory();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool GetEnabled();

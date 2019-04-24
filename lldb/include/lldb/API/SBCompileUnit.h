@@ -24,6 +24,8 @@ public:
 
   const lldb::SBCompileUnit &operator=(const lldb::SBCompileUnit &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBFileSpec GetFileSpec() const;

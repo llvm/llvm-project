@@ -28,6 +28,8 @@ public:
 
   lldb::SBStructuredData &operator=(const lldb::SBStructuredData &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBError SetFromJSON(lldb::SBStream &stream);
