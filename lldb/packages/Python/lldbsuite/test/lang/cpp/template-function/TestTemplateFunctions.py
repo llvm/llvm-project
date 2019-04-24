@@ -22,9 +22,11 @@ class TemplateFunctionsTestCase(TestBase):
         self.assertTrue(expr_result.IsValid())
         self.assertEqual(expr_result.GetValue(), "42")
 
+    @skipIfWindows
     def test_template_function_with_cast(self):
         self.do_test_template_function(True)
 
+    @skipIfWindows
     @expectedFailureAll(debug_info=["dwarf", "gmodules"])
     def test_template_function_without_cast(self):
         self.do_test_template_function(False)
