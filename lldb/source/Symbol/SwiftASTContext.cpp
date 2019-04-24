@@ -2060,8 +2060,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     process_one_module(target.GetImages().GetModuleAtIndex(mi));
   }
 
-  FileSpecList &framework_search_paths = target.GetSwiftFrameworkSearchPaths();
-  FileSpecList &module_search_paths = target.GetSwiftModuleSearchPaths();
+  FileSpecList framework_search_paths = target.GetSwiftFrameworkSearchPaths();
+  FileSpecList module_search_paths = target.GetSwiftModuleSearchPaths();
 
   for (size_t fi = 0, fe = framework_search_paths.GetSize(); fi != fe; ++fi) {
     swift_ast_sp->AddFrameworkSearchPath(
