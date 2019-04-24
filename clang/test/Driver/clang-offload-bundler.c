@@ -5,7 +5,7 @@
 // Generate all the types of files we can bundle.
 //
 // generate the emulated fat object:
-// RUN: %clangxx -O0 -target powerpc64le-ibm-linux-gnu -DEMULATE_FAT_OBJ %s -c -o %s.o
+// RUN: %clangxx -O0 -target powerpc64le-ibm-linux-gnu -DEMULATE_FAT_OBJ %s -c -o %t.2.o
 //
 // RUN: %clang -O0 -target powerpc64le-ibm-linux-gnu %s -E -o %t.i
 // RUN: %clangxx -O0 -target powerpc64le-ibm-linux-gnu -x c++ %s -E -o %t.ii
@@ -237,12 +237,12 @@
 // CK-OBJ-CMD: private constant [{{[0-9]+}} x i8] c"Content of device file 2{{.+}}", section "__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu"
 // CK-OBJ-CMD: clang{{(.exe)?}}" "-r" "-target" "powerpc64le-ibm-linux-gnu" "-o" "{{.+}}.o" "{{.+}}.o" "{{.+}}.bc" "-nostdlib"
 
-// RUN: clang-offload-bundler -type=o -targets=host-powerpc64le-ibm-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -outputs=%t.res.o,%t.res.tgt1,%t.res.tgt2 -inputs=%s.o -unbundle
-// RUN: diff %s.o %t.res.o
+// RUN: clang-offload-bundler -type=o -targets=host-powerpc64le-ibm-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -outputs=%t.res.o,%t.res.tgt1,%t.res.tgt2 -inputs=%t.2.o -unbundle
+// RUN: diff %t.2.o %t.res.o
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
-// RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu,host-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -outputs=%t.res.tgt1,%t.res.o,%t.res.tgt2 -inputs=%s.o -unbundle
-// RUN: diff %s.o %t.res.o
+// RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu,host-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -outputs=%t.res.tgt1,%t.res.o,%t.res.tgt2 -inputs=%t.2.o -unbundle
+// RUN: diff %t.2.o %t.res.o
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 
