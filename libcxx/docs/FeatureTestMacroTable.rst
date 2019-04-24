@@ -188,7 +188,7 @@ Status
     ------------------------------------------------- -----------------
     ``__cpp_lib_generic_unordered_lookup``            *unimplemented*  
     ------------------------------------------------- -----------------
-    ``__cpp_lib_is_constant_evaluated``               *unimplemented*  
+    ``__cpp_lib_is_constant_evaluated``               ``201811L``      
     ------------------------------------------------- -----------------
     ``__cpp_lib_list_remove_return_type``             *unimplemented*  
     ------------------------------------------------- -----------------
