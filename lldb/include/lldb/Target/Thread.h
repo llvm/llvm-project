@@ -43,7 +43,7 @@ public:
   ///
   const RegularExpression *GetSymbolsToAvoidRegexp();
 
-  FileSpecList &GetLibrariesToAvoid() const;
+  FileSpecList GetLibrariesToAvoid() const;
 
   bool GetTraceEnabledState() const;
 

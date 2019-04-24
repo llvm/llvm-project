@@ -104,6 +104,9 @@
 
 namespace llvm {
 
+/// Enables memory ssa as a dependency for loop passes.
+extern cl::opt<bool> EnableMSSALoopDependency;
+
 class Function;
 class Instruction;
 class MemoryAccess;

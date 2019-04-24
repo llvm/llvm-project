@@ -23,10 +23,10 @@
 ; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
 
 ; APPLE-NOT: debug_names
-; APPLE-NOT: pubnames
+; APPLE-NOT: debug{{.*}}pub
 ; APPLE: apple_names
 ; APPLE-NOT: debug_names
-; APPLE-NOT: pubnames
+; APPLE-NOT: debug{{.*}}pub
 
 ; PUB-NOT: apple_names
 ; PUB-NOT: debug_names

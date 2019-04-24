@@ -109,6 +109,8 @@ public:
       { "fixup_riscv_tprel_lo12_i", 20,     12,  0 },
       { "fixup_riscv_tprel_lo12_s",  0,     32,  0 },
       { "fixup_riscv_tprel_add",     0,      0,  0 },
+      { "fixup_riscv_tls_got_hi20", 12,     20,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_tls_gd_hi20",  12,     20,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_jal",          12,     20,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_branch",        0,     32,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_rvc_jump",      2,     11,  MCFixupKindInfo::FKF_IsPCRel },

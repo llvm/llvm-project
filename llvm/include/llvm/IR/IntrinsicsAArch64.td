@@ -684,3 +684,20 @@ def int_aarch64_crc32x  : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i64_ty],
 def int_aarch64_crc32cx : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i64_ty],
     [IntrNoMem]>;
 }
+
+//===----------------------------------------------------------------------===//
+// Memory Tagging Extensions (MTE) Intrinsics
+let TargetPrefix = "aarch64" in {
+def int_aarch64_irg   : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty],
+    [IntrInaccessibleMemOnly]>;
+def int_aarch64_addg  : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty],
+    [IntrNoMem]>;
+def int_aarch64_gmi   : Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty],
+    [IntrNoMem]>;
+def int_aarch64_ldg   : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_ptr_ty],
+    [IntrReadMem]>;
+def int_aarch64_stg   : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
+    [IntrWriteMem]>;
+def int_aarch64_subp :  Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_ptr_ty],
+    [IntrNoMem]>;
+}

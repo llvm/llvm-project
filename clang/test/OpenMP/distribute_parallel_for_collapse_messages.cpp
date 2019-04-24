@@ -53,7 +53,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
 #pragma omp distribute parallel for collapse ((ST > 0) ? 1 + ST : 2) // expected-note 2 {{as specified in 'collapse' clause}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST]; // expected-error 2 {{expected 2 for loops after '#pragma omp distribute parallel for', but found only 1}}
   // expected-error@+8 2 {{directive '#pragma omp distribute parallel for' cannot contain more than one 'collapse' clause}}
-  // expected-error@+7 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
+  // expected-error@+7 {{argument to 'collapse' clause must be a strictly positive integer value}}
   // expected-error@+6 2 {{expression is not an integral constant expression}}
 #if __cplusplus >= 201103L
   // expected-note@+4 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
   // expected-note@+6{{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
   // expected-error@+4 2 {{directive '#pragma omp distribute parallel for' cannot contain more than one 'collapse' clause}}
-  // expected-error@+3 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
+  // expected-error@+3 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for collapse (foobool(argc)), collapse (true), collapse (-5) 

@@ -235,7 +235,7 @@ private:
           AtomToFix = &*AtomToFixOrErr;
         }
 
-        if (FixupAddress + static_cast<JITTargetAddress>(1 << RI.r_length) >
+        if (FixupAddress + static_cast<JITTargetAddress>(1ULL << RI.r_length) >
             AtomToFix->getAddress() + AtomToFix->getContent().size())
           return make_error<JITLinkError>(
               "Relocation content extends past end of fixup atom");
@@ -299,7 +299,7 @@ private:
         case PCRel32Minus2Anon:
         case PCRel32Minus4Anon: {
           JITTargetAddress Delta =
-              static_cast<JITTargetAddress>(1 << (*Kind - PCRel32Minus1Anon));
+              static_cast<JITTargetAddress>(1ULL << (*Kind - PCRel32Minus1Anon));
           JITTargetAddress TargetAddress =
               FixupAddress + 4 + Delta + *(const ulittle32_t *)FixupContent;
           if (auto TargetAtomOrErr = G.findAtomByAddress(TargetAddress))

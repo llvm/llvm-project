@@ -8,7 +8,7 @@
 # RUN: echo "// module Foo" >%t.dir/Foo/x86_64.swiftinterface
 # RUN: dsymutil -oso-prepend-path %t.dir -y %s \
 # RUN:    -o %t.dir/swift-interface.dSYM
-# RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/Foo.swiftinterface \
+# RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/x86_64/Foo.swiftinterface \
 # RUN:   | FileCheck %s --check-prefix=INTERFACE
 
 # WARNINGS: cannot copy parseable Swift interface

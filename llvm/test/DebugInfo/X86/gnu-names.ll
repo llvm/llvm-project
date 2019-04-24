@@ -1,8 +1,9 @@
 ; Verify the emission of accelerator tables for various targets for the DWARF<=4 case
 
 ; Darwin has the apple tables unless we specifically tune for gdb
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s > %t
+; RUN: llvm-readobj -sections %t | FileCheck --check-prefix=APPLE %s
+; RUN: llvm-dwarfdump -apple-names %t | FileCheck --check-prefix=APPLE-NAMES %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
 ; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=GNU %s
 
@@ -23,10 +24,12 @@
 ; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
 
 ; APPLE-NOT: debug_names
-; APPLE-NOT: pubnames
+; APPLE-NOT: debug{{.*}}pub
 ; APPLE: apple_names
 ; APPLE-NOT: debug_names
-; APPLE-NOT: pubnames
+; APPLE: debug{{.*}}pub
+
+; APPLE-NAMES: Hashes count: 3
 
 ; GNU-NOT: apple_names
 ; GNU-NOT: debug_names
@@ -36,6 +39,7 @@
 
 ; NONE-NOT: apple_names
 ; NONE-NOT: debug_names
+; NONE: debug_gnu_pub
 
 @var = thread_local global i32 0, align 4, !dbg !0
 

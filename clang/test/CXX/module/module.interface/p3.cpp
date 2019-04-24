@@ -15,15 +15,15 @@ export { // expected-note 3{{export block begins here}}
   using namespace A; // expected-error {{ISO C++20 does not permit using directive to be exported}}
 }
 
-export struct {}; // expected-error {{must be class member}} expected-error {{GNU extension}}
+export struct {}; // expected-error {{must be class member}} expected-error {{GNU extension}} expected-error {{does not declare anything}}
 export struct {} struct_;
-export union {}; // expected-error {{must be declared 'static'}}
+export union {}; // expected-error {{must be declared 'static'}} expected-error {{does not declare anything}}
 export union {} union_;
 export enum {}; // expected-error {{does not declare anything}}
 export enum {} enum_;
 export enum E : int;
 export typedef int; // expected-error {{typedef requires a name}}
-export static union {}; // FIXME: this declaration is ill-formed even without the 'export'
+export static union {}; // expected-error {{does not declare anything}}
 export asm(""); // expected-error {{asm declaration cannot be exported}}
 export namespace B = A;
 export using A::ns_mem;

@@ -88,7 +88,7 @@ public:
     FindSupportFileIndex (uint32_t start_idx, const SBFileSpec &sb_file, bool full);
 
     %feature("docstring", "
-     Get all types matching \a type_mask from debug info in this
+     Get all types matching type_mask from debug info in this
      compile unit.
 
      @param[in] type_mask
@@ -100,7 +100,7 @@ public:
         unit.
 
      @return
-        A list of types in this compile unit that match \a type_mask") GetTypes;
+        A list of types in this compile unit that match type_mask") GetTypes;
     lldb::SBTypeList
     GetTypes (uint32_t type_mask = lldb::eTypeClassAny);
 

@@ -93,9 +93,14 @@ class Reduce(object):
   def read_clang_args(self, crash_script, filename):
     print("\nReading arguments from crash script...")
     with open(crash_script) as f:
-      # Assume clang call is on the last line of the script
-      line = f.readlines()[-1]
-      cmd = shlex.split(line)
+      # Assume clang call is the first non comment line.
+      cmd = []
+      for line in f:
+        if not line.lstrip().startswith('#'):
+          cmd = shlex.split(line)
+          break
+    if not cmd:
+      sys.exit("Could not find command in the crash script.");
 
     # Remove clang and filename from the command
     # Assume the last occurrence of the filename is the clang input file
@@ -122,7 +127,7 @@ class Reduce(object):
     # Look for specific error messages
     regexes = [r"Assertion `(.+)' failed", # Linux assert()
                r"Assertion failed: (.+),", # FreeBSD/Mac assert()
-               r"fatal error: backend error: (.+)",
+               r"fatal error: error in backend: (.+)",
                r"LLVM ERROR: (.+)",
                r"UNREACHABLE executed (at .+)?!",
                r"LLVM IR generation of ceclaration '(.+)'",

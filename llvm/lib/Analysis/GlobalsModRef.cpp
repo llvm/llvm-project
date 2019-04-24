@@ -896,13 +896,13 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
   // Iterate through all the arguments to the called function. If any argument
   // is based on GV, return the conservative result.
   for (auto &A : Call->args()) {
-    SmallVector<Value*, 4> Objects;
+    SmallVector<const Value*, 4> Objects;
     GetUnderlyingObjects(A, Objects, DL);
 
     // All objects must be identified.
     if (!all_of(Objects, isIdentifiedObject) &&
         // Try ::alias to see if all objects are known not to alias GV.
-        !all_of(Objects, [&](Value *V) {
+        !all_of(Objects, [&](const Value *V) {
           return this->alias(MemoryLocation(V), MemoryLocation(GV), AAQI) ==
                  NoAlias;
         }))

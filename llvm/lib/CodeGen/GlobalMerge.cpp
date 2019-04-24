@@ -219,11 +219,11 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
                           Module &M, bool isConst, unsigned AddrSpace) const {
   auto &DL = M.getDataLayout();
   // FIXME: Find better heuristics
-  std::stable_sort(Globals.begin(), Globals.end(),
-                   [&DL](const GlobalVariable *GV1, const GlobalVariable *GV2) {
-                     return DL.getTypeAllocSize(GV1->getValueType()) <
-                            DL.getTypeAllocSize(GV2->getValueType());
-                   });
+  llvm::stable_sort(
+      Globals, [&DL](const GlobalVariable *GV1, const GlobalVariable *GV2) {
+        return DL.getTypeAllocSize(GV1->getValueType()) <
+               DL.getTypeAllocSize(GV2->getValueType());
+      });
 
   // If we want to just blindly group all globals together, do so.
   if (!GlobalMergeGroupByUse) {
@@ -385,11 +385,11 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
   //
   // Multiply that by the size of the set to give us a crude profitability
   // metric.
-  std::stable_sort(UsedGlobalSets.begin(), UsedGlobalSets.end(),
-            [](const UsedGlobalSet &UGS1, const UsedGlobalSet &UGS2) {
-              return UGS1.Globals.count() * UGS1.UsageCount <
-                     UGS2.Globals.count() * UGS2.UsageCount;
-            });
+  llvm::stable_sort(UsedGlobalSets,
+                    [](const UsedGlobalSet &UGS1, const UsedGlobalSet &UGS2) {
+                      return UGS1.Globals.count() * UGS1.UsageCount <
+                             UGS2.Globals.count() * UGS2.UsageCount;
+                    });
 
   // We can choose to merge all globals together, but ignore globals never used
   // with another global.  This catches the obviously non-profitable cases of

@@ -290,10 +290,9 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
       ColdLoopBBs.push_back(B);
       LoopBlockNumber[B] = ++i;
     }
-  std::stable_sort(ColdLoopBBs.begin(), ColdLoopBBs.end(),
-                   [&](BasicBlock *A, BasicBlock *B) {
-                     return BFI.getBlockFreq(A) < BFI.getBlockFreq(B);
-                   });
+  llvm::stable_sort(ColdLoopBBs, [&](BasicBlock *A, BasicBlock *B) {
+    return BFI.getBlockFreq(A) < BFI.getBlockFreq(B);
+  });
 
   // Traverse preheader's instructions in reverse order becaue if A depends
   // on B (A appears after B), A needs to be sinked first before B can be

@@ -1199,15 +1199,17 @@ void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char *Name,
 const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    S = I->getDebugLoc()->getDirectory();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      S = DL->getDirectory();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         S = DGV->getDirectory();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       S = DSP->getDirectory();
   } else {
@@ -1221,15 +1223,17 @@ const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
 const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    S = I->getDebugLoc()->getFilename();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      S = DL->getFilename();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         S = DGV->getFilename();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       S = DSP->getFilename();
   } else {
@@ -1242,15 +1246,17 @@ const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
 
 unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
   unsigned L = 0;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    L = I->getDebugLoc()->getLine();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      L = DL->getLine();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         L = DGV->getLine();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       L = DSP->getLine();
   } else {
@@ -1262,9 +1268,9 @@ unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
 
 unsigned LLVMGetDebugLocColumn(LLVMValueRef Val) {
   unsigned C = 0;
-  if (const auto *I = unwrap<Instruction>(Val))
-    if (const auto &L = I->getDebugLoc())
-      C = L->getColumn();
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val)))
+    if (const auto &DL = I->getDebugLoc())
+      C = DL->getColumn();
   return C;
 }
 

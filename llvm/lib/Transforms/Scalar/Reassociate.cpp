@@ -1328,8 +1328,7 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   //     So, if Rank(X) < Rank(Y) < Rank(Z), it means X is defined earlier
   //     than Y which is defined earlier than Z. Permute "x | 1", "Y & 2",
   //     "z" in the order of X-Y-Z is better than any other orders.
-  std::stable_sort(OpndPtrs.begin(), OpndPtrs.end(),
-                   [](XorOpnd *LHS, XorOpnd *RHS) {
+  llvm::stable_sort(OpndPtrs, [](XorOpnd *LHS, XorOpnd *RHS) {
     return LHS->getSymbolicRank() < RHS->getSymbolicRank();
   });
 
@@ -1686,8 +1685,7 @@ static bool collectMultiplyFactors(SmallVectorImpl<ValueEntry> &Ops,
   // below our mininum of '4'.
   assert(FactorPowerSum >= 4);
 
-  std::stable_sort(Factors.begin(), Factors.end(),
-                   [](const Factor &LHS, const Factor &RHS) {
+  llvm::stable_sort(Factors, [](const Factor &LHS, const Factor &RHS) {
     return LHS.Power > RHS.Power;
   });
   return true;
@@ -2141,7 +2139,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   // positions maintained (and so the compiler is deterministic).  Note that
   // this sorts so that the highest ranking values end up at the beginning of
   // the vector.
-  std::stable_sort(Ops.begin(), Ops.end());
+  llvm::stable_sort(Ops);
 
   // Now that we have the expression tree in a convenient
   // sorted form, optimize it globally if possible.

@@ -551,6 +551,11 @@ static std::string createResponseFile(const opt::InputArgList &Args,
     case OPT_manifestinput:
     case OPT_manifestuac:
       break;
+    case OPT_implib:
+    case OPT_pdb:
+    case OPT_out:
+      OS << Arg->getSpelling() << sys::path::filename(Arg->getValue()) << "\n";
+      break;
     default:
       OS << toString(*Arg) << "\n";
     }
