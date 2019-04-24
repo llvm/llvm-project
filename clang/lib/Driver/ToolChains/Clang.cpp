@@ -3420,17 +3420,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   assert(Inputs.size() >= 1 && "Must have at least one input.");
   // CUDA/HIP compilation may have multiple inputs (source file + results of
   // device-side compilations). OpenMP and SYCL device jobs also take the host
-  // IR as a second input. All other jobs are expected to have exactly one
-  // include as part of the module. All other jobs are expected to have exactly
-  // one input.
+  // IR as a second input. Module precompilation accepts a list of header files
+  // to include as part of the module. All other jobs are expected to have
+  // exactly one input.
   bool IsCuda = JA.isOffloading(Action::OFK_Cuda);
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsSYCLOffloadDevice = JA.isDeviceOffloading(Action::OFK_SYCL);
   bool IsSYCL = JA.isOffloading(Action::OFK_SYCL);
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
-  assert((IsCuda || IsHIP || (IsOpenMPDevice && Inputs.size() == 2) ||
-         IsSYCL || Inputs.size() == 1) && "Unable to handle multiple inputs.");
+  assert((IsCuda || IsHIP || (IsOpenMPDevice && Inputs.size() == 2) || IsSYCL ||
+          IsHeaderModulePrecompile || Inputs.size() == 1) &&
+         "Unable to handle multiple inputs.");
 
   // A header module compilation doesn't have a main input file, so invent a
   // fake one as a placeholder.
