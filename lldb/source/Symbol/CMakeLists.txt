@@ -26,6 +26,7 @@ add_lldb_library(lldbSymbol
   LineTable.cpp
   LocateSymbolFile.cpp
   ObjectFile.cpp
+  PostfixExpression.cpp
   SwiftASTContext.cpp
   Symbol.cpp
   SymbolContext.cpp

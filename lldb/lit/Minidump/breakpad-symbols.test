@@ -3,7 +3,8 @@
 #
 # The minidump input for this test taken from packages/Python/lldbsuite/test/functionalities/postmortem/minidump-new
 
-# RUN: %lldb -c %S/Inputs/linux-x86_64.dmp \
+# RUN: yaml2obj %S/Inputs/linux-x86_64.yaml > %t
+# RUN: %lldb -c %t \
 # RUN:   -o "target symbols add -s /tmp/test/linux-x86_64 %S/Inputs/linux-x86_64.syms" \
 # RUN:   -s %s -o exit | FileCheck %s
 

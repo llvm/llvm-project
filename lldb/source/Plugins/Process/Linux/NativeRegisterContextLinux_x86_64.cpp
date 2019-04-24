@@ -21,6 +21,23 @@
 #include <cpuid.h>
 #include <linux/elf.h>
 
+// Newer toolchains define __get_cpuid_count in cpuid.h, but some
+// older-but-still-supported ones (e.g. gcc 5.4.0) don't, so we
+// define it locally here, following the definition in clang/lib/Headers.
+static inline int get_cpuid_count(unsigned int __leaf,
+                                  unsigned int __subleaf,
+                                  unsigned int *__eax, unsigned int *__ebx,
+                                  unsigned int *__ecx, unsigned int *__edx)
+{
+    unsigned int __max_leaf = __get_cpuid_max(__leaf & 0x80000000, 0);
+
+    if (__max_leaf == 0 || __max_leaf < __leaf)
+        return 0;
+
+    __cpuid_count(__leaf, __subleaf, *__eax, *__ebx, *__ecx, *__edx);
+    return 1;
+}
+
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
@@ -269,7 +286,7 @@ static std::size_t GetXSTATESize() {
     return sizeof(FPR);
 
   // Then fetch the maximum size of the area.
-  if (!__get_cpuid_count(0x0d, 0, &eax, &ebx, &ecx, &edx))
+  if (!get_cpuid_count(0x0d, 0, &eax, &ebx, &ecx, &edx))
     return sizeof(FPR);
   return std::max<std::size_t>(ecx, sizeof(FPR));
 }

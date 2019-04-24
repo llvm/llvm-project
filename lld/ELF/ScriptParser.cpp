@@ -752,7 +752,6 @@ bool ScriptParser::readSectionDirective(OutputSection *Cmd, StringRef Tok1, Stri
   } else {
     skip(); // This is "COPY", "INFO" or "OVERLAY".
     Cmd->NonAlloc = true;
-    Cmd->Type = SHT_PROGBITS;
   }
   expect(")");
   return true;

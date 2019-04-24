@@ -356,14 +356,14 @@ void test_impl() {
   }
 }
 
-int main() {
+void test_all_impls() {
   using MutexImpl = SelectImplementation<Implementation::GlobalLock>::type;
 
   // Attempt to test the Futex based implementation if it's supported on the
   // target platform.
   using RealFutexImpl = SelectImplementation<Implementation::Futex>::type;
   using FutexImpl = typename std::conditional<
-      DoesPlatformSupportFutex(),
+      PlatformSupportsFutex(),
       RealFutexImpl,
       MutexImpl
   >::type;
@@ -372,7 +372,48 @@ int main() {
   const int num_runs = 5;
   for (int i=0; i < num_runs; ++i) {
     test_impl<MutexImpl>();
-    if (DoesPlatformSupportFutex())
+    if (PlatformSupportsFutex())
       test_impl<FutexImpl>();
   }
+}
+
+// A dummy
+template <bool Dummy = true>
+void test_futex_syscall() {
+  if (!PlatformSupportsFutex())
+    return;
+  int lock1 = 0;
+  int lock2 = 0;
+  int lock3 = 0;
+  std::thread waiter1([&]() {
+    int expect = 0;
+    PlatformFutexWait(&lock1, expect);
+    assert(lock1 == 1);
+  });
+  std::thread waiter2([&]() {
+    int expect = 0;
+    PlatformFutexWait(&lock2, expect);
+    assert(lock2 == 2);
+  });
+  std::thread waiter3([&]() {
+    int expect = 42; // not the value
+    PlatformFutexWait(&lock3, expect); // doesn't block
+  });
+  std::thread waker([&]() {
+    lock1 = 1;
+    PlatformFutexWake(&lock1);
+    lock2 = 2;
+    PlatformFutexWake(&lock2);
+  });
+  waiter1.join();
+  waiter2.join();
+  waiter3.join();
+  waker.join();
+}
+
+int main() {
+  // Test each multi-threaded implementation with real threads.
+  test_all_impls();
+  // Test the basic sanity of the futex syscall wrappers.
+  test_futex_syscall();
 }
