@@ -90,7 +90,6 @@ def lldb_iter(obj, getsize, getelem):
     size = getattr(obj, getsize)
     elem = getattr(obj, getelem)
     for i in range(size()):
-        yield elem(i)
 %}
 
 %include "./Python/python-typemaps.swig"

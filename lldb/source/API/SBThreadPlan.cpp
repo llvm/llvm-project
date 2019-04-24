@@ -392,6 +392,7 @@ void RegisterMethods<SBThreadPlan>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBThreadPlan, (lldb::SBThread &, const char *));
   LLDB_REGISTER_METHOD(const lldb::SBThreadPlan &,
                        SBThreadPlan, operator=,(const lldb::SBThreadPlan &));
+  LLDB_REGISTER_METHOD(lldb_private::ThreadPlan *, SBThreadPlan, get, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBThreadPlan, Clear, ());
