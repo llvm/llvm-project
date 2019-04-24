@@ -118,21 +118,18 @@ define i8* @f_ret8(i8* %obj) nounwind {
 ; OPT:       if.then:
 ; OPT-NEXT:    [[PTR:%.*]] = tail call i32* @g_ret32()
 ; OPT-NEXT:    [[CASTED:%.*]] = bitcast i32* [[PTR]] to i8*
-; OPT-NEXT:    br label [[RETURN]]
+; OPT-NEXT:    ret i8* [[CASTED]]
 ; OPT:       return:
-; OPT-NEXT:    [[RETVAL:%.*]] = phi i8* [ [[CASTED]], [[IF_THEN]] ], [ [[OBJ]], [[ENTRY:%.*]] ]
-; OPT-NEXT:    ret i8* [[RETVAL]]
+; OPT-NEXT:    ret i8* [[OBJ]]
 ;
 ; CHECK-LABEL: f_ret8:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB3_2
-; CHECK-NEXT:  ## %bb.1: ## %if.then
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq _g_ret32
-; CHECK-NEXT:    addq $8, %rsp
-; CHECK-NEXT:  LBB3_2: ## %return
+; CHECK-NEXT:    je LBB3_1
+; CHECK-NEXT:  ## %bb.2: ## %if.then
+; CHECK-NEXT:    jmp _g_ret32 ## TAILCALL
+; CHECK-NEXT:  LBB3_1: ## %return
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp eq i8* %obj, null
