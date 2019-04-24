@@ -697,6 +697,9 @@ extern __attribute__((const)) double2 OCML_MANGLE_F64(ctanh)(double2);
 extern __attribute__((const)) float2 OCML_MANGLE_F32(csqrt)(float2);
 extern __attribute__((const)) double2 OCML_MANGLE_F64(csqrt)(double2);
 
+extern __attribute__((const)) float2 OCML_MANGLE_F32(cdiv)(float2, float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(cdiv)(double2, double2);
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
 #endif // OCML_H
