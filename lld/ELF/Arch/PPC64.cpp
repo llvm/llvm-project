@@ -774,7 +774,10 @@ bool PPC64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
 
   // If the offset exceeds the range of the branch type then it will need
   // a range-extending thunk.
-  return !inBranchRange(Type, BranchAddr, S.getVA());
+  // See the comment in getRelocTargetVA() about R_PPC64_CALL.
+  return !inBranchRange(Type, BranchAddr,
+                        S.getVA() +
+                            getPPC64GlobalEntryToLocalEntryOffset(S.StOther));
 }
 
 bool PPC64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
