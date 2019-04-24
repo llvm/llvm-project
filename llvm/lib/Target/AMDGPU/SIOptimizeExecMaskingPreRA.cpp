@@ -246,7 +246,7 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
   MachineInstr *Andn2 = BuildMI(MBB, *And, And->getDebugLoc(),
                                 TII->get(Andn2Opc), And->getOperand(0).getReg())
                             .addReg(ExecReg)
-                            .addReg(CCReg, CC->getSubReg());
+                            .addReg(CCReg, 0, CC->getSubReg());
   And->eraseFromParent();
   LIS->InsertMachineInstrInMaps(*Andn2);
 

@@ -157,8 +157,8 @@ static cl::opt<int>
     ThinLTOCachePruningInterval("thinlto-cache-pruning-interval",
     cl::init(1200), cl::desc("Set ThinLTO cache pruning interval."));
 
-static cl::opt<unsigned long long>
-    ThinLTOCacheMaxSizeBytes("thinlto-cache-max-size-bytes",
+static cl::opt<uint64_t> ThinLTOCacheMaxSizeBytes(
+    "thinlto-cache-max-size-bytes",
     cl::desc("Set ThinLTO cache pruning directory maximum size in bytes."));
 
 static cl::opt<int>

@@ -710,7 +710,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedBitWidth(SDValue N, bool IsSigned
       if (IsSignedImm) {
         int64_t RHSC = RHS->getSExtValue();
         unsigned Scale = Log2_32(Size);
-        int64_t Range = 0x1 << (BW-1);
+        int64_t Range = 0x1LL << (BW - 1);
 
         if ((RHSC & (Size - 1)) == 0 && RHSC >= -(Range << Scale) &&
             RHSC < (Range << Scale)) {
@@ -726,7 +726,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedBitWidth(SDValue N, bool IsSigned
         // unsigned Immediate
         uint64_t RHSC = RHS->getZExtValue();
         unsigned Scale = Log2_32(Size);
-        uint64_t Range = 0x1 << BW;
+        uint64_t Range = 0x1ULL << BW;
 
         if ((RHSC & (Size - 1)) == 0 && RHSC < (Range << Scale)) {
           Base = N.getOperand(0);

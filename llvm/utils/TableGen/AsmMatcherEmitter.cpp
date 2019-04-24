@@ -3131,10 +3131,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Sort the instruction table using the partial order on classes. We use
   // stable_sort to ensure that ambiguous instructions are still
   // deterministically ordered.
-  std::stable_sort(Info.Matchables.begin(), Info.Matchables.end(),
-                   [](const std::unique_ptr<MatchableInfo> &a,
-                      const std::unique_ptr<MatchableInfo> &b){
-                     return *a < *b;});
+  llvm::stable_sort(
+      Info.Matchables,
+      [](const std::unique_ptr<MatchableInfo> &a,
+         const std::unique_ptr<MatchableInfo> &b) { return *a < *b; });
 
 #ifdef EXPENSIVE_CHECKS
   // Verify that the table is sorted and operator < works transitively.

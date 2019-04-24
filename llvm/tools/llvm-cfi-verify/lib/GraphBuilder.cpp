@@ -38,17 +38,17 @@ using Instr = llvm::cfi_verify::FileAnalysis::Instr;
 namespace llvm {
 namespace cfi_verify {
 
-unsigned long long SearchLengthForUndef;
-unsigned long long SearchLengthForConditionalBranch;
+uint64_t SearchLengthForUndef;
+uint64_t SearchLengthForConditionalBranch;
 
-static cl::opt<unsigned long long, true> SearchLengthForUndefArg(
+static cl::opt<uint64_t, true> SearchLengthForUndefArg(
     "search-length-undef",
     cl::desc("Specify the maximum amount of instructions "
              "to inspect when searching for an undefined "
              "instruction from a conditional branch."),
     cl::location(SearchLengthForUndef), cl::init(2));
 
-static cl::opt<unsigned long long, true> SearchLengthForConditionalBranchArg(
+static cl::opt<uint64_t, true> SearchLengthForConditionalBranchArg(
     "search-length-cb",
     cl::desc("Specify the maximum amount of instructions "
              "to inspect when searching for a conditional "

@@ -626,8 +626,8 @@ Demangler::translateIntrinsicFunctionCode(char CH,
                                        // iter
       IFK::None,                       // ?__J local static thread guard
       IFK::None,                       // ?__K operator ""_name
-      IFK::CoAwait,                    // ?__L co_await
-      IFK::None,                       // ?__M <unused>
+      IFK::CoAwait,                    // ?__L operator co_await
+      IFK::Spaceship,                  // ?__M operator<=>
       IFK::None,                       // ?__N <unused>
       IFK::None,                       // ?__O <unused>
       IFK::None,                       // ?__P <unused>
@@ -687,7 +687,6 @@ Demangler::demangleFunctionIdentifierCode(StringView &MangledName,
           translateIntrinsicFunctionCode(CH, Group));
     }
   }
-  // No Mangling Yet:      Spaceship,                    // operator<=>
 
   DEMANGLE_UNREACHABLE;
 }

@@ -87,7 +87,7 @@ extern cl::opt<bool> Rebase;
 extern cl::opt<bool> UniversalHeaders;
 extern cl::opt<bool> WeakBind;
 
-static cl::opt<unsigned long long> AdjustVMA(
+static cl::opt<uint64_t> AdjustVMA(
     "adjust-vma",
     cl::desc("Increase the displayed address by the specified offset"),
     cl::value_desc("offset"), cl::init(0));
@@ -271,12 +271,13 @@ static cl::alias PrintSourceShort("S", cl::desc("Alias for -source"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(PrintSource));
 
-static cl::opt<unsigned long long>
+static cl::opt<uint64_t>
     StartAddress("start-address", cl::desc("Disassemble beginning at address"),
                  cl::value_desc("address"), cl::init(0));
-static cl::opt<unsigned long long>
-    StopAddress("stop-address", cl::desc("Stop disassembly at address"),
-                cl::value_desc("address"), cl::init(UINT64_MAX));
+static cl::opt<uint64_t> StopAddress("stop-address",
+                                     cl::desc("Stop disassembly at address"),
+                                     cl::value_desc("address"),
+                                     cl::init(UINT64_MAX));
 
 cl::opt<bool> SymbolTable("syms", cl::desc("Display the symbol table"));
 static cl::alias SymbolTableShort("t", cl::desc("Alias for --syms"),

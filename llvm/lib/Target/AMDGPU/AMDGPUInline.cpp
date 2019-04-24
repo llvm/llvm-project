@@ -206,6 +206,7 @@ InlineCost AMDGPUInliner::getInlineCost(CallSite CS) {
     return ACT->getAssumptionCache(F);
   };
 
-  return llvm::getInlineCost(CS, Callee, LocalParams, TTI, GetAssumptionCache,
-                             None, PSI, RemarksEnabled ? &ORE : nullptr);
+  return llvm::getInlineCost(cast<CallBase>(*CS.getInstruction()), Callee,
+                             LocalParams, TTI, GetAssumptionCache, None, PSI,
+                             RemarksEnabled ? &ORE : nullptr);
 }

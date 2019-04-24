@@ -351,7 +351,8 @@ class Value;
   /// Since A[i] and A[i-1] are independent pointers, getUnderlyingObjects
   /// should not assume that Curr and Prev share the same underlying object thus
   /// it shouldn't look through the phi above.
-  void GetUnderlyingObjects(Value *V, SmallVectorImpl<Value *> &Objects,
+  void GetUnderlyingObjects(const Value *V,
+                            SmallVectorImpl<const Value *> &Objects,
                             const DataLayout &DL, LoopInfo *LI = nullptr,
                             unsigned MaxLookup = 6);
 

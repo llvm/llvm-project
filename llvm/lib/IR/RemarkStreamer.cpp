@@ -17,7 +17,7 @@ using namespace llvm;
 
 RemarkStreamer::RemarkStreamer(StringRef Filename, raw_ostream &OS)
     : Filename(Filename), OS(OS),
-      YAMLOutput(OS, reinterpret_cast<void *>(this)) {
+      YAMLOutput(OS, reinterpret_cast<void *>(this)), StrTab() {
   assert(!Filename.empty() && "This needs to be a real filename.");
 }
 

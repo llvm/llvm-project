@@ -49,6 +49,12 @@ enum Fixups {
   // fixup_riscv_tprel_add - A fixup corresponding to %tprel_add(foo) for the
   // add_tls instruction. Used to provide a hint to the linker.
   fixup_riscv_tprel_add,
+  // fixup_riscv_tls_got_hi20 - 20-bit fixup corresponding to
+  // tls_ie_pcrel_hi(foo) for instructions like auipc
+  fixup_riscv_tls_got_hi20,
+  // fixup_riscv_tls_gd_hi20 - 20-bit fixup corresponding to
+  // tls_gd_pcrel_hi(foo) for instructions like auipc
+  fixup_riscv_tls_gd_hi20,
   // fixup_riscv_jal - 20-bit fixup for symbol references in the jal
   // instruction
   fixup_riscv_jal,

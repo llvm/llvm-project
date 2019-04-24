@@ -1273,9 +1273,20 @@ define half @test_nearbyint(half %a) #0 {
 ; CHECK-CVT-NEXT: fcvt h0, [[INT32]]
 ; CHECK-CVT-NEXT: ret
 
+; GISEL-CVT-LABEL: test_round:
+; GISEL-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; GISEL-CVT-NEXT: frinta [[INT32:s[0-9]+]], [[FLOAT32]]
+; GISEL-CVT-NEXT: fcvt h0, [[INT32]]
+; GISEL-CVT-NEXT: ret
+
+
 ; CHECK-FP16-LABEL: test_round:
 ; CHECK-FP16-NEXT: frinta h0, h0
 ; CHECK-FP16-NEXT: ret
+
+; GISEL-FP16-LABEL: test_round:
+; GISEL-FP16-NEXT: frinta h0, h0
+; GISEL-FP16-NEXT: ret
 
 define half @test_round(half %a) #0 {
   %r = call half @llvm.round.f16(half %a)

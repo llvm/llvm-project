@@ -1416,7 +1416,7 @@ void CHR::sortScopes(SmallVectorImpl<CHRScope *> &Input,
                      SmallVectorImpl<CHRScope *> &Output) {
   Output.resize(Input.size());
   llvm::copy(Input, Output.begin());
-  std::stable_sort(Output.begin(), Output.end(), CHRScopeSorter);
+  llvm::stable_sort(Output, CHRScopeSorter);
 }
 
 // Return true if V is already hoisted or was hoisted (along with its operands)

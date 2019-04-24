@@ -34,6 +34,8 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   default:
     break;
   case RISCV::fixup_riscv_got_hi20:
+  case RISCV::fixup_riscv_tls_got_hi20:
+  case RISCV::fixup_riscv_tls_gd_hi20:
     return true;
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_s:
@@ -51,6 +53,8 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
       llvm_unreachable("Unexpected fixup kind for pcrel_lo12");
       break;
     case RISCV::fixup_riscv_got_hi20:
+    case RISCV::fixup_riscv_tls_got_hi20:
+    case RISCV::fixup_riscv_tls_gd_hi20:
       ShouldForce = true;
       break;
     case RISCV::fixup_riscv_pcrel_hi20:
@@ -179,6 +183,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   default:
     llvm_unreachable("Unknown fixup kind!");
   case RISCV::fixup_riscv_got_hi20:
+  case RISCV::fixup_riscv_tls_got_hi20:
+  case RISCV::fixup_riscv_tls_gd_hi20:
     llvm_unreachable("Relocation should be unconditionally forced\n");
   case FK_Data_1:
   case FK_Data_2:

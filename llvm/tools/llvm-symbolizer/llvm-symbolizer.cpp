@@ -134,7 +134,7 @@ static cl::opt<bool> ClVerbose("verbose", cl::init(false),
                                cl::desc("Print verbose line info"));
 
 // -adjust-vma
-static cl::opt<unsigned long long>
+static cl::opt<uint64_t>
     ClAdjustVMA("adjust-vma", cl::init(0), cl::value_desc("offset"),
                 cl::desc("Add specified offset to object file addresses"));
 

@@ -799,11 +799,10 @@ static void GroupByComplexity(SmallVectorImpl<const SCEV *> &Ops,
   }
 
   // Do the rough sort by complexity.
-  std::stable_sort(Ops.begin(), Ops.end(),
-                   [&](const SCEV *LHS, const SCEV *RHS) {
-                     return CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI,
-                                                  LHS, RHS, DT) < 0;
-                   });
+  llvm::stable_sort(Ops, [&](const SCEV *LHS, const SCEV *RHS) {
+    return CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LHS, RHS, DT) <
+           0;
+  });
 
   // Now that we are sorted by complexity, group elements of the same
   // complexity.  Note that this is, at worst, N^2, but the vector is likely to

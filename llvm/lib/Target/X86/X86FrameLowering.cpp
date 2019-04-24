@@ -3088,8 +3088,7 @@ void X86FrameLowering::orderFrameObjects(
 
   // Sort the objects using X86FrameSortingAlgorithm (see its comment for
   // info).
-  std::stable_sort(SortingObjects.begin(), SortingObjects.end(),
-                   X86FrameSortingComparator());
+  llvm::stable_sort(SortingObjects, X86FrameSortingComparator());
 
   // Now modify the original list to represent the final order that
   // we want. The order will depend on whether we're going to access them

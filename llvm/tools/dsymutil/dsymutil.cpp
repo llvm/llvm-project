@@ -328,9 +328,9 @@ static Expected<OutputLocation> getOutputFileName(llvm::StringRef InputFile) {
     return std::move(E);
 
   llvm::sys::path::append(Path, "Contents", "Resources");
-  StringRef ResourceDir = Path;
+  std::string ResourceDir = Path.str();
   llvm::sys::path::append(Path, "DWARF", llvm::sys::path::filename(DwarfFile));
-  return OutputLocation(Path.str(), ResourceDir.str());
+  return OutputLocation(Path.str(), ResourceDir);
 }
 
 /// Parses the command line options into the LinkOptions struct and performs
