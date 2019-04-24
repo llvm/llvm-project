@@ -1,10 +1,15 @@
-// RUN: %clangxx_tsan %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan %s %link_libcxx_tsan -o %t
+// RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
+
+// This test requires the %link_libcxx_tsan substitution, which was recently
+// added and is not available in swift-5.1-branch.
+// REQUIRES: link_libcxx_tsan
 
 #include <dispatch/dispatch.h>
 
-#import <memory>
-#import <stdatomic.h>
+#include <memory>
+#include <stdatomic.h>
+#include <cstdio>
 
 _Atomic(long) destructor_counter = 0;
 
@@ -39,5 +44,4 @@ int main(int argc, const char *argv[]) {
 }
 
 // CHECK: Hello world.
-// CHECK-NOT: WARNING: ThreadSanitizer
 // CHECK: Done.

@@ -1,9 +1,6 @@
 // RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
-// TODO(yln): fails on one of our bots, need to investigate
-// REQUIRES: disabled
-
 #include <dispatch/dispatch.h>
 
 #include <stdio.h>
