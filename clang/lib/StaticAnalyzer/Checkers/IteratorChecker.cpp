@@ -825,7 +825,7 @@ void IteratorChecker::handleComparison(CheckerContext &C, const Expr *CE,
   SymbolRef Sym;
   if (!LPos || !RPos) {
     auto &SymMgr = C.getSymbolManager();
-    auto Sym = SymMgr.conjureSymbol(CE, C.getLocationContext(),
+    Sym = SymMgr.conjureSymbol(CE, C.getLocationContext(),
                                C.getASTContext().LongTy, C.blockCount());
     State = assumeNoOverflow(State, Sym, 4);
   }

@@ -1558,12 +1558,8 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
 
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
 
-  if (!IsIncompleteFunction) {
+  if (!IsIncompleteFunction)
     SetLLVMFunctionAttributes(GD, getTypes().arrangeGlobalDeclaration(GD), F);
-    // Setup target-specific attributes.
-    if (F->isDeclaration())
-      getTargetCodeGenInfo().setTargetAttributes(FD, F, *this);
-  }
 
   // Add the Returned attribute for "this", except for iOS 5 and earlier
   // where substantial code, including the libstdc++ dylib, was compiled with
@@ -1582,6 +1578,10 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
 
   setLinkageForGV(F, FD);
   setGVProperties(F, FD);
+
+  // Setup target-specific attributes.
+  if (!IsIncompleteFunction && F->isDeclaration())
+    getTargetCodeGenInfo().setTargetAttributes(FD, F, *this);
 
   if (const auto *CSA = FD->getAttr<CodeSegAttr>())
     F->setSection(CSA->getName());

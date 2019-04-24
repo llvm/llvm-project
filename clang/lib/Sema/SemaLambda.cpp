@@ -758,15 +758,14 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
   TypeSourceInfo *TSI = TLB.getTypeSourceInfo(Context, DeductType);
 
   // Deduce the type of the init capture.
-  Expr *DeduceInit = Init;
   QualType DeducedType = deduceVarTypeFromInitializer(
       /*VarDecl*/nullptr, DeclarationName(Id), DeductType, TSI,
-      SourceRange(Loc, Loc), IsDirectInit, DeduceInit);
+      SourceRange(Loc, Loc), IsDirectInit, Init);
   if (DeducedType.isNull())
     return QualType();
 
   // Are we a non-list direct initialization?
-  bool CXXDirectInit = isa<ParenListExpr>(Init);
+  ParenListExpr *CXXDirectInit = dyn_cast<ParenListExpr>(Init);
 
   // Perform initialization analysis and ensure any implicit conversions
   // (such as lvalue-to-rvalue) are enforced.
@@ -779,7 +778,10 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
                            : InitializationKind::CreateDirectList(Loc))
           : InitializationKind::CreateCopy(Loc, Init->getBeginLoc());
 
-  MultiExprArg Args = DeduceInit;
+  MultiExprArg Args = Init;
+  if (CXXDirectInit)
+    Args =
+        MultiExprArg(CXXDirectInit->getExprs(), CXXDirectInit->getNumExprs());
   QualType DclT;
   InitializationSequence InitSeq(*this, Entity, Kind, Args);
   ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);

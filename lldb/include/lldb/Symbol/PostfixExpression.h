@@ -15,6 +15,7 @@
 #define LLDB_SYMBOL_POSTFIXEXPRESSION_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 
 namespace lldb_private {
@@ -172,6 +173,17 @@ protected:
     llvm_unreachable("Fully covered switch!");
   }
 };
+
+template <typename T, typename... Args>
+inline T *MakeNode(llvm::BumpPtrAllocator &alloc, Args &&... args) {
+  static_assert(std::is_trivially_destructible<T>::value,
+                "This object will not be destroyed!");
+  return new (alloc.Allocate<T>()) T(std::forward<Args>(args)...);
+}
+
+/// Parse the given postfix expression. The parsed nodes are placed into the
+/// provided allocator.
+Node *Parse(llvm::StringRef expr, llvm::BumpPtrAllocator &alloc);
 
 } // namespace postfix
 } // namespace lldb_private

@@ -998,7 +998,8 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
     if (VD->getType()->isBlockPointerType() && !VD->hasAttr<BlocksAttr>())
       S.Diag(BE->getBeginLoc(),
              diag::warn_uninit_byref_blockvar_captured_by_block)
-          << VD->getDeclName();
+          << VD->getDeclName()
+          << VD->getType().getQualifiers().hasObjCLifetime();
     else
       DiagUninitUse(S, VD, Use, true);
   }
