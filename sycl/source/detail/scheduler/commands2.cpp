@@ -115,7 +115,7 @@ MapMemObject::MapMemObject(Requirement SrcReq, AllocaCommand *SrcAlloca,
 cl_int MapMemObject::enqueueImp() {
   std::vector<cl_event> RawEvents =
       Command::prepareEvents(detail::getSyclObjImpl(MQueue->get_context()));
-  assert(MDstReq.getNumOfDims() == 1);
+  assert(MDstReq.MDims == 1);
 
   cl_event &Event = MEvent->getHandleRef();
   void *MappedPtr = MemoryManager::map(

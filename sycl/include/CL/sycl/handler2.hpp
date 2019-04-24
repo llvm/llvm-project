@@ -857,7 +857,7 @@ public:
         for (int I = 1; I < Dims; ++I)
           LinearIndex += Range[I] * Index[I];
 
-        Dst[Index] = ((T_Src *)Src)[LinearIndex];
+        Dst[Index] = ((T_Dst *)Src)[LinearIndex];
       });
 
       return;
