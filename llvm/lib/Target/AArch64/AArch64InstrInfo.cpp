@@ -1768,7 +1768,11 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LDNPSi:
   case AArch64::STNPWi:
   case AArch64::STNPSi:
+  case AArch64::LDG:
     return 3;
+  case AArch64::ADDG:
+  case AArch64::STGOffset:
+    return 2;
   }
 }
 
@@ -2142,6 +2146,18 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     Scale = Width = 1;
     MinOffset = 0;
     MaxOffset = 4095;
+    break;
+  case AArch64::ADDG:
+    Scale = 16;
+    Width = 0;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LDG:
+  case AArch64::STGOffset:
+    Scale = Width = 16;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   }
 

@@ -1242,15 +1242,8 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
   case OO_Array_Delete: Out << "?_V"; break;
   // <operator-name> ::= ?__L # co_await
   case OO_Coawait: Out << "?__L"; break;
-
-  case OO_Spaceship: {
-    // FIXME: Once MS picks a mangling, use it.
-    DiagnosticsEngine &Diags = Context.getDiags();
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-      "cannot mangle this three-way comparison operator yet");
-    Diags.Report(Loc, DiagID);
-    break;
-  }
+  // <operator-name> ::= ?__M # <=>
+  case OO_Spaceship: Out << "?__M"; break;
 
   case OO_Conditional: {
     DiagnosticsEngine &Diags = Context.getDiags();

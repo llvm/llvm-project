@@ -401,7 +401,7 @@ bool MergeFunctions::runOnModule(Module &M) {
     }
   }
 
-  std::stable_sort(HashedFuncs.begin(), HashedFuncs.end(), less_first());
+  llvm::stable_sort(HashedFuncs, less_first());
 
   auto S = HashedFuncs.begin();
   for (auto I = HashedFuncs.begin(), IE = HashedFuncs.end(); I != IE; ++I) {

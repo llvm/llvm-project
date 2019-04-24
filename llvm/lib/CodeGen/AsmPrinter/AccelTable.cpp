@@ -55,10 +55,10 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
   // Create the individual hash data outputs.
   for (auto &E : Entries) {
     // Unique the entries.
-    std::stable_sort(E.second.Values.begin(), E.second.Values.end(),
-                     [](const AccelTableData *A, const AccelTableData *B) {
-                       return *A < *B;
-                     });
+    llvm::stable_sort(E.second.Values,
+                      [](const AccelTableData *A, const AccelTableData *B) {
+                        return *A < *B;
+                      });
     E.second.Values.erase(
         std::unique(E.second.Values.begin(), E.second.Values.end()),
         E.second.Values.end());
@@ -81,10 +81,9 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
   // Sort the contents of the buckets by hash value so that hash collisions end
   // up together. Stable sort makes testing easier and doesn't cost much more.
   for (auto &Bucket : Buckets)
-    std::stable_sort(Bucket.begin(), Bucket.end(),
-                     [](HashData *LHS, HashData *RHS) {
-                       return LHS->HashValue < RHS->HashValue;
-                     });
+    llvm::stable_sort(Bucket, [](HashData *LHS, HashData *RHS) {
+      return LHS->HashValue < RHS->HashValue;
+    });
 }
 
 namespace {

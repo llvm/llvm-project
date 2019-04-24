@@ -842,7 +842,7 @@ void AccessAnalysis::processMemAccesses() {
     bool SetHasWrite = false;
 
     // Map of pointers to last access encountered.
-    typedef DenseMap<Value*, MemAccessInfo> UnderlyingObjToAccessMap;
+    typedef DenseMap<const Value*, MemAccessInfo> UnderlyingObjToAccessMap;
     UnderlyingObjToAccessMap ObjToLastAccess;
 
     // Set of access to check after all writes have been processed.
@@ -903,13 +903,13 @@ void AccessAnalysis::processMemAccesses() {
 
           // Create sets of pointers connected by a shared alias set and
           // underlying object.
-          typedef SmallVector<Value *, 16> ValueVector;
+          typedef SmallVector<const Value *, 16> ValueVector;
           ValueVector TempObjects;
 
           GetUnderlyingObjects(Ptr, TempObjects, DL, LI);
           LLVM_DEBUG(dbgs()
                      << "Underlying objects for pointer " << *Ptr << "\n");
-          for (Value *UnderlyingObj : TempObjects) {
+          for (const Value *UnderlyingObj : TempObjects) {
             // nullptr never alias, don't join sets for pointer that have "null"
             // in their UnderlyingObjects list.
             if (isa<ConstantPointerNull>(UnderlyingObj) &&
@@ -1144,10 +1144,9 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
   std::iota(SortedIndices.begin(), SortedIndices.end(), 0);
 
   // Sort the memory accesses and keep the order of their uses in UseOrder.
-  std::stable_sort(SortedIndices.begin(), SortedIndices.end(),
-                   [&OffValPairs](unsigned Left, unsigned Right) {
-                     return OffValPairs[Left].first < OffValPairs[Right].first;
-                   });
+  llvm::stable_sort(SortedIndices, [&](unsigned Left, unsigned Right) {
+    return OffValPairs[Left].first < OffValPairs[Right].first;
+  });
 
   // Check if the order is consecutive already.
   if (llvm::all_of(SortedIndices, [&SortedIndices](const unsigned I) {

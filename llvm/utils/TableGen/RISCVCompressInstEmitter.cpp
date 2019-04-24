@@ -543,15 +543,15 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   // transformed to a C_ADD or a C_MV. When emitting 'uncompress()' function the
   // source and destination are flipped and the sort key needs to change
   // accordingly.
-  std::stable_sort(CompressPatterns.begin(), CompressPatterns.end(),
-                   [Compress](const CompressPat &LHS, const CompressPat &RHS) {
-                     if (Compress)
-                       return (LHS.Source.TheDef->getName().str() <
-                               RHS.Source.TheDef->getName().str());
-                     else
-                       return (LHS.Dest.TheDef->getName().str() <
-                               RHS.Dest.TheDef->getName().str());
-                   });
+  llvm::stable_sort(CompressPatterns,
+                    [Compress](const CompressPat &LHS, const CompressPat &RHS) {
+                      if (Compress)
+                        return (LHS.Source.TheDef->getName().str() <
+                                RHS.Source.TheDef->getName().str());
+                      else
+                        return (LHS.Dest.TheDef->getName().str() <
+                                RHS.Dest.TheDef->getName().str());
+                    });
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map.
   std::vector<const Record *> MCOpPredicates;

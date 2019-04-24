@@ -163,8 +163,7 @@ Error EHFrameParser::processCIE() {
 
   LLVM_DEBUG(dbgs() << "  Record is CIE\n");
 
-  /// Reset state for the new CIE.
-  LSDAFieldPresent = false;
+  CIEInformation CIEInfo(*CurRecordAtom);
 
   uint8_t Version = 0;
   if (auto Err = EHFrameReader.readInteger(Version))
@@ -219,7 +218,7 @@ Error EHFrameParser::processCIE() {
   while (uint8_t Field = *NextField++) {
     switch (Field) {
     case 'L': {
-      LSDAFieldPresent = true;
+      CIEInfo.FDEsHaveLSDAField = true;
       uint8_t LSDAPointerEncoding;
       if (auto Err = EHFrameReader.readInteger(LSDAPointerEncoding))
         return Err;
@@ -268,6 +267,10 @@ Error EHFrameParser::processCIE() {
     return make_error<JITLinkError>("Read past the end of the augmentation "
                                     "data while parsing fields");
 
+  assert(!CIEInfos.count(CurRecordAtom->getAddress()) &&
+         "Multiple CIEs recorded at the same address?");
+  CIEInfos[CurRecordAtom->getAddress()] = std::move(CIEInfo);
+
   return Error::success();
 }
 
@@ -280,14 +283,18 @@ Error EHFrameParser::processFDE(JITTargetAddress CIEPointerAddress,
            << format("0x%016" PRIx64, CIEPointerAddress - CIEPointer) << "\n";
   });
 
-  auto CIEAtom = G.findAtomByAddress(CIEPointerAddress - CIEPointer);
-  if (!CIEAtom)
-    return CIEAtom.takeError();
+  auto CIEInfoItr = CIEInfos.find(CIEPointerAddress - CIEPointer);
+  if (CIEInfoItr == CIEInfos.end())
+    return make_error<JITLinkError>(
+        "FDE at " + formatv("{0:x16}", CurRecordAtom->getAddress()) +
+        " points to non-existant CIE at " +
+        formatv("{0:x16}", CIEPointerAddress - CIEPointer));
+  auto &CIEInfo = CIEInfoItr->second;
 
   // The CIEPointer looks good. Add a relocation.
   CurRecordAtom->addEdge(FDEToCIERelocKind,
                          CIEPointerAddress - CurRecordAtom->getAddress(),
-                         *CIEAtom, 0);
+                         *CIEInfo.CIEAtom, 0);
 
   // Read and sanity check the PC-start pointer and size.
   JITTargetAddress PCBeginAddress = EHFrameAddress + EHFrameReader.getOffset();
@@ -329,15 +336,15 @@ Error EHFrameParser::processFDE(JITTargetAddress CIEPointerAddress,
   if (auto Err = EHFrameReader.skip(G.getPointerSize()))
     return Err;
 
-  if (LSDAFieldPresent) {
+  if (CIEInfo.FDEsHaveLSDAField) {
     uint64_t AugmentationDataSize;
     if (auto Err = EHFrameReader.readULEB128(AugmentationDataSize))
       return Err;
     if (AugmentationDataSize != G.getPointerSize())
-      return make_error<JITLinkError>("Unexpected FDE augmentation data size "
-                                      "(expected " +
-                                      Twine(G.getPointerSize()) + ", got " +
-                                      Twine(AugmentationDataSize) + ")");
+      return make_error<JITLinkError>(
+          "Unexpected FDE augmentation data size (expected " +
+          Twine(G.getPointerSize()) + ", got " + Twine(AugmentationDataSize) +
+          ") for FDE at " + formatv("{0:x16}", CurRecordAtom->getAddress()));
     JITTargetAddress LSDAAddress = EHFrameAddress + EHFrameReader.getOffset();
     auto LSDADelta = readAbsolutePointer();
     if (!LSDADelta)

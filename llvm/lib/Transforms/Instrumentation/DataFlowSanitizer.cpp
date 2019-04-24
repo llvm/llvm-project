@@ -1190,10 +1190,10 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   }
 
   uint64_t ShadowAlign = Align * DFS.ShadowWidth / 8;
-  SmallVector<Value *, 2> Objs;
+  SmallVector<const Value *, 2> Objs;
   GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
   bool AllConstants = true;
-  for (Value *Obj : Objs) {
+  for (const Value *Obj : Objs) {
     if (isa<Function>(Obj) || isa<BlockAddress>(Obj))
       continue;
     if (isa<GlobalVariable>(Obj) && cast<GlobalVariable>(Obj)->isConstant())

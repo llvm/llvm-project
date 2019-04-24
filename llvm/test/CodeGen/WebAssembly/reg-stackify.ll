@@ -118,7 +118,7 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; CHECK-NEXT: br_if       0, $pop8{{$}}
 ; CHECK-NEXT: i32.const   $push9=, 0{{$}}
 ; CHECK-NEXT: return      $pop9{{$}}
-; CHECK-NEXT: .LBB7_2:
+; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: i32.const   $push14=, 1{{$}}
 ; CHECK-NEXT: return      $pop14{{$}}
@@ -145,7 +145,7 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; NOREGS-NEXT: br_if       0{{$}}
 ; NOREGS-NEXT: i32.const   0{{$}}
 ; NOREGS-NEXT: return{{$}}
-; NOREGS-NEXT: .LBB7_2:
+; NOREGS-NEXT: .LBB{{[0-9]+}}_2:
 ; NOREGS-NEXT: end_block{{$}}
 ; NOREGS-NEXT: i32.const   1{{$}}
 ; NOREGS-NEXT: return{{$}}
@@ -178,7 +178,7 @@ false:
 ; CHECK-NEXT: i32.lt_u    $push[[NUM3:[0-9]+]]=, $3, $0{{$}}
 ; CHECK-NEXT: br_if       0, $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: i32.store   0($2), $3{{$}}
-; CHECK-NEXT: .LBB8_3:
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 ; NOREGS-LABEL: multiple_uses:
@@ -198,7 +198,7 @@ false:
 ; NOREGS-NEXT: local.get   2{{$}}
 ; NOREGS-NEXT: local.get   3{{$}}
 ; NOREGS-NEXT: i32.store   0{{$}}
-; NOREGS-NEXT: .LBB8_3:
+; NOREGS-NEXT: .LBB{{[0-9]+}}_3:
 ; NOREGS-NEXT: end_block{{$}}
 ; NOREGS-NEXT: return{{$}}
 define void @multiple_uses(i32* %arg0, i32* %arg1, i32* %arg2) nounwind {

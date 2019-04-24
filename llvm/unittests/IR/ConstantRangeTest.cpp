@@ -58,6 +58,70 @@ static void ForeachNumInConstantRange(const ConstantRange &CR, Fn TestFn) {
   }
 }
 
+template<typename Fn1, typename Fn2>
+static void TestUnsignedBinOpExhaustive(
+    Fn1 RangeFn, Fn2 IntFn,
+    bool SkipZeroRHS = false, bool CorrectnessOnly = false) {
+  unsigned Bits = 4;
+  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
+                                       const ConstantRange &CR2) {
+    APInt Min = APInt::getMaxValue(Bits);
+    APInt Max = APInt::getMinValue(Bits);
+    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+        if (SkipZeroRHS && N2 == 0)
+          return;
+
+        APInt N = IntFn(N1, N2);
+        if (N.ult(Min))
+          Min = N;
+        if (N.ugt(Max))
+          Max = N;
+      });
+    });
+
+    ConstantRange CR = RangeFn(CR1, CR2);
+    if (Min.ugt(Max)) {
+      EXPECT_TRUE(CR.isEmptySet());
+      return;
+    }
+
+    ConstantRange Exact = ConstantRange::getNonEmpty(Min, Max + 1);
+    if (CorrectnessOnly) {
+      EXPECT_TRUE(CR.contains(Exact));
+    } else {
+      EXPECT_EQ(Exact, CR);
+    }
+  });
+}
+
+template<typename Fn1, typename Fn2>
+static void TestSignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn) {
+  unsigned Bits = 4;
+  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
+                                       const ConstantRange &CR2) {
+    ConstantRange CR = RangeFn(CR1, CR2);
+    if (CR1.isEmptySet() || CR2.isEmptySet()) {
+      EXPECT_TRUE(CR.isEmptySet());
+      return;
+    }
+
+    APInt Min = APInt::getSignedMaxValue(Bits);
+    APInt Max = APInt::getSignedMinValue(Bits);
+    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+        APInt N = IntFn(N1, N2);
+        if (N.slt(Min))
+          Min = N;
+        if (N.sgt(Max))
+          Max = N;
+      });
+    });
+
+    EXPECT_EQ(ConstantRange::getNonEmpty(Min, Max + 1), CR);
+  });
+}
+
 ConstantRange ConstantRangeTest::Full(16, true);
 ConstantRange ConstantRangeTest::Empty(16, false);
 ConstantRange ConstantRangeTest::One(APInt(16, 0xa));
@@ -757,6 +821,42 @@ TEST_F(ConstantRangeTest, UDiv) {
   EXPECT_EQ(Some.udiv(Some), ConstantRange(APInt(16, 0), APInt(16, 0x111)));
   EXPECT_EQ(Some.udiv(Wrap), ConstantRange(APInt(16, 0), APInt(16, 0xaaa)));
   EXPECT_EQ(Wrap.udiv(Wrap), Full);
+}
+
+TEST_F(ConstantRangeTest, URem) {
+  EXPECT_EQ(Full.urem(Empty), Empty);
+  EXPECT_EQ(Empty.urem(Full), Empty);
+  // urem by zero is poison.
+  EXPECT_EQ(Full.urem(ConstantRange(APInt(16, 0))), Empty);
+  // urem by full range doesn't contain MaxValue.
+  EXPECT_EQ(Full.urem(Full), ConstantRange(APInt(16, 0), APInt(16, 0xffff)));
+  // urem is upper bounded by maximum RHS minus one.
+  EXPECT_EQ(Full.urem(ConstantRange(APInt(16, 0), APInt(16, 123))),
+            ConstantRange(APInt(16, 0), APInt(16, 122)));
+  // urem is upper bounded by maximum LHS.
+  EXPECT_EQ(ConstantRange(APInt(16, 0), APInt(16, 123)).urem(Full),
+            ConstantRange(APInt(16, 0), APInt(16, 123)));
+  // If the LHS is always lower than the RHS, the result is the LHS.
+  EXPECT_EQ(ConstantRange(APInt(16, 10), APInt(16, 20))
+                .urem(ConstantRange(APInt(16, 20), APInt(16, 30))),
+            ConstantRange(APInt(16, 10), APInt(16, 20)));
+  // It has to be strictly lower, otherwise the top value may wrap to zero.
+  EXPECT_EQ(ConstantRange(APInt(16, 10), APInt(16, 20))
+                .urem(ConstantRange(APInt(16, 19), APInt(16, 30))),
+            ConstantRange(APInt(16, 0), APInt(16, 20)));
+  // [12, 14] % 10 is [2, 4], but we conservatively compute [0, 9].
+  EXPECT_EQ(ConstantRange(APInt(16, 12), APInt(16, 15))
+                .urem(ConstantRange(APInt(16, 10))),
+            ConstantRange(APInt(16, 0), APInt(16, 10)));
+
+  TestUnsignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.urem(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1.urem(N2);
+      },
+      /* SkipZeroRHS */ true, /* CorrectnessOnly */ true);
 }
 
 TEST_F(ConstantRangeTest, Shl) {
@@ -1644,60 +1744,6 @@ TEST_F(ConstantRangeTest, Negative) {
 
     EXPECT_EQ(AllNegative, CR.isAllNegative());
     EXPECT_EQ(AllNonNegative, CR.isAllNonNegative());
-  });
-}
-
-template<typename Fn1, typename Fn2>
-static void TestUnsignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
-                                       const ConstantRange &CR2) {
-    ConstantRange CR = RangeFn(CR1, CR2);
-    if (CR1.isEmptySet() || CR2.isEmptySet()) {
-      EXPECT_TRUE(CR.isEmptySet());
-      return;
-    }
-
-    APInt Min = APInt::getMaxValue(Bits);
-    APInt Max = APInt::getMinValue(Bits);
-    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
-        APInt N = IntFn(N1, N2);
-        if (N.ult(Min))
-          Min = N;
-        if (N.ugt(Max))
-          Max = N;
-      });
-    });
-
-    EXPECT_EQ(ConstantRange::getNonEmpty(Min, Max + 1), CR);
-  });
-}
-
-template<typename Fn1, typename Fn2>
-static void TestSignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
-                                       const ConstantRange &CR2) {
-    ConstantRange CR = RangeFn(CR1, CR2);
-    if (CR1.isEmptySet() || CR2.isEmptySet()) {
-      EXPECT_TRUE(CR.isEmptySet());
-      return;
-    }
-
-    APInt Min = APInt::getSignedMaxValue(Bits);
-    APInt Max = APInt::getSignedMinValue(Bits);
-    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
-        APInt N = IntFn(N1, N2);
-        if (N.slt(Min))
-          Min = N;
-        if (N.sgt(Max))
-          Max = N;
-      });
-    });
-
-    EXPECT_EQ(ConstantRange::getNonEmpty(Min, Max + 1), CR);
   });
 }
 

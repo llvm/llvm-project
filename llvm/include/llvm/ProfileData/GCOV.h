@@ -318,12 +318,6 @@ class GCOVBlock {
     uint64_t Count = 0;
   };
 
-  struct SortDstEdgesFunctor {
-    bool operator()(const GCOVEdge *E1, const GCOVEdge *E2) {
-      return E1->Dst.Number < E2->Dst.Number;
-    }
-  };
-
 public:
   using EdgeIterator = SmallVectorImpl<GCOVEdge *>::const_iterator;
   using BlockVector = SmallVector<const GCOVBlock *, 4>;

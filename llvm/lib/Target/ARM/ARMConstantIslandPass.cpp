@@ -1838,16 +1838,6 @@ bool ARMConstantIslands::optimizeThumb2Instructions() {
   return MadeChange;
 }
 
-static bool registerDefinedBetween(unsigned Reg,
-                                   MachineBasicBlock::iterator From,
-                                   MachineBasicBlock::iterator To,
-                                   const TargetRegisterInfo *TRI) {
-  for (auto I = From; I != To; ++I)
-    if (I->modifiesRegister(Reg, TRI))
-      return true;
-  return false;
-}
-
 bool ARMConstantIslands::optimizeThumb2Branches() {
   bool MadeChange = false;
 
@@ -1915,29 +1905,13 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     if (BrOffset >= DestOffset || (DestOffset - BrOffset) > 126)
       continue;
 
-    // Search backwards to the instruction that defines CSPR. This may or not
-    // be a CMP, we check that after this loop. If we find an instruction that
-    // reads cpsr, we need to keep the original cmp.
+    // Search backwards to find a tCMPi8
     auto *TRI = STI->getRegisterInfo();
-    MachineBasicBlock::iterator CmpMI = Br.MI;
-    while (CmpMI != Br.MI->getParent()->begin()) {
-      --CmpMI;
-      if (CmpMI->modifiesRegister(ARM::CPSR, TRI))
-        break;
-      if (CmpMI->readsRegister(ARM::CPSR, TRI))
-        break;
-    }
+    MachineInstr *CmpMI = findCMPToFoldIntoCBZ(Br.MI, TRI);
+    if (!CmpMI || CmpMI->getOpcode() != ARM::tCMPi8)
+      continue;
 
-    // Check that this inst is a CMP r[0-7], #0 and that the register
-    // is not redefined between the cmp and the br.
-    if (CmpMI->getOpcode() != ARM::tCMPi8)
-      continue;
     unsigned Reg = CmpMI->getOperand(0).getReg();
-    Pred = getInstrPredicate(*CmpMI, PredReg);
-    if (Pred != ARMCC::AL || CmpMI->getOperand(1).getImm() != 0)
-      continue;
-    if (registerDefinedBetween(Reg, CmpMI->getNextNode(), Br.MI, TRI))
-      continue;
 
     // Check for Kill flags on Reg. If they are present remove them and set kill
     // on the new CBZ.

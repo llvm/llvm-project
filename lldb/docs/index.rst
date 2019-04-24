@@ -56,17 +56,16 @@ Resources
    resources/test
    resources/bots
    resources/sbapi
-   resources/external
 
 API Documentation
 =================
 
+* `C++ API Documentation <https://lldb.llvm.org/cpp_reference/index.html>`_
 * `Python API Documentation <https://lldb.llvm.org/python_reference/index.html>`_
-* `C++ API Documentation <https://lldb.llvm.org/cpp_reference/html/index.html>`_
 
+External Links
+==============
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`search`
+* `Source Code <http://llvm.org/viewvc/llvm-project/lldb/trunk/>`_
+* `Code Reviews <https://reviews.llvm.org>`_
+* `Bug Reports <https://bugs.llvm.org/>`_

@@ -10768,8 +10768,8 @@ void OverloadCandidateSet::NoteCandidates(
     }
   }
 
-  std::stable_sort(Cands.begin(), Cands.end(),
-            CompareOverloadCandidatesForDisplay(S, OpLoc, Args.size(), Kind));
+  llvm::stable_sort(
+      Cands, CompareOverloadCandidatesForDisplay(S, OpLoc, Args.size(), Kind));
 
   bool ReportedAmbiguousConversions = false;
 

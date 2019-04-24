@@ -45,7 +45,7 @@ Range nodeRange(const SelectionTree::Node *N, ParsedAST &AST) {
   CharSourceRange R =
       Lexer::getAsCharRange(SR, SM, AST.getASTContext().getLangOpts());
   return Range{offsetToPosition(Buffer, SM.getFileOffset(R.getBegin())),
-               offsetToPosition(Buffer, SM.getFileOffset(R.getEnd()) + 1)};
+               offsetToPosition(Buffer, SM.getFileOffset(R.getEnd()))};
 }
 
 std::string nodeKind(const SelectionTree::Node *N) {

@@ -6792,6 +6792,20 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     }
     break;
 
+  case ARM::t2ADDri:
+  case ARM::t2ADDri12:
+  case ARM::t2ADDrr:
+  case ARM::t2ADDrs:
+  case ARM::t2SUBri:
+  case ARM::t2SUBri12:
+  case ARM::t2SUBrr:
+  case ARM::t2SUBrs:
+    if (Inst.getOperand(0).getReg() == ARM::SP &&
+        Inst.getOperand(1).getReg() != ARM::SP)
+      return Error(Operands[4]->getStartLoc(),
+                   "source register must be sp if destination is sp");
+    break;
+
   // Final range checking for Thumb unconditional branch instructions.
   case ARM::tB:
     if (!(static_cast<ARMOperand &>(*Operands[2])).isSignedOffset<11, 1>())

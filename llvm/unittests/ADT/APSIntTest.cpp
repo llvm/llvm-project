@@ -159,4 +159,90 @@ TEST(APSIntTest, StringDeath) {
 
 #endif
 
+TEST(APSIntTest, SignedHighBit) {
+  APSInt False(APInt(1, 0), false);
+  APSInt True(APInt(1, 1), false);
+  APSInt CharMin(APInt(8, 0), false);
+  APSInt CharSmall(APInt(8, 0x13), false);
+  APSInt CharBoundaryUnder(APInt(8, 0x7f), false);
+  APSInt CharBoundaryOver(APInt(8, 0x80), false);
+  APSInt CharLarge(APInt(8, 0xd9), false);
+  APSInt CharMax(APInt(8, 0xff), false);
+
+  EXPECT_FALSE(False.isNegative());
+  EXPECT_TRUE(False.isNonNegative());
+  EXPECT_FALSE(False.isStrictlyPositive());
+
+  EXPECT_TRUE(True.isNegative());
+  EXPECT_FALSE(True.isNonNegative());
+  EXPECT_FALSE(True.isStrictlyPositive());
+
+  EXPECT_FALSE(CharMin.isNegative());
+  EXPECT_TRUE(CharMin.isNonNegative());
+  EXPECT_FALSE(CharMin.isStrictlyPositive());
+
+  EXPECT_FALSE(CharSmall.isNegative());
+  EXPECT_TRUE(CharSmall.isNonNegative());
+  EXPECT_TRUE(CharSmall.isStrictlyPositive());
+
+  EXPECT_FALSE(CharBoundaryUnder.isNegative());
+  EXPECT_TRUE(CharBoundaryUnder.isNonNegative());
+  EXPECT_TRUE(CharBoundaryUnder.isStrictlyPositive());
+
+  EXPECT_TRUE(CharBoundaryOver.isNegative());
+  EXPECT_FALSE(CharBoundaryOver.isNonNegative());
+  EXPECT_FALSE(CharBoundaryOver.isStrictlyPositive());
+
+  EXPECT_TRUE(CharLarge.isNegative());
+  EXPECT_FALSE(CharLarge.isNonNegative());
+  EXPECT_FALSE(CharLarge.isStrictlyPositive());
+
+  EXPECT_TRUE(CharMax.isNegative());
+  EXPECT_FALSE(CharMax.isNonNegative());
+  EXPECT_FALSE(CharMax.isStrictlyPositive());
+}
+
+TEST(APSIntTest, UnsignedHighBit) {
+  APSInt False(APInt(1, 0));
+  APSInt True(APInt(1, 1));
+  APSInt CharMin(APInt(8, 0));
+  APSInt CharSmall(APInt(8, 0x13));
+  APSInt CharBoundaryUnder(APInt(8, 0x7f));
+  APSInt CharBoundaryOver(APInt(8, 0x80));
+  APSInt CharLarge(APInt(8, 0xd9));
+  APSInt CharMax(APInt(8, 0xff));
+
+  EXPECT_FALSE(False.isNegative());
+  EXPECT_TRUE(False.isNonNegative());
+  EXPECT_FALSE(False.isStrictlyPositive());
+
+  EXPECT_FALSE(True.isNegative());
+  EXPECT_TRUE(True.isNonNegative());
+  EXPECT_TRUE(True.isStrictlyPositive());
+
+  EXPECT_FALSE(CharMin.isNegative());
+  EXPECT_TRUE(CharMin.isNonNegative());
+  EXPECT_FALSE(CharMin.isStrictlyPositive());
+
+  EXPECT_FALSE(CharSmall.isNegative());
+  EXPECT_TRUE(CharSmall.isNonNegative());
+  EXPECT_TRUE(CharSmall.isStrictlyPositive());
+
+  EXPECT_FALSE(CharBoundaryUnder.isNegative());
+  EXPECT_TRUE(CharBoundaryUnder.isNonNegative());
+  EXPECT_TRUE(CharBoundaryUnder.isStrictlyPositive());
+
+  EXPECT_FALSE(CharBoundaryOver.isNegative());
+  EXPECT_TRUE(CharBoundaryOver.isNonNegative());
+  EXPECT_TRUE(CharBoundaryOver.isStrictlyPositive());
+
+  EXPECT_FALSE(CharLarge.isNegative());
+  EXPECT_TRUE(CharLarge.isNonNegative());
+  EXPECT_TRUE(CharLarge.isStrictlyPositive());
+
+  EXPECT_FALSE(CharMax.isNegative());
+  EXPECT_TRUE(CharMax.isNonNegative());
+  EXPECT_TRUE(CharMax.isStrictlyPositive());
+}
+
 } // end anonymous namespace

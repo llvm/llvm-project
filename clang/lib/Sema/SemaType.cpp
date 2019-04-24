@@ -275,10 +275,7 @@ namespace {
     /// Extract and remove the Attr* for a given attributed type.
     const Attr *takeAttrForAttributedType(const AttributedType *AT) {
       if (!AttrsForTypesSorted) {
-        std::stable_sort(AttrsForTypes.begin(), AttrsForTypes.end(),
-                         [](const TypeAttrPair &A, const TypeAttrPair &B) {
-                           return A.first < B.first;
-                         });
+        llvm::stable_sort(AttrsForTypes, llvm::less_first());
         AttrsForTypesSorted = true;
       }
 

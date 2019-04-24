@@ -45,11 +45,11 @@ size_t std::type_info::hash_code() const _NOEXCEPT {
 }
 #endif // _LIBCPP_ABI_MICROSOFT
 
-// FIXME: Remove __APPLE__ default here once buildit is gone.
 // FIXME: Remove the _LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY configuration.
-#if (!defined(LIBCXX_BUILDING_LIBCXXABI) && !defined(LIBCXXRT) &&              \
-     !defined(__GLIBCXX__) && !defined(__APPLE__) &&                           \
-     !defined(_LIBCPP_ABI_VCRUNTIME)) ||   \
+#if (!defined(LIBCXX_BUILDING_LIBCXXABI) &&               \
+     !defined(LIBCXXRT) &&                                \
+     !defined(__GLIBCXX__) &&                             \
+     !defined(_LIBCPP_ABI_VCRUNTIME)) ||                  \
     defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
 std::type_info::~type_info()
 {

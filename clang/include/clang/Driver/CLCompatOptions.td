@@ -166,7 +166,7 @@ def _SLASH_source_charset : CLCompileJoined<"source-charset:">,
 def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
   HelpText<"Runtime encoding, supports only UTF-8">, Alias<fexec_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
-  HelpText<"Language standard to compile for">;
+  HelpText<"Language standard to compile for (c++14,c++17,c++latest)">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,
   MetaVarName<"<macro>">, Alias<U>;
 def _SLASH_validate_charset : CLFlag<"validate-charset">,

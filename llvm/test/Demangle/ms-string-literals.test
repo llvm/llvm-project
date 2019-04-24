@@ -792,3 +792,8 @@
 
 ??_C@_07LJGFEJEB@D3?$CC?$BB?$AA?$AA?$AA?$AA@)
 ; CHECK: U"\x11223344"
+
+; This has a string length of 0x6_0000_0000, so it's 0 if treated as a 32-bit
+; number. (In practice, 24GiB large string literals should be rare.)
+??_C@_0GAAAAAAAA@GPLEPFHO@01234567890123456789012345678901@
+; CHECK: "01234567890123456789012345678901"...

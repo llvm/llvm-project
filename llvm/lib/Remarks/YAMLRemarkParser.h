@@ -17,6 +17,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Remarks/Remark.h"
+#include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
@@ -38,7 +39,8 @@ struct YAMLRemarkParser {
   raw_string_ostream ErrorStream;
   /// Temporary parsing buffer for the arguments.
   SmallVector<Argument, 8> TmpArgs;
-
+  /// The string table used for parsing strings.
+  Optional<ParsedStringTable> StrTab;
   /// The state used by the parser to parse a remark entry. Invalidated with
   /// every call to `parseYAMLElement`.
   struct ParseState {
@@ -57,10 +59,13 @@ struct YAMLRemarkParser {
   /// not be containing any value.
   Optional<ParseState> State;
 
-  YAMLRemarkParser(StringRef Buf)
+  YAMLRemarkParser(StringRef Buf, Optional<StringRef> StrTabBuf = None)
       : SM(), Stream(Buf, SM), ErrorString(), ErrorStream(ErrorString),
-        TmpArgs() {
+        TmpArgs(), StrTab() {
     SM.setDiagHandler(YAMLRemarkParser::HandleDiagnostic, this);
+
+    if (StrTabBuf)
+      StrTab.emplace(*StrTabBuf);
   }
 
   /// Parse a YAML element.
@@ -122,8 +127,8 @@ struct YAMLParserImpl : public ParserImpl {
   /// Set to `true` if we had any errors during parsing.
   bool HasErrors = false;
 
-  YAMLParserImpl(StringRef Buf)
-      : ParserImpl{ParserImpl::Kind::YAML}, YAMLParser(Buf),
+  YAMLParserImpl(StringRef Buf, Optional<StringRef> StrTabBuf = None)
+      : ParserImpl{ParserImpl::Kind::YAML}, YAMLParser(Buf, StrTabBuf),
         YAMLIt(YAMLParser.Stream.begin()), HasErrors(false) {}
 
   static bool classof(const ParserImpl *PI) {

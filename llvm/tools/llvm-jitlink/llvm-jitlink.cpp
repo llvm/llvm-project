@@ -326,14 +326,37 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 
 } // end namespace llvm
 
+Triple getFirstFileTriple() {
+  assert(!InputFiles.empty() && "InputFiles can not be empty");
+  auto ObjBuffer =
+      ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFiles.front())));
+  auto Obj = ExitOnErr(
+      object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
+  return Obj->makeTriple();
+}
+
+void setEntryPointNameIfNotProvided(const Session &S) {
+  if (EntryPointName.empty()) {
+    if (S.TT.getObjectFormat() == Triple::MachO)
+      EntryPointName = "_main";
+    else
+      EntryPointName = "main";
+  }
+}
+
 Error loadProcessSymbols(Session &S) {
   std::string ErrMsg;
   if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr, &ErrMsg))
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
 
   char GlobalPrefix = S.TT.getObjectFormat() == Triple::MachO ? '_' : '\0';
-  S.ES.getMainJITDylib().setGenerator(ExitOnErr(
-      orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(GlobalPrefix)));
+  auto InternedEntryPointName = S.ES.intern(EntryPointName);
+  auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
+    return Name != InternedEntryPointName;
+  };
+  S.ES.getMainJITDylib().setGenerator(
+      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          GlobalPrefix, FilterMainEntryPoint)));
 
   return Error::success();
 }
@@ -350,15 +373,6 @@ Error loadDylibs() {
   }
 
   return Error::success();
-}
-
-Triple getFirstFileTriple() {
-  assert(!InputFiles.empty() && "InputFiles can not be empty");
-  auto ObjBuffer =
-      ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFiles.front())));
-  auto Obj = ExitOnErr(
-      object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-  return Obj->makeTriple();
 }
 
 Error loadObjects(Session &S) {
@@ -542,16 +556,6 @@ static void dumpSessionStats(Session &S) {
 }
 
 static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
-
-  // First, if the entry point has not been set, set it to a sensible default
-  // for this process.
-  if (EntryPointName.empty()) {
-    if (S.TT.getObjectFormat() == Triple::MachO)
-      EntryPointName = "_main";
-    else
-      EntryPointName = "main";
-  }
-
   return S.ES.lookup(S.JDSearchOrder, EntryPointName);
 }
 
@@ -583,6 +587,8 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   Session S(getFirstFileTriple());
+
+  setEntryPointNameIfNotProvided(S);
 
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(S));

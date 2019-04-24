@@ -1325,6 +1325,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.MAttrs = TOpts.Features;
   Conf.RelocModel = CGOpts.RelocationModel;
   Conf.CGOptLevel = getCGOptLevel(CGOpts);
+  Conf.OptLevel = CGOpts.OptimizationLevel;
   initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
 

@@ -73,6 +73,8 @@ struct SA {
     {}
     #pragma omp target map(b[:-1]) // expected-error {{section length is evaluated to a negative value -1}}
     {}
+    #pragma omp target map(b[true:true])
+    {}
 
     #pragma omp target map(: c,f) // expected-error {{missing map type}}
     {}

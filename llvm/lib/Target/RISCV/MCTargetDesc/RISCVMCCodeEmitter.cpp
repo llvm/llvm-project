@@ -307,6 +307,12 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_tprel_hi20;
       RelaxCandidate = true;
       break;
+    case RISCVMCExpr::VK_RISCV_TLS_GOT_HI:
+      FixupKind = RISCV::fixup_riscv_tls_got_hi20;
+      break;
+    case RISCVMCExpr::VK_RISCV_TLS_GD_HI:
+      FixupKind = RISCV::fixup_riscv_tls_gd_hi20;
+      break;
     case RISCVMCExpr::VK_RISCV_CALL:
       FixupKind = RISCV::fixup_riscv_call;
       RelaxCandidate = true;

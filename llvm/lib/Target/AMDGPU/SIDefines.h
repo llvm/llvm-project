@@ -523,6 +523,15 @@ enum DppCtrl : unsigned {
 #define   S_00B848_IEEE_MODE(x)                                       (((x) & 0x1) << 23)
 #define   G_00B848_IEEE_MODE(x)                                       (((x) >> 23) & 0x1)
 #define   C_00B848_IEEE_MODE                                          0xFF7FFFFF
+#define   S_00B848_WGP_MODE(x)                                        (((x) & 0x1) << 29)
+#define   G_00B848_WGP_MODE(x)                                        (((x) >> 29) & 0x1)
+#define   C_00B848_WGP_MODE                                           0xDFFFFFFF
+#define   S_00B848_MEM_ORDERED(x)                                     (((x) & 0x1) << 30)
+#define   G_00B848_MEM_ORDERED(x)                                     (((x) >> 30) & 0x1)
+#define   C_00B848_MEM_ORDERED                                        0xBFFFFFFF
+#define   S_00B848_FWD_PROGRESS(x)                                    (((x) & 0x1) << 31)
+#define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
+#define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
 
 
 // Helpers for setting FLOAT_MODE
@@ -552,6 +561,15 @@ enum DppCtrl : unsigned {
 
 #define R_0286E8_SPI_TMPRING_SIZE                                       0x0286E8
 #define   S_0286E8_WAVESIZE(x)                                        (((x) & 0x1FFF) << 12)
+
+#define R_028B54_VGT_SHADER_STAGES_EN                                 0x028B54
+#define   S_028B54_HS_W32_EN(x)                                       (((x) & 0x1) << 21)
+#define   S_028B54_GS_W32_EN(x)                                       (((x) & 0x1) << 22)
+#define   S_028B54_VS_W32_EN(x)                                       (((x) & 0x1) << 23)
+#define R_0286D8_SPI_PS_IN_CONTROL                                    0x0286D8
+#define   S_0286D8_PS_W32_EN(x)                                       (((x) & 0x1) << 15)
+#define R_00B800_COMPUTE_DISPATCH_INITIATOR                           0x00B800
+#define   S_00B800_CS_W32_EN(x)                                       (((x) & 0x1) << 15)
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8

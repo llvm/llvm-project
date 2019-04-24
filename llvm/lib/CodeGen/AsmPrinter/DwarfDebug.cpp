@@ -2233,19 +2233,18 @@ void DwarfDebug::emitDebugARanges() {
     }
 
     // Sort the symbols by offset within the section.
-    std::stable_sort(
-        List.begin(), List.end(), [&](const SymbolCU &A, const SymbolCU &B) {
-          unsigned IA = A.Sym ? Asm->OutStreamer->GetSymbolOrder(A.Sym) : 0;
-          unsigned IB = B.Sym ? Asm->OutStreamer->GetSymbolOrder(B.Sym) : 0;
+    llvm::stable_sort(List, [&](const SymbolCU &A, const SymbolCU &B) {
+      unsigned IA = A.Sym ? Asm->OutStreamer->GetSymbolOrder(A.Sym) : 0;
+      unsigned IB = B.Sym ? Asm->OutStreamer->GetSymbolOrder(B.Sym) : 0;
 
-          // Symbols with no order assigned should be placed at the end.
-          // (e.g. section end labels)
-          if (IA == 0)
-            return false;
-          if (IB == 0)
-            return true;
-          return IA < IB;
-        });
+      // Symbols with no order assigned should be placed at the end.
+      // (e.g. section end labels)
+      if (IA == 0)
+        return false;
+      if (IB == 0)
+        return true;
+      return IA < IB;
+    });
 
     // Insert a final terminator.
     List.push_back(SymbolCU(nullptr, Asm->OutStreamer->endSection(Section)));
@@ -2762,10 +2761,7 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&
-      CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::None)
-    return;
-
-  if (CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::GNU)
+      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Default)
     return;
 
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;

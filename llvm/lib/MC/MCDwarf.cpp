@@ -1865,11 +1865,10 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
   std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  std::stable_sort(
-      FrameArrayX.begin(), FrameArrayX.end(),
-      [&](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) -> bool {
-        return CIEKey(X) < CIEKey(Y);
-      });
+  llvm::stable_sort(FrameArrayX,
+                    [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
+                      return CIEKey(X) < CIEKey(Y);
+                    });
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;

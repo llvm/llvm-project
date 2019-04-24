@@ -14,10 +14,11 @@
 #define LLVM_IR_REMARKSTREAMER_H
 
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/Remarks/RemarkStringTable.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Regex.h"
 #include <string>
 #include <vector>
 
@@ -34,6 +35,11 @@ class RemarkStreamer {
   /// The YAML streamer.
   yaml::Output YAMLOutput;
 
+  /// The string table containing all the unique strings used in the output.
+  /// The table will be serialized in a section to be consumed after the
+  /// compilation.
+  remarks::StringTable StrTab;
+
 public:
   RemarkStreamer(StringRef Filename, raw_ostream& OS);
   /// Return the filename that the remark diagnostics are emitted to.
@@ -45,6 +51,9 @@ public:
   Error setFilter(StringRef Filter);
   /// Emit a diagnostic through the streamer.
   void emit(const DiagnosticInfoOptimizationBase &Diag);
+  /// The string table used during emission.
+  remarks::StringTable &getStringTable() { return StrTab; }
+  const remarks::StringTable &getStringTable() const { return StrTab; }
 };
 } // end namespace llvm
 

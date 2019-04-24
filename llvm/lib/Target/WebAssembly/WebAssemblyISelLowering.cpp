@@ -270,6 +270,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     MaxStoresPerMemset = 1;
     MaxStoresPerMemsetOptSize = 1;
   }
+
+  // Always convert switches to br_tables unless there is only one case, which
+  // is equivalent to a simple branch. This reduces code size for wasm, and we
+  // defer possible jump table optimizations to the VM.
+  setMinimumJumpTableEntries(2);
 }
 
 TargetLowering::AtomicExpansionKind

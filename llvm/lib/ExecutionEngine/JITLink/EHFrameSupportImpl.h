@@ -44,13 +44,20 @@ private:
   Error processCIE();
   Error processFDE(JITTargetAddress CIEPointerAddress, uint32_t CIEPointer);
 
+  struct CIEInformation {
+    CIEInformation() = default;
+    CIEInformation(DefinedAtom &CIEAtom) : CIEAtom(&CIEAtom) {}
+    DefinedAtom *CIEAtom = nullptr;
+    bool FDEsHaveLSDAField = false;
+  };
+
   AtomGraph &G;
   Section &EHFrameSection;
   StringRef EHFrameContent;
   JITTargetAddress EHFrameAddress;
   BinaryStreamReader EHFrameReader;
   DefinedAtom *CurRecordAtom = nullptr;
-  bool LSDAFieldPresent = false;
+  DenseMap<JITTargetAddress, CIEInformation> CIEInfos;
   Edge::Kind FDEToCIERelocKind;
   Edge::Kind FDEToTargetRelocKind;
 };

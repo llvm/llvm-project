@@ -22,6 +22,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -699,11 +700,13 @@ TEST(CompletionTest, DynamicIndexIncludeInsertion) {
   Server.addDocument(testPath("foo_impl.cpp"), FileContent);
   // Wait for the dynamic index being built.
   ASSERT_TRUE(Server.blockUntilIdleForTest());
-  EXPECT_THAT(
-      completions(Server, "Foo^ foo;").Completions,
-      ElementsAre(AllOf(Named("Foo"),
-                        HasInclude('"' + testPath("foo_header.h") + '"'),
-                        InsertInclude())));
+  EXPECT_THAT(completions(Server, "Foo^ foo;").Completions,
+              ElementsAre(AllOf(Named("Foo"),
+                                HasInclude('"' +
+                                           llvm::sys::path::convert_to_slash(
+                                               testPath("foo_header.h")) +
+                                           '"'),
+                                InsertInclude())));
 }
 
 TEST(CompletionTest, DynamicIndexMultiFile) {

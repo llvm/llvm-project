@@ -973,6 +973,29 @@ public:
 extern template class basic_parser<unsigned>;
 
 //--------------------------------------------------
+// parser<unsigned long>
+//
+template <>
+class parser<unsigned long> final : public basic_parser<unsigned long> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // parse - Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, unsigned long &Val);
+
+  // getValueName - Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "ulong"; }
+
+  void printOptionDiff(const Option &O, unsigned long V, OptVal Default,
+                       size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+extern template class basic_parser<unsigned long>;
+
+//--------------------------------------------------
 // parser<unsigned long long>
 //
 template <>
@@ -986,7 +1009,7 @@ public:
              unsigned long long &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  StringRef getValueName() const override { return "uint"; }
+  StringRef getValueName() const override { return "ulong"; }
 
   void printOptionDiff(const Option &O, unsigned long long V, OptVal Default,
                        size_t GlobalWidth) const;

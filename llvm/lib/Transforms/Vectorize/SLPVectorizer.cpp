@@ -4120,10 +4120,10 @@ void BoUpSLP::optimizeGatherSequence() {
 
   // Sort blocks by domination. This ensures we visit a block after all blocks
   // dominating it are visited.
-  std::stable_sort(CSEWorkList.begin(), CSEWorkList.end(),
-                   [this](const DomTreeNode *A, const DomTreeNode *B) {
-    return DT->properlyDominates(A, B);
-  });
+  llvm::stable_sort(CSEWorkList,
+                    [this](const DomTreeNode *A, const DomTreeNode *B) {
+                      return DT->properlyDominates(A, B);
+                    });
 
   // Perform O(N^2) search over the gather sequences and merge identical
   // instructions. TODO: We can further optimize this scan if we split the
@@ -6601,7 +6601,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
 
     // Sort by type.
-    std::stable_sort(Incoming.begin(), Incoming.end(), PhiTypeSorterFunc);
+    llvm::stable_sort(Incoming, PhiTypeSorterFunc);
 
     // Try to vectorize elements base on their type.
     for (SmallVector<Value *, 4>::iterator IncIt = Incoming.begin(),

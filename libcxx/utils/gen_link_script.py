@@ -29,11 +29,14 @@ def main():
                         help="List of libraries libc++ depends on")
     args = parser.parse_args()
 
+    # Use the relative path for the libc++ library.
+    libcxx = os.path.relpath(args.input, os.path.dirname(args.output))
+
     # Prepare the list of public libraries to link.
     public_libs = ['-l%s' % l for l in args.libraries]
 
     # Generate the linker script contents.
-    contents = "INPUT(%s)" % ' '.join([args.input] + public_libs)
+    contents = "INPUT(%s)" % ' '.join([libcxx] + public_libs)
     print("GENERATING SCRIPT: '%s' as file %s" % (contents, args.output))
 
     if args.dryrun:

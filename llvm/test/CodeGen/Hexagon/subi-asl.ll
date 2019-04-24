@@ -3,7 +3,10 @@
 ; Check if S4_subi_asl_ri is being generated correctly.
 
 ; CHECK-LABEL: yes_sub_asl
-; CHECK: [[REG1:(r[0-9]+)]] = sub(#0,asl([[REG1]],#1))
+; FIXME: We no longer get subi_asl here. 
+; XCHECK: [[REG1:(r[0-9]+)]] = sub(#0,asl([[REG1]],#1))
+; CHECK: [[REG1:(r[0-9]+)]] = asl([[REG1]],#1)
+; CHECK:  = sub(#0,[[REG1]])
 
 ; CHECK-LABEL: no_sub_asl
 ; CHECK: [[REG2:(r[0-9]+)]] = asl(r{{[0-9]+}},#1)

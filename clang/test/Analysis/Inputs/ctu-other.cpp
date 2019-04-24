@@ -80,3 +80,41 @@ int other_macro_diag(int x) {
   MACRODIAG();
   return x;
 }
+
+extern const int extInt = 2;
+namespace intns {
+extern const int extInt = 3;
+}
+struct S {
+  int a;
+};
+extern const S extS = {.a = 4};
+struct A {
+  static const int a;
+};
+const int A::a = 3;
+struct SC {
+  const int a;
+};
+SC extSC = {.a = 8};
+struct ST {
+  static struct SC sc;
+};
+struct SC ST::sc = {.a = 2};
+struct SCNest {
+  struct SCN {
+    const int a;
+  } scn;
+};
+SCNest extSCN = {.scn = {.a = 9}};
+SCNest::SCN extSubSCN = {.a = 1};
+struct SCC {
+  SCC(int c) : a(c) {}
+  const int a;
+};
+SCC extSCC{7};
+union U {
+  const int a;
+  const unsigned int b;
+};
+U extU = {.a = 4};

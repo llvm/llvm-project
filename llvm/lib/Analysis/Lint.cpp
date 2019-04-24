@@ -267,10 +267,14 @@ void Lint::visitCallSite(CallSite CS) {
         if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
           AttributeList PAL = CS.getAttributes();
           unsigned ArgNo = 0;
-          for (CallSite::arg_iterator BI = CS.arg_begin(); BI != AE; ++BI) {
+          for (CallSite::arg_iterator BI = CS.arg_begin(); BI != AE;
+               ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
-            if (PAL.hasParamAttribute(ArgNo++, Attribute::ByVal))
+            if (PAL.hasParamAttribute(ArgNo, Attribute::ByVal))
+              continue;
+            // If both arguments are readonly, they have no dependence.
+            if (Formal->onlyReadsMemory() && CS.onlyReadsMemory(ArgNo))
               continue;
             if (AI != BI && (*BI)->getType()->isPointerTy()) {
               AliasResult Result = AA->alias(*AI, *BI);

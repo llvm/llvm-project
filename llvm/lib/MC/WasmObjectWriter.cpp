@@ -934,9 +934,8 @@ void WasmObjectWriter::writeRelocSection(
   // order, but for the code section we combine many MC sections into single
   // wasm section, and this order is determined by the order of Asm.Symbols()
   // not the sections order.
-  std::stable_sort(
-      Relocs.begin(), Relocs.end(),
-      [](const WasmRelocationEntry &A, const WasmRelocationEntry &B) {
+  llvm::stable_sort(
+      Relocs, [](const WasmRelocationEntry &A, const WasmRelocationEntry &B) {
         return (A.Offset + A.FixupSection->getSectionOffset()) <
                (B.Offset + B.FixupSection->getSectionOffset());
       });

@@ -146,8 +146,15 @@ DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
                                        SectionSP &section_sp, Type type)
     : m_objfile(objfile), m_section_sp(section_sp), m_type(type) {}
 
-bool DWARFCallFrameInfo::GetUnwindPlan(Address addr, UnwindPlan &unwind_plan) {
+bool DWARFCallFrameInfo::GetUnwindPlan(const Address &addr,
+                                       UnwindPlan &unwind_plan) {
+  return GetUnwindPlan(AddressRange(addr, 1), unwind_plan);
+}
+
+bool DWARFCallFrameInfo::GetUnwindPlan(const AddressRange &range,
+                                       UnwindPlan &unwind_plan) {
   FDEEntryMap::Entry fde_entry;
+  Address addr = range.GetBaseAddress();
 
   // Make sure that the Address we're searching for is the same object file as
   // this DWARFCallFrameInfo, we only store File offsets in m_fde_index.
@@ -156,9 +163,9 @@ bool DWARFCallFrameInfo::GetUnwindPlan(Address addr, UnwindPlan &unwind_plan) {
       module_sp->GetObjectFile() != &m_objfile)
     return false;
 
-  if (!GetFDEEntryByFileAddress(addr.GetFileAddress(), fde_entry))
-    return false;
-  return FDEToUnwindPlan(fde_entry.data, addr, unwind_plan);
+  if (llvm::Optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
+    return FDEToUnwindPlan(entry->data, addr, unwind_plan);
+  return false;
 }
 
 bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
@@ -183,23 +190,21 @@ bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
   return true;
 }
 
-bool DWARFCallFrameInfo::GetFDEEntryByFileAddress(
-    addr_t file_addr, FDEEntryMap::Entry &fde_entry) {
-  if (m_section_sp.get() == nullptr || m_section_sp->IsEncrypted())
-    return false;
+llvm::Optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
+DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
+  if (!m_section_sp || m_section_sp->IsEncrypted())
+    return llvm::None;
 
   GetFDEIndex();
 
-  if (m_fde_index.IsEmpty())
-    return false;
+  addr_t start_file_addr = range.GetBaseAddress().GetFileAddress();
+  const FDEEntryMap::Entry *fde =
+      m_fde_index.FindEntryThatContainsOrFollows(start_file_addr);
+  if (fde && fde->DoesIntersect(
+                 FDEEntryMap::Range(start_file_addr, range.GetByteSize())))
+    return *fde;
 
-  FDEEntryMap::Entry *fde = m_fde_index.FindEntryThatContains(file_addr);
-
-  if (fde == nullptr)
-    return false;
-
-  fde_entry = *fde;
-  return true;
+  return llvm::None;
 }
 
 void DWARFCallFrameInfo::GetFunctionAddressAndSizeVector(

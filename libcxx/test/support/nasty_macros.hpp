@@ -62,4 +62,7 @@
 #define __output NASTY_MACRO
 #define __input NASTY_MACRO
 
+#define __acquire NASTY_MACRO
+#define __release NASTY_MACRO
+
 #endif // SUPPORT_NASTY_MACROS_HPP

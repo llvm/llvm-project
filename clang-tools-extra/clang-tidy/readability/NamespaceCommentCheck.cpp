@@ -102,11 +102,14 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     }
   }
 
+  // FIXME: This probably breaks on comments between the namespace and its '{'.
   auto TextRange =
       Lexer::getAsCharRange(SourceRange(NestedNamespaceBegin, LBracketLocation),
                             Sources, getLangOpts());
   StringRef NestedNamespaceName =
-      Lexer::getSourceText(TextRange, Sources, getLangOpts()).rtrim();
+      Lexer::getSourceText(TextRange, Sources, getLangOpts())
+          .rtrim('{') // Drop the { itself.
+          .rtrim();   // Drop any whitespace before it.
   bool IsNested = NestedNamespaceName.contains(':');
 
   if (IsNested)

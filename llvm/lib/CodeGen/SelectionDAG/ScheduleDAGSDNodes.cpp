@@ -921,7 +921,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     // Sort the source order instructions and use the order to insert debug
     // values. Use stable_sort so that DBG_VALUEs are inserted in the same order
     // regardless of the host's implementation fo std::sort.
-    std::stable_sort(Orders.begin(), Orders.end(), less_first());
+    llvm::stable_sort(Orders, less_first());
     std::stable_sort(DAG->DbgBegin(), DAG->DbgEnd(),
                      [](const SDDbgValue *LHS, const SDDbgValue *RHS) {
                        return LHS->getOrder() < RHS->getOrder();

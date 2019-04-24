@@ -459,7 +459,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
       Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
     }
-    std::stable_sort(Bases.begin(), Bases.end());
+    llvm::stable_sort(Bases);
 
     for (unsigned I = 0, N = Bases.size(); I != N; ++I) {
       BaseInfo &Base = Bases[I];

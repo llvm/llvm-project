@@ -99,7 +99,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
 }
 
 void Command::printArg(raw_ostream &OS, StringRef Arg, bool Quote) {
-  const bool Escape = Arg.find_first_of("\"\\$") != StringRef::npos;
+  const bool Escape = Arg.find_first_of(" \"\\$") != StringRef::npos;
 
   if (!Quote && !Escape) {
     OS << Arg;

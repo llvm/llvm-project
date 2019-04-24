@@ -2002,43 +2002,22 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
 
-  // Use heuristics to determine if Ex is a macro expending to a literal and
-  // if so, use the macro's name.
-  SourceLocation LocStart = Ex->getBeginLoc();
-  SourceLocation LocEnd = Ex->getEndLoc();
-  if (LocStart.isMacroID() && LocEnd.isMacroID() &&
-      (isa<GNUNullExpr>(Ex) ||
-       isa<ObjCBoolLiteralExpr>(Ex) ||
-       isa<CXXBoolLiteralExpr>(Ex) ||
-       isa<IntegerLiteral>(Ex) ||
-       isa<FloatingLiteral>(Ex))) {
-    StringRef StartName = Lexer::getImmediateMacroNameForDiagnostics(LocStart,
-      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-    StringRef EndName = Lexer::getImmediateMacroNameForDiagnostics(LocEnd,
-      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-    bool beginAndEndAreTheSameMacro = StartName.equals(EndName);
-
-    bool partOfParentMacro = false;
-    if (ParentEx->getBeginLoc().isMacroID()) {
-      StringRef PName = Lexer::getImmediateMacroNameForDiagnostics(
-          ParentEx->getBeginLoc(), BRC.getSourceManager(),
-          BRC.getASTContext().getLangOpts());
-      partOfParentMacro = PName.equals(StartName);
-    }
-
-    if (beginAndEndAreTheSameMacro && !partOfParentMacro ) {
-      // Get the location of the macro name as written by the caller.
-      SourceLocation Loc = LocStart;
-      while (LocStart.isMacroID()) {
-        Loc = LocStart;
-        LocStart = BRC.getSourceManager().getImmediateMacroCallerLoc(LocStart);
+  if (isa<GNUNullExpr>(Ex) || isa<ObjCBoolLiteralExpr>(Ex) ||
+      isa<CXXBoolLiteralExpr>(Ex) || isa<IntegerLiteral>(Ex) ||
+      isa<FloatingLiteral>(Ex)) {
+    // Use heuristics to determine if the expression is a macro
+    // expanding to a literal and if so, use the macro's name.
+    SourceLocation BeginLoc = OriginalExpr->getBeginLoc();
+    SourceLocation EndLoc = OriginalExpr->getEndLoc();
+    if (BeginLoc.isMacroID() && EndLoc.isMacroID()) {
+      SourceManager &SM = BRC.getSourceManager();
+      const LangOptions &LO = BRC.getASTContext().getLangOpts();
+      if (Lexer::isAtStartOfMacroExpansion(BeginLoc, SM, LO) &&
+          Lexer::isAtEndOfMacroExpansion(EndLoc, SM, LO)) {
+        CharSourceRange R = Lexer::getAsCharRange({BeginLoc, EndLoc}, SM, LO);
+        Out << Lexer::getSourceText(R, SM, LO);
+        return false;
       }
-      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
-        Loc, BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-
-      // Return the macro name.
-      Out << MacroName;
-      return false;
     }
   }
 

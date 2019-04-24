@@ -752,8 +752,9 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
   // when cost exceeds threshold without checking all IRs in the callee.
   // The acutal cost does not matter because we only checks isNever() to
   // see if it is legal to inline the callsite.
-  InlineCost Cost = getInlineCost(CS, Params, GetTTI(*CalledFunction), GetAC,
-                                  None, nullptr, nullptr);
+  InlineCost Cost =
+      getInlineCost(cast<CallBase>(*I), Params, GetTTI(*CalledFunction), GetAC,
+                    None, nullptr, nullptr);
   if (Cost.isNever()) {
     ORE->emit(OptimizationRemark(DEBUG_TYPE, "Not inline", DLoc, BB)
               << "incompatible inlining");

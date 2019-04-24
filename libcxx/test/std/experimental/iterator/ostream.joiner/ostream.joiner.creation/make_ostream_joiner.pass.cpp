@@ -26,13 +26,13 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-namespace exp = std::experimental;
+namespace exper = std::experimental;
 
 template <class Delim, class Iter, class CharT = char, class Traits = std::char_traits<CharT>>
 void test (Delim &&d, Iter first, Iter last, const CharT *expected ) {
     std::basic_stringstream<CharT, Traits> sstream;
-    auto joiner = exp::make_ostream_joiner(sstream, d);
-    typedef exp::ostream_joiner<typename std::decay<Delim>::type, CharT, Traits> Joiner;
+    auto joiner = exper::make_ostream_joiner(sstream, d);
+    typedef exper::ostream_joiner<typename std::decay<Delim>::type, CharT, Traits> Joiner;
     static_assert((std::is_same<decltype(joiner), Joiner>::value), "" );
     while (first != last)
         joiner = *first++;

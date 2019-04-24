@@ -4698,11 +4698,6 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
   return TaskPrivatesMap;
 }
 
-static bool stable_sort_comparator(const PrivateDataTy P1,
-                                   const PrivateDataTy P2) {
-  return P1.first > P2.first;
-}
-
 /// Emit initialization for private variables in task-based directives.
 static void emitPrivatesInit(CodeGenFunction &CGF,
                              const OMPExecutableDirective &D,
@@ -4956,7 +4951,9 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                          /*PrivateElemInit=*/nullptr));
     ++I;
   }
-  std::stable_sort(Privates.begin(), Privates.end(), stable_sort_comparator);
+  llvm::stable_sort(Privates, [](PrivateDataTy L, PrivateDataTy R) {
+    return L.first > R.first;
+  });
   QualType KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
   // Build type kmp_routine_entry_t (if not built yet).
   emitKmpRoutineEntryT(KmpInt32Ty);

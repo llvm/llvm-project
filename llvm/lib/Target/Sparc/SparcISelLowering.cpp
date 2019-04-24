@@ -3258,6 +3258,8 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':
       if (VT == MVT::v2i32)
         return std::make_pair(0U, &SP::IntPairRegClass);
+      else if (Subtarget->is64Bit())
+        return std::make_pair(0U, &SP::I64RegsRegClass);
       else
         return std::make_pair(0U, &SP::IntRegsRegClass);
     case 'f':
