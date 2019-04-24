@@ -240,9 +240,25 @@
 // RUN:   | FileCheck -check-prefix=CHK-LINK-TARGETS-UB %s
 // CHK-LINK-TARGETS-UB: 0: input, "[[INPUT:.+\.o]]", object
 // CHK-LINK-TARGETS-UB: 1: clang-offload-unbundler, {0}, object
-// CHK-LINK-TARGETS-UB: 2: offload, " (spir64-unknown-linux-sycldevice)" {1}, object
-// CHK-LINK-TARGETS-UB: 3: linker, {2}, image, (device-sycl)
-// CHK-LINK-TARGETS-UB: 4: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {3}, image
+// CHK-LINK-TARGETS-UB: 2: linker, {1}, image, (device-sycl)
+// CHK-LINK-TARGETS-UB: 3: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {2}, image
+
+/// ###########################################################################
+
+/// Check -fsycl-link-targets=<triple> behaviors unbundle multiple objects
+// RUN:   touch %t-a.o
+// RUN:   touch %t-b.o
+// RUN:   touch %t-c.o
+// RUN:   %clang -### -ccc-print-phases -target x86_64-unknown-linux-gnu -fsycl -o %t.out -fsycl-link-targets=spir64-unknown-linux-sycldevice %t-a.o %t-b.o %t-c.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-LINK-TARGETS-UB2 %s
+// CHK-LINK-TARGETS-UB2: 0: input, "[[INPUT:.+\a.o]]", object
+// CHK-LINK-TARGETS-UB2: 1: clang-offload-unbundler, {0}, object
+// CHK-LINK-TARGETS-UB2: 2: input, "[[INPUT:.+\b.o]]", object
+// CHK-LINK-TARGETS-UB2: 3: clang-offload-unbundler, {2}, object
+// CHK-LINK-TARGETS-UB2: 4: input, "[[INPUT:.+\c.o]]", object
+// CHK-LINK-TARGETS-UB2: 5: clang-offload-unbundler, {4}, object
+// CHK-LINK-TARGETS-UB2: 6: linker, {1, 3, 5}, image, (device-sycl)
+// CHK-LINK-TARGETS-UB2: 7: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {6}, image
 
 /// ###########################################################################
 
@@ -254,9 +270,8 @@
 // CHK-LINK-TARGETS: 2: compiler, {1}, ir, (device-sycl)
 // CHK-LINK-TARGETS: 3: backend, {2}, assembler, (device-sycl)
 // CHK-LINK-TARGETS: 4: assembler, {3}, object, (device-sycl)
-// CHK-LINK-TARGETS: 5: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {4}, object
-// CHK-LINK-TARGETS: 6: linker, {5}, image, (device-sycl)
-// CHK-LINK-TARGETS: 7: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {6}, image
+// CHK-LINK-TARGETS: 5: linker, {4}, image, (device-sycl)
+// CHK-LINK-TARGETS: 6: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {5}, image
 
 /// ###########################################################################
 
