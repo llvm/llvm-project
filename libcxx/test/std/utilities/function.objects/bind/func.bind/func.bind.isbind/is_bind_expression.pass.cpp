@@ -25,7 +25,7 @@ test(const T&)
 #endif
 }
 
-struct C {};
+struct C {int operator()(...) const { return 0; }};
 
 int main(int, char**)
 {
