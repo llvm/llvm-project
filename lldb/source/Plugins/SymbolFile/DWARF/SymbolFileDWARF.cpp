@@ -136,8 +136,8 @@ public:
     m_collection_sp->Initialize(g_properties);
   }
 
-  FileSpecList &GetSymLinkPaths() {
-    OptionValueFileSpecList *option_value =
+  FileSpecList GetSymLinkPaths() {
+    const OptionValueFileSpecList *option_value =
         m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(
             nullptr, true, ePropertySymLinkPaths);
     assert(option_value);
@@ -159,7 +159,7 @@ static const SymbolFileDWARFPropertiesSP &GetGlobalPluginProperties() {
 
 } // anonymous namespace end
 
-const FileSpecList &SymbolFileDWARF::GetSymlinkPaths() {
+FileSpecList SymbolFileDWARF::GetSymlinkPaths() {
   return GetGlobalPluginProperties()->GetSymLinkPaths();
 }
 
