@@ -22,7 +22,7 @@
 namespace llvm {
 class AssumptionCacheTracker;
 class BlockFrequencyInfo;
-class CallSite;
+class CallBase;
 class DataLayout;
 class Function;
 class ProfileSummaryInfo;
@@ -199,7 +199,7 @@ InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
 
 /// Return the cost associated with a callsite, including parameter passing
 /// and the call/return instruction.
-int getCallsiteCost(CallSite CS, const DataLayout &DL);
+int getCallsiteCost(CallBase &Call, const DataLayout &DL);
 
 /// Get an InlineCost object representing the cost of inlining this
 /// callsite.
@@ -213,7 +213,7 @@ int getCallsiteCost(CallSite CS, const DataLayout &DL);
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
 InlineCost getInlineCost(
-    CallSite CS, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE = nullptr);
@@ -224,7 +224,7 @@ InlineCost getInlineCost(
 /// parameter in all other respects.
 //
 InlineCost
-getInlineCost(CallSite CS, Function *Callee, const InlineParams &Params,
+getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
               std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
               Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,

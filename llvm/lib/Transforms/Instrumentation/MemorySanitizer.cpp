@@ -304,21 +304,21 @@ static cl::opt<bool> ClWithComdat("msan-with-comdat",
 
 // These options allow to specify custom memory map parameters
 // See MemoryMapParams for details.
-static cl::opt<unsigned long long> ClAndMask("msan-and-mask",
-       cl::desc("Define custom MSan AndMask"),
-       cl::Hidden, cl::init(0));
+static cl::opt<uint64_t> ClAndMask("msan-and-mask",
+                                   cl::desc("Define custom MSan AndMask"),
+                                   cl::Hidden, cl::init(0));
 
-static cl::opt<unsigned long long> ClXorMask("msan-xor-mask",
-       cl::desc("Define custom MSan XorMask"),
-       cl::Hidden, cl::init(0));
+static cl::opt<uint64_t> ClXorMask("msan-xor-mask",
+                                   cl::desc("Define custom MSan XorMask"),
+                                   cl::Hidden, cl::init(0));
 
-static cl::opt<unsigned long long> ClShadowBase("msan-shadow-base",
-       cl::desc("Define custom MSan ShadowBase"),
-       cl::Hidden, cl::init(0));
+static cl::opt<uint64_t> ClShadowBase("msan-shadow-base",
+                                      cl::desc("Define custom MSan ShadowBase"),
+                                      cl::Hidden, cl::init(0));
 
-static cl::opt<unsigned long long> ClOriginBase("msan-origin-base",
-       cl::desc("Define custom MSan OriginBase"),
-       cl::Hidden, cl::init(0));
+static cl::opt<uint64_t> ClOriginBase("msan-origin-base",
+                                      cl::desc("Define custom MSan OriginBase"),
+                                      cl::Hidden, cl::init(0));
 
 static const char *const kMsanModuleCtorName = "msan.module_ctor";
 static const char *const kMsanInitName = "__msan_init";

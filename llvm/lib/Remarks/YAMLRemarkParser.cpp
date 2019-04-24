@@ -34,7 +34,19 @@ Error YAMLRemarkParser::parseStr(T &Result, yaml::KeyValueNode &Node) {
   auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
   if (!Value)
     return make_error<YAMLParseError>("expected a value of scalar type.", Node);
-  StringRef Tmp = Value->getRawValue();
+  StringRef Tmp;
+  if (!StrTab) {
+    Tmp = Value->getRawValue();
+  } else {
+    // If we have a string table, parse it as an unsigned.
+    unsigned StrID = 0;
+    if (Error E = parseUnsigned(StrID, Node))
+      return E;
+    if (Expected<StringRef> Str = (*StrTab)[StrID])
+      Tmp = *Str;
+    else
+      return Str.takeError();
+  }
 
   if (Tmp.front() == '\'')
     Tmp = Tmp.drop_front();

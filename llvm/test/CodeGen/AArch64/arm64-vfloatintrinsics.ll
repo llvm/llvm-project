@@ -120,11 +120,17 @@ define %v4f16 @test_v4f16.log2(%v4f16 %a) {
   %1 = call %v4f16 @llvm.log2.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v4f16.fma
 define %v4f16 @test_v4f16.fma(%v4f16 %a, %v4f16 %b, %v4f16 %c) {
   ; CHECK-LABEL:          test_v4f16.fma:
   ; CHECK-NOFP16-COUNT-4: fmadd s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           fmla.4h
+  ; GISEL-LABEL:          test_v4f16.fma:
+  ; GISEL-NOFP16-COUNT-4: fmadd s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           fmla.4h
   %1 = call %v4f16 @llvm.fma.v4f16(%v4f16 %a, %v4f16 %b, %v4f16 %c)
   ret %v4f16 %1
 }
@@ -177,12 +183,19 @@ define %v4f16 @test_v4f16.ceil(%v4f16 %a) {
   %1 = call %v4f16 @llvm.ceil.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v4f16.trunc
 define %v4f16 @test_v4f16.trunc(%v4f16 %a) {
   ; CHECK-LABEL:          test_v4f16.trunc:
   ; CHECK-NOFP16-COUNT-4: frintz s{{[0-9]+}}, s{{[0-9]+}}
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frintz.4h
   ; CHECK-FP16-NEXT:      ret
+  ; GISEL-LABEL:          test_v4f16.trunc:
+  ; GISEL-NOFP16-COUNT-4: frintz s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frintz.4h
+  ; GISEL-FP16-NEXT:      ret
   %1 = call %v4f16 @llvm.trunc.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
@@ -217,6 +230,11 @@ define %v4f16 @test_v4f16.round(%v4f16 %a) {
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frinta.4h
   ; CHECK-FP16-NEXT:      ret
+  ; GISEL-LABEL:          test_v4f16.round:
+  ; GISEL-NOFP16-COUNT-4: frinta s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frinta.4h
+  ; GISEL-FP16-NEXT:      ret
   %1 =  call %v4f16 @llvm.round.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
@@ -352,11 +370,17 @@ define %v8f16 @test_v8f16.log2(%v8f16 %a) {
   %1 = call %v8f16 @llvm.log2.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v8f16.fma
 define %v8f16 @test_v8f16.fma(%v8f16 %a, %v8f16 %b, %v8f16 %c) {
   ; CHECK-LABEL:          test_v8f16.fma:
   ; CHECK-NOFP16-COUNT-8: fmadd s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           fmla.8h
+  ; GISEL-LABEL:          test_v8f16.fma:
+  ; GISEL-NOFP16-COUNT-8: fmadd s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           fmla.8h
   %1 = call %v8f16 @llvm.fma.v8f16(%v8f16 %a, %v8f16 %b, %v8f16 %c)
   ret %v8f16 %1
 }
@@ -409,12 +433,19 @@ define %v8f16 @test_v8f16.ceil(%v8f16 %a) {
   %1 = call %v8f16 @llvm.ceil.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v8f16.trunc
 define %v8f16 @test_v8f16.trunc(%v8f16 %a) {
   ; CHECK-LABEL:          test_v8f16.trunc:
   ; CHECK-NOFP16-COUNT-8: frintz s{{[0-9]+}}, s{{[0-9]+}}
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frintz.8h
   ; CHECK-FP16-NEXT:      ret
+  ; GISEL-LABEL:          test_v8f16.trunc:
+  ; GISEL-NOFP16-COUNT-8: frintz s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frintz.8h
+  ; GISEL-FP16-NEXT:      ret
   %1 = call %v8f16 @llvm.trunc.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
@@ -449,6 +480,11 @@ define %v8f16 @test_v8f16.round(%v8f16 %a) {
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frinta.8h
   ; CHECK-FP16-NEXT:      ret
+  ; GISEL-LABEL:          test_v8f16.round:
+  ; GISEL-NOFP16-COUNT-8: frinta s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frinta.8h
+  ; GISEL-FP16-NEXT:      ret
   %1 =  call %v8f16 @llvm.round.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
@@ -564,9 +600,13 @@ define %v2f32 @test_v2f32.log2(%v2f32 %a) {
   %1 = call %v2f32 @llvm.log2.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v2f32.fma
 ; CHECK-LABEL: test_v2f32.fma:
+; GISEL-LABEL: test_v2f32.fma:
 define %v2f32 @test_v2f32.fma(%v2f32 %a, %v2f32 %b, %v2f32 %c) {
   ; CHECK: fmla.2s
+  ; GISEL: fmla.2s
   %1 = call %v2f32 @llvm.fma.v2f32(%v2f32 %a, %v2f32 %b, %v2f32 %c)
   ret %v2f32 %1
 }
@@ -600,8 +640,11 @@ define %v2f32 @test_v2f32.ceil(%v2f32 %a) {
   ret %v2f32 %1
 }
 ; CHECK-LABEL: test_v2f32.trunc:
+; FALLBACK-NOT: remark{{.*}}test_v2f32.trunc
+; GISEL-LABEL: test_v2f32.trunc:
 define %v2f32 @test_v2f32.trunc(%v2f32 %a) {
   ; CHECK: frintz.2s
+  ; GISEL: frintz.2s
   %1 = call %v2f32 @llvm.trunc.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
@@ -730,9 +773,13 @@ define %v4f32 @test_v4f32.log2(%v4f32 %a) {
   %1 = call %v4f32 @llvm.log2.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v4f32.fma
 ; CHECK: test_v4f32.fma:
+; GISEL: test_v4f32.fma:
 define %v4f32 @test_v4f32.fma(%v4f32 %a, %v4f32 %b, %v4f32 %c) {
   ; CHECK: fma
+  ; GISEL: fma
   %1 = call %v4f32 @llvm.fma.v4f32(%v4f32 %a, %v4f32 %b, %v4f32 %c)
   ret %v4f32 %1
 }
@@ -766,8 +813,11 @@ define %v4f32 @test_v4f32.ceil(%v4f32 %a) {
   ret %v4f32 %1
 }
 ; CHECK: test_v4f32.trunc:
+; FALLBACK-NOT: remark{{.*}}test_v4f32.trunc
+; GISEL: test_v4f32.trunc:
 define %v4f32 @test_v4f32.trunc(%v4f32 %a) {
   ; CHECK: frintz.4s
+  ; GISEL: frintz.4s
   %1 = call %v4f32 @llvm.trunc.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }
@@ -896,9 +946,13 @@ define %v2f64 @test_v2f64.log2(%v2f64 %a) {
   %1 = call %v2f64 @llvm.log2.v2f64(%v2f64 %a)
   ret %v2f64 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v2f64.fma
 ; CHECK: test_v2f64.fma:
+; GISEL: test_v2f64.fma:
 define %v2f64 @test_v2f64.fma(%v2f64 %a, %v2f64 %b, %v2f64 %c) {
   ; CHECK: fma
+  ; GISEL: fma
   %1 = call %v2f64 @llvm.fma.v2f64(%v2f64 %a, %v2f64 %b, %v2f64 %c)
   ret %v2f64 %1
 }
@@ -932,8 +986,11 @@ define %v2f64 @test_v2f64.ceil(%v2f64 %a) {
   ret %v2f64 %1
 }
 ; CHECK: test_v2f64.trunc:
+; FALLBACK-NOT: remark{{.*}}test_v2f64.trunc
+; GISEL: test_v2f64.trunc:
 define %v2f64 @test_v2f64.trunc(%v2f64 %a) {
   ; CHECK: frintz.2d
+  ; GISEL: frintz.2d
   %1 = call %v2f64 @llvm.trunc.v2f64(%v2f64 %a)
   ret %v2f64 %1
 }

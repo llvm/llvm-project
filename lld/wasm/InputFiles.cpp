@@ -155,7 +155,9 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
     if (isa<DataSymbol>(Sym) && Sym->isUndefined()) {
       if (Sym->isWeak() || Config->Relocatable)
         return 0;
-      if (Config->Shared && Reloc.Type == R_WASM_MEMORY_ADDR_I32)
+      // R_WASM_MEMORY_ADDR_I32 relocations in PIC code are turned into runtime
+      // fixups in __wasm_apply_relocs
+      if (Config->Pic && Reloc.Type == R_WASM_MEMORY_ADDR_I32)
         return 0;
       if (Reloc.Type != R_WASM_GLOBAL_INDEX_LEB) {
         llvm_unreachable(

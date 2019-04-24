@@ -1904,19 +1904,10 @@ isProfitableToIfCvt(MachineBasicBlock &MBB,
     if (!Pred->empty()) {
       MachineInstr *LastMI = &*Pred->rbegin();
       if (LastMI->getOpcode() == ARM::t2Bcc) {
-        MachineBasicBlock::iterator CmpMI = LastMI;
-        if (CmpMI != Pred->begin()) {
-          --CmpMI;
-          if (CmpMI->getOpcode() == ARM::tCMPi8 ||
-              CmpMI->getOpcode() == ARM::t2CMPri) {
-            unsigned Reg = CmpMI->getOperand(0).getReg();
-            unsigned PredReg = 0;
-            ARMCC::CondCodes P = getInstrPredicate(*CmpMI, PredReg);
-            if (P == ARMCC::AL && CmpMI->getOperand(1).getImm() == 0 &&
-                isARMLowRegister(Reg))
-              return false;
-          }
-        }
+        const TargetRegisterInfo *TRI = &getRegisterInfo();
+        MachineInstr *CmpMI = findCMPToFoldIntoCBZ(LastMI, TRI);
+        if (CmpMI)
+          return false;
       }
     }
   }
@@ -1932,6 +1923,15 @@ isProfitableToIfCvt(MachineBasicBlock &TBB,
                     BranchProbability Probability) const {
   if (!TCycles)
     return false;
+
+  // In thumb code we often end up trading one branch for a IT block, and
+  // if we are cloning the instruction can increase code size. Prevent
+  // blocks with multiple predecesors from being ifcvted to prevent this
+  // cloning.
+  if (Subtarget.isThumb2() && TBB.getParent()->getFunction().hasMinSize()) {
+    if (TBB.pred_size() != 1 || FBB.pred_size() != 1)
+      return false;
+  }
 
   // Attempt to estimate the relative costs of predication versus branching.
   // Here we scale up each component of UnpredCost to avoid precision issue when
@@ -5201,4 +5201,45 @@ ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_SECREL, "arm-secrel"},
       {MO_NONLAZY, "arm-nonlazy"}};
   return makeArrayRef(TargetFlags);
+}
+
+bool llvm::registerDefinedBetween(unsigned Reg,
+                                  MachineBasicBlock::iterator From,
+                                  MachineBasicBlock::iterator To,
+                                  const TargetRegisterInfo *TRI) {
+  for (auto I = From; I != To; ++I)
+    if (I->modifiesRegister(Reg, TRI))
+      return true;
+  return false;
+}
+
+MachineInstr *llvm::findCMPToFoldIntoCBZ(MachineInstr *Br,
+                                         const TargetRegisterInfo *TRI) {
+  // Search backwards to the instruction that defines CSPR. This may or not
+  // be a CMP, we check that after this loop. If we find another instruction
+  // that reads cpsr, we return nullptr.
+  MachineBasicBlock::iterator CmpMI = Br;
+  while (CmpMI != Br->getParent()->begin()) {
+    --CmpMI;
+    if (CmpMI->modifiesRegister(ARM::CPSR, TRI))
+      break;
+    if (CmpMI->readsRegister(ARM::CPSR, TRI))
+      break;
+  }
+
+  // Check that this inst is a CMP r[0-7], #0 and that the register
+  // is not redefined between the cmp and the br.
+  if (CmpMI->getOpcode() != ARM::tCMPi8 && CmpMI->getOpcode() != ARM::t2CMPri)
+    return nullptr;
+  unsigned Reg = CmpMI->getOperand(0).getReg();
+  unsigned PredReg = 0;
+  ARMCC::CondCodes Pred = getInstrPredicate(*CmpMI, PredReg);
+  if (Pred != ARMCC::AL || CmpMI->getOperand(1).getImm() != 0)
+    return nullptr;
+  if (!isARMLowRegister(Reg))
+    return nullptr;
+  if (registerDefinedBetween(Reg, CmpMI->getNextNode(), Br, TRI))
+    return nullptr;
+
+  return &*CmpMI;
 }

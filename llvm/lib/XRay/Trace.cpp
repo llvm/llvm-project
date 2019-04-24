@@ -461,10 +461,9 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   }
 
   if (Sort)
-    std::stable_sort(T.Records.begin(), T.Records.end(),
-                     [&](const XRayRecord &L, const XRayRecord &R) {
-                       return L.TSC < R.TSC;
-                     });
+    llvm::stable_sort(T.Records, [&](const XRayRecord &L, const XRayRecord &R) {
+      return L.TSC < R.TSC;
+    });
 
   return std::move(T);
 }

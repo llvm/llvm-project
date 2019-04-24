@@ -1426,8 +1426,14 @@ void PGOUseFunc::annotateValueSites() {
     annotateValueSites(Kind);
 }
 
+static const char *ValueProfKindDescr[] = {
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Descr,
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
 // Annotate the instructions for a specific value kind.
 void PGOUseFunc::annotateValueSites(uint32_t Kind) {
+  assert(Kind <= IPVK_Last);
   unsigned ValueSiteIndex = 0;
   auto &ValueSites = FuncInfo.ValueSites[Kind];
   unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
@@ -1435,8 +1441,10 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     auto &Ctx = M->getContext();
     Ctx.diagnose(DiagnosticInfoPGOProfile(
         M->getName().data(),
-        Twine("Inconsistent number of value sites for kind = ") + Twine(Kind) +
-            " in " + F.getName().str(),
+        Twine("Inconsistent number of value sites for ") +
+            Twine(ValueProfKindDescr[Kind]) +
+            Twine(" profiling in \"") + F.getName().str() +
+            Twine("\", possibly due to the use of a stale profile."),
         DS_Warning));
     return;
   }

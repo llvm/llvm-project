@@ -6463,12 +6463,12 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     const int64_t ObjectSize =
         cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
     Value *const ObjectPtr = I.getArgOperand(1);
-    SmallVector<Value *, 4> Allocas;
+    SmallVector<const Value *, 4> Allocas;
     GetUnderlyingObjects(ObjectPtr, Allocas, *DL);
 
-    for (SmallVectorImpl<Value*>::iterator Object = Allocas.begin(),
+    for (SmallVectorImpl<const Value*>::iterator Object = Allocas.begin(),
            E = Allocas.end(); Object != E; ++Object) {
-      AllocaInst *LifetimeObject = dyn_cast_or_null<AllocaInst>(*Object);
+      const AllocaInst *LifetimeObject = dyn_cast_or_null<AllocaInst>(*Object);
 
       // Could not find an Alloca.
       if (!LifetimeObject)

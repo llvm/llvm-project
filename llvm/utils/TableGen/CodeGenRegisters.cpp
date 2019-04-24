@@ -2101,8 +2101,7 @@ void CodeGenRegBank::computeDerivedInfo() {
   for (unsigned Idx = 0, EndIdx = RegUnitSets.size(); Idx != EndIdx; ++Idx)
     RegUnitSetOrder.push_back(Idx);
 
-  std::stable_sort(RegUnitSetOrder.begin(), RegUnitSetOrder.end(),
-                   [this](unsigned ID1, unsigned ID2) {
+  llvm::stable_sort(RegUnitSetOrder, [this](unsigned ID1, unsigned ID2) {
     return getRegPressureSet(ID1).Units.size() <
            getRegPressureSet(ID2).Units.size();
   });

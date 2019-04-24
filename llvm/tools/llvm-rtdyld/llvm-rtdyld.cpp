@@ -91,35 +91,28 @@ CheckFiles("check",
            cl::desc("File containing RuntimeDyld verifier checks."),
            cl::ZeroOrMore);
 
-// Tracking BUG: 19665
-// http://llvm.org/bugs/show_bug.cgi?id=19665
-//
-// Do not change these options to cl::opt<uint64_t> since this silently breaks
-// argument parsing.
-static cl::opt<unsigned long long>
-PreallocMemory("preallocate",
-              cl::desc("Allocate memory upfront rather than on-demand"),
-              cl::init(0));
+static cl::opt<uint64_t>
+    PreallocMemory("preallocate",
+                   cl::desc("Allocate memory upfront rather than on-demand"),
+                   cl::init(0));
 
-static cl::opt<unsigned long long>
-TargetAddrStart("target-addr-start",
-                cl::desc("For -verify only: start of phony target address "
-                         "range."),
-                cl::init(4096), // Start at "page 1" - no allocating at "null".
-                cl::Hidden);
+static cl::opt<uint64_t> TargetAddrStart(
+    "target-addr-start",
+    cl::desc("For -verify only: start of phony target address "
+             "range."),
+    cl::init(4096), // Start at "page 1" - no allocating at "null".
+    cl::Hidden);
 
-static cl::opt<unsigned long long>
-TargetAddrEnd("target-addr-end",
-              cl::desc("For -verify only: end of phony target address range."),
-              cl::init(~0ULL),
-              cl::Hidden);
+static cl::opt<uint64_t> TargetAddrEnd(
+    "target-addr-end",
+    cl::desc("For -verify only: end of phony target address range."),
+    cl::init(~0ULL), cl::Hidden);
 
-static cl::opt<unsigned long long>
-TargetSectionSep("target-section-sep",
-                 cl::desc("For -verify only: Separation between sections in "
-                          "phony target address space."),
-                 cl::init(0),
-                 cl::Hidden);
+static cl::opt<uint64_t> TargetSectionSep(
+    "target-section-sep",
+    cl::desc("For -verify only: Separation between sections in "
+             "phony target address space."),
+    cl::init(0), cl::Hidden);
 
 static cl::list<std::string>
 SpecificSectionMappings("map-section",

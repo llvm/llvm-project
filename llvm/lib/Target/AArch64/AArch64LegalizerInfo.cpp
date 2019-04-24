@@ -125,12 +125,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder({G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO})
       .legalFor({{s32, s1}, {s64, s1}});
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMA, G_FMUL, G_FDIV, G_FNEG})
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
     .legalFor({s32, s64, v2s64, v4s32, v2s32});
 
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FCEIL, G_FABS, G_FSQRT, G_FFLOOR, G_FRINT})
+  getActionDefinitionsBuilder({G_FCEIL, G_FABS, G_FSQRT, G_FFLOOR, G_FRINT,
+                               G_FMA, G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
       .fewerElementsIf(

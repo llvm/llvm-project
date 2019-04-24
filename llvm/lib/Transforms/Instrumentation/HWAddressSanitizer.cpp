@@ -124,10 +124,10 @@ static cl::opt<bool> ClEnableKhwasan(
 // is accessed. The shadow mapping looks like:
 //    Shadow = (Mem >> scale) + offset
 
-static cl::opt<unsigned long long> ClMappingOffset(
-    "hwasan-mapping-offset",
-    cl::desc("HWASan shadow mapping offset [EXPERIMENTAL]"), cl::Hidden,
-    cl::init(0));
+static cl::opt<uint64_t>
+    ClMappingOffset("hwasan-mapping-offset",
+                    cl::desc("HWASan shadow mapping offset [EXPERIMENTAL]"),
+                    cl::Hidden, cl::init(0));
 
 static cl::opt<bool>
     ClWithIfunc("hwasan-with-ifunc",

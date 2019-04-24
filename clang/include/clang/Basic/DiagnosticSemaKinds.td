@@ -1911,8 +1911,8 @@ def note_var_declared_here : Note<"variable %0 is declared here">;
 def note_uninit_var_use : Note<
   "%select{uninitialized use occurs|variable is captured by block}0 here">;
 def warn_uninit_byref_blockvar_captured_by_block : Warning<
-  "block pointer variable %0 is uninitialized when captured by block">,
-  InGroup<Uninitialized>, DefaultIgnore;
+  "block pointer variable %0 is %select{uninitialized|null}1 when captured by "
+  "block">, InGroup<Uninitialized>, DefaultIgnore;
 def note_block_var_fixit_add_initialization : Note<
   "did you mean to use __block %0?">;
 def note_in_omitted_aggregate_initializer : Note<

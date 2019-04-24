@@ -1780,11 +1780,10 @@ static void sortCppIncludes(const FormatStyle &Style,
   SmallVector<unsigned, 16> Indices;
   for (unsigned i = 0, e = Includes.size(); i != e; ++i)
     Indices.push_back(i);
-  std::stable_sort(
-      Indices.begin(), Indices.end(), [&](unsigned LHSI, unsigned RHSI) {
-        return std::tie(Includes[LHSI].Category, Includes[LHSI].Filename) <
-               std::tie(Includes[RHSI].Category, Includes[RHSI].Filename);
-      });
+  llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
+    return std::tie(Includes[LHSI].Category, Includes[LHSI].Filename) <
+           std::tie(Includes[RHSI].Category, Includes[RHSI].Filename);
+  });
   // The index of the include on which the cursor will be put after
   // sorting/deduplicating.
   unsigned CursorIndex;

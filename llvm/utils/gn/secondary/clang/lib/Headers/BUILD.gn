@@ -154,6 +154,7 @@ copy("Headers") {
     "cuda_wrappers/algorithm",
     "cuda_wrappers/complex",
     "cuda_wrappers/new",
+    "ppc_wrappers/mmintrin.h",
   ]
   outputs = [
     "$clang_resource_dir/include/{{source_target_relative}}",

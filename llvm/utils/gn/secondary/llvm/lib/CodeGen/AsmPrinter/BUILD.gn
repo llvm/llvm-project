@@ -10,6 +10,7 @@ static_library("AsmPrinter") {
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Remarks",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
   ]

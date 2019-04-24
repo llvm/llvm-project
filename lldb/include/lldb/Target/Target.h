@@ -119,11 +119,13 @@ public:
 
   PathMappingList &GetSourcePathMap() const;
 
-  FileSpecList &GetExecutableSearchPaths();
+  FileSpecList GetExecutableSearchPaths();
 
-  FileSpecList &GetDebugFileSearchPaths();
+  void AppendExecutableSearchPaths(const FileSpec&);
 
-  FileSpecList &GetClangModuleSearchPaths();
+  FileSpecList GetDebugFileSearchPaths();
+
+  FileSpecList GetClangModuleSearchPaths();
 
   bool GetEnableAutoImportClangModules() const;
 

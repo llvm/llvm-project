@@ -21,7 +21,6 @@ add_custom_command(
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Python/prepare_binding_Python.py
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Python/modify-python-lldb.py
   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/prepare_bindings.py
       ${framework_arg}
       --srcRoot=${LLDB_SOURCE_DIR}

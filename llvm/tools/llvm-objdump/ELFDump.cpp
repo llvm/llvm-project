@@ -131,7 +131,7 @@ static uint64_t getSectionLMA(const ELFFile<ELFT> *Obj,
                               const object::ELFSectionRef &Sec) {
   auto PhdrRangeOrErr = Obj->program_headers();
   if (!PhdrRangeOrErr)
-    report_fatal_error(errorToErrorCode(PhdrRangeOrErr.takeError()).message());
+    report_fatal_error(toString(PhdrRangeOrErr.takeError()));
 
   // Search for a PT_LOAD segment containing the requested section. Use this
   // segment's p_addr to calculate the section's LMA.
@@ -178,7 +178,7 @@ void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
         outs() << (Data + Dyn.d_un.d_val) << "\n";
         continue;
       }
-      warn(errorToErrorCode(StrTabOrErr.takeError()).message());
+      warn(toString(StrTabOrErr.takeError()));
       consumeError(StrTabOrErr.takeError());
     }
     outs() << format(Fmt, (uint64_t)Dyn.d_un.d_val);
@@ -189,8 +189,7 @@ template <class ELFT> void printProgramHeaders(const ELFFile<ELFT> *o) {
   outs() << "Program Header:\n";
   auto ProgramHeaderOrError = o->program_headers();
   if (!ProgramHeaderOrError)
-    report_fatal_error(
-        errorToErrorCode(ProgramHeaderOrError.takeError()).message());
+    report_fatal_error(toString(ProgramHeaderOrError.takeError()));
   for (const typename ELFT::Phdr &Phdr : *ProgramHeaderOrError) {
     switch (Phdr.p_type) {
     case ELF::PT_DYNAMIC:

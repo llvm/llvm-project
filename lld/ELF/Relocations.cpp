@@ -248,8 +248,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  // TODO Delete R_ABS after all R_*_DTPREL_* relocations migrate to R_DTPREL.
-  if ((Expr == R_ABS || Expr == R_DTPREL) && !Config->Shared) {
+  if (Expr == R_DTPREL && !Config->Shared) {
     C.Relocations.push_back(
         {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
          Offset, Addend, &Sym});

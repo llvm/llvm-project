@@ -80,7 +80,7 @@ public:
   static lldb_private::SymbolFile *
   CreateInstance(lldb_private::ObjectFile *obj_file);
 
-  static const lldb_private::FileSpecList &GetSymlinkPaths();
+  static lldb_private::FileSpecList GetSymlinkPaths();
 
   // Constructors and Destructors
 

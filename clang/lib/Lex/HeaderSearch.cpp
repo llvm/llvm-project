@@ -1685,11 +1685,10 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
     StringRef Dir = SearchDirs[I].getDir()->getName();
     llvm::SmallString<32> DirPath(Dir.begin(), Dir.end());
-    if (!WorkingDir.empty() && !path::is_absolute(Dir)) {
+    if (!WorkingDir.empty() && !path::is_absolute(Dir))
       fs::make_absolute(WorkingDir, DirPath);
-      path::remove_dots(DirPath, /*remove_dot_dot=*/true);
-      Dir = DirPath;
-    }
+    path::remove_dots(DirPath, /*remove_dot_dot=*/true);
+    Dir = DirPath;
     for (auto NI = path::begin(File), NE = path::end(File),
               DI = path::begin(Dir), DE = path::end(Dir);
          /*termination condition in loop*/; ++NI, ++DI) {
@@ -1720,5 +1719,5 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
   if (IsSystem)
     *IsSystem = BestPrefixLength ? BestSearchDir >= SystemDirIdx : false;
-  return File.drop_front(BestPrefixLength);
+  return path::convert_to_slash(File.drop_front(BestPrefixLength));
 }

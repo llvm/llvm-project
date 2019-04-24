@@ -1234,12 +1234,6 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   if (CLI.NumResultRegs && CLI.CS)
     updateValueMap(CLI.CS->getInstruction(), CLI.ResultReg, CLI.NumResultRegs);
 
-  // Set labels for heapallocsite call.
-  if (CLI.CS && CLI.CS->getInstruction()->getMetadata("heapallocsite")) {
-    MDNode *MD = CLI.CS->getInstruction()->getMetadata("heapallocsite");
-    MF->addCodeViewHeapAllocSite(CLI.Call, MD);
-  }
-
   return true;
 }
 

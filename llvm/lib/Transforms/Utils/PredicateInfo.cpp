@@ -634,7 +634,7 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
     // uses in the same instruction do not have a strict sort order
     // currently and will be considered equal. We could get rid of the
     // stable sort by creating one if we wanted.
-    std::stable_sort(OrderedUses.begin(), OrderedUses.end(), Compare);
+    llvm::stable_sort(OrderedUses, Compare);
     SmallVector<ValueDFS, 8> RenameStack;
     // For each use, sorted into dfs order, push values and replaces uses with
     // top of stack, which will represent the reaching def.

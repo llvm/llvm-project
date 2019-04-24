@@ -1248,13 +1248,13 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       PointeeAlign:  16
 ; CHECK-NEXT:       AddrSpaceQual: Local
 ; CHECK-NEXT:       AccQual:       Default
-; CHECK-NEXT:      - Name:            h
-; CHECK-NEXT:        Size:            4
-; CHECK-NEXT:        Align:           4
-; CHECK-NEXT:        ValueKind:       DynamicSharedPointer
-; CHECK-NEXT:        ValueType:       Struct
-; CHECK-NEXT:        PointeeAlign:    1
-; CHECK-NEXT:        AddrSpaceQual:   Local
+; CHECK-NEXT:     - Name:          h
+; CHECK-NEXT:       Size:          4
+; CHECK-NEXT:       Align:         4
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
+; CHECK-NEXT:       ValueType:     Struct
+; CHECK-NEXT:       PointeeAlign:  1
+; CHECK-NEXT:       AddrSpaceQual: Local
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX

@@ -1199,10 +1199,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (checkArgCount(*this, TheCall, 1)) return true;
     TheCall->setType(Context.IntTy);
     break;
-  case Builtin::BI__builtin_constant_p:
+  case Builtin::BI__builtin_constant_p: {
     if (checkArgCount(*this, TheCall, 1)) return true;
+    ExprResult Arg = DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+    if (Arg.isInvalid()) return true;
+    TheCall->setArg(0, Arg.get());
     TheCall->setType(Context.IntTy);
     break;
+  }
   case Builtin::BI__builtin_launder:
     return SemaBuiltinLaunder(*this, TheCall);
   case Builtin::BI__sync_fetch_and_add:

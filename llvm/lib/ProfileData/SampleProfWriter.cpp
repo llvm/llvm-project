@@ -50,9 +50,8 @@ SampleProfileWriter::write(const StringMap<FunctionSamples> &ProfileMap) {
   for (const auto &I : ProfileMap)
     V.push_back(std::make_pair(I.getKey(), &I.second));
 
-  std::stable_sort(
-      V.begin(), V.end(),
-      [](const NameFunctionSamples &A, const NameFunctionSamples &B) {
+  llvm::stable_sort(
+      V, [](const NameFunctionSamples &A, const NameFunctionSamples &B) {
         if (A.second->getTotalSamples() == B.second->getTotalSamples())
           return A.first > B.first;
         return A.second->getTotalSamples() > B.second->getTotalSamples();
