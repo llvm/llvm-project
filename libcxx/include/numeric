@@ -145,6 +145,7 @@ floating_point  midpoint(floating_point a, floating_point b);    // C++20
 #include <iterator>
 #include <limits> // for numeric_limits
 #include <functional>
+#include <cmath> // for isnormal
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -552,7 +553,24 @@ midpoint(_TPtr __a, _TPtr __b) noexcept
 {
     return __a + _VSTD::midpoint(ptrdiff_t(0), __b - __a);
 }
-#endif
+
+
+template <typename _Tp>
+int __sign(_Tp __val) {
+    return (_Tp(0) < __val) - (__val < _Tp(0));
+}
+
+template <class _Fp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<is_floating_point_v<_Fp>, _Fp>
+midpoint(_Fp __a, _Fp __b) noexcept
+{
+    return isnormal(__a) && isnormal(__b) 
+       && ((__sign(__a) != __sign(__b)) || ((numeric_limits<_Fp>::max() - abs(__a)) < abs(__b)))
+             ?  __a / 2 + __b / 2
+             : (__a + __b) / 2;
+}
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

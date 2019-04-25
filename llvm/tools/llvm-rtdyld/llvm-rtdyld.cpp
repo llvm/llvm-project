@@ -77,6 +77,10 @@ Dylibs("dylib",
        cl::desc("Add library."),
        cl::ZeroOrMore);
 
+static cl::list<std::string> InputArgv("args", cl::Positional,
+                                       cl::desc("<program arguments>..."),
+                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+
 static cl::opt<std::string>
 TripleName("triple", cl::desc("Target triple for disassembler"));
 
@@ -208,7 +212,15 @@ public:
     if (I != DummyExterns.end())
       return JITSymbol(I->second, JITSymbolFlags::Exported);
 
-    return RTDyldMemoryManager::findSymbol(Name);
+    if (auto Sym = RTDyldMemoryManager::findSymbol(Name))
+      return Sym;
+    else if (auto Err = Sym.takeError())
+      ExitOnErr(std::move(Err));
+    else
+      ExitOnErr(make_error<StringError>("Could not find definition for \"" +
+                                            Name + "\"",
+                                        inconvertibleErrorCode()));
+    llvm_unreachable("Should have returned or exited by now");
   }
 
   void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
@@ -533,11 +545,13 @@ static int executeInput() {
 
   int (*Main)(int, const char**) =
     (int(*)(int,const char**)) uintptr_t(MainAddress);
-  const char **Argv = new const char*[2];
+  std::vector<const char *> Argv;
   // Use the name of the first input object module as argv[0] for the target.
-  Argv[0] = InputFileList[0].c_str();
-  Argv[1] = nullptr;
-  return Main(1, Argv);
+  Argv.push_back(InputFileList[0].data());
+  for (auto &Arg : InputArgv)
+    Argv.push_back(Arg.data());
+  Argv.push_back(nullptr);
+  return Main(Argv.size() - 1, Argv.data());
 }
 
 static int checkAllExpressions(RuntimeDyldChecker &Checker) {

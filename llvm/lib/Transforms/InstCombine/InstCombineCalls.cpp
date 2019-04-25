@@ -21,10 +21,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
@@ -58,6 +57,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include <algorithm>
 #include <cassert>
@@ -593,12 +593,7 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   Arg0 = Builder.CreateSelect(Builder.CreateICmpSGT(Arg0, MaxC), MaxC, Arg0);
   Arg1 = Builder.CreateSelect(Builder.CreateICmpSGT(Arg1, MaxC), MaxC, Arg1);
 
-  // Truncate clamped args to dst size.
-  auto *TruncTy = VectorType::get(ResTy->getScalarType(), NumSrcElts);
-  Arg0 = Builder.CreateTrunc(Arg0, TruncTy);
-  Arg1 = Builder.CreateTrunc(Arg1, TruncTy);
-
-  // Shuffle args together at the lane level.
+  // Shuffle clamped args together at the lane level.
   SmallVector<unsigned, 32> PackMask;
   for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
     for (unsigned Elt = 0; Elt != NumSrcEltsPerLane; ++Elt)
@@ -606,8 +601,10 @@ static Value *simplifyX86pack(IntrinsicInst &II,
     for (unsigned Elt = 0; Elt != NumSrcEltsPerLane; ++Elt)
       PackMask.push_back(Elt + (Lane * NumSrcEltsPerLane) + NumSrcElts);
   }
+  auto *Shuffle = Builder.CreateShuffleVector(Arg0, Arg1, PackMask);
 
-  return Builder.CreateShuffleVector(Arg0, Arg1, PackMask);
+  // Truncate to dst size.
+  return Builder.CreateTrunc(Shuffle, ResTy);
 }
 
 // Replace X86-specific intrinsics with generic floor-ceil where applicable.
@@ -1147,40 +1144,9 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
 }
 
-static bool maskIsAllOneOrUndef(Value *Mask) {
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
-    return true;
-  for (unsigned I = 0, E = ConstMask->getType()->getVectorNumElements(); I != E;
-       ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
-        continue;
-    return false;
-  }
-  return true;
-}
-
-/// Given a mask vector <Y x i1>, return an APInt (of bitwidth Y) for each lane
-/// which may be active.  TODO: This is a lot like known bits, but for
-/// vectors.  Is there something we can common this with?
-static APInt possiblyDemandedEltsInMask(Value *Mask) {
-
-  const unsigned VWidth = cast<VectorType>(Mask->getType())->getNumElements();
-  APInt DemandedElts = APInt::getAllOnesValue(VWidth);
-  if (auto *CV = dyn_cast<ConstantVector>(Mask))
-    for (unsigned i = 0; i < VWidth; i++)
-      if (CV->getAggregateElement(i)->isNullValue())
-        DemandedElts.clearBit(i);
-  return DemandedElts;
-}
-
 // TODO, Obvious Missing Transforms:
 // * Narrow width by halfs excluding zero/undef lanes
-static Value *simplifyMaskedLoad(const IntrinsicInst &II,
-                                 InstCombiner::BuilderTy &Builder) {
+Value *InstCombiner::simplifyMaskedLoad(IntrinsicInst &II) {
   Value *LoadPtr = II.getArgOperand(0);
   unsigned Alignment = cast<ConstantInt>(II.getArgOperand(1))->getZExtValue();
 
@@ -1241,7 +1207,7 @@ Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
 // * Narrow width by halfs excluding zero/undef lanes
 // * Vector splat address w/known mask -> scalar load
 // * Vector incrementing address -> vector masked load
-static Instruction *simplifyMaskedGather(IntrinsicInst &II, InstCombiner &IC) {
+Instruction *InstCombiner::simplifyMaskedGather(IntrinsicInst &II) {
   return nullptr;
 }
 
@@ -2018,13 +1984,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::masked_load:
-    if (Value *SimplifiedMaskedOp = simplifyMaskedLoad(*II, Builder))
+    if (Value *SimplifiedMaskedOp = simplifyMaskedLoad(*II))
       return replaceInstUsesWith(CI, SimplifiedMaskedOp);
     break;
   case Intrinsic::masked_store:
     return simplifyMaskedStore(*II);
   case Intrinsic::masked_gather:
-    return simplifyMaskedGather(*II, *this);
+    return simplifyMaskedGather(*II);
   case Intrinsic::masked_scatter:
     return simplifyMaskedScatter(*II);
   case Intrinsic::launder_invariant_group:

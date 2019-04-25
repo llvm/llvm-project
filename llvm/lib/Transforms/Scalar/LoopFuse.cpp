@@ -311,16 +311,14 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#if !defined(NDEBUG)
 static void
 printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
-  LLVM_DEBUG(dbgs() << "Fusion Candidates: \n");
+  dbgs() << "Fusion Candidates: \n";
   for (const auto &CandidateSet : FusionCandidates) {
-    LLVM_DEBUG({
-      dbgs() << "*** Fusion Candidate Set ***\n";
-      dbgs() << CandidateSet;
-      dbgs() << "****************************\n";
-    });
+    dbgs() << "*** Fusion Candidate Set ***\n";
+    dbgs() << CandidateSet;
+    dbgs() << "****************************\n";
   }
 }
 #endif

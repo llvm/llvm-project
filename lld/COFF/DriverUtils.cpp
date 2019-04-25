@@ -315,6 +315,27 @@ void parseManifestUAC(StringRef Arg) {
   }
 }
 
+// Parses a string in the form of "cd|net[,(cd|net)]*"
+// Results are directly written to Config.
+void parseSwaprun(StringRef Arg) {
+  do {
+    StringRef Swaprun, NewArg;
+    std::tie(Swaprun, NewArg) = Arg.split(',');
+    if (Swaprun.equals_lower("cd"))
+      Config->SwaprunCD = true;
+    else if (Swaprun.equals_lower("net"))
+      Config->SwaprunNet = true;
+    else if (Swaprun.empty())
+      error("/swaprun: missing argument");
+    else
+      error("/swaprun: invalid argument: " + Swaprun);
+    // To catch trailing commas, e.g. `/spawrun:cd,`
+    if (NewArg.empty() && Arg.endswith(","))
+      error("/swaprun: missing argument");
+    Arg = NewArg;
+  } while (!Arg.empty());
+}
+
 // An RAII temporary file class that automatically removes a temporary file.
 namespace {
 class TemporaryFile {

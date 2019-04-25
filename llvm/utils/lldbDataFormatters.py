@@ -18,6 +18,9 @@ def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand('type summary add -w llvm '
                            '-F lldbDataFormatters.OptionalSummaryProvider '
                            '-x "^llvm::Optional<.+>$"')
+    debugger.HandleCommand('type summary add -w llvm '
+                           '-F lldbDataFormatters.SmallStringSummaryProvider '
+                           '-x "^llvm::SmallString<.+>$"')
 
 # Pretty printer for llvm::SmallVector/llvm::SmallVectorImpl
 class SmallVectorSynthProvider:
@@ -104,3 +107,11 @@ def OptionalSummaryProvider(valobj, internal_dict):
     underlying_type = storage.GetType().GetTemplateArgumentType(0)
     storage = storage.GetChildMemberWithName('storage')
     return str(storage.Cast(underlying_type))
+
+def SmallStringSummaryProvider(valobj, internal_dict):
+    num_elements = valobj.GetNumChildren()
+    res = "\""
+    for i in range(0, num_elements):
+      res += valobj.GetChildAtIndex(i).GetValue().strip("'")
+    res += "\""
+    return res

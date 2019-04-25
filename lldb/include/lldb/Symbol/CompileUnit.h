@@ -240,7 +240,7 @@ public:
   /// current module.
   ///
   /// \return
-  ///     A list of imported module names.
+  ///     A list of imported modules.
   const std::vector<SourceModule> &GetImportedModules();
 
   /// Get the SymbolFile plug-in user data.

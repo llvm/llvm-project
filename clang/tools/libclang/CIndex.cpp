@@ -171,7 +171,6 @@ CXSourceRange cxloc::translateSourceRange(const SourceManager &SM,
 static SourceRange getRawCursorExtent(CXCursor C);
 static SourceRange getFullCursorExtent(CXCursor C, SourceManager &SrcMgr);
 
-
 RangeComparisonResult CursorVisitor::CompareRegionOfInterest(SourceRange R) {
   return RangeCompare(AU->getSourceManager(), R, RegionOfInterest);
 }

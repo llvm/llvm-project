@@ -1217,6 +1217,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     COFF->Characteristics |= IMAGE_FILE_DLL;
   if (!Config->Relocatable)
     COFF->Characteristics |= IMAGE_FILE_RELOCS_STRIPPED;
+  if (Config->SwaprunCD)
+    COFF->Characteristics |= IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP;
+  if (Config->SwaprunNet)
+    COFF->Characteristics |= IMAGE_FILE_NET_RUN_FROM_SWAP;
   COFF->SizeOfOptionalHeader =
       sizeof(PEHeaderTy) + sizeof(data_directory) * NumberOfDataDirectory;
 
