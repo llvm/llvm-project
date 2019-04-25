@@ -245,11 +245,13 @@ private:
   std::shared_ptr<std::thread> _sp_output_thread;
 
 public:
-  void SetUp() {
-    FileSystem::Initialize();
-
+  static void SetUpTestCase() {
     // We need a TERM set properly for editline to work as expected.
     setenv("TERM", "vt100", 1);
+  }
+
+  void SetUp() {
+    FileSystem::Initialize();
 
     // Validate the editline adapter.
     EXPECT_TRUE(_el_adapter.IsValid());

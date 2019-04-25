@@ -71,6 +71,7 @@ def EXEC : RegisterWithSubRegs<"EXEC", [EXEC_LO, EXEC_HI]>,
 
 def SCC : SIReg<"scc", 253>;
 def M0 : SIReg <"m0", 124>;
+def SGPR_NULL : SIReg<"null", 125>;
 
 def SRC_SHARED_BASE : SIReg<"src_shared_base", 235>;
 def SRC_SHARED_LIMIT : SIReg<"src_shared_limit", 236>;
@@ -112,9 +113,9 @@ def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]>,
 }
 
 foreach Index = 0-15 in {
-  def TTMP#Index#_vi   : SIReg<"ttmp"#Index, !add(112, Index)>;
-  def TTMP#Index#_gfx9 : SIReg<"ttmp"#Index, !add(108, Index)>;
-  def TTMP#Index       : SIReg<"", 0>;
+  def TTMP#Index#_vi         : SIReg<"ttmp"#Index, !add(112, Index)>;
+  def TTMP#Index#_gfx9_gfx10 : SIReg<"ttmp"#Index, !add(108, Index)>;
+  def TTMP#Index             : SIReg<"", 0>;
 }
 
 multiclass FLAT_SCR_LOHI_m <string n, bits<16> ci_e, bits<16> vi_e> {
@@ -139,7 +140,7 @@ def FLAT_SCR_vi : FlatReg<FLAT_SCR_LO_vi, FLAT_SCR_HI_vi, 102>;
 def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 
 // SGPR registers
-foreach Index = 0-103 in {
+foreach Index = 0-105 in {
   def SGPR#Index : SIReg <"SGPR"#Index, Index>;
 }
 
@@ -168,7 +169,7 @@ def M0_CLASS : RegisterClass<"AMDGPU", [i32], 32, (add M0)> {
 
 // SGPR 32-bit registers
 def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
-                            (add (sequence "SGPR%u", 0, 103))> {
+                            (add (sequence "SGPR%u", 0, 105))> {
   // Give all SGPR classes higher priority than VGPR classes, because
   // we want to spill SGPRs to VGPRs.
   let AllocationPriority = 7;
@@ -311,8 +312,8 @@ class TmpRegTuples<string tgt,
                    getSubRegs<size>.ret>;
 
 foreach Index = {0, 2, 4, 6, 8, 10, 12, 14} in {
-  def TTMP#Index#_TTMP#!add(Index,1)#_vi   : TmpRegTuples<"_vi",   2, Index>;
-  def TTMP#Index#_TTMP#!add(Index,1)#_gfx9 : TmpRegTuples<"_gfx9", 2, Index>;
+  def TTMP#Index#_TTMP#!add(Index,1)#_vi         : TmpRegTuples<"_vi",   2, Index>;
+  def TTMP#Index#_TTMP#!add(Index,1)#_gfx9_gfx10 : TmpRegTuples<"_gfx9_gfx10", 2, Index>;
 }
 
 foreach Index = {0, 4, 8, 12} in {
@@ -321,7 +322,7 @@ foreach Index = {0, 4, 8, 12} in {
                  _TTMP#!add(Index,3)#_vi : TmpRegTuples<"_vi",   4, Index>;
   def TTMP#Index#_TTMP#!add(Index,1)#
                  _TTMP#!add(Index,2)#
-                 _TTMP#!add(Index,3)#_gfx9 : TmpRegTuples<"_gfx9", 4, Index>;
+                 _TTMP#!add(Index,3)#_gfx9_gfx10 : TmpRegTuples<"_gfx9_gfx10", 4, Index>;
 }
 
 foreach Index = {0, 4, 8} in {
@@ -338,7 +339,7 @@ foreach Index = {0, 4, 8} in {
                  _TTMP#!add(Index,4)#
                  _TTMP#!add(Index,5)#
                  _TTMP#!add(Index,6)#
-                 _TTMP#!add(Index,7)#_gfx9 : TmpRegTuples<"_gfx9", 8, Index>;
+                 _TTMP#!add(Index,7)#_gfx9_gfx10 : TmpRegTuples<"_gfx9_gfx10", 8, Index>;
 }
 
 def TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15_vi :
@@ -348,12 +349,12 @@ def TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TT
                     TTMP8_vi, TTMP9_vi, TTMP10_vi, TTMP11_vi,
                     TTMP12_vi, TTMP13_vi, TTMP14_vi, TTMP15_vi]>;
 
-def TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15_gfx9 :
+def TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15_gfx9_gfx10 :
   TmpRegTuplesBase<0, 16,
-                   [TTMP0_gfx9, TTMP1_gfx9, TTMP2_gfx9, TTMP3_gfx9,
-                    TTMP4_gfx9, TTMP5_gfx9, TTMP6_gfx9, TTMP7_gfx9,
-                    TTMP8_gfx9, TTMP9_gfx9, TTMP10_gfx9, TTMP11_gfx9,
-                    TTMP12_gfx9, TTMP13_gfx9, TTMP14_gfx9, TTMP15_gfx9]>;
+                   [TTMP0_gfx9_gfx10, TTMP1_gfx9_gfx10, TTMP2_gfx9_gfx10, TTMP3_gfx9_gfx10,
+                    TTMP4_gfx9_gfx10, TTMP5_gfx9_gfx10, TTMP6_gfx9_gfx10, TTMP7_gfx9_gfx10,
+                    TTMP8_gfx9_gfx10, TTMP9_gfx9_gfx10, TTMP10_gfx9_gfx10, TTMP11_gfx9_gfx10,
+                    TTMP12_gfx9_gfx10, TTMP13_gfx9_gfx10, TTMP14_gfx9_gfx10, TTMP15_gfx9_gfx10]>;
 
 
 // VGPR 32-bit registers
@@ -446,7 +447,7 @@ def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
-   TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE, SRC_SHARED_LIMIT,
+   SGPR_NULL, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE, SRC_SHARED_LIMIT,
    SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, SRC_POPS_EXITING_WAVE_ID)> {
   let AllocationPriority = 8;
 }

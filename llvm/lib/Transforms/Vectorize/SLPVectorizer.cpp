@@ -785,9 +785,10 @@ public:
           break;
         case ReorderingMode::Opcode:
           // We accept both Instructions and Undefs, but with different scores.
-          if ((isa<Instruction>(Op) &&
+          if ((isa<Instruction>(Op) && isa<Instruction>(OpLastLane) &&
                cast<Instruction>(Op)->getOpcode() ==
                    cast<Instruction>(OpLastLane)->getOpcode()) ||
+              (isa<UndefValue>(OpLastLane) && isa<Instruction>(Op)) ||
               isa<UndefValue>(Op)) {
             // An instruction has a higher score than an undef.
             unsigned Score = (isa<UndefValue>(Op)) ? GoodScore : BestScore;

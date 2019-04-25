@@ -1036,6 +1036,16 @@ LLVMValueRef LLVMConstPointerNull(LLVMTypeRef Ty) {
 
 /*--.. Operations on metadata nodes ........................................--*/
 
+LLVMMetadataRef LLVMMDStringInContext2(LLVMContextRef C, const char *Str,
+                                       size_t SLen) {
+  return wrap(MDString::get(*unwrap(C), StringRef(Str, SLen)));
+}
+
+LLVMMetadataRef LLVMMDNodeInContext2(LLVMContextRef C, LLVMMetadataRef *MDs,
+                                     size_t Count) {
+  return wrap(MDNode::get(*unwrap(C), ArrayRef<Metadata*>(unwrap(MDs), Count)));
+}
+
 LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
                                    unsigned SLen) {
   LLVMContext &Context = *unwrap(C);

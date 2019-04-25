@@ -1154,8 +1154,11 @@ static unsigned countEmbeddedNulls(const uint8_t *StringBytes,
   return Result;
 }
 
+// A mangled (non-wide) string literal stores the total length of the string it
+// refers to (passed in NumBytes), and it contains up to 32 bytes of actual text
+// (passed in StringBytes, NumChars).
 static unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
-                                  unsigned NumBytes) {
+                                  uint64_t NumBytes) {
   assert(NumBytes > 0);
 
   // If the number of bytes is odd, this is guaranteed to be a char string.

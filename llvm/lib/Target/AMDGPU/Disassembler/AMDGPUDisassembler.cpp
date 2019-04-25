@@ -51,6 +51,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-disassembler"
 
+#define SGPR_MAX (isGFX10() ? AMDGPU::EncValues::SGPR_MAX_GFX10 \
+                            : AMDGPU::EncValues::SGPR_MAX_SI)
+
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
 inline static MCDisassembler::DecodeStatus
@@ -705,8 +708,10 @@ unsigned AMDGPUDisassembler::getTtmpClassId(const OpWidthTy Width) const {
 int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
   using namespace AMDGPU::EncValues;
 
-  unsigned TTmpMin = isGFX9() ? TTMP_GFX9_MIN : TTMP_VI_MIN;
-  unsigned TTmpMax = isGFX9() ? TTMP_GFX9_MAX : TTMP_VI_MAX;
+  unsigned TTmpMin =
+      (isGFX9() || isGFX10()) ? TTMP_GFX9_GFX10_MIN : TTMP_VI_MIN;
+  unsigned TTmpMax =
+      (isGFX9() || isGFX10()) ? TTMP_GFX9_GFX10_MAX : TTMP_VI_MAX;
 
   return (TTmpMin <= Val && Val <= TTmpMax)? Val - TTmpMin : -1;
 }
@@ -784,6 +789,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   case 110: return createRegOperand(TMA_LO);
   case 111: return createRegOperand(TMA_HI);
   case 124: return createRegOperand(M0);
+  case 125: return createRegOperand(SGPR_NULL);
   case 126: return createRegOperand(EXEC_LO);
   case 127: return createRegOperand(EXEC_HI);
   case 235: return createRegOperand(SRC_SHARED_BASE);
@@ -827,7 +833,8 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
   using namespace AMDGPU::SDWA;
   using namespace AMDGPU::EncValues;
 
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX9]) {
+  if (STI.getFeatureBits()[AMDGPU::FeatureGFX9] ||
+      STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
     // XXX: cast to int is needed to avoid stupid warning:
     // compare with unsigned is always true
     if (int(SDWA9EncValues::SRC_VGPR_MIN) <= int(Val) &&
@@ -836,7 +843,8 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
                               Val - SDWA9EncValues::SRC_VGPR_MIN);
     }
     if (SDWA9EncValues::SRC_SGPR_MIN <= Val &&
-        Val <= SDWA9EncValues::SRC_SGPR_MAX) {
+        Val <= (isGFX10() ? SDWA9EncValues::SRC_SGPR_MAX_GFX10
+                          : SDWA9EncValues::SRC_SGPR_MAX_SI)) {
       return createSRegOperand(getSgprClassId(Width),
                                Val - SDWA9EncValues::SRC_SGPR_MIN);
     }
@@ -872,15 +880,17 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc32(unsigned Val) const {
 MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
   using namespace AMDGPU::SDWA;
 
-  assert(STI.getFeatureBits()[AMDGPU::FeatureGFX9] &&
-         "SDWAVopcDst should be present only on GFX9");
+  assert((STI.getFeatureBits()[AMDGPU::FeatureGFX9] ||
+          STI.getFeatureBits()[AMDGPU::FeatureGFX10]) &&
+         "SDWAVopcDst should be present only on GFX9+");
+
   if (Val & SDWA9EncValues::VOPC_DST_VCC_MASK) {
     Val &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
 
     int TTmpIdx = getTTmpIdx(Val);
     if (TTmpIdx >= 0) {
       return createSRegOperand(getTtmpClassId(OPW64), TTmpIdx);
-    } else if (Val > AMDGPU::EncValues::SGPR_MAX) {
+    } else if (Val > SGPR_MAX) {
       return decodeSpecialReg64(Val);
     } else {
       return createSRegOperand(getSgprClassId(OPW64), Val);
@@ -896,6 +906,10 @@ bool AMDGPUDisassembler::isVI() const {
 
 bool AMDGPUDisassembler::isGFX9() const {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
+}
+
+bool AMDGPUDisassembler::isGFX10() const {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
 }
 
 //===----------------------------------------------------------------------===//

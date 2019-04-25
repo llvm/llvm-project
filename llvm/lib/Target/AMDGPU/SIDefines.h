@@ -223,11 +223,12 @@ namespace EncValues { // Encoding values of enum9/8/7 operands
 
 enum : unsigned {
   SGPR_MIN = 0,
-  SGPR_MAX = 101,
+  SGPR_MAX_SI = 101,
+  SGPR_MAX_GFX10 = 105,
   TTMP_VI_MIN = 112,
   TTMP_VI_MAX = 123,
-  TTMP_GFX9_MIN = 108,
-  TTMP_GFX9_MAX = 123,
+  TTMP_GFX9_GFX10_MIN = 108,
+  TTMP_GFX9_GFX10_MAX = 123,
   INLINE_INTEGER_C_MIN = 128,
   INLINE_INTEGER_C_POSITIVE_MAX = 192, // 64
   INLINE_INTEGER_C_MAX = 208,
@@ -249,6 +250,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_INTERRUPT = 1,
   ID_GS,
   ID_GS_DONE,
+  ID_GS_ALLOC_REQ = 9,
   ID_SYSMSG = 15,
   ID_GAPS_LAST_, // Indicate that sequence has gaps.
   ID_GAPS_FIRST_ = ID_INTERRUPT,
@@ -305,7 +307,16 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_IB_STS = 7,
   ID_MEM_BASES = 15,
   ID_SYMBOLIC_FIRST_GFX9_ = ID_MEM_BASES,
-  ID_SYMBOLIC_LAST_ = 16,
+  ID_TBA_LO = 16,
+  ID_SYMBOLIC_FIRST_GFX10_ = ID_TBA_LO,
+  ID_TBA_HI = 17,
+  ID_TMA_LO = 18,
+  ID_TMA_HI = 19,
+  ID_FLAT_SCR_LO = 20,
+  ID_FLAT_SCR_HI = 21,
+  ID_XNACK_MASK = 22,
+  ID_POPS_PACKER = 25,
+  ID_SYMBOLIC_LAST_ = 26,
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
   ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)
@@ -400,7 +411,8 @@ enum SDWA9EncValues : unsigned {
   SRC_VGPR_MIN = 0,
   SRC_VGPR_MAX = 255,
   SRC_SGPR_MIN = 256,
-  SRC_SGPR_MAX = 357,
+  SRC_SGPR_MAX_SI = 357,
+  SRC_SGPR_MAX_GFX10 = 361,
   SRC_TTMP_MIN = 364,
   SRC_TTMP_MAX = 379,
 };
@@ -523,6 +535,15 @@ enum DppCtrl : unsigned {
 #define   S_00B848_IEEE_MODE(x)                                       (((x) & 0x1) << 23)
 #define   G_00B848_IEEE_MODE(x)                                       (((x) >> 23) & 0x1)
 #define   C_00B848_IEEE_MODE                                          0xFF7FFFFF
+#define   S_00B848_WGP_MODE(x)                                        (((x) & 0x1) << 29)
+#define   G_00B848_WGP_MODE(x)                                        (((x) >> 29) & 0x1)
+#define   C_00B848_WGP_MODE                                           0xDFFFFFFF
+#define   S_00B848_MEM_ORDERED(x)                                     (((x) & 0x1) << 30)
+#define   G_00B848_MEM_ORDERED(x)                                     (((x) >> 30) & 0x1)
+#define   C_00B848_MEM_ORDERED                                        0xBFFFFFFF
+#define   S_00B848_FWD_PROGRESS(x)                                    (((x) & 0x1) << 31)
+#define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
+#define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
 
 
 // Helpers for setting FLOAT_MODE
@@ -552,6 +573,15 @@ enum DppCtrl : unsigned {
 
 #define R_0286E8_SPI_TMPRING_SIZE                                       0x0286E8
 #define   S_0286E8_WAVESIZE(x)                                        (((x) & 0x1FFF) << 12)
+
+#define R_028B54_VGT_SHADER_STAGES_EN                                 0x028B54
+#define   S_028B54_HS_W32_EN(x)                                       (((x) & 0x1) << 21)
+#define   S_028B54_GS_W32_EN(x)                                       (((x) & 0x1) << 22)
+#define   S_028B54_VS_W32_EN(x)                                       (((x) & 0x1) << 23)
+#define R_0286D8_SPI_PS_IN_CONTROL                                    0x0286D8
+#define   S_0286D8_PS_W32_EN(x)                                       (((x) & 0x1) << 15)
+#define R_00B800_COMPUTE_DISPATCH_INITIATOR                           0x00B800
+#define   S_00B800_CS_W32_EN(x)                                       (((x) & 0x1) << 15)
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8

@@ -10,7 +10,7 @@ RUN: cp %S/Inputs/id.res %t.dir/id1.res
 RUN: cp %S/Inputs/id.res %t.dir/id2.res
 RUN: not llvm-cvtres /machine:X86 %t.dir/id1.res %t.dir/id2.res 2>&1 | \
 RUN:     FileCheck -check-prefix=ID %s
-ID: duplicate resource: type ID 6/name ID 3/language 1033, in {{.*}}id1.res and in {{.*}}id2.res
+ID: duplicate resource: type STRINGTABLE (ID 6)/name ID 3/language 1033, in {{.*}}id1.res and in {{.*}}id2.res
 
 RUN: cp %S/Inputs/name.res %t.dir/name1.res
 RUN: cp %S/Inputs/name.res %t.dir/name2.res

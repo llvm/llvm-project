@@ -92,9 +92,9 @@
 #include "Plugins/Platform/MacOSX/PlatformAppleTVSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformAppleWatchSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteAppleBridge.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleTV.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteAppleBridge.h"
 #include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
 #include "Plugins/Process/MacOSX-Kernel/ProcessKDP.h"
 #include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
@@ -115,7 +115,6 @@
 #include <string>
 
 using namespace lldb_private;
-
 
 SystemInitializerFull::SystemInitializerFull() {}
 

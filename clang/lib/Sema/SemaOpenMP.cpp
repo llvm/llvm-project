@@ -4487,6 +4487,8 @@ namespace {
 class OpenMPIterationSpaceChecker {
   /// Reference to Sema.
   Sema &SemaRef;
+  /// Data-sharing stack.
+  DSAStackTy &Stack;
   /// A location for diagnostics (when there is no some better location).
   SourceLocation DefaultLoc;
   /// A location for diagnostics (when increment is not compatible).
@@ -4518,10 +4520,14 @@ class OpenMPIterationSpaceChecker {
   bool TestIsStrictOp = false;
   /// This flag is true when step is subtracted on each iteration.
   bool SubtractStep = false;
+  /// Checks if the provide statement depends on the loop counter.
+  bool doesDependOnLoopCounter(const Stmt *S, bool IsInitializer) const;
 
 public:
-  OpenMPIterationSpaceChecker(Sema &SemaRef, SourceLocation DefaultLoc)
-      : SemaRef(SemaRef), DefaultLoc(DefaultLoc), ConditionLoc(DefaultLoc) {}
+  OpenMPIterationSpaceChecker(Sema &SemaRef, DSAStackTy &Stack,
+                              SourceLocation DefaultLoc)
+      : SemaRef(SemaRef), Stack(Stack), DefaultLoc(DefaultLoc),
+        ConditionLoc(DefaultLoc) {}
   /// Check init-expr for canonical loop form and save loop counter
   /// variable - #Var and its initialization value - #LB.
   bool checkAndSetInit(Stmt *S, bool EmitDiags = true);
@@ -4579,7 +4585,8 @@ private:
   /// expression.
   bool checkAndSetIncRHS(Expr *RHS);
   /// Helper to set loop counter variable and its initializer.
-  bool setLCDeclAndLB(ValueDecl *NewLCDecl, Expr *NewDeclRefExpr, Expr *NewLB);
+  bool setLCDeclAndLB(ValueDecl *NewLCDecl, Expr *NewDeclRefExpr, Expr *NewLB,
+                      bool EmitDiags);
   /// Helper to set upper bound.
   bool setUB(Expr *NewUB, llvm::Optional<bool> LessOp, bool StrictOp,
              SourceRange SR, SourceLocation SL);
@@ -4599,7 +4606,7 @@ bool OpenMPIterationSpaceChecker::dependent() const {
 
 bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
                                                  Expr *NewLCRefExpr,
-                                                 Expr *NewLB) {
+                                                 Expr *NewLB, bool EmitDiags) {
   // State consistency checking to ensure correct usage.
   assert(LCDecl == nullptr && LB == nullptr && LCRef == nullptr &&
          UB == nullptr && Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
@@ -4614,6 +4621,8 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
           CE->getNumArgs() > 0 && CE->getArg(0) != nullptr)
         NewLB = CE->getArg(0)->IgnoreParenImpCasts();
   LB = NewLB;
+  if (EmitDiags)
+    (void)doesDependOnLoopCounter(LB, /*IsInitializer=*/true);
   return false;
 }
 
@@ -4632,6 +4641,7 @@ bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB,
   TestIsStrictOp = StrictOp;
   ConditionSrcRange = SR;
   ConditionLoc = SL;
+  (void)doesDependOnLoopCounter(UB, /*IsInitializer=*/false);
   return false;
 }
 
@@ -4697,6 +4707,66 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   return false;
 }
 
+namespace {
+/// Checker for the non-rectangular loops. Checks if the initializer or
+/// condition expression references loop counter variable.
+class LoopCounterRefChecker final
+    : public ConstStmtVisitor<LoopCounterRefChecker, bool> {
+  Sema &SemaRef;
+  DSAStackTy &Stack;
+  const ValueDecl *CurLCDecl = nullptr;
+  bool IsInitializer = true;
+
+public:
+  bool VisitDeclRefExpr(const DeclRefExpr *E) {
+    const ValueDecl *VD = E->getDecl();
+    if (isa<VarDecl>(VD)) {
+      if (getCanonicalDecl(VD) == getCanonicalDecl(CurLCDecl)) {
+        SemaRef.Diag(E->getExprLoc(),
+                     diag::err_omp_stmt_depends_on_loop_counter)
+            << (IsInitializer ? 0 : 1);
+        return false;
+      }
+      const auto &&Data = Stack.isLoopControlVariable(VD);
+      return Data.first;
+    }
+    return false;
+  }
+  bool VisitMemberExpr(const MemberExpr *E) {
+    if (isa<CXXThisExpr>(E->getBase()->IgnoreParens())) {
+      const ValueDecl *VD = E->getMemberDecl();
+      if (getCanonicalDecl(VD) == getCanonicalDecl(CurLCDecl)) {
+        SemaRef.Diag(E->getExprLoc(),
+                     diag::err_omp_stmt_depends_on_loop_counter)
+            << (IsInitializer ? 0 : 1);
+        return false;
+      }
+      const auto &&Data = Stack.isLoopControlVariable(VD);
+      return Data.first;
+    }
+    return false;
+  }
+  bool VisitStmt(const Stmt *S) {
+    for (const Stmt *Child : S->children()) {
+      if (Child && Visit(Child))
+        return true;
+    }
+    return false;
+  }
+  explicit LoopCounterRefChecker(Sema &SemaRef, DSAStackTy &Stack,
+                                 const ValueDecl *CurLCDecl, bool IsInitializer)
+      : SemaRef(SemaRef), Stack(Stack), CurLCDecl(CurLCDecl),
+        IsInitializer(IsInitializer) {}
+};
+} // namespace
+
+bool OpenMPIterationSpaceChecker::doesDependOnLoopCounter(
+    const Stmt *S, bool IsInitializer) const {
+  // Check for the non-rectangular loops.
+  LoopCounterRefChecker LoopStmtChecker(SemaRef, Stack, LCDecl, IsInitializer);
+  return LoopStmtChecker.Visit(S);
+}
+
 bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
   // Check init-expr for canonical loop form and save loop counter
   // variable - #Var and its initialization value - #LB.
@@ -4725,13 +4795,15 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
       if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
         if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
           if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
-            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS());
-        return setLCDeclAndLB(DRE->getDecl(), DRE, BO->getRHS());
+            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
+                                  EmitDiags);
+        return setLCDeclAndLB(DRE->getDecl(), DRE, BO->getRHS(), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
             isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
-          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS());
+          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
+                                EmitDiags);
       }
     }
   } else if (auto *DS = dyn_cast<DeclStmt>(S)) {
@@ -4748,7 +4820,7 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
               buildDeclRefExpr(SemaRef, Var,
                                Var->getType().getNonReferenceType(),
                                DS->getBeginLoc()),
-              Var->getInit());
+              Var->getInit(), EmitDiags);
         }
       }
     }
@@ -4758,13 +4830,15 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
       if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
         if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
           if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
-            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS());
-        return setLCDeclAndLB(DRE->getDecl(), DRE, CE->getArg(1));
+            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
+                                  EmitDiags);
+        return setLCDeclAndLB(DRE->getDecl(), DRE, CE->getArg(1), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
             isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
-          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS());
+          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
+                                EmitDiags);
       }
     }
   }
@@ -5261,7 +5335,7 @@ void Sema::ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init) {
   if (AssociatedLoops > 0 &&
       isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
     DSAStack->loopStart();
-    OpenMPIterationSpaceChecker ISC(*this, ForLoc);
+    OpenMPIterationSpaceChecker ISC(*this, *DSAStack, ForLoc);
     if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
       if (ValueDecl *D = ISC.getLoopDecl()) {
         auto *VD = dyn_cast<VarDecl>(D);
@@ -5327,7 +5401,7 @@ static bool checkOpenMPIterationSpace(
   }
   assert(For->getBody());
 
-  OpenMPIterationSpaceChecker ISC(SemaRef, For->getForLoc());
+  OpenMPIterationSpaceChecker ISC(SemaRef, DSA, For->getForLoc());
 
   // Check init.
   Stmt *Init = For->getInit();

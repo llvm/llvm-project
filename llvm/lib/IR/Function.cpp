@@ -1381,7 +1381,7 @@ void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
   setEntryCount(ProfileCount(Count, Type), Imports);
 }
 
-ProfileCount Function::getEntryCount() const {
+ProfileCount Function::getEntryCount(bool AllowSynthetic) const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
@@ -1393,7 +1393,8 @@ ProfileCount Function::getEntryCount() const {
         if (Count == (uint64_t)-1)
           return ProfileCount::getInvalid();
         return ProfileCount(Count, PCT_Real);
-      } else if (MDS->getString().equals("synthetic_function_entry_count")) {
+      } else if (AllowSynthetic &&
+                 MDS->getString().equals("synthetic_function_entry_count")) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         return ProfileCount(Count, PCT_Synthetic);

@@ -43,6 +43,7 @@
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -568,29 +569,6 @@ static const EnumEntry<uint8_t> FileChecksumKindNames[] = {
   LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA1),
   LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
 };
-
-static const EnumEntry<COFF::ResourceTypeID> ResourceTypeNames[]{
-    {"kRT_CURSOR (ID 1)", COFF::RID_Cursor},
-    {"kRT_BITMAP (ID 2)", COFF::RID_Bitmap},
-    {"kRT_ICON (ID 3)", COFF::RID_Icon},
-    {"kRT_MENU (ID 4)", COFF::RID_Menu},
-    {"kRT_DIALOG (ID 5)", COFF::RID_Dialog},
-    {"kRT_STRING (ID 6)", COFF::RID_String},
-    {"kRT_FONTDIR (ID 7)", COFF::RID_FontDir},
-    {"kRT_FONT (ID 8)", COFF::RID_Font},
-    {"kRT_ACCELERATOR (ID 9)", COFF::RID_Accelerator},
-    {"kRT_RCDATA (ID 10)", COFF::RID_RCData},
-    {"kRT_MESSAGETABLE (ID 11)", COFF::RID_MessageTable},
-    {"kRT_GROUP_CURSOR (ID 12)", COFF::RID_Group_Cursor},
-    {"kRT_GROUP_ICON (ID 14)", COFF::RID_Group_Icon},
-    {"kRT_VERSION (ID 16)", COFF::RID_Version},
-    {"kRT_DLGINCLUDE (ID 17)", COFF::RID_DLGInclude},
-    {"kRT_PLUGPLAY (ID 19)", COFF::RID_PlugPlay},
-    {"kRT_VXD (ID 20)", COFF::RID_VXD},
-    {"kRT_ANICURSOR (ID 21)", COFF::RID_AniCursor},
-    {"kRT_ANIICON (ID 22)", COFF::RID_AniIcon},
-    {"kRT_HTML (ID 23)", COFF::RID_HTML},
-    {"kRT_MANIFEST (ID 24)", COFF::RID_Manifest}};
 
 template <typename T>
 static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
@@ -1805,9 +1783,8 @@ void COFFDumper::printResourceDirectoryTable(
       OS << EntryNameString;
     } else {
       if (Level == "Type") {
-        ScopedPrinter Printer(OS);
-        Printer.printEnum("", Entry.Identifier.ID,
-                          makeArrayRef(ResourceTypeNames));
+        OS << ": ";
+        printResourceTypeName(Entry.Identifier.ID, OS);
         IDStr = IDStr.slice(0, IDStr.find_first_of(")", 0) + 1);
       } else {
         OS << ": (ID " << Entry.Identifier.ID << ")";

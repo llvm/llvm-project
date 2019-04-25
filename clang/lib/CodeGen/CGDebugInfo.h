@@ -41,6 +41,7 @@ class ObjCInterfaceDecl;
 class ObjCIvarDecl;
 class UsingDecl;
 class VarDecl;
+enum class DynamicInitKind : unsigned;
 
 namespace CodeGen {
 class CodeGenModule;
@@ -647,6 +648,12 @@ private:
 
   /// Get the vtable name for the given class.
   StringRef getVTableName(const CXXRecordDecl *Decl);
+
+  /// Get the name to use in the debug info for a dynamic initializer or atexit
+  /// stub function.
+  StringRef getDynamicInitializerName(const VarDecl *VD,
+                                      DynamicInitKind StubKind,
+                                      llvm::Function *InitFn);
 
   /// Get line number for the location. If location is invalid
   /// then use current location.

@@ -513,6 +513,19 @@ void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
       MF.createMIExtraInfo(memoperands(), getPreInstrSymbol(), Symbol));
 }
 
+void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
+                                     const MachineInstr &MI) {
+  if (this == &MI)
+    // Nothing to do for a self-clone!
+    return;
+
+  assert(&MF == MI.getMF() &&
+         "Invalid machine functions when cloning instruction symbols!");
+
+  setPreInstrSymbol(MF, MI.getPreInstrSymbol());
+  setPostInstrSymbol(MF, MI.getPostInstrSymbol());
+}
+
 uint16_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
   // For now, the just return the union of the flags. If the flags get more
   // complicated over time, we might need more logic here.

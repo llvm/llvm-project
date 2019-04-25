@@ -244,7 +244,8 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen);
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const MCSubtargetInfo *STI);
 
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor();
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
+    const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
@@ -398,6 +399,7 @@ bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
+bool isGFX10(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);

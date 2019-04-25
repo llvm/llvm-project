@@ -181,6 +181,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     HasApertureRegs(false),
     EnableXNACK(false),
+    EnableCuMode(false),
     TrapHandler(false),
 
     EnableHugePrivateBuffer(false),
@@ -196,6 +197,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     CIInsts(false),
     GFX8Insts(false),
     GFX9Insts(false),
+    GFX10Insts(false),
     GFX7GFX8GFX9Insts(false),
     SGPRInitBug(false),
     HasSMemRealTime(false),
@@ -212,19 +214,36 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasSDWAOutModsVOPC(false),
     HasDPP(false),
     HasR128A16(false),
+    HasNSAEncoding(false),
     HasDLInsts(false),
     HasDot1Insts(false),
     HasDot2Insts(false),
     EnableSRAMECC(false),
     DoesNotSupportSRAMECC(false),
+    HasNoSdstCMPX(false),
+    HasVscnt(false),
+    HasRegisterBanking(false),
+    HasVOP3Literal(false),
+    HasNoDataDepHazard(false),
     FlatAddressSpace(false),
     FlatInstOffsets(false),
     FlatGlobalInsts(false),
     FlatScratchInsts(false),
+    ScalarFlatScratchInsts(false),
     AddNoCarryInsts(false),
     HasUnpackedD16VMem(false),
+    LDSMisalignedBug(false),
 
     ScalarizeGlobal(false),
+
+    HasVcmpxPermlaneHazard(false),
+    HasVMEMtoScalarWriteHazard(false),
+    HasSMEMtoVectorWriteHazard(false),
+    HasInstFwdPrefetchBug(false),
+    HasVcmpxExecWARHazard(false),
+    HasLdsBranchVmemWARHazard(false),
+    HasNSAtoVMEMBug(false),
+    HasFlatSegmentOffsetBug(false),
 
     FeatureDisable(false),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
@@ -243,6 +262,8 @@ unsigned AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
     return getLocalMemorySize();
   unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
   unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
+  if (!WorkGroupsPerCu)
+    return 0;
   unsigned MaxWaves = getMaxWavesPerEU();
   return getLocalMemorySize() * MaxWaves / WorkGroupsPerCu / NWaves;
 }
@@ -251,6 +272,8 @@ unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
   const Function &F) const {
   unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
   unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
+  if (!WorkGroupsPerCu)
+    return 0;
   unsigned MaxWaves = getMaxWavesPerEU();
   unsigned Limit = getLocalMemorySize() * MaxWaves / WorkGroupsPerCu;
   unsigned NumWaves = Limit / (Bytes ? Bytes : 1u);
@@ -271,7 +294,8 @@ AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
-    return std::make_pair(getWavefrontSize() * 2, getWavefrontSize() * 4);
+    return std::make_pair(getWavefrontSize() * 2,
+                          std::max(getWavefrontSize() * 4, 256u));
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_LS:
   case CallingConv::AMDGPU_HS:
@@ -496,7 +520,14 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+bool GCNSubtarget::hasMadF16() const {
+  return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16) != -1;
+}
+
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
+  if (getGeneration() >= AMDGPUSubtarget::GFX10)
+    return 10;
+
   if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
     if (SGPRs <= 80)
       return 10;
@@ -543,6 +574,9 @@ unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  if (getGeneration() >= AMDGPUSubtarget::GFX10)
+    return 2; // VCC. FLAT_SCRATCH and XNACK are no longer in SGPRs.
+
   if (MFI.hasFlatScratchInit()) {
     if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return 6; // FLAT_SCRATCH, XNACK, VCC (in that order).

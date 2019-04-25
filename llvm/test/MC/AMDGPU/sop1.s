@@ -6,6 +6,8 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=NOVI --check-prefix=NOSICIVI --check-prefix=NOGFX89 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck --check-prefix=NOGFX89 %s
 
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding 2>&1 %s | FileCheck --check-prefix=GFX10-ERR %s
+
 s_mov_b32 s1, s2
 // SICI: s_mov_b32 s1, s2 ; encoding: [0x02,0x03,0x81,0xbe]
 // GFX89: s_mov_b32 s1, s2 ; encoding: [0x02,0x00,0x81,0xbe]
@@ -238,6 +240,7 @@ s_movreld_b64 s[2:3], s[4:5]
 s_cbranch_join s4
 // SICI: s_cbranch_join s4 ; encoding: [0x04,0x32,0x80,0xbe]
 // GFX89: s_cbranch_join s4 ; encoding: [0x04,0x2e,0x80,0xbe]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_cbranch_join 1
 // NOSICI: error: invalid operand for instruction

@@ -298,6 +298,9 @@ public:
   /// allocated in the MCContext.
   Optional<MD5::MD5Result> getMD5AsBytes(const DIFile *File) const;
 
+  /// Get context owner's DIE.
+  DIE *createTypeDIE(const DICompositeType *Ty);
+
 protected:
   ~DwarfUnit();
 
@@ -313,11 +316,6 @@ protected:
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
     return Ref.resolve();
   }
-
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
 
   /// Emit the common part of the header for this unit.
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
@@ -346,6 +344,13 @@ private:
   /// Set D as anonymous type for index which can be reused later.
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
+  virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
+
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;
 };
@@ -358,6 +363,7 @@ class DwarfTypeUnit final : public DwarfUnit {
   bool UsedLineTable = false;
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
+  void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
   bool isDwoUnit() const override;
 
 public:
@@ -366,9 +372,6 @@ public:
 
   void setTypeSignature(uint64_t Signature) { TypeSignature = Signature; }
   void setType(const DIE *Ty) { this->Ty = Ty; }
-
-  /// Get context owner's DIE.
-  DIE *createTypeDIE(const DICompositeType *Ty);
 
   /// Emit the header for this unit, not including the initial length field.
   void emitHeader(bool UseOffsets) override;
