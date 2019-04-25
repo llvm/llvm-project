@@ -560,9 +560,6 @@ std::string fixUTF8(llvm::StringRef S) {
   return Res;
 }
 
-} // namespace json
-} // namespace llvm
-
 static void quote(llvm::raw_ostream &OS, llvm::StringRef S) {
   OS << '\"';
   for (unsigned char C : S) {
@@ -593,106 +590,129 @@ static void quote(llvm::raw_ostream &OS, llvm::StringRef S) {
   OS << '\"';
 }
 
-enum IndenterAction {
-  Indent,
-  Outdent,
-  Newline,
-  Space,
-};
-
-// Prints JSON. The indenter can be used to control formatting.
-template <typename Indenter>
-void llvm::json::Value::print(raw_ostream &OS, const Indenter &I) const {
-  switch (Type) {
-  case T_Null:
+void llvm::json::OStream::value(const Value &V) {
+  switch (V.kind()) {
+  case Value::Null:
+    valueBegin();
     OS << "null";
-    break;
-  case T_Boolean:
-    OS << (as<bool>() ? "true" : "false");
-    break;
-  case T_Double:
-    OS << format("%.*g", std::numeric_limits<double>::max_digits10,
-                 as<double>());
-    break;
-  case T_Integer:
-    OS << as<int64_t>();
-    break;
-  case T_StringRef:
-    quote(OS, as<StringRef>());
-    break;
-  case T_String:
-    quote(OS, as<std::string>());
-    break;
-  case T_Object: {
-    bool Comma = false;
-    OS << '{';
-    I(Indent);
-    for (const auto *P : sortedElements(as<json::Object>())) {
-      if (Comma)
-        OS << ',';
-      Comma = true;
-      I(Newline);
-      quote(OS, P->first);
-      OS << ':';
-      I(Space);
-      P->second.print(OS, I);
-    }
-    I(Outdent);
-    if (Comma)
-      I(Newline);
-    OS << '}';
-    break;
-  }
-  case T_Array: {
-    bool Comma = false;
-    OS << '[';
-    I(Indent);
-    for (const auto &E : as<json::Array>()) {
-      if (Comma)
-        OS << ',';
-      Comma = true;
-      I(Newline);
-      E.print(OS, I);
-    }
-    I(Outdent);
-    if (Comma)
-      I(Newline);
-    OS << ']';
-    break;
-  }
+    return;
+  case Value::Boolean:
+    valueBegin();
+    OS << (*V.getAsBoolean() ? "true" : "false");
+    return;
+  case Value::Number:
+    valueBegin();
+    if (V.Type == Value::T_Integer)
+      OS << *V.getAsInteger();
+    else
+      OS << format("%.*g", std::numeric_limits<double>::max_digits10,
+                   *V.getAsNumber());
+    return;
+  case Value::String:
+    valueBegin();
+    quote(OS, *V.getAsString());
+    return;
+  case Value::Array:
+    return array([&] {
+      for (const Value &E : *V.getAsArray())
+        value(E);
+    });
+  case Value::Object:
+    return object([&] {
+      for (const Object::value_type *E : sortedElements(*V.getAsObject()))
+        attribute(E->first, E->second);
+    });
   }
 }
+
+void llvm::json::OStream::valueBegin() {
+  assert(Stack.back().Ctx != Object && "Only attributes allowed here");
+  if (Stack.back().HasValue) {
+    assert(Stack.back().Ctx != Singleton && "Only one value allowed here");
+    OS << ',';
+  }
+  if (Stack.back().Ctx == Array)
+    newline();
+  Stack.back().HasValue = true;
+}
+
+void llvm::json::OStream::newline() {
+  if (IndentSize) {
+    OS.write('\n');
+    OS.indent(Indent);
+  }
+}
+
+void llvm::json::OStream::arrayBegin() {
+  valueBegin();
+  Stack.emplace_back();
+  Stack.back().Ctx = Array;
+  Indent += IndentSize;
+  OS << '[';
+}
+
+void llvm::json::OStream::arrayEnd() {
+  assert(Stack.back().Ctx == Array);
+  Indent -= IndentSize;
+  if (Stack.back().HasValue)
+    newline();
+  OS << ']';
+  Stack.pop_back();
+  assert(!Stack.empty());
+}
+
+void llvm::json::OStream::objectBegin() {
+  valueBegin();
+  Stack.emplace_back();
+  Stack.back().Ctx = Object;
+  Indent += IndentSize;
+  OS << '{';
+}
+
+void llvm::json::OStream::objectEnd() {
+  assert(Stack.back().Ctx == Object);
+  Indent -= IndentSize;
+  if (Stack.back().HasValue)
+    newline();
+  OS << '}';
+  Stack.pop_back();
+  assert(!Stack.empty());
+}
+
+void llvm::json::OStream::attributeBegin(llvm::StringRef Key) {
+  assert(Stack.back().Ctx == Object);
+  if (Stack.back().HasValue)
+    OS << ',';
+  newline();
+  Stack.back().HasValue = true;
+  Stack.emplace_back();
+  Stack.back().Ctx = Singleton;
+  if (LLVM_LIKELY(isUTF8(Key))) {
+    quote(OS, Key);
+  } else {
+    assert(false && "Invalid UTF-8 in attribute key");
+    quote(OS, fixUTF8(Key));
+  }
+  OS.write(':');
+  if (IndentSize)
+    OS.write(' ');
+}
+
+void llvm::json::OStream::attributeEnd() {
+  assert(Stack.back().Ctx == Singleton);
+  assert(Stack.back().HasValue && "Attribute must have a value");
+  Stack.pop_back();
+  assert(Stack.back().Ctx == Object);
+}
+
+} // namespace json
+} // namespace llvm
 
 void llvm::format_provider<llvm::json::Value>::format(
     const llvm::json::Value &E, raw_ostream &OS, StringRef Options) {
-  if (Options.empty()) {
-    OS << E;
-    return;
-  }
   unsigned IndentAmount = 0;
-  if (Options.getAsInteger(/*Radix=*/10, IndentAmount))
+  if (!Options.empty() && Options.getAsInteger(/*Radix=*/10, IndentAmount))
     llvm_unreachable("json::Value format options should be an integer");
-  unsigned IndentLevel = 0;
-  E.print(OS, [&](IndenterAction A) {
-    switch (A) {
-    case Newline:
-      OS << '\n';
-      OS.indent(IndentLevel);
-      break;
-    case Space:
-      OS << ' ';
-      break;
-    case Indent:
-      IndentLevel += IndentAmount;
-      break;
-    case Outdent:
-      IndentLevel -= IndentAmount;
-      break;
-    };
-  });
+  json::OStream(OS, IndentAmount).value(E);
 }
 
-llvm::raw_ostream &llvm::json::operator<<(raw_ostream &OS, const Value &E) {
-  E.print(OS, [](IndenterAction A) { /*ignore*/ });
-  return OS;
-}

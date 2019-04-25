@@ -50,6 +50,46 @@ NXCOMPAT: IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
 # RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=NONXCOMPAT %s
 NONXCOMPAT-NOT: IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
 
+# RUN: lld-link /out:%t.exe /entry:main /swaprun:CD %t.obj
+# RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=SWAPCD %s
+# RUN: lld-link /out:%t.exe /entry:main /swaprun:cd,net %t.obj
+# RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=SWAPCD %s
+SWAPCD: IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP
+
+# RUN: lld-link /out:%t.exe /entry:main %t.obj
+# RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=NOSWAPCD %s
+NOSWAPCD-NOT: IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP
+
+# RUN: lld-link /out:%t.exe /entry:main /swaprun:NeT %t.obj
+# RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=SWAPNET %s
+# RUN: lld-link /out:%t.exe /entry:main /swaprun:net,cd,cd,net %t.obj
+# RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=SWAPNET %s
+SWAPNET: IMAGE_FILE_NET_RUN_FROM_SWAP
+
+# RUN: lld-link /out:%t.exe /entry:main %t.obj
+# RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=NOSWAPNET %s
+NOSWAPNET-NOT: IMAGE_FILE_NET_RUN_FROM_SWAP
+
+# RUN: not lld-link /out:%t.exe /entry:main /swaprun: %t.obj 2>&1 | \
+# RUN:     FileCheck -check-prefix=SWAPERR1 %s
+# RUN: not lld-link /out:%t.exe /entry:main /swaprun:cd, %t.obj 2>&1 | \
+# RUN:     FileCheck -check-prefix=SWAPERR1 %s
+# RUN: not lld-link /out:%t.exe /entry:main /swaprun:,, %t.obj 2>&1 | \
+# RUN:     FileCheck -check-prefix=SWAPERR1 %s
+# RUN: not lld-link /out:%t.exe /entry:main /swaprun:,cd %t.obj 2>&1 | \
+# RUN:     FileCheck -check-prefix=SWAPERR1 %s
+SWAPERR1: /swaprun: missing argument
+
+# RUN: not lld-link /out:%t.exe /entry:main /swaprun:foo %t.obj 2>&1 | \
+# RUN:     FileCheck -check-prefix=SWAPERR2 %s
+# RUN: not lld-link /out:%t.exe /entry:main /swaprun:cd,foo,net %t.obj 2>&1 | \
+# RUN:     FileCheck -check-prefix=SWAPERR2 %s
+SWAPERR2: /swaprun: invalid argument: foo
+
+# RUN: not lld-link /out:%t.exe /entry:main /swaprun:cdfoo,net %t.obj 2>&1 | \
+# RUN:     FileCheck -check-prefix=SWAPERR3 %s
+SWAPERR3: /swaprun: invalid argument: cdfoo
+
 # RUN: lld-link /out:%t.exe /entry:main %t.obj
 # RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=TSAWARE %s
 # RUN: lld-link /out:%t.exe /entry:main /tsaware %t.obj

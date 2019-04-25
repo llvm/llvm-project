@@ -2293,7 +2293,7 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
       Complexity += 2;
   }
 
-  if (AM.Disp && (AM.Base_Reg.getNode() || AM.IndexReg.getNode()))
+  if (AM.Disp)
     Complexity++;
 
   // If it isn't worth using an LEA, reject it.

@@ -3,22 +3,25 @@
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
 # These assertions are a bit loose, to avoid brittleness.
-# CHECK: {"displayTimeUnit":"ns","traceEvents":[
 # CHECK: {
-# CHECK:   "args": {
-# CHECK:     "File": "{{.*(/|\\)}}foo.c"
-# CHECK:   },
-# CHECK:   "name": "BuildPreamble",
-# CHECK:   "ph": "X",
+# CHECK:   "displayTimeUnit": "ns",
+# CHECK:   "traceEvents": [
+# CHECK:     {
+# CHECK:       "ph": "X",
+# CHECK:       "name": "BuildPreamble",
+# CHECK:       "args": {
+# CHECK:         "File": "{{.*(/|\\)}}foo.c"
+# CHECK:       },
+# CHECK:     }
+# CHECK:     {
+# CHECK:       "ph": "X",
+# CHECK:       "name": "BuildAST",
+# CHECK:       "args": {
+# CHECK:         "File": "{{.*(/|\\)}}foo.c"
+# CHECK:       },
+# CHECK:     }
+# CHECK:   ]
 # CHECK: }
-# CHECK: {
-# CHECK:   "args": {
-# CHECK:     "File": "{{.*(/|\\)}}foo.c"
-# CHECK:   },
-# CHECK:   "name": "BuildAST",
-# CHECK:   "ph": "X",
-# CHECK: }
-# CHECK: },
 ---
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}
 ---

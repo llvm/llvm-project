@@ -113,6 +113,11 @@ const Node *Input::getCurrentNode() const {
 }
 
 bool Input::mapTag(StringRef Tag, bool Default) {
+  // CurrentNode can be null if setCurrentDocument() was unable to
+  // parse the document because it was invalid or empty.
+  if (!CurrentNode)
+    return false;
+
   std::string foundTag = CurrentNode->_node->getVerbatimTag();
   if (foundTag.empty()) {
     // If no tag found and 'Tag' is the default, say it was found.

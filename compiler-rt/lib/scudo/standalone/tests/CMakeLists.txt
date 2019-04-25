@@ -58,6 +58,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   mutex_test.cc
   report_test.cc
   secondary_test.cc
+  size_class_map_test.cc
   stats_test.cc
   strings_test.cc
   vector_test.cc

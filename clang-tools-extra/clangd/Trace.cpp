@@ -27,13 +27,14 @@ namespace {
 // Perhaps we should replace this by something that disturbs performance less.
 class JSONTracer : public EventTracer {
 public:
-  JSONTracer(llvm::raw_ostream &Out, bool Pretty)
-      : Out(Out), Sep(""), Start(std::chrono::system_clock::now()),
-        JSONFormat(Pretty ? "{0:2}" : "{0}") {
+  JSONTracer(llvm::raw_ostream &OS, bool Pretty)
+      : Out(OS, Pretty ? 2 : 0), Start(std::chrono::system_clock::now()) {
     // The displayTimeUnit must be ns to avoid low-precision overlap
     // calculations!
-    Out << R"({"displayTimeUnit":"ns","traceEvents":[)"
-        << "\n";
+    Out.objectBegin();
+    Out.attribute("displayTimeUnit", "ns");
+    Out.attributeBegin("traceEvents");
+    Out.arrayBegin();
     rawEvent("M", llvm::json::Object{
                       {"name", "process_name"},
                       {"args", llvm::json::Object{{"name", "clangd"}}},
@@ -41,7 +42,9 @@ public:
   }
 
   ~JSONTracer() {
-    Out << "\n]}";
+    Out.arrayEnd();
+    Out.attributeEnd();
+    Out.objectEnd();
     Out.flush();
   }
 
@@ -73,7 +76,7 @@ public:
     Contents["ts"] = Timestamp ? Timestamp : timestamp();
     Contents["tid"] = int64_t(TID);
     std::lock_guard<std::mutex> Lock(Mu);
-    rawEvent(Phase, std::move(Contents));
+    rawEvent(Phase, Contents);
   }
 
 private:
@@ -145,13 +148,14 @@ private:
   // Record an event. ph and pid are set.
   // Contents must be a list of the other JSON key/values.
   void rawEvent(llvm::StringRef Phase,
-                llvm::json::Object &&Event) /*REQUIRES(Mu)*/ {
+                const llvm::json::Object &Event) /*REQUIRES(Mu)*/ {
     // PID 0 represents the clangd process.
-    Event["pid"] = 0;
-    Event["ph"] = Phase;
-    Out << Sep
-        << llvm::formatv(JSONFormat, llvm::json::Value(std::move(Event)));
-    Sep = ",\n";
+    Out.object([&]{
+      Out.attribute("pid", 0);
+      Out.attribute("ph", Phase);
+      for (const auto& KV : Event)
+        Out.attribute(KV.first, KV.second);
+    });
   }
 
   // If we haven't already, emit metadata describing this thread.
@@ -177,11 +181,9 @@ private:
   }
 
   std::mutex Mu;
-  llvm::raw_ostream &Out /*GUARDED_BY(Mu)*/;
-  const char *Sep /*GUARDED_BY(Mu)*/;
+  llvm::json::OStream Out /*GUARDED_BY(Mu)*/;
   llvm::DenseSet<uint64_t> ThreadsWithMD /*GUARDED_BY(Mu)*/;
   const llvm::sys::TimePoint<> Start;
-  const char *JSONFormat;
 };
 
 Key<std::unique_ptr<JSONTracer::JSONSpan>> JSONTracer::SpanKey;

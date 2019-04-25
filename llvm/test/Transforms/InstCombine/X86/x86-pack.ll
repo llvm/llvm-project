@@ -350,6 +350,166 @@ define <64 x i8> @elts_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) {
   ret <64 x i8> %4
 }
 
+;
+; Truncation (without Saturation)
+;
+
+define <8 x i16> @trunc_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @trunc_packssdw_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> [[A0:%.*]], <i32 17, i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[A1:%.*]], <i32 15, i32 15, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP3]]
+;
+  %1 = ashr <4 x i32> %a0, <i32 17, i32 17, i32 17, i32 17>
+  %2 = and  <4 x i32> %a1, <i32 15, i32 15, i32 15, i32 15>
+  %3 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %1, <4 x i32> %2)
+  ret <8 x i16> %3
+}
+
+define <8 x i16> @trunc_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @trunc_packusdw_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[A0:%.*]], <i32 17, i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[A1:%.*]], <i32 15, i32 15, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP3]]
+;
+  %1 = lshr <4 x i32> %a0, <i32 17, i32 17, i32 17, i32 17>
+  %2 = and  <4 x i32> %a1, <i32 15, i32 15, i32 15, i32 15>
+  %3 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %1, <4 x i32> %2)
+  ret <8 x i16> %3
+}
+
+define <16 x i8> @trunc_packsswb_128(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: @trunc_packsswb_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i16> [[A1:%.*]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> [[TMP1]], <8 x i16> [[TMP2]])
+; CHECK-NEXT:    ret <16 x i8> [[TMP3]]
+;
+  %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = and  <8 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
+  %3 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %1, <8 x i16> %2)
+  ret <16 x i8> %3
+}
+
+define <16 x i8> @trunc_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: @trunc_packuswb_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i16> [[A1:%.*]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> [[TMP1]], <8 x i16> [[TMP2]])
+; CHECK-NEXT:    ret <16 x i8> [[TMP3]]
+;
+  %1 = lshr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = and  <8 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
+  %3 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %1, <8 x i16> %2)
+  ret <16 x i8> %3
+}
+
+define <16 x i16> @trunc_packssdw_256(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: @trunc_packssdw_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[A0:%.*]], <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <8 x i32> [[A1:%.*]], <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> [[TMP1]], <8 x i32> [[TMP2]])
+; CHECK-NEXT:    ret <16 x i16> [[TMP3]]
+;
+  %1 = ashr <8 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+  %2 = ashr <8 x i32> %a1, <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
+  %3 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %1, <8 x i32> %2)
+  ret <16 x i16> %3
+}
+
+define <16 x i16> @trunc_packusdw_256(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: @trunc_packusdw_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i32> [[A0:%.*]], <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i32> [[A1:%.*]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> [[TMP1]], <8 x i32> [[TMP2]])
+; CHECK-NEXT:    ret <16 x i16> [[TMP3]]
+;
+  %1 = lshr <8 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+  %2 = and  <8 x i32> %a1, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %3 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %1, <8 x i32> %2)
+  ret <16 x i16> %3
+}
+
+define <32 x i8> @trunc_packsswb_256(<16 x i16> %a0, <16 x i16> %a1) {
+; CHECK-LABEL: @trunc_packsswb_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <16 x i16> [[A1:%.*]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> [[TMP1]], <16 x i16> [[TMP2]])
+; CHECK-NEXT:    ret <32 x i8> [[TMP3]]
+;
+  %1 = ashr <16 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = and  <16 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
+  %3 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %1, <16 x i16> %2)
+  ret <32 x i8> %3
+}
+
+define <32 x i8> @trunc_packuswb_256(<16 x i16> %a0, <16 x i16> %a1) {
+; CHECK-LABEL: @trunc_packuswb_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <16 x i16> [[A1:%.*]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> [[TMP1]], <16 x i16> [[TMP2]])
+; CHECK-NEXT:    ret <32 x i8> [[TMP3]]
+;
+  %1 = lshr <16 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = and  <16 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
+  %3 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %1, <16 x i16> %2)
+  ret <32 x i8> %3
+}
+
+define <32 x i16> @trunc_packssdw_512(<16 x i32> %a0, <16 x i32> %a1) {
+; CHECK-LABEL: @trunc_packssdw_512(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i32> [[A0:%.*]], <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i32> [[A1:%.*]], <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> [[TMP1]], <16 x i32> [[TMP2]])
+; CHECK-NEXT:    ret <32 x i16> [[TMP3]]
+;
+  %1 = ashr <16 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+  %2 = ashr <16 x i32> %a1, <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
+  %3 = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> %1, <16 x i32> %2)
+  ret <32 x i16> %3
+}
+
+define <32 x i16> @trunc_packusdw_512(<16 x i32> %a0, <16 x i32> %a1) {
+; CHECK-LABEL: @trunc_packusdw_512(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i32> [[A0:%.*]], <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <16 x i32> [[A1:%.*]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> [[TMP1]], <16 x i32> [[TMP2]])
+; CHECK-NEXT:    ret <32 x i16> [[TMP3]]
+;
+  %1 = lshr <16 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+  %2 = and  <16 x i32> %a1, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %3 = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> %1, <16 x i32> %2)
+  ret <32 x i16> %3
+}
+
+define <64 x i8> @trunc_packsswb_512(<32 x i16> %a0, <32 x i16> %a1) {
+; CHECK-LABEL: @trunc_packsswb_512(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <32 x i16> [[A1:%.*]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <64 x i8> @llvm.x86.avx512.packsswb.512(<32 x i16> [[TMP1]], <32 x i16> [[TMP2]])
+; CHECK-NEXT:    ret <64 x i8> [[TMP3]]
+;
+  %1 = ashr <32 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = and  <32 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
+  %3 = call <64 x i8> @llvm.x86.avx512.packsswb.512(<32 x i16> %1, <32 x i16> %2)
+  ret <64 x i8> %3
+}
+
+define <64 x i8> @trunc_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) {
+; CHECK-LABEL: @trunc_packuswb_512(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <32 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <32 x i16> [[A1:%.*]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <64 x i8> @llvm.x86.avx512.packuswb.512(<32 x i16> [[TMP1]], <32 x i16> [[TMP2]])
+; CHECK-NEXT:    ret <64 x i8> [[TMP3]]
+;
+  %1 = lshr <32 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = and  <32 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
+  %3 = call <64 x i8> @llvm.x86.avx512.packuswb.512(<32 x i16> %1, <32 x i16> %2)
+  ret <64 x i8> %3
+}
+
 declare <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32>, <4 x i32>) nounwind readnone
 declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>) nounwind readnone
 declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>) nounwind readnone
