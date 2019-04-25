@@ -243,7 +243,7 @@ public:
         ++Depth;
       FileLocs.push_back(std::make_pair(Loc, Depth));
     }
-    std::stable_sort(FileLocs.begin(), FileLocs.end(), llvm::less_second());
+    llvm::stable_sort(FileLocs, llvm::less_second());
 
     for (const auto &FL : FileLocs) {
       SourceLocation Loc = FL.first;

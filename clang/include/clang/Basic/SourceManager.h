@@ -841,8 +841,8 @@ public:
 
   /// Create a new FileID that represents the specified memory buffer.
   ///
-  /// This does no caching of the buffer and takes ownership of the
-  /// MemoryBuffer, so only pass a MemoryBuffer to this once.
+  /// This does not take ownership of the MemoryBuffer. The memory buffer must
+  /// outlive the SourceManager.
   FileID createFileID(UnownedTag, const llvm::MemoryBuffer *Buffer,
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,

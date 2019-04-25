@@ -1,3 +1,4 @@
+// REQUIRES: shell
 // RUN: %clang --verbose -DSPACE="a b"  -c %s 2>&1 | FileCheck -check-prefix=SPACE     -strict-whitespace %s
 // RUN: %clang --verbose -DQUOTES=\"\"  -c %s 2>&1 | FileCheck -check-prefix=QUOTES    -strict-whitespace %s
 // RUN: %clang --verbose -DBACKSLASH=\\ -c %s 2>&1 | FileCheck -check-prefix=BACKSLASH -strict-whitespace %s

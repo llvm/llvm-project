@@ -367,11 +367,7 @@ void RecursiveCloneTypeIIHashConstraint::constrain(
     }
 
     // Sort hash_codes in StmtsByHash.
-    std::stable_sort(StmtsByHash.begin(), StmtsByHash.end(),
-                     [](std::pair<size_t, StmtSequence> LHS,
-                        std::pair<size_t, StmtSequence> RHS) {
-                       return LHS.first < RHS.first;
-                     });
+    llvm::stable_sort(StmtsByHash, llvm::less_first());
 
     // Check for each StmtSequence if its successor has the same hash value.
     // We don't check the last StmtSequence as it has no successor.
