@@ -1880,6 +1880,58 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
   return internString("_vptr$", RD->getNameAsString());
 }
 
+StringRef CGDebugInfo::getDynamicInitializerName(const VarDecl *VD,
+                                                 DynamicInitKind StubKind,
+                                                 llvm::Function *InitFn) {
+  // If we're not emitting codeview, use the mangled name. For Itanium, this is
+  // arbitrary.
+  if (!CGM.getCodeGenOpts().EmitCodeView)
+    return InitFn->getName();
+
+  // Print the normal qualified name for the variable, then break off the last
+  // NNS, and add the appropriate other text. Clang always prints the global
+  // variable name without template arguments, so we can use rsplit("::") and
+  // then recombine the pieces.
+  SmallString<128> QualifiedGV;
+  StringRef Quals;
+  StringRef GVName;
+  {
+    llvm::raw_svector_ostream OS(QualifiedGV);
+    VD->printQualifiedName(OS, getPrintingPolicy());
+    std::tie(Quals, GVName) = OS.str().rsplit("::");
+    if (GVName.empty())
+      std::swap(Quals, GVName);
+  }
+
+  SmallString<128> InitName;
+  llvm::raw_svector_ostream OS(InitName);
+  if (!Quals.empty())
+    OS << Quals << "::";
+
+  switch (StubKind) {
+  case DynamicInitKind::NoStub:
+    llvm_unreachable("not an initializer");
+  case DynamicInitKind::Initializer:
+    OS << "`dynamic initializer for '";
+    break;
+  case DynamicInitKind::AtExit:
+    OS << "`dynamic atexit destructor for '";
+    break;
+  }
+
+  OS << GVName;
+
+  // Add any template specialization args.
+  if (const auto *VTpl = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
+    printTemplateArgumentList(OS, VTpl->getTemplateArgs().asArray(),
+                              getPrintingPolicy());
+  }
+
+  OS << '\'';
+
+  return internString(OS.str());
+}
+
 void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
                                     SmallVectorImpl<llvm::Metadata *> &EltTys,
                                     llvm::DICompositeType *RecordTy) {
@@ -3470,6 +3522,11 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D)) {
     Name = getObjCMethodName(OMD);
     Flags |= llvm::DINode::FlagPrototyped;
+  } else if (isa<VarDecl>(D) &&
+             GD.getDynamicInitKind() != DynamicInitKind::NoStub) {
+    // This is a global initializer or atexit destructor for a global variable.
+    Name = getDynamicInitializerName(cast<VarDecl>(D), GD.getDynamicInitKind(),
+                                     Fn);
   } else {
     // Use llvm function name.
     Name = Fn->getName();

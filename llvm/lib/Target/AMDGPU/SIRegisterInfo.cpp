@@ -181,6 +181,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::TTMP12_TTMP13);
   reserveRegisterTuples(Reserved, AMDGPU::TTMP14_TTMP15);
 
+  // Reserve null register - it shall never be allocated
+  reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL);
+
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
@@ -1213,9 +1216,9 @@ StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
     }
 
   REG_RANGE(AMDGPU::VGPR0, AMDGPU::VGPR255, VGPR32RegNames);
-  REG_RANGE(AMDGPU::SGPR0, AMDGPU::SGPR103, SGPR32RegNames);
+  REG_RANGE(AMDGPU::SGPR0, AMDGPU::SGPR105, SGPR32RegNames);
   REG_RANGE(AMDGPU::VGPR0_VGPR1, AMDGPU::VGPR254_VGPR255, VGPR64RegNames);
-  REG_RANGE(AMDGPU::SGPR0_SGPR1, AMDGPU::SGPR102_SGPR103, SGPR64RegNames);
+  REG_RANGE(AMDGPU::SGPR0_SGPR1, AMDGPU::SGPR104_SGPR105, SGPR64RegNames);
   REG_RANGE(AMDGPU::VGPR0_VGPR1_VGPR2, AMDGPU::VGPR253_VGPR254_VGPR255,
             VGPR96RegNames);
 

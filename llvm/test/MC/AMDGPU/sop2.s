@@ -10,6 +10,8 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=NOSICIVI --check-prefix=NOVI --check-prefix=NOGFX89 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck --check-prefix=NOGFX89 %s
 
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding 2>&1 %s | FileCheck --check-prefix=GFX10-ERR %s
+
 s_add_u32 s1, s2, s3
 // GCN: s_add_u32 s1, s2, s3 ; encoding: [0x02,0x03,0x01,0x80]
 
@@ -177,14 +179,17 @@ s_bfe_i64 s[2:3], s[4:5], s6
 s_cbranch_g_fork s[4:5], s[6:7]
 // SICI: s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x95]
 // GFX89: s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x94]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_cbranch_g_fork 1, s[6:7]
 // SICI: s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x95]
 // GFX89: s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x94]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_cbranch_g_fork s[6:7], 2
 // SICI: s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x95]
 // GFX89: s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x94]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_absdiff_i32 s2, s4, s6
 // SICI: s_absdiff_i32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x96]

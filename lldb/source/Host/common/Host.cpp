@@ -462,16 +462,19 @@ Status Host::RunShellCommand(const char *command, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_default_shell) {
+                             bool run_in_default_shell,
+                             bool hide_stderr) {
   return RunShellCommand(Args(command), working_dir, status_ptr, signo_ptr,
-                         command_output_ptr, timeout, run_in_default_shell);
+                         command_output_ptr, timeout, run_in_default_shell,
+                         hide_stderr);
 }
 
 Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_default_shell) {
+                             bool run_in_default_shell,
+                             bool hide_stderr) {
   Status error;
   ProcessLaunchInfo launch_info;
   launch_info.SetArchitecture(HostInfo::GetArchitecture());
@@ -509,16 +512,18 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
   }
 
   FileSpec output_file_spec(output_file_path.c_str());
-
+  // Set up file descriptors.
   launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
-  if (output_file_spec) {
+  if (output_file_spec)
     launch_info.AppendOpenFileAction(STDOUT_FILENO, output_file_spec, false,
                                      true);
-    launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
-  } else {
+  else
     launch_info.AppendSuppressFileAction(STDOUT_FILENO, false, true);
+
+  if (output_file_spec && !hide_stderr)
+    launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
+  else
     launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
-  }
 
   std::shared_ptr<ShellInfo> shell_info_sp(new ShellInfo());
   const bool monitor_signals = false;

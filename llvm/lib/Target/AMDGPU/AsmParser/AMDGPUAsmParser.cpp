@@ -1012,7 +1012,11 @@ public:
   }
 
   bool hasSGPR102_SGPR103() const {
-    return !isVI();
+    return !isVI() && !isGFX9();
+  }
+
+  bool hasSGPR104_SGPR105() const {
+    return isGFX10();
   }
 
   bool hasIntClamp() const {
@@ -1702,6 +1706,7 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("tma_hi", AMDGPU::TMA_HI)
     .Case("tba_lo", AMDGPU::TBA_LO)
     .Case("tba_hi", AMDGPU::TBA_HI)
+    .Case("null", AMDGPU::SGPR_NULL)
     .Default(0);
 }
 
@@ -2349,7 +2354,10 @@ unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
     switch (Reg) {
     case AMDGPU::FLAT_SCR:
     case AMDGPU::VCC:
+    case AMDGPU::VCC_LO:
+    case AMDGPU::VCC_HI:
     case AMDGPU::M0:
+    case AMDGPU::SGPR_NULL:
       return Reg;
     default:
       break;
@@ -2924,21 +2932,27 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 
   unsigned NumVGPRs = NextFreeVGPR;
   unsigned NumSGPRs = NextFreeSGPR;
-  unsigned MaxAddressableNumSGPRs = IsaInfo::getAddressableNumSGPRs(&getSTI());
 
-  if (Version.Major >= 8 && !Features.test(FeatureSGPRInitBug) &&
-      NumSGPRs > MaxAddressableNumSGPRs)
-    return OutOfRangeError(SGPRRange);
+  if (Version.Major >= 10)
+    NumSGPRs = 0;
+  else {
+    unsigned MaxAddressableNumSGPRs =
+        IsaInfo::getAddressableNumSGPRs(&getSTI());
 
-  NumSGPRs +=
-      IsaInfo::getNumExtraSGPRs(&getSTI(), VCCUsed, FlatScrUsed, XNACKUsed);
+    if (Version.Major >= 8 && !Features.test(FeatureSGPRInitBug) &&
+        NumSGPRs > MaxAddressableNumSGPRs)
+      return OutOfRangeError(SGPRRange);
 
-  if ((Version.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
-      NumSGPRs > MaxAddressableNumSGPRs)
-    return OutOfRangeError(SGPRRange);
+    NumSGPRs +=
+        IsaInfo::getNumExtraSGPRs(&getSTI(), VCCUsed, FlatScrUsed, XNACKUsed);
 
-  if (Features.test(FeatureSGPRInitBug))
-    NumSGPRs = IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
+    if ((Version.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
+        NumSGPRs > MaxAddressableNumSGPRs)
+      return OutOfRangeError(SGPRRange);
+
+    if (Features.test(FeatureSGPRInitBug))
+      NumSGPRs = IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
+  }
 
   VGPRBlocks = IsaInfo::getNumVGPRBlocks(&getSTI(), NumVGPRs);
   SGPRBlocks = IsaInfo::getNumSGPRBlocks(&getSTI(), NumSGPRs);
@@ -3516,7 +3530,14 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   for (MCRegAliasIterator R(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, &MRI, true);
        R.isValid(); ++R) {
     if (*R == RegNo)
-      return isGFX9();
+      return isGFX9() || isGFX10();
+  }
+
+  // GFX10 has 2 more SGPRs 104 and 105.
+  for (MCRegAliasIterator R(AMDGPU::SGPR104_SGPR105, &MRI, true);
+       R.isValid(); ++R) {
+    if (*R == RegNo)
+      return hasSGPR104_SGPR105();
   }
 
   switch (RegNo) {
@@ -3526,11 +3547,13 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case AMDGPU::TMA:
   case AMDGPU::TMA_LO:
   case AMDGPU::TMA_HI:
-    return !isGFX9();
+    return !isGFX9() && !isGFX10();
   case AMDGPU::XNACK_MASK:
   case AMDGPU::XNACK_MASK_LO:
   case AMDGPU::XNACK_MASK_HI:
-    return !isCI() && !isSI() && hasXNACK();
+    return !isCI() && !isSI() && !isGFX10() && hasXNACK();
+  case AMDGPU::SGPR_NULL:
+    return isGFX10();
   default:
     break;
   }
@@ -3541,8 +3564,10 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   if (isCI())
     return true;
 
-  if (isSI()) {
-    // No flat_scr
+  if (isSI() || isGFX10()) {
+    // No flat_scr on SI.
+    // On GFX10 flat scratch is not a valid register operand and can only be
+    // accessed with s_setreg/s_getreg.
     switch (RegNo) {
     case AMDGPU::FLAT_SCR:
     case AMDGPU::FLAT_SCR_LO:
@@ -3558,7 +3583,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   for (MCRegAliasIterator R(AMDGPU::SGPR102_SGPR103, &MRI, true);
        R.isValid(); ++R) {
     if (*R == RegNo)
-      return false;
+      return hasSGPR102_SGPR103();
   }
 
   return true;
@@ -4132,6 +4157,8 @@ bool AMDGPUAsmParser::parseHwregConstruct(OperandInfoTy &HwReg, int64_t &Offset,
     int Last = ID_SYMBOLIC_LAST_;
     if (isSI() || isCI() || isVI())
       Last = ID_SYMBOLIC_FIRST_GFX9_;
+    else if (isGFX9())
+      Last = ID_SYMBOLIC_FIRST_GFX10_;
     for (int i = ID_SYMBOLIC_FIRST_; i < Last; ++i) {
       if (tok == IdSymbolic[i]) {
         HwReg.Id = i;
@@ -4247,7 +4274,12 @@ bool AMDGPUAsmParser::parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &O
     for (int i = ID_GAPS_FIRST_; i < ID_GAPS_LAST_; ++i) {
       switch(i) {
         default: continue; // Omit gaps.
-        case ID_INTERRUPT: case ID_GS: case ID_GS_DONE:  case ID_SYSMSG: break;
+        case ID_GS_ALLOC_REQ:
+          if (isSI() || isCI() || isVI())
+            continue;
+          break;
+        case ID_INTERRUPT: case ID_GS: case ID_GS_DONE:
+        case ID_SYSMSG: break;
       }
       if (tok == IdSymbolic[i]) {
         Msg.Id = i;
@@ -4494,6 +4526,7 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
       do {
         // Validate and encode message ID.
         if (! ((ID_INTERRUPT <= Msg.Id && Msg.Id <= ID_GS_DONE)
+                || (Msg.Id == ID_GS_ALLOC_REQ && !isSI() && !isCI() && !isVI())
                 || Msg.Id == ID_SYSMSG)) {
           if (Msg.IsSymbolic)
             Error(S, "invalid/unsupported symbolic name of message");

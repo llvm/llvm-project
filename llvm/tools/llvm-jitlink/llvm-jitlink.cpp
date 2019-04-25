@@ -64,6 +64,10 @@ static cl::list<std::string>
     Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"),
            cl::ZeroOrMore);
 
+static cl::list<std::string> InputArgv("args", cl::Positional,
+                                       cl::desc("<program arguments>..."),
+                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -335,13 +339,18 @@ Triple getFirstFileTriple() {
   return Obj->makeTriple();
 }
 
-void setEntryPointNameIfNotProvided(const Session &S) {
+Error sanitizeArguments(const Session &S) {
   if (EntryPointName.empty()) {
     if (S.TT.getObjectFormat() == Triple::MachO)
       EntryPointName = "_main";
     else
       EntryPointName = "main";
   }
+
+  if (NoExec && !InputArgv.empty())
+    outs() << "Warning: --args passed to -noexec run will be ignored.\n";
+
+  return Error::success();
 }
 
 Error loadProcessSymbols(Session &S) {
@@ -568,6 +577,8 @@ Expected<int> runEntryPoint(Session &S, JITEvaluatedSymbol EntryPoint) {
 
   std::vector<const char *> EntryPointArgs;
   EntryPointArgs.push_back(PNStorage.get());
+  for (auto &InputArg : InputArgv)
+    EntryPointArgs.push_back(InputArg.data());
   EntryPointArgs.push_back(nullptr);
 
   using MainTy = int (*)(int, const char *[]);
@@ -588,7 +599,7 @@ int main(int argc, char *argv[]) {
 
   Session S(getFirstFileTriple());
 
-  setEntryPointNameIfNotProvided(S);
+  ExitOnErr(sanitizeArguments(S));
 
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(S));

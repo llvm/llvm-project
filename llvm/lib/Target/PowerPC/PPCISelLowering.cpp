@@ -2757,7 +2757,8 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
   PICLevel::Level picLevel = M->getPICLevel();
 
-  TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+  const TargetMachine &TM = getTargetMachine();
+  TLSModel::Model Model = TM.getTLSModel(GV);
 
   if (Model == TLSModel::LocalExec) {
     SDValue TGAHi = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
@@ -2781,8 +2782,14 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
       GOTPtr = DAG.getNode(PPCISD::ADDIS_GOT_TPREL_HA, dl,
                            PtrVT, GOTReg, TGA);
-    } else
-      GOTPtr = DAG.getNode(PPCISD::PPC32_GOT, dl, PtrVT);
+    } else {
+      if (!TM.isPositionIndependent())
+        GOTPtr = DAG.getNode(PPCISD::PPC32_GOT, dl, PtrVT);
+      else if (picLevel == PICLevel::SmallPIC)
+        GOTPtr = DAG.getNode(PPCISD::GlobalBaseReg, dl, PtrVT);
+      else
+        GOTPtr = DAG.getNode(PPCISD::PPC32_PICGOT, dl, PtrVT);
+    }
     SDValue TPOffset = DAG.getNode(PPCISD::LD_GOT_TPREL_L, dl,
                                    PtrVT, TGA, GOTPtr);
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TPOffset, TGATLS);
@@ -14437,7 +14444,7 @@ void PPCTargetLowering::insertCopiesSplitCSR(
     BuildMI(*Entry, MBBI, DebugLoc(), TII->get(TargetOpcode::COPY), NewVR)
       .addReg(*I);
 
-    // Insert the copy-back instructions right before the terminator
+    // Insert the copy-back instructions right before the terminator.
     for (auto *Exit : Exits)
       BuildMI(*Exit, Exit->getFirstTerminator(), DebugLoc(),
               TII->get(TargetOpcode::COPY), *I)

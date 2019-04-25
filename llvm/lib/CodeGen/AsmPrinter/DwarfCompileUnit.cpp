@@ -1201,6 +1201,10 @@ bool DwarfCompileUnit::isDwoUnit() const {
   return DD->useSplitDwarf() && Skeleton;
 }
 
+void DwarfCompileUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
+  constructTypeDIE(D, CTy);
+}
+
 bool DwarfCompileUnit::includeMinimalInlineScopes() const {
   return getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly ||
          (DD->useSplitDwarf() && !Skeleton);

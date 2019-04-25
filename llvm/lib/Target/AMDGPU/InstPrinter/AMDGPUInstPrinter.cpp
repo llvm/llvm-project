@@ -262,6 +262,9 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::M0:
     O << "m0";
     return;
+  case AMDGPU::SGPR_NULL:
+    O << "null";
+    return;
   case AMDGPU::FLAT_SCR:
     O << "flat_scratch";
     return;
@@ -1037,7 +1040,9 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   const unsigned SImm16 = MI->getOperand(OpNo).getImm();
   const unsigned Id = SImm16 & ID_MASK_;
   do {
-    if (Id == ID_INTERRUPT) {
+      if (Id == ID_INTERRUPT ||
+          (Id == ID_GS_ALLOC_REQ && !AMDGPU::isSI(STI) && !AMDGPU::isCI(STI) &&
+           !AMDGPU::isVI(STI))) {
       if ((SImm16 & ~ID_MASK_) != 0) // Unused/unknown bits must be 0.
         break;
       O << "sendmsg(" << IdSymbolic[Id] << ')';
@@ -1219,6 +1224,8 @@ void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
   unsigned Last = ID_SYMBOLIC_LAST_;
   if (AMDGPU::isSI(STI) || AMDGPU::isCI(STI) || AMDGPU::isVI(STI))
     Last = ID_SYMBOLIC_FIRST_GFX9_;
+  else if (AMDGPU::isGFX9(STI))
+    Last = ID_SYMBOLIC_FIRST_GFX10_;
   if (ID_SYMBOLIC_FIRST_ <= Id && Id < Last && IdSymbolic[Id]) {
     O << IdSymbolic[Id];
   } else {
