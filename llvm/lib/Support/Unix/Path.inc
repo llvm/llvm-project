@@ -38,6 +38,7 @@
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #include <sys/attr.h>
+#include <copyfile.h>
 #elif defined(__DragonFly__)
 #include <sys/mount.h>
 #endif
@@ -1062,6 +1063,37 @@ void system_temp_directory(bool ErasedOnReboot, SmallVectorImpl<char> &Result) {
 }
 
 } // end namespace path
+
+namespace fs {
+
+#ifdef __APPLE__
+/// This implementation tries to perform an APFS CoW clone of the file,
+/// which can be much faster and uses less space.
+/// Unfortunately fcopyfile(3) does not support COPYFILE_CLONE, so the
+/// file descriptor variant of this function still uses the default
+/// implementation.
+std::error_code copy_file(const Twine &From, const Twine &To) {
+  uint32_t Flag = COPYFILE_DATA;
+  if (__builtin_available(macos 10.12, *)) {
+    bool IsSymlink;
+    if (std::error_code Error = is_symlink_file(From, IsSymlink))
+      return Error;
+    // COPYFILE_CLONE clones the symlink instead of following it
+    // and returns EEXISTS if the target file already exists.
+    if (!IsSymlink && !exists(To))
+      Flag = COPYFILE_CLONE;
+  }
+
+  int Status =
+      copyfile(From.str().c_str(), To.str().c_str(), /* State */ NULL, Flag);
+
+  if (Status == 0)
+    return std::error_code();
+  return std::error_code(errno, std::generic_category());
+}
+#endif // __APPLE__
+
+} // end namespace fs
 
 } // end namespace sys
 } // end namespace llvm
