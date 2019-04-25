@@ -501,7 +501,8 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
       "libc++ std::list synthetic children",
-      ConstString("^std::__(ndk)?1::list<.+>(( )?&)?$"), stl_synth_flags, true);
+      ConstString("^std::__(ndk)?1::list<.+>(( )?&)?$"), stl_deref_flags,
+      true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdMapSyntheticFrontEndCreator,

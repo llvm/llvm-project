@@ -8,7 +8,8 @@ typedef std::list<std::string> string_list;
 int main()
 {
     int_list numbers_list;
-    
+    std::list<int>* list_ptr = &numbers_list;
+
     printf("// Set break point at this line.");
     (numbers_list.push_back(0x12345678));
     (numbers_list.push_back(0x11223344));
