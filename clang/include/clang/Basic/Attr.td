@@ -1462,7 +1462,7 @@ def IntelFPGALocalOrStaticVar : SubsetSubject<Var,
                               "local variables, static variables">;
 
 def IntelFPGADoublePump : Attr {
-  let Spellings = [GNU<"doublepump">, CXX11<"intelfpga", "doublepump">];
+  let Spellings = [CXX11<"intelfpga", "doublepump">];
   let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalOrStaticVar,
                               Field], ErrorDiag>;
   let LangOpts = [SYCL];
@@ -1470,7 +1470,7 @@ def IntelFPGADoublePump : Attr {
 }
 
 def IntelFPGASinglePump : Attr {
-  let Spellings = [GNU<"singlepump">, CXX11<"intelfpga", "singlepump">];
+  let Spellings = [CXX11<"intelfpga", "singlepump">];
   let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalOrStaticVar,
                               Field], ErrorDiag>;
   let LangOpts = [SYCL];
@@ -1478,7 +1478,7 @@ def IntelFPGASinglePump : Attr {
 }
 
 def IntelFPGAMemory : Attr {
-  let Spellings = [GNU<"memory">, CXX11<"intelfpga", "memory">];
+  let Spellings = [CXX11<"intelfpga", "memory">];
   let Args = [EnumArgument<"Kind", "MemoryKind",
                            ["MLAB", "BLOCK_RAM", ""],
                            ["MLAB", "BlockRAM", "Default"], 1>];
@@ -1498,7 +1498,7 @@ def IntelFPGAMemory : Attr {
 }
 
 def IntelFPGARegister : Attr {
-  let Spellings = [GNU<"register">, CXX11<"intelfpga", "register">];
+  let Spellings = [CXX11<"intelfpga", "register">];
   let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalOrStaticVar,
                               Field], ErrorDiag>;
   let LangOpts = [SYCL];
@@ -1507,7 +1507,7 @@ def IntelFPGARegister : Attr {
 
 // One integral argument.
 def IntelFPGABankWidth : Attr {
-  let Spellings = [GNU<"bankwidth">, CXX11<"intelfpga","bankwidth">];
+  let Spellings = [CXX11<"intelfpga","bankwidth">];
   let Args = [ExprArgument<"Value">];
   let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalStaticSlaveMemVar,
                               Field], ErrorDiag>;
@@ -1524,7 +1524,7 @@ def IntelFPGABankWidth : Attr {
 }
 
 def IntelFPGANumBanks : Attr {
-  let Spellings = [GNU<"numbanks">, CXX11<"intelfpga","numbanks">];
+  let Spellings = [CXX11<"intelfpga","numbanks">];
   let Args = [ExprArgument<"Value">];
   let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalStaticSlaveMemVar,
                               Field], ErrorDiag>;
@@ -1541,7 +1541,7 @@ def IntelFPGANumBanks : Attr {
 }
 
 def IntelFPGAMaxPrivateCopies : InheritableAttr {
-  let Spellings = [GNU<"max_private_copies">, CXX11<"intelfpga","max_private_copies">];
+  let Spellings = [CXX11<"intelfpga","max_private_copies">];
   let Args = [ExprArgument<"Value">];
   let LangOpts = [SYCL];
   let Subjects = SubjectList<[IntelFPGALocalNonConstVar, Field], ErrorDiag>;

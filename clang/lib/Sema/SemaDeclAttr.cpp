@@ -5023,7 +5023,7 @@ static bool checkForDuplicateAttribute(Sema &S, Decl *D,
   return false;
 }
 
-/// Handle the __doublepump__ and __singlepump__ attributes.
+/// Handle the [[intelfpga::doublepump]] and [[intelfpga::singlepump]] attributes.
 /// One but not both can be specified
 /// Both are incompatible with the __register__ attribute.
 template <typename AttrType, typename IncompatAttrType>
@@ -5043,8 +5043,8 @@ static void handleIntelFPGAPumpAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
   handleSimpleAttribute<AttrType>(S, D, Attr);
 }
 
-/// Handle the __memory__ attribute.
-/// This is incompatible with the __register__ attribute.
+/// Handle the [[intelfpga::memory]] attribute.
+/// This is incompatible with the [[intelfpga::register]] attribute.
 static void handleIntelFPGAMemoryAttr(Sema &S, Decl *D,
                                       const ParsedAttr &Attr) {
 
@@ -5103,7 +5103,7 @@ static bool checkIntelFPGARegisterAttrCompatibility(Sema &S, Decl *D,
   return InCompat;
 }
 
-/// Handle the __register__ attribute.
+/// Handle the [[intelfpga::register]] attribute.
 /// This is incompatible with most of the other memory attributes.
 static void handleIntelFPGARegisterAttr(Sema &S, Decl *D,
                                         const ParsedAttr &Attr) {
@@ -5115,7 +5115,7 @@ static void handleIntelFPGARegisterAttr(Sema &S, Decl *D,
   handleSimpleAttribute<IntelFPGARegisterAttr>(S, D, Attr);
 }
 
-/// Handle the bankwidth and numbanks attributes.
+/// Handle the [[intelfpga::bankwidth]] and [[intelfpga::numbanks]] attributes.
 /// These require a single constant power of two greater than zero.
 /// These are incompatible with the register attribute.
 /// The numbanks and bank_bits attributes are related.  If bank_bits exists

@@ -16,29 +16,29 @@ void foo() {
   //CHECK: %[[VAR_ONE:[0-9]+]] = bitcast{{.*}}var_one
   //CHECK: %[[VAR_ONE1:var_one[0-9]+]] = bitcast{{.*}}var_one
   //CHECK: llvm.var.annotation{{.*}}%[[VAR_ONE1]],{{.*}}[[ANN1]]
-  int __attribute__((numbanks(4))) var_one;
+  int var_one [[intelfpga::numbanks(4)]];
   //CHECK: %[[VAR_TWO:[0-9]+]] = bitcast{{.*}}var_two
   //CHECK: %[[VAR_TWO1:var_two[0-9]+]] = bitcast{{.*}}var_two
   //CHECK: llvm.var.annotation{{.*}}%[[VAR_TWO1]],{{.*}}[[ANN2]]
-  int __attribute__((register)) var_two;
+  int var_two [[intelfpga::register]];
   //CHECK: %[[VAR_THREE:[0-9]+]] = bitcast{{.*}}var_three
   //CHECK: %[[VAR_THREE1:var_three[0-9]+]] = bitcast{{.*}}var_three
   //CHECK: llvm.var.annotation{{.*}}%[[VAR_THREE1]],{{.*}}[[ANN3]]
-  int __attribute__((__memory__)) var_three;
+  int var_three [[intelfpga::memory]];
   //CHECK: %[[VAR_FOUR:[0-9]+]] = bitcast{{.*}}var_four
   //CHECK: %[[VAR_FOUR1:var_four[0-9]+]] = bitcast{{.*}}var_four
   //CHECK: llvm.var.annotation{{.*}}%[[VAR_FOUR1]],{{.*}}[[ANN4]]
-  int __attribute__((__bankwidth__(4))) var_four;
+  int var_four [[intelfpga::bankwidth(4)]];
 }
 
 struct foo_two {
-  int __attribute__((numbanks(4))) f1;
-  int __attribute__((register)) f2;
-  int __attribute__((__memory__)) f3;
-  int __attribute__((__bankwidth__(4))) f4;
-  int __attribute__((max_private_copies(8))) f5;
-  int __attribute__((singlepump)) f6;
-  int __attribute__((doublepump)) f7;
+  int f1 [[intelfpga::numbanks(4)]];
+  int f2 [[intelfpga::register]];
+  int f3 [[intelfpga::memory]];
+  int f4 [[intelfpga::bankwidth(4)]];
+  int f5 [[intelfpga::max_private_copies(8)]];
+  int f6 [[intelfpga::singlepump]];
+  int f7 [[intelfpga::doublepump]];
 };
 
 void bar() {
