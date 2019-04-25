@@ -27,7 +27,7 @@ public:
   __spirv::OpTypeSampler *m_Sampler;
   sampler_impl(__spirv::OpTypeSampler *Sampler) : m_Sampler(Sampler) {}
 #else
-  cl_sampler m_Sampler;
+  cl_sampler m_Sampler = nullptr;
   context m_SyclContext;
   std::unordered_map<context, cl_sampler> m_contextToSampler;
 
