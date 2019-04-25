@@ -60,39 +60,40 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   AMDGPU::GPUKind AK;
 
   switch (ElfMach) {
-  case ELF::EF_AMDGPU_MACH_R600_R600:     AK = GK_R600;    break;
-  case ELF::EF_AMDGPU_MACH_R600_R630:     AK = GK_R630;    break;
-  case ELF::EF_AMDGPU_MACH_R600_RS880:    AK = GK_RS880;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV670:    AK = GK_RV670;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV710:    AK = GK_RV710;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV730:    AK = GK_RV730;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV770:    AK = GK_RV770;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CEDAR:    AK = GK_CEDAR;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:  AK = GK_CYPRESS; break;
-  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:  AK = GK_JUNIPER; break;
-  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:  AK = GK_REDWOOD; break;
-  case ELF::EF_AMDGPU_MACH_R600_SUMO:     AK = GK_SUMO;    break;
-  case ELF::EF_AMDGPU_MACH_R600_BARTS:    AK = GK_BARTS;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CAICOS:   AK = GK_CAICOS;  break;
-  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:   AK = GK_CAYMAN;  break;
-  case ELF::EF_AMDGPU_MACH_R600_TURKS:    AK = GK_TURKS;   break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600: AK = GK_GFX600;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601: AK = GK_GFX601;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700: AK = GK_GFX700;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701: AK = GK_GFX701;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702: AK = GK_GFX702;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703: AK = GK_GFX703;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704: AK = GK_GFX704;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801: AK = GK_GFX801;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802: AK = GK_GFX802;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803: AK = GK_GFX803;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810: AK = GK_GFX810;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900: AK = GK_GFX900;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902: AK = GK_GFX902;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904: AK = GK_GFX904;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906: AK = GK_GFX906;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909: AK = GK_GFX909;  break;
-  case ELF::EF_AMDGPU_MACH_NONE:          AK = GK_NONE;    break;
+  case ELF::EF_AMDGPU_MACH_R600_R600:      AK = GK_R600;    break;
+  case ELF::EF_AMDGPU_MACH_R600_R630:      AK = GK_R630;    break;
+  case ELF::EF_AMDGPU_MACH_R600_RS880:     AK = GK_RS880;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV670:     AK = GK_RV670;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV710:     AK = GK_RV710;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV730:     AK = GK_RV730;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV770:     AK = GK_RV770;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CEDAR:     AK = GK_CEDAR;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:   AK = GK_CYPRESS; break;
+  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:   AK = GK_JUNIPER; break;
+  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:   AK = GK_REDWOOD; break;
+  case ELF::EF_AMDGPU_MACH_R600_SUMO:      AK = GK_SUMO;    break;
+  case ELF::EF_AMDGPU_MACH_R600_BARTS:     AK = GK_BARTS;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CAICOS:    AK = GK_CAICOS;  break;
+  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:    AK = GK_CAYMAN;  break;
+  case ELF::EF_AMDGPU_MACH_R600_TURKS:     AK = GK_TURKS;   break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600:  AK = GK_GFX600;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601:  AK = GK_GFX601;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700:  AK = GK_GFX700;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701:  AK = GK_GFX701;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702:  AK = GK_GFX702;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703:  AK = GK_GFX703;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704:  AK = GK_GFX704;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801:  AK = GK_GFX801;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802:  AK = GK_GFX802;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803:  AK = GK_GFX803;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810:  AK = GK_GFX810;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900:  AK = GK_GFX900;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902:  AK = GK_GFX902;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904:  AK = GK_GFX904;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906:  AK = GK_GFX906;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:  AK = GK_GFX909;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
+  case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   }
 
   StringRef GPUName = getArchNameAMDGCN(AK);
@@ -139,6 +140,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX904:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX904;
   case GK_GFX906:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
   case GK_GFX909:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX909;
+  case GK_GFX1010: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
 
@@ -324,6 +326,17 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
                 compute_pgm_rsrc1,
                 amdhsa::COMPUTE_PGM_RSRC1_FP16_OVFL);
+  if (IVersion.Major >= 10) {
+    PRINT_FIELD(OS, ".amdhsa_workgroup_processor_mode", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE);
+    PRINT_FIELD(OS, ".amdhsa_memory_ordered", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED);
+    PRINT_FIELD(OS, ".amdhsa_forward_progress", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_FWD_PROGRESS);
+  }
   PRINT_FIELD(
       OS, ".amdhsa_exception_fp_ieee_invalid_op", KD,
       compute_pgm_rsrc2,

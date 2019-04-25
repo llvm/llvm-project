@@ -5591,7 +5591,9 @@ enum SIEncodingFamily {
   SDWA = 2,
   SDWA9 = 3,
   GFX80 = 4,
-  GFX9 = 5
+  GFX9 = 5,
+  GFX10 = 6,
+  SDWA10 = 7
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
@@ -5604,6 +5606,8 @@ static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::VOLCANIC_ISLANDS:
   case AMDGPUSubtarget::GFX9:
     return SIEncodingFamily::VI;
+  case AMDGPUSubtarget::GFX10:
+    return SIEncodingFamily::GFX10;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }

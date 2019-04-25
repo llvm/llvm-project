@@ -557,14 +557,17 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
 
 Optional<uint64_t>
 BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
-                                                 const BlockNode &Node) const {
-  return getProfileCountFromFreq(F, getBlockFreq(Node).getFrequency());
+                                                 const BlockNode &Node,
+                                                 bool AllowSynthetic) const {
+  return getProfileCountFromFreq(F, getBlockFreq(Node).getFrequency(),
+                                 AllowSynthetic);
 }
 
 Optional<uint64_t>
 BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
-                                                    uint64_t Freq) const {
-  auto EntryCount = F.getEntryCount();
+                                                    uint64_t Freq,
+                                                    bool AllowSynthetic) const {
+  auto EntryCount = F.getEntryCount(AllowSynthetic);
   if (!EntryCount)
     return None;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.

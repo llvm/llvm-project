@@ -142,6 +142,15 @@ Improvements to clang-tidy
   <clang-tidy/checks/modernize-use-override>` now supports `OverrideSpelling`
   and `FinalSpelling` options.
 
+- New :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm-prefer-isa-or-dyn-cast-in-conditionals>` check.
+
+  Looks at conditionals and finds and replaces cases of ``cast<>``,
+  which will assert rather than return a null pointer, and
+  ``dyn_cast<>`` where the return value is not captured. Additionally,
+  finds and replaces cases that match the pattern ``var &&
+  isa<X>(var)``, where ``var`` is evaluated twice.
+
 - New :doc:`openmp-exception-escape
   <clang-tidy/checks/openmp-exception-escape>` check.
 

@@ -16,17 +16,8 @@
 #define _PSTL_VERSION_MINOR ((_PSTL_VERSION % 1000) / 10)
 #define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
 
-// Check the user-defined macro for parallel policies
-#if defined(PSTL_USE_PARALLEL_POLICIES)
-#    undef _PSTL_USE_PAR_POLICIES
-#    define _PSTL_USE_PAR_POLICIES PSTL_USE_PARALLEL_POLICIES
-// Check the internal macro for parallel policies
-#elif !defined(_PSTL_USE_PAR_POLICIES)
-#    define _PSTL_USE_PAR_POLICIES 1
-#endif
-
 #if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB)
-#   error "The parallel backend is neither serial nor TBB"
+#    error "The parallel backend is neither serial nor TBB"
 #endif
 
 // Check the user-defined macro for warnings

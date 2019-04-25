@@ -525,7 +525,8 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++2a": 201811L,
    },
    "headers": ["type_traits"],
-   "unimplemented": True,
+   "depends": "TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900",
+   "internal_depends": "!defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)",
    },
   {"name": "__cpp_lib_list_remove_return_type",
    "values": {

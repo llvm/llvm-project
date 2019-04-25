@@ -100,6 +100,8 @@ class DwarfCompileUnit final : public DwarfUnit {
     return DU->getAbstractEntities();
   }
 
+  void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
+
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU);

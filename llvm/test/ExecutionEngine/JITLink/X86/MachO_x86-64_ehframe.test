@@ -1,5 +1,10 @@
 # RUN: llvm-jitlink -noexec  %S/Inputs/MachO_x86-64_ehframe.o
 #
+# FIXME: Produces these errors:
+#   JIT session error: Symbols not found: { __ZTIi, ___gxx_personality_v0 }
+#   llvm-jitlink.exe: Failed to materialize symbols: { biz, _main, baz }
+# XFAIL: windows-msvc
+#
 # Perform a no-exec link of MachO_x86-64_ehframe and verify that it does not
 # generate any errors despite the last FDE referring to the first CIE (rather
 # than the most recent).

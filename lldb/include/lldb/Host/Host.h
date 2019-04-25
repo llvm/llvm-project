@@ -195,28 +195,35 @@ public:
   /// user experience
   static Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
-  // TODO: Convert this function to take a StringRef.
-  static Status RunShellCommand(
-      const char *command,         // Shouldn't be NULL
-      const FileSpec &working_dir, // Pass empty FileSpec to use the current
-                                   // working directory
-      int *status_ptr, // Pass NULL if you don't want the process exit status
-      int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
-                       // process to exit
-      std::string
-          *command_output, // Pass NULL if you don't want the command output
-      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
+  /// Run a shell command.
+  /// \arg command  shouldn't be NULL
+  /// \arg working_dir Pass empty FileSpec to use the current working directory
+  /// \arg status_ptr  Pass NULL if you don't want the process exit status
+  /// \arg signo_ptr   Pass NULL if you don't want the signal that caused the
+  ///                  process to exit
+  /// \arg command_output  Pass NULL if you don't want the command output
+  /// \arg hide_stderr if this is false, redirect stderr to stdout
+  /// TODO: Convert this function to take a StringRef.
+  static Status RunShellCommand(const char *command,
+                                const FileSpec &working_dir, int *status_ptr,
+                                int *signo_ptr, std::string *command_output,
+                                const Timeout<std::micro> &timeout,
+                                bool run_in_default_shell = true,
+                                bool hide_stderr = false);
 
-  static Status RunShellCommand(
-      const Args &args,
-      const FileSpec &working_dir, // Pass empty FileSpec to use the current
-                                   // working directory
-      int *status_ptr, // Pass NULL if you don't want the process exit status
-      int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
-                       // process to exit
-      std::string
-          *command_output, // Pass NULL if you don't want the command output
-      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
+  /// Run a shell command.
+  /// \arg working_dir Pass empty FileSpec to use the current working directory
+  /// \arg status_ptr  Pass NULL if you don't want the process exit status
+  /// \arg signo_ptr   Pass NULL if you don't want the signal that caused the
+  ///                  process to exit
+  /// \arg command_output  Pass NULL if you don't want the command output
+  /// \arg hide_stderr if this is false, redirect stderr to stdout
+  static Status RunShellCommand(const Args &args, const FileSpec &working_dir,
+                                int *status_ptr, int *signo_ptr,
+                                std::string *command_output,
+                                const Timeout<std::micro> &timeout,
+                                bool run_in_default_shell = true,
+                                bool hide_stderr = false);
 
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);

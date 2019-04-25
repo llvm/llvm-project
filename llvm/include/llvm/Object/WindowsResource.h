@@ -37,11 +37,14 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ScopedPrinter.h"
 
 #include <map>
 
 namespace llvm {
+
+class raw_ostream;
+class ScopedPrinter;
+
 namespace object {
 
 class WindowsResource;
@@ -230,6 +233,7 @@ Expected<std::unique_ptr<MemoryBuffer>>
 writeWindowsResourceCOFF(llvm::COFF::MachineTypes MachineType,
                          const WindowsResourceParser &Parser);
 
+void printResourceTypeName(uint16_t TypeID, raw_ostream &OS);
 } // namespace object
 } // namespace llvm
 

@@ -2752,7 +2752,7 @@ TEST_F(FunctionAttachmentTest, EntryCount) {
   F = getFunction("bar");
   EXPECT_FALSE(F->getEntryCount().hasValue());
   F->setEntryCount(123, Function::PCT_Synthetic);
-  Count = F->getEntryCount();
+  Count = F->getEntryCount(true /*allow synthetic*/);
   EXPECT_TRUE(Count.hasValue());
   EXPECT_EQ(123u, Count.getCount());
   EXPECT_EQ(Function::PCT_Synthetic, Count.getType());

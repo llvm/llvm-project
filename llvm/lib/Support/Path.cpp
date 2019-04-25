@@ -935,7 +935,6 @@ std::error_code create_directories(const Twine &Path, bool IgnoreExisting,
   return create_directory(P, IgnoreExisting, Perms);
 }
 
-#ifndef __APPLE__
 static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   const size_t BufSize = 4096;
   char *Buf = new char[BufSize];
@@ -960,6 +959,7 @@ static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   return std::error_code();
 }
 
+#ifndef __APPLE__
 std::error_code copy_file(const Twine &From, const Twine &To) {
   int ReadFD, WriteFD;
   if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
@@ -977,6 +977,7 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
 
   return EC;
 }
+#endif
 
 std::error_code copy_file(const Twine &From, int ToFD) {
   int ReadFD;
@@ -989,7 +990,6 @@ std::error_code copy_file(const Twine &From, int ToFD) {
 
   return EC;
 }
-#endif
 
 ErrorOr<MD5::MD5Result> md5_contents(int FD) {
   MD5 Hash;

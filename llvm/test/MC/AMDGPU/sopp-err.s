@@ -1,6 +1,7 @@
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=SICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=VI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=VI --check-prefix=SICIVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN %s
 
 s_sendmsg sendmsg(11)
 // GCN: error: invalid/unsupported code of message
@@ -50,6 +51,12 @@ s_sendmsg sendmsg(2, 2, 0, 0)
 s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // GCN: error: failed parsing operand
 
+s_sendmsg sendmsg(MSG_GS_ALLOC_REQ)
+// SICIVI: error: invalid/unsupported symbolic name of message
+
+s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
+// SICIVI: error: invalid/unsupported symbolic name of message
+
 s_sendmsg sendmsg(15)
 // GCN: error: failed parsing operand
 
@@ -75,13 +82,19 @@ s_sendmsg sendmsg(MSG_SYSMSG, 5)
 // GCN: error: invalid/unsupported code of SYSMSG_OP
 
 s_waitcnt lgkmcnt(16)
+// SICIVI: error: too large value for lgkmcnt
+
+s_waitcnt lgkmcnt(64)
 // GCN: error: too large value for lgkmcnt
 
 s_waitcnt expcnt(8)
 // GCN: error: too large value for expcnt
 
 s_waitcnt vmcnt(16)
-// GCN: error: too large value for vmcnt
+// SICIVI: error: too large value for vmcnt
+
+s_waitcnt vmcnt(64)
+// GFX10: error: too large value for vmcnt
 
 s_waitcnt vmcnt(0xFFFFFFFFFFFF0000)
 // GCN: error: too large value for vmcnt
