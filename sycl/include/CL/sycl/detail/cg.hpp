@@ -48,7 +48,7 @@ class NDRDescT {
   template <int Dims_> void setNDRangeLeftover() {
     for (int I = Dims_; I < 3; ++I) {
       GlobalSize[I] = 1;
-      LocalSize[I] = 1;
+      LocalSize[I] = LocalSize[0] ? 1 : 0;
       GlobalOffset[I] = 0;
     }
   }
@@ -59,7 +59,7 @@ public:
   template <int Dims_> void set(sycl::range<Dims_> NumWorkItems) {
     for (int I = 0; I < Dims_; ++I) {
       GlobalSize[I] = NumWorkItems[I];
-      LocalSize[I] = 1;
+      LocalSize[I] = 0;
       GlobalOffset[I] = 0;
     }
 

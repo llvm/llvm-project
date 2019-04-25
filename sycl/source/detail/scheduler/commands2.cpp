@@ -369,8 +369,9 @@ cl_int ExecCGCommand::enqueueImp() {
     cl_int Error = CL_SUCCESS;
     Error = clEnqueueNDRangeKernel(
         MQueue->getHandleRef(), Kernel, NDRDesc.Dims, &NDRDesc.GlobalOffset[0],
-        &NDRDesc.GlobalSize[0], &NDRDesc.LocalSize[0], RawEvents.size(),
-        RawEvents.empty() ? nullptr : &RawEvents[0], &Event);
+        &NDRDesc.GlobalSize[0],
+        NDRDesc.LocalSize[0] ? &NDRDesc.LocalSize[0] : nullptr,
+        RawEvents.size(), RawEvents.empty() ? nullptr : &RawEvents[0], &Event);
     CHECK_OCL_CODE(Error);
     return CL_SUCCESS;
   }
