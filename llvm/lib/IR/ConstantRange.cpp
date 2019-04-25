@@ -974,8 +974,6 @@ ConstantRange
 ConstantRange::udiv(const ConstantRange &RHS) const {
   if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax().isNullValue())
     return getEmpty();
-  if (RHS.isFullSet())
-    return getFull();
 
   APInt Lower = getUnsignedMin().udiv(RHS.getUnsignedMax());
 

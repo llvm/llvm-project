@@ -23,4 +23,4 @@
 RUN: not llvm-objdump -private-headers %p/Inputs/invalid-phdr.elf 2>&1 \
 RUN:         | FileCheck %s
 
-CHECK: LLVM ERROR: Invalid data was encountered while parsing the file
+CHECK: LLVM ERROR: program headers longer than binary

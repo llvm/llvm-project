@@ -1,4 +1,5 @@
 import("//llvm/lib/Target/targets.gni")
+import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
@@ -77,7 +78,6 @@ write_cmake_config("config") {
     "HAVE_CRASHREPORTERCLIENT_H=",
     "HAVE_DECL_FE_ALL_EXCEPT=1",
     "HAVE_DECL_FE_INEXACT=1",
-    "LLVM_ENABLE_DIA_SDK=",
     "LLVM_ENABLE_CRASH_DUMPS=",
     "HAVE_ERRNO_H=1",
     "HAVE_FCNTL_H=1",
@@ -295,6 +295,12 @@ write_cmake_config("config") {
     values += [ "HAVE_TERMINFO=1" ]
   } else {
     values += [ "HAVE_TERMINFO=" ]
+  }
+
+  if (llvm_enable_dia_sdk) {
+    values += [ "LLVM_ENABLE_DIA_SDK=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
   if (llvm_enable_zlib) {

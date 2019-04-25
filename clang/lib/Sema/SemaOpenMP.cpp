@@ -4715,6 +4715,7 @@ class LoopCounterRefChecker final
   Sema &SemaRef;
   DSAStackTy &Stack;
   const ValueDecl *CurLCDecl = nullptr;
+  const ValueDecl *DepDecl = nullptr;
   bool IsInitializer = true;
 
 public:
@@ -4728,6 +4729,18 @@ public:
         return false;
       }
       const auto &&Data = Stack.isLoopControlVariable(VD);
+      if (DepDecl && Data.first) {
+        SmallString<128> Name;
+        llvm::raw_svector_ostream OS(Name);
+        DepDecl->getNameForDiagnostic(OS, SemaRef.getPrintingPolicy(),
+                                      /*Qualified=*/true);
+        SemaRef.Diag(E->getExprLoc(),
+                     diag::err_omp_invariant_or_linear_dependancy)
+            << OS.str();
+        return false;
+      }
+      if (Data.first)
+        DepDecl = VD;
       return Data.first;
     }
     return false;
@@ -4742,16 +4755,27 @@ public:
         return false;
       }
       const auto &&Data = Stack.isLoopControlVariable(VD);
+      if (DepDecl && Data.first) {
+        SmallString<128> Name;
+        llvm::raw_svector_ostream OS(Name);
+        DepDecl->getNameForDiagnostic(OS, SemaRef.getPrintingPolicy(),
+                                      /*Qualified=*/true);
+        SemaRef.Diag(E->getExprLoc(),
+                     diag::err_omp_invariant_or_linear_dependancy)
+            << OS.str();
+        return false;
+      }
+      if (Data.first)
+        DepDecl = VD;
       return Data.first;
     }
     return false;
   }
   bool VisitStmt(const Stmt *S) {
-    for (const Stmt *Child : S->children()) {
-      if (Child && Visit(Child))
-        return true;
-    }
-    return false;
+    bool Res = true;
+    for (const Stmt *Child : S->children())
+      Res = Child && Visit(Child) && Res;
+    return Res;
   }
   explicit LoopCounterRefChecker(Sema &SemaRef, DSAStackTy &Stack,
                                  const ValueDecl *CurLCDecl, bool IsInitializer)

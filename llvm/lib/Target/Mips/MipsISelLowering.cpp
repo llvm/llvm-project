@@ -1203,8 +1203,9 @@ MipsTargetLowering::LowerOperationWrapper(SDNode *N,
                                           SelectionDAG &DAG) const {
   SDValue Res = LowerOperation(SDValue(N, 0), DAG);
 
-  for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
-    Results.push_back(Res.getValue(I));
+  if (Res)
+    for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
+      Results.push_back(Res.getValue(I));
 }
 
 void

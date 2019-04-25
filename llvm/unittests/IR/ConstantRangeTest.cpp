@@ -821,6 +821,16 @@ TEST_F(ConstantRangeTest, UDiv) {
   EXPECT_EQ(Some.udiv(Some), ConstantRange(APInt(16, 0), APInt(16, 0x111)));
   EXPECT_EQ(Some.udiv(Wrap), ConstantRange(APInt(16, 0), APInt(16, 0xaaa)));
   EXPECT_EQ(Wrap.udiv(Wrap), Full);
+
+
+  ConstantRange Zero(APInt(16, 0));
+  EXPECT_EQ(Zero.udiv(One), Zero);
+  EXPECT_EQ(Zero.udiv(Full), Zero);
+
+  EXPECT_EQ(ConstantRange(APInt(16, 0), APInt(16, 99)).udiv(Full),
+            ConstantRange(APInt(16, 0), APInt(16, 99)));
+  EXPECT_EQ(ConstantRange(APInt(16, 10), APInt(16, 99)).udiv(Full),
+            ConstantRange(APInt(16, 0), APInt(16, 99)));
 }
 
 TEST_F(ConstantRangeTest, URem) {

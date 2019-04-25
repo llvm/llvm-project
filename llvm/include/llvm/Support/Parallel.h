@@ -73,8 +73,12 @@ public:
 
 class TaskGroup {
   Latch L;
+  bool Parallel;
 
 public:
+  TaskGroup();
+  ~TaskGroup();
+
   void spawn(std::function<void()> f);
 
   void sync() const { L.sync(); }

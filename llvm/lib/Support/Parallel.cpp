@@ -17,7 +17,9 @@
 #include <stack>
 #include <thread>
 
-using namespace llvm;
+namespace llvm {
+namespace parallel {
+namespace detail {
 
 namespace {
 
@@ -118,11 +120,28 @@ Executor *Executor::getDefaultExecutor() {
 #endif
 }
 
-void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
-  L.inc();
-  Executor::getDefaultExecutor()->add([&, F] {
+static std::atomic<int> TaskGroupInstances;
+
+// Latch::sync() called by the dtor may cause one thread to block. If is a dead
+// lock if all threads in the default executor are blocked. To prevent the dead
+// lock, only allow the first TaskGroup to run tasks parallelly. In the scenario
+// of nested parallel_for_each(), only the outermost one runs parallelly.
+TaskGroup::TaskGroup() : Parallel(TaskGroupInstances++ == 0) {}
+TaskGroup::~TaskGroup() { --TaskGroupInstances; }
+
+void TaskGroup::spawn(std::function<void()> F) {
+  if (Parallel) {
+    L.inc();
+    Executor::getDefaultExecutor()->add([&, F] {
+      F();
+      L.dec();
+    });
+  } else {
     F();
-    L.dec();
-  });
+  }
 }
+
+} // namespace detail
+} // namespace parallel
+} // namespace llvm
 #endif // LLVM_ENABLE_THREADS
