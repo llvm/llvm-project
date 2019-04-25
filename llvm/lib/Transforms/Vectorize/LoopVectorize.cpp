@@ -281,7 +281,7 @@ cl::opt<bool> llvm::EnableLoopInterleaving(
     "interleave-loops", cl::init(true), cl::Hidden,
     cl::desc("Enable loop interleaving in Loop vectorization passes"));
 cl::opt<bool> llvm::EnableLoopVectorization(
-    "vectorize-loops", cl::init(false), cl::Hidden,
+    "vectorize-loops", cl::init(true), cl::Hidden,
     cl::desc("Run the Loop vectorization passes"));
 
 /// A helper function for converting Scalar types to vector types.

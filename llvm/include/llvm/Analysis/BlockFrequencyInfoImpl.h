@@ -520,9 +520,11 @@ public:
 
   BlockFrequency getBlockFreq(const BlockNode &Node) const;
   Optional<uint64_t> getBlockProfileCount(const Function &F,
-                                          const BlockNode &Node) const;
+                                          const BlockNode &Node,
+                                          bool AllowSynthetic = false) const;
   Optional<uint64_t> getProfileCountFromFreq(const Function &F,
-                                             uint64_t Freq) const;
+                                             uint64_t Freq,
+                                             bool AllowSynthetic = false) const;
   bool isIrrLoopHeader(const BlockNode &Node);
 
   void setBlockFreq(const BlockNode &Node, uint64_t Freq);
@@ -968,13 +970,17 @@ public:
   }
 
   Optional<uint64_t> getBlockProfileCount(const Function &F,
-                                          const BlockT *BB) const {
-    return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB));
+                                          const BlockT *BB,
+                                          bool AllowSynthetic = false) const {
+    return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB),
+                                                            AllowSynthetic);
   }
 
   Optional<uint64_t> getProfileCountFromFreq(const Function &F,
-                                             uint64_t Freq) const {
-    return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq);
+                                             uint64_t Freq,
+                                             bool AllowSynthetic = false) const {
+    return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq,
+                                                               AllowSynthetic);
   }
 
   bool isIrrLoopHeader(const BlockT *BB) {

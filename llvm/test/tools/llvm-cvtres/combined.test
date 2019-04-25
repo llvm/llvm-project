@@ -32,7 +32,7 @@ CHECK-NEXT:        Characteristics: 0
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
 CHECK-NEXT:  ]
-CHECK-NEXT:  Type: kRT_BITMAP (ID 2) [
+CHECK-NEXT:  Type: BITMAP (ID 2) [
 CHECK-NEXT:    Table Offset: 0x58
 CHECK-NEXT:    Number of String Entries: 2
 CHECK-NEXT:    Number of ID Entries: 0
@@ -61,7 +61,7 @@ CHECK-NEXT:        Characteristics: 0
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
 CHECK-NEXT:  ]
-CHECK-NEXT:  Type: kRT_MENU (ID 4) [
+CHECK-NEXT:  Type: MENU (ID 4) [
 CHECK-NEXT:    Table Offset: 0x78
 CHECK-NEXT:    Number of String Entries: 1
 CHECK-NEXT:    Number of ID Entries: 1
@@ -90,7 +90,7 @@ CHECK-NEXT:        Characteristics: 0
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
 CHECK-NEXT:  ]
-CHECK-NEXT:  Type: kRT_DIALOG (ID 5) [
+CHECK-NEXT:  Type: DIALOG (ID 5) [
 CHECK-NEXT:    Table Offset: 0x98
 CHECK-NEXT:    Number of String Entries: 1
 CHECK-NEXT:    Number of ID Entries: 0
@@ -107,7 +107,7 @@ CHECK-NEXT:        Characteristics: 0
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
 CHECK-NEXT:  ]
-CHECK-NEXT:  Type: kRT_ACCELERATOR (ID 9) [
+CHECK-NEXT:  Type: ACCELERATOR (ID 9) [
 CHECK-NEXT:    Table Offset: 0xB0
 CHECK-NEXT:    Number of String Entries: 1
 CHECK-NEXT:    Number of ID Entries: 1
@@ -143,7 +143,7 @@ CHECK-NEXT:        Characteristics: 0
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
 CHECK-NEXT:  ]
-CHECK-NEXT:  Type: kRT_RCDATA (ID 10) [
+CHECK-NEXT:  Type: RCDATA (ID 10) [
 CHECK-NEXT:    Table Offset: 0xD0
 CHECK-NEXT:    Number of String Entries: 1
 CHECK-NEXT:    Number of ID Entries: 0

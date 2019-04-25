@@ -11901,6 +11901,9 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
 // FDIVs may be lower than the cost of one FDIV and two FMULs. Another reason
 // is the critical path is increased from "one FDIV" to "one FDIV + one FMUL".
 SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
+  // TODO: Limit this transform based on optsize/minsize - it always creates at
+  //       least 1 extra instruction. But the perf win may be substantial enough
+  //       that only minsize should restrict this.
   bool UnsafeMath = DAG.getTarget().Options.UnsafeFPMath;
   const SDNodeFlags Flags = N->getFlags();
   if (!UnsafeMath && !Flags.hasAllowReciprocal())
@@ -11916,7 +11919,15 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   // possibly be enough uses of the divisor to make the transform worthwhile.
   SDValue N1 = N->getOperand(1);
   unsigned MinUses = TLI.combineRepeatedFPDivisors();
-  if (!MinUses || N1->use_size() < MinUses)
+
+  // For splat vectors, scale the number of uses by the splat factor. If we can
+  // convert the division into a scalar op, that will likely be much faster.
+  unsigned NumElts = 1;
+  EVT VT = N->getValueType(0);
+  if (VT.isVector() && DAG.isSplatValue(N1))
+    NumElts = VT.getVectorNumElements();
+
+  if (!MinUses || (N1->use_size() * NumElts) < MinUses)
     return SDValue();
 
   // Find all FDIV users of the same divisor.
@@ -11933,10 +11944,9 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
 
   // Now that we have the actual number of divisor uses, make sure it meets
   // the minimum threshold specified by the target.
-  if (Users.size() < MinUses)
+  if ((Users.size() * NumElts) < MinUses)
     return SDValue();
 
-  EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDValue FPOne = DAG.getConstantFP(1.0, DL, VT);
   SDValue Reciprocal = DAG.getNode(ISD::FDIV, DL, VT, FPOne, N1, Flags);

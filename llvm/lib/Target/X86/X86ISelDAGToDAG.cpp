@@ -592,6 +592,15 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
             Imm->getAPIntValue().isIntN(32))
           return false;
 
+        // If this really a zext_inreg that can be represented with a movzx
+        // instruction, prefer that.
+        // TODO: We could shrink the load and fold if it is non-volatile.
+        if (U->getOpcode() == ISD::AND &&
+            (Imm->getAPIntValue() == UINT8_MAX ||
+             Imm->getAPIntValue() == UINT16_MAX ||
+             Imm->getAPIntValue() == UINT32_MAX))
+          return false;
+
         // ADD/SUB with can negate the immediate and use the opposite operation
         // to fit 128 into a sign extended 8 bit immediate.
         if ((U->getOpcode() == ISD::ADD || U->getOpcode() == ISD::SUB) &&
@@ -1375,6 +1384,7 @@ static bool foldMaskAndShiftToExtract(SelectionDAG &DAG, SDValue N,
   insertDAGNode(DAG, N, ShlCount);
   insertDAGNode(DAG, N, Shl);
   DAG.ReplaceAllUsesWith(N, Shl);
+  DAG.RemoveDeadNode(N.getNode());
   AM.IndexReg = And;
   AM.Scale = (1 << ScaleLog);
   return false;
@@ -1441,6 +1451,7 @@ static bool foldMaskedShiftToScaledMask(SelectionDAG &DAG, SDValue N,
   insertDAGNode(DAG, N, NewAnd);
   insertDAGNode(DAG, N, NewShift);
   DAG.ReplaceAllUsesWith(N, NewShift);
+  DAG.RemoveDeadNode(N.getNode());
 
   AM.Scale = 1 << ShiftAmt;
   AM.IndexReg = NewAnd;
@@ -1551,6 +1562,7 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   insertDAGNode(DAG, N, NewSHLAmt);
   insertDAGNode(DAG, N, NewSHL);
   DAG.ReplaceAllUsesWith(N, NewSHL);
+  DAG.RemoveDeadNode(N.getNode());
 
   AM.Scale = 1 << AMShiftAmt;
   AM.IndexReg = NewSRL;
@@ -1609,6 +1621,7 @@ static bool foldMaskedShiftToBEXTR(SelectionDAG &DAG, SDValue N,
   insertDAGNode(DAG, N, NewSHLAmt);
   insertDAGNode(DAG, N, NewSHL);
   DAG.ReplaceAllUsesWith(N, NewSHL);
+  DAG.RemoveDeadNode(N.getNode());
 
   AM.Scale = 1 << AMShiftAmt;
   AM.IndexReg = NewAnd;
@@ -1940,6 +1953,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     insertDAGNode(*CurDAG, N, Zext);
     insertDAGNode(*CurDAG, N, NewShl);
     CurDAG->ReplaceAllUsesWith(N, NewShl);
+    CurDAG->RemoveDeadNode(N.getNode());
     return false;
   }
   }
@@ -2052,10 +2066,13 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
       AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
   }
 
+  // Save the DL and VT before calling matchAddress, it can invalidate N.
+  SDLoc DL(N);
+  MVT VT = N.getSimpleValueType();
+
   if (matchAddress(N, AM))
     return false;
 
-  MVT VT = N.getSimpleValueType();
   if (AM.BaseType == X86ISelAddressMode::RegBase) {
     if (!AM.Base_Reg.getNode())
       AM.Base_Reg = CurDAG->getRegister(0, VT);
@@ -2064,7 +2081,7 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
   if (!AM.IndexReg.getNode())
     AM.IndexReg = CurDAG->getRegister(0, VT);
 
-  getAddressOperands(AM, SDLoc(N), Base, Scale, Index, Disp, Segment);
+  getAddressOperands(AM, DL, Base, Scale, Index, Disp, Segment);
   return true;
 }
 
@@ -2276,7 +2293,7 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
       Complexity += 2;
   }
 
-  if (AM.Disp && (AM.Base_Reg.getNode() || AM.IndexReg.getNode()))
+  if (AM.Disp)
     Complexity++;
 
   // If it isn't worth using an LEA, reject it.

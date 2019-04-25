@@ -257,6 +257,9 @@ struct LibcppCondVar {
 private:
   std::__libcpp_condvar_t cond = _LIBCPP_CONDVAR_INITIALIZER;
 };
+#else
+struct LibcppMutex {};
+struct LibcppCondVar {};
 #endif // !defined(_LIBCXXABI_HAS_NO_THREADS)
 
 

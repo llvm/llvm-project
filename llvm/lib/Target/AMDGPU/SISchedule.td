@@ -37,6 +37,9 @@ def WriteDouble : SchedWrite;
 // half rate f64 instruction (same as v_add_f64)
 def WriteDoubleAdd  : SchedWrite;
 
+// Conversion to or from f64 instruction
+def WriteDoubleCvt  : SchedWrite;
+
 // Half rate 64-bit instructions.
 def Write64Bit : SchedWrite;
 
@@ -61,6 +64,7 @@ class SISchedMachineModel : SchedMachineModel {
 
 def SIFullSpeedModel : SISchedMachineModel;
 def SIQuarterSpeedModel : SISchedMachineModel;
+def GFX10SpeedModel : SISchedMachineModel;
 
 // XXX: Are the resource counts correct?
 def HWBranch : ProcResource<1> {
@@ -79,6 +83,9 @@ def HWVMEM   : ProcResource<1> {
   let BufferSize = 15;  // Taken from S_WAITCNT
 }
 def HWVALU   : ProcResource<1> {
+  let BufferSize = 1;
+}
+def HWRC   : ProcResource<1> { // Register destination cache
   let BufferSize = 1;
 }
 
@@ -124,6 +131,7 @@ defm : SICommonWriteRes;
 def : HWVALUWriteRes<WriteFloatFMA,   1>;
 def : HWVALUWriteRes<WriteDouble,     4>;
 def : HWVALUWriteRes<WriteDoubleAdd,  2>;
+def : HWVALUWriteRes<WriteDoubleCvt,  4>;
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
@@ -136,7 +144,32 @@ defm : SICommonWriteRes;
 def : HWVALUWriteRes<WriteFloatFMA, 16>;
 def : HWVALUWriteRes<WriteDouble,   16>;
 def : HWVALUWriteRes<WriteDoubleAdd, 8>;
+def : HWVALUWriteRes<WriteDoubleCvt, 4>;
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
 }  // End SchedModel = SIQuarterSpeedModel
+
+let SchedModel = GFX10SpeedModel in {
+
+// The latency values are 1 / (operations / cycle).
+// Add 1 stall cycle for VGPR read.
+def : HWWriteRes<Write32Bit,         [HWVALU, HWRC],   5>;
+def : HWWriteRes<Write64Bit,         [HWVALU, HWRC],   9>;
+def : HWWriteRes<WriteQuarterRate32, [HWVALU, HWRC],   17>;
+def : HWWriteRes<WriteFloatFMA,      [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteDouble,        [HWVALU, HWRC],   17>;
+def : HWWriteRes<WriteDoubleAdd,     [HWVALU, HWRC],   17>;
+def : HWWriteRes<WriteDoubleCvt,     [HWVALU, HWRC],   17>;
+
+def : HWWriteRes<WriteBranch,        [HWBranch],       32>;
+def : HWWriteRes<WriteExport,        [HWExport, HWRC], 16>;
+def : HWWriteRes<WriteLDS,           [HWLGKM,   HWRC], 20>;
+def : HWWriteRes<WriteSALU,          [HWSALU,   HWRC], 5>;
+def : HWWriteRes<WriteSMEM,          [HWLGKM,   HWRC], 20>;
+def : HWWriteRes<WriteVMEM,          [HWVMEM,   HWRC], 320>;
+def : HWWriteRes<WriteBarrier,       [HWBranch],       2000>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
+
+}  // End SchedModel = GFX10SpeedModel

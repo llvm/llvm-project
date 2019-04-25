@@ -5011,6 +5011,12 @@ bool X86TargetLowering::hasAndNot(SDValue Y) const {
   return Subtarget.hasSSE2();
 }
 
+bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
+    const SDNode *N, CombineLevel Level) const {
+  // TODO - some targets prefer immediate vector shifts to shift+mask.
+  return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N, Level);
+}
+
 bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   EVT VT = Y.getValueType();
 
@@ -32814,10 +32820,13 @@ static SDValue foldShuffleOfHorizOp(SDNode *N) {
 
   // For a broadcast, peek through an extract element of index 0 to find the
   // horizontal op: broadcast (ext_vec_elt HOp, 0)
+  EVT VT = N->getValueType(0);
   if (Opcode == X86ISD::VBROADCAST) {
     SDValue SrcOp = N->getOperand(0);
     if (SrcOp.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-        SrcOp.getValueType() == MVT::f64 && isNullConstant(SrcOp.getOperand(1)))
+        SrcOp.getValueType() == MVT::f64 &&
+        SrcOp.getOperand(0).getValueType() == VT &&
+        isNullConstant(SrcOp.getOperand(1)))
       N = SrcOp.getNode();
   }
 
@@ -32841,7 +32850,8 @@ static SDValue foldShuffleOfHorizOp(SDNode *N) {
     // movddup (hadd X, X) --> hadd X, X
     // broadcast (extract_vec_elt (hadd X, X), 0) --> hadd X, X
     assert((HOp.getValueType() == MVT::v2f64 ||
-            HOp.getValueType() == MVT::v4f64) && "Unexpected type for h-op");
+            HOp.getValueType() == MVT::v4f64) && HOp.getValueType() == VT &&
+           "Unexpected type for h-op");
     return HOp;
   }
 
@@ -33725,8 +33735,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
                                   const SDLoc &DL,
                                   const X86Subtarget &Subtarget) {
   EVT SrcVT = Src.getValueType();
-
-  if (!VT.isScalarInteger() || !SrcVT.isSimple())
+  if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
     return SDValue();
 
   // If the input is a truncate from v16i8 or v32i8 go ahead and use a
@@ -33822,7 +33831,11 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
                       DAG.getUNDEF(MVT::v8i16));
     V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
   }
-  return DAG.getZExtOrTrunc(V, DL, VT);
+
+  EVT IntVT =
+      EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
+  V = DAG.getZExtOrTrunc(V, DL, IntVT);
+  return DAG.getBitcast(VT, V);
 }
 
 // Convert a vXi1 constant build vector to the same width scalar integer.

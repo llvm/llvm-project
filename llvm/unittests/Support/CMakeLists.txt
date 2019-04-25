@@ -39,6 +39,7 @@ add_llvm_unittest(SupportTests
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
+  MatchersTest.cpp
   MD5Test.cpp
   ManagedStatic.cpp
   MathExtrasTest.cpp

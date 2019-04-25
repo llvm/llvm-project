@@ -1548,6 +1548,10 @@ public:
   /// FIXME: This is not fully implemented yet.
   void setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol);
 
+  /// Clone another MachineInstr's pre- and post- instruction symbols and
+  /// replace ours with it.
+  void cloneInstrSymbols(MachineFunction &MF, const MachineInstr &MI);
+
   /// Return the MIFlags which represent both MachineInstrs. This
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
