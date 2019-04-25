@@ -519,13 +519,11 @@ typedef __char32_t char32_t;
 
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
-#if _GNUC_VER >= 407
 #define _LIBCPP_UNDERLYING_TYPE(T) __underlying_type(T)
 #define _LIBCPP_IS_LITERAL(T) __is_literal_type(T)
 #define _LIBCPP_HAS_IS_FINAL
-#endif
 
-#if defined(__GNUC__) && _GNUC_VER >= 403
+#if defined(__GNUC__)
 #define _LIBCPP_HAS_IS_BASE_OF
 #endif
 
@@ -533,26 +531,19 @@ typedef __char32_t char32_t;
 #define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-// constexpr was added to GCC in 4.6.
-#if _GNUC_VER < 406
-#  define _LIBCPP_HAS_NO_CONSTEXPR
-// Can only use constexpr in c++11 mode.
-#elif !defined(__GXX_EXPERIMENTAL_CXX0X__) && __cplusplus < 201103L
-#  define _LIBCPP_HAS_NO_CONSTEXPR
-#endif
-
 // Determine if GCC supports relaxed constexpr
 #if !defined(__cpp_constexpr) || __cpp_constexpr < 201304L
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #endif
 
-// GCC 5 will support variable templates
+// GCC 5 supports variable templates
 #if !defined(__cpp_variable_templates) || __cpp_variable_templates < 201304L
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #endif
 
 #ifndef __GXX_EXPERIMENTAL_CXX0X__
 
+#define _LIBCPP_HAS_NO_CONSTEXPR
 #define _LIBCPP_HAS_NO_DECLTYPE
 #define _LIBCPP_HAS_NO_NULLPTR
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
@@ -560,25 +551,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #define _LIBCPP_HAS_NO_STRONG_ENUMS
 #define _LIBCPP_HAS_NO_NOEXCEPT
-
-#else  // __GXX_EXPERIMENTAL_CXX0X__
-
-#if _GNUC_VER < 403
-#define _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#endif
-
-
-#if _GNUC_VER < 404
-#define _LIBCPP_HAS_NO_DECLTYPE
-#define _LIBCPP_HAS_NO_UNICODE_CHARS
-#define _LIBCPP_HAS_NO_VARIADICS
-#define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-#endif  // _GNUC_VER < 404
-
-#if _GNUC_VER < 406
-#define _LIBCPP_HAS_NO_NOEXCEPT
-#define _LIBCPP_HAS_NO_NULLPTR
-#endif
 
 #endif  // __GXX_EXPERIMENTAL_CXX0X__
 
@@ -883,7 +855,7 @@ template <unsigned> struct __static_assert_check {};
 
 #ifdef _LIBCPP_HAS_NO_DECLTYPE
 // GCC 4.6 provides __decltype in all standard modes.
-#  if __has_keyword(__decltype) || _LIBCPP_CLANG_VER >= 304 || _GNUC_VER >= 406
+#  if __has_keyword(__decltype) || _LIBCPP_CLANG_VER >= 304 || defined(_LIBCPP_COMPILER_GCC)
 #    define decltype(__x) __decltype(__x)
 #  else
 #    define decltype(__x) __typeof__(__x)
@@ -1219,7 +1191,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 #if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
 #  define _LIBCPP_HAS_C_ATOMIC_IMP
-#elif _GNUC_VER > 407
+#elif defined(_LIBCPP_COMPILER_GCC)
 #  define _LIBCPP_HAS_GCC_ATOMIC_IMP
 #endif
 
