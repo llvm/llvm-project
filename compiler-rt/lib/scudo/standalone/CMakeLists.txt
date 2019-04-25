@@ -71,6 +71,7 @@ set(SCUDO_HEADERS
   platform.h
   report.h
   secondary.h
+  size_class_map.h
   stats.h
   string_utils.h
   vector.h)

@@ -67,7 +67,7 @@ INLINE uptr roundUpToPowerOfTwo(uptr Size) {
 
 INLINE uptr getLeastSignificantSetBitIndex(uptr X) {
   DCHECK_NE(X, 0U);
-  return static_cast<uptr>(__builtin_ctzll(X));
+  return static_cast<uptr>(__builtin_ctzl(X));
 }
 
 INLINE uptr getLog2(uptr X) {

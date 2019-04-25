@@ -539,6 +539,9 @@ HANDLE_TARGET_OPCODE(G_FFLOOR)
 /// Floating point round to next integer.
 HANDLE_TARGET_OPCODE(G_FRINT)
 
+/// Floating point round to nearest integer.
+HANDLE_TARGET_OPCODE(G_FNEARBYINT)
+
 /// Generic AddressSpaceCast.
 HANDLE_TARGET_OPCODE(G_ADDRSPACE_CAST)
 

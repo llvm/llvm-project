@@ -293,6 +293,12 @@ int test_iteration_spaces() {
   for (ii = ii * 10 + 25; ii < ii / ii - 23; ii += 1)
     c[ii] = a[ii];
 
+// expected-error@+3 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(2)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (kk = ii * 10 + 25; kk < ii / ii - 23; kk += 1)
+        ;
+
 #pragma omp parallel
 // expected-note@+2  {{defined as firstprivate}}
 // expected-error@+2 {{loop iteration variable in the associated loop of 'omp for' directive may not be firstprivate, predetermined as private}}
@@ -603,7 +609,7 @@ int test_with_random_access_iterator() {
 
 template <typename IT, int ST>
 class TC {
-  int ii;
+  int ii, iii;
 public:
   int dotest_lt(IT begin, IT end) {
 #pragma omp parallel
@@ -612,6 +618,14 @@ public:
 #pragma omp for
   for (ii = ii * 10 + 25; ii < ii / ii - 23; ii += 1)
     ;
+
+#pragma omp parallel
+// expected-error@+4 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+// expected-error@+3 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(2)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (iii = ii * 10 + 25; iii < ii / ii - 23; iii += 1)
+        ;
 
 #pragma omp parallel
 // expected-note@+3 {{loop step is expected to be positive due to this condition}}

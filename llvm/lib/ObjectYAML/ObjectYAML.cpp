@@ -32,6 +32,7 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
       MappingTraits<MachOYAML::UniversalBinary>::mapping(IO,
                                                          *ObjectFile.FatMachO);
   } else {
+    Input &In = (Input &)IO;
     if (IO.mapTag("!ELF")) {
       ObjectFile.Elf.reset(new ELFYAML::Object());
       MappingTraits<ELFYAML::Object>::mapping(IO, *ObjectFile.Elf);
@@ -51,15 +52,12 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
     } else if (IO.mapTag("!WASM")) {
       ObjectFile.Wasm.reset(new WasmYAML::Object());
       MappingTraits<WasmYAML::Object>::mapping(IO, *ObjectFile.Wasm);
-    } else {
-      Input &In = (Input &)IO;
-      std::string Tag = In.getCurrentNode()->getRawTag();
-      if (Tag.empty())
+    } else if (const Node *N = In.getCurrentNode()) {
+      if (N->getRawTag().empty())
         IO.setError("YAML Object File missing document type tag!");
       else
-        IO.setError(
-            Twine("YAML Object File unsupported document type tag '") +
-            Twine(Tag) + Twine("'!"));
+        IO.setError("YAML Object File unsupported document type tag '" +
+                    N->getRawTag() + "'!");
     }
   }
 }

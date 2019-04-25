@@ -1375,6 +1375,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->IntegrityCheck =
       Args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
+  for (auto *Arg : Args.filtered(OPT_swaprun))
+    parseSwaprun(Arg->getValue());
   Config->TerminalServerAware =
       !Config->DLL && Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   Config->DebugDwarf = Debug == DebugKind::Dwarf;
