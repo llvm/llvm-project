@@ -71,6 +71,7 @@ def EXEC : RegisterWithSubRegs<"EXEC", [EXEC_LO, EXEC_HI]>,
 
 def SCC : SIReg<"scc", 253>;
 def M0 : SIReg <"m0", 124>;
+def SGPR_NULL : SIReg<"null", 125>;
 
 def SRC_SHARED_BASE : SIReg<"src_shared_base", 235>;
 def SRC_SHARED_LIMIT : SIReg<"src_shared_limit", 236>;
@@ -139,7 +140,7 @@ def FLAT_SCR_vi : FlatReg<FLAT_SCR_LO_vi, FLAT_SCR_HI_vi, 102>;
 def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 
 // SGPR registers
-foreach Index = 0-103 in {
+foreach Index = 0-105 in {
   def SGPR#Index : SIReg <"SGPR"#Index, Index>;
 }
 
@@ -168,7 +169,7 @@ def M0_CLASS : RegisterClass<"AMDGPU", [i32], 32, (add M0)> {
 
 // SGPR 32-bit registers
 def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
-                            (add (sequence "SGPR%u", 0, 103))> {
+                            (add (sequence "SGPR%u", 0, 105))> {
   // Give all SGPR classes higher priority than VGPR classes, because
   // we want to spill SGPRs to VGPRs.
   let AllocationPriority = 7;
@@ -446,7 +447,7 @@ def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
-   TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE, SRC_SHARED_LIMIT,
+   SGPR_NULL, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE, SRC_SHARED_LIMIT,
    SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, SRC_POPS_EXITING_WAVE_ID)> {
   let AllocationPriority = 8;
 }

@@ -22,6 +22,9 @@ namespace __sanitizer {
 class FlagHandlerBase {
  public:
   virtual bool Parse(const char *value) { return false; }
+
+ protected:
+  ~FlagHandlerBase() {};
 };
 
 template <typename T>

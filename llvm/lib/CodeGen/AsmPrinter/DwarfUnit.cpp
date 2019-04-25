@@ -608,7 +608,7 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
   return getDIE(Context);
 }
 
-DIE *DwarfTypeUnit::createTypeDIE(const DICompositeType *Ty) {
+DIE *DwarfUnit::createTypeDIE(const DICompositeType *Ty) {
   auto *Context = resolve(Ty->getScope());
   DIE *ContextDIE = getOrCreateContextDIE(Context);
 
@@ -636,12 +636,16 @@ DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
   else if (auto *STy = dyn_cast<DISubroutineType>(Ty))
     constructTypeDIE(TyDIE, STy);
   else if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
-    if (DD->generateTypeUnits() && !Ty->isForwardDecl())
-      if (MDString *TypeId = CTy->getRawIdentifier()) {
+    if (DD->generateTypeUnits() && !Ty->isForwardDecl()) {
+      // Skip updating the accelerator tables since this is not the full type.
+      if (MDString *TypeId = CTy->getRawIdentifier())
         DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);
-        // Skip updating the accelerator tables since this is not the full type.
-        return &TyDIE;
+      else {
+        auto X = DD->enterNonTypeUnitContext();
+        finishNonUnitTypeDIE(TyDIE, CTy);
       }
+      return &TyDIE;
+    }
     constructTypeDIE(TyDIE, CTy);
   } else {
     constructTypeDIE(TyDIE, cast<DIDerivedType>(Ty));
@@ -1688,4 +1692,12 @@ void DwarfUnit::addLoclistsBase() {
   addSectionLabel(getUnitDie(), dwarf::DW_AT_loclists_base,
                   DU->getLoclistsTableBaseSym(),
                   TLOF.getDwarfLoclistsSection()->getBeginSymbol());
+}
+
+void DwarfTypeUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
+  addFlag(D, dwarf::DW_AT_declaration);
+  StringRef Name = CTy->getName();
+  if (!Name.empty())
+    addString(D, dwarf::DW_AT_name, Name);
+  getCU().createTypeDIE(CTy);
 }

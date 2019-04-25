@@ -1119,6 +1119,9 @@ namespace fs {
 #ifdef __APPLE__
 /// This implementation tries to perform an APFS CoW clone of the file,
 /// which can be much faster and uses less space.
+/// Unfortunately fcopyfile(3) does not support COPYFILE_CLONE, so the
+/// file descriptor variant of this function still uses the default
+/// implementation.
 std::error_code copy_file(const Twine &From, const Twine &To) {
   uint32_t Flag = COPYFILE_DATA;
   if (__builtin_available(macos 10.12, *)) {
@@ -1138,26 +1141,7 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 }
-
-/// This implementation tries to perform an APFS CoW clone of the file,
-/// which can be much faster and uses less space.
-std::error_code copy_file(const Twine &From, int ToFD) {
-  int ReadFD;
-  if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
-    return EC;
-
-  uint32_t Flag = COPYFILE_DATA;
-  if (__builtin_available(macos 10.12, *))
-    Flag = COPYFILE_CLONE;
-
-  int Status = fcopyfile(ReadFD, ToFD, /*State*/ NULL, Flag);
-
-  close(ReadFD);
-  if (Status == 0)
-    return std::error_code();
-  return std::error_code(errno, std::generic_category());
-}
-#endif
+#endif // __APPLE__
 
 } // end namespace fs
 

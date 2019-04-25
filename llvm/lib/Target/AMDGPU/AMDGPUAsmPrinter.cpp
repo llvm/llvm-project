@@ -622,6 +622,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::SRC_SHARED_LIMIT:
         case AMDGPU::SRC_PRIVATE_BASE:
         case AMDGPU::SRC_PRIVATE_LIMIT:
+        case AMDGPU::SGPR_NULL:
           continue;
 
         case AMDGPU::SRC_POPS_EXITING_WAVE_ID:

@@ -95,7 +95,8 @@ bool ProfileSummaryInfo::computeSummary() {
 
 Optional<uint64_t>
 ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
-                                    BlockFrequencyInfo *BFI) {
+                                    BlockFrequencyInfo *BFI,
+                                    bool AllowSynthetic) {
   if (!Inst)
     return None;
   assert((isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) &&
@@ -111,7 +112,7 @@ ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
     return None;
   }
   if (BFI)
-    return BFI->getBlockProfileCount(Inst->getParent());
+    return BFI->getBlockProfileCount(Inst->getParent(), AllowSynthetic);
   return None;
 }
 

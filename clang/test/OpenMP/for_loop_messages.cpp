@@ -287,6 +287,13 @@ int test_iteration_spaces() {
     c[ii] = a[ii];
 
 #pragma omp parallel
+// expected-error@+3 {{the loop initializer expression depends on the current loop control variable}}
+// expected-error@+2 2 {{the loop condition expression depends on the current loop control variable}}
+#pragma omp for
+  for (ii = ii * 10 + 25; ii < ii / ii - 23; ii += 1)
+    c[ii] = a[ii];
+
+#pragma omp parallel
 // expected-note@+2  {{defined as firstprivate}}
 // expected-error@+2 {{loop iteration variable in the associated loop of 'omp for' directive may not be firstprivate, predetermined as private}}
 #pragma omp for firstprivate(ii)
@@ -596,8 +603,16 @@ int test_with_random_access_iterator() {
 
 template <typename IT, int ST>
 class TC {
+  int ii;
 public:
   int dotest_lt(IT begin, IT end) {
+#pragma omp parallel
+// expected-error@+3 3 {{the loop initializer expression depends on the current loop control variable}}
+// expected-error@+2 6 {{the loop condition expression depends on the current loop control variable}}
+#pragma omp for
+  for (ii = ii * 10 + 25; ii < ii / ii - 23; ii += 1)
+    ;
+
 #pragma omp parallel
 // expected-note@+3 {{loop step is expected to be positive due to this condition}}
 // expected-error@+2 {{increment expression must cause 'I' to increase on each iteration of OpenMP for loop}}
@@ -659,7 +674,7 @@ void test_with_template() {
   GoodIter begin, end;
   TC<GoodIter, 100> t1;
   TC<GoodIter, -100> t2;
-  t1.dotest_lt(begin, end);
+  t1.dotest_lt(begin, end);         // expected-note {{in instantiation of member function 'TC<GoodIter, 100>::dotest_lt' requested here}}
   t2.dotest_lt(begin, end);         // expected-note {{in instantiation of member function 'TC<GoodIter, -100>::dotest_lt' requested here}}
   dotest_gt(begin, end);            // expected-note {{in instantiation of function template specialization 'dotest_gt<GoodIter, 0>' requested here}}
   dotest_gt<unsigned, 10>(0, 100);  // expected-note {{in instantiation of function template specialization 'dotest_gt<unsigned int, 10>' requested here}}

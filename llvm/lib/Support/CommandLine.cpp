@@ -412,6 +412,7 @@ void OptionCategory::registerCategory() {
 // that this ManagedStatic uses constant initailization and not dynamic
 // initialization because it is referenced from cl::opt constructors, which run
 // dynamically in an arbitrary order.
+LLVM_REQUIRE_CONSTANT_INITIALIZATION
 ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.

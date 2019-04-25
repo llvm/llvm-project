@@ -22,7 +22,7 @@ const char* const IdSymbolic[] = {
   nullptr,
   nullptr,
   nullptr,
-  nullptr,
+  "MSG_GS_ALLOC_REQ",
   nullptr,
   nullptr,
   nullptr,
@@ -68,7 +68,17 @@ const char* const IdSymbolic[] = {
   nullptr,
   nullptr,
   nullptr,
-  "HW_REG_SH_MEM_BASES"
+  "HW_REG_SH_MEM_BASES",
+  "HW_REG_TBA_LO",
+  "HW_REG_TBA_HI",
+  "HW_REG_TMA_LO",
+  "HW_REG_TMA_HI",
+  "HW_REG_FLAT_SCR_LO",
+  "HW_REG_FLAT_SCR_HI",
+  "HW_REG_XNACK_MASK",
+  nullptr, // HW_ID1, no predictable values
+  nullptr, // HW_ID2, no predictable values
+  "HW_REG_POPS_PACKER"
 };
 
 } // namespace Hwreg

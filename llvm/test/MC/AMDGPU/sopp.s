@@ -194,6 +194,9 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
 s_sendmsg 0x4
 // GCN: s_sendmsg 4 ; encoding: [0x04,0x00,0x90,0xbf]
 
+s_sendmsg 9
+// GCN: s_sendmsg 9 ; encoding: [0x09,0x00,0x90,0xbf]
+
 s_sendmsg 11
 // GCN: s_sendmsg 11 ; encoding: [0x0b,0x00,0x90,0xbf]
 

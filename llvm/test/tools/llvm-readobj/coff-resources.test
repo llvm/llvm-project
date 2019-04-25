@@ -14,7 +14,7 @@ ZERO-NEXT:  Total Number of Resources: 1
 ZERO-NEXT:  Base Table Address: 0x188
 ZERO-DAG:   Number of String Entries: 0
 ZERO-NEXT:  Number of ID Entries: 1
-ZERO-NEXT:  Type: kRT_STRING (ID 6) [
+ZERO-NEXT:  Type: STRINGTABLE (ID 6) [
 ZERO-NEXT:    Table Offset: 0x18
 ZERO-NEXT:    Number of String Entries: 0
 ZERO-NEXT:    Number of ID Entries: 1
@@ -37,7 +37,7 @@ TEST_RES-NEXT:  Total Number of Resources: 7
 TEST_RES-NEXT:  Base Table Address: 0x1C0  
 TEST_RES-DAG:   Number of String Entries: 0
 TEST_RES-NEXT:  Number of ID Entries: 4
-TEST_RES-NEXT:  Type: kRT_BITMAP (ID 2) [
+TEST_RES-NEXT:  Type: BITMAP (ID 2) [
 TEST_RES-NEXT:    Table Offset: 0x30
 TEST_RES-NEXT:    Number of String Entries: 2
 TEST_RES-NEXT:    Number of ID Entries: 0
@@ -66,7 +66,7 @@ TEST_RES-NEXT:        Characteristics: 0
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
 TEST_RES-NEXT:  ]
-TEST_RES-NEXT:  Type: kRT_MENU (ID 4) [
+TEST_RES-NEXT:  Type: MENU (ID 4) [
 TEST_RES-NEXT:    Table Offset: 0x50
 TEST_RES-NEXT:    Number of String Entries: 1
 TEST_RES-NEXT:    Number of ID Entries: 1
@@ -95,7 +95,7 @@ TEST_RES-NEXT:        Characteristics: 0
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
 TEST_RES-NEXT:  ]
-TEST_RES-NEXT:  Type: kRT_DIALOG (ID 5) [
+TEST_RES-NEXT:  Type: DIALOG (ID 5) [
 TEST_RES-NEXT:    Table Offset: 0x70
 TEST_RES-NEXT:    Number of String Entries: 1
 TEST_RES-NEXT:    Number of ID Entries: 0
@@ -112,7 +112,7 @@ TEST_RES-NEXT:        Characteristics: 0
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
 TEST_RES-NEXT:  ]
-TEST_RES-NEXT:  Type: kRT_ACCELERATOR (ID 9) [
+TEST_RES-NEXT:  Type: ACCELERATOR (ID 9) [
 TEST_RES-NEXT:    Table Offset: 0x88
 TEST_RES-NEXT:    Number of String Entries: 1
 TEST_RES-NEXT:    Number of ID Entries: 1

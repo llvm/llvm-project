@@ -9170,6 +9170,8 @@ def warn_omp_allocate_thread_on_task_target_directive : Warning<
   InGroup<OpenMPClauses>;
 def err_omp_expected_private_copy_for_allocate : Error<
   "the referenced item is not found in any private clause on the same directive">;
+def err_omp_stmt_depends_on_loop_counter : Error<
+  "the loop %select{initializer|condition}0 expression depends on the current loop control variable">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

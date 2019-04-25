@@ -27,6 +27,12 @@
 
 namespace clang {
 
+enum class DynamicInitKind : unsigned {
+  NoStub = 0,
+  Initializer,
+  AtExit,
+};
+
 /// GlobalDecl - represents a global declaration. This can either be a
 /// CXXConstructorDecl and the constructor type (Base, Complete).
 /// a CXXDestructorDecl and the destructor type (Base, Complete) or
@@ -55,6 +61,8 @@ public:
   GlobalDecl(const OMPDeclareReductionDecl *D) { Init(D); }
   GlobalDecl(const CXXConstructorDecl *D, CXXCtorType Type) : Value(D, Type) {}
   GlobalDecl(const CXXDestructorDecl *D, CXXDtorType Type) : Value(D, Type) {}
+  GlobalDecl(const VarDecl *D, DynamicInitKind StubKind)
+      : Value(D, unsigned(StubKind)) {}
 
   GlobalDecl getCanonicalDecl() const {
     GlobalDecl CanonGD;
@@ -75,6 +83,13 @@ public:
   CXXDtorType getDtorType() const {
     assert(isa<CXXDestructorDecl>(getDecl()) && "Decl is not a dtor!");
     return static_cast<CXXDtorType>(Value.getInt());
+  }
+
+  DynamicInitKind getDynamicInitKind() const {
+    assert(isa<VarDecl>(getDecl()) &&
+           cast<VarDecl>(getDecl())->hasGlobalStorage() &&
+           "Decl is not a global variable!");
+    return static_cast<DynamicInitKind>(Value.getInt());
   }
 
   unsigned getMultiVersionIndex() const {

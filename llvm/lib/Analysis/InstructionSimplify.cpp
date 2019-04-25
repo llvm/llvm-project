@@ -4635,22 +4635,6 @@ static Value *SimplifyRelativeLoad(Constant *Ptr, Constant *Offset,
   return ConstantExpr::getBitCast(LoadedLHSPtr, Int8PtrTy);
 }
 
-static bool maskIsAllZeroOrUndef(Value *Mask) {
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
-    return true;
-  for (unsigned I = 0, E = ConstMask->getType()->getVectorNumElements(); I != E;
-       ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
-        continue;
-    return false;
-  }
-  return true;
-}
-
 static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
                                      const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.

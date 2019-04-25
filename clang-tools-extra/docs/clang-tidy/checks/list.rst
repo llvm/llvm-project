@@ -178,6 +178,7 @@ Clang-Tidy Checks
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
+   llvm-prefer-isa-or-dyn-cast-in-conditionals
    llvm-twine-local
    misc-definitions-in-headers
    misc-misplaced-const

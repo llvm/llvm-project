@@ -32,20 +32,24 @@ template <typename T, size_t N> struct object_deleter<T[N]> {
   static void call(void *Ptr) { delete[](T *)Ptr; }
 };
 
-// If the current compiler is MSVC 2017 or earlier, then we have to work around
-// a bug where MSVC emits code to perform dynamic initialization even if the
-// class has a constexpr constructor. Instead, fall back to the C++98 strategy
-// where there are no constructors or member initializers. We can remove this
-// when MSVC 2019 (19.20+) is our minimum supported version.
-#if !defined(__clang__) && defined(_MSC_VER) && _MSC_VER < 1920
-#define LLVM_AVOID_CONSTEXPR_CTOR
+// ManagedStatic must be initialized to zero, and it must *not* have a dynamic
+// initializer because managed statics are often created while running other
+// dynamic initializers. In standard C++11, the best way to accomplish this is
+// with a constexpr default constructor. However, different versions of the
+// Visual C++ compiler have had bugs where, even though the constructor may be
+// constexpr, a dynamic initializer may be emitted depending on optimization
+// settings. For the affected versions of MSVC, use the old linker
+// initialization pattern of not providing a constructor and leaving the fields
+// uninitialized.
+#if !defined(_MSC_VER) || defined(__clang__)
+#define LLVM_USE_CONSTEXPR_CTOR
 #endif
 
 /// ManagedStaticBase - Common base class for ManagedStatic instances.
 class ManagedStaticBase {
 protected:
-#ifndef LLVM_AVOID_CONSTEXPR_CTOR
-  mutable std::atomic<void *> Ptr{nullptr};
+#ifdef LLVM_USE_CONSTEXPR_CTOR
+  mutable std::atomic<void *> Ptr{};
   mutable void (*DeleterFn)(void *) = nullptr;
   mutable const ManagedStaticBase *Next = nullptr;
 #else
@@ -59,7 +63,7 @@ protected:
   void RegisterManagedStatic(void *(*creator)(), void (*deleter)(void*)) const;
 
 public:
-#ifndef LLVM_AVOID_CONSTEXPR_CTOR
+#ifdef LLVM_USE_CONSTEXPR_CTOR
   constexpr ManagedStaticBase() = default;
 #endif
 

@@ -17,7 +17,7 @@ RESOURCE_INFO-NEXT:   Total Number of Resources: 1
 RESOURCE_INFO-NEXT:   Base Table Address: 0x600
 RESOURCE_INFO-DAG:    Number of String Entries: 0
 RESOURCE_INFO-NEXT:   Number of ID Entries: 1
-RESOURCE_INFO-NEXT:   Type: kRT_STRING (ID 6) [
+RESOURCE_INFO-NEXT:   Type: STRINGTABLE (ID 6) [
 RESOURCE_INFO-NEXT:     Table Offset: 0x18
 RESOURCE_INFO-NEXT:     Number of String Entries: 0
 RESOURCE_INFO-NEXT:     Number of ID Entries: 1
