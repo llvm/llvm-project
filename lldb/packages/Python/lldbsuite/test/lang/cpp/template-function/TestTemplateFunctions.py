@@ -27,6 +27,6 @@ class TemplateFunctionsTestCase(TestBase):
         self.do_test_template_function(True)
 
     @skipIfWindows
-    @expectedFailureAll(debug_info=["dwarf", "gmodules"])
+    @expectedFailureAll(debug_info=["dwarf", "gmodules", "dwo"])
     def test_template_function_without_cast(self):
         self.do_test_template_function(False)
