@@ -10,6 +10,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include <set>
 #include <thread>
@@ -728,6 +729,41 @@ TEST_F(CoreAPIsStandardTest, FailResolution) {
                           << ErrMsg;
                     });
   }
+}
+
+TEST_F(CoreAPIsStandardTest, FailEmissionEarly) {
+
+  cantFail(JD.define(absoluteSymbols({{Baz, BazSym}})));
+
+  auto MU = llvm::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
+      [&](MaterializationResponsibility R) {
+        R.resolve(SymbolMap({{Foo, FooSym}, {Bar, BarSym}}));
+
+        ES.lookup(
+            JITDylibSearchList({{&JD, false}}), SymbolNameSet({Baz}),
+            [&R](Expected<SymbolMap> Result) {
+              // Called when "baz" is resolved. We don't actually depend
+              // on or care about baz, but use it to trigger failure of
+              // this materialization before Baz has been finalized in
+              // order to test that error propagation is correct in this
+              // scenario.
+              cantFail(std::move(Result));
+              R.failMaterialization();
+            },
+            [](Error Err) { cantFail(std::move(Err)); },
+            [&](const SymbolDependenceMap &Deps) {
+              R.addDependenciesForAll(Deps);
+            });
+      });
+
+  cantFail(JD.define(MU));
+
+  SymbolNameSet Names({Foo, Bar});
+  auto Result = ES.lookup(JITDylibSearchList({{&JD, false}}), Names);
+
+  EXPECT_THAT_EXPECTED(std::move(Result), Failed())
+      << "Unexpected success while trying to test error propagation";
 }
 
 TEST_F(CoreAPIsStandardTest, TestLookupWithUnthreadedMaterialization) {

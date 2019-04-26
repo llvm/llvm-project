@@ -1364,7 +1364,8 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
     MBB = MBB->getPrevNode();
     MBBI = MBB->end();
   }
-  return --MBBI;
+  --MBBI;
+  return MBBI;
 }
 
 static const Constant *getConstantFromPool(const MachineInstr &MI,

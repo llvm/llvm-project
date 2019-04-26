@@ -131,7 +131,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
   getActionDefinitionsBuilder({G_FCEIL, G_FABS, G_FSQRT, G_FFLOOR, G_FRINT,
-                               G_FMA, G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND})
+                               G_FMA, G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
+                               G_FNEARBYINT})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
       .fewerElementsIf(
@@ -320,8 +321,29 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   // Extensions
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalForCartesianProduct({s8, s16, s32, s64}, {s1, s8, s16, s32})
-      .legalFor({v8s16, v8s8});
+      .legalIf([=](const LegalityQuery &Query) {
+        unsigned DstSize = Query.Types[0].getSizeInBits();
+
+        // Make sure that we have something that will fit in a register, and
+        // make sure it's a power of 2.
+        if (DstSize < 8 || DstSize > 128 || !isPowerOf2_32(DstSize))
+          return false;
+
+        const LLT &SrcTy = Query.Types[1];
+
+        // Special case for s1.
+        if (SrcTy == s1)
+          return true;
+
+        // Make sure we fit in a register otherwise. Don't bother checking that
+        // the source type is below 128 bits. We shouldn't be allowing anything
+        // through which is wider than the destination in the first place.
+        unsigned SrcSize = SrcTy.getSizeInBits();
+        if (SrcSize < 8 || !isPowerOf2_32(SrcSize))
+          return false;
+
+        return true;
+      });
 
   getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 
@@ -495,8 +517,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .minScalar(2, s64)
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &VecTy = Query.Types[1];
-        return VecTy == v2s16 || VecTy == v4s16 || VecTy == v4s32 ||
-               VecTy == v2s64 || VecTy == v2s32;
+        return VecTy == v2s16 || VecTy == v4s16 || VecTy == v8s16 ||
+               VecTy == v4s32 || VecTy == v2s64 || VecTy == v2s32;
       });
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)

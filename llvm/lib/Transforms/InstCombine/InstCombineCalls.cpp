@@ -593,12 +593,7 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   Arg0 = Builder.CreateSelect(Builder.CreateICmpSGT(Arg0, MaxC), MaxC, Arg0);
   Arg1 = Builder.CreateSelect(Builder.CreateICmpSGT(Arg1, MaxC), MaxC, Arg1);
 
-  // Truncate clamped args to dst size.
-  auto *TruncTy = VectorType::get(ResTy->getScalarType(), NumSrcElts);
-  Arg0 = Builder.CreateTrunc(Arg0, TruncTy);
-  Arg1 = Builder.CreateTrunc(Arg1, TruncTy);
-
-  // Shuffle args together at the lane level.
+  // Shuffle clamped args together at the lane level.
   SmallVector<unsigned, 32> PackMask;
   for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
     for (unsigned Elt = 0; Elt != NumSrcEltsPerLane; ++Elt)
@@ -606,8 +601,10 @@ static Value *simplifyX86pack(IntrinsicInst &II,
     for (unsigned Elt = 0; Elt != NumSrcEltsPerLane; ++Elt)
       PackMask.push_back(Elt + (Lane * NumSrcEltsPerLane) + NumSrcElts);
   }
+  auto *Shuffle = Builder.CreateShuffleVector(Arg0, Arg1, PackMask);
 
-  return Builder.CreateShuffleVector(Arg0, Arg1, PackMask);
+  // Truncate to dst size.
+  return Builder.CreateTrunc(Shuffle, ResTy);
 }
 
 // Replace X86-specific intrinsics with generic floor-ceil where applicable.

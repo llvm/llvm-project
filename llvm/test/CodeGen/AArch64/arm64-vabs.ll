@@ -1,13 +1,11 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-eabi -aarch64-neon-syntax=apple 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
+; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-eabi -aarch64-neon-syntax=apple 2>&1 | FileCheck %s --check-prefixes=FALLBACK,CHECK
 
-; FALLBACK-NOT: remark:{{.*}}(<8 x s16>) = G_ZEXT %4:_(<8 x s8>)
+; FALLBACK-NOT: remark:{{.*}} G_ZEXT
 ; FALLBACK-NOT: remark:{{.*}} sabdl8h
 define <8 x i16> @sabdl8h(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: sabdl8h:
 ;CHECK: sabdl.8h
-;GISEL-LABEL: sabdl8h:
-;GISEL: sabdl.8h
         %tmp1 = load <8 x i8>, <8 x i8>* %A
         %tmp2 = load <8 x i8>, <8 x i8>* %B
         %tmp3 = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)
@@ -15,6 +13,7 @@ define <8 x i16> @sabdl8h(<8 x i8>* %A, <8 x i8>* %B) nounwind {
         ret <8 x i16> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabdl4s
 define <4 x i32> @sabdl4s(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ;CHECK-LABEL: sabdl4s:
 ;CHECK: sabdl.4s
@@ -25,6 +24,7 @@ define <4 x i32> @sabdl4s(<4 x i16>* %A, <4 x i16>* %B) nounwind {
         ret <4 x i32> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabdl2d
 define <2 x i64> @sabdl2d(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ;CHECK-LABEL: sabdl2d:
 ;CHECK: sabdl.2d
@@ -71,6 +71,7 @@ define <2 x i64> @sabdl2_2d(<4 x i32>* %A, <4 x i32>* %B) nounwind {
         ret <2 x i64> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabdl8h)
 define <8 x i16> @uabdl8h(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: uabdl8h:
 ;CHECK: uabdl.8h
@@ -81,6 +82,7 @@ define <8 x i16> @uabdl8h(<8 x i8>* %A, <8 x i8>* %B) nounwind {
   ret <8 x i16> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabdl4s)
 define <4 x i32> @uabdl4s(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ;CHECK-LABEL: uabdl4s:
 ;CHECK: uabdl.4s
@@ -91,6 +93,7 @@ define <4 x i32> @uabdl4s(<4 x i16>* %A, <4 x i16>* %B) nounwind {
   ret <4 x i32> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabdl2d)
 define <2 x i64> @uabdl2d(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ;CHECK-LABEL: uabdl2d:
 ;CHECK: uabdl.2d
@@ -560,6 +563,7 @@ declare <4 x i32> @llvm.aarch64.neon.abs.v4i32(<4 x i32>) nounwind readnone
 declare <1 x i64> @llvm.aarch64.neon.abs.v1i64(<1 x i64>) nounwind readnone
 declare i64 @llvm.aarch64.neon.abs.i64(i64) nounwind readnone
 
+; FALLBACK-NOT: remark:{{.*}} sabal8h
 define <8 x i16> @sabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
 ;CHECK-LABEL: sabal8h:
 ;CHECK: sabal.8h
@@ -572,6 +576,7 @@ define <8 x i16> @sabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
         ret <8 x i16> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabal4s
 define <4 x i32> @sabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind {
 ;CHECK-LABEL: sabal4s:
 ;CHECK: sabal.4s
@@ -584,6 +589,7 @@ define <4 x i32> @sabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind 
         ret <4 x i32> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabal2d
 define <2 x i64> @sabal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind {
 ;CHECK-LABEL: sabal2d:
 ;CHECK: sabal.2d
@@ -639,6 +645,7 @@ define <2 x i64> @sabal2_2d(<4 x i32>* %A, <4 x i32>* %B, <2 x i64>* %C) nounwin
         ret <2 x i64> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabal8h
 define <8 x i16> @uabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
 ;CHECK-LABEL: uabal8h:
 ;CHECK: uabal.8h
@@ -651,6 +658,7 @@ define <8 x i16> @uabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
         ret <8 x i16> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabal8s
 define <4 x i32> @uabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind {
 ;CHECK-LABEL: uabal4s:
 ;CHECK: uabal.4s
@@ -663,6 +671,7 @@ define <4 x i32> @uabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind 
         ret <4 x i32> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabal2d
 define <2 x i64> @uabal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind {
 ;CHECK-LABEL: uabal2d:
 ;CHECK: uabal.2d

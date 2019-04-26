@@ -306,21 +306,24 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
                          BitConvertToInteger(GetScalarizedVector(InOp)));
     break;
   case TargetLowering::TypeSplitVector: {
-    // For example, i32 = BITCAST v2i16 on alpha.  Convert the split
-    // pieces of the input into integers and reassemble in the final type.
-    SDValue Lo, Hi;
-    GetSplitVector(N->getOperand(0), Lo, Hi);
-    Lo = BitConvertToInteger(Lo);
-    Hi = BitConvertToInteger(Hi);
+    if (!NOutVT.isVector()) {
+      // For example, i32 = BITCAST v2i16 on alpha.  Convert the split
+      // pieces of the input into integers and reassemble in the final type.
+      SDValue Lo, Hi;
+      GetSplitVector(N->getOperand(0), Lo, Hi);
+      Lo = BitConvertToInteger(Lo);
+      Hi = BitConvertToInteger(Hi);
 
-    if (DAG.getDataLayout().isBigEndian())
-      std::swap(Lo, Hi);
+      if (DAG.getDataLayout().isBigEndian())
+        std::swap(Lo, Hi);
 
-    InOp = DAG.getNode(ISD::ANY_EXTEND, dl,
-                       EVT::getIntegerVT(*DAG.getContext(),
-                                         NOutVT.getSizeInBits()),
-                       JoinIntegers(Lo, Hi));
-    return DAG.getNode(ISD::BITCAST, dl, NOutVT, InOp);
+      InOp = DAG.getNode(ISD::ANY_EXTEND, dl,
+                         EVT::getIntegerVT(*DAG.getContext(),
+                                           NOutVT.getSizeInBits()),
+                         JoinIntegers(Lo, Hi));
+      return DAG.getNode(ISD::BITCAST, dl, NOutVT, InOp);
+    }
+    break;
   }
   case TargetLowering::TypeWidenVector:
     // The input is widened to the same size. Convert to the widened value.

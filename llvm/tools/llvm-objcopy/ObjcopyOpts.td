@@ -1,16 +1,17 @@
 include "llvm/Option/OptParser.td"
 
 multiclass Eq<string name, string help> {
-  def NAME : Separate<["--", "-"], name>;
-  def NAME #_eq : Joined<["--", "-"], name #"=">,
+  def NAME : Separate<["--"], name>;
+  def NAME #_eq : Joined<["--"], name #"=">,
                   Alias<!cast<Separate>(NAME)>,
                   HelpText<help>;
 }
 
-def help : Flag<["-", "--"], "help">;
+def help : Flag<["--"], "help">;
+def h : Flag<["-"], "h">, Alias<help>;
 
 def allow_broken_links
-    : Flag<["-", "--"], "allow-broken-links">,
+    : Flag<["--"], "allow-broken-links">,
       HelpText<"Allow llvm-objcopy to remove sections even if it would leave "
                "invalid section references. The appropriate sh_link fields"
                "will be set to zero.">;
@@ -32,13 +33,13 @@ defm output_target : Eq<"output-target", "Format of the output file">,
                      Values<"binary">;
 def O : JoinedOrSeparate<["-"], "O">, Alias<output_target>;
 
-def compress_debug_sections : Flag<["--", "-"], "compress-debug-sections">;
+def compress_debug_sections : Flag<["--"], "compress-debug-sections">;
 def compress_debug_sections_eq
-    : Joined<["--", "-"], "compress-debug-sections=">,
+    : Joined<["--"], "compress-debug-sections=">,
       MetaVarName<"[ zlib | zlib-gnu ]">,
       HelpText<"Compress DWARF debug sections using specified style. Supported "
                "styles: 'zlib-gnu' and 'zlib'">;
-def decompress_debug_sections : Flag<["-", "--"], "decompress-debug-sections">,
+def decompress_debug_sections : Flag<["--"], "decompress-debug-sections">,
                                 HelpText<"Decompress DWARF debug sections.">;
 defm split_dwo
     : Eq<"split-dwo", "Equivalent to extract-dwo on the input file to "
@@ -46,7 +47,7 @@ defm split_dwo
       MetaVarName<"dwo-file">;
 
 def enable_deterministic_archives
-    : Flag<["-", "--"], "enable-deterministic-archives">,
+    : Flag<["--"], "enable-deterministic-archives">,
       HelpText<"Enable deterministic mode when copying archives (use zero for "
                "UIDs, GIDs, and timestamps).">;
 def D : Flag<["-"], "D">,
@@ -54,14 +55,14 @@ def D : Flag<["-"], "D">,
         HelpText<"Alias for --enable-deterministic-archives">;
 
 def disable_deterministic_archives
-    : Flag<["-", "--"], "disable-deterministic-archives">,
+    : Flag<["--"], "disable-deterministic-archives">,
       HelpText<"Disable deterministic mode when copying archives (use real "
                "values for UIDs, GIDs, and timestamps).">;
 def U : Flag<["-"], "U">,
         Alias<disable_deterministic_archives>,
         HelpText<"Alias for --disable-deterministic-archives">;
 
-def preserve_dates : Flag<["-", "--"], "preserve-dates">,
+def preserve_dates : Flag<["--"], "preserve-dates">,
                      HelpText<"Preserve access and modification timestamps">;
 def p : Flag<["-"], "p">, Alias<preserve_dates>;
 
@@ -109,25 +110,25 @@ defm set_section_flags
          "rom, share, contents, merge, strings.">,
       MetaVarName<"section=flag1[,flag2,...]">;
 
-def strip_all : Flag<["-", "--"], "strip-all">,
+def strip_all : Flag<["--"], "strip-all">,
                 HelpText<"Remove non-allocated sections outside segments. "
                          ".gnu.warning* sections are not removed">;
 def S : Flag<["-"], "S">, Alias<strip_all>;
-def strip_all_gnu : Flag<["-", "--"], "strip-all-gnu">,
+def strip_all_gnu : Flag<["--"], "strip-all-gnu">,
                     HelpText<"Compatible with GNU objcopy's --strip-all">;
-def strip_debug : Flag<["-", "--"], "strip-debug">,
+def strip_debug : Flag<["--"], "strip-debug">,
                   HelpText<"Remove all debug information">;
 def g : Flag<["-"], "g">, Alias<strip_debug>,
         HelpText<"Alias for --strip-debug">;
-def strip_dwo : Flag<["-", "--"], "strip-dwo">,
+def strip_dwo : Flag<["--"], "strip-dwo">,
                 HelpText<"Remove all DWARF .dwo sections from file">;
 def strip_sections
-    : Flag<["-", "--"], "strip-sections">,
+    : Flag<["--"], "strip-sections">,
       HelpText<"Remove all section headers and all sections not in segments">;
 def strip_non_alloc
-    : Flag<["-", "--"], "strip-non-alloc">,
+    : Flag<["--"], "strip-non-alloc">,
       HelpText<"Remove all non-allocated sections outside segments">;
-def strip_unneeded : Flag<["-", "--"], "strip-unneeded">,
+def strip_unneeded : Flag<["--"], "strip-unneeded">,
                      HelpText<"Remove all symbols not needed by relocations">;
 defm strip_unneeded_symbol
     : Eq<"strip-unneeded-symbol",
@@ -140,12 +141,12 @@ defm strip_unneeded_symbols
       MetaVarName<"filename">;
 
 def extract_dwo
-    : Flag<["-", "--"], "extract-dwo">,
+    : Flag<["--"], "extract-dwo">,
       HelpText<
           "Remove all sections that are not DWARF .dwo sections from file">;
 
 def localize_hidden
-    : Flag<["-", "--"], "localize-hidden">,
+    : Flag<["--"], "localize-hidden">,
       HelpText<
           "Mark all symbols that have hidden or internal visibility as local">;
 defm localize_symbol : Eq<"localize-symbol", "Mark <symbol> as local">,
@@ -189,16 +190,16 @@ defm weaken_symbols
       MetaVarName<"filename">;
 
 def W : JoinedOrSeparate<["-"], "W">, Alias<weaken_symbol>;
-def weaken : Flag<["-", "--"], "weaken">,
+def weaken : Flag<["--"], "weaken">,
              HelpText<"Mark all global symbols as weak">;
 
-def discard_locals : Flag<["-", "--"], "discard-locals">,
+def discard_locals : Flag<["--"], "discard-locals">,
                      HelpText<"Remove compiler-generated local symbols, (e.g. "
                               "symbols starting with .L)">;
 def X : Flag<["-"], "X">, Alias<discard_locals>;
 
 def discard_all
-    : Flag<["-", "--"], "discard-all">,
+    : Flag<["--"], "discard-all">,
       HelpText<"Remove all local symbols except file and section symbols">;
 def x : Flag<["-"], "x">, Alias<discard_all>;
 defm strip_symbol : Eq<"strip-symbol", "Remove symbol <symbol>">,
@@ -223,11 +224,11 @@ defm keep_symbols
       MetaVarName<"filename">;
 
 def only_keep_debug
-    : Flag<["-", "--"], "only-keep-debug">,
+    : Flag<["--"], "only-keep-debug">,
       HelpText<"Clear sections that would not be stripped by --strip-debug. "
                "Currently only implemented for COFF.">;
 
-def keep_file_symbols : Flag<["-", "--"], "keep-file-symbols">,
+def keep_file_symbols : Flag<["--"], "keep-file-symbols">,
                         HelpText<"Do not remove file symbols">;
 defm dump_section
     : Eq<"dump-section",
@@ -237,7 +238,7 @@ defm prefix_symbols
     : Eq<"prefix-symbols", "Add <prefix> to the start of every symbol name">,
       MetaVarName<"prefix">;
 
-def version : Flag<["-", "--"], "version">,
+def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;
 def V : Flag<["-"], "V">, Alias<version>;
 defm build_id_link_dir
@@ -254,7 +255,7 @@ defm build_id_link_output
       MetaVarName<"suffix">;
 
 def regex
-    : Flag<["-", "--"], "regex">,
+    : Flag<["--"], "regex">,
       HelpText<"Permit regular expressions in name comparison">;
 
 defm set_start : Eq<"set-start", "Set the start address to <addr>. Overrides "
@@ -264,7 +265,7 @@ defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be 
                        "specified multiple times, all values will be applied "
                        "cumulatively.">,
                     MetaVarName<"incr">;
-def adjust_start : JoinedOrSeparate<["-", "--"], "adjust-start">,
+def adjust_start : JoinedOrSeparate<["--"], "adjust-start">,
                    Alias<change_start>;
 
 defm add_symbol
