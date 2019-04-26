@@ -970,8 +970,10 @@ ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
     return Pred;
 
   ProgramStateRef state = C.getState();
-  SymbolRef Sym =
-    state->getSValAsScalarOrLoc(RetE, C.getLocationContext()).getAsLocSymbol();
+  // We need to dig down to the symbolic base here because various
+  // custom allocators do sometimes return the symbol with an offset.
+  SymbolRef Sym = state->getSValAsScalarOrLoc(RetE, C.getLocationContext())
+                      .getAsLocSymbol(/*IncludeBaseRegions=*/true);
   if (!Sym)
     return Pred;
 

@@ -1059,8 +1059,6 @@ private:
     valarray& __assign_range(const value_type* __f, const value_type* __l);
 };
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS valarray<size_t>::valarray(size_t))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS valarray<size_t>::~valarray())
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void valarray<size_t>::resize(size_t, size_t))
 
 template <class _Op, class _Tp>

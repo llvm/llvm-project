@@ -731,13 +731,13 @@ multiclass VOP2_Real_e32_si <bits<6> op> {
 multiclass VOP2_Real_e32e64_si <bits<6> op> : VOP2_Real_e32_si<op> {
   def _e64_si :
     VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.SI>,
-    VOP3e_si <{1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
+    VOP3e_gfx6_gfx7 <{1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
 }
 
 multiclass VOP2be_Real_e32e64_si <bits<6> op> : VOP2_Real_e32_si<op> {
   def _e64_si :
     VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.SI>,
-    VOP3be_si <{1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
+    VOP3be_gfx6_gfx7 <{1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
 }
 
 } // End AssemblerPredicates = [isGFX6GFX7], DecoderNamespace = "GFX6GFX7"

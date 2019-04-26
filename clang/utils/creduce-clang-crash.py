@@ -187,7 +187,7 @@ class Reduce(object):
         (pipes.quote(not_cmd), crash_flag, quote_cmd(self.get_crash_cmd()))
 
     for msg in self.expected_output:
-      output += 'grep %s t.log || exit 1\n' % pipes.quote(msg)
+      output += 'grep -F %s t.log || exit 1\n' % pipes.quote(msg)
 
     write_to_script(output, self.testfile)
     self.check_interestingness()

@@ -203,7 +203,13 @@ struct MIMGDimInfo {
 };
 
 LLVM_READONLY
-const MIMGDimInfo *getMIMGDimInfo(unsigned Dim);
+const MIMGDimInfo *getMIMGDimInfo(unsigned DimEnum);
+
+LLVM_READONLY
+const MIMGDimInfo *getMIMGDimInfoByEncoding(uint8_t DimEnc);
+
+LLVM_READONLY
+const MIMGDimInfo *getMIMGDimInfoByAsmSuffix(StringRef AsmSuffix);
 
 struct MIMGLZMappingInfo {
   MIMGBaseOpcode L;
@@ -219,6 +225,17 @@ int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
 
 LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
+
+struct MIMGInfo {
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
+  uint8_t MIMGEncoding;
+  uint8_t VDataDwords;
+  uint8_t VAddrDwords;
+};
+
+LLVM_READONLY
+const MIMGInfo *getMIMGInfo(unsigned Opc);
 
 LLVM_READONLY
 int getMUBUFBaseOpcode(unsigned Opc);
@@ -285,21 +302,30 @@ struct Waitcnt {
   unsigned VmCnt = ~0u;
   unsigned ExpCnt = ~0u;
   unsigned LgkmCnt = ~0u;
+  unsigned VsCnt = ~0u;
 
   Waitcnt() {}
-  Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt)
-      : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt) {}
+  Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
+      : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt), VsCnt(VsCnt) {}
 
-  static Waitcnt allZero() { return Waitcnt(0, 0, 0); }
+  static Waitcnt allZero(const IsaVersion &Version) {
+    return Waitcnt(0, 0, 0, Version.Major >= 10 ? 0 : ~0u);
+  }
+  static Waitcnt allZeroExceptVsCnt() { return Waitcnt(0, 0, 0, ~0u); }
+
+  bool hasWait() const {
+    return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u || VsCnt != ~0u;
+  }
 
   bool dominates(const Waitcnt &Other) const {
     return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
-           LgkmCnt <= Other.LgkmCnt;
+           LgkmCnt <= Other.LgkmCnt && VsCnt <= Other.VsCnt;
   }
 
   Waitcnt combined(const Waitcnt &Other) const {
     return Waitcnt(std::min(VmCnt, Other.VmCnt), std::min(ExpCnt, Other.ExpCnt),
-                   std::min(LgkmCnt, Other.LgkmCnt));
+                   std::min(LgkmCnt, Other.LgkmCnt),
+                   std::min(VsCnt, Other.VsCnt));
   }
 };
 
@@ -332,7 +358,8 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 ///     \p Vmcnt = \p Waitcnt[3:0]                      (pre-gfx9 only)
 ///     \p Vmcnt = \p Waitcnt[3:0] | \p Waitcnt[15:14]  (gfx9+ only)
 ///     \p Expcnt = \p Waitcnt[6:4]
-///     \p Lgkmcnt = \p Waitcnt[11:8]
+///     \p Lgkmcnt = \p Waitcnt[11:8]                   (pre-gfx10 only)
+///     \p Lgkmcnt = \p Waitcnt[13:8]                   (gfx10+ only)
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
                    unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
 
@@ -357,7 +384,8 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 ///     Waitcnt[3:0]   = \p Vmcnt       (pre-gfx9 only)
 ///     Waitcnt[3:0]   = \p Vmcnt[3:0]  (gfx9+ only)
 ///     Waitcnt[6:4]   = \p Expcnt
-///     Waitcnt[11:8]  = \p Lgkmcnt
+///     Waitcnt[11:8]  = \p Lgkmcnt     (pre-gfx10 only)
+///     Waitcnt[13:8]  = \p Lgkmcnt     (gfx10+ only)
 ///     Waitcnt[15:14] = \p Vmcnt[5:4]  (gfx9+ only)
 ///
 /// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
@@ -455,6 +483,8 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
     return 2;
 
   default:
