@@ -1,10 +1,10 @@
-// #Check that with common switch commons are added to bss or 
+// #Check that with common switch commons are added to bss or
 // #Shown as *COM* otherwise their size is discounted
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
-// RUN: llvm-size -A -common %t.o | FileCheck --check-prefix="SYSV" %s
-// RUN: llvm-size -B -common %t.o| FileCheck --check-prefix="BSD" %s
-// RUN: llvm-size -A %t.o | FileCheck --check-prefix="SYSVNOCOMM" %s
-// RUN: llvm-size -B %t.o| FileCheck --check-prefix="BSDNOCOMM" %s
+// RUN: llvm-size -A --common %t.o | FileCheck --check-prefix=SYSV %s
+// RUN: llvm-size -B --common %t.o | FileCheck --check-prefix=BSD %s
+// RUN: llvm-size -A %t.o | FileCheck --check-prefix=SYSVNOCOMM %s
+// RUN: llvm-size -B %t.o | FileCheck --check-prefix=BSDNOCOMM %s
 	.type	x,@object
 	.comm	x,4,4
 	.type	y,@object

@@ -75,7 +75,7 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  uint32_t V = std::max<uint64_t>(Alignment, 1);
+  uint32_t V = std::max<uint32_t>(Alignment, 1);
   if (!isPowerOf2_64(V))
     fatal(toString(this) + ": sh_addralign is not a power of 2");
   this->Alignment = V;
@@ -253,7 +253,7 @@ void InputSectionBase::parseCompressedHeader() {
     }
 
     UncompressedSize = Hdr->ch_size;
-    Alignment = std::max<uint64_t>(Hdr->ch_addralign, 1);
+    Alignment = std::max<uint32_t>(Hdr->ch_addralign, 1);
     RawData = RawData.slice(sizeof(*Hdr));
     return;
   }
@@ -271,7 +271,7 @@ void InputSectionBase::parseCompressedHeader() {
   }
 
   UncompressedSize = Hdr->ch_size;
-  Alignment = std::max<uint64_t>(Hdr->ch_addralign, 1);
+  Alignment = std::max<uint32_t>(Hdr->ch_addralign, 1);
   RawData = RawData.slice(sizeof(*Hdr));
 }
 

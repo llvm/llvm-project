@@ -18,6 +18,7 @@
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
+#include "index/Index.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -2450,6 +2451,71 @@ TEST(NoCompileCompletionTest, WithFilter) {
   )cpp");
   EXPECT_THAT(Results.Completions,
               UnorderedElementsAre(Named("sym1"), Named("sym2")));
+}
+
+TEST(NoCompileCompletionTest, WithIndex) {
+  std::vector<Symbol> Syms = {func("xxx"), func("a::xxx"), func("ns::b::xxx"),
+                              func("c::xxx"), func("ns::d::xxx")};
+  auto Results = completionsNoCompile(
+      R"cpp(
+        // Current-scopes, unqualified completion.
+        using namespace a;
+        namespace ns {
+        using namespace b;
+        void foo() {
+        xx^
+        }
+      )cpp",
+      Syms);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Scope("")),
+                                   AllOf(Qualifier(""), Scope("a::")),
+                                   AllOf(Qualifier(""), Scope("ns::b::"))));
+  CodeCompleteOptions Opts;
+  Opts.AllScopes = true;
+  Results = completionsNoCompile(
+      R"cpp(
+        // All-scopes unqualified completion.
+        using namespace a;
+        namespace ns {
+        using namespace b;
+        void foo() {
+        xx^
+        }
+      )cpp",
+      Syms, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Scope("")),
+                                   AllOf(Qualifier(""), Scope("a::")),
+                                   AllOf(Qualifier(""), Scope("ns::b::")),
+                                   AllOf(Qualifier("c::"), Scope("c::")),
+                                   AllOf(Qualifier("d::"), Scope("ns::d::"))));
+  Results = completionsNoCompile(
+      R"cpp(
+        // Qualified completion.
+        using namespace a;
+        namespace ns {
+        using namespace b;
+        void foo() {
+        b::xx^
+        }
+      )cpp",
+      Syms, Opts);
+  EXPECT_THAT(Results.Completions,
+              ElementsAre(AllOf(Qualifier(""), Scope("ns::b::"))));
+  Results = completionsNoCompile(
+      R"cpp(
+        // Absolutely qualified completion.
+        using namespace a;
+        namespace ns {
+        using namespace b;
+        void foo() {
+        ::a::xx^
+        }
+      )cpp",
+      Syms, Opts);
+  EXPECT_THAT(Results.Completions,
+              ElementsAre(AllOf(Qualifier(""), Scope("a::"))));
 }
 
 } // namespace

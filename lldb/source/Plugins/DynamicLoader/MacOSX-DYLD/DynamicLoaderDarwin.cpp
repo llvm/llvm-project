@@ -474,7 +474,7 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       // that starts of file offset zero and that has bytes in the file...
       if ((image_infos[i].segments[k].fileoff == 0 &&
            image_infos[i].segments[k].filesize > 0) ||
-          (image_infos[i].segments[k].name == ConstString("__TEXT"))) {
+          (image_infos[i].segments[k].name == "__TEXT")) {
         image_infos[i].slide =
             image_infos[i].address - image_infos[i].segments[k].vmaddr;
         // We have found the slide amount, so we can exit this for loop.

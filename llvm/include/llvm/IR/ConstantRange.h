@@ -397,6 +397,10 @@ public:
   /// Return a new range that is the logical not of the current set.
   ConstantRange inverse() const;
 
+  /// Calculate absolute value range. If the original range contains signed
+  /// min, then the resulting range will also contain signed min.
+  ConstantRange abs() const;
+
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.
   enum class OverflowResult { AlwaysOverflows, MayOverflow, NeverOverflows };

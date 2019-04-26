@@ -322,6 +322,74 @@ TEST(SourceCodeTests, CollectIdentifiers) {
   EXPECT_EQ(IDs["foo"], 2u);
 }
 
+TEST(SourceCodeTests, VisibleNamespaces) {
+  std::vector<std::pair<const char *, std::vector<std::string>>> Cases = {
+      {
+          R"cpp(
+            // Using directive resolved against enclosing namespaces.
+            using namespace foo;
+            namespace ns {
+            using namespace bar;
+          )cpp",
+          {"ns", "", "bar", "foo", "ns::bar"},
+      },
+      {
+          R"cpp(
+            // Don't include namespaces we've closed, ignore namespace aliases.
+            using namespace clang;
+            using std::swap;
+            namespace clang {
+            namespace clangd {}
+            namespace ll = ::llvm;
+            }
+            namespace clang {
+          )cpp",
+          {"clang", ""},
+      },
+      {
+          R"cpp(
+            // Using directives visible even if a namespace is reopened.
+            // Ignore anonymous namespaces.
+            namespace foo{ using namespace bar; }
+            namespace foo{ namespace {
+          )cpp",
+          {"foo", "", "bar", "foo::bar"},
+      },
+      {
+          R"cpp(
+            // Mismatched braces
+            namespace foo{}
+            }}}
+            namespace bar{
+          )cpp",
+          {"bar", ""},
+      },
+      {
+          R"cpp(
+            // Namespaces with multiple chunks.
+            namespace a::b {
+              using namespace c::d;
+              namespace e::f {
+          )cpp",
+          {
+              "a::b::e::f",
+              "",
+              "a",
+              "a::b",
+              "a::b::c::d",
+              "a::b::e",
+              "a::c::d",
+              "c::d",
+          },
+      },
+  };
+  for (const auto& Case : Cases) {
+    EXPECT_EQ(Case.second,
+              visibleNamespaces(Case.first, format::getLLVMStyle()))
+        << Case.first;
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

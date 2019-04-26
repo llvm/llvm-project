@@ -183,10 +183,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   bool IsSDWA = false;
 
   // ToDo: AMDGPUDisassembler supports only VI ISA.
-  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding])
+  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] && !isGFX10())
     report_fatal_error("Disassembly not yet supported for subtarget");
 
-  const unsigned MaxInstBytesNum = (std::min)((size_t)8, Bytes_.size());
+  unsigned MaxInstBytesNum = (std::min)(
+    STI.getFeatureBits()[AMDGPU::FeatureGFX10] ? (size_t) 20 :
+    STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal] ? (size_t) 12 : (size_t)8,
+    Bytes_.size());
   Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
   DecodeStatus Res = MCDisassembler::Fail;
@@ -206,6 +209,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address);
       if (Res) { IsSDWA = true;  break; }
+
+      Res = tryDecodeInst(DecoderTableSDWA1064, MI, QW, Address);
+      if (Res) { IsSDWA = true;  break; }
+
+      // Some GFX9 subtargets repurposed the v_mad_mix_f32, v_mad_mixlo_f16 and
+      // v_mad_mixhi_f16 for FMA variants. Try to decode using this special
+      // table first so we print the correct name.
+
+      if (STI.getFeatureBits()[AMDGPU::FeatureFmaMixInsts]) {
+        Res = tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address);
+        if (Res) break;
+      }
 
       if (STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem]) {
         Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address);
@@ -238,6 +253,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX932, MI, DW, Address);
     if (Res) break;
 
+    Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address);
+    if (Res) break;
+
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
     Res = tryDecodeInst(DecoderTableGFX864, MI, QW, Address);
@@ -247,12 +265,25 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX964, MI, QW, Address);
+    if (Res) break;
+
+    Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
   } while (false);
 
+  if (Res && (MaxInstBytesNum - Bytes.size()) == 12 && (!HasLiteral ||
+        !(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3))) {
+    MaxInstBytesNum = 8;
+    Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    eatBytes<uint64_t>(Bytes);
+  }
+
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
-              MI.getOpcode() == AMDGPU::V_MAC_F32_e64_si ||
+              MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
+              MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx10 ||
               MI.getOpcode() == AMDGPU::V_MAC_F16_e64_vi ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_vi)) {
+              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_vi ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx10 ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx10)) {
     // Insert dummy unused src2_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src2_modifiers);
@@ -265,6 +296,22 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Res && IsSDWA)
     Res = convertSDWAInst(MI);
 
+  int VDstIn_Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                              AMDGPU::OpName::vdst_in);
+  if (VDstIn_Idx != -1) {
+    int Tied = MCII->get(MI.getOpcode()).getOperandConstraint(VDstIn_Idx,
+                           MCOI::OperandConstraint::TIED_TO);
+    if (Tied != -1 && (MI.getNumOperands() <= (unsigned)VDstIn_Idx ||
+         !MI.getOperand(VDstIn_Idx).isReg() ||
+         MI.getOperand(VDstIn_Idx).getReg() != MI.getOperand(Tied).getReg())) {
+      if (MI.getNumOperands() > (unsigned)VDstIn_Idx)
+        MI.erase(&MI.getOperand(VDstIn_Idx));
+      insertNamedMCOperand(MI,
+        MCOperand::createReg(MI.getOperand(Tied).getReg()),
+        AMDGPU::OpName::vdst_in);
+    }
+  }
+
   // if the opcode was not recognized we'll assume a Size of 4 bytes
   // (unless there are fewer bytes left)
   Size = Res ? (MaxInstBytesNum - Bytes.size())
@@ -273,7 +320,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 }
 
 DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX9]) {
+  if (STI.getFeatureBits()[AMDGPU::FeatureGFX9] ||
+      STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
     if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::sdst) != -1)
       // VOPC - insert clamp
       insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::clamp);

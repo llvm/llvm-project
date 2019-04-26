@@ -82,7 +82,7 @@ body:             |
     ; CHECK-LABEL: name: shuffle_v4i32
     ; CHECK: constants:
     ; CHECK: value:           '<16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3>'
-    ; CHECK: alignment:       8
+    ; CHECK: alignment:       16
     ; CHECK: isTargetSpecific: false
     ; CHECK: liveins: $q0, $q1
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
@@ -117,7 +117,7 @@ body:             |
     ; CHECK-LABEL: name: shuffle_tbl_v4i32
     ; CHECK: constants:
     ; CHECK: value:           '<16 x i8> <i8 20, i8 21, i8 22, i8 23, i8 28, i8 29, i8 30, i8 31, i8 4, i8 5, i8 6, i8 7, i8 0, i8 1, i8 2, i8 3>'
-    ; CHECK: alignment:       8
+    ; CHECK: alignment:       16
     ; CHECK: isTargetSpecific: false
     ; CHECK: liveins: $q0, $q1
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
@@ -153,7 +153,7 @@ body:             |
     ; CHECK-LABEL: name: shuffle_v2i64
     ; CHECK: constants:
     ; CHECK: value:           '<16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>'
-    ; CHECK: alignment:       8
+    ; CHECK: alignment:       16
     ; CHECK: isTargetSpecific: false
     ; CHECK: liveins: $q0, $q1
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0

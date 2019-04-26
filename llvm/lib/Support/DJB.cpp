@@ -57,29 +57,26 @@ static UTF32 foldCharDwarf(UTF32 C) {
   return sys::unicode::foldCharSimple(C);
 }
 
-static uint32_t caseFoldingDjbHashCharSlow(StringRef &Buffer, uint32_t H) {
-  UTF32 C = chopOneUTF32(Buffer);
-
-  C = foldCharDwarf(C);
-
-  std::array<UTF8, UNI_MAX_UTF8_BYTES_PER_CODE_POINT> Storage;
-  StringRef Folded = toUTF8(C, Storage);
-  return djbHash(Folded, H);
+static Optional<uint32_t> fastCaseFoldingDjbHash(StringRef Buffer, uint32_t H) {
+  bool allASCII = true;
+  for (unsigned char C : Buffer) {
+    H = H * 33 + ('A' <= C && C <= 'Z' ? C - 'A' + 'a' : C);
+    allASCII &= C <= 0x7f;
+  }
+  if (allASCII)
+    return H;
+  return None;
 }
 
 uint32_t llvm::caseFoldingDjbHash(StringRef Buffer, uint32_t H) {
+  if (Optional<uint32_t> Result = fastCaseFoldingDjbHash(Buffer, H))
+    return *Result;
+
+  std::array<UTF8, UNI_MAX_UTF8_BYTES_PER_CODE_POINT> Storage;
   while (!Buffer.empty()) {
-    unsigned char C = Buffer.front();
-    if (LLVM_LIKELY(C <= 0x7f)) {
-      // US-ASCII, encoded as one character in utf-8.
-      // This is by far the most common case, so handle this specially.
-      if (C >= 'A' && C <= 'Z')
-        C = 'a' + (C - 'A'); // fold uppercase into lowercase
-      H = (H << 5) + H + C;
-      Buffer = Buffer.drop_front();
-      continue;
-    }
-    H = caseFoldingDjbHashCharSlow(Buffer, H);
+    UTF32 C = foldCharDwarf(chopOneUTF32(Buffer));
+    StringRef Folded = toUTF8(C, Storage);
+    H = djbHash(Folded, H);
   }
   return H;
 }

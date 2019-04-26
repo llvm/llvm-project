@@ -596,7 +596,8 @@ void COFFDumper::cacheRelocations() {
   }
 }
 
-void COFFDumper::printDataDirectory(uint32_t Index, const std::string &FieldName) {
+void COFFDumper::printDataDirectory(uint32_t Index,
+                                    const std::string &FieldName) {
   const data_directory *Data;
   if (Obj->getDataDirectory(Index, Data))
     return;
@@ -1234,8 +1235,9 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
       if (GHash) {
         std::vector<GloballyHashedType> Hashes =
             GloballyHashedType::hashTypes(Types);
-        if (auto EC = mergeTypeAndIdRecords(GlobalCVIDs, GlobalCVTypes, SourceToDest, Types,
-                                            Hashes, PCHSignature))
+        if (auto EC =
+                mergeTypeAndIdRecords(GlobalCVIDs, GlobalCVTypes, SourceToDest,
+                                      Types, Hashes, PCHSignature))
           return error(std::move(EC));
       } else {
         if (auto EC = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
@@ -1767,7 +1769,8 @@ void COFFDumper::printResourceDirectoryTable(
     SmallString<20> IDStr;
     raw_svector_ostream OS(IDStr);
     if (i < Table.NumberOfNameEntries) {
-      ArrayRef<UTF16> RawEntryNameString = unwrapOrError(RSF.getEntryNameString(Entry));
+      ArrayRef<UTF16> RawEntryNameString =
+          unwrapOrError(RSF.getEntryNameString(Entry));
       std::vector<UTF16> EndianCorrectedNameString;
       if (llvm::sys::IsBigEndianHost) {
         EndianCorrectedNameString.resize(RawEntryNameString.size() + 1);

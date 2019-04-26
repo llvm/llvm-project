@@ -2572,7 +2572,7 @@ void AArch64InstructionSelector::collectShuffleMaskIndices(
 unsigned
 AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
                                                   MachineFunction &MF) const {
-  Type *CPTy = CPVal->getType()->getPointerTo();
+  Type *CPTy = CPVal->getType();
   unsigned Align = MF.getDataLayout().getPrefTypeAlignment(CPTy);
   if (Align == 0)
     Align = MF.getDataLayout().getTypeAllocSize(CPTy);

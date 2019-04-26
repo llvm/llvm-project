@@ -56,7 +56,11 @@ if(APPLE)
   set(TSAN_TEST_APPLE_PLATFORM "iossim")
   set(arch "x86_64")
   set(TSAN_TEST_TARGET_ARCH ${arch})
-  set(TSAN_TEST_TARGET_CFLAGS "-arch ${arch} -isysroot ${DARWIN_iossim_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+  get_test_cflags_for_apple_platform(
+    "${TSAN_TEST_APPLE_PLATFORM}"
+    "${TSAN_TEST_TARGET_ARCH}"
+    TSAN_TEST_TARGET_CFLAGS
+    )
   set(TSAN_TEST_CONFIG_SUFFIX "-${arch}-${TSAN_TEST_APPLE_PLATFORM}")
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME "IOSSim${ARCH_UPPER_CASE}Config")
@@ -71,7 +75,11 @@ if(APPLE)
   set(TSAN_TEST_APPLE_PLATFORM "ios")
   set(arch "arm64")
   set(TSAN_TEST_TARGET_ARCH ${arch})
-  set(TSAN_TEST_TARGET_CFLAGS "-arch ${arch} -isysroot ${DARWIN_ios_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+  get_test_cflags_for_apple_platform(
+    "${TSAN_TEST_APPLE_PLATFORM}"
+    "${TSAN_TEST_TARGET_ARCH}"
+    TSAN_TEST_TARGET_CFLAGS
+    )
   set(TSAN_TEST_CONFIG_SUFFIX "-${arch}-${TSAN_TEST_APPLE_PLATFORM}")
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME "IOS${ARCH_UPPER_CASE}Config")

@@ -53,9 +53,15 @@ struct ChunkMetadata {
     defined(__arm__)
 static const uptr kRegionSizeLog = 20;
 static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
+
+#if SANITIZER_WORDSIZE == 32
+template <typename AddressSpaceView>
+using ByteMapASVT = FlatByteMap<kNumRegions, AddressSpaceView>;
+#elif SANITIZER_WORDSIZE == 64
 template <typename AddressSpaceView>
 using ByteMapASVT =
     TwoLevelByteMap<(kNumRegions >> 12), 1 << 12, AddressSpaceView>;
+#endif
 
 template <typename AddressSpaceViewTy>
 struct AP32 {

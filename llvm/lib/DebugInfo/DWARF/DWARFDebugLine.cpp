@@ -980,7 +980,7 @@ const llvm::DWARFDebugLine::FileNameEntry &
 DWARFDebugLine::LineTable::getFileNameEntry(uint64_t Index) const {
   uint16_t DwarfVersion = Prologue.getVersion();
   assert(DwarfVersion != 0 && "LineTable has no dwarf version information");
-  // Unlike previous versions, in Dwarf 5 the file names is 0-indexed.
+  // In DWARF v5 the file names are 0-indexed.
   if (DwarfVersion >= 5)
     return Prologue.FileNames[Index];
   else

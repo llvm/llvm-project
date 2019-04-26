@@ -424,6 +424,11 @@ def FeatureFastHorizontalOps
         "Prefer horizontal vector math instructions (haddp, phsub, etc.) over "
         "normal vector instructions with shuffles", [FeatureSSE3]>;
 
+def FeatureFastVectorShiftMasks
+    : SubtargetFeature<
+        "fast-vector-shift-masks", "HasFastVectorShiftMasks", "true",
+        "Prefer a left/right vector logical shift pair over a shift+and pair">;
+
 // Merge branches using three-way conditional code.
 def FeatureMergeToThreeWayBranch : SubtargetFeature<"merge-to-threeway-branch",
                                         "ThreewayBranchProfitable", "true",
@@ -775,7 +780,8 @@ def ProcessorFeatures {
                                                       FeaturePOPCNT,
                                                       FeatureSlowSHLD,
                                                       FeatureLAHFSAHF,
-                                                      FeatureFast15ByteNOP];
+                                                      FeatureFast15ByteNOP,
+                                                      FeatureFastVectorShiftMasks];
   list<SubtargetFeature> BtVer1Features = BtVer1InheritableFeatures;
 
   // Jaguar

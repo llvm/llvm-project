@@ -1797,4 +1797,30 @@ TEST_F(ConstantRangeTest, SSubSat) {
       });
 }
 
+TEST_F(ConstantRangeTest, Abs) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    // We're working with unsigned integers here, because it makes the signed
+    // min case non-wrapping.
+    APInt Min = APInt::getMaxValue(Bits);
+    APInt Max = APInt::getMinValue(Bits);
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      APInt AbsN = N.abs();
+      if (AbsN.ult(Min))
+        Min = AbsN;
+      if (AbsN.ugt(Max))
+        Max = AbsN;
+    });
+
+    ConstantRange AbsCR = CR.abs();
+    if (Min.ugt(Max)) {
+      EXPECT_TRUE(AbsCR.isEmptySet());
+      return;
+    }
+
+    ConstantRange Exact = ConstantRange::getNonEmpty(Min, Max + 1);
+    EXPECT_EQ(Exact, AbsCR);
+  });
+}
+
 }  // anonymous namespace

@@ -367,10 +367,16 @@ ImplicitlyInstantiatedExportedTemplate<IncompleteType> implicitlyInstantiatedExp
 
 // Don't instantiate class members of templates with explicit instantiation declarations, even if they are exported.
 struct IncompleteType2;
-template <typename T> struct __declspec(dllexport) ExportedTemplateWithExplicitInstantiationDecl { // expected-note{{attribute is here}}
+#ifdef MS
+// expected-note@+2{{attribute is here}}
+#endif
+template <typename T> struct __declspec(dllexport) ExportedTemplateWithExplicitInstantiationDecl {
   int f() { return sizeof(T); } // no-error
 };
-extern template struct ExportedTemplateWithExplicitInstantiationDecl<IncompleteType2>; // expected-warning{{explicit instantiation declaration should not be 'dllexport'}}
+#ifdef MS
+// expected-warning@+2{{explicit instantiation declaration should not be 'dllexport'}}
+#endif
+extern template struct ExportedTemplateWithExplicitInstantiationDecl<IncompleteType2>;
 
 // Instantiate class members for explicitly instantiated exported templates.
 struct IncompleteType3; // expected-note{{forward declaration of 'IncompleteType3'}}
@@ -402,10 +408,17 @@ struct __declspec(dllexport) ExportedBaseClass2 : public ExportedBaseClassTempla
 
 // Warn about explicit instantiation declarations of dllexport classes.
 template <typename T> struct ExplicitInstantiationDeclTemplate {};
-extern template struct __declspec(dllexport) ExplicitInstantiationDeclTemplate<int>; // expected-warning{{explicit instantiation declaration should not be 'dllexport'}} expected-note{{attribute is here}}
+#ifdef MS
+// expected-warning@+2{{explicit instantiation declaration should not be 'dllexport'}} expected-note@+2{{attribute is here}}
+#endif
+extern template struct __declspec(dllexport) ExplicitInstantiationDeclTemplate<int>;
 
-template <typename T> struct __declspec(dllexport) ExplicitInstantiationDeclExportedTemplate {}; // expected-note{{attribute is here}}
-extern template struct ExplicitInstantiationDeclExportedTemplate<int>; // expected-warning{{explicit instantiation declaration should not be 'dllexport'}}
+template <typename T> struct __declspec(dllexport) ExplicitInstantiationDeclExportedTemplate {};
+#ifdef MS
+// expected-note@-2{{attribute is here}}
+// expected-warning@+2{{explicit instantiation declaration should not be 'dllexport'}}
+#endif
+extern template struct ExplicitInstantiationDeclExportedTemplate<int>;
 
 namespace { struct InternalLinkageType {}; }
 struct __declspec(dllexport) PR23308 {
@@ -438,6 +451,12 @@ template <typename T> struct ExplicitlyInstantiatedTemplate { void func() {} };
 template struct ExplicitlyInstantiatedTemplate<int>;
 template <typename T> struct ExplicitlyExportInstantiatedTemplate { void func() {} };
 template struct __declspec(dllexport) ExplicitlyExportInstantiatedTemplate<int>;
+template <typename T> struct ExplicitlyExportDeclaredInstantiatedTemplate { void func() {} };
+extern template struct ExplicitlyExportDeclaredInstantiatedTemplate<int>;
+#ifndef MS
+// expected-warning@+2{{'dllexport' attribute ignored on explicit instantiation definition}}
+#endif
+template struct __declspec(dllexport) ExplicitlyExportDeclaredInstantiatedTemplate<int>;
 template <typename T> struct ExplicitlyImportInstantiatedTemplate { void func() {} };
 template struct __declspec(dllimport) ExplicitlyImportInstantiatedTemplate<int>;
 

@@ -12,13 +12,17 @@
 #include "Protocol.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -391,16 +395,25 @@ cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
   return formatReplacements(Code, std::move(*CleanReplaces), Style);
 }
 
-llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
-                                             const format::FormatStyle &Style) {
-  SourceManagerForFile FileSM("dummy.cpp", Content);
+template <typename Action>
+static void lex(llvm::StringRef Code, const format::FormatStyle &Style,
+                Action A) {
+  // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
+  std::string NullTerminatedCode = Code.str();
+  SourceManagerForFile FileSM("dummy.cpp", NullTerminatedCode);
   auto &SM = FileSM.get();
   auto FID = SM.getMainFileID();
   Lexer Lex(FID, SM.getBuffer(FID), SM, format::getFormattingLangOpts(Style));
   Token Tok;
 
+  while (!Lex.LexFromRawLexer(Tok))
+    A(Tok);
+}
+
+llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
+                                             const format::FormatStyle &Style) {
   llvm::StringMap<unsigned> Identifiers;
-  while (!Lex.LexFromRawLexer(Tok)) {
+  lex(Content, Style, [&](const clang::Token &Tok) {
     switch (Tok.getKind()) {
     case tok::identifier:
       ++Identifiers[Tok.getIdentifierInfo()->getName()];
@@ -409,10 +422,184 @@ llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
       ++Identifiers[Tok.getRawIdentifier()];
       break;
     default:
-      continue;
+      break;
     }
-  }
+  });
   return Identifiers;
+}
+
+namespace {
+enum NamespaceEvent {
+  BeginNamespace, // namespace <ns> {.     Payload is resolved <ns>.
+  EndNamespace,   // } // namespace <ns>.  Payload is resolved *outer* namespace.
+  UsingDirective  // using namespace <ns>. Payload is unresolved <ns>.
+};
+// Scans C++ source code for constructs that change the visible namespaces.
+void parseNamespaceEvents(
+    llvm::StringRef Code, const format::FormatStyle &Style,
+    llvm::function_ref<void(NamespaceEvent, llvm::StringRef)> Callback) {
+
+  // Stack of enclosing namespaces, e.g. {"clang", "clangd"}
+  std::vector<std::string> Enclosing; // Contains e.g. "clang", "clangd"
+  // Stack counts open braces. true if the brace opened a namespace.
+  std::vector<bool> BraceStack;
+
+  enum {
+    Default,
+    Namespace,          // just saw 'namespace'
+    NamespaceName,      // just saw 'namespace' NSName
+    Using,              // just saw 'using'
+    UsingNamespace,     // just saw 'using namespace'
+    UsingNamespaceName, // just saw 'using namespace' NSName
+  } State = Default;
+  std::string NSName;
+
+  lex(Code, Style, [&](const clang::Token &Tok) {
+    switch(Tok.getKind()) {
+    case tok::raw_identifier:
+      // In raw mode, this could be a keyword or a name.
+      switch (State) {
+      case UsingNamespace:
+      case UsingNamespaceName:
+        NSName.append(Tok.getRawIdentifier());
+        State = UsingNamespaceName;
+        break;
+      case Namespace:
+      case NamespaceName:
+        NSName.append(Tok.getRawIdentifier());
+        State = NamespaceName;
+        break;
+      case Using:
+        State =
+            (Tok.getRawIdentifier() == "namespace") ? UsingNamespace : Default;
+        break;
+      case Default:
+        NSName.clear();
+        if (Tok.getRawIdentifier() == "namespace")
+          State = Namespace;
+        else if (Tok.getRawIdentifier() == "using")
+          State = Using;
+        break;
+      }
+      break;
+    case tok::coloncolon:
+      // This can come at the beginning or in the middle of a namespace name.
+      switch (State) {
+      case UsingNamespace:
+      case UsingNamespaceName:
+        NSName.append("::");
+        State = UsingNamespaceName;
+        break;
+      case NamespaceName:
+        NSName.append("::");
+        State = NamespaceName;
+        break;
+      case Namespace: // Not legal here.
+      case Using:
+      case Default:
+        State = Default;
+        break;
+      }
+      break;
+    case tok::l_brace:
+      // Record which { started a namespace, so we know when } ends one.
+      if (State == NamespaceName) {
+        // Parsed: namespace <name> {
+        BraceStack.push_back(true);
+        Enclosing.push_back(NSName);
+        Callback(BeginNamespace, llvm::join(Enclosing, "::"));
+      } else {
+        // This case includes anonymous namespaces (State = Namespace).
+        // For our purposes, they're not namespaces and we ignore them.
+        BraceStack.push_back(false);
+      }
+      State = Default;
+      break;
+    case tok::r_brace:
+      // If braces are unmatched, we're going to be confused, but don't crash.
+      if (!BraceStack.empty()) {
+        if (BraceStack.back()) {
+          // Parsed: } // namespace
+          Enclosing.pop_back();
+          Callback(EndNamespace, llvm::join(Enclosing, "::"));
+        }
+        BraceStack.pop_back();
+      }
+      break;
+    case tok::semi:
+      if (State == UsingNamespaceName)
+        // Parsed: using namespace <name> ;
+        Callback(UsingDirective, llvm::StringRef(NSName));
+      State = Default;
+      break;
+    default:
+      State = Default;
+      break;
+    }
+  });
+}
+
+// Returns the prefix namespaces of NS: {"" ... NS}.
+llvm::SmallVector<llvm::StringRef, 8> ancestorNamespaces(llvm::StringRef NS) {
+  llvm::SmallVector<llvm::StringRef, 8> Results;
+  Results.push_back(NS.take_front(0));
+  NS.split(Results, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (llvm::StringRef &R : Results)
+    R = NS.take_front(R.end() - NS.begin());
+  return Results;
+}
+
+} // namespace
+
+std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
+                                           const format::FormatStyle &Style) {
+  std::string Current;
+  // Map from namespace to (resolved) namespaces introduced via using directive.
+  llvm::StringMap<llvm::StringSet<>> UsingDirectives;
+
+  parseNamespaceEvents(Code, Style,
+                       [&](NamespaceEvent Event, llvm::StringRef NS) {
+                         switch (Event) {
+                         case BeginNamespace:
+                         case EndNamespace:
+                           Current = NS;
+                           break;
+                         case UsingDirective:
+                           if (NS.consume_front("::"))
+                             UsingDirectives[Current].insert(NS);
+                           else {
+                             for (llvm::StringRef Enclosing :
+                                  ancestorNamespaces(Current)) {
+                               if (Enclosing.empty())
+                                 UsingDirectives[Current].insert(NS);
+                               else
+                                 UsingDirectives[Current].insert(
+                                     (Enclosing + "::" + NS).str());
+                             }
+                           }
+                           break;
+                         }
+                       });
+
+  std::vector<std::string> Found;
+  for (llvm::StringRef Enclosing : ancestorNamespaces(Current)) {
+    Found.push_back(Enclosing);
+    auto It = UsingDirectives.find(Enclosing);
+    if (It != UsingDirectives.end())
+      for (const auto& Used : It->second)
+        Found.push_back(Used.getKey());
+  }
+
+
+  llvm::sort(Found, [&](const std::string &LHS, const std::string &RHS) {
+    if (Current == RHS)
+      return false;
+    if (Current == LHS)
+      return true;
+    return LHS < RHS;
+  });
+  Found.erase(std::unique(Found.begin(), Found.end()), Found.end());
+  return Found;
 }
 
 } // namespace clangd

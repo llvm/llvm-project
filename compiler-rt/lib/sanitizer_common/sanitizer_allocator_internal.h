@@ -27,7 +27,7 @@ static const uptr kInternalAllocatorNumRegions =
     SANITIZER_MMAP_RANGE_SIZE >> kInternalAllocatorRegionSizeLog;
 #if SANITIZER_WORDSIZE == 32
 typedef FlatByteMap<kInternalAllocatorNumRegions> ByteMap;
-#else
+#elif SANITIZER_WORDSIZE == 64
 typedef TwoLevelByteMap<(kInternalAllocatorNumRegions >> 12), 1 << 12> ByteMap;
 #endif
 struct AP32 {

@@ -136,7 +136,7 @@ bool DynamicLoaderMacOSXDYLD::ProcessDidExec() {
             const Symbol *symbol =
                 frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
             if (symbol) {
-              if (symbol->GetName() == ConstString("_dyld_start"))
+              if (symbol->GetName() == "_dyld_start")
                 did_exec = true;
             }
           }
@@ -898,7 +898,7 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
     // starts of file offset zero and that has bytes in the file...
     if ((dylib_info.segments[i].fileoff == 0 &&
          dylib_info.segments[i].filesize > 0) ||
-        (dylib_info.segments[i].name == ConstString("__TEXT"))) {
+        (dylib_info.segments[i].name == "__TEXT")) {
       dylib_info.slide = dylib_info.address - dylib_info.segments[i].vmaddr;
       // We have found the slide amount, so we can exit this for loop.
       break;

@@ -201,8 +201,10 @@ private:
   SDValue getHi16Elt(SDValue In) const;
 
   void SelectADD_SUB_I64(SDNode *N);
+  void SelectAddcSubb(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
+  void SelectDIV_FMAS(SDNode *N);
   void SelectMAD_64_32(SDNode *N);
   void SelectFMA_W_CHAIN(SDNode *N);
   void SelectFMUL_W_CHAIN(SDNode *N);
@@ -650,6 +652,13 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectADD_SUB_I64(N);
     return;
   }
+  case ISD::ADDCARRY:
+  case ISD::SUBCARRY:
+    if (N->getValueType(0) != MVT::i32)
+      break;
+
+    SelectAddcSubb(N);
+    return;
   case ISD::UADDO:
   case ISD::USUBO: {
     SelectUADDO_USUBO(N);
@@ -763,6 +772,10 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
   case AMDGPUISD::DIV_SCALE: {
     SelectDIV_SCALE(N);
+    return;
+  }
+  case AMDGPUISD::DIV_FMAS: {
+    SelectDIV_FMAS(N);
     return;
   }
   case AMDGPUISD::MAD_I64_I32:
@@ -928,6 +941,19 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   ReplaceNode(N, RegSequence);
 }
 
+void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue CI = N->getOperand(2);
+
+  unsigned Opc = N->getOpcode() == ISD::ADDCARRY ? AMDGPU::V_ADDC_U32_e64
+                                                 : AMDGPU::V_SUBB_U32_e64;
+  CurDAG->SelectNodeTo(
+      N, Opc, N->getVTList(),
+      {LHS, RHS, CI, CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
+}
+
 void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   // The name of the opcodes are misleading. v_add_i32/v_sub_i32 have unsigned
   // carry out despite the _i32 name. These were renamed in VI to _U32.
@@ -980,6 +1006,32 @@ void AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
     = (VT == MVT::f64) ? AMDGPU::V_DIV_SCALE_F64 : AMDGPU::V_DIV_SCALE_F32;
 
   SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2) };
+  CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+}
+
+void AMDGPUDAGToDAGISel::SelectDIV_FMAS(SDNode *N) {
+  SDLoc SL(N);
+  EVT VT = N->getValueType(0);
+
+  assert(VT == MVT::f32 || VT == MVT::f64);
+
+  unsigned Opc
+    = (VT == MVT::f64) ? AMDGPU::V_DIV_FMAS_F64 : AMDGPU::V_DIV_FMAS_F32;
+
+  SDValue CarryIn = N->getOperand(3);
+  // V_DIV_FMAS implicitly reads VCC.
+  SDValue VCC = CurDAG->getCopyToReg(CurDAG->getEntryNode(), SL,
+                                     AMDGPU::VCC, CarryIn, SDValue());
+
+  SDValue Ops[10];
+
+  SelectVOP3Mods0(N->getOperand(0), Ops[1], Ops[0], Ops[6], Ops[7]);
+  SelectVOP3Mods(N->getOperand(1), Ops[3], Ops[2]);
+  SelectVOP3Mods(N->getOperand(2), Ops[5], Ops[4]);
+
+  Ops[8] = VCC;
+  Ops[9] = VCC.getValue(1);
+
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }
 

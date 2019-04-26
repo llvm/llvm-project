@@ -936,43 +936,26 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
 
   elf_section_iterator SecI = *SecIOrErr;
   if (SecI != Obj.section_end()) {
-    switch (SecI->getType()) {
-    case ELF::SHT_PROGBITS:
-    case ELF::SHT_DYNAMIC:
-      switch (SecI->getFlags()) {
-      case (ELF::SHF_ALLOC | ELF::SHF_EXECINSTR):
-        return 't';
-      case (ELF::SHF_TLS | ELF::SHF_ALLOC | ELF::SHF_WRITE):
-      case (ELF::SHF_ALLOC | ELF::SHF_WRITE):
-        return 'd';
-      case ELF::SHF_ALLOC:
-      case (ELF::SHF_ALLOC | ELF::SHF_MERGE):
-      case (ELF::SHF_ALLOC | ELF::SHF_MERGE | ELF::SHF_STRINGS):
-        return 'r';
-      }
-      break;
-    case ELF::SHT_NOBITS:
+    uint32_t Type = SecI->getType();
+    uint64_t Flags = SecI->getFlags();
+    if (Type == ELF::SHT_NOBITS)
       return 'b';
-    case ELF::SHT_INIT_ARRAY:
-    case ELF::SHT_FINI_ARRAY:
+    if (Flags & ELF::SHF_EXECINSTR)
       return 't';
-    }
-  }
-
-  if (SymI->getELFType() == ELF::STT_SECTION) {
+    if (Flags & ELF::SHF_ALLOC)
+      return Flags & ELF::SHF_WRITE ? 'd' : 'r';
     Expected<StringRef> Name = SymI->getName();
     if (!Name) {
       consumeError(Name.takeError());
       return '?';
     }
-    return StringSwitch<char>(*Name)
-        .StartsWith(".debug", 'N')
-        .StartsWith(".note", 'n')
-        .StartsWith(".comment", 'n')
-        .Default('?');
+    if (Name->startswith(".debug"))
+      return 'N';
+    if (!(Flags & ELF::SHF_WRITE))
+      return 'n';
   }
 
-  return 'n';
+  return '?';
 }
 
 static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {

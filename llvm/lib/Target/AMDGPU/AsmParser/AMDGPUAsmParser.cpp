@@ -2609,61 +2609,114 @@ static bool IsRevOpcode(const unsigned Opcode)
   switch (Opcode) {
   case AMDGPU::V_SUBREV_F32_e32:
   case AMDGPU::V_SUBREV_F32_e64:
-  case AMDGPU::V_SUBREV_F32_e32_si:
+  case AMDGPU::V_SUBREV_F32_e32_gfx10:
+  case AMDGPU::V_SUBREV_F32_e32_gfx6_gfx7:
   case AMDGPU::V_SUBREV_F32_e32_vi:
-  case AMDGPU::V_SUBREV_F32_e64_si:
+  case AMDGPU::V_SUBREV_F32_e64_gfx10:
+  case AMDGPU::V_SUBREV_F32_e64_gfx6_gfx7:
   case AMDGPU::V_SUBREV_F32_e64_vi:
+
   case AMDGPU::V_SUBREV_I32_e32:
   case AMDGPU::V_SUBREV_I32_e64:
-  case AMDGPU::V_SUBREV_I32_e32_si:
-  case AMDGPU::V_SUBREV_I32_e64_si:
+  case AMDGPU::V_SUBREV_I32_e32_gfx6_gfx7:
+  case AMDGPU::V_SUBREV_I32_e64_gfx6_gfx7:
+
   case AMDGPU::V_SUBBREV_U32_e32:
   case AMDGPU::V_SUBBREV_U32_e64:
-  case AMDGPU::V_SUBBREV_U32_e32_si:
+  case AMDGPU::V_SUBBREV_U32_e32_gfx6_gfx7:
   case AMDGPU::V_SUBBREV_U32_e32_vi:
-  case AMDGPU::V_SUBBREV_U32_e64_si:
+  case AMDGPU::V_SUBBREV_U32_e64_gfx6_gfx7:
   case AMDGPU::V_SUBBREV_U32_e64_vi:
+
   case AMDGPU::V_SUBREV_U32_e32:
   case AMDGPU::V_SUBREV_U32_e64:
   case AMDGPU::V_SUBREV_U32_e32_gfx9:
   case AMDGPU::V_SUBREV_U32_e32_vi:
   case AMDGPU::V_SUBREV_U32_e64_gfx9:
   case AMDGPU::V_SUBREV_U32_e64_vi:
+
   case AMDGPU::V_SUBREV_F16_e32:
   case AMDGPU::V_SUBREV_F16_e64:
+  case AMDGPU::V_SUBREV_F16_e32_gfx10:
   case AMDGPU::V_SUBREV_F16_e32_vi:
+  case AMDGPU::V_SUBREV_F16_e64_gfx10:
   case AMDGPU::V_SUBREV_F16_e64_vi:
+
   case AMDGPU::V_SUBREV_U16_e32:
   case AMDGPU::V_SUBREV_U16_e64:
   case AMDGPU::V_SUBREV_U16_e32_vi:
   case AMDGPU::V_SUBREV_U16_e64_vi:
+
   case AMDGPU::V_SUBREV_CO_U32_e32_gfx9:
+  case AMDGPU::V_SUBREV_CO_U32_e64_gfx10:
   case AMDGPU::V_SUBREV_CO_U32_e64_gfx9:
+
   case AMDGPU::V_SUBBREV_CO_U32_e32_gfx9:
   case AMDGPU::V_SUBBREV_CO_U32_e64_gfx9:
-  case AMDGPU::V_LSHLREV_B32_e32_si:
-  case AMDGPU::V_LSHLREV_B32_e64_si:
-  case AMDGPU::V_LSHLREV_B16_e32_vi:
-  case AMDGPU::V_LSHLREV_B16_e64_vi:
-  case AMDGPU::V_LSHLREV_B32_e32_vi:
-  case AMDGPU::V_LSHLREV_B32_e64_vi:
-  case AMDGPU::V_LSHLREV_B64_vi:
-  case AMDGPU::V_LSHRREV_B32_e32_si:
-  case AMDGPU::V_LSHRREV_B32_e64_si:
-  case AMDGPU::V_LSHRREV_B16_e32_vi:
-  case AMDGPU::V_LSHRREV_B16_e64_vi:
+
+  case AMDGPU::V_SUBREV_NC_U32_e32_gfx10:
+  case AMDGPU::V_SUBREV_NC_U32_e64_gfx10:
+
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx10:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_gfx10:
+
+  case AMDGPU::V_LSHRREV_B32_e32:
+  case AMDGPU::V_LSHRREV_B32_e64:
+  case AMDGPU::V_LSHRREV_B32_e32_gfx6_gfx7:
+  case AMDGPU::V_LSHRREV_B32_e64_gfx6_gfx7:
   case AMDGPU::V_LSHRREV_B32_e32_vi:
   case AMDGPU::V_LSHRREV_B32_e64_vi:
-  case AMDGPU::V_LSHRREV_B64_vi:
-  case AMDGPU::V_ASHRREV_I32_e64_si:
-  case AMDGPU::V_ASHRREV_I32_e32_si:
+  case AMDGPU::V_LSHRREV_B32_e32_gfx10:
+  case AMDGPU::V_LSHRREV_B32_e64_gfx10:
+
+  case AMDGPU::V_ASHRREV_I32_e32:
+  case AMDGPU::V_ASHRREV_I32_e64:
+  case AMDGPU::V_ASHRREV_I32_e32_gfx10:
+  case AMDGPU::V_ASHRREV_I32_e32_gfx6_gfx7:
+  case AMDGPU::V_ASHRREV_I32_e32_vi:
+  case AMDGPU::V_ASHRREV_I32_e64_gfx10:
+  case AMDGPU::V_ASHRREV_I32_e64_gfx6_gfx7:
+  case AMDGPU::V_ASHRREV_I32_e64_vi:
+
+  case AMDGPU::V_LSHLREV_B32_e32:
+  case AMDGPU::V_LSHLREV_B32_e64:
+  case AMDGPU::V_LSHLREV_B32_e32_gfx10:
+  case AMDGPU::V_LSHLREV_B32_e32_gfx6_gfx7:
+  case AMDGPU::V_LSHLREV_B32_e32_vi:
+  case AMDGPU::V_LSHLREV_B32_e64_gfx10:
+  case AMDGPU::V_LSHLREV_B32_e64_gfx6_gfx7:
+  case AMDGPU::V_LSHLREV_B32_e64_vi:
+
+  case AMDGPU::V_LSHLREV_B16_e32:
+  case AMDGPU::V_LSHLREV_B16_e64:
+  case AMDGPU::V_LSHLREV_B16_e32_vi:
+  case AMDGPU::V_LSHLREV_B16_e64_vi:
+
+  case AMDGPU::V_LSHRREV_B16_e32:
+  case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B16_e32_vi:
+  case AMDGPU::V_LSHRREV_B16_e64_vi:
+
+  case AMDGPU::V_ASHRREV_I16_e32:
+  case AMDGPU::V_ASHRREV_I16_e64:
   case AMDGPU::V_ASHRREV_I16_e32_vi:
   case AMDGPU::V_ASHRREV_I16_e64_vi:
-  case AMDGPU::V_ASHRREV_I32_e32_vi:
-  case AMDGPU::V_ASHRREV_I32_e64_vi:
+
+  case AMDGPU::V_LSHLREV_B64:
+  case AMDGPU::V_LSHLREV_B64_vi:
+
+  case AMDGPU::V_LSHRREV_B64:
+  case AMDGPU::V_LSHRREV_B64_vi:
+
+  case AMDGPU::V_ASHRREV_I64:
   case AMDGPU::V_ASHRREV_I64_vi:
+
+  case AMDGPU::V_PK_LSHLREV_B16:
   case AMDGPU::V_PK_LSHLREV_B16_vi:
+
+  case AMDGPU::V_PK_LSHRREV_B16:
   case AMDGPU::V_PK_LSHRREV_B16_vi:
+  case AMDGPU::V_PK_ASHRREV_I16:
   case AMDGPU::V_PK_ASHRREV_I16_vi:
     return true;
   default:
@@ -5523,10 +5576,13 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   // it has src2 register operand that is tied to dst operand
   // we don't allow modifiers for this operand in assembler so src2_modifiers
   // should be 0.
-  if (Opc == AMDGPU::V_MAC_F32_e64_si ||
+  if (Opc == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
+      Opc == AMDGPU::V_MAC_F32_e64_gfx10 ||
       Opc == AMDGPU::V_MAC_F32_e64_vi ||
       Opc == AMDGPU::V_MAC_F16_e64_vi ||
-      Opc == AMDGPU::V_FMAC_F32_e64_vi) {
+      Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
+      Opc == AMDGPU::V_FMAC_F32_e64_vi ||
+      Opc == AMDGPU::V_FMAC_F16_e64_gfx10) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2
