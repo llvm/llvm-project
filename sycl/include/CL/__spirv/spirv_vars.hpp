@@ -23,9 +23,9 @@ extern const __constant size_t_vec VarGlobalOffset;
 
 #define DEFINE_INT_ID_TO_XYZ_CONVERTER(POSTFIX)                                \
   template <int ID> static size_t get##POSTFIX();                              \
-  template <> static size_t get##POSTFIX<0>() { return Var##POSTFIX.x; }       \
-  template <> static size_t get##POSTFIX<1>() { return Var##POSTFIX.y; }       \
-  template <> static size_t get##POSTFIX<2>() { return Var##POSTFIX.z; }
+  template <> size_t get##POSTFIX<0>() { return Var##POSTFIX.x; }              \
+  template <> size_t get##POSTFIX<1>() { return Var##POSTFIX.y; }              \
+  template <> size_t get##POSTFIX<2>() { return Var##POSTFIX.z; }
 
 DEFINE_INT_ID_TO_XYZ_CONVERTER(GlobalSize);
 DEFINE_INT_ID_TO_XYZ_CONVERTER(GlobalInvocationId)
