@@ -825,10 +825,16 @@ static bool isDiscardable(OutputSection &Sec) {
   if (!Sec.Phdrs.empty())
     return false;
 
-  // We do not want to remove sections that reference symbols in address and
-  // other expressions. We add script symbols as undefined, and want to ensure
-  // all of them are defined in the output, hence have to keep them.
+  // We do not want to remove OutputSections with expressions that reference
+  // symbols even if the OutputSection is empty. We want to ensure that the
+  // expressions can be evaluated and report an error if they cannot.
   if (Sec.ExpressionsUseSymbols)
+    return false;
+
+  // OutputSections may be referenced by name in ADDR and LOADADDR expressions,
+  // as an empty Section can has a valid VMA and LMA we keep the OutputSection
+  // to maintain the integrity of the other Expression.
+  if (Sec.UsedInExpression)
     return false;
 
   for (BaseCommand *Base : Sec.SectionCommands) {

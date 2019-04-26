@@ -490,7 +490,8 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
   
   while (descriptor) {
     ConstString class_name(descriptor->GetClassName());
-    if (class_name == ConstString("NSException")) return cpp_exception;
+    if (class_name == "NSException")
+      return cpp_exception;
     descriptor = descriptor->GetSuperclass();
   }
 

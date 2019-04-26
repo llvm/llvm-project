@@ -2000,8 +2000,8 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   // custom extension and file name makes it highly unlikely that this will
   // collide with anything else.
   ConstString file_extension = m_file.GetFileNameExtension();
-  bool skip_oatdata_oatexec = file_extension == ConstString(".oat") ||
-                              file_extension == ConstString(".odex");
+  bool skip_oatdata_oatexec =
+      file_extension == ".oat" || file_extension == ".odex";
 
   ArchSpec arch = GetArchitecture();
   ModuleSP module_sp(GetModule());
