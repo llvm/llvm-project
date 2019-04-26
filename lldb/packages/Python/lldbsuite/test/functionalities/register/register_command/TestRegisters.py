@@ -72,7 +72,6 @@ class RegisterCommandsTestCase(TestBase):
     @expectedFailureAndroid(archs=["i386"])
     @skipIfFreeBSD  # llvm.org/pr25057
     @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
-    @expectedFailureDarwin(bugnumber="<rdar://problem/34092153>")  # CI bots need to use updated debugserver to match ftag size change in r311579.
     @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_special_purpose_register_read(self):
