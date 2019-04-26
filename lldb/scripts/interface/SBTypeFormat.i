@@ -29,11 +29,7 @@ namespace lldb {
         IsValid() const;
 
         explicit operator bool() const;
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> origin/stable
         bool
         IsEqualTo (lldb::SBTypeFormat &rhs);
 
