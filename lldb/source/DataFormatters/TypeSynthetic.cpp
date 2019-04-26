@@ -137,8 +137,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
   if (!target_sp)
     return;
 
-  m_interpreter =
-      target_sp->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+  m_interpreter = target_sp->GetDebugger().GetScriptInterpreter();
 
   if (m_interpreter != NULL)
     m_wrapper_sp = m_interpreter->CreateSyntheticScriptedProvider(

@@ -43,18 +43,8 @@ public:
 
   lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, bool &exiting);
 
-  const char *GetFilename() const;
-
-  const char *GetCrashLogFilename() const;
-
-  const char *GetArchName() const;
-
-  lldb::ScriptLanguage GetScriptLanguage() const;
-
   void WriteCommandsForSourcing(CommandPlacement placement,
                                 lldb::SBStream &strm);
-
-  bool GetDebugMode() const;
 
   struct OptionData {
     void AddLocalLLDBInit();
@@ -79,7 +69,6 @@ public:
 
     std::vector<std::string> m_args;
 
-    lldb::ScriptLanguage m_script_lang = lldb::eScriptLanguageDefault;
     lldb::LanguageType m_repl_lang = lldb::eLanguageTypeUnknown;
     lldb::pid_t m_process_pid = LLDB_INVALID_PROCESS_ID;
 

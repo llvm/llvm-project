@@ -1260,7 +1260,7 @@ public:
     if (m_fetched_help_long)
       return CommandObjectRaw::GetHelpLong();
 
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return CommandObjectRaw::GetHelpLong();
 
@@ -1275,7 +1275,7 @@ public:
 protected:
   bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
     Status error;
 
@@ -1318,7 +1318,7 @@ public:
     StreamString stream;
     stream.Printf("For more information run 'help %s'", name.c_str());
     SetHelp(stream.GetString());
-    if (ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter())
+    if (ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter())
       GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
   }
 
@@ -1333,7 +1333,7 @@ public:
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
       return CommandObjectRaw::GetHelp();
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return CommandObjectRaw::GetHelp();
     std::string docstring;
@@ -1349,7 +1349,7 @@ public:
     if (m_fetched_help_long)
       return CommandObjectRaw::GetHelpLong();
 
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return CommandObjectRaw::GetHelpLong();
 
@@ -1364,7 +1364,7 @@ public:
 protected:
   bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
     Status error;
 
@@ -1503,7 +1503,7 @@ protected:
       // won't stomp on each other (wrt to execution contents, options, and
       // more)
       m_exe_ctx.Clear();
-      if (m_interpreter.GetScriptInterpreter()->LoadScriptingModule(
+      if (GetDebugger().GetScriptInterpreter()->LoadScriptingModule(
               entry.c_str(), m_options.m_allow_reload, init_session, error)) {
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
@@ -1644,7 +1644,7 @@ protected:
                               std::string &data) override {
     StreamFileSP error_sp = io_handler.GetErrorStreamFile();
 
-    ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter) {
 
       StringList lines;
@@ -1729,8 +1729,7 @@ protected:
         }
       }
     } else {
-      ScriptInterpreter *interpreter =
-          GetCommandInterpreter().GetScriptInterpreter();
+      ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
       if (!interpreter) {
         result.AppendError("cannot find ScriptInterpreter");
         result.SetStatus(eReturnStatusFailed);

@@ -121,6 +121,7 @@ public:
   GetArgumentDescriptionAsCString(const lldb::CommandArgumentType arg_type);
 
   CommandInterpreter &GetCommandInterpreter() { return m_interpreter; }
+  Debugger &GetDebugger();
 
   virtual llvm::StringRef GetHelp();
 

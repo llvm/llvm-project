@@ -1285,9 +1285,8 @@ void ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
   std::string oneliner("return ");
   oneliner += function_name;
   oneliner += "(frame, bp_loc, internal_dict)";
-  m_debugger.GetCommandInterpreter()
-      .GetScriptInterpreter()
-      ->SetBreakpointCommandCallback(bp_options, oneliner.c_str());
+  m_debugger.GetScriptInterpreter()->SetBreakpointCommandCallback(
+      bp_options, oneliner.c_str());
 }
 
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
@@ -1862,8 +1861,7 @@ StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
     return StructuredData::ObjectSP();
 
   Debugger &debugger = thread_plan_sp->GetTarget().GetDebugger();
-  ScriptInterpreter *script_interpreter =
-      debugger.GetCommandInterpreter().GetScriptInterpreter();
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
       static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
 
@@ -1967,8 +1965,7 @@ ScriptInterpreterPythonImpl::CreateScriptedBreakpointResolver(
     return StructuredData::GenericSP();
 
   Debugger &debugger = bkpt_sp->GetTarget().GetDebugger();
-  ScriptInterpreter *script_interpreter =
-      debugger.GetCommandInterpreter().GetScriptInterpreter();
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
       static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
 
@@ -2083,8 +2080,7 @@ ScriptInterpreterPythonImpl::CreateSyntheticScriptedProvider(
     return StructuredData::ObjectSP();
 
   Debugger &debugger = target->GetDebugger();
-  ScriptInterpreter *script_interpreter =
-      debugger.GetCommandInterpreter().GetScriptInterpreter();
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
       (ScriptInterpreterPythonImpl *)script_interpreter;
 
@@ -2262,8 +2258,7 @@ bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
     return true;
 
   Debugger &debugger = target->GetDebugger();
-  ScriptInterpreter *script_interpreter =
-      debugger.GetCommandInterpreter().GetScriptInterpreter();
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
       (ScriptInterpreterPythonImpl *)script_interpreter;
 
@@ -2313,8 +2308,7 @@ bool ScriptInterpreterPythonImpl::WatchpointCallbackFunction(
     return true;
 
   Debugger &debugger = target->GetDebugger();
-  ScriptInterpreter *script_interpreter =
-      debugger.GetCommandInterpreter().GetScriptInterpreter();
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
       (ScriptInterpreterPythonImpl *)script_interpreter;
 

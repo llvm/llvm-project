@@ -377,7 +377,7 @@ uint32_t ProcessGDBRemote::GetPluginVersion() { return 1; }
 bool ProcessGDBRemote::ParsePythonTargetDefinition(
     const FileSpec &target_definition_fspec) {
   ScriptInterpreter *interpreter =
-      GetTarget().GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+      GetTarget().GetDebugger().GetScriptInterpreter();
   Status error;
   StructuredData::ObjectSP module_object_sp(
       interpreter->LoadPluginModule(target_definition_fspec, error));

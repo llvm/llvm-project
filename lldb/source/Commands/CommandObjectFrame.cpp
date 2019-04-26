@@ -890,7 +890,7 @@ bool CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
     return false;
   }
 
-  ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+  ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
   if (interpreter &&
       !interpreter->CheckObjectExists(m_options.m_class_name.c_str())) {

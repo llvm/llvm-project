@@ -49,6 +49,8 @@ CommandObject::CommandObject(CommandInterpreter &interpreter, llvm::StringRef na
 
 CommandObject::~CommandObject() {}
 
+Debugger &CommandObject::GetDebugger() { return m_interpreter.GetDebugger(); }
+
 llvm::StringRef CommandObject::GetHelp() { return m_cmd_help_short; }
 
 llvm::StringRef CommandObject::GetHelpLong() { return m_cmd_help_long; }

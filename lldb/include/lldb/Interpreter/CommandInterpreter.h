@@ -386,10 +386,6 @@ public:
 
   int GetOptionArgumentPosition(const char *in_string);
 
-  ScriptInterpreter *GetScriptInterpreter(bool can_create = true);
-
-  void SetScriptInterpreter();
-
   void SkipLLDBInitFiles(bool skip_lldbinit_files) {
     m_skip_lldbinit_files = skip_lldbinit_files;
   }
@@ -573,8 +569,6 @@ private:
   CommandHistory m_command_history;
   std::string m_repeat_command; // Stores the command that will be executed for
                                 // an empty command string.
-  lldb::ScriptInterpreterSP m_script_interpreter_sp;
-  std::recursive_mutex m_script_interpreter_mutex;
   lldb::IOHandlerSP m_command_io_handler_sp;
   char m_comment_char;
   bool m_batch_command_mode;

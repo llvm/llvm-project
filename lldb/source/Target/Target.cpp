@@ -635,13 +635,10 @@ Target::CreateScriptedBreakpoint(const llvm::StringRef class_name,
   StructuredDataImpl *extra_args_impl = new StructuredDataImpl();
   if (extra_args_sp)
     extra_args_impl->SetObjectSP(extra_args_sp);
-  
-  BreakpointResolverSP resolver_sp(new 
-                                   BreakpointResolverScripted(nullptr, class_name,
-                                   depth,
-                                   extra_args_impl,
-                                   *GetDebugger().GetCommandInterpreter()
-                                       .GetScriptInterpreter()));
+
+  BreakpointResolverSP resolver_sp(new BreakpointResolverScripted(
+      nullptr, class_name, depth, extra_args_impl,
+      *GetDebugger().GetScriptInterpreter()));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, false, true);
 
 }

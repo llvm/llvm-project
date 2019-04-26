@@ -154,6 +154,8 @@ public:
     return *m_command_interpreter_up;
   }
 
+  ScriptInterpreter *GetScriptInterpreter(bool can_create = true);
+
   lldb::ListenerSP GetListener() { return m_listener_sp; }
 
   // This returns the Debugger's scratch source manager.  It won't be able to
@@ -402,6 +404,9 @@ protected:
                                                       // shared
                                                       // source file cache.
   std::unique_ptr<CommandInterpreter> m_command_interpreter_up;
+
+  lldb::ScriptInterpreterSP m_script_interpreter_sp;
+  std::recursive_mutex m_script_interpreter_mutex;
 
   IOHandlerStack m_input_reader_stack;
   llvm::StringMap<std::weak_ptr<llvm::raw_ostream>> m_log_streams;
