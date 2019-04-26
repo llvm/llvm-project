@@ -488,7 +488,7 @@ ClangUserExpression::GetModulesToImport(ExecutionContext &exe_ctx) {
   // We currently don't support importing any other modules in the expression
   // parser.
   for (const SourceModule &m : sc.comp_unit->GetImportedModules())
-    if (!m.path.empty() && m.path.front() == ConstString("std"))
+    if (!m.path.empty() && m.path.front() == "std")
       return {"std"};
 
   return {};

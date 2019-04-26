@@ -66,9 +66,12 @@ Sema::getTemplateInstantiationArgs(NamedDecl *D,
   if (!Ctx) {
     Ctx = D->getDeclContext();
 
-    // Add template arguments from a variable template instantiation.
-    if (VarTemplateSpecializationDecl *Spec =
-            dyn_cast<VarTemplateSpecializationDecl>(D)) {
+    // Add template arguments from a variable template instantiation. For a
+    // class-scope explicit specialization, there are no template arguments
+    // at this level, but there may be enclosing template arguments.
+    VarTemplateSpecializationDecl *Spec =
+        dyn_cast<VarTemplateSpecializationDecl>(D);
+    if (Spec && !Spec->isClassScopeExplicitSpecialization()) {
       // We're done when we hit an explicit specialization.
       if (Spec->getSpecializationKind() == TSK_ExplicitSpecialization &&
           !isa<VarTemplatePartialSpecializationDecl>(Spec))
@@ -111,8 +114,9 @@ Sema::getTemplateInstantiationArgs(NamedDecl *D,
 
   while (!Ctx->isFileContext()) {
     // Add template arguments from a class template instantiation.
-    if (ClassTemplateSpecializationDecl *Spec
-          = dyn_cast<ClassTemplateSpecializationDecl>(Ctx)) {
+    ClassTemplateSpecializationDecl *Spec
+          = dyn_cast<ClassTemplateSpecializationDecl>(Ctx);
+    if (Spec && !Spec->isClassScopeExplicitSpecialization()) {
       // We're done when we hit an explicit specialization.
       if (Spec->getSpecializationKind() == TSK_ExplicitSpecialization &&
           !isa<ClassTemplatePartialSpecializationDecl>(Spec))

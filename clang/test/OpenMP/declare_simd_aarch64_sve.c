@@ -33,12 +33,12 @@ void foo_loop(double *x, float *y, int N) {
   // test integers
 
 #pragma omp declare simd notinbranch
-char a01(int x);
-// CHECK-DAG: _ZGVsMxv_a01
-// CHECK-NOT: a01
+char a01_fun(int x);
+// CHECK-DAG: _ZGVsMxv_a01_fun
+// CHECK-NOT: a01_fun
 
 static int *in;
 static char *out;
 void do_something() {
-  *out = a01(*in);
+  *out = a01_fun(*in);
 }
