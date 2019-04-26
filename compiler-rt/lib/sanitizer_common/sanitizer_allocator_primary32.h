@@ -41,6 +41,7 @@ struct SizeClassAllocator32FlagMasks {  //  Bit masks.
   enum {
     kRandomShuffleChunks = 1,
     kUseSeparateSizeClassForBatch = 2,
+    kForTest = 4,
   };
 };
 
@@ -56,7 +57,20 @@ class SizeClassAllocator32 {
   typedef typename Params::ByteMap ByteMap;
   typedef typename Params::MapUnmapCallback MapUnmapCallback;
 
+#if SANITIZER_WORDSIZE == 32
+  using BM = FlatByteMap<(Params::kSpaceSize >> Params::kRegionSizeLog),
+                         AddressSpaceView>;
+#elif SANITIZER_WORDSIZE == 64
+  using BM =
+      TwoLevelByteMap<((Params::kSpaceSize >> Params::kRegionSizeLog) >> 12),
+                      1 << 12, AddressSpaceView>;
+#endif
+  static_assert((Params::kFlags & SizeClassAllocator32FlagMasks::kForTest) ||
+                    is_same<BM, ByteMap>::value,
+                "Unexpected ByteMap type");
+
   static_assert(
+
       is_same<typename ByteMap::AddressSpaceView, AddressSpaceView>::value,
       "AddressSpaceView type mismatch");
 

@@ -266,6 +266,7 @@ void Fuzzer::MaybeExitGracefully() {
 void Fuzzer::InterruptCallback() {
   Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
+  ScopedDisableMsanInterceptorChecks S; // RmDirRecursive may call opendir().
   RmDirRecursive(TempPath(".dir"));
   // Stop right now, don't perform any at-exit actions.
   _Exit(Options.InterruptExitCode);
@@ -681,7 +682,7 @@ void Fuzzer::MutateAndTestOne() {
         Size <= CurrentMaxMutationLen)
       NewSize = MD.MutateWithMask(CurrentUnitData, Size, Size,
                                   II.DataFlowTraceForFocusFunction);
-    
+
     // If MutateWithMask either failed or wasn't called, call default Mutate.
     if (!NewSize)
       NewSize = MD.Mutate(CurrentUnitData, Size, CurrentMaxMutationLen);

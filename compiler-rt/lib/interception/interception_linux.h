@@ -25,7 +25,8 @@ namespace __interception {
 // returns true if a function with the given name was found.
 bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
     uptr real, uptr wrapper);
-void *GetFuncAddrVer(const char *func_name, const char *ver);
+void *GetFuncAddr(const char *name);
+void *GetFuncAddrVer(const char *name, const char *ver);
 }  // namespace __interception
 
 #define INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)                          \

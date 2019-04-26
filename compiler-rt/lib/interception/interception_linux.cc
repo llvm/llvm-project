@@ -35,27 +35,32 @@ static int StrCmp(const char *s1, const char *s2) {
 
 bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
     uptr real, uptr wrapper) {
+  *func_addr = (uptr)GetFuncAddr(func_name);
+  return real == wrapper;
+}
+
+void *GetFuncAddr(const char *name) {
 #if SANITIZER_NETBSD
   // FIXME: Find a better way to handle renames
-  if (StrCmp(func_name, "sigaction"))
-    func_name = "__sigaction14";
+  if (StrCmp(name, "sigaction"))
+    name = "__sigaction14";
 #endif
-  *func_addr = (uptr)dlsym(RTLD_NEXT, func_name);
-  if (!*func_addr) {
+  void *addr = dlsym(RTLD_NEXT, name);
+  if (!addr) {
     // If the lookup using RTLD_NEXT failed, the sanitizer runtime library is
     // later in the library search order than the DSO that we are trying to
     // intercept, which means that we cannot intercept this function. We still
     // want the address of the real definition, though, so look it up using
     // RTLD_DEFAULT.
-    *func_addr = (uptr)dlsym(RTLD_DEFAULT, func_name);
+    addr = dlsym(RTLD_DEFAULT, name);
   }
-  return real == wrapper;
+  return addr;
 }
 
 // Android and Solaris do not have dlvsym
 #if !SANITIZER_ANDROID && !SANITIZER_SOLARIS && !SANITIZER_OPENBSD
-void *GetFuncAddrVer(const char *func_name, const char *ver) {
-  return dlvsym(RTLD_NEXT, func_name, ver);
+void *GetFuncAddrVer(const char *name, const char *ver) {
+  return dlvsym(RTLD_NEXT, name, ver);
 }
 #endif  // !SANITIZER_ANDROID
 

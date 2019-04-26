@@ -44,6 +44,11 @@ TEST(Interception, GetRealFunctionAddress) {
   EXPECT_EQ(0U, dummy_address);
 }
 
+TEST(Interception, GetFuncAddr) {
+  EXPECT_NE(GetFuncAddr("malloc"), nullptr);
+  EXPECT_EQ(GetFuncAddr("does_not_exist"), nullptr);
+}
+
 TEST(Interception, Basic) {
   ASSERT_TRUE(INTERCEPT_FUNCTION(isdigit));
 
