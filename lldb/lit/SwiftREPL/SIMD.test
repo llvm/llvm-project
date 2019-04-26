@@ -175,3 +175,7 @@ let tinky = SIMD2<Int>(1, 2)
 
 let patatino = SIMD4<Double>(1.5, 2.5, 3.5, 4.5)
 // CHECK: {{patatino}}: SIMD4<Double> = (1.5, 2.5, 3.5, 4.5)
+
+// Make sure we don't print the padding for SIMD3
+let claude = SIMD3(1, 2, 3)
+// CHECK: {{claude}}: SIMD3<Int> = (1, 2, 3)

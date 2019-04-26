@@ -1076,7 +1076,17 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   if (len < type_size)
     return false;
 
+  // We deduce the number of elements looking at the size of the swift
+  // type and the size of the generic argument, as we know the type is
+  // laid out contiguosly in memory. SIMD3, though, has an element of
+  // padding. Given this is the only type in the standard library with
+  // padding, we special-case it.
+  ConstString full_type_name = valobj.GetTypeName();
+  llvm::StringRef type_name = full_type_name.GetStringRef();
   uint64_t num_elements = type_size / arg_size;
+  if (type_name.startswith("Swift.SIMD3"))
+    num_elements = 3;
+
   std::vector<std::string> elem_vector;
   for (int i = 0; i < num_elements; ++i) {
     DataExtractor elem_extractor(storage_buf, i * arg_size, arg_size);
