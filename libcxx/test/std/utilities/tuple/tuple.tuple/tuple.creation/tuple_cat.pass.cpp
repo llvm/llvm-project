@@ -240,18 +240,18 @@ int main(int, char**)
     }
     {
         int x = 101;
-        std::tuple<int, int&, const int&, int&&> t(42, x, x, std::move(x));
+        std::tuple<int, const int, int&, const int&, int&&> t(42, 101, x, x, std::move(x));
         const auto& ct = t;
-        std::tuple<int, int&, const int&> t2(42, x, x);
+        std::tuple<int, const int, int&, const int&> t2(42, 101, x, x);
         const auto& ct2 = t2;
 
         auto r = std::tuple_cat(std::move(t), std::move(ct), t2, ct2);
 
         ASSERT_SAME_TYPE(decltype(r), std::tuple<
-            int, int&, const int&, int&&,
-            int, int&, const int&, int&&,
-            int, int&, const int&,
-            int, int&, const int&>);
+            int, const int, int&, const int&, int&&,
+            int, const int, int&, const int&, int&&,
+            int, const int, int&, const int&,
+            int, const int, int&, const int&>);
         ((void)r);
     }
   return 0;
