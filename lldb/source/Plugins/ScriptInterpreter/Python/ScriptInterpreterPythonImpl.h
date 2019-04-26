@@ -29,7 +29,7 @@ class ScriptInterpreterPythonImpl : public ScriptInterpreterPython {
 public:
   friend class IOHandlerPythonInterpreter;
 
-  ScriptInterpreterPythonImpl(CommandInterpreter &interpreter);
+  ScriptInterpreterPythonImpl(Debugger &debugger);
 
   ~ScriptInterpreterPythonImpl() override;
 
@@ -275,8 +275,7 @@ public:
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override;
 
-  static lldb::ScriptInterpreterSP
-  CreateInstance(CommandInterpreter &interpreter);
+  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
 
   //------------------------------------------------------------------
   // PluginInterface protocol
