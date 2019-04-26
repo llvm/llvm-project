@@ -19,8 +19,7 @@ if(${SWIG_FOUND})
     "--swig-executable=${SWIG_EXECUTABLE}")
 elseif(${LLDB_ALLOW_STATIC_BINDINGS})
   set(PREPARE_BINDINGS_ARGS
-    --find-swig
-    --allow-static-binding)
+    --use-static-binding)
 else()
   message(FATAL_ERROR "swig not found and static bindings not permitted - install swig or specify -DLLDB_ALLOW_STATIC_BINDINGS=1")
 endif()
