@@ -24,7 +24,7 @@ test(const Allocator& a)
 {
     std::match_results<const CharT*, Allocator> m(a);
     assert(m.size() == 0);
-    assert(m.str() == std::basic_string<CharT>());
+    assert(!m.ready());
     assert(m.get_allocator() == a);
 }
 
