@@ -59,9 +59,9 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.expect("fr v pureSwiftStruct", substrs=["pure swift"])
         self.expect("fr v swiftStructCMember",
                     substrs=["swift struct c member"])
-        logfile = open(log, "r")
+        logfile = open(log, "rb")
         for line in logfile:
-            self.assertFalse("missing required module" in line)
+            self.assertFalse(b"missing required module" in line)
         process.Clear()
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
