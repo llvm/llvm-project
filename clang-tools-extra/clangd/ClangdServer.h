@@ -250,10 +250,6 @@ public:
   /// FIXME: those metrics might be useful too, we should add them.
   std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
 
-  /// Returns the active dynamic index if one was built.
-  /// This can be useful for testing, debugging, or observing memory usage.
-  const SymbolIndex *dynamicIndex() const { return DynamicIdx.get(); }
-
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
   LLVM_NODISCARD bool
