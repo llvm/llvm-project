@@ -40,7 +40,6 @@ class TestExpressionsInSwiftMethodsPureSwift(TestBase):
         self.assertTrue(answer == expected_result, report_str)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_expressions_in_methods(self):
         """Tests that we can run simple Swift expressions correctly"""
         self.build()

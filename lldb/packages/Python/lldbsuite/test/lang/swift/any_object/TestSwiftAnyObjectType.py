@@ -28,7 +28,6 @@ class TestSwiftAnyObjectType(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_any_object_type(self):
         """Test the AnyObject type"""
         self.build()

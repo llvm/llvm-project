@@ -25,7 +25,6 @@ class TestSwiftGlobals(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_globals(self):
         """Check that we can examine module globals in the expression parser"""
         self.build()

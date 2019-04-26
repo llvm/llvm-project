@@ -30,7 +30,6 @@ class TestSwiftDedupMacros(TestBase):
     # is observed, try to collect a crashlog before disabling this test.
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def testSwiftDebugMacros(self):
         """This tests that configuration macros get uniqued when building the
         scratch ast context. Note that "-D MACRO" options with a space

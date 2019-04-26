@@ -31,14 +31,12 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
 
     @skipIfLinux # <rdar://problem/30783388> test crashing sometimes when run on linux
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_generic_expressions(self):
         """Test expressions in generic contexts"""
         self.build()
         self.do_test()
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_ivars_in_generic_expressions(self):
         """Test ivar access through expressions in generic contexts"""
         self.build()

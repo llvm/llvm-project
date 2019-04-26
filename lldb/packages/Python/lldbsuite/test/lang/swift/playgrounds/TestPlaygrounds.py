@@ -43,7 +43,6 @@ class TestSwiftPlaygrounds(TestBase):
         debug_info=decorators.no_match("dsym"),
         bugnumber="This test only builds one way",
         macos_version=["<", "10.11"])
-    @add_test_categories(["swiftpr"])
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
         self.build()

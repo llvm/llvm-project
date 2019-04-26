@@ -29,7 +29,6 @@ class TestSwiftCGImportedTypes(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_cg_imported_types(self):
         """Test that we are able to deal with C-imported types from CoreGraphics"""
         self.build()

@@ -35,7 +35,6 @@ class TestSwiftAtObjCIvars(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_at_objc_ivars(self):
         """Test ObjC instance variables"""
         self.build()

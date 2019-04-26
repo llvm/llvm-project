@@ -19,8 +19,6 @@ debug_info_categories = [
 ]
 
 all_categories = {
-    'swiftpr': 'Tests that may run as a part of Swift pull-request testing',
-    'swift-history': 'Tests that work even when compiled older versions of swiftc',
     'dataformatters': 'Tests related to the type command and the data formatters subsystem',
     'dwarf': 'Tests that can be run with DWARF debug information',
     'dwo': 'Tests that can be run with DWO debug information',

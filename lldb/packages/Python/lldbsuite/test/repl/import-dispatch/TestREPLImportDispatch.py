@@ -24,7 +24,6 @@ class TestREPLImportDispatch(TestBase):
 
     @decorators.swiftTest
     @skipIf(debug_info=no_match(["dwarf"]))
-    @decorators.add_test_categories(["swiftpr"])
     def test(self):
         self.build()
         self.assertTrue(os.path.isfile(self.getBuildArtifact("a.out")))
