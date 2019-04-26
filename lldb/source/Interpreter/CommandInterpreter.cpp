@@ -2513,7 +2513,7 @@ ScriptInterpreter *CommandInterpreter::GetScriptInterpreter(bool can_create) {
       return nullptr;
     lldb::ScriptLanguage script_lang = GetDebugger().GetScriptLanguage();
     m_script_interpreter_sp =
-        PluginManager::GetScriptInterpreterForLanguage(script_lang, *this);
+        PluginManager::GetScriptInterpreterForLanguage(script_lang, m_debugger);
   }
   return m_script_interpreter_sp.get();
 }
