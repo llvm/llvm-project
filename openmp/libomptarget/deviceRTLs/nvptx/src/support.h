@@ -40,6 +40,8 @@ INLINE int GetThreadIdInBlock();
 INLINE int GetBlockIdInKernel();
 INLINE int GetNumberOfBlocksInKernel();
 INLINE int GetNumberOfThreadsInBlock();
+INLINE unsigned GetWarpId();
+INLINE unsigned GetLaneId();
 
 // get global ids to locate tread/team info (constant regardless of OMP)
 INLINE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode);

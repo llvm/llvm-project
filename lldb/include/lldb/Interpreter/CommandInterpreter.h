@@ -188,8 +188,7 @@ public:
     eCommandTypesAllThem = 0xFFFF  // all commands
   };
 
-  CommandInterpreter(Debugger &debugger, lldb::ScriptLanguage script_language,
-                     bool synchronous_execution);
+  CommandInterpreter(Debugger &debugger, bool synchronous_execution);
 
   ~CommandInterpreter() override;
 
@@ -371,8 +370,6 @@ public:
   void Initialize();
 
   void Clear();
-
-  void SetScriptLanguage(lldb::ScriptLanguage lang);
 
   bool HasCommands() const;
 

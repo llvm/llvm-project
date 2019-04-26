@@ -122,7 +122,6 @@ ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
 }
 
 CommandInterpreter::CommandInterpreter(Debugger &debugger,
-                                       ScriptLanguage script_language,
                                        bool synchronous_execution)
     : Broadcaster(debugger.GetBroadcasterManager(),
                   CommandInterpreter::GetStaticBroadcasterClass().AsCString()),
@@ -135,7 +134,6 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       m_batch_command_mode(false), m_truncation_warning(eNoTruncation),
       m_command_source_depth(0), m_num_errors(0), m_quit_requested(false),
       m_stopped_for_crash(false) {
-  debugger.SetScriptLanguage(script_language);
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");

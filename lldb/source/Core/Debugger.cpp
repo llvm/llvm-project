@@ -840,8 +840,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_terminal_state(), m_target_list(*this), m_platform_list(),
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_up(), m_source_file_cache(),
-      m_command_interpreter_up(llvm::make_unique<CommandInterpreter>(
-          *this, eScriptLanguageDefault, false)),
+      m_command_interpreter_up(
+          llvm::make_unique<CommandInterpreter>(*this, false)),
       m_input_reader_stack(), m_instance_name(), m_loaded_plugins(),
       m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
