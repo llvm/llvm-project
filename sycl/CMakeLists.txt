@@ -5,6 +5,7 @@ project(sycl-solution)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 if(MSVC)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -135,6 +136,7 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/detail/program_manager/program_manager.cpp"
   "${sourceRootPath}/detail/queue_impl.cpp"
   "${sourceRootPath}/detail/os_util.cpp"
+  "${sourceRootPath}/detail/platform_util.cpp"
   "${sourceRootPath}/detail/sampler_impl.cpp"
   "${sourceRootPath}/detail/scheduler/commands.cpp"
   "${sourceRootPath}/detail/scheduler/commands2.cpp"

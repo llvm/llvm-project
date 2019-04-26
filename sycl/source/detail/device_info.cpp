@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <CL/sycl/detail/device_info.hpp>
+#include <CL/sycl/detail/os_util.hpp>
+#include <CL/sycl/detail/platform_util.hpp>
 #include <CL/sycl/device.hpp>
 #include <chrono>
-#include <sys/sysinfo.h>
 #include <thread>
 
 #ifdef __GNUG__
@@ -20,22 +21,6 @@
 namespace cl {
 namespace sycl {
 namespace detail {
-
-// Used by methods that duplicate OpenCL behaviour in order to get CPU info
-// TODO add Windows support
-// TODO add support for x86-64 ABI selected using ifdef.
-static void cpuid(unsigned int cpuid_info[], unsigned int type) {
-  unsigned int eax, ebx, ecx, edx;
-  __asm__ __volatile__("mov  %%ebx, %%edi\n\r"
-                       "cpuid\n\r"
-                       "xchg %%edi, %%ebx\n\r"
-                       : "=a"(eax), "=D"(ebx), "=c"(ecx), "=d"(edx)
-                       : "a"(type));
-  cpuid_info[0] = eax;
-  cpuid_info[1] = ebx;
-  cpuid_info[2] = ecx;
-  cpuid_info[3] = edx;
-}
 
 vector_class<info::fp_config> read_fp_bitfield(cl_device_fp_config bits) {
   vector_class<info::fp_config> result;
@@ -156,99 +141,43 @@ cl_uint get_device_info_host<info::device::preferred_vector_width_half>() {
   return 0;
 }
 
-// SSE4.2 has 16 byte (XMM) registers
-static const cl_uint NATIVE_VECTOR_WIDTH_SSE42[] = {16, 8, 4, 2, 4, 2, 0};
-// AVX supports 32 byte (YMM) registers only for floats and doubles
-static const cl_uint NATIVE_VECTOR_WIDTH_AVX[] = {16, 8, 4, 2, 8, 4, 0};
-// AVX2 has a full set of 32 byte (YMM) registers
-static const cl_uint NATIVE_VECTOR_WIDTH_AVX2[] = {32, 16, 8, 4, 8, 4, 0};
-// AVX512 has 64 byte (ZMM) registers
-static const cl_uint NATIVE_VECTOR_WIDTH_AVX512[] = {64, 32, 16, 8, 16, 8, 0};
-
-cl_uint get_native_vector_width(size_t idx) {
-#if (__GNUG__ && GCC_VERSION > 40900)
-  if (__builtin_cpu_supports("avx512f")) {
-    return NATIVE_VECTOR_WIDTH_AVX512[idx];
-  }
-#endif
-
-  if (__builtin_cpu_supports("avx2")) {
-    return NATIVE_VECTOR_WIDTH_AVX2[idx];
-  }
-  if (__builtin_cpu_supports("avx")) {
-    return NATIVE_VECTOR_WIDTH_AVX[idx];
-  }
-  return NATIVE_VECTOR_WIDTH_SSE42[idx];
-}
-
 template <>
 cl_uint get_device_info_host<info::device::native_vector_width_char>() {
-  return get_native_vector_width(0);
+  return PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex::Char);
 }
 
 template <>
 cl_uint get_device_info_host<info::device::native_vector_width_short>() {
-  return get_native_vector_width(1);
+  return PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex::Short);
 }
 
 template <>
 cl_uint get_device_info_host<info::device::native_vector_width_int>() {
-  return get_native_vector_width(2);
+  return PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex::Int);
 }
 
 template <>
 cl_uint get_device_info_host<info::device::native_vector_width_long>() {
-  return get_native_vector_width(3);
+  return PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex::Long);
 }
 
 template <>
 cl_uint get_device_info_host<info::device::native_vector_width_float>() {
-  return get_native_vector_width(4);
+  return PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex::Float);
 }
 
 template <>
 cl_uint get_device_info_host<info::device::native_vector_width_double>() {
-  return get_native_vector_width(5);
+  return PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex::Double);
 }
 
 template <>
 cl_uint get_device_info_host<info::device::native_vector_width_half>() {
-  return get_native_vector_width(6);
+  return PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex::Half);
 }
 
 template <> cl_uint get_device_info_host<info::device::max_clock_frequency>() {
-  throw runtime_error(
-      "max_clock_frequency parameter is not supported for host device");
-  unsigned int cpuInfo[4] = {0 - 1u};
-  string_class buff(sizeof(cpuInfo) * 3 + 1, 0);
-  size_t offset = 0;
-
-  for (unsigned int i = 0x80000002; i <= 0x80000004; i++) {
-    cpuid(cpuInfo, i);
-    std::copy(reinterpret_cast<char *>(cpuInfo),
-              reinterpret_cast<char *>(cpuInfo) + sizeof(cpuInfo),
-              buff.begin() + offset);
-    offset += sizeof(cpuInfo);
-  }
-  std::size_t found = buff.rfind("Hz");
-  // Bail out if frequency is not found in CPUID string
-  if (found == std::string::npos)
-    return 0;
-
-  buff = buff.substr(0, found);
-
-  cl_uint freq = 0;
-  switch (buff[buff.size() - 1]) {
-  case 'M':
-    freq = 1;
-    break;
-  case 'G':
-    freq = 1000;
-    break;
-  }
-  buff = buff.substr(buff.rfind(' '), buff.length());
-  freq *= std::stod(buff);
-  return freq;
+  return PlatformUtil::getMaxClockFrequency();
 }
 
 template <> cl_uint get_device_info_host<info::device::address_bits>() {
@@ -256,9 +185,7 @@ template <> cl_uint get_device_info_host<info::device::address_bits>() {
 }
 
 template <> cl_ulong get_device_info_host<info::device::global_mem_size>() {
-  struct sysinfo meminfo;
-  sysinfo(&meminfo);
-  return meminfo.totalram * meminfo.mem_unit;
+  return static_cast<cl_ulong>(OSUtil::getOSMemSize());
 }
 
 template <> cl_ulong get_device_info_host<info::device::max_mem_alloc_size>() {
@@ -362,16 +289,12 @@ get_device_info_host<info::device::global_mem_cache_type>() {
 
 template <>
 cl_uint get_device_info_host<info::device::global_mem_cache_line_size>() {
-  unsigned int viCPUInfo[4] = {(unsigned int)-1};
-  cpuid(viCPUInfo, 0x80000006);
-  return viCPUInfo[2] & 0xff;
+  return PlatformUtil::getMemCacheLineSize();
 }
 
 template <>
 cl_ulong get_device_info_host<info::device::global_mem_cache_size>() {
-  unsigned int viCPUInfo[4] = {(unsigned int)-1};
-  cpuid(viCPUInfo, 0x80000006);
-  return ((viCPUInfo[2] >> 16) & 0xffff) * 1024;
+  return PlatformUtil::getMemCacheSize();
 }
 
 template <>

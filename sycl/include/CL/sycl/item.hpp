@@ -16,10 +16,10 @@
 namespace cl {
 namespace sycl {
 namespace detail {
-class Builder;
+struct Builder;
 }
 template <int dimensions> struct id;
-template <int dimensions> struct range;
+template <int dimensions> class range;
 template <int dimensions = 1, bool with_offset = true> struct item {
 
   item() = delete;
@@ -86,8 +86,9 @@ template <int dimensions = 1, bool with_offset = true> struct item {
 
 protected:
   // For call constructor inside conversion operator
-  friend class item<dimensions, false>;
-  friend class detail::Builder;
+  friend struct item<dimensions, false>;
+  friend struct item<dimensions, true>;
+  friend struct detail::Builder;
 
   template <size_t W = with_offset>
   item(typename std::enable_if<(W == true), const range<dimensions>>::type &R,

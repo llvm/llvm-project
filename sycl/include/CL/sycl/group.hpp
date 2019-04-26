@@ -19,7 +19,7 @@
 namespace cl {
 namespace sycl {
 namespace detail {
-class Builder;
+struct Builder;
 } // namespace detail
 
 template <int dimensions = 1> class group {

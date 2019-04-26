@@ -22,7 +22,7 @@
 namespace cl {
 namespace sycl {
 namespace detail {
-class Builder;
+struct Builder;
 }
 template <int dimensions = 1> struct nd_item {
 

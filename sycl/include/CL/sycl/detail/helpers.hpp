@@ -19,10 +19,10 @@ namespace cl {
 namespace sycl {
 class context;
 class event;
-template <int dimensions, bool with_offset> class item;
+template <int dimensions, bool with_offset> struct item;
 template <int dimensions> class group;
 template <int dimensions> class range;
-template <int dimensions> class id;
+template <int dimensions> struct id;
 template <int dimensions> class nd_item;
 namespace detail {
 class context_impl;

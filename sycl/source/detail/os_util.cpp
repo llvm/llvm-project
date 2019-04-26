@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <CL/sycl/detail/os_util.hpp>
+#include <CL/sycl/exception.hpp>
 
 #if defined(SYCL_RT_OS_LINUX)
 
@@ -16,9 +17,13 @@
 
 #include <link.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <sys/sysinfo.h>
 
-#endif // SYCL_RT_OS_LINUX
+#elif defined(SYCL_RT_OS_WINDOWS)
+
+#include <Windows.h>
+
+#endif
 
 namespace cl {
 namespace sycl {
@@ -35,23 +40,22 @@ struct ModuleInfo {
   const char *Name;     // out
 };
 
-static int callback(struct dl_phdr_info *info, size_t size, void *data) {
-  unsigned char *Base = reinterpret_cast<unsigned char *>(info->dlpi_addr);
-  ModuleInfo *MI = (ModuleInfo *)data;
+static int callback(struct dl_phdr_info *Info, size_t Size, void *Data) {
+  auto Base = reinterpret_cast<unsigned char *>(Info->dlpi_addr);
+  auto MI = reinterpret_cast<ModuleInfo *>(Data);
+  auto TestAddr = reinterpret_cast<const unsigned char *>(MI->VirtAddr);
 
-  for (int i = 0; i < info->dlpi_phnum; ++i) {
-    unsigned char *SegStart = Base + info->dlpi_phdr[i].p_vaddr;
-    unsigned char *SegEnd = SegStart + info->dlpi_phdr[i].p_memsz;
-    const unsigned char *TestAddr =
-        reinterpret_cast<const unsigned char *>(MI->VirtAddr);
+  for (int i = 0; i < Info->dlpi_phnum; ++i) {
+    unsigned char *SegStart = Base + Info->dlpi_phdr[i].p_vaddr;
+    unsigned char *SegEnd = SegStart + Info->dlpi_phdr[i].p_memsz;
 
     // check if the tested address is within current segment
     if (TestAddr >= SegStart && TestAddr < SegEnd) {
       // ... it is - belongs to the module then
       // dlpi_addr is zero for the executable, replace it
-      void *H = (void *)info->dlpi_addr;
+      auto H = reinterpret_cast<void *>(Info->dlpi_addr);
       MI->Handle = H ? H : OSUtil::ExeModuleHandle;
-      MI->Name = info->dlpi_name;
+      MI->Name = Info->dlpi_name;
       return 1; // non-zero tells to finish iteration via modules
     }
   }
@@ -66,9 +70,25 @@ OSModuleHandle OSUtil::getOSModuleHandle(const void *VirtAddr) {
 }
 
 #elif defined(SYCL_RT_OS_WINDOWS)
+// TODO: implement this function for Windows probably by using
 // GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,...)
-// to implement getOSModuleHandle
-#endif // SYCL_RT_OS_LINUX
+OSModuleHandle OSUtil::getOSModuleHandle(const void *VirtAddr) {
+  throw runtime_error("OSUtil::getOSModuleHandle() is not implemented yet");
+}
+#endif // SYCL_RT_OS_WINDOWS
+
+size_t OSUtil::getOSMemSize() {
+#if defined(SYCL_RT_OS_LINUX)
+  struct sysinfo MemInfo;
+  sysinfo(&MemInfo);
+  return static_cast<size_t>(MemInfo.totalram * MemInfo.mem_unit);
+#elif defined(SYCL_RT_OS_WINDOWS)
+  MEMORYSTATUSEX MemInfo;
+  MemInfo.dwLength = sizeof(MemInfo);
+  GlobalMemoryStatusEx(&MemInfo);
+  return static_cast<size_t>(MemInfo.ullTotalPhys);
+#endif
+}
 
 } // namespace detail
 } // namespace sycl

@@ -16,8 +16,9 @@ namespace cl {
 namespace sycl {
 template <int dimensions> class range;
 template <int dimensions = 1> struct id : public detail::array<dimensions> {
-public:
+private:
   using base = detail::array<dimensions>;
+public:
   id() = default;
 
   /* The following constructor is only available in the id struct

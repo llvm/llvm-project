@@ -16,8 +16,8 @@ namespace sycl {
 template <int dimensions> struct id;
 template <int dimensions = 1>
 class range : public detail::array<dimensions> {
-public:
   using base = detail::array<dimensions>;
+public:
   /* The following constructor is only available in the range class
   specialization where: dimensions==1 */
   template <int N = dimensions>

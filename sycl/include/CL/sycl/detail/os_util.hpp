@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <stdlib.h>
+
 #ifdef _WIN32
 #define SYCL_RT_OS_WINDOWS
 // Windows platform
@@ -48,6 +50,9 @@ public:
   /// Module handle for the executable module - it is assumed there is always
   /// single one at most.
   static const OSModuleHandle ExeModuleHandle;
+
+  /// Returns the amount of RAM available for the operating system.
+  static size_t getOSMemSize();
 };
 
 } // namespace detail

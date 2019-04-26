@@ -42,7 +42,7 @@ class accessor;
 template <typename T, int dimensions, typename AllocatorT> class buffer;
 class handler;
 class queue;
-template <int dimentions> class id;
+template <int dimentions> struct id;
 template <int dimentions> class range;
 using buffer_allocator = aligned_allocator<char, /*alignment*/ 64>;
 namespace detail {
