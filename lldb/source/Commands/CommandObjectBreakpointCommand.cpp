@@ -630,7 +630,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
 
     if (target == nullptr) {
       result.AppendError("There is not a current executable; there are no "

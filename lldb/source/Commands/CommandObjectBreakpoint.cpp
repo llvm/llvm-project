@@ -901,7 +901,7 @@ protected:
       const bool show_locations = false;
       bp_sp->GetDescription(&output_stream, lldb::eDescriptionLevelInitial,
                          show_locations);
-      if (target == m_interpreter.GetDebugger().GetDummyTarget())
+      if (target == GetDebugger().GetDummyTarget())
         output_stream.Printf("Breakpoint set in dummy target, will get copied "
                              "into future targets.\n");
       else {

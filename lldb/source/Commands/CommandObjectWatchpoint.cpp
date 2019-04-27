@@ -225,7 +225,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     if (target == nullptr) {
       result.AppendError("Invalid target. No current target or watchpoints.");
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -313,7 +313,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     if (!CheckTargetForWatchpointOperations(target, result))
       return false;
 
@@ -383,7 +383,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     if (!CheckTargetForWatchpointOperations(target, result))
       return false;
 
@@ -455,7 +455,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     if (!CheckTargetForWatchpointOperations(target, result))
       return false;
 
@@ -577,7 +577,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     if (!CheckTargetForWatchpointOperations(target, result))
       return false;
 
@@ -704,7 +704,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     if (!CheckTargetForWatchpointOperations(target, result))
       return false;
 
@@ -822,7 +822,7 @@ protected:
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     // If no argument is present, issue an error message.  There's no way to
@@ -1007,7 +1007,7 @@ protected:
     m_option_group.NotifyOptionParsingStarting(
         &exe_ctx); // This is a raw command, so notify the option group
 
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     OptionsWithRaw args(raw_command);

@@ -147,7 +147,7 @@ public:
 
 protected:
   bool DoExecute(Args &launch_args, CommandReturnObject &result) override {
-    Debugger &debugger = m_interpreter.GetDebugger();
+    Debugger &debugger = GetDebugger();
     Target *target = debugger.GetSelectedTarget().get();
     // If our listener is nullptr, users aren't allows to launch
     ModuleSP exe_module_sp = target->GetExecutableModule();
@@ -430,9 +430,9 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
 
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     // N.B. The attach should be synchronous.  It doesn't help much to get the
     // prompt back between initiating the attach and the target actually
     // stopping.  So even if the interpreter is set to be asynchronous, we wait
@@ -449,8 +449,8 @@ protected:
       TargetSP new_target_sp;
       Status error;
 
-      error = m_interpreter.GetDebugger().GetTargetList().CreateTarget(
-          m_interpreter.GetDebugger(), "", "", eLoadDependentsNo,
+      error = GetDebugger().GetTargetList().CreateTarget(
+          GetDebugger(), "", "", eLoadDependentsNo,
           nullptr, // No platform options
           new_target_sp);
       target = new_target_sp.get();
@@ -458,7 +458,7 @@ protected:
         result.AppendError(error.AsCString("Error creating target"));
         return false;
       }
-      m_interpreter.GetDebugger().GetTargetList().SetSelectedTarget(target);
+      GetDebugger().GetTargetList().SetSelectedTarget(target);
     }
 
     // Record the old executable module, we want to issue a warning if the
@@ -889,7 +889,7 @@ protected:
       plugin_name = m_options.plugin_name.c_str();
 
     Status error;
-    Debugger &debugger = m_interpreter.GetDebugger();
+    Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
     ProcessSP process_sp = platform_sp->ConnectProcess(
         command.GetArgumentAtIndex(0), plugin_name, debugger,
@@ -1460,7 +1460,7 @@ public:
 
 protected:
   bool DoExecute(Args &signal_args, CommandReturnObject &result) override {
-    TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
+    TargetSP target_sp = GetDebugger().GetSelectedTarget();
 
     if (!target_sp) {
       result.AppendError("No current target;"

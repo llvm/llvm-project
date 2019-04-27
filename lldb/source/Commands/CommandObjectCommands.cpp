@@ -985,11 +985,8 @@ protected:
           llvm::StringRef bytes_strref(lines[i]);
           Status error = AppendRegexSubstitution(bytes_strref, check_only);
           if (error.Fail()) {
-            if (!m_interpreter.GetDebugger()
-                     .GetCommandInterpreter()
-                     .GetBatchCommandMode()) {
-              StreamSP out_stream =
-                  m_interpreter.GetDebugger().GetAsyncOutputStream();
+            if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode()) {
+              StreamSP out_stream = GetDebugger().GetAsyncOutputStream();
               out_stream->Printf("error: %s\n", error.AsCString());
             }
           }
@@ -1032,7 +1029,7 @@ protected:
         true);
 
     if (argc == 1) {
-      Debugger &debugger = m_interpreter.GetDebugger();
+      Debugger &debugger = GetDebugger();
       bool color_prompt = debugger.GetUseColor();
       const bool multiple_lines = true; // Get multiple lines
       IOHandlerSP io_handler_sp(new IOHandlerEditline(
@@ -1476,8 +1473,7 @@ protected:
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (m_interpreter.GetDebugger().GetScriptLanguage() !=
-        lldb::eScriptLanguagePython) {
+    if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for module "
                          "importing is currently Python");
       result.SetStatus(eReturnStatusFailed);
@@ -1690,8 +1686,7 @@ protected:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (m_interpreter.GetDebugger().GetScriptLanguage() !=
-        lldb::eScriptLanguagePython) {
+    if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for scripted "
                          "commands is currently Python");
       result.SetStatus(eReturnStatusFailed);
