@@ -51,27 +51,14 @@ struct ChunkMetadata {
 
 #if defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
     defined(__arm__)
-static const uptr kRegionSizeLog = 20;
-static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
-
-#if SANITIZER_WORDSIZE == 32
-template <typename AddressSpaceView>
-using ByteMapASVT = FlatByteMap<kNumRegions, AddressSpaceView>;
-#elif SANITIZER_WORDSIZE == 64
-template <typename AddressSpaceView>
-using ByteMapASVT =
-    TwoLevelByteMap<(kNumRegions >> 12), 1 << 12, AddressSpaceView>;
-#endif
-
 template <typename AddressSpaceViewTy>
 struct AP32 {
   static const uptr kSpaceBeg = 0;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = sizeof(ChunkMetadata);
   typedef __sanitizer::CompactSizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = __lsan::kRegionSizeLog;
+  static const uptr kRegionSizeLog = 20;
   using AddressSpaceView = AddressSpaceViewTy;
-  using ByteMap = __lsan::ByteMapASVT<AddressSpaceView>;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };

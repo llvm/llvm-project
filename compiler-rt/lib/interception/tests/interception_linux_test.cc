@@ -33,24 +33,13 @@ INTERCEPTOR(int, isdigit, int d) {
 
 namespace __interception {
 
-TEST(Interception, GetRealFunctionAddress) {
-  uptr malloc_address = 0;
-  EXPECT_TRUE(GetRealFunctionAddress("malloc", &malloc_address, 0, 0));
-  EXPECT_NE(0U, malloc_address);
-
-  uptr dummy_address = 0;
-  EXPECT_TRUE(
-      GetRealFunctionAddress("dummy_doesnt_exist__", &dummy_address, 0, 0));
-  EXPECT_EQ(0U, dummy_address);
-}
-
 TEST(Interception, GetFuncAddr) {
   EXPECT_NE(GetFuncAddr("malloc"), nullptr);
   EXPECT_EQ(GetFuncAddr("does_not_exist"), nullptr);
 }
 
 TEST(Interception, Basic) {
-  ASSERT_TRUE(INTERCEPT_FUNCTION(isdigit));
+  INTERCEPT_FUNCTION(isdigit);
 
   // After interception, the counter should be incremented.
   InterceptorFunctionCalled = 0;

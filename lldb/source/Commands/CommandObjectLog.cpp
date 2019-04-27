@@ -168,9 +168,9 @@ protected:
 
     std::string error;
     llvm::raw_string_ostream error_stream(error);
-    bool success = m_interpreter.GetDebugger().EnableLog(
-        channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
-        error_stream);
+    bool success =
+        GetDebugger().EnableLog(channel, args.GetArgumentArrayRef(), log_file,
+                                m_options.log_options, error_stream);
     result.GetErrorStream() << error_stream.str();
 
     if (success)

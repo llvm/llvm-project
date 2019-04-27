@@ -836,7 +836,7 @@ public:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    if (!m_interpreter.GetDebugger().GetSelectedTarget()) {
+    if (!GetDebugger().GetSelectedTarget()) {
       result.AppendError("invalid target, create a debug target using the "
                          "'target create' command");
       result.SetStatus(eReturnStatusFailed);
@@ -1116,7 +1116,7 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     if (target == nullptr) {
       result.AppendError("invalid target, create a debug target using the "
                          "'target create' command");

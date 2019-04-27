@@ -80,7 +80,7 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
 
       std::vector<const Property *> properties;
       const size_t num_properties =
-          m_interpreter.GetDebugger().Apropos(search_word, properties);
+          GetDebugger().Apropos(search_word, properties);
       if (num_properties) {
         const bool dump_qualified_name = true;
         result.AppendMessageWithFormatv(
