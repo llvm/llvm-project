@@ -7842,13 +7842,16 @@ static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
   // Otherwise, it returns 0.
   //
   // FIXME: GCC also intends to return 1 for literals of aggregate types, but
-  // its support for this does not currently work.
+  // its support for this did not work prior to GCC 9 and is not yet well
+  // understood.
   if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
       ArgType->isAnyComplexType() || ArgType->isPointerType() ||
       ArgType->isNullPtrType()) {
     APValue V;
-    if (!::EvaluateAsRValue(Info, Arg, V))
+    if (!::EvaluateAsRValue(Info, Arg, V)) {
+      Fold.keepDiagnostics();
       return false;
+    }
 
     // For a pointer (possibly cast to integer), there are special rules.
     if (V.getKind() == APValue::LValue)
@@ -8265,18 +8268,15 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BI__builtin_constant_p: {
-    auto Arg = E->getArg(0);
+    const Expr *Arg = E->getArg(0);
     if (EvaluateBuiltinConstantP(Info, Arg))
       return Success(true, E);
-    auto ArgTy = Arg->IgnoreImplicit()->getType();
-    if (!Info.InConstantContext && !Arg->HasSideEffects(Info.Ctx) &&
-        !ArgTy->isAggregateType() && !ArgTy->isPointerType()) {
-      // We can delay calculation of __builtin_constant_p until after
-      // inlining. Note: This diagnostic won't be shown to the user.
+    else if (Info.InConstantContext)
+      return Success(false, E);
+    else {
       Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
       return false;
     }
-    return Success(false, E);
   }
 
   case Builtin::BI__builtin_is_constant_evaluated:

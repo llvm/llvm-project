@@ -892,7 +892,9 @@ def KImmFP16MatchClass : KImmMatchClass<16>;
 def f16kimm : kimmOperand<i16>;
 
 
-def VOPDstS64 : VOPDstOperand <SReg_64>;
+def VOPDstS64 : VOPDstOperand <SReg_64> {
+  let PrintMethod = "printVOPDst";
+}
 
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";
@@ -2169,6 +2171,15 @@ def getGlobalSaddrOp : InstrMapping {
   let ColFields = ["IsSaddr"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+// Maps a v_cmpx opcode with sdst to opcode without sdst.
+def getVCMPXNoSDstOp : InstrMapping {
+  let FilterClass = "VCMPXNoSDstTable";
+  let RowFields = ["NoSDstOp"];
+  let ColFields = ["HasSDst"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
 }
 
 include "SIInstructions.td"

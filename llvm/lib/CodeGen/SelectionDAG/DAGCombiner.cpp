@@ -17531,7 +17531,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   return NewLd;
 }
 
-SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
+SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   EVT NVT = N->getValueType(0);
   SDValue V = N->getOperand(0);
 
@@ -17584,26 +17584,27 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
       if (ExtractSize % EltSize == 0) {
         unsigned NumElems = ExtractSize / EltSize;
         EVT EltVT = InVT.getVectorElementType();
-        EVT ExtractVT = NumElems == 1 ? EltVT :
-          EVT::getVectorVT(*DAG.getContext(), EltVT, NumElems);
+        EVT ExtractVT = NumElems == 1 ? EltVT
+                                      : EVT::getVectorVT(*DAG.getContext(),
+                                                         EltVT, NumElems);
         if ((Level < AfterLegalizeDAG ||
              (NumElems == 1 ||
               TLI.isOperationLegal(ISD::BUILD_VECTOR, ExtractVT))) &&
             (!LegalTypes || TLI.isTypeLegal(ExtractVT))) {
-          unsigned IdxVal = (Idx->getZExtValue() * NVT.getScalarSizeInBits()) /
-                            EltSize;
+          unsigned IdxVal = Idx->getZExtValue();
+          IdxVal *= NVT.getScalarSizeInBits();
+          IdxVal /= EltSize;
+
           if (NumElems == 1) {
             SDValue Src = V->getOperand(IdxVal);
             if (EltVT != Src.getValueType())
               Src = DAG.getNode(ISD::TRUNCATE, SDLoc(N), InVT, Src);
-
             return DAG.getBitcast(NVT, Src);
           }
 
           // Extract the pieces from the original build_vector.
-          SDValue BuildVec = DAG.getBuildVector(ExtractVT, SDLoc(N),
-                                            makeArrayRef(V->op_begin() + IdxVal,
-                                                         NumElems));
+          SDValue BuildVec = DAG.getBuildVector(
+              ExtractVT, SDLoc(N), V->ops().slice(IdxVal, NumElems));
           return DAG.getBitcast(NVT, BuildVec);
         }
       }
@@ -17633,7 +17634,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
       return DAG.getNode(
           ISD::EXTRACT_SUBVECTOR, SDLoc(N), NVT,
           DAG.getBitcast(N->getOperand(0).getValueType(), V.getOperand(0)),
-                         N->getOperand(1));
+          N->getOperand(1));
     }
   }
 

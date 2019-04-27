@@ -4406,12 +4406,18 @@ let Predicates = [UseAVX] in {
             (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIrm addr:$src)), sub_xmm)>;
   def : Pat<(v4i64 (X86vzload addr:$src)),
             (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIrm addr:$src)), sub_xmm)>;
+
+  def : Pat<(X86vextractstore (v2i64 VR128:$src), addr:$dst),
+            (VMOVPQI2QImr addr:$dst, VR128:$src)>;
 }
 
 let Predicates = [UseSSE2] in {
   def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
             (MOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)), (MOVQI2PQIrm addr:$src)>;
+
+  def : Pat<(X86vextractstore (v2i64 VR128:$src), addr:$dst),
+            (MOVPQI2QImr addr:$dst, VR128:$src)>;
 }
 
 //===---------------------------------------------------------------------===//

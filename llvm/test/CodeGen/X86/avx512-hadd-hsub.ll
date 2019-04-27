@@ -249,8 +249,7 @@ define double @fsub_noundef_ee (<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fsub_noundef_ee:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
-; KNL-NEXT:    vbroadcastsd %xmm0, %zmm1
-; KNL-NEXT:    vextractf32x4 $2, %zmm1, %xmm1
+; KNL-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
 ; KNL-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; KNL-NEXT:    retq
@@ -258,8 +257,7 @@ define double @fsub_noundef_ee (<8 x double> %x225, <8 x double> %x227) {
 ; SKX-LABEL: fsub_noundef_ee:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
-; SKX-NEXT:    vbroadcastsd %xmm0, %zmm1
-; SKX-NEXT:    vextractf32x4 $2, %zmm1, %xmm1
+; SKX-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
 ; SKX-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
 ; SKX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; SKX-NEXT:    vzeroupper

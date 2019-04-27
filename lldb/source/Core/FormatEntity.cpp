@@ -410,7 +410,7 @@ static bool RunScriptFormatKeyword(Stream &s, const SymbolContext *sc,
 
   if (target) {
     ScriptInterpreter *script_interpreter =
-        target->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+        target->GetDebugger().GetScriptInterpreter();
     if (script_interpreter) {
       Status error;
       std::string script_output;

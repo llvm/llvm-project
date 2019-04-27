@@ -2691,32 +2691,41 @@ static bool IsRevOpcode(const unsigned Opcode)
   case AMDGPU::V_LSHLREV_B16_e64:
   case AMDGPU::V_LSHLREV_B16_e32_vi:
   case AMDGPU::V_LSHLREV_B16_e64_vi:
+  case AMDGPU::V_LSHLREV_B16_gfx10:
 
   case AMDGPU::V_LSHRREV_B16_e32:
   case AMDGPU::V_LSHRREV_B16_e64:
   case AMDGPU::V_LSHRREV_B16_e32_vi:
   case AMDGPU::V_LSHRREV_B16_e64_vi:
+  case AMDGPU::V_LSHRREV_B16_gfx10:
 
   case AMDGPU::V_ASHRREV_I16_e32:
   case AMDGPU::V_ASHRREV_I16_e64:
   case AMDGPU::V_ASHRREV_I16_e32_vi:
   case AMDGPU::V_ASHRREV_I16_e64_vi:
+  case AMDGPU::V_ASHRREV_I16_gfx10:
 
   case AMDGPU::V_LSHLREV_B64:
+  case AMDGPU::V_LSHLREV_B64_gfx10:
   case AMDGPU::V_LSHLREV_B64_vi:
 
   case AMDGPU::V_LSHRREV_B64:
+  case AMDGPU::V_LSHRREV_B64_gfx10:
   case AMDGPU::V_LSHRREV_B64_vi:
 
   case AMDGPU::V_ASHRREV_I64:
+  case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_vi:
 
   case AMDGPU::V_PK_LSHLREV_B16:
+  case AMDGPU::V_PK_LSHLREV_B16_gfx10:
   case AMDGPU::V_PK_LSHLREV_B16_vi:
 
   case AMDGPU::V_PK_LSHRREV_B16:
+  case AMDGPU::V_PK_LSHRREV_B16_gfx10:
   case AMDGPU::V_PK_LSHRREV_B16_vi:
   case AMDGPU::V_PK_ASHRREV_I16:
+  case AMDGPU::V_PK_ASHRREV_I16_gfx10:
   case AMDGPU::V_PK_ASHRREV_I16_vi:
     return true;
   default:
@@ -5994,7 +6003,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
     skippedVcc = false;
   }
 
-  if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx9 &&
+  if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx10 &&
+      Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx9 &&
       Inst.getOpcode() != AMDGPU::V_NOP_sdwa_vi) {
     // v_nop_sdwa_sdwa_vi/gfx9 has no optional sdwa arguments
     switch (BasicInstType) {

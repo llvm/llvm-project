@@ -89,11 +89,7 @@ if(APPLE)
   foreach(arch ${DARWIN_iossim_ARCHS})
     set(ASAN_TEST_APPLE_PLATFORM "iossim")
     set(ASAN_TEST_TARGET_ARCH ${arch})
-    get_test_cflags_for_apple_platform(
-      "${ASAN_TEST_APPLE_PLATFORM}"
-      "${ASAN_TEST_TARGET_ARCH}"
-      ASAN_TEST_TARGET_CFLAGS
-      )
+    set(ASAN_TEST_TARGET_CFLAGS "-arch ${arch} -isysroot ${DARWIN_iossim_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
     set(ASAN_TEST_CONFIG_SUFFIX "-${arch}-${ASAN_TEST_APPLE_PLATFORM}")
     get_bits_for_arch(${arch} ASAN_TEST_BITS)
     string(TOUPPER ${arch} ARCH_UPPER_CASE)
@@ -110,10 +106,7 @@ if(APPLE)
   foreach (arch ${DARWIN_ios_ARCHS})
     set(ASAN_TEST_APPLE_PLATFORM "ios")
     set(ASAN_TEST_TARGET_ARCH ${arch})
-    get_test_cflags_for_apple_platform(
-      "${ASAN_TEST_APPLE_PLATFORM}"
-      "${arch}"
-      ASAN_TEST_TARGET_CFLAGS)
+    set(ASAN_TEST_TARGET_CFLAGS "-arch ${arch} -isysroot ${DARWIN_ios_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
     set(ASAN_TEST_CONFIG_SUFFIX "-${arch}-${ASAN_TEST_APPLE_PLATFORM}")
     get_bits_for_arch(${arch} ASAN_TEST_BITS)
     string(TOUPPER ${arch} ARCH_UPPER_CASE)

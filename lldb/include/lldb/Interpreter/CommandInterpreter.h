@@ -188,8 +188,7 @@ public:
     eCommandTypesAllThem = 0xFFFF  // all commands
   };
 
-  CommandInterpreter(Debugger &debugger, lldb::ScriptLanguage script_language,
-                     bool synchronous_execution);
+  CommandInterpreter(Debugger &debugger, bool synchronous_execution);
 
   ~CommandInterpreter() override;
 
@@ -372,8 +371,6 @@ public:
 
   void Clear();
 
-  void SetScriptLanguage(lldb::ScriptLanguage lang);
-
   bool HasCommands() const;
 
   bool HasAliases() const;
@@ -388,10 +385,6 @@ public:
                              CommandReturnObject &result);
 
   int GetOptionArgumentPosition(const char *in_string);
-
-  ScriptInterpreter *GetScriptInterpreter(bool can_create = true);
-
-  void SetScriptInterpreter();
 
   void SkipLLDBInitFiles(bool skip_lldbinit_files) {
     m_skip_lldbinit_files = skip_lldbinit_files;
@@ -576,8 +569,6 @@ private:
   CommandHistory m_command_history;
   std::string m_repeat_command; // Stores the command that will be executed for
                                 // an empty command string.
-  lldb::ScriptInterpreterSP m_script_interpreter_sp;
-  std::recursive_mutex m_script_interpreter_mutex;
   lldb::IOHandlerSP m_command_io_handler_sp;
   char m_comment_char;
   bool m_batch_command_mode;

@@ -163,22 +163,6 @@ void Driver::OptionData::AddInitialCommand(std::string command,
     command_set->push_back(InitialCmdEntry(command, is_file, false));
 }
 
-const char *Driver::GetFilename() const {
-  if (m_option_data.m_args.empty())
-    return nullptr;
-  return m_option_data.m_args.front().c_str();
-}
-
-const char *Driver::GetCrashLogFilename() const {
-  if (m_option_data.m_crash_log.empty())
-    return nullptr;
-  return m_option_data.m_crash_log.c_str();
-}
-
-lldb::ScriptLanguage Driver::GetScriptLanguage() const {
-  return m_option_data.m_script_lang;
-}
-
 void Driver::WriteCommandsForSourcing(CommandPlacement placement,
                                       SBStream &strm) {
   std::vector<OptionData::InitialCmdEntry> *command_set;
@@ -235,8 +219,6 @@ void Driver::WriteCommandsForSourcing(CommandPlacement placement,
       strm.Printf("%s\n", command);
   }
 }
-
-bool Driver::GetDebugMode() const { return m_option_data.m_debug_mode; }
 
 // Check the arguments that were passed to this program to make sure they are
 // valid and to get their argument values (if any).  Return a boolean value
@@ -321,7 +303,7 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 
   if (auto *arg = args.getLastArg(OPT_script_language)) {
     auto arg_value = arg->getValue();
-    m_option_data.m_script_lang = m_debugger.GetScriptingLanguage(arg_value);
+    m_debugger.SetScriptLanguage(m_debugger.GetScriptingLanguage(arg_value));
   }
 
   if (args.hasArg(OPT_no_use_colors)) {
@@ -474,7 +456,7 @@ static inline int OpenPipe(int fds[2], std::size_t size) {
 #ifdef _WIN32
   return _pipe(fds, size, O_BINARY);
 #else
-  (void) size;
+  (void)size;
   return pipe(fds);
 #endif
 }
@@ -494,10 +476,10 @@ static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
   if (size_t(nrwr) != commands_size) {
     WithColor::error()
         << format(
-                "write(%i, %p, %" PRIu64
-                ") failed (errno = %i) when trying to open LLDB commands pipe",
-                fds[WRITE], static_cast<const void *>(commands_data),
-                static_cast<uint64_t>(commands_size), errno)
+               "write(%i, %p, %" PRIu64
+               ") failed (errno = %i) when trying to open LLDB commands pipe",
+               fds[WRITE], static_cast<const void *>(commands_data),
+               static_cast<uint64_t>(commands_size), errno)
         << '\n';
     llvm::sys::Process::SafelyCloseFileDescriptor(fds[READ]);
     llvm::sys::Process::SafelyCloseFileDescriptor(fds[WRITE]);
@@ -549,8 +531,8 @@ int Driver::MainLoop() {
 
   m_debugger.SetErrorFileHandle(stderr, false);
   m_debugger.SetOutputFileHandle(stdout, false);
-  m_debugger.SetInputFileHandle(stdin,
-                                false); // Don't take ownership of STDIN yet...
+  // Don't take ownership of STDIN yet...
+  m_debugger.SetInputFileHandle(stdin, false);
 
   m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
 
@@ -567,7 +549,7 @@ int Driver::MainLoop() {
   // .lldbinit file in the user's home directory.
   SBCommandReturnObject result;
   sb_interpreter.SourceInitFileInHomeDirectory(result);
-  if (GetDebugMode()) {
+  if (m_option_data.m_debug_mode) {
     result.PutError(m_debugger.GetErrorFileHandle());
     result.PutOutput(m_debugger.GetOutputFileHandle());
   }
@@ -589,7 +571,8 @@ int Driver::MainLoop() {
     const size_t num_args = m_option_data.m_args.size();
     if (num_args > 0) {
       char arch_name[64];
-      if (lldb::SBDebugger::GetDefaultArchitecture(arch_name, sizeof(arch_name)))
+      if (lldb::SBDebugger::GetDefaultArchitecture(arch_name,
+                                                   sizeof(arch_name)))
         commands_stream.Printf("target create --arch=%s %s", arch_name,
                                EscapeString(m_option_data.m_args[0]).c_str());
       else
@@ -613,8 +596,9 @@ int Driver::MainLoop() {
       commands_stream.Printf("target create --core %s\n",
                              EscapeString(m_option_data.m_core_file).c_str());
     } else if (!m_option_data.m_process_name.empty()) {
-      commands_stream.Printf("process attach --name %s",
-                             EscapeString(m_option_data.m_process_name).c_str());
+      commands_stream.Printf(
+          "process attach --name %s",
+          EscapeString(m_option_data.m_process_name).c_str());
 
       if (m_option_data.m_wait_for)
         commands_stream.Printf(" --waitfor");
@@ -630,16 +614,16 @@ int Driver::MainLoop() {
   } else if (!m_option_data.m_after_file_commands.empty()) {
     // We're in repl mode and after-file-load commands were specified.
     WithColor::warning() << "commands specified to run after file load (via -o "
-      "or -s) are ignored in REPL mode.\n";
+                            "or -s) are ignored in REPL mode.\n";
   }
 
-  if (GetDebugMode()) {
+  if (m_option_data.m_debug_mode) {
     result.PutError(m_debugger.GetErrorFileHandle());
     result.PutOutput(m_debugger.GetOutputFileHandle());
   }
 
-  bool handle_events = true;
-  bool spawn_thread = false;
+  const bool handle_events = true;
+  const bool spawn_thread = false;
 
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
@@ -653,8 +637,8 @@ int Driver::MainLoop() {
   bool stopped_for_crash = false;
   if ((commands_data != nullptr) && (commands_size != 0u)) {
     bool success = true;
-    FILE *commands_file = PrepareCommandsForSourcing(
-        commands_data, commands_size);
+    FILE *commands_file =
+        PrepareCommandsForSourcing(commands_data, commands_size);
     if (commands_file != nullptr) {
       m_debugger.SetInputFileHandle(commands_file, true);
 
@@ -681,16 +665,16 @@ int Driver::MainLoop() {
                                  crash_commands_stream);
         const char *crash_commands_data = crash_commands_stream.GetData();
         const size_t crash_commands_size = crash_commands_stream.GetSize();
-        commands_file = PrepareCommandsForSourcing(
-            crash_commands_data, crash_commands_size);
+        commands_file = PrepareCommandsForSourcing(crash_commands_data,
+                                                   crash_commands_size);
         if (commands_file != nullptr) {
           bool local_quit_requested;
           bool local_stopped_for_crash;
           m_debugger.SetInputFileHandle(commands_file, true);
 
-          m_debugger.RunCommandInterpreter(
-              handle_events, spawn_thread, options, num_errors,
-              local_quit_requested, local_stopped_for_crash);
+          m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
+                                           num_errors, local_quit_requested,
+                                           local_stopped_for_crash);
           if (local_quit_requested)
             quit_requested = true;
         }
@@ -722,7 +706,8 @@ int Driver::MainLoop() {
       const char *repl_options = nullptr;
       if (!m_option_data.m_repl_options.empty())
         repl_options = m_option_data.m_repl_options.c_str();
-      SBError error(m_debugger.RunREPL(m_option_data.m_repl_lang, repl_options));
+      SBError error(
+          m_debugger.RunREPL(m_option_data.m_repl_lang, repl_options));
       if (error.Fail()) {
         const char *error_cstr = error.GetCString();
         if ((error_cstr != nullptr) && (error_cstr[0] != 0))

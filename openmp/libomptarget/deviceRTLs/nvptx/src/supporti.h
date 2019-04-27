@@ -102,6 +102,10 @@ INLINE int GetNumberOfBlocksInKernel() { return gridDim.x; }
 
 INLINE int GetNumberOfThreadsInBlock() { return blockDim.x; }
 
+INLINE unsigned GetWarpId() { return threadIdx.x / WARPSIZE; }
+
+INLINE unsigned GetLaneId() { return threadIdx.x & (WARPSIZE - 1); }
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Calls to the Generic Scheme Implementation Layer (assuming 1D layout)
@@ -154,7 +158,7 @@ INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode,
     ASSERT0(LT_FUSSY, isSPMDExecutionMode,
             "Uninitialized runtime with non-SPMD mode.");
     // For level 2 parallelism all parallel regions are executed sequentially.
-    if (parallelLevel > 0)
+    if (parallelLevel[GetWarpId()] > 0)
       rc = 0;
     else
       rc = GetThreadIdInBlock();
@@ -175,7 +179,7 @@ INLINE int GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode,
     ASSERT0(LT_FUSSY, isSPMDExecutionMode,
             "Uninitialized runtime with non-SPMD mode.");
     // For level 2 parallelism all parallel regions are executed sequentially.
-    if (parallelLevel > 0)
+    if (parallelLevel[GetWarpId()] > 0)
       rc = 1;
     else
       rc = GetNumberOfThreadsInBlock();

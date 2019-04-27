@@ -299,6 +299,13 @@ int test_iteration_spaces() {
       for (kk = ii * 10 + 25; kk < ii / ii - 23; kk += 1)
         ;
 
+// expected-error@+4 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(3)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (jj = 10 + 25; jj < 1000; jj += 1)
+        for (kk = ii * 10 + 25; kk < jj - 23; kk += 1)
+          ;
+
 #pragma omp parallel
 // expected-note@+2  {{defined as firstprivate}}
 // expected-error@+2 {{loop iteration variable in the associated loop of 'omp for' directive may not be firstprivate, predetermined as private}}
@@ -601,6 +608,14 @@ int test_with_random_access_iterator() {
   for (Iter1 I; I < end1; ++I) {
   }
   GoodIter1 I1, E1;
+// expected-error@+4 {{expected an integer or a pointer type of the outer loop counter 'I' for non-rectangular nests}}
+// expected-error@+4 {{expected an integer or a pointer type of the outer loop counter 'I' for non-rectangular nests}}
+#pragma omp for collapse(3)
+  for (GoodIter1 I = I1; I < E1; I++) // expected-note 2 {{'I' declared here}}
+    for (int i = (I - I1) * 10 + 25; i < 23; i += 1)
+      for (int j = 10 + 25; j < 23 + (I - E1); j += 1)
+        ;
+
 #pragma omp for
   for (GoodIter1 I = I1; I < E1; I++)
     ;
@@ -609,7 +624,7 @@ int test_with_random_access_iterator() {
 
 template <typename IT, int ST>
 class TC {
-  int ii, iii;
+  int ii, iii, kk;
 public:
   int dotest_lt(IT begin, IT end) {
 #pragma omp parallel
@@ -626,6 +641,17 @@ public:
     for (ii = 10 + 25; ii < 1000; ii += 1)
       for (iii = ii * 10 + 25; iii < ii / ii - 23; iii += 1)
         ;
+
+#pragma omp parallel
+// expected-error@+6 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+// expected-error@+5 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+// expected-error@+5 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+// expected-error@+4 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(3)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (iii = ii * 10 + 25; iii < ii / ii - 23; iii += 1)
+        for (kk = ii * 10 + 25; kk < iii - 23; kk += 1)
+          ;
 
 #pragma omp parallel
 // expected-note@+3 {{loop step is expected to be positive due to this condition}}

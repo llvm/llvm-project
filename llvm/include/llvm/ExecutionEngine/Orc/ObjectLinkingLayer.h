@@ -41,27 +41,48 @@ namespace orc {
 
 class ObjectLinkingLayerJITLinkContext;
 
+/// An ObjectLayer implementation built on JITLink.
+///
+/// Clients can use this class to add relocatable object files to an
+/// ExecutionSession, and it typically serves as the base layer (underneath
+/// a compiling layer like IRCompileLayer) for the rest of the JIT.
 class ObjectLinkingLayer : public ObjectLayer {
   friend class ObjectLinkingLayerJITLinkContext;
 
 public:
-  /// Function object for receiving object-loaded notifications.
-  using NotifyLoadedFunction = std::function<void(VModuleKey)>;
-
-  /// Function object for receiving finalization notifications.
-  using NotifyEmittedFunction = std::function<void(VModuleKey)>;
-
-  /// Function object for modifying PassConfiguration objects.
-  using ModifyPassConfigFunction =
-      std::function<void(const Triple &TT, jitlink::PassConfiguration &Config)>;
+  /// Plugin instances can be added to the ObjectLinkingLayer to receive
+  /// callbacks when code is loaded or emitted, and when JITLink is being
+  /// configured.
+  class Plugin {
+  public:
+    virtual ~Plugin();
+    virtual void modifyPassConfig(MaterializationResponsibility &MR,
+                                  const Triple &TT,
+                                  jitlink::PassConfiguration &Config) {}
+    virtual void notifyLoaded(MaterializationResponsibility &MR) {}
+    virtual Error notifyEmitted(MaterializationResponsibility &MR) {
+      return Error::success();
+    }
+    virtual Error notifyRemovingModule(VModuleKey K) {
+      return Error::success();
+    }
+    virtual Error notifyRemovingAllModules() { return Error::success(); }
+  };
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
-  ///        and NotifyEmitted functors.
-  ObjectLinkingLayer(
-      ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr,
-      NotifyLoadedFunction NotifyLoaded = NotifyLoadedFunction(),
-      NotifyEmittedFunction NotifyEmitted = NotifyEmittedFunction(),
-      ModifyPassConfigFunction ModifyPassConfig = ModifyPassConfigFunction());
+  /// and NotifyEmitted functors.
+  ObjectLinkingLayer(ExecutionSession &ES,
+                     jitlink::JITLinkMemoryManager &MemMgr);
+
+  /// Destruct an ObjectLinkingLayer.
+  ~ObjectLinkingLayer();
+
+  /// Add a pass-config modifier.
+  ObjectLinkingLayer &addPlugin(std::unique_ptr<Plugin> P) {
+    std::lock_guard<std::mutex> Lock(LayerMutex);
+    Plugins.push_back(std::move(P));
+    return *this;
+  }
 
   /// Emit the object.
   void emit(MaterializationResponsibility R,
@@ -101,31 +122,35 @@ public:
 private:
   using AllocPtr = std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>;
 
-  class ObjectResources {
-  public:
-    ObjectResources() = default;
-    ObjectResources(AllocPtr Alloc, JITTargetAddress EHFrameAddr);
-    ObjectResources(ObjectResources &&Other);
-    ObjectResources &operator=(ObjectResources &&Other);
-    ~ObjectResources();
+  void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+                        jitlink::PassConfiguration &PassConfig);
+  void notifyLoaded(MaterializationResponsibility &MR);
+  Error notifyEmitted(MaterializationResponsibility &MR, AllocPtr Alloc);
 
-  private:
-    AllocPtr Alloc;
-    JITTargetAddress EHFrameAddr = 0;
-  };
-
-  void notifyFinalized(ObjectResources OR) {
-    ObjResources.push_back(std::move(OR));
-  }
+  Error removeModule(VModuleKey K);
+  Error removeAllModules();
 
   mutable std::mutex LayerMutex;
   jitlink::JITLinkMemoryManager &MemMgr;
-  NotifyLoadedFunction NotifyLoaded;
-  NotifyEmittedFunction NotifyEmitted;
-  ModifyPassConfigFunction ModifyPassConfig;
   bool OverrideObjectFlags = false;
   bool AutoClaimObjectSymbols = false;
-  std::vector<ObjectResources> ObjResources;
+  DenseMap<VModuleKey, AllocPtr> TrackedAllocs;
+  std::vector<AllocPtr> UntrackedAllocs;
+  std::vector<std::unique_ptr<Plugin>> Plugins;
+};
+
+class LocalEHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {
+public:
+  Error notifyEmitted(MaterializationResponsibility &MR) override;
+  void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+                        jitlink::PassConfiguration &PassConfig) override;
+  Error notifyRemovingModule(VModuleKey K) override;
+  Error notifyRemovingAllModules() override;
+
+private:
+  DenseMap<MaterializationResponsibility *, const void *> InProcessLinks;
+  DenseMap<VModuleKey, const void *> TrackedEHFrameAddrs;
+  std::vector<const void *> UntrackedEHFrameAddrs;
 };
 
 } // end namespace orc

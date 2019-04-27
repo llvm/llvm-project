@@ -573,12 +573,8 @@ TSAN_INTERCEPTOR(int, sigsetjmp, void *env);
 #endif
 
 #define TSAN_INTERCEPTOR_SETJMP_(x) __interceptor_ ## x
-#define TSAN_INTERCEPTOR_SETJMP__(x) TSAN_INTERCEPTOR_SETJMP_(x)
-#define TSAN_INTERCEPTOR_SETJMP TSAN_INTERCEPTOR_SETJMP__(setjmp_symname)
-#define TSAN_INTERCEPTOR_SIGSETJMP TSAN_INTERCEPTOR_SETJMP__(sigsetjmp_symname)
-
-#define TSAN_STRING_SETJMP SANITIZER_STRINGIFY(setjmp_symname)
-#define TSAN_STRING_SIGSETJMP SANITIZER_STRINGIFY(sigsetjmp_symname)
+#define TSAN_INTERCEPTOR_SETJMP TSAN_INTERCEPTOR_SETJMP_(setjmp_symname)
+#define TSAN_INTERCEPTOR_SIGSETJMP TSAN_INTERCEPTOR_SETJMP_(sigsetjmp_symname)
 
 // Not called.  Merely to satisfy TSAN_INTERCEPT().
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -2643,18 +2639,12 @@ void InitializeInterceptors() {
   InitializeSignalInterceptors();
   InitializeLibdispatchInterceptors();
 
-#if !SANITIZER_MAC
-  // We can not use TSAN_INTERCEPT to get setjmp addr,
-  // because it does &setjmp and setjmp is not present in some versions of libc.
-  using __interception::GetRealFunctionAddress;
-  GetRealFunctionAddress(TSAN_STRING_SETJMP,
-                         (uptr*)&REAL(setjmp_symname), 0, 0);
-  GetRealFunctionAddress("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
-  GetRealFunctionAddress(TSAN_STRING_SIGSETJMP,
-                         (uptr*)&REAL(sigsetjmp_symname), 0, 0);
+  TSAN_INTERCEPT(setjmp_symname);
+  TSAN_INTERCEPT(_setjmp);
+  TSAN_INTERCEPT(sigsetjmp_symname);
+
 #if !SANITIZER_NETBSD
-  GetRealFunctionAddress("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
-#endif
+  TSAN_INTERCEPT(__sigsetjmp);
 #endif
 
   TSAN_INTERCEPT(longjmp_symname);

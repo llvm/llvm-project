@@ -893,6 +893,18 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
   }
 }
 
+/// Take a path that speculatively points into Xcode and return the
+/// `XCODE/Contents/Developer` path if it is an Xcode path, or an empty path
+/// otherwise.
+static StringRef getXcodeDeveloperPath(StringRef PathIntoXcode) {
+  static constexpr llvm::StringLiteral XcodeAppSuffix(
+      ".app/Contents/Developer");
+  size_t Index = PathIntoXcode.find(XcodeAppSuffix);
+  if (Index == StringRef::npos)
+    return "";
+  return PathIntoXcode.take_front(Index + XcodeAppSuffix.size());
+}
+
 void DarwinClang::AddLinkARCArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   // Avoid linking compatibility stubs on i386 mac.
@@ -905,10 +917,27 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
       runtime.hasSubscripting())
     return;
 
-  CmdArgs.push_back("-force_load");
   SmallString<128> P(getDriver().ClangExecutable);
   llvm::sys::path::remove_filename(P); // 'clang'
   llvm::sys::path::remove_filename(P); // 'bin'
+
+  // 'libarclite' usually lives in the same toolchain as 'clang'. However, the
+  // Swift open source toolchains for macOS distribute Clang without libarclite.
+  // In that case, to allow the linker to find 'libarclite', we point to the
+  // 'libarclite' in the XcodeDefault toolchain instead.
+  if (getXcodeDeveloperPath(P).empty()) {
+    if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+      // Try to infer the path to 'libarclite' in the toolchain from the
+      // specified SDK path.
+      StringRef XcodePathForSDK = getXcodeDeveloperPath(A->getValue());
+      if (!XcodePathForSDK.empty()) {
+        P = XcodePathForSDK;
+        llvm::sys::path::append(P, "Toolchains/XcodeDefault.xctoolchain/usr");
+      }
+    }
+  }
+
+  CmdArgs.push_back("-force_load");
   llvm::sys::path::append(P, "lib", "arc", "libarclite_");
   // Mash in the platform.
   if (isTargetWatchOSSimulator())

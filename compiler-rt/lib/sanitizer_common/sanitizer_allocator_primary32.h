@@ -45,8 +45,22 @@ struct SizeClassAllocator32FlagMasks {  //  Bit masks.
   };
 };
 
+// This template is not necessary but t helps to see values if static_assert
+// fails.
+// FIXME: Replace check with automatic type detection. D61206
+template <bool Expected, u64 MinSize, u64 ActualSize>
+struct CheckTwoLevelByteMapSize {
+  static_assert((ActualSize >= MinSize) == Expected,
+                "Unexpected ByteMap type for the size");
+};
+
 template <class Params>
 class SizeClassAllocator32 {
+ private:
+  static const u64 TwoLevelByteMapSize1 =
+      (Params::kSpaceSize >> Params::kRegionSizeLog) >> 12;
+  static const u64 kMinFirstMapSizeTwoLevelByteMap = 4;
+
  public:
   using AddressSpaceView = typename Params::AddressSpaceView;
   static const uptr kSpaceBeg = Params::kSpaceBeg;
@@ -58,12 +72,16 @@ class SizeClassAllocator32 {
   typedef typename Params::MapUnmapCallback MapUnmapCallback;
 
 #if SANITIZER_WORDSIZE == 32
+  CheckTwoLevelByteMapSize<false, kMinFirstMapSizeTwoLevelByteMap,
+                           TwoLevelByteMapSize1>
+      Check;
   using BM = FlatByteMap<(Params::kSpaceSize >> Params::kRegionSizeLog),
                          AddressSpaceView>;
 #elif SANITIZER_WORDSIZE == 64
-  using BM =
-      TwoLevelByteMap<((Params::kSpaceSize >> Params::kRegionSizeLog) >> 12),
-                      1 << 12, AddressSpaceView>;
+  CheckTwoLevelByteMapSize<true, kMinFirstMapSizeTwoLevelByteMap,
+                           TwoLevelByteMapSize1>
+      Check;
+  using BM = TwoLevelByteMap<TwoLevelByteMapSize1, 1 << 12, AddressSpaceView>;
 #endif
   static_assert((Params::kFlags & SizeClassAllocator32FlagMasks::kForTest) ||
                     is_same<BM, ByteMap>::value,

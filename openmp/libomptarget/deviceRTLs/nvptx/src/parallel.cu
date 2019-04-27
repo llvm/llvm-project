@@ -339,10 +339,12 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   if (checkRuntimeUninitialized(loc)) {
     ASSERT0(LT_FUSSY, checkSPMDMode(loc),
             "Expected SPMD mode with uninitialized runtime.");
-    __SYNCTHREADS();
-    if (GetThreadIdInBlock() == 0)
-      ++parallelLevel;
-    __SYNCTHREADS();
+    unsigned tnum = __ACTIVEMASK();
+    int leader = __ffs(tnum) - 1;
+    __SHFL_SYNC(tnum, leader, leader);
+    if (GetLaneId() == leader)
+      ++parallelLevel[GetWarpId()];
+    __SHFL_SYNC(tnum, leader, leader);
 
     return;
   }
@@ -382,10 +384,12 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   if (checkRuntimeUninitialized(loc)) {
     ASSERT0(LT_FUSSY, checkSPMDMode(loc),
             "Expected SPMD mode with uninitialized runtime.");
-    __SYNCTHREADS();
-    if (GetThreadIdInBlock() == 0)
-      --parallelLevel;
-    __SYNCTHREADS();
+    unsigned tnum = __ACTIVEMASK();
+    int leader = __ffs(tnum) - 1;
+    __SHFL_SYNC(tnum, leader, leader);
+    if (GetLaneId() == leader)
+      --parallelLevel[GetWarpId()];
+    __SHFL_SYNC(tnum, leader, leader);
     return;
   }
 
@@ -407,7 +411,7 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
   if (checkRuntimeUninitialized(loc)) {
     ASSERT0(LT_FUSSY, checkSPMDMode(loc),
             "Expected SPMD mode with uninitialized runtime.");
-    return parallelLevel + 1;
+    return parallelLevel[GetWarpId()] + 1;
   }
 
   int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));

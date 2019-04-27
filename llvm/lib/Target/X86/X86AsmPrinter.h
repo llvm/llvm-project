@@ -102,7 +102,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   // Choose between emitting .seh_ directives and .cv_fpo_ directives.
   void EmitSEHInstruction(const MachineInstr *MI);
 
-  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O);
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
   void PrintOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
   void PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
                             raw_ostream &O, const char *Modifier);

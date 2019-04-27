@@ -75,6 +75,7 @@ public:
 
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
 
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,

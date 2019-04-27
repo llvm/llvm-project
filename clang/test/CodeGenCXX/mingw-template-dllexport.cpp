@@ -1,11 +1,14 @@
 // RUN: %clang_cc1 -emit-llvm -triple i686-mingw32 %s -o - | FileCheck %s
 
+#define JOIN2(x, y) x##y
+#define JOIN(x, y) JOIN2(x, y)
+#define UNIQ(name) JOIN(name, __LINE__)
+#define USEMEMFUNC(class, func) void (class::*UNIQ(use)())() { return &class::func; }
+
 template <class T>
 class c {
-  void f();
+  void f() {}
 };
-
-template <class T> void c<T>::f() {}
 
 template class __declspec(dllexport) c<int>;
 
@@ -36,3 +39,10 @@ template class __declspec(dllexport) outer<int>;
 
 // CHECK: define {{.*}} dllexport {{.*}} @_ZN5outerIiE1fEv
 // CHECK-NOT: define {{.*}} dllexport {{.*}} @_ZN5outerIiE5inner1fEv
+
+extern template class __declspec(dllimport) outer<char>;
+USEMEMFUNC(outer<char>, f)
+USEMEMFUNC(outer<char>::inner, f)
+
+// CHECK: declare dllimport {{.*}} @_ZN5outerIcE1fEv
+// CHECK: define {{.*}} @_ZN5outerIcE5inner1fEv
