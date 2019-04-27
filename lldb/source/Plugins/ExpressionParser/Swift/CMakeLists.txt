@@ -6,6 +6,7 @@ add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
   SwiftASTManipulator.cpp
   SwiftExpressionParser.cpp
   SwiftExpressionVariable.cpp
+  SwiftHost.cpp
   SwiftPersistentExpressionState.cpp
   SwiftREPL.cpp
   SwiftREPLMaterializer.cpp
