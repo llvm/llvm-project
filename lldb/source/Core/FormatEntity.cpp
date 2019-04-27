@@ -79,108 +79,98 @@ using namespace lldb_private;
 
 enum FileKind { FileError = 0, Basename, Dirname, Fullpath };
 
-#define ENTRY(n, t, f)                                                         \
+#define ENTRY(n, t)                                                            \
+  { n, nullptr, FormatEntity::Entry::Type::t, 0, 0, nullptr, false }
+#define ENTRY_VALUE(n, t, v)                                                   \
+  { n, nullptr, FormatEntity::Entry::Type::t, v, 0, nullptr, false }
+#define ENTRY_CHILDREN(n, t, c)                                                \
   {                                                                            \
-    n, nullptr, FormatEntity::Entry::Type::t,                                  \
-        FormatEntity::Entry::FormatType::f, 0, 0, nullptr, false               \
-  }
-#define ENTRY_VALUE(n, t, f, v)                                                \
-  {                                                                            \
-    n, nullptr, FormatEntity::Entry::Type::t,                                  \
-        FormatEntity::Entry::FormatType::f, v, 0, nullptr, false               \
-  }
-#define ENTRY_CHILDREN(n, t, f, c)                                             \
-  {                                                                            \
-    n, nullptr, FormatEntity::Entry::Type::t,                                  \
-        FormatEntity::Entry::FormatType::f, 0,                                 \
+    n, nullptr, FormatEntity::Entry::Type::t, 0,                               \
         static_cast<uint32_t>(llvm::array_lengthof(c)), c, false               \
   }
-#define ENTRY_CHILDREN_KEEP_SEP(n, t, f, c)                                    \
+#define ENTRY_CHILDREN_KEEP_SEP(n, t, c)                                       \
   {                                                                            \
-    n, nullptr, FormatEntity::Entry::Type::t,                                  \
-        FormatEntity::Entry::FormatType::f, 0,                                 \
+    n, nullptr, FormatEntity::Entry::Type::t, 0,                               \
         static_cast<uint32_t>(llvm::array_lengthof(c)), c, true                \
   }
 #define ENTRY_STRING(n, s)                                                     \
-  {                                                                            \
-    n, s, FormatEntity::Entry::Type::InsertString,                             \
-        FormatEntity::Entry::FormatType::None, 0, 0, nullptr, false            \
-  }
+  { n, s, FormatEntity::Entry::Type::InsertString, 0, 0, nullptr, false }
 static FormatEntity::Entry::Definition g_string_entry[] = {
-    ENTRY("*", ParentString, None)};
+    ENTRY("*", ParentString)};
 
 static FormatEntity::Entry::Definition g_addr_entries[] = {
-    ENTRY("load", AddressLoad, UInt64), ENTRY("file", AddressFile, UInt64),
-    ENTRY("load", AddressLoadOrFile, UInt64),
+    ENTRY("load", AddressLoad),
+    ENTRY("file", AddressFile),
+    ENTRY("load", AddressLoadOrFile),
 };
 
 static FormatEntity::Entry::Definition g_file_child_entries[] = {
-    ENTRY_VALUE("basename", ParentNumber, CString, FileKind::Basename),
-    ENTRY_VALUE("dirname", ParentNumber, CString, FileKind::Dirname),
-    ENTRY_VALUE("fullpath", ParentNumber, CString, FileKind::Fullpath)};
+    ENTRY_VALUE("basename", ParentNumber, FileKind::Basename),
+    ENTRY_VALUE("dirname", ParentNumber, FileKind::Dirname),
+    ENTRY_VALUE("fullpath", ParentNumber, FileKind::Fullpath)};
 
 static FormatEntity::Entry::Definition g_frame_child_entries[] = {
-    ENTRY("index", FrameIndex, UInt32),
-    ENTRY("pc", FrameRegisterPC, UInt64),
-    ENTRY("fp", FrameRegisterFP, UInt64),
-    ENTRY("sp", FrameRegisterSP, UInt64),
-    ENTRY("flags", FrameRegisterFlags, UInt64),
-    ENTRY("no-debug", FrameNoDebug, None),
-    ENTRY_CHILDREN("reg", FrameRegisterByName, UInt64, g_string_entry),
-    ENTRY("is-artificial", FrameIsArtificial, UInt32),
+    ENTRY("index", FrameIndex),
+    ENTRY("pc", FrameRegisterPC),
+    ENTRY("fp", FrameRegisterFP),
+    ENTRY("sp", FrameRegisterSP),
+    ENTRY("flags", FrameRegisterFlags),
+    ENTRY("no-debug", FrameNoDebug),
+    ENTRY_CHILDREN("reg", FrameRegisterByName, g_string_entry),
+    ENTRY("is-artificial", FrameIsArtificial),
 };
 
 static FormatEntity::Entry::Definition g_function_child_entries[] = {
-    ENTRY("id", FunctionID, UInt64), ENTRY("name", FunctionName, CString),
-    ENTRY("name-without-args", FunctionNameNoArgs, CString),
-    ENTRY("name-with-args", FunctionNameWithArgs, CString),
-    ENTRY("addr-offset", FunctionAddrOffset, UInt64),
-    ENTRY("concrete-only-addr-offset-no-padding", FunctionAddrOffsetConcrete,
-          UInt64),
-    ENTRY("line-offset", FunctionLineOffset, UInt64),
-    ENTRY("pc-offset", FunctionPCOffset, UInt64),
-    ENTRY("initial-function", FunctionInitial, None),
-    ENTRY("changed", FunctionChanged, None),
-    ENTRY("is-optimized", FunctionIsOptimized, None)};
+    ENTRY("id", FunctionID),
+    ENTRY("name", FunctionName),
+    ENTRY("name-without-args", FunctionNameNoArgs),
+    ENTRY("name-with-args", FunctionNameWithArgs),
+    ENTRY("addr-offset", FunctionAddrOffset),
+    ENTRY("concrete-only-addr-offset-no-padding", FunctionAddrOffsetConcrete),
+    ENTRY("line-offset", FunctionLineOffset),
+    ENTRY("pc-offset", FunctionPCOffset),
+    ENTRY("initial-function", FunctionInitial),
+    ENTRY("changed", FunctionChanged),
+    ENTRY("is-optimized", FunctionIsOptimized)};
 
 static FormatEntity::Entry::Definition g_line_child_entries[] = {
-    ENTRY_CHILDREN("file", LineEntryFile, None, g_file_child_entries),
-    ENTRY("number", LineEntryLineNumber, UInt32),
-    ENTRY("column", LineEntryColumn, UInt32),
-    ENTRY("start-addr", LineEntryStartAddress, UInt64),
-    ENTRY("end-addr", LineEntryEndAddress, UInt64),
+    ENTRY_CHILDREN("file", LineEntryFile, g_file_child_entries),
+    ENTRY("number", LineEntryLineNumber),
+    ENTRY("column", LineEntryColumn),
+    ENTRY("start-addr", LineEntryStartAddress),
+    ENTRY("end-addr", LineEntryEndAddress),
 };
 
 static FormatEntity::Entry::Definition g_module_child_entries[] = {
-    ENTRY_CHILDREN("file", ModuleFile, None, g_file_child_entries),
+    ENTRY_CHILDREN("file", ModuleFile, g_file_child_entries),
 };
 
 static FormatEntity::Entry::Definition g_process_child_entries[] = {
-    ENTRY("id", ProcessID, UInt64),
-    ENTRY_VALUE("name", ProcessFile, CString, FileKind::Basename),
-    ENTRY_CHILDREN("file", ProcessFile, None, g_file_child_entries),
+    ENTRY("id", ProcessID),
+    ENTRY_VALUE("name", ProcessFile, FileKind::Basename),
+    ENTRY_CHILDREN("file", ProcessFile, g_file_child_entries),
 };
 
 static FormatEntity::Entry::Definition g_svar_child_entries[] = {
-    ENTRY("*", ParentString, None)};
+    ENTRY("*", ParentString)};
 
 static FormatEntity::Entry::Definition g_var_child_entries[] = {
-    ENTRY("*", ParentString, None)};
+    ENTRY("*", ParentString)};
 
 static FormatEntity::Entry::Definition g_thread_child_entries[] = {
-    ENTRY("id", ThreadID, UInt64),
-    ENTRY("protocol_id", ThreadProtocolID, UInt64),
-    ENTRY("index", ThreadIndexID, UInt32),
-    ENTRY_CHILDREN("info", ThreadInfo, None, g_string_entry),
-    ENTRY("queue", ThreadQueue, CString),
-    ENTRY("name", ThreadName, CString),
-    ENTRY("stop-reason", ThreadStopReason, CString),
-    ENTRY("return-value", ThreadReturnValue, CString),
-    ENTRY("completed-expression", ThreadCompletedExpression, CString),
+    ENTRY("id", ThreadID),
+    ENTRY("protocol_id", ThreadProtocolID),
+    ENTRY("index", ThreadIndexID),
+    ENTRY_CHILDREN("info", ThreadInfo, g_string_entry),
+    ENTRY("queue", ThreadQueue),
+    ENTRY("name", ThreadName),
+    ENTRY("stop-reason", ThreadStopReason),
+    ENTRY("return-value", ThreadReturnValue),
+    ENTRY("completed-expression", ThreadCompletedExpression),
 };
 
 static FormatEntity::Entry::Definition g_target_child_entries[] = {
-    ENTRY("arch", TargetArch, CString),
+    ENTRY("arch", TargetArch),
 };
 
 #define _TO_STR2(_val) #_val
@@ -223,8 +213,8 @@ static FormatEntity::Entry::Definition g_ansi_bg_entries[] = {
 };
 
 static FormatEntity::Entry::Definition g_ansi_entries[] = {
-    ENTRY_CHILDREN("fg", Invalid, None, g_ansi_fg_entries),
-    ENTRY_CHILDREN("bg", Invalid, None, g_ansi_bg_entries),
+    ENTRY_CHILDREN("fg", Invalid, g_ansi_fg_entries),
+    ENTRY_CHILDREN("bg", Invalid, g_ansi_bg_entries),
     ENTRY_STRING("normal",
                  ANSI_ESC_START _TO_STR(ANSI_CTRL_NORMAL) ANSI_ESC_END),
     ENTRY_STRING("bold", ANSI_ESC_START _TO_STR(ANSI_CTRL_BOLD) ANSI_ESC_END),
@@ -246,37 +236,33 @@ static FormatEntity::Entry::Definition g_ansi_entries[] = {
 };
 
 static FormatEntity::Entry::Definition g_script_child_entries[] = {
-    ENTRY("frame", ScriptFrame, None),
-    ENTRY("process", ScriptProcess, None),
-    ENTRY("target", ScriptTarget, None),
-    ENTRY("thread", ScriptThread, None),
-    ENTRY("var", ScriptVariable, None),
-    ENTRY("svar", ScriptVariableSynthetic, None),
-    ENTRY("thread", ScriptThread, None),
+    ENTRY("frame", ScriptFrame),   ENTRY("process", ScriptProcess),
+    ENTRY("target", ScriptTarget), ENTRY("thread", ScriptThread),
+    ENTRY("var", ScriptVariable),  ENTRY("svar", ScriptVariableSynthetic),
+    ENTRY("thread", ScriptThread),
 };
 
 static FormatEntity::Entry::Definition g_top_level_entries[] = {
-    ENTRY_CHILDREN("addr", AddressLoadOrFile, UInt64, g_addr_entries),
-    ENTRY("addr-file-or-load", AddressLoadOrFile, UInt64),
-    ENTRY_CHILDREN("ansi", Invalid, None, g_ansi_entries),
-    ENTRY("current-pc-arrow", CurrentPCArrow, CString),
-    ENTRY_CHILDREN("file", File, CString, g_file_child_entries),
-    ENTRY("language", Lang, CString),
-    ENTRY_CHILDREN("frame", Invalid, None, g_frame_child_entries),
-    ENTRY_CHILDREN("function", Invalid, None, g_function_child_entries),
-    ENTRY_CHILDREN("line", Invalid, None, g_line_child_entries),
-    ENTRY_CHILDREN("module", Invalid, None, g_module_child_entries),
-    ENTRY_CHILDREN("process", Invalid, None, g_process_child_entries),
-    ENTRY_CHILDREN("script", Invalid, None, g_script_child_entries),
-    ENTRY_CHILDREN_KEEP_SEP("svar", VariableSynthetic, None,
-                            g_svar_child_entries),
-    ENTRY_CHILDREN("thread", Invalid, None, g_thread_child_entries),
-    ENTRY_CHILDREN("target", Invalid, None, g_target_child_entries),
-    ENTRY_CHILDREN_KEEP_SEP("var", Variable, None, g_var_child_entries),
+    ENTRY_CHILDREN("addr", AddressLoadOrFile, g_addr_entries),
+    ENTRY("addr-file-or-load", AddressLoadOrFile),
+    ENTRY_CHILDREN("ansi", Invalid, g_ansi_entries),
+    ENTRY("current-pc-arrow", CurrentPCArrow),
+    ENTRY_CHILDREN("file", File, g_file_child_entries),
+    ENTRY("language", Lang),
+    ENTRY_CHILDREN("frame", Invalid, g_frame_child_entries),
+    ENTRY_CHILDREN("function", Invalid, g_function_child_entries),
+    ENTRY_CHILDREN("line", Invalid, g_line_child_entries),
+    ENTRY_CHILDREN("module", Invalid, g_module_child_entries),
+    ENTRY_CHILDREN("process", Invalid, g_process_child_entries),
+    ENTRY_CHILDREN("script", Invalid, g_script_child_entries),
+    ENTRY_CHILDREN_KEEP_SEP("svar", VariableSynthetic, g_svar_child_entries),
+    ENTRY_CHILDREN("thread", Invalid, g_thread_child_entries),
+    ENTRY_CHILDREN("target", Invalid, g_target_child_entries),
+    ENTRY_CHILDREN_KEEP_SEP("var", Variable, g_var_child_entries),
 };
 
 static FormatEntity::Entry::Definition g_root =
-    ENTRY_CHILDREN("<root>", Root, None, g_top_level_entries);
+    ENTRY_CHILDREN("<root>", Root, g_top_level_entries);
 
 FormatEntity::Entry::Entry(llvm::StringRef s)
     : string(s.data(), s.size()), printf_format(), children(),
@@ -476,9 +462,8 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
           // can be discontiguous.
           Block *inline_block = sc->block->GetContainingInlinedBlock();
           AddressRange inline_range;
-          if (inline_block &&
-              inline_block->GetRangeContainingAddress(format_addr,
-                                                      inline_range))
+          if (inline_block && inline_block->GetRangeContainingAddress(
+                                  format_addr, inline_range))
             func_addr = inline_range.GetBaseAddress();
         }
       } else if (sc->symbol && sc->symbol->ValueIsAddress())
@@ -1720,8 +1705,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                   var_representation = buffer;
                 } else
                   var_value_sp->DumpPrintableRepresentation(
-                      ss, ValueObject::ValueObjectRepresentationStyle::
-                              eValueObjectRepresentationStyleSummary,
+                      ss,
+                      ValueObject::ValueObjectRepresentationStyle::
+                          eValueObjectRepresentationStyleSummary,
                       eFormatDefault,
                       ValueObject::PrintableRepresentationSpecialCases::eAllow,
                       false);
