@@ -15,7 +15,7 @@ namespace lldb_private {
 
 class ScriptInterpreterNone : public ScriptInterpreter {
 public:
-  ScriptInterpreterNone(CommandInterpreter &interpreter);
+  ScriptInterpreterNone(Debugger &debugger);
 
   ~ScriptInterpreterNone() override;
 
@@ -30,8 +30,7 @@ public:
 
   static void Terminate();
 
-  static lldb::ScriptInterpreterSP
-  CreateInstance(CommandInterpreter &interpreter);
+  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
 
   static lldb_private::ConstString GetPluginNameStatic();
 

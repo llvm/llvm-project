@@ -15,13 +15,17 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
+
+using tools::addMultilibFlag;
 
 void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
@@ -98,8 +102,6 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_u);
 
-  addSanitizerPathLibArgs(ToolChain, Args, CmdArgs);
-
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   if (D.isUsingLTO()) {
@@ -169,6 +171,52 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
     llvm::sys::path::append(P, "lib");
     getFilePaths().push_back(P.str());
   }
+
+  auto RuntimeDirs = [&](const Multilib &M) -> std::vector<std::string> {
+    SmallString<128> P;
+    std::vector<std::string> RD;
+
+    P.assign(D.ResourceDir);
+    llvm::sys::path::append(P, D.getTargetTriple(), "lib", M.gccSuffix());
+    if (getVFS().exists(P))
+      RD.push_back(P.str());
+
+    P.assign(D.ResourceDir);
+    llvm::sys::path::append(P, Triple.str(), "lib", M.gccSuffix());
+    if (getVFS().exists(P))
+      RD.push_back(P.str());
+
+    return RD;
+  };
+
+  Multilibs.push_back(Multilib());
+  // Use the noexcept variant with -fno-exceptions to avoid the extra overhead.
+  Multilibs.push_back(Multilib("noexcept", {}, {}, 1)
+                          .flag("-fexceptions")
+                          .flag("+fno-exceptions"));
+  // ASan has higher priority because we always want the instrumentated version.
+  Multilibs.push_back(Multilib("asan", {}, {}, 2)
+                          .flag("+fsanitize=address"));
+  Multilibs.FilterOut([&](const Multilib &M) {
+    std::vector<std::string> RD = RuntimeDirs(M);
+    return std::all_of(RD.begin(), RD.end(), [&](std::string P) {
+      return !getVFS().exists(P);
+    });
+  });
+
+  Multilib::flags_list Flags;
+  addMultilibFlag(
+      Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions, true),
+      "fexceptions", Flags);
+  addMultilibFlag(getSanitizerArgs().needsAsanRt(), "fsanitize=address", Flags);
+  Multilibs.setFilePathsCallback(RuntimeDirs);
+
+  if (Multilibs.select(Flags, SelectedMultilib))
+    if (!SelectedMultilib.isDefault())
+      if (const auto &PathsCallback = Multilibs.filePathsCallback())
+        for (const auto &Path : PathsCallback(SelectedMultilib))
+          // We need to prepend the multilib path to ensure it takes precedence.
+          getLibraryPaths().insert(getLibraryPaths().begin(), Path);
 }
 
 std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,

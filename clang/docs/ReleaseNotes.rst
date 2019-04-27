@@ -190,7 +190,8 @@ libclang
 Static Analyzer
 ---------------
 
-- ...
+- The UninitializedObject checker is now considered as stable.
+  (moved from the 'alpha.cplusplus' to the 'optin.cplusplus' package)
 
 ...
 

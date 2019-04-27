@@ -605,6 +605,16 @@ __crc32cd(uint32_t __a, uint64_t __b) {
 #define __arm_wsr64(sysreg, v) __builtin_arm_wsr64(sysreg, v)
 #define __arm_wsrp(sysreg, v) __builtin_arm_wsrp(sysreg, v)
 
+// Memory Tagging Extensions (MTE) Intrinsics
+#if __ARM_FEATURE_MEMORY_TAGGING
+#define __arm_mte_create_random_tag(__ptr, __mask)  __builtin_arm_irg(__ptr, __mask)
+#define __arm_mte_increment_tag(__ptr, __tag_offset)  __builtin_arm_addg(__ptr, __tag_offset)
+#define __arm_mte_exclude_tag(__ptr, __excluded)  __builtin_arm_gmi(__ptr, __excluded)
+#define __arm_mte_get_tag(__ptr) __builtin_arm_ldg(__ptr)
+#define __arm_mte_set_tag(__ptr) __builtin_arm_stg(__ptr)
+#define __arm_mte_ptrdiff(__ptra, __ptrb) __builtin_arm_subp(__ptra, __ptrb)
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

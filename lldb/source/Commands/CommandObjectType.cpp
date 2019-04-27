@@ -180,7 +180,7 @@ public:
     StreamFileSP error_sp = io_handler.GetErrorStreamFile();
 
 #ifndef LLDB_DISABLE_PYTHON
-    ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter) {
       StringList lines;
       lines.SplitIntoLines(data);
@@ -192,7 +192,7 @@ public:
               options_ptr); // this will ensure that we get rid of the pointer
                             // when going out of scope
 
-          ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+          ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
           if (interpreter) {
             std::string funct_name_str;
             if (interpreter->GenerateTypeScriptFunction(lines,
@@ -425,7 +425,7 @@ protected:
     StreamFileSP error_sp = io_handler.GetErrorStreamFile();
 
 #ifndef LLDB_DISABLE_PYTHON
-    ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter) {
       StringList lines;
       lines.SplitIntoLines(data);
@@ -437,7 +437,7 @@ protected:
               options_ptr); // this will ensure that we get rid of the pointer
                             // when going out of scope
 
-          ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+          ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
           if (interpreter) {
             std::string class_name_str;
             if (interpreter->GenerateTypeSynthClass(lines, class_name_str)) {
@@ -1346,7 +1346,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     script_format = std::make_shared<ScriptSummaryFormat>(
         m_options.m_flags, funct_name, code.c_str());
 
-    ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
     if (interpreter && !interpreter->CheckObjectExists(funct_name))
       result.AppendWarningWithFormat(
@@ -1356,7 +1356,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   } else if (!m_options.m_python_script
                   .empty()) // we have a quick 1-line script, just use it
   {
-    ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (!interpreter) {
       result.AppendError("script interpreter missing - unable to generate "
                          "function wrapper.\n");
@@ -2357,7 +2357,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
 
   entry.reset(impl);
 
-  ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+  ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
   if (interpreter &&
       !interpreter->CheckObjectExists(impl->GetPythonClassName()))

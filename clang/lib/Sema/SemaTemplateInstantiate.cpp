@@ -2685,10 +2685,14 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         continue;
 
       if ((Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-           Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment()) &&
+           Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment() ||
+           Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) &&
           TSK == TSK_ExplicitInstantiationDeclaration) {
         // In MSVC and Windows Itanium mode, explicit instantiation decl of the
         // outer class doesn't affect the inner class.
+        // In GNU mode, inner classes aren't dllexported. Don't let the
+        // instantiation cover the inner class, to avoid undefined references
+        // to inner classes that weren't exported.
         continue;
       }
 

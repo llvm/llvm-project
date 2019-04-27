@@ -612,7 +612,7 @@ protected:
         result.AppendErrorWithFormat("empty class name for scripted step.");
         result.SetStatus(eReturnStatusFailed);
         return false;
-      } else if (!m_interpreter.GetScriptInterpreter()->CheckObjectExists(
+      } else if (!GetDebugger().GetScriptInterpreter()->CheckObjectExists(
                      m_options.m_class_name.c_str())) {
         result.AppendErrorWithFormat(
             "class for scripted step: \"%s\" does not exist.",
