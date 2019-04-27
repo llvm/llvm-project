@@ -10150,7 +10150,7 @@ bool EmulateInstructionARM::EmulateADDRegShift(const uint32_t opcode,
       shift_t = DecodeRegShift(Bits32(opcode, 6, 5));
 
       // if d == 15 || n == 15 || m == 15 || s == 15 then UNPREDICTABLE;
-      if ((d == 15) || (m == 15) || (m == 15) || (s == 15))
+      if ((d == 15) || (n == 15) || (m == 15) || (s == 15))
         return false;
       break;
 
