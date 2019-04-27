@@ -396,6 +396,10 @@ define <4 x i32> @test_vrev32_bswap(<4 x i32> %source) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rev32.16b v0, v0
 ; CHECK-NEXT:    ret
+; GISEL-LABEL: test_vrev32_bswap:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    rev32.16b v0, v0
+; GISEL-NEXT:    ret
   %bswap = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %source)
   ret <4 x i32> %bswap
 }

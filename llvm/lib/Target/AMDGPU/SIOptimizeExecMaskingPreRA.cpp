@@ -83,7 +83,7 @@ FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
 }
 
 static bool isEndCF(const MachineInstr& MI, const SIRegisterInfo* TRI) {
-  return MI.getOpcode() == AMDGPU::S_OR_B64_term &&
+  return MI.getOpcode() == AMDGPU::S_OR_B64 &&
          MI.modifiesRegister(AMDGPU::EXEC, TRI);
 }
 
@@ -367,7 +367,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
     // Try to collapse adjacent endifs.
     auto E = MBB.end();
-    auto Lead = MBB.getFirstTerminator();
+    auto Lead = skipDebugInstructionsForward(MBB.begin(), E);
     if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI))
       continue;
 

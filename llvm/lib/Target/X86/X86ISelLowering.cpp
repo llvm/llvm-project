@@ -5013,7 +5013,18 @@ bool X86TargetLowering::hasAndNot(SDValue Y) const {
 
 bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
     const SDNode *N, CombineLevel Level) const {
-  // TODO - some targets prefer immediate vector shifts to shift+mask.
+  assert(((N->getOpcode() == ISD::SHL &&
+           N->getOperand(0).getOpcode() == ISD::SRL) ||
+          (N->getOpcode() == ISD::SRL &&
+           N->getOperand(0).getOpcode() == ISD::SHL)) &&
+         "Expected shift-shift mask");
+
+  if (Subtarget.hasFastVectorShiftMasks() && N->getValueType(0).isVector()) {
+    // Only fold if the shift values are equal - so it folds to AND.
+    // TODO - we should fold if either is non-uniform but we don't do the
+    // fold for non-splats yet.
+    return N->getOperand(1) == N->getOperand(0).getOperand(1);
+  }
   return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N, Level);
 }
 
@@ -19195,36 +19206,25 @@ static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
                      DAG.getConstant(Cond, dl, MVT::i8), EFLAGS);
 }
 
-// Check whether an OR'd tree is PTEST-able.
-static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
-                                      const X86Subtarget &Subtarget,
-                                      SelectionDAG &DAG,
-                                      SDValue &X86CC) {
-  assert(Op.getOpcode() == ISD::OR && "Only check OR'd tree.");
-
-  if (!Subtarget.hasSSE41())
-    return SDValue();
-
-  if (!Op->hasOneUse())
-    return SDValue();
-
-  SDNode *N = Op.getNode();
-  SDLoc DL(N);
-
+/// Helper for matching OR(EXTRACTELT(X,0),OR(EXTRACTELT(X,1),...))
+/// style scalarized (associative) reduction patterns.
+static bool matchBitOpReduction(SDValue Op, ISD::NodeType BinOp,
+                                SmallVectorImpl<SDValue> &SrcOps) {
   SmallVector<SDValue, 8> Opnds;
-  DenseMap<SDValue, unsigned> VecInMap;
-  SmallVector<SDValue, 8> VecIns;
+  DenseMap<SDValue, APInt> SrcOpMap;
   EVT VT = MVT::Other;
 
   // Recognize a special case where a vector is casted into wide integer to
   // test all 0s.
-  Opnds.push_back(N->getOperand(0));
-  Opnds.push_back(N->getOperand(1));
+  assert(Op.getOpcode() == unsigned(BinOp) &&
+         "Unexpected bit reduction opcode");
+  Opnds.push_back(Op.getOperand(0));
+  Opnds.push_back(Op.getOperand(1));
 
   for (unsigned Slot = 0, e = Opnds.size(); Slot < e; ++Slot) {
     SmallVectorImpl<SDValue>::const_iterator I = Opnds.begin() + Slot;
-    // BFS traverse all OR'd operands.
-    if (I->getOpcode() == ISD::OR) {
+    // BFS traverse all BinOp operands.
+    if (I->getOpcode() == unsigned(BinOp)) {
       Opnds.push_back(I->getOperand(0));
       Opnds.push_back(I->getOperand(1));
       // Re-evaluate the number of nodes to be traversed.
@@ -19234,42 +19234,63 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
 
     // Quit if a non-EXTRACT_VECTOR_ELT
     if (I->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
-      return SDValue();
+      return false;
 
     // Quit if without a constant index.
     SDValue Idx = I->getOperand(1);
     if (!isa<ConstantSDNode>(Idx))
-      return SDValue();
+      return false;
 
-    SDValue ExtractedFromVec = I->getOperand(0);
-    DenseMap<SDValue, unsigned>::iterator M = VecInMap.find(ExtractedFromVec);
-    if (M == VecInMap.end()) {
-      VT = ExtractedFromVec.getValueType();
-      // Quit if not 128/256-bit vector.
-      if (!VT.is128BitVector() && !VT.is256BitVector())
-        return SDValue();
+    SDValue Src = I->getOperand(0);
+    DenseMap<SDValue, APInt>::iterator M = SrcOpMap.find(Src);
+    if (M == SrcOpMap.end()) {
+      VT = Src.getValueType();
       // Quit if not the same type.
-      if (VecInMap.begin() != VecInMap.end() &&
-          VT != VecInMap.begin()->first.getValueType())
-        return SDValue();
-      M = VecInMap.insert(std::make_pair(ExtractedFromVec, 0)).first;
-      VecIns.push_back(ExtractedFromVec);
+      if (SrcOpMap.begin() != SrcOpMap.end() &&
+          VT != SrcOpMap.begin()->first.getValueType())
+        return false;
+      unsigned NumElts = VT.getVectorNumElements();
+      APInt EltCount = APInt::getNullValue(NumElts);
+      M = SrcOpMap.insert(std::make_pair(Src, EltCount)).first;
+      SrcOps.push_back(Src);
     }
-    M->second |= 1U << cast<ConstantSDNode>(Idx)->getZExtValue();
+    // Quit if element already used.
+    unsigned CIdx = cast<ConstantSDNode>(Idx)->getZExtValue();
+    if (M->second[CIdx])
+      return false;
+    M->second.setBit(CIdx);
   }
 
-  assert((VT.is128BitVector() || VT.is256BitVector()) &&
-         "Not extracted from 128-/256-bit vector.");
-
-  unsigned FullMask = (1U << VT.getVectorNumElements()) - 1U;
-
-  for (DenseMap<SDValue, unsigned>::const_iterator
-        I = VecInMap.begin(), E = VecInMap.end(); I != E; ++I) {
-    // Quit if not all elements are used.
-    if (I->second != FullMask)
-      return SDValue();
+  // Quit if not all elements are used.
+  for (DenseMap<SDValue, APInt>::const_iterator I = SrcOpMap.begin(),
+                                                E = SrcOpMap.end();
+       I != E; ++I) {
+    if (!I->second.isAllOnesValue())
+      return false;
   }
 
+  return true;
+}
+
+// Check whether an OR'd tree is PTEST-able.
+static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
+                                      const X86Subtarget &Subtarget,
+                                      SelectionDAG &DAG, SDValue &X86CC) {
+  assert(Op.getOpcode() == ISD::OR && "Only check OR'd tree.");
+
+  if (!Subtarget.hasSSE41() || !Op->hasOneUse())
+    return SDValue();
+
+  SmallVector<SDValue, 8> VecIns;
+  if (!matchBitOpReduction(Op, ISD::OR, VecIns))
+    return SDValue();
+
+  // Quit if not 128/256-bit vector.
+  EVT VT = VecIns[0].getValueType();
+  if (!VT.is128BitVector() && !VT.is256BitVector())
+    return SDValue();
+
+  SDLoc DL(Op);
   MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
 
   // Cast all vectors into TestVT for PTEST.
@@ -19285,10 +19306,9 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     VecIns.push_back(DAG.getNode(ISD::OR, DL, TestVT, LHS, RHS));
   }
 
-  X86CC = DAG.getConstant(CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE,
-                          DL, MVT::i8);
-  return DAG.getNode(X86ISD::PTEST, DL, MVT::i32,
-                     VecIns.back(), VecIns.back());
+  X86CC = DAG.getConstant(CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE, DL,
+                          MVT::i8);
+  return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, VecIns.back(), VecIns.back());
 }
 
 /// return true if \c Op has a use that doesn't just read flags.
@@ -25605,8 +25625,18 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   return false;
 }
 
+// TODO: In 32-bit mode, use MOVLPS when SSE1 is available?
+// TODO: In 32-bit mode, use FISTP when X87 is available?
 bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
-  return needsCmpXchgNb(SI->getValueOperand()->getType());
+  Type *MemType = SI->getValueOperand()->getType();
+
+  bool NoImplicitFloatOps =
+      SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
+  if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
+      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2())
+    return false;
+
+  return needsCmpXchgNb(MemType);
 }
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
@@ -26242,28 +26272,54 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
                      DAG.getUNDEF(VT), LockOp.getValue(1));
 }
 
-static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) {
-  SDNode *Node = Op.getNode();
+static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
+                                 const X86Subtarget &Subtarget) {
+  auto *Node = cast<AtomicSDNode>(Op.getNode());
   SDLoc dl(Node);
-  EVT VT = cast<AtomicSDNode>(Node)->getMemoryVT();
+  EVT VT = Node->getMemoryVT();
+
+  bool IsSeqCst = Node->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  bool IsTypeLegal = DAG.getTargetLoweringInfo().isTypeLegal(VT);
+
+  // If this store is not sequentially consistent and the type is legal
+  // we can just keep it.
+  if (!IsSeqCst && IsTypeLegal)
+    return Op;
+
+  if (VT == MVT::i64 && !IsTypeLegal) {
+    // For illegal i64 atomic_stores, we can try to use MOVQ if SSE2 is enabled.
+    // FIXME: Use movlps with SSE1.
+    // FIXME: Use fist with X87.
+    bool NoImplicitFloatOps =
+        DAG.getMachineFunction().getFunction().hasFnAttribute(
+            Attribute::NoImplicitFloat);
+    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
+        Subtarget.hasSSE2()) {
+      SDValue SclToVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64,
+                                     Node->getOperand(2));
+      SDVTList Tys = DAG.getVTList(MVT::Other);
+      SDValue Ops[] = { Node->getChain(), SclToVec, Node->getBasePtr() };
+      SDValue Chain = DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys,
+                                              Ops, MVT::i64,
+                                              Node->getMemOperand());
+
+      // If this is a sequentially consistent store, also emit an mfence.
+      if (IsSeqCst)
+        Chain = DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Chain);
+
+      return Chain;
+    }
+  }
 
   // Convert seq_cst store -> xchg
   // Convert wide store -> swap (-> cmpxchg8b/cmpxchg16b)
-  // FIXME: On 32-bit, store -> fist or movq would be more efficient
-  //        (The only way to get a 16-byte store is cmpxchg16b)
   // FIXME: 16-byte ATOMIC_SWAP isn't actually hooked up at the moment.
-  if (cast<AtomicSDNode>(Node)->getOrdering() ==
-          AtomicOrdering::SequentiallyConsistent ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
-    SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                                 cast<AtomicSDNode>(Node)->getMemoryVT(),
-                                 Node->getOperand(0),
-                                 Node->getOperand(1), Node->getOperand(2),
-                                 cast<AtomicSDNode>(Node)->getMemOperand());
-    return Swap.getValue(1);
-  }
-  // Other atomic stores have a simple pattern.
-  return Op;
+  SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
+                               Node->getMemoryVT(),
+                               Node->getOperand(0),
+                               Node->getOperand(1), Node->getOperand(2),
+                               Node->getMemOperand());
+  return Swap.getValue(1);
 }
 
 static SDValue LowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) {
@@ -26684,7 +26740,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD_OR:
   case ISD::ATOMIC_LOAD_XOR:
   case ISD::ATOMIC_LOAD_AND:    return lowerAtomicArith(Op, DAG, Subtarget);
-  case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op, DAG);
+  case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op, DAG, Subtarget);
   case ISD::BITREVERSE:         return LowerBITREVERSE(Op, Subtarget, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
@@ -27792,6 +27848,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::LAND:               return "X86ISD::LAND";
   case X86ISD::VZEXT_MOVL:         return "X86ISD::VZEXT_MOVL";
   case X86ISD::VZEXT_LOAD:         return "X86ISD::VZEXT_LOAD";
+  case X86ISD::VEXTRACT_STORE:     return "X86ISD::VEXTRACT_STORE";
   case X86ISD::VTRUNC:             return "X86ISD::VTRUNC";
   case X86ISD::VTRUNCS:            return "X86ISD::VTRUNCS";
   case X86ISD::VTRUNCUS:           return "X86ISD::VTRUNCUS";
@@ -42569,6 +42626,13 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
     return DAG.getBuildVector(
         VT, SDLoc(N),
         InVec.getNode()->ops().slice(IdxVal, VT.getVectorNumElements()));
+
+  // If we're extracting from a broadcast then we're better off just
+  // broadcasting to the smaller type directly, assuming this is the only use.
+  // As its a broadcast we don't care about the extraction index.
+  if (InVec.getOpcode() == X86ISD::VBROADCAST && InVec.hasOneUse() &&
+      InVec.getOperand(0).getValueSizeInBits() <= VT.getSizeInBits())
+    return DAG.getNode(X86ISD::VBROADCAST, SDLoc(N), VT, InVec.getOperand(0));
 
   // If we're extracting the lowest subvector and we're the only user,
   // we may be able to perform this with a smaller vector width.

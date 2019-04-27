@@ -470,6 +470,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
     def _sdwa_gfx10 :
       VOP_SDWA10_Real<!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
       VOP1_SDWA9Ae<op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl> {
+      let DecoderNamespace = "SDWA10";
     }
   }
 } // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"

@@ -91,9 +91,7 @@ void HexagonAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
     GetCPISymbol(MO.getIndex())->print(O, MAI);
     return;
   case MachineOperand::MO_GlobalAddress:
-    // Computing the address of a global symbol, not calling it.
-    getSymbol(MO.getGlobal())->print(O, MAI);
-    printOffset(MO.getOffset(), O);
+    PrintSymbolOperand(MO, O);
     return;
   }
 }

@@ -222,7 +222,7 @@ public:
 /// referenced by the name table and interpreted with the help of the
 /// abbreviation table.
 class DWARFDebugNames : public DWARFAcceleratorTable {
-  /// The fixed-size part of a Dwarf 5 Name Index header
+  /// The fixed-size part of a DWARF v5 Name Index header
   struct HeaderPOD {
     uint32_t UnitLength;
     uint16_t Version;
@@ -241,7 +241,7 @@ public:
   class NameIterator;
   class ValueIterator;
 
-  /// Dwarf 5 Name Index header.
+  /// DWARF v5 Name Index header.
   struct Header : public HeaderPOD {
     SmallString<8> AugmentationString;
 
@@ -348,7 +348,7 @@ private:
   };
 
 public:
-  /// A single entry in the Name Table (Dwarf 5 sect. 6.1.1.4.6) of the Name
+  /// A single entry in the Name Table (DWARF v5 sect. 6.1.1.4.6) of the Name
   /// Index.
   class NameTableEntry {
     DataExtractor StrData;
@@ -380,7 +380,7 @@ public:
     uint32_t getEntryOffset() const { return EntryOffset; }
   };
 
-  /// Represents a single accelerator table within the Dwarf 5 .debug_names
+  /// Represents a single accelerator table within the DWARF v5 .debug_names
   /// section.
   class NameIndex {
     DenseSet<Abbrev, AbbrevMapInfo> Abbrevs;

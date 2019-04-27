@@ -3893,6 +3893,11 @@ def VMOVPQI2QIZrr : AVX512BI<0xD6, MRMDestReg, (outs VR128X:$dst),
 def : InstAlias<"vmovq.s\t{$src, $dst|$dst, $src}",
                 (VMOVPQI2QIZrr VR128X:$dst, VR128X:$src), 0>;
 
+let Predicates = [HasAVX512] in {
+  def : Pat<(X86vextractstore (v2i64 VR128X:$src), addr:$dst),
+            (VMOVPQI2QIZmr addr:$dst, VR128X:$src)>;
+}
+
 // Move Scalar Single to Double Int
 //
 let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {

@@ -244,7 +244,7 @@ public:
 
     /// Extracts filename by its index in filename table in prologue.
     /// In Dwarf 4, the files are 1-indexed and the current compilation file
-    /// name is not represented in the list. In Dwarf 5, the files are
+    /// name is not represented in the list. In DWARF v5, the files are
     /// 0-indexed and the primary source file has the index 0.
     /// Returns true on success.
     bool getFileNameByIndex(uint64_t FileIndex, const char *CompDir,

@@ -138,3 +138,74 @@ body:             |
     RET_ReallyLR implicit $h0
 
 ...
+---
+name:            v8s16_fpr_zext
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: v8s16_fpr_zext
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
+    ; CHECK: $h0 = COPY [[CPYi16_]]
+    ; CHECK: RET_ReallyLR implicit $h0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:gpr(s32) = G_CONSTANT i32 1
+    %2:gpr(s64) = G_ZEXT %1
+    %3:fpr(s64) = COPY %2(s64)
+    %4:fpr(s16) = G_EXTRACT_VECTOR_ELT %0(<8 x s16>), %3(s64)
+    $h0 = COPY %4(s16)
+    RET_ReallyLR implicit $h0
+
+...
+---
+name:            v8s16_fpr_sext
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: v8s16_fpr_sext
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
+    ; CHECK: $h0 = COPY [[CPYi16_]]
+    ; CHECK: RET_ReallyLR implicit $h0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:gpr(s32) = G_CONSTANT i32 1
+    %2:gpr(s64) = G_SEXT %1
+    %3:fpr(s64) = COPY %2(s64)
+    %4:fpr(s16) = G_EXTRACT_VECTOR_ELT %0(<8 x s16>), %3(s64)
+    $h0 = COPY %4(s16)
+    RET_ReallyLR implicit $h0
+
+...
+---
+name:            v8s16_fpr_trunc
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: v8s16_fpr_trunc
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
+    ; CHECK: $h0 = COPY [[CPYi16_]]
+    ; CHECK: RET_ReallyLR implicit $h0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:gpr(s64) = G_CONSTANT i64 1
+    %2:gpr(s32) = G_TRUNC %1
+    %3:gpr(s64) = G_SEXT %2
+    %4:fpr(s64) = COPY %3(s64)
+    %5:fpr(s16) = G_EXTRACT_VECTOR_ELT %0(<8 x s16>), %4(s64)
+    $h0 = COPY %5(s16)
+    RET_ReallyLR implicit $h0

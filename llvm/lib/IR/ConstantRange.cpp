@@ -1156,6 +1156,37 @@ ConstantRange ConstantRange::inverse() const {
   return ConstantRange(Upper, Lower);
 }
 
+ConstantRange ConstantRange::abs() const {
+  if (isEmptySet())
+    return getEmpty();
+
+  if (isSignWrappedSet()) {
+    APInt Lo;
+    // Check whether the range crosses zero.
+    if (Upper.isStrictlyPositive() || !Lower.isStrictlyPositive())
+      Lo = APInt::getNullValue(getBitWidth());
+    else
+      Lo = APIntOps::umin(Lower, -Upper + 1);
+
+    // SignedMin is included in the result range.
+    return ConstantRange(Lo, APInt::getSignedMinValue(getBitWidth()) + 1);
+  }
+
+  APInt SMin = getSignedMin(), SMax = getSignedMax();
+
+  // All non-negative.
+  if (SMin.isNonNegative())
+    return *this;
+
+  // All negative.
+  if (SMax.isNegative())
+    return ConstantRange(-SMax, -SMin + 1);
+
+  // Range crosses zero.
+  return ConstantRange(APInt::getNullValue(getBitWidth()),
+                       APIntOps::umax(-SMin, SMax) + 1);
+}
+
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(
     const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())

@@ -1819,7 +1819,7 @@ define <4 x i32> @test_16xi32_to_4xi32_perm_mask9(<16 x i32> %vec) {
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
 ; CHECK-NEXT:    vpermps %ymm2, %ymm1, %ymm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0
+; CHECK-NEXT:    vbroadcastss %xmm0, %xmm0
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
