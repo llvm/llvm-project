@@ -95,11 +95,11 @@ Error DispatchStage::dispatch(InstRef IR) {
     AvailableEntries = 0;
 
   // Check if this is an optimizable reg-reg move.
-  bool IsEliminated = false;
   if (IS.isOptimizableMove()) {
     assert(IS.getDefs().size() == 1 && "Expected a single input!");
     assert(IS.getUses().size() == 1 && "Expected a single output!");
-    IsEliminated = PRF.tryEliminateMove(IS.getDefs()[0], IS.getUses()[0]);
+    if (PRF.tryEliminateMove(IS.getDefs()[0], IS.getUses()[0]))
+      IS.setEliminated();
   }
 
   if (IS.isMemOp())
@@ -114,7 +114,7 @@ Error DispatchStage::dispatch(InstRef IR) {
   //
   // We also don't update data dependencies for instructions that have been
   // eliminated at register renaming stage.
-  if (!IsEliminated) {
+  if (!IS.isEliminated()) {
     for (ReadState &RS : IS.getUses())
       PRF.addRegisterRead(RS, STI);
   }

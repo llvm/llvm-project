@@ -166,16 +166,6 @@ template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #else  // Fallback to SizeClassAllocator32.
-static const uptr kRegionSizeLog = 20;
-static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
-# if SANITIZER_WORDSIZE == 32
-template <typename AddressSpaceView>
-using ByteMapASVT = FlatByteMap<kNumRegions, AddressSpaceView>;
-# elif SANITIZER_WORDSIZE == 64
-template <typename AddressSpaceView>
-using ByteMapASVT =
-    TwoLevelByteMap<(kNumRegions >> 12), 1 << 12, AddressSpaceView>;
-# endif
 typedef CompactSizeClassMap SizeClassMap;
 template <typename AddressSpaceViewTy>
 struct AP32 {
@@ -183,9 +173,8 @@ struct AP32 {
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = 16;
   typedef __asan::SizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = __asan::kRegionSizeLog;
+  static const uptr kRegionSizeLog = 20;
   using AddressSpaceView = AddressSpaceViewTy;
-  using ByteMap = __asan::ByteMapASVT<AddressSpaceView>;
   typedef AsanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };

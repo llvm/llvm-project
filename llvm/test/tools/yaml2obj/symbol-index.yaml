@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-readelf -symbols %t | FileCheck %s
+# RUN: llvm-readelf -s %t | FileCheck %s
 
 !ELF
 FileHeader:

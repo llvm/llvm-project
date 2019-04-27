@@ -58,12 +58,12 @@ static UTF32 foldCharDwarf(UTF32 C) {
 }
 
 static Optional<uint32_t> fastCaseFoldingDjbHash(StringRef Buffer, uint32_t H) {
-  bool allASCII = true;
+  bool AllASCII = true;
   for (unsigned char C : Buffer) {
     H = H * 33 + ('A' <= C && C <= 'Z' ? C - 'A' + 'a' : C);
-    allASCII &= C <= 0x7f;
+    AllASCII &= C <= 0x7f;
   }
-  if (allASCII)
+  if (AllASCII)
     return H;
   return None;
 }

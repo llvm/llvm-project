@@ -22,22 +22,13 @@ namespace __sanitizer {
 // purposes.
 typedef CompactSizeClassMap InternalSizeClassMap;
 
-static const uptr kInternalAllocatorRegionSizeLog = 20;
-static const uptr kInternalAllocatorNumRegions =
-    SANITIZER_MMAP_RANGE_SIZE >> kInternalAllocatorRegionSizeLog;
-#if SANITIZER_WORDSIZE == 32
-typedef FlatByteMap<kInternalAllocatorNumRegions> ByteMap;
-#elif SANITIZER_WORDSIZE == 64
-typedef TwoLevelByteMap<(kInternalAllocatorNumRegions >> 12), 1 << 12> ByteMap;
-#endif
 struct AP32 {
   static const uptr kSpaceBeg = 0;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = 0;
   typedef InternalSizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = kInternalAllocatorRegionSizeLog;
+  static const uptr kRegionSizeLog = 20;
   using AddressSpaceView = LocalAddressSpaceView;
-  using ByteMap = __sanitizer::ByteMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };

@@ -61,7 +61,7 @@ protected:
     FileSpec dylib_fspec(command[0].ref);
     FileSystem::Instance().Resolve(dylib_fspec);
 
-    if (m_interpreter.GetDebugger().LoadPlugin(dylib_fspec, error))
+    if (GetDebugger().LoadPlugin(dylib_fspec, error))
       result.SetStatus(eReturnStatusSuccessFinishResult);
     else {
       result.AppendError(error.AsCString());

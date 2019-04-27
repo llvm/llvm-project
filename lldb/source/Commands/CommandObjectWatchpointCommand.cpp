@@ -387,7 +387,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
 
     if (target == nullptr) {
       result.AppendError("There is not a current executable; there are no "
@@ -504,7 +504,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
 
     if (target == nullptr) {
       result.AppendError("There is not a current executable; there are no "
@@ -583,7 +583,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
 
     if (target == nullptr) {
       result.AppendError("There is not a current executable; there are no "

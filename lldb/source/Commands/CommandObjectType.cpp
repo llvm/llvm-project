@@ -2956,7 +2956,7 @@ public:
 protected:
   bool DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
-    TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
+    TargetSP target_sp = GetDebugger().GetSelectedTarget();
     Thread *thread = GetDefaultThread();
     if (!thread) {
       result.AppendError("no default thread");
