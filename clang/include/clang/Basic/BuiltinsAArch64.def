@@ -52,6 +52,14 @@ BUILTIN(__builtin_arm_crc32cw, "UiUiUi", "nc")
 BUILTIN(__builtin_arm_crc32d, "UiUiWUi", "nc")
 BUILTIN(__builtin_arm_crc32cd, "UiUiWUi", "nc")
 
+// Memory Tagging Extensions (MTE)
+BUILTIN(__builtin_arm_irg, "v*v*Ui", "t")
+BUILTIN(__builtin_arm_addg, "v*v*Ui", "t")
+BUILTIN(__builtin_arm_gmi, "Uiv*Ui", "t")
+BUILTIN(__builtin_arm_ldg, "v*v*", "t")
+BUILTIN(__builtin_arm_stg, "vv*", "t")
+BUILTIN(__builtin_arm_subp, "Uiv*v*", "t")
+
 // Memory barrier
 BUILTIN(__builtin_arm_dmb, "vUi", "nc")
 BUILTIN(__builtin_arm_dsb, "vUi", "nc")

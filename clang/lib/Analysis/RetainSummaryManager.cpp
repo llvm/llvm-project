@@ -228,29 +228,36 @@ RetainSummaryManager::isKnownSmartPointer(QualType QT) {
 const RetainSummary *
 RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
                                             StringRef FName, QualType RetTy) {
+  assert(TrackOSObjects &&
+         "Requesting a summary for an OSObject but OSObjects are not tracked");
+
   if (RetTy->isPointerType()) {
     const CXXRecordDecl *PD = RetTy->getPointeeType()->getAsCXXRecordDecl();
     if (PD && isOSObjectSubclass(PD)) {
-      if (const IdentifierInfo *II = FD->getIdentifier()) {
-        StringRef FuncName = II->getName();
-        if (isOSObjectDynamicCast(FuncName) || isOSObjectThisCast(FuncName))
-          return getDefaultSummary();
+      if (isOSObjectDynamicCast(FName) || isOSObjectThisCast(FName))
+        return getDefaultSummary();
 
-        // All objects returned with functions *not* starting with
-        // get, or iterators, are returned at +1.
-        if ((!FuncName.startswith("get") && !FuncName.startswith("Get")) ||
-            isOSIteratorSubclass(PD)) {
-          return getOSSummaryCreateRule(FD);
-        } else {
-          return getOSSummaryGetRule(FD);
-        }
+      // TODO: Add support for the slightly common *Matching(table) idiom.
+      // Cf. IOService::nameMatching() etc. - these function have an unusual
+      // contract of returning at +0 or +1 depending on their last argument.
+      if (FName.endswith("Matching")) {
+        return getPersistentStopSummary();
+      }
+
+      // All objects returned with functions *not* starting with 'get',
+      // or iterators, are returned at +1.
+      if ((!FName.startswith("get") && !FName.startswith("Get")) ||
+          isOSIteratorSubclass(PD)) {
+        return getOSSummaryCreateRule(FD);
+      } else {
+        return getOSSummaryGetRule(FD);
       }
     }
   }
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     const CXXRecordDecl *Parent = MD->getParent();
-    if (TrackOSObjects && Parent && isOSObjectSubclass(Parent)) {
+    if (Parent && isOSObjectSubclass(Parent)) {
       if (FName == "release" || FName == "taggedRelease")
         return getOSSummaryReleaseRule(FD);
 

@@ -248,6 +248,11 @@ if( LLVM_ENABLE_PIC )
   else()
     add_flag_or_print_warning("-fPIC" FPIC)
   endif()
+  # GCC for MIPS can miscompile LLVM due to PR37701.
+  if(CMAKE_COMPILER_IS_GNUCXX AND LLVM_NATIVE_ARCH STREQUAL "Mips" AND
+         NOT Uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    add_flag_or_print_warning("-fno-shrink-wrap" FNO_SHRINK_WRAP)
+  endif()
 endif()
 
 if(NOT WIN32 AND NOT CYGWIN AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))

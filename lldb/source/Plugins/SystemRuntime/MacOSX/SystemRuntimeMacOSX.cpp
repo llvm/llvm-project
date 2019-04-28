@@ -454,8 +454,7 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
 ThreadSP SystemRuntimeMacOSX::GetExtendedBacktraceThread(ThreadSP real_thread,
                                                          ConstString type) {
   ThreadSP originating_thread_sp;
-  if (BacktraceRecordingHeadersInitialized() &&
-      type == ConstString("libdispatch")) {
+  if (BacktraceRecordingHeadersInitialized() && type == "libdispatch") {
     Status error;
 
     // real_thread is either an actual, live thread (in which case we need to
@@ -554,7 +553,7 @@ ThreadSP
 SystemRuntimeMacOSX::GetExtendedBacktraceForQueueItem(QueueItemSP queue_item_sp,
                                                       ConstString type) {
   ThreadSP extended_thread_sp;
-  if (type != ConstString("libdispatch"))
+  if (type != "libdispatch")
     return extended_thread_sp;
 
   bool stop_id_is_valid = true;

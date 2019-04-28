@@ -1176,17 +1176,25 @@ void TestNoWrapRegionExhaustive(Instruction::BinaryOps BinOp,
             ConstantRange::makeGuaranteedNoWrapRegion(BinOp, CR2, NoWrapKind);
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
           bool NoOverflow = true;
+          bool Overflow = true;
           ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
             if (OverflowFn(N1, N2))
               NoOverflow = false;
+            else
+              Overflow = false;
           });
           EXPECT_EQ(NoOverflow, NoWrap.contains(N1));
+
+          // The no-wrap range is exact for single-element ranges.
+          if (CR2.isSingleElement()) {
+            EXPECT_EQ(Overflow, !NoWrap.contains(N1));
+          }
         });
       });
 }
 
-// Show that makeGuaranteedNoWrapRegion is precise if only one of
-// NoUnsignedWrap or NoSignedWrap is used.
+// Show that makeGuaranteedNoWrapRegion() is maximal, and for single-element
+// ranges also exact.
 TEST(ConstantRange, NoWrapRegionExhaustive) {
   TestNoWrapRegionExhaustive(
       Instruction::Add, OverflowingBinaryOperator::NoUnsignedWrap,
@@ -1795,6 +1803,32 @@ TEST_F(ConstantRangeTest, SSubSat) {
       [](const APInt &N1, const APInt &N2) {
         return N1.ssub_sat(N2);
       });
+}
+
+TEST_F(ConstantRangeTest, Abs) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    // We're working with unsigned integers here, because it makes the signed
+    // min case non-wrapping.
+    APInt Min = APInt::getMaxValue(Bits);
+    APInt Max = APInt::getMinValue(Bits);
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      APInt AbsN = N.abs();
+      if (AbsN.ult(Min))
+        Min = AbsN;
+      if (AbsN.ugt(Max))
+        Max = AbsN;
+    });
+
+    ConstantRange AbsCR = CR.abs();
+    if (Min.ugt(Max)) {
+      EXPECT_TRUE(AbsCR.isEmptySet());
+      return;
+    }
+
+    ConstantRange Exact = ConstantRange::getNonEmpty(Min, Max + 1);
+    EXPECT_EQ(Exact, AbsCR);
+  });
 }
 
 }  // anonymous namespace

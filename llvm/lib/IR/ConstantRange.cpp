@@ -309,6 +309,14 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
   }
 }
 
+ConstantRange ConstantRange::makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
+                                                   const APInt &Other,
+                                                   unsigned NoWrapKind) {
+  // makeGuaranteedNoWrapRegion() is exact for single-element ranges, as
+  // "for all" and "for any" coincide in this case.
+  return makeGuaranteedNoWrapRegion(BinOp, ConstantRange(Other), NoWrapKind);
+}
+
 bool ConstantRange::isFullSet() const {
   return Lower == Upper && Lower.isMaxValue();
 }
@@ -843,10 +851,8 @@ ConstantRange::add(const ConstantRange &Other) const {
 ConstantRange ConstantRange::addWithNoSignedWrap(const APInt &Other) const {
   // Calculate the subset of this range such that "X + Other" is
   // guaranteed not to wrap (overflow) for all X in this subset.
-  // makeGuaranteedNoWrapRegion will produce an exact NSW range.
-  auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(BinaryOperator::Add,
-                                      ConstantRange(Other),
-                                      OverflowingBinaryOperator::NoSignedWrap);
+  auto NSWRange = ConstantRange::makeExactNoWrapRegion(
+      BinaryOperator::Add, Other, OverflowingBinaryOperator::NoSignedWrap);
   auto NSWConstrainedRange = intersectWith(NSWRange);
 
   return NSWConstrainedRange.add(ConstantRange(Other));
@@ -1154,6 +1160,37 @@ ConstantRange ConstantRange::inverse() const {
   if (isEmptySet())
     return getFull();
   return ConstantRange(Upper, Lower);
+}
+
+ConstantRange ConstantRange::abs() const {
+  if (isEmptySet())
+    return getEmpty();
+
+  if (isSignWrappedSet()) {
+    APInt Lo;
+    // Check whether the range crosses zero.
+    if (Upper.isStrictlyPositive() || !Lower.isStrictlyPositive())
+      Lo = APInt::getNullValue(getBitWidth());
+    else
+      Lo = APIntOps::umin(Lower, -Upper + 1);
+
+    // SignedMin is included in the result range.
+    return ConstantRange(Lo, APInt::getSignedMinValue(getBitWidth()) + 1);
+  }
+
+  APInt SMin = getSignedMin(), SMax = getSignedMax();
+
+  // All non-negative.
+  if (SMin.isNonNegative())
+    return *this;
+
+  // All negative.
+  if (SMax.isNegative())
+    return ConstantRange(-SMax, -SMin + 1);
+
+  // Range crosses zero.
+  return ConstantRange(APInt::getNullValue(getBitWidth()),
+                       APIntOps::umax(-SMin, SMax) + 1);
 }
 
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(

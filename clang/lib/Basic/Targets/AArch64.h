@@ -34,6 +34,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   unsigned HasFullFP16;
   unsigned HasDotProd;
   unsigned HasFP16FML;
+  unsigned HasMTE;
   llvm::AArch64::ArchKind ArchKind;
 
   static const Builtin::Info BuiltinInfo[];

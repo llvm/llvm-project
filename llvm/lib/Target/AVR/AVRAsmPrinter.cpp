@@ -42,8 +42,7 @@ public:
 
   StringRef getPassName() const override { return "AVR Assembly Printer"; }
 
-  void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O,
-                    const char *Modifier = 0);
+  void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
                        const char *ExtraCode, raw_ostream &O) override;
@@ -58,7 +57,7 @@ private:
 };
 
 void AVRAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
-                                 raw_ostream &O, const char *Modifier) {
+                                 raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNo);
 
   switch (MO.getType()) {

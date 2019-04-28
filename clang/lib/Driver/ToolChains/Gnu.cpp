@@ -33,6 +33,8 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
+using tools::addMultilibFlag;
+
 void tools::GnuTool::anchor() {}
 
 static bool forwardToGCC(const Option &O) {
@@ -869,16 +871,6 @@ static bool isSoftFloatABI(const ArgList &Args) {
   return A->getOption().matches(options::OPT_msoft_float) ||
          (A->getOption().matches(options::OPT_mfloat_abi_EQ) &&
           A->getValue() == StringRef("soft"));
-}
-
-/// \p Flag must be a flag accepted by the driver with its leading '-' removed,
-//     otherwise '-print-multi-lib' will not emit them correctly.
-static void addMultilibFlag(bool Enabled, const char *const Flag,
-                            std::vector<std::string> &Flags) {
-  if (Enabled)
-    Flags.push_back(std::string("+") + Flag);
-  else
-    Flags.push_back(std::string("-") + Flag);
 }
 
 static bool isArmOrThumbArch(llvm::Triple::ArchType Arch) {

@@ -167,8 +167,7 @@ static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
     ConstString var_name = var_sp->GetName();
-    if (!var_name || var_name == ConstString("this") ||
-        var_name == ConstString(".block_descriptor"))
+    if (!var_name || var_name == "this" || var_name == ".block_descriptor")
       continue;
 
     stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());

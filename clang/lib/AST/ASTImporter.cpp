@@ -1767,6 +1767,9 @@ Error ASTNodeImporter::ImportDefinition(
     ToData.HasDeclaredCopyAssignmentWithConstParam
       = FromData.HasDeclaredCopyAssignmentWithConstParam;
 
+    // Copy over the data stored in RecordDeclBits
+    ToCXX->setArgPassingRestrictions(FromCXX->getArgPassingRestrictions());
+
     SmallVector<CXXBaseSpecifier *, 4> Bases;
     for (const auto &Base1 : FromCXX->bases()) {
       ExpectedType TyOrErr = import(Base1.getType());

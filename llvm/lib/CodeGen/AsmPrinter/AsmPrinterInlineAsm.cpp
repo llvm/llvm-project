@@ -599,6 +599,12 @@ void AsmPrinter::PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
   }
 }
 
+void AsmPrinter::PrintSymbolOperand(const MachineOperand &MO, raw_ostream &OS) {
+  assert(MO.isGlobal() && "caller should check MO.isGlobal");
+  getSymbol(MO.getGlobal())->print(OS, MAI);
+  printOffset(MO.getOffset(), OS);
+}
+
 /// PrintAsmOperand - Print the specified operand of MI, an INLINEASM
 /// instruction, using the specified assembler variant.  Targets should
 /// override this to format as appropriate for machine specific ExtraCodes
@@ -621,10 +627,15 @@ bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       }
       LLVM_FALLTHROUGH; // GCC allows '%a' to behave like '%c' with immediates.
     case 'c': // Substitute immediate value without immediate syntax
-      if (!MO.isImm())
-        return true;
-      O << MO.getImm();
-      return false;
+      if (MO.isImm()) {
+        O << MO.getImm();
+        return false;
+      }
+      if (MO.isGlobal()) {
+        PrintSymbolOperand(MO, O);
+        return false;
+      }
+      return true;
     case 'n':  // Negate the immediate constant.
       if (!MO.isImm())
         return true;

@@ -122,7 +122,6 @@ ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
 }
 
 CommandInterpreter::CommandInterpreter(Debugger &debugger,
-                                       ScriptLanguage script_language,
                                        bool synchronous_execution)
     : Broadcaster(debugger.GetBroadcasterManager(),
                   CommandInterpreter::GetStaticBroadcasterClass().AsCString()),
@@ -131,11 +130,10 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
       m_debugger(debugger), m_synchronous_execution(synchronous_execution),
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
-      m_script_interpreter_sp(), m_command_io_handler_sp(), m_comment_char('#'),
+      m_command_io_handler_sp(), m_comment_char('#'),
       m_batch_command_mode(false), m_truncation_warning(eNoTruncation),
       m_command_source_depth(0), m_num_errors(0), m_quit_requested(false),
       m_stopped_for_crash(false) {
-  debugger.SetScriptLanguage(script_language);
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
@@ -435,9 +433,6 @@ void CommandInterpreter::Initialize() {
 
 void CommandInterpreter::Clear() {
   m_command_io_handler_sp.reset();
-
-  if (m_script_interpreter_sp)
-    m_script_interpreter_sp->Clear();
 }
 
 const char *CommandInterpreter::ProcessEmbeddedScriptCommands(const char *arg) {
@@ -2500,18 +2495,6 @@ void CommandInterpreter::HandleCommandsFromFile(
   debugger.SetAsyncExecution(old_async_execution);
 }
 
-ScriptInterpreter *CommandInterpreter::GetScriptInterpreter(bool can_create) {
-  std::lock_guard<std::recursive_mutex> locker(m_script_interpreter_mutex);
-  if (!m_script_interpreter_sp) {
-    if (!can_create)
-      return nullptr;
-    lldb::ScriptLanguage script_lang = GetDebugger().GetScriptLanguage();
-    m_script_interpreter_sp =
-        PluginManager::GetScriptInterpreterForLanguage(script_lang, *this);
-  }
-  return m_script_interpreter_sp.get();
-}
-
 bool CommandInterpreter::GetSynchronous() { return m_synchronous_execution; }
 
 void CommandInterpreter::SetSynchronous(bool value) {
@@ -2886,7 +2869,8 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
     }
   }
 
-  ScriptInterpreter *script_interpreter = GetScriptInterpreter(false);
+  ScriptInterpreter *script_interpreter =
+      m_debugger.GetScriptInterpreter(false);
   if (script_interpreter) {
     if (script_interpreter->Interrupt())
       return true;

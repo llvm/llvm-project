@@ -826,7 +826,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   //   with knowledge of the called routines.
   if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return) {
-    Wait = AMDGPU::Waitcnt::allZero();
+    Wait = AMDGPU::Waitcnt::allZero(IV);
   }
   // Resolve vm waits before gs-done.
   else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
@@ -998,7 +998,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // requiring a WAITCNT beforehand.
   if (MI.getOpcode() == AMDGPU::S_BARRIER &&
       !ST->hasAutoWaitcntBeforeBarrier()) {
-    Wait = AMDGPU::Waitcnt::allZero();
+    Wait = AMDGPU::Waitcnt::allZero(IV);
   }
 
   // TODO: Remove this work-around, enable the assert for Bug 457939
@@ -1030,7 +1030,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   }
 
   if (ForceEmitZeroWaitcnts)
-    Wait = AMDGPU::Waitcnt::allZero();
+    Wait = AMDGPU::Waitcnt::allZero(IV);
 
   if (ForceEmitWaitcnt[VM_CNT])
     Wait.VmCnt = 0;
@@ -1311,7 +1311,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         Inst.getOpcode() == AMDGPU::DS_GWS_SEMA_P ||
         Inst.getOpcode() == AMDGPU::DS_GWS_BARRIER) {
       // TODO: && context->target_info->GwsRequiresMemViolTest() ) {
-      ScoreBrackets.applyWaitcnt(AMDGPU::Waitcnt::allZero());
+      ScoreBrackets.applyWaitcnt(AMDGPU::Waitcnt::allZeroExceptVsCnt());
     }
 
     // TODO: Remove this work-around after fixing the scheduler and enable the

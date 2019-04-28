@@ -90,6 +90,7 @@ public:
   bool NonAlloc = false;
   bool Noload = false;
   bool ExpressionsUseSymbols = false;
+  bool UsedInExpression = false;
   bool InOverlay = false;
 
   void finalize();

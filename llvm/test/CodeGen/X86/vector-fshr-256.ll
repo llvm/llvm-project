@@ -1971,9 +1971,9 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpsrlvw {{.*}}(%rip), %ymm1, %ymm2
 ; AVX512VLBW-NEXT:    vpsllvw {{.*}}(%rip), %ymm0, %ymm0
-; AVX512VLBW-NEXT:    vpor %ymm2, %ymm0, %ymm0
-; AVX512VLBW-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
-; AVX512VLBW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX512VLBW-NEXT:    vpor %ymm2, %ymm0, %ymm2
+; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} ymm0 = [16,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX512VLBW-NEXT:    vpermi2w %ymm1, %ymm2, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VLVBMI2-LABEL: constant_funnnel_v16i16:

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/PostfixExpression.h"
+#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -94,4 +97,56 @@ TEST(PostfixExpression, Parse) {
   EXPECT_EQ("nullptr", ParseAndStringify("1 + 2"));
   EXPECT_EQ("nullptr", ParseAndStringify("1 2"));
   EXPECT_EQ("nullptr", ParseAndStringify(""));
+}
+
+static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
+  llvm::BumpPtrAllocator alloc;
+  Node *ast = Parse(expr, alloc);
+  if (!ast)
+    return "Parse failed.";
+  if (!ResolveSymbols(ast, [&](SymbolNode &symbol) -> Node * {
+        uint32_t num;
+        if (to_integer(symbol.GetName().drop_front(), num))
+          return MakeNode<RegisterNode>(alloc, num);
+        return nullptr;
+      })) {
+    return "Resolution failed.";
+  }
+
+  const size_t addr_size = 4;
+  StreamString dwarf(Stream::eBinary, addr_size, lldb::eByteOrderLittle);
+  ToDWARF(*ast, dwarf);
+
+  // print dwarf expression to comparable textual representation
+  DataExtractor extractor(dwarf.GetData(), dwarf.GetSize(),
+                          lldb::eByteOrderLittle, addr_size);
+
+  StreamString result;
+  if (!DWARFExpression::PrintDWARFExpression(result, extractor, addr_size,
+                                             /*dwarf_ref_size*/ 4,
+                                             /*location_expression*/ false)) {
+    return "DWARF printing failed.";
+  }
+
+  return result.GetString();
+}
+
+TEST(PostfixExpression, ToDWARF) {
+  EXPECT_EQ("DW_OP_constu 0x0", ParseAndGenerateDWARF("0"));
+
+  EXPECT_EQ("DW_OP_breg1 +0", ParseAndGenerateDWARF("R1"));
+
+  EXPECT_EQ("DW_OP_bregx 65 0", ParseAndGenerateDWARF("R65"));
+
+  EXPECT_EQ("DW_OP_constu 0x4, DW_OP_constu 0x5, DW_OP_plus ",
+            ParseAndGenerateDWARF("4 5 +"));
+
+  EXPECT_EQ("DW_OP_constu 0x4, DW_OP_constu 0x5, DW_OP_minus ",
+            ParseAndGenerateDWARF("4 5 -"));
+
+  EXPECT_EQ("DW_OP_constu 0x4, DW_OP_deref ", ParseAndGenerateDWARF("4 ^"));
+
+  EXPECT_EQ("DW_OP_breg6 +0, DW_OP_constu 0x80, DW_OP_lit1 "
+            ", DW_OP_minus , DW_OP_not , DW_OP_and ",
+            ParseAndGenerateDWARF("R6 128 @"));
 }

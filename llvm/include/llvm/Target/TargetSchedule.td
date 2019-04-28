@@ -135,7 +135,7 @@ class ProcResourceKind;
 //
 // An optional Super resource may be given to model these resources as
 // a subset of the more general super resources. Using one of these
-// resources implies using one of the super resoruces.
+// resources implies using one of the super resources.
 //
 // ProcResourceUnits normally model a few buffered resources within an
 // out-of-order engine. Buffered resources may be held for multiple

@@ -160,6 +160,29 @@ cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
 llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
                                              const format::FormatStyle &Style);
 
+/// Heuristically determine namespaces visible at a point, without parsing Code.
+/// This considers using-directives and enclosing namespace-declarations that
+/// are visible (and not obfuscated) in the file itself (not headers).
+/// Code should be truncated at the point of interest.
+///
+/// The returned vector is always non-empty.
+/// - The first element is the namespace that encloses the point: a declaration
+///   near the point would be within this namespace.
+/// - The elements are the namespaces in scope at the point: an unqualified
+///   lookup would search within these namespaces.
+///
+/// Using directives are resolved against all enclosing scopes, but no other
+/// namespace directives.
+///
+/// example:
+///   using namespace a;
+///   namespace foo {
+///     using namespace b;
+///
+/// visibleNamespaces are {"foo::", "", "a::", "b::", "foo::b::"}, not "a::b::".
+std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
+                                           const format::FormatStyle &Style);
+
 } // namespace clangd
 } // namespace clang
 #endif

@@ -133,25 +133,19 @@ public:
 
     MR.resolve(InternedResult);
 
-    if (Layer.NotifyLoaded)
-      Layer.NotifyLoaded(MR.getVModuleKey());
+    Layer.notifyLoaded(MR);
   }
 
   void notifyFinalized(
       std::unique_ptr<JITLinkMemoryManager::Allocation> A) override {
 
-    if (EHFrameAddr) {
-      // If there is an eh-frame then try to register it.
-      if (auto Err = registerEHFrameSection((void *)EHFrameAddr)) {
-        Layer.getExecutionSession().reportError(std::move(Err));
-        MR.failMaterialization();
-        return;
-      }
-    }
+    if (auto Err = Layer.notifyEmitted(MR, std::move(A))) {
+      Layer.getExecutionSession().reportError(std::move(Err));
+      MR.failMaterialization();
 
+      return;
+    }
     MR.emit();
-    Layer.notifyFinalized(
-        ObjectLinkingLayer::ObjectResources(std::move(A), EHFrameAddr));
   }
 
   AtomGraphPassFunction getMarkLivePass(const Triple &TT) const override {
@@ -166,11 +160,7 @@ public:
     Config.PostPrunePasses.push_back(
         [this](AtomGraph &G) { return computeNamedSymbolDependencies(G); });
 
-    Config.PostFixupPasses.push_back(
-        createEHFrameRecorderPass(TT, EHFrameAddr));
-
-    if (Layer.ModifyPassConfig)
-      Layer.ModifyPassConfig(TT, Config);
+    Layer.modifyPassConfig(MR, TT, Config);
 
     return Error::success();
   }
@@ -328,16 +318,18 @@ private:
   MaterializationResponsibility MR;
   std::unique_ptr<MemoryBuffer> ObjBuffer;
   DenseMap<SymbolStringPtr, SymbolNameSet> NamedSymbolDeps;
-  JITTargetAddress EHFrameAddr = 0;
 };
 
-ObjectLinkingLayer::ObjectLinkingLayer(
-    ExecutionSession &ES, JITLinkMemoryManager &MemMgr,
-    NotifyLoadedFunction NotifyLoaded, NotifyEmittedFunction NotifyEmitted,
-    ModifyPassConfigFunction ModifyPassConfig)
-    : ObjectLayer(ES), MemMgr(MemMgr), NotifyLoaded(std::move(NotifyLoaded)),
-      NotifyEmitted(std::move(NotifyEmitted)),
-      ModifyPassConfig(std::move(ModifyPassConfig)) {}
+ObjectLinkingLayer::Plugin::~Plugin() {}
+
+ObjectLinkingLayer::ObjectLinkingLayer(ExecutionSession &ES,
+                                       JITLinkMemoryManager &MemMgr)
+    : ObjectLayer(ES), MemMgr(MemMgr) {}
+
+ObjectLinkingLayer::~ObjectLinkingLayer() {
+  if (auto Err = removeAllModules())
+    getExecutionSession().reportError(std::move(Err));
+}
 
 void ObjectLinkingLayer::emit(MaterializationResponsibility R,
                               std::unique_ptr<MemoryBuffer> O) {
@@ -346,36 +338,145 @@ void ObjectLinkingLayer::emit(MaterializationResponsibility R,
       *this, std::move(R), std::move(O)));
 }
 
-ObjectLinkingLayer::ObjectResources::ObjectResources(
-    AllocPtr Alloc, JITTargetAddress EHFrameAddr)
-    : Alloc(std::move(Alloc)), EHFrameAddr(EHFrameAddr) {}
-
-ObjectLinkingLayer::ObjectResources::ObjectResources(ObjectResources &&Other)
-    : Alloc(std::move(Other.Alloc)), EHFrameAddr(Other.EHFrameAddr) {
-  Other.EHFrameAddr = 0;
+void ObjectLinkingLayer::modifyPassConfig(MaterializationResponsibility &MR,
+                                          const Triple &TT,
+                                          PassConfiguration &PassConfig) {
+  for (auto &P : Plugins)
+    P->modifyPassConfig(MR, TT, PassConfig);
 }
 
-ObjectLinkingLayer::ObjectResources &
-ObjectLinkingLayer::ObjectResources::operator=(ObjectResources &&Other) {
-  std::swap(Alloc, Other.Alloc);
-  std::swap(EHFrameAddr, Other.EHFrameAddr);
-  return *this;
+void ObjectLinkingLayer::notifyLoaded(MaterializationResponsibility &MR) {
+  for (auto &P : Plugins)
+    P->notifyLoaded(MR);
 }
 
-ObjectLinkingLayer::ObjectResources::~ObjectResources() {
-  const char *ErrBanner =
-      "ObjectLinkingLayer received error deallocating object resources:";
+Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
+                                        AllocPtr Alloc) {
+  Error Err = Error::success();
+  for (auto &P : Plugins)
+    Err = joinErrors(std::move(Err), P->notifyEmitted(MR));
 
-  assert((EHFrameAddr == 0 || Alloc) &&
-         "Non-null EHFrameAddr must have an associated allocation");
+  if (Err)
+    return Err;
 
-  if (EHFrameAddr)
-    if (auto Err = deregisterEHFrameSection((void *)EHFrameAddr))
-      logAllUnhandledErrors(std::move(Err), llvm::errs(), ErrBanner);
+  {
+    std::lock_guard<std::mutex> Lock(LayerMutex);
+    UntrackedAllocs.push_back(std::move(Alloc));
+  }
 
-  if (Alloc)
-    if (auto Err = Alloc->deallocate())
-      logAllUnhandledErrors(std::move(Err), llvm::errs(), ErrBanner);
+  return Error::success();
+}
+
+Error ObjectLinkingLayer::removeModule(VModuleKey K) {
+  Error Err = Error::success();
+
+  for (auto &P : Plugins)
+    Err = joinErrors(std::move(Err), P->notifyRemovingModule(K));
+
+  AllocPtr Alloc;
+
+  {
+    std::lock_guard<std::mutex> Lock(LayerMutex);
+    auto AllocItr = TrackedAllocs.find(K);
+    Alloc = std::move(AllocItr->second);
+    TrackedAllocs.erase(AllocItr);
+  }
+
+  assert(Alloc && "No allocation for key K");
+
+  return joinErrors(std::move(Err), Alloc->deallocate());
+}
+
+Error ObjectLinkingLayer::removeAllModules() {
+
+  Error Err = Error::success();
+
+  for (auto &P : Plugins)
+    Err = joinErrors(std::move(Err), P->notifyRemovingAllModules());
+
+  std::vector<AllocPtr> Allocs;
+  {
+    std::lock_guard<std::mutex> Lock(LayerMutex);
+    Allocs = std::move(UntrackedAllocs);
+
+    for (auto &KV : TrackedAllocs)
+      Allocs.push_back(std::move(KV.second));
+
+    TrackedAllocs.clear();
+  }
+
+  while (!Allocs.empty()) {
+    Err = joinErrors(std::move(Err), Allocs.back()->deallocate());
+    Allocs.pop_back();
+  }
+
+  return Err;
+}
+
+void LocalEHFrameRegistrationPlugin::modifyPassConfig(
+    MaterializationResponsibility &MR, const Triple &TT,
+    PassConfiguration &PassConfig) {
+  assert(!InProcessLinks.count(&MR) && "Link for MR already being tracked?");
+
+  PassConfig.PostFixupPasses.push_back(
+      createEHFrameRecorderPass(TT, [this, &MR](JITTargetAddress Addr) {
+        if (Addr)
+          InProcessLinks[&MR] = jitTargetAddressToPointer<void *>(Addr);
+      }));
+}
+
+Error LocalEHFrameRegistrationPlugin::notifyEmitted(
+    MaterializationResponsibility &MR) {
+
+  auto EHFrameAddrItr = InProcessLinks.find(&MR);
+  if (EHFrameAddrItr == InProcessLinks.end())
+    return Error::success();
+
+  const void *EHFrameAddr = EHFrameAddrItr->second;
+  assert(EHFrameAddr && "eh-frame addr to register can not be null");
+
+  InProcessLinks.erase(EHFrameAddrItr);
+  if (auto Key = MR.getVModuleKey())
+    TrackedEHFrameAddrs[Key] = EHFrameAddr;
+  else
+    UntrackedEHFrameAddrs.push_back(EHFrameAddr);
+
+  return registerEHFrameSection(EHFrameAddr);
+}
+
+Error LocalEHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
+  auto EHFrameAddrItr = TrackedEHFrameAddrs.find(K);
+  if (EHFrameAddrItr == TrackedEHFrameAddrs.end())
+    return Error::success();
+
+  const void *EHFrameAddr = EHFrameAddrItr->second;
+  assert(EHFrameAddr && "Tracked eh-frame addr must not be null");
+
+  TrackedEHFrameAddrs.erase(EHFrameAddrItr);
+
+  return deregisterEHFrameSection(EHFrameAddr);
+}
+
+Error LocalEHFrameRegistrationPlugin::notifyRemovingAllModules() {
+
+  std::vector<const void *> EHFrameAddrs = std::move(UntrackedEHFrameAddrs);
+  EHFrameAddrs.reserve(EHFrameAddrs.size() + TrackedEHFrameAddrs.size());
+
+  for (auto &KV : TrackedEHFrameAddrs)
+    EHFrameAddrs.push_back(KV.second);
+
+  TrackedEHFrameAddrs.clear();
+
+  Error Err = Error::success();
+
+  while (!EHFrameAddrs.empty()) {
+    const void *EHFrameAddr = EHFrameAddrs.back();
+    assert(EHFrameAddr && "Untracked eh-frame addr must not be null");
+    EHFrameAddrs.pop_back();
+    Err = joinErrors(std::move(Err), deregisterEHFrameSection(EHFrameAddr));
+  }
+
+  return Err;
 }
 
 } // End namespace orc.

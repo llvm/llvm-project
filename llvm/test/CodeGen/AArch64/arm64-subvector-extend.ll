@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* 2>&1 | FileCheck %s --check-prefixes=CHECK,FALLBACK
 
 ; Test efficient codegen of vector extends up from legal type to 128 bit
 ; and 256 bit vector types.
@@ -6,6 +7,8 @@
 ;-----
 ; Vectors of i16.
 ;-----
+
+; FALLBACK-NOT: remark:{{.*}}(in function: func1)
 define <8 x i16> @func1(<8 x i8> %v0) nounwind {
 ; CHECK-LABEL: func1:
 ; CHECK-NEXT: ushll.8h  v0, v0, #0
@@ -14,6 +17,7 @@ define <8 x i16> @func1(<8 x i8> %v0) nounwind {
   ret <8 x i16> %r
 }
 
+; FALLBACK-NOT: remark:{{.*}}(in function: func2)
 define <8 x i16> @func2(<8 x i8> %v0) nounwind {
 ; CHECK-LABEL: func2:
 ; CHECK-NEXT: sshll.8h  v0, v0, #0
@@ -44,6 +48,7 @@ define <16 x i16> @func4(<16 x i8> %v0) nounwind {
 ; Vectors of i32.
 ;-----
 
+; FALLBACK-NOT: remark:{{.*}}(in function: afunc1)
 define <4 x i32> @afunc1(<4 x i16> %v0) nounwind {
 ; CHECK-LABEL: afunc1:
 ; CHECK-NEXT: ushll.4s v0, v0, #0
@@ -52,6 +57,7 @@ define <4 x i32> @afunc1(<4 x i16> %v0) nounwind {
   ret <4 x i32> %r
 }
 
+; FALLBACK-NOT: remark:{{.*}}(in function: afunc2)
 define <4 x i32> @afunc2(<4 x i16> %v0) nounwind {
 ; CHECK-LABEL: afunc2:
 ; CHECK-NEXT: sshll.4s v0, v0, #0

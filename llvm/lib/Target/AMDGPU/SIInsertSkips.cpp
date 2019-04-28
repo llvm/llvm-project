@@ -248,6 +248,10 @@ void SIInsertSkips::kill(MachineInstr &MI) {
       llvm_unreachable("invalid ISD:SET cond code");
     }
 
+    const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+    if (ST.hasNoSdstCMPX())
+      Opcode = AMDGPU::getVCMPXNoSDstOp(Opcode);
+
     assert(MI.getOperand(0).isReg());
 
     if (TRI->isVGPR(MBB.getParent()->getRegInfo(),
@@ -257,13 +261,17 @@ void SIInsertSkips::kill(MachineInstr &MI) {
           .add(MI.getOperand(1))
           .add(MI.getOperand(0));
     } else {
-      BuildMI(MBB, &MI, DL, TII->get(Opcode))
-          .addReg(AMDGPU::VCC, RegState::Define)
-          .addImm(0)  // src0 modifiers
-          .add(MI.getOperand(1))
-          .addImm(0)  // src1 modifiers
-          .add(MI.getOperand(0))
-          .addImm(0);  // omod
+      auto I = BuildMI(MBB, &MI, DL, TII->get(Opcode));
+      if (!ST.hasNoSdstCMPX())
+        I.addReg(AMDGPU::VCC, RegState::Define);
+
+      I.addImm(0)  // src0 modifiers
+        .add(MI.getOperand(1))
+        .addImm(0)  // src1 modifiers
+        .add(MI.getOperand(0));
+
+      if (!ST.hasNoSdstCMPX())
+        I.addImm(0);  // omod
     }
     break;
   }

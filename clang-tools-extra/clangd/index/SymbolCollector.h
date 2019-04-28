@@ -120,12 +120,8 @@ private:
 
   llvm::Optional<std::string> getIncludeHeader(llvm::StringRef QName, FileID);
   bool isSelfContainedHeader(FileID);
-  // Heuristic to detect headers that aren't self-contained, usually because
-  // they need to be included via an umbrella header. e.g. GTK matches this.
-  llvm::Regex DontIncludeMePattern = {
-      "^[ \t]*#[ \t]*if.*\n"         // An #if, #ifndef etc directive, then
-      "[ \t]*#[ \t]*error.*include", // an #error directive mentioning "include"
-      llvm::Regex::Newline};
+  // Heuristically headers that only want to be included via an umbrella.
+  static bool isDontIncludeMeHeader(llvm::StringRef);
 
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;

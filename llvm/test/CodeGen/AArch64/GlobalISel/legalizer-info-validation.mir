@@ -157,7 +157,7 @@
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined
 #
 # DEBUG-NEXT: G_ANYEXT (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_TRUNC (opcode {{[0-9]+}}): 2 type indices
 # DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
@@ -175,10 +175,10 @@
 # DEBUG:      .. the first uncovered type index: 2, OK
 #
 # DEBUG-NEXT: G_SEXT (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ZEXT (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_SHL (opcode {{[0-9]+}}): 2 type indices
 # DEBUG:.. type index coverage check SKIPPED: user-defined predicate detected

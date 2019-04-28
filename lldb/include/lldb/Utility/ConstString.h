@@ -154,6 +154,30 @@ public:
     return m_string == rhs.m_string;
   }
 
+  /// Equal to operator against a non-ConstString value.
+  ///
+  /// Returns true if this string is equal to the string in \a rhs. This
+  /// overload is usually slower than comparing against a ConstString value.
+  /// However, if the rhs string not already a ConstString and it is impractical
+  /// to turn it into a non-temporary variable, then this overload is faster.
+  ///
+  /// \param[in] rhs
+  ///     Another string object to compare this object to.
+  ///
+  /// \return
+  ///     \li \b true if this object is equal to \a rhs.
+  ///     \li \b false if this object is not equal to \a rhs.
+  bool operator==(const char *rhs) const {
+    // ConstString differentiates between empty strings and nullptr strings, but
+    // StringRef doesn't. Therefore we have to do this check manually now.
+    if (m_string == nullptr && rhs != nullptr)
+      return false;
+    if (m_string != nullptr && rhs == nullptr)
+      return false;
+
+    return GetStringRef() == rhs;
+  }
+
   /// Not equal to operator
   ///
   /// Returns true if this string is not equal to the string in \a rhs. This
@@ -169,6 +193,21 @@ public:
   bool operator!=(ConstString rhs) const {
     return m_string != rhs.m_string;
   }
+
+  /// Not equal to operator against a non-ConstString value.
+  ///
+  /// Returns true if this string is not equal to the string in \a rhs. This
+  /// overload is usually slower than comparing against a ConstString value.
+  /// However, if the rhs string not already a ConstString and it is impractical
+  /// to turn it into a non-temporary variable, then this overload is faster.
+  ///
+  /// \param[in] rhs
+  ///     Another string object to compare this object to.
+  ///
+  /// \return
+  ///     \li \b true if this object is not equal to \a rhs.
+  ///     \li \b false if this object is equal to \a rhs.
+  bool operator!=(const char *rhs) const { return !(*this == rhs); }
 
   bool operator<(ConstString rhs) const;
 

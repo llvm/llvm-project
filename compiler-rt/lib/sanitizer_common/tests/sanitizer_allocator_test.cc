@@ -143,7 +143,6 @@ static const u64 kAddressSpaceSize = 1ULL << 32;
 #endif
 
 static const uptr kRegionSizeLog = FIRST_32_SECOND_64(20, 24);
-static const uptr kFlatByteMapSize = kAddressSpaceSize >> kRegionSizeLog;
 
 template <typename AddressSpaceViewTy>
 struct AP32Compact {
@@ -153,7 +152,6 @@ struct AP32Compact {
   typedef CompactSizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = ::kRegionSizeLog;
   using AddressSpaceView = AddressSpaceViewTy;
-  using ByteMap = FlatByteMap<kFlatByteMapSize, AddressSpaceView>;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };
@@ -299,7 +297,6 @@ struct AP32SeparateBatches {
   typedef DefaultSizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = ::kRegionSizeLog;
   using AddressSpaceView = AddressSpaceViewTy;
-  using ByteMap = FlatByteMap<kFlatByteMapSize, AddressSpaceView>;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags =
       SizeClassAllocator32FlagMasks::kUseSeparateSizeClassForBatch;
@@ -474,7 +471,6 @@ struct AP32WithCallback {
   typedef CompactSizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = ::kRegionSizeLog;
   using AddressSpaceView = AddressSpaceViewTy;
-  using ByteMap = FlatByteMap<kFlatByteMapSize, AddressSpaceView>;
   typedef TestMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };

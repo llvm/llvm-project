@@ -142,9 +142,12 @@ def true : Predicate<"true">;
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
 def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
 def hasPTX61 : Predicate<"Subtarget->getPTXVersion() >= 61">;
+def hasPTX63 : Predicate<"Subtarget->getPTXVersion() >= 63">;
 
 def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
 def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
+def hasSM72 : Predicate<"Subtarget->getSmVersion() >= 72">;
+def hasSM75 : Predicate<"Subtarget->getSmVersion() >= 75">;
 
 def useShortPtr : Predicate<"useShortPointers()">;
 def useFP16Math: Predicate<"Subtarget->allowFP16Math()">;
@@ -1546,6 +1549,10 @@ def imemAny : Operand<iPTRAny> {
 
 def LdStCode : Operand<i32> {
   let PrintMethod = "printLdStCode";
+}
+
+def MmaCode : Operand<i32> {
+  let PrintMethod = "printMmaCode";
 }
 
 def SDTWrapper : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;

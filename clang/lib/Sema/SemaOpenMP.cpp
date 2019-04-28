@@ -4520,8 +4520,16 @@ class OpenMPIterationSpaceChecker {
   bool TestIsStrictOp = false;
   /// This flag is true when step is subtracted on each iteration.
   bool SubtractStep = false;
+  /// The outer loop counter this loop depends on (if any).
+  const ValueDecl *DepDecl = nullptr;
+  /// Contains number of loop (starts from 1) on which loop counter init
+  /// expression of this loop depends on.
+  Optional<unsigned> InitDependOnLC;
+  /// Contains number of loop (starts from 1) on which loop counter condition
+  /// expression of this loop depends on.
+  Optional<unsigned> CondDependOnLC;
   /// Checks if the provide statement depends on the loop counter.
-  bool doesDependOnLoopCounter(const Stmt *S, bool IsInitializer) const;
+  Optional<unsigned> doesDependOnLoopCounter(const Stmt *S, bool IsInitializer);
 
 public:
   OpenMPIterationSpaceChecker(Sema &SemaRef, DSAStackTy &Stack,
@@ -4622,7 +4630,7 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
         NewLB = CE->getArg(0)->IgnoreParenImpCasts();
   LB = NewLB;
   if (EmitDiags)
-    (void)doesDependOnLoopCounter(LB, /*IsInitializer=*/true);
+    InitDependOnLC = doesDependOnLoopCounter(LB, /*IsInitializer=*/true);
   return false;
 }
 
@@ -4641,7 +4649,7 @@ bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB,
   TestIsStrictOp = StrictOp;
   ConditionSrcRange = SR;
   ConditionLoc = SL;
-  (void)doesDependOnLoopCounter(UB, /*IsInitializer=*/false);
+  CondDependOnLC = doesDependOnLoopCounter(UB, /*IsInitializer=*/false);
   return false;
 }
 
@@ -4716,58 +4724,62 @@ class LoopCounterRefChecker final
   DSAStackTy &Stack;
   const ValueDecl *CurLCDecl = nullptr;
   const ValueDecl *DepDecl = nullptr;
+  const ValueDecl *PrevDepDecl = nullptr;
   bool IsInitializer = true;
+  unsigned BaseLoopId = 0;
+  bool checkDecl(const Expr *E, const ValueDecl *VD) {
+    if (getCanonicalDecl(VD) == getCanonicalDecl(CurLCDecl)) {
+      SemaRef.Diag(E->getExprLoc(), diag::err_omp_stmt_depends_on_loop_counter)
+          << (IsInitializer ? 0 : 1);
+      return false;
+    }
+    const auto &&Data = Stack.isLoopControlVariable(VD);
+    // OpenMP, 2.9.1 Canonical Loop Form, Restrictions.
+    // The type of the loop iterator on which we depend may not have a random
+    // access iterator type.
+    if (Data.first && VD->getType()->isRecordType()) {
+      SmallString<128> Name;
+      llvm::raw_svector_ostream OS(Name);
+      VD->getNameForDiagnostic(OS, SemaRef.getPrintingPolicy(),
+                               /*Qualified=*/true);
+      SemaRef.Diag(E->getExprLoc(),
+                   diag::err_omp_wrong_dependency_iterator_type)
+          << OS.str();
+      SemaRef.Diag(VD->getLocation(), diag::note_previous_decl) << VD;
+      return false;
+    }
+    if (Data.first &&
+        (DepDecl || (PrevDepDecl &&
+                     getCanonicalDecl(VD) != getCanonicalDecl(PrevDepDecl)))) {
+      if (!DepDecl && PrevDepDecl)
+        DepDecl = PrevDepDecl;
+      SmallString<128> Name;
+      llvm::raw_svector_ostream OS(Name);
+      DepDecl->getNameForDiagnostic(OS, SemaRef.getPrintingPolicy(),
+                                    /*Qualified=*/true);
+      SemaRef.Diag(E->getExprLoc(),
+                   diag::err_omp_invariant_or_linear_dependency)
+          << OS.str();
+      return false;
+    }
+    if (Data.first) {
+      DepDecl = VD;
+      BaseLoopId = Data.first;
+    }
+    return Data.first;
+  }
 
 public:
   bool VisitDeclRefExpr(const DeclRefExpr *E) {
     const ValueDecl *VD = E->getDecl();
-    if (isa<VarDecl>(VD)) {
-      if (getCanonicalDecl(VD) == getCanonicalDecl(CurLCDecl)) {
-        SemaRef.Diag(E->getExprLoc(),
-                     diag::err_omp_stmt_depends_on_loop_counter)
-            << (IsInitializer ? 0 : 1);
-        return false;
-      }
-      const auto &&Data = Stack.isLoopControlVariable(VD);
-      if (DepDecl && Data.first) {
-        SmallString<128> Name;
-        llvm::raw_svector_ostream OS(Name);
-        DepDecl->getNameForDiagnostic(OS, SemaRef.getPrintingPolicy(),
-                                      /*Qualified=*/true);
-        SemaRef.Diag(E->getExprLoc(),
-                     diag::err_omp_invariant_or_linear_dependancy)
-            << OS.str();
-        return false;
-      }
-      if (Data.first)
-        DepDecl = VD;
-      return Data.first;
-    }
+    if (isa<VarDecl>(VD))
+      return checkDecl(E, VD);
     return false;
   }
   bool VisitMemberExpr(const MemberExpr *E) {
     if (isa<CXXThisExpr>(E->getBase()->IgnoreParens())) {
       const ValueDecl *VD = E->getMemberDecl();
-      if (getCanonicalDecl(VD) == getCanonicalDecl(CurLCDecl)) {
-        SemaRef.Diag(E->getExprLoc(),
-                     diag::err_omp_stmt_depends_on_loop_counter)
-            << (IsInitializer ? 0 : 1);
-        return false;
-      }
-      const auto &&Data = Stack.isLoopControlVariable(VD);
-      if (DepDecl && Data.first) {
-        SmallString<128> Name;
-        llvm::raw_svector_ostream OS(Name);
-        DepDecl->getNameForDiagnostic(OS, SemaRef.getPrintingPolicy(),
-                                      /*Qualified=*/true);
-        SemaRef.Diag(E->getExprLoc(),
-                     diag::err_omp_invariant_or_linear_dependancy)
-            << OS.str();
-        return false;
-      }
-      if (Data.first)
-        DepDecl = VD;
-      return Data.first;
+      return checkDecl(E, VD);
     }
     return false;
   }
@@ -4778,17 +4790,32 @@ public:
     return Res;
   }
   explicit LoopCounterRefChecker(Sema &SemaRef, DSAStackTy &Stack,
-                                 const ValueDecl *CurLCDecl, bool IsInitializer)
+                                 const ValueDecl *CurLCDecl, bool IsInitializer,
+                                 const ValueDecl *PrevDepDecl = nullptr)
       : SemaRef(SemaRef), Stack(Stack), CurLCDecl(CurLCDecl),
-        IsInitializer(IsInitializer) {}
+        PrevDepDecl(PrevDepDecl), IsInitializer(IsInitializer) {}
+  unsigned getBaseLoopId() const {
+    assert(CurLCDecl && "Expected loop dependency.");
+    return BaseLoopId;
+  }
+  const ValueDecl *getDepDecl() const {
+    assert(CurLCDecl && "Expected loop dependency.");
+    return DepDecl;
+  }
 };
 } // namespace
 
-bool OpenMPIterationSpaceChecker::doesDependOnLoopCounter(
-    const Stmt *S, bool IsInitializer) const {
+Optional<unsigned>
+OpenMPIterationSpaceChecker::doesDependOnLoopCounter(const Stmt *S,
+                                                     bool IsInitializer) {
   // Check for the non-rectangular loops.
-  LoopCounterRefChecker LoopStmtChecker(SemaRef, Stack, LCDecl, IsInitializer);
-  return LoopStmtChecker.Visit(S);
+  LoopCounterRefChecker LoopStmtChecker(SemaRef, Stack, LCDecl, IsInitializer,
+                                        DepDecl);
+  if (LoopStmtChecker.Visit(S)) {
+    DepDecl = LoopStmtChecker.getDepDecl();
+    return LoopStmtChecker.getBaseLoopId();
+  }
+  return llvm::None;
 }
 
 bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {

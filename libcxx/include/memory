@@ -683,7 +683,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
 #if !defined(_LIBCPP_HAS_NO_THREADS) && \
     defined(__ATOMIC_RELAXED) &&        \
-    (__has_builtin(__atomic_load_n) || _GNUC_VER >= 407)
+    (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
     return __atomic_load_n(__value, __ATOMIC_RELAXED);
 #else
     return *__value;
@@ -695,7 +695,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 _ValueType __libcpp_acquire_load(_ValueType const* __value) {
 #if !defined(_LIBCPP_HAS_NO_THREADS) && \
     defined(__ATOMIC_ACQUIRE) &&        \
-    (__has_builtin(__atomic_load_n) || _GNUC_VER >= 407)
+    (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
     return __atomic_load_n(__value, __ATOMIC_ACQUIRE);
 #else
     return *__value;
@@ -3466,7 +3466,7 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
                        && defined(__ATOMIC_RELAXED)                  \
                        && defined(__ATOMIC_ACQ_REL)
 #   define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT
-#elif !defined(__clang__) && defined(_GNUC_VER) && _GNUC_VER >= 407
+#elif defined(_LIBCPP_COMPILER_GCC)
 #   define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT
 #endif
 

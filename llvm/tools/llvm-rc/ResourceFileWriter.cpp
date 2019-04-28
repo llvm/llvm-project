@@ -722,7 +722,7 @@ Error ResourceFileWriter::writeBitmapBody(const RCResource *Base) {
 
 // --- CursorResource and IconResource helpers. --- //
 
-// ICONRESDIR structure. Describes a single icon in resouce group.
+// ICONRESDIR structure. Describes a single icon in resource group.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648016.aspx
 struct IconResDir {
