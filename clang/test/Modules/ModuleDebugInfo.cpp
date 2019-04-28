@@ -119,8 +119,7 @@
 
 // CHECK: ![[A:.*]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "A",
 // CHECK-SAME:                               elements:
-// CHECK-SAME:                               vtableHolder: ![[A]],
-// CHECK-SAME:                               identifier: "_ZTS1A")
+// CHECK-SAME:                               vtableHolder: ![[A]])
 
 // CHECK: ![[DERIVED:.*]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "Derived",
 // CHECK-SAME:                                     identifier: "_ZTS7Derived")

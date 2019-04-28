@@ -48,7 +48,7 @@ class Issue11581TestCase(TestBase):
         # register r14 is an x86_64 extension let's skip this part of the test
         # if we are on a different architecture
         if self.getArchitecture() == 'x86_64':
-            target = lldb.debugger.GetSelectedTarget()
+            target = self.dbg.GetSelectedTarget()
             process = target.GetProcess()
             frame = process.GetSelectedThread().GetSelectedFrame()
             pointer = frame.FindVariable("r14")

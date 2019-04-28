@@ -915,6 +915,11 @@ static SmallString<256> getTypeIdentifier(const TagType *Ty, CodeGenModule &CGM,
 
   if (!needsTypeIdentifier(TD, CGM, TheCU))
     return Identifier;
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(TD))
+    if (RD->getDefinition())
+      if (RD->isDynamicClass() &&
+          CGM.getVTableLinkage(RD) == llvm::GlobalValue::ExternalLinkage)
+        return Identifier;
 
   // TODO: This is using the RTTI name. Is there a better way to get
   // a unique string for a type?

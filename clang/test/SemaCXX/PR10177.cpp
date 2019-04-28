@@ -57,11 +57,10 @@ namespace N {
 }
 
 #else
-// expected-no-diagnostics
 
 namespace { template<typename> extern int n; }
 template<typename T> int g() { return n<int>; }
-namespace { extern template int n<int>; }
+namespace { extern template int n<int>; } // expected-error {{explicit instantiation declaration of 'n<int>' with internal linkage}}
 
 #endif
 

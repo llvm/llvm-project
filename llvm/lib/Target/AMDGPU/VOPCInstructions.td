@@ -708,8 +708,8 @@ multiclass VOPC_Real_si <bits<9> op> {
       VOPCe<op{7-0}>;
 
     def _e64_si :
-      VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.SI>,
-      VOP3a_si <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
+        VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.SI>,
+        VOP3a_gfx6_gfx7<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
       // Encoding used for VOPC instructions encoded as VOP3
       // Differs from VOP3e by destination name (sdst) as VOPC doesn't have vector dst
       bits<8> sdst;

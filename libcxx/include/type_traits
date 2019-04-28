@@ -833,7 +833,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_rvalue_reference_v
 #endif
 // is_union
 
-#if __has_feature(is_union) || (_GNUC_VER >= 403)
+#if __has_feature(is_union) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_union
     : public integral_constant<bool, __is_union(_Tp)> {};
@@ -854,7 +854,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_union_v
 
 // is_class
 
-#if __has_feature(is_class) || (_GNUC_VER >= 403)
+#if __has_feature(is_class) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_class
     : public integral_constant<bool, __is_class(_Tp)> {};
@@ -976,7 +976,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_member_object_pointer_v
 
 // is_enum
 
-#if __has_feature(is_enum) || (_GNUC_VER >= 403)
+#if __has_feature(is_enum) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_enum
     : public integral_constant<bool, __is_enum(_Tp)> {};
@@ -1617,7 +1617,7 @@ inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<_Fm, _To
 
 // is_empty
 
-#if __has_feature(is_empty) || (_GNUC_VER >= 407)
+#if __has_feature(is_empty) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_empty
@@ -1680,7 +1680,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_polymorphic_v
 
 // has_virtual_destructor
 
-#if __has_feature(has_virtual_destructor) || (_GNUC_VER >= 403)
+#if __has_feature(has_virtual_destructor) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS has_virtual_destructor
     : public integral_constant<bool, __has_virtual_destructor(_Tp)> {};
@@ -2498,8 +2498,7 @@ struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const volatil
     typedef _Rp (_FnType) (_Param..., ...);
 };
 
-#if __has_feature(cxx_reference_qualified_functions) || \
-    (defined(_GNUC_VER) && _GNUC_VER >= 409)
+#if __has_feature(cxx_reference_qualified_functions) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Rp, class _Class, class ..._Param>
 struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) &, true, false>
@@ -2629,7 +2628,7 @@ struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const volatil
     typedef _Rp (_FnType) (_Param..., ...);
 };
 
-#endif  // __has_feature(cxx_reference_qualified_functions) || _GNUC_VER >= 409
+#endif  // __has_feature(cxx_reference_qualified_functions) || defined(_LIBCPP_COMPILER_GCC)
 
 #else  // _LIBCPP_HAS_NO_VARIADICS
 
@@ -3503,7 +3502,7 @@ struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp>
-#if __has_feature(has_trivial_constructor) || (_GNUC_VER >= 403)
+#if __has_feature(has_trivial_constructor) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_trivial_constructor(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3734,7 +3733,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_move_assignable_v
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
     : public integral_constant<bool, __is_trivially_destructible(_Tp)> {};
 
-#elif __has_feature(has_trivial_destructor) || (_GNUC_VER >= 403)
+#elif __has_feature(has_trivial_destructor) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
     : public integral_constant<bool, is_destructible<_Tp>::value && __has_trivial_destructor(_Tp)> {};
@@ -3769,7 +3768,7 @@ template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
     : public integral_constant<bool, __is_nothrow_constructible(_Tp, _Args...)> {};
 
-#elif __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
+#elif !defined(_LIBCPP_HAS_NO_NOEXCEPT)
 
 template <bool, bool, class _Tp, class... _Args> struct __libcpp_is_nothrow_constructible;
 
@@ -3806,7 +3805,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp[_Ns]>
 {
 };
 
-#else  // __has_keyword(__is_nothrow_constructible) || __has_feature(cxx_noexcept)
+#else  // __has_keyword(__is_nothrow_constructible) || !defined(_LIBCPP_HAS_NO_NOEXCEPT)
 
 template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
@@ -3816,7 +3815,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp>
-#if __has_feature(has_nothrow_constructor) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_constructor) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_constructor(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3830,7 +3829,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&&>
 #else
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp>
 #endif
-#if __has_feature(has_nothrow_copy) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_copy(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3840,7 +3839,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp>
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, const _Tp&>
-#if __has_feature(has_nothrow_copy) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_copy(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3850,7 +3849,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, const _Tp&>
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&>
-#if __has_feature(has_nothrow_copy) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_copy(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3858,7 +3857,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&>
 {
 };
 
-#endif  // __has_feature(cxx_noexcept)
+#endif  // _LIBCPP_HAS_NO_NOEXCEPT
 
 #else  // _LIBCPP_HAS_NO_VARIADICS
 
@@ -3889,7 +3888,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, __is_construct::__nat,
                                                        __is_construct::__nat>
-#if __has_feature(has_nothrow_constructor) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_constructor) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_constructor(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3900,7 +3899,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, __is_construct::__nat,
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp,
                                                        __is_construct::__nat>
-#if __has_feature(has_nothrow_copy) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_copy(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3911,7 +3910,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp,
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, const _Tp&,
                                                        __is_construct::__nat>
-#if __has_feature(has_nothrow_copy) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_copy(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3922,7 +3921,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, const _Tp&,
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&,
                                                        __is_construct::__nat>
-#if __has_feature(has_nothrow_copy) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_copy(_Tp)>
 #else
     : integral_constant<bool, is_scalar<_Tp>::value>
@@ -3987,7 +3986,7 @@ template <class _Tp, class _Arg>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
     : public integral_constant<bool, __is_nothrow_assignable(_Tp, _Arg)> {};
 
-#elif __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
+#elif !defined(_LIBCPP_HAS_NO_NOEXCEPT)
 
 template <bool, class _Tp, class _Arg> struct __libcpp_is_nothrow_assignable;
 
@@ -4009,7 +4008,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
 {
 };
 
-#else  // __has_keyword(__is_nothrow_assignable) || __has_feature(cxx_noexcept)
+#else  // __has_keyword(__is_nothrow_assignable) || !defined(_LIBCPP_HAS_NO_NOEXCEPT)
 
 template <class _Tp, class _Arg>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
@@ -4017,7 +4016,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, _Tp>
-#if __has_feature(has_nothrow_assign) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
 #else
     : integral_constant<bool, is_scalar<_Tp>::value> {};
@@ -4025,7 +4024,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, _Tp>
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, _Tp&>
-#if __has_feature(has_nothrow_assign) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
 #else
     : integral_constant<bool, is_scalar<_Tp>::value> {};
@@ -4033,7 +4032,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, _Tp&>
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, const _Tp&>
-#if __has_feature(has_nothrow_assign) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
 #else
     : integral_constant<bool, is_scalar<_Tp>::value> {};
@@ -4043,7 +4042,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, const _Tp&>
 
 template <class _Tp>
 struct is_nothrow_assignable<_Tp&, _Tp&&>
-#if __has_feature(has_nothrow_assign) || (_GNUC_VER >= 403)
+#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
     : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
 #else
     : integral_constant<bool, is_scalar<_Tp>::value> {};
@@ -4051,7 +4050,7 @@ struct is_nothrow_assignable<_Tp&, _Tp&&>
 
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
-#endif  // __has_feature(cxx_noexcept)
+#endif  // _LIBCPP_HAS_NO_NOEXCEPT
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp, class _Arg>
@@ -4090,7 +4089,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_nothrow_move_assignable_v
 
 // is_nothrow_destructible
 
-#if __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
+#if !defined(_LIBCPP_HAS_NO_NOEXCEPT)
 
 template <bool, class _Tp> struct __libcpp_is_nothrow_destructible;
 
@@ -4157,7 +4156,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_nothrow_destructible_v
 
 // is_pod
 
-#if __has_feature(is_pod) || (_GNUC_VER >= 403)
+#if __has_feature(is_pod) || defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_pod
     : public integral_constant<bool, __is_pod(_Tp)> {};
@@ -4198,7 +4197,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_literal_type_v
 // is_standard_layout;
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_standard_layout
-#if __has_feature(is_standard_layout) || (_GNUC_VER >= 407)
+#if __has_feature(is_standard_layout) || defined(_LIBCPP_COMPILER_GCC)
     : public integral_constant<bool, __is_standard_layout(_Tp)>
 #else
     : integral_constant<bool, is_scalar<typename remove_all_extents<_Tp>::type>::value>
@@ -4232,7 +4231,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_copyable_v
 // is_trivial;
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivial
-#if __has_feature(is_trivial) || _GNUC_VER >= 407
+#if __has_feature(is_trivial) || defined(_LIBCPP_COMPILER_GCC)
     : public integral_constant<bool, __is_trivial(_Tp)>
 #else
     : integral_constant<bool, is_trivially_copyable<_Tp>::value &&

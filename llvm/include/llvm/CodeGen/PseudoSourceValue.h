@@ -122,7 +122,7 @@ public:
   bool mayAlias(const MachineFrameInfo *) const override;
 };
 
-/// A specialized pseudo soruce value for holding GlobalValue values.
+/// A specialized pseudo source value for holding GlobalValue values.
 class GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
   const GlobalValue *GV;
 

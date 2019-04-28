@@ -390,8 +390,8 @@ SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
 }
 
 void MaterializationResponsibility::resolve(const SymbolMap &Symbols) {
-  LLVM_DEBUG(dbgs() << "In " << JD.getName() << " resolving " << Symbols
-                    << "\n");
+  LLVM_DEBUG(
+      { dbgs() << "In " << JD.getName() << " resolving " << Symbols << "\n"; });
 #ifndef NDEBUG
   for (auto &KV : Symbols) {
     auto I = SymbolFlags.find(KV.first);
@@ -412,6 +412,11 @@ void MaterializationResponsibility::resolve(const SymbolMap &Symbols) {
 }
 
 void MaterializationResponsibility::emit() {
+
+  LLVM_DEBUG({
+    dbgs() << "In " << JD.getName() << " emitting " << SymbolFlags << "\n";
+  });
+
 #ifndef NDEBUG
   for (auto &KV : SymbolFlags)
     assert(!KV.second.isMaterializing() &&
@@ -440,6 +445,11 @@ Error MaterializationResponsibility::defineMaterializing(
 }
 
 void MaterializationResponsibility::failMaterialization() {
+
+  LLVM_DEBUG({
+    dbgs() << "In " << JD.getName() << " failing materialization for "
+           << SymbolFlags << "\n";
+  });
 
   SymbolNameSet FailedSymbols;
   for (auto &KV : SymbolFlags)
@@ -1024,6 +1034,23 @@ void JITDylib::notifyFailed(const SymbolNameSet &FailedSymbols) {
       // there is nobody to notify.
       if (MII == MaterializingInfos.end())
         continue;
+
+      // Remove this symbol from the dependants list of any dependencies.
+      for (auto &KV : MII->second.UnemittedDependencies) {
+        auto *DependencyJD = KV.first;
+        auto &Dependencies = KV.second;
+        for (auto &DependencyName : Dependencies) {
+          auto DependencyMII =
+              DependencyJD->MaterializingInfos.find(DependencyName);
+          assert(DependencyMII != DependencyJD->MaterializingInfos.end() &&
+                 "Unemitted dependency must have a MaterializingInfo entry");
+          assert(DependencyMII->second.Dependants.count(this) &&
+                 "Dependency's dependants list does not contain this JITDylib");
+          assert(DependencyMII->second.Dependants[this].count(Name) &&
+                 "Dependency's dependants list does not contain dependant");
+          DependencyMII->second.Dependants[this].erase(Name);
+        }
+      }
 
       // Copy all the queries to the FailedQueries list, then abandon them.
       // This has to be a copy, and the copy has to come before the abandon

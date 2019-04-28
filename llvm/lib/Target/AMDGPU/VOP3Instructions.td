@@ -671,12 +671,12 @@ let AssemblerPredicates = [isGFX6GFX7], DecoderNamespace = "GFX6GFX7" in {
 
 multiclass VOP3_Real_si<bits<9> op> {
   def _si : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
-            VOP3e_si <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+            VOP3e_gfx6_gfx7 <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
 multiclass VOP3be_Real_si<bits<9> op> {
   def _si : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
-            VOP3be_si <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+            VOP3be_gfx6_gfx7 <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
 } // End AssemblerPredicates = [isGFX6GFX7], DecoderNamespace = "GFX6GFX7"
@@ -740,7 +740,7 @@ defm V_TRIG_PREOP_F64   : VOP3_Real_si <0x174>;
 
 multiclass VOP3_Real_ci<bits<9> op> {
   def _ci : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
-            VOP3e_si <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
+            VOP3e_gfx6_gfx7 <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicates = [isGFX7Only];
     let DecoderNamespace = "GFX7";
   }
@@ -748,7 +748,7 @@ multiclass VOP3_Real_ci<bits<9> op> {
 
 multiclass VOP3be_Real_ci<bits<9> op> {
   def _ci : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
-            VOP3be_si <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
+            VOP3be_gfx6_gfx7 <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicates = [isGFX7Only];
     let DecoderNamespace = "GFX7";
   }

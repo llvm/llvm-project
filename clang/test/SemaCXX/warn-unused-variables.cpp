@@ -135,7 +135,9 @@ namespace PR19305 {
   template<typename T> int m = 0;
   template<typename T> int m<T*> = 0;
 
-  template<> const int m<void> = 0; // expected-warning {{unused variable}}
+  // This has external linkage, so could be referenced by a declaration in a
+  // different translation unit.
+  template<> const int m<void> = 0; // no warning
 }
 
 namespace ctor_with_cleanups {

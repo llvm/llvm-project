@@ -84,7 +84,9 @@ unsigned getExpcntBitWidth() { return 3; }
 unsigned getLgkmcntBitShift() { return 8; }
 
 /// \returns Lgkmcnt bit width.
-unsigned getLgkmcntBitWidth() { return 4; }
+unsigned getLgkmcntBitWidth(unsigned VersionMajor) {
+  return (VersionMajor >= 10) ? 6 : 4;
+}
 
 /// \returns Vmcnt bit shift (higher bits).
 unsigned getVmcntBitShiftHi() { return 14; }
@@ -98,14 +100,6 @@ namespace llvm {
 
 namespace AMDGPU {
 
-struct MIMGInfo {
-  uint16_t Opcode;
-  uint16_t BaseOpcode;
-  uint8_t MIMGEncoding;
-  uint8_t VDataDwords;
-  uint8_t VAddrDwords;
-};
-
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
 #define GET_MIMGInfoTable_IMPL
@@ -117,6 +111,11 @@ int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
   const MIMGInfo *Info = getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding,
                                              VDataDwords, VAddrDwords);
   return Info ? Info->Opcode : -1;
+}
+
+const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc) {
+  const MIMGInfo *Info = getMIMGInfo(Opc);
+  return Info ? getMIMGBaseOpcodeInfo(Info->BaseOpcode) : nullptr;
 }
 
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
@@ -279,6 +278,8 @@ unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
 
 unsigned getSGPRAllocGranule(const MCSubtargetInfo *STI) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
+  if (Version.Major >= 10)
+    return getAddressableNumSGPRs(STI);
   if (Version.Major >= 8)
     return 16;
   return 8;
@@ -300,6 +301,8 @@ unsigned getAddressableNumSGPRs(const MCSubtargetInfo *STI) {
     return FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   IsaVersion Version = getIsaVersion(STI->getCPU());
+  if (Version.Major >= 10)
+    return 106;
   if (Version.Major >= 8)
     return 102;
   return 104;
@@ -307,6 +310,10 @@ unsigned getAddressableNumSGPRs(const MCSubtargetInfo *STI) {
 
 unsigned getMinNumSGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   assert(WavesPerEU != 0);
+
+  IsaVersion Version = getIsaVersion(STI->getCPU());
+  if (Version.Major >= 10)
+    return 0;
 
   if (WavesPerEU >= getMaxWavesPerEU())
     return 0;
@@ -322,8 +329,10 @@ unsigned getMaxNumSGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
                         bool Addressable) {
   assert(WavesPerEU != 0);
 
-  IsaVersion Version = getIsaVersion(STI->getCPU());
   unsigned AddressableNumSGPRs = getAddressableNumSGPRs(STI);
+  IsaVersion Version = getIsaVersion(STI->getCPU());
+  if (Version.Major >= 10)
+    return Addressable ? AddressableNumSGPRs : 108;
   if (Version.Major >= 8 && !Addressable)
     AddressableNumSGPRs = 112;
   unsigned MaxNumSGPRs = getTotalNumSGPRs(STI) / WavesPerEU;
@@ -340,6 +349,9 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
     ExtraSGPRs = 2;
 
   IsaVersion Version = getIsaVersion(STI->getCPU());
+  if (Version.Major >= 10)
+    return ExtraSGPRs;
+
   if (Version.Major < 8) {
     if (FlatScrUsed)
       ExtraSGPRs = 4;
@@ -540,13 +552,14 @@ unsigned getExpcntBitMask(const IsaVersion &Version) {
 }
 
 unsigned getLgkmcntBitMask(const IsaVersion &Version) {
-  return (1 << getLgkmcntBitWidth()) - 1;
+  return (1 << getLgkmcntBitWidth(Version.Major)) - 1;
 }
 
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
   unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(), getVmcntBitWidthLo());
   unsigned Expcnt = getBitMask(getExpcntBitShift(), getExpcntBitWidth());
-  unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(), getLgkmcntBitWidth());
+  unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(),
+                                getLgkmcntBitWidth(Version.Major));
   unsigned Waitcnt = VmcntLo | Expcnt | Lgkmcnt;
   if (Version.Major < 9)
     return Waitcnt;
@@ -572,7 +585,8 @@ unsigned decodeExpcnt(const IsaVersion &Version, unsigned Waitcnt) {
 }
 
 unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getLgkmcntBitShift(), getLgkmcntBitWidth());
+  return unpackBits(Waitcnt, getLgkmcntBitShift(),
+                    getLgkmcntBitWidth(Version.Major));
 }
 
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
@@ -608,7 +622,8 @@ unsigned encodeExpcnt(const IsaVersion &Version, unsigned Waitcnt,
 
 unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
                        unsigned Lgkmcnt) {
-  return packBits(Lgkmcnt, Waitcnt, getLgkmcntBitShift(), getLgkmcntBitWidth());
+  return packBits(Lgkmcnt, Waitcnt, getLgkmcntBitShift(),
+                                    getLgkmcntBitWidth(Version.Major));
 }
 
 unsigned encodeWaitcnt(const IsaVersion &Version,
@@ -800,10 +815,13 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     return true;
   default:
     return false;
@@ -934,6 +952,13 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
 bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   assert(HasInv2Pi);
 
+  if (isInt<16>(Literal) || isUInt<16>(Literal)) {
+    int16_t Trunc = static_cast<int16_t>(Literal);
+    return AMDGPU::isInlinableLiteral16(Trunc, HasInv2Pi);
+  }
+  if (!(Literal & 0xffff))
+    return AMDGPU::isInlinableLiteral16(Literal >> 16, HasInv2Pi);
+
   int16_t Lo16 = static_cast<int16_t>(Literal);
   int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
   return Lo16 == Hi16 && isInlinableLiteral16(Lo16, HasInv2Pi);
@@ -965,15 +990,19 @@ bool isArgPassedInSGPR(const Argument *A) {
   }
 }
 
+static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
+  return isGCN3Encoding(ST) || isGFX10(ST);
+}
+
 int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
-  if (isGCN3Encoding(ST))
+  if (hasSMEMByteOffset(ST))
     return ByteOffset;
   return ByteOffset >> 2;
 }
 
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
   int64_t EncodedOffset = getSMRDEncodedOffset(ST, ByteOffset);
-  return isGCN3Encoding(ST) ?
+  return (hasSMEMByteOffset(ST)) ?
     isUInt<20>(EncodedOffset) : isUInt<8>(EncodedOffset);
 }
 
