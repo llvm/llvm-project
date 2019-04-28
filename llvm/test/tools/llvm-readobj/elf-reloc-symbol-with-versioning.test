@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t.o
-# RUN: llvm-readobj -demangle -r %t.o | FileCheck %s --check-prefix LLVM
-# RUN: llvm-readelf -demangle -r %t.o | FileCheck %s --check-prefix GNU
+# RUN: llvm-readobj --demangle -r %t.o | FileCheck %s --check-prefix LLVM
+# RUN: llvm-readelf --demangle -r %t.o | FileCheck %s --check-prefix GNU
 
 # GNU:      Relocation section '.rela.plt' at offset {{.*}} contains 5 entries:
 # GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend

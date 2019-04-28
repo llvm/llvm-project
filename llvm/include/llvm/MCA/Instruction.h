@@ -457,10 +457,14 @@ class Instruction : public InstructionBase {
   // by a memory dependency.
   unsigned CriticalMemDep;
 
+  // True if this instruction has been optimized at register renaming stage.
+  bool IsEliminated;
+
 public:
   Instruction(const InstrDesc &D)
       : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
-        RCUTokenID(0), CriticalResourceMask(0), CriticalMemDep(0) {}
+        RCUTokenID(0), CriticalResourceMask(0), CriticalMemDep(0),
+        IsEliminated(false) {}
 
   unsigned getRCUTokenID() const { return RCUTokenID; }
   int getCyclesLeft() const { return CyclesLeft; }
@@ -490,15 +494,11 @@ public:
   bool isExecuting() const { return Stage == IS_EXECUTING; }
   bool isExecuted() const { return Stage == IS_EXECUTED; }
   bool isRetired() const { return Stage == IS_RETIRED; }
-
-  bool isEliminated() const {
-    return isReady() && getDefs().size() &&
-           all_of(getDefs(),
-                  [](const WriteState &W) { return W.isEliminated(); });
-  }
+  bool isEliminated() const { return IsEliminated; }
 
   // Forces a transition from state IS_DISPATCHED to state IS_EXECUTED.
   void forceExecuted();
+  void setEliminated() { IsEliminated = true; }
 
   void retire() {
     assert(isExecuted() && "Instruction is in an invalid state!");

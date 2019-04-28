@@ -34390,8 +34390,8 @@ static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
 static SDValue combineHorizontalPredicateResult(SDNode *Extract,
                                                 SelectionDAG &DAG,
                                                 const X86Subtarget &Subtarget) {
-  // Bail without SSE2 or with AVX512VL (which uses predicate registers).
-  if (!Subtarget.hasSSE2() || Subtarget.hasVLX())
+  // Bail without SSE2.
+  if (!Subtarget.hasSSE2())
     return SDValue();
 
   EVT ExtractVT = Extract->getValueType(0);
@@ -34413,25 +34413,36 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
 
   SDValue Movmsk;
   SDLoc DL(Extract);
-  unsigned NumElts = Match.getValueType().getVectorNumElements();
+  EVT MatchVT = Match.getValueType();
+  unsigned NumElts = MatchVT.getVectorNumElements();
 
   if (ExtractVT == MVT::i1) {
     // Special case for (pre-legalization) vXi1 reductions.
-    // Use combineBitcastvxi1 to create the MOVMSK.
     if (NumElts > 32)
       return SDValue();
-    if (NumElts == 32 && !Subtarget.hasInt256()) {
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = DAG.SplitVector(Match, DL);
-      Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
-      NumElts = 16;
+    if (DAG.getTargetLoweringInfo().isTypeLegal(MatchVT)) {
+      // If this is a legal AVX512 predicate type then we can just bitcast.
+      EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      Movmsk = DAG.getBitcast(MovmskVT, Match);
+    } else {
+      // Use combineBitcastvxi1 to create the MOVMSK.
+      if (NumElts == 32 && !Subtarget.hasInt256()) {
+        SDValue Lo, Hi;
+        std::tie(Lo, Hi) = DAG.SplitVector(Match, DL);
+        Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
+        NumElts = 16;
+      }
+      EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      Movmsk = combineBitcastvxi1(DAG, MovmskVT, Match, DL, Subtarget);
     }
-    EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-    Movmsk = combineBitcastvxi1(DAG, MovmskVT, Match, DL, Subtarget);
     if (!Movmsk)
       return SDValue();
     Movmsk = DAG.getZExtOrTrunc(Movmsk, DL, MVT::i32);
   } else {
+    // Bail with AVX512VL (which uses predicate registers).
+    if (Subtarget.hasVLX())
+      return SDValue();
+
     unsigned MatchSizeInBits = Match.getValueSizeInBits();
     if (!(MatchSizeInBits == 128 ||
           (MatchSizeInBits == 256 && Subtarget.hasAVX())))
@@ -35324,6 +35335,42 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
        VT.getVectorElementType() == MVT::i16)) {
     Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
     return DAG.getNode(N->getOpcode(), DL, VT, Cond, LHS, RHS);
+  }
+
+  // AVX512 - Extend select with zero to merge with target shuffle.
+  // select(mask, extract_subvector(shuffle(x)), zero) -->
+  // extract_subvector(select(insert_subvector(mask), shuffle(x), zero))
+  // TODO - support non target shuffles as well.
+  if (Subtarget.hasAVX512() && CondVT.isVector() &&
+      CondVT.getVectorElementType() == MVT::i1) {
+    auto SelectableOp = [&TLI](SDValue Op) {
+      return Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+             isTargetShuffle(Op.getOperand(0).getOpcode()) &&
+             isNullConstant(Op.getOperand(1)) &&
+             TLI.isTypeLegal(Op.getOperand(0).getValueType()) &&
+             Op.hasOneUse() && Op.getOperand(0).hasOneUse();
+    };
+
+    bool SelectableLHS = SelectableOp(LHS);
+    bool SelectableRHS = SelectableOp(RHS);
+    bool ZeroLHS = ISD::isBuildVectorAllZeros(LHS.getNode());
+    bool ZeroRHS = ISD::isBuildVectorAllZeros(RHS.getNode());
+
+    if ((SelectableLHS && ZeroRHS) || (SelectableRHS && ZeroLHS)) {
+      EVT SrcVT = SelectableLHS ? LHS.getOperand(0).getValueType()
+                                : RHS.getOperand(0).getValueType();
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      EVT SrcCondVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumSrcElts);
+      LHS = insertSubVector(DAG.getUNDEF(SrcVT), LHS, 0, DAG, DL,
+                            VT.getSizeInBits());
+      RHS = insertSubVector(DAG.getUNDEF(SrcVT), RHS, 0, DAG, DL,
+                            VT.getSizeInBits());
+      Cond = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, SrcCondVT,
+                         DAG.getUNDEF(SrcCondVT), Cond,
+                         DAG.getIntPtrConstant(0, DL));
+      SDValue Res = DAG.getSelect(DL, SrcVT, Cond, LHS, RHS);
+      return extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
+    }
   }
 
   if (SDValue V = combineSelectOfTwoConstants(N, DAG))
@@ -42444,11 +42491,15 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   unsigned IdxVal = N->getConstantOperandVal(2);
   MVT SubVecVT = SubVec.getSimpleValueType();
 
-  if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
-    // Inserting zeros into zeros is a nop.
-    if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
-      return getZeroVector(OpVT, Subtarget, DAG, dl);
+  if (Vec.isUndef() && SubVec.isUndef())
+    return DAG.getUNDEF(OpVT);
 
+  // Inserting undefs/zeros into zeros/undefs is a zero vector.
+  if ((Vec.isUndef() || ISD::isBuildVectorAllZeros(Vec.getNode())) &&
+      (SubVec.isUndef() || ISD::isBuildVectorAllZeros(SubVec.getNode())))
+    return getZeroVector(OpVT, Subtarget, DAG, dl);
+
+  if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
     // If we're inserting into a zero vector and then into a larger zero vector,
     // just insert into the larger zero vector directly.
     if (SubVec.getOpcode() == ISD::INSERT_SUBVECTOR &&
