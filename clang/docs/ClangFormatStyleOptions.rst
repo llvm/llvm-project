@@ -1346,7 +1346,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      namespace a {                  vs.     namespace a {
      foo();                                 foo();
-     } // namespace a;                      }
+     } // namespace a                       }
 
 **ForEachMacros** (``std::vector<std::string>``)
   A vector of macros that should be interpreted as foreach loops

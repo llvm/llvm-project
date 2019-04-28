@@ -2295,8 +2295,8 @@ OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
       // cold at all call sites and the callers contain no other non coldcc
       // calls.
       if (EnableColdCCStressTest ||
-          (isValidCandidateForColdCC(*F, GetBFI, AllCallsCold) &&
-           TTI.useColdCCForColdCall(*F))) {
+          (TTI.useColdCCForColdCall(*F) &&
+           isValidCandidateForColdCC(*F, GetBFI, AllCallsCold))) {
         F->setCallingConv(CallingConv::Cold);
         changeCallSitesToColdCC(F);
         Changed = true;

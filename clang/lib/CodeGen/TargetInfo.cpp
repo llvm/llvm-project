@@ -7847,7 +7847,8 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
 
   return D->hasAttr<OpenCLKernelAttr>() ||
          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
-         (isa<VarDecl>(D) && D->hasAttr<CUDADeviceAttr>());
+         (isa<VarDecl>(D) &&
+          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()));
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(

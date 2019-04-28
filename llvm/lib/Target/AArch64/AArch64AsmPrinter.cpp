@@ -436,14 +436,7 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
     break;
   }
   case MachineOperand::MO_GlobalAddress: {
-    const GlobalValue *GV = MO.getGlobal();
-    MCSymbol *Sym = getSymbol(GV);
-
-    // FIXME: Can we get anything other than a plain symbol here?
-    assert(!MO.getTargetFlags() && "Unknown operand target flag!");
-
-    Sym->print(O, MAI);
-    printOffset(MO.getOffset(), O);
+    PrintSymbolOperand(MO, O);
     break;
   }
   case MachineOperand::MO_BlockAddress: {

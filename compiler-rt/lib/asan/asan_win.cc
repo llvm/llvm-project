@@ -166,11 +166,16 @@ void InitializePlatformInterceptors() {
                            (LPCWSTR)&InitializePlatformInterceptors,
                            &pinned));
 
-  ASAN_INTERCEPT_FUNC(CreateThread);
+  // FIXME: ASAN_INTERCEPT_FUNC has some sanity checking that currently does
+  // not compile, i.e., it compares `(&CreateThread) != WRAP(&CreateThread)`,
+  // but the type of the interceptor does not match.
+  // ASAN_INTERCEPT_FUNC(CreateThread);
+  INTERCEPT_FUNCTION(CreateThread);
   ASAN_INTERCEPT_FUNC(SetUnhandledExceptionFilter);
 
 #ifdef _WIN64
-  ASAN_INTERCEPT_FUNC(__C_specific_handler);
+  // ASAN_INTERCEPT_FUNC(__C_specific_handler); // FIXME: same as above
+  INTERCEPT_FUNCTION(__C_specific_handler);
 #else
   ASAN_INTERCEPT_FUNC(_except_handler3);
   ASAN_INTERCEPT_FUNC(_except_handler4);

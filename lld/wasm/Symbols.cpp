@@ -97,6 +97,9 @@ void Symbol::setOutputSymbolIndex(uint32_t Index) {
 void Symbol::setGOTIndex(uint32_t Index) {
   LLVM_DEBUG(dbgs() << "setGOTIndex " << Name << " -> " << Index << "\n");
   assert(GOTIndex == INVALID_INDEX);
+  // Any symbol that is assigned a GOT entry must be exported othewise the
+  // dynamic linker won't be able create the entry that contains it.
+  ForceExport = true;
   GOTIndex = Index;
 }
 

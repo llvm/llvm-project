@@ -1875,6 +1875,16 @@ bool Sema::CheckAArch64BuiltinFunctionCall(unsigned BuiltinID,
       BuiltinID == AArch64::BI__builtin_arm_wsr64)
     return SemaBuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
 
+  // Memory Tagging Extensions (MTE) Intrinsics
+  if (BuiltinID == AArch64::BI__builtin_arm_irg ||
+      BuiltinID == AArch64::BI__builtin_arm_addg ||
+      BuiltinID == AArch64::BI__builtin_arm_gmi ||
+      BuiltinID == AArch64::BI__builtin_arm_ldg ||
+      BuiltinID == AArch64::BI__builtin_arm_stg ||
+      BuiltinID == AArch64::BI__builtin_arm_subp) {
+    return SemaBuiltinARMMemoryTaggingCall(BuiltinID, TheCall);
+  }
+
   if (BuiltinID == AArch64::BI__builtin_arm_rsr ||
       BuiltinID == AArch64::BI__builtin_arm_rsrp ||
       BuiltinID == AArch64::BI__builtin_arm_wsr ||
@@ -6100,6 +6110,160 @@ bool Sema::SemaBuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
            << Num << Arg->getSourceRange();
 
   return false;
+}
+
+/// SemaBuiltinARMMemoryTaggingCall - Handle calls of memory tagging extensions
+bool Sema::SemaBuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall) {
+  if (BuiltinID == AArch64::BI__builtin_arm_irg) {
+    if (checkArgCount(*this, TheCall, 2))
+      return true;
+    Expr *Arg0 = TheCall->getArg(0);
+    Expr *Arg1 = TheCall->getArg(1);
+
+    ExprResult FirstArg = DefaultFunctionArrayLvalueConversion(Arg0);
+    if (FirstArg.isInvalid())
+      return true;
+    QualType FirstArgType = FirstArg.get()->getType();
+    if (!FirstArgType->isAnyPointerType())
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
+               << "first" << FirstArgType << Arg0->getSourceRange();
+    TheCall->setArg(0, FirstArg.get());
+
+    ExprResult SecArg = DefaultLvalueConversion(Arg1);
+    if (SecArg.isInvalid())
+      return true;
+    QualType SecArgType = SecArg.get()->getType();
+    if (!SecArgType->isIntegerType())
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
+               << "second" << SecArgType << Arg1->getSourceRange();
+
+    // Derive the return type from the pointer argument.
+    TheCall->setType(FirstArgType);
+    return false;
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_addg) {
+    if (checkArgCount(*this, TheCall, 2))
+      return true;
+
+    Expr *Arg0 = TheCall->getArg(0);
+    ExprResult FirstArg = DefaultFunctionArrayLvalueConversion(Arg0);
+    if (FirstArg.isInvalid())
+      return true;
+    QualType FirstArgType = FirstArg.get()->getType();
+    if (!FirstArgType->isAnyPointerType())
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
+               << "first" << FirstArgType << Arg0->getSourceRange();
+    TheCall->setArg(0, FirstArg.get());
+
+    // Derive the return type from the pointer argument.
+    TheCall->setType(FirstArgType);
+
+    // Second arg must be an constant in range [0,15]
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_gmi) {
+    if (checkArgCount(*this, TheCall, 2))
+      return true;
+    Expr *Arg0 = TheCall->getArg(0);
+    Expr *Arg1 = TheCall->getArg(1);
+
+    ExprResult FirstArg = DefaultFunctionArrayLvalueConversion(Arg0);
+    if (FirstArg.isInvalid())
+      return true;
+    QualType FirstArgType = FirstArg.get()->getType();
+    if (!FirstArgType->isAnyPointerType())
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
+               << "first" << FirstArgType << Arg0->getSourceRange();
+
+    QualType SecArgType = Arg1->getType();
+    if (!SecArgType->isIntegerType())
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
+               << "second" << SecArgType << Arg1->getSourceRange();
+    TheCall->setType(Context.IntTy);
+    return false;
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_ldg ||
+      BuiltinID == AArch64::BI__builtin_arm_stg) {
+    if (checkArgCount(*this, TheCall, 1))
+      return true;
+    Expr *Arg0 = TheCall->getArg(0);
+    ExprResult FirstArg = DefaultFunctionArrayLvalueConversion(Arg0);
+    if (FirstArg.isInvalid())
+      return true;
+
+    QualType FirstArgType = FirstArg.get()->getType();
+    if (!FirstArgType->isAnyPointerType())
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
+               << "first" << FirstArgType << Arg0->getSourceRange();
+    TheCall->setArg(0, FirstArg.get());
+
+    // Derive the return type from the pointer argument.
+    if (BuiltinID == AArch64::BI__builtin_arm_ldg)
+      TheCall->setType(FirstArgType);
+    return false;
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_subp) {
+    Expr *ArgA = TheCall->getArg(0);
+    Expr *ArgB = TheCall->getArg(1);
+
+    ExprResult ArgExprA = DefaultFunctionArrayLvalueConversion(ArgA);
+    ExprResult ArgExprB = DefaultFunctionArrayLvalueConversion(ArgB);
+
+    if (ArgExprA.isInvalid() || ArgExprB.isInvalid())
+      return true;
+
+    QualType ArgTypeA = ArgExprA.get()->getType();
+    QualType ArgTypeB = ArgExprB.get()->getType();
+
+    auto isNull = [&] (Expr *E) -> bool {
+      return E->isNullPointerConstant(
+                        Context, Expr::NPC_ValueDependentIsNotNull); };
+
+    // argument should be either a pointer or null
+    if (!ArgTypeA->isAnyPointerType() && !isNull(ArgA))
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_null_or_pointer)
+        << "first" << ArgTypeA << ArgA->getSourceRange();
+
+    if (!ArgTypeB->isAnyPointerType() && !isNull(ArgB))
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_null_or_pointer)
+        << "second" << ArgTypeB << ArgB->getSourceRange();
+
+    // Ensure Pointee types are compatible
+    if (ArgTypeA->isAnyPointerType() && !isNull(ArgA) &&
+        ArgTypeB->isAnyPointerType() && !isNull(ArgB)) {
+      QualType pointeeA = ArgTypeA->getPointeeType();
+      QualType pointeeB = ArgTypeB->getPointeeType();
+      if (!Context.typesAreCompatible(
+             Context.getCanonicalType(pointeeA).getUnqualifiedType(),
+             Context.getCanonicalType(pointeeB).getUnqualifiedType())) {
+        return Diag(TheCall->getBeginLoc(), diag::err_typecheck_sub_ptr_compatible)
+          << ArgTypeA <<  ArgTypeB << ArgA->getSourceRange()
+          << ArgB->getSourceRange();
+      }
+    }
+
+    // at least one argument should be pointer type
+    if (!ArgTypeA->isAnyPointerType() && !ArgTypeB->isAnyPointerType())
+      return Diag(TheCall->getBeginLoc(), diag::err_memtag_any2arg_pointer)
+        <<  ArgTypeA << ArgTypeB << ArgA->getSourceRange();
+
+    if (isNull(ArgA)) // adopt type of the other pointer
+      ArgExprA = ImpCastExprToType(ArgExprA.get(), ArgTypeB, CK_NullToPointer);
+
+    if (isNull(ArgB))
+      ArgExprB = ImpCastExprToType(ArgExprB.get(), ArgTypeA, CK_NullToPointer);
+
+    TheCall->setArg(0, ArgExprA.get());
+    TheCall->setArg(1, ArgExprB.get());
+    TheCall->setType(Context.LongLongTy);
+    return false;
+  }
+  assert(false && "Unhandled ARM MTE intrinsic");
+  return true;
 }
 
 /// SemaBuiltinARMSpecialReg - Handle a check if argument ArgNum of CallExpr

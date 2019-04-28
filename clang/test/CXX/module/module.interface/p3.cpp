@@ -48,7 +48,7 @@ export namespace { int c; } // expected-error {{declaration of 'c' with internal
 namespace { // expected-note {{here}}
   export int d; // expected-error {{export declaration appears within anonymous namespace}}
 }
-export template<typename> static int e; // FIXME
+export template<typename> static int e; // expected-error {{declaration of 'e' with internal linkage cannot be exported}}
 export template<typename> static int f(); // expected-error {{declaration of 'f' with internal linkage cannot be exported}}
 export const int k = 5;
 export static union { int n; }; // expected-error {{declaration of 'n' with internal linkage cannot be exported}}

@@ -62,3 +62,20 @@ namespace SpecLoc {
   template<> float A<int>::n; // expected-error {{different type}}
   template<> void A<int>::f() throw(); // expected-error {{does not match}}
 }
+
+namespace PR41607 {
+  template<int N> struct Outer {
+    template<typename...> struct Inner;
+    template<> struct Inner<> {
+      static constexpr int f() { return N; }
+    };
+
+    template<typename...> static int a; // expected-note 2{{}}
+    template<> static constexpr int a<> = 42;
+  };
+  static_assert(Outer<123>::Inner<>::f() == 123, "");
+  static_assert(Outer<123>::Inner<>::f() != 125, "");
+  // FIXME: The class-scope explicit specialization of the variable template doesn't work!
+  static_assert(Outer<123>::a<> == 42, ""); // expected-error {{}} expected-note {{}}
+  static_assert(Outer<123>::a<> != 43, ""); // expected-error {{}} expected-note {{}}
+}

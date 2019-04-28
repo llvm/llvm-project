@@ -27,14 +27,17 @@ Error registerEHFrameSection(const void *EHFrameSectionAddr);
 /// Deregisters all FDEs in the given eh-frame section with the current process.
 Error deregisterEHFrameSection(const void *EHFrameSectionAddr);
 
+using StoreFrameAddressFunction = std::function<void(JITTargetAddress)>;
+
 /// Creates a pass that records the address of the EH frame section. If no
 /// eh-frame section is found, it will set EHFrameAddr to zero.
 ///
 /// Authors of JITLinkContexts can use this function to register a post-fixup
 /// pass that records the address of the eh-frame section. This address can
 /// be used after finalization to register and deregister the frame.
-AtomGraphPassFunction createEHFrameRecorderPass(const Triple &TT,
-                                                JITTargetAddress &EHFrameAddr);
+AtomGraphPassFunction
+createEHFrameRecorderPass(const Triple &TT,
+                          StoreFrameAddressFunction StoreFrameAddress);
 
 } // end namespace jitlink
 } // end namespace llvm

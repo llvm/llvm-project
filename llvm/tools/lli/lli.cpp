@@ -172,7 +172,7 @@ namespace {
 
   cl::opt<bool>
   EnableCacheManager("enable-cache-manager",
-        cl::desc("Use cache manager to save/load mdoules"),
+        cl::desc("Use cache manager to save/load modules"),
         cl::init(false));
 
   cl::opt<std::string>

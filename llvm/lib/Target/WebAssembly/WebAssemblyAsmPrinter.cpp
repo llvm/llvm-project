@@ -407,8 +407,7 @@ bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
       OS << regToString(MO);
       return false;
     case MachineOperand::MO_GlobalAddress:
-      getSymbol(MO.getGlobal())->print(OS, MAI);
-      printOffset(MO.getOffset(), OS);
+      PrintSymbolOperand(MO, OS);
       return false;
     case MachineOperand::MO_ExternalSymbol:
       GetExternalSymbolSymbol(MO.getSymbolName())->print(OS, MAI);

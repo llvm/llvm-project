@@ -191,8 +191,7 @@ protected:
         PlatformSP platform_sp(m_platform_options.CreatePlatformWithOptions(
             m_interpreter, ArchSpec(), select, error, platform_arch));
         if (platform_sp) {
-          m_interpreter.GetDebugger().GetPlatformList().SetSelectedPlatform(
-              platform_sp);
+          GetDebugger().GetPlatformList().SetSelectedPlatform(platform_sp);
 
           platform_sp->GetStatus(result.GetOutputStream());
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -271,14 +270,13 @@ protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
     if (platform_sp) {
       platform_sp->GetStatus(ostrm);
@@ -307,15 +305,14 @@ protected:
     Stream &ostrm = result.GetOutputStream();
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status error(platform_sp->ConnectRemote(args));
       if (error.Success()) {
         platform_sp->GetStatus(ostrm);
         result.SetStatus(eReturnStatusSuccessFinishResult);
 
-        platform_sp->ConnectToWaitingProcesses(m_interpreter.GetDebugger(),
-                                               error);
+        platform_sp->ConnectToWaitingProcesses(GetDebugger(), error);
         if (error.Fail()) {
           result.AppendError(error.AsCString());
           result.SetStatus(eReturnStatusFailed);
@@ -333,7 +330,7 @@ protected:
 
   Options *GetOptions() override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     OptionGroupOptions *m_platform_options = nullptr;
     if (platform_sp) {
       m_platform_options = platform_sp->GetConnectionOptions(m_interpreter);
@@ -357,7 +354,7 @@ public:
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       if (args.GetArgumentCount() == 0) {
         Status error;
@@ -424,7 +421,7 @@ public:
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       if (m_option_working_dir.GetOptionValue().OptionWasSet())
         platform_sp->SetWorkingDirectory(
@@ -460,7 +457,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -509,7 +506,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status error;
       std::string cmd_line;
@@ -563,7 +560,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -607,7 +604,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -700,7 +697,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -845,7 +842,7 @@ public:
     }
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       const char *remote_file_path = args.GetArgumentAtIndex(0);
       const char *local_file_path = args.GetArgumentAtIndex(1);
@@ -910,7 +907,7 @@ public:
     }
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       user_id_t size = platform_sp->GetFileSize(FileSpec(remote_file_path));
@@ -953,7 +950,7 @@ public:
     FileSpec dst_fs(dst ? dst : src_fs.GetFilename().GetCString());
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status error(platform_sp->PutFile(src_fs, dst_fs));
       if (error.Success()) {
@@ -986,14 +983,13 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
 
     if (platform_sp) {
@@ -1024,7 +1020,7 @@ protected:
       }
 
       if (m_options.launch_info.GetExecutableFile()) {
-        Debugger &debugger = m_interpreter.GetDebugger();
+        Debugger &debugger = GetDebugger();
 
         if (argc == 0)
           target->GetRunArguments(m_options.launch_info.GetArguments());
@@ -1094,14 +1090,13 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
 
     if (platform_sp) {
@@ -1384,14 +1379,13 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
 
     if (platform_sp) {
@@ -1567,11 +1561,11 @@ public:
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status err;
       ProcessSP remote_process_sp = platform_sp->Attach(
-          m_options.attach_info, m_interpreter.GetDebugger(), nullptr, err);
+          m_options.attach_info, GetDebugger(), nullptr, err);
       if (err.Fail()) {
         result.AppendError(err.AsCString());
         result.SetStatus(eReturnStatusFailed);
@@ -1699,7 +1693,7 @@ public:
         return false;
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     Status error;
     if (platform_sp) {
       FileSpec working_dir{};
@@ -1771,7 +1765,7 @@ public:
       return false;
     }
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (!platform_sp) {
       result.AppendError("no platform currently selected");
       result.SetStatus(eReturnStatusFailed);

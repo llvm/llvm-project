@@ -5296,21 +5296,41 @@ public:
     // element access:
     _LIBCPP_INLINE_VISIBILITY
     difference_type length(size_type __sub = 0) const
-        {return (*this)[__sub].length();}
+        {
+        _LIBCPP_ASSERT(ready(), "match_results::length() called when not ready");
+        return (*this)[__sub].length();
+        }
     _LIBCPP_INLINE_VISIBILITY
     difference_type position(size_type __sub = 0) const
-        {return _VSTD::distance(__position_start_, (*this)[__sub].first);}
+        {
+        _LIBCPP_ASSERT(ready(), "match_results::position() called when not ready");
+        return _VSTD::distance(__position_start_, (*this)[__sub].first);
+        }
     _LIBCPP_INLINE_VISIBILITY
     string_type str(size_type __sub = 0) const
-        {return (*this)[__sub].str();}
+        {
+        _LIBCPP_ASSERT(ready(), "match_results::str() called when not ready");
+        return (*this)[__sub].str();
+        }
     _LIBCPP_INLINE_VISIBILITY
     const_reference operator[](size_type __n) const
-        {return __n < __matches_.size() ? __matches_[__n] : __unmatched_;}
+        {
+        _LIBCPP_ASSERT(ready(), "match_results::operator[]() called when not ready");
+        return __n < __matches_.size() ? __matches_[__n] : __unmatched_;
+        }
 
     _LIBCPP_INLINE_VISIBILITY
-    const_reference prefix() const {return __prefix_;}
+    const_reference prefix() const
+        {
+        _LIBCPP_ASSERT(ready(), "match_results::prefix() called when not ready");
+        return __prefix_;
+        }
     _LIBCPP_INLINE_VISIBILITY
-    const_reference suffix() const {return __suffix_;}
+    const_reference suffix() const
+        {
+        _LIBCPP_ASSERT(ready(), "match_results::suffix() called when not ready");
+        return __suffix_;
+        }
 
     _LIBCPP_INLINE_VISIBILITY
     const_iterator begin() const {return empty() ? __matches_.end() : __matches_.begin();}
@@ -5448,6 +5468,7 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output_i
         const char_type* __fmt_first, const char_type* __fmt_last,
         regex_constants::match_flag_type __flags) const
 {
+    _LIBCPP_ASSERT(ready(), "match_results::format() called when not ready");
     if (__flags & regex_constants::format_sed)
     {
         for (; __fmt_first != __fmt_last; ++__fmt_first)

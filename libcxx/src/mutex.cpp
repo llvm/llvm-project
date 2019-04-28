@@ -19,7 +19,7 @@ const defer_lock_t  defer_lock = {};
 const try_to_lock_t try_to_lock = {};
 const adopt_lock_t  adopt_lock = {};
 
-mutex::~mutex()
+mutex::~mutex() _NOEXCEPT
 {
     __libcpp_mutex_destroy(&__m_);
 }

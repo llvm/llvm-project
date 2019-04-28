@@ -161,9 +161,8 @@ insert-before or insert-after.");
           const char *setting_var_name =
               request.GetParsedLine().GetArgumentAtIndex(setting_var_idx);
           Status error;
-          lldb::OptionValueSP value_sp(
-              m_interpreter.GetDebugger().GetPropertyValue(
-                  &m_exe_ctx, setting_var_name, false, error));
+          lldb::OptionValueSP value_sp(GetDebugger().GetPropertyValue(
+              &m_exe_ctx, setting_var_name, false, error));
           if (value_sp) {
             value_sp->AutoComplete(m_interpreter, request);
           }
@@ -202,7 +201,7 @@ protected:
     // A missing value corresponds to clearing the setting when "force" is
     // specified.
     if (argc == 1 && m_options.m_force) {
-      Status error(m_interpreter.GetDebugger().SetPropertyValue(
+      Status error(GetDebugger().SetPropertyValue(
           &m_exe_ctx, eVarSetOperationClear, var_name, llvm::StringRef()));
       if (error.Fail()) {
         result.AppendError(error.AsCString());
@@ -220,8 +219,8 @@ protected:
 
     Status error;
     if (m_options.m_global) {
-      error = m_interpreter.GetDebugger().SetPropertyValue(
-          nullptr, eVarSetOperationAssign, var_name, var_value_cstr);
+      error = GetDebugger().SetPropertyValue(nullptr, eVarSetOperationAssign,
+                                             var_name, var_value_cstr);
     }
 
     if (error.Success()) {
@@ -232,8 +231,8 @@ protected:
       // if we did not clear the command's exe_ctx first
       ExecutionContext exe_ctx(m_exe_ctx);
       m_exe_ctx.Clear();
-      error = m_interpreter.GetDebugger().SetPropertyValue(
-          &exe_ctx, eVarSetOperationAssign, var_name, var_value_cstr);
+      error = GetDebugger().SetPropertyValue(&exe_ctx, eVarSetOperationAssign,
+                                             var_name, var_value_cstr);
     }
 
     if (error.Fail()) {
@@ -292,7 +291,7 @@ protected:
 
     if (!args.empty()) {
       for (const auto &arg : args) {
-        Status error(m_interpreter.GetDebugger().DumpPropertyValue(
+        Status error(GetDebugger().DumpPropertyValue(
             &m_exe_ctx, result.GetOutputStream(), arg.ref,
             OptionValue::eDumpGroupValue));
         if (error.Success()) {
@@ -303,8 +302,8 @@ protected:
         }
       }
     } else {
-      m_interpreter.GetDebugger().DumpAllPropertyValues(
-          &m_exe_ctx, result.GetOutputStream(), OptionValue::eDumpGroupValue);
+      GetDebugger().DumpAllPropertyValues(&m_exe_ctx, result.GetOutputStream(),
+                                          OptionValue::eDumpGroupValue);
     }
 
     return result.Succeeded();
@@ -415,13 +414,13 @@ protected:
     ExecutionContext clean_ctx;
 
     if (args.empty()) {
-      m_interpreter.GetDebugger().DumpAllPropertyValues(
-          &clean_ctx, out_file, OptionValue::eDumpGroupExport);
+      GetDebugger().DumpAllPropertyValues(&clean_ctx, out_file,
+                                          OptionValue::eDumpGroupExport);
       return result.Succeeded();
     }
 
     for (const auto &arg : args) {
-      Status error(m_interpreter.GetDebugger().DumpPropertyValue(
+      Status error(GetDebugger().DumpPropertyValue(
           &clean_ctx, out_file, arg.ref, OptionValue::eDumpGroupExport));
       if (!error.Success()) {
         result.AppendError(error.AsCString());
@@ -565,7 +564,7 @@ protected:
         const char *property_path = args.GetArgumentAtIndex(i);
 
         const Property *property =
-            m_interpreter.GetDebugger().GetValueProperties()->GetPropertyAtPath(
+            GetDebugger().GetValueProperties()->GetPropertyAtPath(
                 &m_exe_ctx, will_modify, property_path);
 
         if (property) {
@@ -578,8 +577,8 @@ protected:
         }
       }
     } else {
-      m_interpreter.GetDebugger().DumpAllDescriptions(m_interpreter,
-                                                      result.GetOutputStream());
+      GetDebugger().DumpAllDescriptions(m_interpreter,
+                                        result.GetOutputStream());
     }
 
     return result.Succeeded();
@@ -672,7 +671,7 @@ protected:
     const char *var_value_cstr =
         Args::StripSpaces(var_value_string, true, true, false);
 
-    Status error(m_interpreter.GetDebugger().SetPropertyValue(
+    Status error(GetDebugger().SetPropertyValue(
         &m_exe_ctx, eVarSetOperationRemove, var_name, var_value_cstr));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -772,7 +771,7 @@ protected:
     const char *var_value_cstr =
         Args::StripSpaces(var_value_string, true, true, false);
 
-    Status error(m_interpreter.GetDebugger().SetPropertyValue(
+    Status error(GetDebugger().SetPropertyValue(
         &m_exe_ctx, eVarSetOperationReplace, var_name, var_value_cstr));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -878,7 +877,7 @@ protected:
     const char *var_value_cstr =
         Args::StripSpaces(var_value_string, true, true, false);
 
-    Status error(m_interpreter.GetDebugger().SetPropertyValue(
+    Status error(GetDebugger().SetPropertyValue(
         &m_exe_ctx, eVarSetOperationInsertBefore, var_name, var_value_cstr));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -981,7 +980,7 @@ protected:
     const char *var_value_cstr =
         Args::StripSpaces(var_value_string, true, true, false);
 
-    Status error(m_interpreter.GetDebugger().SetPropertyValue(
+    Status error(GetDebugger().SetPropertyValue(
         &m_exe_ctx, eVarSetOperationInsertAfter, var_name, var_value_cstr));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1075,7 +1074,7 @@ protected:
     const char *var_value_cstr =
         Args::StripSpaces(var_value_string, true, true, false);
 
-    Status error(m_interpreter.GetDebugger().SetPropertyValue(
+    Status error(GetDebugger().SetPropertyValue(
         &m_exe_ctx, eVarSetOperationAppend, var_name, var_value_cstr));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1143,7 +1142,7 @@ protected:
       return false;
     }
 
-    Status error(m_interpreter.GetDebugger().SetPropertyValue(
+    Status error(GetDebugger().SetPropertyValue(
         &m_exe_ctx, eVarSetOperationClear, var_name, llvm::StringRef()));
     if (error.Fail()) {
       result.AppendError(error.AsCString());

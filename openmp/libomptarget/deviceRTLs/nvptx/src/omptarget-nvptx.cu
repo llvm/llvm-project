@@ -95,8 +95,10 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     // If OMP runtime is not required don't initialize OMP state.
     setExecutionParameters(Spmd, RuntimeUninitialized);
     if (GetThreadIdInBlock() == 0) {
-      parallelLevel = 0;
       usedSlotIdx = smid() % MAX_SM;
+      parallelLevel[0] = 0;
+    } else if (GetLaneId() == 0) {
+      parallelLevel[GetWarpId()] = 0;
     }
     __SYNCTHREADS();
     return;

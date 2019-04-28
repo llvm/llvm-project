@@ -644,19 +644,25 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
-  // Libdevice in CUDA-7.0 requires PTX version that's more recent than LLVM
-  // defaults to. Use PTX4.2 by default, which is the PTX version that came with
-  // CUDA-7.0.
-  const char *PtxFeature = "+ptx42";
-  // TODO(tra): CUDA-10+ needs PTX 6.3 to support new features. However that
-  // requires fair amount of work on LLVM side. We'll keep using PTX 6.1 until
-  // all prerequisites are in place.
-  if (CudaInstallation.version() >= CudaVersion::CUDA_91) {
-    // CUDA-9.1 uses new instructions that are only available in PTX6.1+
-    PtxFeature = "+ptx61";
-  } else if (CudaInstallation.version() >= CudaVersion::CUDA_90) {
-    // CUDA-9.0 uses new instructions that are only available in PTX6.0+
-    PtxFeature = "+ptx60";
+  // New CUDA versions often introduce new instructions that are only supported
+  // by new PTX version, so we need to raise PTX level to enable them in NVPTX
+  // back-end.
+  const char *PtxFeature = nullptr;
+  switch(CudaInstallation.version()) {
+    case CudaVersion::CUDA_101:
+      PtxFeature = "+ptx64";
+      break;
+    case CudaVersion::CUDA_100:
+      PtxFeature = "+ptx63";
+      break;
+    case CudaVersion::CUDA_91:
+      PtxFeature = "+ptx61";
+      break;
+    case CudaVersion::CUDA_90:
+      PtxFeature = "+ptx60";
+      break;
+    default:
+      PtxFeature = "+ptx42";
   }
   CC1Args.append({"-target-feature", PtxFeature});
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,

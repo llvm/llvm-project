@@ -22,7 +22,7 @@ test()
 {
     std::match_results<const CharT*> m;
     assert(m.size() == 0);
-    assert(m.str() == std::basic_string<CharT>());
+    assert(!m.ready());
     assert(m.get_allocator() == std::allocator<std::sub_match<const CharT*> >());
 }
 

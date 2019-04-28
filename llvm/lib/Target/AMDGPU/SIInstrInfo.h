@@ -379,6 +379,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SOPP;
   }
 
+  static bool isPacked(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsPacked;
+  }
+
+  bool isPacked(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsPacked;
+  }
+
   static bool isVOP1(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VOP1;
   }
@@ -1013,6 +1021,9 @@ namespace AMDGPU {
 
   LLVM_READONLY
   int getGlobalSaddrOp(uint16_t Opcode);
+
+  LLVM_READONLY
+  int getVCMPXNoSDstOp(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);

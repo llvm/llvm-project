@@ -73,3 +73,17 @@ for i in ['module-cache-clang', 'module-cache-lldb']:
     if os.path.isdir(cachedir):
         print("Deleting module cache at %s."%cachedir)
         shutil.rmtree(cachedir)
+
+# If running tests natively, check for CPU features needed for some tests.
+
+if 'native' in config.available_features:
+    cpuid_exe = lit.util.which('lit-cpuid', config.lldb_tools_dir)
+    if cpuid_exe is None:
+        lit_config.warning("lit-cpuid not found, tests requiring CPU extensions will be skipped")
+    else:
+        out, err, exitcode = lit.util.executeCommand([cpuid_exe])
+        if exitcode == 0:
+            for x in out.split():
+                config.available_features.add('native-cpu-%s' % x)
+        else:
+            lit_config.warning("lit-cpuid failed: %s" % err)

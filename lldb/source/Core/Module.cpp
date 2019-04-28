@@ -1545,8 +1545,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 
     const uint32_t num_specs = file_specs.GetSize();
     if (num_specs) {
-      ScriptInterpreter *script_interpreter =
-          debugger.GetCommandInterpreter().GetScriptInterpreter();
+      ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
       if (script_interpreter) {
         for (uint32_t i = 0; i < num_specs; ++i) {
           FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));

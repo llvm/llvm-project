@@ -639,7 +639,7 @@ bool SymbolCollector::isSelfContainedHeader(FileID FID) {
       return false;
     // This pattern indicates that a header can't be used without
     // particular preprocessor state, usually set up by another header.
-    if (DontIncludeMePattern.match(SM.getBufferData(FID)))
+    if (isDontIncludeMeHeader(SM.getBufferData(FID)))
       return false;
     return true;
   };
@@ -648,6 +648,37 @@ bool SymbolCollector::isSelfContainedHeader(FileID FID) {
   if (R.second)
     R.first->second = Compute();
   return R.first->second;
+}
+
+// Is Line an #if or #ifdef directive?
+static bool isIf(llvm::StringRef Line) {
+  Line = Line.ltrim();
+  if (!Line.consume_front("#"))
+    return false;
+  Line = Line.ltrim();
+  return Line.startswith("if");
+}
+// Is Line an #error directive mentioning includes?
+static bool isErrorAboutInclude(llvm::StringRef Line) {
+  Line = Line.ltrim();
+  if (!Line.consume_front("#"))
+    return false;
+  Line = Line.ltrim();
+  if (! Line.startswith("error"))
+    return false;
+  return Line.contains_lower("includ"); // Matches "include" or "including".
+}
+
+bool SymbolCollector::isDontIncludeMeHeader(llvm::StringRef Content) {
+  llvm::StringRef Line;
+  // Only sniff up to 100 lines or 10KB.
+  Content = Content.take_front(100*100);
+  for (unsigned I = 0; I < 100 && !Content.empty(); ++I) {
+    std::tie(Line, Content) = Content.split('\n');
+    if (isIf(Line) && isErrorAboutInclude(Content.split('\n').first))
+      return true;
+  }
+  return false;
 }
 
 } // namespace clangd

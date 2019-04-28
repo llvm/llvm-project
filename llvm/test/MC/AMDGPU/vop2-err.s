@@ -8,9 +8,6 @@
 v_mul_i32_i24 v1, v2, 100
 // CHECK: error: invalid operand for instruction
 
-v_cndmask_b32 v1, v2, v3
-// CHECK: error: too few operands for instruction
-
 //===----------------------------------------------------------------------===//
 // _e32 checks
 //===----------------------------------------------------------------------===//

@@ -22,14 +22,14 @@
 # RUN: od -t x1 -j 0x5000 -N 60 %t.stripped | FileCheck %s --check-prefix=CHECK7 -DPATTERN="00 00 00 00"
 
 # RUN: cp %t.stripped %t.in
-# RUN: echo "with open('%/t.in', 'r+') as input:"                                  > %t.py
+# RUN: echo "with open('%/t.in', 'rb+') as input:"                                 > %t.py
 # RUN: echo "  for offset in ["                                                   >> %t.py
 # RUN: echo "   0x2000, 0x2008, 0x200C, 0x2014, 0x2104, 0x2300,"                  >> %t.py
 # RUN: echo "   0x3008, 0x3010, 0x3018, 0x3020, 0x3028, 0x302C, 0x3034, 0x303C,"  >> %t.py
 # RUN: echo "   0x4000, 0x4008, 0x4010, 0x4014, 0x401C, 0x4024, 0x4034,"          >> %t.py
 # RUN: echo "   0x5000, 0x5008, 0x5010, 0x501C, 0x5024, 0x502C, 0x5030, 0x5038]:" >> %t.py
 # RUN: echo "    input.seek(offset)"                                              >> %t.py
-# RUN: echo "    input.write('\xDE\xAD\xBE\xEF')"                                 >> %t.py
+# RUN: echo "    input.write(bytearray.fromhex('DEADBEEF'))"                      >> %t.py
 # RUN: %python %t.py
 # RUN: llvm-objcopy %t.in %t.out
 # RUN: od -t x1 -j 0x2000 -N 24 %t.out | FileCheck %s --check-prefix=CHECK1 -DPATTERN="de ad be ef"

@@ -724,7 +724,7 @@ public:
     /// through (also identified by position but in the call site instruction).
     ///
     /// NOTE that we use LLVM argument numbers (starting at 0) and not
-    /// clang/soruce argument numbers (starting at 1). The -1 entries represent
+    /// clang/source argument numbers (starting at 1). The -1 entries represent
     /// unknown values that are passed to the callee.
     using ParameterEncodingTy = SmallVector<int, 0>;
     ParameterEncodingTy ParameterEncoding;

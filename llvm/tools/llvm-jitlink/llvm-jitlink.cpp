@@ -214,13 +214,27 @@ static void dumpSectionContents(raw_ostream &OS, AtomGraph &G) {
   }
 }
 
-Session::Session(Triple TT)
-    : ObjLayer(ES, MemMgr, ObjectLinkingLayer::NotifyLoadedFunction(),
-               ObjectLinkingLayer::NotifyEmittedFunction(),
-               [this](const Triple &TT, PassConfiguration &PassConfig) {
-                 modifyPassConfig(TT, PassConfig);
-               }),
-      TT(std::move(TT)) {}
+Session::Session(Triple TT) : ObjLayer(ES, MemMgr), TT(std::move(TT)) {
+
+  /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
+  /// Session.
+  class JITLinkSessionPlugin : public ObjectLinkingLayer::Plugin {
+  public:
+    JITLinkSessionPlugin(Session &S) : S(S) {}
+    void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+                          PassConfiguration &PassConfig) {
+      S.modifyPassConfig(TT, PassConfig);
+    }
+
+  private:
+    Session &S;
+  };
+
+  if (!NoExec && !TT.isOSWindows())
+    ObjLayer.addPlugin(llvm::make_unique<LocalEHFrameRegistrationPlugin>());
+
+  ObjLayer.addPlugin(llvm::make_unique<JITLinkSessionPlugin>(*this));
+}
 
 void Session::dumpSessionInfo(raw_ostream &OS) {
   OS << "Registered addresses:\n" << SymbolInfos << FileInfos;

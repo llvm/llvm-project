@@ -214,7 +214,7 @@ void foo() {
 // CHECK-PCH:                dwoId: 18446744073709551614
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A",
-// CHECK-SAME:             DIFlagFwdDecl, identifier: "_ZTS1A")
+// CHECK-SAME:             DIFlagFwdDecl)
 
 // There is a full definition of the type available in the module.
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual",

@@ -1214,12 +1214,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_XOR_B64));
     break;
 
-  case AMDGPU::S_OR_B64_term:
-    // This is only a terminator to get the correct spill code placement during
-    // register allocation.
-    MI.setDesc(get(AMDGPU::S_OR_B64));
-    break;
-
   case AMDGPU::S_ANDN2_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -1704,7 +1698,6 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::SI_MASK_BRANCH:
     case AMDGPU::S_MOV_B64_term:
     case AMDGPU::S_XOR_B64_term:
-    case AMDGPU::S_OR_B64_term:
     case AMDGPU::S_ANDN2_B64_term:
       break;
     case AMDGPU::SI_IF:
@@ -2819,10 +2812,12 @@ static bool shouldReadExec(const MachineInstr &MI) {
   if (SIInstrInfo::isVALU(MI)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
-    case AMDGPU::V_READLANE_B32_si:
+    case AMDGPU::V_READLANE_B32_gfx6_gfx7:
+    case AMDGPU::V_READLANE_B32_gfx10:
     case AMDGPU::V_READLANE_B32_vi:
     case AMDGPU::V_WRITELANE_B32:
-    case AMDGPU::V_WRITELANE_B32_si:
+    case AMDGPU::V_WRITELANE_B32_gfx6_gfx7:
+    case AMDGPU::V_WRITELANE_B32_gfx10:
     case AMDGPU::V_WRITELANE_B32_vi:
       return false;
     }

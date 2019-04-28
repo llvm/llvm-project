@@ -855,15 +855,10 @@ define i1 @bool_reduction_v2f64(<2 x double> %x, <2 x double> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpltpd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmq %xmm0, %xmm0, %k0
-; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb $3, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = fcmp ogt <2 x double> %x, %y
   %b = shufflevector <2 x i1> %a, <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
@@ -891,20 +886,10 @@ define i1 @bool_reduction_v4f32(<4 x float> %x, <4 x float> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb $15, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = fcmp oeq <4 x float> %x, %y
   %s1 = shufflevector <4 x i1> %a, <4 x i1> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
@@ -937,20 +922,10 @@ define i1 @bool_reduction_v4f64(<4 x double> %x, <4 x double> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v4f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmplepd %ymm0, %ymm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    vcmplepd %ymm0, %ymm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb $15, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = fcmp oge <4 x double> %x, %y
@@ -985,25 +960,10 @@ define i1 @bool_reduction_v8f32(<8 x float> %x, <8 x float> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneqps %ymm1, %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX512-NEXT:    vptestmd %ymm0, %ymm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    vcmpneqps %ymm1, %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb %al, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = fcmp une <8 x float> %x, %y
@@ -1042,15 +1002,10 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmq %xmm0, %xmm0, %k0
-; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb $3, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = icmp ugt <2 x i64> %x, %y
   %b = shufflevector <2 x i1> %a, <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
@@ -1082,20 +1037,10 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpneqd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb $15, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = icmp ne <4 x i32> %x, %y
   %s1 = shufflevector <4 x i1> %a, <4 x i1> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
@@ -1127,26 +1072,10 @@ define i1 @bool_reduction_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpgtw %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX512-NEXT:    vptestmd %ymm0, %ymm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    vpcmpgtw %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    testb %al, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = icmp slt <8 x i16> %x, %y
   %s1 = shufflevector <8 x i1> %a, <8 x i1> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1179,16 +1108,8 @@ define i1 @bool_reduction_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX512-LABEL: bool_reduction_v16i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0
-; AVX512-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrw $4, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrw $1, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
   %a = icmp sgt <16 x i8> %x, %y
   %s1 = shufflevector <16 x i1> %a, <16 x i1> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1238,20 +1159,10 @@ define i1 @bool_reduction_v4i64(<4 x i64> %x, <4 x i64> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpgtq %ymm0, %ymm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    vpcmpgtq %ymm0, %ymm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb $15, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp slt <4 x i64> %x, %y
@@ -1304,25 +1215,10 @@ define i1 @bool_reduction_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpleud %ymm1, %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX512-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX512-NEXT:    vptestmd %ymm0, %ymm0, %k0
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    vpcmpleud %ymm1, %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    testb %al, %al
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp ule <8 x i32> %x, %y
@@ -1374,16 +1270,8 @@ define i1 @bool_reduction_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; AVX512-LABEL: bool_reduction_v16i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0
-; AVX512-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrw $4, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrw $1, %k0, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp eq <16 x i16> %x, %y
@@ -1435,18 +1323,8 @@ define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; AVX512-LABEL: bool_reduction_v32i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
-; AVX512-NEXT:    kshiftrd $16, %k0, %k1
-; AVX512-NEXT:    kord %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrd $8, %k0, %k1
-; AVX512-NEXT:    kord %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrd $4, %k0, %k1
-; AVX512-NEXT:    kord %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrd $2, %k0, %k1
-; AVX512-NEXT:    kord %k0, %k1, %k0
-; AVX512-NEXT:    kshiftrd $1, %k0, %k1
-; AVX512-NEXT:    kord %k0, %k1, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    kortestd %k0, %k0
+; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp eq <32 x i8> %x, %y

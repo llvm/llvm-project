@@ -563,12 +563,14 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
     const auto Op = Func->getOverloadedOperator();
     if (isAssignmentOperator(Op)) {
       const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call);
-      if (Func->getParamDecl(0)->getType()->isRValueReferenceType()) {
+      if (cast<CXXMethodDecl>(Func)->isMoveAssignmentOperator()) {
         handleAssign(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
                      Call.getArgSVal(0));
-      } else {
-        handleAssign(C, InstCall->getCXXThisVal());
+        return;
       }
+
+      handleAssign(C, InstCall->getCXXThisVal());
+      return;
     } else if (isSimpleComparisonOperator(Op)) {
       const auto *OrigExpr = Call.getOriginExpr();
       if (!OrigExpr)
@@ -577,68 +579,107 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         handleComparison(C, OrigExpr, Call.getReturnValue(),
                          InstCall->getCXXThisVal(), Call.getArgSVal(0), Op);
-      } else {
-        handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
-                         Call.getArgSVal(1), Op);
+        return;
       }
+
+      handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
+                         Call.getArgSVal(1), Op);
+      return;
     } else if (isRandomIncrOrDecrOperator(Func->getOverloadedOperator())) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         if (Call.getNumArgs() >= 1) {
           handleRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                  Call.getReturnValue(),
                                  InstCall->getCXXThisVal(), Call.getArgSVal(0));
+          return;
         }
       } else {
         if (Call.getNumArgs() >= 2) {
           handleRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                  Call.getReturnValue(), Call.getArgSVal(0),
                                  Call.getArgSVal(1));
+          return;
         }
       }
     } else if (isIncrementOperator(Func->getOverloadedOperator())) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         handleIncrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
                         Call.getNumArgs());
-      } else {
-        handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                        Call.getNumArgs());
+        return;
       }
+
+      handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                      Call.getNumArgs());
+      return;
     } else if (isDecrementOperator(Func->getOverloadedOperator())) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         handleDecrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
                         Call.getNumArgs());
-      } else {
-        handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                        Call.getNumArgs());
+        return;
       }
+
+      handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                        Call.getNumArgs());
+      return;
     }
   } else {
     if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
       if (isAssignCall(Func)) {
         handleAssign(C, InstCall->getCXXThisVal());
-      } else if (isClearCall(Func)) {
+        return;
+      }
+
+      if (isClearCall(Func)) {
         handleClear(C, InstCall->getCXXThisVal());
-      } else if (isPushBackCall(Func) || isEmplaceBackCall(Func)) {
+        return;
+      }
+
+      if (isPushBackCall(Func) || isEmplaceBackCall(Func)) {
         handlePushBack(C, InstCall->getCXXThisVal());
-      } else if (isPopBackCall(Func)) {
+        return;
+      }
+
+      if (isPopBackCall(Func)) {
         handlePopBack(C, InstCall->getCXXThisVal());
-      } else if (isPushFrontCall(Func) || isEmplaceFrontCall(Func)) {
+        return;
+      }
+
+      if (isPushFrontCall(Func) || isEmplaceFrontCall(Func)) {
         handlePushFront(C, InstCall->getCXXThisVal());
-      } else if (isPopFrontCall(Func)) {
+        return;
+      }
+
+      if (isPopFrontCall(Func)) {
         handlePopFront(C, InstCall->getCXXThisVal());
-      } else if (isInsertCall(Func) || isEmplaceCall(Func)) {
+        return;
+      }
+
+      if (isInsertCall(Func) || isEmplaceCall(Func)) {
         handleInsert(C, Call.getArgSVal(0));
-      } else if (isEraseCall(Func)) {
+        return;
+      }
+
+      if (isEraseCall(Func)) {
         if (Call.getNumArgs() == 1) {
           handleErase(C, Call.getArgSVal(0));
-        } else if (Call.getNumArgs() == 2) {
-          handleErase(C, Call.getArgSVal(0), Call.getArgSVal(1));
+          return;
         }
-      } else if (isEraseAfterCall(Func)) {
+
+        if (Call.getNumArgs() == 2) {
+          handleErase(C, Call.getArgSVal(0), Call.getArgSVal(1));
+          return;
+        }
+      }
+
+      if (isEraseAfterCall(Func)) {
         if (Call.getNumArgs() == 1) {
           handleEraseAfter(C, Call.getArgSVal(0));
-        } else if (Call.getNumArgs() == 2) {
+          return;
+        }
+
+        if (Call.getNumArgs() == 2) {
           handleEraseAfter(C, Call.getArgSVal(0), Call.getArgSVal(1));
+          return;
         }
       }
     }
@@ -658,6 +699,7 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
                     InstCall->getCXXThisVal());
         return;
       }
+      
       if (isEndCall(Func)) {
         handleEnd(C, OrigExpr, Call.getReturnValue(),
                   InstCall->getCXXThisVal());

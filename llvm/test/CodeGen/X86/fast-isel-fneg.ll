@@ -5,10 +5,9 @@
 define double @doo(double %x) nounwind {
 ; CHECK-LABEL: doo:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movq %xmm0, %rax
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx ## imm = 0x8000000000000000
-; CHECK-NEXT:    xorq %rax, %rcx
-; CHECK-NEXT:    movq %rcx, %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    subsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; SSE2-LABEL: doo:
@@ -31,9 +30,9 @@ define double @doo(double %x) nounwind {
 define float @foo(float %x) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    xorl $2147483648, %eax ## imm = 0x80000000
-; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    subss %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; SSE2-LABEL: foo:

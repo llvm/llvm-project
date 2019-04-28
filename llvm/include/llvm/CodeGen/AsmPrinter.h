@@ -590,6 +590,10 @@ public:
   virtual void PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
                             const char *Code) const;
 
+  /// Print the MachineOperand as a symbol. Targets with complex handling of
+  /// symbol references should override the base implementation.
+  virtual void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &OS);
+
   /// Print the specified operand of MI, an INLINEASM instruction, using the
   /// specified assembler variant.  Targets should override this to format as
   /// appropriate.  This method can return true if the operand is erroneous.

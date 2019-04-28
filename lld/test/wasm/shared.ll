@@ -9,8 +9,14 @@ target triple = "wasm32-unknown-unknown"
 @indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 @indirect_func_external = local_unnamed_addr global void ()* @func_external, align 4
 
+; Test data relocations
 @data_addr = local_unnamed_addr global i32* @data, align 4
+; .. against external symbols
 @data_addr_external = local_unnamed_addr global i32* @data_external, align 4
+; .. including addends
+%struct.s = type { i32, i32 }
+@extern_struct = external global %struct.s
+@extern_struct_internal_ptr = local_unnamed_addr global i32* getelementptr inbounds (%struct.s, %struct.s* @extern_struct, i32 0, i32 1), align 4
 
 define hidden i32 @foo() {
 entry:
@@ -46,7 +52,7 @@ declare void @func_external()
 ; CHECK:      Sections:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            dylink
-; CHECK-NEXT:     MemorySize:      20
+; CHECK-NEXT:     MemorySize:      24
 ; CHECK-NEXT:     MemoryAlignment: 2
 ; CHECK-NEXT:     TableSize:       3
 ; CHECK-NEXT:     TableAlignment:  0
@@ -98,6 +104,11 @@ declare void @func_external()
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   true
+; CHECK-NEXT:       - Module:          GOT.mem
+; CHECK-NEXT:         Field:           extern_struct
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         GlobalType:      I32
+; CHECK-NEXT:         GlobalMutable:   true
 ; CHECK-NEXT:   - Type:            FUNCTION
 
 ; CHECK:        - Type:            EXPORT
@@ -125,7 +136,7 @@ declare void @func_external()
 ; CHECK-NEXT:         Body:            10020B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:          []
-; CHECK-NEXT:         Body:            230141046A230241016A360200230141086A230241026A3602002301410C6A230141006A360200230141106A23033602000B
+; CHECK-NEXT:         Body:            230141046A230241016A360200230141086A23043602002301410C6A230141006A360200230141106A2303360200230141146A230541046A3602000B
 
 ; check the data segment initialized with __memory_base global as offset
 
@@ -136,4 +147,4 @@ declare void @func_external()
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          GLOBAL_GET
 ; CHECK-NEXT:           Index:           1
-; CHECK-NEXT:         Content:         '0200000001000000020000000000000000000000'
+; CHECK-NEXT:         Content:         '020000000100000002000000000000000000000000000000'

@@ -602,7 +602,6 @@ void SBBreakpoint::SetScriptCallbackFunction(
     BreakpointOptions *bp_options = bkpt_sp->GetOptions();
     bkpt_sp->GetTarget()
         .GetDebugger()
-        .GetCommandInterpreter()
         .GetScriptInterpreter()
         ->SetBreakpointCommandCallbackFunction(bp_options,
                                                callback_function_name);
@@ -623,7 +622,6 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
     Status error =
         bkpt_sp->GetTarget()
             .GetDebugger()
-            .GetCommandInterpreter()
             .GetScriptInterpreter()
             ->SetBreakpointCommandCallback(bp_options, callback_body_text);
     sb_error.SetError(error);

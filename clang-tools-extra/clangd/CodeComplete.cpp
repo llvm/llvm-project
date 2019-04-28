@@ -1269,7 +1269,11 @@ public:
 
     semaCodeComplete(std::move(RecorderOwner), Opts.getClangCompleteOpts(),
                      SemaCCInput, &Includes);
+    logResults(Output, Tracer);
+    return Output;
+  }
 
+  void logResults(const CodeCompleteResult &Output, const trace::Span &Tracer) {
     SPAN_ATTACH(Tracer, "sema_results", NSema);
     SPAN_ATTACH(Tracer, "index_results", NIndex);
     SPAN_ATTACH(Tracer, "merged_results", NSemaAndIndex);
@@ -1283,27 +1287,23 @@ public:
     assert(!Opts.Limit || Output.Completions.size() <= Opts.Limit);
     // We don't assert that isIncomplete means we hit a limit.
     // Indexes may choose to impose their own limits even if we don't have one.
-    return Output;
   }
 
   CodeCompleteResult
   runWithoutSema(llvm::StringRef Content, size_t Offset,
                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) && {
-    auto CCPrefix = guessCompletionPrefix(Content, Offset);
+    trace::Span Tracer("CodeCompleteWithoutSema");
     // Fill in fields normally set by runWithSema()
+    HeuristicPrefix = guessCompletionPrefix(Content, Offset);
     CCContextKind = CodeCompletionContext::CCC_Recovery;
-    Filter = FuzzyMatcher(CCPrefix.Name);
+    Filter = FuzzyMatcher(HeuristicPrefix.Name);
     auto Pos = offsetToPosition(Content, Offset);
     ReplacedRange.start = ReplacedRange.end = Pos;
-    ReplacedRange.start.character -= CCPrefix.Name.size();
+    ReplacedRange.start.character -= HeuristicPrefix.Name.size();
 
     llvm::StringMap<SourceParams> ProxSources;
     ProxSources[FileName].Cost = 0;
     FileProximity.emplace(ProxSources);
-
-    // FIXME: collect typed scope specifier and potentially parse the enclosing
-    // namespaces.
-    // FIXME: initialize ScopeProximity when scopes are added.
 
     auto Style = getFormatStyleForFile(FileName, Content, VFS.get());
     // This will only insert verbatim headers.
@@ -1317,16 +1317,38 @@ public:
       ID.Name = IDAndCount.first();
       ID.References = IDAndCount.second;
       // Avoid treating typed filter as an identifier.
-      if (ID.Name == CCPrefix.Name)
+      if (ID.Name == HeuristicPrefix.Name)
         --ID.References;
       if (ID.References > 0)
         IdentifierResults.push_back(std::move(ID));
     }
 
-    // FIXME: add results from Opts.Index when we know more about scopes (e.g.
-    // typed scope specifier).
-    return toCodeCompleteResult(mergeResults(
-        /*SemaResults=*/{}, /*IndexResults*/ {}, IdentifierResults));
+    // Simplified version of getQueryScopes():
+    //  - accessible scopes are determined heuristically.
+    //  - all-scopes query if no qualifier was typed (and it's allowed).
+    SpecifiedScope Scopes;
+    Scopes.AccessibleScopes =
+        visibleNamespaces(Content.take_front(Offset), Style);
+    for (std::string &S : Scopes.AccessibleScopes)
+      if (!S.empty())
+        S.append("::"); // visibleNamespaces doesn't include trailing ::.
+    if (HeuristicPrefix.Qualifier.empty())
+      AllScopes = Opts.AllScopes;
+    else if (HeuristicPrefix.Qualifier.startswith("::")) {
+      Scopes.AccessibleScopes = {""};
+      Scopes.UnresolvedQualifier = HeuristicPrefix.Qualifier.drop_front(2);
+    } else
+      Scopes.UnresolvedQualifier = HeuristicPrefix.Qualifier;
+    // First scope is the (modified) enclosing scope.
+    QueryScopes = Scopes.scopesForIndexQuery();
+    ScopeProximity.emplace(QueryScopes);
+
+    SymbolSlab IndexResults = Opts.Index ? queryIndex() : SymbolSlab();
+
+    CodeCompleteResult Output = toCodeCompleteResult(mergeResults(
+        /*SemaResults=*/{}, IndexResults, IdentifierResults));
+    logResults(Output, Tracer);
+    return Output;
   }
 
 private:

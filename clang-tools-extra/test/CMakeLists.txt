@@ -89,7 +89,7 @@ set(LLVM_UTILS_DEPS
 )
 foreach(dep ${LLVM_UTILS_DEPS})
   if(TARGET ${dep})
-    list(APPEND CLANGD_TEST_DEPS ${dep})
+    list(APPEND CLANG_TOOLS_TEST_DEPS ${dep})
   endif()
 endforeach()
 

@@ -297,7 +297,8 @@ reverse_iterator rbegin(StringRef Path, Style style) {
   I.Path = Path;
   I.Position = Path.size();
   I.S = style;
-  return ++I;
+  ++I;
+  return I;
 }
 
 reverse_iterator rend(StringRef Path) {

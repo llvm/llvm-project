@@ -263,7 +263,7 @@ public:
 
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
-                                  CommandInterpreter &interpreter);
+                                  Debugger &debugger);
 
   // StructuredDataPlugin
 

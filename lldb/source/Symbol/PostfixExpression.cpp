@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/PostfixExpression.h"
+#include "lldb/Core/dwarf.h"
+#include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace lldb_private;
@@ -79,4 +81,122 @@ Node *postfix::Parse(llvm::StringRef expr, llvm::BumpPtrAllocator &alloc) {
     return nullptr;
 
   return stack.back();
+}
+
+namespace {
+class SymbolResolver : public Visitor<bool> {
+public:
+  SymbolResolver(llvm::function_ref<Node *(SymbolNode &symbol)> replacer)
+      : m_replacer(replacer) {}
+
+  using Visitor<bool>::Dispatch;
+
+private:
+  bool Visit(BinaryOpNode &binary, Node *&) override {
+    return Dispatch(binary.Left()) && Dispatch(binary.Right());
+  }
+
+  bool Visit(IntegerNode &integer, Node *&) override { return true; }
+  bool Visit(RegisterNode &reg, Node *&) override { return true; }
+
+  bool Visit(SymbolNode &symbol, Node *&ref) override {
+    if (Node *replacement = m_replacer(symbol)) {
+      ref = replacement;
+      if (replacement != &symbol)
+        return Dispatch(ref);
+      return true;
+    }
+    return false;
+  }
+
+  bool Visit(UnaryOpNode &unary, Node *&) override {
+    return Dispatch(unary.Operand());
+  }
+
+  llvm::function_ref<Node *(SymbolNode &symbol)> m_replacer;
+};
+
+class DWARFCodegen : public Visitor<> {
+public:
+  DWARFCodegen(Stream &stream) : m_out_stream(stream) {}
+
+  using Visitor<>::Dispatch;
+
+private:
+  void Visit(BinaryOpNode &binary, Node *&);
+
+  void Visit(IntegerNode &integer, Node *&) {
+    m_out_stream.PutHex8(DW_OP_constu);
+    m_out_stream.PutULEB128(integer.GetValue());
+  }
+
+  void Visit(RegisterNode &reg, Node *&);
+
+  void Visit(SymbolNode &symbol, Node *&) {
+    llvm_unreachable("Symbols should have been resolved by now!");
+  }
+
+  void Visit(UnaryOpNode &unary, Node *&);
+
+  Stream &m_out_stream;
+};
+} // namespace
+
+void DWARFCodegen::Visit(BinaryOpNode &binary, Node *&) {
+  Dispatch(binary.Left());
+  Dispatch(binary.Right());
+
+  switch (binary.GetOpType()) {
+  case BinaryOpNode::Plus:
+    m_out_stream.PutHex8(DW_OP_plus);
+    // NOTE: can be optimized by using DW_OP_plus_uconst opcpode
+    //       if right child node is constant value
+    break;
+  case BinaryOpNode::Minus:
+    m_out_stream.PutHex8(DW_OP_minus);
+    break;
+  case BinaryOpNode::Align:
+    // emit align operator a @ b as
+    // a & ~(b - 1)
+    // NOTE: implicitly assuming that b is power of 2
+    m_out_stream.PutHex8(DW_OP_lit1);
+    m_out_stream.PutHex8(DW_OP_minus);
+    m_out_stream.PutHex8(DW_OP_not);
+
+    m_out_stream.PutHex8(DW_OP_and);
+    break;
+  }
+}
+
+void DWARFCodegen::Visit(RegisterNode &reg, Node *&) {
+  uint32_t reg_num = reg.GetRegNum();
+  assert(reg_num != LLDB_INVALID_REGNUM);
+
+  if (reg_num > 31) {
+    m_out_stream.PutHex8(DW_OP_bregx);
+    m_out_stream.PutULEB128(reg_num);
+  } else
+    m_out_stream.PutHex8(DW_OP_breg0 + reg_num);
+
+  m_out_stream.PutSLEB128(0);
+}
+
+void DWARFCodegen::Visit(UnaryOpNode &unary, Node *&) {
+  Dispatch(unary.Operand());
+
+  switch (unary.GetOpType()) {
+  case UnaryOpNode::Deref:
+    m_out_stream.PutHex8(DW_OP_deref);
+    break;
+  }
+}
+
+bool postfix::ResolveSymbols(
+    Node *&node, llvm::function_ref<Node *(SymbolNode &)> replacer) {
+  return SymbolResolver(replacer).Dispatch(node);
+}
+
+void postfix::ToDWARF(Node &node, Stream &stream) {
+  Node *ptr = &node;
+  DWARFCodegen(stream).Dispatch(ptr);
 }

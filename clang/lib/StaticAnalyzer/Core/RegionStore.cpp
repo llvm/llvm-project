@@ -2361,7 +2361,14 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
   // In C++17 aggregates may have base classes, handle those as well.
   // They appear before fields in the initializer list / compound value.
   if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD)) {
-    assert(CRD->isAggregate() &&
+    // If the object was constructed with a constructor, its value is a
+    // LazyCompoundVal. If it's a raw CompoundVal, it means that we're
+    // performing aggregate initialization. The only exception from this
+    // rule is sending an Objective-C++ message that returns a C++ object
+    // to a nil receiver; in this case the semantics is to return a
+    // zero-initialized object even if it's a C++ object that doesn't have
+    // this sort of constructor; the CompoundVal is empty in this case.
+    assert((CRD->isAggregate() || (Ctx.getLangOpts().ObjC && VI == VE)) &&
            "Non-aggregates are constructed with a constructor!");
 
     for (const auto &B : CRD->bases()) {

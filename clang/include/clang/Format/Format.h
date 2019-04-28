@@ -1139,7 +1139,7 @@ struct FormatStyle {
   ///    true:                                  false:
   ///    namespace a {                  vs.     namespace a {
   ///    foo();                                 foo();
-  ///    } // namespace a;                      }
+  ///    } // namespace a                       }
   /// \endcode
   bool FixNamespaceComments;
 

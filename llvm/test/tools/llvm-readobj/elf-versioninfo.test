@@ -1,7 +1,7 @@
 // Test that llvm-readobj dumps version info tags correctly.
 
-RUN: llvm-readobj -dynamic-table -V %p/Inputs/verdef.elf-x86-64 | FileCheck %s --check-prefix=LLVM-VERDEF
-RUN: llvm-readelf -dynamic-table -V %p/Inputs/verdef.elf-x86-64 | FileCheck %s --check-prefix=GNU-VERDEF
+RUN: llvm-readobj --dynamic-table -V %p/Inputs/verdef.elf-x86-64 | FileCheck %s --check-prefix=LLVM-VERDEF
+RUN: llvm-readelf --dynamic-table -V %p/Inputs/verdef.elf-x86-64 | FileCheck %s --check-prefix=GNU-VERDEF
 
 LLVM-VERDEF: 0x000000006FFFFFF0 VERSYM               0x24C
 LLVM-VERDEF: 0x000000006FFFFFFC VERDEF               0x25C

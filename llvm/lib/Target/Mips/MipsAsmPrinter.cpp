@@ -692,7 +692,7 @@ void MipsAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
       return;
 
     case MachineOperand::MO_GlobalAddress:
-      getSymbol(MO.getGlobal())->print(O, MAI);
+      PrintSymbolOperand(MO, O);
       break;
 
     case MachineOperand::MO_BlockAddress: {
