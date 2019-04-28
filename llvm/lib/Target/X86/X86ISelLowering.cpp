@@ -34390,8 +34390,8 @@ static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
 static SDValue combineHorizontalPredicateResult(SDNode *Extract,
                                                 SelectionDAG &DAG,
                                                 const X86Subtarget &Subtarget) {
-  // Bail without SSE2 or with AVX512VL (which uses predicate registers).
-  if (!Subtarget.hasSSE2() || Subtarget.hasVLX())
+  // Bail without SSE2.
+  if (!Subtarget.hasSSE2())
     return SDValue();
 
   EVT ExtractVT = Extract->getValueType(0);
@@ -34413,25 +34413,36 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
 
   SDValue Movmsk;
   SDLoc DL(Extract);
-  unsigned NumElts = Match.getValueType().getVectorNumElements();
+  EVT MatchVT = Match.getValueType();
+  unsigned NumElts = MatchVT.getVectorNumElements();
 
   if (ExtractVT == MVT::i1) {
     // Special case for (pre-legalization) vXi1 reductions.
-    // Use combineBitcastvxi1 to create the MOVMSK.
     if (NumElts > 32)
       return SDValue();
-    if (NumElts == 32 && !Subtarget.hasInt256()) {
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = DAG.SplitVector(Match, DL);
-      Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
-      NumElts = 16;
+    if (DAG.getTargetLoweringInfo().isTypeLegal(MatchVT)) {
+      // If this is a legal AVX512 predicate type then we can just bitcast.
+      EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      Movmsk = DAG.getBitcast(MovmskVT, Match);
+    } else {
+      // Use combineBitcastvxi1 to create the MOVMSK.
+      if (NumElts == 32 && !Subtarget.hasInt256()) {
+        SDValue Lo, Hi;
+        std::tie(Lo, Hi) = DAG.SplitVector(Match, DL);
+        Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
+        NumElts = 16;
+      }
+      EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      Movmsk = combineBitcastvxi1(DAG, MovmskVT, Match, DL, Subtarget);
     }
-    EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-    Movmsk = combineBitcastvxi1(DAG, MovmskVT, Match, DL, Subtarget);
     if (!Movmsk)
       return SDValue();
     Movmsk = DAG.getZExtOrTrunc(Movmsk, DL, MVT::i32);
   } else {
+    // Bail with AVX512VL (which uses predicate registers).
+    if (Subtarget.hasVLX())
+      return SDValue();
+
     unsigned MatchSizeInBits = Match.getValueSizeInBits();
     if (!(MatchSizeInBits == 128 ||
           (MatchSizeInBits == 256 && Subtarget.hasAVX())))
