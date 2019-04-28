@@ -2588,8 +2588,7 @@ namespace ISD {
       cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
   }
 
-  /// Return true if the node is a math/logic binary operator. This corresponds
-  /// to the IR function of the same name.
+  /// Return true if the node is a math/logic binary operator.
   inline bool isBinaryOp(const SDNode *N) {
     auto Op = N->getOpcode();
     return (Op == ISD::ADD || Op == ISD::SUB || Op == ISD::MUL ||
@@ -2597,7 +2596,10 @@ namespace ISD {
             Op == ISD::SHL || Op == ISD::SRL || Op == ISD::SRA ||
             Op == ISD::SDIV || Op == ISD::UDIV || Op == ISD::SREM ||
             Op == ISD::UREM || Op == ISD::FADD || Op == ISD::FSUB ||
-            Op == ISD::FMUL || Op == ISD::FDIV || Op == ISD::FREM);
+            Op == ISD::FMUL || Op == ISD::FDIV || Op == ISD::FREM ||
+            Op == ISD::FMINNUM || Op == ISD::FMAXNUM ||
+            Op == ISD::FMINNUM_IEEE || Op == ISD::FMAXNUM_IEEE ||
+            Op == ISD::FMAXIMUM || Op == ISD::FMINIMUM);
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

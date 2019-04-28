@@ -769,9 +769,9 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k0
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [9,1,2,3,4,5,6,7]
+; AVX512VL-NEXT:    vpermi2d %ymm1, %ymm0, %ymm2
+; AVX512VL-NEXT:    vptestmd %ymm2, %ymm2, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512VL-NEXT:    vzeroupper
@@ -782,10 +782,10 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; VL_BW_DQ-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; VL_BW_DQ-NEXT:    vpmovw2m %xmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2d %k0, %ymm0
-; VL_BW_DQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; VL_BW_DQ-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; VL_BW_DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
-; VL_BW_DQ-NEXT:    vpmovd2m %ymm0, %k0
+; VL_BW_DQ-NEXT:    vmovdqa {{.*#+}} ymm1 = [9,1,2,3,4,5,6,7]
+; VL_BW_DQ-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; VL_BW_DQ-NEXT:    vpermt2d %ymm0, %ymm1, %ymm2
+; VL_BW_DQ-NEXT:    vpmovd2m %ymm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
 ; VL_BW_DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; VL_BW_DQ-NEXT:    vzeroupper
