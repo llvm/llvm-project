@@ -15,6 +15,8 @@ popd
 apt-get update -y
 apt-get upgrade -y
 
+apt-get install sudo -y
+
 # FIXME(EricWF): Remove this hack. It's only in place to temporarily fix linking libclang_rt from the
 # debian packages.
 # WARNING: If you're not a buildbot, DO NOT RUN!
@@ -67,7 +69,7 @@ function try_start_builder {
   local BOT_DIR=$BOT_ROOT/b$N
   local BOT_NAME=$BOT_ROOT_NAME$N
   setup_numbered_bot $BOT_NAME $BOT_DIR
-  /usr/bin/buildslave start $BOT_DIR
+  sudo -u buildbot /usr/bin/buildslave start $BOT_DIR
 
   sleep 30
   cat /tmp/twistd.log
@@ -82,8 +84,7 @@ function try_start_builder {
   exit 1
 }
 
-
-for N in 1 2 3 4 5
+for N in `shuf -i 1-5`
 do
   if try_start_builder $N; then
     break
