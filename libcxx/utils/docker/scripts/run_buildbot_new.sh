@@ -69,6 +69,7 @@ function try_start_builder {
   local BOT_DIR=$BOT_ROOT/b$N
   local BOT_NAME=$BOT_ROOT_NAME$N
   setup_numbered_bot $BOT_NAME $BOT_DIR
+  chown -R buildbot:buildbot $BOT_DIR/
   sudo -u buildbot /usr/bin/buildslave start $BOT_DIR
 
   sleep 30
