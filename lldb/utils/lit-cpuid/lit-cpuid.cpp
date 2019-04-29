@@ -29,6 +29,8 @@ int main(int argc, char **argv) {
     outs() << "sse\n";
   if (features["avx"])
     outs() << "avx\n";
+  if (features["avx512f"])
+    outs() << "avx512f\n";
 #endif
 
   return 0;
