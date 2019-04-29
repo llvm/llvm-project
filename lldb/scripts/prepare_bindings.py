@@ -257,7 +257,7 @@ def main(args):
     logging.debug("Processed args: options=%s", options)
 
     # Clear the swig executable if we want to use the static bindings.
-    if options.use_static_bindings:
+    if options.use_static_binding:
         options.swig_executable = None
         options.find_swig = False
 
