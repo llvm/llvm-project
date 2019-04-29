@@ -650,7 +650,6 @@ static void printMCExpr(const MCExpr *E, raw_ostream &OS) {
 
 void SystemZOperand::print(raw_ostream &OS) const {
   switch (Kind) {
-    break;
   case KindToken:
     OS << "Token:" << getToken();
     break;

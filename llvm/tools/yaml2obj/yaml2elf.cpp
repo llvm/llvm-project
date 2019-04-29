@@ -40,8 +40,7 @@ class ContiguousBlobAccumulator {
       Align = 1;
     uint64_t CurrentOffset = InitialOffset + OS.tell();
     uint64_t AlignedOffset = alignTo(CurrentOffset, Align);
-    for (; CurrentOffset != AlignedOffset; ++CurrentOffset)
-      OS.write('\0');
+    OS.write_zeros(AlignedOffset - CurrentOffset);
     return AlignedOffset; // == CurrentOffset;
   }
 
@@ -325,6 +324,8 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   SHeader.sh_name = DotShStrtab.getOffset(IsStatic ? ".symtab" : ".dynsym");
   SHeader.sh_type = IsStatic ? ELF::SHT_SYMTAB : ELF::SHT_DYNSYM;
   SHeader.sh_link = IsStatic ? getDotStrTabSecNo() : getDotDynStrSecNo();
+  if (!IsStatic)
+    SHeader.sh_flags |= ELF::SHF_ALLOC;
 
   // One greater than symbol table index of the last local symbol.
   const auto &Symbols = IsStatic ? Doc.Symbols : Doc.DynamicSymbols;
@@ -378,6 +379,9 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
     unsigned SecNdx = getDotDynStrSecNo() - 1;
     if (SecNdx < Doc.Sections.size())
       SHeader.sh_addr = Doc.Sections[SecNdx]->Address;
+
+    // We assume that .dynstr is always allocatable.
+    SHeader.sh_flags |= ELF::SHF_ALLOC;
   }
 }
 
@@ -899,19 +903,17 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, const ELFYAML::Object &Doc) {
       SHeaders.push_back({});
 
   // Initialize the implicit sections
-  auto Index = State.SN2I.get(".symtab");
-  State.initSymtabSectionHeader(SHeaders[Index], SymtabType::Static, CBA);
-  Index = State.SN2I.get(".strtab");
-  State.initStrtabSectionHeader(SHeaders[Index], ".strtab", State.DotStrtab, CBA);
-  Index = State.SN2I.get(".shstrtab");
-  State.initStrtabSectionHeader(SHeaders[Index], ".shstrtab", State.DotShStrtab, CBA);
+  State.initSymtabSectionHeader(SHeaders[State.SN2I.get(".symtab")],
+                                SymtabType::Static, CBA);
+  State.initStrtabSectionHeader(SHeaders[State.SN2I.get(".strtab")], ".strtab",
+                                State.DotStrtab, CBA);
+  State.initStrtabSectionHeader(SHeaders[State.SN2I.get(".shstrtab")],
+                                ".shstrtab", State.DotShStrtab, CBA);
   if (!Doc.DynamicSymbols.empty()) {
-    Index = State.SN2I.get(".dynsym");
-    State.initSymtabSectionHeader(SHeaders[Index], SymtabType::Dynamic, CBA);
-    SHeaders[Index].sh_flags |= ELF::SHF_ALLOC;
-    Index = State.SN2I.get(".dynstr");
-    State.initStrtabSectionHeader(SHeaders[Index], ".dynstr", State.DotDynstr, CBA);
-    SHeaders[Index].sh_flags |= ELF::SHF_ALLOC;
+    State.initSymtabSectionHeader(SHeaders[State.SN2I.get(".dynsym")],
+                                  SymtabType::Dynamic, CBA);
+    State.initStrtabSectionHeader(SHeaders[State.SN2I.get(".dynstr")],
+                                  ".dynstr", State.DotDynstr, CBA);
   }
 
   // Now we can decide segment offsets
@@ -931,24 +933,15 @@ std::vector<StringRef> ELFState<ELFT>::implicitSectionNames() const {
   return {".symtab", ".strtab", ".shstrtab", ".dynsym", ".dynstr"};
 }
 
-static bool is64Bit(const ELFYAML::Object &Doc) {
-  return Doc.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
-}
-
-static bool isLittleEndian(const ELFYAML::Object &Doc) {
-  return Doc.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
-}
-
 int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
-  if (is64Bit(Doc)) {
-    if (isLittleEndian(Doc))
+  bool IsLE = Doc.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
+  bool Is64Bit = Doc.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
+  if (Is64Bit) {
+    if (IsLE)
       return ELFState<object::ELF64LE>::writeELF(Out, Doc);
-    else
-      return ELFState<object::ELF64BE>::writeELF(Out, Doc);
-  } else {
-    if (isLittleEndian(Doc))
-      return ELFState<object::ELF32LE>::writeELF(Out, Doc);
-    else
-      return ELFState<object::ELF32BE>::writeELF(Out, Doc);
+    return ELFState<object::ELF64BE>::writeELF(Out, Doc);
   }
+  if (IsLE)
+    return ELFState<object::ELF32LE>::writeELF(Out, Doc);
+  return ELFState<object::ELF32BE>::writeELF(Out, Doc);
 }

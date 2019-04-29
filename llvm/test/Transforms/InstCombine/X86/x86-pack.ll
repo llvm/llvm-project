@@ -510,6 +510,112 @@ define <64 x i8> @trunc_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) {
   ret <64 x i8> %3
 }
 
+;
+; Signed Pack Comparison Results
+;
+
+define <8 x i16> @cmp_packssdw_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
+; CHECK-LABEL: @cmp_packssdw_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[A2:%.*]], [[A3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> [[TMP3]], <4 x i32> [[TMP4]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP5]]
+;
+  %1 = icmp eq <4 x i32> %a0, %a1
+  %2 = icmp eq <4 x i32> %a2, %a3
+  %3 = sext <4 x i1> %1 to <4 x i32>
+  %4 = sext <4 x i1> %2 to <4 x i32>
+  %5 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %3, <4 x i32> %4)
+  ret <8 x i16> %5
+}
+
+define <16 x i8> @cmp_packsswb_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
+; CHECK-LABEL: @cmp_packsswb_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i16> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i16> [[A2:%.*]], [[A3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i1> [[TMP2]] to <8 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> [[TMP3]], <8 x i16> [[TMP4]])
+; CHECK-NEXT:    ret <16 x i8> [[TMP5]]
+;
+  %1 = icmp eq <8 x i16> %a0, %a1
+  %2 = icmp eq <8 x i16> %a2, %a3
+  %3 = sext <8 x i1> %1 to <8 x i16>
+  %4 = sext <8 x i1> %2 to <8 x i16>
+  %5 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %3, <8 x i16> %4)
+  ret <16 x i8> %5
+}
+
+define <16 x i16> @cmp_packssdw_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
+; CHECK-LABEL: @cmp_packssdw_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i32> [[A2:%.*]], [[A3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i1> [[TMP2]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> [[TMP3]], <8 x i32> [[TMP4]])
+; CHECK-NEXT:    ret <16 x i16> [[TMP5]]
+;
+  %1 = icmp eq <8 x i32> %a0, %a1
+  %2 = icmp eq <8 x i32> %a2, %a3
+  %3 = sext <8 x i1> %1 to <8 x i32>
+  %4 = sext <8 x i1> %2 to <8 x i32>
+  %5 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %3, <8 x i32> %4)
+  ret <16 x i16> %5
+}
+
+define <32 x i8> @cmp_packsswb_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2, <16 x i16> %a3) {
+; CHECK-LABEL: @cmp_packsswb_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <16 x i16> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i16> [[A2:%.*]], [[A3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i1> [[TMP1]] to <16 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i1> [[TMP2]] to <16 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> [[TMP3]], <16 x i16> [[TMP4]])
+; CHECK-NEXT:    ret <32 x i8> [[TMP5]]
+;
+  %1 = icmp eq <16 x i16> %a0, %a1
+  %2 = icmp eq <16 x i16> %a2, %a3
+  %3 = sext <16 x i1> %1 to <16 x i16>
+  %4 = sext <16 x i1> %2 to <16 x i16>
+  %5 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %3, <16 x i16> %4)
+  ret <32 x i8> %5
+}
+
+define <32 x i16> @cmp_packssdw_512(<16 x i32> %a0, <16 x i32> %a1, <16 x i32> %a2, <16 x i32> %a3) {
+; CHECK-LABEL: @cmp_packssdw_512(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <16 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i32> [[A2:%.*]], [[A3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i1> [[TMP1]] to <16 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i1> [[TMP2]] to <16 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> [[TMP3]], <16 x i32> [[TMP4]])
+; CHECK-NEXT:    ret <32 x i16> [[TMP5]]
+;
+  %1 = icmp eq <16 x i32> %a0, %a1
+  %2 = icmp eq <16 x i32> %a2, %a3
+  %3 = sext <16 x i1> %1 to <16 x i32>
+  %4 = sext <16 x i1> %2 to <16 x i32>
+  %5 = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> %3, <16 x i32> %4)
+  ret <32 x i16> %5
+}
+
+define <64 x i8> @cmp_packsswb_512(<32 x i16> %a0, <32 x i16> %a1, <32 x i16> %a2, <32 x i16> %a3) {
+; CHECK-LABEL: @cmp_packsswb_512(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <32 x i16> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <32 x i16> [[A2:%.*]], [[A3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <32 x i1> [[TMP1]] to <32 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <32 x i1> [[TMP2]] to <32 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <64 x i8> @llvm.x86.avx512.packsswb.512(<32 x i16> [[TMP3]], <32 x i16> [[TMP4]])
+; CHECK-NEXT:    ret <64 x i8> [[TMP5]]
+;
+  %1 = icmp eq <32 x i16> %a0, %a1
+  %2 = icmp eq <32 x i16> %a2, %a3
+  %3 = sext <32 x i1> %1 to <32 x i16>
+  %4 = sext <32 x i1> %2 to <32 x i16>
+  %5 = call <64 x i8> @llvm.x86.avx512.packsswb.512(<32 x i16> %3, <32 x i16> %4)
+  ret <64 x i8> %5
+}
+
 declare <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32>, <4 x i32>) nounwind readnone
 declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>) nounwind readnone
 declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>) nounwind readnone

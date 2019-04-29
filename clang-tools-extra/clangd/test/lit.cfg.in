@@ -1,0 +1,30 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import lit.llvm
+import lit.formats
+
+# Reuse clang configuration (PATH setup, etc).
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.clang_libs_dir = "@CLANG_LIBS_DIR@"
+config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
+config.target_triple = "@TARGET_TRIPLE@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+lit.llvm.initialize(lit_config, config)
+lit.llvm.llvm_config.use_clang()
+
+config.name = 'Clangd'
+config.suffixes = ['.test']
+config.excludes = ['Inputs']
+config.test_format = lit.formats.ShTest(not lit.llvm.llvm_config.use_lit_shell)
+config.test_source_root = "@CMAKE_CURRENT_SOURCE_DIR@"
+config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
+
+# Clangd-specific lit environment.
+config.substitutions.append(('%clangd-benchmark-dir',
+                             "@CMAKE_CURRENT_BINARY_DIR@/../benchmarks"))
+
+if @CLANGD_BUILD_XPC@:
+  config.available_features.add('clangd-xpc-support')
+

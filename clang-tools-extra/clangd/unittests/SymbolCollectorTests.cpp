@@ -931,47 +931,15 @@ TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {
               UnorderedElementsAre(IncludeHeaderWithRef(TestHeaderURI, 1u)));
 }
 
-#ifndef _WIN32
 TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
   CollectorOpts.CollectIncludePath = true;
   CanonicalIncludes Includes;
   addSystemHeadersMapping(&Includes);
   CollectorOpts.Includes = &Includes;
-  // bits/basic_string.h$ should be mapped to <string>
-  TestHeaderName = "/nasty/bits/basic_string.h";
-  TestFileName = "/nasty/bits/basic_string.cpp";
-  TestHeaderURI = URI::create(TestHeaderName).toString();
-  runSymbolCollector("class string {};", /*Main=*/"");
-  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("string"),
-                                                  DeclURI(TestHeaderURI),
-                                                  IncludeHeader("<string>"))));
-}
-#endif
-
-TEST_F(SymbolCollectorTest, STLiosfwd) {
-  CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  addSystemHeadersMapping(&Includes);
-  CollectorOpts.Includes = &Includes;
-  // Symbols from <iosfwd> should be mapped individually.
-  TestHeaderName = testPath("iosfwd");
-  TestFileName = testPath("iosfwd.cpp");
-  std::string Header = R"(
-    namespace std {
-      class no_map {};
-      class ios {};
-      class ostream {};
-      class filebuf {};
-    } // namespace std
-  )";
-  runSymbolCollector(Header, /*Main=*/"");
+  runSymbolCollector("namespace std { class string {}; }", /*Main=*/"");
   EXPECT_THAT(Symbols,
-              UnorderedElementsAre(
-                  QName("std"),
-                  AllOf(QName("std::no_map"), IncludeHeader("<iosfwd>")),
-                  AllOf(QName("std::ios"), IncludeHeader("<ios>")),
-                  AllOf(QName("std::ostream"), IncludeHeader("<ostream>")),
-                  AllOf(QName("std::filebuf"), IncludeHeader("<fstream>"))));
+              Contains(AllOf(QName("std::string"), DeclURI(TestHeaderURI),
+                             IncludeHeader("<string>"))));
 }
 
 TEST_F(SymbolCollectorTest, IWYUPragma) {

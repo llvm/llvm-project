@@ -182,6 +182,10 @@ ModulePass *createBlockExtractorPass();
 ModulePass *
 createBlockExtractorPass(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
                          bool EraseFunctions);
+ModulePass *
+createBlockExtractorPass(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
+                             &GroupsOfBlocksToExtract,
+                         bool EraseFunctions);
 
 /// createStripDeadPrototypesPass - This pass removes any function declarations
 /// (prototypes) that are not used.

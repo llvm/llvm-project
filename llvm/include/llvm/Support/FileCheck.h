@@ -102,8 +102,10 @@ public:
   llvm::Optional<StringRef> getVarValue(StringRef VarName);
 
   /// Define variables from definitions given on the command line passed as a
-  /// vector of VAR=VAL strings in \p CmdlineDefines.
-  void defineCmdlineVariables(std::vector<std::string> &CmdlineDefines);
+  /// vector of VAR=VAL strings in \p CmdlineDefines. Report any error to \p SM
+  /// and return whether an error occured.
+  bool defineCmdlineVariables(std::vector<std::string> &CmdlineDefines,
+                              SourceMgr &SM);
 
   /// Undefine local variables (variables whose name does not start with a '$'
   /// sign), i.e. remove them from GlobalVariableTable.
@@ -153,6 +155,13 @@ public:
   /// Returns the pointer to the global state for all patterns in this
   /// FileCheck instance.
   FileCheckPatternContext *getContext() const { return Context; }
+  /// Return whether \p is a valid first character for a variable name.
+  static bool isValidVarNameStart(char C);
+  /// Verify that the string at the start of \p Str is a well formed variable.
+  /// Return false if it is and set \p IsPseudo to indicate if it is a pseudo
+  /// variable and \p TrailIdx to the position of the last character that is
+  /// part of the variable name. Otherwise, only return true.
+  static bool parseVariable(StringRef Str, bool &IsPseudo, unsigned &TrailIdx);
   bool ParsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
                     unsigned LineNumber, const FileCheckRequest &Req);
   size_t match(StringRef Buffer, size_t &MatchLen) const;

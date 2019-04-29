@@ -352,17 +352,43 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
       }
     }
 
-    // Make sure locations for register-described variables are valid only
-    // until the end of the basic block (unless it's the last basic block, in
-    // which case let their liveness run off to the end of the function).
+    // Make sure locations for all variables are valid only until the end of
+    // the basic block (unless it's the last basic block, in which case let
+    // their liveness run off to the end of the function).
     if (!MBB.empty() && &MBB != &MF->back()) {
-      for (auto I = RegVars.begin(), E = RegVars.end(); I != E;) {
-        auto CurElem = I++; // CurElem can be erased below.
-        if (TRI->isVirtualRegister(CurElem->first) ||
-            ChangingRegs.test(CurElem->first))
-          clobberRegisterUses(RegVars, CurElem, DbgValues, LiveEntries,
-                              MBB.back());
+      // Iterate over all variables that have open debug values.
+      SmallSet<unsigned, 8> RegsToClobber;
+      for (auto &Pair : LiveEntries) {
+        // Iterate over history entries for all open fragments.
+        SmallVector<EntryIndex, 8> IdxesToRemove;
+        for (EntryIndex Idx : Pair.second) {
+          DbgValueHistoryMap::Entry &Ent = DbgValues.getEntry(Pair.first, Idx);
+          assert(Ent.isDbgValue() && !Ent.isClosed());
+          const MachineInstr *DbgValue = Ent.getInstr();
+
+          // If this is a register or indirect DBG_VALUE, apply some futher
+          // tests to see if we should clobber it. Perform the clobbering
+          // later though, to keep LiveEntries iteration stable.
+          if (DbgValue->getOperand(0).isReg()) {
+            unsigned RegNo = DbgValue->getOperand(0).getReg();
+            if (TRI->isVirtualRegister(RegNo) || ChangingRegs.test(RegNo))
+              RegsToClobber.insert(RegNo);
+          } else {
+            // This is a constant, terminate it at end of the block. Store
+            // eliminated EntryIdx and delete later, for iteration stability.
+            EntryIndex ClobIdx = DbgValues.startClobber(Pair.first, MBB.back());
+            DbgValues.getEntry(Pair.first, Idx).endEntry(ClobIdx);
+            IdxesToRemove.push_back(Idx);
+          }
+        }
+
+        for (EntryIndex Idx : IdxesToRemove)
+          Pair.second.erase(Idx);
       }
+
+      // Implement clobbering of registers at the end of BB.
+      for (unsigned Reg : RegsToClobber)
+        clobberRegisterUses(RegVars, Reg, DbgValues, LiveEntries, MBB.back());
     }
   }
 }

@@ -9,10 +9,11 @@
 #include "Annotations.h"
 #include "ClangdUnit.h"
 #include "Diagnostics.h"
+#include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
-#include "TestIndex.h"
 #include "TestFS.h"
+#include "TestIndex.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/Basic/Diagnostic.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -61,7 +63,8 @@ MATCHER_P(EqualToLSPDiag, LSPDiag,
           "LSP diagnostic " + llvm::to_string(LSPDiag)) {
   if (toJSON(arg) != toJSON(LSPDiag)) {
     *result_listener << llvm::formatv("expected:\n{0:2}\ngot\n{1:2}",
-                                      toJSON(LSPDiag), toJSON(arg)).str();
+                                      toJSON(LSPDiag), toJSON(arg))
+                            .str();
     return false;
   }
   return true;
@@ -82,7 +85,6 @@ MATCHER_P(EqualToFix, Fix, "LSP fix " + llvm::to_string(Fix)) {
   }
   return true;
 }
-
 
 // Helper function to make tests shorter.
 Position pos(int line, int character) {
@@ -114,8 +116,7 @@ o]]();
           // This range spans lines.
           AllOf(Diag(Test.range("typo"),
                      "use of undeclared identifier 'goo'; did you mean 'foo'?"),
-                DiagSource(Diag::Clang),
-                DiagName("undeclared_var_use_suggest"),
+                DiagSource(Diag::Clang), DiagName("undeclared_var_use_suggest"),
                 WithFix(
                     Fix(Test.range("typo"), "foo", "change 'go\\ o' to 'foo'")),
                 // This is a pretty normal range.
@@ -301,7 +302,8 @@ TEST(DiagnosticsTest, ToLSP) {
   MainLSP.severity = getSeverity(DiagnosticsEngine::Error);
   MainLSP.code = "enum_class_reference";
   MainLSP.source = "clang";
-  MainLSP.message = R"(Something terrible happened (fix available)
+  MainLSP.message =
+      R"(Something terrible happened (fix available)
 
 main.cpp:6:7: remark: declared somewhere in the main file
 
@@ -354,9 +356,8 @@ main.cpp:2:3: error: something terrible happened)";
   NoteInHeaderDRI.location.range = NoteInHeader.Range;
   NoteInHeaderDRI.location.uri = HeaderFile;
   MainLSP.relatedInformation = {NoteInMainDRI, NoteInHeaderDRI};
-  EXPECT_THAT(
-      LSPDiags,
-      ElementsAre(Pair(EqualToLSPDiag(MainLSP), ElementsAre(EqualToFix(F)))));
+  EXPECT_THAT(LSPDiags, ElementsAre(Pair(EqualToLSPDiag(MainLSP),
+                                         ElementsAre(EqualToFix(F)))));
 }
 
 struct SymbolWithHeader {
@@ -646,7 +647,124 @@ namespace c {
                               "Add include \"x.h\" for symbol a::X")))));
 }
 
+TEST(DiagsInHeaders, DiagInsideHeader) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]]
+    void foo() {})cpp");
+  Annotations Header("[[no_type_spec]];");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(AllOf(
+                  Diag(Main.range(), "in included file: C++ requires a "
+                                     "type specifier for all declarations"),
+                  WithNote(Diag(Header.range(), "error occurred here")))));
+}
+
+TEST(DiagsInHeaders, DiagInTransitiveInclude) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]]
+    void foo() {})cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", "#include \"b.h\""}, {"b.h", "no_type_spec;"}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range(), "in included file: C++ requires a "
+                                     "type specifier for all declarations")));
+}
+
+TEST(DiagsInHeaders, DiagInMultipleHeaders) {
+  Annotations Main(R"cpp(
+    #include $a[["a.h"]]
+    #include $b[["b.h"]]
+    void foo() {})cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", "no_type_spec;"}, {"b.h", "no_type_spec;"}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range("a"), "in included file: C++ requires a type "
+                                        "specifier for all declarations"),
+                  Diag(Main.range("b"), "in included file: C++ requires a type "
+                                        "specifier for all declarations")));
+}
+
+TEST(DiagsInHeaders, PreferExpansionLocation) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]]
+    #include "b.h"
+    void foo() {})cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", "#include \"b.h\"\n"},
+                        {"b.h", "#ifndef X\n#define X\nno_type_spec;\n#endif"}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(Diag(Main.range(),
+                                        "in included file: C++ requires a type "
+                                        "specifier for all declarations")));
+}
+
+TEST(DiagsInHeaders, PreferExpansionLocationMacros) {
+  Annotations Main(R"cpp(
+    #define X
+    #include "a.h"
+    #undef X
+    #include [["b.h"]]
+    void foo() {})cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", "#include \"c.h\"\n"},
+                        {"b.h", "#include \"c.h\"\n"},
+                        {"c.h", "#ifndef X\n#define X\nno_type_spec;\n#endif"}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range(), "in included file: C++ requires a "
+                                     "type specifier for all declarations")));
+}
+
+TEST(DiagsInHeaders, LimitDiagsOutsideMainFile) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]]
+    #include "b.h"
+    void foo() {})cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", "#include \"c.h\"\n"},
+                        {"b.h", "#include \"c.h\"\n"},
+                        {"c.h", R"cpp(
+      #ifndef X
+      #define X
+      no_type_spec_0;
+      no_type_spec_1;
+      no_type_spec_2;
+      no_type_spec_3;
+      no_type_spec_4;
+      no_type_spec_5;
+      no_type_spec_6;
+      no_type_spec_7;
+      no_type_spec_8;
+      no_type_spec_9;
+      no_type_spec_10;
+      #endif)cpp"}};
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range(), "in included file: C++ requires a "
+                                     "type specifier for all declarations")));
+}
+
+TEST(DiagsInHeaders, OnlyErrorOrFatal) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]]
+    void foo() {})cpp");
+  Annotations Header(R"cpp(
+    [[no_type_spec]];
+    int x = 5/0;)cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  auto diags = TU.build().getDiagnostics();
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(AllOf(
+                  Diag(Main.range(), "in included file: C++ requires "
+                                     "a type specifier for all declarations"),
+                  WithNote(Diag(Header.range(), "error occurred here")))));
+}
 } // namespace
+
 } // namespace clangd
 } // namespace clang
-

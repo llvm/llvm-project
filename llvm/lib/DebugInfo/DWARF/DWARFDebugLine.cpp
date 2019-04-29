@@ -1032,8 +1032,7 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   // We may still need to append compilation directory of compile unit.
   // We know that FileName is not absolute, the only way to have an
   // absolute path at this point would be if IncludeDir is absolute.
-  if (CompDir && Kind == FileLineInfoKind::AbsoluteFilePath &&
-      !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
+  if (CompDir && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
     sys::path::append(FilePath, CompDir);
 
   // sys::path::append skips empty strings.
