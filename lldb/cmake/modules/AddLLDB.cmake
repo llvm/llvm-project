@@ -83,7 +83,7 @@ function(add_lldb_library name)
       endif()
       if (NOT CMAKE_CONFIGURATION_TYPES)
         add_llvm_install_targets(install-${name}
-                                 DEPENDS $<TARGET_FILE:${name}>
+                                 DEPENDS ${name}
                                  COMPONENT ${name})
       endif()
     endif()

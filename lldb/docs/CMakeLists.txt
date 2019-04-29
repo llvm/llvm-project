@@ -32,8 +32,8 @@ if(EPYDOC_EXECUTABLE)
   get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
   add_custom_target(lldb-python-doc-package
     COMMAND "${CMAKE_COMMAND}" -E copy "${lldb_scripts_dir}/lldb.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/__init__.py"
-    DEPENDS swig_wrapper
     COMMENT "Copying lldb.py to pretend package.")
+  add_dependencies(lldb-python-doc-package swig_wrapper)
 
   set(DOC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/doc")
   file(MAKE_DIRECTORY "${DOC_DIR}")
@@ -45,11 +45,10 @@ if(EPYDOC_EXECUTABLE)
     --name "LLDB python API"
     --url "http://lldb.llvm.org"
     ${EPYDOC_OPTIONS}
-    DEPENDS swig_wrapper
-    DEPENDS lldb-python-doc-package
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating LLDB Python API reference with epydoc" VERBATIM
   )
+  add_dependencies(lldb-python-doc swig_wrapper lldb-python-doc-package)
 else()
   message(STATUS "Could NOT find epydoc")
 endif()
