@@ -3479,7 +3479,8 @@ GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
   // one sitting next to the stdlib we just built, and then fall back to the
   // one in the OS if that's not available.
   std::vector<std::string> paths;
-  paths.push_back(search_path_opts.RuntimeLibraryPath);
+  if (!search_path_opts.RuntimeLibraryPath.empty())
+    paths.push_back(search_path_opts.RuntimeLibraryPath);
   for (std::string path : search_path_opts.LibrarySearchPaths)
     paths.push_back(path);
   return paths;
