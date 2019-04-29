@@ -554,6 +554,9 @@ private:
     PathDiagnosticLocation L =
         PathDiagnosticLocation::create(N->getLocation(), SM);
 
+    // For now this shouldn't trigger, but once it does (as we add more
+    // functions to the body farm), we'll need to decide if these reports
+    // are worth suppressing as well.
     if (!L.hasValidLocation())
       return nullptr;
 

@@ -8,13 +8,20 @@ int OSAtomicCompareAndSwapPtrBarrier() {
 }
 
 int *invalidSLocOnRedecl() {
-  int *b; // expected-note{{'b' declared without an initial value}}
-
+  // Was crashing when trying to throw a report about returning an uninitialized
+  // value to the caller. FIXME: We should probably still throw that report,
+  // something like "The "compare" part of CompareAndSwap depends on an
+  // undefined value".
+  int *b;
   OSAtomicCompareAndSwapPtrBarrier(0, 0, &b); // no-crash
-  // FIXME: We don't really need these notes.
-  // expected-note@-2{{Calling 'OSAtomicCompareAndSwapPtrBarrier'}}
-  // expected-note@-3{{Returning from 'OSAtomicCompareAndSwapPtrBarrier'}}
+  return b;
+}
 
-  return b; // expected-warning{{Undefined or garbage value returned to caller}}
-            // expected-note@-1{{Undefined or garbage value returned to caller}}
+void testThatItActuallyWorks() {
+  void *x = 0;
+  int res = OSAtomicCompareAndSwapPtrBarrier(0, &x, &x);
+  clang_analyzer_eval(res); // expected-warning{{TRUE}}
+                            // expected-note@-1{{TRUE}}
+  clang_analyzer_eval(x == &x); // expected-warning{{TRUE}}
+                                // expected-note@-1{{TRUE}}
 }
