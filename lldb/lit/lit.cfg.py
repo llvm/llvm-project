@@ -74,6 +74,9 @@ for i in ['module-cache-clang', 'module-cache-lldb']:
         print("Deleting module cache at %s."%cachedir)
         shutil.rmtree(cachedir)
 
+# Set a default  timeout of 10 minutes.
+lit_config.maxIndividualTestTime = 600
+
 # If running tests natively, check for CPU features needed for some tests.
 
 if 'native' in config.available_features:
