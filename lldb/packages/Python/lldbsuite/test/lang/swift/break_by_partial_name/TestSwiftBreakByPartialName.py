@@ -25,7 +25,6 @@ class SwiftPartialBreakTest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_partial_break(self):
         """Tests that we can break on a partial name of a Swift function"""
         self.build()

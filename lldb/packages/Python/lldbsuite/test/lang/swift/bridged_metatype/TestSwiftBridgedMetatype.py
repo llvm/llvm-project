@@ -29,7 +29,6 @@ class TestSwiftBridgedMetatype(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_bridged_metatype(self):
         """Test the formatting of bridged Swift metatypes"""
         self.build()

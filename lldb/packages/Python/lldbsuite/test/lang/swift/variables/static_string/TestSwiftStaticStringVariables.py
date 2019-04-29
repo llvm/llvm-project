@@ -28,7 +28,6 @@ class TestSwiftStaticStringVariables(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_static_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()

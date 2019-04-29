@@ -21,7 +21,6 @@ class TestSwiftUnitTests(TestBase):
     @swiftTest
     # The creation of the .xctest framework messes with the AST search path.
     @skipIf(debug_info=no_match("dsym"))
-    @add_test_categories(["swiftpr"])
     def test_cross_module_extension(self):
         """Test that XCTest-based unit tests work"""
         self.build()

@@ -27,7 +27,6 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test(self):
         """
         This testcase causes the scratch context to get destroyed by a

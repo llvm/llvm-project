@@ -26,7 +26,6 @@ class TestSwiftDeploymentTarget(TestBase):
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.11"])
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_deployment_target(self):
         self.build()
 
@@ -38,7 +37,6 @@ class TestSwiftDeploymentTarget(TestBase):
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.11"])
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_deployment_target_dlopen(self):
         self.build()
         # Create the target

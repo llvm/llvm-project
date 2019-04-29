@@ -28,7 +28,6 @@ class TestSwiftMetatype(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_metatype(self):
         """Test the formatting of Swift metatypes"""
         self.build()

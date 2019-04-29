@@ -24,7 +24,6 @@ class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(compiler="swiftc", compiler_version=['<', '5.0'])
-    @add_test_categories(["swiftpr", "swift-history"])
     def test_simple(self):
         if 'SWIFTC' in os.environ:
             compiler = os.environ['SWIFTC']
