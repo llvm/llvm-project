@@ -1751,7 +1751,7 @@ bool DWARFExpression::Evaluate(
     case DW_OP_pick: {
       uint8_t pick_idx = opcodes.GetU8(&offset);
       if (pick_idx < stack.size())
-        stack.push_back(stack[pick_idx]);
+        stack.push_back(stack[stack.size() - 1 - pick_idx]);
       else {
         if (error_ptr)
           error_ptr->SetErrorStringWithFormat(

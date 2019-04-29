@@ -12,6 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -2848,4 +2849,10 @@ bool Scalar::SetBit(uint32_t bit) {
     break;
   }
   return false;
+}
+
+llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os, const Scalar &scalar) {
+  StreamString s;
+  scalar.GetValue(&s, /*show_type*/ true);
+  return os << s.GetString();
 }
