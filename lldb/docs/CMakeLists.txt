@@ -13,31 +13,46 @@ if(DOXYGEN_FOUND)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating LLDB C++ API reference with Doxygen" VERBATIM
   )
-endif(DOXYGEN_FOUND)
+endif()
 
-find_package(PythonInterp REQUIRED)
 find_program(EPYDOC_EXECUTABLE NAMES epydoc epydoc.py)
 if(EPYDOC_EXECUTABLE)
+  message(STATUS "Found epydoc - ${EPYDOC_EXECUTABLE}")
+
   find_program(DOT_EXECUTABLE dot)
-    if(DOT_EXECUTABLE)
-      set(EPYDOC_OPTIONS ${EPYDOC_OPTIONS} --graph all --dotpath ${DOT_EXECUTABLE})
-    endif()
-    set(DOC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/doc")
-    file(MAKE_DIRECTORY "${DOC_DIR}")
-    #set(ENV{PYTHONPATH} ${CMAKE_CURRENT_BINARY_DIR}/../../../lib/python2.7/site-packages)
-    add_custom_target(lldb-python-doc
-      ${EPYDOC_EXECUTABLE}
-      --html
-      lldb
-      -o ${CMAKE_CURRENT_BINARY_DIR}/python_reference
-      --name "LLDB python API"
-      --url "http://lldb.llvm.org"
-      ${EPYDOC_OPTIONS}
-      DEPENDS swig_wrapper liblldb
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../../../lib${LLVM_LIBDIR_SUFFIX}/python2.7/site-packages
-      COMMENT "Generating LLDB Python API reference with epydoc" VERBATIM
-    )
-endif(EPYDOC_EXECUTABLE)
+  if(DOT_EXECUTABLE)
+    set(EPYDOC_OPTIONS ${EPYDOC_OPTIONS} --graph all --dotpath ${DOT_EXECUTABLE})
+    message(STATUS "Found dot - ${DOT_EXECUTABLE}")
+  endif()
+
+  # Pretend to make a python package so that we can generate the reference.
+  # Because we don't build liblldb, epydoc will complain that the import of
+  # _lldb.so failed, but that doesn't prevent it from generating the docs.
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lldb)
+  get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
+  add_custom_target(lldb-python-doc-package
+    COMMAND "${CMAKE_COMMAND}" -E copy "${lldb_scripts_dir}/lldb.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/__init__.py"
+    DEPENDS swig_wrapper
+    COMMENT "Copying lldb.py to pretend package.")
+
+  set(DOC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/doc")
+  file(MAKE_DIRECTORY "${DOC_DIR}")
+  add_custom_target(lldb-python-doc
+    ${EPYDOC_EXECUTABLE}
+    --html
+    lldb
+    -o ${CMAKE_CURRENT_BINARY_DIR}/python_reference
+    --name "LLDB python API"
+    --url "http://lldb.llvm.org"
+    ${EPYDOC_OPTIONS}
+    DEPENDS swig_wrapper
+    DEPENDS lldb-python-doc-package
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating LLDB Python API reference with epydoc" VERBATIM
+  )
+else()
+  message(STATUS "Could NOT find epydoc")
+endif()
 
 if (LLVM_ENABLE_SPHINX)
   include(AddSphinxTarget)
