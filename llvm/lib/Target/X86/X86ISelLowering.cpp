@@ -34838,9 +34838,11 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(InputVector);
   bool IsPextr = N->getOpcode() != ISD::EXTRACT_VECTOR_ELT;
 
+  if (CIdx && CIdx->getAPIntValue().uge(SrcVT.getVectorNumElements()))
+    return IsPextr ? DAG.getConstant(0, dl, VT) : DAG.getUNDEF(VT);
+
   // Integer Constant Folding.
-  if (VT.isInteger() && CIdx &&
-      CIdx->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
+  if (CIdx && VT.isInteger()) {
     APInt UndefVecElts;
     SmallVector<APInt, 16> EltBits;
     unsigned VecEltBitWidth = SrcVT.getScalarSizeInBits();

@@ -11,9 +11,9 @@
 //
 // extern unsigned int __fixunssfsivfp(float a);
 //
-// Converts single precision float to a 32-bit unsigned int rounding towards 
+// Converts single precision float to a 32-bit unsigned int rounding towards
 // zero. All negative values become zero.
-// Uses Darwin calling convention where a single precision parameter is 
+// Uses Darwin calling convention where a single precision parameter is
 // passed in a GPR..
 //
 	.syntax unified

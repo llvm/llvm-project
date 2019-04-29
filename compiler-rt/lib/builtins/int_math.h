@@ -1,27 +1,26 @@
-/* ===-- int_math.h - internal math inlines ---------------------------------===
- *
- * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
- * See https://llvm.org/LICENSE.txt for license information.
- * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
- *
- * ===-----------------------------------------------------------------------===
- *
- * This file is not part of the interface of this library.
- *
- * This file defines substitutes for the libm functions used in some of the
- * compiler-rt implementations, defined in such a way that there is not a direct
- * dependency on libm or math.h. Instead, we use the compiler builtin versions
- * where available. This reduces our dependencies on the system SDK by foisting
- * the responsibility onto the compiler.
- *
- * ===-----------------------------------------------------------------------===
- */
+//===-- int_math.h - internal math inlines --------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is not part of the interface of this library.
+//
+// This file defines substitutes for the libm functions used in some of the
+// compiler-rt implementations, defined in such a way that there is not a direct
+// dependency on libm or math.h. Instead, we use the compiler builtin versions
+// where available. This reduces our dependencies on the system SDK by foisting
+// the responsibility onto the compiler.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef INT_MATH_H
 #define INT_MATH_H
 
 #ifndef __has_builtin
-#  define  __has_builtin(x) 0
+#define __has_builtin(x) 0
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -40,24 +39,23 @@
 #define crt_isinf(x) !_finite((x))
 #define crt_isnan(x) _isnan((x))
 #else
-/* Define crt_isfinite in terms of the builtin if available, otherwise provide
- * an alternate version in terms of our other functions. This supports some
- * versions of GCC which didn't have __builtin_isfinite.
- */
+// Define crt_isfinite in terms of the builtin if available, otherwise provide
+// an alternate version in terms of our other functions. This supports some
+// versions of GCC which didn't have __builtin_isfinite.
 #if __has_builtin(__builtin_isfinite)
-#  define crt_isfinite(x) __builtin_isfinite((x))
+#define crt_isfinite(x) __builtin_isfinite((x))
 #elif defined(__GNUC__)
-#  define crt_isfinite(x) \
-  __extension__(({ \
-      __typeof((x)) x_ = (x); \
-      !crt_isinf(x_) && !crt_isnan(x_); \
-    }))
+#define crt_isfinite(x)                                                        \
+  __extension__(({                                                             \
+    __typeof((x)) x_ = (x);                                                    \
+    !crt_isinf(x_) && !crt_isnan(x_);                                          \
+  }))
 #else
-#  error "Do not know how to check for infinity"
-#endif /* __has_builtin(__builtin_isfinite) */
+#error "Do not know how to check for infinity"
+#endif // __has_builtin(__builtin_isfinite)
 #define crt_isinf(x) __builtin_isinf((x))
 #define crt_isnan(x) __builtin_isnan((x))
-#endif /* _MSC_VER */
+#endif // _MSC_VER
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define crt_copysign(x, y) copysign((x), (y))
@@ -105,4 +103,4 @@
 #define crt_scalbnl(x, y) __builtin_scalbnl((x), (y))
 #endif
 
-#endif /* INT_MATH_H */
+#endif // INT_MATH_H
