@@ -11992,6 +11992,9 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
+  if (SDValue V = combineRepeatedFPDivisors(N))
+    return V;
+
   if (Options.UnsafeFPMath || Flags.hasAllowReciprocal()) {
     // fold (fdiv X, c2) -> fmul X, 1/c2 if losing precision is acceptable.
     if (N1CFP) {
@@ -12080,9 +12083,6 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
                            Flags);
     }
   }
-
-  if (SDValue CombineRepeatedDivisors = combineRepeatedFPDivisors(N))
-    return CombineRepeatedDivisors;
 
   return SDValue();
 }

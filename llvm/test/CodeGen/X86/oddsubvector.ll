@@ -4,6 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-SLOW
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512-SLOW
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512-FAST
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+xop | FileCheck %s --check-prefixes=AVX,XOP
 
 define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
@@ -65,6 +67,19 @@ define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
 ; AVX2-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
 ;
+; AVX512-LABEL: insert_v7i8_v2i16_2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[3],zero,zero,zero
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1,2],xmm2[3]
+; AVX512-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpextrb $6, %xmm1, 6(%rdi)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
+; AVX512-NEXT:    vmovd %xmm0, (%rdi)
+; AVX512-NEXT:    retq
+;
 ; XOP-LABEL: insert_v7i8_v2i16_2:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -80,5 +95,65 @@ define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
   %4 = load <7 x i8>, <7 x i8> *%a0
   %5 = shufflevector <7 x i8> %4, <7 x i8> %3, <7 x i32> <i32 0, i32 1, i32 7, i32 8, i32 9, i32 10, i32 6>
   store <7 x i8> %5, <7 x i8>* %a0
+  ret void
+}
+
+%struct.Mat4 = type { %struct.storage }
+%struct.storage = type { [16 x float] }
+
+define void @PR40815(%struct.Mat4* nocapture readonly dereferenceable(64), %struct.Mat4* nocapture dereferenceable(64)) {
+; SSE-LABEL: PR40815:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movaps 16(%rdi), %xmm1
+; SSE-NEXT:    movaps 32(%rdi), %xmm2
+; SSE-NEXT:    movaps 48(%rdi), %xmm3
+; SSE-NEXT:    movaps %xmm3, (%rsi)
+; SSE-NEXT:    movaps %xmm2, 16(%rsi)
+; SSE-NEXT:    movaps %xmm1, 32(%rsi)
+; SSE-NEXT:    movaps %xmm0, 48(%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR40815:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
+; AVX-NEXT:    vmovaps 48(%rdi), %xmm1
+; AVX-NEXT:    vinsertf128 $1, 32(%rdi), %ymm1, %ymm1
+; AVX-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
+; AVX-NEXT:    vmovups %ymm1, (%rsi)
+; AVX-NEXT:    vmovups %ymm0, 32(%rsi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: PR40815:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovaps 16(%rdi), %xmm0
+; AVX512-NEXT:    vmovaps 48(%rdi), %xmm1
+; AVX512-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vinsertf128 $1, 32(%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovups %zmm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %3 = bitcast %struct.Mat4* %0 to <16 x float>*
+  %4 = load <16 x float>, <16 x float>* %3, align 64
+  %5 = shufflevector <16 x float> %4, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %6 = getelementptr inbounds %struct.Mat4, %struct.Mat4* %1, i64 0, i32 0, i32 0, i64 4
+  %7 = bitcast <16 x float> %4 to <4 x i128>
+  %8 = extractelement <4 x i128> %7, i32 1
+  %9 = getelementptr inbounds %struct.Mat4, %struct.Mat4* %1, i64 0, i32 0, i32 0, i64 8
+  %10 = bitcast <16 x float> %4 to <4 x i128>
+  %11 = extractelement <4 x i128> %10, i32 2
+  %12 = getelementptr inbounds %struct.Mat4, %struct.Mat4* %1, i64 0, i32 0, i32 0, i64 12
+  %13 = bitcast float* %12 to <4 x float>*
+  %14 = bitcast <16 x float> %4 to <4 x i128>
+  %15 = extractelement <4 x i128> %14, i32 3
+  %16 = bitcast %struct.Mat4* %1 to i128*
+  store i128 %15, i128* %16, align 16
+  %17 = bitcast float* %6 to i128*
+  store i128 %11, i128* %17, align 16
+  %18 = bitcast float* %9 to i128*
+  store i128 %8, i128* %18, align 16
+  store <4 x float> %5, <4 x float>* %13, align 16
   ret void
 }

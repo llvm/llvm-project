@@ -309,6 +309,14 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
   }
 }
 
+ConstantRange ConstantRange::makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
+                                                   const APInt &Other,
+                                                   unsigned NoWrapKind) {
+  // makeGuaranteedNoWrapRegion() is exact for single-element ranges, as
+  // "for all" and "for any" coincide in this case.
+  return makeGuaranteedNoWrapRegion(BinOp, ConstantRange(Other), NoWrapKind);
+}
+
 bool ConstantRange::isFullSet() const {
   return Lower == Upper && Lower.isMaxValue();
 }
@@ -843,10 +851,8 @@ ConstantRange::add(const ConstantRange &Other) const {
 ConstantRange ConstantRange::addWithNoSignedWrap(const APInt &Other) const {
   // Calculate the subset of this range such that "X + Other" is
   // guaranteed not to wrap (overflow) for all X in this subset.
-  // makeGuaranteedNoWrapRegion will produce an exact NSW range.
-  auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(BinaryOperator::Add,
-                                      ConstantRange(Other),
-                                      OverflowingBinaryOperator::NoSignedWrap);
+  auto NSWRange = ConstantRange::makeExactNoWrapRegion(
+      BinaryOperator::Add, Other, OverflowingBinaryOperator::NoSignedWrap);
   auto NSWConstrainedRange = intersectWith(NSWRange);
 
   return NSWConstrainedRange.add(ConstantRange(Other));

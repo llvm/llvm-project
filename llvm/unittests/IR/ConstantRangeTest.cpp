@@ -1176,17 +1176,25 @@ void TestNoWrapRegionExhaustive(Instruction::BinaryOps BinOp,
             ConstantRange::makeGuaranteedNoWrapRegion(BinOp, CR2, NoWrapKind);
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
           bool NoOverflow = true;
+          bool Overflow = true;
           ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
             if (OverflowFn(N1, N2))
               NoOverflow = false;
+            else
+              Overflow = false;
           });
           EXPECT_EQ(NoOverflow, NoWrap.contains(N1));
+
+          // The no-wrap range is exact for single-element ranges.
+          if (CR2.isSingleElement()) {
+            EXPECT_EQ(Overflow, !NoWrap.contains(N1));
+          }
         });
       });
 }
 
-// Show that makeGuaranteedNoWrapRegion is precise if only one of
-// NoUnsignedWrap or NoSignedWrap is used.
+// Show that makeGuaranteedNoWrapRegion() is maximal, and for single-element
+// ranges also exact.
 TEST(ConstantRange, NoWrapRegionExhaustive) {
   TestNoWrapRegionExhaustive(
       Instruction::Add, OverflowingBinaryOperator::NoUnsignedWrap,
