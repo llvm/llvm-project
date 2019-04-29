@@ -3471,9 +3471,17 @@ bool SwiftASTContext::LoadOneImage(Process &process, FileSpec &link_lib_spec,
 
 static std::vector<std::string>
 GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
-  std::vector<std::string> paths(search_path_opts.LibrarySearchPaths.begin(),
-                                 search_path_opts.LibrarySearchPaths.end());
-  paths.push_back(search_path_opts.RuntimeLibraryPath);
+  // The order in which we look up the libraries is important. The REPL
+  // dlopen()s libswiftCore, and gives precedence to the just built standard
+  // library instead of the one in the OS. When we type `import Foundation`,
+  // we want to make sure we end up loading the correct library, i.e. the
+  // one sitting next to the stdlib we just built, and then fall back to the
+  // one in the OS if that's not available.
+  std::vector<std::string> paths;
+  if (!search_path_opts.RuntimeLibraryPath.empty())
+    paths.push_back(search_path_opts.RuntimeLibraryPath);
+  for (std::string path : search_path_opts.LibrarySearchPaths)
+    paths.push_back(path);
   return paths;
 }
 
