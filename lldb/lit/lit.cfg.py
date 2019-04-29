@@ -73,3 +73,6 @@ for i in ['module-cache-clang', 'module-cache-lldb']:
     if os.path.isdir(cachedir):
         print("Deleting module cache at %s."%cachedir)
         shutil.rmtree(cachedir)
+
+# Set a default  timeout of 10 minutes.
+lit_config.maxIndividualTestTime = 600
