@@ -12,7 +12,7 @@
 // extern float __truncdfsf2vfp(double a);
 //
 // Converts double precision float to signle precision result.
-// Uses Darwin calling convention where a double precision parameter is 
+// Uses Darwin calling convention where a double precision parameter is
 // passed in a R0/R1 pair and a signle precision result is returned in R0.
 //
 	.syntax unified

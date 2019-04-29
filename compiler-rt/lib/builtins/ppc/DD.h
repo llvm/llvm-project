@@ -4,20 +4,20 @@
 #include "../int_lib.h"
 
 typedef union {
-	long double ld;
-	struct {
-		double hi;
-		double lo;
-	}s;
+  long double ld;
+  struct {
+    double hi;
+    double lo;
+  } s;
 } DD;
 
-typedef union { 
-	double d;
-	uint64_t x;
+typedef union {
+  double d;
+  uint64_t x;
 } doublebits;
 
-#define LOWORDER(xy,xHi,xLo,yHi,yLo) \
-	(((((xHi)*(yHi) - (xy)) + (xHi)*(yLo)) + (xLo)*(yHi)) + (xLo)*(yLo))
+#define LOWORDER(xy, xHi, xLo, yHi, yLo)                                       \
+  (((((xHi) * (yHi) - (xy)) + (xHi) * (yLo)) + (xLo) * (yHi)) + (xLo) * (yLo))
 
 static __inline ALWAYS_INLINE double local_fabs(double x) {
   doublebits result = {.d = x};
@@ -42,4 +42,4 @@ long double __gcc_qsub(long double, long double);
 long double __gcc_qmul(long double, long double);
 long double __gcc_qdiv(long double, long double);
 
-#endif /* COMPILERRT_DD_HEADER */
+#endif // COMPILERRT_DD_HEADER

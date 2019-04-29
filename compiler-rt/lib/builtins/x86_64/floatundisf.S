@@ -24,7 +24,7 @@ DEFINE_COMPILERRT_FUNCTION(__floatundisf)
 	js			1f
 	cvtsi2ssq	%rdi,		%xmm0
 	ret
-	
+
 1:	andq		%rdi,		%rsi
 	shrq		%rdi
 	orq			%rsi,		%rdi

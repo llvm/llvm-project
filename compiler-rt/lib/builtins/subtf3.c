@@ -18,9 +18,8 @@
 COMPILER_RT_ABI fp_t __addtf3(fp_t a, fp_t b);
 
 // Subtraction; flip the sign bit of b and add.
-COMPILER_RT_ABI fp_t
-__subtf3(fp_t a, fp_t b) {
-    return __addtf3(a, fromRep(toRep(b) ^ signBit));
+COMPILER_RT_ABI fp_t __subtf3(fp_t a, fp_t b) {
+  return __addtf3(a, fromRep(toRep(b) ^ signBit));
 }
 
 #endif
