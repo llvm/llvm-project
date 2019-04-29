@@ -4,6 +4,7 @@ import lit.llvm
 import lit.formats
 
 # Reuse clang configuration (PATH setup, etc).
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.clang_libs_dir = "@CLANG_LIBS_DIR@"

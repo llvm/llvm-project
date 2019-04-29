@@ -18,8 +18,13 @@
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 
 #include "ClangdUnit.h"
+#include "Path.h"
 #include "index/Index.h"
+#include "llvm/ADT/StringMap.h"
 #include "gtest/gtest.h"
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -44,6 +49,9 @@ struct TestTU {
   // Define contents of a header which will be implicitly included by Code.
   std::string HeaderCode;
   std::string HeaderFilename = "TestTU.h";
+
+  // Name and contents of each file.
+  llvm::StringMap<std::string> AdditionalFiles;
 
   // Extra arguments for the compiler invocation.
   std::vector<const char *> ExtraArgs;

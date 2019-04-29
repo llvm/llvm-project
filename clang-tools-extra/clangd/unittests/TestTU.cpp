@@ -21,11 +21,17 @@ ParsedAST TestTU::build() const {
   std::string FullFilename = testPath(Filename),
               FullHeaderName = testPath(HeaderFilename),
               ImportThunk = testPath("import_thunk.h");
-  std::vector<const char *> Cmd = {"clang", FullFilename.c_str()};
   // We want to implicitly include HeaderFilename without messing up offsets.
   // -include achieves this, but sometimes we want #import (to simulate a header
   // guard without messing up offsets). In this case, use an intermediate file.
   std::string ThunkContents = "#import \"" + FullHeaderName + "\"\n";
+
+  llvm::StringMap<std::string> Files(AdditionalFiles);
+  Files[FullFilename] = Code;
+  Files[FullHeaderName] = HeaderCode;
+  Files[ImportThunk] = ThunkContents;
+
+  std::vector<const char *> Cmd = {"clang", FullFilename.c_str()};
   // FIXME: this shouldn't need to be conditional, but it breaks a
   // GoToDefinition test for some reason (getMacroArgExpandedLocation fails).
   if (!HeaderCode.empty()) {
@@ -39,9 +45,7 @@ ParsedAST TestTU::build() const {
   Inputs.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
-  Inputs.FS = buildTestFS({{FullFilename, Code},
-                           {FullHeaderName, HeaderCode},
-                           {ImportThunk, ThunkContents}});
+  Inputs.FS = buildTestFS(Files);
   Inputs.Opts = ParseOptions();
   Inputs.Opts.ClangTidyOpts.Checks = ClangTidyChecks;
   Inputs.Index = ExternalIndex;
