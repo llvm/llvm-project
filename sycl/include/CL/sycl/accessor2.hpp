@@ -273,9 +273,16 @@ class accessor :
   using PtrType = typename detail::PtrValueType<DataT, AS>::type *;
 
   template <int Dims = Dimensions> size_t getLinearIndex(id<Dims> Id) const {
+
+#ifdef __SYCL_DEVICE_ONLY__
+    // Pointer is already adjusted for 1D case.
+    if (Dimensions == 1)
+      return Id[0];
+#endif // __SYCL_DEVICE_ONLY__
+
     size_t Result = 0;
     for (int I = 0; I < Dims; ++I)
-      Result = Result * getOrigRange()[I] + get_offset()[I] + Id[I];
+      Result = Result * getOrigRange()[I] + getOffset()[I] + Id[I];
     return Result;
   }
 
@@ -301,9 +308,11 @@ class accessor :
       getRange()[I] = AccessRange[I];
       getOrigRange()[I] = MemRange[I];
     }
+    // In case of 1D buffer, adjust pointer during initialization rather
+    // then each time in operator[] or get_pointer functions.
+    if (1 == AdjustedDim)
+      MData += Offset[0];
   }
-
-  void *getPtr() { return MData; }
 
   PtrType getQualifiedPtr() const { return MData; }
 #else
@@ -466,7 +475,8 @@ public:
   template <int Dims = Dimensions,
             typename = enable_if_t<IsAccessAnyWrite && Dims == 0>>
   operator RefType() const {
-    return *(getQualifiedPtr() + get_offset()[0]);
+    const size_t LinearIndex = getLinearIndex(id<Dimensions>());
+    return *(getQualifiedPtr() + LinearIndex);
   }
 
   template <int Dims = Dimensions,
@@ -479,13 +489,15 @@ public:
   template <int Dims = Dimensions,
             typename = enable_if_t<IsAccessAnyWrite && Dims == 1>>
   RefType operator[](size_t Index) const {
-    return getQualifiedPtr()[Index + get_offset()[0]];
+    const size_t LinearIndex = getLinearIndex(id<Dimensions>(Index));
+    return getQualifiedPtr()[LinearIndex];
   }
 
   template <int Dims = Dimensions,
             typename = enable_if_t<IsAccessReadOnly && Dims == 0>>
   operator DataT() const {
-    return *(getQualifiedPtr() + get_offset()[0]);
+    const size_t LinearIndex = getLinearIndex(id<AdjustedDim>());
+    return *(getQualifiedPtr() + LinearIndex);
   }
 
   template <int Dims = Dimensions,
@@ -498,14 +510,17 @@ public:
   template <int Dims = Dimensions,
             typename = enable_if_t<IsAccessReadOnly && Dims == 1>>
   DataT operator[](size_t Index) const {
-    return getQualifiedPtr()[Index + get_offset()[0]];
+    const size_t LinearIndex = getLinearIndex(id<Dimensions>(Index));
+    return getQualifiedPtr()[LinearIndex];
   }
 
   template <
       int Dims = Dimensions,
       typename = enable_if_t<AccessMode == access::mode::atomic && Dims == 0>>
   operator atomic<DataT, AS>() const {
-    return atomic<DataT, AS>(multi_ptr<DataT, AS>(getQualifiedPtr()));
+    const size_t LinearIndex = getLinearIndex(id<AdjustedDim>());
+    return atomic<DataT, AS>(
+        multi_ptr<DataT, AS>(getQualifiedPtr() + LinearIndex));
   }
 
   template <
@@ -521,14 +536,15 @@ public:
       int Dims = Dimensions,
       typename = enable_if_t<AccessMode == access::mode::atomic && Dims == 1>>
   atomic<DataT, AS> operator[](size_t Index) const {
+    const size_t LinearIndex = getLinearIndex(id<AdjustedDim>(Index));
     return atomic<DataT, AS>(
-        multi_ptr<DataT, AS>(getQualifiedPtr() + Index + get_offset()[0]));
+        multi_ptr<DataT, AS>(getQualifiedPtr() + LinearIndex));
   }
 
   template <int Dims = Dimensions, typename = enable_if_t<(Dims > 1)>>
   typename AccessorCommonT::template AccessorSubscript<Dims - 1>
   operator[](size_t Index) const {
-    return AccessorSubscript<Dims - 1>(*this, Index + get_offset()[0]);
+    return AccessorSubscript<Dims - 1>(*this, Index);
   }
 
   template <
