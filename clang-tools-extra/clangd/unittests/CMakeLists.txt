@@ -11,7 +11,17 @@ include_directories(
   ${CLANGD_BINARY_DIR}
   )
 
-add_extra_unittest(ClangdTests
+if(CLANG_BUILT_STANDALONE)
+  # LLVMTestingSupport library is needed for clangd tests.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      AND NOT TARGET LLVMTestingSupport)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      lib/Testing/Support)
+  endif()
+endif()
+
+add_custom_target(ClangdUnitTests)
+add_unittest(ClangdUnitTests ClangdTests
   Annotations.cpp
   BackgroundIndexTests.cpp
   CancellationTests.cpp
