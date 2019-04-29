@@ -310,7 +310,7 @@ public:
         if (RegionOfInterest->isSubRegionOf(SelfRegion) &&
             potentiallyWritesIntoIvar(Call->getRuntimeDefinition().getDecl(),
                                       IvarR->getDecl()))
-          return maybeEmitNode(R, *Call, N, {}, SelfRegion, "self",
+          return maybeEmitNote(R, *Call, N, {}, SelfRegion, "self",
                                /*FirstIsReferenceType=*/false, 1);
       }
     }
@@ -319,7 +319,7 @@ public:
       const MemRegion *ThisR = CCall->getCXXThisVal().getAsRegion();
       if (RegionOfInterest->isSubRegionOf(ThisR)
           && !CCall->getDecl()->isImplicit())
-        return maybeEmitNode(R, *Call, N, {}, ThisR, "this",
+        return maybeEmitNote(R, *Call, N, {}, ThisR, "this",
                              /*FirstIsReferenceType=*/false, 1);
 
       // Do not generate diagnostics for not modified parameters in
@@ -338,7 +338,7 @@ public:
       QualType T = PVD->getType();
       while (const MemRegion *MR = V.getAsRegion()) {
         if (RegionOfInterest->isSubRegionOf(MR) && !isPointerToConst(T))
-          return maybeEmitNode(R, *Call, N, {}, MR, ParamName,
+          return maybeEmitNote(R, *Call, N, {}, MR, ParamName,
                                ParamIsReferenceType, IndirectionLevel);
 
         QualType PT = T->getPointeeType();
@@ -346,7 +346,7 @@ public:
 
         if (const RecordDecl *RD = PT->getAsRecordDecl())
           if (auto P = findRegionOfInterestInRecord(RD, State, MR))
-            return maybeEmitNode(R, *Call, N, *P, RegionOfInterest, ParamName,
+            return maybeEmitNote(R, *Call, N, *P, RegionOfInterest, ParamName,
                                  ParamIsReferenceType, IndirectionLevel);
 
         V = State->getSVal(MR, PT);
@@ -524,7 +524,7 @@ private:
   /// \return Diagnostics piece for region not modified in the current function,
   /// if it decides to emit one.
   std::shared_ptr<PathDiagnosticPiece>
-  maybeEmitNode(BugReport &R, const CallEvent &Call, const ExplodedNode *N,
+  maybeEmitNote(BugReport &R, const CallEvent &Call, const ExplodedNode *N,
                 const RegionVector &FieldChain, const MemRegion *MatchedRegion,
                 StringRef FirstElement, bool FirstIsReferenceType,
                 unsigned IndirectionLevel) {
@@ -553,6 +553,9 @@ private:
 
     PathDiagnosticLocation L =
         PathDiagnosticLocation::create(N->getLocation(), SM);
+
+    if (!L.hasValidLocation())
+      return nullptr;
 
     SmallString<256> sbuf;
     llvm::raw_svector_ostream os(sbuf);
