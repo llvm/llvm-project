@@ -474,6 +474,74 @@ void ProcessWindows::DidAttach(ArchSpec &arch_spec) {
     RefreshStateAfterStop();
 }
 
+static void
+DumpAdditionalExceptionInformation(llvm::raw_ostream &stream,
+                                   const ExceptionRecordSP &exception) {
+  // Decode additional exception information for specific exception types based
+  // on
+  // https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_exception_record
+
+  const int addr_min_width = 2 + 8; // "0x" + 4 address bytes
+
+  const std::vector<ULONG_PTR> &args = exception->GetExceptionArguments();
+  switch (exception->GetExceptionCode()) {
+  case EXCEPTION_ACCESS_VIOLATION: {
+    if (args.size() < 2)
+      break;
+
+    stream << ": ";
+    const int access_violation_code = args[0];
+    const lldb::addr_t access_violation_address = args[1];
+    switch (access_violation_code) {
+    case 0:
+      stream << "Access violation reading";
+      break;
+    case 1:
+      stream << "Access violation writing";
+      break;
+    case 8:
+      stream << "User-mode data execution prevention (DEP) violation at";
+      break;
+    default:
+      stream << "Unknown access violation (code " << access_violation_code
+             << ") at";
+      break;
+    }
+    stream << " location "
+           << llvm::format_hex(access_violation_address, addr_min_width);
+    break;
+  }
+  case EXCEPTION_IN_PAGE_ERROR: {
+    if (args.size() < 3)
+      break;
+
+    stream << ": ";
+    const int page_load_error_code = args[0];
+    const lldb::addr_t page_load_error_address = args[1];
+    const DWORD underlying_code = args[2];
+    switch (page_load_error_code) {
+    case 0:
+      stream << "In page error reading";
+      break;
+    case 1:
+      stream << "In page error writing";
+      break;
+    case 8:
+      stream << "User-mode data execution prevention (DEP) violation at";
+      break;
+    default:
+      stream << "Unknown page loading error (code " << page_load_error_code
+             << ") at";
+      break;
+    }
+    stream << " location "
+           << llvm::format_hex(page_load_error_address, addr_min_width)
+           << " (status code " << llvm::format_hex(underlying_code, 8) << ")";
+    break;
+  }
+  }
+}
+
 void ProcessWindows::RefreshStateAfterStop() {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_EXCEPTION);
   llvm::sys::ScopedLock lock(m_mutex);
@@ -573,6 +641,8 @@ void ProcessWindows::RefreshStateAfterStop() {
                 << llvm::format_hex(active_exception->GetExceptionCode(), 8)
                 << " encountered at address "
                 << llvm::format_hex(active_exception->GetExceptionAddress(), 8);
+    DumpAdditionalExceptionInformation(desc_stream, active_exception);
+
     stop_info = StopInfo::CreateStopReasonWithException(
         *stop_thread, desc_stream.str().c_str());
     stop_thread->SetStopInfo(stop_info);
