@@ -1215,9 +1215,13 @@ void Editline::TerminalSizeChanged() {
   if (m_editline != nullptr) {
     el_resize(m_editline);
     int columns;
-    // Despite the man page claiming non-zero indicates success, it's actually
-    // zero
-    if (el_get(m_editline, EL_GETTC, "co", &columns) == 0) {
+    // This function is documenting as taking (const char *, void *) for the
+    // vararg part, but in reality in was consuming arguments until the first
+    // null pointer. This was fixed in libedit in April 2019
+    // <http://mail-index.netbsd.org/source-changes/2019/04/26/msg105454.html>,
+    // but we're keeping the workaround until a version with that fix is more
+    // widely available.
+    if (el_get(m_editline, EL_GETTC, "co", &columns, nullptr) == 0) {
       m_terminal_width = columns;
       if (m_current_line_rows != -1) {
         const LineInfoW *info = el_wline(m_editline);
