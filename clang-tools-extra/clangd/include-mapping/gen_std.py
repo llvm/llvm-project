@@ -31,8 +31,11 @@ Usage:
 from bs4 import BeautifulSoup
 
 import argparse
+import collections
 import datetime
+import multiprocessing
 import os
+import signal
 import sys
 
 STDGEN_CODE_PREFIX = """\
@@ -101,7 +104,12 @@ class Symbol:
     self.headers = headers
 
 
-def GetSymbols(root_dir, index_page_name, namespace):
+def ReadSymbolPage(path, name):
+  with open(path) as f:
+    return ParseSymbolPage(f.read())
+
+
+def GetSymbols(pool, root_dir, index_page_name, namespace):
   """Get all symbols listed in the index page. All symbols should be in the
   given namespace.
 
@@ -114,24 +122,22 @@ def GetSymbols(root_dir, index_page_name, namespace):
   #      contains the defined header.
   #   2. Parse the symbol page to get the defined header.
   index_page_path = os.path.join(root_dir, index_page_name)
-  symbols = []
   with open(index_page_path, "r") as f:
-    # A map from symbol name to a set of headers.
-    symbol_headers = {}
+    # Read each symbol page in parallel.
+    results = [] # (symbol_name, promise of [header...])
     for symbol_name, symbol_page_path in ParseIndexPage(f.read()):
-      with open(os.path.join(root_dir, symbol_page_path), "r") as f:
-        headers = ParseSymbolPage(f.read())
-      if not headers:
-        sys.stderr.write("No header found for symbol %s at %s\n" % (symbol_name,
-          symbol_page_path))
-        continue
+      path = os.path.join(root_dir, symbol_page_path)
+      results.append((symbol_name,
+                      pool.apply_async(ReadSymbolPage, (path, symbol_name))))
 
-      if symbol_name not in symbol_headers:
-        symbol_headers[symbol_name] = set()
-      symbol_headers[symbol_name].update(headers)
+    # Build map from symbol name to a set of headers.
+    symbol_headers = collections.defaultdict(set)
+    for symbol_name, lazy_headers in results:
+      symbol_headers[symbol_name].update(lazy_headers.get())
 
-    for name, headers in sorted(symbol_headers.items(), key=lambda t : t[0]):
-      symbols.append(Symbol(name, namespace, list(headers)))
+  symbols = []
+  for name, headers in sorted(symbol_headers.items(), key=lambda t : t[0]):
+    symbols.append(Symbol(name, namespace, list(headers)))
   return symbols
 
 
@@ -169,8 +175,16 @@ def main():
   ]
 
   symbols = []
-  for root_dir, page_name, namespace in parse_pages:
-    symbols.extend(GetSymbols(root_dir, page_name, namespace))
+  # Run many workers to process individual symbol pages under the symbol index.
+  # Don't allow workers to capture Ctrl-C.
+  pool = multiprocessing.Pool(
+      initializer=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN))
+  try:
+    for root_dir, page_name, namespace in parse_pages:
+      symbols.extend(GetSymbols(pool, root_dir, page_name, namespace))
+  finally:
+    pool.terminate()
+    pool.join()
 
   # We don't have version information from the unzipped offline HTML files.
   # so we use the modified time of the symbol_index.html as the version.
@@ -179,12 +193,16 @@ def main():
     os.stat(index_page_path).st_mtime).strftime('%Y-%m-%d')
   print STDGEN_CODE_PREFIX % cppreference_modified_date
   for symbol in symbols:
-    if len(symbol.headers) > 1:
+    if len(symbol.headers) == 1:
+      # SYMBOL(unqualified_name, namespace, header)
+      print "SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
+                                    symbol.headers[0])
+    elif len(symbol.headers) == 0:
+      sys.stderr.write("No header found for symbol %s\n" % symbol.name)
+    else:
       # FIXME: support symbols with multiple headers (e.g. std::move).
-      continue
-    # SYMBOL(unqualified_name, namespace, header)
-    print "SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
-                                  symbol.headers[0])
+      sys.stderr.write("Ambiguous header for symbol %s: %s\n" % (
+          symbol.name, ', '.join(symbol.headers)))
 
 
 if __name__ == '__main__':

@@ -1132,7 +1132,7 @@ void fCXX11MemberInitTest2() {
 }
 
 //===----------------------------------------------------------------------===//
-// _Atomic tests.
+// "Esoteric" primitive type tests.
 //===----------------------------------------------------------------------===//
 
 struct MyAtomicInt {
@@ -1142,6 +1142,17 @@ struct MyAtomicInt {
   MyAtomicInt() {} // expected-warning{{1 uninitialized field}}
 };
 
-void entry() {
+void _AtomicTest() {
   MyAtomicInt b;
+}
+
+struct VectorSizeLong {
+  VectorSizeLong() {}
+  __attribute__((__vector_size__(16))) long x;
+};
+
+void __vector_size__LongTest() {
+  // TODO: Warn for v.x.
+  VectorSizeLong v;
+  v.x[0] = 0;
 }

@@ -44,6 +44,8 @@ protected:
                          Dispatch(binary.Left()), Dispatch(binary.Right()));
   }
 
+  std::string Visit(InitialValueNode &, Node *&) override { return "InitialValue"; }
+
   std::string Visit(IntegerNode &integer, Node *&) override {
     return llvm::formatv("int({0})", integer.GetValue());
   }
@@ -105,6 +107,9 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
   if (!ast)
     return "Parse failed.";
   if (!ResolveSymbols(ast, [&](SymbolNode &symbol) -> Node * {
+        if (symbol.GetName() == "INIT")
+          return MakeNode<InitialValueNode>(alloc);
+
         uint32_t num;
         if (to_integer(symbol.GetName().drop_front(), num))
           return MakeNode<RegisterNode>(alloc, num);
@@ -137,6 +142,17 @@ TEST(PostfixExpression, ToDWARF) {
   EXPECT_EQ("DW_OP_breg1 +0", ParseAndGenerateDWARF("R1"));
 
   EXPECT_EQ("DW_OP_bregx 65 0", ParseAndGenerateDWARF("R65"));
+
+  EXPECT_EQ("DW_OP_pick 0x00", ParseAndGenerateDWARF("INIT"));
+
+  EXPECT_EQ("DW_OP_pick 0x00, DW_OP_pick 0x01, DW_OP_plus ",
+            ParseAndGenerateDWARF("INIT INIT +"));
+
+  EXPECT_EQ("DW_OP_breg1 +0, DW_OP_pick 0x01, DW_OP_plus ",
+            ParseAndGenerateDWARF("R1 INIT +"));
+
+  EXPECT_EQ("DW_OP_constu 0x1, DW_OP_pick 0x01, DW_OP_deref , DW_OP_plus ",
+            ParseAndGenerateDWARF("1 INIT ^ +"));
 
   EXPECT_EQ("DW_OP_constu 0x4, DW_OP_constu 0x5, DW_OP_plus ",
             ParseAndGenerateDWARF("4 5 +"));

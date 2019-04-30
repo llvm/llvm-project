@@ -179,6 +179,10 @@ void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
   BS.EmitULEB128(Value, Twine(Value));
 }
 
+void DebugLocDwarfExpression::emitData1(uint8_t Value) {
+  BS.EmitInt8(Value, Twine(Value));
+}
+
 void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   assert(Idx < (1ULL << (ULEB128PadSize * 7)) && "Idx wont fit");
   BS.EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);

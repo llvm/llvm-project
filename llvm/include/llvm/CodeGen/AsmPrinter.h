@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/InlineAsm.h"
@@ -32,7 +33,6 @@
 
 namespace llvm {
 
-class AsmPrinterHandler;
 class BasicBlock;
 class BlockAddress;
 class Constant;
@@ -138,16 +138,16 @@ protected:
   /// Protected struct HandlerInfo and Handlers permit target extended
   /// AsmPrinter adds their own handlers.
   struct HandlerInfo {
-    AsmPrinterHandler *Handler;
+    std::unique_ptr<AsmPrinterHandler> Handler;
     const char *TimerName;
     const char *TimerDescription;
     const char *TimerGroupName;
     const char *TimerGroupDescription;
 
-    HandlerInfo(AsmPrinterHandler *Handler, const char *TimerName,
-                const char *TimerDescription, const char *TimerGroupName,
-                const char *TimerGroupDescription)
-        : Handler(Handler), TimerName(TimerName),
+    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler,
+                const char *TimerName, const char *TimerDescription,
+                const char *TimerGroupName, const char *TimerGroupDescription)
+        : Handler(std::move(Handler)), TimerName(TimerName),
           TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
           TimerGroupDescription(TimerGroupDescription) {}
   };

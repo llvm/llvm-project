@@ -96,8 +96,9 @@ private:
     return Dispatch(binary.Left()) && Dispatch(binary.Right());
   }
 
-  bool Visit(IntegerNode &integer, Node *&) override { return true; }
-  bool Visit(RegisterNode &reg, Node *&) override { return true; }
+  bool Visit(InitialValueNode &, Node *&) override { return true; }
+  bool Visit(IntegerNode &, Node *&) override { return true; }
+  bool Visit(RegisterNode &, Node *&) override { return true; }
 
   bool Visit(SymbolNode &symbol, Node *&ref) override {
     if (Node *replacement = m_replacer(symbol)) {
@@ -125,9 +126,12 @@ public:
 private:
   void Visit(BinaryOpNode &binary, Node *&);
 
+  void Visit(InitialValueNode &val, Node *&);
+
   void Visit(IntegerNode &integer, Node *&) {
     m_out_stream.PutHex8(DW_OP_constu);
     m_out_stream.PutULEB128(integer.GetValue());
+    ++m_stack_depth;
   }
 
   void Visit(RegisterNode &reg, Node *&);
@@ -139,6 +143,15 @@ private:
   void Visit(UnaryOpNode &unary, Node *&);
 
   Stream &m_out_stream;
+
+  /// The number keeping track of the evaluation stack depth at any given
+  /// moment. Used for implementing InitialValueNodes. We start with
+  /// m_stack_depth = 1, assuming that the initial value is already on the
+  /// stack. This initial value will be the value of all InitialValueNodes. If
+  /// the expression does not contain InitialValueNodes, then m_stack_depth is
+  /// not used, and the generated expression will run correctly even without an
+  /// initial value.
+  size_t m_stack_depth = 1;
 };
 } // namespace
 
@@ -166,6 +179,16 @@ void DWARFCodegen::Visit(BinaryOpNode &binary, Node *&) {
     m_out_stream.PutHex8(DW_OP_and);
     break;
   }
+  --m_stack_depth; // Two pops, one push.
+}
+
+void DWARFCodegen::Visit(InitialValueNode &, Node *&) {
+  // We never go below the initial stack, so we can pick the initial value from
+  // the bottom of the stack at any moment.
+  assert(m_stack_depth >= 1);
+  m_out_stream.PutHex8(DW_OP_pick);
+  m_out_stream.PutHex8(m_stack_depth - 1);
+  ++m_stack_depth;
 }
 
 void DWARFCodegen::Visit(RegisterNode &reg, Node *&) {
@@ -179,6 +202,7 @@ void DWARFCodegen::Visit(RegisterNode &reg, Node *&) {
     m_out_stream.PutHex8(DW_OP_breg0 + reg_num);
 
   m_out_stream.PutSLEB128(0);
+  ++m_stack_depth;
 }
 
 void DWARFCodegen::Visit(UnaryOpNode &unary, Node *&) {
@@ -189,6 +213,7 @@ void DWARFCodegen::Visit(UnaryOpNode &unary, Node *&) {
     m_out_stream.PutHex8(DW_OP_deref);
     break;
   }
+  // Stack depth unchanged.
 }
 
 bool postfix::ResolveSymbols(

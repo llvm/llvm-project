@@ -29,6 +29,7 @@ class Node {
 public:
   enum Kind {
     BinaryOp,
+    InitialValue,
     Integer,
     Register,
     Symbol,
@@ -71,6 +72,16 @@ private:
   OpType m_op_type;
   Node *m_left;
   Node *m_right;
+};
+
+/// A node representing the canonical frame address.
+class InitialValueNode: public Node {
+public:
+  InitialValueNode() : Node(InitialValue) {}
+
+  static bool classof(const Node *node) {
+    return node->GetKind() == InitialValue;
+  }
 };
 
 /// A node representing an integer literal.
@@ -153,6 +164,7 @@ protected:
   virtual ~Visitor() = default;
 
   virtual ResultT Visit(BinaryOpNode &binary, Node *&ref) = 0;
+  virtual ResultT Visit(InitialValueNode &val, Node *&ref) = 0;
   virtual ResultT Visit(IntegerNode &integer, Node *&) = 0;
   virtual ResultT Visit(RegisterNode &reg, Node *&) = 0;
   virtual ResultT Visit(SymbolNode &symbol, Node *&ref) = 0;
@@ -164,6 +176,8 @@ protected:
     switch (node->GetKind()) {
     case Node::BinaryOp:
       return Visit(llvm::cast<BinaryOpNode>(*node), node);
+    case Node::InitialValue:
+      return Visit(llvm::cast<InitialValueNode>(*node), node);
     case Node::Integer:
       return Visit(llvm::cast<IntegerNode>(*node), node);
     case Node::Register:
@@ -200,7 +214,10 @@ inline T *MakeNode(llvm::BumpPtrAllocator &alloc, Args &&... args) {
 Node *Parse(llvm::StringRef expr, llvm::BumpPtrAllocator &alloc);
 
 /// Serialize the given expression tree as DWARF. The result is written into the
-/// given stream. The AST should not contain any SymbolNodes.
+/// given stream. The AST should not contain any SymbolNodes. If the expression
+/// contains InitialValueNodes, the generated expression will assume that their
+/// value will be provided as the top value of the initial evaluation stack (as
+/// is the case with the CFA value in register eh_unwind rules).
 void ToDWARF(Node &node, Stream &stream);
 
 } // namespace postfix

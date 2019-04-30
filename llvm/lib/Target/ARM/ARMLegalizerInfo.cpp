@@ -90,6 +90,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
     .legalFor({{s32, s32}})
+    .minScalar(0, s32)
     .clampScalar(1, s32, s32);
 
   bool HasHWDivide = (!ST.isThumb() && ST.hasDivideInARMMode()) ||

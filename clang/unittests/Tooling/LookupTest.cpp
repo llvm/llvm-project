@@ -217,8 +217,9 @@ TEST(LookupTest, replaceNestedClassName) {
   // `x::y::Foo` in c.cc [1], it should not make "Foo" at [0] ambiguous because
   // it's not visible at [0].
   Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
-    if (Type.getDecl()->getQualifiedNameAsString() == "x::y::Old")
+    if (Type.getDecl()->getQualifiedNameAsString() == "x::y::Old") {
       EXPECT_EQ("Foo", replaceRecordTypeLoc(Type, "::x::Foo"));
+    }
   };
   Visitor.runOver(R"(
     // a.h

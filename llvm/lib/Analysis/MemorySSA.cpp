@@ -2213,15 +2213,6 @@ MemorySSAAnalysis::Result MemorySSAAnalysis::run(Function &F,
   return MemorySSAAnalysis::Result(llvm::make_unique<MemorySSA>(F, &AA, &DT));
 }
 
-bool MemorySSAAnalysis::Result::invalidate(
-    Function &F, const PreservedAnalyses &PA,
-    FunctionAnalysisManager::Invalidator &Inv) {
-  auto PAC = PA.getChecker<MemorySSAAnalysis>();
-  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
-         Inv.invalidate<AAManager>(F, PA) ||
-         Inv.invalidate<DominatorTreeAnalysis>(F, PA);
-}
-
 PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   OS << "MemorySSA for function: " << F.getName() << "\n";

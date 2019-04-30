@@ -256,6 +256,29 @@ void fCharPointerTest() {
   CharPointerTest();
 }
 
+struct VectorSizePointer {
+  VectorSizePointer() {} // expected-warning{{1 uninitialized field}}
+  __attribute__((__vector_size__(8))) int *x; // expected-note{{uninitialized pointer 'this->x'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+};
+
+void __vector_size__PointerTest() {
+  VectorSizePointer v;
+}
+
+struct VectorSizePointee {
+  using MyVectorType = __attribute__((__vector_size__(8))) int;
+  MyVectorType *x;
+
+  VectorSizePointee(decltype(x) x) : x(x) {}
+};
+
+void __vector_size__PointeeTest() {
+  VectorSizePointee::MyVectorType i;
+  // TODO: Report v.x's pointee.
+  VectorSizePointee v(&i);
+}
+
 struct CyclicPointerTest1 {
   int *ptr; // expected-note{{object references itself 'this->ptr'}}
   int dontGetFilteredByNonPedanticMode = 0;
