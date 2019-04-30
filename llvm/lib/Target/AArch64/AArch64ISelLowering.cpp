@@ -3958,6 +3958,13 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   CallingConv::ID CallerCC = CallerF.getCallingConv();
   bool CCMatch = CallerCC == CalleeCC;
 
+  // When using the Windows calling convention on a non-windows OS, we want
+  // to back up and restore X18 in such functions; we can't do a tail call
+  // from those functions.
+  if (CallerCC == CallingConv::Win64 && !Subtarget->isTargetWindows() &&
+      CalleeCC != CallingConv::Win64)
+    return false;
+
   // Byval parameters hand the function a pointer directly into the stack area
   // we want to reuse during a tail call. Working around this *is* possible (see
   // X86) but less efficient and uglier in LowerCall.
