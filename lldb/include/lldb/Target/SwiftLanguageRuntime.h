@@ -323,6 +323,9 @@ public:
                           ConstString member_name,
                           Status *error = nullptr);
 
+  /// Determines wether \c variable is the "self" object.
+  static bool IsSelf(Variable &variable);
+
   void AddToLibraryNegativeCache(const char *library_name);
 
   bool IsInLibraryNegativeCache(const char *library_name);
