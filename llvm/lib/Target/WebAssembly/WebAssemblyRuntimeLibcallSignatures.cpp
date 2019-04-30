@@ -309,6 +309,9 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::MEMSET] = iPTR_func_iPTR_i32_iPTR;
     Table[RTLIB::MEMMOVE] = iPTR_func_iPTR_iPTR_iPTR;
 
+    // __stack_chk_fail
+    Table[RTLIB::STACKPROTECTOR_CHECK_FAIL] = func;
+
     // Element-wise Atomic memory
     // TODO: Fix these when we implement atomic support
     Table[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_1] = unsupported;
@@ -837,6 +840,11 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                SmallVectorImpl<wasm::ValType> &Params) {
   auto &Map = LibcallNameMap->Map;
   auto Val = Map.find(Name);
-  assert(Val != Map.end() && "unexpected runtime library name");
+#ifndef NDEBUG
+  if (Val == Map.end()) {
+    auto message = std::string("unexpected runtime library name: ") + Name;
+    llvm_unreachable(message.c_str());
+  }
+#endif
   return getLibcallSignature(Subtarget, Val->second, Rets, Params);
 }

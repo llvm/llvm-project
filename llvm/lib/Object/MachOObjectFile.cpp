@@ -1661,7 +1661,6 @@ Error MachOObjectFile::checkSymbolTable() const {
     } else {
       MachO::nlist STE = getSymbolTableEntry(SymDRI);
       NType = STE.n_type;
-      NType = STE.n_type;
       NSect = STE.n_sect;
       NDesc = STE.n_desc;
       NStrx = STE.n_strx;

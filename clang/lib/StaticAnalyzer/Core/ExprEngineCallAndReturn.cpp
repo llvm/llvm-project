@@ -364,6 +364,26 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   }
 }
 
+bool ExprEngine::isSmall(AnalysisDeclContext *ADC) const {
+  // When there are no branches in the function, it means that there's no
+  // exponential complexity introduced by inlining such function.
+  // Such functions also don't trigger various fundamental problems
+  // with our inlining mechanism, such as the problem of
+  // inlined defensive checks. Hence isLinear().
+  const CFG *Cfg = ADC->getCFG();
+  return Cfg->isLinear() || Cfg->size() <= AMgr.options.AlwaysInlineSize;
+}
+
+bool ExprEngine::isLarge(AnalysisDeclContext *ADC) const {
+  const CFG *Cfg = ADC->getCFG();
+  return Cfg->size() >= AMgr.options.MinCFGSizeTreatFunctionsAsLarge;
+}
+
+bool ExprEngine::isHuge(AnalysisDeclContext *ADC) const {
+  const CFG *Cfg = ADC->getCFG();
+  return Cfg->getNumBlockIDs() > AMgr.options.MaxInlinableSize;
+}
+
 void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
                                bool &IsRecursive, unsigned &StackDepth) {
   IsRecursive = false;
@@ -384,8 +404,7 @@ void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
 
       // Do not count the small functions when determining the stack depth.
       AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(DI);
-      const CFG *CalleeCFG = CalleeADC->getCFG();
-      if (CalleeCFG->getNumBlockIDs() > AMgr.options.AlwaysInlineSize)
+      if (!isSmall(CalleeADC))
         ++StackDepth;
     }
     LCtx = LCtx->getParent();
@@ -832,8 +851,7 @@ static bool isCXXSharedPtrDtor(const FunctionDecl *FD) {
 /// This checks static properties of the function, such as its signature and
 /// CFG, to determine whether the analyzer should ever consider inlining it,
 /// in any context.
-static bool mayInlineDecl(AnalysisManager &AMgr,
-                          AnalysisDeclContext *CalleeADC) {
+bool ExprEngine::mayInlineDecl(AnalysisDeclContext *CalleeADC) const {
   AnalyzerOptions &Opts = AMgr.getAnalyzerOptions();
   // FIXME: Do not inline variadic calls.
   if (CallEvent::isVariadic(CalleeADC->getDecl()))
@@ -878,7 +896,7 @@ static bool mayInlineDecl(AnalysisManager &AMgr,
     return false;
 
   // Do not inline large functions.
-  if (CalleeCFG->getNumBlockIDs() > Opts.MaxInlinableSize)
+  if (isHuge(CalleeADC))
     return false;
 
   // It is possible that the live variables analysis cannot be
@@ -918,7 +936,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   } else {
     // We haven't actually checked the static properties of this function yet.
     // Do that now, and record our decision in the function summaries.
-    if (mayInlineDecl(getAnalysisManager(), CalleeADC)) {
+    if (mayInlineDecl(CalleeADC)) {
       Engine.FunctionSummaries->markMayInline(D);
     } else {
       Engine.FunctionSummaries->markShouldNotInline(D);
@@ -939,29 +957,23 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
     return false;
   }
 
-  const CFG *CalleeCFG = CalleeADC->getCFG();
-
   // Do not inline if recursive or we've reached max stack frame count.
   bool IsRecursive = false;
   unsigned StackDepth = 0;
   examineStackFrames(D, Pred->getLocationContext(), IsRecursive, StackDepth);
   if ((StackDepth >= Opts.InlineMaxStackDepth) &&
-      ((CalleeCFG->getNumBlockIDs() > Opts.AlwaysInlineSize)
-       || IsRecursive))
+      (!isSmall(CalleeADC) || IsRecursive))
     return false;
 
   // Do not inline large functions too many times.
   if ((Engine.FunctionSummaries->getNumTimesInlined(D) >
        Opts.MaxTimesInlineLarge) &&
-       CalleeCFG->getNumBlockIDs() >=
-       Opts.MinCFGSizeTreatFunctionsAsLarge) {
+      isLarge(CalleeADC)) {
     NumReachedInlineCountMax++;
     return false;
   }
 
-  if (HowToInline == Inline_Minimal &&
-      (CalleeCFG->getNumBlockIDs() > Opts.AlwaysInlineSize
-      || IsRecursive))
+  if (HowToInline == Inline_Minimal && (!isSmall(CalleeADC) || IsRecursive))
     return false;
 
   return true;

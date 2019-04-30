@@ -20,6 +20,9 @@
 ; RUN: ls %t.thin.out | count 2
 ; RUN: ls %t.cache | count 3
 
+; Check the name of object in directory has arch name included.
+; RUN: ls %t.thin.out | grep x86_64.thinlto.o | count 2
+
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"

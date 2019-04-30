@@ -26,7 +26,13 @@ StringTableHashTraits::StringTableHashTraits(PDBStringTableBuilder &Table)
     : Table(&Table) {}
 
 uint32_t StringTableHashTraits::hashLookupKey(StringRef S) const {
-  return Table->getIdForString(S);
+  // The reference implementation doesn't include code for /src/headerblock
+  // handling, but it can only read natvis entries lld's PDB files if
+  // this hash function truncates the hash to 16 bit.
+  // PDB/include/misc.h in the reference implementation has a hashSz() function
+  // that returns an unsigned short, that seems what's being used for
+  // /src/headerblock.
+  return static_cast<uint16_t>(Table->getIdForString(S));
 }
 
 StringRef StringTableHashTraits::storageKeyToLookupKey(uint32_t Offset) const {

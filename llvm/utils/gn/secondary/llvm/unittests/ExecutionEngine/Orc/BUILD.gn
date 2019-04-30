@@ -9,6 +9,7 @@ unittest("OrcJITTests") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:NativeTarget",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "CoreAPIsTest.cpp",

@@ -155,6 +155,7 @@ public:
   /// Returns the pointer to the global state for all patterns in this
   /// FileCheck instance.
   FileCheckPatternContext *getContext() const { return Context; }
+
   /// Return whether \p is a valid first character for a variable name.
   static bool isValidVarNameStart(char C);
   /// Verify that the string at the start of \p Str is a well formed variable.
@@ -162,6 +163,11 @@ public:
   /// variable and \p TrailIdx to the position of the last character that is
   /// part of the variable name. Otherwise, only return true.
   static bool parseVariable(StringRef Str, bool &IsPseudo, unsigned &TrailIdx);
+  /// Parse a numeric expression involving pseudo variable \p Name with the
+  /// string corresponding to the operation being performed in \p Trailer.
+  /// Return whether parsing failed in which case errors are reported on \p SM.
+  bool parseExpression(StringRef Name, StringRef Trailer,
+                       const SourceMgr &SM) const;
   bool ParsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
                     unsigned LineNumber, const FileCheckRequest &Req);
   size_t match(StringRef Buffer, size_t &MatchLen) const;
@@ -184,7 +190,7 @@ private:
   bool AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM);
   void AddBackrefToRegEx(unsigned BackrefNum);
   unsigned computeMatchDistance(StringRef Buffer) const;
-  bool EvaluateExpression(StringRef Expr, std::string &Value) const;
+  void evaluateExpression(StringRef Expr, std::string &Value) const;
   size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
 };
 

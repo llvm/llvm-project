@@ -34,6 +34,7 @@ uint16_t NamedStreamMapTraits::hashLookupKey(StringRef S) const {
   // Here, the type HASH is a typedef of unsigned short.
   // ** It is not a bug that we truncate the result of hashStringV1, in fact
   //    it is a bug if we do not! **
+  // See NMTNI::hash() in the reference implementation.
   return static_cast<uint16_t>(hashStringV1(S));
 }
 

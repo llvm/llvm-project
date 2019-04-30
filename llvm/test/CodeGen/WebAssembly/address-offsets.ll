@@ -165,10 +165,10 @@ define i32 @load_test9() {
 ; NON-PIC-NEXT:  i32.load  $push4=, 0($pop3){{$}}
 ; NON-PIC-NEXT:  return    $pop4{{$}}
 
-; PIC-NEXT:   global.get $push2=, g@GOT{{$}}
 ; PIC-NEXT:   i32.const $push0=, 2{{$}}
 ; PIC-NEXT:   i32.shl   $push1=, $0, $pop0{{$}}
-; PIC-NEXT:   i32.add   $push3=, $pop2, $pop1{{$}}
+; PIC-NEXT:   global.get $push2=, g@GOT{{$}}
+; PIC-NEXT:   i32.add   $push3=, $pop1, $pop2{{$}}
 ; PIC-NEXT:   i32.const $push4=, -40{{$}}
 ; PIC-NEXT:   i32.add   $push5=, $pop3, $pop4{{$}}
 ; PIC-NEXT:   i32.load  $push6=, 0($pop5){{$}}
@@ -206,7 +206,7 @@ define i32 @load_test11_noinbounds(i32* %p) {
 ; CHECK-NEXT: .functype load_test12 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
+; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -222,7 +222,7 @@ define i32 @load_test12(i32* %p, i32 %n) {
 ; CHECK-NEXT: .functype load_test13 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
+; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -284,7 +284,7 @@ define i32 @load_test16(i32* %p, i32 %n) {
 ; CHECK-NEXT: .functype load_test17 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
+; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -314,7 +314,7 @@ define i32 @load_test18(i32* %p, i32 %n) {
 ; CHECK-NEXT: .functype load_test19 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
+; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -342,7 +342,7 @@ define i32 @load_test20(i32* %p) {
 ; CHECK-NEXT: .functype load_test21 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
+; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
 ; CHECK-NEXT: i32.const $push3=, -40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -501,10 +501,10 @@ define void @store_test9(i32 %i) {
 ; NON-PIC-NEXT:  i32.const $push2=, g-40{{$}}
 ; NON-PIC-NEXT:  i32.add   $push3=, $pop1, $pop2{{$}}
 ; NON-PIC-NEXT:  i32.store 0($pop3), $1{{$}}
-; PIC-NEXT: global.get $push2=, g@GOT{{$}}
 ; PIC-NEXT: i32.const  $push0=, 2{{$}}
 ; PIC-NEXT: i32.shl    $push1=, $0, $pop0{{$}}
-; PIC-NEXT: i32.add    $push3=, $pop2, $pop1{{$}}
+; PIC-NEXT: global.get $push2=, g@GOT{{$}}
+; PIC-NEXT: i32.add    $push3=, $pop1, $pop2{{$}}
 ; PIC-NEXT: i32.const  $push4=, -40{{$}}
 ; PIC-NEXT: i32.add    $push5=, $pop3, $pop4{{$}}
 ; PIC-NEXT: i32.store  0($pop5), $1{{$}}
@@ -542,7 +542,7 @@ define void @store_test11_noinbounds(i32* %p, i32 %i) {
 ; CHECK-NEXT: .functype store_test12 (i32, i32, i32) -> (){{$}}
 ; NON-PIC-NEXT:  i32.const $push0=, 2{{$}}
 ; NON-PIC-NEXT:  i32.shl   $push1=, $1, $pop0{{$}}
-; NON-PIC-NEXT:  i32.add   $push2=, $0, $pop1{{$}}
+; NON-PIC-NEXT:  i32.add   $push2=, $pop1, $0{{$}}
 ; NON-PIC-NEXT:  i32.const $push3=, 40{{$}}
 ; NON-PIC-NEXT:  i32.add   $push4=, $pop2, $pop3{{$}}
 ; NON-PIC-NEXT:  i32.store 0($pop4), $2{{$}}
@@ -558,7 +558,7 @@ define void @store_test12(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: .functype store_test13 (i32, i32, i32) -> (){{$}}
 ; NON-PIC-NEXT:  i32.const $push0=, 2{{$}}
 ; NON-PIC-NEXT:  i32.shl   $push1=, $1, $pop0{{$}}
-; NON-PIC-NEXT:  i32.add   $push2=, $0, $pop1{{$}}
+; NON-PIC-NEXT:  i32.add   $push2=, $pop1, $0{{$}}
 ; NON-PIC-NEXT:  i32.const $push3=, 40{{$}}
 ; NON-PIC-NEXT:  i32.add   $push4=, $pop2, $pop3{{$}}
 ; NON-PIC-NEXT:  i32.store 0($pop4), $2{{$}}
@@ -620,7 +620,7 @@ define void @store_test16(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: .functype store_test17 (i32, i32, i32) -> (){{$}}
 ; NON-PIC-NEXT:  i32.const $push0=, 2{{$}}
 ; NON-PIC-NEXT:  i32.shl   $push1=, $1, $pop0{{$}}
-; NON-PIC-NEXT:  i32.add   $push2=, $0, $pop1{{$}}
+; NON-PIC-NEXT:  i32.add   $push2=, $pop1, $0{{$}}
 ; NON-PIC-NEXT:  i32.const $push3=, 40{{$}}
 ; NON-PIC-NEXT:  i32.add   $push4=, $pop2, $pop3{{$}}
 ; NON-PIC-NEXT:  i32.store 0($pop4), $2{{$}}
@@ -650,7 +650,7 @@ define void @store_test18(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: .functype store_test19 (i32, i32, i32) -> (){{$}}
 ; NON-PIC-NEXT:  i32.const $push0=, 2{{$}}
 ; NON-PIC-NEXT:  i32.shl   $push1=, $1, $pop0{{$}}
-; NON-PIC-NEXT:  i32.add   $push2=, $0, $pop1{{$}}
+; NON-PIC-NEXT:  i32.add   $push2=, $pop1, $0{{$}}
 ; NON-PIC-NEXT:  i32.const $push3=, 40{{$}}
 ; NON-PIC-NEXT:  i32.add   $push4=, $pop2, $pop3{{$}}
 ; NON-PIC-NEXT:  i32.store 0($pop4), $2{{$}}
@@ -678,7 +678,7 @@ define void @store_test20(i32* %p, i32 %i) {
 ; CHECK-NEXT: .functype store_test21 (i32, i32, i32) -> (){{$}}
 ; NON-PIC-NEXT:  i32.const $push0=, 2{{$}}
 ; NON-PIC-NEXT:  i32.shl   $push1=, $1, $pop0{{$}}
-; NON-PIC-NEXT:  i32.add   $push2=, $0, $pop1{{$}}
+; NON-PIC-NEXT:  i32.add   $push2=, $pop1, $0{{$}}
 ; NON-PIC-NEXT:  i32.const $push3=, -40{{$}}
 ; NON-PIC-NEXT:  i32.add   $push4=, $pop2, $pop3{{$}}
 ; NON-PIC-NEXT:  i32.store 0($pop4), $2{{$}}

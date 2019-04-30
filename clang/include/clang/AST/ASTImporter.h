@@ -142,6 +142,12 @@ class TypeSourceInfo;
 
     void AddToLookupTable(Decl *ToD);
 
+  protected:
+    /// Can be overwritten by subclasses to implement their own import logic.
+    /// The overwritten method should call this method if it didn't import the
+    /// decl on its own.
+    virtual Expected<Decl *> ImportImpl(Decl *From);
+
   public:
 
     /// \param ToContext The context we'll be importing into.
@@ -426,6 +432,8 @@ class TypeSourceInfo;
     /// Subclasses can override this function to observe all of the \c From ->
     /// \c To declaration mappings as they are imported.
     virtual void Imported(Decl *From, Decl *To) {}
+
+    void RegisterImportedDecl(Decl *FromD, Decl *ToD);
 
     /// Store and assign the imported declaration to its counterpart.
     Decl *MapImported(Decl *From, Decl *To);

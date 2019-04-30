@@ -164,7 +164,7 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
       std::string default_xcode_sdk;
       FileSpec fspec;
       uint32_t versions[2];
-      if (objfile->GetSDKVersion(versions, sizeof(versions))) {
+      if (objfile->GetSDKVersion(versions, 2)) {
         fspec = HostInfo::GetShlibDir();
         if (fspec) {
           std::string path;

@@ -1632,9 +1632,7 @@ define float @PR39936_v8f32(<8 x float>) {
 ; AVX-SLOW-LABEL: PR39936_v8f32:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,2],xmm1[0,2]
-; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX-SLOW-NEXT:    vaddps %xmm0, %xmm2, %xmm0
+; AVX-SLOW-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,2,2,3]
 ; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; AVX-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
@@ -1646,9 +1644,7 @@ define float @PR39936_v8f32(<8 x float>) {
 ; AVX-FAST-LABEL: PR39936_v8f32:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,2],xmm1[0,2]
-; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX-FAST-NEXT:    vaddps %xmm0, %xmm2, %xmm0
+; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper

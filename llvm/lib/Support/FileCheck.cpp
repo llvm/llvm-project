@@ -55,6 +55,58 @@ bool FileCheckPattern::parseVariable(StringRef Str, bool &IsPseudo,
   return false;
 }
 
+// Parsing helper function that strips the first character in S and returns it.
+static char popFront(StringRef &S) {
+  char C = S.front();
+  S = S.drop_front();
+  return C;
+}
+
+bool FileCheckPattern::parseExpression(StringRef Name, StringRef Trailer,
+                                       const SourceMgr &SM) const {
+  if (!Name.equals("@LINE")) {
+    SM.PrintMessage(SMLoc::getFromPointer(Name.data()), SourceMgr::DK_Error,
+                    "invalid pseudo variable '" + Name + "'");
+    return true;
+  }
+
+  // Check if this is a supported operation and select function to perform it.
+  if (Trailer.empty())
+    return false;
+  SMLoc OpLoc = SMLoc::getFromPointer(Trailer.data());
+  char Operator = popFront(Trailer);
+  switch (Operator) {
+  case '+':
+  case '-':
+    break;
+  default:
+    SM.PrintMessage(OpLoc, SourceMgr::DK_Error,
+                    Twine("unsupported numeric operation '") + Twine(Operator) +
+                        "'");
+    return true;
+  }
+
+  // Parse right operand.
+  if (Trailer.empty()) {
+    SM.PrintMessage(SMLoc::getFromPointer(Trailer.data()), SourceMgr::DK_Error,
+                    "missing operand in numeric expression '" + Trailer + "'");
+    return true;
+  }
+  uint64_t Offset;
+  if (Trailer.consumeInteger(10, Offset)) {
+    SM.PrintMessage(SMLoc::getFromPointer(Trailer.data()), SourceMgr::DK_Error,
+                    "invalid offset in numeric expression '" + Trailer + "'");
+    return true;
+  }
+  if (!Trailer.empty()) {
+    SM.PrintMessage(SMLoc::getFromPointer(Trailer.data()), SourceMgr::DK_Error,
+                    "unexpected characters at end of numeric expression '" +
+                        Trailer + "'");
+    return true;
+  }
+  return false;
+}
+
 /// Parses the given string into the Pattern.
 ///
 /// \p Prefix provides which prefix is being matched, \p SM provides the
@@ -163,6 +215,14 @@ bool FileCheckPattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
       MatchStr = MatchStr.substr(0, End);
       PatternStr = PatternStr.substr(End + 4);
 
+      size_t VarEndIdx = MatchStr.find(":");
+      size_t SpacePos = MatchStr.substr(0, VarEndIdx).find_first_of(" \t");
+      if (SpacePos != StringRef::npos) {
+        SM.PrintMessage(SMLoc::getFromPointer(MatchStr.data() + SpacePos),
+                        SourceMgr::DK_Error, "unexpected whitespace");
+        return true;
+      }
+
       // Get the regex name (e.g. "foo") and verify it is well formed.
       bool IsPseudo;
       unsigned TrailIdx;
@@ -174,7 +234,7 @@ bool FileCheckPattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
 
       StringRef Name = MatchStr.substr(0, TrailIdx);
       StringRef Trailer = MatchStr.substr(TrailIdx);
-      bool IsVarDef = (Trailer.find(":") != StringRef::npos);
+      bool IsVarDef = (VarEndIdx != StringRef::npos);
 
       if (IsVarDef && (IsPseudo || !Trailer.consume_front(":"))) {
         SM.PrintMessage(SMLoc::getFromPointer(MatchStr.data()),
@@ -183,17 +243,9 @@ bool FileCheckPattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
         return true;
       }
 
-      // Verify that the name/expression is well formed. FileCheck currently
-      // supports @LINE, @LINE+number, @LINE-number expressions. The check here
-      // is relaxed. A stricter check is performed in \c EvaluateExpression.
-      if (IsPseudo) {
-        for (unsigned I = 0, E = Trailer.size(); I != E; ++I) {
-          if (!isalnum(Trailer[I]) && Trailer[I] != '+' && Trailer[I] != '-') {
-            SM.PrintMessage(SMLoc::getFromPointer(Name.data() + I),
-                            SourceMgr::DK_Error, "invalid name in named regex");
-            return true;
-          }
-        }
+      if (!IsVarDef && IsPseudo) {
+        if (parseExpression(Name, Trailer, SM))
+          return true;
       }
 
       // Handle [[foo]].
@@ -264,24 +316,16 @@ void FileCheckPattern::AddBackrefToRegEx(unsigned BackrefNum) {
 }
 
 /// Evaluates expression and stores the result to \p Value.
-///
-/// Returns true on success and false when the expression has invalid syntax.
-bool FileCheckPattern::EvaluateExpression(StringRef Expr, std::string &Value) const {
-  // The only supported expression is @LINE([\+-]\d+)?
-  if (!Expr.startswith("@LINE"))
-    return false;
+void FileCheckPattern::evaluateExpression(StringRef Expr,
+                                          std::string &Value) const {
   Expr = Expr.substr(StringRef("@LINE").size());
   int Offset = 0;
   if (!Expr.empty()) {
     if (Expr[0] == '+')
       Expr = Expr.substr(1);
-    else if (Expr[0] != '-')
-      return false;
-    if (Expr.getAsInteger(10, Offset))
-      return false;
+    Expr.getAsInteger(10, Offset);
   }
   Value = llvm::itostr(LineNumber + Offset);
-  return true;
 }
 
 /// Matches the pattern string against the input buffer \p Buffer
@@ -320,8 +364,7 @@ size_t FileCheckPattern::match(StringRef Buffer, size_t &MatchLen) const {
       std::string Value;
 
       if (VariableUse.first[0] == '@') {
-        if (!EvaluateExpression(VariableUse.first, Value))
-          return StringRef::npos;
+        evaluateExpression(VariableUse.first, Value);
       } else {
         llvm::Optional<StringRef> ValueRef =
             Context->getVarValue(VariableUse.first);
@@ -397,14 +440,10 @@ void FileCheckPattern::printVariableUses(const SourceMgr &SM, StringRef Buffer,
       StringRef Var = VariableUse.first;
       if (Var[0] == '@') {
         std::string Value;
-        if (EvaluateExpression(Var, Value)) {
-          OS << "with expression \"";
-          OS.write_escaped(Var) << "\" equal to \"";
-          OS.write_escaped(Value) << "\"";
-        } else {
-          OS << "uses incorrect expression \"";
-          OS.write_escaped(Var) << "\"";
-        }
+        evaluateExpression(Var, Value);
+        OS << "with expression \"";
+        OS.write_escaped(Var) << "\" equal to \"";
+        OS.write_escaped(Value) << "\"";
       } else {
         llvm::Optional<StringRef> VarValue = Context->getVarValue(Var);
 

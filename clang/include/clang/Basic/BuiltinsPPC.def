@@ -478,6 +478,9 @@ BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "")
 // Set the floating point rounding mode
 BUILTIN(__builtin_setrnd, "di", "")
 
+// Cache built-ins
+BUILTIN(__builtin_dcbf, "vvC*", "")
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN

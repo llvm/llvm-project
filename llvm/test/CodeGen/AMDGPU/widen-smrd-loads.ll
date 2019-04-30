@@ -216,7 +216,7 @@ define amdgpu_kernel void @widen_v2i8_constant_load(<2 x i8> addrspace(4)* %arg)
 ; SI-NEXT:    s_add_i32 s0, s0, 12
 ; SI-NEXT:    s_or_b32 s0, s0, 4
 ; SI-NEXT:    s_and_b32 s0, s0, 0xff
-; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_or_b32 s0, s1, s0
 ; SI-NEXT:    s_addk_i32 s0, 0x2c00
 ; SI-NEXT:    s_or_b32 s0, s0, 0x300
 ; SI-NEXT:    v_mov_b32_e32 v0, s0

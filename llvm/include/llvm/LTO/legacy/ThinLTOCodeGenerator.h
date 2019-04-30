@@ -287,6 +287,13 @@ public:
    */
   void optimize(Module &Module);
 
+  /**
+   * Write temporary object file to SavedObjectDirectoryPath, write symlink
+   * to Cache directory if needed. Returns the path to the generated file in
+   * SavedObjectsDirectoryPath.
+   */
+  std::string writeGeneratedObject(int count, StringRef CacheEntryPath,
+                                   const MemoryBuffer &OutputBuffer);
   /**@}*/
 
 private:

@@ -8,7 +8,8 @@ include_directories(
   ${CLANGD_SOURCE_DIR}
   )
 
-add_extra_unittest(ClangdXpcTests
+add_custom_target(ClangdXpcUnitTests)
+add_unittest(ClangdXpcUnitTests ClangdXpcTests
   ConversionTests.cpp
   )
 

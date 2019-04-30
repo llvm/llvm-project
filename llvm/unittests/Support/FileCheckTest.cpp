@@ -90,6 +90,62 @@ TEST_F(FileCheckTest, ParseVar) {
   EXPECT_EQ(TrailIdx, VarName.size() - 1);
 }
 
+class ExprTester {
+private:
+  SourceMgr SM;
+  FileCheckPatternContext Context;
+  FileCheckPattern P = FileCheckPattern(Check::CheckPlain, &Context);
+
+public:
+  bool parseExpect(std::string &VarName, std::string &Trailer) {
+    std::string NameTrailer = VarName + Trailer;
+    std::unique_ptr<MemoryBuffer> Buffer =
+        MemoryBuffer::getMemBufferCopy(NameTrailer, "TestBuffer");
+    StringRef NameTrailerRef = Buffer->getBuffer();
+    SM.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+    StringRef VarNameRef = NameTrailerRef.substr(0, VarName.size());
+    StringRef TrailerRef = NameTrailerRef.substr(VarName.size());
+    return P.parseExpression(VarNameRef, TrailerRef, SM);
+  }
+};
+
+TEST_F(FileCheckTest, ParseExpr) {
+  ExprTester Tester;
+
+  // @LINE with offset.
+  std::string VarName = "@LINE";
+  std::string Trailer = "+3";
+  EXPECT_FALSE(Tester.parseExpect(VarName, Trailer));
+
+  // @LINE only.
+  Trailer = "";
+  EXPECT_FALSE(Tester.parseExpect(VarName, Trailer));
+
+  // Wrong Pseudovar.
+  VarName = "@FOO";
+  EXPECT_TRUE(Tester.parseExpect(VarName, Trailer));
+
+  // Unsupported operator.
+  VarName = "@LINE";
+  Trailer = "/2";
+  EXPECT_TRUE(Tester.parseExpect(VarName, Trailer));
+
+  // Missing offset operand.
+  VarName = "@LINE";
+  Trailer = "+";
+  EXPECT_TRUE(Tester.parseExpect(VarName, Trailer));
+
+  // Cannot parse offset operand.
+  VarName = "@LINE";
+  Trailer = "+x";
+  EXPECT_TRUE(Tester.parseExpect(VarName, Trailer));
+
+  // Unexpected string at end of numeric expression.
+  VarName = "@LINE";
+  Trailer = "+5x";
+  EXPECT_TRUE(Tester.parseExpect(VarName, Trailer));
+}
+
 TEST_F(FileCheckTest, FileCheckContext) {
   FileCheckPatternContext Cxt = FileCheckPatternContext();
   std::vector<std::string> GlobalDefines;

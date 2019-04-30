@@ -313,6 +313,17 @@ class ASTImporterTestBase : public CompilerOptionSpecificTest {
   const char *const InputFileName = "input.cc";
   const char *const OutputFileName = "output.cc";
 
+public:
+  /// Allocates an ASTImporter (or one of its subclasses).
+  typedef std::function<ASTImporter *(ASTContext &, FileManager &, ASTContext &,
+                                      FileManager &, bool,
+                                      ASTImporterLookupTable *)>
+      ImporterConstructor;
+
+  // The lambda that constructs the ASTImporter we use in this test.
+  ImporterConstructor Creator;
+
+private:
   // Buffer for the To context, must live in the test scope.
   std::string ToCode;
 
@@ -325,22 +336,32 @@ class ASTImporterTestBase : public CompilerOptionSpecificTest {
     std::unique_ptr<ASTUnit> Unit;
     TranslationUnitDecl *TUDecl = nullptr;
     std::unique_ptr<ASTImporter> Importer;
-    TU(StringRef Code, StringRef FileName, ArgVector Args)
+    ImporterConstructor Creator;
+    TU(StringRef Code, StringRef FileName, ArgVector Args,
+       ImporterConstructor C = ImporterConstructor())
         : Code(Code), FileName(FileName),
           Unit(tooling::buildASTFromCodeWithArgs(this->Code, Args,
                                                  this->FileName)),
-          TUDecl(Unit->getASTContext().getTranslationUnitDecl()) {
+          TUDecl(Unit->getASTContext().getTranslationUnitDecl()), Creator(C) {
       Unit->enableSourceFileDiagnostics();
+
+      // If the test doesn't need a specific ASTImporter, we just create a
+      // normal ASTImporter with it.
+      if (!Creator)
+        Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
+                     ASTContext &FromContext, FileManager &FromFileManager,
+                     bool MinimalImport, ASTImporterLookupTable *LookupTable) {
+          return new ASTImporter(ToContext, ToFileManager, FromContext,
+                                 FromFileManager, MinimalImport, LookupTable);
+        };
     }
 
     void lazyInitImporter(ASTImporterLookupTable &LookupTable, ASTUnit *ToAST) {
       assert(ToAST);
-      if (!Importer) {
-        Importer.reset(
-            new ASTImporter(ToAST->getASTContext(), ToAST->getFileManager(),
-                            Unit->getASTContext(), Unit->getFileManager(),
-                            false, &LookupTable));
-      }
+      if (!Importer)
+        Importer.reset(Creator(ToAST->getASTContext(), ToAST->getFileManager(),
+                               Unit->getASTContext(), Unit->getFileManager(),
+                               false, &LookupTable));
       assert(&ToAST->getASTContext() == &Importer->getToContext());
       createVirtualFileIfNeeded(ToAST, FileName, Code);
     }
@@ -424,7 +445,7 @@ public:
     ArgVector FromArgs = getArgVectorForLanguage(FromLang),
               ToArgs = getArgVectorForLanguage(ToLang);
 
-    FromTUs.emplace_back(FromSrcCode, InputFileName, FromArgs);
+    FromTUs.emplace_back(FromSrcCode, InputFileName, FromArgs, Creator);
     TU &FromTU = FromTUs.back();
 
     assert(!ToAST);
@@ -560,6 +581,74 @@ TEST_P(CanonicalRedeclChain, ShouldBeSameForAllDeclInTheChain) {
 
   EXPECT_THAT(RedeclsD0, ::testing::ContainerEq(RedeclsD1));
   EXPECT_THAT(RedeclsD1, ::testing::ContainerEq(RedeclsD2));
+}
+
+namespace {
+struct RedirectingImporter : public ASTImporter {
+  using ASTImporter::ASTImporter;
+
+protected:
+  llvm::Expected<Decl *> ImportImpl(Decl *FromD) override {
+    auto *ND = dyn_cast<NamedDecl>(FromD);
+    if (!ND || ND->getName() != "shouldNotBeImported")
+      return ASTImporter::ImportImpl(FromD);
+    for (Decl *D : getToContext().getTranslationUnitDecl()->decls()) {
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        if (ND->getName() == "realDecl") {
+          RegisterImportedDecl(FromD, ND);
+          return ND;
+        }
+    }
+    return ASTImporter::ImportImpl(FromD);
+  }
+};
+
+} // namespace
+
+struct RedirectingImporterTest : ASTImporterOptionSpecificTestBase {
+  RedirectingImporterTest() {
+    Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
+                 ASTContext &FromContext, FileManager &FromFileManager,
+                 bool MinimalImport, ASTImporterLookupTable *LookupTable) {
+      return new RedirectingImporter(ToContext, ToFileManager, FromContext,
+                                     FromFileManager, MinimalImport,
+                                     LookupTable);
+    };
+  }
+};
+
+// Test that an ASTImporter subclass can intercept an import call.
+TEST_P(RedirectingImporterTest, InterceptImport) {
+  Decl *From, *To;
+  std::tie(From, To) =
+      getImportedDecl("class shouldNotBeImported {};", Lang_CXX,
+                      "class realDecl {};", Lang_CXX, "shouldNotBeImported");
+  auto *Imported = cast<CXXRecordDecl>(To);
+  EXPECT_EQ(Imported->getQualifiedNameAsString(), "realDecl");
+
+  // Make sure our importer prevented the importing of the decl.
+  auto *ToTU = Imported->getTranslationUnitDecl();
+  auto Pattern = functionDecl(hasName("shouldNotBeImported"));
+  unsigned count =
+      DeclCounterWithPredicate<CXXRecordDecl>().match(ToTU, Pattern);
+  EXPECT_EQ(0U, count);
+}
+
+// Test that when we indirectly import a declaration the custom ASTImporter
+// is still intercepting the import.
+TEST_P(RedirectingImporterTest, InterceptIndirectImport) {
+  Decl *From, *To;
+  std::tie(From, To) =
+      getImportedDecl("class shouldNotBeImported {};"
+                      "class F { shouldNotBeImported f; };",
+                      Lang_CXX, "class realDecl {};", Lang_CXX, "F");
+
+  // Make sure our ASTImporter prevented the importing of the decl.
+  auto *ToTU = To->getTranslationUnitDecl();
+  auto Pattern = functionDecl(hasName("shouldNotBeImported"));
+  unsigned count =
+      DeclCounterWithPredicate<CXXRecordDecl>().match(ToTU, Pattern);
+  EXPECT_EQ(0U, count);
 }
 
 TEST_P(ImportExpr, ImportStringLiteral) {
@@ -5547,6 +5636,9 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportDecl,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterOptionSpecificTestBase,
+                        DefaultTestValuesForRunOptions, );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, RedirectingImporterTest,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFunctions,

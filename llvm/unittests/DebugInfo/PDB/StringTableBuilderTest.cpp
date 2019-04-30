@@ -19,11 +19,7 @@ using namespace llvm;
 using namespace llvm::pdb;
 using namespace llvm::support;
 
-namespace {
-class StringTableBuilderTest : public ::testing::Test {};
-}
-
-TEST_F(StringTableBuilderTest, Simple) {
+TEST(StringTableBuilderTest, Simple) {
   // Create /names table contents.
   PDBStringTableBuilder Builder;
 
@@ -77,4 +73,22 @@ TEST_F(StringTableBuilderTest, Simple) {
   EXPECT_THAT_EXPECTED(Table.getIDForString("buzz"), HasValue(BuzzID));
   EXPECT_THAT_EXPECTED(Table.getIDForString("bazz"), HasValue(BazzID));
   EXPECT_THAT_EXPECTED(Table.getIDForString("barr"), HasValue(BarrID));
+}
+
+TEST(StringTableHashTraitsTest, Simple) {
+  PDBStringTableBuilder Builder;
+
+  // Create more than 64kiB of dummy entries.
+  for (int i = 0; i < 320; ++i) {
+    std::string aaaaa = std::string(220, 'a') + std::to_string(i);
+    Builder.insert(aaaaa);
+  }
+
+  std::string S = "foo.natvis";
+  uint32_t Pos = Builder.insert(S);
+
+  EXPECT_GT(Pos, 0xFFFFu);
+
+  StringTableHashTraits Traits(Builder);
+  EXPECT_LE(Traits.hashLookupKey(S), 0xFFFFu);
 }

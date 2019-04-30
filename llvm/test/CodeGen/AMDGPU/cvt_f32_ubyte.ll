@@ -289,18 +289,18 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; SI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v1
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v1
 ; SI-NEXT:    v_cvt_f32_ubyte1_e32 v1, v6
-; SI-NEXT:    v_add_i32_e32 v4, vcc, 9, v4
 ; SI-NEXT:    v_and_b32_e32 v7, s12, v7
+; SI-NEXT:    v_add_i32_e32 v4, vcc, 9, v4
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_or_b32_e32 v1, v7, v6
+; SI-NEXT:    v_or_b32_e32 v0, v6, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
-; SI-NEXT:    v_and_b32_e32 v0, s12, v4
-; SI-NEXT:    v_or_b32_e32 v0, v0, v5
-; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x900, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; SI-NEXT:    v_and_b32_e32 v1, s12, v4
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x900, v0
+; SI-NEXT:    v_or_b32_e32 v1, v5, v1
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x9000000, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -335,8 +335,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; VI-NEXT:    v_add_u16_e32 v9, 9, v5
 ; VI-NEXT:    v_add_u16_sdwa v4, v5, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_lshlrev_b16_e32 v1, 8, v7
-; VI-NEXT:    v_or_b32_sdwa v0, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_sdwa v0, v8, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; VI-NEXT:    v_or_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; VI-NEXT:    v_add_u16_e32 v0, s8, v0
 ; VI-NEXT:    v_add_u16_sdwa v1, v1, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1

@@ -1425,6 +1425,8 @@ template <class DataType, class StorageClass> class list_storage {
 public:
   list_storage() = default;
 
+  void clear() {}
+
   bool setLocation(Option &O, StorageClass &L) {
     if (Location)
       return O.error("cl::location(x) specified more than once!");
@@ -1475,6 +1477,10 @@ public:
 
   reference operator[](size_type pos) { return Storage[pos]; }
   const_reference operator[](size_type pos) const { return Storage[pos]; }
+
+  void clear() {
+    Storage.clear();
+  }
 
   iterator erase(const_iterator pos) { return Storage.erase(pos); }
   iterator erase(const_iterator first, const_iterator last) {
@@ -1553,7 +1559,10 @@ class list : public Option, public list_storage<DataType, StorageClass> {
   void printOptionValue(size_t /*GlobalWidth*/, bool /*Force*/) const override {
   }
 
-  void setDefault() override {}
+  void setDefault() override {
+    Positions.clear();
+    list_storage<DataType, StorageClass>::clear();
+  }
 
   void done() {
     addArgument();

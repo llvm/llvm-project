@@ -8,6 +8,7 @@ set(CLANGD_TEST_DEPS
 
 if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS clangd-xpc-test-client)
+  list(APPEND CLANGD_TEST_DEPS ClangdXpcUnitTests)
 endif()
 
 foreach(dep FileCheck count not)

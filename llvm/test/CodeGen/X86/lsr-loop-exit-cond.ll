@@ -66,7 +66,7 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; GENERIC-NEXT:    movzbl 2(%r8,%rbx,4), %ebx
 ; GENERIC-NEXT:    shll $16, %ebx
 ; GENERIC-NEXT:    orl %eax, %ebx
-; GENERIC-NEXT:    xorl 16(%rdx,%rcx), %ebx
+; GENERIC-NEXT:    xorl 16(%rcx,%rdx), %ebx
 ; GENERIC-NEXT:    shrl $8, %edi
 ; GENERIC-NEXT:    movzbl 3(%r9,%rdi,4), %eax
 ; GENERIC-NEXT:    shll $24, %eax
@@ -74,7 +74,7 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; GENERIC-NEXT:    movzbl 2(%r8,%rdi,4), %edi
 ; GENERIC-NEXT:    shll $16, %edi
 ; GENERIC-NEXT:    orl %eax, %edi
-; GENERIC-NEXT:    xorl 20(%rdx,%rcx), %edi
+; GENERIC-NEXT:    xorl 20(%rcx,%rdx), %edi
 ; GENERIC-NEXT:    movl %ebx, %eax
 ; GENERIC-NEXT:    shrl $24, %eax
 ; GENERIC-NEXT:    movb %al, (%rsi)
@@ -156,8 +156,8 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    shll $16, %eax
 ; ATOM-NEXT:    orl %edi, %ebp
 ; ATOM-NEXT:    orl %r15d, %eax
-; ATOM-NEXT:    xorl 20(%rdx,%rcx), %ebp
-; ATOM-NEXT:    xorl 16(%rdx,%rcx), %eax
+; ATOM-NEXT:    xorl 20(%rcx,%rdx), %ebp
+; ATOM-NEXT:    xorl 16(%rcx,%rdx), %eax
 ; ATOM-NEXT:    movl %eax, %edi
 ; ATOM-NEXT:    shrl $16, %eax
 ; ATOM-NEXT:    shrl $24, %edi
