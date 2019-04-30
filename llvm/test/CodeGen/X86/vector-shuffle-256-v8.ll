@@ -2805,9 +2805,7 @@ define <8 x float> @add_v8f32_02468ACE_13579BDF(<8 x float> %a, <8 x float> %b) 
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm2[1,3],ymm0[5,7],ymm2[5,7]
-; AVX1-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: add_v8f32_02468ACE_13579BDF:
@@ -2848,9 +2846,7 @@ define <8 x float> @add_v8f32_8ACE0246_9BDF1357(<8 x float> %a, <8 x float> %b) 
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm1[2,3],ymm0[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm2[1,3],ymm0[5,7],ymm2[5,7]
-; AVX1-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: add_v8f32_8ACE0246_9BDF1357:

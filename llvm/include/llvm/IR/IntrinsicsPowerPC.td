@@ -18,7 +18,8 @@
 let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   // dcba/dcbf/dcbi/dcbst/dcbt/dcbz/dcbzl(PPC970) instructions.
   def int_ppc_dcba  : Intrinsic<[], [llvm_ptr_ty], []>;
-  def int_ppc_dcbf  : Intrinsic<[], [llvm_ptr_ty], []>;
+  def int_ppc_dcbf  : GCCBuiltin<"__builtin_dcbf">,
+                      Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbi  : Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbst : Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbt  : Intrinsic<[], [llvm_ptr_ty],

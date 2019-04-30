@@ -1732,9 +1732,7 @@ define <4 x double> @add_v4f64_0246_1357(<4 x double> %a, <4 x double> %b) {
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
-; AVX1-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm2[1],ymm0[3],ymm2[3]
-; AVX1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: add_v4f64_0246_1357:
@@ -1775,9 +1773,7 @@ define <4 x double> @add_v4f64_4602_5713(<4 x double> %a, <4 x double> %b) {
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm1[2,3],ymm0[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
-; AVX1-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm2[1],ymm0[3],ymm2[3]
-; AVX1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: add_v4f64_4602_5713:

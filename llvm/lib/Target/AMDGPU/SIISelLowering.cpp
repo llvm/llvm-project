@@ -1222,11 +1222,10 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   return VT.bitsGT(MVT::i32) && Align % 4 == 0;
 }
 
-EVT SITargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
-                                          unsigned SrcAlign, bool IsMemset,
-                                          bool ZeroMemset,
-                                          bool MemcpyStrSrc,
-                                          MachineFunction &MF) const {
+EVT SITargetLowering::getOptimalMemOpType(
+    uint64_t Size, unsigned DstAlign, unsigned SrcAlign, bool IsMemset,
+    bool ZeroMemset, bool MemcpyStrSrc,
+    const AttributeList &FuncAttributes) const {
   // FIXME: Should account for address space here.
 
   // The default fallback uses the private pointer size as a guess for a type to

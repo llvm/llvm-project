@@ -1,8 +1,8 @@
 ; Extract the 'if', 'then', and 'else' blocks into the same function.
-; RUN: echo 'foo if,then,else' > %t
+; RUN: echo 'foo if;then;else' > %t
 ; Make sure we can still extract a single basic block
 ; RUN: echo 'foo end' >> %t
-; RUN: echo 'bar bb14,bb20' >> %t
+; RUN: echo 'bar bb14;bb20' >> %t
 ; RUN: opt -S -extract-blocks -extract-blocks-file=%t %s | FileCheck %s
 
 ; CHECK-LABEL: foo

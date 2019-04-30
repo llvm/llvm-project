@@ -401,7 +401,8 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
 
   if (ST->hasVSX() && Val->getScalarType()->isDoubleTy()) {
     // Double-precision scalars are already located in index #0 (or #1 if LE).
-    if (ISD == ISD::EXTRACT_VECTOR_ELT && Index == ST->isLittleEndian() ? 1 : 0)
+    if (ISD == ISD::EXTRACT_VECTOR_ELT &&
+        Index == (ST->isLittleEndian() ? 1 : 0))
       return 0;
 
     return Cost;

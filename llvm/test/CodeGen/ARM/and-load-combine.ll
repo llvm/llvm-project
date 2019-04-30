@@ -414,35 +414,35 @@ entry:
 define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a, i32* nocapture readonly %b) {
 ; ARM-LABEL: cmp_and8_short_int:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    ldrb r0, [r0]
 ; ARM-NEXT:    ldrb r1, [r1]
-; ARM-NEXT:    and r0, r1, r0
+; ARM-NEXT:    ldrb r0, [r0]
+; ARM-NEXT:    and r0, r0, r1
 ; ARM-NEXT:    clz r0, r0
 ; ARM-NEXT:    lsr r0, r0, #5
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_and8_short_int:
 ; ARMEB:       @ %bb.0: @ %entry
-; ARMEB-NEXT:    ldrb r0, [r0, #1]
 ; ARMEB-NEXT:    ldrb r1, [r1, #3]
-; ARMEB-NEXT:    and r0, r1, r0
+; ARMEB-NEXT:    ldrb r0, [r0, #1]
+; ARMEB-NEXT:    and r0, r0, r1
 ; ARMEB-NEXT:    clz r0, r0
 ; ARMEB-NEXT:    lsr r0, r0, #5
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_and8_short_int:
 ; THUMB1:       @ %bb.0: @ %entry
-; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
-; THUMB1-NEXT:    ands r1, r0
-; THUMB1-NEXT:    rsbs r0, r1, #0
-; THUMB1-NEXT:    adcs r0, r1
+; THUMB1-NEXT:    ldrb r2, [r0]
+; THUMB1-NEXT:    ands r2, r1
+; THUMB1-NEXT:    rsbs r0, r2, #0
+; THUMB1-NEXT:    adcs r0, r2
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_and8_short_int:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    ldrb r0, [r0]
 ; THUMB2-NEXT:    ldrb r1, [r1]
+; THUMB2-NEXT:    ldrb r0, [r0]
 ; THUMB2-NEXT:    ands r0, r1
 ; THUMB2-NEXT:    clz r0, r0
 ; THUMB2-NEXT:    lsrs r0, r0, #5
@@ -846,7 +846,7 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ; ARM-LABEL: test6:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
-; ARM-NEXT:    and r0, r0, r1
+; ARM-NEXT:    and r0, r1, r0
 ; ARM-NEXT:    uxtb r1, r2
 ; ARM-NEXT:    sub r0, r0, r1
 ; ARM-NEXT:    clz r0, r0
@@ -856,7 +856,7 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ; ARMEB-LABEL: test6:
 ; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrb r0, [r0]
-; ARMEB-NEXT:    and r0, r0, r1
+; ARMEB-NEXT:    and r0, r1, r0
 ; ARMEB-NEXT:    uxtb r1, r2
 ; ARMEB-NEXT:    sub r0, r0, r1
 ; ARMEB-NEXT:    clz r0, r0
@@ -893,7 +893,7 @@ define arm_aapcscc i1 @test7(i16* %x, i16 %y, i8 %z) {
 ; ARM-LABEL: test7:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
-; ARM-NEXT:    and r0, r0, r1
+; ARM-NEXT:    and r0, r1, r0
 ; ARM-NEXT:    uxtb r1, r2
 ; ARM-NEXT:    sub r0, r0, r1
 ; ARM-NEXT:    clz r0, r0
@@ -903,7 +903,7 @@ define arm_aapcscc i1 @test7(i16* %x, i16 %y, i8 %z) {
 ; ARMEB-LABEL: test7:
 ; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrb r0, [r0, #1]
-; ARMEB-NEXT:    and r0, r0, r1
+; ARMEB-NEXT:    and r0, r1, r0
 ; ARMEB-NEXT:    uxtb r1, r2
 ; ARMEB-NEXT:    sub r0, r0, r1
 ; ARMEB-NEXT:    clz r0, r0
@@ -1550,34 +1550,34 @@ define arm_aapcscc i64 @test26(i64* nocapture %p) {
   ret i64 %and
 }
 
+define void @test27(i32* nocapture %ptr) {
 ; ARM-LABEL: test27:
-; ARM:       @ %bb.0:
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r0, #1]
 ; ARM-NEXT:    lsl r1, r1, #16
 ; ARM-NEXT:    str r1, [r0]
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: test27:
-; ARMEB:     @ %bb.0:
-; ARMEB-NEXT:  ldrb r1, [r0, #2]
-; ARMEB-NEXT:  lsl r1, r1, #16
-; ARMEB-NEXT:  str r1, [r0]
-; ARMEB-NEXT:  bx lr
+; ARMEB:       @ %bb.0: @ %entry
+; ARMEB-NEXT:    ldrb r1, [r0, #2]
+; ARMEB-NEXT:    lsl r1, r1, #16
+; ARMEB-NEXT:    str r1, [r0]
+; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: test27:
-; THUMB1:     @ %bb.0:
-; THUMB1-NEXT:  ldrb r1, [r0, #1]
-; THUMB1-NEXT:  lsls r1, r1, #16
-; THUMB1-NEXT:  str r1, [r0]
-; THUMB1-NEXT:  bx lr
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    ldrb r1, [r0, #1]
+; THUMB1-NEXT:    lsls r1, r1, #16
+; THUMB1-NEXT:    str r1, [r0]
+; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: test27:
-; THUMB2:       @ %bb.0:
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrb r1, [r0, #1]
 ; THUMB2-NEXT:    lsls r1, r1, #16
 ; THUMB2-NEXT:    str r1, [r0]
 ; THUMB2-NEXT:    bx lr
-define void @test27(i32* nocapture %ptr) {
 entry:
   %0 = load i32, i32* %ptr, align 4
   %and = and i32 %0, 65280

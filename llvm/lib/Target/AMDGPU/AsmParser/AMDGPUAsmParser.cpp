@@ -5862,7 +5862,8 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
       // VOP2b (v_add_u32, v_sub_u32 ...) dpp use "vcc" token.
       // Skip it.
       continue;
-    } if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+    }
+    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegWithFPInputModsOperands(Inst, 2);
     } else if (Op.isDPPCtrl()) {
       Op.addImmOperands(Inst, 1);

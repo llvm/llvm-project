@@ -1406,12 +1406,11 @@ public:
   /// zero. 'MemcpyStrSrc' indicates whether the memcpy source is constant so it
   /// does not need to be loaded.  It returns EVT::Other if the type should be
   /// determined using generic target-independent logic.
-  virtual EVT getOptimalMemOpType(uint64_t /*Size*/,
-                                  unsigned /*DstAlign*/, unsigned /*SrcAlign*/,
-                                  bool /*IsMemset*/,
-                                  bool /*ZeroMemset*/,
-                                  bool /*MemcpyStrSrc*/,
-                                  MachineFunction &/*MF*/) const {
+  virtual EVT
+  getOptimalMemOpType(uint64_t /*Size*/, unsigned /*DstAlign*/,
+                      unsigned /*SrcAlign*/, bool /*IsMemset*/,
+                      bool /*ZeroMemset*/, bool /*MemcpyStrSrc*/,
+                      const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
 

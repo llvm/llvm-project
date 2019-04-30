@@ -5586,9 +5586,10 @@ static bool FindOptimalMemOpLowering(std::vector<EVT> &MemOps,
   // means it's possible to change the alignment of the destination.
   // 'MemcpyStrSrc' indicates whether the memcpy source is constant so it does
   // not need to be loaded.
+  const Function &F = DAG.getMachineFunction().getFunction();
   EVT VT = TLI.getOptimalMemOpType(Size, DstAlign, SrcAlign,
                                    IsMemset, ZeroMemset, MemcpyStrSrc,
-                                   DAG.getMachineFunction());
+                                   F.getAttributes());
 
   if (VT == MVT::Other) {
     // Use the largest integer type whose alignment constraints are satisfied.

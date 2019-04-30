@@ -832,7 +832,7 @@ namespace llvm {
     EVT
     getOptimalMemOpType(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
                         bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-                        MachineFunction &MF) const override;
+                        const AttributeList &FuncAttributes) const override;
 
     /// Is unaligned memory access allowed for the given type, and is it fast
     /// relative to software emulation.

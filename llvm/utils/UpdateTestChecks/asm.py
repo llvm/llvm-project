@@ -14,7 +14,7 @@ else:
 ##### Assembly parser
 
 ASM_FUNCTION_X86_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n(?:\s*.Lfunc_begin[^:\n]*:\n)?[^:]*?'
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?'
     r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
     r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section|#+ -- End function)',
     flags=(re.M | re.S))

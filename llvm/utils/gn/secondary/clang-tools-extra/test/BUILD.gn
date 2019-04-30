@@ -38,12 +38,6 @@ write_lit_config("lit_site_cfg") {
     "PYTHON_EXECUTABLE=$python_path",
   ]
 
-  if (clangd_build_xpc) {
-    extra_values += [ "CLANGD_BUILD_XPC=1" ]
-  } else {
-    extra_values += [ "CLANGD_BUILD_XPC=0" ]
-  }
-
   if (clang_enable_static_analyzer) {
     extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
   } else {
