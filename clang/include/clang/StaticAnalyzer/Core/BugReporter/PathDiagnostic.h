@@ -314,6 +314,8 @@ public:
 
   bool hasRange() const { return K == StmtK || K == RangeK || K == DeclK; }
 
+  bool hasValidLocation() const { return asLocation().isValid(); }
+
   void invalidate() {
     *this = PathDiagnosticLocation();
   }
@@ -469,7 +471,7 @@ public:
                           PathDiagnosticPiece::Kind k,
                           bool addPosRange = true)
       : PathDiagnosticPiece(s, k), Pos(pos) {
-    assert(Pos.isValid() && Pos.asLocation().isValid() &&
+    assert(Pos.isValid() && Pos.hasValidLocation() &&
            "PathDiagnosticSpotPiece's must have a valid location.");
     if (addPosRange && Pos.hasRange()) addRange(Pos.asRange());
   }

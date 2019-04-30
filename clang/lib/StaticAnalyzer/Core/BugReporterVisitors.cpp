@@ -310,7 +310,7 @@ public:
         if (RegionOfInterest->isSubRegionOf(SelfRegion) &&
             potentiallyWritesIntoIvar(Call->getRuntimeDefinition().getDecl(),
                                       IvarR->getDecl()))
-          return maybeEmitNode(R, *Call, N, {}, SelfRegion, "self",
+          return maybeEmitNote(R, *Call, N, {}, SelfRegion, "self",
                                /*FirstIsReferenceType=*/false, 1);
       }
     }
@@ -319,7 +319,7 @@ public:
       const MemRegion *ThisR = CCall->getCXXThisVal().getAsRegion();
       if (RegionOfInterest->isSubRegionOf(ThisR)
           && !CCall->getDecl()->isImplicit())
-        return maybeEmitNode(R, *Call, N, {}, ThisR, "this",
+        return maybeEmitNote(R, *Call, N, {}, ThisR, "this",
                              /*FirstIsReferenceType=*/false, 1);
 
       // Do not generate diagnostics for not modified parameters in
@@ -338,7 +338,7 @@ public:
       QualType T = PVD->getType();
       while (const MemRegion *MR = V.getAsRegion()) {
         if (RegionOfInterest->isSubRegionOf(MR) && !isPointerToConst(T))
-          return maybeEmitNode(R, *Call, N, {}, MR, ParamName,
+          return maybeEmitNote(R, *Call, N, {}, MR, ParamName,
                                ParamIsReferenceType, IndirectionLevel);
 
         QualType PT = T->getPointeeType();
@@ -346,7 +346,7 @@ public:
 
         if (const RecordDecl *RD = PT->getAsRecordDecl())
           if (auto P = findRegionOfInterestInRecord(RD, State, MR))
-            return maybeEmitNode(R, *Call, N, *P, RegionOfInterest, ParamName,
+            return maybeEmitNote(R, *Call, N, *P, RegionOfInterest, ParamName,
                                  ParamIsReferenceType, IndirectionLevel);
 
         V = State->getSVal(MR, PT);
@@ -524,7 +524,7 @@ private:
   /// \return Diagnostics piece for region not modified in the current function,
   /// if it decides to emit one.
   std::shared_ptr<PathDiagnosticPiece>
-  maybeEmitNode(BugReport &R, const CallEvent &Call, const ExplodedNode *N,
+  maybeEmitNote(BugReport &R, const CallEvent &Call, const ExplodedNode *N,
                 const RegionVector &FieldChain, const MemRegion *MatchedRegion,
                 StringRef FirstElement, bool FirstIsReferenceType,
                 unsigned IndirectionLevel) {
@@ -553,6 +553,12 @@ private:
 
     PathDiagnosticLocation L =
         PathDiagnosticLocation::create(N->getLocation(), SM);
+
+    // For now this shouldn't trigger, but once it does (as we add more
+    // functions to the body farm), we'll need to decide if these reports
+    // are worth suppressing as well.
+    if (!L.hasValidLocation())
+      return nullptr;
 
     SmallString<256> sbuf;
     llvm::raw_svector_ostream os(sbuf);
@@ -1970,43 +1976,22 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
 
-  // Use heuristics to determine if Ex is a macro expending to a literal and
-  // if so, use the macro's name.
-  SourceLocation LocStart = Ex->getBeginLoc();
-  SourceLocation LocEnd = Ex->getEndLoc();
-  if (LocStart.isMacroID() && LocEnd.isMacroID() &&
-      (isa<GNUNullExpr>(Ex) ||
-       isa<ObjCBoolLiteralExpr>(Ex) ||
-       isa<CXXBoolLiteralExpr>(Ex) ||
-       isa<IntegerLiteral>(Ex) ||
-       isa<FloatingLiteral>(Ex))) {
-    StringRef StartName = Lexer::getImmediateMacroNameForDiagnostics(LocStart,
-      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-    StringRef EndName = Lexer::getImmediateMacroNameForDiagnostics(LocEnd,
-      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-    bool beginAndEndAreTheSameMacro = StartName.equals(EndName);
-
-    bool partOfParentMacro = false;
-    if (ParentEx->getBeginLoc().isMacroID()) {
-      StringRef PName = Lexer::getImmediateMacroNameForDiagnostics(
-          ParentEx->getBeginLoc(), BRC.getSourceManager(),
-          BRC.getASTContext().getLangOpts());
-      partOfParentMacro = PName.equals(StartName);
-    }
-
-    if (beginAndEndAreTheSameMacro && !partOfParentMacro ) {
-      // Get the location of the macro name as written by the caller.
-      SourceLocation Loc = LocStart;
-      while (LocStart.isMacroID()) {
-        Loc = LocStart;
-        LocStart = BRC.getSourceManager().getImmediateMacroCallerLoc(LocStart);
+  if (isa<GNUNullExpr>(Ex) || isa<ObjCBoolLiteralExpr>(Ex) ||
+      isa<CXXBoolLiteralExpr>(Ex) || isa<IntegerLiteral>(Ex) ||
+      isa<FloatingLiteral>(Ex)) {
+    // Use heuristics to determine if the expression is a macro
+    // expanding to a literal and if so, use the macro's name.
+    SourceLocation BeginLoc = OriginalExpr->getBeginLoc();
+    SourceLocation EndLoc = OriginalExpr->getEndLoc();
+    if (BeginLoc.isMacroID() && EndLoc.isMacroID()) {
+      SourceManager &SM = BRC.getSourceManager();
+      const LangOptions &LO = BRC.getASTContext().getLangOpts();
+      if (Lexer::isAtStartOfMacroExpansion(BeginLoc, SM, LO) &&
+          Lexer::isAtEndOfMacroExpansion(EndLoc, SM, LO)) {
+        CharSourceRange R = Lexer::getAsCharRange({BeginLoc, EndLoc}, SM, LO);
+        Out << Lexer::getSourceText(R, SM, LO);
+        return false;
       }
-      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
-        Loc, BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-
-      // Return the macro name.
-      Out << MacroName;
-      return false;
     }
   }
 
