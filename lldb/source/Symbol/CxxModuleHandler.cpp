@@ -21,10 +21,10 @@ CxxModuleHandler::CxxModuleHandler(ASTImporter &importer, ASTContext *target)
 
   std::initializer_list<const char *> supported_names = {
       // containers
-      "vector",
-      "list",
-      "forward_list",
       "deque",
+      "forward_list",
+      "list",
+      "vector",
       // pointers
       "shared_ptr",
       "unique_ptr",
