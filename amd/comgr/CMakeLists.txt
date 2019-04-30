@@ -19,7 +19,36 @@ include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 include_directories(${CLANG_INCLUDE_DIRS})
 
+# FIXME: There is no way to directly determine the include paths for LLD when
+# working with an LLVM build tree, but we want to avoid having to install LLVM
+# to build Comgr. This should eventually be fixed in usptream LLD so this can
+# be removed.
+if(DEFINED LLVM_BUILD_MAIN_SRC_DIR)
+  set(INTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/tools/lld/include")
+  set(EXTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/../lld/include")
+  if (EXISTS "${INTERNAL_LLD_INCLUDE_DIRS}"
+      AND IS_DIRECTORY "${INTERNAL_LLD_INCLUDE_DIRS}")
+    set(LLD_INCLUDE_DIRS "${INTERNAL_LLD_INCLUDE_DIRS}")
+  elseif (EXISTS "${EXTERNAL_LLD_INCLUDE_DIRS}"
+      AND IS_DIRECTORY "${EXTERNAL_LLD_INCLUDE_DIRS}")
+    set(LLD_INCLUDE_DIRS "${EXTERNAL_LLD_INCLUDE_DIRS}")
+  else()
+    message(FATAL_ERROR "You are attempting to compile using an LLVM build tree, but the LLD include directory could not be located. The paths '${INTERNAL_LLD_INCLUDE_DIRS}' and '${EXTERNAL_LLD_INCLUDE_DIRS}' were tried.")
+  endif()
+  include_directories(${LLD_INCLUDE_DIRS})
+endif()
+
 find_package(AMDDeviceLibs CONFIG)
+
+message("")
+message("------------LLVM_DIR: ${LLVM_DIR}")
+message("-----------Clang_DIR: ${Clang_DIR}")
+message("---AMDDeviceLibs_DIR: ${AMDDeviceLibs_DIR}")
+message("---LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
+message("---LLVM_LIBRARY_DIRS: ${LLVM_LIBRARY_DIRS}")
+message("--CLANG_INCLUDE_DIRS: ${CLANG_INCLUDE_DIRS}")
+message("----LLD_INCLUDE_DIRS: ${LLD_INCLUDE_DIRS}")
+message("")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
