@@ -100,6 +100,6 @@
 // Check our load function is in a comdat.
 // CHECK-WIN: define linkonce_odr hidden void @.objcv2_load_function() comdat {
 
-// Make sure we have dllimport on the load function
-// CHECK-WIN: declare dllimport void @__objc_load
+// Make sure we do not have dllimport on the load function
+// CHECK-WIN: declare dso_local void @__objc_load
 

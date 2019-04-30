@@ -27,6 +27,7 @@ add_lldb_library(lldbSymbol
   LocateSymbolFile.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
+  CxxModuleHandler.cpp
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp

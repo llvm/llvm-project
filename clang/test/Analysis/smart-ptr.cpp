@@ -16,3 +16,13 @@ void derefAfterMove(std::unique_ptr<int> P) {
   // TODO: Report a null dereference (instead).
   *P.get() = 1; // expected-warning {{Method called on moved-from object 'P'}}
 }
+
+// Don't crash when attempting to model a call with unknown callee.
+namespace testUnknownCallee {
+struct S {
+  void foo();
+};
+void bar(S *s, void (S::*func)(void)) {
+  (s->*func)(); // no-crash
+}
+} // namespace testUnknownCallee

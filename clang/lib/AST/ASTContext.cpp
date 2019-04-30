@@ -2580,7 +2580,7 @@ ASTContext::getBlockVarCopyInit(const VarDecl*VD) const {
   return {nullptr, false};
 }
 
-/// Set the copy inialization expression of a block var decl.
+/// Set the copy initialization expression of a block var decl.
 void ASTContext::setBlockVarCopyInit(const VarDecl*VD, Expr *CopyExpr,
                                      bool CanThrow) {
   assert(VD && CopyExpr && "Passed null params");

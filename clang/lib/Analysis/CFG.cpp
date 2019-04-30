@@ -4677,6 +4677,51 @@ std::unique_ptr<CFG> CFG::buildCFG(const Decl *D, Stmt *Statement,
   return Builder.buildCFG(D, Statement);
 }
 
+bool CFG::isLinear() const {
+  // Quick path: if we only have the ENTRY block, the EXIT block, and some code
+  // in between, then we have no room for control flow.
+  if (size() <= 3)
+    return true;
+
+  // Traverse the CFG until we find a branch.
+  // TODO: While this should still be very fast,
+  // maybe we should cache the answer.
+  llvm::SmallPtrSet<const CFGBlock *, 4> Visited;
+  const CFGBlock *B = Entry;
+  while (B != Exit) {
+    auto IteratorAndFlag = Visited.insert(B);
+    if (!IteratorAndFlag.second) {
+      // We looped back to a block that we've already visited. Not linear.
+      return false;
+    }
+
+    // Iterate over reachable successors.
+    const CFGBlock *FirstReachableB = nullptr;
+    for (const CFGBlock::AdjacentBlock &AB : B->succs()) {
+      if (!AB.isReachable())
+        continue;
+
+      if (FirstReachableB == nullptr) {
+        FirstReachableB = &*AB;
+      } else {
+        // We've encountered a branch. It's not a linear CFG.
+        return false;
+      }
+    }
+
+    if (!FirstReachableB) {
+      // We reached a dead end. EXIT is unreachable. This is linear enough.
+      return true;
+    }
+
+    // There's only one way to move forward. Proceed.
+    B = FirstReachableB;
+  }
+
+  // We reached EXIT and found no branches.
+  return true;
+}
+
 const CXXDestructorDecl *
 CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
   switch (getKind()) {

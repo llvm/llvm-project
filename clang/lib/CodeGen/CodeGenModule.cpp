@@ -3000,9 +3000,13 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
     if (F->empty()) {
       F->setCallingConv(getRuntimeCC());
 
-      if (!Local && getTriple().isOSBinFormatCOFF() &&
-          !getCodeGenOpts().LTOVisibilityPublicStd &&
-          !getTriple().isWindowsGNUEnvironment()) {
+      // In Windows Itanium environments, try to mark runtime functions
+      // dllimport. For Mingw and MSVC, don't. We don't really know if the user
+      // will link their standard library statically or dynamically. Marking
+      // functions imported when they are not imported can cause linker errors
+      // and warnings.
+      if (!Local && getTriple().isWindowsItaniumEnvironment() &&
+          !getCodeGenOpts().LTOVisibilityPublicStd) {
         const FunctionDecl *FD = GetRuntimeFunctionDecl(Context, Name);
         if (!FD || FD->hasAttr<DLLImportAttr>()) {
           F->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);

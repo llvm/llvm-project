@@ -563,15 +563,14 @@ private:
     // initialize its out-parameter, and additionally check that such
     // precondition can actually be fulfilled on the current path.
     if (Call.isInSystemHeader()) {
-      // We make an exception for system header functions that have no branches,
-      // i.e. have exactly 3 CFG blocks: begin, all its code, end. Such
-      // functions unconditionally fail to initialize the variable.
+      // We make an exception for system header functions that have no branches.
+      // Such functions unconditionally fail to initialize the variable.
       // If they call other functions that have more paths within them,
       // this suppression would still apply when we visit these inner functions.
       // One common example of a standard function that doesn't ever initialize
       // its out parameter is operator placement new; it's up to the follow-up
       // constructor (if any) to initialize the memory.
-      if (N->getStackFrame()->getCFG()->size() > 3)
+      if (!N->getStackFrame()->getCFG()->isLinear())
         R.markInvalid(getTag(), nullptr);
       return nullptr;
     }
