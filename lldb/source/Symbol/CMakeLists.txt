@@ -28,6 +28,7 @@ add_lldb_library(lldbSymbol
   ObjectFile.cpp
   PostfixExpression.cpp
   SwiftASTContext.cpp
+  CxxModuleHandler.cpp
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp

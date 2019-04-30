@@ -53,6 +53,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/LangStandard.h"
+#include "clang/Sema/Sema.h"
 
 #ifdef LLDB_DEFINED_NDEBUG_FOR_CLANG
 #undef NDEBUG
@@ -801,6 +802,12 @@ void ClangASTContext::Clear() {
   m_selector_table_up.reset();
   m_builtins_up.reset();
   m_pointer_byte_size = 0;
+}
+
+void ClangASTContext::setSema(Sema *s) {
+  // Ensure that the new sema actually belongs to our ASTContext.
+  assert(s == nullptr || &s->getASTContext() == m_ast_up.get());
+  m_sema = s;
 }
 
 const char *ClangASTContext::GetTargetTriple() {

@@ -1048,8 +1048,10 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
                                *Consumer, TU_Complete, completion_consumer));
   m_compiler->setASTConsumer(std::move(Consumer));
 
-  if (ast_context.getLangOpts().Modules)
+  if (ast_context.getLangOpts().Modules) {
     m_compiler->createModuleManager();
+    m_ast_context->setSema(&m_compiler->getSema());
+  }
 
   ClangExpressionDeclMap *decl_map = type_system_helper->DeclMap();
   if (decl_map) {
@@ -1086,6 +1088,10 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
         &m_compiler->getSema());
     ParseAST(m_compiler->getSema(), false, false);
   }
+
+  // Make sure we have no pointer to the Sema we are about to destroy.
+  if (ast_context.getLangOpts().Modules)
+    m_ast_context->setSema(nullptr);
   // Destroy the Sema. This is necessary because we want to emulate the
   // original behavior of ParseAST (which also destroys the Sema after parsing).
   m_compiler->setSema(nullptr);

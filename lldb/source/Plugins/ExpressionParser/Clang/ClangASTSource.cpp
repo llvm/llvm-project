@@ -764,6 +764,10 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   }
 }
 
+clang::Sema *ClangASTSource::getSema() {
+  return ClangASTContext::GetASTContext(m_ast_context)->getSema();
+}
+
 bool ClangASTSource::IgnoreName(const ConstString name,
                                 bool ignore_all_dollar_names) {
   static const ConstString id_name("id");
