@@ -39,7 +39,7 @@ bool SmartPtrModeling::isNullAfterMoveMethod(
   // TODO: Handle other methods, such as .get() or .release().
   // But once we do, we'd need a visitor to explain null dereferences
   // that are found via such modeling.
-  const auto *CD = dyn_cast<CXXConversionDecl>(Call->getDecl());
+  const auto *CD = dyn_cast_or_null<CXXConversionDecl>(Call->getDecl());
   return CD && CD->getConversionType()->isBooleanType();
 }
 
