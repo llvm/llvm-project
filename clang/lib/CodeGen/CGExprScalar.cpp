@@ -639,13 +639,15 @@ public:
 
     // If we're checking for a platform older than our minimum deployment
     // target, we can fold the check away.
-    if ((Version.empty() && VariantVersion.empty()) ||
-        (!Version.empty() &&
-         Version <= CGF.CGM.getTarget().getPlatformMinVersion() &&
-         (!CGF.CGM.getTarget().hasTargetVariantPlatform() ||
-          (!VariantVersion.empty() &&
-           VariantVersion <=
-               CGF.CGM.getTarget().getTargetVariantPlatformMinVersion()))))
+    if (!Version.empty() &&
+        Version <= CGF.CGM.getTarget().getPlatformMinVersion())
+      Version = VersionTuple();
+    if (!VariantVersion.empty() &&
+        VariantVersion <=
+            CGF.CGM.getTarget().getTargetVariantPlatformMinVersion())
+      VariantVersion = VersionTuple();
+
+    if (Version.empty() && VariantVersion.empty())
       return llvm::ConstantInt::get(Builder.getInt1Ty(), 1);
 
     return CGF.EmitBuiltinAvailable(Version, VariantVersion);

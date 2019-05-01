@@ -20,11 +20,30 @@ void use_at_available() {
   if (@available(ios 13.1, *))
    ;
 
-  // This check should be folded: our deployment target is 10.11.
+  // These checks should be partially folded
+  // CHECK: call i32 @__isPlatformVersionAtLeast(i32 2, i32 13, i32 1, i32 0)
+  // CHECK-NEXT: icmp ne
+  if (@available(macos 10.11, macCatalyst 13.1, *))
+    ;
+
+  // CHECK: call i32 @__isPlatformVersionAtLeast(i32 1, i32 10, i32 15, i32 0)
+  // CHECK-NEXT: icmp ne
+  if (@available(macos 10.15, ios 11, *))
+    ;
+
+  // These checks should be folded: our deployment target is higher.
   // CHECK-NOT: call i32 @__isPlatformVersionAtLeast
   // CHECK-NOT: call i32 @__isPlatformOrVariantPlatformVersionAtLeast
   // CHECK: br i1 true
   if (__builtin_available(macos 10.11, ios 11, *))
+    ;
+
+  // CHECK: br i1 true
+  if (@available(ios 11, *))
+    ;
+
+  // CHECK: br i1 true
+  if (@available(macos 10.11, *))
     ;
 }
 
