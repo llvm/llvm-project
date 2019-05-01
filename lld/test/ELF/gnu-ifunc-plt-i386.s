@@ -5,7 +5,7 @@
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
-// RUN: llvm-readobj -r -dynamic-table %tout | FileCheck %s
+// RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 
 // Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
 // CHECK: Relocations [

@@ -1,8 +1,8 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -s %t | FileCheck %s
-// RUN: llvm-readobj -s -symbols %t | FileCheck -check-prefix=SYMBOLS %s
+// RUN: llvm-readobj -S %t | FileCheck %s
+// RUN: llvm-readobj -S --symbols %t | FileCheck -check-prefix=SYMBOLS %s
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t | FileCheck -check-prefix=CODE %s
 
 // Test the R_ARM_GOT_PREL relocation

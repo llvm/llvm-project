@@ -6,7 +6,7 @@
 // RUN: ld.lld --hash-style=sysv -shared %t1 %t2 -o %t3
 // RUN: llvm-objdump -triple=thumbv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOTHUMB %s
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOARM %s
-// RUN: llvm-readobj -s -r %t3 | FileCheck -check-prefix=DSOREL %s
+// RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 //
 // Test PLT entry generation
  .syntax unified

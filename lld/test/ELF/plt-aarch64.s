@@ -4,10 +4,10 @@
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld -shared %t.o %t2.so -o %t.so
 // RUN: ld.lld %t.o %t2.so -o %t.exe
-// RUN: llvm-readobj -s -r %t.so | FileCheck --check-prefix=CHECKDSO %s
+// RUN: llvm-readobj -S -r %t.so | FileCheck --check-prefix=CHECKDSO %s
 // RUN: llvm-objdump -s -section=.got.plt %t.so | FileCheck --check-prefix=DUMPDSO %s
 // RUN: llvm-objdump -d %t.so | FileCheck --check-prefix=DISASMDSO %s
-// RUN: llvm-readobj -s -r %t.exe | FileCheck --check-prefix=CHECKEXE %s
+// RUN: llvm-readobj -S -r %t.exe | FileCheck --check-prefix=CHECKEXE %s
 // RUN: llvm-objdump -s -section=.got.plt %t.exe | FileCheck --check-prefix=DUMPEXE %s
 // RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=DISASMEXE %s
 

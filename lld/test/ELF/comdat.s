@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/comdat.s -o %t2.o
 // RUN: ld.lld -shared %t.o %t.o %t2.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
-// RUN: llvm-readobj -s -t %t | FileCheck --check-prefix=READ %s
+// RUN: llvm-readobj -S --symbols %t | FileCheck --check-prefix=READ %s
 
 // Check that we don't crash with --gc-section and that we print a list of
 // reclaimed sections on stderr.

@@ -19,7 +19,7 @@
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t3 | FileCheck -check-prefix=CHECK-ARM -check-prefix=CHECK-PI-ARM %s
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t4 | FileCheck -check-prefix=CHECK-THUMB -check-prefix=CHECK-PI-PLT-THUMB %s
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t4 | FileCheck -check-prefix=CHECK-ARM -check-prefix=CHECK-PI-PLT-ARM %s
-// RUN: llvm-readobj -s -r %t4 | FileCheck -check-prefix=CHECK-DSO-REL %s
+// RUN: llvm-readobj -S -r %t4 | FileCheck -check-prefix=CHECK-DSO-REL %s
 
 // Test ARM Thumb Interworking
 // The file is linked and checked 3 times to check the following contexts

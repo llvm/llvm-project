@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %p/Inputs/tls-opt-iele-i686-nopic.s -o %tso.o
 // RUN: ld.lld -shared %tso.o -o %tso
 // RUN: ld.lld --hash-style=sysv %t.o %tso -o %t1
-// RUN: llvm-readobj -s -r %t1 | FileCheck --check-prefix=GOTREL %s
+// RUN: llvm-readobj -S -r %t1 | FileCheck --check-prefix=GOTREL %s
 // RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
 
 // GOTREL:      Section {

@@ -4,9 +4,9 @@
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld -shared %t.o %t2.so -o %t
 // RUN: ld.lld %t.o %t2.so -o %t3
-// RUN: llvm-readobj -s -r %t | FileCheck %s
+// RUN: llvm-readobj -S -r %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
-// RUN: llvm-readobj -s -r %t3 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-readobj -S -r %t3 | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump -d %t3 | FileCheck --check-prefix=DISASM2 %s
 
 // CHECK:      Name: .plt

@@ -8,7 +8,7 @@
 # RUN:         -mattr=micromips %s -o %t2eb.o
 # RUN: ld.lld -o %teb.exe %t2eb.o %teb.so
 # RUN: llvm-objdump -d -mattr=micromips %teb.exe | FileCheck --check-prefix=EB %s
-# RUN: llvm-readobj -mips-plt-got %teb.exe | FileCheck --check-prefix=PLT %s
+# RUN: llvm-readobj --mips-plt-got %teb.exe | FileCheck --check-prefix=PLT %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips %S/Inputs/mips-micro.s -o %t1el.o
@@ -17,7 +17,7 @@
 # RUN:         -mattr=micromips %s -o %t2el.o
 # RUN: ld.lld -o %tel.exe %t2el.o %tel.so
 # RUN: llvm-objdump -d -mattr=micromips %tel.exe | FileCheck --check-prefix=EL %s
-# RUN: llvm-readobj -mips-plt-got %tel.exe | FileCheck --check-prefix=PLT %s
+# RUN: llvm-readobj --mips-plt-got %tel.exe | FileCheck --check-prefix=PLT %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips -mcpu=mips32r6 %S/Inputs/mips-micro.s -o %t1eb.o

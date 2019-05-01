@@ -3,7 +3,7 @@
 # RUN: ld.lld %t1.o -shared -o %t1.so
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t %t1.so -pie
-# RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
+# RUN: llvm-readobj --dyn-syms %t | FileCheck %s
 
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {

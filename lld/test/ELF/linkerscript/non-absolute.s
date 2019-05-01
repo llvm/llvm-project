@@ -3,7 +3,7 @@
 # RUN: echo "SECTIONS { A = . - 0x10; B = A + 0x1; }" > %t.script
 # RUN: ld.lld -shared %t1.o --script %t.script -o %t
 # RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=DUMP
-# RUN: llvm-readobj -t %t | FileCheck %s --check-prefix=SYMBOL
+# RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=SYMBOL
 
 # B = A + 0x1 = -0x10 + 0x1 = -0xf -> 0xFFFFFFFFFFFFFFF1
 # B - (0x94+6) = -0xf - (0x94+6) = -169

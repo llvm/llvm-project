@@ -7,7 +7,7 @@
 # RUN:   .foo : {foo1 = .;  *(.foo.*) foo2 = .;  *(.bar) foo3 = .;} \
 # RUN: }" > %t.script
 # RUN: ld.lld --hash-style=sysv -o %t1 --script %t.script %t -shared
-# RUN: llvm-readobj -t %t1 | FileCheck %s
+# RUN: llvm-readobj --symbols %t1 | FileCheck %s
 
 # CHECK:      Name: foo1
 # CHECK-NEXT: Value: 0x2C0

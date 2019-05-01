@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %p/Inputs/shared.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld --hash-style=sysv %t %t2.so -o %t2
-// RUN: llvm-readobj -s %t2 | FileCheck --check-prefix=ADDR %s
+// RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=ADDR %s
 // RUN: llvm-objdump -d %t2 | FileCheck %s
 
 .global _start

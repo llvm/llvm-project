@@ -3,10 +3,10 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %p/Inputs/shared.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
-// RUN: llvm-readobj -s -r %t | FileCheck %s
+// RUN: llvm-readobj -S -r %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 // RUN: ld.lld -shared %t.o %t2.so -o %t
-// RUN: llvm-readobj -s -r %t | FileCheck --check-prefix=CHECKSHARED %s
+// RUN: llvm-readobj -S -r %t | FileCheck --check-prefix=CHECKSHARED %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASMSHARED %s
 // RUN: ld.lld -pie %t.o %t2.so -o %t
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASMPIE %s

@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-freebsd %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -s --section-data  %t | FileCheck %s
+// RUN: llvm-readobj -S --section-data  %t | FileCheck %s
 
 // CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS

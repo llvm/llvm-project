@@ -5,7 +5,7 @@
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t | FileCheck %s
 // RUN: ld.lld --hash-style=sysv -shared %t1 %t2 -o %t3
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSO %s
-// RUN: llvm-readobj -s -r %t3 | FileCheck -check-prefix=DSOREL %s
+// RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 //
 // Test PLT entry generation
  .syntax unified
@@ -111,7 +111,7 @@ _start:
 // RUN:       }" > %t.script
 // RUN: ld.lld --hash-style=sysv --script %t.script -shared %t1 %t2 -o %t4
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t4 | FileCheck --check-prefix=CHECKHIGH %s
-// RUN: llvm-readobj -s -r %t4 | FileCheck --check-prefix=DSORELHIGH %s
+// RUN: llvm-readobj -S -r %t4 | FileCheck --check-prefix=DSORELHIGH %s
 
 // CHECKHIGH: Disassembly of section .text:
 // CHECKHIGH-NEXT: func1:
@@ -176,7 +176,7 @@ _start:
 // RUN:       }" > %t2.script
 // RUN: ld.lld --hash-style=sysv --script %t2.script -shared %t1 %t2 -o %t5
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t5 | FileCheck --check-prefix=CHECKLONG %s
-// RUN: llvm-readobj -s -r %t5 | FileCheck --check-prefix=DSORELLONG %s
+// RUN: llvm-readobj -S -r %t5 | FileCheck --check-prefix=DSORELLONG %s
 
 // CHECKLONG: Disassembly of section .text:
 // CHECKLONG-NEXT: func1:
@@ -242,7 +242,7 @@ _start:
 // RUN:       }" > %t3.script
 // RUN: ld.lld --hash-style=sysv --script %t3.script -shared %t1 %t2 -o %t6
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t6 | FileCheck --check-prefix=CHECKMIX %s
-// RUN: llvm-readobj -s -r %t6 | FileCheck --check-prefix=DSORELMIX %s
+// RUN: llvm-readobj -S -r %t6 | FileCheck --check-prefix=DSORELMIX %s
 
 // CHECKMIX: Disassembly of section .text:
 // CHECKMIX-NEXT: func1:

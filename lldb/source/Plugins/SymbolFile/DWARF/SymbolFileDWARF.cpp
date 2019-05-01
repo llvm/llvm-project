@@ -1651,9 +1651,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
             // printed. However, as one can notice in this case we don't
             // actually need to try to load the already loaded module
             // (corresponding to .dwo) so we simply skip it.
-            if (m_obj_file->GetFileSpec()
-                        .GetFileNameExtension()
-                        .GetStringRef() == ".dwo" &&
+            if (m_obj_file->GetFileSpec().GetFileNameExtension() == ".dwo" &&
                 llvm::StringRef(m_obj_file->GetFileSpec().GetPath())
                     .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
               continue;

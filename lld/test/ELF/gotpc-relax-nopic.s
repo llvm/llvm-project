@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o -o %t1
-# RUN: llvm-readobj -symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
+# RUN: llvm-readobj --symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
 # RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
 
 ## There is no relocations.
@@ -26,7 +26,7 @@
 # DISASM-NEXT:   201038: {{.*}} testq $2105344, %r15
 
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t2
-# RUN: llvm-readobj -s -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s
+# RUN: llvm-readobj -S -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s
 # RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=DISASM-PIC %s
 # SEC-PIC:      Section {
 # SEC-PIC:        Index:

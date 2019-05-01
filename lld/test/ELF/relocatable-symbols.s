@@ -3,7 +3,7 @@
 # RUN: ld.lld -r %t -o %tout
 # RUN: llvm-objdump -d %tout | FileCheck -check-prefix=DISASM %s
 # RUN: llvm-readobj -r %t | FileCheck -check-prefix=RELOC %s
-# RUN: llvm-readobj -symbols -r %tout | FileCheck -check-prefix=SYMBOL %s
+# RUN: llvm-readobj --symbols -r %tout | FileCheck -check-prefix=SYMBOL %s
 
 # DISASM:      _start:
 # DISASM-NEXT:   0: {{.*}} callq 0

@@ -48,7 +48,7 @@
 # SECTION-NOT: debug_gnu_pubnames
 
 # RUN: ld.lld --gdb-index --no-gdb-index %t1.o %t2.o -o %t2
-# RUN: llvm-readobj -sections %t2 | FileCheck -check-prefix=NOGDB %s
+# RUN: llvm-readobj --sections %t2 | FileCheck -check-prefix=NOGDB %s
 # NOGDB-NOT: Name: .gdb_index
 
 ## The following section contents are created by this using gcc 7.1.0:

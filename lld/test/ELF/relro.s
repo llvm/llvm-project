@@ -5,13 +5,13 @@
 // RUN: ld.lld -shared %t2.o -o %t2.so
 
 // RUN: ld.lld %t.o %t2.so -z now -z norelro -z relro -o %t
-// RUN: llvm-readobj -l --elf-output-style=GNU %t | FileCheck --check-prefix=CHECK --check-prefix=FULLRELRO %s
+// RUN: llvm-readelf -l %t | FileCheck --check-prefix=CHECK --check-prefix=FULLRELRO %s
 
 // RUN: ld.lld %t.o %t2.so -z norelro -z relro -o %t
-// RUN: llvm-readobj -l --elf-output-style=GNU %t | FileCheck --check-prefix=CHECK --check-prefix=PARTRELRO %s
+// RUN: llvm-readelf -l %t | FileCheck --check-prefix=CHECK --check-prefix=PARTRELRO %s
 
 // RUN: ld.lld %t.o %t2.so -z norelro -o %t
-// RUN: llvm-readobj -l --elf-output-style=GNU %t | FileCheck --check-prefix=NORELRO %s
+// RUN: llvm-readelf -l %t | FileCheck --check-prefix=NORELRO %s
 
 // CHECK:      Program Headers:
 // CHECK-NEXT: Type

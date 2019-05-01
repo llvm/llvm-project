@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -s -r -t %t | FileCheck %s
+// RUN: llvm-readobj -S -r --symbols %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Name: .got.plt

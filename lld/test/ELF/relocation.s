@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/shared.s -o %t2
 // RUN: ld.lld %t2 -soname fixed-length-string.so -o %t2.so -shared
 // RUN: ld.lld --hash-style=sysv %t %t2.so -o %t3
-// RUN: llvm-readobj -s  %t3 | FileCheck --check-prefix=SEC %s
+// RUN: llvm-readobj -S  %t3 | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -s -d %t3 | FileCheck %s
 
 // SEC:      Name: .plt
