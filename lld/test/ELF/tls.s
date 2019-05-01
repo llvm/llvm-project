@@ -163,6 +163,7 @@ d:
 // CHECK-NEXT:   }
 
 // DIS:      Disassembly of section .text:
+// DIS-EMPTY:
 // DIS-NEXT: _start:
 // DIS-NEXT:    201000: {{.+}} movl    %fs:-8, %eax
 // DIS-NEXT:    201008: {{.+}} movl    %fs:-16, %eax

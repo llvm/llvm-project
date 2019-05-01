@@ -11,6 +11,7 @@
 # 0x11028 - 24 = 0x11010
 # 0x1102c - 16 = 0x1101c
 # CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: _foo:
 # CHECK-NEXT:    210000: {{.*}} nop
 # CHECK-NEXT:    210004: {{.*}} nop
@@ -53,6 +54,7 @@
 #DSOREL-NEXT:]
 
 #DSO:      Disassembly of section .text:
+#DSO-EMPTY:
 #DSO-NEXT: _foo:
 #DSO-NEXT:     10000: {{.*}} nop
 #DSO-NEXT:     10004: {{.*}} nop
@@ -69,7 +71,9 @@
 #DSO-NEXT:     10024: {{.*}} b.eq #44
 #DSO-NEXT:     10028: {{.*}} b.eq #56
 #DSO-NEXT:     1002c: {{.*}} b.eq #68
+#DSO-EMPTY:
 #DSO-NEXT: Disassembly of section .plt:
+#DSO-EMPTY:
 #DSO-NEXT: .plt:
 #DSO-NEXT:     10030: {{.*}} stp x16, x30, [sp, #-16]!
 #DSO-NEXT:     10034: {{.*}} adrp x16, #131072

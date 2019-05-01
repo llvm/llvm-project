@@ -17,6 +17,7 @@
 # 0x101e + 7 - 36 = 0x1001
 # 0x1025 + 7 - 43 = 0x1001
 # DISASM:      Disassembly of section .text:
+# DISASM-EMPTY:
 # DISASM-NEXT: foo:
 # DISASM-NEXT:     nop
 # DISASM:      hid:

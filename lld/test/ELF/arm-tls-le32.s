@@ -68,6 +68,7 @@ x:
 // SEC-NEXT: }
 
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: _start:
 // offset of x from Thread pointer = (TcbSize + 0x0 = 0x20)
 // CHECK-NEXT:   11000:         20 00 00 00

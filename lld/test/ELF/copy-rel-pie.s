@@ -42,6 +42,7 @@ _start:
 // 0x3020          - 0x100a = 8214
 
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: _start:
 // DISASM-NEXT:     1000:       e8 1b 00 00 00  callq   27
 // DISASM-NEXT:     1005:       e8 16 20 00 00  callq   8214 <foo>

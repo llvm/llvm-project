@@ -16,6 +16,7 @@
 # RUN: llvm-readelf -sections %t | FileCheck %s --check-prefix=SECTION
 
 # DISASM:       Disassembly of section .text:
+# DISASM-EMPTY:
 # DISASM:       entrypoint:
 # DISASM-CHECK:   201000: 90 nop
 # DISASM-CHECK:   201001: cc int3

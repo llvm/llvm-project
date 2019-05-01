@@ -113,6 +113,7 @@ _start:
 // CHECK-NEXT:  }
 
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:    11000:      1e ff 2f e1     bx      lr
 // DISASM: bar:
@@ -126,7 +127,9 @@ _start:
 // 1 * 65536 + 260 = 0x10104 __rel_iplt_end
 // DISASM-NEXT:    11018:      04 01 00 e3     movw    r0, #260
 // DISASM-NEXT:    1101c:      01 00 40 e3     movt    r0, #1
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: $a:
 // DISASM-NEXT:    11020:       00 c6 8f e2     add     r12, pc, #0, #12
 // DISASM-NEXT:    11024:       00 ca 8c e2     add     r12, r12, #0, #20

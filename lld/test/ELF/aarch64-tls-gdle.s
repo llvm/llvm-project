@@ -11,6 +11,7 @@
 
 # TCB size = 64 and foo is first element from TLS register.
 # CHECK: Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK: _start:
 # CHECK:  210000:	00 00 a0 d2	movz	x0, #0, lsl #16
 # CHECK:  210004:	00 08 80 f2 	movk	x0, #64

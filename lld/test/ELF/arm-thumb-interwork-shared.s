@@ -15,6 +15,7 @@ sym1:
 // entry.
 
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: sym1:
 // CHECK-NEXT: 1000: 00 f0 02 b8 b.w #4 <__ThumbV7PILongThunk_elsewhere>
 // CHECK-NEXT: 1004: 00 f0 06 b8 b.w #12 <__ThumbV7PILongThunk_weakref>
@@ -30,6 +31,7 @@ sym1:
 // CHECK-NEXT:     101e:       60 47   bx      r12
 
 // PLT: Disassembly of section .plt:
+// PLT-EMPTY:
 // PLT-NEXT: $a:
 // PLT-NEXT:     1020:  04 e0 2d e5     str     lr, [sp, #-4]!
 // PLT-NEXT:     1024:  00 e6 8f e2     add     lr, pc, #0, #12

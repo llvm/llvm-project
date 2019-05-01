@@ -41,6 +41,7 @@
 // GOTRELSHARED:      0x6FFFFFFA RELCOUNT             8
 
 // DISASMSHARED:       Disassembly of section test:
+// DISASMSHARED-EMPTY:
 // DISASMSHARED-NEXT:  _start:
 // (.got)[0] = 0x2060 = 8288
 // (.got)[1] = 0x2064 = 8292

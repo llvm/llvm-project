@@ -9,11 +9,13 @@
 // DISASM:    1005:       {{.*}}  callq   8
 // DISASM:    100a:       {{.*}}  callq   3
 // DISASM: Disassembly of section foo:
+// DISASM-EMPTY:
 // DISASM: __start_foo:
 // DISASM:    100f:       90      nop
 // DISASM:    1010:       90      nop
 // DISASM:    1011:       90      nop
 // DISASM: Disassembly of section bar:
+// DISASM-EMPTY:
 // DISASM: __start_bar:
 // DISASM:    1012:       90      nop
 // DISASM:    1013:       90      nop

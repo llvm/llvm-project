@@ -83,6 +83,7 @@ x:
 // SEC:  0x2050 R_ARM_TLS_TPOFF32 y
 
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: func:
 // CHECK-NEXT:    1000: 00 f0 20 e3     nop
 // CHECK-NEXT:    1004: 00 f0 20 e3     nop

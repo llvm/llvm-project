@@ -4,6 +4,7 @@
 # RUN: llvm-objdump -triple=thumbv7a-linux-gnueabi -d %t | FileCheck %s
 
 # CHECK: Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT:_start:
 # CHECK-NEXT:    11000:       ff e7   b       #-2
 

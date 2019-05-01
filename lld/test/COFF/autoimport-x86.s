@@ -19,6 +19,7 @@
 # IMPORTS-NEXT: }
 
 # DISASM: Disassembly of section .text:
+# DISASM-EMPTY:
 # DISASM: .text:
 # Relative offset at 0x1002 pointing at the IAT at 0x2080.
 # DISASM: 140001000:      8b 05 7a 10 00 00       movl    4218(%rip), %eax

@@ -58,6 +58,7 @@ movl $z, %edx
 // 2109456 = 0x203000 + 16
 // 2109460 = 0x203000 + 16 + 4
 // CODE: Disassembly of section .text:
+// CODE-EMPTY:
 // CODE-NEXT: _start:
 // CODE-NEXT: 201000: {{.*}} movl $5, 2109440
 // CODE-NEXT: 20100b: {{.*}} movl $7, 2109456

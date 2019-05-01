@@ -41,6 +41,7 @@ function:
 // CHECK-NEXT:    Section: .got
 
 // CODE: Disassembly of section .text:
+// CODE-EMPTY:
 // CODE-NEXT: _start:
 // CODE-NEXT:    1000:        08 30 9f e5    ldr     r3, [pc, #8]
 // CODE-NEXT:    1004:        08 20 9f e5    ldr     r2, [pc, #8]

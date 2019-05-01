@@ -100,6 +100,7 @@
 // 392 = 0x188
 
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:  210000: c0 03 5f d6 ret
 // DISASM: bar:
@@ -109,7 +110,9 @@
 // DISASM-NEXT:  21000c: 09 00 00 94     bl      #36
 // DISASM-NEXT:  210010: 42 60 05 91     add     x2, x2, #344
 // DISASM-NEXT:  210014: 42 20 06 91     add     x2, x2, #392
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:  210020: 90 00 00 90 adrp x16, #65536
 // DISASM-NEXT:  210024: 11 02 40 f9 ldr x17, [x16]

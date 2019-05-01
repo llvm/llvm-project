@@ -77,6 +77,7 @@ _start:
 // CHECK: ]
 
 // CODE: Disassembly of section .text:
+// CODE-EMPTY:
 // CODE-NEXT: _start:
 // S(x) = 0x230000, A = 0, P = 0x210000
 // S + A - P = 0x20000 = 131072

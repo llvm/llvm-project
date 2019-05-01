@@ -14,6 +14,7 @@
 
 ## 2105344 = 0x202000 (bar)
 # DISASM:      Disassembly of section .text:
+# DISASM-EMPTY:
 # DISASM-NEXT: _start:
 # DISASM-NEXT:   201000: {{.*}} adcq  $2105344, %rax
 # DISASM-NEXT:   201007: {{.*}} addq  $2105344, %rbx
@@ -55,6 +56,7 @@
 ## Ex: 0x1000 + 4249 + 7 = 0x20A0
 ##     0x102a + 4207 + 7 = 0x20A0
 # DISASM-PIC:      Disassembly of section .text:
+# DISASM-PIC-EMPTY:
 # DISASM-PIC-NEXT: _start:
 # DISASM-PIC-NEXT: 1000: {{.*}} adcq  4249(%rip), %rax
 # DISASM-PIC-NEXT: 1007: {{.*}} addq  4242(%rip), %rbx

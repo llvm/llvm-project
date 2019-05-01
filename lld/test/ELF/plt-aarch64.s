@@ -70,6 +70,7 @@
 // DISASMDSO-NEXT:     1000c:	1f 20 03 d5 	nop
 
 // DISASMDSO: Disassembly of section .plt:
+// DISASMDSO-EMPTY:
 // DISASMDSO-NEXT: .plt:
 // DISASMDSO-NEXT:     10010:	f0 7b bf a9 	stp	x16, x30, [sp, #-16]!
 // &(.got.plt[2]) = 0x3000 + 2 * 8 = 0x3010
@@ -169,6 +170,7 @@
 // DISASMEXE-NEXT:    21000c:	1f 20 03 d5 	nop
 
 // DISASMEXE: Disassembly of section .plt:
+// DISASMEXE-EMPTY:
 // DISASMEXE-NEXT: .plt:
 // DISASMEXE-NEXT:    210010:	f0 7b bf a9 	stp	x16, x30, [sp, #-16]!
 // &(.got.plt[2]) = 0x2200B0 + 2 * 8 = 0x2200C0

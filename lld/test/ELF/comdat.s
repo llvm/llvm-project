@@ -19,6 +19,7 @@ foo:
         nop
 
 // CHECK: Disassembly of section .text2:
+// CHECK-EMPTY:
 // CHECK-NEXT: foo:
 // CHECK-NEXT:   1000: {{.*}}  nop
 // CHECK-NOT: nop
@@ -27,6 +28,7 @@ foo:
         call foo
 
 // CHECK: Disassembly of section bar:
+// CHECK-EMPTY:
 // CHECK-NEXT: bar:
 // 0x1000 - 0x1001 - 5 = -6
 // 0      - 0x1006 - 5 = -4107

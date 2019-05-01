@@ -65,6 +65,7 @@ _start:
 // CHECK-NEXT:    Section: .bss
 
 // CODE: Disassembly of section .text:
+// CODE-EMPTY:
 // CODE-NEXT: _start:
 // S(y) = 0x13000, A = 0
 // (S + A) & 0x0000ffff = 0x3000 = #12288
