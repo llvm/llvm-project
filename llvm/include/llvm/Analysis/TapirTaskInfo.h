@@ -1057,10 +1057,10 @@ public:
   /// Traverse the graph of spindles to evaluate some parallel state.
   template<typename StateT>
   void evaluateParallelState(StateT &State) const {
-    SmallPtrSet<Spindle *, 8> IPOVisited;
     SmallVector<Spindle *, 8> ToProcess;
 
-    // First walk the spindles to mark all defining spindles.
+    // First walk the spindles in a depth-first order to mark all defining
+    // spindles (and spindles whose state is eagerly updated).
     {
       SmallPtrSet<Spindle *, 8> Visited;
       SmallVector<Spindle *, 8> WorkList;
@@ -1068,36 +1068,37 @@ public:
       WorkList.push_back(Entry);
       while (!WorkList.empty()) {
         Spindle *Curr = WorkList.pop_back_val();
-        if (!Visited.insert(Curr).second) continue;
+        if (!Visited.insert(Curr).second)
+          continue;
 
+        // If we find a defining spindle (or a spindle with an eagerly-updated
+        // state), add its successors for processing.
         if (State.markDefiningSpindle(Curr))
-          IPOVisited.insert(Curr);
-        else
-          ToProcess.push_back(Curr);
+          for (Spindle *Succ : successors(Curr))
+            ToProcess.push_back(Succ);
 
         for (Spindle *Succ : successors(Curr))
           WorkList.push_back(Succ);
       }
     }
 
-    // Process each non-defining spindle using an inverse post-order walk
-    // starting from that spindle.
+    // Process each non-defining spindle, and discover new spindles to process.
     {
-      SmallVector<Spindle *, 8> ToReprocess;
+      SmallVector<Spindle *, 8> NextToProcess;
       unsigned EvalNum = 0;
       while (!ToProcess.empty()) {
-        SmallPtrSet<Spindle *, 8> LocalVisited(IPOVisited);
-        while (!ToProcess.empty()) {
-          Spindle *Curr = ToProcess.pop_back_val();
-          for (Spindle *S : inverse_post_order_ext(Curr, LocalVisited)) {
-            if (!State.evaluate(S, EvalNum))
-              ToReprocess.push_back(S);
-            else
-              IPOVisited.insert(S);
-          }
-        }
-        ToProcess.append(ToReprocess.begin(), ToReprocess.end());
-        ToReprocess.clear();
+        // Process all spindles that need processing.
+        for (Spindle *Curr : ToProcess)
+          if (!State.evaluate(Curr, EvalNum))
+            // If the state of this spindle changed, add its successors for
+            // future processing.
+            for (Spindle *Succ : successors(Curr))
+              NextToProcess.push_back(Succ);
+
+        // Get ready to Process the next set of spindles.
+        ToProcess.clear();
+        ToProcess.append(NextToProcess.begin(), NextToProcess.end());
+        NextToProcess.clear();
         ++EvalNum;
       }
     }

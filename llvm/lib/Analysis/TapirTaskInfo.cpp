@@ -629,13 +629,9 @@ bool IsSyncedState::markDefiningSpindle(const Spindle *S) {
 bool IsSyncedState::evaluate(const Spindle *S, unsigned EvalNum) {
   LLVM_DEBUG(dbgs() << "evaluate @ " << *S << "\n");
 
-  // if (!EvalNum && SyncedState.count(S)) return;
-
   // For the first evaluation, optimistically assume that we are synced.  Any
   // unsynced predecessor will clear this bit.
-  if (!EvalNum) {
-    assert(!SyncedState.count(S) &&
-           "Evaluating a spindle whose sync state is already determined.");
+  if (!EvalNum && !SyncedState.count(S)) {
     SyncedState[S] = SyncInfo::Synced;
   }
 
@@ -690,21 +686,16 @@ bool MaybeParallelTasks::markDefiningSpindle(const Spindle *S) {
       // detached task that reattaches to this continuation.
       if (S->isTaskContinuation()) {
         LLVM_DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
-        bool Complete = true;
         for (const Spindle *Pred : predecessors(S)) {
           LLVM_DEBUG(dbgs() << "\tpred spindle " << *Pred << "\n");
           if (S->predInDifferentTask(Pred))
             TaskList[S].insert(Pred->getParentTask());
-          // If we have a Phi predecessor of this spindle, we'll want to
-          // re-evaluate it.
-          if (Pred->isPhi() || Pred->isSync())
-            Complete = false;
         }
         LLVM_DEBUG({
             for (const Task *MPT : TaskList[S])
               dbgs() << "Added MPT " << MPT->getEntry()->getName() << "\n";
           });
-        return Complete;
+        return true;
       }
       return false;
     }
@@ -719,7 +710,7 @@ bool MaybeParallelTasks::evaluate(const Spindle *S, unsigned EvalNum) {
   if (!TaskList.count(S))
     TaskList.try_emplace(S);
 
-  bool Complete = true;
+  bool NoChange = true;
   for (const Spindle::SpindleEdge &PredEdge : S->in_edges()) {
     const Spindle *Pred = PredEdge.first;
     const BasicBlock *Inc = PredEdge.second;
@@ -738,15 +729,15 @@ bool MaybeParallelTasks::evaluate(const Spindle *S, unsigned EvalNum) {
       // Insert the task into this spindle's task list.  If this task is a new
       // addition, then we haven't yet reached the fixed point of this analysis.
       if (TaskList[S].insert(MP).second)
-        Complete = false;
+        NoChange = false;
     }
   }
   LLVM_DEBUG({
-      dbgs() << "New MPT list for " << *S << "(Complete? " << Complete << ")\n";
+      dbgs() << "New MPT list for " << *S << "(NoChange? " << NoChange << ")\n";
       for (const Task *MP : TaskList[S])
         dbgs() << "\t" << MP->getEntry()->getName() << "\n";
     });
-  return Complete;
+  return NoChange;
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Spindle &S) {

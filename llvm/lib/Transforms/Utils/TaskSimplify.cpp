@@ -48,12 +48,17 @@ static bool removeRedundantSyncs(MaybeParallelTasks &MPTasks, Task *T) {
     // Iterate over outgoing edges of S to find redundant syncs.
     for (Spindle::SpindleEdge &Edge : S->out_edges())
       if (SyncInst *Y = dyn_cast<SyncInst>(Edge.second->getTerminator()))
-        if (!syncMatchesReachingTask(Y->getSyncRegion(), MPTasks.TaskList[S]))
+        if (!syncMatchesReachingTask(Y->getSyncRegion(), MPTasks.TaskList[S])) {
+          LLVM_DEBUG(dbgs() << "Found redundant sync in spindle " << *S <<
+                     "\n");
           RedundantSyncs.insert(Y);
+        }
 
   // Replace all unnecesary syncs with unconditional branches.
-  for (SyncInst *Y : RedundantSyncs)
+  for (SyncInst *Y : RedundantSyncs) {
+    LLVM_DEBUG(dbgs() << "Removing redundant sync " << *Y << "\n");
     ReplaceInstWithInst(Y, BranchInst::Create(Y->getSuccessor(0)));
+  }
 
   Changed |= !RedundantSyncs.empty();
 

@@ -54,18 +54,18 @@ attributes #1 = { argmemonly nounwind }
 ; CHECK: task at depth 1 containing: <task entry><task sp entry>%det.achd2<sp exit><task exit>
 ; CHECK: task at depth 1 containing: <task entry><task sp entry>%det.achd<sp exit><task exit>
 
-; CHECK: Spindle @ while.body may happen in parallel with:
-; CHECK: task @ det.achd2
-; CHECK: task @ det.achd
-; CHECK: Spindle @ sync.continue may happen in parallel with:
-; CHECK: task @ det.achd2
+; CHECK-DAG: Spindle @ while.body may happen in parallel with:
+; CHECK-NEXT: task @ det.achd2
+; CHECK-NEXT: task @ det.achd
+; CHECK-DAG: Spindle @ sync.continue may happen in parallel with:
+; CHECK-NEXT: task @ det.achd2
 ; CHECK-NOT:  task @ det.achd
-; CHECK: Spindle @ det.cont may happen in parallel with:
-; CHECK: task @ det.achd
-; CHECK: task @ det.achd2
-; CHECK: Spindle @ sync.continue1 may happen in parallel with:
-; CHECK: task @ det.achd
+; CHECK-DAG: Spindle @ det.cont may happen in parallel with:
+; CHECK-NEXT: task @ det.achd
+; CHECK-NEXT: task @ det.achd2
+; CHECK-DAG: Spindle @ sync.continue1 may happen in parallel with:
+; CHECK-NEXT: task @ det.achd
 ; CHECK-NOT:  task @ det.achd2
-; CHECK: Spindle @ det.cont4 may happen in parallel with:
-; CHECK: task @ det.achd2
-; CHECK: task @ det.achd
+; CHECK-DAG: Spindle @ det.cont4 may happen in parallel with:
+; CHECK-NEXT: task @ det.achd2
+; CHECK-NEXT: task @ det.achd
