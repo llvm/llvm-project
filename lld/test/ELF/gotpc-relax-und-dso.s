@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-pc-linux %S/Inputs/gotpc-relax-und-dso.s -o %tdso.o
 # RUN: ld.lld -shared %tdso.o -o %t.so
 # RUN: ld.lld --hash-style=sysv -shared %t.o %t.so -o %tout
-# RUN: llvm-readobj -r -s %tout | FileCheck --check-prefix=RELOC %s
+# RUN: llvm-readobj -r -S %tout | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d %tout | FileCheck --check-prefix=DISASM %s
 
 # RELOC:      Relocations [

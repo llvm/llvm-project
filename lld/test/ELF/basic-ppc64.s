@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 # # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t
 # RUN: ld.lld --hash-style=sysv -discard-all -shared %t -o %t2
-# RUN: llvm-readobj -file-headers -sections -section-data -program-headers %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections --section-data -l %t2 | FileCheck %s
 .abiversion 2
 # Exits with return code 55 on linux.
 .text

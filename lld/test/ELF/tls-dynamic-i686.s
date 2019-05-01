@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t
 // RUN: ld.lld --hash-style=sysv -shared -z norelro %t -o %tout
-// RUN: llvm-readobj -sections -relocations %tout | FileCheck %s
+// RUN: llvm-readobj --sections -r %tout | FileCheck %s
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DIS
 
 .type tls0,@object

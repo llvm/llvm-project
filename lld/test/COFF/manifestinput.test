@@ -5,7 +5,7 @@
 # RUN:   /manifest:embed \
 # RUN:   /manifestuac:"level='requireAdministrator'" \
 # RUN:   /manifestinput:%p/Inputs/manifestinput.test %t.obj
-# RUN: llvm-readobj -coff-resources -file-headers %t.exe | FileCheck %s \
+# RUN: llvm-readobj --coff-resources --file-headers %t.exe | FileCheck %s \
 # RUN:   -check-prefix TEST_EMBED
 
 TEST_EMBED:          ResourceTableRVA: 0x2000

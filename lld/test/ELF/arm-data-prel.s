@@ -5,7 +5,7 @@
 // RUN:          .prel.test : { *(.ARM.exidx) } \
 // RUN:          .TEST1 : { *(.TEST1) } } " > %t.script
 // RUN: ld.lld --script %t.script %t.o -o %t
-// RUN: llvm-readobj -s -sd %t | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-readobj -S --section-data %t | FileCheck --check-prefix=CHECK %s
 
 // The R_ARM_PREL31 relocation is used in by the .ARM.exidx exception tables
 // bit31 of the place denotes whether the field is an inline table entry

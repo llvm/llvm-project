@@ -1,25 +1,84 @@
 set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
 
 # Get sources
-# FIXME: Don't use glob here
-file(GLOB LIBCXX_SOURCES ../src/*.cpp)
+set(LIBCXX_SOURCES
+  algorithm.cpp
+  any.cpp
+  bind.cpp
+  charconv.cpp
+  chrono.cpp
+  condition_variable.cpp
+  debug.cpp
+  exception.cpp
+  functional.cpp
+  future.cpp
+  hash.cpp
+  include/apple_availability.h
+  include/atomic_support.h
+  include/config_elast.h
+  include/refstring.h
+  ios.cpp
+  iostream.cpp
+  locale.cpp
+  memory.cpp
+  mutex.cpp
+  new.cpp
+  optional.cpp
+  random.cpp
+  regex.cpp
+  shared_mutex.cpp
+  stdexcept.cpp
+  string.cpp
+  strstream.cpp
+  support/runtime/exception_fallback.ipp
+  support/runtime/exception_glibcxx.ipp
+  support/runtime/exception_libcxxabi.ipp
+  support/runtime/exception_libcxxrt.ipp
+  support/runtime/exception_msvc.ipp
+  support/runtime/exception_pointer_cxxabi.ipp
+  support/runtime/exception_pointer_glibcxx.ipp
+  support/runtime/exception_pointer_msvc.ipp
+  support/runtime/exception_pointer_unimplemented.ipp
+  support/runtime/new_handler_fallback.ipp
+  support/runtime/stdexcept_default.ipp
+  support/runtime/stdexcept_vcruntime.ipp
+  system_error.cpp
+  thread.cpp
+  typeinfo.cpp
+  utility.cpp
+  valarray.cpp
+  variant.cpp
+  vector.cpp
+  )
+
 if(WIN32)
-  file(GLOB LIBCXX_WIN32_SOURCES ../src/support/win32/*.cpp)
-  list(APPEND LIBCXX_SOURCES ${LIBCXX_WIN32_SOURCES})
+  list(APPEND LIBCXX_SOURCES
+    support/win32/locale_win32.cpp
+    support/win32/support.cpp
+    support/win32/thread_win32.cpp
+    )
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
-  file(GLOB LIBCXX_SOLARIS_SOURCES ../src/support/solaris/*.cpp)
-  list(APPEND LIBCXX_SOURCES ${LIBCXX_SOLARIS_SOURCES})
+  list(APPEND LIBCXX_SOURCES
+    support/solaris/mbsnrtowcs.inc
+    support/solaris/wcsnrtombs.inc
+    support/solaris/xlocale.cpp
+    )
 endif()
 
 if (LIBCXX_ENABLE_FILESYSTEM)
-  list(APPEND LIBCXX_SOURCES ../src/filesystem/operations.cpp
-                             ../src/filesystem/directory_iterator.cpp)
+  list(APPEND LIBCXX_SOURCES
+    filesystem/filesystem_common.h
+    filesystem/operations.cpp
+    filesystem/directory_iterator.cpp
+    )
   # Filesystem uses __int128_t, which requires a definition of __muloi4 when
   # compiled with UBSAN. This definition is not provided by libgcc_s, but is
   # provided by compiler-rt. So we need to disable it to avoid having multiple
   # definitions. See filesystem/int128_builtins.cpp.
   if (NOT LIBCXX_USE_COMPILER_RT)
-    list(APPEND LIBCXX_SOURCES ../src/filesystem/int128_builtins.cpp)
+    list(APPEND LIBCXX_SOURCES
+      filesystem/int128_builtins.cpp
+      )
   endif()
 endif()
 
@@ -215,18 +274,18 @@ if (LIBCXX_ENABLE_SHARED)
 
   if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
     if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
+      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++sjlj-abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
     else()
-      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
+      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
     endif()
     target_link_libraries(cxx_shared PRIVATE
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
+      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
       "-Wl,-reexported_symbols_list,${RE_EXPORT_LIST}"
-      "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp"
-      "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/weak.exp")
+      "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
+      "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
 
     if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
+      target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-new-delete.exp")
     endif()
   endif()
 
@@ -325,7 +384,9 @@ endif()
 add_custom_target(cxx DEPENDS cxx-headers ${LIBCXX_BUILD_TARGETS})
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-  file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
+  set(LIBCXX_EXPERIMENTAL_SOURCES
+    experimental/memory_resource.cpp
+    )
   add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
   if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_experimental cxx_shared)

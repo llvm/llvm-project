@@ -2,15 +2,15 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -file-headers -s -section-data -program-headers -symbols %t \
+// RUN: llvm-readobj --file-headers -S --section-data -l --symbols %t \
 // RUN:   | FileCheck %s --check-prefix=NOHDR
 
 // RUN: ld.lld -eh-frame-hdr -no-eh-frame-hdr %t.o -o %t
-// RUN: llvm-readobj -file-headers -s -section-data -program-headers -symbols %t \
+// RUN: llvm-readobj --file-headers -S --section-data -l --symbols %t \
 // RUN:   | FileCheck %s --check-prefix=NOHDR
 
 // RUN: ld.lld --eh-frame-hdr %t.o -o %t
-// RUN: llvm-readobj -file-headers -s -section-data -program-headers -symbols %t \
+// RUN: llvm-readobj --file-headers -S --section-data -l --symbols %t \
 // RUN:   | FileCheck %s --check-prefix=HDR
 // RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=HDRDISASM
 

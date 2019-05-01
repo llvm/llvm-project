@@ -5,7 +5,7 @@
 # RUN: llvm-objdump -d %t | FileCheck %s
 # RUN: ld.lld -shared %t1 %t2 -o %t3
 # RUN: llvm-objdump -d %t3 | FileCheck -check-prefix=DSO %s
-# RUN: llvm-readobj -s -r %t3 | FileCheck -check-prefix=DSOREL %s
+# RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 
 # 0x11024 - 36 = 0x11000
 # 0x11028 - 24 = 0x11010

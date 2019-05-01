@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %tmain.o
 # RUN: ld.lld %tmain.o -o %tout
 # RUN: llvm-objdump -d %tout | FileCheck %s
-# RUN: llvm-readobj -s -r %tout | FileCheck -check-prefix=RELOC %s
+# RUN: llvm-readobj -S -r %tout | FileCheck -check-prefix=RELOC %s
 
 #Local-Dynamic to Local-Exec relax creates no
 #RELOC:      Relocations [

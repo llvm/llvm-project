@@ -4,11 +4,11 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld -shared -o %t.so %t.o %S/Inputs/mips-gp-disp.so
-# RUN: llvm-readobj -symbols %t.so | FileCheck -check-prefix=INT-SO %s
-# RUN: llvm-readobj -symbols %S/Inputs/mips-gp-disp.so \
+# RUN: llvm-readobj --symbols %t.so | FileCheck -check-prefix=INT-SO %s
+# RUN: llvm-readobj --symbols %S/Inputs/mips-gp-disp.so \
 # RUN:   | FileCheck -check-prefix=EXT-SO %s
 # RUN: llvm-objdump -d -t %t.so | FileCheck -check-prefix=DIS %s
-# RUN: llvm-readobj -relocations %t.so | FileCheck -check-prefix=REL %s
+# RUN: llvm-readobj -r %t.so | FileCheck -check-prefix=REL %s
 
 # INT-SO:      Name: _gp_disp
 # INT-SO-NEXT: Value:

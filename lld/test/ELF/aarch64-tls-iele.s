@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %s -o %tmain.o
 # RUN: ld.lld %tmain.o %ttlsie.o -o %tout
 # RUN: llvm-objdump -d %tout | FileCheck %s
-# RUN: llvm-readobj -s -r %tout | FileCheck -check-prefix=RELOC %s
+# RUN: llvm-readobj -S -r %tout | FileCheck -check-prefix=RELOC %s
 
 # Initial-Exec to Local-Exec relax creates no dynamic relocations.
 # RELOC:      Relocations [

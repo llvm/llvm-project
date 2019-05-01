@@ -1,13 +1,13 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: llvm-readobj -relocations %t.o | FileCheck -check-prefix=RELOCS-LE %s
+# RUN: llvm-readobj -r %t.o | FileCheck -check-prefix=RELOCS-LE %s
 # RUN: ld.lld %t.o -o %t2
 # RUN: llvm-objdump -D %t2 | FileCheck %s --check-prefix=CHECK-LE
 # RUN: llvm-objdump -D %t2 | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
-# RUN: llvm-readobj -relocations %t.o | FileCheck -check-prefix=RELOCS-BE %s
+# RUN: llvm-readobj -r %t.o | FileCheck -check-prefix=RELOCS-BE %s
 # RUN: ld.lld %t.o -o %t2
 # RUN: llvm-objdump -D %t2 | FileCheck %s --check-prefix=CHECK-BE
 # RUN: llvm-objdump -D %t2 | FileCheck %s

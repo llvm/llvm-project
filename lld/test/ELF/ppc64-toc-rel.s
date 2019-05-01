@@ -1,14 +1,14 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: llvm-readobj -relocations %t.o | FileCheck -check-prefix=RELOCS-LE %s
+# RUN: llvm-readobj -r %t.o | FileCheck -check-prefix=RELOCS-LE %s
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-readelf -x .got %t | FileCheck --check-prefix=HEX-LE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=CHECK %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
-# RUN: llvm-readobj -relocations %t.o | FileCheck -check-prefix=RELOCS-BE %s
+# RUN: llvm-readobj -r %t.o | FileCheck -check-prefix=RELOCS-BE %s
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-readelf -x .got %t | FileCheck --check-prefix=HEX-BE %s

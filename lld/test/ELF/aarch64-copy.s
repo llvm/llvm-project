@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-freebsd %p/Inputs/relocation-copy.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -soname fixed-length-string.so -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t3
-// RUN: llvm-readobj -s -r --expand-relocs -symbols %t3 | FileCheck %s
+// RUN: llvm-readobj -S -r --expand-relocs --symbols %t3 | FileCheck %s
 // RUN: llvm-objdump -d %t3 | FileCheck -check-prefix=CODE %s
 // RUN: llvm-objdump -s -section=.rodata %t3 | FileCheck -check-prefix=RODATA %s
 

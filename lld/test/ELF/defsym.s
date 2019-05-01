@@ -1,12 +1,12 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld -o %t %t.o --defsym=foo2=foo1
-# RUN: llvm-readobj -t -s %t | FileCheck %s
+# RUN: llvm-readobj --symbols -S %t | FileCheck %s
 # RUN: llvm-objdump -d -print-imm-hex %t | FileCheck %s --check-prefix=USE
 
 ## Check that we accept --defsym foo2=foo1 form.
 # RUN: ld.lld -o %t2 %t.o --defsym foo2=foo1
-# RUN: llvm-readobj -t -s %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols -S %t2 | FileCheck %s
 # RUN: llvm-objdump -d -print-imm-hex %t2 | FileCheck %s --check-prefix=USE
 
 ## Check we are reporting the error correctly and don't crash
@@ -40,7 +40,7 @@
 # USE-NEXT:    movl $0x123, %edx
 
 # RUN: ld.lld -o %t %t.o --defsym=foo2=1
-# RUN: llvm-readobj -t -s %t | FileCheck %s --check-prefix=ABS
+# RUN: llvm-readobj --symbols -S %t | FileCheck %s --check-prefix=ABS
 
 # ABS:      Symbol {
 # ABS:        Name: foo2
@@ -53,7 +53,7 @@
 # ABS-NEXT: }
 
 # RUN: ld.lld -o %t %t.o --defsym=foo2=foo1+5
-# RUN: llvm-readobj -t -s %t | FileCheck %s --check-prefix=EXPR
+# RUN: llvm-readobj --symbols -S %t | FileCheck %s --check-prefix=EXPR
 
 # EXPR:      Symbol {
 # EXPR:        Name: foo1

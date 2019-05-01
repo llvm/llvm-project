@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -s -r -t %t | FileCheck %s
+// RUN: llvm-readobj -S -r --symbols %t | FileCheck %s
 // RUN: llvm-objdump -triple=armv7a-linux-gnueabi -d %t | FileCheck --check-prefix=DISASM %s
 
 // Test the R_ARM_GOTOFF32 relocation

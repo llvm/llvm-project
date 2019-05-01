@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.exe
 # RUN: llvm-objdump -d %t.exe | FileCheck %s
-# RUN: llvm-readobj -mips-plt-got -symbols %t.exe \
+# RUN: llvm-readobj --mips-plt-got --symbols %t.exe \
 # RUN:   | FileCheck -check-prefix=GOT %s
 
   .text

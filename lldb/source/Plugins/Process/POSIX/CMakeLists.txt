@@ -4,7 +4,7 @@ add_lldb_library(lldbPluginProcessPOSIX PLUGIN
   ProcessPOSIXLog.cpp
 
   LINK_LIBS
-    lldbInterpreter
+    lldbUtility
   LINK_COMPONENTS
     Support
   )

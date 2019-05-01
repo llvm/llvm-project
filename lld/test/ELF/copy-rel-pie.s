@@ -3,7 +3,7 @@
 // RUN: llvm-mc %p/Inputs/copy-rel-pie.s -o %t2.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t.exe -pie
-// RUN: llvm-readobj -s -r %t.exe | FileCheck %s
+// RUN: llvm-readobj -S -r %t.exe | FileCheck %s
 // RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=DISASM %s
 
 .global _start
