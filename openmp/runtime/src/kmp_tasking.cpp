@@ -2019,49 +2019,109 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
 
 #if OMP_50_ENABLED
 // Task Reduction implementation
+//
+// Note: initial implementation didn't take into account the possibility
+// to specify omp_orig for initializer of the UDR (user defined reduction).
+// Corrected implementation takes into account the omp_orig object.
+// Compiler is free to use old implementation if omp_orig is not specified.
 
-typedef struct kmp_task_red_flags {
-  unsigned lazy_priv : 1; // hint: (1) use lazy allocation (big objects)
+/*!
+@ingroup BASIC_TYPES
+@{
+*/
+
+/*!
+Flags for special info per task reduction item.
+*/
+typedef struct kmp_taskred_flags {
+  /*! 1 - use lazy alloc/init (e.g. big objects, #tasks < #threads) */
+  unsigned lazy_priv : 1;
   unsigned reserved31 : 31;
-} kmp_task_red_flags_t;
+} kmp_taskred_flags_t;
 
-// internal structure for reduction data item related info
-typedef struct kmp_task_red_data {
-  void *reduce_shar; // shared reduction item
-  size_t reduce_size; // size of data item
-  void *reduce_priv; // thread specific data
-  void *reduce_pend; // end of private data for comparison op
-  void *reduce_init; // data initialization routine
-  void *reduce_fini; // data finalization routine
-  void *reduce_comb; // data combiner routine
-  kmp_task_red_flags_t flags; // flags for additional info from compiler
-} kmp_task_red_data_t;
-
-// structure sent us by compiler - one per reduction item
+/*!
+Internal struct for reduction data item related info set up by compiler.
+*/
 typedef struct kmp_task_red_input {
-  void *reduce_shar; // shared reduction item
-  size_t reduce_size; // size of data item
-  void *reduce_init; // data initialization routine
-  void *reduce_fini; // data finalization routine
-  void *reduce_comb; // data combiner routine
-  kmp_task_red_flags_t flags; // flags for additional info from compiler
+  void *reduce_shar; /**< shared between tasks item to reduce into */
+  size_t reduce_size; /**< size of data item in bytes */
+  // three compiler-generated routines (init, fini are optional):
+  void *reduce_init; /**< data initialization routine (single parameter) */
+  void *reduce_fini; /**< data finalization routine */
+  void *reduce_comb; /**< data combiner routine */
+  kmp_taskred_flags_t flags; /**< flags for additional info from compiler */
 } kmp_task_red_input_t;
 
 /*!
-@ingroup TASKING
-@param gtid      Global thread ID
-@param num       Number of data items to reduce
-@param data      Array of data for reduction
-@return The taskgroup identifier
-
-Initialize task reduction for the taskgroup.
+Internal struct for reduction data item related info saved by the library.
 */
-void *__kmpc_task_reduction_init(int gtid, int num, void *data) {
+typedef struct kmp_taskred_data {
+  void *reduce_shar; /**< shared between tasks item to reduce into */
+  size_t reduce_size; /**< size of data item */
+  kmp_taskred_flags_t flags; /**< flags for additional info from compiler */
+  void *reduce_priv; /**< array of thread specific items */
+  void *reduce_pend; /**< end of private data for faster comparison op */
+  // three compiler-generated routines (init, fini are optional):
+  void *reduce_comb; /**< data combiner routine */
+  void *reduce_init; /**< data initialization routine (two parameters) */
+  void *reduce_fini; /**< data finalization routine */
+  void *reduce_orig; /**< original item (can be used in UDR initializer) */
+} kmp_taskred_data_t;
+
+/*!
+Internal struct for reduction data item related info set up by compiler.
+
+New interface: added reduce_orig field to provide omp_orig for UDR initializer.
+*/
+typedef struct kmp_taskred_input {
+  void *reduce_shar; /**< shared between tasks item to reduce into */
+  void *reduce_orig; /**< original reduction item used for initialization */
+  size_t reduce_size; /**< size of data item */
+  // three compiler-generated routines (init, fini are optional):
+  void *reduce_init; /**< data initialization routine (two parameters) */
+  void *reduce_fini; /**< data finalization routine */
+  void *reduce_comb; /**< data combiner routine */
+  kmp_taskred_flags_t flags; /**< flags for additional info from compiler */
+} kmp_taskred_input_t;
+/*!
+@}
+*/
+
+template <typename T> void __kmp_assign_orig(kmp_taskred_data_t &item, T &src);
+template <>
+void __kmp_assign_orig<kmp_task_red_input_t>(kmp_taskred_data_t &item,
+                                             kmp_task_red_input_t &src) {
+  item.reduce_orig = NULL;
+}
+template <>
+void __kmp_assign_orig<kmp_taskred_input_t>(kmp_taskred_data_t &item,
+                                            kmp_taskred_input_t &src) {
+  if (src.reduce_orig != NULL) {
+    item.reduce_orig = src.reduce_orig;
+  } else {
+    item.reduce_orig = src.reduce_shar;
+  } // non-NULL reduce_orig means new interface used
+}
+
+template <typename T> void __kmp_call_init(kmp_taskred_data_t &item, int j);
+template <>
+void __kmp_call_init<kmp_task_red_input_t>(kmp_taskred_data_t &item,
+                                           int offset) {
+  ((void (*)(void *))item.reduce_init)((char *)(item.reduce_priv) + offset);
+}
+template <>
+void __kmp_call_init<kmp_taskred_input_t>(kmp_taskred_data_t &item,
+                                          int offset) {
+  ((void (*)(void *, void *))item.reduce_init)(
+      (char *)(item.reduce_priv) + offset, item.reduce_orig);
+}
+
+template <typename T>
+void *__kmp_task_reduction_init(int gtid, int num, T *data) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *tg = thread->th.th_current_task->td_taskgroup;
   kmp_int32 nth = thread->th.th_team_nproc;
-  kmp_task_red_input_t *input = (kmp_task_red_input_t *)data;
-  kmp_task_red_data_t *arr;
+  kmp_taskred_data_t *arr;
 
   // check input data just in case
   KMP_ASSERT(tg != NULL);
@@ -2074,39 +2134,93 @@ void *__kmpc_task_reduction_init(int gtid, int num, void *data) {
   }
   KA_TRACE(10, ("__kmpc_task_reduction_init: T#%d, taskgroup %p, #items %d\n",
                 gtid, tg, num));
-  arr = (kmp_task_red_data_t *)__kmp_thread_malloc(
-      thread, num * sizeof(kmp_task_red_data_t));
+  arr = (kmp_taskred_data_t *)__kmp_thread_malloc(
+      thread, num * sizeof(kmp_taskred_data_t));
   for (int i = 0; i < num; ++i) {
-    void (*f_init)(void *) = (void (*)(void *))(input[i].reduce_init);
-    size_t size = input[i].reduce_size - 1;
+    size_t size = data[i].reduce_size - 1;
     // round the size up to cache line per thread-specific item
     size += CACHE_LINE - size % CACHE_LINE;
-    KMP_ASSERT(input[i].reduce_comb != NULL); // combiner is mandatory
-    arr[i].reduce_shar = input[i].reduce_shar;
+    KMP_ASSERT(data[i].reduce_comb != NULL); // combiner is mandatory
+    arr[i].reduce_shar = data[i].reduce_shar;
     arr[i].reduce_size = size;
-    arr[i].reduce_init = input[i].reduce_init;
-    arr[i].reduce_fini = input[i].reduce_fini;
-    arr[i].reduce_comb = input[i].reduce_comb;
-    arr[i].flags = input[i].flags;
-    if (!input[i].flags.lazy_priv) {
+    arr[i].flags = data[i].flags;
+    arr[i].reduce_comb = data[i].reduce_comb;
+    arr[i].reduce_init = data[i].reduce_init;
+    arr[i].reduce_fini = data[i].reduce_fini;
+    __kmp_assign_orig<T>(arr[i], data[i]);
+    if (!arr[i].flags.lazy_priv) {
       // allocate cache-line aligned block and fill it with zeros
       arr[i].reduce_priv = __kmp_allocate(nth * size);
       arr[i].reduce_pend = (char *)(arr[i].reduce_priv) + nth * size;
-      if (f_init != NULL) {
-        // initialize thread-specific items
+      if (arr[i].reduce_init != NULL) {
+        // initialize all thread-specific items
         for (int j = 0; j < nth; ++j) {
-          f_init((char *)(arr[i].reduce_priv) + j * size);
+          __kmp_call_init<T>(arr[i], j * size);
         }
       }
     } else {
       // only allocate space for pointers now,
-      // objects will be lazily allocated/initialized once requested
+      // objects will be lazily allocated/initialized if/when requested
+      // note that __kmp_allocate zeroes the allocated memory
       arr[i].reduce_priv = __kmp_allocate(nth * sizeof(void *));
     }
   }
   tg->reduce_data = (void *)arr;
   tg->reduce_num_data = num;
   return (void *)tg;
+}
+
+/*!
+@ingroup TASKING
+@param gtid      Global thread ID
+@param num       Number of data items to reduce
+@param data      Array of data for reduction
+@return The taskgroup identifier
+
+Initialize task reduction for the taskgroup.
+
+Note: this entry supposes the optional compiler-generated initializer routine
+has single parameter - pointer to object to be initialized. That means
+the reduction either does not use omp_orig object, or the omp_orig is accessible
+without help of the runtime library.
+*/
+void *__kmpc_task_reduction_init(int gtid, int num, void *data) {
+  return __kmp_task_reduction_init(gtid, num, (kmp_task_red_input_t *)data);
+}
+
+/*!
+@ingroup TASKING
+@param gtid      Global thread ID
+@param num       Number of data items to reduce
+@param data      Array of data for reduction
+@return The taskgroup identifier
+
+Initialize task reduction for the taskgroup.
+
+Note: this entry supposes the optional compiler-generated initializer routine
+has two parameters, pointer to object to be initialized and pointer to omp_orig
+*/
+void *__kmpc_taskred_init(int gtid, int num, void *data) {
+  return __kmp_task_reduction_init(gtid, num, (kmp_taskred_input_t *)data);
+}
+
+// Copy task reduction data (except for shared pointers).
+template <typename T>
+void __kmp_task_reduction_init_copy(kmp_info_t *thr, int num, T *data,
+                                    kmp_taskgroup_t *tg, void *reduce_data) {
+  kmp_taskred_data_t *arr;
+  KA_TRACE(20, ("__kmp_task_reduction_init_copy: Th %p, init taskgroup %p,"
+                " from data %p\n",
+                thr, tg, reduce_data));
+  arr = (kmp_taskred_data_t *)__kmp_thread_malloc(
+      thr, num * sizeof(kmp_taskred_data_t));
+  // threads will share private copies, thunk routines, sizes, flags, etc.:
+  KMP_MEMCPY(arr, reduce_data, num * sizeof(kmp_taskred_data_t));
+  for (int i = 0; i < num; ++i) {
+    arr[i].reduce_shar = data[i].reduce_shar; // init unique shared pointers
+  }
+  tg->reduce_data = (void *)arr;
+  tg->reduce_num_data = num;
 }
 
 /*!
@@ -2128,7 +2242,7 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
   if (tg == NULL)
     tg = thread->th.th_current_task->td_taskgroup;
   KMP_ASSERT(tg != NULL);
-  kmp_task_red_data_t *arr = (kmp_task_red_data_t *)(tg->reduce_data);
+  kmp_taskred_data_t *arr = (kmp_taskred_data_t *)(tg->reduce_data);
   kmp_int32 num = tg->reduce_num_data;
   kmp_int32 tid = thread->th.th_info.ds.ds_tid;
 
@@ -2152,17 +2266,21 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
       found:
         if (p_priv[tid] == NULL) {
           // allocate thread specific object lazily
-          void (*f_init)(void *) = (void (*)(void *))(arr[i].reduce_init);
           p_priv[tid] = __kmp_allocate(arr[i].reduce_size);
-          if (f_init != NULL) {
-            f_init(p_priv[tid]);
+          if (arr[i].reduce_init != NULL) {
+            if (arr[i].reduce_orig != NULL) { // new interface
+              ((void (*)(void *, void *))arr[i].reduce_init)(
+                  p_priv[tid], arr[i].reduce_orig);
+            } else { // old interface (single parameter)
+              ((void (*)(void *))arr[i].reduce_init)(p_priv[tid]);
+            }
           }
         }
         return p_priv[tid];
       }
     }
     tg = tg->parent;
-    arr = (kmp_task_red_data_t *)(tg->reduce_data);
+    arr = (kmp_taskred_data_t *)(tg->reduce_data);
     num = tg->reduce_num_data;
   }
   KMP_ASSERT2(0, "Unknown task reduction item");
@@ -2174,7 +2292,7 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
 static void __kmp_task_reduction_fini(kmp_info_t *th, kmp_taskgroup_t *tg) {
   kmp_int32 nth = th->th.th_team_nproc;
   KMP_DEBUG_ASSERT(nth > 1); // should not be called if nth == 1
-  kmp_task_red_data_t *arr = (kmp_task_red_data_t *)tg->reduce_data;
+  kmp_taskred_data_t *arr = (kmp_taskred_data_t *)tg->reduce_data;
   kmp_int32 num = tg->reduce_num_data;
   for (int i = 0; i < num; ++i) {
     void *sh_data = arr[i].reduce_shar;
@@ -2206,6 +2324,111 @@ static void __kmp_task_reduction_fini(kmp_info_t *th, kmp_taskgroup_t *tg) {
   __kmp_thread_free(th, arr);
   tg->reduce_data = NULL;
   tg->reduce_num_data = 0;
+}
+
+// Cleanup task reduction data for parallel or worksharing,
+// do not touch task private data other threads still working with.
+// Called from __kmpc_end_taskgroup()
+static void __kmp_task_reduction_clean(kmp_info_t *th, kmp_taskgroup_t *tg) {
+  __kmp_thread_free(th, tg->reduce_data);
+  tg->reduce_data = NULL;
+  tg->reduce_num_data = 0;
+}
+
+template <typename T>
+void *__kmp_task_reduction_modifier_init(ident_t *loc, int gtid, int is_ws,
+                                         int num, T *data) {
+  kmp_info_t *thr = __kmp_threads[gtid];
+  kmp_int32 nth = thr->th.th_team_nproc;
+  __kmpc_taskgroup(loc, gtid); // form new taskgroup first
+  if (nth == 1) {
+    KA_TRACE(10,
+             ("__kmpc_reduction_modifier_init: T#%d, tg %p, exiting nth=1\n",
+              gtid, thr->th.th_current_task->td_taskgroup));
+    return (void *)thr->th.th_current_task->td_taskgroup;
+  }
+  kmp_team_t *team = thr->th.th_team;
+  void *reduce_data;
+  kmp_taskgroup_t *tg;
+  reduce_data = KMP_ATOMIC_LD_RLX(&team->t.t_tg_reduce_data[is_ws]);
+  if (reduce_data == NULL &&
+      __kmp_atomic_compare_store(&team->t.t_tg_reduce_data[is_ws], reduce_data,
+                                 (void *)1)) {
+    // single thread enters this block to initialize common reduction data
+    KMP_DEBUG_ASSERT(reduce_data == NULL);
+    // first initialize own data, then make a copy other threads can use
+    tg = (kmp_taskgroup_t *)__kmp_task_reduction_init<T>(gtid, num, data);
+    reduce_data = __kmp_thread_malloc(thr, num * sizeof(kmp_taskred_data_t));
+    KMP_MEMCPY(reduce_data, tg->reduce_data, num * sizeof(kmp_taskred_data_t));
+    // fini counters should be 0 at this point
+    KMP_DEBUG_ASSERT(KMP_ATOMIC_LD_RLX(&team->t.t_tg_fini_counter[0]) == 0);
+    KMP_DEBUG_ASSERT(KMP_ATOMIC_LD_RLX(&team->t.t_tg_fini_counter[1]) == 0);
+    KMP_ATOMIC_ST_REL(&team->t.t_tg_reduce_data[is_ws], reduce_data);
+  } else {
+    while (
+        (reduce_data = KMP_ATOMIC_LD_ACQ(&team->t.t_tg_reduce_data[is_ws])) ==
+        (void *)1) { // wait for task reduction initialization
+      KMP_CPU_PAUSE();
+    }
+    KMP_DEBUG_ASSERT(reduce_data > (void *)1); // should be valid pointer here
+    tg = thr->th.th_current_task->td_taskgroup;
+    __kmp_task_reduction_init_copy<T>(thr, num, data, tg, reduce_data);
+  }
+  return tg;
+}
+
+/*!
+@ingroup TASKING
+@param loc       Source location info
+@param gtid      Global thread ID
+@param is_ws     Is 1 if the reduction is for worksharing, 0 otherwise
+@param num       Number of data items to reduce
+@param data      Array of data for reduction
+@return The taskgroup identifier
+
+Initialize task reduction for a parallel or worksharing.
+
+Note: this entry supposes the optional compiler-generated initializer routine
+has single parameter - pointer to object to be initialized. That means
+the reduction either does not use omp_orig object, or the omp_orig is accessible
+without help of the runtime library.
+*/
+void *__kmpc_task_reduction_modifier_init(ident_t *loc, int gtid, int is_ws,
+                                          int num, void *data) {
+  return __kmp_task_reduction_modifier_init(loc, gtid, is_ws, num,
+                                            (kmp_task_red_input_t *)data);
+}
+
+/*!
+@ingroup TASKING
+@param loc       Source location info
+@param gtid      Global thread ID
+@param is_ws     Is 1 if the reduction is for worksharing, 0 otherwise
+@param num       Number of data items to reduce
+@param data      Array of data for reduction
+@return The taskgroup identifier
+
+Initialize task reduction for a parallel or worksharing.
+
+Note: this entry supposes the optional compiler-generated initializer routine
+has two parameters, pointer to object to be initialized and pointer to omp_orig
+*/
+void *__kmpc_taskred_modifier_init(ident_t *loc, int gtid, int is_ws, int num,
+                                   void *data) {
+  return __kmp_task_reduction_modifier_init(loc, gtid, is_ws, num,
+                                            (kmp_taskred_input_t *)data);
+}
+
+/*!
+@ingroup TASKING
+@param loc       Source location info
+@param gtid      Global thread ID
+@param is_ws     Is 1 if the reduction is for worksharing, 0 otherwise
+
+Finalize task reduction for a parallel or worksharing.
+*/
+void __kmpc_task_reduction_modifier_fini(ident_t *loc, int gtid, int is_ws) {
+  __kmpc_end_taskgroup(loc, gtid);
 }
 #endif
 
@@ -2326,8 +2549,54 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
   KMP_DEBUG_ASSERT(taskgroup->count == 0);
 
 #if OMP_50_ENABLED
-  if (taskgroup->reduce_data != NULL) // need to reduce?
-    __kmp_task_reduction_fini(thread, taskgroup);
+  if (taskgroup->reduce_data != NULL) { // need to reduce?
+    int cnt;
+    void *reduce_data;
+    kmp_team_t *t = thread->th.th_team;
+    kmp_taskred_data_t *arr = (kmp_taskred_data_t *)taskgroup->reduce_data;
+    // check if <priv> data of the first reduction variable shared for the team
+    void *priv0 = arr[0].reduce_priv;
+    if ((reduce_data = KMP_ATOMIC_LD_ACQ(&t->t.t_tg_reduce_data[0])) != NULL &&
+        ((kmp_taskred_data_t *)reduce_data)[0].reduce_priv == priv0) {
+      // finishing task reduction on parallel
+      cnt = KMP_ATOMIC_INC(&t->t.t_tg_fini_counter[0]);
+      if (cnt == thread->th.th_team_nproc - 1) {
+        // we are the last thread passing __kmpc_reduction_modifier_fini()
+        // finalize task reduction:
+        __kmp_task_reduction_fini(thread, taskgroup);
+        // cleanup fields in the team structure:
+        // TODO: is relaxed store enough here (whole barrier should follow)?
+        __kmp_thread_free(thread, reduce_data);
+        KMP_ATOMIC_ST_REL(&t->t.t_tg_reduce_data[0], NULL);
+        KMP_ATOMIC_ST_REL(&t->t.t_tg_fini_counter[0], 0);
+      } else {
+        // we are not the last thread passing __kmpc_reduction_modifier_fini(),
+        // so do not finalize reduction, just clean own copy of the data
+        __kmp_task_reduction_clean(thread, taskgroup);
+      }
+    } else if ((reduce_data = KMP_ATOMIC_LD_ACQ(&t->t.t_tg_reduce_data[1])) !=
+                   NULL &&
+               ((kmp_taskred_data_t *)reduce_data)[0].reduce_priv == priv0) {
+      // finishing task reduction on worksharing
+      cnt = KMP_ATOMIC_INC(&t->t.t_tg_fini_counter[1]);
+      if (cnt == thread->th.th_team_nproc - 1) {
+        // we are the last thread passing __kmpc_reduction_modifier_fini()
+        __kmp_task_reduction_fini(thread, taskgroup);
+        // cleanup fields in team structure:
+        // TODO: is relaxed store enough here (whole barrier should follow)?
+        __kmp_thread_free(thread, reduce_data);
+        KMP_ATOMIC_ST_REL(&t->t.t_tg_reduce_data[1], NULL);
+        KMP_ATOMIC_ST_REL(&t->t.t_tg_fini_counter[1], 0);
+      } else {
+        // we are not the last thread passing __kmpc_reduction_modifier_fini(),
+        // so do not finalize reduction, just clean own copy of the data
+        __kmp_task_reduction_clean(thread, taskgroup);
+      }
+    } else {
+      // finishing task reduction on taskgroup
+      __kmp_task_reduction_fini(thread, taskgroup);
+    }
+  }
 #endif
   // Restore parent taskgroup for the current task
   taskdata->td_taskgroup = taskgroup->parent;

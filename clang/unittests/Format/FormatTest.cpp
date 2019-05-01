@@ -10581,6 +10581,13 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  unsigned c;\n"
                "}",
                Alignment);
+
+  // See PR37175
+  FormatStyle Style = getMozillaStyle();
+  Style.AlignConsecutiveDeclarations = true;
+  EXPECT_EQ("DECOR1 /**/ int8_t /**/ DECOR2 /**/\n"
+            "foo(int a);",
+            format("DECOR1 /**/ int8_t /**/ DECOR2 /**/ foo (int a);", Style));
 }
 
 TEST_F(FormatTest, LinuxBraceBreaking) {

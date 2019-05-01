@@ -463,9 +463,21 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
       [](Change const &C) {
         // tok::kw_operator is necessary for aligning operator overload
         // definitions.
-        return C.Tok->is(TT_StartOfName) ||
-               C.Tok->is(TT_FunctionDeclarationName) ||
-               C.Tok->is(tok::kw_operator);
+        if (C.Tok->isOneOf(TT_FunctionDeclarationName, tok::kw_operator))
+          return true;
+        if (C.Tok->isNot(TT_StartOfName))
+          return false;
+        // Check if there is a subsequent name that starts the same declaration.
+        for (FormatToken *Next = C.Tok->Next; Next; Next = Next->Next) {
+          if (Next->is(tok::comment))
+            continue;
+          if (!Next->Tok.getIdentifierInfo())
+            break;
+          if (Next->isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
+                            tok::kw_operator))
+            return false;
+        }
+        return true;
       },
       Changes, /*StartAt=*/0);
 }
