@@ -1584,6 +1584,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       target ? (new SwiftASTContextForExpressions(*target))
              : new SwiftASTContext());
 
+  // This is a module AST context, mark it as such.
+  swift_ast_sp->m_is_scratch_context = false;
+
   swift_ast_sp->SetDescription(m_description);
   swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
@@ -1800,6 +1803,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     logError("invalid target architecture");
     return TypeSystemSP();
   }
+
+  // This is a scratch AST context, mark it as such.
+  swift_ast_sp->m_is_scratch_context = true;
 
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
 
@@ -3092,7 +3098,8 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
     }
   }
 
-  if (!m_dwarf_importer) {
+  // We only want to register the DWARF importer for the module AST context.
+  if (!m_dwarf_importer && !this->m_is_scratch_context) {
     // Install the DWARF importer fallback loader.
     auto props = ModuleList::GetGlobalModuleListProperties();
     if (props.GetUseDWARFImporter()) {
