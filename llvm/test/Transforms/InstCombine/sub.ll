@@ -843,8 +843,8 @@ define i32 @test45commuted(i32 %x, i32 %y) {
 
 define i32 @test46(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test46(
-; CHECK-NEXT:    [[X_NOT:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %or = or i32 %x, %y
@@ -854,8 +854,8 @@ define i32 @test46(i32 %x, i32 %y) {
 
 define i32 @test46commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test46commuted(
-; CHECK-NEXT:    [[X_NOT:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %or = or i32 %y, %x

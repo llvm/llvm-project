@@ -7,7 +7,7 @@
 
 ## Check we emit a valid ELF header when
 ## sections amount is greater than SHN_LORESERVE.
-# RUN: llvm-readobj -file-headers %t | FileCheck %s --check-prefix=HDR
+# RUN: llvm-readobj --file-headers %t | FileCheck %s --check-prefix=HDR
 # HDR:      ElfHeader {
 # HDR:        SectionHeaderCount: 0 (65544)
 # HDR-NEXT:   StringTableSectionIndex: 65535 (65542)

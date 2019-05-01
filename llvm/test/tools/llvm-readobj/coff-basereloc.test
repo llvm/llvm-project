@@ -1,4 +1,4 @@
-RUN: llvm-readobj -coff-basereloc %p/Inputs/basereloc.obj.coff-i386 | FileCheck %s
+RUN: llvm-readobj --coff-basereloc %p/Inputs/basereloc.obj.coff-i386 | FileCheck %s
 
 CHECK:      Format: COFF-i386
 CHECK-NEXT: Arch: i386

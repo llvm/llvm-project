@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -DSIGNED -Wtautological-constant-in-range-compare -verify %s
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DUNSIGNED -DSILENCE -Wno-tautological-constant-compare -verify %s
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -DSIGNED -DSILENCE -Wno-tautological-constant-compare -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DUNSIGNED -Wtype-limits -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DUNSIGNED -DSILENCE -Wno-type-limits -verify %s
 
 int main() {
   enum A { A_a = 2 };

@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %p/Inputs/shared.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld --hash-style=sysv %t %t2.so -o %t2
-// RUN: llvm-readobj -s %t2 | FileCheck --check-prefix=ADDR %s
+// RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=ADDR %s
 // RUN: llvm-objdump -d %t2 | FileCheck %s
 
 .global _start
@@ -26,10 +26,12 @@ R_386_PC32_2:
   nop
 
 // CHECK: Disassembly of section .R_386_32:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_386_32:
 // CHECK-NEXT:  401000: {{.*}} movl $4198401, %edx
 
 // CHECK: Disassembly of section .R_386_PC32:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_386_PC32:
 // CHECK-NEXT:   401005:  e8 04 00 00 00  calll 4
 
@@ -66,6 +68,7 @@ R_386_GOTPC:
 // 0x403000 (.got.plt) - 0x401014 = 8300
 
 // CHECK:      Disassembly of section .R_386_GOTPC:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_386_GOTPC:
 // CHECK-NEXT:   401014:  {{.*}} movl  $8172, %eax
 
@@ -73,6 +76,7 @@ R_386_GOTPC:
  call bar
 // addr(.plt) + 16 - (0x401019 + 5) = 50
 // CHECK:      Disassembly of section .dynamic_reloc:
+// CHECK-EMPTY:
 // CHECK-NEXT: .dynamic_reloc:
 // CHECK-NEXT:   401019:  e8 32 00 00 00 calll 50
 
@@ -87,6 +91,7 @@ R_386_GOT32:
 // 4294963320 = 0xfffff078 = got[0](0x402078) - .got.plt(0x403000)
 // 4294963324 = 0xfffff07c = got[1](0x40207c) - .got(0x403000)
 // CHECK:      Disassembly of section .R_386_GOT32:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_386_GOT32:
 // CHECK-NEXT: 40101e: a1 78 f0 ff ff movl 4294963320, %eax
 // CHECK-NEXT: 401023: a1 7c f0 ff ff movl 4294963324, %eax

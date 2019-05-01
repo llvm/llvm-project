@@ -7,7 +7,7 @@
 # RUN: ld.lld %t.so.o -shared -o %t.so
 # RUN: ld.lld %t.exe.o %t.so -o %t.exe
 # RUN: llvm-objdump -d -t %t.exe | FileCheck %s
-# RUN: llvm-readobj -r -mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
+# RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
 
 # CHECK:      __start:
 # CHECK-NEXT:    20000:   24 42 80 40   addiu   $2, $2, -32704

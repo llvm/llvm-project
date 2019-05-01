@@ -1,5 +1,5 @@
 // Test that R_390_PC32 and R_390_PC64 relocations can be generated.
-// RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s -o - | llvm-readobj -s -sr -sd | FileCheck %s
+// RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s -o - | llvm-readobj -S --sr --sd | FileCheck %s
 
 // Test that RuntimeDyld can fix up such relocations.
 // RUN: rm -rf %t && mkdir -p %t

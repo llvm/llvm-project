@@ -25,10 +25,10 @@ let Predicates = [HasSVE] in {
   defm SQSUB_ZZZ : sve_int_bin_cons_arit_0<0b110, "sqsub">;
   defm UQSUB_ZZZ : sve_int_bin_cons_arit_0<0b111, "uqsub">;
 
-  def AND_ZZZ : sve_int_bin_cons_log<0b00, "and">;
-  def ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr">;
-  def EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor">;
-  def BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic">;
+  defm AND_ZZZ : sve_int_bin_cons_log<0b00, "and">;
+  defm ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr">;
+  defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor">;
+  defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic">;
 
   defm ADD_ZPmZ   : sve_int_bin_pred_arit_0<0b000, "add">;
   defm SUB_ZPmZ   : sve_int_bin_pred_arit_0<0b001, "sub">;

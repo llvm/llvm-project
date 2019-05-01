@@ -695,10 +695,10 @@ Status NativeProcessNetBSD::ReadMemory(lldb::addr_t addr, void *buf,
     io.piod_addr = dst + bytes_read;
 
     Status error = NativeProcessNetBSD::PtraceWrapper(PT_IO, GetID(), &io);
-    if (error.Fail())
+    if (error.Fail() || io.piod_len == 0)
       return error;
 
-    bytes_read = io.piod_len;
+    bytes_read += io.piod_len;
     io.piod_len = size - bytes_read;
   } while (bytes_read < size);
 
@@ -723,10 +723,10 @@ Status NativeProcessNetBSD::WriteMemory(lldb::addr_t addr, const void *buf,
     io.piod_offs = (void *)(addr + bytes_written);
 
     Status error = NativeProcessNetBSD::PtraceWrapper(PT_IO, GetID(), &io);
-    if (error.Fail())
+    if (error.Fail() || io.piod_len == 0)
       return error;
 
-    bytes_written = io.piod_len;
+    bytes_written += io.piod_len;
     io.piod_len = size - bytes_written;
   } while (bytes_written < size);
 

@@ -20,7 +20,6 @@ config.lldb_bitness = 64 if @LLDB_IS_64_BITS@ else 32
 config.lldb_disable_python = @LLDB_DISABLE_PYTHON@
 config.have_lldb_instr = @LLDB_TOOL_LLDB_INSTR_BUILD@
 config.have_lldb_vscode = @LLDB_TOOL_LLDB_VSCODE_BUILD@
-config.maxIndividualTestTime = 600
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

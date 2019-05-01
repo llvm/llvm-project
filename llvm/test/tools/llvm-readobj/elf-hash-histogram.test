@@ -1,8 +1,8 @@
-RUN: llvm-readobj -elf-hash-histogram %p/Inputs/gnuhash.so.elf-ppc64 \
-RUN:  --elf-output-style=GNU | FileCheck %s -check-prefix PPC64GNU
-RUN: llvm-readobj -elf-hash-histogram %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf --elf-hash-histogram %p/Inputs/gnuhash.so.elf-ppc64 \
+RUN:   | FileCheck %s -check-prefix PPC64GNU
+RUN: llvm-readelf --elf-hash-histogram %p/Inputs/gnuhash.so.elf-x86_64 \
 RUN:   | FileCheck %s -check-prefix X86GNU
-RUN: llvm-readobj -elf-hash-histogram %p/Inputs/got-plt.exe.elf-mipsel --elf-output-style=GNU \
+RUN: llvm-readelf --elf-hash-histogram %p/Inputs/got-plt.exe.elf-mipsel \
 RUN:   | FileCheck %s -check-prefix SYSV
 
 PPC64GNU: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)

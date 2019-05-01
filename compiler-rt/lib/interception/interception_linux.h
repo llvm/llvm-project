@@ -22,18 +22,24 @@
 #define INTERCEPTION_LINUX_H
 
 namespace __interception {
+// returns true if a function with the given name was found.
+bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
+    uptr real, uptr wrapper);
 void *GetFuncAddr(const char *name);
 void *GetFuncAddrVer(const char *name, const char *ver);
 }  // namespace __interception
 
 #define INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)                          \
-  (REAL(func) = (FUNC_TYPE(func)) ::__interception::GetFuncAddr(#func))
+  ::__interception::GetRealFunctionAddress(                                \
+      #func, (::__interception::uptr *)&__interception::PTR_TO_REAL(func), \
+      (::__interception::uptr) & (func),                                   \
+      (::__interception::uptr) & WRAP(func))
 
 // Android,  Solaris and OpenBSD do not have dlvsym
 #if !SANITIZER_ANDROID && !SANITIZER_SOLARIS && !SANITIZER_OPENBSD
-#define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver)              \
-  (REAL(func) =                                                            \
-      (FUNC_TYPE(func)) ::__interception::GetFuncAddrVer(#func, symver))
+#define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
+  (::__interception::real_##func = (func##_type)(                \
+       unsigned long)::__interception::GetFuncAddrVer(#func, symver))
 #else
 #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
   INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)

@@ -458,7 +458,9 @@ namespace {
     SDValue visitFMULForFMADistributiveCombine(SDNode *N);
 
     SDValue XformToShuffleWithZero(SDNode *N);
-    SDValue ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
+    SDValue reassociateOpsCommutative(unsigned Opc, const SDLoc &DL, SDValue N0,
+                                      SDValue N1);
+    SDValue reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                            SDValue N1, SDNodeFlags Flags);
 
     SDValue visitShiftByConstant(SDNode *N, ConstantSDNode *Amt);
@@ -1000,53 +1002,50 @@ static bool isAnyConstantBuildVector(SDValue V, bool NoOpaques = false) {
          ISD::isBuildVectorOfConstantFPSDNodes(V.getNode());
 }
 
-SDValue DAGCombiner::ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
+// Helper for DAGCombiner::reassociateOps. Try to reassociate an expression
+// such as (Opc N0, N1), if \p N0 is the same kind of operation as \p Opc.
+SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
+                                               SDValue N0, SDValue N1) {
+  EVT VT = N0.getValueType();
+
+  if (N0.getOpcode() != Opc)
+    return SDValue();
+
+  // Don't reassociate reductions.
+  if (N0->getFlags().hasVectorReduction())
+    return SDValue();
+
+  if (SDNode *C1 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1))) {
+    if (SDNode *C2 = DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
+      // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
+      if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, C1, C2))
+        return DAG.getNode(Opc, DL, VT, N0.getOperand(0), OpNode);
+      return SDValue();
+    }
+    if (N0.hasOneUse()) {
+      // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
+      //              iff (op x, c1) has one use
+      SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N0.getOperand(0), N1);
+      if (!OpNode.getNode())
+        return SDValue();
+      AddToWorklist(OpNode.getNode());
+      return DAG.getNode(Opc, DL, VT, OpNode, N0.getOperand(1));
+    }
+  }
+  return SDValue();
+}
+
+// Try to reassociate commutative binops.
+SDValue DAGCombiner::reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                                     SDValue N1, SDNodeFlags Flags) {
+  assert(TLI.isCommutativeBinOp(Opc) && "Operation not commutative.");
   // Don't reassociate reductions.
   if (Flags.hasVectorReduction())
     return SDValue();
-
-  EVT VT = N0.getValueType();
-  if (N0.getOpcode() == Opc && !N0->getFlags().hasVectorReduction()) {
-    if (SDNode *L = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1))) {
-      if (SDNode *R = DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
-        // reassoc. (op (op x, c1), c2) -> (op x, (op c1, c2))
-        if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, L, R))
-          return DAG.getNode(Opc, DL, VT, N0.getOperand(0), OpNode);
-        return SDValue();
-      }
-      if (N0.hasOneUse()) {
-        // reassoc. (op (op x, c1), y) -> (op (op x, y), c1) iff x+c1 has one
-        // use
-        SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N0.getOperand(0), N1);
-        if (!OpNode.getNode())
-          return SDValue();
-        AddToWorklist(OpNode.getNode());
-        return DAG.getNode(Opc, DL, VT, OpNode, N0.getOperand(1));
-      }
-    }
-  }
-
-  if (N1.getOpcode() == Opc && !N1->getFlags().hasVectorReduction()) {
-    if (SDNode *R = DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1))) {
-      if (SDNode *L = DAG.isConstantIntBuildVectorOrConstantInt(N0)) {
-        // reassoc. (op c2, (op x, c1)) -> (op x, (op c1, c2))
-        if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, R, L))
-          return DAG.getNode(Opc, DL, VT, N1.getOperand(0), OpNode);
-        return SDValue();
-      }
-      if (N1.hasOneUse()) {
-        // reassoc. (op x, (op y, c1)) -> (op (op x, y), c1) iff x+c1 has one
-        // use
-        SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N0, N1.getOperand(0));
-        if (!OpNode.getNode())
-          return SDValue();
-        AddToWorklist(OpNode.getNode());
-        return DAG.getNode(Opc, DL, VT, OpNode, N1.getOperand(1));
-      }
-    }
-  }
-
+  if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N0, N1))
+    return Combined;
+  if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N1, N0))
+    return Combined;
   return SDValue();
 }
 
@@ -2193,7 +2192,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return NewSel;
 
   // reassociate add
-  if (SDValue RADD = ReassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
+  if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
     return RADD;
 
   // fold ((0-A) + B) -> B-A
@@ -3275,7 +3274,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
                                      N0.getOperand(1), N1));
 
   // reassociate mul
-  if (SDValue RMUL = ReassociateOps(ISD::MUL, SDLoc(N), N0, N1, N->getFlags()))
+  if (SDValue RMUL = reassociateOps(ISD::MUL, SDLoc(N), N0, N1, N->getFlags()))
     return RMUL;
 
   return SDValue();
@@ -4799,7 +4798,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     return NewSel;
 
   // reassociate and
-  if (SDValue RAND = ReassociateOps(ISD::AND, SDLoc(N), N0, N1, N->getFlags()))
+  if (SDValue RAND = reassociateOps(ISD::AND, SDLoc(N), N0, N1, N->getFlags()))
     return RAND;
 
   // Try to convert a constant mask AND into a shuffle clear mask.
@@ -5525,7 +5524,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return BSwap;
 
   // reassociate or
-  if (SDValue ROR = ReassociateOps(ISD::OR, SDLoc(N), N0, N1, N->getFlags()))
+  if (SDValue ROR = reassociateOps(ISD::OR, SDLoc(N), N0, N1, N->getFlags()))
     return ROR;
 
   // Canonicalize (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
@@ -6412,7 +6411,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return NewSel;
 
   // reassociate xor
-  if (SDValue RXOR = ReassociateOps(ISD::XOR, DL, N0, N1, N->getFlags()))
+  if (SDValue RXOR = reassociateOps(ISD::XOR, DL, N0, N1, N->getFlags()))
     return RXOR;
 
   // fold !(x cc y) -> (x !cc y)
@@ -10258,7 +10257,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // When the adde's carry is not used.
   if ((N0.getOpcode() == ISD::ADDE || N0.getOpcode() == ISD::ADDCARRY) &&
       N0.hasOneUse() && !N0.getNode()->hasAnyUseOfValue(1) &&
-      (!LegalOperations || TLI.isOperationLegal(N0.getOpcode(), VT))) {
+      // We only do for addcarry before legalize operation
+      ((!LegalOperations && N0.getOpcode() == ISD::ADDCARRY) ||
+       TLI.isOperationLegal(N0.getOpcode(), VT))) {
     SDLoc SL(N);
     auto X = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
     auto Y = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));

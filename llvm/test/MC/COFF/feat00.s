@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s -o - | llvm-readobj -t | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s -o - | llvm-readobj --symbols | FileCheck %s
 
 "@feat.00" = 123
 .globl @feat.00

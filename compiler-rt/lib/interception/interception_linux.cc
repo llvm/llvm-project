@@ -33,6 +33,12 @@ static int StrCmp(const char *s1, const char *s2) {
 }
 #endif
 
+bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
+    uptr real, uptr wrapper) {
+  *func_addr = (uptr)GetFuncAddr(func_name);
+  return real == wrapper;
+}
+
 void *GetFuncAddr(const char *name) {
 #if SANITIZER_NETBSD
   // FIXME: Find a better way to handle renames

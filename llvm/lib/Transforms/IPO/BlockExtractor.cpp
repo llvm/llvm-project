@@ -44,20 +44,40 @@ class BlockExtractor : public ModulePass {
   SmallVector<std::pair<std::string, SmallVector<std::string, 4>>, 4>
       BlocksByName;
 
+  void init(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
+                &GroupsOfBlocksToExtract) {
+    for (const SmallVectorImpl<BasicBlock *> &GroupOfBlocks :
+         GroupsOfBlocksToExtract) {
+      SmallVector<BasicBlock *, 16> NewGroup;
+      NewGroup.append(GroupOfBlocks.begin(), GroupOfBlocks.end());
+      GroupsOfBlocks.emplace_back(NewGroup);
+    }
+    if (!BlockExtractorFile.empty())
+      loadFile();
+  }
+
 public:
   static char ID;
   BlockExtractor(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
                  bool EraseFunctions)
       : ModulePass(ID), EraseFunctions(EraseFunctions) {
     // We want one group per element of the input list.
+    SmallVector<SmallVector<BasicBlock *, 16>, 4> MassagedGroupsOfBlocks;
     for (BasicBlock *BB : BlocksToExtract) {
       SmallVector<BasicBlock *, 16> NewGroup;
       NewGroup.push_back(BB);
-      GroupsOfBlocks.push_back(NewGroup);
+      MassagedGroupsOfBlocks.push_back(NewGroup);
     }
-    if (!BlockExtractorFile.empty())
-      loadFile();
+    init(MassagedGroupsOfBlocks);
   }
+
+  BlockExtractor(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
+                     &GroupsOfBlocksToExtract,
+                 bool EraseFunctions)
+      : ModulePass(ID), EraseFunctions(EraseFunctions) {
+    init(GroupsOfBlocksToExtract);
+  }
+
   BlockExtractor() : BlockExtractor(SmallVector<BasicBlock *, 0>(), false) {}
   bool runOnModule(Module &M) override;
 
@@ -75,6 +95,12 @@ ModulePass *llvm::createBlockExtractorPass() { return new BlockExtractor(); }
 ModulePass *llvm::createBlockExtractorPass(
     const SmallVectorImpl<BasicBlock *> &BlocksToExtract, bool EraseFunctions) {
   return new BlockExtractor(BlocksToExtract, EraseFunctions);
+}
+ModulePass *llvm::createBlockExtractorPass(
+    const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
+        &GroupsOfBlocksToExtract,
+    bool EraseFunctions) {
+  return new BlockExtractor(GroupsOfBlocksToExtract, EraseFunctions);
 }
 
 /// Gets all of the blocks specified in the input file.
@@ -94,7 +120,7 @@ void BlockExtractor::loadFile() {
     if (LineSplit.empty())
       continue;
     SmallVector<StringRef, 4> BBNames;
-    LineSplit[1].split(BBNames, ',', /*MaxSplit=*/-1,
+    LineSplit[1].split(BBNames, ';', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
     if (BBNames.empty())
       report_fatal_error("Missing bbs name");

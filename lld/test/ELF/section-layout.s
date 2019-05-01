@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %tout
-# RUN: llvm-readobj -sections %tout | FileCheck %s
+# RUN: llvm-readobj --sections %tout | FileCheck %s
 
 # Check that sections are laid out in the correct order.
 

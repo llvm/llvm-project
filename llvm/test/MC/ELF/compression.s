@@ -4,16 +4,16 @@
 // RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-GNU-STYLE %s
 // RUN: llvm-dwarfdump -debug-str %t | FileCheck --check-prefix=STR %s
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib-gnu -triple i386-pc-linux-gnu < %s \
-// RUN:     | llvm-readobj -symbols - | FileCheck --check-prefix=386-SYMBOLS-GNU %s
+// RUN:     | llvm-readobj --symbols - | FileCheck --check-prefix=386-SYMBOLS-GNU %s
 
 // Check zlib style
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple x86_64-pc-linux-gnu < %s -o %t
 // RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-ZLIB-STYLE %s
 // RUN: llvm-dwarfdump -debug-str %t | FileCheck --check-prefix=STR %s
-// RUN: llvm-readobj -sections %t | FileCheck --check-prefixes=ZLIB-STYLE-FLAGS,ZLIB-STYLE-FLAGS64 %s
+// RUN: llvm-readobj --sections %t | FileCheck --check-prefixes=ZLIB-STYLE-FLAGS,ZLIB-STYLE-FLAGS64 %s
 
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple i386-pc-linux-gnu < %s -o %t
-// RUN: llvm-readobj -symbols -sections %t \
+// RUN: llvm-readobj --symbols -S %t \
 // RUN:   | FileCheck --check-prefixes=386-SYMBOLS-ZLIB,ZLIB-STYLE-FLAGS,ZLIB-STYLE-FLAGS32 %s
 
 // Don't compress small sections, such as this simple debug_abbrev example

@@ -1145,7 +1145,7 @@ bool DSAStackTy::isOpenMPLocal(VarDecl *D, iterator Iter) const {
       return false;
     TopScope = I->CurScope ? I->CurScope->getParent() : nullptr;
     Scope *CurScope = getCurScope();
-    while (CurScope != TopScope && !CurScope->isDeclScope(D))
+    while (CurScope && CurScope != TopScope && !CurScope->isDeclScope(D))
       CurScope = CurScope->getParent();
     return CurScope != TopScope;
   }

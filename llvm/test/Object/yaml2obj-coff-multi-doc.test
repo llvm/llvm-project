@@ -1,7 +1,7 @@
 # RUN: yaml2obj -docnum=1 %s \
-# RUN:   | llvm-readobj -symbols - | FileCheck -check-prefix=DOC1 %s
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC1 %s
 # RUN: yaml2obj -docnum=2 %s \
-# RUN:   | llvm-readobj -symbols - | FileCheck -check-prefix=DOC2 %s
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC2 %s
 # RUN: not yaml2obj -docnum=3 %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=DOC3 %s
 

@@ -1,8 +1,8 @@
 @ RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -s -sd | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
+@ RUN:   | llvm-readobj -S --sd | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
 
 @ RUN: llvm-mc %s -triple=armebv7-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -s -sd | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
+@ RUN:   | llvm-readobj -S --sd | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
 
 	.syntax unified
 

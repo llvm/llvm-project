@@ -20,6 +20,7 @@
 
 # SKIP:      0000000000000000 .rodata:
 # SKIP-NEXT:   ...
+# SKIP-EMPTY:
 # SKIP-NEXT: Disassembly of section .rela.rodata:
 
 --- !ELF

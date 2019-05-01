@@ -31,6 +31,7 @@ _start:
 
 
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK: _start:
 // CHECK:     1001001c:       bl .-28
 // CHECK-NOT: 10010020:       nop

@@ -1,6 +1,4 @@
-# FIXME: Disabled on Windows for now because of reliance on posix only features
-# (eg: export, "&", pkill).
-UNSUPPORTED: darwin, windows
+REQUIRES: msan
 
 # Check that libFuzzer exits gracefully under SIGINT with MSan.
 RUN: rm -rf %t

@@ -21,6 +21,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Driver/ToolChain.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
@@ -453,20 +454,29 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (IsIAMCU)
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
-    else {
-      const char *crtbegin;
-      if (Args.hasArg(options::OPT_static))
-        crtbegin = isAndroid ? "crtbegin_static.o" : "crtbeginT.o";
-      else if (Args.hasArg(options::OPT_shared))
-        crtbegin = isAndroid ? "crtbegin_so.o" : "crtbeginS.o";
-      else if (IsPIE || IsStaticPIE)
-        crtbegin = isAndroid ? "crtbegin_dynamic.o" : "crtbeginS.o";
-      else
-        crtbegin = isAndroid ? "crtbegin_dynamic.o" : "crtbegin.o";
-
-      if (HasCRTBeginEndFiles)
-        CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
-    }
+    else if (HasCRTBeginEndFiles) {
+      std::string P;
+      if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT &&
+          !isAndroid) {
+        std::string crtbegin = ToolChain.getCompilerRT(Args, "crtbegin",
+                                                       ToolChain::FT_Object);
+        if (ToolChain.getVFS().exists(crtbegin))
+          P = crtbegin;
+      }
+      if (P.empty()) {
+        const char *crtbegin;
+        if (Args.hasArg(options::OPT_static))
+          crtbegin = isAndroid ? "crtbegin_static.o" : "crtbeginT.o";
+        else if (Args.hasArg(options::OPT_shared))
+          crtbegin = isAndroid ? "crtbegin_so.o" : "crtbeginS.o";
+        else if (IsPIE || IsStaticPIE)
+          crtbegin = isAndroid ? "crtbegin_dynamic.o" : "crtbeginS.o";
+        else
+          crtbegin = isAndroid ? "crtbegin_dynamic.o" : "crtbegin.o";
+        P = ToolChain.GetFilePath(crtbegin);
+      }
+      CmdArgs.push_back(Args.MakeArgString(P));
+	  }
 
     // Add crtfastmath.o if available and fast math is enabled.
     ToolChain.AddFastMathRuntimeIfAvailable(Args, CmdArgs);
@@ -560,16 +570,27 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (!Args.hasArg(options::OPT_nostartfiles) && !IsIAMCU) {
-      const char *crtend;
-      if (Args.hasArg(options::OPT_shared))
-        crtend = isAndroid ? "crtend_so.o" : "crtendS.o";
-      else if (IsPIE || IsStaticPIE)
-        crtend = isAndroid ? "crtend_android.o" : "crtendS.o";
-      else
-        crtend = isAndroid ? "crtend_android.o" : "crtend.o";
-
-      if (HasCRTBeginEndFiles)
-        CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
+      if (HasCRTBeginEndFiles) {
+        std::string P;
+        if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT &&
+            !isAndroid) {
+          std::string crtend = ToolChain.getCompilerRT(Args, "crtend",
+                                                       ToolChain::FT_Object);
+          if (ToolChain.getVFS().exists(crtend))
+            P = crtend;
+        }
+        if (P.empty()) {
+          const char *crtend;
+          if (Args.hasArg(options::OPT_shared))
+            crtend = isAndroid ? "crtend_so.o" : "crtendS.o";
+          else if (IsPIE || IsStaticPIE)
+            crtend = isAndroid ? "crtend_android.o" : "crtendS.o";
+          else
+            crtend = isAndroid ? "crtend_android.o" : "crtend.o";
+          P = ToolChain.GetFilePath(crtend);
+        }
+        CmdArgs.push_back(Args.MakeArgString(P));
+      }
       if (!isAndroid)
         CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
     }

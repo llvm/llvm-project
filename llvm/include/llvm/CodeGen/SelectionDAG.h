@@ -794,6 +794,16 @@ public:
   /// value assuming it was the smaller SrcTy value.
   SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
 
+  /// Convert Op, which must be of integer type, to the integer type VT, by
+  /// either truncating it or performing either zero or sign extension as
+  /// appropriate extension for the pointer's semantics.
+  SDValue getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Return the expression required to extend the Op as a pointer value
+  /// assuming it was the smaller SrcTy value. This may be either a zero extend
+  /// or a sign extend.
+  SDValue getPtrExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
+
   /// Convert Op, which must be of integer type, to the integer type VT,
   /// by using an extension appropriate for the target's
   /// BooleanContent for type OpVT or truncating it.

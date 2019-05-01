@@ -4,7 +4,8 @@
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx     | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX1
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx2    | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX2
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
-; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512bw,avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512VLBW
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512dq,avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512VL,AVX512VLDQ
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512bw,avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512VL,AVX512VLBW
 
 ;
 ; vXf64
@@ -94,11 +95,11 @@ define <2 x double> @load_v2f64_v2i64(<2 x i64> %trigger, <2 x double>* %addr, <
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v2f64_v2i64:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vblendmpd (%rdi), %xmm1, %xmm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v2f64_v2i64:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vblendmpd (%rdi), %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <2 x i64> %trigger, zeroinitializer
   %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1> %mask, <2 x double> %dst)
   ret <2 x double> %res
@@ -205,11 +206,11 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, <4 x double>* %addr, <
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v4f64_v4i32:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmd %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vblendmpd (%rdi), %ymm1, %ymm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v4f64_v4i32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vblendmpd (%rdi), %ymm1, %ymm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 32, <4 x i1> %mask, <4 x double> %dst)
   ret <4 x double> %res
@@ -317,11 +318,11 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, <4 x double>* %ad
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v4f64_v4i32_zero:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmd %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vmovapd (%rdi), %ymm0 {%k1} {z}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v4f64_v4i32_zero:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vmovapd (%rdi), %ymm0 {%k1} {z}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 32, <4 x i1> %mask, <4 x double>zeroinitializer)
   ret <4 x double> %res
@@ -430,11 +431,11 @@ define <4 x double> @load_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v4f64_v4i64:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmq %ymm0, %ymm0, %k1
-; AVX512VLBW-NEXT:    vblendmpd (%rdi), %ymm1, %ymm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v4f64_v4i64:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmq %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vblendmpd (%rdi), %ymm1, %ymm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i64> %trigger, zeroinitializer
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1> %mask, <4 x double> %dst)
   ret <4 x double> %res
@@ -613,6 +614,15 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_v8f64_v8i16:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
+; AVX512VLDQ-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_v8f64_v8i16:
 ; AVX512VLBW:       ## %bb.0:
@@ -888,13 +898,13 @@ define <2 x float> @load_v2f32_v2i32(<2 x i32> %trigger, <2 x float>* %addr, <2 
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v2f32_v2i32:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512VLBW-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v2f32_v2i32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
   ret <2 x float> %res
@@ -977,13 +987,13 @@ define <2 x float> @load_v2f32_v2i32_undef(<2 x i32> %trigger, <2 x float>* %add
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v2f32_v2i32_undef:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; AVX512VLBW-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v2f32_v2i32_undef:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float>undef)
   ret <2 x float> %res
@@ -1085,11 +1095,11 @@ define <4 x float> @load_v4f32_v4i32(<4 x i32> %trigger, <4 x float>* %addr, <4 
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v4f32_v4i32:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmd %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v4f32_v4i32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1> %mask, <4 x float> %dst)
   ret <4 x float> %res
@@ -1252,6 +1262,14 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, <8 x float>* %addr) {
 ; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_v8f32_v8i1_zero:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VLDQ-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
+; AVX512VLDQ-NEXT:    vmovaps (%rdi), %ymm0 {%k1} {z}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_v8f32_v8i1_zero:
 ; AVX512VLBW:       ## %bb.0:
@@ -1440,11 +1458,11 @@ define <8 x float> @load_v8f32_v8i32(<8 x i32> %trigger, <8 x float>* %addr, <8 
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v8f32_v8i32:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmd %ymm0, %ymm0, %k1
-; AVX512VLBW-NEXT:    vblendmps (%rdi), %ymm1, %ymm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v8f32_v8i32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vblendmps (%rdi), %ymm1, %ymm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
   %res = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %addr, i32 32, <8 x i1> %mask, <8 x float> %dst)
   ret <8 x float> %res
@@ -1552,11 +1570,11 @@ define <2 x i64> @load_v2i64_v2i64(<2 x i64> %trigger, <2 x i64>* %addr, <2 x i6
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v2i64_v2i64:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpblendmq (%rdi), %xmm1, %xmm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v2i64_v2i64:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vpblendmq (%rdi), %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <2 x i64> %trigger, zeroinitializer
   %res = call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* %addr, i32 4, <2 x i1> %mask, <2 x i64> %dst)
   ret <2 x i64> %res
@@ -1667,11 +1685,11 @@ define <4 x i64> @load_v4i64_v4i64(<4 x i64> %trigger, <4 x i64>* %addr, <4 x i6
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v4i64_v4i64:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmq %ymm0, %ymm0, %k1
-; AVX512VLBW-NEXT:    vpblendmq (%rdi), %ymm1, %ymm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v4i64_v4i64:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmq %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vpblendmq (%rdi), %ymm1, %ymm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i64> %trigger, zeroinitializer
   %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1> %mask, <4 x i64> %dst)
   ret <4 x i64> %res
@@ -1854,6 +1872,15 @@ define <8 x i64> @load_v8i64_v8i16(<8 x i16> %trigger, <8 x i64>* %addr, <8 x i6
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmq (%rdi), %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_v8i64_v8i16:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
+; AVX512VLDQ-NEXT:    vpblendmq (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_v8i64_v8i16:
 ; AVX512VLBW:       ## %bb.0:
@@ -2138,15 +2165,15 @@ define <2 x i32> @load_v2i32_v2i32(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i3
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v2i32_v2i32:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512VLBW-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; AVX512VLBW-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
-; AVX512VLBW-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v2i32_v2i32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; AVX512VL-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
+; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   %res = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %addr, i32 4, <2 x i1> %mask, <2 x i32> %dst)
   ret <2 x i32> %res
@@ -2255,11 +2282,11 @@ define <4 x i32> @load_v4i32_v4i32(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i3
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: load_v4i32_v4i32:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vptestnmd %xmm0, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpblendmd (%rdi), %xmm1, %xmm0 {%k1}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: load_v4i32_v4i32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vpblendmd (%rdi), %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1> %mask, <4 x i32> %dst)
   ret <4 x i32> %res
@@ -2421,6 +2448,14 @@ define <8 x i32> @load_v8i32_v8i1(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %d
 ; AVX512F-NEXT:    vpblendmd (%rdi), %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_v8i32_v8i1:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VLDQ-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
+; AVX512VLDQ-NEXT:    vpblendmd (%rdi), %ymm1, %ymm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_v8i32_v8i1:
 ; AVX512VLBW:       ## %bb.0:
@@ -2588,6 +2623,14 @@ define <8 x i32> @load_v8i32_v8i1_zero(<8 x i1> %mask, <8 x i32>* %addr) {
 ; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_v8i32_v8i1_zero:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VLDQ-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
+; AVX512VLDQ-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1} {z}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_v8i32_v8i1_zero:
 ; AVX512VLBW:       ## %bb.0:
@@ -2863,6 +2906,83 @@ define <8 x i16> @load_v8i16_v8i16(<8 x i16> %trigger, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_v8i16_v8i16:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm2, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_2
+; AVX512VLDQ-NEXT:  ## %bb.1: ## %cond.load
+; AVX512VLDQ-NEXT:    vpinsrw $0, (%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_2: ## %else
+; AVX512VLDQ-NEXT:    kshiftrb $1, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_4
+; AVX512VLDQ-NEXT:  ## %bb.3: ## %cond.load1
+; AVX512VLDQ-NEXT:    vpinsrw $1, 2(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_4: ## %else2
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $2, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_6
+; AVX512VLDQ-NEXT:  ## %bb.5: ## %cond.load4
+; AVX512VLDQ-NEXT:    vpinsrw $2, 4(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_6: ## %else5
+; AVX512VLDQ-NEXT:    kshiftrb $3, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_8
+; AVX512VLDQ-NEXT:  ## %bb.7: ## %cond.load7
+; AVX512VLDQ-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_8: ## %else8
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $4, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_10
+; AVX512VLDQ-NEXT:  ## %bb.9: ## %cond.load10
+; AVX512VLDQ-NEXT:    vpinsrw $4, 8(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_10: ## %else11
+; AVX512VLDQ-NEXT:    kshiftrb $5, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_12
+; AVX512VLDQ-NEXT:  ## %bb.11: ## %cond.load13
+; AVX512VLDQ-NEXT:    vpinsrw $5, 10(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_12: ## %else14
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm0
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_14
+; AVX512VLDQ-NEXT:  ## %bb.13: ## %cond.load16
+; AVX512VLDQ-NEXT:    vpinsrw $6, 12(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_14: ## %else17
+; AVX512VLDQ-NEXT:    kshiftrb $7, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB21_16
+; AVX512VLDQ-NEXT:  ## %bb.15: ## %cond.load19
+; AVX512VLDQ-NEXT:    vpinsrw $7, 14(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB21_16: ## %else20
+; AVX512VLDQ-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_v8i16_v8i16:
 ; AVX512VLBW:       ## %bb.0:
@@ -3574,6 +3694,178 @@ define <16 x i16> @load_v16i16_v16i16(<16 x i16> %trigger, <16 x i16>* %addr, <1
 ; AVX512F-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VLDQ-LABEL: load_v16i16_v16i16:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_2
+; AVX512VLDQ-NEXT:  ## %bb.1: ## %cond.load
+; AVX512VLDQ-NEXT:    vpinsrw $0, (%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_2: ## %else
+; AVX512VLDQ-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_4
+; AVX512VLDQ-NEXT:  ## %bb.3: ## %cond.load1
+; AVX512VLDQ-NEXT:    vpinsrw $1, 2(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_4: ## %else2
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_6
+; AVX512VLDQ-NEXT:  ## %bb.5: ## %cond.load4
+; AVX512VLDQ-NEXT:    vpinsrw $2, 4(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_6: ## %else5
+; AVX512VLDQ-NEXT:    kshiftrw $3, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_8
+; AVX512VLDQ-NEXT:  ## %bb.7: ## %cond.load7
+; AVX512VLDQ-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_8: ## %else8
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $4, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_10
+; AVX512VLDQ-NEXT:  ## %bb.9: ## %cond.load10
+; AVX512VLDQ-NEXT:    vpinsrw $4, 8(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_10: ## %else11
+; AVX512VLDQ-NEXT:    kshiftrw $5, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_12
+; AVX512VLDQ-NEXT:  ## %bb.11: ## %cond.load13
+; AVX512VLDQ-NEXT:    vpinsrw $5, 10(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_12: ## %else14
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $6, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_14
+; AVX512VLDQ-NEXT:  ## %bb.13: ## %cond.load16
+; AVX512VLDQ-NEXT:    vpinsrw $6, 12(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_14: ## %else17
+; AVX512VLDQ-NEXT:    kshiftrw $7, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_16
+; AVX512VLDQ-NEXT:  ## %bb.15: ## %cond.load19
+; AVX512VLDQ-NEXT:    vpinsrw $7, 14(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB22_16: ## %else20
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_18
+; AVX512VLDQ-NEXT:  ## %bb.17: ## %cond.load22
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrw $0, 16(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_18: ## %else23
+; AVX512VLDQ-NEXT:    kshiftrw $9, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_20
+; AVX512VLDQ-NEXT:  ## %bb.19: ## %cond.load25
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrw $1, 18(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_20: ## %else26
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $10, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_22
+; AVX512VLDQ-NEXT:  ## %bb.21: ## %cond.load28
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrw $2, 20(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_22: ## %else29
+; AVX512VLDQ-NEXT:    kshiftrw $11, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_24
+; AVX512VLDQ-NEXT:  ## %bb.23: ## %cond.load31
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrw $3, 22(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_24: ## %else32
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_26
+; AVX512VLDQ-NEXT:  ## %bb.25: ## %cond.load34
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrw $4, 24(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_26: ## %else35
+; AVX512VLDQ-NEXT:    kshiftrw $13, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_28
+; AVX512VLDQ-NEXT:  ## %bb.27: ## %cond.load37
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrw $5, 26(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_28: ## %else38
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
+; AVX512VLDQ-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm0, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_30
+; AVX512VLDQ-NEXT:  ## %bb.29: ## %cond.load40
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512VLDQ-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_30: ## %else41
+; AVX512VLDQ-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB22_32
+; AVX512VLDQ-NEXT:  ## %bb.31: ## %cond.load43
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512VLDQ-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB22_32: ## %else44
+; AVX512VLDQ-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512VLDQ-NEXT:    retq
+;
 ; AVX512VLBW-LABEL: load_v16i16_v16i16:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    vpmovw2m %ymm0, %k1
@@ -4183,6 +4475,155 @@ define <16 x i8> @load_v16i8_v16i8(<16 x i8> %trigger, <16 x i8>* %addr, <16 x i
 ; AVX512F-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_v16i8_v16i8:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_2
+; AVX512VLDQ-NEXT:  ## %bb.1: ## %cond.load
+; AVX512VLDQ-NEXT:    vpinsrb $0, (%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_2: ## %else
+; AVX512VLDQ-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_4
+; AVX512VLDQ-NEXT:  ## %bb.3: ## %cond.load1
+; AVX512VLDQ-NEXT:    vpinsrb $1, 1(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_4: ## %else2
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_6
+; AVX512VLDQ-NEXT:  ## %bb.5: ## %cond.load4
+; AVX512VLDQ-NEXT:    vpinsrb $2, 2(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_6: ## %else5
+; AVX512VLDQ-NEXT:    kshiftrw $3, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_8
+; AVX512VLDQ-NEXT:  ## %bb.7: ## %cond.load7
+; AVX512VLDQ-NEXT:    vpinsrb $3, 3(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_8: ## %else8
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $4, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_10
+; AVX512VLDQ-NEXT:  ## %bb.9: ## %cond.load10
+; AVX512VLDQ-NEXT:    vpinsrb $4, 4(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_10: ## %else11
+; AVX512VLDQ-NEXT:    kshiftrw $5, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_12
+; AVX512VLDQ-NEXT:  ## %bb.11: ## %cond.load13
+; AVX512VLDQ-NEXT:    vpinsrb $5, 5(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_12: ## %else14
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $6, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_14
+; AVX512VLDQ-NEXT:  ## %bb.13: ## %cond.load16
+; AVX512VLDQ-NEXT:    vpinsrb $6, 6(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_14: ## %else17
+; AVX512VLDQ-NEXT:    kshiftrw $7, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_16
+; AVX512VLDQ-NEXT:  ## %bb.15: ## %cond.load19
+; AVX512VLDQ-NEXT:    vpinsrb $7, 7(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_16: ## %else20
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_18
+; AVX512VLDQ-NEXT:  ## %bb.17: ## %cond.load22
+; AVX512VLDQ-NEXT:    vpinsrb $8, 8(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_18: ## %else23
+; AVX512VLDQ-NEXT:    kshiftrw $9, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_20
+; AVX512VLDQ-NEXT:  ## %bb.19: ## %cond.load25
+; AVX512VLDQ-NEXT:    vpinsrb $9, 9(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_20: ## %else26
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $10, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_22
+; AVX512VLDQ-NEXT:  ## %bb.21: ## %cond.load28
+; AVX512VLDQ-NEXT:    vpinsrb $10, 10(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_22: ## %else29
+; AVX512VLDQ-NEXT:    kshiftrw $11, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_24
+; AVX512VLDQ-NEXT:  ## %bb.23: ## %cond.load31
+; AVX512VLDQ-NEXT:    vpinsrb $11, 11(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_24: ## %else32
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_26
+; AVX512VLDQ-NEXT:  ## %bb.25: ## %cond.load34
+; AVX512VLDQ-NEXT:    vpinsrb $12, 12(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_26: ## %else35
+; AVX512VLDQ-NEXT:    kshiftrw $13, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_28
+; AVX512VLDQ-NEXT:  ## %bb.27: ## %cond.load37
+; AVX512VLDQ-NEXT:    vpinsrb $13, 13(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_28: ## %else38
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm0, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_30
+; AVX512VLDQ-NEXT:  ## %bb.29: ## %cond.load40
+; AVX512VLDQ-NEXT:    vpinsrb $14, 14(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_30: ## %else41
+; AVX512VLDQ-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB23_32
+; AVX512VLDQ-NEXT:  ## %bb.31: ## %cond.load43
+; AVX512VLDQ-NEXT:    vpinsrb $15, 15(%rdi), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:  LBB23_32: ## %else44
+; AVX512VLDQ-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_v16i8_v16i8:
 ; AVX512VLBW:       ## %bb.0:
@@ -5779,6 +6220,369 @@ define <32 x i8> @load_v32i8_v32i8(<32 x i8> %trigger, <32 x i8>* %addr, <32 x i
 ; AVX512F-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VLDQ-LABEL: load_v32i8_v32i8:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_2
+; AVX512VLDQ-NEXT:  ## %bb.1: ## %cond.load
+; AVX512VLDQ-NEXT:    vpinsrb $0, (%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_2: ## %else
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_4
+; AVX512VLDQ-NEXT:  ## %bb.3: ## %cond.load1
+; AVX512VLDQ-NEXT:    vpinsrb $1, 1(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_4: ## %else2
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $2, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_6
+; AVX512VLDQ-NEXT:  ## %bb.5: ## %cond.load4
+; AVX512VLDQ-NEXT:    vpinsrb $2, 2(%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_6: ## %else5
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $3, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_8
+; AVX512VLDQ-NEXT:  ## %bb.7: ## %cond.load7
+; AVX512VLDQ-NEXT:    vpinsrb $3, 3(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_8: ## %else8
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $4, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_10
+; AVX512VLDQ-NEXT:  ## %bb.9: ## %cond.load10
+; AVX512VLDQ-NEXT:    vpinsrb $4, 4(%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_10: ## %else11
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $5, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_12
+; AVX512VLDQ-NEXT:  ## %bb.11: ## %cond.load13
+; AVX512VLDQ-NEXT:    vpinsrb $5, 5(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_12: ## %else14
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $6, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_14
+; AVX512VLDQ-NEXT:  ## %bb.13: ## %cond.load16
+; AVX512VLDQ-NEXT:    vpinsrb $6, 6(%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_14: ## %else17
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $7, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_16
+; AVX512VLDQ-NEXT:  ## %bb.15: ## %cond.load19
+; AVX512VLDQ-NEXT:    vpinsrb $7, 7(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_16: ## %else20
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $8, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_18
+; AVX512VLDQ-NEXT:  ## %bb.17: ## %cond.load22
+; AVX512VLDQ-NEXT:    vpinsrb $8, 8(%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_18: ## %else23
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $9, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_20
+; AVX512VLDQ-NEXT:  ## %bb.19: ## %cond.load25
+; AVX512VLDQ-NEXT:    vpinsrb $9, 9(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_20: ## %else26
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $10, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_22
+; AVX512VLDQ-NEXT:  ## %bb.21: ## %cond.load28
+; AVX512VLDQ-NEXT:    vpinsrb $10, 10(%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_22: ## %else29
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $11, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_24
+; AVX512VLDQ-NEXT:  ## %bb.23: ## %cond.load31
+; AVX512VLDQ-NEXT:    vpinsrb $11, 11(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_24: ## %else32
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $12, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_26
+; AVX512VLDQ-NEXT:  ## %bb.25: ## %cond.load34
+; AVX512VLDQ-NEXT:    vpinsrb $12, 12(%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_26: ## %else35
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $13, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_28
+; AVX512VLDQ-NEXT:  ## %bb.27: ## %cond.load37
+; AVX512VLDQ-NEXT:    vpinsrb $13, 13(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_28: ## %else38
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm3, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $14, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_30
+; AVX512VLDQ-NEXT:  ## %bb.29: ## %cond.load40
+; AVX512VLDQ-NEXT:    vpinsrb $14, 14(%rdi), %xmm1, %xmm3
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_30: ## %else41
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_32
+; AVX512VLDQ-NEXT:  ## %bb.31: ## %cond.load43
+; AVX512VLDQ-NEXT:    vpinsrb $15, 15(%rdi), %xmm1, %xmm2
+; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLDQ-NEXT:  LBB24_32: ## %else44
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_34
+; AVX512VLDQ-NEXT:  ## %bb.33: ## %cond.load46
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $0, 16(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_34: ## %else47
+; AVX512VLDQ-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_36
+; AVX512VLDQ-NEXT:  ## %bb.35: ## %cond.load49
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $1, 17(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_36: ## %else50
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_38
+; AVX512VLDQ-NEXT:  ## %bb.37: ## %cond.load52
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $2, 18(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_38: ## %else53
+; AVX512VLDQ-NEXT:    kshiftrw $3, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_40
+; AVX512VLDQ-NEXT:  ## %bb.39: ## %cond.load55
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $3, 19(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_40: ## %else56
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $4, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_42
+; AVX512VLDQ-NEXT:  ## %bb.41: ## %cond.load58
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $4, 20(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_42: ## %else59
+; AVX512VLDQ-NEXT:    kshiftrw $5, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_44
+; AVX512VLDQ-NEXT:  ## %bb.43: ## %cond.load61
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $5, 21(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_44: ## %else62
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $6, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_46
+; AVX512VLDQ-NEXT:  ## %bb.45: ## %cond.load64
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $6, 22(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_46: ## %else65
+; AVX512VLDQ-NEXT:    kshiftrw $7, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_48
+; AVX512VLDQ-NEXT:  ## %bb.47: ## %cond.load67
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $7, 23(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_48: ## %else68
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_50
+; AVX512VLDQ-NEXT:  ## %bb.49: ## %cond.load70
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $8, 24(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_50: ## %else71
+; AVX512VLDQ-NEXT:    kshiftrw $9, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_52
+; AVX512VLDQ-NEXT:  ## %bb.51: ## %cond.load73
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $9, 25(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_52: ## %else74
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $10, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_54
+; AVX512VLDQ-NEXT:  ## %bb.53: ## %cond.load76
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $10, 26(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_54: ## %else77
+; AVX512VLDQ-NEXT:    kshiftrw $11, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_56
+; AVX512VLDQ-NEXT:  ## %bb.55: ## %cond.load79
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $11, 27(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_56: ## %else80
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm2
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_58
+; AVX512VLDQ-NEXT:  ## %bb.57: ## %cond.load82
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $12, 28(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_58: ## %else83
+; AVX512VLDQ-NEXT:    kshiftrw $13, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_60
+; AVX512VLDQ-NEXT:  ## %bb.59: ## %cond.load85
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrb $13, 29(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_60: ## %else86
+; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512VLDQ-NEXT:    vpmovd2m %zmm0, %k0
+; AVX512VLDQ-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %k1, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_62
+; AVX512VLDQ-NEXT:  ## %bb.61: ## %cond.load88
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512VLDQ-NEXT:    vpinsrb $14, 30(%rdi), %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_62: ## %else89
+; AVX512VLDQ-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    testb $1, %al
+; AVX512VLDQ-NEXT:    je LBB24_64
+; AVX512VLDQ-NEXT:  ## %bb.63: ## %cond.load91
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512VLDQ-NEXT:    vpinsrb $15, 31(%rdi), %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm1
+; AVX512VLDQ-NEXT:  LBB24_64: ## %else92
+; AVX512VLDQ-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512VLDQ-NEXT:    retq
+;
 ; AVX512VLBW-LABEL: load_v32i8_v32i8:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    vpmovb2m %ymm0, %k1
@@ -5829,6 +6633,13 @@ define <4 x float> @mload_constmask_v4f32(<4 x float>* %addr, <4 x float> %dst) 
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VLDQ-LABEL: mload_constmask_v4f32:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $13, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovups (%rdi), %xmm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
 ; AVX512VLBW-LABEL: mload_constmask_v4f32:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    movb $13, %al
@@ -5859,11 +6670,11 @@ define <4 x float> @mload_constmask_v4f32_all(<4 x float>* %addr) {
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: mload_constmask_v4f32_all:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    kxnorw %k0, %k0, %k1
-; AVX512VLBW-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
-; AVX512VLBW-NEXT:    retq
+; AVX512VL-LABEL: mload_constmask_v4f32_all:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    kxnorw %k0, %k0, %k1
+; AVX512VL-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
+; AVX512VL-NEXT:    retq
   %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float>undef)
   ret <4 x float> %res
 }
@@ -5928,6 +6739,13 @@ define <4 x i32> @mload_constmask_v4i32(<4 x i32>* %addr, <4 x i32> %dst) {
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: mload_constmask_v4i32:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $14, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: mload_constmask_v4i32:
 ; AVX512VLBW:       ## %bb.0:
@@ -5997,6 +6815,13 @@ define <8 x float> @mload_constmask_v8f32(<8 x float>* %addr, <8 x float> %dst) 
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VLDQ-LABEL: mload_constmask_v8f32:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $7, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovups (%rdi), %ymm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
 ; AVX512VLBW-LABEL: mload_constmask_v8f32:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    movb $7, %al
@@ -6029,6 +6854,13 @@ define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %ds
 ; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: mload_constmask_v4f64:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $7, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovupd (%rdi), %ymm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: mload_constmask_v4f64:
 ; AVX512VLBW:       ## %bb.0:
@@ -6079,6 +6911,13 @@ define <8 x i32> @mload_constmask_v8i32(<8 x i32>* %addr, <8 x i32> %dst) {
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VLDQ-LABEL: mload_constmask_v8i32:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $-121, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
 ; AVX512VLBW-LABEL: mload_constmask_v8i32:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    movb $-121, %al
@@ -6117,6 +6956,13 @@ define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VLDQ-LABEL: mload_constmask_v4i64:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $9, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovdqu64 (%rdi), %ymm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
 ; AVX512VLBW-LABEL: mload_constmask_v4i64:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    movb $9, %al
@@ -6150,6 +6996,13 @@ define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %ds
 ; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VLDQ-LABEL: mload_constmask_v8f64:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $-121, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
 ; AVX512VLBW-LABEL: mload_constmask_v8f64:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    movb $-121, %al
@@ -6182,6 +7035,13 @@ define <4 x double> @mload_constmask_v4f64_undef_passthrough(<4 x double>* %addr
 ; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: mload_constmask_v4f64_undef_passthrough:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $7, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovupd (%rdi), %ymm0 {%k1} {z}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: mload_constmask_v4f64_undef_passthrough:
 ; AVX512VLBW:       ## %bb.0:
@@ -6220,6 +7080,13 @@ define <4 x i64> @mload_constmask_v4i64_undef_passthrough(<4 x i64>* %addr) {
 ; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: mload_constmask_v4i64_undef_passthrough:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $6, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovdqu64 (%rdi), %ymm0 {%k1} {z}
+; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: mload_constmask_v4i64_undef_passthrough:
 ; AVX512VLBW:       ## %bb.0:

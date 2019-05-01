@@ -1,6 +1,6 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s | FileCheck %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin14.0.0-elf %s -o - | llvm-readobj -s | FileCheck %s -check-prefix=DARWIN
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32-elf %s -o - | llvm-readobj -s | FileCheck %s -check-prefix=WINDOWS
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin14.0.0-elf %s -o - | llvm-readobj -S | FileCheck %s -check-prefix=DARWIN
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32-elf %s -o - | llvm-readobj -S | FileCheck %s -check-prefix=WINDOWS
 
 // Check that we can create ELF files for darwin/windows, even though
 // it is not the default file format.

@@ -696,17 +696,20 @@ Expected<SymbolAliasMap>
 buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols) {
   auto Flags = SourceJD.lookupFlags(Symbols);
 
-  if (Flags.size() != Symbols.size()) {
+  if (!Flags)
+    return Flags.takeError();
+
+  if (Flags->size() != Symbols.size()) {
     SymbolNameSet Unresolved = Symbols;
-    for (auto &KV : Flags)
+    for (auto &KV : *Flags)
       Unresolved.erase(KV.first);
     return make_error<SymbolsNotFound>(std::move(Unresolved));
   }
 
   SymbolAliasMap Result;
   for (auto &Name : Symbols) {
-    assert(Flags.count(Name) && "Missing entry in flags map");
-    Result[Name] = SymbolAliasMapEntry(Name, Flags[Name]);
+    assert(Flags->count(Name) && "Missing entry in flags map");
+    Result[Name] = SymbolAliasMapEntry(Name, (*Flags)[Name]);
   }
 
   return Result;
@@ -718,14 +721,17 @@ ReexportsGenerator::ReexportsGenerator(JITDylib &SourceJD,
     : SourceJD(SourceJD), MatchNonExported(MatchNonExported),
       Allow(std::move(Allow)) {}
 
-SymbolNameSet ReexportsGenerator::operator()(JITDylib &JD,
-                                             const SymbolNameSet &Names) {
+Expected<SymbolNameSet>
+ReexportsGenerator::operator()(JITDylib &JD, const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolAliasMap AliasMap;
 
   auto Flags = SourceJD.lookupFlags(Names);
 
-  for (auto &KV : Flags) {
+  if (!Flags)
+    return Flags.takeError();
+
+  for (auto &KV : *Flags) {
     if (Allow && !Allow(KV.first))
       continue;
     AliasMap[KV.first] = SymbolAliasMapEntry(KV.first, KV.second);
@@ -1171,16 +1177,23 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
   });
 }
 
-SymbolFlagsMap JITDylib::lookupFlags(const SymbolNameSet &Names) {
-  return ES.runSessionLocked([&, this]() {
+Expected<SymbolFlagsMap> JITDylib::lookupFlags(const SymbolNameSet &Names) {
+  return ES.runSessionLocked([&, this]() -> Expected<SymbolFlagsMap> {
     SymbolFlagsMap Result;
     auto Unresolved = lookupFlagsImpl(Result, Names);
-    if (DefGenerator && !Unresolved.empty()) {
-      auto NewDefs = DefGenerator(*this, Unresolved);
-      if (!NewDefs.empty()) {
-        auto Unresolved2 = lookupFlagsImpl(Result, NewDefs);
+    if (!Unresolved)
+      return Unresolved.takeError();
+
+    if (DefGenerator && !Unresolved->empty()) {
+      auto NewDefs = DefGenerator(*this, *Unresolved);
+      if (!NewDefs)
+        return NewDefs.takeError();
+      if (!NewDefs->empty()) {
+        auto Unresolved2 = lookupFlagsImpl(Result, *NewDefs);
+        if (!Unresolved2)
+          return Unresolved2.takeError();
         (void)Unresolved2;
-        assert(Unresolved2.empty() &&
+        assert(Unresolved2->empty() &&
                "All fallback defs should have been found by lookupFlagsImpl");
       }
     };
@@ -1188,8 +1201,8 @@ SymbolFlagsMap JITDylib::lookupFlags(const SymbolNameSet &Names) {
   });
 }
 
-SymbolNameSet JITDylib::lookupFlagsImpl(SymbolFlagsMap &Flags,
-                                        const SymbolNameSet &Names) {
+Expected<SymbolNameSet> JITDylib::lookupFlagsImpl(SymbolFlagsMap &Flags,
+                                                  const SymbolNameSet &Names) {
   SymbolNameSet Unresolved;
 
   for (auto &Name : Names) {
@@ -1207,22 +1220,26 @@ SymbolNameSet JITDylib::lookupFlagsImpl(SymbolFlagsMap &Flags,
   return Unresolved;
 }
 
-void JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                          SymbolNameSet &Unresolved, bool MatchNonExported,
-                          MaterializationUnitList &MUs) {
+Error JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
+                           SymbolNameSet &Unresolved, bool MatchNonExported,
+                           MaterializationUnitList &MUs) {
   assert(Q && "Query can not be null");
 
   lodgeQueryImpl(Q, Unresolved, MatchNonExported, MUs);
   if (DefGenerator && !Unresolved.empty()) {
     auto NewDefs = DefGenerator(*this, Unresolved);
-    if (!NewDefs.empty()) {
-      for (auto &D : NewDefs)
+    if (!NewDefs)
+      return NewDefs.takeError();
+    if (!NewDefs->empty()) {
+      for (auto &D : *NewDefs)
         Unresolved.erase(D);
-      lodgeQueryImpl(Q, NewDefs, MatchNonExported, MUs);
-      assert(NewDefs.empty() &&
+      lodgeQueryImpl(Q, *NewDefs, MatchNonExported, MUs);
+      assert(NewDefs->empty() &&
              "All fallback defs should have been found by lookupImpl");
     }
   }
+
+  return Error::success();
 }
 
 void JITDylib::lodgeQueryImpl(
@@ -1294,8 +1311,9 @@ void JITDylib::lodgeQueryImpl(
     Unresolved.erase(Name);
 }
 
-SymbolNameSet JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
-                                     SymbolNameSet Names) {
+Expected<SymbolNameSet>
+JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
+                       SymbolNameSet Names) {
   assert(Q && "Query can not be null");
 
   ES.runOutstandingMUs();
@@ -1304,21 +1322,27 @@ SymbolNameSet JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
   std::vector<std::unique_ptr<MaterializationUnit>> MUs;
 
   SymbolNameSet Unresolved = std::move(Names);
-  ES.runSessionLocked([&, this]() {
+  auto Err = ES.runSessionLocked([&, this]() -> Error {
     ActionFlags = lookupImpl(Q, MUs, Unresolved);
     if (DefGenerator && !Unresolved.empty()) {
       assert(ActionFlags == None &&
              "ActionFlags set but unresolved symbols remain?");
       auto NewDefs = DefGenerator(*this, Unresolved);
-      if (!NewDefs.empty()) {
-        for (auto &D : NewDefs)
+      if (!NewDefs)
+        return NewDefs.takeError();
+      if (!NewDefs->empty()) {
+        for (auto &D : *NewDefs)
           Unresolved.erase(D);
-        ActionFlags = lookupImpl(Q, MUs, NewDefs);
-        assert(NewDefs.empty() &&
+        ActionFlags = lookupImpl(Q, MUs, *NewDefs);
+        assert(NewDefs->empty() &&
                "All fallback defs should have been found by lookupImpl");
       }
     }
+    return Error::success();
   });
+
+  if (Err)
+    return std::move(Err);
 
   assert((MUs.empty() || ActionFlags == None) &&
          "If action flags are set, there should be no work to do (so no MUs)");
@@ -1761,34 +1785,29 @@ void ExecutionSession::lookup(
       Unresolved, std::move(OnResolve), std::move(OnReady));
   bool QueryIsFullyResolved = false;
   bool QueryIsFullyReady = false;
-  bool QueryFailed = false;
 
-  runSessionLocked([&]() {
-    for (auto &KV : SearchOrder) {
-      assert(KV.first && "JITDylibList entries must not be null");
-      assert(!CollectedMUsMap.count(KV.first) &&
-             "JITDylibList should not contain duplicate entries");
+  auto LodgingErr = runSessionLocked([&]() -> Error {
+    auto LodgeQuery = [&]() -> Error {
+      for (auto &KV : SearchOrder) {
+        assert(KV.first && "JITDylibList entries must not be null");
+        assert(!CollectedMUsMap.count(KV.first) &&
+               "JITDylibList should not contain duplicate entries");
 
-      auto &JD = *KV.first;
-      auto MatchNonExported = KV.second;
-      JD.lodgeQuery(Q, Unresolved, MatchNonExported, CollectedMUsMap[&JD]);
-    }
+        auto &JD = *KV.first;
+        auto MatchNonExported = KV.second;
+        if (auto Err = JD.lodgeQuery(Q, Unresolved, MatchNonExported,
+                                     CollectedMUsMap[&JD]))
+          return Err;
+      }
 
-    if (Unresolved.empty()) {
-      // Query lodged successfully.
+      if (!Unresolved.empty())
+        return make_error<SymbolsNotFound>(std::move(Unresolved));
 
-      // Record whether this query is fully ready / resolved. We will use
-      // this to call handleFullyResolved/handleFullyReady outside the session
-      // lock.
-      QueryIsFullyResolved = Q->isFullyResolved();
-      QueryIsFullyReady = Q->isFullyReady();
+      return Error::success();
+    };
 
-      // Call the register dependencies function.
-      if (RegisterDependencies && !Q->QueryRegistrations.empty())
-        RegisterDependencies(Q->QueryRegistrations);
-    } else {
-      // Query failed due to unresolved symbols.
-      QueryFailed = true;
+    if (auto Err = LodgeQuery()) {
+      // Query failed.
 
       // Disconnect the query from its dependencies.
       Q->detach();
@@ -1797,11 +1816,27 @@ void ExecutionSession::lookup(
       for (auto &KV : CollectedMUsMap)
         for (auto &MU : KV.second)
           KV.first->replace(std::move(MU));
+
+      return Err;
     }
+
+    // Query lodged successfully.
+
+    // Record whether this query is fully ready / resolved. We will use
+    // this to call handleFullyResolved/handleFullyReady outside the session
+    // lock.
+    QueryIsFullyResolved = Q->isFullyResolved();
+    QueryIsFullyReady = Q->isFullyReady();
+
+    // Call the register dependencies function.
+    if (RegisterDependencies && !Q->QueryRegistrations.empty())
+      RegisterDependencies(Q->QueryRegistrations);
+
+    return Error::success();
   });
 
-  if (QueryFailed) {
-    Q->handleFailed(make_error<SymbolsNotFound>(std::move(Unresolved)));
+  if (LodgingErr) {
+    Q->handleFailed(std::move(LodgingErr));
     return;
   } else {
     if (QueryIsFullyResolved)

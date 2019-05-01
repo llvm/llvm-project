@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
   }
 
   // Figure out which BasicBlocks we should extract.
-  SmallVector<BasicBlock *, 4> BBs;
+  SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupOfBBs;
   for (StringRef StrPair : ExtractBlocks) {
     auto BBInfo = StrPair.split(':');
     // Get the function.
@@ -241,17 +241,24 @@ int main(int argc, char **argv) {
     }
     // Do not materialize this function.
     GVs.insert(F);
-    // Get the basic block.
-    auto Res = llvm::find_if(*F, [&](const BasicBlock &BB) {
-      return BB.getName().equals(BBInfo.second);
-    });
-    if (Res == F->end()) {
-      errs() << argv[0] << ": function " << F->getName()
-             << " doesn't contain a basic block named '" << BBInfo.second
-             << "'!\n";
-      return 1;
+    // Get the basic blocks.
+    SmallVector<BasicBlock *, 16> BBs;
+    SmallVector<StringRef, 16> BBNames;
+    BBInfo.second.split(BBNames, ';', /*MaxSplit=*/-1,
+                        /*KeepEmpty=*/false);
+    for (StringRef BBName : BBNames) {
+      auto Res = llvm::find_if(*F, [&](const BasicBlock &BB) {
+        return BB.getName().equals(BBName);
+      });
+      if (Res == F->end()) {
+        errs() << argv[0] << ": function " << F->getName()
+               << " doesn't contain a basic block named '" << BBInfo.second
+               << "'!\n";
+        return 1;
+      }
+      BBs.push_back(&*Res);
     }
-    BBs.push_back(&*Res);
+    GroupOfBBs.push_back(BBs);
   }
 
   // Use *argv instead of argv[0] to work around a wrong GCC warning.
@@ -316,7 +323,7 @@ int main(int argc, char **argv) {
   // functions.
   if (!ExtractBlocks.empty()) {
     legacy::PassManager PM;
-    PM.add(createBlockExtractorPass(BBs, true));
+    PM.add(createBlockExtractorPass(GroupOfBBs, true));
     PM.run(*M);
   }
 

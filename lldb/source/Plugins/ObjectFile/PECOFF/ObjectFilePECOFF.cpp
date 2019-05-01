@@ -40,6 +40,54 @@
 using namespace lldb;
 using namespace lldb_private;
 
+struct CVInfoPdb70 {
+  // 16-byte GUID
+  struct _Guid {
+    llvm::support::ulittle32_t Data1;
+    llvm::support::ulittle16_t Data2;
+    llvm::support::ulittle16_t Data3;
+    uint8_t Data4[8];
+  } Guid;
+
+  llvm::support::ulittle32_t Age;
+};
+
+static UUID GetCoffUUID(llvm::object::COFFObjectFile *coff_obj) {
+  if (!coff_obj)
+    return UUID();
+
+  const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  llvm::StringRef pdb_file;
+
+  // This part is similar with what has done in minidump parser.
+  if (!coff_obj->getDebugPDBInfo(pdb_info, pdb_file) && pdb_info) {
+    if (pdb_info->PDB70.CVSignature == llvm::OMF::Signature::PDB70) {
+      using llvm::support::endian::read16be;
+      using llvm::support::endian::read32be;
+
+      const uint8_t *sig = pdb_info->PDB70.Signature;
+      struct CVInfoPdb70 info;
+      info.Guid.Data1 = read32be(sig);
+      sig += 4;
+      info.Guid.Data2 = read16be(sig);
+      sig += 2;
+      info.Guid.Data3 = read16be(sig);
+      sig += 2;
+      memcpy(info.Guid.Data4, sig, 8);
+
+      // Return 20-byte UUID if the Age is not zero
+      if (pdb_info->PDB70.Age) {
+        info.Age = read32be(&pdb_info->PDB70.Age);
+        return UUID::fromOptionalData(&info, sizeof(info));
+      }
+      // Otherwise return 16-byte GUID
+      return UUID::fromOptionalData(&info.Guid, sizeof(info.Guid));
+    }
+  }
+
+  return UUID();
+}
+
 void ObjectFilePECOFF::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
@@ -113,36 +161,43 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
+  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+    return initial_count;
 
-  if (ObjectFilePECOFF::MagicBytesMatch(data_sp)) {
-    DataExtractor data;
-    data.SetData(data_sp, data_offset, length);
-    data.SetByteOrder(eByteOrderLittle);
+  auto binary = llvm::object::createBinary(file.GetPath());
+  if (!binary)
+    return initial_count;
 
-    dos_header_t dos_header;
-    coff_header_t coff_header;
+  if (!binary->getBinary()->isCOFF() &&
+      !binary->getBinary()->isCOFFImportFile())
+    return initial_count;
 
-    if (ParseDOSHeader(data, dos_header)) {
-      lldb::offset_t offset = dos_header.e_lfanew;
-      uint32_t pe_signature = data.GetU32(&offset);
-      if (pe_signature != IMAGE_NT_SIGNATURE)
-        return false;
-      if (ParseCOFFHeader(data, &offset, coff_header)) {
-        ArchSpec spec;
-        if (coff_header.machine == MachineAmd64) {
-          spec.SetTriple("x86_64-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-        } else if (coff_header.machine == MachineX86) {
-          spec.SetTriple("i386-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-          spec.SetTriple("i686-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-        } else if (coff_header.machine == MachineArmNt) {
-          spec.SetTriple("arm-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-        }
-      }
-    }
+  auto COFFObj =
+    llvm::cast<llvm::object::COFFObjectFile>(binary->getBinary());
+
+  ModuleSpec module_spec(file);
+  ArchSpec &spec = module_spec.GetArchitecture();
+  lldb_private::UUID &uuid = module_spec.GetUUID();
+  if (!uuid.IsValid())
+    uuid = GetCoffUUID(COFFObj);
+
+  switch (COFFObj->getMachine()) {
+  case MachineAmd64:
+    spec.SetTriple("x86_64-pc-windows");
+    specs.Append(module_spec);
+    break;
+  case MachineX86:
+    spec.SetTriple("i386-pc-windows");
+    specs.Append(module_spec);
+    spec.SetTriple("i686-pc-windows");
+    specs.Append(module_spec);
+    break;
+  case MachineArmNt:
+    spec.SetTriple("arm-pc-windows");
+    specs.Append(module_spec);
+    break;
+  default:
+    break;
   }
 
   return specs.GetSize() - initial_count;
@@ -828,7 +883,19 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   }
 }
 
-UUID ObjectFilePECOFF::GetUUID() { return UUID(); }
+UUID ObjectFilePECOFF::GetUUID() {
+  if (m_uuid.IsValid())
+    return m_uuid;
+
+  if (!CreateBinary())
+    return UUID();
+
+  auto COFFObj =
+    llvm::cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
+
+  m_uuid = GetCoffUUID(COFFObj);
+  return m_uuid;
+}
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
   ModuleSP module_sp(GetModule());
@@ -850,8 +917,7 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
                 static_cast<void *>(this), static_cast<void *>(module_sp.get()),
                 module_sp->GetSpecificationDescription().c_str(),
                 static_cast<void *>(m_owningbin.getPointer()),
-                m_owningbin ? static_cast<void *>(m_owningbin->getBinary())
-                            : nullptr);
+                static_cast<void *>(m_owningbin->getBinary()));
 
   auto COFFObj =
       llvm::dyn_cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
@@ -912,7 +978,8 @@ lldb_private::Address ObjectFilePECOFF::GetEntryPointAddress() {
   if (!section_list)
     m_entry_point_address.SetOffset(file_addr);
   else
-    m_entry_point_address.ResolveAddressUsingFileSections(file_addr, section_list);
+    m_entry_point_address.ResolveAddressUsingFileSections(file_addr,
+                                                          section_list);
   return m_entry_point_address;
 }
 

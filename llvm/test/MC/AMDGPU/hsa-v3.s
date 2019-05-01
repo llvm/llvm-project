@@ -1,10 +1,10 @@
 // RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
-// RUN: llvm-readobj -elf-output-style=GNU -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
+// RUN: llvm-readelf -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // big endian not supported
-// XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
+// XFAIL: host-byteorder-big-endian
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256

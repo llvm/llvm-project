@@ -24,17 +24,17 @@
 
 // A basic C++ link command-line with known OS.
 
-// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo --stdlib=c++ %s 2>&1 | FileCheck -check-prefix=LINK_KNOWN %s
+// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo --stdlib=c++ %s 2>&1 | FileCheck -check-prefix=LINK_KNOWN %s
 // LINK_KNOWN: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi-musl" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
+// LINK_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C++ link command-line with optimization with known OS.
 
-// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo %s --stdlib=c++ 2>&1 | FileCheck -check-prefix=LINK_OPT_KNOWN %s
+// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo %s --stdlib=c++ 2>&1 | FileCheck -check-prefix=LINK_OPT_KNOWN %s
 // LINK_OPT_KNOWN: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK_OPT_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi-musl" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
+// LINK_OPT_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C++ compile command-line with known OS.
 
-// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo --stdlib=c++ %s 2>&1 | FileCheck -check-prefix=COMPILE %s
-// COMPILE: clang{{.*}}" "-cc1" {{.*}} "-internal-isystem" "/foo/include/wasm32-wasi-musl/c++/v1" "-internal-isystem" "/foo/include/c++/v1" "-internal-isystem" "/foo/include/wasm32-wasi-musl" "-internal-isystem" "/foo/include"
+// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo --stdlib=c++ %s 2>&1 | FileCheck -check-prefix=COMPILE %s
+// COMPILE: clang{{.*}}" "-cc1" {{.*}} "-internal-isystem" "/foo/include/wasm32-wasi/c++/v1" "-internal-isystem" "/foo/include/c++/v1" "-internal-isystem" "/foo/include/wasm32-wasi" "-internal-isystem" "/foo/include"

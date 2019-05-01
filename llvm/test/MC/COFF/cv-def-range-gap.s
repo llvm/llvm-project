@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=x86_64-pc-win32 -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s
+# RUN: llvm-mc -triple=x86_64-pc-win32 -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s
 
 # This tries to test defrange gap edge cases.
 

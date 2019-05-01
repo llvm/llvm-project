@@ -28,6 +28,7 @@ main:
 # CHECK-NEXT:    1000c: c0 03 5f d6     ret
 
 # CHECK: Disassembly of section .got:
+# CHECK-EMPTY:
 # CHECK-NEXT: 00000000000200a0 .got:
 
 # CHECK-RELOCS: Relocations [

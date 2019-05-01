@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple i686-windows-itanium -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-ASM
-; RUN: llc -mtriple i686-windows-itanium -filetype obj -o - %s | llvm-readobj -relocations - | FileCheck %s -check-prefix CHECK-OBJ
+; RUN: llc -mtriple i686-windows-itanium -filetype obj -o - %s | llvm-readobj -r - | FileCheck %s -check-prefix CHECK-OBJ
 
 @get_count_incremented.count = internal thread_local unnamed_addr global i32 0, align 4
 

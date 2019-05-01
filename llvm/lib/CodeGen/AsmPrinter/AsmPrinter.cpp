@@ -34,7 +34,6 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/GCStrategy.h"
@@ -310,16 +309,17 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = MMI->getModule()->getCodeViewFlag();
     if (EmitCodeView && TM.getTargetTriple().isOSWindows()) {
-      Handlers.push_back(HandlerInfo(new CodeViewDebug(this),
-                                     DbgTimerName, DbgTimerDescription,
-                                     CodeViewLineTablesGroupName,
-                                     CodeViewLineTablesGroupDescription));
+      Handlers.emplace_back(llvm::make_unique<CodeViewDebug>(this),
+                            DbgTimerName, DbgTimerDescription,
+                            CodeViewLineTablesGroupName,
+                            CodeViewLineTablesGroupDescription);
     }
     if (!EmitCodeView || MMI->getModule()->getDwarfVersion()) {
       DD = new DwarfDebug(this, &M);
       DD->beginModule();
-      Handlers.push_back(HandlerInfo(DD, DbgTimerName, DbgTimerDescription,
-                                     DWARFGroupName, DWARFGroupDescription));
+      Handlers.emplace_back(std::unique_ptr<DwarfDebug>(DD), DbgTimerName,
+                            DbgTimerDescription, DWARFGroupName,
+                            DWARFGroupDescription);
     }
   }
 
@@ -372,14 +372,15 @@ bool AsmPrinter::doInitialization(Module &M) {
     break;
   }
   if (ES)
-    Handlers.push_back(HandlerInfo(ES, EHTimerName, EHTimerDescription,
-                                   DWARFGroupName, DWARFGroupDescription));
+    Handlers.emplace_back(std::unique_ptr<EHStreamer>(ES), EHTimerName,
+                          EHTimerDescription, DWARFGroupName,
+                          DWARFGroupDescription);
 
   if (mdconst::extract_or_null<ConstantInt>(
           MMI->getModule()->getModuleFlag("cfguardtable")))
-    Handlers.push_back(HandlerInfo(new WinCFGuard(this), CFGuardName,
-                                   CFGuardDescription, DWARFGroupName,
-                                   DWARFGroupDescription));
+    Handlers.emplace_back(llvm::make_unique<WinCFGuard>(this), CFGuardName,
+                          CFGuardDescription, DWARFGroupName,
+                          DWARFGroupDescription);
 
   return false;
 }
@@ -1487,7 +1488,6 @@ bool AsmPrinter::doFinalization(Module &M) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->endModule();
-    delete HI.Handler;
   }
   Handlers.clear();
   DD = nullptr;

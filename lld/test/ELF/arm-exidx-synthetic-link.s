@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj  -arm-add-build-attributes -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t.so -shared
-// RUN: llvm-readobj -s %t.so | FileCheck %s
+// RUN: llvm-readobj -S %t.so | FileCheck %s
 
 // Test that when all the .ARM.exidx sections are merged into a single
 // synthetic EXIDX_CANTUNWIND entry we can still set the SHF_LINK_ORDER

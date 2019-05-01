@@ -10,10 +10,6 @@ group("unittests") {
     "clang-move:ClangMoveTests",
     "clang-query:ClangQueryTests",
     "clang-tidy:ClangTidyTests",
-    "clangd:ClangdTests",
   ]
-  if (clangd_build_xpc) {
-    deps += [ "clangd/xpc:ClangdXpcTests" ]
-  }
   testonly = true
 }

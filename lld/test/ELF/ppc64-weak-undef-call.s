@@ -9,6 +9,7 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s
 
 # CHECK: Disassembly of section .text:
+# CHECK-EMPTY:
 
 .text
 .global _start

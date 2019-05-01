@@ -155,6 +155,17 @@ void printResourceTypeName(uint16_t TypeID, raw_ostream &OS) {
   }
 }
 
+static bool convertUTF16LEToUTF8String(ArrayRef<UTF16> Src, std::string &Out) {
+  if (!sys::IsBigEndianHost)
+    return convertUTF16ToUTF8String(Src, Out);
+
+  std::vector<UTF16> EndianCorrectedSrc;
+  EndianCorrectedSrc.resize(Src.size() + 1);
+  llvm::copy(Src, EndianCorrectedSrc.begin() + 1);
+  EndianCorrectedSrc[0] = UNI_UTF16_BYTE_ORDER_MARK_SWAPPED;
+  return convertUTF16ToUTF8String(makeArrayRef(EndianCorrectedSrc), Out);
+}
+
 static Error makeDuplicateResourceError(const ResourceEntryRef &Entry,
                                         StringRef File1, StringRef File2) {
   std::string Ret;
@@ -165,7 +176,7 @@ static Error makeDuplicateResourceError(const ResourceEntryRef &Entry,
   OS << " type ";
   if (Entry.checkTypeString()) {
     std::string UTF8;
-    if (!convertUTF16ToUTF8String(Entry.getTypeString(), UTF8))
+    if (!convertUTF16LEToUTF8String(Entry.getTypeString(), UTF8))
       UTF8 = "(failed conversion from UTF16)";
     OS << '\"' << UTF8 << '\"';
   } else
@@ -174,7 +185,7 @@ static Error makeDuplicateResourceError(const ResourceEntryRef &Entry,
   OS << "/name ";
   if (Entry.checkNameString()) {
     std::string UTF8;
-    if (!convertUTF16ToUTF8String(Entry.getNameString(), UTF8))
+    if (!convertUTF16LEToUTF8String(Entry.getNameString(), UTF8))
       UTF8 = "(failed conversion from UTF16)";
     OS << '\"' << UTF8 << '\"';
   } else {
@@ -331,16 +342,7 @@ WindowsResourceParser::TreeNode &
 WindowsResourceParser::TreeNode::addNameChild(ArrayRef<UTF16> NameRef,
                                               bool &IsNewString) {
   std::string NameString;
-  ArrayRef<UTF16> CorrectedName;
-  std::vector<UTF16> EndianCorrectedName;
-  if (sys::IsBigEndianHost) {
-    EndianCorrectedName.resize(NameRef.size() + 1);
-    llvm::copy(NameRef, EndianCorrectedName.begin() + 1);
-    EndianCorrectedName[0] = UNI_UTF16_BYTE_ORDER_MARK_SWAPPED;
-    CorrectedName = makeArrayRef(EndianCorrectedName);
-  } else
-    CorrectedName = NameRef;
-  convertUTF16ToUTF8String(CorrectedName, NameString);
+  convertUTF16LEToUTF8String(NameRef, NameString);
 
   auto Child = StringChildren.find(NameString);
   if (Child == StringChildren.end()) {

@@ -1,5 +1,5 @@
-import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
+import("//llvm/lib/Target/targets.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")

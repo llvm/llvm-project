@@ -72,6 +72,7 @@ high_target2:
 // CHECK-NEXT: 10000018:	00 02 1f d6 	br	x16
 
 // CHECK: Disassembly of section .plt:
+// CHECK-EMPTY:
 // CHECK-NEXT: .plt:
 // CHECK-NEXT: 10000020:       f0 7b bf a9     stp     x16, x30, [sp, #-16]!
 // CHECK-NEXT: 10000024:       10 00 00 90     adrp    x16, #0

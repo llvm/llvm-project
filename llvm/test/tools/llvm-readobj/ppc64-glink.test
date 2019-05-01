@@ -1,6 +1,6 @@
 # Check DT_PPC64_GLINK dynamic tag.
 
-RUN: llvm-readobj -dynamic-table %p/Inputs/ppc64.exe | FileCheck %s
+RUN: llvm-readobj --dynamic-table %p/Inputs/ppc64.exe | FileCheck %s
 
 CHECK: Format: ELF64-ppc64
 CHECK: Arch: powerpc64le

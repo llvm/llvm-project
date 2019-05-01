@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t
 // RUN: ld.lld --hash-style=sysv -shared %t -o %t2
-// RUN: llvm-readobj -t %t2 | FileCheck %s
+// RUN: llvm-readobj --symbols %t2 | FileCheck %s
 .globl  a
 .type   a,@object
 .comm   a,4,4

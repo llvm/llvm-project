@@ -4,9 +4,9 @@
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld -shared %t.o %t2.so -o %t
 // RUN: ld.lld %t.o %t2.so -o %t3
-// RUN: llvm-readobj -s -r %t | FileCheck %s
+// RUN: llvm-readobj -S -r %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
-// RUN: llvm-readobj -s -r %t3 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-readobj -S -r %t3 | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump -d %t3 | FileCheck --check-prefix=DISASM2 %s
 
 // CHECK:      Name: .plt
@@ -69,6 +69,7 @@
 // 0x3028 - 0x1056  = 8146
 
 // DISASM:      Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:   1020:  ff 35 e2 1f 00 00  pushq 8162(%rip)
 // DISASM-NEXT:   1026:  ff 25 e4 1f 00 00  jmpq *8164(%rip)
@@ -104,6 +105,7 @@
 // 0x202020 - 0x201046  = 4058
 
 // DISASM2:      Disassembly of section .plt:
+// DISASM2-EMPTY:
 // DISASM2-NEXT: .plt:
 // DISASM2-NEXT:  201020:  ff 35 e2 1f 00 00   pushq 8162(%rip)
 // DISASM2-NEXT:  201026:  ff 25 e4 1f 00 00   jmpq *8164(%rip)

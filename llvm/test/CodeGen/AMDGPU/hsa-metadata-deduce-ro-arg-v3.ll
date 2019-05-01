@@ -1,4 +1,4 @@
-; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck %s
+; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck %s
 
 ; CHECK:        - .args:           
 ; CHECK-NEXT:       - .access:         read_only

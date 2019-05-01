@@ -215,7 +215,6 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx512.mask.cvtps2pd.256" || // Added in 7.0
       Name == "avx512.cvtusi2sd" || // Added in 7.0
       Name.startswith("avx512.mask.permvar.") || // Added in 7.0
-      Name.startswith("avx512.mask.permvar.") || // Added in 7.0
       Name == "sse2.pmulu.dq" || // Added in 7.0
       Name == "sse41.pmuldq" || // Added in 7.0
       Name == "avx2.pmulu.dq" || // Added in 7.0

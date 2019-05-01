@@ -585,13 +585,14 @@ uint32_t DWARFDebugNames::NameIndex::getCUOffset(uint32_t CU) const {
 
 uint32_t DWARFDebugNames::NameIndex::getLocalTUOffset(uint32_t TU) const {
   assert(TU < Hdr.LocalTypeUnitCount);
-  uint32_t Offset = CUsBase + Hdr.CompUnitCount * 4;
+  uint32_t Offset = CUsBase + 4 * (Hdr.CompUnitCount + TU);
   return Section.AccelSection.getRelocatedValue(4, &Offset);
 }
 
 uint64_t DWARFDebugNames::NameIndex::getForeignTUSignature(uint32_t TU) const {
   assert(TU < Hdr.ForeignTypeUnitCount);
-  uint32_t Offset = CUsBase + (Hdr.CompUnitCount + Hdr.LocalTypeUnitCount) * 4;
+  uint32_t Offset =
+      CUsBase + 4 * (Hdr.CompUnitCount + Hdr.LocalTypeUnitCount) + 8 * TU;
   return Section.AccelSection.getU64(&Offset);
 }
 

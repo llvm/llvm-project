@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -r -o %t2.o -O0
-# RUN: llvm-readobj -s -section-data %t2.o | FileCheck %s
+# RUN: llvm-readobj -S --section-data %t2.o | FileCheck %s
 
 # We combine just the sections with the same name and sh_entsize.
 

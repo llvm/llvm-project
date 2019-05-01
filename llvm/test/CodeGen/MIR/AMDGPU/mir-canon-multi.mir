@@ -16,13 +16,13 @@ body:             |
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %vreg123_1:vgpr_32 = COPY %11
     %27:vreg_64 = REG_SEQUENCE %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1
-    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 9, 0, 0
     %vreg123_2:vgpr_32 = COPY %4
-    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 11, 0, 0
     %vreg123_3:vgpr_32 = COPY %5
     %16:sgpr_128 = REG_SEQUENCE killed %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1, %vreg123_2, %subreg.sub2, %vreg123_3, %subreg.sub3
 
-    BUFFER_STORE_DWORD_ADDR64 %vreg123_1, %27, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %vreg123_1, %27, killed %16, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

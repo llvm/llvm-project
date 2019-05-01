@@ -8,7 +8,7 @@ name: diffoporder_add
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
@@ -34,12 +34,12 @@ body:             |
     %26:vgpr_32, %27:sreg_64_xexec = V_ADD_I32_e64 %25, %21, 0, implicit $exec
     %28:vgpr_32, dead %29:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %27, 0, implicit $exec
     %30:vreg_64 = REG_SEQUENCE %26, %subreg.sub0, %28, %subreg.sub1
-    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, implicit $exec
+    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, 0, implicit $exec
     %32:sgpr_32 = S_MOV_B32 6144
     %33:vgpr_32, %34:sreg_64_xexec = V_ADD_I32_e64 %21, %32, 0, implicit $exec
     %35:vgpr_32, dead %36:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %34, 0, implicit $exec
     %37:vreg_64 = REG_SEQUENCE %33, %subreg.sub0, %35, %subreg.sub1
-    %38:vreg_64 = GLOBAL_LOAD_DWORDX2 %37, 0, 0, 0, implicit $exec
+    %38:vreg_64 = GLOBAL_LOAD_DWORDX2 %37, 0, 0, 0, 0, implicit $exec
 ...
 ---
 
@@ -61,7 +61,7 @@ name: LowestInMiddle
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
@@ -87,17 +87,17 @@ body:             |
     %26:vgpr_32, %27:sreg_64_xexec = V_ADD_I32_e64 %21, %25, 0, implicit $exec
     %28:vgpr_32, dead %29:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %27, 0, implicit $exec
     %30:vreg_64 = REG_SEQUENCE %26, %subreg.sub0, %28, %subreg.sub1
-    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, implicit $exec
+    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, 0, implicit $exec
     %32:sgpr_32 = S_MOV_B32 6400
     %33:vgpr_32, %34:sreg_64_xexec = V_ADD_I32_e64 %21, %32, 0, implicit $exec
     %35:vgpr_32, dead %36:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %34, 0, implicit $exec
     %37:vreg_64 = REG_SEQUENCE %33, %subreg.sub0, %35, %subreg.sub1
-    %38:vreg_64 = GLOBAL_LOAD_DWORDX2 %37, 0, 0, 0, implicit $exec
+    %38:vreg_64 = GLOBAL_LOAD_DWORDX2 %37, 0, 0, 0, 0, implicit $exec
     %39:sgpr_32 = S_MOV_B32 11200
     %40:vgpr_32, %41:sreg_64_xexec = V_ADD_I32_e64 %21, %39, 0, implicit $exec
     %42:vgpr_32, dead %43:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %41, 0, implicit $exec
     %44:vreg_64 = REG_SEQUENCE %40, %subreg.sub0, %42, %subreg.sub1
-    %45:vreg_64 = GLOBAL_LOAD_DWORDX2 %44, 0, 0, 0, implicit $exec
+    %45:vreg_64 = GLOBAL_LOAD_DWORDX2 %44, 0, 0, 0, 0, implicit $exec
 ...
 ---
 
@@ -114,7 +114,7 @@ name: NegativeDistance
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
@@ -140,17 +140,17 @@ body:             |
     %26:vgpr_32, %27:sreg_64_xexec = V_ADD_I32_e64 %21, %25, 0, implicit $exec
     %28:vgpr_32, dead %29:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %27, 0, implicit $exec
     %30:vreg_64 = REG_SEQUENCE %26, %subreg.sub0, %28, %subreg.sub1
-    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, implicit $exec
+    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, 0, implicit $exec
     %32:sgpr_32 = S_MOV_B32 8192
     %33:vgpr_32, %34:sreg_64_xexec = V_ADD_I32_e64 %21, %32, 0, implicit $exec
     %35:vgpr_32, dead %36:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %34, 0, implicit $exec
     %37:vreg_64 = REG_SEQUENCE %33, %subreg.sub0, %35, %subreg.sub1
-    %38:vreg_64 = GLOBAL_LOAD_DWORDX2 %37, 0, 0, 0, implicit $exec
+    %38:vreg_64 = GLOBAL_LOAD_DWORDX2 %37, 0, 0, 0, 0, implicit $exec
     %39:sgpr_32 = S_MOV_B32 10240
     %40:vgpr_32, %41:sreg_64_xexec = V_ADD_I32_e64 %21, %39, 0, implicit $exec
     %42:vgpr_32, dead %43:sreg_64_xexec = V_ADDC_U32_e64 %23, 0, killed %41, 0, implicit $exec
     %44:vreg_64 = REG_SEQUENCE %40, %subreg.sub0, %42, %subreg.sub1
-    %45:vreg_64 = GLOBAL_LOAD_DWORDX2 %44, 0, 0, 0, implicit $exec
+    %45:vreg_64 = GLOBAL_LOAD_DWORDX2 %44, 0, 0, 0, 0, implicit $exec
 ...
 ---
 
@@ -159,7 +159,7 @@ name: assert_hit
 body:             |
     bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
@@ -186,5 +186,5 @@ body:             |
     %26:vgpr_32, %27:sreg_64_xexec = V_ADD_I32_e64 %21, %25, 0, implicit $exec
     %28:vgpr_32, dead %29:sreg_64_xexec = V_ADDC_U32_e64 %23, 4294967295, killed %27, 0, implicit $exec
     %30:vreg_64 = REG_SEQUENCE %26, %subreg.sub0, %28, %subreg.sub1
-    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, implicit $exec
+    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, 0, implicit $exec
 ...

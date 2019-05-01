@@ -1,7 +1,7 @@
 // This tests that ARM attributes are properly encoded.
 
 // RUN: llvm-mc < %s -triple=arm-linux-gnueabi -filetype=obj -o - \
-// RUN:   | llvm-readobj -s -sd | FileCheck %s
+// RUN:   | llvm-readobj -S --sd | FileCheck %s
 
 // Tag_CPU_name (=5)
 .cpu cortex-a8

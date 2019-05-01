@@ -4,9 +4,9 @@
 // > rc /fo test_resource.res /nologo test_resource.rc
 // > cvtres /machine:X86 /readonly /nologo /out:test_resource.o test_resource.res
 
-RUN: llvm-readobj -coff-resources -section-data %p/Inputs/zero-string-table.obj.coff-i386 \
+RUN: llvm-readobj --coff-resources --section-data %p/Inputs/zero-string-table.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix ZERO
-RUN: llvm-readobj -coff-resources %p/Inputs/resources/test_resource.obj.coff \
+RUN: llvm-readobj --coff-resources %p/Inputs/resources/test_resource.obj.coff \
 RUN:   | FileCheck %s -check-prefix TEST_RES
 
 ZERO:     Resources [

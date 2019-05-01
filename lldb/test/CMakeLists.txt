@@ -8,9 +8,9 @@ function(add_python_test_target name test_script args comment)
   add_custom_target(${name}
     COMMAND ${PYTHON_TEST_COMMAND} ${ARG_DEFAULT_ARGS}
     COMMENT "${comment}"
-    DEPENDS ${LLDB_TEST_DEPS}
     USES_TERMINAL
     )
+  add_dependencies(${name} ${LLDB_TEST_DEPS})
 endfunction()
 
 # The default architecture with which to compile test executables is the default LLVM target

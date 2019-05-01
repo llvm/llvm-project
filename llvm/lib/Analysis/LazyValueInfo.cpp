@@ -1146,8 +1146,8 @@ static ValueLatticeElement getValueFromOverflowCondition(
     return ValueLatticeElement::getOverdefined();
 
   // Calculate the possible values of %x for which no overflow occurs.
-  ConstantRange NWR = ConstantRange::makeGuaranteedNoWrapRegion(
-      WO->getBinaryOp(), ConstantRange(*C), WO->getNoWrapKind());
+  ConstantRange NWR = ConstantRange::makeExactNoWrapRegion(
+      WO->getBinaryOp(), *C, WO->getNoWrapKind());
 
   // If overflow is false, %x is constrained to NWR. If overflow is true, %x is
   // constrained to it's inverse (all values that might cause overflow).

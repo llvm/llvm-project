@@ -19,8 +19,8 @@ define zeroext i8 @fullGtU(i32 %i1, i32 %i2) {
 ; CHECK-NEXT: cmp [[BLOCKVAL1]], [[BLOCKVAL2]]
 ; CHECK-NEXT: b.ne
 ; Next BB
-; CHECK: add [[BLOCKBASE2:x[0-9]+]], [[BLOCKBASE]], [[I2]]
-; CHECK-NEXT: add [[BLOCKBASE1:x[0-9]+]], [[BLOCKBASE]], [[I1]]
+; CHECK: add [[BLOCKBASE1:x[0-9]+]], [[I1]], [[BLOCKBASE]]
+; CHECK-NEXT: add [[BLOCKBASE2:x[0-9]+]], [[I2]], [[BLOCKBASE]]
 ; CHECK-NEXT: ldrb [[LOADEDVAL1:w[0-9]+]], {{\[}}[[BLOCKBASE1]], #1]
 ; CHECK-NEXT: ldrb [[LOADEDVAL2:w[0-9]+]], {{\[}}[[BLOCKBASE2]], #1]
 ; CHECK-NEXT: cmp [[LOADEDVAL1]], [[LOADEDVAL2]]

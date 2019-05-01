@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple i686-pc-win32 < %s | llvm-readobj -codeview - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple i686-pc-win32 < %s | llvm-readobj --codeview - | FileCheck %s
 	.text
 	.def	 @feat.00;
 	.scl	3;

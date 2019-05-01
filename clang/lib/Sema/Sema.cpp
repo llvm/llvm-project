@@ -1629,7 +1629,7 @@ void Sema::RecordParsingTemplateParameterDepth(unsigned Depth) {
 }
 
 // Check that the type of the VarDecl has an accessible copy constructor and
-// resolve its destructor's exception spefication.
+// resolve its destructor's exception specification.
 static void checkEscapingByref(VarDecl *VD, Sema &S) {
   QualType T = VD->getType();
   EnterExpressionEvaluationContext scope(
@@ -1646,7 +1646,7 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
     S.Context.setBlockVarCopyInit(VD, Init, S.canThrow(Init));
   }
 
-  // The destructor's exception spefication is needed when IRGen generates
+  // The destructor's exception specification is needed when IRGen generates
   // block copy/destroy functions. Resolve it here.
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DD = RD->getDestructor()) {

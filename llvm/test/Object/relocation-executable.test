@@ -1,6 +1,6 @@
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/hello-world.elf-x86-64 \
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/hello-world.elf-x86-64 \
 RUN:   | FileCheck %s
-RUN: llvm-readobj -dyn-relocations -expand-relocs \
+RUN: llvm-readobj --dyn-relocations --expand-relocs \
 RUN:   %p/Inputs/hello-world.elf-x86-64 | FileCheck %s --check-prefix=DYN
 
 // CHECK:     Relocations [
@@ -48,7 +48,7 @@ RUN:   %p/Inputs/hello-world.elf-x86-64 | FileCheck %s --check-prefix=DYN
 // DYN-NEXT:   }
 // DYN-NEXT: }
 
-RUN: llvm-readobj -dyn-relocations -expand-relocs \
+RUN: llvm-readobj --dyn-relocations --expand-relocs \
 RUN:   %p/Inputs/rel-no-sec-table.elf-x86-64 | FileCheck %s --check-prefix=DYN2
 
 // DYN2:      Dynamic Relocations {

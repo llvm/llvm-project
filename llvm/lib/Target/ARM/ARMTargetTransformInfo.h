@@ -148,6 +148,8 @@ public:
     return ST->getMaxInterleaveFactor();
   }
 
+  int getMemcpyCost(const Instruction *I);
+
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,

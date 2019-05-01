@@ -139,6 +139,8 @@ protected:
   /// Emit a raw unsigned value.
   virtual void emitUnsigned(uint64_t Value) = 0;
 
+  virtual void emitData1(uint8_t Value) = 0;
+
   virtual void emitBaseTypeRef(uint64_t Idx) = 0;
 
   /// Emit a normalized unsigned constant.
@@ -264,6 +266,7 @@ class DebugLocDwarfExpression final : public DwarfExpression {
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
+  void emitData1(uint8_t Value) override;
   void emitBaseTypeRef(uint64_t Idx) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
@@ -281,6 +284,7 @@ const AsmPrinter &AP;
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
+  void emitData1(uint8_t Value) override;
   void emitBaseTypeRef(uint64_t Idx) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;

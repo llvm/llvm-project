@@ -815,11 +815,13 @@ void ThinLTOCodeGenerator::optimize(Module &TheModule) {
 /// Write out the generated object file, either from CacheEntryPath or from
 /// OutputBuffer, preferring hard-link when possible.
 /// Returns the path to the generated file in SavedObjectsDirectoryPath.
-static std::string writeGeneratedObject(int count, StringRef CacheEntryPath,
-                                        StringRef SavedObjectsDirectoryPath,
-                                        const MemoryBuffer &OutputBuffer) {
+std::string
+ThinLTOCodeGenerator::writeGeneratedObject(int count, StringRef CacheEntryPath,
+                                           const MemoryBuffer &OutputBuffer) {
+  auto ArchName = TMBuilder.TheTriple.getArchName();
   SmallString<128> OutputPath(SavedObjectsDirectoryPath);
-  llvm::sys::path::append(OutputPath, Twine(count) + ".thinlto.o");
+  llvm::sys::path::append(OutputPath,
+                          Twine(count) + "." + ArchName + ".thinlto.o");
   OutputPath.c_str(); // Ensure the string is null terminated.
   if (sys::fs::exists(OutputPath))
     sys::fs::remove(OutputPath);
@@ -882,8 +884,8 @@ void ThinLTOCodeGenerator::run() {
         if (SavedObjectsDirectoryPath.empty())
           ProducedBinaries[count] = std::move(OutputBuffer);
         else
-          ProducedBinaryFiles[count] = writeGeneratedObject(
-              count, "", SavedObjectsDirectoryPath, *OutputBuffer);
+          ProducedBinaryFiles[count] =
+              writeGeneratedObject(count, "", *OutputBuffer);
       }, count++);
     }
 
@@ -1006,8 +1008,7 @@ void ThinLTOCodeGenerator::run() {
               ProducedBinaries[count] = std::move(ErrOrBuffer.get());
             else
               ProducedBinaryFiles[count] = writeGeneratedObject(
-                  count, CacheEntryPath, SavedObjectsDirectoryPath,
-                  *ErrOrBuffer.get());
+                  count, CacheEntryPath, *ErrOrBuffer.get());
             return;
           }
         }
@@ -1064,7 +1065,7 @@ void ThinLTOCodeGenerator::run() {
           return;
         }
         ProducedBinaryFiles[count] = writeGeneratedObject(
-            count, CacheEntryPath, SavedObjectsDirectoryPath, *OutputBuffer);
+            count, CacheEntryPath, *OutputBuffer);
       }, IndexCount);
     }
   }

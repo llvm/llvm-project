@@ -3,7 +3,7 @@
 
 # RUN: lld-link -entry:dllmain -dll %t.obj -out:%t.dll -implib:%t.lib
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix DECORATED-IMPLIB %s
-# RUN: llvm-readobj -coff-exports %t.dll | FileCheck -check-prefix DECORATED-EXPORTS %s
+# RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix DECORATED-EXPORTS %s
 
 # DECORATED-IMPLIB: Name type: name
 # DECORATED-IMPLIB-NEXT: __imp_@fastcall@8

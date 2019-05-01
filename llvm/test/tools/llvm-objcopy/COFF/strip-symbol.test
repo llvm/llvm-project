@@ -1,14 +1,14 @@
 RUN: yaml2obj %p/Inputs/strip-symbols.yaml > %t.in.o
 
-RUN: llvm-readobj -relocations %t.in.o | FileCheck %s --check-prefixes=RELOCS,RELOCS-PRE
+RUN: llvm-readobj -r %t.in.o | FileCheck %s --check-prefixes=RELOCS,RELOCS-PRE
 RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-PRE
 
 RUN: llvm-objcopy -N mainfunc %t.in.o %t.out.o
-RUN: llvm-readobj -relocations %t.out.o | FileCheck %s --check-prefixes=RELOCS,RELOCS-POST
+RUN: llvm-readobj -r %t.out.o | FileCheck %s --check-prefixes=RELOCS,RELOCS-POST
 RUN: llvm-objdump -t %t.out.o | FileCheck %s --check-prefix=SYMBOLS
 
 RUN: llvm-objcopy --strip-symbol mainfunc %t.in.o %t.out.o
-RUN: llvm-readobj -relocations %t.out.o | FileCheck %s --check-prefixes=RELOCS,RELOCS-POST
+RUN: llvm-readobj -r %t.out.o | FileCheck %s --check-prefixes=RELOCS,RELOCS-POST
 RUN: llvm-objdump -t %t.out.o | FileCheck %s --check-prefix=SYMBOLS
 
 Explicitly listing the relocations for the input as well, to show

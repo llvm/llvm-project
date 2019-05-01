@@ -10,6 +10,8 @@
 
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -18,6 +20,8 @@ using namespace tooling;
 using namespace ast_matchers;
 
 namespace {
+using ::testing::IsEmpty;
+
 constexpr char KHeaderContents[] = R"cc(
   struct string {
     string(const char*);
@@ -84,26 +88,43 @@ protected:
             Factory->create(), Code, std::vector<std::string>(), "input.cc",
             "clang-tool", std::make_shared<PCHContainerOperations>(),
             FileContents)) {
+      llvm::errs() << "Running tool failed.\n";
       return None;
     }
-    auto ChangedCodeOrErr =
+    if (ErrorCount != 0) {
+      llvm::errs() << "Generating changes failed.\n";
+      return None;
+    }
+    auto ChangedCode =
         applyAtomicChanges("input.cc", Code, Changes, ApplyChangesSpec());
-    if (auto Err = ChangedCodeOrErr.takeError()) {
-      llvm::errs() << "Change failed: " << llvm::toString(std::move(Err))
-                   << "\n";
+    if (!ChangedCode) {
+      llvm::errs() << "Applying changes failed: "
+                   << llvm::toString(ChangedCode.takeError()) << "\n";
       return None;
     }
-    return *ChangedCodeOrErr;
+    return *ChangedCode;
+  }
+
+  Transformer::ChangeConsumer consumer() {
+    return [this](Expected<AtomicChange> C) {
+      if (C) {
+        Changes.push_back(std::move(*C));
+      } else {
+        consumeError(C.takeError());
+        ++ErrorCount;
+      }
+    };
   }
 
   void testRule(RewriteRule Rule, StringRef Input, StringRef Expected) {
-    Transformer T(std::move(Rule),
-                  [this](const AtomicChange &C) { Changes.push_back(C); });
+    Transformer T(std::move(Rule), consumer());
     T.registerMatchers(&MatchFinder);
     compareSnippets(Expected, rewrite(Input));
   }
 
   clang::ast_matchers::MatchFinder MatchFinder;
+  // Records whether any errors occurred in individual changes.
+  int ErrorCount = 0;
   AtomicChanges Changes;
 
 private:
@@ -230,9 +251,11 @@ TEST_F(TransformerTest, NodePartNameDeclRefFailure) {
   )cc";
 
   StringRef Ref = "ref";
-  testRule(makeRule(declRefExpr(to(functionDecl())).bind(Ref),
-                    change<clang::Expr>(Ref, NodePart::Name, "good")),
-           Input, Input);
+  Transformer T(makeRule(declRefExpr(to(functionDecl())).bind(Ref),
+                         change<clang::Expr>(Ref, NodePart::Name, "good")),
+                consumer());
+  T.registerMatchers(&MatchFinder);
+  EXPECT_FALSE(rewrite(Input));
 }
 
 TEST_F(TransformerTest, NodePartMember) {
@@ -357,6 +380,23 @@ TEST_F(TransformerTest, MultiChange) {
 //
 
 // Tests for a conflict in edits from a single match for a rule.
+TEST_F(TransformerTest, TextGeneratorFailure) {
+  std::string Input = "int conflictOneRule() { return 3 + 7; }";
+  // Try to change the whole binary-operator expression AND one its operands:
+  StringRef O = "O";
+  auto AlwaysFail = [](const ast_matchers::MatchFinder::MatchResult &)
+      -> llvm::Expected<std::string> {
+    return llvm::createStringError(llvm::errc::invalid_argument, "ERROR");
+  };
+  Transformer T(makeRule(binaryOperator().bind(O), change<Expr>(O, AlwaysFail)),
+                consumer());
+  T.registerMatchers(&MatchFinder);
+  EXPECT_FALSE(rewrite(Input));
+  EXPECT_THAT(Changes, IsEmpty());
+  EXPECT_EQ(ErrorCount, 1);
+}
+
+// Tests for a conflict in edits from a single match for a rule.
 TEST_F(TransformerTest, OverlappingEditsInRule) {
   std::string Input = "int conflictOneRule() { return 3 + 7; }";
   // Try to change the whole binary-operator expression AND one its operands:
@@ -364,13 +404,11 @@ TEST_F(TransformerTest, OverlappingEditsInRule) {
   Transformer T(
       makeRule(binaryOperator(hasLHS(expr().bind(L))).bind(O),
                {change<Expr>(O, "DELETE_OP"), change<Expr>(L, "DELETE_LHS")}),
-      [this](const AtomicChange &C) { Changes.push_back(C); });
+      consumer());
   T.registerMatchers(&MatchFinder);
-  // The rewrite process fails...
-  EXPECT_TRUE(rewrite(Input));
-  // ... but one AtomicChange was consumed:
-  ASSERT_EQ(Changes.size(), 1u);
-  EXPECT_TRUE(Changes[0].hasError());
+  EXPECT_FALSE(rewrite(Input));
+  EXPECT_THAT(Changes, IsEmpty());
+  EXPECT_EQ(ErrorCount, 1);
 }
 
 // Tests for a conflict in edits across multiple matches (of the same rule).
@@ -379,27 +417,27 @@ TEST_F(TransformerTest, OverlappingEditsMultipleMatches) {
   // Try to change the whole binary-operator expression AND one its operands:
   StringRef E = "E";
   Transformer T(makeRule(expr().bind(E), change<Expr>(E, "DELETE_EXPR")),
-                [this](const AtomicChange &C) { Changes.push_back(C); });
+                consumer());
   T.registerMatchers(&MatchFinder);
   // The rewrite process fails because the changes conflict with each other...
   EXPECT_FALSE(rewrite(Input));
-  // ... but all changes are (individually) fine:
-  ASSERT_EQ(Changes.size(), 2u);
-  EXPECT_FALSE(Changes[0].hasError());
-  EXPECT_FALSE(Changes[1].hasError());
+  // ... but two changes were produced.
+  EXPECT_EQ(Changes.size(), 2u);
+  EXPECT_EQ(ErrorCount, 0);
 }
 
 TEST_F(TransformerTest, ErrorOccurredMatchSkipped) {
   // Syntax error in the function body:
   std::string Input = "void errorOccurred() { 3 }";
-  Transformer T(
-      makeRule(functionDecl(hasName("errorOccurred")), change<Decl>("DELETED;")),
-      [this](const AtomicChange &C) { Changes.push_back(C); });
+  Transformer T(makeRule(functionDecl(hasName("errorOccurred")),
+                         change<Decl>("DELETED;")),
+                consumer());
   T.registerMatchers(&MatchFinder);
   // The rewrite process itself fails...
   EXPECT_FALSE(rewrite(Input));
-  // ... and no changes are produced in the process.
-  EXPECT_THAT(Changes, ::testing::IsEmpty());
+  // ... and no changes or errors are produced in the process.
+  EXPECT_THAT(Changes, IsEmpty());
+  EXPECT_EQ(ErrorCount, 0);
 }
 
 TEST_F(TransformerTest, NoTransformationInMacro) {

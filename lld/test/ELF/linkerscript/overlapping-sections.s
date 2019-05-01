@@ -17,7 +17,7 @@
 
 # Verify that the .sec2 was indeed placed in a PT_LOAD where the PhysAddr
 # overlaps with where .sec1 is loaded:
-# RUN: llvm-readobj -sections -program-headers -elf-output-style=GNU %t.so | FileCheck %s -check-prefix BAD-LMA
+# RUN: llvm-readelf --sections -l %t.so | FileCheck %s -check-prefix BAD-LMA
 # BAD-LMA-LABEL: Section Headers:
 # BAD-LMA: .sec1             PROGBITS        0000000000008000 002000 000100 00  WA  0   0  1
 # BAD-LMA: .sec2             PROGBITS        0000000000008800 002800 000100 00  WA  0   0  1
@@ -43,7 +43,7 @@
 
 # Check that the expected binary was created with --noinhibit-exec:
 # RUN: ld.lld -o %t.so --script %t-vaddr.script %t.o -shared --noinhibit-exec
-# RUN: llvm-readobj -sections -program-headers -elf-output-style=GNU %t.so | FileCheck %s -check-prefix BAD-VADDR
+# RUN: llvm-readelf --sections -l %t.so | FileCheck %s -check-prefix BAD-VADDR
 # BAD-VADDR-LABEL: Section Headers:
 # BAD-VADDR: .sec1             PROGBITS        0000000000008000 002000 000100 00  WA  0   0  1
 # BAD-VADDR: .sec2             PROGBITS        0000000000008020 003020 000100 00  WA  0   0  1
@@ -91,7 +91,7 @@
 # Starting here the contents of .sec2 overwrites .sec1:
 # BROKEN-OUTPUT-FILE-NEXT: 8040 02020202 02020202 02020202 02020202
 
-# RUN: llvm-readobj -sections -program-headers -elf-output-style=GNU %t.so | FileCheck %s -check-prefix BAD-BOTH
+# RUN: llvm-readelf --sections -l %t.so | FileCheck %s -check-prefix BAD-BOTH
 # BAD-BOTH-LABEL: Section Headers:
 # BAD-BOTH: .sec1             PROGBITS        0000000000008000 002000 000100 00  WA  0   0  1
 # BAD-BOTH: .sec2             PROGBITS        0000000000008040 002040 000100 00  WA  0   0  1

@@ -7,7 +7,7 @@
 EXE: {{H.e.l.l.o}}
 
 # Verify the resource tree layout in the final executable.
-# RUN: llvm-readobj -file-headers -coff-resources -section-data %t.exe | \
+# RUN: llvm-readobj --file-headers --coff-resources --section-data %t.exe | \
 # RUN:   FileCheck --check-prefix=RESOURCE_INFO %s
 
 RESOURCE_INFO:      ResourceTableRVA: 0x2000

@@ -4,7 +4,7 @@
 # RUN: echo "V1 { global: a; local: *; };" > %t.script
 # RUN: echo "V2 { global: b; c; } V1;" >> %t.script
 # RUN: ld.lld --hash-style=sysv -shared -soname shared %t1 --version-script %t.script -o %t.so
-# RUN: llvm-readobj -V -dyn-symbols %t.so | FileCheck --check-prefix=DSO %s
+# RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
 # DSO:      DynamicSymbols [
 # DSO-NEXT:    Symbol {
@@ -108,7 +108,7 @@
 ## Check that we can link against DSO produced.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2
 # RUN: ld.lld --hash-style=sysv %t2 %t.so -o %t3
-# RUN: llvm-readobj -V -dyn-symbols %t3 | FileCheck --check-prefix=EXE %s
+# RUN: llvm-readobj -V --dyn-syms %t3 | FileCheck --check-prefix=EXE %s
 
 # EXE:      DynamicSymbols [
 # EXE-NEXT:    Symbol {

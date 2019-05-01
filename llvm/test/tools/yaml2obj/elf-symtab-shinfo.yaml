@@ -1,6 +1,6 @@
 ## Check we are able to set sh_info field for SHT_SYMTAB sections.
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -sections %t | FileCheck %s
+# RUN: llvm-readobj --sections %t | FileCheck %s
 
 # CHECK:      Name: .symtab
 # CHECK-NEXT: Type: SHT_SYMTAB

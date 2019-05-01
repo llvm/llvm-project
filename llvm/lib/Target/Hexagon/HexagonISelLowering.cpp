@@ -3049,7 +3049,7 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
 /// determined using generic target-independent logic.
 EVT HexagonTargetLowering::getOptimalMemOpType(uint64_t Size,
       unsigned DstAlign, unsigned SrcAlign, bool IsMemset, bool ZeroMemset,
-      bool MemcpyStrSrc, MachineFunction &MF) const {
+      bool MemcpyStrSrc, const AttributeList &FuncAttributes) const {
 
   auto Aligned = [](unsigned GivenA, unsigned MinA) -> bool {
     return (GivenA % MinA) == 0;

@@ -193,8 +193,9 @@ DynamicLibrarySearchGenerator::Load(const char *FileName, char GlobalPrefix,
                                        std::move(Allow));
 }
 
-SymbolNameSet DynamicLibrarySearchGenerator::
-operator()(JITDylib &JD, const SymbolNameSet &Names) {
+Expected<SymbolNameSet>
+DynamicLibrarySearchGenerator::operator()(JITDylib &JD,
+                                          const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolMap NewSymbols;
 

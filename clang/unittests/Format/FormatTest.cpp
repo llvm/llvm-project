@@ -2584,6 +2584,12 @@ TEST_F(FormatTest, MacrosWithoutTrailingSemicolon) {
   verifyFormat("VISIT_GL_CALL(GenBuffers, void, (GLsizei n, GLuint* buffers), "
                "(n, buffers))\n",
                getChromiumStyle(FormatStyle::LK_Cpp));
+
+  // See PR41483
+  EXPECT_EQ("/**/ FOO(a)\n"
+            "FOO(b)",
+            format("/**/ FOO(a)\n"
+                   "FOO(b)"));
 }
 
 TEST_F(FormatTest, MacroCallsWithoutTrailingSemicolon) {

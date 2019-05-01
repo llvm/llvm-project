@@ -1306,8 +1306,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // option is another positional argument.  If so, treat it as an argument,
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
-      // Eat leading dashes.
-      while (!ArgName.empty() && ArgName[0] == '-')
+      // Eat second dash.
+      if (!ArgName.empty() && ArgName[0] == '-')
         ArgName = ArgName.substr(1);
 
       Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
@@ -1318,8 +1318,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
-      // Eat leading dashes.
-      while (!ArgName.empty() && ArgName[0] == '-')
+      // Eat second dash.
+      if (!ArgName.empty() && ArgName[0] == '-')
         ArgName = ArgName.substr(1);
 
       Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
