@@ -268,6 +268,7 @@ class TestQueues(TestBase):
             stream.GetData() == "Background",
             "background QoS thread name is valid")
 
+    @skipIfDarwin # rdar://50379398
     def queues_with_libBacktraceRecording(self):
         """Test queues inspection SB APIs with libBacktraceRecording present."""
         exe = self.getBuildArtifact("a.out")
