@@ -7,6 +7,7 @@
 # RUN: llvm-readobj -r --mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: foo:
 # CHECK-NEXT:    10000:       3c 02 00 00     lui     $2, 0
 # CHECK-NEXT:    10004:       8c 42 80 20     lw      $2, -32736($2)

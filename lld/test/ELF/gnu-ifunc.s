@@ -90,6 +90,7 @@
 // CHECK-NEXT: ]
 
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:  201000: {{.*}} retq
 // DISASM:      bar:
@@ -100,7 +101,9 @@
 // DISASM-NEXT:  20100c: {{.*}} movl $2097496, %edx
 // DISASM-NEXT:  201011: {{.*}} movl $2097544, %edx
 // DISASM-NEXT:  201016: {{.*}} movl $2097545, %edx
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:  201020: {{.*}} jmpq *4058(%rip)
 // DISASM-NEXT:  201026: {{.*}} pushq $0

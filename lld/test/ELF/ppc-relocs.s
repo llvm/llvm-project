@@ -13,6 +13,7 @@ msg:
   len = . - msg
 
 # CHECK: Disassembly of section .R_PPC_ADDR16_HA:
+# CHECK-EMPTY:
 # CHECK: _start:
 # CHECK:    11000:       lis 4, 1
 # CHECK: msg:
@@ -27,6 +28,7 @@ msgi:
   leni = . - msgi
 
 # CHECK: Disassembly of section .R_PPC_ADDR16_HI:
+# CHECK-EMPTY:
 # CHECK: _starti:
 # CHECK:    11008:       lis 4, 1
 # CHECK: msgi:
@@ -39,6 +41,7 @@ mystr:
   len = . - mystr
 
 # CHECK: Disassembly of section .R_PPC_ADDR16_LO:
+# CHECK-EMPTY:
 # CHECK: .R_PPC_ADDR16_LO:
 # CHECK:    11010:       addi 4, 4, 4100
 # CHECK: mystr:
@@ -53,6 +56,7 @@ mystr:
 .Lfoox:
 
 # CHECK: Disassembly of section .R_PPC_REL24:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC_REL24:
 # CHECK:    1101c:       b .+4
 
@@ -64,6 +68,7 @@ mystr:
 .Lfooy:
 
 # CHECK: Disassembly of section .R_PPC_REL14:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC_REL14:
 # CHECK:    11020:       bt 2, .+4
 
@@ -96,5 +101,6 @@ mystr:
 .Lfoox4:
 
 # CHECK: Disassembly of section .R_PPC_PLTREL24:
+# CHECK-EMPTY:
 # CHECK: .R_PPC_PLTREL24:
 # CHECK:    1102c:       b .+4

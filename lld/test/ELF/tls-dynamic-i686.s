@@ -76,6 +76,7 @@ addl tls1@gotntpoff(%ebx),%eax
 // CHECK-NEXT: }
 
 // DIS:      Disassembly of section .text:
+// DIS-EMPTY:
 // DIS-NEXT: _start:
 // General dynamic model:
 // -32 and -24 are first and second GOT entries offsets.

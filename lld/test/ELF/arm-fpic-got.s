@@ -53,6 +53,7 @@ val:
 // SYMBOLS-NEXT:    Section: .data
 
 // CODE: Disassembly of section .text:
+// CODE-EMPTY:
 // CODE-NEXT: _start:
 // CODE-NEXT:   11000:  08 00 9f e5     ldr     r0, [pc, #8]
 // CODE-NEXT:   11004:  00 00 9f e7     ldr     r0, [pc, r0]

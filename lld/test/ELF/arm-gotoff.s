@@ -53,6 +53,7 @@
 // CHECK-NEXT:    Section: .bss
 
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT :_start:
 // DISASM-NEXT   11000:       1e ff 2f e1     bx      lr
 // Offset 0 from .got = bar

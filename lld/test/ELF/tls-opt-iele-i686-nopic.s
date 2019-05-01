@@ -30,6 +30,7 @@
 // GOTREL-NEXT: ]
 
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: _start:
 // 4294967288 = 0xFFFFFFF8
 // 4294967292 = 0xFFFFFFFC

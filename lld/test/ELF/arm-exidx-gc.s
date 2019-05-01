@@ -91,6 +91,7 @@ _start:
 // routines are kept alive by references from live .ARM.exidx and .ARM.extab
 // sections
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: _start:
 // CHECK-NEXT:   11000:       01 00 00 eb     bl      #4 <func1>
 // CHECK-NEXT:   11004:       01 00 00 eb     bl      #4 <func2>

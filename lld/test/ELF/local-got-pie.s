@@ -15,6 +15,7 @@ foo:
 
 // 0x20B0 - 1001 - 5 = 4266
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: _start:
 // DISASM-NEXT:   1000: {{.*}} callq 4267
 // DISASM:      foo:

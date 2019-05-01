@@ -64,6 +64,7 @@
 # SECTION:   7 .strtab       0000002d 0000000000000000
 
 # CHECKTEXT:      Disassembly of section .text:
+# CHECKTEXT-EMPTY:
 # CHECKTEXT-NEXT: main:
 # CHECKTEXT-NEXT: 0: c7 04 25 00 00 00 00 05 00 00 00 movl $5, 0
 # CHECKTEXT-NEXT: b: c7 04 25 00 00 00 00 07 00 00 00 movl $7, 0

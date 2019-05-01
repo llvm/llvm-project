@@ -22,6 +22,7 @@
 // 0x1007 + 4249 = 0x20A0
 // 0x100e + 4250 = 0x20A8
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: .text:
 // DISASM-NEXT:  1000: {{.*}} addq 4249(%rip), %rax
 // DISASM-NEXT:  1007: {{.*}} addq 4250(%rip), %rax

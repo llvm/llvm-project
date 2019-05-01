@@ -88,28 +88,34 @@ glob:
 # CHECK: 1001001c:  {{.*}}   lwa 3, 0(3)
 
 # CHECK-LE: Disassembly of section .got:
+# CHECK-LE-EMPTY:
 # CHECK-LE-NEXT: .got:
 # CHECK-LE-NEXT: 10020000:       00 80 02 10
 # CHECK-LE-NEXT: 10020004:       00 00 00 00
 
 # Verify that .toc comes right after .got
 # CHECK-LE: Disassembly of section .toc:
+# CHECK-LE-EMPTY:
 # CHECK-LE: 10020008:       00 00 03 10
 
 # CHECK-LE: Disassembly of section .data:
+# CHECK-LE-EMPTY:
 # CHECK-LE-NEXT: glob:
 # CHECK-LE-NEXT: 10030000:       37 00 00 00
 
 # CHECK-BE: Disassembly of section .got:
+# CHECK-BE-EMPTY:
 # CHECK-BE-NEXT: .got:
 # CHECK-BE-NEXT: 10020000:       00 00 00 00
 # CHECK-BE-NEXT: 10020004:       10 02 80 00
 
 # Verify that .toc comes right after .got
 # CHECK-BE: Disassembly of section .toc:
+# CHECK-BE-EMPTY:
 # CHECK-BE: 10020008:       00 00 00 00
 # CHECK-BE: 1002000c:       10 03 00 00
 
 # CHECK-BE: Disassembly of section .data:
+# CHECK-BE-EMPTY:
 # CHECK-BE-NEXT: glob:
 # CHECK-BE-NEXT: 10030000:       00 00 00 37

@@ -32,6 +32,7 @@
 //0x201009 + (4256 + 7) = 0x2020B0
 //0x201019 + (4248 + 7) = 0x2020B8
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: _start:
 // DISASM-NEXT: 201000: {{.*}} movq %fs:0, %rax
 // DISASM-NEXT: 201009: {{.*}} addq 4256(%rip), %rax

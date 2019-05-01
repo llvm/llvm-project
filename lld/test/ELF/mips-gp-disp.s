@@ -19,6 +19,7 @@
 # EXT-SO-NEXT: Value: 0x20000
 
 # DIS:      Disassembly of section .text:
+# DIS-EMPTY:
 # DIS-NEXT: __start:
 # DIS-NEXT:    10000:  3c 08 00 01  lui   $8, 1
 # DIS-NEXT:    10004:  21 08 7f f0  addi  $8, $8, 32752

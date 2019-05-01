@@ -7,6 +7,7 @@
 // RUN: llvm-objdump -d -s %t.exe | FileCheck %s
 
 // CHECK:      Disassembly of section .plt:
+// CHECK-EMPTY:
 // CHECK-NEXT: .plt:
 // CHECK-NEXT: 401010:       ff 35 04 30 40 00       pushl   4206596
 // CHECK-NEXT: 401016:       50      pushl   %eax

@@ -8,6 +8,7 @@
 # B = A + 0x1 = -0x10 + 0x1 = -0xf -> 0xFFFFFFFFFFFFFFF1
 # B - (0x94+6) = -0xf - (0x94+6) = -169
 # DUMP:       Disassembly of section .text:
+# DUMP-EMPTY:
 # DUMP-NEXT:  foo:
 # DUMP-NEXT:   94: {{.*}} -169(%rip), %eax
 

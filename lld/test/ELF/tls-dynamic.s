@@ -66,6 +66,7 @@ c:
 // 4279 = (0x2100 + -4) - (0x1042 + 3) // PC relative offset to got entry.
 
 // DIS:      Disassembly of section .text:
+// DIS-EMPTY:
 // DIS-NEXT: .text:
 // DIS-NEXT:     1000: {{.+}} leaq    4313(%rip), %rdi
 // DIS-NEXT:     1007: {{.+}} callq

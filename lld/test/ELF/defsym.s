@@ -36,6 +36,7 @@
 
 ## Check we can use foo2 and it that it is an alias for foo1.
 # USE:       Disassembly of section .text:
+# USE-EMPTY:
 # USE-NEXT:  _start:
 # USE-NEXT:    movl $0x123, %edx
 

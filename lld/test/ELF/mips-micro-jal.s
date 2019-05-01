@@ -47,6 +47,7 @@
 # RUN:   | FileCheck --check-prefix=MIXED %s
 
 # EB:      Disassembly of section .plt:
+# EB-EMPTY:
 # EB-NEXT: .plt:
 # EB-NEXT:    20010:       79 80 3f fd     addiupc $3, 65524
 # EB-NEXT:    20014:       ff 23 00 00     lw      $25, 0($3)
@@ -64,6 +65,7 @@
 # EB-NEXT:    2003a:       0f 02           move    $24, $2
 
 # EL:      Disassembly of section .plt:
+# EL-EMPTY:
 # EL-NEXT: .plt:
 # EL-NEXT:    20010:       80 79 fd 3f     addiupc $3, 65524
 # EL-NEXT:    20014:       23 ff 00 00     lw      $25, 0($3)
@@ -81,6 +83,7 @@
 # EL-NEXT:    2003a:       02 0f           move    $24, $2
 
 # EBR6:      Disassembly of section .plt:
+# EBR6-EMPTY:
 # EBR6-NEXT: .plt:
 # EBR6-NEXT:    20010:       78 60 3f fd     lapc    $3, 65524
 # EBR6-NEXT:    20014:       ff 23 00 00     lw      $25, 0($3)
@@ -97,6 +100,7 @@
 # EBR6-NEXT:    2003a:       47 23           jrc16   $25
 
 # ELR6:      Disassembly of section .plt:
+# ELR6-EMPTY:
 # ELR6-NEXT: .plt:
 # ELR6-NEXT:    20010:       60 78 fd 3f     lapc    $3, 65524
 # ELR6-NEXT:    20014:       23 ff 00 00     lw      $25, 0($3)
@@ -113,6 +117,7 @@
 # ELR6-NEXT:    2003a:       23 47           jrc16   $25
 
 # MIXED:      Disassembly of section .plt:
+# MIXED-EMPTY:
 # MIXED-NEXT: .plt:
 # MIXED-NEXT:    20020:       79 80 3f f9     addiupc $3, 65508
 # MIXED-NEXT:    20024:       ff 23 00 00     lw      $25, 0($3)

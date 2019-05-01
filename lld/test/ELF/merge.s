@@ -72,6 +72,7 @@ zed:
         .globl  _start
 _start:
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: _start:
 
         movl .mysec, %eax

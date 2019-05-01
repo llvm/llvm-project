@@ -35,6 +35,7 @@ _start:
   ld 1, .L1@toc@l(2)
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_LO_DS:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_TOC16_LO_DS:
 # CHECK: 1001000c:       ld 1, -32768(2)
 
@@ -44,6 +45,7 @@ _start:
   addi  1, 2, .L1@toc@l
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_LO:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_TOC16_LO:
 # CHECK: 10010010:       addi 1, 2, -32768
 
@@ -53,6 +55,7 @@ _start:
   addis 1, 2, .L1@toc@h
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_HI:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_TOC16_HI:
 # CHECK: 10010014:       addis 1, 2, -1
 
@@ -62,6 +65,7 @@ _start:
   addis 1, 2, .L1@toc@ha
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_HA:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_TOC16_HA:
 # CHECK: 10010018:       nop
 
@@ -73,6 +77,7 @@ _start:
 .Lfoox:
 
 # CHECK: Disassembly of section .R_PPC64_REL24:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_REL24:
 # CHECK: 1001001c:       b .+4
 
@@ -84,6 +89,7 @@ _start:
 .Lfooy:
 
 # CHECK: Disassembly of section .R_PPC64_REL14:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_REL14:
 # CHECK: 10010020:       bt 2, .+4
 
@@ -93,6 +99,7 @@ _start:
   li 1, .Lfoo@l
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_LO:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_ADDR16_LO:
 # CHECK: 10010024:       li 1, 0
 
@@ -102,6 +109,7 @@ _start:
   li 1, .Lfoo@h
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HI:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_ADDR16_HI:
 # CHECK: 10010028:       li 1, 4097
 
@@ -111,6 +119,7 @@ _start:
   li 1, .Lfoo@ha
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HA:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_ADDR16_HA:
 # CHECK: 1001002c:       li 1, 4097
 
@@ -120,6 +129,7 @@ _start:
   li 1, .Lfoo@higher
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHER:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_ADDR16_HIGHER:
 # CHECK: 10010030:       li 1, 0
 
@@ -129,6 +139,7 @@ _start:
   li 1, .Lfoo@highera
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHERA:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_ADDR16_HIGHERA:
 # CHECK: 10010034:       li 1, 0
 
@@ -138,6 +149,7 @@ _start:
   li 1, .Lfoo@highest
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHEST:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_ADDR16_HIGHEST:
 # CHECK: 10010038:       li 1, 0
 
@@ -147,6 +159,7 @@ _start:
   li 1, .Lfoo@highesta
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHESTA:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_ADDR16_HIGHESTA:
 # CHECK: 1001003c:       li 1, 0
 
@@ -168,6 +181,7 @@ _start:
 # should equal address of LBB0_2.
 # 0x10000190 + 0xfeb4 = 0x10010044
 # CHECK: Disassembly of section .R_PPC64_REL32:
+# CHECK-EMPTY:
 # CHECK: .FR_PPC64_REL32:
 # CHECK: 10010040:       nop
 # CHECK: 10010044:       ld 5, -32736(2)

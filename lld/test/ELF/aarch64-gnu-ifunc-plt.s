@@ -30,6 +30,7 @@
 
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:    210000: {{.*}} ret
 // DISASM:      bar:
@@ -39,7 +40,9 @@
 // DISASM-NEXT:    21000c: {{.*}} bl      #100
 // DISASM-NEXT:    210010: {{.*}} bl      #48
 // DISASM-NEXT:    210014: {{.*}} bl      #60
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:    210020: {{.*}} stp     x16, x30, [sp, #-16]!
 // DISASM-NEXT:    210024: {{.*}} adrp    x16, #131072

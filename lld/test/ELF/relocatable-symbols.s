@@ -18,12 +18,16 @@
 # DISASM-NEXT:  2d: {{.*}} callq 0
 # DISASM-NEXT:  32: {{.*}} callq 0
 # DISASM-NEXT:  37: {{.*}} callq 0
+# DISASM-EMPTY:
 # DISASM-NEXT: Disassembly of section foo:
+# DISASM-EMPTY:
 # DISASM-NEXT: foo:
 # DISASM-NEXT:  0: 90 nop
 # DISASM-NEXT:  1: 90 nop
 # DISASM-NEXT:  2: 90 nop
+# DISASM-EMPTY:
 # DISASM-NEXT: Disassembly of section bar:
+# DISASM-EMPTY:
 # DISASM-NEXT: bar:
 # DISASM-NEXT:  0: 90 nop
 # DISASM-NEXT:  1: 90 nop
