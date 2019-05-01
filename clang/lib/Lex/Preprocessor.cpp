@@ -625,8 +625,23 @@ void Preprocessor::SkipTokensWhileUsingPCH() {
   bool UsingPragmaHdrStop = SkippingUntilPragmaHdrStop;
   Token Tok;
   while (true) {
-    bool InPredefines = (CurLexer->getFileID() == getPredefinesFileID());
-    CurLexer->Lex(Tok);
+    bool InPredefines =
+        (CurLexer && CurLexer->getFileID() == getPredefinesFileID());
+    switch (CurLexerKind) {
+    case CLK_Lexer:
+      CurLexer->Lex(Tok);
+     break;
+    case CLK_TokenLexer:
+      CurTokenLexer->Lex(Tok);
+      break;
+    case CLK_CachingLexer:
+      bool IsNewToken;
+      CachingLex(Tok, IsNewToken);
+      break;
+    case CLK_LexAfterModuleImport:
+      LexAfterModuleImport(Tok);
+      break;
+    }
     if (Tok.is(tok::eof) && !InPredefines) {
       ReachedMainFileEOF = true;
       break;

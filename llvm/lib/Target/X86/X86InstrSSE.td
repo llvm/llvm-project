@@ -1475,13 +1475,9 @@ def VCVTPD2DQYrm : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
 }
 
 def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQrr VR128:$dst, VR128:$src), 0>;
-def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
+                (VCVTPD2DQrr VR128:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtpd2dqy\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQYrr VR128:$dst, VR256:$src), 0>;
-def : InstAlias<"vcvtpd2dqy\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQYrm VR128:$dst, f256mem:$src), 0, "intel">;
+                (VCVTPD2DQYrr VR128:$dst, VR256:$src), 0, "att">;
 
 def CVTPD2DQrm  : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                       "cvtpd2dq\t{$src, $dst|$dst, $src}",
@@ -1579,13 +1575,9 @@ def VCVTTPD2DQYrm : VPDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
 } // Predicates = [HasAVX, NoVLX]
 
 def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQrr VR128:$dst, VR128:$src), 0>;
-def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
+                (VCVTTPD2DQrr VR128:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvttpd2dqy\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQYrr VR128:$dst, VR256:$src), 0>;
-def : InstAlias<"vcvttpd2dqy\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQYrm VR128:$dst, f256mem:$src), 0, "intel">;
+                (VCVTTPD2DQYrr VR128:$dst, VR256:$src), 0, "att">;
 
 let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v4i32 (fp_to_sint (v4f64 VR256:$src))),
@@ -1717,13 +1709,9 @@ def VCVTPD2PSYrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
 } // Predicates = [HasAVX, NoVLX]
 
 def : InstAlias<"vcvtpd2psx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSrr VR128:$dst, VR128:$src), 0>;
-def : InstAlias<"vcvtpd2psx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSrm VR128:$dst, f128mem:$src), 0, "intel">;
+                (VCVTPD2PSrr VR128:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtpd2psy\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSYrr VR128:$dst, VR256:$src), 0>;
-def : InstAlias<"vcvtpd2psy\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSYrm VR128:$dst, f256mem:$src), 0, "intel">;
+                (VCVTPD2PSYrr VR128:$dst, VR256:$src), 0, "att">;
 
 def CVTPD2PSrr : PDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                      "cvtpd2ps\t{$src, $dst|$dst, $src}",
@@ -4121,11 +4109,6 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
 def VMOV64toPQIrm : VRS2I<0x6E, MRMSrcMem, (outs VR128:$dst), (ins i64mem:$src),
                           "movq\t{$src, $dst|$dst, $src}", []>,
                           VEX, Sched<[WriteVecLoad]>;
-let isCodeGenOnly = 1 in
-def VMOV64toSDrr : VRS2I<0x6E, MRMSrcReg, (outs FR64:$dst), (ins GR64:$src),
-                         "movq\t{$src, $dst|$dst, $src}",
-                         [(set FR64:$dst, (bitconvert GR64:$src))]>,
-                         VEX, Sched<[WriteVecMoveFromGpr]>;
 
 def MOVDI2PDIrr : S2I<0x6E, MRMSrcReg, (outs VR128:$dst), (ins GR32:$src),
                       "movd\t{$src, $dst|$dst, $src}",
@@ -4146,36 +4129,7 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
 def MOV64toPQIrm : RS2I<0x6E, MRMSrcMem, (outs VR128:$dst), (ins i64mem:$src),
                         "movq\t{$src, $dst|$dst, $src}", []>,
                         Sched<[WriteVecLoad]>;
-let isCodeGenOnly = 1 in
-def MOV64toSDrr : RS2I<0x6E, MRMSrcReg, (outs FR64:$dst), (ins GR64:$src),
-                       "movq\t{$src, $dst|$dst, $src}",
-                       [(set FR64:$dst, (bitconvert GR64:$src))]>,
-                       Sched<[WriteVecMoveFromGpr]>;
 } // ExeDomain = SSEPackedInt
-
-//===---------------------------------------------------------------------===//
-// Move Int Doubleword to Single Scalar
-//
-let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
-  def VMOVDI2SSrr  : VS2I<0x6E, MRMSrcReg, (outs FR32:$dst), (ins GR32:$src),
-                        "movd\t{$src, $dst|$dst, $src}",
-                        [(set FR32:$dst, (bitconvert GR32:$src))]>,
-                        VEX, Sched<[WriteVecMoveFromGpr]>;
-
-  def VMOVDI2SSrm  : VS2I<0x6E, MRMSrcMem, (outs FR32:$dst), (ins i32mem:$src),
-                        "movd\t{$src, $dst|$dst, $src}",
-                        [(set FR32:$dst, (bitconvert (loadi32 addr:$src)))]>,
-                        VEX, Sched<[WriteVecLoad]>;
-  def MOVDI2SSrr  : S2I<0x6E, MRMSrcReg, (outs FR32:$dst), (ins GR32:$src),
-                        "movd\t{$src, $dst|$dst, $src}",
-                        [(set FR32:$dst, (bitconvert GR32:$src))]>,
-                        Sched<[WriteVecMoveFromGpr]>;
-
-  def MOVDI2SSrm  : S2I<0x6E, MRMSrcMem, (outs FR32:$dst), (ins i32mem:$src),
-                        "movd\t{$src, $dst|$dst, $src}",
-                        [(set FR32:$dst, (bitconvert (loadi32 addr:$src)))]>,
-                        Sched<[WriteVecLoad]>;
-} // ExeDomain = SSEPackedInt, isCodeGenOnly = 1
 
 //===---------------------------------------------------------------------===//
 // Move Packed Doubleword Int to Packed Double Int
@@ -4203,6 +4157,21 @@ def MOVPDI2DImr  : S2I<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, VR128:$src),
                                      (iPTR 0))), addr:$dst)]>,
                        Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt
+
+let Predicates = [UseAVX] in {
+  def : Pat<(f64 (bitconvert GR64:$src)),
+            (COPY_TO_REGCLASS (VMOV64toPQIrr GR64:$src), FR64)>;
+  def : Pat<(f32 (bitconvert GR32:$src)),
+            (COPY_TO_REGCLASS (VMOVDI2PDIrr GR32:$src), FR32)>;
+}
+
+let Predicates = [UseSSE2] in
+def : Pat<(f64 (bitconvert GR64:$src)),
+          (COPY_TO_REGCLASS (MOV64toPQIrr GR64:$src), FR64)>;
+
+let Predicates = [UseSSE1] in
+def : Pat<(f32 (bitconvert GR32:$src)),
+          (COPY_TO_REGCLASS (MOVDI2PDIrr GR32:$src), FR32)>;
 
 //===---------------------------------------------------------------------===//
 // Move Packed Doubleword Int first element to Doubleword Int
@@ -4237,10 +4206,6 @@ def MOVPQIto64mr : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
 //
 let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
   let Predicates = [UseAVX] in
-  def VMOV64toSDrm : VS2SI<0x7E, MRMSrcMem, (outs FR64:$dst), (ins i64mem:$src),
-                          "movq\t{$src, $dst|$dst, $src}",
-                          [(set FR64:$dst, (bitconvert (loadi64 addr:$src)))]>,
-                          VEX, Sched<[WriteVecLoad]>;
   def VMOVSDto64rr : VRS2I<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64:$src),
                            "movq\t{$src, $dst|$dst, $src}",
                            [(set GR64:$dst, (bitconvert FR64:$src))]>,
@@ -4250,10 +4215,6 @@ let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
                            [(store (i64 (bitconvert FR64:$src)), addr:$dst)]>,
                            VEX, Sched<[WriteVecStore]>;
 
-  def MOV64toSDrm : S2SI<0x7E, MRMSrcMem, (outs FR64:$dst), (ins i64mem:$src),
-                         "movq\t{$src, $dst|$dst, $src}",
-                         [(set FR64:$dst, (bitconvert (loadi64 addr:$src)))]>,
-                         Sched<[WriteVecLoad]>;
   def MOVSDto64rr : RS2I<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64:$src),
                          "movq\t{$src, $dst|$dst, $src}",
                          [(set GR64:$dst, (bitconvert FR64:$src))]>,
@@ -4406,12 +4367,18 @@ let Predicates = [UseAVX] in {
             (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIrm addr:$src)), sub_xmm)>;
   def : Pat<(v4i64 (X86vzload addr:$src)),
             (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIrm addr:$src)), sub_xmm)>;
+
+  def : Pat<(X86vextractstore (v2i64 VR128:$src), addr:$dst),
+            (VMOVPQI2QImr addr:$dst, VR128:$src)>;
 }
 
 let Predicates = [UseSSE2] in {
   def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
             (MOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)), (MOVQI2PQIrm addr:$src)>;
+
+  def : Pat<(X86vextractstore (v2i64 VR128:$src), addr:$dst),
+            (MOVPQI2QImr addr:$dst, VR128:$src)>;
 }
 
 //===---------------------------------------------------------------------===//

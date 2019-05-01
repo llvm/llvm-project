@@ -980,7 +980,7 @@ const llvm::DWARFDebugLine::FileNameEntry &
 DWARFDebugLine::LineTable::getFileNameEntry(uint64_t Index) const {
   uint16_t DwarfVersion = Prologue.getVersion();
   assert(DwarfVersion != 0 && "LineTable has no dwarf version information");
-  // Unlike previous versions, in Dwarf 5 the file names is 0-indexed.
+  // In DWARF v5 the file names are 0-indexed.
   if (DwarfVersion >= 5)
     return Prologue.FileNames[Index];
   else
@@ -1032,8 +1032,7 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   // We may still need to append compilation directory of compile unit.
   // We know that FileName is not absolute, the only way to have an
   // absolute path at this point would be if IncludeDir is absolute.
-  if (CompDir && Kind == FileLineInfoKind::AbsoluteFilePath &&
-      !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
+  if (CompDir && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
     sys::path::append(FilePath, CompDir);
 
   // sys::path::append skips empty strings.

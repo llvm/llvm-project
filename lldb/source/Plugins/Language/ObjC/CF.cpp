@@ -139,10 +139,8 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
   bool is_type_ok = false; // check to see if this is a CFBag we know about
   if (descriptor->IsCFType()) {
     ConstString type_name(valobj.GetTypeName());
-    if (type_name == ConstString("__CFMutableBitVector") ||
-        type_name == ConstString("__CFBitVector") ||
-        type_name == ConstString("CFMutableBitVectorRef") ||
-        type_name == ConstString("CFBitVectorRef")) {
+    if (type_name == "__CFMutableBitVector" || type_name == "__CFBitVector" ||
+        type_name == "CFMutableBitVectorRef" || type_name == "CFBitVectorRef") {
       if (valobj.IsPointerType())
         is_type_ok = true;
     }

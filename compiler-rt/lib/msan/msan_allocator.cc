@@ -46,18 +46,14 @@ struct MsanMapUnmapCallback {
 
 #if defined(__mips64)
 static const uptr kMaxAllowedMallocSize = 2UL << 30;
-static const uptr kRegionSizeLog = 20;
-static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
-typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;
 
 struct AP32 {
   static const uptr kSpaceBeg = 0;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = sizeof(Metadata);
   typedef __sanitizer::CompactSizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = __msan::kRegionSizeLog;
+  static const uptr kRegionSizeLog = 20;
   using AddressSpaceView = LocalAddressSpaceView;
-  using ByteMap = __msan::ByteMap;
   typedef MsanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };
@@ -99,18 +95,14 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #elif defined(__aarch64__)
 static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
-static const uptr kRegionSizeLog = 20;
-static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
-typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;
 
 struct AP32 {
   static const uptr kSpaceBeg = 0;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = sizeof(Metadata);
   typedef __sanitizer::CompactSizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = __msan::kRegionSizeLog;
+  static const uptr kRegionSizeLog = 20;
   using AddressSpaceView = LocalAddressSpaceView;
-  using ByteMap = __msan::ByteMap;
   typedef MsanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };

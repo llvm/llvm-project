@@ -12,7 +12,7 @@
 
 #include <string.h>
 
-const char *MappingName = "scudo:test";
+static const char *MappingName = "scudo:test";
 
 TEST(ScudoMapTest, MapNoAccessUnmap) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();

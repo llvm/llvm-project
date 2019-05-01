@@ -165,7 +165,7 @@ EXTERN int omp_get_level(void) {
     ASSERT0(LT_FUSSY, isSPMDMode(),
             "Expected SPMD mode only with uninitialized runtime.");
     // parallelLevel starts from 0, need to add 1 for correct level.
-    return parallelLevel + 1;
+    return parallelLevel[GetWarpId()] + 1;
   }
   int level = 0;
   omptarget_nvptx_TaskDescr *currTaskDescr =

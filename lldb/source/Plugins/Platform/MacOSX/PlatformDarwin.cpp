@@ -105,7 +105,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                 std::replace(module_basename.begin(), module_basename.end(),
                              '-', '_');
                 ScriptInterpreter *script_interpreter =
-                  target->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+                    target->GetDebugger().GetScriptInterpreter();
                 if (script_interpreter &&
                     script_interpreter->IsReservedWord(
                         module_basename.c_str())) {

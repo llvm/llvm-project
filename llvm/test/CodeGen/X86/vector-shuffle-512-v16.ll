@@ -363,10 +363,10 @@ define <8 x float> @test_v16f32_0_1_2_3_4_6_7_10 (<16 x float> %v) {
 define <4 x float> @test_v16f32_0_1_3_6 (<16 x float> %v) {
 ; ALL-LABEL: test_v16f32_0_1_3_6:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,3,3]
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; ALL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,1,3,6,0,1,3,6,0,1,3,6,0,1,3,6]
+; ALL-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; ALL-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %res = shufflevector <16 x float> %v, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 6>

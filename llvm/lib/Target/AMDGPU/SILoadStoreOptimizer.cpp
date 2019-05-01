@@ -131,6 +131,8 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     bool GLC1;
     bool SLC0;
     bool SLC1;
+    bool DLC0;
+    bool DLC1;
     bool UseST64;
     SmallVector<MachineInstr *, 8> InstsToMove;
   };
@@ -323,7 +325,7 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI) {
   if ((CI.InstClass != DS_READ) && (CI.InstClass != DS_WRITE)) {
     return (EltOffset0 + CI.Width0 == EltOffset1 ||
             EltOffset1 + CI.Width1 == EltOffset0) &&
-           CI.GLC0 == CI.GLC1 &&
+           CI.GLC0 == CI.GLC1 && CI.DLC0 == CI.DLC1 &&
            (CI.InstClass == S_BUFFER_LOAD_IMM || CI.SLC0 == CI.SLC1);
   }
 
@@ -637,6 +639,8 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
           CI.SLC0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::slc)->getImm();
           CI.SLC1 = TII->getNamedOperand(*MBBI, AMDGPU::OpName::slc)->getImm();
         }
+        CI.DLC0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::dlc)->getImm();
+        CI.DLC1 = TII->getNamedOperand(*MBBI, AMDGPU::OpName::dlc)->getImm();
       }
 
       // Check both offsets fit in the reduced range.
@@ -857,6 +861,7 @@ SILoadStoreOptimizer::mergeSBufferLoadImmPair(CombineInfo &CI) {
       .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::sbase))
       .addImm(MergedOffset) // offset
       .addImm(CI.GLC0)      // glc
+      .addImm(CI.DLC0)      // dlc
       .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI);
@@ -909,6 +914,7 @@ SILoadStoreOptimizer::mergeBufferLoadPair(CombineInfo &CI) {
       .addImm(CI.GLC0)      // glc
       .addImm(CI.SLC0)      // slc
       .addImm(0)            // tfe
+      .addImm(CI.DLC0)      // dlc
       .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI);
@@ -1088,9 +1094,10 @@ SILoadStoreOptimizer::mergeBufferStorePair(CombineInfo &CI) {
   MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::srsrc))
       .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
       .addImm(std::min(CI.Offset0, CI.Offset1)) // offset
-      .addImm(CI.GLC0)                          // glc
-      .addImm(CI.SLC0)                          // slc
-      .addImm(0)                                // tfe
+      .addImm(CI.GLC0)      // glc
+      .addImm(CI.SLC0)      // slc
+      .addImm(0)            // tfe
+      .addImm(CI.DLC0)      // dlc
       .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   moveInstsAfter(MIB, CI.InstsToMove);

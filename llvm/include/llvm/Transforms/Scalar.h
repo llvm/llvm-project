@@ -383,9 +383,10 @@ Pass *createCorrelatedValuePropagationPass();
 //
 // InferAddressSpaces - Modify users of addrspacecast instructions with values
 // in the source address space if using the destination address space is slower
-// on the target.
+// on the target. If AddressSpace is left to its default value, it will be
+// obtained from the TargetTransformInfo.
 //
-FunctionPass *createInferAddressSpacesPass();
+FunctionPass *createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
 extern char &InferAddressSpacesID;
 
 //===----------------------------------------------------------------------===//

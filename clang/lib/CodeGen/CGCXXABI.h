@@ -136,10 +136,6 @@ public:
     RAA_Indirect
   };
 
-  /// Returns true if C++ allows us to copy the memory of an object of type RD
-  /// when it is passed as an argument.
-  bool canCopyArgument(const CXXRecordDecl *RD) const;
-
   /// Returns how an argument of the given record type should be passed.
   virtual RecordArgABI getRecordArgABI(const CXXRecordDecl *RD) const = 0;
 

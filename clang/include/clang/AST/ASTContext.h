@@ -2701,7 +2701,7 @@ public:
   /// otherwise returns null.
   const ObjCInterfaceDecl *getObjContainingInterface(const NamedDecl *ND) const;
 
-  /// Set the copy inialization expression of a block var decl. \p CanThrow
+  /// Set the copy initialization expression of a block var decl. \p CanThrow
   /// indicates whether the copy expression can throw or not.
   void setBlockVarCopyInit(const VarDecl* VD, Expr *CopyExpr, bool CanThrow);
 

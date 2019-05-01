@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=x86_64-windows -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s
+# RUN: llvm-mc -triple=x86_64-windows -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s
 
 # C source to generate the assembly:
 # volatile int unlikely_cond = 0;

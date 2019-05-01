@@ -1,9 +1,9 @@
-# Check that llvm-readobj -mips-plt-got correctly shows .got section
+# Check that llvm-readobj --mips-plt-got correctly shows .got section
 # content if there are some other zero-sized sections with the same
 # address as the .got. got-over.exe.elf-mips has zero-sized .data
 # section at the same offset .got section.
 
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-over.exe.elf-mips | FileCheck %s
+RUN: llvm-readobj --mips-plt-got %p/Inputs/got-over.exe.elf-mips | FileCheck %s
 
 GOT-OBJ: Cannot find PLTGOT dynamic table tag.
 

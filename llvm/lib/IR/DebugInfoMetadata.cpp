@@ -833,6 +833,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_LLVM_fragment:
     return 3;
   case dwarf::DW_OP_constu:
+  case dwarf::DW_OP_deref_size:
   case dwarf::DW_OP_plus_uconst:
     return 2;
   default:
@@ -889,6 +890,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_shr:
     case dwarf::DW_OP_shra:
     case dwarf::DW_OP_deref:
+    case dwarf::DW_OP_deref_size:
     case dwarf::DW_OP_xderef:
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
@@ -897,6 +899,19 @@ bool DIExpression::isValid() const {
     }
   }
   return true;
+}
+
+bool DIExpression::isImplicit() const {
+  unsigned N = getNumElements();
+  if (isValid() && N > 0) {
+    switch (getElement(N-1)) {
+      case dwarf::DW_OP_stack_value: return true;
+      case dwarf::DW_OP_LLVM_fragment:
+        return N > 1 && getElement(N-2) == dwarf::DW_OP_stack_value;
+      default: break;
+    }
+  }
+  return false;
 }
 
 Optional<DIExpression::FragmentInfo>

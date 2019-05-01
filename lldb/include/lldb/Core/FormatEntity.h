@@ -110,14 +110,10 @@ public:
       CurrentPCArrow
     };
 
-    enum FormatType { None, UInt32, UInt64, CString };
-
     struct Definition {
       const char *name;
       const char *string; // Insert this exact string into the output
       Entry::Type type;
-      FormatType format_type; // uint32_t, uint64_t, cstr, or anything that can
-                              // be formatted by printf or lldb::Format
       uint64_t data;
       uint32_t num_children;
       Definition *children; // An array of "num_children" Definition entries,

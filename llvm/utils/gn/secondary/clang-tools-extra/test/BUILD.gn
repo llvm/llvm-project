@@ -1,4 +1,3 @@
-import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -38,12 +37,6 @@ write_lit_config("lit_site_cfg") {
     "PYTHON_EXECUTABLE=$python_path",
   ]
 
-  if (clangd_build_xpc) {
-    extra_values += [ "CLANGD_BUILD_XPC=1" ]
-  } else {
-    extra_values += [ "CLANGD_BUILD_XPC=0" ]
-  }
-
   if (clang_enable_static_analyzer) {
     extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
   } else {
@@ -74,9 +67,6 @@ group("test") {
     "//clang-tools-extra/clang-query/tool:clang-query",
     "//clang-tools-extra/clang-reorder-fields/tool:clang-reorder-fields",
     "//clang-tools-extra/clang-tidy/tool:clang-tidy",
-    "//clang-tools-extra/clangd/index/dex/dexp",
-    "//clang-tools-extra/clangd/indexer:clangd-indexer",
-    "//clang-tools-extra/clangd/tool:clangd",
     "//clang-tools-extra/modularize",
     "//clang-tools-extra/pp-trace",
     "//clang-tools-extra/unittests",
@@ -90,10 +80,6 @@ group("test") {
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
   ]
-  if (clangd_build_xpc) {
-    deps +=
-        [ "//clang-tools-extra/clangd/xpc/test-client:clangd-xpc-test-client" ]
-  }
   testonly = true
 }
 
@@ -117,7 +103,7 @@ action("check-clang-tools") {
   ]
 
   # Since check-clang-tools is always dirty, //:default doesn't depend on it so
-  # that it's not part of the default ninja target.  Hence, check-clang
+  # that it's not part of the default ninja target.  Hence, check-clang-tools
   # shouldn't have any deps except :test. so that the default target is sure to
   # build all the deps.
   deps = [

@@ -3,7 +3,7 @@
 // RUN: llvm-mc %p/Inputs/shared.s -o %t2.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: ld.lld %t.o %t2.so -o %t.exe
-// RUN: llvm-readobj -t %t.exe | FileCheck %s
+// RUN: llvm-readobj --symbols %t.exe | FileCheck %s
 
 // CHECK:      Name: bar
 // CHECK-NEXT: Value: 0x201020

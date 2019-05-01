@@ -2,7 +2,7 @@
 // sysroot to make these tests independent of the host system.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux \
+// RUN:     --target=i386-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
@@ -51,16 +51,18 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=x86_64-unknown-linux \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT %s
 // CHECK-LD-RT-NOT: warning:
+// CHECK-LD-RT: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-LD-RT: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT: "--eh-frame-hdr"
 // CHECK-LD-RT: "-m" "elf_x86_64"
 // CHECK-LD-RT: "-dynamic-linker"
-// CHECK-LD-RT: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-x86_64.o"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../.."
@@ -69,19 +71,22 @@
 // CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
 // CHECK-LD-RT: "-lc"
 // CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
+// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-x86_64.o"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=i686-unknown-linux \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-I686 %s
 // CHECK-LD-RT-I686-NOT: warning:
+// CHECK-LD-RT-I686: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-LD-RT-I686: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT-I686: "--eh-frame-hdr"
 // CHECK-LD-RT-I686: "-m" "elf_i386"
 // CHECK-LD-RT-I686: "-dynamic-linker"
-// CHECK-LD-RT-I686: "{{.*}}/usr/lib/gcc/i686-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-i386.o"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0/../../../../i686-unknown-linux/lib"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0/../../.."
@@ -90,6 +95,7 @@
 // CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
 // CHECK-LD-RT-I686: "-lc"
 // CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
+// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-i386.o"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
@@ -110,7 +116,6 @@
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:     --rtlib=libgcc \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GCC %s
 // CHECK-LD-GCC-NOT: warning:
 // CHECK-LD-GCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
@@ -291,7 +296,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64-STATIC %s
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_32bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-32-TO-32 %s
@@ -308,7 +313,7 @@
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m64 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m64 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_32bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-32-TO-64 %s
@@ -326,7 +331,7 @@
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -m64 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform -m64 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-64 %s
@@ -343,7 +348,7 @@
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -m32 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=plaform -m32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-32 %s
@@ -361,7 +366,7 @@
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnux32 \
+// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X32 %s
@@ -379,7 +384,7 @@
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -mx32 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform -mx32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-X32 %s
@@ -397,7 +402,7 @@
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -mx32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -mx32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-32-TO-X32 %s
@@ -415,7 +420,7 @@
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnux32 -m64 \
+// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform -m64 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X32-TO-64 %s
@@ -432,7 +437,7 @@
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnux32 -m32 \
+// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform -m32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X32-TO-32 %s
@@ -450,7 +455,7 @@
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -m32 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform -m32 \
 // RUN:     --gcc-toolchain=%S/Inputs/multilib_64bit_linux_tree/usr \
 // RUN:     --sysroot=%S/Inputs/multilib_32bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-32-SYSROOT %s
@@ -464,7 +469,7 @@
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     -ccc-install-dir %S/Inputs/fake_install_tree/bin \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -476,7 +481,7 @@
 // Check that with 64-bit builds, we don't actually use the install directory
 // as its version of GCC is lower than our sysrooted version.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -m64 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform -m64 \
 // RUN:     -ccc-install-dir %S/Inputs/fake_install_tree/bin \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -488,7 +493,7 @@
 // Check that we support unusual patch version formats, including missing that
 // component.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     -ccc-install-dir %S/Inputs/gcc_version_parsing1/bin \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -497,7 +502,7 @@
 // CHECK-GCC-VERSION1: "{{.*}}/Inputs/gcc_version_parsing1/bin/../lib/gcc/i386-unknown-linux/4.7{{/|\\\\}}crtbegin.o"
 // CHECK-GCC-VERSION1: "-L{{.*}}/Inputs/gcc_version_parsing1/bin/../lib/gcc/i386-unknown-linux/4.7"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     -ccc-install-dir %S/Inputs/gcc_version_parsing2/bin \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -506,7 +511,7 @@
 // CHECK-GCC-VERSION2: "{{.*}}/Inputs/gcc_version_parsing2/bin/../lib/gcc/i386-unknown-linux/4.7.x{{/|\\\\}}crtbegin.o"
 // CHECK-GCC-VERSION2: "-L{{.*}}/Inputs/gcc_version_parsing2/bin/../lib/gcc/i386-unknown-linux/4.7.x"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     -ccc-install-dir %S/Inputs/gcc_version_parsing3/bin \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -515,7 +520,7 @@
 // CHECK-GCC-VERSION3: "{{.*}}/Inputs/gcc_version_parsing3/bin/../lib/gcc/i386-unknown-linux/4.7.99-rc5{{/|\\\\}}crtbegin.o"
 // CHECK-GCC-VERSION3: "-L{{.*}}/Inputs/gcc_version_parsing3/bin/../lib/gcc/i386-unknown-linux/4.7.99-rc5"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     -ccc-install-dir %S/Inputs/gcc_version_parsing4/bin \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -524,7 +529,7 @@
 // CHECK-GCC-VERSION4: "{{.*}}/Inputs/gcc_version_parsing4/bin/../lib/gcc/i386-unknown-linux/4.7.99{{/|\\\\}}crtbegin.o"
 // CHECK-GCC-VERSION4: "-L{{.*}}/Inputs/gcc_version_parsing4/bin/../lib/gcc/i386-unknown-linux/4.7.99"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -m32 \
+// RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     -ccc-install-dir %S/Inputs/gcc_version_parsing5/bin \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -582,7 +587,7 @@
 //
 // Test a very broken version of multiarch that shipped in Ubuntu 11.04.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux \
+// RUN:     --target=i386-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_11.04_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-11-04 %s
@@ -597,7 +602,7 @@
 //
 // Check multi arch support on Ubuntu 12.04 LTS.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-unknown-linux-gnueabihf \
+// RUN:     --target=arm-unknown-linux-gnueabihf -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
@@ -615,7 +620,7 @@
 //
 // Check Ubuntu 13.10 on x86-64 targeting arm-linux-gnueabihf.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-gnueabihf \
+// RUN:     --target=arm-linux-gnueabihf -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/x86-64_ubuntu_13.10 \
 // RUN:   | FileCheck --check-prefix=CHECK-X86-64-UBUNTU-13-10-ARM-HF %s
@@ -634,7 +639,7 @@
 //
 // Check Ubuntu 13.10 on x86-64 targeting arm-linux-gnueabi.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-gnueabi \
+// RUN:     --target=arm-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/x86-64_ubuntu_13.10 \
 // RUN:   | FileCheck --check-prefix=CHECK-X86-64-UBUNTU-13-10-ARM %s
@@ -653,7 +658,7 @@
 //
 // Check Ubuntu 14.04 on powerpc64le.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64le-unknown-linux-gnu \
+// RUN:     --target=powerpc64le-unknown-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04-PPC64LE %s
@@ -672,7 +677,7 @@
 // Check Ubuntu 14.04 on x32.
 // "/usr/lib/gcc/x86_64-linux-gnu/4.8/x32/crtend.o" "/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../libx32/crtn.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnux32 \
+// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04-X32 %s
@@ -692,7 +697,7 @@
 //
 // Check fedora 18 on arm.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv7-unknown-linux-gnueabihf \
+// RUN:     --target=armv7-unknown-linux-gnueabihf -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/fedora_18_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-FEDORA-18-ARM-HF %s
@@ -707,12 +712,12 @@
 //
 // Check Fedora 21 on AArch64.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-unknown-linux-gnu \
+// RUN:     --target=arm64-unknown-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/fedora_21_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-FEDORA-21-AARCH64 %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-unknown-linux-gnu \
+// RUN:     --target=aarch64-unknown-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/fedora_21_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-FEDORA-21-AARCH64 %s
@@ -726,7 +731,7 @@
 // CHECK-FEDORA-21-AARCH64: "{{.*}}/usr/lib/gcc/aarch64-redhat-linux/4.9.0/../../../../lib64{{/|\\\\}}crtn.o"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-unknown-linux-gnueabi \
+// RUN:     --target=arm-unknown-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM %s
@@ -744,7 +749,7 @@
 //
 // Test the setup that shipped in SUSE 10.3 on ppc64.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64-suse-linux \
+// RUN:     --target=powerpc64-suse-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/suse_10.3_ppc64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SUSE-10-3-PPC64 %s
@@ -757,12 +762,12 @@
 //
 // Check openSuse Leap 42.2 on AArch64
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-unknown-linux-gnu \
+// RUN:     --target=arm64-unknown-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/opensuse_42.2_aarch64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-42-2-AARCH64 %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-unknown-linux-gnu \
+// RUN:     --target=aarch64-unknown-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/opensuse_42.2_aarch64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-42-2-AARCH64 %s
@@ -777,12 +782,12 @@
 //
 // Check openSUSE Tumbleweed on armv6hl
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv6hl-suse-linux-gnueabi \
+// RUN:     --target=armv6hl-suse-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_armv6hl_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-ARMV6HL %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv6hl-suse-linux-gnueabi \
+// RUN:     --target=armv6hl-suse-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_armv6hl_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-ARMV6HL %s
@@ -797,12 +802,12 @@
 //
 // Check openSUSE Tumbleweed on armv7hl
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv7hl-suse-linux-gnueabi \
+// RUN:     --target=armv7hl-suse-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_armv7hl_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-ARMV7HL %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv7hl-suse-linux-gnueabi \
+// RUN:     --target=armv7hl-suse-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_armv7hl_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-ARMV7HL %s
@@ -1050,7 +1055,7 @@
 //
 // Thoroughly exercise the Debian multiarch environment.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-gnu \
+// RUN:     --target=i686-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-X86 %s
@@ -1063,7 +1068,7 @@
 // CHECK-DEBIAN-X86: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-X86: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-gnu \
+// RUN:     --target=x86_64-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-X86-64 %s
@@ -1076,7 +1081,7 @@
 // CHECK-DEBIAN-X86-64: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-X86-64: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc-linux-gnu \
+// RUN:     --target=powerpc-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC %s
@@ -1089,7 +1094,7 @@
 // CHECK-DEBIAN-PPC: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-PPC: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64le-linux-gnu \
+// RUN:     --target=powerpc64le-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC64LE %s
@@ -1102,7 +1107,7 @@
 // CHECK-DEBIAN-PPC64LE: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-PPC64LE: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64-linux-gnu \
+// RUN:     --target=powerpc64-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC64 %s
@@ -1115,7 +1120,7 @@
 // CHECK-DEBIAN-PPC64: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-PPC64: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips-linux-gnu \
+// RUN:     --target=mips-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS %s
@@ -1128,7 +1133,7 @@
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-gnu \
+// RUN:     --target=mipsel-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPSEL %s
@@ -1141,7 +1146,7 @@
 // CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64-linux-gnu \
+// RUN:     --target=mips64-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64 %s
@@ -1153,7 +1158,7 @@
 // CHECK-DEBIAN-MIPS64: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPS64: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-gnu \
+// RUN:     --target=mips64el-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64EL %s
@@ -1165,7 +1170,7 @@
 // CHECK-DEBIAN-MIPS64EL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPS64EL: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64-linux-gnu -mabi=n32 \
+// RUN:     --target=mips64-linux-gnu -rtlib=platform -mabi=n32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64-N32 %s
@@ -1177,7 +1182,7 @@
 // CHECK-DEBIAN-MIPS64-N32: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPS64-N32: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-gnu -mabi=n32 \
+// RUN:     --target=mips64el-linux-gnu -rtlib=platform -mabi=n32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64EL-N32 %s
@@ -1191,7 +1196,7 @@
 //
 // Check linker paths on Debian 8 / Sparc
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=sparc-linux-gnu \
+// RUN:     --target=sparc-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_8_sparc_multilib_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC32 %s
@@ -1211,7 +1216,7 @@
 //
 // Check linker paths on Debian 8 / Sparc, with the oldstyle multilib packages
 // RUN: %clang -no-canonical-prefixes -m64 %s -### -o %t.o 2>&1 \
-// RUN:     --target=sparc-linux-gnu \
+// RUN:     --target=sparc-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_8_sparc_multilib_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC32-LIB64 %s
@@ -1231,7 +1236,7 @@
 //
 // Check linker paths on Debian 8 / Sparc64
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=sparc64-linux-gnu \
+// RUN:     --target=sparc64-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_8_sparc64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC64 %s
@@ -1609,7 +1614,7 @@
 //
 // Check linker invocation on Debian 6 MIPS 32/64-bit.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-gnu \
+// RUN:     --target=mipsel-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPSEL %s
@@ -1626,7 +1631,7 @@
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-gnu \
+// RUN:     --target=mips64el-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64EL %s
@@ -1643,7 +1648,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-gnu -mabi=n32 \
+// RUN:     --target=mips64el-linux-gnu -rtlib=platform -mabi=n32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64EL-N32 %s
@@ -1660,12 +1665,12 @@
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64-unknown-linux-gnu \
+// RUN:     --target=mips64-unknown-linux-gnu --rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64-GNUABI %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64-linux-gnuabi64 -mabi=n64 \
+// RUN:     --target=mips64-linux-gnuabi64 -rtlib=platform -mabi=n64 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64-GNUABI %s
@@ -1685,12 +1690,12 @@
 // CHECK-DEBIAN-ML-MIPS64-GNUABI: "{{.*}}/usr/lib/gcc/mips64-linux-gnuabi64/4.9/../../../mips64-linux-gnuabi64{{/|\\\\}}crtn.o"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-unknown-linux-gnu \
+// RUN:     --target=mips64el-unknown-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64EL-GNUABI %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-gnuabi64 -mabi=n64 \
+// RUN:     --target=mips64el-linux-gnuabi64 -rtlib=platform -mabi=n64 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-MIPS64EL-GNUABI %s
@@ -1711,7 +1716,7 @@
 //
 // Test linker invocation for Freescale SDK (OpenEmbedded).
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc-fsl-linux \
+// RUN:     --target=powerpc-fsl-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/freescale_ppc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-FSL-PPC %s
@@ -1721,7 +1726,7 @@
 // CHECK-FSL-PPC: "{{.*}}{{/|\\\\}}crtbegin.o"
 // CHECK-FSL-PPC: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64-fsl-linux \
+// RUN:     --target=powerpc64-fsl-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/freescale_ppc64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-FSL-PPC64 %s

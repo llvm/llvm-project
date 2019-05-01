@@ -36,8 +36,8 @@ public:
     }
   };
 
-  ScriptInterpreterPython(CommandInterpreter &interpreter)
-      : ScriptInterpreter(interpreter, lldb::eScriptLanguagePython),
+  ScriptInterpreterPython(Debugger &debugger)
+      : ScriptInterpreter(debugger, lldb::eScriptLanguagePython),
         IOHandlerDelegateMultiline("DONE") {}
 
   static void Initialize();

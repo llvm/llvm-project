@@ -16,6 +16,7 @@
 #include "clang/Tooling/Refactoring/SourceCode.h"
 #include "llvm/Support/Errc.h"
 #include <atomic>
+#include <memory>
 #include <string>
 
 using namespace clang;
@@ -183,17 +184,17 @@ Stencil::eval(const MatchFinder::MatchResult &Match) const {
 }
 
 StencilPart stencil::text(StringRef Text) {
-  return StencilPart(llvm::make_unique<RawText>(Text));
+  return StencilPart(std::make_shared<RawText>(Text));
 }
 
 StencilPart stencil::node(StringRef Id) {
-  return StencilPart(llvm::make_unique<NodeRef>(Id, SemiAssociation::Inferred));
+  return StencilPart(std::make_shared<NodeRef>(Id, SemiAssociation::Inferred));
 }
 
 StencilPart stencil::sNode(StringRef Id) {
-  return StencilPart(llvm::make_unique<NodeRef>(Id, SemiAssociation::Always));
+  return StencilPart(std::make_shared<NodeRef>(Id, SemiAssociation::Always));
 }
 
 StencilPart stencil::dPrint(StringRef Id) {
-  return StencilPart(llvm::make_unique<DebugPrintNodeOp>(Id));
+  return StencilPart(std::make_shared<DebugPrintNodeOp>(Id));
 }

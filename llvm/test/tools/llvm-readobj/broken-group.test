@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t.o
 
-# RUN: llvm-readobj --elf-section-groups -elf-output-style=GNU \
+# RUN: llvm-readelf --elf-section-groups \
 # RUN:   %t.o >%tout.log 2>%terr.log
 # RUN: FileCheck %s -check-prefix=GNU-STDERR < %terr.log
 # GNU-STDERR: Error: section [    3] in group section [    4] already in group section [    2]

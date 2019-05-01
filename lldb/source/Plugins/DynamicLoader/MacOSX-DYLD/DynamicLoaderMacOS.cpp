@@ -111,7 +111,7 @@ bool DynamicLoaderMacOS::ProcessDidExec() {
             const Symbol *symbol =
                 frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
             if (symbol) {
-              if (symbol->GetName() == ConstString("_dyld_start"))
+              if (symbol->GetName() == "_dyld_start")
                 did_exec = true;
             }
           }

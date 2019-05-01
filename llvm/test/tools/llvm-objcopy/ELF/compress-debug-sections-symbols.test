@@ -6,10 +6,10 @@
 ## and it is placed into the right section.
 
 # RUN: llvm-objcopy --compress-debug-sections %t.o %t-compressed1.o
-# RUN: llvm-readobj -symbols %t-compressed1.o | FileCheck %s --check-prefixes=CHECK,ZLIB
+# RUN: llvm-readobj --symbols %t-compressed1.o | FileCheck %s --check-prefixes=CHECK,ZLIB
 
 # RUN: llvm-objcopy --compress-debug-sections=zlib-gnu %t.o %t-compressed2.o
-# RUN: llvm-readobj -symbols %t-compressed2.o | FileCheck %s --check-prefixes=CHECK,ZLIBGNU
+# RUN: llvm-readobj --symbols %t-compressed2.o | FileCheck %s --check-prefixes=CHECK,ZLIBGNU
 
 # CHECK:        Name:    .Linfo_string0
 # CHECK-NEXT:   Value:   0x0

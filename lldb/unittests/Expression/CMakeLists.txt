@@ -1,4 +1,5 @@
 add_lldb_unittest(ExpressionTests
+  DWARFExpressionTest.cpp
   ClangParserTest.cpp
 
   LINK_LIBS
@@ -6,4 +7,5 @@ add_lldb_unittest(ExpressionTests
     lldbPluginExpressionParserClang
     lldbUtility
     lldbUtilityHelpers
+    LLVMTestingSupport
   )

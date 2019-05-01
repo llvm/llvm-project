@@ -239,7 +239,7 @@ public:
     return Load(nullptr, GlobalPrefix, std::move(Allow));
   }
 
-  SymbolNameSet operator()(JITDylib &JD, const SymbolNameSet &Names);
+  Expected<SymbolNameSet> operator()(JITDylib &JD, const SymbolNameSet &Names);
 
 private:
   sys::DynamicLibrary Dylib;

@@ -5,8 +5,7 @@
 // This test checks that we follow these rules and can force
 // dissasembly of zero blocks with the -z and --disassemble-zeroes options.
 
-// NODISASM:      Disassembly of section .text:
-// NODISASM-NEXT:  0000000000000000 main:
+// NODISASM:       0000000000000000 main:
 // NODISASM-NEXT:   0:  00 00               addb %al, (%rax)
 // NODISASM-NEXT:   2:  00 00               addb %al, (%rax)
 // NODISASM-NEXT:   4:  00 00               addb %al, (%rax)
@@ -23,8 +22,7 @@
 // Check that with -z we disassemble blocks of zeroes.
 // RUN: llvm-objdump -d -z %t | FileCheck %s --check-prefix=DISASM
 
-// DISASM: Disassembly of section .text:
-// DISASM-NEXT: 0000000000000000 main:
+// DISASM:      0000000000000000 main:
 // DISASM-NEXT:   0: 00 00              addb %al, (%rax)
 // DISASM-NEXT:   2: 00 00              addb %al, (%rax)
 // DISASM-NEXT:   4: 00 00              addb %al, (%rax)

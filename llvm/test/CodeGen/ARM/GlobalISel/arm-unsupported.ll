@@ -28,6 +28,12 @@ define i64 @test_i64(i64 %a, i64 %b) {
   ret i64 %res
 }
 
+define void @test_i64_arr([1 x i64] %a) {
+; CHECK: remark: {{.*}} unable to lower arguments: void ([1 x i64])*
+; CHECK-LABEL: warning: Instruction selection used fallback path for test_i64_arr
+  ret void
+}
+
 define i128 @test_i128(i128 %a, i128 %b) {
 ; CHECK: remark: {{.*}} unable to lower arguments: i128 (i128, i128)*
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_i128
@@ -75,6 +81,14 @@ define %mixed.struct @test_mixed_struct(%mixed.struct %x) {
 ; CHECK: remark: {{.*}} unable to lower arguments: %mixed.struct (%mixed.struct)*
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_mixed_struct
   ret %mixed.struct %x
+}
+
+%bad.element.type = type {i24, i24}
+
+define void @test_bad_element_struct(%bad.element.type %x) {
+; CHECK: remark: {{.*}} unable to lower arguments: void (%bad.element.type)*
+; CHECK-LABEL: warning: Instruction selection used fallback path for test_bad_element_struct
+  ret void
 }
 
 define void @test_vararg_definition(i32 %a, ...) {

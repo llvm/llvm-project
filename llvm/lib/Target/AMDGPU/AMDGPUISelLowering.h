@@ -323,6 +323,10 @@ public:
   }
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+
+  bool SelectFlatOffset(bool IsSigned, SelectionDAG &DAG, SDNode *N,
+                        SDValue Addr, SDValue &VAddr, SDValue &Offset,
+                        SDValue &SLC) const;
 };
 
 namespace AMDGPUISD {

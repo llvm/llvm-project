@@ -135,30 +135,69 @@ define void @store_float(float* %fptr, float %v) {
 }
 
 define void @store_double(double* %fptr, double %v) {
-; X86-LABEL: store_double:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%esi), %eax
-; X86-NEXT:    movl 4(%esi), %edx
-; X86-NEXT:    .p2align 4, 0x90
-; X86-NEXT:  .LBB2_1: # %atomicrmw.start
-; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    lock cmpxchg8b (%esi)
-; X86-NEXT:    jne .LBB2_1
-; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
-; X86-NEXT:    retl
+; X86-SSE1-LABEL: store_double:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    .cfi_offset %esi, -12
+; X86-SSE1-NEXT:    .cfi_offset %ebx, -8
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movl (%esi), %eax
+; X86-SSE1-NEXT:    movl 4(%esi), %edx
+; X86-SSE1-NEXT:    .p2align 4, 0x90
+; X86-SSE1-NEXT:  .LBB2_1: # %atomicrmw.start
+; X86-SSE1-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-SSE1-NEXT:    lock cmpxchg8b (%esi)
+; X86-SSE1-NEXT:    jne .LBB2_1
+; X86-SSE1-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    popl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE2-LABEL: store_double:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: store_double:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
+; X86-AVX-NEXT:    retl
+;
+; X86-NOSSE-LABEL: store_double:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    pushl %ebx
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-NOSSE-NEXT:    pushl %esi
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 12
+; X86-NOSSE-NEXT:    .cfi_offset %esi, -12
+; X86-NOSSE-NEXT:    .cfi_offset %ebx, -8
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    movl (%esi), %eax
+; X86-NOSSE-NEXT:    movl 4(%esi), %edx
+; X86-NOSSE-NEXT:    .p2align 4, 0x90
+; X86-NOSSE-NEXT:  .LBB2_1: # %atomicrmw.start
+; X86-NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NOSSE-NEXT:    lock cmpxchg8b (%esi)
+; X86-NOSSE-NEXT:    jne .LBB2_1
+; X86-NOSSE-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NOSSE-NEXT:    popl %esi
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-NOSSE-NEXT:    popl %ebx
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-NOSSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_double:
 ; X64-SSE:       # %bb.0:
@@ -641,30 +680,71 @@ define void @store_float_seq_cst(float* %fptr, float %v) {
 }
 
 define void @store_double_seq_cst(double* %fptr, double %v) {
-; X86-LABEL: store_double_seq_cst:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%esi), %eax
-; X86-NEXT:    movl 4(%esi), %edx
-; X86-NEXT:    .p2align 4, 0x90
-; X86-NEXT:  .LBB9_1: # %atomicrmw.start
-; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    lock cmpxchg8b (%esi)
-; X86-NEXT:    jne .LBB9_1
-; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
-; X86-NEXT:    retl
+; X86-SSE1-LABEL: store_double_seq_cst:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    .cfi_offset %esi, -12
+; X86-SSE1-NEXT:    .cfi_offset %ebx, -8
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movl (%esi), %eax
+; X86-SSE1-NEXT:    movl 4(%esi), %edx
+; X86-SSE1-NEXT:    .p2align 4, 0x90
+; X86-SSE1-NEXT:  .LBB9_1: # %atomicrmw.start
+; X86-SSE1-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-SSE1-NEXT:    lock cmpxchg8b (%esi)
+; X86-SSE1-NEXT:    jne .LBB9_1
+; X86-SSE1-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    popl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE2-LABEL: store_double_seq_cst:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: store_double_seq_cst:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
+; X86-AVX-NEXT:    mfence
+; X86-AVX-NEXT:    retl
+;
+; X86-NOSSE-LABEL: store_double_seq_cst:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    pushl %ebx
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-NOSSE-NEXT:    pushl %esi
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 12
+; X86-NOSSE-NEXT:    .cfi_offset %esi, -12
+; X86-NOSSE-NEXT:    .cfi_offset %ebx, -8
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    movl (%esi), %eax
+; X86-NOSSE-NEXT:    movl 4(%esi), %edx
+; X86-NOSSE-NEXT:    .p2align 4, 0x90
+; X86-NOSSE-NEXT:  .LBB9_1: # %atomicrmw.start
+; X86-NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NOSSE-NEXT:    lock cmpxchg8b (%esi)
+; X86-NOSSE-NEXT:    jne .LBB9_1
+; X86-NOSSE-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NOSSE-NEXT:    popl %esi
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-NOSSE-NEXT:    popl %ebx
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-NOSSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_double_seq_cst:
 ; X64-SSE:       # %bb.0:

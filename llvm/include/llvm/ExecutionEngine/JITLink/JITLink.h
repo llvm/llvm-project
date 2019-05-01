@@ -77,8 +77,6 @@ public:
 
   using SegmentsRequestMap = DenseMap<unsigned, SegmentRequest>;
 
-  using FinalizeContinuation = std::function<void(Error)>;
-
   /// Represents an allocation created by the memory manager.
   ///
   /// An allocation object is responsible for allocating and owning jit-linker
@@ -87,6 +85,9 @@ public:
   ///
   class Allocation {
   public:
+
+    using FinalizeContinuation = std::function<void(Error)>;
+
     virtual ~Allocation();
 
     /// Should return the address of linker working memory for the segment with

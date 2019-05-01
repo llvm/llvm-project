@@ -220,3 +220,27 @@ endmacro()
 macro(split_list listname)
   string(REPLACE ";" " " ${listname} "${${listname}}")
 endmacro()
+
+# For each specified flag, add that link flag to the provided target.
+# The flags are added with the given visibility, i.e. PUBLIC|PRIVATE|INTERFACE.
+function(target_add_link_flags_if_supported target visibility)
+  foreach(flag ${ARGN})
+    mangle_name("${flag}" flagname)
+    check_cxx_compiler_flag("${flag}" "LIBCXX_SUPPORTS_${flagname}_FLAG")
+    if (LIBCXX_SUPPORTS_${flagname}_FLAG)
+      target_link_libraries(${target} ${visibility} ${flag})
+    endif()
+  endforeach()
+endfunction()
+
+# For each specified flag, add that compile flag to the provided target.
+# The flags are added with the given visibility, i.e. PUBLIC|PRIVATE|INTERFACE.
+function(target_add_compile_flags_if_supported target visibility)
+  foreach(flag ${ARGN})
+    mangle_name("${flag}" flagname)
+    check_cxx_compiler_flag("${flag}" "LIBCXX_SUPPORTS_${flagname}_FLAG")
+    if (LIBCXX_SUPPORTS_${flagname}_FLAG)
+      target_compile_options(${target} ${visibility} ${flag})
+    endif()
+  endforeach()
+endfunction()

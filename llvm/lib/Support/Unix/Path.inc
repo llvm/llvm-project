@@ -185,8 +185,21 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||   \
     defined(__minix) || defined(__DragonFly__) ||                              \
     defined(__FreeBSD_kernel__) || defined(_AIX)
+  StringRef curproc("/proc/curproc/file");
   char exe_path[PATH_MAX];
-
+  // /proc is not mounted by default under FreeBSD, but gives more accurate
+  // information than argv[0] when it is.
+  if (sys::fs::exists(curproc)) {
+    ssize_t len = readlink(curproc.str().c_str(), exe_path, sizeof(exe_path));
+    if (len > 0) {
+      // Null terminate the string for realpath. readlink never null
+      // terminates its output.
+      len = std::min(len, ssize_t(sizeof(exe_path) - 1));
+      exe_path[len] = '\0';
+      return exe_path;
+    }
+  }
+  // If we don't have procfs mounted, fall back to argv[0]
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
 #elif defined(__linux__) || defined(__CYGWIN__)

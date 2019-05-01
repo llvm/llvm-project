@@ -620,15 +620,11 @@ EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
-  if (ExtraCode && *ExtraCode == 'n') {
-    if (!MI->getOperand(OpNo).isImm())
-      return true;
-    OS << -int64_t(MI->getOperand(OpNo).getImm());
-  } else {
-    SystemZMCInstLower Lower(MF->getContext(), *this);
-    MCOperand MO(Lower.lowerOperand(MI->getOperand(OpNo)));
-    SystemZInstPrinter::printOperand(MO, MAI, OS);
-  }
+  if (ExtraCode)
+    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  SystemZMCInstLower Lower(MF->getContext(), *this);
+  MCOperand MO(Lower.lowerOperand(MI->getOperand(OpNo)));
+  SystemZInstPrinter::printOperand(MO, MAI, OS);
   return false;
 }
 

@@ -125,26 +125,38 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   /// Tunable parameters that control the analysis.
   const InlineParams &Params;
 
+  /// Upper bound for the inlining cost. Bonuses are being applied to account
+  /// for speculative "expected profit" of the inlining decision.
   int Threshold;
-  int Cost;
+
+  /// Inlining cost measured in abstract units, accounts for all the
+  /// instructions expected to be executed for a given function invocation.
+  /// Instructions that are statically proven to be dead based on call-site
+  /// arguments are not counted here.
+  int Cost = 0;
+
   bool ComputeFullInlineCost;
 
-  bool IsCallerRecursive;
-  bool IsRecursiveCall;
-  bool ExposesReturnsTwice;
-  bool HasDynamicAlloca;
-  bool ContainsNoDuplicateCall;
-  bool HasReturn;
-  bool HasIndirectBr;
-  bool HasUninlineableIntrinsic;
-  bool InitsVargArgs;
+  bool IsCallerRecursive = false;
+  bool IsRecursiveCall = false;
+  bool ExposesReturnsTwice = false;
+  bool HasDynamicAlloca = false;
+  bool ContainsNoDuplicateCall = false;
+  bool HasReturn = false;
+  bool HasIndirectBr = false;
+  bool HasUninlineableIntrinsic = false;
+  bool InitsVargArgs = false;
 
   /// Number of bytes allocated statically by the callee.
-  uint64_t AllocatedSize;
-  unsigned NumInstructions, NumVectorInstructions;
-  int VectorBonus, TenPercentVectorBonus;
-  // Bonus to be applied when the callee has only one reachable basic block.
-  int SingleBBBonus;
+  uint64_t AllocatedSize = 0;
+  unsigned NumInstructions = 0;
+  unsigned NumVectorInstructions = 0;
+
+  /// Bonus to be applied when percentage of vector instructions in callee is
+  /// high (see more details in updateThreshold).
+  int VectorBonus = 0;
+  /// Bonus to be applied when the callee has only one reachable basic block.
+  int SingleBBBonus = 0;
 
   /// While we walk the potentially-inlined instructions, we build up and
   /// maintain a mapping of simplified values specific to this callsite. The
@@ -179,7 +191,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   /// loads.
   bool EnableLoadElimination;
   SmallPtrSet<Value *, 16> LoadAddrSet;
-  int LoadEliminationCost;
+  int LoadEliminationCost = 0;
 
   // Custom simplification helper routines.
   bool isAllocaDerivedArg(Value *V);
@@ -230,6 +242,12 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   InlineResult analyzeBlock(BasicBlock *BB,
                             SmallPtrSetImpl<const Value *> &EphValues);
 
+  /// Handle a capped 'int' increment for Cost.
+  void addCost(int64_t Inc, int64_t UpperBound = INT_MAX) {
+    assert(UpperBound > 0 && UpperBound <= INT_MAX && "invalid upper bound");
+    Cost = (int)std::min(UpperBound, Cost + Inc);
+  }
+
   // Disable several entry points to the visitor so we don't accidentally use
   // them by declaring but not defining them here.
   void visit(Module *);
@@ -278,18 +296,9 @@ public:
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()), ORE(ORE),
         CandidateCall(Call), Params(Params), Threshold(Params.DefaultThreshold),
-        Cost(0), ComputeFullInlineCost(OptComputeFullInlineCost ||
-                                       Params.ComputeFullInlineCost || ORE),
-        IsCallerRecursive(false), IsRecursiveCall(false),
-        ExposesReturnsTwice(false), HasDynamicAlloca(false),
-        ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
-        HasUninlineableIntrinsic(false), InitsVargArgs(false), AllocatedSize(0),
-        NumInstructions(0), NumVectorInstructions(0), VectorBonus(0),
-        SingleBBBonus(0), EnableLoadElimination(true), LoadEliminationCost(0),
-        NumConstantArgs(0), NumConstantOffsetPtrArgs(0), NumAllocaArgs(0),
-        NumConstantPtrCmps(0), NumConstantPtrDiffs(0),
-        NumInstructionsSimplified(0), SROACostSavings(0),
-        SROACostSavingsLost(0) {}
+        ComputeFullInlineCost(OptComputeFullInlineCost ||
+                              Params.ComputeFullInlineCost || ORE),
+        EnableLoadElimination(true) {}
 
   InlineResult analyzeCall(CallBase &Call);
 
@@ -298,14 +307,14 @@ public:
 
   // Keep a bunch of stats about the cost savings found so we can print them
   // out when debugging.
-  unsigned NumConstantArgs;
-  unsigned NumConstantOffsetPtrArgs;
-  unsigned NumAllocaArgs;
-  unsigned NumConstantPtrCmps;
-  unsigned NumConstantPtrDiffs;
-  unsigned NumInstructionsSimplified;
-  unsigned SROACostSavings;
-  unsigned SROACostSavingsLost;
+  unsigned NumConstantArgs = 0;
+  unsigned NumConstantOffsetPtrArgs = 0;
+  unsigned NumAllocaArgs = 0;
+  unsigned NumConstantPtrCmps = 0;
+  unsigned NumConstantPtrDiffs = 0;
+  unsigned NumInstructionsSimplified = 0;
+  unsigned SROACostSavings = 0;
+  unsigned SROACostSavingsLost = 0;
 
   void dump();
 };
@@ -340,7 +349,7 @@ bool CallAnalyzer::lookupSROAArgAndCost(
 void CallAnalyzer::disableSROA(DenseMap<Value *, int>::iterator CostIt) {
   // If we're no longer able to perform SROA we need to undo its cost savings
   // and prevent subsequent analysis.
-  Cost += CostIt->second;
+  addCost(CostIt->second);
   SROACostSavings -= CostIt->second;
   SROACostSavingsLost += CostIt->second;
   SROAArgCosts.erase(CostIt);
@@ -364,7 +373,7 @@ void CallAnalyzer::accumulateSROACost(DenseMap<Value *, int>::iterator CostIt,
 
 void CallAnalyzer::disableLoadElimination() {
   if (EnableLoadElimination) {
-    Cost += LoadEliminationCost;
+    addCost(LoadEliminationCost);
     LoadEliminationCost = 0;
     EnableLoadElimination = false;
   }
@@ -719,7 +728,7 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
   case Instruction::FPToUI:
   case Instruction::FPToSI:
     if (TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive)
-      Cost += InlineConstants::CallPenalty;
+      addCost(InlineConstants::CallPenalty);
     break;
   default:
     break;
@@ -1089,7 +1098,7 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   // as such.
   if (I.getType()->isFloatingPointTy() &&
       TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive)
-    Cost += InlineConstants::CallPenalty;
+    addCost(InlineConstants::CallPenalty);
 
   return false;
 }
@@ -1226,7 +1235,7 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
 
       case Intrinsic::load_relative:
         // This is normally lowered to 4 LLVM instructions.
-        Cost += 3 * InlineConstants::InstrCost;
+        addCost(3 * InlineConstants::InstrCost);
         return false;
 
       case Intrinsic::memset:
@@ -1255,12 +1264,12 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     if (TTI.isLoweredToCall(F)) {
       // We account for the average 1 instruction per call argument setup
       // here.
-      Cost += Call.arg_size() * InlineConstants::InstrCost;
+      addCost(Call.arg_size() * InlineConstants::InstrCost);
 
       // Everything other than inline ASM will also have a significant cost
       // merely from making the call.
       if (!isa<InlineAsm>(Call.getCalledValue()))
-        Cost += InlineConstants::CallPenalty;
+        addCost(InlineConstants::CallPenalty);
     }
 
     if (!Call.onlyReadsMemory())
@@ -1274,7 +1283,7 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
 
   // First, pay the price of the argument setup. We account for the average
   // 1 instruction per call argument setup here.
-  Cost += Call.arg_size() * InlineConstants::InstrCost;
+  addCost(Call.arg_size() * InlineConstants::InstrCost);
 
   // Next, check if this happens to be an indirect function call to a known
   // function in this inline context. If not, we've done all we can.
@@ -1436,7 +1445,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
                (int64_t)SI.getNumCases() * InlineConstants::InstrCost + Cost);
 
   if (CostLowerBound > Threshold && !ComputeFullInlineCost) {
-    Cost = CostLowerBound;
+    addCost((int64_t)SI.getNumCases() * InlineConstants::InstrCost);
     return false;
   }
 
@@ -1450,7 +1459,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
     int64_t JTCost = (int64_t)JumpTableSize * InlineConstants::InstrCost +
                      4 * InlineConstants::InstrCost;
 
-    Cost = std::min((int64_t)CostUpperBound, JTCost + Cost);
+    addCost(JTCost, (int64_t)CostUpperBound);
     return false;
   }
 
@@ -1471,7 +1480,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   //   n + n / 2 - 1 = n * 3 / 2 - 1
   if (NumCaseCluster <= 3) {
     // Suppose a comparison includes one compare and one conditional branch.
-    Cost += NumCaseCluster * 2 * InlineConstants::InstrCost;
+    addCost(NumCaseCluster * 2 * InlineConstants::InstrCost);
     return false;
   }
 
@@ -1479,7 +1488,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   int64_t SwitchCost =
       ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
 
-  Cost = std::min((int64_t)CostUpperBound, SwitchCost + Cost);
+  addCost(SwitchCost, (int64_t)CostUpperBound);
   return false;
 }
 
@@ -1572,7 +1581,7 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     if (Base::visit(&*I))
       ++NumInstructionsSimplified;
     else
-      Cost += InlineConstants::InstrCost;
+      addCost(InlineConstants::InstrCost);
 
     using namespace ore;
     // If the visit this instruction detected an uninlinable pattern, abort.
@@ -1617,7 +1626,7 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
       return IR;
     }
 
-    // Check if we've past the maximum possible threshold so we don't spin in
+    // Check if we've passed the maximum possible threshold so we don't spin in
     // huge basic blocks that will never inline.
     if (Cost >= Threshold && !ComputeFullInlineCost)
       return false;
@@ -1743,7 +1752,7 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
 
   // Give out bonuses for the callsite, as the instructions setting them up
   // will be gone after inlining.
-  Cost -= getCallsiteCost(Call, DL);
+  addCost(-getCallsiteCost(Call, DL));
 
   // If this function uses the coldcc calling convention, prefer not to inline
   // it.
@@ -1904,7 +1913,7 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
         continue;
       NumLoops++;
     }
-    Cost += NumLoops * InlineConstants::CallPenalty;
+    addCost(NumLoops * InlineConstants::CallPenalty);
   }
 
   // We applied the maximum possible vector bonus at the beginning. Now,

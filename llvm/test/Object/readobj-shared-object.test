@@ -1,14 +1,14 @@
-RUN: llvm-readobj -s -t -dt -dynamic-table -needed-libs \
+RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
 RUN:              %p/Inputs/shared-object-test.elf-i386 \
 RUN:         | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -s -t -dt -dynamic-table -needed-libs \
+RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
 RUN:              %p/Inputs/shared-object-test.elf-i386 \
 RUN:         | FileCheck %s -check-prefix ELF32
 
-RUN: llvm-readobj -s -t -dt -dynamic-table -needed-libs \
+RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
 RUN:            %p/Inputs/shared-object-test.elf-x86-64 \
 RUN:         | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -s -t -dt -dynamic-table -needed-libs \
+RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
 RUN:            %p/Inputs/shared-object-test.elf-x86-64 \
 RUN:         | FileCheck %s -check-prefix ELF64
 

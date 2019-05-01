@@ -485,6 +485,8 @@ def TautologicalInRangeCompare : DiagGroup<"tautological-constant-in-range-compa
                                            [TautologicalTypeLimitCompare,
                                             TautologicalUnsignedZeroCompare,
                                             TautologicalUnsignedEnumZeroCompare]>;
+// For compatibility with GCC; -Wtype-limits = -Wtautological-constant-in-range-compare
+def TypeLimits : DiagGroup<"type-limits", [TautologicalInRangeCompare]>;
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
 def TautologicalConstantCompare : DiagGroup<"tautological-constant-compare",
                                             [TautologicalOutOfRangeCompare]>;

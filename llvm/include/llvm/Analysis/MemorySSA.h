@@ -936,6 +936,9 @@ public:
     MemorySSA &getMSSA() { return *MSSA.get(); }
 
     std::unique_ptr<MemorySSA> MSSA;
+
+    bool invalidate(Function &F, const PreservedAnalyses &PA,
+                    FunctionAnalysisManager::Invalidator &Inv);
   };
 
   Result run(Function &F, FunctionAnalysisManager &AM);

@@ -4,7 +4,7 @@
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
-// RUN: llvm-readobj -dyn-relocations %t | FileCheck %s
+// RUN: llvm-readobj --dyn-relocations %t | FileCheck %s
 // RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=DIS %s
 // RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
 
@@ -12,7 +12,7 @@
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
-// RUN: llvm-readobj -dyn-relocations %t | FileCheck %s
+// RUN: llvm-readobj --dyn-relocations %t | FileCheck %s
 // RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=DIS %s
 // RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
 

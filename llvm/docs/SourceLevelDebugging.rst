@@ -1932,7 +1932,7 @@ embedded in ``llvm-readobj``.
 * Testing MSVC's output::
 
     $ cl -c -Z7 foo.cpp # Use /Z7 to keep types in the object file
-    $ llvm-readobj -codeview foo.obj
+    $ llvm-readobj --codeview foo.obj
 
 * Getting LLVM IR debug info out of Clang::
 
@@ -1943,7 +1943,7 @@ embedded in ``llvm-readobj``.
 * Generate and dump CodeView from LLVM IR metadata::
 
     $ llc foo.ll -filetype=obj -o foo.obj
-    $ llvm-readobj -codeview foo.obj > foo.txt
+    $ llvm-readobj --codeview foo.obj > foo.txt
 
   Use this pattern in lit test cases and FileCheck the output of llvm-readobj
 

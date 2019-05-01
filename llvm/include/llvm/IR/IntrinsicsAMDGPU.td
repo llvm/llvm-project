@@ -1431,6 +1431,14 @@ def int_amdgcn_ds_bpermute :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
 //===----------------------------------------------------------------------===//
+// GFX10 Intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_amdgcn_s_get_waveid_in_workgroup :
+  GCCBuiltin<"__builtin_amdgcn_s_get_waveid_in_workgroup">,
+  Intrinsic<[llvm_i32_ty], [], [IntrReadMem]>;
+
+//===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
 

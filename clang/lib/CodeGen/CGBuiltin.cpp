@@ -2027,8 +2027,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     const Expr *Arg = E->getArg(0);
     QualType ArgType = Arg->getType();
-    if (!hasScalarEvaluationKind(ArgType) || ArgType->isFunctionType())
-      // We can only reason about scalar types.
+    // FIXME: The allowance for Obj-C pointers and block pointers is historical
+    // and likely a mistake.
+    if (!ArgType->isIntegralOrEnumerationType() && !ArgType->isFloatingType() &&
+        !ArgType->isObjCObjectPointerType() && !ArgType->isBlockPointerType())
+      // Per the GCC documentation, only numeric constants are recognized after
+      // inlining.
+      return RValue::get(ConstantInt::get(ResultType, 0));
+
+    if (Arg->HasSideEffects(getContext()))
+      // The argument is unevaluated, so be conservative if it might have
+      // side-effects.
       return RValue::get(ConstantInt::get(ResultType, 0));
 
     Value *ArgValue = EmitScalarExpr(Arg);
@@ -7075,6 +7084,84 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Arg1 = Builder.CreateZExtOrBitCast(Arg1, DataTy);
 
     return Builder.CreateCall(F, {Arg0, Arg1});
+  }
+
+  // Memory Tagging Extensions (MTE) Intrinsics
+  Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;
+  switch (BuiltinID) {
+  case AArch64::BI__builtin_arm_irg:
+    MTEIntrinsicID = Intrinsic::aarch64_irg; break;
+  case  AArch64::BI__builtin_arm_addg:
+    MTEIntrinsicID = Intrinsic::aarch64_addg; break;
+  case  AArch64::BI__builtin_arm_gmi:
+    MTEIntrinsicID = Intrinsic::aarch64_gmi; break;
+  case  AArch64::BI__builtin_arm_ldg:
+    MTEIntrinsicID = Intrinsic::aarch64_ldg; break;
+  case AArch64::BI__builtin_arm_stg:
+    MTEIntrinsicID = Intrinsic::aarch64_stg; break;
+  case AArch64::BI__builtin_arm_subp:
+    MTEIntrinsicID = Intrinsic::aarch64_subp; break;
+  }
+
+  if (MTEIntrinsicID != Intrinsic::not_intrinsic) {
+    llvm::Type *T = ConvertType(E->getType());
+
+    if (MTEIntrinsicID == Intrinsic::aarch64_irg) {
+      Value *Pointer = EmitScalarExpr(E->getArg(0));
+      Value *Mask = EmitScalarExpr(E->getArg(1));
+
+      Pointer = Builder.CreatePointerCast(Pointer, Int8PtrTy);
+      Mask = Builder.CreateZExt(Mask, Int64Ty);
+      Value *RV = Builder.CreateCall(
+                       CGM.getIntrinsic(MTEIntrinsicID), {Pointer, Mask});
+       return Builder.CreatePointerCast(RV, T);
+    }
+    if (MTEIntrinsicID == Intrinsic::aarch64_addg) {
+      Value *Pointer = EmitScalarExpr(E->getArg(0));
+      Value *TagOffset = EmitScalarExpr(E->getArg(1));
+
+      Pointer = Builder.CreatePointerCast(Pointer, Int8PtrTy);
+      TagOffset = Builder.CreateZExt(TagOffset, Int64Ty);
+      Value *RV = Builder.CreateCall(
+                       CGM.getIntrinsic(MTEIntrinsicID), {Pointer, TagOffset});
+      return Builder.CreatePointerCast(RV, T);
+    }
+    if (MTEIntrinsicID == Intrinsic::aarch64_gmi) {
+      Value *Pointer = EmitScalarExpr(E->getArg(0));
+      Value *ExcludedMask = EmitScalarExpr(E->getArg(1));
+
+      ExcludedMask = Builder.CreateZExt(ExcludedMask, Int64Ty);
+      Pointer = Builder.CreatePointerCast(Pointer, Int8PtrTy);
+      return Builder.CreateCall(
+                       CGM.getIntrinsic(MTEIntrinsicID), {Pointer, ExcludedMask});
+    }
+    // Although it is possible to supply a different return
+    // address (first arg) to this intrinsic, for now we set
+    // return address same as input address.
+    if (MTEIntrinsicID == Intrinsic::aarch64_ldg) {
+      Value *TagAddress = EmitScalarExpr(E->getArg(0));
+      TagAddress = Builder.CreatePointerCast(TagAddress, Int8PtrTy);
+      Value *RV = Builder.CreateCall(
+                    CGM.getIntrinsic(MTEIntrinsicID), {TagAddress, TagAddress});
+      return Builder.CreatePointerCast(RV, T);
+    }
+    // Although it is possible to supply a different tag (to set)
+    // to this intrinsic (as first arg), for now we supply
+    // the tag that is in input address arg (common use case).
+    if (MTEIntrinsicID == Intrinsic::aarch64_stg) {
+        Value *TagAddress = EmitScalarExpr(E->getArg(0));
+        TagAddress = Builder.CreatePointerCast(TagAddress, Int8PtrTy);
+        return Builder.CreateCall(
+                 CGM.getIntrinsic(MTEIntrinsicID), {TagAddress, TagAddress});
+    }
+    if (MTEIntrinsicID == Intrinsic::aarch64_subp) {
+      Value *PointerA = EmitScalarExpr(E->getArg(0));
+      Value *PointerB = EmitScalarExpr(E->getArg(1));
+      PointerA = Builder.CreatePointerCast(PointerA, Int8PtrTy);
+      PointerB = Builder.CreatePointerCast(PointerB, Int8PtrTy);
+      return Builder.CreateCall(
+                       CGM.getIntrinsic(MTEIntrinsicID), {PointerA, PointerB});
+    }
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_rsr ||

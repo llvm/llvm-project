@@ -139,6 +139,7 @@ public:
     ImmTyInstOffset,
     ImmTyOffset0,
     ImmTyOffset1,
+    ImmTyDLC,
     ImmTyGLC,
     ImmTySLC,
     ImmTyTFE,
@@ -314,6 +315,7 @@ public:
   bool isOffsetS13() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isInt<13>(getImm()); }
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isLDS() const { return isImmTy(ImmTyLDS); }
+  bool isDLC() const { return isImmTy(ImmTyDLC); }
   bool isGLC() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
@@ -676,6 +678,7 @@ public:
     case ImmTyInstOffset: OS << "InstOffset"; break;
     case ImmTyOffset0: OS << "Offset0"; break;
     case ImmTyOffset1: OS << "Offset1"; break;
+    case ImmTyDLC: OS << "DLC"; break;
     case ImmTyGLC: OS << "GLC"; break;
     case ImmTySLC: OS << "SLC"; break;
     case ImmTyTFE: OS << "TFE"; break;
@@ -1184,6 +1187,7 @@ public:
   void cvtMubufLds(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false, true); }
   void cvtMtbuf(MCInst &Inst, const OperandVector &Operands);
 
+  AMDGPUOperand::Ptr defaultDLC() const;
   AMDGPUOperand::Ptr defaultGLC() const;
   AMDGPUOperand::Ptr defaultSLC() const;
 
@@ -2303,13 +2307,26 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     }
   }
 
-  if ((TSFlags & SIInstrFlags::FLAT) && !hasFlatOffsets()) {
+  if (TSFlags & SIInstrFlags::FLAT) {
     // FIXME: Produces error without correct column reported.
-    auto OpNum =
-        AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::offset);
+    auto Opcode = Inst.getOpcode();
+    auto OpNum = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::offset);
+
     const auto &Op = Inst.getOperand(OpNum);
-    if (Op.getImm() != 0)
+    if (!hasFlatOffsets() && Op.getImm() != 0)
       return Match_InvalidOperand;
+
+    // GFX10: Address offset is 12-bit signed byte offset. Must be positive for
+    // FLAT segment. For FLAT segment MSB is ignored and forced to zero.
+    if (isGFX10()) {
+      if (TSFlags & SIInstrFlags::IsNonFlatSeg) {
+        if (!isInt<12>(Op.getImm()))
+          return Match_InvalidOperand;
+      } else {
+        if (!isUInt<11>(Op.getImm()))
+          return Match_InvalidOperand;
+      }
+    }
   }
 
   return Match_Success;
@@ -2609,61 +2626,123 @@ static bool IsRevOpcode(const unsigned Opcode)
   switch (Opcode) {
   case AMDGPU::V_SUBREV_F32_e32:
   case AMDGPU::V_SUBREV_F32_e64:
-  case AMDGPU::V_SUBREV_F32_e32_si:
+  case AMDGPU::V_SUBREV_F32_e32_gfx10:
+  case AMDGPU::V_SUBREV_F32_e32_gfx6_gfx7:
   case AMDGPU::V_SUBREV_F32_e32_vi:
-  case AMDGPU::V_SUBREV_F32_e64_si:
+  case AMDGPU::V_SUBREV_F32_e64_gfx10:
+  case AMDGPU::V_SUBREV_F32_e64_gfx6_gfx7:
   case AMDGPU::V_SUBREV_F32_e64_vi:
+
   case AMDGPU::V_SUBREV_I32_e32:
   case AMDGPU::V_SUBREV_I32_e64:
-  case AMDGPU::V_SUBREV_I32_e32_si:
-  case AMDGPU::V_SUBREV_I32_e64_si:
+  case AMDGPU::V_SUBREV_I32_e32_gfx6_gfx7:
+  case AMDGPU::V_SUBREV_I32_e64_gfx6_gfx7:
+
   case AMDGPU::V_SUBBREV_U32_e32:
   case AMDGPU::V_SUBBREV_U32_e64:
-  case AMDGPU::V_SUBBREV_U32_e32_si:
+  case AMDGPU::V_SUBBREV_U32_e32_gfx6_gfx7:
   case AMDGPU::V_SUBBREV_U32_e32_vi:
-  case AMDGPU::V_SUBBREV_U32_e64_si:
+  case AMDGPU::V_SUBBREV_U32_e64_gfx6_gfx7:
   case AMDGPU::V_SUBBREV_U32_e64_vi:
+
   case AMDGPU::V_SUBREV_U32_e32:
   case AMDGPU::V_SUBREV_U32_e64:
   case AMDGPU::V_SUBREV_U32_e32_gfx9:
   case AMDGPU::V_SUBREV_U32_e32_vi:
   case AMDGPU::V_SUBREV_U32_e64_gfx9:
   case AMDGPU::V_SUBREV_U32_e64_vi:
+
   case AMDGPU::V_SUBREV_F16_e32:
   case AMDGPU::V_SUBREV_F16_e64:
+  case AMDGPU::V_SUBREV_F16_e32_gfx10:
   case AMDGPU::V_SUBREV_F16_e32_vi:
+  case AMDGPU::V_SUBREV_F16_e64_gfx10:
   case AMDGPU::V_SUBREV_F16_e64_vi:
+
   case AMDGPU::V_SUBREV_U16_e32:
   case AMDGPU::V_SUBREV_U16_e64:
   case AMDGPU::V_SUBREV_U16_e32_vi:
   case AMDGPU::V_SUBREV_U16_e64_vi:
+
   case AMDGPU::V_SUBREV_CO_U32_e32_gfx9:
+  case AMDGPU::V_SUBREV_CO_U32_e64_gfx10:
   case AMDGPU::V_SUBREV_CO_U32_e64_gfx9:
+
   case AMDGPU::V_SUBBREV_CO_U32_e32_gfx9:
   case AMDGPU::V_SUBBREV_CO_U32_e64_gfx9:
-  case AMDGPU::V_LSHLREV_B32_e32_si:
-  case AMDGPU::V_LSHLREV_B32_e64_si:
-  case AMDGPU::V_LSHLREV_B16_e32_vi:
-  case AMDGPU::V_LSHLREV_B16_e64_vi:
-  case AMDGPU::V_LSHLREV_B32_e32_vi:
-  case AMDGPU::V_LSHLREV_B32_e64_vi:
-  case AMDGPU::V_LSHLREV_B64_vi:
-  case AMDGPU::V_LSHRREV_B32_e32_si:
-  case AMDGPU::V_LSHRREV_B32_e64_si:
-  case AMDGPU::V_LSHRREV_B16_e32_vi:
-  case AMDGPU::V_LSHRREV_B16_e64_vi:
+
+  case AMDGPU::V_SUBREV_NC_U32_e32_gfx10:
+  case AMDGPU::V_SUBREV_NC_U32_e64_gfx10:
+
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx10:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_gfx10:
+
+  case AMDGPU::V_LSHRREV_B32_e32:
+  case AMDGPU::V_LSHRREV_B32_e64:
+  case AMDGPU::V_LSHRREV_B32_e32_gfx6_gfx7:
+  case AMDGPU::V_LSHRREV_B32_e64_gfx6_gfx7:
   case AMDGPU::V_LSHRREV_B32_e32_vi:
   case AMDGPU::V_LSHRREV_B32_e64_vi:
-  case AMDGPU::V_LSHRREV_B64_vi:
-  case AMDGPU::V_ASHRREV_I32_e64_si:
-  case AMDGPU::V_ASHRREV_I32_e32_si:
+  case AMDGPU::V_LSHRREV_B32_e32_gfx10:
+  case AMDGPU::V_LSHRREV_B32_e64_gfx10:
+
+  case AMDGPU::V_ASHRREV_I32_e32:
+  case AMDGPU::V_ASHRREV_I32_e64:
+  case AMDGPU::V_ASHRREV_I32_e32_gfx10:
+  case AMDGPU::V_ASHRREV_I32_e32_gfx6_gfx7:
+  case AMDGPU::V_ASHRREV_I32_e32_vi:
+  case AMDGPU::V_ASHRREV_I32_e64_gfx10:
+  case AMDGPU::V_ASHRREV_I32_e64_gfx6_gfx7:
+  case AMDGPU::V_ASHRREV_I32_e64_vi:
+
+  case AMDGPU::V_LSHLREV_B32_e32:
+  case AMDGPU::V_LSHLREV_B32_e64:
+  case AMDGPU::V_LSHLREV_B32_e32_gfx10:
+  case AMDGPU::V_LSHLREV_B32_e32_gfx6_gfx7:
+  case AMDGPU::V_LSHLREV_B32_e32_vi:
+  case AMDGPU::V_LSHLREV_B32_e64_gfx10:
+  case AMDGPU::V_LSHLREV_B32_e64_gfx6_gfx7:
+  case AMDGPU::V_LSHLREV_B32_e64_vi:
+
+  case AMDGPU::V_LSHLREV_B16_e32:
+  case AMDGPU::V_LSHLREV_B16_e64:
+  case AMDGPU::V_LSHLREV_B16_e32_vi:
+  case AMDGPU::V_LSHLREV_B16_e64_vi:
+  case AMDGPU::V_LSHLREV_B16_gfx10:
+
+  case AMDGPU::V_LSHRREV_B16_e32:
+  case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B16_e32_vi:
+  case AMDGPU::V_LSHRREV_B16_e64_vi:
+  case AMDGPU::V_LSHRREV_B16_gfx10:
+
+  case AMDGPU::V_ASHRREV_I16_e32:
+  case AMDGPU::V_ASHRREV_I16_e64:
   case AMDGPU::V_ASHRREV_I16_e32_vi:
   case AMDGPU::V_ASHRREV_I16_e64_vi:
-  case AMDGPU::V_ASHRREV_I32_e32_vi:
-  case AMDGPU::V_ASHRREV_I32_e64_vi:
+  case AMDGPU::V_ASHRREV_I16_gfx10:
+
+  case AMDGPU::V_LSHLREV_B64:
+  case AMDGPU::V_LSHLREV_B64_gfx10:
+  case AMDGPU::V_LSHLREV_B64_vi:
+
+  case AMDGPU::V_LSHRREV_B64:
+  case AMDGPU::V_LSHRREV_B64_gfx10:
+  case AMDGPU::V_LSHRREV_B64_vi:
+
+  case AMDGPU::V_ASHRREV_I64:
+  case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_vi:
+
+  case AMDGPU::V_PK_LSHLREV_B16:
+  case AMDGPU::V_PK_LSHLREV_B16_gfx10:
   case AMDGPU::V_PK_LSHLREV_B16_vi:
+
+  case AMDGPU::V_PK_LSHRREV_B16:
+  case AMDGPU::V_PK_LSHRREV_B16_gfx10:
   case AMDGPU::V_PK_LSHRREV_B16_vi:
+  case AMDGPU::V_PK_ASHRREV_I16:
+  case AMDGPU::V_PK_ASHRREV_I16_gfx10:
   case AMDGPU::V_PK_ASHRREV_I16_vi:
     return true;
   default:
@@ -3824,6 +3903,9 @@ AMDGPUAsmParser::parseNamedBit(const char *Name, OperandVector &Operands,
         return MatchOperand_NoMatch;
     }
   }
+
+  if (!isGFX10() && ImmTy == AMDGPUOperand::ImmTyDLC)
+    return MatchOperand_ParseFail;
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, Bit, S, ImmTy));
   return MatchOperand_Success;
@@ -5039,6 +5121,10 @@ AMDGPUAsmParser::parseSOppBrTarget(OperandVector &Operands) {
 // mubuf
 //===----------------------------------------------------------------------===//
 
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDLC() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDLC);
+}
+
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultGLC() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyGLC);
 }
@@ -5115,6 +5201,9 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   if (!IsLdsOpcode) { // tfe is not legal with lds opcodes
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   }
+
+  if (isGFX10())
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDLC);
 }
 
 void AMDGPUAsmParser::cvtMtbuf(MCInst &Inst, const OperandVector &Operands) {
@@ -5152,6 +5241,9 @@ void AMDGPUAsmParser::cvtMtbuf(MCInst &Inst, const OperandVector &Operands) {
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
+
+  if (isGFX10())
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDLC);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5187,8 +5279,12 @@ void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
+  bool IsGFX10 = isGFX10();
+
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDMask);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyUNorm);
+  if (IsGFX10)
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyR128A16);
@@ -5291,6 +5387,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"lds",     AMDGPUOperand::ImmTyLDS, true, nullptr},
   {"offset",  AMDGPUOperand::ImmTyOffset, false, nullptr},
   {"inst_offset", AMDGPUOperand::ImmTyInstOffset, false, nullptr},
+  {"dlc",     AMDGPUOperand::ImmTyDLC, true, nullptr},
   {"dfmt",    AMDGPUOperand::ImmTyFORMAT, false, nullptr},
   {"glc",     AMDGPUOperand::ImmTyGLC, true, nullptr},
   {"slc",     AMDGPUOperand::ImmTySLC, true, nullptr},
@@ -5519,14 +5616,17 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
   }
 
-  // Special case v_mac_{f16, f32} and v_fmac_f32 (gfx906):
+  // Special case v_mac_{f16, f32} and v_fmac_{f16, f32} (gfx906/gfx10+):
   // it has src2 register operand that is tied to dst operand
   // we don't allow modifiers for this operand in assembler so src2_modifiers
   // should be 0.
-  if (Opc == AMDGPU::V_MAC_F32_e64_si ||
+  if (Opc == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
+      Opc == AMDGPU::V_MAC_F32_e64_gfx10 ||
       Opc == AMDGPU::V_MAC_F32_e64_vi ||
       Opc == AMDGPU::V_MAC_F16_e64_vi ||
-      Opc == AMDGPU::V_FMAC_F32_e64_vi) {
+      Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
+      Opc == AMDGPU::V_FMAC_F32_e64_vi ||
+      Opc == AMDGPU::V_FMAC_F16_e64_gfx10) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2
@@ -5797,7 +5897,8 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
       // VOP2b (v_add_u32, v_sub_u32 ...) dpp use "vcc" token.
       // Skip it.
       continue;
-    } if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+    }
+    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegWithFPInputModsOperands(Inst, 2);
     } else if (Op.isDPPCtrl()) {
       Op.addImmOperands(Inst, 1);
@@ -5938,7 +6039,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
     skippedVcc = false;
   }
 
-  if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx9 &&
+  if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx10 &&
+      Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx9 &&
       Inst.getOpcode() != AMDGPU::V_NOP_sdwa_vi) {
     // v_nop_sdwa_sdwa_vi/gfx9 has no optional sdwa arguments
     switch (BasicInstType) {
@@ -5964,7 +6066,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
       break;
 
     case SIInstrFlags::VOPC:
-      addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
+      if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::clamp) != -1)
+        addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc0Sel, SdwaSel::DWORD);
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc1Sel, SdwaSel::DWORD);
       break;

@@ -148,27 +148,15 @@ define void @fadd_64r(double* %loc, double %val) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    pushl %ebx
-; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-8, %esp
 ; X86-SSE2-NEXT:    subl $8, %esp
-; X86-SSE2-NEXT:    movl 8(%ebp), %esi
+; X86-SSE2-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd 12(%ebp), %xmm0
 ; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movl (%esp), %ebx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl (%esi), %eax
-; X86-SSE2-NEXT:    movl 4(%esi), %edx
-; X86-SSE2-NEXT:    .p2align 4, 0x90
-; X86-SSE2-NEXT:  .LBB1_1: # %atomicrmw.start
-; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    lock cmpxchg8b (%esi)
-; X86-SSE2-NEXT:    jne .LBB1_1
-; X86-SSE2-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-SSE2-NEXT:    leal -8(%ebp), %esp
-; X86-SSE2-NEXT:    popl %esi
-; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -176,27 +164,15 @@ define void @fadd_64r(double* %loc, double %val) nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %ebp
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    pushl %ebx
-; X86-AVX-NEXT:    pushl %esi
 ; X86-AVX-NEXT:    andl $-8, %esp
 ; X86-AVX-NEXT:    subl $8, %esp
-; X86-AVX-NEXT:    movl 8(%ebp), %esi
+; X86-AVX-NEXT:    movl 8(%ebp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd 12(%ebp), %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    movl (%esp), %ebx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movl (%esi), %eax
-; X86-AVX-NEXT:    movl 4(%esi), %edx
-; X86-AVX-NEXT:    .p2align 4, 0x90
-; X86-AVX-NEXT:  .LBB1_1: # %atomicrmw.start
-; X86-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-AVX-NEXT:    lock cmpxchg8b (%esi)
-; X86-AVX-NEXT:    jne .LBB1_1
-; X86-AVX-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-AVX-NEXT:    leal -8(%ebp), %esp
-; X86-AVX-NEXT:    popl %esi
-; X86-AVX-NEXT:    popl %ebx
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
+; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
 ;
@@ -353,24 +329,14 @@ define void @fadd_64g() nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    andl $-8, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.LCPI.*}}, %xmm0
 ; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movl (%esp), %ebx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl glob64+4, %edx
-; X86-SSE2-NEXT:    movl glob64, %eax
-; X86-SSE2-NEXT:    .p2align 4, 0x90
-; X86-SSE2-NEXT:  .LBB3_1: # %atomicrmw.start
-; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    lock cmpxchg8b glob64
-; X86-SSE2-NEXT:    jne .LBB3_1
-; X86-SSE2-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-SSE2-NEXT:    leal -4(%ebp), %esp
-; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movlps %xmm0, glob64
+; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -378,24 +344,14 @@ define void @fadd_64g() nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %ebp
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    pushl %ebx
 ; X86-AVX-NEXT:    andl $-8, %esp
-; X86-AVX-NEXT:    subl $16, %esp
+; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.LCPI.*}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    movl (%esp), %ebx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movl glob64+4, %edx
-; X86-AVX-NEXT:    movl glob64, %eax
-; X86-AVX-NEXT:    .p2align 4, 0x90
-; X86-AVX-NEXT:  .LBB3_1: # %atomicrmw.start
-; X86-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-AVX-NEXT:    lock cmpxchg8b glob64
-; X86-AVX-NEXT:    jne .LBB3_1
-; X86-AVX-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-AVX-NEXT:    leal -4(%ebp), %esp
-; X86-AVX-NEXT:    popl %ebx
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovlps %xmm0, glob64
+; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
 ;
@@ -552,24 +508,14 @@ define void @fadd_64imm() nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    andl $-8, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.LCPI.*}}, %xmm0
 ; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movl (%esp), %ebx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl -559038737, %eax
-; X86-SSE2-NEXT:    movl -559038733, %edx
-; X86-SSE2-NEXT:    .p2align 4, 0x90
-; X86-SSE2-NEXT:  .LBB5_1: # %atomicrmw.start
-; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    lock cmpxchg8b -559038737
-; X86-SSE2-NEXT:    jne .LBB5_1
-; X86-SSE2-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-SSE2-NEXT:    leal -4(%ebp), %esp
-; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movlps %xmm0, -559038737
+; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -577,24 +523,14 @@ define void @fadd_64imm() nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %ebp
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    pushl %ebx
 ; X86-AVX-NEXT:    andl $-8, %esp
-; X86-AVX-NEXT:    subl $16, %esp
+; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.LCPI.*}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    movl (%esp), %ebx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movl -559038737, %eax
-; X86-AVX-NEXT:    movl -559038733, %edx
-; X86-AVX-NEXT:    .p2align 4, 0x90
-; X86-AVX-NEXT:  .LBB5_1: # %atomicrmw.start
-; X86-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-AVX-NEXT:    lock cmpxchg8b -559038737
-; X86-AVX-NEXT:    jne .LBB5_1
-; X86-AVX-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-AVX-NEXT:    leal -4(%ebp), %esp
-; X86-AVX-NEXT:    popl %ebx
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovlps %xmm0, -559038737
+; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
 ;
@@ -757,24 +693,14 @@ define void @fadd_64stack() nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    andl $-8, %esp
-; X86-SSE2-NEXT:    subl $24, %esp
+; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.LCPI.*}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl (%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    .p2align 4, 0x90
-; X86-SSE2-NEXT:  .LBB7_1: # %atomicrmw.start
-; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    lock cmpxchg8b (%esp)
-; X86-SSE2-NEXT:    jne .LBB7_1
-; X86-SSE2-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-SSE2-NEXT:    leal -4(%ebp), %esp
-; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -782,24 +708,14 @@ define void @fadd_64stack() nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %ebp
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    pushl %ebx
 ; X86-AVX-NEXT:    andl $-8, %esp
-; X86-AVX-NEXT:    subl $24, %esp
+; X86-AVX-NEXT:    subl $16, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.LCPI.*}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movl (%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX-NEXT:    .p2align 4, 0x90
-; X86-AVX-NEXT:  .LBB7_1: # %atomicrmw.start
-; X86-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-AVX-NEXT:    lock cmpxchg8b (%esp)
-; X86-AVX-NEXT:    jne .LBB7_1
-; X86-AVX-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-AVX-NEXT:    leal -4(%ebp), %esp
-; X86-AVX-NEXT:    popl %ebx
+; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
+; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
 ;
@@ -905,30 +821,16 @@ define void @fadd_array(i64* %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE2:       # %bb.0: # %bb
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    pushl %ebx
-; X86-SSE2-NEXT:    pushl %edi
-; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-8, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    movl 20(%ebp), %esi
-; X86-SSE2-NEXT:    movl 8(%ebp), %edi
+; X86-SSE2-NEXT:    subl $8, %esp
+; X86-SSE2-NEXT:    movl 20(%ebp), %eax
+; X86-SSE2-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd 12(%ebp), %xmm0
 ; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movl (%esp), %ebx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl (%edi,%esi,8), %eax
-; X86-SSE2-NEXT:    movl 4(%edi,%esi,8), %edx
-; X86-SSE2-NEXT:    .p2align 4, 0x90
-; X86-SSE2-NEXT:  .LBB8_1: # %atomicrmw.start
-; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    lock cmpxchg8b (%edi,%esi,8)
-; X86-SSE2-NEXT:    jne .LBB8_1
-; X86-SSE2-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-SSE2-NEXT:    leal -12(%ebp), %esp
-; X86-SSE2-NEXT:    popl %esi
-; X86-SSE2-NEXT:    popl %edi
-; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -936,30 +838,16 @@ define void @fadd_array(i64* %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-AVX:       # %bb.0: # %bb
 ; X86-AVX-NEXT:    pushl %ebp
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    pushl %ebx
-; X86-AVX-NEXT:    pushl %edi
-; X86-AVX-NEXT:    pushl %esi
 ; X86-AVX-NEXT:    andl $-8, %esp
-; X86-AVX-NEXT:    subl $16, %esp
-; X86-AVX-NEXT:    movl 20(%ebp), %esi
-; X86-AVX-NEXT:    movl 8(%ebp), %edi
+; X86-AVX-NEXT:    subl $8, %esp
+; X86-AVX-NEXT:    movl 20(%ebp), %eax
+; X86-AVX-NEXT:    movl 8(%ebp), %ecx
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd 12(%ebp), %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    movl (%esp), %ebx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movl (%edi,%esi,8), %eax
-; X86-AVX-NEXT:    movl 4(%edi,%esi,8), %edx
-; X86-AVX-NEXT:    .p2align 4, 0x90
-; X86-AVX-NEXT:  .LBB8_1: # %atomicrmw.start
-; X86-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-AVX-NEXT:    lock cmpxchg8b (%edi,%esi,8)
-; X86-AVX-NEXT:    jne .LBB8_1
-; X86-AVX-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-AVX-NEXT:    leal -12(%ebp), %esp
-; X86-AVX-NEXT:    popl %esi
-; X86-AVX-NEXT:    popl %edi
-; X86-AVX-NEXT:    popl %ebx
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovlps %xmm0, (%ecx,%eax,8)
+; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
 ;

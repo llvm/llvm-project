@@ -1169,6 +1169,18 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
   default: break;
 
   case Instruction::GetElementPtr: {
+    // The LangRef requires that struct geps have all constant indices.  As
+    // such, we can't convert any operand to partial undef.
+    auto mayIndexStructType = [](GetElementPtrInst &GEP) {
+      for (auto I = gep_type_begin(GEP), E = gep_type_end(GEP);
+           I != E; I++)
+        if (I.isStruct())
+          return true;;
+      return false;
+    };
+    if (mayIndexStructType(cast<GetElementPtrInst>(*I)))
+      break;
+    
     // Conservatively track the demanded elements back through any vector
     // operands we may have.  We know there must be at least one, or we
     // wouldn't have a vector result to get here. Note that we intentionally

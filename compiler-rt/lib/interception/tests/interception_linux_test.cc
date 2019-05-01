@@ -50,7 +50,7 @@ TEST(Interception, GetFuncAddr) {
 }
 
 TEST(Interception, Basic) {
-  ASSERT_TRUE(INTERCEPT_FUNCTION(isdigit));
+  INTERCEPT_FUNCTION(isdigit);
 
   // After interception, the counter should be incremented.
   InterceptorFunctionCalled = 0;

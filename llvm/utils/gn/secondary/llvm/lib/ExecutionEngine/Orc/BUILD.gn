@@ -10,6 +10,7 @@ static_library("Orc") {
   ]
   sources = [
     "CompileOnDemandLayer.cpp",
+    "CompileUtils.cpp",
     "Core.cpp",
     "ExecutionUtils.cpp",
     "IRCompileLayer.cpp",

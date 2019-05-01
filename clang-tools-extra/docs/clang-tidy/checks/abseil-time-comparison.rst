@@ -6,7 +6,7 @@ abseil-time-comparison
 Prefer comparisons in the ``absl::Time`` domain instead of the integer domain.
 
 N.B.: In cases where an ``absl::Time`` is being converted to an integer,
-alignment may occur. If the comparison depends on this alingment, doing the
+alignment may occur. If the comparison depends on this alignment, doing the
 comparison in the ``absl::Time`` domain may yield a different result. In
 practice this is very rare, and still indicates a bug which should be fixed.
 

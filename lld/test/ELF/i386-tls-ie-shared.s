@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %p/Inputs/tls-opt-iele-i686-nopic.s -o %tso.o
 // RUN: ld.lld -shared %tso.o -o %tso
 // RUN: ld.lld --hash-style=sysv -shared %t.o %tso -o %t1
-// RUN: llvm-readobj -s -r -d %t1 | FileCheck --check-prefix=GOTRELSHARED %s
+// RUN: llvm-readobj -S -r -d %t1 | FileCheck --check-prefix=GOTRELSHARED %s
 // RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASMSHARED %s
 
 // GOTRELSHARED:     Section {
@@ -41,6 +41,7 @@
 // GOTRELSHARED:      0x6FFFFFFA RELCOUNT             8
 
 // DISASMSHARED:       Disassembly of section test:
+// DISASMSHARED-EMPTY:
 // DISASMSHARED-NEXT:  _start:
 // (.got)[0] = 0x2060 = 8288
 // (.got)[1] = 0x2064 = 8292

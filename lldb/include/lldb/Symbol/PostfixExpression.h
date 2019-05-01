@@ -19,6 +19,9 @@
 #include "llvm/Support/Casting.h"
 
 namespace lldb_private {
+
+class Stream;
+
 namespace postfix {
 
 /// The base class for all nodes in the parsed postfix tree.
@@ -26,6 +29,7 @@ class Node {
 public:
   enum Kind {
     BinaryOp,
+    InitialValue,
     Integer,
     Register,
     Symbol,
@@ -68,6 +72,16 @@ private:
   OpType m_op_type;
   Node *m_left;
   Node *m_right;
+};
+
+/// A node representing the canonical frame address.
+class InitialValueNode: public Node {
+public:
+  InitialValueNode() : Node(InitialValue) {}
+
+  static bool classof(const Node *node) {
+    return node->GetKind() == InitialValue;
+  }
 };
 
 /// A node representing an integer literal.
@@ -150,6 +164,7 @@ protected:
   virtual ~Visitor() = default;
 
   virtual ResultT Visit(BinaryOpNode &binary, Node *&ref) = 0;
+  virtual ResultT Visit(InitialValueNode &val, Node *&ref) = 0;
   virtual ResultT Visit(IntegerNode &integer, Node *&) = 0;
   virtual ResultT Visit(RegisterNode &reg, Node *&) = 0;
   virtual ResultT Visit(SymbolNode &symbol, Node *&ref) = 0;
@@ -161,6 +176,8 @@ protected:
     switch (node->GetKind()) {
     case Node::BinaryOp:
       return Visit(llvm::cast<BinaryOpNode>(*node), node);
+    case Node::InitialValue:
+      return Visit(llvm::cast<InitialValueNode>(*node), node);
     case Node::Integer:
       return Visit(llvm::cast<IntegerNode>(*node), node);
     case Node::Register:
@@ -174,6 +191,17 @@ protected:
   }
 };
 
+/// A utility function for "resolving" SymbolNodes. It traverses a tree and
+/// calls the callback function for all SymbolNodes it encountered. The
+/// replacement function should return the node it wished to replace the current
+/// SymbolNode with (this can also be the original node), or nullptr in case of
+/// an error. The nodes returned by the callback are inspected and replaced
+/// recursively, *except* for the case when the function returns the exact same
+/// node as the input one. It returns true if all SymbolNodes were replaced
+/// successfully.
+bool ResolveSymbols(Node *&node,
+                    llvm::function_ref<Node *(SymbolNode &symbol)> replacer);
+
 template <typename T, typename... Args>
 inline T *MakeNode(llvm::BumpPtrAllocator &alloc, Args &&... args) {
   static_assert(std::is_trivially_destructible<T>::value,
@@ -184,6 +212,13 @@ inline T *MakeNode(llvm::BumpPtrAllocator &alloc, Args &&... args) {
 /// Parse the given postfix expression. The parsed nodes are placed into the
 /// provided allocator.
 Node *Parse(llvm::StringRef expr, llvm::BumpPtrAllocator &alloc);
+
+/// Serialize the given expression tree as DWARF. The result is written into the
+/// given stream. The AST should not contain any SymbolNodes. If the expression
+/// contains InitialValueNodes, the generated expression will assume that their
+/// value will be provided as the top value of the initial evaluation stack (as
+/// is the case with the CFA value in register eh_unwind rules).
+void ToDWARF(Node &node, Stream &stream);
 
 } // namespace postfix
 } // namespace lldb_private

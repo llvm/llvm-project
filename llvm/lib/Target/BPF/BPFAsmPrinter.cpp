@@ -55,9 +55,8 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
   if (MAI->doesSupportDebugInformation()) {
-    Handlers.push_back(HandlerInfo(new BTFDebug(this), "emit",
-                                   "Debug Info Emission", "BTF",
-                                   "BTF Emission"));
+    Handlers.emplace_back(llvm::make_unique<BTFDebug>(this), "emit",
+                          "Debug Info Emission", "BTF", "BTF Emission");
   }
 
   return false;
@@ -104,7 +103,7 @@ void BPFAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 bool BPFAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                     const char *ExtraCode, raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
-    return true; // BPF does not have special modifiers
+    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
 
   printOperand(MI, OpNo, O);
   return false;

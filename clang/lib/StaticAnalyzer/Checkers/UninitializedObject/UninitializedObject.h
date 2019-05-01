@@ -324,7 +324,8 @@ private:
 inline bool isPrimitiveType(const QualType &T) {
   return T->isBuiltinType() || T->isEnumeralType() ||
          T->isMemberPointerType() || T->isBlockPointerType() ||
-         T->isFunctionType() || T->isAtomicType();
+         T->isFunctionType() || T->isAtomicType() ||
+         T->isVectorType();
 }
 
 inline bool isDereferencableType(const QualType &T) {

@@ -1253,6 +1253,16 @@ unsigned clang_Cursor_isAnonymous(CXCursor C){
 
   return 0;
 }
+
+unsigned clang_Cursor_isAnonymousRecordDecl(CXCursor C){
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+  const Decl *D = cxcursor::getCursorDecl(C);
+  if (const RecordDecl *FD = dyn_cast_or_null<RecordDecl>(D))
+    return FD->isAnonymousStructOrUnion();
+  return 0;
+}
+
 CXType clang_Type_getNamedType(CXType CT){
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();

@@ -314,8 +314,8 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   Sym.Definition = readLocation(Data, Strings);
   Sym.CanonicalDeclaration = readLocation(Data, Strings);
   Sym.References = Data.consumeVar();
-  Sym.Flags = static_cast<Symbol::SymbolFlag>(Data.consumeVar());
-  Sym.Origin = static_cast<SymbolOrigin>(Data.consumeVar());
+  Sym.Flags = static_cast<Symbol::SymbolFlag>(Data.consume8());
+  Sym.Origin = static_cast<SymbolOrigin>(Data.consume8());
   Sym.Signature = Data.consumeString(Strings);
   Sym.CompletionSnippetSuffix = Data.consumeString(Strings);
   Sym.Documentation = Data.consumeString(Strings);

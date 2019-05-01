@@ -258,16 +258,24 @@ namespace {
     void emitSpecialCodeForMain();
 
     inline void getAddressOperands(X86ISelAddressMode &AM, const SDLoc &DL,
-                                   SDValue &Base, SDValue &Scale,
+                                   MVT VT, SDValue &Base, SDValue &Scale,
                                    SDValue &Index, SDValue &Disp,
                                    SDValue &Segment) {
-      Base = (AM.BaseType == X86ISelAddressMode::FrameIndexBase)
-                 ? CurDAG->getTargetFrameIndex(
-                       AM.Base_FrameIndex,
-                       TLI->getPointerTy(CurDAG->getDataLayout()))
-                 : AM.Base_Reg;
+      if (AM.BaseType == X86ISelAddressMode::FrameIndexBase)
+        Base = CurDAG->getTargetFrameIndex(
+            AM.Base_FrameIndex, TLI->getPointerTy(CurDAG->getDataLayout()));
+      else if (AM.Base_Reg.getNode())
+        Base = AM.Base_Reg;
+      else
+        Base = CurDAG->getRegister(0, VT);
+
       Scale = getI8Imm(AM.Scale, DL);
-      Index = AM.IndexReg;
+
+      if (AM.IndexReg.getNode())
+        Index = AM.IndexReg;
+      else
+        Index = CurDAG->getRegister(0, VT);
+
       // These are 32-bit even in 64-bit mode since RIP-relative offset
       // is 32-bit.
       if (AM.GV)
@@ -296,7 +304,7 @@ namespace {
       if (AM.Segment.getNode())
         Segment = AM.Segment;
       else
-        Segment = CurDAG->getRegister(0, MVT::i32);
+        Segment = CurDAG->getRegister(0, MVT::i16);
     }
 
     // Utility function to determine whether we should avoid selecting
@@ -899,6 +907,11 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     ++I;
     CurDAG->DeleteNode(N);
   }
+
+  // The load+call transform above can leave some dead nodes in the graph. Make
+  // sure we remove them. Its possible some of the other transforms do to so
+  // just remove dead nodes unconditionally.
+  CurDAG->RemoveDeadNodes();
 }
 
 // Look for a redundant movzx/movsx that can occur after an 8-bit divrem.
@@ -2021,17 +2034,14 @@ bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
   if (AddrSpace == 258)
     AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
 
+  SDLoc DL(N);
+  MVT VT = N.getSimpleValueType();
+
   // Try to match into the base and displacement fields.
   if (matchVectorAddress(N, AM))
     return false;
 
-  MVT VT = N.getSimpleValueType();
-  if (AM.BaseType == X86ISelAddressMode::RegBase) {
-    if (!AM.Base_Reg.getNode())
-      AM.Base_Reg = CurDAG->getRegister(0, VT);
-  }
-
-  getAddressOperands(AM, SDLoc(N), Base, Scale, Index, Disp, Segment);
+  getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
   return true;
 }
 
@@ -2073,15 +2083,7 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
   if (matchAddress(N, AM))
     return false;
 
-  if (AM.BaseType == X86ISelAddressMode::RegBase) {
-    if (!AM.Base_Reg.getNode())
-      AM.Base_Reg = CurDAG->getRegister(0, VT);
-  }
-
-  if (!AM.IndexReg.getNode())
-    AM.IndexReg = CurDAG->getRegister(0, VT);
-
-  getAddressOperands(AM, DL, Base, Scale, Index, Disp, Segment);
+  getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
   return true;
 }
 
@@ -2262,18 +2264,13 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
   AM.Segment = Copy;
 
   unsigned Complexity = 0;
-  if (AM.BaseType == X86ISelAddressMode::RegBase)
-    if (AM.Base_Reg.getNode())
-      Complexity = 1;
-    else
-      AM.Base_Reg = CurDAG->getRegister(0, VT);
+  if (AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode())
+    Complexity = 1;
   else if (AM.BaseType == X86ISelAddressMode::FrameIndexBase)
     Complexity = 4;
 
   if (AM.IndexReg.getNode())
     Complexity++;
-  else
-    AM.IndexReg = CurDAG->getRegister(0, VT);
 
   // Don't match just leal(,%reg,2). It's cheaper to do addl %reg, %reg, or with
   // a simple shift.
@@ -2300,7 +2297,7 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
   if (Complexity <= 2)
     return false;
 
-  getAddressOperands(AM, DL, Base, Scale, Index, Disp, Segment);
+  getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
   return true;
 }
 
@@ -2314,17 +2311,15 @@ bool X86DAGToDAGISel::selectTLSADDRAddr(SDValue N, SDValue &Base,
   X86ISelAddressMode AM;
   AM.GV = GA->getGlobal();
   AM.Disp += GA->getOffset();
-  AM.Base_Reg = CurDAG->getRegister(0, N.getValueType());
   AM.SymbolFlags = GA->getTargetFlags();
 
-  if (N.getValueType() == MVT::i32) {
+  MVT VT = N.getSimpleValueType();
+  if (VT == MVT::i32) {
     AM.Scale = 1;
     AM.IndexReg = CurDAG->getRegister(X86::EBX, MVT::i32);
-  } else {
-    AM.IndexReg = CurDAG->getRegister(0, MVT::i64);
   }
 
-  getAddressOperands(AM, SDLoc(N), Base, Scale, Index, Disp, Segment);
+  getAddressOperands(AM, SDLoc(N), VT, Base, Scale, Index, Disp, Segment);
   return true;
 }
 

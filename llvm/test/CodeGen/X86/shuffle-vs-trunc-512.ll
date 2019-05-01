@@ -846,11 +846,11 @@ define <4 x double> @PR34175(<32 x i16>* %p) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqu (%rdi), %xmm0
 ; AVX512VL-NEXT:    vmovdqu 32(%rdi), %xmm1
-; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1],xmm1[2],mem[2],xmm1[3],mem[3]
-; AVX512VL-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,4,2,3]
+; AVX512VL-NEXT:    vpermi2d %xmm1, %xmm0, %xmm2
+; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX512VL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;

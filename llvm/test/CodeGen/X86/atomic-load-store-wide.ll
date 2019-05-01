@@ -6,30 +6,38 @@
 ; FIXME: The generated code can be substantially improved.
 
 define void @test1(i64* %ptr, i64 %val1) {
-; CHECK-LABEL: test1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset %esi, -12
-; CHECK-NEXT:    .cfi_offset %ebx, -8
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movl (%esi), %eax
-; CHECK-NEXT:    movl 4(%esi), %edx
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lock cmpxchg8b (%esi)
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    popl %ebx
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; SSE42-LABEL: test1:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE42-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE42-NEXT:    movlps %xmm0, (%eax)
+; SSE42-NEXT:    mfence
+; SSE42-NEXT:    retl
+;
+; NOSSE-LABEL: test1:
+; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    pushl %ebx
+; NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; NOSSE-NEXT:    pushl %esi
+; NOSSE-NEXT:    .cfi_def_cfa_offset 12
+; NOSSE-NEXT:    .cfi_offset %esi, -12
+; NOSSE-NEXT:    .cfi_offset %ebx, -8
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NOSSE-NEXT:    movl (%esi), %eax
+; NOSSE-NEXT:    movl 4(%esi), %edx
+; NOSSE-NEXT:    .p2align 4, 0x90
+; NOSSE-NEXT:  .LBB0_1: # %atomicrmw.start
+; NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOSSE-NEXT:    lock cmpxchg8b (%esi)
+; NOSSE-NEXT:    jne .LBB0_1
+; NOSSE-NEXT:  # %bb.2: # %atomicrmw.end
+; NOSSE-NEXT:    popl %esi
+; NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; NOSSE-NEXT:    popl %ebx
+; NOSSE-NEXT:    .cfi_def_cfa_offset 4
+; NOSSE-NEXT:    retl
   store atomic i64 %val1, i64* %ptr seq_cst, align 8
   ret void
 }

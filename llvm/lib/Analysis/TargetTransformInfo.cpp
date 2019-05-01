@@ -584,6 +584,12 @@ int TargetTransformInfo::getAddressComputationCost(Type *Tp,
   return Cost;
 }
 
+int TargetTransformInfo::getMemcpyCost(const Instruction *I) const {
+  int Cost = TTIImpl->getMemcpyCost(I);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 int TargetTransformInfo::getArithmeticReductionCost(unsigned Opcode, Type *Ty,
                                                     bool IsPairwiseForm) const {
   int Cost = TTIImpl->getArithmeticReductionCost(Opcode, Ty, IsPairwiseForm);

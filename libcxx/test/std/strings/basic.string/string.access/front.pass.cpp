@@ -52,7 +52,7 @@ int main(int, char**)
 #ifdef _LIBCPP_DEBUG
     {
         std::string s;
-        char c = s.front();
+        (void) s.front();
         assert(false);
     }
 #endif

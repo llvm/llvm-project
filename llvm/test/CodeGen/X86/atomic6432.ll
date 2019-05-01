@@ -835,34 +835,11 @@ define void @atomic_fetch_cmpxchg64() nounwind {
 define void @atomic_fetch_store64(i64 %x) nounwind {
 ; X32-LABEL: atomic_fetch_store64:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    subl $20, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl sc64+4, %eax
-; X32-NEXT:    movl sc64, %edx
-; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    jmp .LBB11_1
-; X32-NEXT:  .LBB11_1: # %atomicrmw.start
-; X32-NEXT:    # =>This Inner Loop Header: Depth=1
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    movl %ecx, %eax
-; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; X32-NEXT:    lock cmpxchg8b sc64
-; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    jne .LBB11_1
-; X32-NEXT:    jmp .LBB11_2
-; X32-NEXT:  .LBB11_2: # %atomicrmw.end
-; X32-NEXT:    addl $20, %esp
-; X32-NEXT:    popl %ebx
+; X32-NEXT:    movd %ecx, %xmm0
+; X32-NEXT:    pinsrd $1, %eax, %xmm0
+; X32-NEXT:    movq %xmm0, sc64
 ; X32-NEXT:    retl
   store atomic i64 %x, i64* @sc64 release, align 8
   ret void

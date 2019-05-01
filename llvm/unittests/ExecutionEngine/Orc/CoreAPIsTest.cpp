@@ -216,7 +216,7 @@ TEST_F(CoreAPIsStandardTest, ChainedJITDylibLookup) {
         OnReadyRun = true;
       });
 
-  JD2.legacyLookup(Q, JD.legacyLookup(Q, {Foo}));
+  cantFail(JD2.legacyLookup(Q, cantFail(JD.legacyLookup(Q, {Foo}))));
 
   EXPECT_TRUE(OnResolvedRun) << "OnResolved was not run for empty query";
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run for empty query";
@@ -260,7 +260,7 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
 
   SymbolNameSet Names({Foo, Bar, Baz});
 
-  auto SymbolFlags = JD.lookupFlags(Names);
+  auto SymbolFlags = cantFail(JD.lookupFlags(Names));
 
   EXPECT_EQ(SymbolFlags.size(), 2U)
       << "Returned symbol flags contains unexpected results";
@@ -271,6 +271,27 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
       << "Missing  lookupFlags result for Bar";
   EXPECT_EQ(SymbolFlags[Bar], BarSym.getFlags())
       << "Incorrect flags returned for Bar";
+}
+
+TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
+
+  class BadGenerator {
+  public:
+    Expected<SymbolNameSet> operator()(JITDylib &, const SymbolNameSet &) {
+      return make_error<StringError>("BadGenerator", inconvertibleErrorCode());
+    }
+  };
+
+  JD.setGenerator(BadGenerator());
+
+  EXPECT_THAT_ERROR(JD.lookupFlags({Foo}).takeError(), Failed<StringError>())
+      << "Generator failure did not propagate through lookupFlags";
+
+  EXPECT_THAT_ERROR(
+      ES.lookup(JITDylibSearchList({{&JD, false}}), SymbolNameSet({Foo}))
+          .takeError(),
+      Failed<StringError>())
+      << "Generator failure did not propagate through lookup";
 }
 
 TEST_F(CoreAPIsStandardTest, TestBasicAliases) {
@@ -356,7 +377,7 @@ TEST_F(CoreAPIsStandardTest, TestReexportsGenerator) {
 
   JD.setGenerator(ReexportsGenerator(JD2, false, Filter));
 
-  auto Flags = JD.lookupFlags({Foo, Bar, Baz});
+  auto Flags = cantFail(JD.lookupFlags({Foo, Bar, Baz}));
   EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
   EXPECT_EQ(Flags[Foo], FooSym.getFlags()) << "Unexpected flags for Foo";
 

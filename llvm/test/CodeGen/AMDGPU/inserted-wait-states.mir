@@ -230,28 +230,28 @@ name: vmem_gt_8dw_store
 
 body: |
   bb.0:
-    BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX3_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX3_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_FORMAT_XYZ_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_FORMAT_XYZ_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_FORMAT_XYZW_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_FORMAT_XYZW_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     BUFFER_ATOMIC_CMPSWAP_X2_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
-    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr2_vgpr3, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    FLAT_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    FLAT_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     FLAT_ATOMIC_CMPSWAP_X2 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
@@ -549,14 +549,14 @@ body:             |
     $flat_scr_lo = S_ADD_U32 $sgpr6, $sgpr9, implicit-def $scc
     $flat_scr_hi = S_ADDC_U32 $sgpr7, 0, implicit-def $scc, implicit $scc
     DBG_VALUE $noreg, 2, !5, !11, debug-location !12
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed $sgpr4_sgpr5, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed $sgpr4_sgpr5, 0, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     dead $sgpr6_sgpr7 = KILL $sgpr4_sgpr5
     $sgpr8 = S_MOV_B32 $sgpr5
     $vgpr0 = V_MOV_B32_e32 killed $sgpr8, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr9, 4, 0, 0, 0, implicit $exec :: (store 4 into %ir.A.addr + 4)
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr9, 4, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.A.addr + 4)
     $sgpr8 = S_MOV_B32 $sgpr4, implicit killed $sgpr4_sgpr5
     $vgpr0 = V_MOV_B32_e32 killed $sgpr8, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr9, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.A.addr)
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr9, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.A.addr)
     S_ENDPGM 0
 
 ...

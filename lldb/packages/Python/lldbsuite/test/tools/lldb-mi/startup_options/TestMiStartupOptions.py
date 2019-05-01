@@ -90,6 +90,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfDarwin
+    @skipIfLinux
     def test_lldbmi_executable_option_relative_path(self):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via relative path."""
 
@@ -296,6 +297,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfDarwin
+    @skipIfLinux
     def test_lldbmi_log_directory_option(self):
         """Test that 'lldb-mi --log --log-dir' creates a log file in the directory specified by --log-dir."""
 

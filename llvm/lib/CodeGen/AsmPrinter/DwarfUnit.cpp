@@ -64,6 +64,10 @@ void DIEDwarfExpression::emitUnsigned(uint64_t Value) {
   CU.addUInt(DIE, dwarf::DW_FORM_udata, Value);
 }
 
+void DIEDwarfExpression::emitData1(uint8_t Value) {
+  CU.addUInt(DIE, dwarf::DW_FORM_data1, Value);
+}
+
 void DIEDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   CU.addBaseTypeRef(DIE, Idx);
 }

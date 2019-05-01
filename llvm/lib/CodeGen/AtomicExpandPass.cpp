@@ -360,7 +360,7 @@ bool AtomicExpand::bracketInstWithFences(Instruction *I, AtomicOrdering Order) {
 /// Get the iX type with the same bitwidth as T.
 IntegerType *AtomicExpand::getCorrespondingIntegerType(Type *T,
                                                        const DataLayout &DL) {
-  EVT VT = TLI->getValueType(DL, T);
+  EVT VT = TLI->getMemValueType(DL, T);
   unsigned BitWidth = VT.getStoreSizeInBits();
   assert(BitWidth == VT.getSizeInBits() && "must be a power of two");
   return IntegerType::get(T->getContext(), BitWidth);

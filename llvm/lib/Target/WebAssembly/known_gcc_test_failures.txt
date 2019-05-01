@@ -93,6 +93,18 @@ devirt-21.C  # bad main signature
 devirt-23.C  # bad main signature
 lifetime2.C  # violates C++ DR1696
 
+# WASI doesn't have stdjmp.h yet
+pr56982.c
+simd-2.C
+
+# WASI doesn't have pthread.h yet
+thread_local3.C
+thread_local3g.C
+thread_local4.C
+thread_local4g.C
+thread_local5.C
+thread_local5g.C
+
 # Untriaged C++ failures
 spec5.C
 addr1.C

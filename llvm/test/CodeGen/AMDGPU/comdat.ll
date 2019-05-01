@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple amdgcn-amd-amdhsa -filetype=obj <%s \
-; RUN:   | llvm-readobj -symbols - | FileCheck %s
+; RUN:   | llvm-readobj --symbols - | FileCheck %s
 
 ; CHECK: Name: func1
 ; CHECK: Section: .text.func1

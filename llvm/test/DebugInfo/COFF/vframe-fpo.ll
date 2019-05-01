@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc < %s -filetype=obj | llvm-readobj -codeview | FileCheck %s --check-prefix=CODEVIEW
+; RUN: llc < %s -filetype=obj | llvm-readobj --codeview | FileCheck %s --check-prefix=CODEVIEW
 
 ; This test checks that for 32-bit x86 we use VFRAME and
 ; S_DEFRANGE_FRAMEPOINTER_REL with the right offsets. The test has two function

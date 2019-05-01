@@ -136,7 +136,7 @@ bool LanaiAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       return false;
     }
     default:
-      return true; // Unknown modifier.
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
     }
   }
   printOperand(MI, OpNo, O);

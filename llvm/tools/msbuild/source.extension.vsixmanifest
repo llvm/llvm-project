@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="llvm.d29c51f0-961f-4e20-aad6-356af569907f" Version="1.0.340780" Language="en-US" Publisher="LLVM Extensions" />
+        <Identity Id="llvm.d29c51f0-961f-4e20-aad6-356af569907f" Version="1.0.359557" Language="en-US" Publisher="LLVM Extensions" />
         <DisplayName>LLVM Compiler Toolchain</DisplayName>
         <Description xml:space="preserve">Allows the LLVM Compiler Toolchain (installed separately) to be used from within Visual Studio to build C/C++ Projects.</Description>
         <License>license.txt</License>
     </Metadata>
     <Installation AllUsers="true">
-        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[15.0,16.0)" />
-        <InstallationTarget Version="[15.0,16.0)" Id="Microsoft.VisualStudio.Pro" />
-        <InstallationTarget Version="[15.0,16.0)" Id="Microsoft.VisualStudio.Enterprise" />
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[15.0,17.0)" />
+        <InstallationTarget Version="[15.0,17.0)" Id="Microsoft.VisualStudio.Pro" />
+        <InstallationTarget Version="[15.0,17.0)" Id="Microsoft.VisualStudio.Enterprise" />
     </Installation>
     <Dependencies>
         <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
     </Dependencies>
     <Prerequisites>
-        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0,16.0)" DisplayName="Visual Studio core editor" />
-        <Prerequisite Id="Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core" Version="[15.0.26621.2,16.0)" DisplayName="Visual C++ core desktop features" />
-        <Prerequisite Id="Microsoft.VisualStudio.Component.VC.CoreIde" Version="[15.0.26606.0,16.0)" DisplayName="Visual Studio C++ core features" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0,17.0)" DisplayName="Visual Studio core editor" />
+        <Prerequisite Id="Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core" Version="[15.0.26621.2,17.0)" DisplayName="Visual C++ core desktop features" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.VC.CoreIde" Version="[15.0.26606.0,17.0)" DisplayName="Visual Studio C++ core features" />
     </Prerequisites>
 </PackageManifest>

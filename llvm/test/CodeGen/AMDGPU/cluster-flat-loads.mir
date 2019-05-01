@@ -14,7 +14,7 @@ registers:
 body:             |
   bb.0:
     %0 = IMPLICIT_DEF
-    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
     %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $exec
-    %3 = FLAT_LOAD_DWORD %0, 4, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %0, 4, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
 ...

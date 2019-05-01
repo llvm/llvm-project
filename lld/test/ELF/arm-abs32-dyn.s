@@ -15,7 +15,7 @@ bar:
  .word bar
 
 // RUN: ld.lld -shared -o %t.so %t.o
-// RUN: llvm-readobj -symbols -dyn-relocations %t.so | FileCheck %s
+// RUN: llvm-readobj --symbols --dyn-relocations %t.so | FileCheck %s
 
 // CHECK:      Dynamic Relocations {
 // CHECK-NEXT:   0x2004 R_ARM_RELATIVE

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-/* Functions that implement common sequences in function prologues and epilogues
-   used to save code size */
+// Functions that implement common sequences in function prologues and epilogues
+// used to save code size
 
 	.macro FUNCTION_BEGIN name
 	.p2align 2
@@ -32,10 +32,10 @@
 
 
 
-/* Save r17:16 at fp+#-8, r19:18 at fp+#-16, r21:20 at fp+#-24, r23:22 at
-   fp+#-32, r25:24 at fp+#-40, and r27:26 at fp+#-48.
-   The compiler knows that the __save_* functions clobber LR.  No other
-   registers should be used without informing the compiler. */
+// Save r17:16 at fp+#-8, r19:18 at fp+#-16, r21:20 at fp+#-24, r23:22 at
+// fp+#-32, r25:24 at fp+#-40, and r27:26 at fp+#-48.
+// The compiler knows that the __save_* functions clobber LR.  No other
+// registers should be used without informing the compiler.
 
 FUNCTION_BEGIN __save_r16_through_r27
         {
@@ -106,10 +106,10 @@ FUNCTION_BEGIN __save_r16_through_r17
         }
 FUNCTION_END __save_r16_through_r17
 
-/* For each of the *_before_tailcall functions, jumpr lr is executed in parallel
-   with deallocframe.  That way, the return gets the old value of lr, which is
-   where these functions need to return, and at the same time, lr gets the value
-   it needs going into the tail call. */
+// For each of the *_before_tailcall functions, jumpr lr is executed in parallel
+// with deallocframe.  That way, the return gets the old value of lr, which is
+// where these functions need to return, and at the same time, lr gets the value
+// it needs going into the tail call.
 
 
 FUNCTION_BEGIN __restore_r16_through_r27_and_deallocframe_before_tailcall

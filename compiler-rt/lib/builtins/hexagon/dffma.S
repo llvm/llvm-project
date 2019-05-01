@@ -9,7 +9,7 @@
 #define Q6_ALIAS(TAG) .global __qdsp_##TAG ; .set __qdsp_##TAG, __hexagon_##TAG
 #define END(TAG) .size TAG,.-TAG
 
-/* Double Precision Multiply */
+// Double Precision Multiply
 
 
 #define A r1:0
@@ -75,33 +75,29 @@
 #define SR_ROUND_OFF 22
 #endif
 
-	/*
-	 * First, classify for normal values, and abort if abnormal
-	 *
-	 * Next, unpack mantissa into 0x1000_0000_0000_0000 + mant<<8
-	 *
-	 * Since we know that the 2 MSBs of the H registers is zero, we should never carry
-	 * the partial products that involve the H registers
-	 *
-	 * Try to buy X slots, at the expense of latency if needed
-	 *
-	 * We will have PP_HH with the upper bits of the product, PP_LL with the lower
-	 * PP_HH can have a maximum of 0x03FF_FFFF_FFFF_FFFF or thereabouts
-	 * PP_HH can have a minimum of 0x0100_0000_0000_0000
-	 *
-	 * 0x0100_0000_0000_0000 has EXP of EXPA+EXPB-BIAS
-	 *
-	 * We need to align CTMP.
-	 * If CTMP >> PP, convert PP to 64 bit with sticky, align CTMP, and follow normal add
-	 * If CTMP << PP align CTMP and add 128 bits.  Then compute sticky
-	 * If CTMP ~= PP, align CTMP and add 128 bits.  May have massive cancellation.
-	 *
-	 * Convert partial product and CTMP to 2's complement prior to addition
-	 *
-	 * After we add, we need to normalize into upper 64 bits, then compute sticky.
-	 *
-	 *
-	 */
+	// First, classify for normal values, and abort if abnormal
+	//
+	// Next, unpack mantissa into 0x1000_0000_0000_0000 + mant<<8
+	//
+	// Since we know that the 2 MSBs of the H registers is zero, we should never carry
+	// the partial products that involve the H registers
+	//
+	// Try to buy X slots, at the expense of latency if needed
+	//
+	// We will have PP_HH with the upper bits of the product, PP_LL with the lower
+	// PP_HH can have a maximum of 0x03FF_FFFF_FFFF_FFFF or thereabouts
+	// PP_HH can have a minimum of 0x0100_0000_0000_0000
+	//
+	// 0x0100_0000_0000_0000 has EXP of EXPA+EXPB-BIAS
+	//
+	// We need to align CTMP.
+	// If CTMP >> PP, convert PP to 64 bit with sticky, align CTMP, and follow normal add
+	// If CTMP << PP align CTMP and add 128 bits.  Then compute sticky
+	// If CTMP ~= PP, align CTMP and add 128 bits.  May have massive cancellation.
+	//
+	// Convert partial product and CTMP to 2's complement prior to addition
+	//
+	// After we add, we need to normalize into upper 64 bits, then compute sticky.
 
 	.text
 	.global __hexagon_fmadf4
@@ -181,14 +177,12 @@ fma:
 #define EXPCA r19:18
 		EXPC = extractu(CH,#EXPBITS,#HI_MANTBITS)
 	}
-	/* PP_HH:PP_LL now has product */
-	/* CTMP is negated */
-	/* EXPA,B,C are extracted */
-	/*
-	 * We need to negate PP
-	 * Since we will be adding with carry later, if we need to negate,
-	 * just invert all bits now, which we can do conditionally and in parallel
-	 */
+	// PP_HH:PP_LL now has product
+	// CTMP is negated
+	// EXPA,B,C are extracted
+	// We need to negate PP
+	// Since we will be adding with carry later, if we need to negate,
+	// just invert all bits now, which we can do conditionally and in parallel
 #define PP_HH_TMP r15:14
 #define PP_LL_TMP r7:6
 	{
@@ -273,18 +267,16 @@ fma:
 		PP_HH = add(CTMP,PP_HH,P_CARRY):carry
 		TMP = #62
 	}
-	/*
-	 * PP_HH:PP_LL now holds the sum
-	 * We may need to normalize left, up to ??? bits.
-	 *
-	 * I think that if we have massive cancellation, the range we normalize by
-	 * is still limited
-	 */
+	// PP_HH:PP_LL now holds the sum
+	// We may need to normalize left, up to ??? bits.
+	//
+	// I think that if we have massive cancellation, the range we normalize by
+	// is still limited
 	{
 		LEFTSHIFT = add(clb(PP_HH),#-2)
 		if (!cmp.eq(LEFTSHIFT.new,TMP)) jump:t 1f	// all sign bits?
 	}
-	/* We had all sign bits, shift left by 62. */
+	// We had all sign bits, shift left by 62.
 	{
 		CTMP = extractu(PP_LL,#62,#2)
 		PP_LL = asl(PP_LL,#62)
@@ -329,7 +321,7 @@ fma:
 		if (!P_TMP) dealloc_return		// not zero, return
 	}
 .Ladd_yields_zero:
-	/* We had full cancellation.  Return +/- zero (-0 when round-down) */
+	// We had full cancellation.  Return +/- zero (-0 when round-down)
 	{
 		TMP = USR
 		A = #0
@@ -407,9 +399,9 @@ fma:
 		EXPA = sub(#1+5,TMP)			// Amount to right shift to denormalize
 		p3 = cmp.gt(CTMPH,#-1)
 	}
-	/* Underflow */
-	/* We know that the infinte range exponent should be EXPA */
-	/* CTMP is 2's complement, ATMP is abs(CTMP) */
+	// Underflow
+	// We know that the infinte range exponent should be EXPA
+	// CTMP is 2's complement, ATMP is abs(CTMP)
 	{
 		EXPA = add(EXPA,EXPB)		// how much to shift back right
 		ATMP = asl(ATMP,EXPB)		// shift left
@@ -592,7 +584,7 @@ fma:
 		p1 = dfclass(C,#0x08)
 		if (p1.new) jump:nt .Lfma_inf_plus_inf
 	}
-	/* A*B is +/- inf, C is finite.  Return A */
+	// A*B is +/- inf, C is finite.  Return A
 	{
 		jumpr r31
 	}
@@ -648,7 +640,7 @@ fma:
 		if (!p0) A = C			// If C is not zero, return C
 		if (!p0) jumpr r31
 	}
-	/* B has correctly signed zero, C is also zero */
+	// B has correctly signed zero, C is also zero
 .Lzero_plus_zero:
 	{
 		p0 = cmp.eq(B,C)		// yes, scalar equals.  +0++0 or -0+-0
@@ -673,8 +665,8 @@ fma:
 #define CTMP r11:10
 	.falign
 .Lfma_abnormal_c:
-	/* We know that AB is normal * normal */
-	/* C is not normal: zero, subnormal, inf, or NaN. */
+	// We know that AB is normal * normal
+	// C is not normal: zero, subnormal, inf, or NaN.
 	{
 		p0 = dfclass(C,#0x10)		// is C NaN?
 		if (p0.new) jump:nt .Lnan

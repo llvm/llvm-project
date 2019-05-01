@@ -339,6 +339,8 @@ bool operator<=(const Scalar &lhs, const Scalar &rhs);
 bool operator>(const Scalar &lhs, const Scalar &rhs);
 bool operator>=(const Scalar &lhs, const Scalar &rhs);
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Scalar &scalar);
+
 } // namespace lldb_private
 
 #endif // LLDB_UTILITY_SCALAR_H

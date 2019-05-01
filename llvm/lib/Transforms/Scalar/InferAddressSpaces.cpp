@@ -148,7 +148,9 @@ class InferAddressSpaces : public FunctionPass {
 public:
   static char ID;
 
-  InferAddressSpaces() : FunctionPass(ID) {}
+  InferAddressSpaces() :
+    FunctionPass(ID), FlatAddrSpace(UninitializedAddressSpace) {}
+  InferAddressSpaces(unsigned AS) : FunctionPass(ID), FlatAddrSpace(AS) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -624,9 +626,12 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
 
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  FlatAddrSpace = TTI.getFlatAddressSpace();
-  if (FlatAddrSpace == UninitializedAddressSpace)
-    return false;
+
+  if (FlatAddrSpace == UninitializedAddressSpace) {
+    FlatAddrSpace = TTI.getFlatAddressSpace();
+    if (FlatAddrSpace == UninitializedAddressSpace)
+      return false;
+  }
 
   // Collects all flat address expressions in postorder.
   std::vector<WeakTrackingVH> Postorder = collectFlatAddressExpressions(F);
@@ -1018,6 +1023,6 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
   return true;
 }
 
-FunctionPass *llvm::createInferAddressSpacesPass() {
-  return new InferAddressSpaces();
+FunctionPass *llvm::createInferAddressSpacesPass(unsigned AddressSpace) {
+  return new InferAddressSpaces(AddressSpace);
 }

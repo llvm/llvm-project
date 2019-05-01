@@ -143,6 +143,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -246,6 +247,13 @@ static cl::opt<bool> ClHandleICmp("msan-handle-icmp",
 static cl::opt<bool> ClHandleICmpExact("msan-handle-icmp-exact",
        cl::desc("exact handling of relational integer ICmp"),
        cl::Hidden, cl::init(false));
+
+static cl::opt<bool> ClHandleLifetimeIntrinsics(
+    "msan-handle-lifetime-intrinsics",
+    cl::desc(
+        "when possible, poison scoped variables at the beginning of the scope "
+        "(slower, but more precise)"),
+    cl::Hidden, cl::init(true));
 
 // When compiling the Linux kernel, we sometimes see false positives related to
 // MSan being unable to understand that inline assembly calls may initialize
@@ -1023,6 +1031,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       : Shadow(S), Origin(O), OrigIns(I) {}
   };
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
+  bool InstrumentLifetimeStart = ClHandleLifetimeIntrinsics;
+  SmallSet<AllocaInst *, 16> AllocaSet;
+  SmallVector<std::pair<IntrinsicInst *, AllocaInst *>, 16> LifetimeStartList;
   SmallVector<StoreInst *, 16> StoreList;
 
   MemorySanitizerVisitor(Function &F, MemorySanitizer &MS,
@@ -1278,6 +1289,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     VAHelper->finalizeInstrumentation();
+
+    // Poison llvm.lifetime.start intrinsics, if we haven't fallen back to
+    // instrumenting only allocas.
+    if (InstrumentLifetimeStart) {
+      for (auto Item : LifetimeStartList) {
+        instrumentAlloca(*Item.second, Item.first);
+        AllocaSet.erase(Item.second);
+      }
+    }
+    // Poison the allocas for which we didn't instrument the corresponding
+    // lifetime intrinsics.
+    for (AllocaInst *AI : AllocaSet)
+      instrumentAlloca(*AI);
 
     bool InstrumentWithCalls = ClInstrumentationWithCallThreshold >= 0 &&
                                InstrumentationList.size() + StoreList.size() >
@@ -2536,6 +2560,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return false;
   }
 
+  void handleLifetimeStart(IntrinsicInst &I) {
+    if (!PoisonStack)
+      return;
+    DenseMap<Value *, AllocaInst *> AllocaForValue;
+    AllocaInst *AI =
+        llvm::findAllocaForValue(I.getArgOperand(1), AllocaForValue);
+    if (!AI)
+      InstrumentLifetimeStart = false;
+    LifetimeStartList.push_back(std::make_pair(&I, AI));
+  }
+
   void handleBswap(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Op = I.getArgOperand(0);
@@ -2951,6 +2986,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+      handleLifetimeStart(I);
+      break;
     case Intrinsic::bswap:
       handleBswap(I);
       break;
@@ -3379,7 +3417,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                                 StackDescription.str());
   }
 
-  void instrumentAllocaUserspace(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
+  void poisonAllocaUserspace(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
     if (PoisonStack && ClPoisonStackWithCall) {
       IRB.CreateCall(MS.MsanPoisonStackFn,
                      {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len});
@@ -3401,7 +3439,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  void instrumentAllocaKmsan(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
+  void poisonAllocaKmsan(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
     Value *Descr = getLocalVarDescription(I);
     if (PoisonStack) {
       IRB.CreateCall(MS.MsanPoisonAllocaFn,
@@ -3413,10 +3451,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  void visitAllocaInst(AllocaInst &I) {
-    setShadow(&I, getCleanShadow(&I));
-    setOrigin(&I, getCleanOrigin());
-    IRBuilder<> IRB(I.getNextNode());
+  void instrumentAlloca(AllocaInst &I, Instruction *InsPoint = nullptr) {
+    if (!InsPoint)
+      InsPoint = &I;
+    IRBuilder<> IRB(InsPoint->getNextNode());
     const DataLayout &DL = F.getParent()->getDataLayout();
     uint64_t TypeSize = DL.getTypeAllocSize(I.getAllocatedType());
     Value *Len = ConstantInt::get(MS.IntptrTy, TypeSize);
@@ -3424,9 +3462,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Len = IRB.CreateMul(Len, I.getArraySize());
 
     if (MS.CompileKernel)
-      instrumentAllocaKmsan(I, IRB, Len);
+      poisonAllocaKmsan(I, IRB, Len);
     else
-      instrumentAllocaUserspace(I, IRB, Len);
+      poisonAllocaUserspace(I, IRB, Len);
+  }
+
+  void visitAllocaInst(AllocaInst &I) {
+    setShadow(&I, getCleanShadow(&I));
+    setOrigin(&I, getCleanOrigin());
+    // We'll get to this alloca later unless it's poisoned at the corresponding
+    // llvm.lifetime.start.
+    AllocaSet.insert(&I);
   }
 
   void visitSelectInst(SelectInst& I) {

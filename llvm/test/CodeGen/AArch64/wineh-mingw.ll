@@ -1,5 +1,5 @@
 ; RUN: llc < %s -exception-model=wineh -mtriple=aarch64-pc-mingw32 | FileCheck %s -check-prefix=WINEH
-; RUN: llc < %s -exception-model=wineh -mtriple=aarch64-pc-mingw32 -filetype=obj | llvm-readobj -s | FileCheck %s -check-prefix=WINEH-SECTIONS
+; RUN: llc < %s -exception-model=wineh -mtriple=aarch64-pc-mingw32 -filetype=obj | llvm-readobj -S | FileCheck %s -check-prefix=WINEH-SECTIONS
 
 ; Check emission of eh handler and handler data
 declare i32 @_d_eh_personality(i32, i32, i64, i8*, i8*)

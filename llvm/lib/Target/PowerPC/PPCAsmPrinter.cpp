@@ -101,6 +101,7 @@ public:
     /// The \p MI would be INLINEASM ONLY.
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
 
+    void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                          const char *ExtraCode, raw_ostream &O) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
@@ -158,6 +159,30 @@ public:
 
 } // end anonymous namespace
 
+void PPCAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+                                       raw_ostream &O) {
+  // Computing the address of a global symbol, not calling it.
+  const GlobalValue *GV = MO.getGlobal();
+  MCSymbol *SymToPrint;
+
+  // External or weakly linked global variables need non-lazily-resolved stubs
+  if (Subtarget->hasLazyResolverStub(GV)) {
+    SymToPrint = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
+    MachineModuleInfoImpl::StubValueTy &StubSym =
+        MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(
+            SymToPrint);
+    if (!StubSym.getPointer())
+      StubSym = MachineModuleInfoImpl::StubValueTy(getSymbol(GV),
+                                                   !GV->hasInternalLinkage());
+  } else {
+    SymToPrint = getSymbol(GV);
+  }
+
+  SymToPrint->print(O, MAI);
+
+  printOffset(MO.getOffset(), O);
+}
+
 void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
                                  raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
@@ -190,26 +215,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
     GetBlockAddressSymbol(MO.getBlockAddress())->print(O, MAI);
     return;
   case MachineOperand::MO_GlobalAddress: {
-    // Computing the address of a global symbol, not calling it.
-    const GlobalValue *GV = MO.getGlobal();
-    MCSymbol *SymToPrint;
-
-    // External or weakly linked global variables need non-lazily-resolved stubs
-    if (Subtarget->hasLazyResolverStub(GV)) {
-      SymToPrint = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
-      MachineModuleInfoImpl::StubValueTy &StubSym =
-          MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(
-              SymToPrint);
-      if (!StubSym.getPointer())
-        StubSym = MachineModuleInfoImpl::StubValueTy(getSymbol(GV),
-                                                     !GV->hasInternalLinkage());
-    } else {
-      SymToPrint = getSymbol(GV);
-    }
-
-    SymToPrint->print(O, MAI);
-
-    printOffset(MO.getOffset(), O);
+    PrintSymbolOperand(MO, O);
     return;
   }
 
