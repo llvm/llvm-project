@@ -53,6 +53,14 @@
 # RUN: llvm-readobj --file-headers %t.elf64_ppcle.o | FileCheck %s --check-prefixes=CHECK,LE,PPC64LE,64,SYSV
 # RUN: llvm-readobj --file-headers %t.elf64_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,LE,PPC64LE,64,SYSV
 
+# RUN: llvm-objcopy %t.o -O elf32-littleriscv %t.elf32_littleriscv.o --split-dwo=%t.elf32_littleriscv.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_littleriscv.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV32,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_littleriscv.dwo | FileCheck %s --check-prefixes=CHECK,LE,RISCV32,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-littleriscv %t.elf64_littleriscv.o --split-dwo=%t.elf64_littleriscv.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_littleriscv.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV64,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_littleriscv.dwo | FileCheck %s --check-prefixes=CHECK,LE,RISCV64,64,SYSV
+
 # RUN: llvm-objcopy %t.o -O elf64-x86-64 %t.elf64_x86_64.o --split-dwo=%t.elf64_x86_64.dwo
 # RUN: llvm-readobj --file-headers %t.elf64_x86_64.o | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64,SYSV
 # RUN: llvm-readobj --file-headers %t.elf64_x86_64.dwo | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64,SYSV
@@ -127,6 +135,8 @@ Symbols:
 # PPC-SAME:     ppc{{$}}
 # PPC64BE-SAME: ppc64{{$}}
 # PPC64LE-SAME: ppc64{{$}}
+# RISCV32-SAME: riscv{{$}}
+# RISCV64-SAME: riscv{{$}}
 # X86-64-SAME:  x86-64
 # DEFAULT-SAME: unknown
 
@@ -141,6 +151,8 @@ Symbols:
 # PPC-NEXT:      Arch: powerpc{{$}}
 # PPC64BE-NEXT:  Arch: powerpc64{{$}}
 # PPC64LE-NEXT:  Arch: powerpc64le
+# RISCV32-NEXT:  Arch: riscv32
+# RISCV64-NEXT:  Arch: riscv64
 # X86-64-NEXT:   Arch: x86_64
 # DEFAULT-NEXT:  Arch: unknown
 
@@ -156,14 +168,16 @@ Symbols:
 # FREEBSD: OS/ABI: FreeBSD (0x9)
 # DEFAULT: OS/ABI: Standalone (0xFF)
 
-# AARCH:  Machine: EM_AARCH64 (0xB7)
-# ARM:    Machine: EM_ARM (0x28)
-# I386:   Machine: EM_386 (0x3)
-# IAMCU:  Machine: EM_IAMCU (0x6)
-# MIPS:   Machine: EM_MIPS (0x8)
-# PPC:    Machine: EM_PPC (0x14)
-# PPC64:  Machine: EM_PPC64 (0x15)
-# X86-64: Machine: EM_X86_64 (0x3E)
+# AARCH:   Machine: EM_AARCH64 (0xB7)
+# ARM:     Machine: EM_ARM (0x28)
+# I386:    Machine: EM_386 (0x3)
+# IAMCU:   Machine: EM_IAMCU (0x6)
+# MIPS:    Machine: EM_MIPS (0x8)
+# PPC:     Machine: EM_PPC (0x14)
+# PPC64:   Machine: EM_PPC64 (0x15)
+# RISCV32: Machine: EM_RISCV (0xF3)
+# RISCV64: Machine: EM_RISCV (0xF3)
+# X86-64:  Machine: EM_X86_64 (0x3E)
 
 # 32: HeaderSize: 52
 # 64: HeaderSize: 64

@@ -12,29 +12,18 @@
 define i1 @bitcast_v2i64_to_v2i1(<2 x i64> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: bitcast_v2i64_to_v2i1:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
-; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %ecx
+; SSE2-SSSE3-NEXT:    movl %ecx, %eax
+; SSE2-SSSE3-NEXT:    shrb %al
+; SSE2-SSSE3-NEXT:    addb %cl, %al
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v2i64_to_v2i1:
 ; AVX12:       # %bb.0:
-; AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX12-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
-; AVX12-NEXT:    vpextrb $0, %xmm0, %ecx
-; AVX12-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX12-NEXT:    vmovmskpd %xmm0, %ecx
+; AVX12-NEXT:    movl %ecx, %eax
+; AVX12-NEXT:    shrb %al
 ; AVX12-NEXT:    addb %cl, %al
-; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_v2i64_to_v2i1:

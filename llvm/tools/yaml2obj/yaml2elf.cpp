@@ -390,7 +390,18 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
                                             std::vector<Elf_Shdr> &SHeaders) {
   uint32_t PhdrIdx = 0;
   for (auto &YamlPhdr : Doc.ProgramHeaders) {
-    auto &PHeader = PHeaders[PhdrIdx++];
+    Elf_Phdr &PHeader = PHeaders[PhdrIdx++];
+
+    std::vector<Elf_Shdr *> Sections;
+    for (const ELFYAML::SectionName &SecName : YamlPhdr.Sections) {
+      unsigned Index;
+      if (SN2I.lookup(SecName.Section, Index)) {
+        WithColor::error() << "Unknown section referenced: '" << SecName.Section
+                           << "' by program header.\n";
+        exit(1);
+      }
+      Sections.push_back(&SHeaders[Index]);
+    }
 
     if (YamlPhdr.Offset) {
       PHeader.p_offset = *YamlPhdr.Offset;
@@ -401,12 +412,8 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
         PHeader.p_offset = 0;
 
       // Find the minimum offset for the program header.
-      for (auto SecName : YamlPhdr.Sections) {
-        uint32_t Index = 0;
-        SN2I.lookup(SecName.Section, Index);
-        const auto &SHeader = SHeaders[Index];
-        PHeader.p_offset = std::min(PHeader.p_offset, SHeader.sh_offset);
-      }
+      for (Elf_Shdr *SHeader : Sections)
+        PHeader.p_offset = std::min(PHeader.p_offset, SHeader->sh_offset);
     }
 
     // Find the maximum offset of the end of a section in order to set p_filesz,
@@ -415,15 +422,12 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
       PHeader.p_filesz = *YamlPhdr.FileSize;
     } else {
       PHeader.p_filesz = 0;
-      for (auto SecName : YamlPhdr.Sections) {
-        uint32_t Index = 0;
-        SN2I.lookup(SecName.Section, Index);
-        const auto &SHeader = SHeaders[Index];
+      for (Elf_Shdr *SHeader : Sections) {
         uint64_t EndOfSection;
-        if (SHeader.sh_type == llvm::ELF::SHT_NOBITS)
-          EndOfSection = SHeader.sh_offset;
+        if (SHeader->sh_type == llvm::ELF::SHT_NOBITS)
+          EndOfSection = SHeader->sh_offset;
         else
-          EndOfSection = SHeader.sh_offset + SHeader.sh_size;
+          EndOfSection = SHeader->sh_offset + SHeader->sh_size;
         uint64_t EndOfSegment = PHeader.p_offset + PHeader.p_filesz;
         EndOfSegment = std::max(EndOfSegment, EndOfSection);
         PHeader.p_filesz = EndOfSegment - PHeader.p_offset;
@@ -437,13 +441,9 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
       PHeader.p_memsz = *YamlPhdr.MemSize;
     } else {
       PHeader.p_memsz = PHeader.p_filesz;
-      for (auto SecName : YamlPhdr.Sections) {
-        uint32_t Index = 0;
-        SN2I.lookup(SecName.Section, Index);
-        const auto &SHeader = SHeaders[Index];
-        if (SHeader.sh_offset == PHeader.p_offset + PHeader.p_filesz)
-          PHeader.p_memsz += SHeader.sh_size;
-      }
+      for (Elf_Shdr *SHeader : Sections)
+        if (SHeader->sh_offset == PHeader.p_offset + PHeader.p_filesz)
+          PHeader.p_memsz += SHeader->sh_size;
     }
 
     // Set the alignment of the segment to be the same as the maximum alignment
@@ -453,13 +453,9 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
       PHeader.p_align = *YamlPhdr.Align;
     } else {
       PHeader.p_align = 1;
-      for (auto SecName : YamlPhdr.Sections) {
-        uint32_t Index = 0;
-        SN2I.lookup(SecName.Section, Index);
-        const auto &SHeader = SHeaders[Index];
-        if (SHeader.sh_offset == PHeader.p_offset)
-          PHeader.p_align = std::max(PHeader.p_align, SHeader.sh_addralign);
-      }
+      for (Elf_Shdr *SHeader : Sections)
+        if (SHeader->sh_offset == PHeader.p_offset)
+          PHeader.p_align = std::max(PHeader.p_align, SHeader->sh_addralign);
     }
   }
 }

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple i386-pc-win32 -filetype=obj %s | llvm-readobj -s | FileCheck %s
-// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -s | FileCheck %s
+// RUN: llvm-mc -triple i386-pc-win32 -filetype=obj %s | llvm-readobj -S | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -S | FileCheck %s
 
 .section .foo$bar; .long 1
 .section .foo@bar; .long 1

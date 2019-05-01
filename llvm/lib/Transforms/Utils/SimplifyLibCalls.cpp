@@ -1059,7 +1059,7 @@ static Value *valueHasFloatPrecision(Value *Val) {
 /// Shrink double -> float functions.
 static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
                                bool isBinary, bool isPrecise = false) {
-  if (!CI->getType()->isDoubleTy())
+  if (!CI->getType()->isDoubleTy() || !CI->getCalledFunction())
     return nullptr;
 
   // If not all the uses of the function are converted to float, then bail out.
@@ -1079,15 +1079,17 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
   if (!V[0] || (isBinary && !V[1]))
     return nullptr;
 
+  Function *CalleeFn = CI->getCalledFunction();
+  StringRef CalleeNm = CalleeFn->getName();
+  AttributeList CalleeAt = CalleeFn->getAttributes();
+  bool CalleeIn = CalleeFn->isIntrinsic();
+
   // If call isn't an intrinsic, check that it isn't within a function with the
   // same name as the float version of this call, otherwise the result is an
   // infinite loop.  For example, from MinGW-w64:
   //
   // float expf(float val) { return (float) exp((double) val); }
-  Function *CalleeFn = CI->getCalledFunction();
-  StringRef CalleeNm = CalleeFn->getName();
-  AttributeList CalleeAt = CalleeFn->getAttributes();
-  if (CalleeFn && !CalleeFn->isIntrinsic()) {
+  if (!CalleeIn) {
     const Function *Fn = CI->getFunction();
     StringRef FnName = Fn->getName();
     if (FnName.back() == 'f' &&
@@ -1102,7 +1104,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
 
   // g((double) float) -> (double) gf(float)
   Value *R;
-  if (CalleeFn->isIntrinsic()) {
+  if (CalleeIn) {
     Module *M = CI->getModule();
     Intrinsic::ID IID = CalleeFn->getIntrinsicID();
     Function *Fn = Intrinsic::getDeclaration(M, IID, B.getFloatTy());

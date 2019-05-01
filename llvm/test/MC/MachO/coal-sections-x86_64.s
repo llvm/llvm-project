@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin -filetype=obj %s -o - 2>%t.err | llvm-readobj -sections | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin -filetype=obj %s -o - 2>%t.err | llvm-readobj --sections | FileCheck %s
 // RUN: FileCheck --check-prefix=WARNING < %t.err %s
 
 // CHECK: Section {

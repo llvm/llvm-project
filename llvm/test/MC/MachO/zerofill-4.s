@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -t | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --symbols | FileCheck %s
 
 .zerofill __DATA,__bss,_fill0,1,0
 .zerofill __DATA,__bss,_a,4,2

@@ -70,6 +70,24 @@ void SIFrameLowering::emitFlatScratchInit(const GCNSubtarget &ST,
 
   // Do a 64-bit pointer add.
   if (ST.flatScratchIsPointer()) {
+    if (ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), FlatScrInitLo)
+        .addReg(FlatScrInitLo)
+        .addReg(ScratchWaveOffsetReg);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADDC_U32), FlatScrInitHi)
+        .addReg(FlatScrInitHi)
+        .addImm(0);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_B32)).
+        addReg(FlatScrInitLo).
+        addImm(int16_t(AMDGPU::Hwreg::ID_FLAT_SCR_LO |
+                       (31 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_)));
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_B32)).
+        addReg(FlatScrInitHi).
+        addImm(int16_t(AMDGPU::Hwreg::ID_FLAT_SCR_HI |
+                       (31 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_)));
+      return;
+    }
+
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), AMDGPU::FLAT_SCR_LO)
       .addReg(FlatScrInitLo)
       .addReg(ScratchWaveOffsetReg);
@@ -79,6 +97,8 @@ void SIFrameLowering::emitFlatScratchInit(const GCNSubtarget &ST,
 
     return;
   }
+
+  assert(ST.getGeneration() < AMDGPUSubtarget::GFX10);
 
   // Copy the size in bytes.
   BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), AMDGPU::FLAT_SCR_LO)
@@ -423,6 +443,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
       .addReg(Rsrc01)
       .addImm(EncodedOffset) // offset
       .addImm(0) // glc
+      .addImm(0) // dlc
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine)
       .addMemOperand(MMO);
     return;
@@ -463,6 +484,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
           .addReg(MFI->getImplicitBufferPtrUserSGPR())
           .addImm(0) // offset
           .addImm(0) // glc
+          .addImm(0) // dlc
           .addMemOperand(MMO)
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
       }

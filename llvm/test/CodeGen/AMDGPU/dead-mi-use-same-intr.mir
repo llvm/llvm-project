@@ -50,6 +50,6 @@ body: |
   %0 = IMPLICIT_DEF
   %1 = IMPLICIT_DEF
   %2 = IMPLICIT_DEF
-  GLOBAL_STORE_DWORD undef $vgpr0_vgpr1, %2, 0, 0, 0, implicit $exec
+  GLOBAL_STORE_DWORD undef $vgpr0_vgpr1, %2, 0, 0, 0, 0, implicit $exec
   dead %2:vgpr_32 = V_MAC_F32_e32 %0:vgpr_32, %1:vgpr_32, %2:vgpr_32, implicit $exec
   S_ENDPGM 0

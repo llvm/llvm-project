@@ -4,7 +4,7 @@ RUN: yaml2obj %p/Inputs/x86_64-exe.yaml > %t.in123.exe
 # showcase padding in CONTENTS below.
 
 RUN: llvm-objcopy --add-gnu-debuglink=%t.in123.exe %t.in123.exe %t.out.exe
-RUN: llvm-readobj -sections %t.out.exe | FileCheck %s --check-prefix=SECTIONS
+RUN: llvm-readobj --sections %t.out.exe | FileCheck %s --check-prefix=SECTIONS
 RUN: llvm-objdump -s %t.out.exe | FileCheck %s --check-prefix=CONTENTS
 
 # Show the last of the preexisting sections, which is used for choosing

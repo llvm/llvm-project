@@ -113,6 +113,6 @@ static_library("PDB") {
       "DIA/DIASourceFile.cpp",
       "DIA/DIATable.cpp",
     ]
-    libs =  [ "diaguids.lib" ]
+    libs = [ "diaguids.lib" ]
   }
 }

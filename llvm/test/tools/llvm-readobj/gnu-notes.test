@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t.so
-# RUN: llvm-readobj -elf-output-style GNU --notes %t.so | FileCheck %s --check-prefix=GNU
-# RUN: llvm-readobj -elf-output-style LLVM --notes %t.so | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --notes %t.so | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --elf-output-style LLVM --notes %t.so | FileCheck %s --check-prefix=LLVM
 
 # GNU:      Displaying notes found at file offset 0x00000340 with length 0x00000020:
 # GNU-NEXT:   Owner                 Data size       Description

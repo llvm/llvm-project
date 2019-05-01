@@ -2,7 +2,7 @@
 
 # RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
 # RUN: llvm-objcopy --compress-debug-sections %t.o %t-compressed.o
-# RUN: llvm-readobj -s %t-compressed.o | FileCheck %s
+# RUN: llvm-readobj -S %t-compressed.o | FileCheck %s
 
 # CHECK: Name: .debug_foo
 # CHECK-NEXT: Type: SHT_PROGBITS

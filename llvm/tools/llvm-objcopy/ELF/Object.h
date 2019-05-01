@@ -685,6 +685,9 @@ public:
 
   void accept(SectionVisitor &) const override;
   void accept(MutableSectionVisitor &Visitor) override;
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
+      function_ref<bool(const SectionBase *)> ToRemove) override;
 
   static bool classof(const SectionBase *S) {
     if (!(S->Flags & ELF::SHF_ALLOC))

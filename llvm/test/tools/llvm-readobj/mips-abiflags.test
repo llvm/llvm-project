@@ -1,6 +1,6 @@
-RUN: llvm-readobj -mips-abi-flags %p/Inputs/abiflags.obj.elf-mipsel | \
+RUN: llvm-readobj --mips-abi-flags %p/Inputs/abiflags.obj.elf-mipsel | \
 RUN:   FileCheck -check-prefix=EL64 %s
-RUN: llvm-readobj -mips-abi-flags %p/Inputs/abiflags.obj.elf-mips | \
+RUN: llvm-readobj --mips-abi-flags %p/Inputs/abiflags.obj.elf-mips | \
 RUN:   FileCheck -check-prefix=BE32 %s
 
 EL64:      MIPS ABI Flags {

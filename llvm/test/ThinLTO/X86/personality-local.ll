@@ -6,7 +6,7 @@
 ; RUN:   -r %t1.bc,foo,l \
 ; RUN:   -r %t1.bc,bar,p \
 ; RUN:   -r %t1.bc,main,xp
-; RUN: llvm-readobj -t %t.o.2 | FileCheck %s
+; RUN: llvm-readobj --symbols %t.o.2 | FileCheck %s
 
 ; CHECK:      Symbol {
 ; CHECK:        Name: foo

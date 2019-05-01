@@ -11,7 +11,7 @@ body:             |
   bb.0:
     liveins: $sgpr0_sgpr1
 
-    %10:sreg_128 = S_LOAD_DWORDX4_IMM killed $noreg, 9, 0
+    %10:sreg_128 = S_LOAD_DWORDX4_IMM killed $noreg, 9, 0, 0
     S_NOP 0, implicit-def %4:sreg_128, implicit %10.sub1:sreg_128
     S_CBRANCH_SCC0 %bb.3, implicit undef $scc
     S_BRANCH %bb.1
@@ -26,7 +26,7 @@ body:             |
     S_BRANCH %bb.4
 
   bb.3:
-    %10:sreg_128 = S_LOAD_DWORDX4_IMM killed $noreg, 10, 0
+    %10:sreg_128 = S_LOAD_DWORDX4_IMM killed $noreg, 10, 0, 0
     %7:sreg_32_xm0 = COPY %10.sub1:sreg_128
     %8:sreg_32_xm0 = COPY %10.sub2:sreg_128
 

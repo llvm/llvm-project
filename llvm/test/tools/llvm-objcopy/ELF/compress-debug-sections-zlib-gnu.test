@@ -6,9 +6,9 @@
 
 # RUN: llvm-objdump -s %t.o --section=.debug_foo | FileCheck %s
 # RUN: llvm-objdump -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-COMPRESSED
-# RUN: llvm-readobj --relocations -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
-# RUN: llvm-readobj --relocations -s %t-decompressed.o | FileCheck %s --check-prefix=CHECK-HEADER
-# RUN: llvm-readobj --relocations -s %t.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-readobj --relocations -S %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
+# RUN: llvm-readobj --relocations -S %t-decompressed.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-readobj --relocations -S %t.o | FileCheck %s --check-prefix=CHECK-HEADER
 # RUN: llvm-objdump -s %t-decompressed.o --section=.debug_foo | FileCheck %s
 
 # CHECK: .debug_foo:

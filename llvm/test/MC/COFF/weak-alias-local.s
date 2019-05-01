@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s -o %t.o
-// RUN: llvm-readobj -t %t.o | FileCheck %s
+// RUN: llvm-readobj --symbols %t.o | FileCheck %s
 
 // test that we create an external symbol for a to point to.
 

@@ -180,6 +180,9 @@ cl::opt<bool> JustSymbolName("just-symbol-name",
 cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
                           cl::aliasopt(JustSymbolName), cl::Grouping);
 
+cl::opt<bool> SpecialSyms("special-syms",
+                          cl::desc("No-op. Used for GNU compatibility only"));
+
 // FIXME: This option takes exactly two strings and should be allowed anywhere
 // on the command line.  Such that "llvm-nm -s __TEXT __text foo.o" would work.
 // But that does not as the CommandLine Library does not have a way to make

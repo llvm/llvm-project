@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
 // RUN: llvm-mc -filetype=obj -triple aarch64-windows %s -o - \
-// RUN:   | not llvm-readobj -unwind - | FileCheck %s
+// RUN:   | not llvm-readobj --unwind - | FileCheck %s
 
 // Older versions of LLVM had a bug where we would accidentally
 // truncate the number of epilogue scopes to a uint8_t; make

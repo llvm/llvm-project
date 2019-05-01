@@ -286,6 +286,10 @@ TEST(Option, FindNearest) {
   EXPECT_EQ(Nearest, "-blorp");
   EXPECT_EQ(1U, T.findNearest("--blorm", Nearest));
   EXPECT_EQ(Nearest, "--blorp");
+  EXPECT_EQ(1U, T.findNearest("-blarg", Nearest));
+  EXPECT_EQ(Nearest, "-blarn");
+  EXPECT_EQ(1U, T.findNearest("--blarm", Nearest));
+  EXPECT_EQ(Nearest, "--blarn");
   EXPECT_EQ(1U, T.findNearest("-fjormp", Nearest));
   EXPECT_EQ(Nearest, "--fjormp");
 

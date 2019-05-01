@@ -3,7 +3,7 @@
 #
 # RUN: llvm-mc %s -triple=mips-unknown-linux-gnu -mcpu=mips32r6 \
 # RUN:   -filetype=obj -o - | \
-# RUN:   llvm-readobj -mips-abi-flags - | \
+# RUN:   llvm-readobj --mips-abi-flags - | \
 # RUN:   FileCheck %s -check-prefix=CHECK-OBJ
 
 # CHECK-ASM: .module ginv

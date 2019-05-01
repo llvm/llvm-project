@@ -37,7 +37,7 @@ define void @foo(i64 %n) nounwind {
 ; ATOM-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; ATOM-NEXT:    mulsd %xmm0, %xmm1
 ; ATOM-NEXT:    movsd %xmm1, A(,%rax,8)
-; ATOM-NEXT:    incq %rax
+; ATOM-NEXT:    leaq 1(%rax), %rax
 ; ATOM-NEXT:    cmpq %rax, %rdi
 ; ATOM-NEXT:    jne .LBB0_2
 ; ATOM-NEXT:  .LBB0_3: # %for.end

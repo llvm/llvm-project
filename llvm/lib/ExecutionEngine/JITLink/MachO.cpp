@@ -41,7 +41,8 @@ void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx) {
   memcpy(&Magic, Data.data(), sizeof(uint32_t));
   LLVM_DEBUG({
     dbgs() << "jitLink_MachO: magic = " << format("0x%08" PRIx32, Magic)
-           << "\n";
+           << ", identifier = \""
+           << Ctx->getObjectBuffer().getBufferIdentifier() << "\"\n";
   });
 
   if (Magic == MachO::MH_MAGIC || Magic == MachO::MH_CIGAM) {

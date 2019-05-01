@@ -4,6 +4,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 group("default") {
   deps = [
+    "//clang-tools-extra/clangd/test",
     "//clang-tools-extra/test",
     "//clang/test",
     "//lld/test",

@@ -1,6 +1,6 @@
 ; RUN: llc -o - %s -mtriple=aarch64-windows -verify-machineinstrs | FileCheck %s
 ; RUN: llc -o %t -filetype=obj %s -mtriple=aarch64-windows
-; RUN: llvm-readobj -unwind %t | FileCheck %s -check-prefix=UNWIND
+; RUN: llvm-readobj --unwind %t | FileCheck %s -check-prefix=UNWIND
 
 ; We test the following
 ; 1) That the unwind help object is created and that its offset from the stack

@@ -1,5 +1,5 @@
 // Check dynamic section tags in case of shared library file.
-RUN: llvm-readobj -dynamic-table %p/Inputs/dynamic-table-so.mips \
+RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-so.mips \
 RUN:     | FileCheck %s -check-prefix ELF-MIPS
 
 ELF-MIPS: Format: ELF32-mips
@@ -34,7 +34,7 @@ ELF-MIPS:   0x00000000 NULL                 0x0
 ELF-MIPS: ]
 
 // Check dynamic section tags in case of non-pic executable file.
-RUN: llvm-readobj -dynamic-table %p/Inputs/dynamic-table-exe.mips \
+RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-exe.mips \
 RUN:     | FileCheck %s -check-prefix ELF-MIPS-EXE
 
 ELF-MIPS-EXE: Format: ELF32-mips
@@ -71,7 +71,7 @@ ELF-MIPS-EXE:   0x6FFFFFF0 VERSYM               0x4003D8
 ELF-MIPS-EXE:   0x00000000 NULL                 0x0
 ELF-MIPS-EXE: ]
 
-RUN: llvm-readobj -dynamic-table %p/Inputs/dynamic-table-exe.x86 \
+RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-exe.x86 \
 RUN:     | FileCheck %s -check-prefix ELF-X86-EXE
 
 ELF-X86-EXE: Format: ELF32-i386
@@ -112,7 +112,7 @@ ELF-X86-EXE:   0x6FFFFFFA RELCOUNT             6
 ELF-X86-EXE:   0x00000000 NULL                 0x0
 ELF-X86-EXE: ]
 
-RUN: llvm-readobj -dynamic-table %p/Inputs/dynamic-table-so.x86 \
+RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-so.x86 \
 RUN:     | FileCheck %s -check-prefix ELF-X86-SO
 
 ELF-X86-SO: Format: ELF64-x86-64
@@ -149,7 +149,7 @@ ELF-X86-SO:   0x000000006FFFFFF0 VERSYM               0x{{[0-9A-F]+}}
 ELF-X86-SO:   0x000000006FFFFFF9 RELACOUNT            3
 ELF-X86-SO:   0x0000000000000000 NULL                 0x0
 
-RUN: llvm-readobj -dynamic-table %p/Inputs/dynamic-table-so.aarch64 \
+RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-so.aarch64 \
 RUN:     | FileCheck %s -check-prefix ELF-AARCH64-SO
 
 ELF-AARCH64-SO: Format: ELF64-aarch64-little

@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple=i686-pc-win32 -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+# RUN: llvm-mc < %s -triple=i686-pc-win32 -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 # Original source, slightly modified with an extra .cv_loc directive (at EXTRA
 # below) that was causing assertions:

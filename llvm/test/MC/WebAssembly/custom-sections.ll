@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | llvm-readobj -s | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | llvm-readobj -S | FileCheck %s
 
 ; Test the mechanism for defining user custom sections.
 
