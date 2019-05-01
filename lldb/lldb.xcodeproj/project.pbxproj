@@ -299,6 +299,7 @@
 		9A3D43D61F3151C400EB767C /* ConstStringTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3D43C81F3150D200EB767C /* ConstStringTest.cpp */; };
 		2668022F115FD19D008E1FE4 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26F5C39010F3FA26009D5894 /* CoreFoundation.framework */; };
 		949EEDA01BA74B6D008C63CF /* CoreMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949EED9E1BA74B64008C63CF /* CoreMedia.cpp */; };
+		DDB5829C2278C8D700491B41 /* CxxModuleHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DDB5829B2278C8D600491B41 /* CxxModuleHandler.cpp */; };
 		945261BF1B9A11FC00BF138D /* CxxStringTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261B31B9A11E800BF138D /* CxxStringTypes.cpp */; };
 		6D95DC001B9DC057000E318A /* DIERef.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D95DBFD1B9DC057000E318A /* DIERef.cpp */; };
 		269DDD4A1B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 269DDD481B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp */; };
@@ -1894,6 +1895,8 @@
 		94B9E5071BBEFCF6000A48DC /* CoreMedia.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CoreMedia.h; path = Language/ObjC/CoreMedia.h; sourceTree = "<group>"; };
 		AF3F54AE1B3BA59C00186E73 /* CrashReason.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CrashReason.cpp; sourceTree = "<group>"; };
 		AF3F54AF1B3BA59C00186E73 /* CrashReason.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CrashReason.h; sourceTree = "<group>"; };
+		DDB5829B2278C8D600491B41 /* CxxModuleHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CxxModuleHandler.cpp; path = source/Symbol/CxxModuleHandler.cpp; sourceTree = "<group>"; };
+		DDB5829D2278C8E900491B41 /* CxxModuleHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CxxModuleHandler.h; path = include/lldb/Symbol/CxxModuleHandler.h; sourceTree = "<group>"; };
 		945261B31B9A11E800BF138D /* CxxStringTypes.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CxxStringTypes.cpp; path = Language/CPlusPlus/CxxStringTypes.cpp; sourceTree = "<group>"; };
 		945261B41B9A11E800BF138D /* CxxStringTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CxxStringTypes.h; path = Language/CPlusPlus/CxxStringTypes.h; sourceTree = "<group>"; };
 		6D95DBFD1B9DC057000E318A /* DIERef.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DIERef.cpp; sourceTree = "<group>"; };
@@ -5436,8 +5439,10 @@
 				26BC7F1510F1B8EC00F91463 /* CompileUnit.cpp */,
 				23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */,
 				26BC7C5810F1B6E900F91463 /* Declaration.h */,
+				DDB5829B2278C8D600491B41 /* CxxModuleHandler.cpp */,
 				26BC7F1610F1B8EC00F91463 /* Declaration.cpp */,
 				4997E6811A3B74AE00733D2F /* DeclVendor.h */,
+				DDB5829D2278C8E900491B41 /* CxxModuleHandler.h */,
 				26BC7C5910F1B6E900F91463 /* DWARFCallFrameInfo.h */,
 				26BC7F1710F1B8EC00F91463 /* DWARFCallFrameInfo.cpp */,
 				26BC7C5A10F1B6E900F91463 /* Function.h */,
@@ -8381,6 +8386,7 @@
 				AF0578C4217FA80700CF9D80 /* UdtRecordCompleter.cpp in Sources */,
 				2689FFFF13353DB600698AC0 /* BreakpointResolver.cpp in Sources */,
 				25420ECD1A6490B8009ADBCB /* OptionValueChar.cpp in Sources */,
+				DDB5829C2278C8D700491B41 /* CxxModuleHandler.cpp in Sources */,
 				2689000113353DB600698AC0 /* BreakpointResolverAddress.cpp in Sources */,
 				255EFF741AFABA720069F277 /* LockFileBase.cpp in Sources */,
 				945261C21B9A11FC00BF138D /* LibCxxList.cpp in Sources */,
