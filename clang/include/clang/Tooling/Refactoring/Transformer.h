@@ -44,12 +44,16 @@ enum class NodePart {
   Name,
 };
 
-using TextGenerator =
-    std::function<std::string(const ast_matchers::MatchFinder::MatchResult &)>;
+// Note that \p TextGenerator is allowed to fail, e.g. when trying to access a
+// matched node that was not bound.  Allowing this to fail simplifies error
+// handling for interactive tools like clang-query.
+using TextGenerator = std::function<Expected<std::string>(
+    const ast_matchers::MatchFinder::MatchResult &)>;
 
 /// Wraps a string as a TextGenerator.
 inline TextGenerator text(std::string M) {
-  return [M](const ast_matchers::MatchFinder::MatchResult &) { return M; };
+  return [M](const ast_matchers::MatchFinder::MatchResult &)
+             -> Expected<std::string> { return M; };
 }
 
 // Description of a source-code edit, expressed in terms of an AST node.
@@ -222,11 +226,13 @@ translateEdits(const ast_matchers::MatchFinder::MatchResult &Result,
 class Transformer : public ast_matchers::MatchFinder::MatchCallback {
 public:
   using ChangeConsumer =
-      std::function<void(const clang::tooling::AtomicChange &Change)>;
+      std::function<void(Expected<clang::tooling::AtomicChange> Change)>;
 
-  /// \param Consumer Receives each successful rewrite as an \c AtomicChange.
-  /// Note that clients are responsible for handling the case that independent
-  /// \c AtomicChanges conflict with each other.
+  /// \param Consumer Receives each rewrite or error.  Will not necessarily be
+  /// called for each match; for example, if the rewrite is not applicable
+  /// because of macros, but doesn't fail.  Note that clients are responsible
+  /// for handling the case that independent \c AtomicChanges conflict with each
+  /// other.
   Transformer(RewriteRule Rule, ChangeConsumer Consumer)
       : Rule(std::move(Rule)), Consumer(std::move(Consumer)) {}
 

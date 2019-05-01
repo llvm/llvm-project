@@ -4137,8 +4137,9 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
     auto *ToD = LastDeclMatcher<DeclTy>().match(ToTU, getPattern());
     EXPECT_TRUE(ImportedD == ToD);
     EXPECT_FALSE(ToD->isThisDeclarationADefinition());
-    if (auto *ToT = dyn_cast<TemplateDecl>(ToD))
+    if (auto *ToT = dyn_cast<TemplateDecl>(ToD)) {
       EXPECT_TRUE(ToT->getTemplatedDecl());
+    }
   }
 
   void TypedTest_DefinitionShouldBeImportedAsADefinition() {
@@ -4152,8 +4153,9 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 1u);
     auto *ToD = LastDeclMatcher<DeclTy>().match(ToTU, getPattern());
     EXPECT_TRUE(ToD->isThisDeclarationADefinition());
-    if (auto *ToT = dyn_cast<TemplateDecl>(ToD))
+    if (auto *ToT = dyn_cast<TemplateDecl>(ToD)) {
       EXPECT_TRUE(ToT->getTemplatedDecl());
+    }
   }
 
   void TypedTest_ImportPrototypeAfterImportedPrototype() {
@@ -4266,8 +4268,9 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
     auto *To0 = FirstDeclMatcher<DeclTy>().match(ToTU, getPattern());
     EXPECT_TRUE(Imported0 == To0);
     EXPECT_TRUE(To0->isThisDeclarationADefinition());
-    if (auto *ToT0 = dyn_cast<TemplateDecl>(To0))
+    if (auto *ToT0 = dyn_cast<TemplateDecl>(To0)) {
       EXPECT_TRUE(ToT0->getTemplatedDecl());
+    }
   }
 
   void TypedTest_ImportDefinitionThenPrototype() {

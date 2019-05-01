@@ -811,7 +811,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     // Use the simple Itanium rules for now.
     // FIXME: This is incompatible with MSVC for arguments with a dtor and no
     // copy ctor.
-    return !canCopyArgument(RD) ? RAA_Indirect : RAA_Default;
+    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
 
   case llvm::Triple::x86:
     // All record arguments are passed in memory on x86.  Decide whether to
@@ -820,7 +820,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
 
     // If C++ prohibits us from making a copy, construct the arguments directly
     // into argument memory.
-    if (!canCopyArgument(RD))
+    if (!RD->canPassInRegisters())
       return RAA_DirectInMemory;
 
     // Otherwise, construct the argument into a temporary and copy the bytes
@@ -829,7 +829,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
 
   case llvm::Triple::x86_64:
   case llvm::Triple::aarch64:
-    return !canCopyArgument(RD) ? RAA_Indirect : RAA_Default;
+    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
   }
 
   llvm_unreachable("invalid enum");
