@@ -2801,9 +2801,13 @@ int __kmp_get_max_active_levels(int gtid) {
   return thread->th.th_current_task->td_icvs.max_active_levels;
 }
 
+KMP_BUILD_ASSERT(sizeof(kmp_sched_t) == sizeof(int));
+KMP_BUILD_ASSERT(sizeof(enum sched_type) == sizeof(int));
+
 /* Changes def_sched_var ICV values (run-time schedule kind and chunk) */
 void __kmp_set_schedule(int gtid, kmp_sched_t kind, int chunk) {
   kmp_info_t *thread;
+  kmp_sched_t orig_kind;
   //    kmp_team_t *team;
 
   KF_TRACE(10, ("__kmp_set_schedule: new schedule for thread %d = (%d, %d)\n",
@@ -2814,6 +2818,9 @@ void __kmp_set_schedule(int gtid, kmp_sched_t kind, int chunk) {
   // Valid parameters should fit in one of two intervals - standard or extended:
   //       <lower>, <valid>, <upper_std>, <lower_ext>, <valid>, <upper>
   // 2008-01-25: 0,  1 - 4,       5,         100,     101 - 102, 103
+  orig_kind = kind;
+  kind = __kmp_sched_without_mods(kind);
+
   if (kind <= kmp_sched_lower || kind >= kmp_sched_upper ||
       (kind <= kmp_sched_lower_ext && kind >= kmp_sched_upper_std)) {
     // TODO: Hint needs attention in case we change the default schedule.
@@ -2844,6 +2851,8 @@ void __kmp_set_schedule(int gtid, kmp_sched_t kind, int chunk) {
         __kmp_sch_map[kind - kmp_sched_lower_ext + kmp_sched_upper_std -
                       kmp_sched_lower - 2];
   }
+  __kmp_sched_apply_mods_intkind(
+      orig_kind, &(thread->th.th_current_task->td_icvs.sched.r_sched_type));
   if (kind == kmp_sched_auto || chunk < 1) {
     // ignore parameter chunk for schedule auto
     thread->th.th_current_task->td_icvs.sched.chunk = KMP_DEFAULT_CHUNK;
@@ -2863,12 +2872,12 @@ void __kmp_get_schedule(int gtid, kmp_sched_t *kind, int *chunk) {
   thread = __kmp_threads[gtid];
 
   th_type = thread->th.th_current_task->td_icvs.sched.r_sched_type;
-
-  switch (th_type) {
+  switch (SCHEDULE_WITHOUT_MODIFIERS(th_type)) {
   case kmp_sch_static:
   case kmp_sch_static_greedy:
   case kmp_sch_static_balanced:
     *kind = kmp_sched_static;
+    __kmp_sched_apply_mods_stdkind(kind, th_type);
     *chunk = 0; // chunk was not set, try to show this fact via zero value
     return;
   case kmp_sch_static_chunked:
@@ -2897,6 +2906,7 @@ void __kmp_get_schedule(int gtid, kmp_sched_t *kind, int *chunk) {
     KMP_FATAL(UnknownSchedulingType, th_type);
   }
 
+  __kmp_sched_apply_mods_stdkind(kind, th_type);
   *chunk = thread->th.th_current_task->td_icvs.sched.chunk;
 }
 
@@ -3025,15 +3035,22 @@ kmp_r_sched_t __kmp_get_schedule_global() {
   // __kmp_guided. __kmp_sched should keep original value, so that user can set
   // KMP_SCHEDULE multiple times, and thus have different run-time schedules in
   // different roots (even in OMP 2.5)
-  if (__kmp_sched == kmp_sch_static) {
+  enum sched_type s = SCHEDULE_WITHOUT_MODIFIERS(__kmp_sched);
+#if OMP_45_ENABLED
+  enum sched_type sched_modifiers = SCHEDULE_GET_MODIFIERS(__kmp_sched);
+#endif
+  if (s == kmp_sch_static) {
     // replace STATIC with more detailed schedule (balanced or greedy)
     r_sched.r_sched_type = __kmp_static;
-  } else if (__kmp_sched == kmp_sch_guided_chunked) {
+  } else if (s == kmp_sch_guided_chunked) {
     // replace GUIDED with more detailed schedule (iterative or analytical)
     r_sched.r_sched_type = __kmp_guided;
   } else { // (STATIC_CHUNKED), or (DYNAMIC_CHUNKED), or other
     r_sched.r_sched_type = __kmp_sched;
   }
+#if OMP_45_ENABLED
+  SCHEDULE_SET_MODIFIERS(r_sched.r_sched_type, sched_modifiers);
+#endif
 
   if (__kmp_chunk < KMP_DEFAULT_CHUNK) {
     // __kmp_chunk may be wrong here (if it was not ever set)

@@ -544,7 +544,7 @@ static int __kmp_hwloc_check_numa() {
   if (hN != NULL && hN->depth > hS->depth) {
     __kmp_numa_detected = TRUE; // socket includes node(s)
     if (__kmp_affinity_gran == affinity_gran_node) {
-      __kmp_affinity_gran == affinity_gran_numa;
+      __kmp_affinity_gran = affinity_gran_numa;
     }
   }
 

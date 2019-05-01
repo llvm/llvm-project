@@ -43,10 +43,11 @@
 
     /* schedule kind constants */
     typedef enum omp_sched_t {
-	omp_sched_static  = 1,
-	omp_sched_dynamic = 2,
-	omp_sched_guided  = 3,
-	omp_sched_auto    = 4
+        omp_sched_static  = 1,
+        omp_sched_dynamic = 2,
+        omp_sched_guided  = 3,
+        omp_sched_auto    = 4,
+        omp_sched_monotonic = 0x80000000
     } omp_sched_t;
 
     /* set API functions */

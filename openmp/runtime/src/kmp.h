@@ -325,7 +325,8 @@ typedef enum kmp_sched {
   kmp_sched_static_steal = 102, // mapped to kmp_sch_static_steal (44)
 #endif
   kmp_sched_upper,
-  kmp_sched_default = kmp_sched_static // default scheduling
+  kmp_sched_default = kmp_sched_static, // default scheduling
+  kmp_sched_monotonic = 0x80000000
 } kmp_sched_t;
 #endif
 
@@ -438,6 +439,11 @@ enum sched_type : kmp_int32 {
 #define SCHEDULE_HAS_NONMONOTONIC(s) (((s)&kmp_sch_modifier_nonmonotonic) != 0)
 #define SCHEDULE_HAS_NO_MODIFIERS(s)                                           \
   (((s) & (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic)) == 0)
+#define SCHEDULE_GET_MODIFIERS(s)                                              \
+  ((enum sched_type)(                                                          \
+      (s) & (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic)))
+#define SCHEDULE_SET_MODIFIERS(s, m)                                           \
+  (s = (enum sched_type)((kmp_int32)s | (kmp_int32)m))
 #else
 /* By doing this we hope to avoid multiple tests on OMP_45_ENABLED. Compilers
    can now eliminate tests on compile time constants and dead code that results
@@ -446,10 +452,46 @@ enum sched_type : kmp_int32 {
 #define SCHEDULE_HAS_MONOTONIC(s) false
 #define SCHEDULE_HAS_NONMONOTONIC(s) false
 #define SCHEDULE_HAS_NO_MODIFIERS(s) true
+#define SCHEDULE_GET_MODIFIERS(s) ((enum sched_type)0)
+#define SCHEDULE_SET_MODIFIERS(s, m) /* Nothing */
 #endif
+#define SCHEDULE_NONMONOTONIC 0
+#define SCHEDULE_MONOTONIC 1
 
   kmp_sch_default = kmp_sch_static /**< default scheduling algorithm */
 };
+
+// Apply modifiers on internal kind to standard kind
+static inline void
+__kmp_sched_apply_mods_stdkind(kmp_sched_t *kind,
+                               enum sched_type internal_kind) {
+#if OMP_50_ENABLED
+  if (SCHEDULE_HAS_MONOTONIC(internal_kind)) {
+    *kind = (kmp_sched_t)((int)*kind | (int)kmp_sched_monotonic);
+  }
+#endif
+}
+
+// Apply modifiers on standard kind to internal kind
+static inline void
+__kmp_sched_apply_mods_intkind(kmp_sched_t kind,
+                               enum sched_type *internal_kind) {
+#if OMP_50_ENABLED
+  if ((int)kind & (int)kmp_sched_monotonic) {
+    *internal_kind = (enum sched_type)((int)*internal_kind |
+                                       (int)kmp_sch_modifier_monotonic);
+  }
+#endif
+}
+
+// Get standard schedule without modifiers
+static inline kmp_sched_t __kmp_sched_without_mods(kmp_sched_t kind) {
+#if OMP_50_ENABLED
+  return (kmp_sched_t)((int)kind & ~((int)kmp_sched_monotonic));
+#else
+  return kind;
+#endif
+}
 
 /* Type to keep runtime schedule set via OMP_SCHEDULE or omp_set_schedule() */
 typedef union kmp_r_sched {
