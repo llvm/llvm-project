@@ -1759,6 +1759,40 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   return llvm::None;
 }
 
+bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
+  // A variable is self if its name if "self", and it's either a
+  // function argument or a local variable and it's scope is a
+  // constructor. These checks are sorted from cheap to expensive.
+  static ConstString g_self = ConstString("self");
+  if (variable.GetUnqualifiedName() != g_self)
+    return false;
+
+  if (variable.GetScope() == lldb::eValueTypeVariableArgument)
+    return true;
+
+  if (variable.GetScope() != lldb::eValueTypeVariableLocal)
+    return false;
+
+  SymbolContextScope *sym_ctx_scope = variable.GetSymbolContextScope();
+  if (!sym_ctx_scope)
+    return false;
+  Function *function = sym_ctx_scope->CalculateSymbolContextFunction();
+  if (!function)
+    return false;
+  StringRef func_name = function->GetMangled().GetMangledName().GetStringRef();
+  swift::Demangle::Context demangle_ctx;
+  swift::Demangle::NodePointer node_ptr =
+      demangle_ctx.demangleSymbolAsNode(func_name);
+  if (!node_ptr)
+    return false;
+  if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
+    return false;
+  if (node_ptr->getNumChildren() != 1)
+    return false;
+  node_ptr = node_ptr->getFirstChild();
+  return node_ptr->getKind() == swift::Demangle::Node::Kind::Constructor;
+}
+
 /// Determine whether the scratch SwiftASTContext has been locked.
 static bool IsScratchContextLocked(Target &target) {
   if (target.GetSwiftScratchContextLock().try_lock()) {
