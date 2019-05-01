@@ -19,6 +19,14 @@
 #include <dlfcn.h>
 #endif
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
+#include <stdio.h>
+
 #define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
 
 #if !defined(__has_attribute)
@@ -32,7 +40,11 @@
 #endif
 
 SWIFT_REPL_NOOPT
-int REPL_MAIN() {
+int
+#if defined(_WIN32)
+__declspec(dllexport)
+#endif
+REPL_MAIN() {
   return 0;
 }
 
@@ -43,6 +55,10 @@ int main() {
   dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
 #elif defined(__linux__)
   dlopen("libswiftCore.so", RTLD_LAZY);
+#elif defined(_WIN32)
+  HMODULE hModule = LoadLibraryW(L"swiftCore.dll");
+  if (hModule == NULL)
+    fprintf(stderr, "unable to load standard library: %lu\n", GetLastError());
 #endif
 
 #ifdef __APPLE__
@@ -77,6 +93,6 @@ int main() {
     }
   }
 #else
-  REPL_MAIN();
+  return REPL_MAIN();
 #endif
 }

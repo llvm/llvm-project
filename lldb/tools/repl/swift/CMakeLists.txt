@@ -24,5 +24,12 @@ target_link_libraries(repl_swift PRIVATE ${CMAKE_DL_LIBS})
 # swift symbol (corresponding to main). If we build the repl with debug info,
 # the debugger looks at the frame language (looking up the compile unit) and gets
 # confused.
-set_target_properties(repl_swift PROPERTIES
-    COMPILE_FLAGS "-g0")
+if(MSVC)
+  # disable inline function expansion so that we have a function that we can
+  # break upon
+  target_compile_options(repl_swift PRIVATE /Ob0)
+endif()
+if(NOT MSVC)
+  set_target_properties(repl_swift PROPERTIES
+      COMPILE_FLAGS "-g0")
+endif()
