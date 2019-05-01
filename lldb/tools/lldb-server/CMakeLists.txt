@@ -66,7 +66,6 @@ add_lldb_tool(lldb-server
       lldbBase
       lldbHost
       lldbInitialization
-      lldbInterpreter
       ${LLDB_PLUGINS}
       ${LLDB_SYSTEM_LIBS}
 
