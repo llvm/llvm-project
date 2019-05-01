@@ -5089,7 +5089,9 @@ bool SwiftASTContext::IsPossibleDynamicType(void *type,
         can_type->isAnyExistentialType())
       return true;
 
-    if (can_type->hasArchetype() || can_type->hasTypeParameter())
+    if (can_type->hasArchetype()
+        || can_type->hasOpaqueArchetype()
+        || can_type->hasTypeParameter())
       return true;
 
     if (can_type == GetASTContext()->TheRawPointerType)
