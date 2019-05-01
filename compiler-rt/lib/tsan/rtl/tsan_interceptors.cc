@@ -706,6 +706,19 @@ TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
   return p;
 }
 
+TSAN_INTERCEPTOR(void*, reallocarray, void *p, uptr size, uptr n) {
+  if (in_symbolizer())
+    return InternalReallocArray(p, size, n);
+  if (p)
+    invoke_free_hook(p);
+  {
+    SCOPED_INTERCEPTOR_RAW(reallocarray, p, size, n);
+    p = user_reallocarray(thr, pc, p, size, n);
+  }
+  invoke_malloc_hook(p, size);
+  return p;
+}
+
 TSAN_INTERCEPTOR(void, free, void *p) {
   if (p == 0)
     return;
@@ -2667,6 +2680,7 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(__libc_memalign);
   TSAN_INTERCEPT(calloc);
   TSAN_INTERCEPT(realloc);
+  TSAN_INTERCEPT(reallocarray);
   TSAN_INTERCEPT(free);
   TSAN_INTERCEPT(cfree);
   TSAN_INTERCEPT(munmap);

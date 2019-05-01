@@ -261,6 +261,16 @@ void *msan_realloc(void *ptr, uptr size, StackTrace *stack) {
   return SetErrnoOnNull(MsanReallocate(stack, ptr, size, sizeof(u64)));
 }
 
+void *msan_reallocarray(void *ptr, uptr nmemb, uptr size, StackTrace *stack) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportReallocArrayOverflow(nmemb, size, stack);
+  }
+  return msan_realloc(ptr, nmemb * size, stack);
+}
+
 void *msan_valloc(uptr size, StackTrace *stack) {
   return SetErrnoOnNull(MsanAllocate(stack, size, GetPageSizeCached(), false));
 }

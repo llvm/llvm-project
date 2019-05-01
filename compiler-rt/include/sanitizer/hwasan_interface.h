@@ -87,6 +87,7 @@ extern "C" {
   void __sanitizer_malloc_stats(void);
   void * __sanitizer_calloc(size_t nmemb, size_t size);
   void * __sanitizer_realloc(void *ptr, size_t size);
+  void * __sanitizer_reallocarray(void *ptr, size_t nmemb, size_t size);
   void * __sanitizer_malloc(size_t size);
 #ifdef __cplusplus
 }  // extern "C"

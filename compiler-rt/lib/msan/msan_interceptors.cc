@@ -907,6 +907,11 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
   return msan_realloc(ptr, size, &stack);
 }
 
+INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
+  GET_MALLOC_STACK_TRACE;
+  return msan_reallocarray(ptr, nmemb, size, &stack);
+}
+
 INTERCEPTOR(void *, malloc, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!msan_inited))
@@ -1597,6 +1602,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(realloc);
+  INTERCEPT_FUNCTION(reallocarray);
   INTERCEPT_FUNCTION(free);
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;

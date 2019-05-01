@@ -219,6 +219,8 @@ void asan_delete(void *ptr, uptr size, uptr alignment,
 void *asan_malloc(uptr size, BufferedStackTrace *stack);
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack);
+void *asan_reallocarray(void *p, uptr nmemb, uptr size,
+                        BufferedStackTrace *stack);
 void *asan_valloc(uptr size, BufferedStackTrace *stack);
 void *asan_pvalloc(uptr size, BufferedStackTrace *stack);
 
