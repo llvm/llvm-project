@@ -208,7 +208,7 @@ template <typename T> struct kmp_hier_shared_bdata_t {
 // Can be used in a unit with between 2 to 8 threads
 template <typename T> class core_barrier_impl {
   static inline kmp_uint64 get_wait_val(int num_active) {
-    kmp_uint64 wait_val;
+    kmp_uint64 wait_val = 0LL;
     switch (num_active) {
     case 2:
       wait_val = 0x0101LL;
@@ -424,6 +424,7 @@ template <typename T> struct kmp_hier_top_unit_t {
 
   kmp_int32 is_active() const { return active; }
   kmp_int32 get_num_active() const { return active; }
+#ifdef KMP_DEBUG
   void print() {
     KD_TRACE(
         10,
@@ -431,6 +432,7 @@ template <typename T> struct kmp_hier_top_unit_t {
          active, &hier_pr, hier_pr.u.p.lb, hier_pr.u.p.ub, hier_pr.u.p.st,
          hier_pr.u.p.tc));
   }
+#endif
 };
 
 // Information regarding a single layer within the scheduling hierarchy
@@ -441,6 +443,7 @@ template <typename T> struct kmp_hier_layer_info_t {
   typename traits_t<T>::signed_t chunk; // chunk size associated with schedule
   int length; // length of the kmp_hier_top_unit_t array
 
+#ifdef KMP_DEBUG
   // Print this layer's information
   void print() {
     const char *t = __kmp_get_hier_str(type);
@@ -450,6 +453,7 @@ template <typename T> struct kmp_hier_layer_info_t {
          "length:%d\n",
          num_active, t, sched, chunk, length));
   }
+#endif
 };
 
 /*
@@ -687,6 +691,7 @@ public:
           sizeof(kmp_hier_top_unit_t<T>) * max);
       for (int j = 0; j < max; ++j) {
         layers[i][j].active = 0;
+        layers[i][j].hier_pr.flags.use_hier = TRUE;
       }
     }
     valid = true;
@@ -887,6 +892,7 @@ public:
   int get_top_level_nproc() const { return top_level_nproc; }
   // Return whether this hierarchy is valid or not
   bool is_valid() const { return valid; }
+#ifdef KMP_DEBUG
   // Print the hierarchy
   void print() {
     KD_TRACE(10, ("kmp_hier_t:\n"));
@@ -901,6 +907,7 @@ public:
       }
     }
   }
+#endif
 };
 
 template <typename T>
@@ -910,8 +917,6 @@ void __kmp_dispatch_init_hierarchy(ident_t *loc, int n,
                                    typename traits_t<T>::signed_t *new_chunks,
                                    T lb, T ub,
                                    typename traits_t<T>::signed_t st) {
-  typedef typename traits_t<T>::signed_t ST;
-  typedef typename traits_t<T>::unsigned_t UT;
   int tid, gtid, num_hw_threads, num_threads_per_layer1, active;
   int my_buffer_index;
   kmp_info_t *th;
@@ -945,26 +950,23 @@ void __kmp_dispatch_init_hierarchy(ident_t *loc, int n,
   active = !team->t.t_serialized;
   th->th.th_ident = loc;
   num_hw_threads = __kmp_hier_max_units[kmp_hier_layer_e::LAYER_THREAD + 1];
-  if (!active) {
-    KD_TRACE(10, ("__kmp_dispatch_init_hierarchy: T#%d not active parallel. "
-                  "Using normal dispatch functions.\n",
-                  gtid));
-    pr = reinterpret_cast<dispatch_private_info_template<T> *>(
-        th->th.th_dispatch->th_disp_buffer);
-    KMP_DEBUG_ASSERT(pr);
-    pr->flags.use_hier = FALSE;
-    pr->flags.contains_last = FALSE;
-    return;
-  }
   KMP_DEBUG_ASSERT(th->th.th_dispatch ==
                    &th->th.th_team->t.t_dispatch[th->th.th_info.ds.ds_tid]);
-
   my_buffer_index = th->th.th_dispatch->th_disp_index;
   pr = reinterpret_cast<dispatch_private_info_template<T> *>(
       &th->th.th_dispatch
            ->th_disp_buffer[my_buffer_index % __kmp_dispatch_num_buffers]);
   sh = reinterpret_cast<dispatch_shared_info_template<T> volatile *>(
       &team->t.t_disp_buffer[my_buffer_index % __kmp_dispatch_num_buffers]);
+  if (!active) {
+    KD_TRACE(10, ("__kmp_dispatch_init_hierarchy: T#%d not active parallel. "
+                  "Using normal dispatch functions.\n",
+                  gtid));
+    KMP_DEBUG_ASSERT(pr);
+    pr->flags.use_hier = FALSE;
+    pr->flags.contains_last = FALSE;
+    return;
+  }
   KMP_DEBUG_ASSERT(pr);
   KMP_DEBUG_ASSERT(sh);
   pr->flags.use_hier = TRUE;
