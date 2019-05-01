@@ -238,7 +238,14 @@ public:
   /// Return the pointer type for the given address space, defaults to
   /// the pointer type from the data layout.
   /// FIXME: The default needs to be removed once all the code is updated.
-  MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const {
+  virtual MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const {
+    return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
+  }
+
+  /// Return the in-memory pointer type for the given address space, defaults to
+  /// the pointer type from the data layout.  FIXME: The default needs to be
+  /// removed once all the code is updated.
+  MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const {
     return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
   }
 
@@ -1179,6 +1186,25 @@ public:
     }
     return EVT::getEVT(Ty, AllowUnknown);
   }
+
+  EVT getMemValueType(const DataLayout &DL, Type *Ty,
+                      bool AllowUnknown = false) const {
+    // Lower scalar pointers to native pointer types.
+    if (PointerType *PTy = dyn_cast<PointerType>(Ty))
+      return getPointerMemTy(DL, PTy->getAddressSpace());
+    else if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
+      Type *Elm = VTy->getElementType();
+      if (PointerType *PT = dyn_cast<PointerType>(Elm)) {
+        EVT PointerTy(getPointerMemTy(DL, PT->getAddressSpace()));
+        Elm = PointerTy.getTypeForEVT(Ty->getContext());
+      }
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(Elm, false),
+                       VTy->getNumElements());
+    }
+
+    return getValueType(DL, Ty, AllowUnknown);
+  }
+
 
   /// Return the MVT corresponding to this LLVM type. See getValueType.
   MVT getSimpleValueType(const DataLayout &DL, Type *Ty,

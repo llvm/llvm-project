@@ -177,6 +177,8 @@ if (config.host_ldflags.find("-m32") < 0
     and any(config.llvm_host_triple.startswith(x) for x in known_arches)):
   config.available_features.add("llvm-64-bits")
 
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
+
 # Others/can-execute.txt
 if sys.platform not in ['win32']:
     config.available_features.add('can-execute')

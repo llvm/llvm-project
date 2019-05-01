@@ -883,9 +883,9 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
-; AVX2-NEXT:    vpsrlw $8, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpsrlw %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896]
@@ -922,9 +922,9 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512DQ-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpsrlw $8, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512DQ-NEXT:    vpsrlw %xmm1, %xmm2, %xmm2
+; AVX512DQ-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; AVX512DQ-NEXT:    vpbroadcastb %xmm2, %ymm2
 ; AVX512DQ-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm2 = [32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896]
@@ -946,9 +946,9 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
-; AVX512DQVL-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
-; AVX512DQVL-NEXT:    vpsrlw $8, %ymm2, %ymm2
+; AVX512DQVL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512DQVL-NEXT:    vpsrlw %xmm1, %xmm2, %xmm2
+; AVX512DQVL-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; AVX512DQVL-NEXT:    vpbroadcastb %xmm2, %ymm2
 ; AVX512DQVL-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vmovdqa {{.*#+}} ymm2 = [32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896]
@@ -990,9 +990,9 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; X32-AVX2:       # %bb.0:
 ; X32-AVX2-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; X32-AVX2-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; X32-AVX2-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
-; X32-AVX2-NEXT:    vpsrlw $8, %ymm2, %ymm2
+; X32-AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vpsrlw %xmm1, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; X32-AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
 ; X32-AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896]
@@ -1185,7 +1185,7 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmulhw {{.*}}(%rip), %ymm0, %ymm1
 ; AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm0[0],ymm1[1,2,3,4,5,6,7],ymm0[8],ymm1[9,10,11,12,13,14,15]
-; AVX2-NEXT:    vpsraw $1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsraw $1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7,8],ymm0[9],ymm2[10,11,12,13,14,15]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
@@ -1248,7 +1248,7 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ; X32-AVX2:       # %bb.0:
 ; X32-AVX2-NEXT:    vpmulhw {{\.LCPI.*}}, %ymm0, %ymm1
 ; X32-AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm0[0],ymm1[1,2,3,4,5,6,7],ymm0[8],ymm1[9,10,11,12,13,14,15]
-; X32-AVX2-NEXT:    vpsraw $1, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vpsraw $1, %xmm0, %xmm0
 ; X32-AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7,8],ymm0[9],ymm2[10,11,12,13,14,15]
 ; X32-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; X32-AVX2-NEXT:    retl

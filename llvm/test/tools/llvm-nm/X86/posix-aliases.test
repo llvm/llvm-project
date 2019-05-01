@@ -1,5 +1,5 @@
 # RUN: llvm-nm -P %p/Inputs/hello.obj.elf-x86_64 > %t1
-# RUN: llvm-nm -format=posix %p/Inputs/hello.obj.elf-x86_64 > %t2
+# RUN: llvm-nm --format=posix %p/Inputs/hello.obj.elf-x86_64 > %t2
 # RUN: llvm-nm -portability %p/Inputs/hello.obj.elf-x86_64 > %t3
 # RUN: diff %t1 %t2
 # RUN: diff %t1 %t3

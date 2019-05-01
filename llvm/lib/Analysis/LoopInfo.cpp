@@ -254,16 +254,10 @@ void Loop::setLoopID(MDNode *LoopID) const {
   assert((!LoopID || LoopID->getOperand(0) == LoopID) &&
          "Loop ID should refer to itself");
 
-  BasicBlock *H = getHeader();
-  for (BasicBlock *BB : this->blocks()) {
-    Instruction *TI = BB->getTerminator();
-    for (BasicBlock *Successor : successors(TI)) {
-      if (Successor == H) {
-        TI->setMetadata(LLVMContext::MD_loop, LoopID);
-        break;
-      }
-    }
-  }
+  SmallVector<BasicBlock *, 4> LoopLatches;
+  getLoopLatches(LoopLatches);
+  for (BasicBlock *BB : LoopLatches)
+    BB->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
 }
 
 void Loop::setLoopAlreadyUnrolled() {

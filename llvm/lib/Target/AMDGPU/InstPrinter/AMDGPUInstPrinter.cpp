@@ -208,6 +208,18 @@ void AMDGPUInstPrinter::printDMask(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
+                                 const MCSubtargetInfo &STI, raw_ostream &O) {
+  unsigned Dim = MI->getOperand(OpNo).getImm();
+  O << " dim:SQ_RSRC_IMG_";
+
+  const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
+  if (DimInfo)
+    O << DimInfo->AsmSuffix;
+  else
+    O << Dim;
+}
+
 void AMDGPUInstPrinter::printUNorm(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "unorm");
@@ -254,8 +266,12 @@ void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
   if (unsigned Val = MI->getOperand(OpNo).getImm()) {
-    O << " dfmt:" << (Val & 15);
-    O << ", nfmt:" << (Val >> 4);
+    if (AMDGPU::isGFX10(STI))
+      O << " format:" << Val;
+    else {
+      O << " dfmt:" << (Val & 15);
+      O << ", nfmt:" << (Val >> 4);
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 RUN: rm -rf %t && mkdir -p %t
-RUN: llvm-ar -format gnu crs %t/archive.a %S/Inputs/abcd
+RUN: llvm-ar --format=gnu crs %t/archive.a %S/Inputs/abcd
 RUN: llvm-strings -f %t/archive.a | FileCheck %s
 RUN: llvm-strings --print-file-name %t/archive.a | FileCheck %s
 

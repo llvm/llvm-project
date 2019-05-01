@@ -3223,6 +3223,53 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (isMIMG(MI)) {
+    const MachineOperand *DimOp = getNamedOperand(MI, AMDGPU::OpName::dim);
+    if (DimOp) {
+      int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opcode,
+                                                 AMDGPU::OpName::vaddr0);
+      int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srsrc);
+      const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opcode);
+      const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+          AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+      const AMDGPU::MIMGDimInfo *Dim =
+          AMDGPU::getMIMGDimInfoByEncoding(DimOp->getImm());
+
+      if (!Dim) {
+        ErrInfo = "dim is out of range";
+        return false;
+      }
+
+      bool IsNSA = SRsrcIdx - VAddr0Idx > 1;
+      unsigned AddrWords = BaseOpcode->NumExtraArgs +
+                           (BaseOpcode->Gradients ? Dim->NumGradients : 0) +
+                           (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
+                           (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+
+      unsigned VAddrWords;
+      if (IsNSA) {
+        VAddrWords = SRsrcIdx - VAddr0Idx;
+      } else {
+        const TargetRegisterClass *RC = getOpRegClass(MI, VAddr0Idx);
+        VAddrWords = MRI.getTargetRegisterInfo()->getRegSizeInBits(*RC) / 32;
+        if (AddrWords > 8)
+          AddrWords = 16;
+        else if (AddrWords > 4)
+          AddrWords = 8;
+        else if (AddrWords == 3 && VAddrWords == 4) {
+          // CodeGen uses the V4 variant of instructions for three addresses,
+          // because the selection DAG does not support non-power-of-two types.
+          AddrWords = 4;
+        }
+      }
+
+      if (VAddrWords != AddrWords) {
+        ErrInfo = "bad vaddr size";
+        return false;
+      }
+    }
+  }
+
   const MachineOperand *DppCt = getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl);
   if (DppCt) {
     using namespace AMDGPU::DPP;
@@ -5356,23 +5403,33 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       return DescSize; // No operands.
 
     if (isLiteralConstantLike(MI.getOperand(Src0Idx), Desc.OpInfo[Src0Idx]))
-      return DescSize + 4;
+      return isVOP3(MI) ? 12 : (DescSize + 4);
 
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
     if (Src1Idx == -1)
       return DescSize;
 
     if (isLiteralConstantLike(MI.getOperand(Src1Idx), Desc.OpInfo[Src1Idx]))
-      return DescSize + 4;
+      return isVOP3(MI) ? 12 : (DescSize + 4);
 
     int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
     if (Src2Idx == -1)
       return DescSize;
 
     if (isLiteralConstantLike(MI.getOperand(Src2Idx), Desc.OpInfo[Src2Idx]))
-      return DescSize + 4;
+      return isVOP3(MI) ? 12 : (DescSize + 4);
 
     return DescSize;
+  }
+
+  // Check whether we have extra NSA words.
+  if (isMIMG(MI)) {
+    int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
+    if (VAddr0Idx < 0)
+      return 8;
+
+    int RSrcIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::srsrc);
+    return 8 + 4 * ((RSrcIdx - VAddr0Idx + 2) / 4);
   }
 
   switch (Opc) {
