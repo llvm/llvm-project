@@ -99,13 +99,12 @@ static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
 static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
   Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, getNewShfFlags(Flags));
 
-  // Certain flags also promote SHT_NOBITS to SHT_PROGBITS. Don't change other
-  // section types (RELA, SYMTAB, etc.).
-  const SectionFlag NoBitsToProgBitsMask =
-      SectionFlag::SecContents | SectionFlag::SecLoad | SectionFlag::SecNoload |
-      SectionFlag::SecCode | SectionFlag::SecData | SectionFlag::SecRom |
-      SectionFlag::SecDebug;
-  if (Sec.Type == SHT_NOBITS && (Flags & NoBitsToProgBitsMask))
+  // In GNU objcopy, certain flags promote SHT_NOBITS to SHT_PROGBITS. This rule
+  // may promote more non-ALLOC sections than GNU objcopy, but it is fine as
+  // non-ALLOC SHT_NOBITS sections do not make much sense.
+  if (Sec.Type == SHT_NOBITS &&
+      (!(Sec.Flags & ELF::SHF_ALLOC) ||
+       Flags & (SectionFlag::SecContents | SectionFlag::SecLoad)))
     Sec.Type = SHT_PROGBITS;
 }
 

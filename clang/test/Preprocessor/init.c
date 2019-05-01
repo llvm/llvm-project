@@ -9577,10 +9577,10 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm64-unknown-unknown \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64 %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm32-unknown-wasi \
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm32-wasi \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WEBASSEMBLY-WASI %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm64-unknown-wasi \
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm64-wasi \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WEBASSEMBLY-WASI %s
 //

@@ -35,6 +35,9 @@
 # include <xlocale.h>
 #elif defined(__Fuchsia__)
 # include <support/fuchsia/xlocale.h>
+#elif defined(__wasi__)
+// WASI libc uses musl's locales support.
+# include <support/musl/xlocale.h>
 #elif defined(_LIBCPP_HAS_MUSL_LIBC)
 # include <support/musl/xlocale.h>
 #endif

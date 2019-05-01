@@ -153,16 +153,19 @@ tooling::translateEdits(const MatchResult &Result,
     auto It = NodesMap.find(Edit.Target);
     assert(It != NodesMap.end() && "Edit target must be bound in the match.");
 
-    Expected<CharSourceRange> RangeOrErr = getTargetRange(
+    Expected<CharSourceRange> Range = getTargetRange(
         Edit.Target, It->second, Edit.Kind, Edit.Part, *Result.Context);
-    if (auto Err = RangeOrErr.takeError())
-      return std::move(Err);
-    Transformation T;
-    T.Range = *RangeOrErr;
-    if (T.Range.isInvalid() ||
-        isOriginMacroBody(*Result.SourceManager, T.Range.getBegin()))
+    if (!Range)
+      return Range.takeError();
+    if (Range->isInvalid() ||
+        isOriginMacroBody(*Result.SourceManager, Range->getBegin()))
       return SmallVector<Transformation, 0>();
-    T.Replacement = Edit.Replacement(Result);
+    auto Replacement = Edit.Replacement(Result);
+    if (!Replacement)
+      return Replacement.takeError();
+    Transformation T;
+    T.Range = *Range;
+    T.Replacement = std::move(*Replacement);
     Transformations.push_back(std::move(T));
   }
   return Transformations;
@@ -194,14 +197,13 @@ void Transformer::run(const MatchResult &Result) {
       Root->second.getSourceRange().getBegin());
   assert(RootLoc.isValid() && "Invalid location for Root node of match.");
 
-  auto TransformationsOrErr = translateEdits(Result, Rule.Edits);
-  if (auto Err = TransformationsOrErr.takeError()) {
-    llvm::errs() << "Transformation failed: " << llvm::toString(std::move(Err))
-                 << "\n";
+  auto Transformations = translateEdits(Result, Rule.Edits);
+  if (!Transformations) {
+    Consumer(Transformations.takeError());
     return;
   }
-  auto &Transformations = *TransformationsOrErr;
-  if (Transformations.empty()) {
+
+  if (Transformations->empty()) {
     // No rewrite applied (but no error encountered either).
     RootLoc.print(llvm::errs() << "note: skipping match at loc ",
                   *Result.SourceManager);
@@ -209,14 +211,14 @@ void Transformer::run(const MatchResult &Result) {
     return;
   }
 
-  // Convert the result to an AtomicChange.
+  // Record the results in the AtomicChange.
   AtomicChange AC(*Result.SourceManager, RootLoc);
-  for (const auto &T : Transformations) {
+  for (const auto &T : *Transformations) {
     if (auto Err = AC.replace(*Result.SourceManager, T.Range, T.Replacement)) {
-      AC.setError(llvm::toString(std::move(Err)));
-      break;
+      Consumer(std::move(Err));
+      return;
     }
   }
 
-  Consumer(AC);
+  Consumer(std::move(AC));
 }

@@ -528,7 +528,7 @@ define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 ; (i32) p[i + 1] | ((i32) p[i + 2] << 8) | ((i32) p[i + 3] << 16) | ((i32) p[i + 4] << 24)
 define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
-; CHECK: add r0, r0, r1
+; CHECK: add r0, r1, r0
 ; CHECK-NEXT: mov r1, #65280
 ; CHECK-NEXT: mov r2, #16711680
 ; CHECK-NEXT: ldr r0, [r0, #13]
@@ -540,7 +540,7 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-NEXT: mov pc, lr
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_base_offset_index_2:
-; CHECK-ARMv6: add r0, r0, r1
+; CHECK-ARMv6: add r0, r1, r0
 ; CHECK-ARMv6-NEXT: ldr r0, [r0, #13]
 ; CHECK-ARMv6-NEXT: rev r0, r0
 ; CHECK-ARMv6-NEXT: bx  lr

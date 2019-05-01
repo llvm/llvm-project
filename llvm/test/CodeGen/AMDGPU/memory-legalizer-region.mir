@@ -13,14 +13,14 @@
 name:            load_singlethread_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 1, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") unordered 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -37,14 +37,14 @@ body:             |
 name:            load_singlethread_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") monotonic 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -61,14 +61,14 @@ body:             |
 name:            load_singlethread_acquire
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") acquire 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -85,14 +85,14 @@ body:             |
 name:            load_singlethread_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") seq_cst 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -109,14 +109,14 @@ body:             |
 name:            load_wavefront_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") unordered 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -133,14 +133,14 @@ body:             |
 name:            load_wavefront_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") monotonic 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -157,14 +157,14 @@ body:             |
 name:            load_wavefront_acquire
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") acquire 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -181,14 +181,14 @@ body:             |
 name:            load_wavefront_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") seq_cst 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -205,14 +205,14 @@ body:             |
 name:            load_workgroup_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") unordered 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -229,14 +229,14 @@ body:             |
 name:            load_workgroup_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") monotonic 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -253,14 +253,14 @@ body:             |
 name:            load_workgroup_acquire
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") acquire 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -277,14 +277,14 @@ body:             |
 name:            load_workgroup_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") seq_cst 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -301,14 +301,14 @@ body:             |
 name:            load_agent_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") unordered 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -325,14 +325,14 @@ body:             |
 name:            load_agent_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") monotonic 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -349,14 +349,14 @@ body:             |
 name:            load_agent_acquire
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") acquire 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -373,14 +373,14 @@ body:             |
 name:            load_agent_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") seq_cst 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -397,14 +397,14 @@ body:             |
 name:            load_system_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") unordered 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -421,14 +421,14 @@ body:             |
 name:            load_system_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") monotonic 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -445,14 +445,14 @@ body:             |
 name:            load_system_acquire
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") acquire 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -469,14 +469,14 @@ body:             |
 name:            load_system_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 1, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") seq_cst 4 from `i32 addrspace(2)* undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
     S_ENDPGM 0
 
 ...
@@ -493,8 +493,8 @@ body:             |
 name:            store_singlethread_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -515,8 +515,8 @@ body:             |
 name:            store_singlethread_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -537,8 +537,8 @@ body:             |
 name:            store_singlethread_release
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -559,8 +559,8 @@ body:             |
 name:            store_singlethread_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -581,8 +581,8 @@ body:             |
 name:            store_wavefront_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -603,8 +603,8 @@ body:             |
 name:            store_wavefront_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -625,8 +625,8 @@ body:             |
 name:            store_wavefront_release
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -647,8 +647,8 @@ body:             |
 name:            store_wavefront_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -669,8 +669,8 @@ body:             |
 name:            store_workgroup_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -691,8 +691,8 @@ body:             |
 name:            store_workgroup_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -713,8 +713,8 @@ body:             |
 name:            store_workgroup_release
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -735,8 +735,8 @@ body:             |
 name:            store_workgroup_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -757,13 +757,14 @@ body:             |
 name:            store_agent_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("agent-one-as") unordered 4 into `i32 addrspace(2)* undef`)
     S_ENDPGM 0
+
 ...
 ---
 
@@ -778,8 +779,8 @@ body:             |
 name:            store_agent_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -800,8 +801,8 @@ body:             |
 name:            store_agent_release
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -822,8 +823,8 @@ body:             |
 name:            store_agent_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -844,8 +845,8 @@ body:             |
 name:            store_system_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -866,8 +867,8 @@ body:             |
 name:            store_system_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -888,8 +889,8 @@ body:             |
 name:            store_system_release
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -910,8 +911,8 @@ body:             |
 name:            store_system_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -932,8 +933,8 @@ body:             |
 name:            atomicrmw_singlethread_unordered
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -954,8 +955,8 @@ body:             |
 name:            atomicrmw_singlethread_monotonic
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -976,8 +977,8 @@ body:             |
 name:            atomicrmw_singlethread_acquire
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -998,8 +999,8 @@ body:             |
 name:            atomicrmw_singlethread_release
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -1020,8 +1021,8 @@ body:             |
 name:            atomicrmw_singlethread_acq_rel
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
@@ -1042,8 +1043,8 @@ body:             |
 name:            atomicrmw_singlethread_seq_cst
 body:             |
   bb.0:
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, addrspace 4)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0, 0 :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec

@@ -1335,10 +1335,15 @@ void UnwrappedLineParser::parseStructuralElement() {
       // See if the following token should start a new unwrapped line.
       StringRef Text = FormatTok->TokenText;
       nextToken();
-      if (Line->Tokens.size() == 1 &&
-          // JS doesn't have macros, and within classes colons indicate fields,
-          // not labels.
-          Style.Language != FormatStyle::LK_JavaScript) {
+
+      // JS doesn't have macros, and within classes colons indicate fields, not
+      // labels.
+      if (Style.Language == FormatStyle::LK_JavaScript)
+        break;
+
+      TokenCount = Line->Tokens.size();
+      if (TokenCount == 1 ||
+          (TokenCount == 2 && Line->Tokens.front().Tok->is(tok::comment))) {
         if (FormatTok->Tok.is(tok::colon) && !Line->MustBeDeclaration) {
           Line->Tokens.begin()->Tok->MustBreakBefore = true;
           parseLabel();

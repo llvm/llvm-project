@@ -104,7 +104,9 @@ INTERCEPTOR_WINAPI(void, RaiseException, void *a, void *b, void *c, void *d) {
 
 #ifdef _WIN64
 
-INTERCEPTOR_WINAPI(int, __C_specific_handler, void *a, void *b, void *c, void *d) {  // NOLINT
+INTERCEPTOR_WINAPI(EXCEPTION_DISPOSITION, __C_specific_handler,
+                   _EXCEPTION_RECORD *a, void *b, _CONTEXT *c,
+                   _DISPATCHER_CONTEXT *d) {  // NOLINT
   CHECK(REAL(__C_specific_handler));
   __asan_handle_no_return();
   return REAL(__C_specific_handler)(a, b, c, d);
@@ -135,10 +137,9 @@ static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   return t->ThreadStart(GetTid(), /* signal_thread_is_registered */ nullptr);
 }
 
-INTERCEPTOR_WINAPI(DWORD, CreateThread,
-                   void* security, uptr stack_size,
-                   DWORD (__stdcall *start_routine)(void*), void* arg,
-                   DWORD thr_flags, void* tid) {
+INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
+                   SIZE_T stack_size, LPTHREAD_START_ROUTINE start_routine,
+                   void *arg, DWORD thr_flags, DWORD *tid) {
   // Strict init-order checking is thread-hostile.
   if (flags()->strict_init_order)
     StopInitOrderChecking();
@@ -148,9 +149,9 @@ INTERCEPTOR_WINAPI(DWORD, CreateThread,
   bool detached = false;  // FIXME: how can we determine it on Windows?
   u32 current_tid = GetCurrentTidOrInvalid();
   AsanThread *t =
-        AsanThread::Create(start_routine, arg, current_tid, &stack, detached);
-  return REAL(CreateThread)(security, stack_size,
-                            asan_thread_start, t, thr_flags, tid);
+      AsanThread::Create(start_routine, arg, current_tid, &stack, detached);
+  return REAL(CreateThread)(security, stack_size, asan_thread_start, t,
+                            thr_flags, tid);
 }
 
 // }}}
@@ -166,16 +167,11 @@ void InitializePlatformInterceptors() {
                            (LPCWSTR)&InitializePlatformInterceptors,
                            &pinned));
 
-  // FIXME: ASAN_INTERCEPT_FUNC has some sanity checking that currently does
-  // not compile, i.e., it compares `(&CreateThread) != WRAP(&CreateThread)`,
-  // but the type of the interceptor does not match.
-  // ASAN_INTERCEPT_FUNC(CreateThread);
-  INTERCEPT_FUNCTION(CreateThread);
+  ASAN_INTERCEPT_FUNC(CreateThread);
   ASAN_INTERCEPT_FUNC(SetUnhandledExceptionFilter);
 
 #ifdef _WIN64
-  // ASAN_INTERCEPT_FUNC(__C_specific_handler); // FIXME: same as above
-  INTERCEPT_FUNCTION(__C_specific_handler);
+  ASAN_INTERCEPT_FUNC(__C_specific_handler);
 #else
   ASAN_INTERCEPT_FUNC(_except_handler3);
   ASAN_INTERCEPT_FUNC(_except_handler4);

@@ -1,6 +1,6 @@
 ## Check we dont crash when .symtab has type different from SHT_SYMTAB.
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -sections %t | FileCheck %s
+# RUN: llvm-readobj --sections %t | FileCheck %s
 
 ## TODO: the output is still SHT_SYMTAB because we do not yet
 ## support changing it.

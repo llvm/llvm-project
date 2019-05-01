@@ -1,5 +1,5 @@
-RUN: llvm-readobj -unwind %p/Inputs/arm64-win1.obj | FileCheck %s -check-prefix=UNWIND1
-RUN: llvm-readobj -unwind %p/Inputs/arm64-win2.obj | FileCheck %s -check-prefix=UNWIND2
+RUN: llvm-readobj --unwind %p/Inputs/arm64-win1.obj | FileCheck %s -check-prefix=UNWIND1
+RUN: llvm-readobj --unwind %p/Inputs/arm64-win2.obj | FileCheck %s -check-prefix=UNWIND2
 
 UNWIND1:         ExceptionData {
 UNWIND1-NEXT:      FunctionLength: 340

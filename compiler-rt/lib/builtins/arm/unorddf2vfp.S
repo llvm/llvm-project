@@ -12,7 +12,7 @@
 // extern int __unorddf2vfp(double a, double b);
 //
 // Returns one iff a or b is NaN
-// Uses Darwin calling convention where double precision arguments are passsed 
+// Uses Darwin calling convention where double precision arguments are passsed
 // like in GPR pairs.
 //
 	.syntax unified

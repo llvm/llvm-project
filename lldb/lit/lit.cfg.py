@@ -74,6 +74,15 @@ for i in ['module-cache-clang', 'module-cache-lldb']:
         print("Deleting module cache at %s."%cachedir)
         shutil.rmtree(cachedir)
 
+# Set a default per-test timeout of 10 minutes. Setting a timeout per test
+# requires the psutil module and lit complains if the value is set but the
+# module can't be found.
+try:
+    import psutil  # noqa: F401
+    lit_config.maxIndividualTestTime = 600
+except ImportError:
+    pass
+
 # If running tests natively, check for CPU features needed for some tests.
 
 if 'native' in config.available_features:

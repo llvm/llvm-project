@@ -25,7 +25,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -33,7 +33,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; GCN:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
@@ -44,7 +44,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN:   DBG_VALUE
@@ -72,7 +72,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -80,7 +80,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -92,7 +92,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12, implicit-def $scc
@@ -133,7 +133,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -141,7 +141,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; GCN:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
@@ -152,7 +152,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN: bb.4:
@@ -180,7 +180,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -188,7 +188,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -200,7 +200,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12, implicit-def $scc
@@ -241,7 +241,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -249,7 +249,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; GCN:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
@@ -260,7 +260,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN: bb.4:
@@ -289,7 +289,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -297,7 +297,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -309,7 +309,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12, implicit-def $scc
@@ -350,7 +350,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -358,7 +358,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
@@ -370,7 +370,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
@@ -400,7 +400,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -408,7 +408,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -420,7 +420,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     %15:sgpr_32 = IMPLICIT_DEF
@@ -463,7 +463,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -471,7 +471,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; GCN:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
@@ -482,7 +482,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
@@ -512,7 +512,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -520,7 +520,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -532,7 +532,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12, implicit-def $scc
@@ -575,7 +575,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -583,7 +583,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
@@ -595,7 +595,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
@@ -623,7 +623,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -631,7 +631,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -643,7 +643,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12,  implicit-def $scc
@@ -683,7 +683,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -691,7 +691,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
@@ -703,7 +703,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
@@ -731,7 +731,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -739,7 +739,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -751,7 +751,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12,  implicit-def $scc
@@ -791,7 +791,7 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; GCN:   undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
@@ -799,7 +799,7 @@ body:             |
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
@@ -811,7 +811,7 @@ body:             |
   ; GCN:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.5(0x80000000)
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
@@ -842,7 +842,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
+    undef %5.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 9, 0, 0 :: (dereferenceable invariant load 8, align 4, addrspace 4)
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
@@ -850,7 +850,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -862,7 +862,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12, implicit-def $scc

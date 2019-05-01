@@ -3,7 +3,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: ld.lld %t.o -o %t.so -shared
 # RUN: llvm-objdump -d %t.so | FileCheck %s
-# RUN: llvm-readobj -relocations %t.so | FileCheck -check-prefix=REL %s
+# RUN: llvm-readobj -r %t.so | FileCheck -check-prefix=REL %s
 
 # REQUIRES: mips
 

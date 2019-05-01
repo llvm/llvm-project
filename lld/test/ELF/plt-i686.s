@@ -3,10 +3,10 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %p/Inputs/shared.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
-// RUN: llvm-readobj -s -r %t | FileCheck %s
+// RUN: llvm-readobj -S -r %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 // RUN: ld.lld -shared %t.o %t2.so -o %t
-// RUN: llvm-readobj -s -r %t | FileCheck --check-prefix=CHECKSHARED %s
+// RUN: llvm-readobj -S -r %t | FileCheck --check-prefix=CHECKSHARED %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASMSHARED %s
 // RUN: ld.lld -pie %t.o %t2.so -o %t
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASMPIE %s
@@ -72,6 +72,7 @@
 // 4206604 = 0x40300C = .got.plt (0x403000) + got.plt.reserved(12)
 // 4206608 = 0x403010 = .got.plt (0x403000) + got.plt.reserved(12) + 4
 // DISASM:      Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:    401020: ff 35 04 30 40 00 pushl 4206596
 // DISASM-NEXT:    401026: ff 25 08 30 40 00 jmpl *4206600
@@ -137,7 +138,9 @@
 // DISASMSHARED-NEXT:  1009: e9 22 00 00 00 jmp 34
 // DISASMSHARED-NEXT:  100e: e9 2d 00 00 00 jmp 45
 // DISASMSHARED-NEXT:  1013: e9 e8 ff ff ff jmp -24
+// DISASMSHARED-EMPTY:
 // DISASMSHARED-NEXT:  Disassembly of section .plt:
+// DISASMSHARED-EMPTY:
 // DISASMSHARED-NEXT:  .plt:
 // DISASMSHARED-NEXT:  1020: ff b3 04 00 00 00 pushl 4(%ebx)
 // DISASMSHARED-NEXT:  1026: ff a3 08 00 00 00 jmpl *8(%ebx)
@@ -155,6 +158,7 @@
 // DISASMSHARED-NEXT:  104b: e9 d0 ff ff ff     jmp -48 <.plt>
 
 // DISASMPIE:      Disassembly of section .plt:
+// DISASMPIE-EMPTY:
 // DISASMPIE-NEXT: .plt:
 // DISASMPIE-NEXT:   1020:	ff b3 04 00 00 00 pushl 4(%ebx)
 // DISASMPIE-NEXT:   1026:	ff a3 08 00 00 00 jmpl *8(%ebx)

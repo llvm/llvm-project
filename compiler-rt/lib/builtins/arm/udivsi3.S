@@ -1,15 +1,15 @@
-/*===-- udivsi3.S - 32-bit unsigned integer divide ------------------------===//
- *
- * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
- * See https://llvm.org/LICENSE.txt for license information.
- * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
- *
- *===----------------------------------------------------------------------===//
- *
- * This file implements the __udivsi3 (32-bit unsigned integer divide)
- * function for the ARM 32-bit architecture.
- *
- *===----------------------------------------------------------------------===*/
+//===-- udivsi3.S - 32-bit unsigned integer divide ------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the __udivsi3 (32-bit unsigned integer divide)
+// function for the ARM 32-bit architecture.
+//
+//===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
 
@@ -39,7 +39,7 @@ LOCAL_LABEL(divby0):
 	JMP(lr)
 #  endif
 
-#else /* ! __ARM_ARCH_EXT_IDIV__ */
+#else // ! __ARM_ARCH_EXT_IDIV__
 	cmp	r1, #1
 	bcc	LOCAL_LABEL(divby0)
 #if defined(USE_THUMB_1)
@@ -62,26 +62,24 @@ LOCAL_LABEL(num_ge_denom):
 	JMPc(lr, cc)
 #endif
 
-	/*
-	 * Implement division using binary long division algorithm.
-	 *
-	 * r0 is the numerator, r1 the denominator.
-	 *
-	 * The code before JMP computes the correct shift I, so that
-	 * r0 and (r1 << I) have the highest bit set in the same position.
-	 * At the time of JMP, ip := .Ldiv0block - 12 * I.
-	 * This depends on the fixed instruction size of block.
-	 * For ARM mode, this is 12 Bytes, for THUMB mode 14 Bytes.
-	 *
-	 * block(shift) implements the test-and-update-quotient core.
-	 * It assumes (r0 << shift) can be computed without overflow and
-	 * that (r0 << shift) < 2 * r1. The quotient is stored in r3.
-	 */
+	// Implement division using binary long division algorithm.
+	//
+	// r0 is the numerator, r1 the denominator.
+	//
+	// The code before JMP computes the correct shift I, so that
+	// r0 and (r1 << I) have the highest bit set in the same position.
+	// At the time of JMP, ip := .Ldiv0block - 12 * I.
+	// This depends on the fixed instruction size of block.
+	// For ARM mode, this is 12 Bytes, for THUMB mode 14 Bytes.
+	//
+	// block(shift) implements the test-and-update-quotient core.
+	// It assumes (r0 << shift) can be computed without overflow and
+	// that (r0 << shift) < 2 * r1. The quotient is stored in r3.
 
 #  if defined(__ARM_FEATURE_CLZ)
 	clz	ip, r0
 	clz	r3, r1
-	/* r0 >= r1 implies clz(r0) <= clz(r1), so ip <= r3. */
+	// r0 >= r1 implies clz(r0) <= clz(r1), so ip <= r3.
 	sub	r3, r3, ip
 #    if defined(USE_THUMB_2)
 	adr	ip, LOCAL_LABEL(div0block) + 1
@@ -93,7 +91,7 @@ LOCAL_LABEL(num_ge_denom):
 	sub	ip, ip, r3, lsl #3
 	mov	r3, #0
 	bx	ip
-#  else /* No CLZ Feature */
+#  else // No CLZ Feature
 #    if defined(USE_THUMB_2)
 #    error THUMB mode requires CLZ or UDIV
 #    endif
@@ -159,7 +157,7 @@ LOCAL_LABEL(skip_2):
 	subhs	ip, ip, #(2 * BLOCK_SIZE)
 #    endif
 
-	/* Last block, no need to update r2 or r3. */
+	// Last block, no need to update r2 or r3.
 #    if defined(USE_THUMB_1)
 	lsrs r3, r2, #1
 	cmp r3, r1
@@ -179,12 +177,12 @@ LOCAL_LABEL(skip_1):
 
 	JMP(ip)
 #    endif
-#  endif /* __ARM_FEATURE_CLZ */
+#  endif // __ARM_FEATURE_CLZ
 
 
 #define	IMM	#
-	/* due to the range limit of branch in Thumb1, we have to place the
-		 block closer */
+	// due to the range limit of branch in Thumb1, we have to place the
+	// block closer
 LOCAL_LABEL(divby0):
 	movs	r0, #0
 #      if defined(__ARM_EABI__)
@@ -203,13 +201,13 @@ LOCAL_LABEL(divby0):
 	blo LOCAL_LABEL(block_skip_##shift);                                         \
 	subs r0, r0, r2;                                                             \
 	LOCAL_LABEL(block_skip_##shift) :;                                           \
-	adcs r3, r3 /* same as ((r3 << 1) | Carry). Carry is set if r0 >= r2. */
+	adcs r3, r3 // same as ((r3 << 1) | Carry). Carry is set if r0 >= r2.
 
-	/* TODO: if current location counter is not not word aligned, we don't
-		 need the .p2align and nop */
-	/* Label div0block must be word-aligned. First align block 31 */
+	// TODO: if current location counter is not not word aligned, we don't
+	// need the .p2align and nop
+	// Label div0block must be word-aligned. First align block 31
 	.p2align 2
-	nop /* Padding to align div0block as 31 blocks = 310 bytes */
+	nop // Padding to align div0block as 31 blocks = 310 bytes
 
 #else
 #define block(shift)                                                           \
@@ -255,7 +253,7 @@ LOCAL_LABEL(div0block):
 
 	mov	r0, r3
 	JMP(lr)
-#endif /* __ARM_ARCH_EXT_IDIV__ */
+#endif // __ARM_ARCH_EXT_IDIV__
 
 END_COMPILERRT_FUNCTION(__udivsi3)
 

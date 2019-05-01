@@ -5,7 +5,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 -shared
-# RUN: llvm-readobj -dynamic-table %t1 | FileCheck %s
+# RUN: llvm-readobj --dynamic-table %t1 | FileCheck %s
 
 # CHECK: DynamicSection [
 # CHECK: FLAGS STATIC_TLS

@@ -536,6 +536,7 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
           .addImm(0) // glc
           .addImm(0) // slc
           .addImm(0) // tfe
+          .addImm(0) // dlc
           .cloneMemRefs(*MI);
 
   const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
@@ -639,6 +640,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       .addImm(0) // glc
       .addImm(0) // slc
       .addImm(0) // tfe
+      .addImm(0) // dlc
       .addMemOperand(NewMMO);
 
     if (NumSubRegs > 1)
@@ -769,6 +771,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
         .addReg(MFI->getScratchRSrcReg())        // sbase
         .addReg(OffsetReg, RegState::Kill)       // soff
         .addImm(0)                               // glc
+        .addImm(0)                               // dlc
         .addMemOperand(MMO);
 
       continue;
@@ -928,9 +931,10 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
 
       auto MIB =
         BuildMI(*MBB, MI, DL, TII->get(ScalarLoadOp), SubReg)
-        .addReg(MFI->getScratchRSrcReg()) // sbase
-        .addReg(OffsetReg, RegState::Kill)                // soff
-        .addImm(0)                        // glc
+        .addReg(MFI->getScratchRSrcReg())  // sbase
+        .addReg(OffsetReg, RegState::Kill) // soff
+        .addImm(0)                         // glc
+        .addImm(0)                         // dlc
         .addMemOperand(MMO);
 
       if (NumSubRegs > 1 && i == 0)

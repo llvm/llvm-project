@@ -187,6 +187,40 @@ void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
   addRecord(Name, Hash, std::move(I), Weight, Warn);
 }
 
+void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
+                                    OverlapStats &Overlap,
+                                    OverlapStats &FuncLevelOverlap,
+                                    const OverlapFuncFilters &FuncFilter) {
+  auto Name = Other.Name;
+  auto Hash = Other.Hash;
+  Other.accumuateCounts(FuncLevelOverlap.Test);
+  if (FunctionData.find(Name) == FunctionData.end()) {
+    Overlap.addOneUnique(FuncLevelOverlap.Test);
+    return;
+  }
+  if (FuncLevelOverlap.Test.CountSum < 1.0f) {
+    Overlap.Overlap.NumEntries += 1;
+    return;
+  }
+  auto &ProfileDataMap = FunctionData[Name];
+  bool NewFunc;
+  ProfilingData::iterator Where;
+  std::tie(Where, NewFunc) =
+      ProfileDataMap.insert(std::make_pair(Hash, InstrProfRecord()));
+  if (NewFunc) {
+    Overlap.addOneMismatch(FuncLevelOverlap.Test);
+    return;
+  }
+  InstrProfRecord &Dest = Where->second;
+
+  uint64_t ValueCutoff = FuncFilter.ValueCutoff;
+  if (!FuncFilter.NameFilter.empty() &&
+      Name.find(FuncFilter.NameFilter) != Name.npos)
+    ValueCutoff = 0;
+
+  Dest.overlap(Other, Overlap, FuncLevelOverlap, ValueCutoff);
+}
+
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {

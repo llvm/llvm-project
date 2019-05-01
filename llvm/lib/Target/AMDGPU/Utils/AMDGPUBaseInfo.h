@@ -200,6 +200,8 @@ struct MIMGDimInfo {
   uint8_t NumCoords;
   uint8_t NumGradients;
   bool DA;
+  uint8_t Encoding;
+  const char *AsmSuffix;
 };
 
 LLVM_READONLY

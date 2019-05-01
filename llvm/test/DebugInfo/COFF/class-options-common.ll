@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ;
 ; Command to generate function-options.ll
 ; $ clang++ class-options-common.cpp -S -emit-llvm -g -gcodeview -o class-options-common.ll

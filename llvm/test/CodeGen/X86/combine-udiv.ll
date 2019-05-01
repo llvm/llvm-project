@@ -679,36 +679,21 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: combine_vec_udiv_nonuniform4:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl $171, %eax
-; AVX1-NEXT:    vmovd %eax, %xmm1
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX1-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpsllw $1, %xmm1, %xmm2
-; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5,6,7]
-; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_vec_udiv_nonuniform4:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX2-NEXT:    movl $171, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlw $8, %ymm1, %ymm1
-; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlw $8, %ymm1, %ymm1
-; AVX2-NEXT:    vpackuswb %xmm0, %xmm1, %xmm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_vec_udiv_nonuniform4:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $171, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpsrlw $8, %xmm1, %xmm1
+; AVX-NEXT:    vpsllw $1, %xmm1, %xmm2
+; AVX-NEXT:    vpsllw $8, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5,6,7]
+; AVX-NEXT:    vpsrlw $8, %xmm1, %xmm1
+; AVX-NEXT:    vpackuswb %xmm0, %xmm1, %xmm1
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_udiv_nonuniform4:
 ; XOP:       # %bb.0:

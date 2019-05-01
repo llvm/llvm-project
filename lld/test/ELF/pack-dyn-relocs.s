@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t.a32.so.o -o %t.a32.so
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.a32
 // RUN: ld.lld -pie --pack-dyn-relocs=none %t.a32 %t.a32.so -o %t2.a32
-// RUN: llvm-readobj -relocations %t2.a32 | FileCheck --check-prefix=UNPACKED32 %s
+// RUN: llvm-readobj -r %t2.a32 | FileCheck --check-prefix=UNPACKED32 %s
 
 // Unpacked should have the relative relocations in their natural order.
 // UNPACKED32:          Section ({{.+}}) .rel.dyn {
@@ -41,8 +41,8 @@
 // UNPACKED32-NEXT:     }
 
 // RUN: ld.lld -pie --pack-dyn-relocs=android %t.a32 %t.a32.so -o %t3.a32
-// RUN: llvm-readobj -s -dynamic-table %t3.a32 | FileCheck --check-prefix=ANDROID32-HEADERS %s
-// RUN: llvm-readobj -relocations %t3.a32 | FileCheck --check-prefix=ANDROID32 %s
+// RUN: llvm-readobj -S --dynamic-table %t3.a32 | FileCheck --check-prefix=ANDROID32-HEADERS %s
+// RUN: llvm-readobj -r %t3.a32 | FileCheck --check-prefix=ANDROID32 %s
 
 // ANDROID32-HEADERS:       Index: 1
 // ANDROID32-HEADERS-NEXT:  Name: .dynsym
@@ -99,9 +99,9 @@
 // ANDROID32-NEXT:     }
 
 // RUN: ld.lld -pie --pack-dyn-relocs=relr %t.a32 %t.a32.so -o %t4.a32
-// RUN: llvm-readobj -s -dynamic-table %t4.a32 | FileCheck --check-prefix=RELR32-HEADERS %s
-// RUN: llvm-readobj -relocations -raw-relr %t4.a32 | FileCheck --check-prefix=RAW-RELR32 %s
-// RUN: llvm-readobj -relocations %t4.a32 | FileCheck --check-prefix=RELR32 %s
+// RUN: llvm-readobj -S --dynamic-table %t4.a32 | FileCheck --check-prefix=RELR32-HEADERS %s
+// RUN: llvm-readobj -r --raw-relr %t4.a32 | FileCheck --check-prefix=RAW-RELR32 %s
+// RUN: llvm-readobj -r %t4.a32 | FileCheck --check-prefix=RELR32 %s
 
 // RELR32-HEADERS:       Index: 1
 // RELR32-HEADERS-NEXT:  Name: .dynsym
@@ -171,7 +171,7 @@
 // RUN: ld.lld -shared %t.a64.so.o -o %t.a64.so
 // RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %s -o %t.a64
 // RUN: ld.lld -pie --pack-dyn-relocs=none %t.a64 %t.a64.so -o %t2.a64
-// RUN: llvm-readobj -relocations %t2.a64 | FileCheck --check-prefix=UNPACKED64 %s
+// RUN: llvm-readobj -r %t2.a64 | FileCheck --check-prefix=UNPACKED64 %s
 
 // UNPACKED64:          Section ({{.+}}) .rela.dyn {
 // UNPACKED64-NEXT:     0x20000 R_AARCH64_RELATIVE - 0x1
@@ -207,8 +207,8 @@
 // UNPACKED64-NEXT:     }
 
 // RUN: ld.lld -pie --pack-dyn-relocs=android %t.a64 %t.a64.so -o %t3.a64
-// RUN: llvm-readobj -s -dynamic-table %t3.a64 | FileCheck --check-prefix=ANDROID64-HEADERS %s
-// RUN: llvm-readobj -relocations %t3.a64 | FileCheck --check-prefix=ANDROID64 %s
+// RUN: llvm-readobj -S --dynamic-table %t3.a64 | FileCheck --check-prefix=ANDROID64-HEADERS %s
+// RUN: llvm-readobj -r %t3.a64 | FileCheck --check-prefix=ANDROID64 %s
 
 // ANDROID64-HEADERS:       Index: 1
 // ANDROID64-HEADERS-NEXT:  Name: .dynsym
@@ -263,9 +263,9 @@
 // ANDROID64-NEXT:     }
 
 // RUN: ld.lld -pie --pack-dyn-relocs=relr %t.a64 %t.a64.so -o %t4.a64
-// RUN: llvm-readobj -s -dynamic-table %t4.a64 | FileCheck --check-prefix=RELR64-HEADERS %s
-// RUN: llvm-readobj -relocations -raw-relr %t4.a64 | FileCheck --check-prefix=RAW-RELR64 %s
-// RUN: llvm-readobj -relocations %t4.a64 | FileCheck --check-prefix=RELR64 %s
+// RUN: llvm-readobj -S --dynamic-table %t4.a64 | FileCheck --check-prefix=RELR64-HEADERS %s
+// RUN: llvm-readobj -r --raw-relr %t4.a64 | FileCheck --check-prefix=RAW-RELR64 %s
+// RUN: llvm-readobj -r %t4.a64 | FileCheck --check-prefix=RELR64 %s
 
 // RELR64-HEADERS:       Index: 1
 // RELR64-HEADERS-NEXT:  Name: .dynsym

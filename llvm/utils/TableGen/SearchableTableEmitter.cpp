@@ -611,7 +611,7 @@ void SearchableTableEmitter::collectTableEntries(
         if (!Ty)
           PrintFatalError(Twine("Field '") + Field.Name + "' of table '" +
                           Table.Name + "' has incompatible type: " +
-                          Ty->getAsString() + " vs. " +
+                          Field.RecType->getAsString() + " vs. " +
                           TI->getType()->getAsString());
         Field.RecType = Ty;
       }

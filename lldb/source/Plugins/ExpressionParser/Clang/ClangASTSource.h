@@ -193,6 +193,8 @@ public:
   ///     The NameSearchContext to use when filing results.
   virtual void FindExternalVisibleDecls(NameSearchContext &context);
 
+  clang::Sema *getSema();
+
   void SetImportInProgress(bool import_in_progress) {
     m_import_in_progress = import_in_progress;
   }

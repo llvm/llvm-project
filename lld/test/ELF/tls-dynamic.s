@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 // RUN: ld.lld --hash-style=sysv -shared %t -o %tout
-// RUN: llvm-readobj -sections -relocations %tout | FileCheck %s
+// RUN: llvm-readobj --sections -r %tout | FileCheck %s
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DIS
 
   leaq  a@tlsld(%rip), %rdi
@@ -66,6 +66,7 @@ c:
 // 4279 = (0x2100 + -4) - (0x1042 + 3) // PC relative offset to got entry.
 
 // DIS:      Disassembly of section .text:
+// DIS-EMPTY:
 // DIS-NEXT: .text:
 // DIS-NEXT:     1000: {{.+}} leaq    4313(%rip), %rdi
 // DIS-NEXT:     1007: {{.+}} callq

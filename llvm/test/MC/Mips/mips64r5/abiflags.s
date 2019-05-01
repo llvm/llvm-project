@@ -2,7 +2,7 @@
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # RUN: llvm-mc %s -arch=mips -mcpu=mips64r5 -target-abi n64 -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefix=CHECK-OBJ
 
 # CHECK-ASM: .module fp=64

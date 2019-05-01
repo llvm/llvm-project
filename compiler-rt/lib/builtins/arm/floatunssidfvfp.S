@@ -12,7 +12,7 @@
 // extern double __floatunssidfvfp(unsigned int a);
 //
 // Converts a 32-bit int to a double precision float.
-// Uses Darwin calling convention where a double precision result is 
+// Uses Darwin calling convention where a double precision result is
 // return in GPR register pair.
 //
 	.syntax unified

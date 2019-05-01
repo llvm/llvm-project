@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj -o - < %s | llvm-readobj -s -sd | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj -o - < %s | llvm-readobj -S --sd | FileCheck %s
 ; rdar://13028719
 
  .globl context_save0

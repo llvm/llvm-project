@@ -1,4 +1,4 @@
-RUN: llvm-readobj -needed-libs %p/Inputs/needed-libs.obj.coff-am64 | FileCheck %s
+RUN: llvm-readobj --needed-libs %p/Inputs/needed-libs.obj.coff-am64 | FileCheck %s
 
 CHECK:      NeededLibraries [
 CHECK-NEXT:   KERNEL32.dll

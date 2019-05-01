@@ -3,7 +3,7 @@
 # the symbol table index for the first non-local symbol.
 
 # RUN: yaml2obj -docnum=1 %s -o %t
-# RUN: llvm-readobj -sections %t | FileCheck %s --check-prefix=ONE
+# RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=ONE
 # ONE: Name: .symtab
 # ONE: Info: 2
 
@@ -19,7 +19,7 @@ Symbols:
     Binding: STB_GLOBAL
 
 # RUN: yaml2obj -docnum=2 %s -o %t
-# RUN: llvm-readobj -sections %t | FileCheck %s --check-prefix=TWO
+# RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=TWO
 # TWO: Name: .symtab
 # TWO: Info: 3
 

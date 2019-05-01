@@ -1,7 +1,7 @@
 # The binary blobs in this file were created like this:
 # llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu Inputs/elf-packed-relocs1.s -o - | obj2yaml | grep Content:
 
-# RUN: yaml2obj -docnum 1 %s | llvm-readobj -elf-output-style=LLVM -relocations - | FileCheck --check-prefix=LLVM1 %s
+# RUN: yaml2obj -docnum 1 %s | llvm-readobj --relocations - | FileCheck --check-prefix=LLVM1 %s
 # LLVM1:      Section (1) .rela.dyn {
 # LLVM1-NEXT:   0x1100 R_X86_64_RELATIVE - 0x0
 # LLVM1-NEXT:   0x1180 R_X86_64_RELATIVE - 0x0
@@ -13,7 +13,7 @@
 # LLVM1-NEXT:   0x119F R_X86_64_64 sym2 0xA
 # LLVM1-NEXT: }
 
-# RUN: yaml2obj -docnum 1 %s | llvm-readobj -elf-output-style=GNU -relocations - | FileCheck --check-prefix=GNU1 %s
+# RUN: yaml2obj -docnum 1 %s | llvm-readelf -relocations - | FileCheck --check-prefix=GNU1 %s
 # GNU1:      Relocation section '.rela.dyn' at offset 0x180 contains 8 entries:
 # GNU1:      0000000000001100  0000000000000008 R_X86_64_RELATIVE                 0
 # GNU1-NEXT: 0000000000001180  0000000000000008 R_X86_64_RELATIVE                 0
@@ -47,7 +47,7 @@ Symbols:
     Binding:         STB_GLOBAL
 ...
 
-# RUN: yaml2obj -docnum 2 %s | llvm-readobj -elf-output-style=LLVM -relocations - | FileCheck --check-prefix=LLVM2 %s
+# RUN: yaml2obj -docnum 2 %s | llvm-readobj --relocations - | FileCheck --check-prefix=LLVM2 %s
 # LLVM2:      Section (1) .rel.dyn {
 # LLVM2-NEXT:   0x1008 R_386_32 sym1 0x0
 # LLVM2-NEXT:   0x1010 R_386_GOT32 sym2 0x0
@@ -61,7 +61,7 @@ Symbols:
 # LLVM2-NEXT:   0xFF0 R_386_RELATIVE - 0x0
 # LLVM2-NEXT: }
 
-# RUN: yaml2obj -docnum 2 %s | llvm-readobj -elf-output-style=GNU -relocations - | FileCheck --check-prefix=GNU2 %s
+# RUN: yaml2obj -docnum 2 %s | llvm-readelf -relocations - | FileCheck --check-prefix=GNU2 %s
 # GNU2:      Relocation section '.rel.dyn' at offset 0xfc contains 10 entries:
 # GNU2:      00001008  00000101 R_386_32               00000000   sym1
 # GNU2-NEXT: 00001010  00000203 R_386_GOT32            00000000   sym2
@@ -97,7 +97,7 @@ Symbols:
     Binding:         STB_GLOBAL
 ...
 
-# RUN: yaml2obj -docnum 3 %s | llvm-readobj -elf-output-style=LLVM -relocations - | FileCheck --check-prefix=LLVM3 %s
+# RUN: yaml2obj -docnum 3 %s | llvm-readobj --relocations - | FileCheck --check-prefix=LLVM3 %s
 #
 # LLVM3:      Section (1) .rela.dyn {
 # LLVM3-NEXT:   0x1100 R_X86_64_RELATIVE - 0x0
@@ -108,7 +108,7 @@ Symbols:
 # LLVM3-NEXT:   0x1218 R_X86_64_64 sym2 0x8
 # LLVM3-NEXT: }
 
-# RUN: yaml2obj -docnum 3 %s | llvm-readobj -elf-output-style=GNU -relocations - | FileCheck --check-prefix=GNU3 %s
+# RUN: yaml2obj -docnum 3 %s | llvm-readelf -relocations - | FileCheck --check-prefix=GNU3 %s
 # GNU3:      Relocation section '.rela.dyn' at offset 0x180 contains 6 entries:
 # GNU3: 0000000000001100  0000000000000008 R_X86_64_RELATIVE                 0
 # GNU3-NEXT: 0000000000001180  0000000000000008 R_X86_64_RELATIVE                 8

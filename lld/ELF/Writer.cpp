@@ -1050,9 +1050,8 @@ static int getRankProximityAux(OutputSection *A, OutputSection *B) {
 }
 
 static int getRankProximity(OutputSection *A, BaseCommand *B) {
-  if (auto *Sec = dyn_cast<OutputSection>(B))
-    return getRankProximityAux(A, Sec);
-  return -1;
+  auto *Sec = dyn_cast<OutputSection>(B);
+  return (Sec && Sec->Live) ? getRankProximityAux(A, Sec) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments

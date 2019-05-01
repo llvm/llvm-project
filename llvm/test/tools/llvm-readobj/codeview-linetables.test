@@ -18,13 +18,13 @@
 ;     z();
 ;   }
 ; using 32-/64-bit versions of CL v17.00.61030 and v18.00.21005.1 respectively.
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifunction-linetables.obj.coff-2012-i368 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifunction-linetables.obj.coff-2012-i368 \
 RUN:   | FileCheck %s -check-prefix MFUN32
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifunction-linetables.obj.coff-2013-i368 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifunction-linetables.obj.coff-2013-i368 \
 RUN:   | FileCheck %s -check-prefix MFUN32
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifunction-linetables.obj.coff-2012-x86_64 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifunction-linetables.obj.coff-2012-x86_64 \
 RUN:   | FileCheck %s -check-prefix MFUN64
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifunction-linetables.obj.coff-2013-x86_64 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifunction-linetables.obj.coff-2013-x86_64 \
 RUN:   | FileCheck %s -check-prefix MFUN64
 
 MFUN32:      CodeViewDebugInfo [
@@ -343,13 +343,13 @@ MFUN64:      ]
 ;     g();
 ;   }
 ; using 32-/64-bit versions of CL v17.00.61030 and v18.00.21005.1 respectively.
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifile-linetables.obj.coff-2012-i368 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifile-linetables.obj.coff-2012-i368 \
 RUN:   | FileCheck %s -check-prefix MFILE32
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifile-linetables.obj.coff-2013-i368 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifile-linetables.obj.coff-2013-i368 \
 RUN:   | FileCheck %s -check-prefix MFILE32
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifile-linetables.obj.coff-2012-x86_64 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifile-linetables.obj.coff-2012-x86_64 \
 RUN:   | FileCheck %s -check-prefix MFILE64
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifile-linetables.obj.coff-2013-x86_64 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/multifile-linetables.obj.coff-2013-x86_64 \
 RUN:   | FileCheck %s -check-prefix MFILE64
 
 MFILE32:      CodeViewDebugInfo [
@@ -523,9 +523,9 @@ MFILE64:      ]
 ;     return 0;
 ;   }
 ; using 32-version of CL v17.00.61030 and v18.00.21005.1 respectively.
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/comdat-function-linetables.obj.coff-2012-i386 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/comdat-function-linetables.obj.coff-2012-i386 \
 RUN:   | FileCheck %s -check-prefix MCOMDAT
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/comdat-function-linetables.obj.coff-2013-i386 \
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/comdat-function-linetables.obj.coff-2013-i386 \
 RUN:   | FileCheck %s -check-prefix MCOMDAT
 
 MCOMDAT:      GlobalProcIdSym {

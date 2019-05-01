@@ -1,6 +1,6 @@
-RUN: llvm-readobj -symbols %p/Inputs/st-other.obj.elf-mips \
+RUN: llvm-readobj --symbols %p/Inputs/st-other.obj.elf-mips \
 RUN:   | FileCheck -check-prefix=MREG %s
-RUN: llvm-readobj -symbols %p/Inputs/st-other.obj.elf-mips16 \
+RUN: llvm-readobj --symbols %p/Inputs/st-other.obj.elf-mips16 \
 RUN:   | FileCheck -check-prefix=M16 %s
 
 MREG:      Name: foo

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -relocations %t | FileCheck %s --check-prefix=RELOCS
+# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOCS
 # RUN: obj2yaml %t | FileCheck %s --check-prefix=YAML
 
 # RELOCS:      Relocations [

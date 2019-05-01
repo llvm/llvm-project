@@ -102,6 +102,7 @@ private:
   Error allocateSegments(const SegmentLayoutMap &Layout);
   DenseSet<StringRef> getExternalSymbolNames() const;
   void applyLookupResult(AsyncLookupResult LR);
+  void deallocateAndBailOut(Error Err);
 
   void dumpGraph(raw_ostream &OS);
 

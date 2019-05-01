@@ -61,6 +61,7 @@
         integer(kind=omp_sched_kind), parameter :: omp_sched_dynamic = 2
         integer(kind=omp_sched_kind), parameter :: omp_sched_guided  = 3
         integer(kind=omp_sched_kind), parameter :: omp_sched_auto    = 4
+        integer(kind=omp_sched_kind), parameter :: omp_sched_monotonic = Z'80000000'
 
         integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_false = 0
         integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_true = 1

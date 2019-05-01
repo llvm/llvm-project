@@ -29,16 +29,16 @@ LLVM_DUMP_METHOD void Symbol::dump(raw_ostream &OS) const {
     Result += "(tlv) ";
   switch (Kind) {
   case SymbolKind::GlobalSymbol:
-    Result + Name.str();
+    Result += Name.str();
     break;
   case SymbolKind::ObjectiveCClass:
-    Result + "(ObjC Class) " + Name.str();
+    Result += "(ObjC Class) " + Name.str();
     break;
   case SymbolKind::ObjectiveCClassEHType:
-    Result + "(ObjC Class EH) " + Name.str();
+    Result += "(ObjC Class EH) " + Name.str();
     break;
   case SymbolKind::ObjectiveCInstanceVariable:
-    Result + "(ObjC IVar) " + Name.str();
+    Result += "(ObjC IVar) " + Name.str();
     break;
   }
   OS << Result;

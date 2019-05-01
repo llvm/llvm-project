@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | not llvm-readobj -relocations - 2>&1 | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | not llvm-readobj -r - 2>&1 | FileCheck %s
 
 // CHECK: error: invalid packed relocation header
 

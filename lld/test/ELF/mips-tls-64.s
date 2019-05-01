@@ -8,11 +8,11 @@
 
 # RUN: ld.lld %t.o %t.so -o %t.exe
 # RUN: llvm-objdump -d -s -t %t.exe | FileCheck -check-prefix=DIS %s
-# RUN: llvm-readobj -r -mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck %s
 
 # RUN: ld.lld -shared %t.o %t.so -o %t-out.so
 # RUN: llvm-objdump -d -s -t %t-out.so | FileCheck -check-prefix=DIS-SO %s
-# RUN: llvm-readobj -r -mips-plt-got %t-out.so | FileCheck -check-prefix=SO %s
+# RUN: llvm-readobj -r --mips-plt-got %t-out.so | FileCheck -check-prefix=SO %s
 
 # DIS:      __start:
 # DIS-NEXT:    20000:   24 62 80 30   addiu   $2, $3, -32720

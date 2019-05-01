@@ -19,7 +19,7 @@ template("unix_toolchain") {
       depsformat = "gcc"
       description = "CC {{output}}"
       outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
       ]
     }
 
@@ -29,7 +29,7 @@ template("unix_toolchain") {
       depsformat = "gcc"
       description = "CXX {{output}}"
       outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
       ]
     }
 
@@ -39,7 +39,7 @@ template("unix_toolchain") {
       depsformat = "gcc"
       description = "ASM {{output}}"
       outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
       ]
     }
 
@@ -227,7 +227,7 @@ toolchain("win") {
     depsformat = "msvc"
     description = "CC {{output}}"
     outputs = [
-      "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.obj",
+      "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj",
     ]
   }
 
@@ -236,7 +236,7 @@ toolchain("win") {
     depsformat = "msvc"
     description = "CXX {{output}}"
     outputs = [
-      "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.obj",
+      "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj",
     ]
   }
 

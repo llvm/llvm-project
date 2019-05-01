@@ -260,6 +260,8 @@ static const StringMap<MachineInfo> ArchMap{
     {"i386:x86-64", {ELF::EM_X86_64, true, true}},
     {"mips", {ELF::EM_MIPS, false, false}},
     {"powerpc:common64", {ELF::EM_PPC64, true, true}},
+    {"riscv:rv32", {ELF::EM_RISCV, false, true}},
+    {"riscv:rv64", {ELF::EM_RISCV, true, true}},
     {"sparc", {ELF::EM_SPARC, false, true}},
     {"x86-64", {ELF::EM_X86_64, true, true}},
 };
@@ -275,22 +277,31 @@ static Expected<const MachineInfo &> getMachineInfo(StringRef Arch) {
 // FIXME: consolidate with the bfd parsing used by lld.
 static const StringMap<MachineInfo> OutputFormatMap{
     // Name, {EMachine, 64bit, LittleEndian}
+    // x86
     {"elf32-i386", {ELF::EM_386, false, true}},
-    {"elf32-iamcu", {ELF::EM_IAMCU, false, true}},
-    {"elf32-littlearm", {ELF::EM_ARM, false, true}},
     {"elf32-x86-64", {ELF::EM_X86_64, false, true}},
+    {"elf64-x86-64", {ELF::EM_X86_64, true, true}},
+    // Intel MCU
+    {"elf32-iamcu", {ELF::EM_IAMCU, false, true}},
+    // ARM
+    {"elf32-littlearm", {ELF::EM_ARM, false, true}},
+    // ARM AArch64
     {"elf64-aarch64", {ELF::EM_AARCH64, true, true}},
     {"elf64-littleaarch64", {ELF::EM_AARCH64, true, true}},
+    // RISC-V
+    {"elf32-littleriscv", {ELF::EM_RISCV, false, true}},
+    {"elf64-littleriscv", {ELF::EM_RISCV, true, true}},
+    // PowerPC
     {"elf32-powerpc", {ELF::EM_PPC, false, false}},
     {"elf32-powerpcle", {ELF::EM_PPC, false, true}},
     {"elf64-powerpc", {ELF::EM_PPC64, true, false}},
     {"elf64-powerpcle", {ELF::EM_PPC64, true, true}},
-    {"elf64-x86-64", {ELF::EM_X86_64, true, true}},
-    {"elf32-tradbigmips", {ELF::EM_MIPS, false, false}},
+    // MIPS
     {"elf32-bigmips", {ELF::EM_MIPS, false, false}},
     {"elf32-ntradbigmips", {ELF::EM_MIPS, false, false}},
-    {"elf32-tradlittlemips", {ELF::EM_MIPS, false, true}},
     {"elf32-ntradlittlemips", {ELF::EM_MIPS, false, true}},
+    {"elf32-tradbigmips", {ELF::EM_MIPS, false, false}},
+    {"elf32-tradlittlemips", {ELF::EM_MIPS, false, true}},
     {"elf64-tradbigmips", {ELF::EM_MIPS, true, false}},
     {"elf64-tradlittlemips", {ELF::EM_MIPS, true, true}},
 };

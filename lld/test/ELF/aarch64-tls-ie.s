@@ -5,7 +5,7 @@
 # RUN: ld.lld -shared %tdso.o -o %tdso.so
 # RUN: ld.lld --hash-style=sysv %tmain.o %tdso.so -o %tout
 # RUN: llvm-objdump -d %tout | FileCheck %s
-# RUN: llvm-readobj -s -r %tout | FileCheck -check-prefix=RELOC %s
+# RUN: llvm-readobj -S -r %tout | FileCheck -check-prefix=RELOC %s
 
 #RELOC:      Section {
 #RELOC:        Index:

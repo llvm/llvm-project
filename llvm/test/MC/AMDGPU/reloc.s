@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu=kaveri -show-encoding %s | llvm-readobj -relocations | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu=kaveri -show-encoding %s | llvm-readobj -r | FileCheck %s
 
 // CHECK: Relocations [
 // CHECK: .rel.text {

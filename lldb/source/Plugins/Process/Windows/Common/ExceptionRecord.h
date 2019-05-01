@@ -64,6 +64,8 @@ public:
 
   lldb::tid_t GetThreadID() const { return m_thread_id; }
 
+  const std::vector<ULONG_PTR>& GetExceptionArguments() const { return m_arguments; }
+
 private:
   DWORD m_code;
   bool m_continuable;

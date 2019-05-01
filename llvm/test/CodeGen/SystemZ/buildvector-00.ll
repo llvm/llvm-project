@@ -13,7 +13,7 @@ define void @f1(<2 x i64> %a0) {
 ; CHECK-NEXT:    vn %v0, %v0, %v0
 ; CHECK-NEXT:    vno %v2, %v2, %v2
 ; CHECK-NEXT:    vceqg %v0, %v0, %v1
-; CHECK-NEXT:    vx %v0, %v2, %v0
+; CHECK-NEXT:    vx %v0, %v0, %v2
 ; CHECK-NEXT:    vnc %v0, %v2, %v0
 ; CHECK-NEXT:    vlgvf %r0, %v0, 1
 ; CHECK-NEXT:    tmll %r0, 1

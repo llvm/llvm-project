@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX803 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck --check-prefix=CHECK --check-prefix=GFX803 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
 
 ; CHECK:              ---
 ; CHECK:      amdhsa.kernels:

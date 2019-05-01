@@ -23,6 +23,7 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/Symbol/CxxModuleHandler.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -243,6 +244,41 @@ private:
           m_decls_to_deport(nullptr), m_decls_already_deported(nullptr),
           m_master(master), m_source_ctx(source_ctx) {}
 
+    /// Scope guard that attaches a CxxModuleHandler to a Minion and deattaches
+    /// it at the end of the scope. Supports being used multiple times on the
+    /// same Minion instance in nested scopes.
+    class CxxModuleScope {
+      /// The handler we attach to the Minion.
+      CxxModuleHandler m_handler;
+      /// The Minion we are supposed to attach the handler to.
+      Minion &m_minion;
+      /// True iff we attached the handler to the Minion.
+      bool m_valid = false;
+
+    public:
+      CxxModuleScope(Minion &minion, clang::ASTContext *dst_ctx)
+          : m_minion(minion) {
+        // If the minion doesn't have a CxxModuleHandler yet, create one
+        // and attach it.
+        if (!minion.m_std_handler) {
+          m_handler = CxxModuleHandler(minion, dst_ctx);
+          m_valid = true;
+          minion.m_std_handler = &m_handler;
+        }
+      }
+      ~CxxModuleScope() {
+        if (m_valid) {
+          // Make sure no one messed with the handler we placed.
+          assert(m_minion.m_std_handler == &m_handler);
+          m_minion.m_std_handler = nullptr;
+        }
+      }
+    };
+
+  protected:
+    llvm::Expected<clang::Decl *> ImportImpl(clang::Decl *From) override;
+
+  public:
     // A call to "InitDeportWorkQueues" puts the minion into deport mode.
     // In deport mode, every copied Decl that could require completion is
     // recorded and placed into the decls_to_deport set.
@@ -266,10 +302,16 @@ private:
 
     clang::Decl *GetOriginalDecl(clang::Decl *To) override;
 
+    /// Decls we should ignore when mapping decls back to their original
+    /// ASTContext. Used by the CxxModuleHandler to mark declarations that
+    /// were created from the 'std' C++ module to prevent that the Importer
+    /// tries to sync them with the broken equivalent in the debug info AST.
+    std::set<clang::Decl *> m_decls_to_ignore;
     std::set<clang::NamedDecl *> *m_decls_to_deport;
     std::set<clang::NamedDecl *> *m_decls_already_deported;
     ClangASTImporter &m_master;
     clang::ASTContext *m_source_ctx;
+    CxxModuleHandler *m_std_handler = nullptr;
   };
 
   typedef std::shared_ptr<Minion> MinionSP;

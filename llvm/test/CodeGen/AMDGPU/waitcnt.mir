@@ -44,21 +44,21 @@ name: flat_zero_waitcnt
 body: |
   bb.0:
     successors: %bb.1
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.global4)
-    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.global4)
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.2
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
-    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.flat16)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.flat16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     S_ENDPGM 0
 ...
@@ -79,11 +79,11 @@ name: single_fallthrough_successor_no_end_block_wait
 body: |
   bb.0:
     successors: %bb.1
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.1:
     $vgpr3_vgpr4 = V_LSHLREV_B64 4, $vgpr7_vgpr8, implicit $exec
-    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
 ---
@@ -106,15 +106,15 @@ name: single_branch_successor_not_next_block
 body: |
   bb.0:
     successors: %bb.2
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
    S_BRANCH %bb.2
 
   bb.1:
-    FLAT_STORE_DWORD $vgpr8_vgpr9, $vgpr10, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr8_vgpr9, $vgpr10, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
   bb.2:
      $vgpr3_vgpr4 = V_LSHLREV_B64 4, $vgpr7_vgpr8, implicit $exec
-    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...

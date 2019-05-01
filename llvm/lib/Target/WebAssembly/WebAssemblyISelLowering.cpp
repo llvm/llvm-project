@@ -271,6 +271,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     MaxStoresPerMemsetOptSize = 1;
   }
 
+  // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
+  // consistent with the f64 and f128 names.
+  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
+  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+
   // Always convert switches to br_tables unless there is only one case, which
   // is equivalent to a simple branch. This reduces code size for wasm, and we
   // defer possible jump table optimizations to the VM.

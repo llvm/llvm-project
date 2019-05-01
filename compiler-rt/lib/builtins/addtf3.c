@@ -17,8 +17,8 @@
 #if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
 #include "fp_add_impl.inc"
 
-COMPILER_RT_ABI long double __addtf3(long double a, long double b){
-    return __addXf3__(a, b);
+COMPILER_RT_ABI long double __addtf3(long double a, long double b) {
+  return __addXf3__(a, b);
 }
 
 #endif

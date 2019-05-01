@@ -1164,10 +1164,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
       if (!PrintedSection) {
         PrintedSection = true;
-        outs() << "Disassembly of section ";
+        outs() << "\nDisassembly of section ";
         if (!SegmentName.empty())
           outs() << SegmentName << ",";
-        outs() << SectionName << ':';
+        outs() << SectionName << ":\n";
       }
 
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {

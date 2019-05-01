@@ -92,6 +92,7 @@ enum LegalizeAction : std::uint8_t {
   UseLegacyRules,
 };
 } // end namespace LegalizeActions
+raw_ostream &operator<<(raw_ostream &OS, LegalizeActions::LegalizeAction Action);
 
 using LegalizeActions::LegalizeAction;
 

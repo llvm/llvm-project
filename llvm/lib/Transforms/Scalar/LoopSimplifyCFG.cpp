@@ -598,7 +598,13 @@ public:
 
 #ifndef NDEBUG
     // Make sure that we have preserved all data structures after the transform.
-    assert(DT.verify() && "DT broken after transform!");
+#if defined(EXPENSIVE_CHECKS)
+    assert(DT.verify(DominatorTree::VerificationLevel::Full) &&
+           "DT broken after transform!");
+#else
+    assert(DT.verify(DominatorTree::VerificationLevel::Fast) &&
+           "DT broken after transform!");
+#endif
     assert(DT.isReachableFromEntry(Header));
     LI.verify(DT);
 #endif

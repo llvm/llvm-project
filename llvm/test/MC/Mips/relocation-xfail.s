@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple mips-unknown-linux -mattr=+micromips < %s \
-// RUN:     | llvm-readobj -sections -section-data \
+// RUN:     | llvm-readobj --sections --section-data \
 // RUN:     | FileCheck -check-prefix=DATA %s
 //
 // XFAIL: *

@@ -5,7 +5,7 @@
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump -triple=armv7a-linux-gnueabihf -d %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
-// RUN: llvm-readobj -r -dynamic-table %tout | FileCheck %s
+// RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 
 // Check that the IRELATIVE relocations are last in the .got
 // CHECK: Relocations [
@@ -29,6 +29,7 @@
 // GOTPLT-NEXT:  13010 20100100
 
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:    11000:       1e ff 2f e1     bx      lr
 // DISASM: bar:
@@ -41,7 +42,9 @@
 // DISASM-NEXT:    11014:       04 00 00 00     .word   0x00000004
 // DISASM:         11018:       08 00 00 eb     bl      #32
 // DISASM-NEXT:    1101c:       0b 00 00 eb     bl      #44
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: $a:
 // DISASM-NEXT:    11020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // DISASM-NEXT:    11024:       00 e6 8f e2     add     lr, pc, #0, #12

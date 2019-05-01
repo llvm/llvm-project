@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj -symbols - | FileCheck %s
+# RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
 !ELF
 FileHeader:
   Class: ELFCLASS64

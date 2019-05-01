@@ -5,7 +5,7 @@
 
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld -pie --pack-dyn-relocs=relr %t.o %t.so -o %t.exe
-// RUN: llvm-readobj -relocations %t.exe | FileCheck %s
+// RUN: llvm-readobj -r %t.exe | FileCheck %s
 
 // CHECK:      Section (5) .relr.dyn {
 // CHECK-NEXT:   0x2000 R_ARM_RELATIVE - 0x0
@@ -44,7 +44,7 @@
 // CHECK-NEXT:   0x2084 R_ARM_RELATIVE - 0x0
 // CHECK-NEXT: }
 
-// RUN: llvm-readobj -s -dynamic-table %t.exe | FileCheck --check-prefix=HEADER %s
+// RUN: llvm-readobj -S --dynamic-table %t.exe | FileCheck --check-prefix=HEADER %s
 // HEADER: 0x00000023 RELRSZ 0xC
 
 .data

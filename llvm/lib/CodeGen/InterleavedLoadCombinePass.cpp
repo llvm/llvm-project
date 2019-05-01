@@ -960,6 +960,7 @@ public:
     if (!PtrTy) {
       Result = Polynomial();
       BasePtr = nullptr;
+      return;
     }
     unsigned PointerBits =
         DL.getIndexSizeInBits(PtrTy->getPointerAddressSpace());

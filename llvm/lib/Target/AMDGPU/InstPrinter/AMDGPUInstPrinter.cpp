@@ -72,8 +72,14 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
 }
 
 void AMDGPUInstPrinter::printS13ImmDecOperand(const MCInst *MI, unsigned OpNo,
+                                              const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
-  O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
+  // GFX10: Address offset is 12-bit signed byte offset.
+  if (AMDGPU::isGFX10(STI)) {
+    O << formatDec(SignExtend32<12>(MI->getOperand(OpNo).getImm()));
+  } else {
+    O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
+  }
 }
 
 void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -128,7 +134,7 @@ void AMDGPUInstPrinter::printOffsetS13(const MCInst *MI, unsigned OpNo,
   uint16_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm != 0) {
     O << ((OpNo == 0)? "offset:" : " offset:");
-    printS13ImmDecOperand(MI, OpNo, O);
+    printS13ImmDecOperand(MI, OpNo, STI, O);
   }
 }
 
@@ -173,6 +179,12 @@ void AMDGPUInstPrinter::printGDS(const MCInst *MI, unsigned OpNo,
   printNamedBit(MI, OpNo, O, "gds");
 }
 
+void AMDGPUInstPrinter::printDLC(const MCInst *MI, unsigned OpNo,
+                                 const MCSubtargetInfo &STI, raw_ostream &O) {
+  if (AMDGPU::isGFX10(STI))
+    printNamedBit(MI, OpNo, O, "dlc");
+}
+
 void AMDGPUInstPrinter::printGLC(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "glc");
@@ -194,6 +206,18 @@ void AMDGPUInstPrinter::printDMask(const MCInst *MI, unsigned OpNo,
     O << " dmask:";
     printU16ImmOperand(MI, OpNo, STI, O);
   }
+}
+
+void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
+                                 const MCSubtargetInfo &STI, raw_ostream &O) {
+  unsigned Dim = MI->getOperand(OpNo).getImm();
+  O << " dim:SQ_RSRC_IMG_";
+
+  const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
+  if (DimInfo)
+    O << DimInfo->AsmSuffix;
+  else
+    O << Dim;
 }
 
 void AMDGPUInstPrinter::printUNorm(const MCInst *MI, unsigned OpNo,
@@ -242,8 +266,12 @@ void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
   if (unsigned Val = MI->getOperand(OpNo).getImm()) {
-    O << " dfmt:" << (Val & 15);
-    O << ", nfmt:" << (Val >> 4);
+    if (AMDGPU::isGFX10(STI))
+      O << " format:" << Val;
+    else {
+      O << " dfmt:" << (Val & 15);
+      O << ", nfmt:" << (Val >> 4);
+    }
   }
 }
 

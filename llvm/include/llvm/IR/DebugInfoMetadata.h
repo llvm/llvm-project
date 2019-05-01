@@ -1637,9 +1637,6 @@ public:
 };
 
 /// Subprogram description.
-///
-/// TODO: Remove DisplayName.  It's always equal to Name.
-/// TODO: Split up flags.
 class DISubprogram : public DILocalScope {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -2509,6 +2506,9 @@ public:
 
   /// Return whether this is a piece of an aggregate variable.
   bool isFragment() const { return getFragmentInfo().hasValue(); }
+
+  /// Return whether this is an implicit location description.
+  bool isImplicit() const;
 
   /// Append \p Ops with operations to apply the \p Offset.
   static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);

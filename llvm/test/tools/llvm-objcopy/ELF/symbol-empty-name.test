@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy %t %t2
-# RUN: llvm-readobj -t %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
 ## Check that all values of the null symbol are zeroes.
 

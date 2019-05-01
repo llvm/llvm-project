@@ -2,6 +2,7 @@
 // on integer sizes.
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtautological-constant-in-range-compare -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtype-limits -std=c++11 %s
 
 int test0(long a, unsigned long b) {
   enum EnumA {A};

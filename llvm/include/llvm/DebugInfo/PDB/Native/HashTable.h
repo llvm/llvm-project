@@ -143,7 +143,7 @@ public:
       return EC;
     if (Present.intersects(Deleted))
       return make_error<RawError>(raw_error_code::corrupt_file,
-                                  "Present bit vector interesects deleted!");
+                                  "Present bit vector intersects deleted!");
 
     for (uint32_t P : Present) {
       if (auto EC = Stream.readInteger(Buckets[P].first))

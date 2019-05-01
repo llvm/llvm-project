@@ -5,13 +5,14 @@
 # RUN: llvm-objdump -d %t | FileCheck %s
 # RUN: ld.lld -shared %t1 %t2 -o %t3
 # RUN: llvm-objdump -d %t3 | FileCheck -check-prefix=DSO %s
-# RUN: llvm-readobj -s -r %t3 | FileCheck -check-prefix=DSOREL %s
+# RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 
 # 0x1101c - 28 = 0x20000
 # 0x11020 - 16 = 0x20010
 # 0x11024 - 36 = 0x20000
 # 0x11028 - 24 = 0x20010
 # CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: _foo:
 # CHECK-NEXT:  210000: {{.*}} nop
 # CHECK-NEXT:  210004: {{.*}} nop
@@ -51,6 +52,7 @@
 #DSOREL-NEXT:]
 
 #DSO:      Disassembly of section .text:
+#DSO-EMPTY:
 #DSO-NEXT: _foo:
 #DSO-NEXT:  10000: {{.*}} nop
 #DSO-NEXT:  10004: {{.*}} nop
@@ -69,7 +71,9 @@
 #DSO-NEXT:  10020: {{.*}} tbnz w3, #15, #64
 #DSO-NEXT:  10024: {{.*}} tbz x6, #45, #44
 #DSO-NEXT:  10028: {{.*}} tbz x6, #45, #56
+#DSO-EMPTY:
 #DSO-NEXT: Disassembly of section .plt:
+#DSO-EMPTY:
 #DSO-NEXT: .plt:
 #DSO-NEXT:  10030: {{.*}} stp x16, x30, [sp, #-16]!
 #DSO-NEXT:  10034: {{.*}} adrp x16, #131072

@@ -12,7 +12,7 @@
 // extern float __floatsisfvfp(int a);
 //
 // Converts single precision float to a 32-bit int rounding towards zero.
-// Uses Darwin calling convention where a single precision result is 
+// Uses Darwin calling convention where a single precision result is
 // return in a GPR..
 //
 	.syntax unified

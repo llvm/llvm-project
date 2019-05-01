@@ -100,6 +100,11 @@ public:
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(support::endianness Endianness);
   void setOutputSparse(bool Sparse);
+  // Compute the overlap b/w this object and Other. Program level result is
+  // stored in Overlap and function level result is stored in FuncLevelOverlap.
+  void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,
+                     OverlapStats &FuncLevelOverlap,
+                     const OverlapFuncFilters &FuncFilter);
 
 private:
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,

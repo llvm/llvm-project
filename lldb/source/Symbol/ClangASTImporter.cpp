@@ -16,6 +16,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Sema/Lookup.h"
+#include "clang/Sema/Sema.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <memory>
@@ -58,6 +60,8 @@ clang::QualType ClangASTImporter::CopyType(clang::ASTContext *dst_ast,
                                            clang::QualType type) {
   MinionSP minion_sp(GetMinion(dst_ast, src_ast));
 
+  Minion::CxxModuleScope std_scope(*minion_sp, dst_ast);
+
   if (minion_sp)
     return minion_sp->Import(type);
 
@@ -98,6 +102,8 @@ clang::Decl *ClangASTImporter::CopyDecl(clang::ASTContext *dst_ast,
   MinionSP minion_sp;
 
   minion_sp = GetMinion(dst_ast, src_ast);
+
+  Minion::CxxModuleScope std_scope(*minion_sp, dst_ast);
 
   if (minion_sp) {
     clang::Decl *result = minion_sp->Import(decl);
@@ -557,6 +563,7 @@ bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
 
   MinionSP minion_sp(GetMinion(&decl->getASTContext(), decl_origin.ctx));
 
+  Minion::CxxModuleScope std_scope(*minion_sp, &decl->getASTContext());
   if (minion_sp)
     minion_sp->ImportDefinitionTo(decl, decl_origin.decl);
 
@@ -623,6 +630,8 @@ bool ClangASTImporter::CompleteAndFetchChildren(clang::QualType type) {
       return false;
 
     MinionSP minion_sp(GetMinion(&tag_decl->getASTContext(), decl_origin.ctx));
+
+    Minion::CxxModuleScope std_scope(*minion_sp, &tag_decl->getASTContext());
 
     TagDecl *origin_tag_decl = llvm::dyn_cast<TagDecl>(decl_origin.decl);
 
@@ -816,6 +825,23 @@ void ClangASTImporter::ForgetSource(clang::ASTContext *dst_ast,
 
 ClangASTImporter::MapCompleter::~MapCompleter() { return; }
 
+llvm::Expected<Decl *> ClangASTImporter::Minion::ImportImpl(Decl *From) {
+  if (m_std_handler) {
+    llvm::Optional<Decl *> D = m_std_handler->Import(From);
+    if (D) {
+      // Make sure we don't use this decl later to map it back to it's original
+      // decl. The decl the CxxModuleHandler created has nothing to do with
+      // the one from debug info, and linking those two would just cause the
+      // ASTImporter to try 'updating' the module decl with the minimal one from
+      // the debug info.
+      m_decls_to_ignore.insert(*D);
+      return *D;
+    }
+  }
+
+  return ASTImporter::ImportImpl(From);
+}
+
 void ClangASTImporter::Minion::InitDeportWorkQueues(
     std::set<clang::NamedDecl *> *decls_to_deport,
     std::set<clang::NamedDecl *> *decls_already_deported) {
@@ -942,6 +968,11 @@ void ClangASTImporter::Minion::Imported(clang::Decl *from,
   ClangASTMetrics::RegisterClangImport();
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  // Some decls shouldn't be tracked here because they were not created by
+  // copying 'from' to 'to'. Just exit early for those.
+  if (m_decls_to_ignore.find(to) != m_decls_to_ignore.end())
+    return clang::ASTImporter::Imported(from, to);
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
   ClangASTMetadata *metadata = m_master.GetDeclMetadata(from);

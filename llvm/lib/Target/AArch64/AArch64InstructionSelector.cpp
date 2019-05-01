@@ -101,6 +101,7 @@ private:
                                 MachineRegisterInfo &MRI) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineRegisterInfo &MRI) const;
+  bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectVectorICmp(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectIntrinsicTrunc(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectIntrinsicRound(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -1855,6 +1856,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_VASTART:
     return STI.isTargetDarwin() ? selectVaStartDarwin(I, MF, MRI)
                                 : selectVaStartAAPCS(I, MF, MRI);
+  case TargetOpcode::G_INTRINSIC:
+    return selectIntrinsic(I, MRI);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWithSideEffects(I, MRI);
   case TargetOpcode::G_IMPLICIT_DEF: {
@@ -3083,6 +3086,17 @@ bool AArch64InstructionSelector::selectBuildVector(
   return true;
 }
 
+/// Helper function to find an intrinsic ID on an a MachineInstr. Returns the
+/// ID if it exists, and 0 otherwise.
+static unsigned findIntrinsicID(MachineInstr &I) {
+  auto IntrinOp = find_if(I.operands(), [&](const MachineOperand &Op) {
+    return Op.isIntrinsicID();
+  });
+  if (IntrinOp == I.operands_end())
+    return 0;
+  return IntrinOp->getIntrinsicID();
+}
+
 /// Helper function to emit the correct opcode for a llvm.aarch64.stlxr
 /// intrinsic.
 static unsigned getStlxrOpcode(unsigned NumBytesToStore) {
@@ -3101,12 +3115,9 @@ static unsigned getStlxrOpcode(unsigned NumBytesToStore) {
 bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   // Find the intrinsic ID.
-  auto IntrinOp = find_if(I.operands(), [&](const MachineOperand &Op) {
-    return Op.isIntrinsicID();
-  });
-  if (IntrinOp == I.operands_end())
+  unsigned IntrinID = findIntrinsicID(I);
+  if (!IntrinID)
     return false;
-  unsigned IntrinID = IntrinOp->getIntrinsicID();
   MachineIRBuilder MIRBuilder(I);
 
   // Select the instruction.
@@ -3146,6 +3157,58 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
 
   I.eraseFromParent();
   return true;
+}
+
+bool AArch64InstructionSelector::selectIntrinsic(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  unsigned IntrinID = findIntrinsicID(I);
+  if (!IntrinID)
+    return false;
+  MachineIRBuilder MIRBuilder(I);
+
+  switch (IntrinID) {
+  default:
+    break;
+  case Intrinsic::aarch64_crypto_sha1h:
+    unsigned DstReg = I.getOperand(0).getReg();
+    unsigned SrcReg = I.getOperand(2).getReg();
+
+    // FIXME: Should this be an assert?
+    if (MRI.getType(DstReg).getSizeInBits() != 32 ||
+        MRI.getType(SrcReg).getSizeInBits() != 32)
+      return false;
+
+    // The operation has to happen on FPRs. Set up some new FPR registers for
+    // the source and destination if they are on GPRs.
+    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
+      SrcReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      MIRBuilder.buildCopy({SrcReg}, {I.getOperand(2)});
+
+      // Make sure the copy ends up getting constrained properly.
+      RBI.constrainGenericRegister(I.getOperand(2).getReg(),
+                                   AArch64::GPR32RegClass, MRI);
+    }
+
+    if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID)
+      DstReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+
+    // Actually insert the instruction.
+    auto SHA1Inst = MIRBuilder.buildInstr(AArch64::SHA1Hrr, {DstReg}, {SrcReg});
+    constrainSelectedInstRegOperands(*SHA1Inst, TII, TRI, RBI);
+
+    // Did we create a new register for the destination?
+    if (DstReg != I.getOperand(0).getReg()) {
+      // Yep. Copy the result of the instruction back into the original
+      // destination.
+      MIRBuilder.buildCopy({I.getOperand(0)}, {DstReg});
+      RBI.constrainGenericRegister(I.getOperand(0).getReg(),
+                                   AArch64::GPR32RegClass, MRI);
+    }
+
+    I.eraseFromParent();
+    return true;
+  }
+  return false;
 }
 
 /// SelectArithImmed - Select an immediate value that can be represented as

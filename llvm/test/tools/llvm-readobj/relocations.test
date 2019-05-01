@@ -14,7 +14,7 @@ RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.macho-ppc \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC
 RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.macho-ppc64 \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC64
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/trivial.obj.macho-arm \
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
 RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.wasm \
 RUN:   | FileCheck %s -check-prefix WASM
