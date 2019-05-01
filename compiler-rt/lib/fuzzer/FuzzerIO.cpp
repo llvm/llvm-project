@@ -64,6 +64,11 @@ void WriteToFile(const Unit &U, const std::string &Path) {
   WriteToFile(U.data(), U.size(), Path);
 }
 
+void WriteToFile(const std::string &Data, const std::string &Path) {
+  WriteToFile(reinterpret_cast<const uint8_t *>(Data.c_str()), Data.size(),
+              Path);
+}
+
 void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path) {
   // Use raw C interface because this function may be called from a sig handler.
   FILE *Out = fopen(Path.c_str(), "wb");

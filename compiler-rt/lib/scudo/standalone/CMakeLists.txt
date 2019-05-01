@@ -69,6 +69,7 @@ set(SCUDO_HEADERS
   list.h
   mutex.h
   platform.h
+  release.h
   report.h
   secondary.h
   size_class_map.h

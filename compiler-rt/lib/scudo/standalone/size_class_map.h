@@ -31,8 +31,8 @@ namespace scudo {
 //
 // This class also gives a hint to a thread-caching allocator about the amount
 // of chunks that can be cached per-thread:
-//  - MaxNumCachedHint is a hint for the max number of chunks cached per class.
-//  - 2^MaxBytesCachedLog is the max number of bytes cached per class.
+// - MaxNumCachedHint is a hint for the max number of chunks cached per class.
+// - 2^MaxBytesCachedLog is the max number of bytes cached per class.
 
 template <u8 NumBits, u8 MinSizeLog, u8 MidSizeLog, u8 MaxSizeLog,
           u32 MaxNumCachedHintT, u8 MaxBytesCachedLog>

@@ -1243,16 +1243,13 @@ int OnExit() {
 
 #define MSAN_INTERCEPT_FUNC(name)                                       \
   do {                                                                  \
-    INTERCEPT_FUNCTION(name);                                           \
-    if (&(name) != &WRAP(name) || !REAL(name))                          \
+    if ((!INTERCEPT_FUNCTION(name) || !REAL(name)))                     \
       VReport(1, "MemorySanitizer: failed to intercept '" #name "'\n"); \
   } while (0)
 
 #define MSAN_INTERCEPT_FUNC_VER(name, ver)                                    \
   do {                                                                        \
-    INTERCEPT_FUNCTION_VER(name, ver);                                        \
-    name##_type ptr = (::__interception::real_##name);                        \
-    if (&(name) != &WRAP(name) || !REAL(name))                                \
+    if ((!INTERCEPT_FUNCTION_VER(name, ver) || !REAL(name)))                  \
       VReport(                                                                \
           1, "MemorySanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
   } while (0)

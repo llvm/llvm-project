@@ -763,16 +763,25 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  // Parse -seed_inputs=file1,file2,...
+  // Parse -seed_inputs=file1,file2,... or -seed_inputs=@seed_inputs_file
   Vector<std::string> ExtraSeedFiles;
   if (Flags.seed_inputs) {
-    std::string s = Flags.seed_inputs;
-    size_t comma_pos;
-    while ((comma_pos = s.find_last_of(',')) != std::string::npos) {
-      ExtraSeedFiles.push_back(s.substr(comma_pos + 1));
-      s = s.substr(0, comma_pos);
+    std::string SeedInputs;
+    if (Flags.seed_inputs[0] == '@')
+      SeedInputs = FileToString(Flags.seed_inputs + 1); // File contains list.
+    else
+      SeedInputs = Flags.seed_inputs; // seed_inputs contains the list.
+    if (SeedInputs.empty()) {
+      Printf("seed_inputs is empty or @file does not exist.\n");
+      exit(1);
     }
-    ExtraSeedFiles.push_back(s);
+    // Parse SeedInputs.
+    size_t comma_pos = 0;
+    while ((comma_pos = SeedInputs.find_last_of(',')) != std::string::npos) {
+      ExtraSeedFiles.push_back(SeedInputs.substr(comma_pos + 1));
+      SeedInputs = SeedInputs.substr(0, comma_pos);
+    }
+    ExtraSeedFiles.push_back(SeedInputs);
   }
 
   F->Loop(*Inputs, ExtraSeedFiles);

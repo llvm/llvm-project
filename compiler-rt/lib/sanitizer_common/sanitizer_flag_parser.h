@@ -99,6 +99,15 @@ inline bool FlagHandler<uptr>::Parse(const char *value) {
   return ok;
 }
 
+template <>
+inline bool FlagHandler<s64>::Parse(const char *value) {
+  const char *value_end;
+  *t_ = internal_simple_strtoll(value, &value_end, 10);
+  bool ok = *value_end == 0;
+  if (!ok) Printf("ERROR: Invalid value for s64 option: '%s'\n", value);
+  return ok;
+}
+
 class FlagParser {
   static const int kMaxFlags = 200;
   struct Flag {

@@ -132,7 +132,7 @@ endmacro()
 # Adds static or shared runtime for a list of architectures and operating
 # systems and puts it in the proper directory in the build and install trees.
 # add_compiler_rt_runtime(<name>
-#                         {STATIC|SHARED}
+#                         {OBJECT|STATIC|SHARED}
 #                         ARCHS <architectures>
 #                         OS <os list>
 #                         SOURCES <source files>
@@ -144,8 +144,8 @@ endmacro()
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_runtime name type)
-  if(NOT type MATCHES "^(STATIC|SHARED)$")
-    message(FATAL_ERROR "type argument must be STATIC or SHARED")
+  if(NOT type MATCHES "^(OBJECT|STATIC|SHARED)$")
+    message(FATAL_ERROR "type argument must be OBJECT, STATIC or SHARED")
     return()
   endif()
   cmake_parse_arguments(LIB
@@ -204,7 +204,10 @@ function(add_compiler_rt_runtime name type)
         message(FATAL_ERROR "Architecture ${arch} can't be targeted")
         return()
       endif()
-      if(type STREQUAL "STATIC")
+      if(type STREQUAL "OBJECT")
+        set(libname "${name}-${arch}")
+        set_output_name(output_name_${libname} ${name}${COMPILER_RT_OS_SUFFIX} ${arch})
+      elseif(type STREQUAL "STATIC")
         set(libname "${name}-${arch}")
         set_output_name(output_name_${libname} ${name} ${arch})
       else()
@@ -270,12 +273,61 @@ function(add_compiler_rt_runtime name type)
       set(COMPONENT_OPTION COMPONENT ${libname})
     endif()
 
-    add_library(${libname} ${type} ${sources_${libname}})
-    set_target_compile_flags(${libname} ${extra_cflags_${libname}})
-    set_target_link_flags(${libname} ${extra_link_flags_${libname}})
-    set_property(TARGET ${libname} APPEND PROPERTY
-                COMPILE_DEFINITIONS ${LIB_DEFS})
-    set_target_output_directories(${libname} ${output_dir_${libname}})
+    if(type STREQUAL "OBJECT")
+      if(CMAKE_C_COMPILER_ID MATCHES Clang AND CMAKE_C_COMPILER_TARGET)
+        list(APPEND extra_cflags_${libname} "--target=${CMAKE_C_COMPILER_TARGET}")
+      endif()
+      if(CMAKE_SYSROOT)
+        list(APPEND extra_cflags_${libname} "--sysroot=${CMAKE_SYSROOT}")
+      endif()
+      string(REPLACE ";" " " extra_cflags_${libname} "${extra_cflags_${libname}}")
+      string(REGEX MATCHALL "<[A-Za-z0-9_]*>" substitutions
+             ${CMAKE_C_COMPILE_OBJECT})
+      set(compile_command_${libname} "${CMAKE_C_COMPILE_OBJECT}")
+      set(output_file_${libname} ${output_name_${libname}}${CMAKE_C_OUTPUT_EXTENSION})
+      foreach(substitution ${substitutions})
+        if(substitution STREQUAL "<CMAKE_C_COMPILER>")
+          string(REPLACE "<CMAKE_C_COMPILER>" "${CMAKE_C_COMPILER}"
+                 compile_command_${libname} ${compile_command_${libname}})
+        elseif(substitution STREQUAL "<OBJECT>")
+          string(REPLACE "<OBJECT>" "${output_dir_${libname}}/${output_file_${libname}}"
+                 compile_command_${libname} ${compile_command_${libname}})
+        elseif(substitution STREQUAL "<SOURCE>")
+          string(REPLACE "<SOURCE>" "${sources_${libname}}"
+                 compile_command_${libname} ${compile_command_${libname}})
+        elseif(substitution STREQUAL "<FLAGS>")
+          string(REPLACE "<FLAGS>" "${CMAKE_C_FLAGS} ${extra_cflags_${libname}}"
+                 compile_command_${libname} ${compile_command_${libname}})
+        else()
+          string(REPLACE "${substitution}" "" compile_command_${libname}
+                 ${compile_command_${libname}})
+        endif()
+      endforeach()
+      separate_arguments(compile_command_${libname})
+      add_custom_command(
+          OUTPUT ${output_dir_${libname}}/${output_file_${libname}}
+          COMMAND ${compile_command_${libname}}
+          DEPENDS ${sources_${libname}}
+          COMMENT "Building C object ${output_file_${libname}}")
+      add_custom_target(${libname} DEPENDS ${output_dir_${libname}}/${output_file_${libname}})
+      install(FILES ${output_dir_${libname}}/${output_file_${libname}}
+        DESTINATION ${install_dir_${libname}}
+        ${COMPONENT_OPTION})
+    else()
+      add_library(${libname} ${type} ${sources_${libname}})
+      set_target_compile_flags(${libname} ${extra_cflags_${libname}})
+      set_target_link_flags(${libname} ${extra_link_flags_${libname}})
+      set_property(TARGET ${libname} APPEND PROPERTY
+                   COMPILE_DEFINITIONS ${LIB_DEFS})
+      set_target_output_directories(${libname} ${output_dir_${libname}})
+      install(TARGETS ${libname}
+        ARCHIVE DESTINATION ${install_dir_${libname}}
+                ${COMPONENT_OPTION}
+        LIBRARY DESTINATION ${install_dir_${libname}}
+                ${COMPONENT_OPTION}
+        RUNTIME DESTINATION ${install_dir_${libname}}
+                ${COMPONENT_OPTION})
+    endif()
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
@@ -299,13 +351,6 @@ function(add_compiler_rt_runtime name type)
         )
       endif()
     endif()
-    install(TARGETS ${libname}
-      ARCHIVE DESTINATION ${install_dir_${libname}}
-              ${COMPONENT_OPTION}
-      LIBRARY DESTINATION ${install_dir_${libname}}
-              ${COMPONENT_OPTION}
-      RUNTIME DESTINATION ${install_dir_${libname}}
-              ${COMPONENT_OPTION})
 
     # We only want to generate per-library install targets if you aren't using
     # an IDE because the extra targets get cluttered in IDEs.
