@@ -821,19 +821,23 @@ bool LLParser::ParseSummaryEntry() {
   if (!Index)
     return SkipModuleSummaryEntry();
 
+  bool result = false;
   switch (Lex.getKind()) {
   case lltok::kw_gv:
-    return ParseGVEntry(SummaryID);
+    result = ParseGVEntry(SummaryID);
+    break;
   case lltok::kw_module:
-    return ParseModuleEntry(SummaryID);
+    result = ParseModuleEntry(SummaryID);
+    break;
   case lltok::kw_typeid:
-    return ParseTypeIdEntry(SummaryID);
+    result = ParseTypeIdEntry(SummaryID);
     break;
   default:
-    return Error(Lex.getLoc(), "unexpected summary kind");
+    result = Error(Lex.getLoc(), "unexpected summary kind");
+    break;
   }
   Lex.setIgnoreColonInIdentifiers(false);
-  return false;
+  return result;
 }
 
 static bool isValidVisibilityForLinkage(unsigned V, unsigned L) {

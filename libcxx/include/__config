@@ -307,7 +307,7 @@
    // random data even when using sandboxing mechanisms such as chroots,
    // Capsicum, etc.
 #  define _LIBCPP_USING_ARC4_RANDOM
-#elif defined(__Fuchsia__)
+#elif defined(__Fuchsia__) || defined(__wasi__)
 #  define _LIBCPP_USING_GETENTROPY
 #elif defined(__native_client__)
    // NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
@@ -341,7 +341,7 @@
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    define _LIBCPP_HAS_C11_FEATURES
-#  elif defined(__Fuchsia__)
+#  elif defined(__Fuchsia__) || defined(__wasi__)
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    define _LIBCPP_HAS_TIMESPEC_GET
 #    define _LIBCPP_HAS_C11_FEATURES
@@ -1133,6 +1133,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
     !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
 #  if defined(__FreeBSD__) || \
       defined(__Fuchsia__) || \
+      defined(__wasi__) || \
       defined(__NetBSD__) || \
       defined(__linux__) || \
       defined(__GNU__) || \
@@ -1179,7 +1180,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if defined(__BIONIC__) || defined(__CloudABI__) ||                            \
-    defined(__Fuchsia__) || defined(_LIBCPP_HAS_MUSL_LIBC)
+    defined(__Fuchsia__) || defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 

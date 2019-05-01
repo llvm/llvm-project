@@ -1,4 +1,4 @@
-# RUN: llvm-nm --format darwin %p/Inputs/test.IRobj-x86_64 | FileCheck %s
+# RUN: llvm-nm --format=darwin %p/Inputs/test.IRobj-x86_64 | FileCheck %s
 
 # CHECK: ---------------- (LTO,RODATA) external _global_const
 # CHECK: ---------------- (LTO,DATA) external _global_data

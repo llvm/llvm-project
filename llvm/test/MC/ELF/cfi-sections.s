@@ -1,11 +1,11 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -dwarf-version 2 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_64 -check-prefix=ELF_64_DWARF_2 %s
-// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -dwarf-version 2 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_32 -check-prefix=ELF_32_DWARF_2 %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -dwarf-version 2 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_64 -check-prefix=ELF_64_DWARF_2 %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -dwarf-version 2 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_32 -check-prefix=ELF_32_DWARF_2 %s
 
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -dwarf-version 3 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_64 -check-prefix=ELF_64_DWARF_3 %s
-// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -dwarf-version 3 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_32 -check-prefix=ELF_32_DWARF_3 %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -dwarf-version 3 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_64 -check-prefix=ELF_64_DWARF_3 %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -dwarf-version 3 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_32 -check-prefix=ELF_32_DWARF_3 %s
 
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -dwarf-version 4 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_64 -check-prefix=ELF_64_DWARF_4 %s
-// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -dwarf-version 4 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_32 -check-prefix=ELF_32_DWARF_4 %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -dwarf-version 4 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_64 -check-prefix=ELF_64_DWARF_4 %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -dwarf-version 4 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_32 -check-prefix=ELF_32_DWARF_4 %s
 
 .cfi_sections .debug_frame
 

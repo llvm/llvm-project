@@ -246,36 +246,56 @@ class VINTRPe <bits<2> op> : Enc32 {
   let Inst{31-26} = 0x32; // encoding
 }
 
-class MIMGe <bits<7> op> : Enc64 {
+class MIMGe : Enc64 {
   bits<8> vdata;
   bits<4> dmask;
   bits<1> unorm;
   bits<1> glc;
-  bits<1> da;
   bits<1> r128;
   bits<1> tfe;
   bits<1> lwe;
   bits<1> slc;
   bit d16;
-  bits<8> vaddr;
   bits<7> srsrc;
   bits<7> ssamp;
 
   let Inst{11-8} = dmask;
   let Inst{12} = unorm;
   let Inst{13} = glc;
-  let Inst{14} = da;
   let Inst{15} = r128;
   let Inst{16} = tfe;
   let Inst{17} = lwe;
-  let Inst{24-18} = op;
   let Inst{25} = slc;
   let Inst{31-26} = 0x3c;
-  let Inst{39-32} = vaddr;
   let Inst{47-40} = vdata;
   let Inst{52-48} = srsrc{6-2};
   let Inst{57-53} = ssamp{6-2};
   let Inst{63} = d16;
+}
+
+class MIMGe_gfx6789 <bits<7> op> : MIMGe {
+  bits<8> vaddr;
+  bits<1> da;
+
+  let Inst{14} = da;
+  let Inst{24-18} = op;
+  let Inst{39-32} = vaddr;
+}
+
+class MIMGe_gfx10 <bits<8> op> : MIMGe {
+  bits<8> vaddr0;
+  bits<3> dim;
+  bits<2> nsa;
+  bits<1> dlc;
+  bits<1> a16 = 0; // TODO: this should be an operand
+
+  let Inst{0} = op{7};
+  let Inst{2-1} = nsa;
+  let Inst{5-3} = dim;
+  let Inst{7} = dlc;
+  let Inst{24-18} = op{6-0};
+  let Inst{39-32} = vaddr0;
+  let Inst{62} = a16;
 }
 
 class EXPe : Enc64 {

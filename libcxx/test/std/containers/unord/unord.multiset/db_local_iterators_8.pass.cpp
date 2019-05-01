@@ -29,16 +29,16 @@ int main(int, char**)
     typedef std::unordered_multiset<T> C;
     C c(1);
     C::local_iterator i = c.end(0);
-    T j = *i;
+    (void) *i;
     assert(false);
     }
 #if TEST_STD_VER >= 11
     {
     typedef int T;
-    typedef std::unordered_multiset<T, min_allocator<T>> C;
+    typedef std::unordered_multiset<T, std::hash<T>, std::equal_to<T>, min_allocator<T>> C;
     C c(1);
     C::local_iterator i = c.end(0);
-    T j = *i;
+    (void) *i;
     assert(false);
     }
 #endif

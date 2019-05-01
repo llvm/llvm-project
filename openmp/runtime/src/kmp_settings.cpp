@@ -3662,104 +3662,139 @@ static inline void __kmp_omp_schedule_restore() {
   __kmp_sched = kmp_sch_default;
 }
 
+// if parse_hier = true:
+//    Parse [HW,][modifier:]kind[,chunk]
+// else:
+//    Parse [modifier:]kind[,chunk]
 static const char *__kmp_parse_single_omp_schedule(const char *name,
                                                    const char *value,
                                                    bool parse_hier = false) {
   /* get the specified scheduling style */
   const char *ptr = value;
-  const char *comma = strchr(ptr, ',');
   const char *delim;
   int chunk = 0;
   enum sched_type sched = kmp_sch_default;
   if (*ptr == '\0')
     return NULL;
+  delim = ptr;
+  while (*delim != ',' && *delim != ':' && *delim != '\0')
+    delim++;
 #if KMP_USE_HIER_SCHED
   kmp_hier_layer_e layer = kmp_hier_layer_e::LAYER_THREAD;
   if (parse_hier) {
-    if (!__kmp_strcasecmp_with_sentinel("L1", ptr, ',')) {
-      layer = kmp_hier_layer_e::LAYER_L1;
-    } else if (!__kmp_strcasecmp_with_sentinel("L2", ptr, ',')) {
-      layer = kmp_hier_layer_e::LAYER_L2;
-    } else if (!__kmp_strcasecmp_with_sentinel("L3", ptr, ',')) {
-      layer = kmp_hier_layer_e::LAYER_L3;
-    } else if (!__kmp_strcasecmp_with_sentinel("NUMA", ptr, ',')) {
-      layer = kmp_hier_layer_e::LAYER_NUMA;
+    if (*delim == ',') {
+      if (!__kmp_strcasecmp_with_sentinel("L1", ptr, ',')) {
+        layer = kmp_hier_layer_e::LAYER_L1;
+      } else if (!__kmp_strcasecmp_with_sentinel("L2", ptr, ',')) {
+        layer = kmp_hier_layer_e::LAYER_L2;
+      } else if (!__kmp_strcasecmp_with_sentinel("L3", ptr, ',')) {
+        layer = kmp_hier_layer_e::LAYER_L3;
+      } else if (!__kmp_strcasecmp_with_sentinel("NUMA", ptr, ',')) {
+        layer = kmp_hier_layer_e::LAYER_NUMA;
+      }
     }
-    if (layer != kmp_hier_layer_e::LAYER_THREAD && !comma) {
+    if (layer != kmp_hier_layer_e::LAYER_THREAD && *delim != ',') {
       // If there is no comma after the layer, then this schedule is invalid
       KMP_WARNING(StgInvalidValue, name, value);
       __kmp_omp_schedule_restore();
       return NULL;
     } else if (layer != kmp_hier_layer_e::LAYER_THREAD) {
-      ptr = ++comma;
-      comma = strchr(ptr, ',');
+      ptr = ++delim;
+      while (*delim != ',' && *delim != ':' && *delim != '\0')
+        delim++;
     }
   }
-  delim = ptr;
-  while (*delim != ',' && *delim != ':' && *delim != '\0')
-    delim++;
-#else // KMP_USE_HIER_SCHED
-  delim = ptr;
-  while (*delim != ',' && *delim != '\0')
-    delim++;
 #endif // KMP_USE_HIER_SCHED
-  if (!__kmp_strcasecmp_with_sentinel("dynamic", ptr, *delim)) /* DYNAMIC */
-    sched = kmp_sch_dynamic_chunked;
-  else if (!__kmp_strcasecmp_with_sentinel("guided", ptr, *delim)) /* GUIDED */
-    sched = kmp_sch_guided_chunked;
-  // AC: TODO: add AUTO schedule, and probably remove TRAPEZOIDAL (OMP 3.0 does
-  // not allow it)
-  else if (!__kmp_strcasecmp_with_sentinel("auto", ptr, *delim)) { /* AUTO */
-    sched = kmp_sch_auto;
-    if (comma) {
-      __kmp_msg(kmp_ms_warning, KMP_MSG(IgnoreChunk, name, comma),
-                __kmp_msg_null);
-      comma = NULL;
+#if OMP_45_ENABLED
+  // Read in schedule modifier if specified
+  enum sched_type sched_modifier = (enum sched_type)0;
+  if (*delim == ':') {
+    if (!__kmp_strcasecmp_with_sentinel("monotonic", ptr, *delim)) {
+      sched_modifier = sched_type::kmp_sch_modifier_monotonic;
+      ptr = ++delim;
+      while (*delim != ',' && *delim != ':' && *delim != '\0')
+        delim++;
+    } else if (!__kmp_strcasecmp_with_sentinel("nonmonotonic", ptr, *delim)) {
+      sched_modifier = sched_type::kmp_sch_modifier_nonmonotonic;
+      ptr = ++delim;
+      while (*delim != ',' && *delim != ':' && *delim != '\0')
+        delim++;
+    } else if (!parse_hier) {
+      // If there is no proper schedule modifier, then this schedule is invalid
+      KMP_WARNING(StgInvalidValue, name, value);
+      __kmp_omp_schedule_restore();
+      return NULL;
     }
-  } else if (!__kmp_strcasecmp_with_sentinel("trapezoidal", ptr,
-                                             *delim)) /* TRAPEZOIDAL */
+  }
+#endif
+  // Read in schedule kind (required)
+  if (!__kmp_strcasecmp_with_sentinel("dynamic", ptr, *delim))
+    sched = kmp_sch_dynamic_chunked;
+  else if (!__kmp_strcasecmp_with_sentinel("guided", ptr, *delim))
+    sched = kmp_sch_guided_chunked;
+  // AC: TODO: probably remove TRAPEZOIDAL (OMP 3.0 does not allow it)
+  else if (!__kmp_strcasecmp_with_sentinel("auto", ptr, *delim))
+    sched = kmp_sch_auto;
+  else if (!__kmp_strcasecmp_with_sentinel("trapezoidal", ptr, *delim))
     sched = kmp_sch_trapezoidal;
-  else if (!__kmp_strcasecmp_with_sentinel("static", ptr, *delim)) /* STATIC */
+  else if (!__kmp_strcasecmp_with_sentinel("static", ptr, *delim))
     sched = kmp_sch_static;
 #if KMP_STATIC_STEAL_ENABLED
   else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim))
     sched = kmp_sch_static_steal;
 #endif
   else {
+    // If there is no proper schedule kind, then this schedule is invalid
     KMP_WARNING(StgInvalidValue, name, value);
     __kmp_omp_schedule_restore();
     return NULL;
   }
-  if (ptr && comma && *comma == *delim) {
-    ptr = comma + 1;
-    SKIP_DIGITS(ptr);
 
-    if (sched == kmp_sch_static)
-      sched = kmp_sch_static_chunked;
-    ++comma;
-    chunk = __kmp_str_to_int(comma, *ptr);
-    if (chunk < 1) {
-      chunk = KMP_DEFAULT_CHUNK;
-      __kmp_msg(kmp_ms_warning, KMP_MSG(InvalidChunk, name, comma),
-                __kmp_msg_null);
-      KMP_INFORM(Using_int_Value, name, __kmp_chunk);
-      // AC: next block commented out until KMP_DEFAULT_CHUNK != KMP_MIN_CHUNK
-      // (to improve code coverage :)
-      //     The default chunk size is 1 according to standard, thus making
-      //     KMP_MIN_CHUNK not 1 we would introduce mess:
-      //     wrong chunk becomes 1, but it will be impossible to explicitely set
-      //     1, because it becomes KMP_MIN_CHUNK...
-      //                } else if ( chunk < KMP_MIN_CHUNK ) {
-      //                    chunk = KMP_MIN_CHUNK;
-    } else if (chunk > KMP_MAX_CHUNK) {
-      chunk = KMP_MAX_CHUNK;
-      __kmp_msg(kmp_ms_warning, KMP_MSG(LargeChunk, name, comma),
-                __kmp_msg_null);
-      KMP_INFORM(Using_int_Value, name, chunk);
+  // Read in schedule chunk size if specified
+  if (*delim == ',') {
+    ptr = delim + 1;
+    SKIP_WS(ptr);
+    if (!isdigit(*ptr)) {
+      // If there is no chunk after comma, then this schedule is invalid
+      KMP_WARNING(StgInvalidValue, name, value);
+      __kmp_omp_schedule_restore();
+      return NULL;
     }
-  } else if (ptr) {
-    SKIP_TOKEN(ptr);
+    SKIP_DIGITS(ptr);
+    // auto schedule should not specify chunk size
+    if (sched == kmp_sch_auto) {
+      __kmp_msg(kmp_ms_warning, KMP_MSG(IgnoreChunk, name, delim),
+                __kmp_msg_null);
+    } else {
+      if (sched == kmp_sch_static)
+        sched = kmp_sch_static_chunked;
+      chunk = __kmp_str_to_int(delim + 1, *ptr);
+      if (chunk < 1) {
+        chunk = KMP_DEFAULT_CHUNK;
+        __kmp_msg(kmp_ms_warning, KMP_MSG(InvalidChunk, name, delim),
+                  __kmp_msg_null);
+        KMP_INFORM(Using_int_Value, name, __kmp_chunk);
+        // AC: next block commented out until KMP_DEFAULT_CHUNK != KMP_MIN_CHUNK
+        // (to improve code coverage :)
+        // The default chunk size is 1 according to standard, thus making
+        // KMP_MIN_CHUNK not 1 we would introduce mess:
+        // wrong chunk becomes 1, but it will be impossible to explicitly set
+        // to 1 because it becomes KMP_MIN_CHUNK...
+        // } else if ( chunk < KMP_MIN_CHUNK ) {
+        //   chunk = KMP_MIN_CHUNK;
+      } else if (chunk > KMP_MAX_CHUNK) {
+        chunk = KMP_MAX_CHUNK;
+        __kmp_msg(kmp_ms_warning, KMP_MSG(LargeChunk, name, delim),
+                  __kmp_msg_null);
+        KMP_INFORM(Using_int_Value, name, chunk);
+      }
+    }
+  } else {
+    ptr = delim;
   }
+
+  SCHEDULE_SET_MODIFIERS(sched, sched_modifier);
+
 #if KMP_USE_HIER_SCHED
   if (layer != kmp_hier_layer_e::LAYER_THREAD) {
     __kmp_hier_scheds.append(sched, chunk, layer);
@@ -3790,6 +3825,8 @@ static void __kmp_stg_parse_omp_schedule(char const *name, char const *value,
         while ((ptr = __kmp_parse_single_omp_schedule(name, ptr, true))) {
           while (*ptr == ' ' || *ptr == '\t' || *ptr == ':')
             ptr++;
+          if (*ptr == '\0')
+            break;
         }
       } else
 #endif
@@ -3813,8 +3850,14 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
   } else {
     __kmp_str_buf_print(buffer, "   %s='", name);
   }
+  enum sched_type sched = SCHEDULE_WITHOUT_MODIFIERS(__kmp_sched);
+  if (SCHEDULE_HAS_MONOTONIC(__kmp_sched)) {
+    __kmp_str_buf_print(buffer, "monotonic:");
+  } else if (SCHEDULE_HAS_NONMONOTONIC(__kmp_sched)) {
+    __kmp_str_buf_print(buffer, "nonmonotonic:");
+  }
   if (__kmp_chunk) {
-    switch (__kmp_sched) {
+    switch (sched) {
     case kmp_sch_dynamic_chunked:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "dynamic", __kmp_chunk);
       break;
@@ -3839,7 +3882,7 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       break;
     }
   } else {
-    switch (__kmp_sched) {
+    switch (sched) {
     case kmp_sch_dynamic_chunked:
       __kmp_str_buf_print(buffer, "%s'\n", "dynamic");
       break;

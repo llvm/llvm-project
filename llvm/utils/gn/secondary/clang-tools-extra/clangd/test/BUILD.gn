@@ -77,7 +77,7 @@ group("test") {
   ]
   if (clangd_build_xpc) {
     deps += [
-      "//clang-tools-extra/clangd/unittests/xpc:ClangdXpcUnitTests",
+      "//clang-tools-extra/clangd/unittests/xpc:ClangdXpcTests",
       "//clang-tools-extra/clangd/xpc/test-client:clangd-xpc-test-client",
     ]
   }

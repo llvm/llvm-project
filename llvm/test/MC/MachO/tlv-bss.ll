@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=x86_64-apple-darwin12 -filetype=obj -o - %s | llvm-readobj -s | FileCheck %s
+; RUN: llc -O0 -mtriple=x86_64-apple-darwin12 -filetype=obj -o - %s | llvm-readobj -S | FileCheck %s
 ; Test that we emit weak_odr thread_locals correctly into the thread_bss section
 ; PR15972
 

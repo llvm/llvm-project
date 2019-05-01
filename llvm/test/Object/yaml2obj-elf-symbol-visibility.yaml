@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj -symbols - | \
+# RUN: yaml2obj %s | llvm-readobj --symbols - | \
 # RUN:   FileCheck --check-prefix OBJ %s
 # RUN: yaml2obj %s | obj2yaml - | FileCheck --check-prefix YAML %s
 

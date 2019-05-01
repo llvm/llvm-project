@@ -413,35 +413,6 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       return 0;
 
     return Cost;
-
-  } else if (Val->getScalarType()->isIntegerTy() && Index != -1U) {
-    if (ST->hasP9Altivec()) {
-      if (ISD == ISD::INSERT_VECTOR_ELT)
-        // A move-to VSR and a permute/insert.  Assume vector operation cost
-        // for both (cost will be 2x on P9).
-        return vectorCostAdjustment(2, Opcode, Val, nullptr);
-
-      // It's an extract.  Maybe we can do a cheap move-from VSR.
-      unsigned EltSize = Val->getScalarSizeInBits();
-      if (EltSize == 64) {
-        unsigned MfvsrdIndex = ST->isLittleEndian() ? 1 : 0;
-        if (Index == MfvsrdIndex)
-          return 1;
-      } else if (EltSize == 32) {
-        unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
-        if (Index == MfvsrwzIndex)
-          return 1;
-      }
-
-      // We need a vector extract (or mfvsrld).  Assume vector operation cost.
-      // The cost of the load constant for a vector extract is disregarded
-      // (invariant, easily schedulable).
-      return vectorCostAdjustment(1, Opcode, Val, nullptr);
-      
-    } else if (ST->hasDirectMove())
-      // Assume permute has standard cost.
-      // Assume move-to/move-from VSR have 2x standard cost.
-      return 3;
   }
 
   // Estimated cost of a load-hit-store delay.  This was obtained

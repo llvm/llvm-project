@@ -1145,6 +1145,18 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
                  getConstant(Imm, DL, Op.getValueType()));
 }
 
+SDValue SelectionDAG::getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {
+  // Only unsigned pointer semantics are supported right now. In the future this
+  // might delegate to TLI to check pointer signedness.
+  return getZExtOrTrunc(Op, DL, VT);
+}
+
+SDValue SelectionDAG::getPtrExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
+  // Only unsigned pointer semantics are supported right now. In the future this
+  // might delegate to TLI to check pointer signedness.
+  return getZeroExtendInReg(Op, DL, VT);
+}
+
 /// getNOT - Create a bitwise NOT operation as (XOR Val, -1).
 SDValue SelectionDAG::getNOT(const SDLoc &DL, SDValue Val, EVT VT) {
   EVT EltVT = VT.getScalarType();

@@ -25,7 +25,7 @@ attributes #0 = { "wasm-import-module"="bar" "wasm-import-name"="qux" }
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK:              Name:            foo
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Flags:           [ UNDEFINED, EXPLICIT_NAME ]
 
 ; CHECK:              Name:            plain
 ; CHECK-NEXT:         Flags:           [ UNDEFINED ]

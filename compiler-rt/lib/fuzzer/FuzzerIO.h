@@ -25,6 +25,8 @@ std::string FileToString(const std::string &Path);
 void CopyFileToErr(const std::string &Path);
 
 void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path);
+// Write Data.c_str() to the file without terminating null character.
+void WriteToFile(const std::string &Data, const std::string &Path);
 void WriteToFile(const Unit &U, const std::string &Path);
 
 void ReadDirToVectorOfUnits(const char *Path, Vector<Unit> *V,

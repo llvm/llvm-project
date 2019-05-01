@@ -14,15 +14,15 @@ define i32 @insert(i32 %arg) {
 ; CHECK-P7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-P8LE-LABEL: 'insert'
-; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = insertelement <4 x i32> undef, i32 %arg, i32 0
+; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %x = insertelement <4 x i32> undef, i32 %arg, i32 0
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-P9BE-LABEL: 'insert'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %x = insertelement <4 x i32> undef, i32 %arg, i32 0
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %x = insertelement <4 x i32> undef, i32 %arg, i32 0
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-P9LE-LABEL: 'insert'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %x = insertelement <4 x i32> undef, i32 %arg, i32 0
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %x = insertelement <4 x i32> undef, i32 %arg, i32 0
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %x = insertelement <4 x i32> undef, i32 %arg, i32 0
@@ -40,11 +40,11 @@ define i32 @extract(<4 x i32> %arg) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %x
 ;
 ; CHECK-P9BE-LABEL: 'extract'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <4 x i32> %arg, i32 0
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %x = extractelement <4 x i32> %arg, i32 0
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %x
 ;
 ; CHECK-P9LE-LABEL: 'extract'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <4 x i32> %arg, i32 0
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %x = extractelement <4 x i32> %arg, i32 0
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %x
 ;
   %x = extractelement <4 x i32> %arg, i32 0
@@ -83,15 +83,15 @@ define void @test4xi32(<4 x i32> %v1, i32 %x1) {
 ; CHECK-P7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P8LE-LABEL: 'test4xi32'
-; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <4 x i32> %v1, i32 %x1, i32 2
+; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2 = insertelement <4 x i32> %v1, i32 %x1, i32 2
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9BE-LABEL: 'test4xi32'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <4 x i32> %v1, i32 %x1, i32 2
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2 = insertelement <4 x i32> %v1, i32 %x1, i32 2
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9LE-LABEL: 'test4xi32'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <4 x i32> %v1, i32 %x1, i32 2
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2 = insertelement <4 x i32> %v1, i32 %x1, i32 2
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v2 = insertelement <4 x i32> %v1, i32 %x1, i32 2
@@ -114,17 +114,17 @@ define void @vexti32(<4 x i32> %p1) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9BE-LABEL: 'vexti32'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i1 = extractelement <4 x i32> %p1, i32 0
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = extractelement <4 x i32> %p1, i32 1
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i3 = extractelement <4 x i32> %p1, i32 2
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i4 = extractelement <4 x i32> %p1, i32 3
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i1 = extractelement <4 x i32> %p1, i32 0
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i2 = extractelement <4 x i32> %p1, i32 1
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i3 = extractelement <4 x i32> %p1, i32 2
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i4 = extractelement <4 x i32> %p1, i32 3
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9LE-LABEL: 'vexti32'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i1 = extractelement <4 x i32> %p1, i32 0
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i2 = extractelement <4 x i32> %p1, i32 1
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i3 = extractelement <4 x i32> %p1, i32 2
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i4 = extractelement <4 x i32> %p1, i32 3
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i1 = extractelement <4 x i32> %p1, i32 0
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i2 = extractelement <4 x i32> %p1, i32 1
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i3 = extractelement <4 x i32> %p1, i32 2
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i4 = extractelement <4 x i32> %p1, i32 3
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %i1 = extractelement <4 x i32> %p1, i32 0
@@ -146,13 +146,13 @@ define void @vexti64(<2 x i64> %p1) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9BE-LABEL: 'vexti64'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i1 = extractelement <2 x i64> %p1, i32 0
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i2 = extractelement <2 x i64> %p1, i32 1
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i1 = extractelement <2 x i64> %p1, i32 0
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i2 = extractelement <2 x i64> %p1, i32 1
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9LE-LABEL: 'vexti64'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i1 = extractelement <2 x i64> %p1, i32 0
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = extractelement <2 x i64> %p1, i32 1
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i1 = extractelement <2 x i64> %p1, i32 0
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i2 = extractelement <2 x i64> %p1, i32 1
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %i1 = extractelement <2 x i64> %p1, i32 0
@@ -172,13 +172,13 @@ define void @vext(<8 x i16> %p1, <16 x i8> %p2) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9BE-LABEL: 'vext'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i1 = extractelement <8 x i16> %p1, i32 0
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i2 = extractelement <16 x i8> %p2, i32 0
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i1 = extractelement <8 x i16> %p1, i32 0
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i2 = extractelement <16 x i8> %p2, i32 0
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9LE-LABEL: 'vext'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i1 = extractelement <8 x i16> %p1, i32 0
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i2 = extractelement <16 x i8> %p2, i32 0
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i1 = extractelement <8 x i16> %p1, i32 0
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i2 = extractelement <16 x i8> %p2, i32 0
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %i1 = extractelement <8 x i16> %p1, i32 0

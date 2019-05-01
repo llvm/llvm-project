@@ -1768,6 +1768,9 @@ typedef
     __nat
     > > > > > > > > > > __all_types;
 
+template <size_t _Align>
+struct _ALIGNAS(_Align) __fallback_overaligned {};
+
 template <class _TL, size_t _Align> struct __find_pod;
 
 template <class _Hp, size_t _Align>
@@ -1776,7 +1779,7 @@ struct __find_pod<__type_list<_Hp, __nat>, _Align>
     typedef typename conditional<
                              _Align == _Hp::value,
                              typename _Hp::type,
-                             void
+                             __fallback_overaligned<_Align>
                          >::type type;
 };
 
@@ -1813,7 +1816,6 @@ template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::valu
 struct _LIBCPP_TEMPLATE_VIS aligned_storage
 {
     typedef typename __find_pod<__all_types, _Align>::type _Aligner;
-    static_assert(!is_void<_Aligner>::value, "");
     union type
     {
         _Aligner __align;

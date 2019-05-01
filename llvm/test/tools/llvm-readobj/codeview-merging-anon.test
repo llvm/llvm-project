@@ -6,8 +6,8 @@
 # struct { int x; } o;
 # $ cl -Z7 t.c
 
-RUN: llvm-readobj -codeview %S/Inputs/codeview-merging-anon.obj | FileCheck %s
-RUN: llvm-readobj -codeview-merged-types %S/Inputs/codeview-merging-anon.obj | FileCheck %s
+RUN: llvm-readobj --codeview %S/Inputs/codeview-merging-anon.obj | FileCheck %s
+RUN: llvm-readobj --codeview-merged-types %S/Inputs/codeview-merging-anon.obj | FileCheck %s
 
 CHECK-LABEL:  FieldList (0x1000) {
 CHECK-NEXT:     TypeLeafKind: LF_FIELDLIST (0x1203)

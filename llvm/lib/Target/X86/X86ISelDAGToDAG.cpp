@@ -907,6 +907,11 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     ++I;
     CurDAG->DeleteNode(N);
   }
+
+  // The load+call transform above can leave some dead nodes in the graph. Make
+  // sure we remove them. Its possible some of the other transforms do to so
+  // just remove dead nodes unconditionally.
+  CurDAG->RemoveDeadNodes();
 }
 
 // Look for a redundant movzx/movsx that can occur after an 8-bit divrem.

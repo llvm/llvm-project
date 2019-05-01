@@ -1,5 +1,5 @@
 @ RUN: llvm-mc %s -triple=armv7-unknown-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -s  | FileCheck %s
+@ RUN:   | llvm-readobj -S  | FileCheck %s
 
 @ Test that the ARM_EXIDX sections point (Link) to the corresponding text
 @ sections.

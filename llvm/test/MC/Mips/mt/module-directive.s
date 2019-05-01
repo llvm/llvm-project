@@ -1,5 +1,5 @@
 # RUN: llvm-mc < %s -arch=mips -mcpu=mips32r2 -filetype=obj -o - | \
-# RUN:   llvm-readobj -mips-abi-flags | FileCheck --check-prefix=CHECK-OBJ %s
+# RUN:   llvm-readobj --mips-abi-flags | FileCheck --check-prefix=CHECK-OBJ %s
 # RUN: llvm-mc < %s -arch=mips -mcpu=mips32r2 -filetype=asm -o - | \
 # RUN:   FileCheck --check-prefix=CHECK-ASM %s
 

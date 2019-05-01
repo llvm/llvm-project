@@ -1,7 +1,7 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -program-headers %t | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj -l %t | FileCheck %s
 
-!ELF
+--- !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
@@ -65,3 +65,18 @@ ProgramHeaders:
 #CHECK-NEXT:    Alignment: 4096
 #CHECK-NEXT:  }
 #CHECK-NEXT:]
+
+## Check we do not allow referencing sections that do not exist.
+# RUN: not yaml2obj --docnum=2 %s -o %t 2>&1 | FileCheck %s --check-prefix=ERR
+# ERR: error: Unknown section referenced: '.foo' by program header.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .foo

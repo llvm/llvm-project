@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ;
 ; Verify CodeView emission does not emit forward references for unnamed
 ; structs/unions.  If a forward reference is emitted for an unnamed composite

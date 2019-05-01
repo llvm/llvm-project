@@ -68,6 +68,8 @@
       parameter(omp_sched_guided=3)
       integer(kind=omp_sched_kind)omp_sched_auto
       parameter(omp_sched_auto=4)
+      integer(kind=omp_sched_kind)omp_sched_monotonic
+      parameter(omp_sched_monotonic=Z'80000000')
 
       integer(kind=omp_proc_bind_kind)omp_proc_bind_false
       parameter(omp_proc_bind_false=0)

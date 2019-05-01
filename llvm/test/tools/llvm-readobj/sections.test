@@ -21,7 +21,7 @@ RUN:   | FileCheck %s -check-prefix WASM
 RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 > %t.sections
 RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.uppers
 RUN: cmp %t.sections %t.uppers
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-i386 > %t.lowers
+RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.lowers
 RUN: cmp %t.sections %t.lowers
 
 COFF:      Sections [

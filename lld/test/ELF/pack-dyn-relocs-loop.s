@@ -2,7 +2,7 @@
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-android %s -o %t.o
 // RUN: ld.lld -shared %t.o -o %t.so --pack-dyn-relocs=android -z norelro
-// RUN: llvm-readobj -s %t.so | FileCheck %s
+// RUN: llvm-readobj -S %t.so | FileCheck %s
 
 // This test is making sure the Android packed relocation support doesn't
 // cause an infinite loop due to the size of the section oscillating

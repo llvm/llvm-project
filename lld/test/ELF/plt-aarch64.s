@@ -4,10 +4,10 @@
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld -shared %t.o %t2.so -o %t.so
 // RUN: ld.lld %t.o %t2.so -o %t.exe
-// RUN: llvm-readobj -s -r %t.so | FileCheck --check-prefix=CHECKDSO %s
+// RUN: llvm-readobj -S -r %t.so | FileCheck --check-prefix=CHECKDSO %s
 // RUN: llvm-objdump -s -section=.got.plt %t.so | FileCheck --check-prefix=DUMPDSO %s
 // RUN: llvm-objdump -d %t.so | FileCheck --check-prefix=DISASMDSO %s
-// RUN: llvm-readobj -s -r %t.exe | FileCheck --check-prefix=CHECKEXE %s
+// RUN: llvm-readobj -S -r %t.exe | FileCheck --check-prefix=CHECKEXE %s
 // RUN: llvm-objdump -s -section=.got.plt %t.exe | FileCheck --check-prefix=DUMPEXE %s
 // RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=DISASMEXE %s
 
@@ -70,6 +70,7 @@
 // DISASMDSO-NEXT:     1000c:	1f 20 03 d5 	nop
 
 // DISASMDSO: Disassembly of section .plt:
+// DISASMDSO-EMPTY:
 // DISASMDSO-NEXT: .plt:
 // DISASMDSO-NEXT:     10010:	f0 7b bf a9 	stp	x16, x30, [sp, #-16]!
 // &(.got.plt[2]) = 0x3000 + 2 * 8 = 0x3010
@@ -169,6 +170,7 @@
 // DISASMEXE-NEXT:    21000c:	1f 20 03 d5 	nop
 
 // DISASMEXE: Disassembly of section .plt:
+// DISASMEXE-EMPTY:
 // DISASMEXE-NEXT: .plt:
 // DISASMEXE-NEXT:    210010:	f0 7b bf a9 	stp	x16, x30, [sp, #-16]!
 // &(.got.plt[2]) = 0x2200B0 + 2 * 8 = 0x2200C0

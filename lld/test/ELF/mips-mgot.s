@@ -8,7 +8,7 @@
 # RUN:         %p/Inputs/mips-mgot-2.s -o %t2.o
 # RUN: ld.lld -shared -mips-got-size 52 %t0.o %t1.o %t2.o -o %t.so
 # RUN: llvm-objdump -s -section=.got -t %t.so | FileCheck %s
-# RUN: llvm-readobj -r -dt -mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
+# RUN: llvm-readobj -r --dyn-syms --mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK:      Contents of section .got:
 # CHECK-NEXT:  70000 00000000 80000000 00010000 00010030

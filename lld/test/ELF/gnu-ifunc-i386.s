@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 // RUN: ld.lld -static %t.o -o %tout
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DISASM
-// RUN: llvm-readobj -r -symbols -sections %tout | FileCheck %s
+// RUN: llvm-readobj -r --symbols --sections %tout | FileCheck %s
 
 // CHECK:      Sections [
 // CHECK:       Section {
@@ -107,6 +107,7 @@
 // CHECK-NEXT:]
 
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo_resolver:
 // DISASM-NEXT:    401000: c3 retl
 // DISASM: bar_resolver:
@@ -116,7 +117,9 @@
 // DISASM-NEXT:    401007: e8 24 00 00 00 calll 36
 // DISASM-NEXT:    40100c: ba d4 00 40 00 movl $4194516, %edx
 // DISASM-NEXT:    401011: ba e4 00 40 00 movl $4194532, %edx
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:    401020: ff 25 00 20 40 00 jmpl *4202496
 // DISASM-NEXT:    401026: 68 10 00 00 00 pushl $16

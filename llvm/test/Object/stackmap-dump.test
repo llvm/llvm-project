@@ -1,4 +1,4 @@
-RUN: llvm-readobj -stackmap %p/Inputs/stackmap-test.macho-x86-64 | FileCheck %s
+RUN: llvm-readobj --stackmap %p/Inputs/stackmap-test.macho-x86-64 | FileCheck %s
 
 ; Note: the macho object file in this test was generated in the following way:
 ; llc -mtriple=x86_64-apple-darwin test/CodeGen/X86/stackmap.ll -o test/Object/Inputs/stackmap-test.macho-x86-64 -filetype=obj

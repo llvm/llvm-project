@@ -1,6 +1,6 @@
-RUN: llvm-readobj -r %p/Inputs/relocs.obj.elf-i386 --elf-output-style=GNU \
+RUN: llvm-readelf -r %p/Inputs/relocs.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF32
-RUN: llvm-readobj -r %p/Inputs/relocs.obj.elf-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf -r %p/Inputs/relocs.obj.elf-x86_64 \
 RUN:   | FileCheck %s -check-prefix ELF64
 
 ELF32:    Relocation section '.rel.text' at offset 0x318 contains 41 entries:

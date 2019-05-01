@@ -1,2 +1,2 @@
 // Don't crash if required information is absent
-RUN: llvm-readobj -dyn-symbols %p/Inputs/trivial-object-test.elf-x86-64
+RUN: llvm-readobj --dyn-syms %p/Inputs/trivial-object-test.elf-x86-64

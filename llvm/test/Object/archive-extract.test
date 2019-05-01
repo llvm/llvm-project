@@ -37,13 +37,13 @@
 ; RUN: rm -f very_long_bytecode_file_name.bc
 ; RUN: llvm-ar xo %p/Inputs/GNU.a very_long_bytecode_file_name.bc
 ; RUN: rm -f %t.a
-; RUN: llvm-ar -format gnu rcU %t.a very_long_bytecode_file_name.bc
+; RUN: llvm-ar --format=gnu rcU %t.a very_long_bytecode_file_name.bc
 ; RUN: env TZ=GMT llvm-ar tv %t.a | FileCheck %s -check-prefix CHECK-GNU
 
 CHECK-GNU: 1465 Nov 19 03:01 2004 very_long_bytecode_file_name.bc
 
 ; RUN: rm -f %t.a
-; RUN: llvm-ar -format darwin rcU %t.a very_long_bytecode_file_name.bc
+; RUN: llvm-ar --format=darwin rcU %t.a very_long_bytecode_file_name.bc
 ; RUN: env TZ=GMT llvm-ar tv %t.a | FileCheck %s -check-prefix CHECK-DARWIN
 
 CHECK-DARWIN: 1472 Nov 19 03:01 2004 very_long_bytecode_file_name.bc

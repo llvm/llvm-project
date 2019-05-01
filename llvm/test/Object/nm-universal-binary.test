@@ -1,20 +1,20 @@
-RUN: llvm-nm -arch all %p/Inputs/macho-universal.x86_64.i386 \
+RUN: llvm-nm --arch=all %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-OBJ
-RUN: llvm-nm -arch all %p/Inputs/macho-universal64.x86_64.i386 \
+RUN: llvm-nm --arch=all %p/Inputs/macho-universal64.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-64-OBJ
-RUN: llvm-nm -arch x86_64 %p/Inputs/macho-universal.x86_64.i386 \
+RUN: llvm-nm --arch=x86_64 %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-OBJ-x86_64
-RUN: not llvm-nm -arch armv7m %p/Inputs/macho-universal.x86_64.i386 2>&1 \
+RUN: not llvm-nm --arch=armv7m %p/Inputs/macho-universal.x86_64.i386 2>&1 \
 RUN:         | FileCheck %s -check-prefix CHECK-OBJ-armv7m
-RUN: not llvm-nm -arch foobar %p/Inputs/macho-universal.x86_64.i386 2>&1 \
+RUN: not llvm-nm --arch=foobar %p/Inputs/macho-universal.x86_64.i386 2>&1 \
 RUN:         | FileCheck %s -check-prefix CHECK-OBJ-foobar
-RUN: llvm-nm -arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN: llvm-nm --arch=all %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-AR
-RUN: llvm-nm -arch all %p/Inputs/macho-universal64-archive.x86_64.i386 \
+RUN: llvm-nm --arch=all %p/Inputs/macho-universal64-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-64-AR
-RUN: llvm-nm -arch i386 %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN: llvm-nm --arch=i386 %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-AR-i386
-RUN: llvm-nm -o -arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN: llvm-nm -o --arch=all %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-AR-o
 
 CHECK-OBJ: macho-universal.x86_64.i386 (for architecture x86_64):

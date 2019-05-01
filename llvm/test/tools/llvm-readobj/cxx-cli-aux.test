@@ -3,7 +3,7 @@ Ensure that we can read the COFF auxiliary symbols 'section definition' and
 definitions usually only follow a symbol with static storage class, but
 non-const appdomain globals (external ABS) also get one.
 
-RUN: llvm-readobj -t %p/Inputs/cxx-cli-aux.obj.coff-i386 | FileCheck %s
+RUN: llvm-readobj --symbols %p/Inputs/cxx-cli-aux.obj.coff-i386 | FileCheck %s
 
 CHECK:      Symbols [
 CHECK:        Symbol {

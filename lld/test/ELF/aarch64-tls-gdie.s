@@ -3,7 +3,7 @@
 // RUN: llvm-mc %p/Inputs/aarch64-tls-gdie.s -o %t2.o -filetype=obj -triple=aarch64-pc-linux
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t
-// RUN: llvm-readobj -s %t | FileCheck --check-prefix=SEC %s
+// RUN: llvm-readobj -S %t | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -d %t | FileCheck %s
 
         .globl  _start

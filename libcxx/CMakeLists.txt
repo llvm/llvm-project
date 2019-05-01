@@ -760,7 +760,7 @@ endif()
 #===============================================================================
 include_directories(include)
 add_subdirectory(include)
-add_subdirectory(lib)
+add_subdirectory(src)
 
 set(LIBCXX_TEST_DEPS "")
 

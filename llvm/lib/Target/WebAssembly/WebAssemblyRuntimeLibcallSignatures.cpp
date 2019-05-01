@@ -51,6 +51,8 @@ enum RuntimeLibcallSignature {
   f64_func_f64_i32,
   f64_func_i64_i64,
   i16_func_f32,
+  i16_func_f64,
+  i16_func_i64_i64,
   i8_func_i8_i8,
   func_f32_iPTR_iPTR,
   func_f64_iPTR_iPTR,
@@ -228,13 +230,15 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FMAX_F128] = func_iPTR_i64_i64_i64_i64;
 
     // Conversion
-    // All F80 and PPCF128 routines are unspported.
+    // All F80 and PPCF128 routines are unsupported.
     Table[RTLIB::FPEXT_F64_F128] = func_iPTR_f64;
     Table[RTLIB::FPEXT_F32_F128] = func_iPTR_f32;
     Table[RTLIB::FPEXT_F32_F64] = f64_func_f32;
     Table[RTLIB::FPEXT_F16_F32] = f32_func_i16;
     Table[RTLIB::FPROUND_F32_F16] = i16_func_f32;
+    Table[RTLIB::FPROUND_F64_F16] = i16_func_f64;
     Table[RTLIB::FPROUND_F64_F32] = f32_func_f64;
+    Table[RTLIB::FPROUND_F128_F16] = i16_func_i64_i64;
     Table[RTLIB::FPROUND_F128_F32] = f32_func_i64_i64;
     Table[RTLIB::FPROUND_F128_F64] = f64_func_i64_i64;
     Table[RTLIB::FPTOSINT_F32_I32] = i32_func_f32;
@@ -482,6 +486,10 @@ struct StaticLibcallNameMap {
         Map[NameLibcall.first] = NameLibcall.second;
       }
     }
+    // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
+    // consistent with the f64 and f128 names.
+    Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
+    Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
   }
 };
 
@@ -594,6 +602,15 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   case i16_func_f32:
     Rets.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::F32);
+    break;
+  case i16_func_f64:
+    Rets.push_back(wasm::ValType::I32);
+    Params.push_back(wasm::ValType::F64);
+    break;
+  case i16_func_i64_i64:
+    Rets.push_back(wasm::ValType::I32);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
     break;
   case i8_func_i8_i8:
     Rets.push_back(wasm::ValType::I32);

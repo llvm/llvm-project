@@ -50,6 +50,7 @@ static const EnumEntry<unsigned> WasmSymbolFlags[] = {
   ENUM_ENTRY(VISIBILITY_HIDDEN),
   ENUM_ENTRY(UNDEFINED),
   ENUM_ENTRY(EXPORTED),
+  ENUM_ENTRY(EXPLICIT_NAME),
 #undef ENUM_ENTRY
 };
 

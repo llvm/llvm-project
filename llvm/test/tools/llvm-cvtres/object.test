@@ -8,7 +8,7 @@
 //   test_resource.res
 
 RUN: llvm-cvtres /verbose /out:%t %p/Inputs/test_resource.res
-RUN: llvm-readobj -coff-resources -section-data %t | FileCheck %s
+RUN: llvm-readobj --coff-resources --section-data %t | FileCheck %s
 
 CHECK:     Resources [
 CHECK-NEXT:  Total Number of Resources: 8

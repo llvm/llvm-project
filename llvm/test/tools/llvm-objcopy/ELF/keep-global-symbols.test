@@ -40,10 +40,10 @@
 # RUN:   -G Weak1 \
 # RUN:   --globalize-symbol Weak2 \
 # RUN:   %t.o %t.2.o
-# RUN: llvm-readobj --elf-output-style=GNU --symbols %t.2.o | FileCheck %s
+# RUN: llvm-readelf --symbols %t.2.o | FileCheck %s
 
 # RUN: llvm-objcopy  --regex --keep-global-symbols %t-globals-regexp.txt %t.o %t.3.o
-# RUN: llvm-readobj --elf-output-style=GNU --symbols %t.3.o | FileCheck %s --check-prefix=REGEXP
+# RUN: llvm-readelf --symbols %t.3.o | FileCheck %s --check-prefix=REGEXP
 
 !ELF
 FileHeader:

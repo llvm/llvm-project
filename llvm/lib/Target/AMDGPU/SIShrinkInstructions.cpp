@@ -38,6 +38,8 @@ class SIShrinkInstructions : public MachineFunctionPass {
 public:
   static char ID;
 
+  void shrinkMIMG(MachineInstr &MI);
+
 public:
   SIShrinkInstructions() : MachineFunctionPass(ID) {
   }
@@ -208,6 +210,96 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
   if ((TII->sopkIsZext(SOPKOpc) && isKUImmOperand(TII, Src1)) ||
       (!TII->sopkIsZext(SOPKOpc) && isKImmOperand(TII, Src1))) {
     MI.setDesc(NewDesc);
+  }
+}
+
+// Shrink NSA encoded instructions with contiguous VGPRs to non-NSA encoding.
+void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+  if (Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
+    return;
+
+  MachineFunction *MF = MI.getParent()->getParent();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  int VAddr0Idx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
+  unsigned NewAddrDwords = Info->VAddrDwords;
+  const TargetRegisterClass *RC;
+
+  if (Info->VAddrDwords == 2) {
+    RC = &AMDGPU::VReg_64RegClass;
+  } else if (Info->VAddrDwords == 3) {
+    RC = &AMDGPU::VReg_96RegClass;
+  } else if (Info->VAddrDwords == 4) {
+    RC = &AMDGPU::VReg_128RegClass;
+  } else if (Info->VAddrDwords <= 8) {
+    RC = &AMDGPU::VReg_256RegClass;
+    NewAddrDwords = 8;
+  } else {
+    RC = &AMDGPU::VReg_512RegClass;
+    NewAddrDwords = 16;
+  }
+
+  unsigned VgprBase = 0;
+  bool IsUndef = true;
+  bool IsKill = NewAddrDwords == Info->VAddrDwords;
+  for (unsigned i = 0; i < Info->VAddrDwords; ++i) {
+    const MachineOperand &Op = MI.getOperand(VAddr0Idx + i);
+    unsigned Vgpr = TRI.getHWRegIndex(Op.getReg());
+
+    if (i == 0) {
+      VgprBase = Vgpr;
+    } else if (VgprBase + i != Vgpr)
+      return;
+
+    if (!Op.isUndef())
+      IsUndef = false;
+    if (!Op.isKill())
+      IsKill = false;
+  }
+
+  if (VgprBase + NewAddrDwords > 256)
+    return;
+
+  // Further check for implicit tied operands - this may be present if TFE is
+  // enabled
+  int TFEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::tfe);
+  int LWEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::lwe);
+  unsigned TFEVal = MI.getOperand(TFEIdx).getImm();
+  unsigned LWEVal = MI.getOperand(LWEIdx).getImm();
+  int ToUntie = -1;
+  if (TFEVal || LWEVal) {
+    // TFE/LWE is enabled so we need to deal with an implicit tied operand
+    for (unsigned i = LWEIdx + 1, e = MI.getNumOperands(); i != e; ++i) {
+      if (MI.getOperand(i).isReg() && MI.getOperand(i).isTied() &&
+          MI.getOperand(i).isImplicit()) {
+        // This is the tied operand
+        assert(
+            ToUntie == -1 &&
+            "found more than one tied implicit operand when expecting only 1");
+        ToUntie = i;
+        MI.untieRegOperand(ToUntie);
+      }
+    }
+  }
+
+  unsigned NewOpcode =
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, AMDGPU::MIMGEncGfx10Default,
+                            Info->VDataDwords, NewAddrDwords);
+  MI.setDesc(TII->get(NewOpcode));
+  MI.getOperand(VAddr0Idx).setReg(RC->getRegister(VgprBase));
+  MI.getOperand(VAddr0Idx).setIsUndef(IsUndef);
+  MI.getOperand(VAddr0Idx).setIsKill(IsKill);
+
+  for (unsigned i = 1; i < Info->VAddrDwords; ++i)
+    MI.RemoveOperand(VAddr0Idx + 1);
+
+  if (ToUntie >= 0) {
+    MI.tieOperands(
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata),
+        ToUntie - (Info->VAddrDwords - 1));
   }
 }
 
@@ -595,6 +687,14 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::S_XOR_B32) {
         if (shrinkScalarLogicOp(ST, MRI, TII, MI))
           continue;
+      }
+
+      if (TII->isMIMG(MI.getOpcode()) &&
+          ST.getGeneration() >= AMDGPUSubtarget::GFX10 &&
+          MF.getProperties().hasProperty(
+              MachineFunctionProperties::Property::NoVRegs)) {
+        shrinkMIMG(MI);
+        continue;
       }
 
       if (!TII->hasVALU32BitEncoding(MI.getOpcode()))

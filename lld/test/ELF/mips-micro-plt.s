@@ -7,7 +7,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t-exe.o
 # RUN: ld.lld %t-exe.o %t.so -o %t.exe
-# RUN: llvm-readobj -t -dt -mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readobj --symbols --dyn-syms --mips-plt-got %t.exe | FileCheck %s
 # RUN: llvm-objdump -d -mattr=micromips %t.exe | FileCheck --check-prefix=ASM %s
 
 # CHECK:      Symbols [

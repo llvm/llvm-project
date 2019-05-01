@@ -5,7 +5,7 @@
 //   (8, 999999]:          base 10 string table index (/9999999)
 //   (999999, 0xFFFFFFFF]: base 64 string table index (//AAAAAA)
 //
-// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -S | FileCheck %s
 
 // Raw encoding
 
