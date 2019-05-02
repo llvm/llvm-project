@@ -141,8 +141,7 @@ void SwiftLanguageRuntime::SetupReflection() {
   auto *obj_file = M->GetObjectFile();
   if (!obj_file)
       return;
-  ConstString g_name("elf");
-  if (g_name == obj_file->GetPluginName())
+  if (obj_file->GetPluginName().GetStringRef().equals("elf"))
     return;
   Address start_address = obj_file->GetBaseAddress();
   auto load_ptr = static_cast<uintptr_t>(start_address.GetLoadAddress(&target));
@@ -159,8 +158,7 @@ void SwiftLanguageRuntime::SetupReflection() {
     auto *obj_file = module_sp->GetObjectFile();
     if (!obj_file)
         return false;
-    ConstString g_name("elf");
-    if (g_name == obj_file->GetPluginName())
+    if (obj_file->GetPluginName().GetStringRef().equals("elf"))
       return true;
     Address start_address = obj_file->GetBaseAddress();
     auto load_ptr = static_cast<uintptr_t>(
