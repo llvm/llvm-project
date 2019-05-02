@@ -4339,6 +4339,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::SIGN_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid SIGN_EXTEND!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "SIGN_EXTEND result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4355,6 +4358,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::ZERO_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid ZERO_EXTEND!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "ZERO_EXTEND result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4371,6 +4377,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::ANY_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid ANY_EXTEND!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "ANY_EXTEND result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4398,6 +4407,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::TRUNCATE:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid TRUNCATE!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "TRUNCATE result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop truncate
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
