@@ -6,7 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 v_mul_i32_i24 v1, v2, 100
-// CHECK: error: invalid operand for instruction
+// CHECK: error: invalid literal operand
 
 //===----------------------------------------------------------------------===//
 // _e32 checks
@@ -29,11 +29,11 @@ v_cndmask_b32_e32 v1, v2, v3, s[0:1]
 
 // Immediate src0
 v_mul_i32_i24_e64 v1, 100, v3
-// CHECK: error: invalid operand for instruction
+// CHECK: error: invalid literal operand
 
 // Immediate src1
 v_mul_i32_i24_e64 v1, v2, 100
-// CHECK: error: invalid operand for instruction
+// CHECK: error: invalid literal operand
 
 v_add_i32_e32 v1, s[0:1], v2, v3
 // CHECK: error: invalid operand for instruction

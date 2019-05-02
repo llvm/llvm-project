@@ -105,7 +105,7 @@ public:
     SM.AddNewSourceBuffer(std::move(Buffer), SMLoc());
     StringRef VarNameRef = NameTrailerRef.substr(0, VarName.size());
     StringRef TrailerRef = NameTrailerRef.substr(VarName.size());
-    return P.parseExpression(VarNameRef, TrailerRef, SM);
+    return P.parseNumericExpression(VarNameRef, TrailerRef, SM) == nullptr;
   }
 };
 
@@ -146,6 +146,52 @@ TEST_F(FileCheckTest, ParseExpr) {
   EXPECT_TRUE(Tester.parseExpect(VarName, Trailer));
 }
 
+TEST_F(FileCheckTest, Substitution) {
+  SourceMgr SM;
+  FileCheckPatternContext Context;
+  std::vector<std::string> GlobalDefines;
+  GlobalDefines.emplace_back(std::string("FOO=BAR"));
+  Context.defineCmdlineVariables(GlobalDefines, SM);
+
+  FileCheckPatternSubstitution Substitution =
+      FileCheckPatternSubstitution(&Context, "VAR404", 42);
+  EXPECT_FALSE(Substitution.getResult());
+
+  FileCheckNumExpr NumExpr = FileCheckNumExpr(42);
+  Substitution = FileCheckPatternSubstitution(&Context, "@LINE", &NumExpr, 12);
+  llvm::Optional<std::string> Value = Substitution.getResult();
+  EXPECT_TRUE(Value);
+  EXPECT_EQ("42", *Value);
+
+  FileCheckPattern P = FileCheckPattern(Check::CheckPlain, &Context);
+  Substitution = FileCheckPatternSubstitution(&Context, "FOO", 42);
+  Value = Substitution.getResult();
+  EXPECT_TRUE(Value);
+  EXPECT_EQ("BAR", *Value);
+}
+
+TEST_F(FileCheckTest, UndefVars) {
+  SourceMgr SM;
+  FileCheckPatternContext Context;
+  std::vector<std::string> GlobalDefines;
+  GlobalDefines.emplace_back(std::string("FOO=BAR"));
+  Context.defineCmdlineVariables(GlobalDefines, SM);
+
+  FileCheckPatternSubstitution Substitution =
+      FileCheckPatternSubstitution(&Context, "VAR404", 42);
+  StringRef UndefVar = Substitution.getUndefVarName();
+  EXPECT_EQ("VAR404", UndefVar);
+
+  FileCheckNumExpr NumExpr = FileCheckNumExpr(42);
+  Substitution = FileCheckPatternSubstitution(&Context, "@LINE", &NumExpr, 12);
+  UndefVar = Substitution.getUndefVarName();
+  EXPECT_EQ("", UndefVar);
+
+  Substitution = FileCheckPatternSubstitution(&Context, "FOO", 42);
+  UndefVar = Substitution.getUndefVarName();
+  EXPECT_EQ("", UndefVar);
+}
+
 TEST_F(FileCheckTest, FileCheckContext) {
   FileCheckPatternContext Cxt = FileCheckPatternContext();
   std::vector<std::string> GlobalDefines;
@@ -176,9 +222,9 @@ TEST_F(FileCheckTest, FileCheckContext) {
   StringRef LocalVarStr = "LocalVar";
   StringRef EmptyVarStr = "EmptyVar";
   StringRef UnknownVarStr = "UnknownVar";
-  llvm::Optional<StringRef> LocalVar = Cxt.getVarValue(LocalVarStr);
-  llvm::Optional<StringRef> EmptyVar = Cxt.getVarValue(EmptyVarStr);
-  llvm::Optional<StringRef> UnknownVar = Cxt.getVarValue(UnknownVarStr);
+  llvm::Optional<StringRef> LocalVar = Cxt.getPatternVarValue(LocalVarStr);
+  llvm::Optional<StringRef> EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
+  llvm::Optional<StringRef> UnknownVar = Cxt.getPatternVarValue(UnknownVarStr);
   EXPECT_TRUE(LocalVar);
   EXPECT_EQ(*LocalVar, "FOO");
   EXPECT_TRUE(EmptyVar);
@@ -187,9 +233,9 @@ TEST_F(FileCheckTest, FileCheckContext) {
 
   // Clear local variables and check they become absent.
   Cxt.clearLocalVars();
-  LocalVar = Cxt.getVarValue(LocalVarStr);
+  LocalVar = Cxt.getPatternVarValue(LocalVarStr);
   EXPECT_FALSE(LocalVar);
-  EmptyVar = Cxt.getVarValue(EmptyVarStr);
+  EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
   EXPECT_FALSE(EmptyVar);
 
   // Redefine global variables and check variables are defined again.
@@ -197,13 +243,13 @@ TEST_F(FileCheckTest, FileCheckContext) {
   GotError = Cxt.defineCmdlineVariables(GlobalDefines, SM);
   EXPECT_FALSE(GotError);
   StringRef GlobalVarStr = "$GlobalVar";
-  llvm::Optional<StringRef> GlobalVar = Cxt.getVarValue(GlobalVarStr);
+  llvm::Optional<StringRef> GlobalVar = Cxt.getPatternVarValue(GlobalVarStr);
   EXPECT_TRUE(GlobalVar);
   EXPECT_EQ(*GlobalVar, "BAR");
 
   // Clear local variables and check global variables remain defined.
   Cxt.clearLocalVars();
-  GlobalVar = Cxt.getVarValue(GlobalVarStr);
+  GlobalVar = Cxt.getPatternVarValue(GlobalVarStr);
   EXPECT_TRUE(GlobalVar);
 }
 } // namespace

@@ -286,8 +286,8 @@ accurate.
   within the TPI Hash Stream of the Type Index Offsets Buffer.  This is a list of
   pairs of uint32_t's where the first value is a :ref:`Type Index <type_indices>`
   and the second value is the offset in the type record data of the type with this
-  index.  This can be used to do a binary search followed bin a linear search to
-  get amortized O(log n) lookup by type index.
+  index.  This can be used to do a binary search followed by a linear search to
+  get O(log n) lookup by type index.
 
 - **HashAdjBufferOffset / HashAdjBufferLength** - The offset and size within
   the TPI hash stream of a serialized hash table whose keys are the hash values
@@ -308,5 +308,5 @@ variable length array of :doc:`CodeView type records <CodeViewTypes>`.  The numb
 of such records (e.g. the length of the array) can be determined by computing the
 value ``Header.TypeIndexEnd - Header.TypeIndexBegin``.
 
-log(n) random access is provided by way of the Type Index Offsets array (if present)
-described previously.
+O(log(n)) access is provided by way of the Type Index Offsets array (if
+present) described previously.

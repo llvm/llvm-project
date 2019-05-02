@@ -93,14 +93,7 @@ Memory::allocateMappedMemory(size_t NumBytes,
 
   int fd = -1;
 
-  int MMFlags = MAP_PRIVATE |
-#ifdef MAP_ANONYMOUS
-  MAP_ANONYMOUS
-#else
-  MAP_ANON
-#endif
-  ; // Ends statement above
-
+  int MMFlags = MAP_PRIVATE | MAP_ANON;
   int Protect = getPosixProtectionFlags(PFlags);
 
 #if defined(__NetBSD__) && defined(PROT_MPROTECT)

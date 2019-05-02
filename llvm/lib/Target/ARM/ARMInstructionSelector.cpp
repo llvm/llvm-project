@@ -862,11 +862,8 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     LLVM_FALLTHROUGH;
   case G_ZEXT: {
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
-    // FIXME: Smaller destination sizes coming soon!
-    if (DstTy.getSizeInBits() != 32) {
-      LLVM_DEBUG(dbgs() << "Unsupported destination size for extension");
-      return false;
-    }
+    assert(DstTy.getSizeInBits() <= 32 &&
+           "Unsupported destination size for extension");
 
     LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
     unsigned SrcSize = SrcTy.getSizeInBits();
