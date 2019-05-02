@@ -137,6 +137,7 @@ public:
     StringRef Desc;
     StringRef DocumentationUri;
     CmdLineOptionList CmdLineOptions;
+    bool IsHidden = false;
     StateFromCmdLine State = StateFromCmdLine::State_Unspecified;
 
     ConstCheckerInfoList Dependencies;
@@ -150,9 +151,10 @@ public:
     }
 
     CheckerInfo(InitializationFunction Fn, ShouldRegisterFunction sfn,
-                StringRef Name, StringRef Desc, StringRef DocsUri)
+                StringRef Name, StringRef Desc, StringRef DocsUri,
+                bool IsHidden)
         : Initialize(Fn), ShouldRegister(sfn), FullName(Name), Desc(Desc),
-          DocumentationUri(DocsUri) {}
+          DocumentationUri(DocsUri), IsHidden(IsHidden) {}
 
     // Used for lower_bound.
     explicit CheckerInfo(StringRef FullName) : FullName(FullName) {}
@@ -190,16 +192,19 @@ public:
   /// Adds a checker to the registry. Use this non-templated overload when your
   /// checker requires custom initialization.
   void addChecker(InitializationFunction Fn, ShouldRegisterFunction sfn,
-                  StringRef FullName, StringRef Desc, StringRef DocsUri);
+                  StringRef FullName, StringRef Desc, StringRef DocsUri,
+                  bool IsHidden);
 
   /// Adds a checker to the registry. Use this templated overload when your
   /// checker does not require any custom initialization.
   template <class T>
-  void addChecker(StringRef FullName, StringRef Desc, StringRef DocsUri) {
+  void addChecker(StringRef FullName, StringRef Desc, StringRef DocsUri,
+                  bool IsHidden = false) {
     // Avoid MSVC's Compiler Error C2276:
     // http://msdn.microsoft.com/en-us/library/850cstw1(v=VS.80).aspx
     addChecker(&CheckerRegistry::initializeManager<T>,
-               &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri);
+               &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri,
+               IsHidden);
   }
 
   /// Makes the checker with the full name \p fullName depends on the checker
