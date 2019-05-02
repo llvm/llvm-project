@@ -1125,6 +1125,8 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB, MemoryAccess *IncomingVal,
 void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
                            SmallPtrSetImpl<BasicBlock *> &Visited,
                            bool SkipVisited, bool RenameAllUses) {
+  assert(Root && "Trying to rename accesses in an unreachable block");
+
   SmallVector<RenamePassData, 32> WorkStack;
   // Skip everything if we already renamed this block and we are skipping.
   // Note: You can't sink this into the if, because we need it to occur
