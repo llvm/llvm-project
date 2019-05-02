@@ -111,8 +111,6 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
   SwiftREPL::Initialize();
 
-  ObjectContainerBSDArchive::Initialize();
-
   EmulateInstructionARM::Initialize();
   EmulateInstructionMIPS::Initialize();
   EmulateInstructionMIPS64::Initialize();
