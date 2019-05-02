@@ -355,12 +355,9 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   }
 
   // Optimize potentially non-minimal phis added in this method.
-  for (unsigned Idx = NewPhiIndex; Idx < NewPhiIndexEnd; ++Idx) {
-    if (auto *MPhi = cast_or_null<MemoryPhi>(InsertedPHIs[Idx])) {
-      auto OperRange = MPhi->operands();
-      tryRemoveTrivialPhi(MPhi, OperRange);
-    }
-  }
+  unsigned NewPhiSize = NewPhiIndexEnd - NewPhiIndex;
+  if (NewPhiSize)
+    tryRemoveTrivialPhis(ArrayRef<WeakVH>(&InsertedPHIs[NewPhiIndex], NewPhiSize));
 
   // Now that all fixups are done, rename all uses if we are asked.
   if (RenameUses) {
@@ -1213,6 +1210,14 @@ void MemorySSAUpdater::removeBlocks(
       MSSA->removeFromLists(MA);
     }
   }
+}
+
+void MemorySSAUpdater::tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs) {
+  for (auto &VH : UpdatedPHIs)
+    if (auto *MPhi = cast_or_null<MemoryPhi>(VH)) {
+      auto OperRange = MPhi->operands();
+      tryRemoveTrivialPhi(MPhi, OperRange);
+    }
 }
 
 MemoryAccess *MemorySSAUpdater::createMemoryAccessInBB(
