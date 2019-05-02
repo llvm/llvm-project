@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 
-// HECK: @[[PROTO_P1:"_OBJC_PROTOCOL_$_P1"]] = weak hidden
+// CHECK: @"\01l_OBJC_$_PROTOCOL_METHOD_TYPES_P1" = private global
 // CHECK: @[[PROTO_P1:"_OBJC_PROTOCOL_\$_P1"]] = weak hidden
 // CHECK: @[[LABEL_PROTO_P1:"_OBJC_LABEL_PROTOCOL_\$_P1"]] = weak hidden global %{{.*}}* @[[PROTO_P1]]
 // CHECK: @[[PROTO_P2:"_OBJC_PROTOCOL_\$_P2"]] = weak hidden

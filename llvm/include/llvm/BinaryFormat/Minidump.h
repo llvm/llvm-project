@@ -59,6 +59,14 @@ struct LocationDescriptor {
 };
 static_assert(sizeof(LocationDescriptor) == 8, "");
 
+/// Describes a single memory range (both its VM address and where to find it in
+/// the file) of the process from which this minidump file was generated.
+struct MemoryDescriptor {
+  support::ulittle64_t StartOfMemoryRange;
+  LocationDescriptor Memory;
+};
+static_assert(sizeof(MemoryDescriptor) == 16, "");
+
 /// Specifies the location and type of a single stream in the minidump file. The
 /// minidump stream directory is an array of entries of this type, with its size
 /// given by Header.NumberOfStreams.
@@ -158,6 +166,19 @@ struct Module {
   support::ulittle64_t Reserved1;
 };
 static_assert(sizeof(Module) == 108, "");
+
+/// Describes a single thread in the minidump file. Part of the ThreadList
+/// stream.
+struct Thread {
+  support::ulittle32_t ThreadId;
+  support::ulittle32_t SuspendCount;
+  support::ulittle32_t PriorityClass;
+  support::ulittle32_t Priority;
+  support::ulittle64_t EnvironmentBlock;
+  MemoryDescriptor Stack;
+  LocationDescriptor Context;
+};
+static_assert(sizeof(Thread) == 48, "");
 
 } // namespace minidump
 

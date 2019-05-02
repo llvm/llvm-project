@@ -2,12 +2,15 @@
 #include <cstdint>
 #include <cstdio>
 
-struct alignas(16) xmm_t {
-  uint64_t a, b;
+union alignas(16) xmm_t {
+  uint64_t as_uint64[2];
+  uint8_t as_uint8[16];
 };
 
 int main() {
-  constexpr xmm_t xmm_fill = { 0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F };
+  constexpr xmm_t xmm_fill = {
+    .as_uint64 = { 0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F }
+  };
 
   uint64_t mm[8];
   xmm_t xmm[8];
@@ -60,8 +63,12 @@ int main() {
 
   for (int i = 0; i < 8; ++i)
     printf("mm%d = 0x%016" PRIx64 "\n", i, mm[i]);
-  for (int i = 0; i < 8; ++i)
-    printf("xmm%d = 0x%016" PRIx64 "%016" PRIx64 "\n", i, xmm[i].b, xmm[i].a);
+  for (int i = 0; i < 8; ++i) {
+    printf("xmm%d = { ", i);
+    for (int j = 0; j < sizeof(xmm->as_uint8); ++j)
+      printf("0x%02x ", xmm[i].as_uint8[j]);
+    printf("}\n");
+  }
 
   return 0;
 }

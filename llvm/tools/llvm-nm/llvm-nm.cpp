@@ -525,7 +525,8 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
     }
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;
-    MachO->getSectionName(Ref, SectionName);
+    if (Expected<StringRef> NameOrErr = MachO->getSectionName(Ref))
+      SectionName = *NameOrErr;
     StringRef SegmentName = MachO->getSectionFinalSegmentName(Ref);
     outs() << "(" << SegmentName << "," << SectionName << ") ";
     break;
@@ -951,10 +952,9 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
     section_iterator SecI = *SecIOrErr;
     const coff_section *Section = Obj.getCOFFSection(*SecI);
     Characteristics = Section->Characteristics;
-    StringRef SectionName;
-    Obj.getSectionName(Section, SectionName);
-    if (SectionName.startswith(".idata"))
-      return 'i';
+    if (Expected<StringRef> NameOrErr = Obj.getSectionName(Section))
+      if (NameOrErr->startswith(".idata"))
+        return 'i';
   }
 
   switch (Symb.getSectionNumber()) {
@@ -1014,7 +1014,8 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
       return 's';
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;
-    Obj.getSectionName(Ref, SectionName);
+    if (Expected<StringRef> NameOrErr = Obj.getSectionName(Ref))
+      SectionName = *NameOrErr;
     StringRef SegmentName = Obj.getSectionFinalSegmentName(Ref);
     if (Obj.is64Bit() && Obj.getHeader64().filetype == MachO::MH_KEXT_BUNDLE &&
         SegmentName == "__TEXT_EXEC" && SectionName == "__text")
@@ -1136,7 +1137,8 @@ static unsigned getNsectForSegSect(MachOObjectFile *Obj) {
   for (auto &S : Obj->sections()) {
     DataRefImpl Ref = S.getRawDataRefImpl();
     StringRef SectionName;
-    Obj->getSectionName(Ref, SectionName);
+    if (Expected<StringRef> NameOrErr = Obj->getSectionName(Ref))
+      SectionName = *NameOrErr;
     StringRef SegmentName = Obj->getSectionFinalSegmentName(Ref);
     if (SegmentName == SegSect[0] && SectionName == SegSect[1])
       return Nsect;

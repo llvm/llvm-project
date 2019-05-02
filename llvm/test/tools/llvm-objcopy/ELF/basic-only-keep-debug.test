@@ -6,9 +6,7 @@
 # RUN: llvm-objcopy %t %t2
 # RUN: llvm-objcopy --only-keep-debug %t %t3
 # RUN: cmp %t2 %t3
-# Run llvm-strip with --strip-symbol on a non-existent symbol to prevent
-# defaulting to --strip-all.
-# RUN: llvm-strip --only-keep-debug --strip-symbol foo %t -o %t4
+# RUN: llvm-strip --only-keep-debug --no-strip-all %t -o %t4
 # RUN: cmp %t2 %t4
 
 !ELF
