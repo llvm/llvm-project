@@ -737,7 +737,8 @@ SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
       elements_with_payload = enum_impl_strategy.getElementsWithPayload();
   llvm::ArrayRef<swift::irgen::EnumImplStrategy::Element>
       elements_with_no_payload = enum_impl_strategy.getElementsWithNoPayload();
-  if (enum_decl->isResilient())
+  swift::SILType swift_sil_type = irgen_module.getLoweredType(swift_can_type);
+  if (!irgen_module.getTypeInfo(swift_sil_type).isFixedSize())
     return new SwiftResilientEnumDescriptor(ast, swift_can_type, enum_decl);
   if (elements_with_no_payload.size() == 0) {
     // Nothing with no payload.. empty or all payloads?

@@ -41,3 +41,6 @@ n
 // CHECK:      {{.*R.*}}: Notification = {
 // CHECK-NEXT:   name = "abc"
 // CHECK-NEXT:   object = 42
+
+let tinky : Optional<UUID> = nil
+// CHECK: {{tinky}}: UUID? = nil
