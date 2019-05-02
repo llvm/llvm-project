@@ -154,7 +154,7 @@ class SizeClassAllocator64 {
     return true;
   }
 
-  bool PointerIsMine(const void *p) {
+  bool PointerIsMine(const void *p) const {
     uptr P = reinterpret_cast<uptr>(p);
     if (kUsingConstantSpaceBeg && (kSpaceBeg % kSpaceSize) == 0)
       return P / kSpaceSize == kSpaceBeg / kSpaceSize;
@@ -200,7 +200,7 @@ class SizeClassAllocator64 {
     return ClassIdToSize(GetSizeClass(p));
   }
 
-  uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
+  static uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
 
   void *GetMetaData(const void *p) {
     uptr class_id = GetSizeClass(p);

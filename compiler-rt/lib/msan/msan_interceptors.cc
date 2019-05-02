@@ -1248,13 +1248,13 @@ int OnExit() {
 
 #define MSAN_INTERCEPT_FUNC(name)                                       \
   do {                                                                  \
-    if ((!INTERCEPT_FUNCTION(name) || !REAL(name)))                     \
+    if (!INTERCEPT_FUNCTION(name))                                      \
       VReport(1, "MemorySanitizer: failed to intercept '" #name "'\n"); \
   } while (0)
 
 #define MSAN_INTERCEPT_FUNC_VER(name, ver)                                    \
   do {                                                                        \
-    if ((!INTERCEPT_FUNCTION_VER(name, ver) || !REAL(name)))                  \
+    if (!INTERCEPT_FUNCTION_VER(name, ver))                                   \
       VReport(                                                                \
           1, "MemorySanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
   } while (0)

@@ -2659,14 +2659,13 @@ void InitializeInterceptors() {
 #if !SANITIZER_MAC
   // We can not use TSAN_INTERCEPT to get setjmp addr,
   // because it does &setjmp and setjmp is not present in some versions of libc.
-  using __interception::GetRealFunctionAddress;
-  GetRealFunctionAddress(TSAN_STRING_SETJMP,
-                         (uptr*)&REAL(setjmp_symname), 0, 0);
-  GetRealFunctionAddress("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
-  GetRealFunctionAddress(TSAN_STRING_SIGSETJMP,
-                         (uptr*)&REAL(sigsetjmp_symname), 0, 0);
+  using __interception::InterceptFunction;
+  InterceptFunction(TSAN_STRING_SETJMP, (uptr*)&REAL(setjmp_symname), 0, 0);
+  InterceptFunction("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
+  InterceptFunction(TSAN_STRING_SIGSETJMP, (uptr*)&REAL(sigsetjmp_symname), 0,
+                    0);
 #if !SANITIZER_NETBSD
-  GetRealFunctionAddress("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
+  InterceptFunction("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
 #endif
 #endif
 
