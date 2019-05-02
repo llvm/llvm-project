@@ -87,7 +87,7 @@ using namespace lldb_private;
 
 static constexpr std::chrono::seconds g_po_function_timeout(15);
 static const char *g_dollar_tau_underscore = u8"$\u03C4_";
-
+static ConstString g_self = ConstString("self");
 extern "C" unsigned long long _swift_classIsSwiftMask = 0;
 
 namespace lldb_private {
@@ -1763,7 +1763,6 @@ bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
   // A variable is self if its name if "self", and it's either a
   // function argument or a local variable and it's scope is a
   // constructor. These checks are sorted from cheap to expensive.
-  static ConstString g_self = ConstString("self");
   if (variable.GetUnqualifiedName() != g_self)
     return false;
 
@@ -2506,20 +2505,18 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetBitSize(CompilerType type) {
 }
 
 bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
-  auto valobj_name = valobj.GetName().GetStringRef();
-  if (valobj_name.startswith(g_dollar_tau_underscore))
-    return true;
+  // All runtime support values have to be marked as artificial by the
+  // compiler. But not all artificial variables should be hidden from
+  // the user.
+  if (!valobj.GetVariable())
+    return false;
+  if (!valobj.GetVariable()->IsArtificial())
+    return false;
 
-  auto valobj_type_name = valobj.GetTypeName().GetStringRef();
-  if (valobj_name.startswith("globalinit_") &&
-      valobj_type_name == "Builtin.Word")
-    return true;
-
-  if (valobj_name == "_argc" || valobj_name == "_unsafeArgv" ||
-      valobj_name == "$error" || valobj_name == "$tmpClosure")
-    return true;
-
-  return false;
+  // Whitelist "self".
+  if (valobj.GetName() == g_self)
+     return false;
+  return true;
 }
 
 bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
