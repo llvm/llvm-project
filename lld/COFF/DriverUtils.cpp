@@ -745,8 +745,16 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
     object::WindowsResource *RF = dyn_cast<object::WindowsResource>(Bin.get());
     if (!RF)
       fatal("cannot compile non-resource file as resource");
-    if (auto EC = Parser.parse(RF))
+
+    std::vector<std::string> Duplicates;
+    if (auto EC = Parser.parse(RF, Duplicates))
       fatal(toString(std::move(EC)));
+
+    for (const auto &DupeDiag : Duplicates)
+      if (Config->ForceMultipleRes)
+        warn(DupeDiag);
+      else
+        error(DupeDiag);
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =

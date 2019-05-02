@@ -1096,6 +1096,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_force, OPT_force_multiple))
     Config->ForceMultiple = true;
 
+  // Handle /force or /force:multipleres
+  if (Args.hasArg(OPT_force, OPT_force_multipleres))
+    Config->ForceMultipleRes = true;
+
   // Handle /debug
   DebugKind Debug = parseDebugKind(Args);
   if (Debug == DebugKind::Full || Debug == DebugKind::Dwarf ||

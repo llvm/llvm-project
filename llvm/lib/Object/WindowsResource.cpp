@@ -168,8 +168,8 @@ static bool convertUTF16LEToUTF8String(ArrayRef<UTF16> Src, std::string &Out) {
   return convertUTF16ToUTF8String(makeArrayRef(EndianCorrectedSrc), Out);
 }
 
-static Error makeDuplicateResourceError(const ResourceEntryRef &Entry,
-                                        StringRef File1, StringRef File2) {
+static std::string makeDuplicateResourceError(
+    const ResourceEntryRef &Entry, StringRef File1, StringRef File2) {
   std::string Ret;
   raw_string_ostream OS(Ret);
 
@@ -197,10 +197,11 @@ static Error makeDuplicateResourceError(const ResourceEntryRef &Entry,
   OS << "/language " << Entry.getLanguage() << ", in " << File1 << " and in "
      << File2;
 
-  return make_error<GenericBinaryError>(OS.str(), object_error::parse_failed);
+  return OS.str();
 }
 
-Error WindowsResourceParser::parse(WindowsResource *WR) {
+Error WindowsResourceParser::parse(WindowsResource *WR,
+                                   std::vector<std::string> &Duplicates) {
   auto EntryOrErr = WR->getHeadEntry();
   if (!EntryOrErr) {
     auto E = EntryOrErr.takeError();
@@ -229,9 +230,10 @@ Error WindowsResourceParser::parse(WindowsResource *WR) {
     bool IsNewNode = Root.addEntry(Entry, InputFilenames.size(),
                                    IsNewTypeString, IsNewNameString, Node);
     InputFilenames.push_back(WR->getFileName());
-    if (!IsNewNode)
-      return makeDuplicateResourceError(Entry, InputFilenames[Node->Origin],
-                                        WR->getFileName());
+    if (!IsNewNode) {
+      Duplicates.push_back(makeDuplicateResourceError(
+          Entry, InputFilenames[Node->Origin], WR->getFileName()));
+    }
 
     if (IsNewTypeString)
       StringTable.push_back(Entry.getTypeString());
