@@ -43890,6 +43890,18 @@ static bool isFRClass(const TargetRegisterClass &RC) {
          RC.hasSuperClassEq(&X86::VR512RegClass);
 }
 
+/// Check if \p RC is a mask register class.
+/// I.e., VK* or one of their variant.
+static bool isVKClass(const TargetRegisterClass &RC) {
+  return RC.hasSuperClassEq(&X86::VK1RegClass) ||
+         RC.hasSuperClassEq(&X86::VK2RegClass) ||
+         RC.hasSuperClassEq(&X86::VK4RegClass) ||
+         RC.hasSuperClassEq(&X86::VK8RegClass) ||
+         RC.hasSuperClassEq(&X86::VK16RegClass) ||
+         RC.hasSuperClassEq(&X86::VK32RegClass) ||
+         RC.hasSuperClassEq(&X86::VK64RegClass);
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
@@ -44199,6 +44211,22 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       Res.second = &X86::VR256RegClass;
     else if (TRI->isTypeLegalForClass(X86::VR512RegClass, VT))
       Res.second = &X86::VR512RegClass;
+    else {
+      // Type mismatch and not a clobber: Return an error;
+      Res.first = 0;
+      Res.second = nullptr;
+    }
+  } else if (isVKClass(*Class)) {
+    if (VT == MVT::i1)
+      Res.second = &X86::VK1RegClass;
+    else if (VT == MVT::i8)
+      Res.second = &X86::VK8RegClass;
+    else if (VT == MVT::i16)
+      Res.second = &X86::VK16RegClass;
+    else if (VT == MVT::i32)
+      Res.second = &X86::VK32RegClass;
+    else if (VT == MVT::i64)
+      Res.second = &X86::VK64RegClass;
     else {
       // Type mismatch and not a clobber: Return an error;
       Res.first = 0;
