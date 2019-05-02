@@ -883,9 +883,26 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
           m_fallback_unwind_plan_sp = arch_default_unwind_plan_sp;
         }
       }
-      UnwindLogMsgVerbose("frame uses %s for full UnwindPlan",
+      UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because this "
+                          "is the non-call site unwind plan and this is a "
+                          "zeroth frame",
                           unwind_plan_sp->GetSourceName().GetCString());
       return unwind_plan_sp;
+    }
+
+    // If we're on the first instruction of a function, and we have an
+    // architectural default UnwindPlan for the initial instruction of a
+    // function, use that.
+    if (m_current_offset == 0) {
+      unwind_plan_sp =
+          func_unwinders_sp->GetUnwindPlanArchitectureDefaultAtFunctionEntry(
+              m_thread);
+      if (unwind_plan_sp) {
+        UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because we are at "
+                            "the first instruction of a function",
+                            unwind_plan_sp->GetSourceName().GetCString());
+        return unwind_plan_sp;
+      }
     }
   }
 
@@ -897,7 +914,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   }
   int valid_offset = -1;
   if (IsUnwindPlanValidForCurrentPC(unwind_plan_sp, valid_offset)) {
-    UnwindLogMsgVerbose("frame uses %s for full UnwindPlan",
+    UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because this "
+                        "is the call-site unwind plan",
                         unwind_plan_sp->GetSourceName().GetCString());
     return unwind_plan_sp;
   }
@@ -934,30 +952,18 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   }
 
   if (IsUnwindPlanValidForCurrentPC(unwind_plan_sp, valid_offset)) {
-    UnwindLogMsgVerbose("frame uses %s for full UnwindPlan",
+    UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because we "
+                        "failed to find a call-site unwind plan that would work",
                         unwind_plan_sp->GetSourceName().GetCString());
     return unwind_plan_sp;
-  }
-
-  // If we're on the first instruction of a function, and we have an
-  // architectural default UnwindPlan for the initial instruction of a
-  // function, use that.
-  if (m_current_offset_backed_up_one == 0) {
-    unwind_plan_sp =
-        func_unwinders_sp->GetUnwindPlanArchitectureDefaultAtFunctionEntry(
-            m_thread);
-    if (unwind_plan_sp) {
-      UnwindLogMsgVerbose("frame uses %s for full UnwindPlan",
-                          unwind_plan_sp->GetSourceName().GetCString());
-      return unwind_plan_sp;
-    }
   }
 
   // If nothing else, use the architectural default UnwindPlan and hope that
   // does the job.
   if (arch_default_unwind_plan_sp)
     UnwindLogMsgVerbose(
-        "frame uses %s for full UnwindPlan",
+        "frame uses %s for full UnwindPlan because we are falling back "
+        "to the arch default plan",
         arch_default_unwind_plan_sp->GetSourceName().GetCString());
   else
     UnwindLogMsg(
