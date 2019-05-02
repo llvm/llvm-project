@@ -744,8 +744,7 @@ namespace X86II {
       // has it as the last op.
       if (NumOps == 9 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
           (Desc.getOperandConstraint(3, MCOI::TIED_TO) == 1 ||
-           Desc.getOperandConstraint(8, MCOI::TIED_TO) == 1) &&
-          "Instruction with 2 defs isn't gather?")
+           Desc.getOperandConstraint(8, MCOI::TIED_TO) == 1))
         return 2;
       return 0;
     }
