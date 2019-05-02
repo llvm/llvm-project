@@ -317,7 +317,10 @@ public:
             "indexes can be specified as arguments.\n"
             "Use the thread-index \"all\" to see all threads.\n"
             "Use the thread-index \"unique\" to see threads grouped by unique "
-            "call stacks.",
+            "call stacks.\n"
+            "Use 'settings set frame-format' to customize the printing of "
+            "frames in the backtrace and 'settings set thread-format' to "
+            "customize the thread header.",
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
@@ -1388,7 +1391,9 @@ public:
   CommandObjectThreadList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "thread list",
-            "Show a summary of each thread in the current target process.",
+            "Show a summary of each thread in the current target process.  "
+            "Use 'settings set thread-format' to customize the individual "
+            "thread listings.",
             "thread list",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
