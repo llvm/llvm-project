@@ -2090,21 +2090,21 @@ static void ChangeCalleesToFastCall(Function *F) {
   }
 }
 
-static AttributeList StripNest(LLVMContext &C, AttributeList Attrs) {
-  // There can be at most one attribute set with a nest attribute.
-  unsigned NestIndex;
-  if (Attrs.hasAttrSomewhere(Attribute::Nest, &NestIndex))
-    return Attrs.removeAttribute(C, NestIndex, Attribute::Nest);
+static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
+                               Attribute::AttrKind A) {
+  unsigned AttrIndex;
+  if (Attrs.hasAttrSomewhere(A, &AttrIndex))
+    return Attrs.removeAttribute(C, AttrIndex, A);
   return Attrs;
 }
 
-static void RemoveNestAttribute(Function *F) {
-  F->setAttributes(StripNest(F->getContext(), F->getAttributes()));
+static void RemoveAttribute(Function *F, Attribute::AttrKind A) {
+  F->setAttributes(StripAttr(F->getContext(), F->getAttributes(), A));
   for (User *U : F->users()) {
     if (isa<BlockAddress>(U))
       continue;
     CallSite CS(cast<Instruction>(U));
-    CS.setAttributes(StripNest(F->getContext(), CS.getAttributes()));
+    CS.setAttributes(StripAttr(F->getContext(), CS.getAttributes(), A));
   }
 }
 
@@ -2117,13 +2117,6 @@ static bool hasChangeableCC(Function *F) {
 
   // FIXME: Is it worth transforming x86_stdcallcc and x86_fastcallcc?
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
-    return false;
-
-  // Don't break the invariant that the inalloca parameter is the only parameter
-  // passed in memory.
-  // FIXME: GlobalOpt should remove inalloca when possible and hoist the dynamic
-  // alloca it uses to the entry block if possible.
-  if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca))
     return false;
 
   // FIXME: Change CC for the whole chain of musttail calls when possible.
@@ -2287,6 +2280,17 @@ OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
     if (!F->hasLocalLinkage())
       continue;
 
+    // If we have an inalloca parameter that we can safely remove the
+    // inalloca attribute from, do so. This unlocks optimizations that
+    // wouldn't be safe in the presence of inalloca.
+    // FIXME: We should also hoist alloca affected by this to the entry
+    // block if possible.
+    if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca) &&
+        !F->hasAddressTaken()) {
+      RemoveAttribute(F, Attribute::InAlloca);
+      Changed = true;
+    }
+
     if (hasChangeableCC(F) && !F->isVarArg() && !F->hasAddressTaken()) {
       NumInternalFunc++;
       TargetTransformInfo &TTI = GetTTI(*F);
@@ -2319,7 +2323,7 @@ OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
         !F->hasAddressTaken()) {
       // The function is not used by a trampoline intrinsic, so it is safe
       // to remove the 'nest' attribute.
-      RemoveNestAttribute(F);
+      RemoveAttribute(F, Attribute::Nest);
       ++NumNestRemoved;
       Changed = true;
     }

@@ -19,18 +19,15 @@
 //  When allocating 2^x bytes it should return 2^x aligned chunk.
 // PrimaryAllocator is used via a local AllocatorCache.
 // SecondaryAllocator can allocate anything, but is not efficient.
-template <class PrimaryAllocator, class AllocatorCache,
-          class SecondaryAllocator,
-          typename AddressSpaceViewTy = LocalAddressSpaceView>  // NOLINT
+template <class PrimaryAllocator,
+          class LargeMmapAllocatorPtrArray = DefaultLargeMmapAllocatorPtrArray>
 class CombinedAllocator {
  public:
-  using AddressSpaceView = AddressSpaceViewTy;
-  static_assert(is_same<AddressSpaceView,
-                        typename PrimaryAllocator::AddressSpaceView>::value,
-                "PrimaryAllocator is using wrong AddressSpaceView");
-  static_assert(is_same<AddressSpaceView,
-                        typename SecondaryAllocator::AddressSpaceView>::value,
-                "SecondaryAllocator is using wrong AddressSpaceView");
+  using AllocatorCache = typename PrimaryAllocator::AllocatorCache;
+  using SecondaryAllocator =
+      LargeMmapAllocator<typename PrimaryAllocator::MapUnmapCallback,
+                         LargeMmapAllocatorPtrArray,
+                         typename PrimaryAllocator::AddressSpaceView>;
 
   void InitLinkerInitialized(s32 release_to_os_interval_ms) {
     stats_.InitLinkerInitialized();

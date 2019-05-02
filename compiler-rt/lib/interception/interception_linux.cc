@@ -33,13 +33,7 @@ static int StrCmp(const char *s1, const char *s2) {
 }
 #endif
 
-bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
-    uptr real, uptr wrapper) {
-  *func_addr = (uptr)GetFuncAddr(func_name);
-  return real == wrapper;
-}
-
-void *GetFuncAddr(const char *name) {
+static void *GetFuncAddr(const char *name) {
 #if SANITIZER_NETBSD
   // FIXME: Find a better way to handle renames
   if (StrCmp(name, "sigaction"))
@@ -57,10 +51,24 @@ void *GetFuncAddr(const char *name) {
   return addr;
 }
 
+bool InterceptFunction(const char *name, uptr *ptr_to_real, uptr func,
+                       uptr wrapper) {
+  void *addr = GetFuncAddr(name);
+  *ptr_to_real = (uptr)addr;
+  return addr && (func == wrapper);
+}
+
 // Android and Solaris do not have dlvsym
 #if !SANITIZER_ANDROID && !SANITIZER_SOLARIS && !SANITIZER_OPENBSD
-void *GetFuncAddrVer(const char *name, const char *ver) {
+static void *GetFuncAddr(const char *name, const char *ver) {
   return dlvsym(RTLD_NEXT, name, ver);
+}
+
+bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
+                       uptr func, uptr wrapper) {
+  void *addr = GetFuncAddr(name, ver);
+  *ptr_to_real = (uptr)addr;
+  return addr && (func == wrapper);
 }
 #endif  // !SANITIZER_ANDROID
 

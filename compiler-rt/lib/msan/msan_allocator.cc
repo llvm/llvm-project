@@ -108,10 +108,8 @@ struct AP32 {
 };
 typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #endif
-typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
-typedef LargeMmapAllocator<MsanMapUnmapCallback> SecondaryAllocator;
-typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
-                          SecondaryAllocator> Allocator;
+typedef CombinedAllocator<PrimaryAllocator> Allocator;
+typedef Allocator::AllocatorCache AllocatorCache;
 
 static Allocator allocator;
 static AllocatorCache fallback_allocator_cache;
@@ -259,6 +257,16 @@ void *msan_realloc(void *ptr, uptr size, StackTrace *stack) {
     return nullptr;
   }
   return SetErrnoOnNull(MsanReallocate(stack, ptr, size, sizeof(u64)));
+}
+
+void *msan_reallocarray(void *ptr, uptr nmemb, uptr size, StackTrace *stack) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportReallocArrayOverflow(nmemb, size, stack);
+  }
+  return msan_realloc(ptr, nmemb * size, stack);
 }
 
 void *msan_valloc(uptr size, StackTrace *stack) {

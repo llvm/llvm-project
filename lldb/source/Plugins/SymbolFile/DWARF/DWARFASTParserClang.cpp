@@ -959,6 +959,14 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           }
         }
 
+        if (calling_convention == llvm::dwarf::DW_CC_pass_by_reference) {
+          clang::CXXRecordDecl *record_decl =
+              m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
+          if (record_decl)
+            record_decl->setArgPassingRestrictions(
+                clang::RecordDecl::APK_CannotPassInRegs);
+        }
+
       } break;
 
       case DW_TAG_enumeration_type: {

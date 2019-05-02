@@ -1056,6 +1056,7 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
   // third bullet. If the type of the friend is dependent, skip this lookup
   // until instantiation.
   if (New->getFriendObjectKind() && New->getQualifier() &&
+      !New->getDescribedFunctionTemplate() &&
       !New->getDependentSpecializationInfo() &&
       !New->getType()->isDependentType()) {
     LookupResult TemplateSpecResult(LookupResult::Temporary, Old);

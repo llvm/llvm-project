@@ -19020,33 +19020,38 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
   }
   unsigned LExtIndex = LHS.getConstantOperandVal(1);
   unsigned RExtIndex = RHS.getConstantOperandVal(1);
-  if (LExtIndex == 1 && RExtIndex == 0 &&
+  if ((LExtIndex & 1) == 1 && (RExtIndex & 1) == 0 &&
       (HOpcode == X86ISD::HADD || HOpcode == X86ISD::FHADD))
     std::swap(LExtIndex, RExtIndex);
 
-  // TODO: This can be extended to handle other adjacent extract pairs.
-  if (LExtIndex != 0 || RExtIndex != 1)
+  if ((LExtIndex & 1) != 0 || RExtIndex != (LExtIndex + 1))
     return Op;
 
   SDValue X = LHS.getOperand(0);
   EVT VecVT = X.getValueType();
   unsigned BitWidth = VecVT.getSizeInBits();
+  unsigned NumLanes = BitWidth / 128;
+  unsigned NumEltsPerLane = VecVT.getVectorNumElements() / NumLanes;
   assert((BitWidth == 128 || BitWidth == 256 || BitWidth == 512) &&
          "Not expecting illegal vector widths here");
 
   // Creating a 256-bit horizontal op would be wasteful, and there is no 512-bit
-  // equivalent, so extract the 256/512-bit source op to 128-bit.
-  // This is free: ymm/zmm -> xmm.
+  // equivalent, so extract the 256/512-bit source op to 128-bit if we can.
+  // This is free if we're extracting from the bottom lane: ymm/zmm -> xmm.
+  if (NumEltsPerLane <= LExtIndex)
+   return Op;
+
   SDLoc DL(Op);
   if (BitWidth == 256 || BitWidth == 512)
     X = extract128BitVector(X, 0, DAG, DL);
 
   // add (extractelt (X, 0), extractelt (X, 1)) --> extractelt (hadd X, X), 0
   // add (extractelt (X, 1), extractelt (X, 0)) --> extractelt (hadd X, X), 0
+  // add (extractelt (X, 2), extractelt (X, 3)) --> extractelt (hadd X, X), 1
   // sub (extractelt (X, 0), extractelt (X, 1)) --> extractelt (hsub X, X), 0
   SDValue HOp = DAG.getNode(HOpcode, DL, X.getValueType(), X, X);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op.getSimpleValueType(), HOp,
-                     DAG.getIntPtrConstant(0, DL));
+                     DAG.getIntPtrConstant(LExtIndex / 2, DL));
 }
 
 /// Depending on uarch and/or optimizing for size, we might prefer to use a

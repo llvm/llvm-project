@@ -49,6 +49,7 @@ class Package<string name> {
   // This field is optional.
   list<CmdLineOption> PackageOptions;
   Package             ParentPackage;
+  bit                 Hidden = 0;
 }
 
 /// Describes a 'super' package that holds another package inside it. This is
@@ -91,6 +92,7 @@ class Checker<string name = ""> {
   list<Checker>       Dependencies;
   bits<2>             Documentation;
   Package             ParentPackage;
+  bit                 Hidden = 0;
 }
 
 /// Describes a list of checker options.
@@ -108,3 +110,7 @@ class CheckerOptions<list<CmdLineOption> opts> {
 class Dependencies<list<Checker> Deps = []> {
   list<Checker> Dependencies = Deps;
 }
+
+/// Marks a checker or a package hidden. Hidden entries won't be displayed in
+/// -analyzer-checker-help, which is desirable for alpha or modeling checkers.
+class Hidden { bit Hidden = 1; }

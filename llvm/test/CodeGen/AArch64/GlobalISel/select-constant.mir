@@ -55,9 +55,8 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s32
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1080033280
-    ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
-    ; CHECK: $s0 = COPY [[COPY]]
+    ; CHECK: [[FMOVSi:%[0-9]+]]:fpr32 = FMOVSi 12
+    ; CHECK: $s0 = COPY [[FMOVSi]]
     %0(s32) = G_FCONSTANT float 3.5
     $s0 = COPY %0(s32)
 ...
@@ -72,9 +71,8 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s64
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 4607182418800017408
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY [[MOVi64imm]]
-    ; CHECK: $d0 = COPY [[COPY]]
+    ; CHECK: [[FMOVDi:%[0-9]+]]:fpr64 = FMOVDi 112
+    ; CHECK: $d0 = COPY [[FMOVDi]]
     %0(s64) = G_FCONSTANT double 1.0
     $d0 = COPY %0(s64)
 ...

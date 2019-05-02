@@ -1951,10 +1951,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
   return Function;
 }
 
-Decl *
-TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
-                                      TemplateParameterList *TemplateParams,
-                                      bool IsClassScopeSpecialization) {
+Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
+    CXXMethodDecl *D, TemplateParameterList *TemplateParams,
+    Optional<const ASTTemplateArgumentListInfo *>
+        ClassScopeSpecializationArgs) {
   FunctionTemplateDecl *FunctionTemplate = D->getDescribedFunctionTemplate();
   if (FunctionTemplate && !TemplateParams) {
     // We are creating a function template specialization from a function
@@ -2158,7 +2158,8 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
 
     IsExplicitSpecialization = true;
   } else if (const ASTTemplateArgumentListInfo *Info =
-                 D->getTemplateSpecializationArgsAsWritten()) {
+                 ClassScopeSpecializationArgs.getValueOr(
+                     D->getTemplateSpecializationArgsAsWritten())) {
     SemaRef.LookupQualifiedName(Previous, DC);
 
     TemplateArgumentListInfo ExplicitArgs(Info->getLAngleLoc(),
@@ -2173,6 +2174,14 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
       Method->setInvalidDecl();
 
     IsExplicitSpecialization = true;
+  } else if (ClassScopeSpecializationArgs) {
+    // Class-scope explicit specialization written without explicit template
+    // arguments.
+    SemaRef.LookupQualifiedName(Previous, DC);
+    if (SemaRef.CheckFunctionTemplateSpecialization(Method, nullptr, Previous))
+      Method->setInvalidDecl();
+
+    IsExplicitSpecialization = true;
   } else if (!FunctionTemplate || TemplateParams || isFriend) {
     SemaRef.LookupQualifiedName(Previous, Record);
 
@@ -2184,9 +2193,8 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
       Previous.clear();
   }
 
-  if (!IsClassScopeSpecialization)
-    SemaRef.CheckFunctionDeclaration(nullptr, Method, Previous,
-                                     IsExplicitSpecialization);
+  SemaRef.CheckFunctionDeclaration(nullptr, Method, Previous,
+                                   IsExplicitSpecialization);
 
   if (D->isPure())
     SemaRef.CheckPureMethod(Method, SourceRange());
@@ -2209,6 +2217,12 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
   if (D->isDeletedAsWritten())
     SemaRef.SetDeclDeleted(Method, Method->getLocation());
 
+  // If this is an explicit specialization, mark the implicitly-instantiated
+  // template specialization as being an explicit specialization too.
+  // FIXME: Is this necessary?
+  if (IsExplicitSpecialization && !isFriend)
+    SemaRef.CompleteMemberSpecialization(Method, Previous);
+
   // If there's a function template, let our caller handle it.
   if (FunctionTemplate) {
     // do nothing
@@ -2229,7 +2243,7 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
   // Otherwise, add the declaration.  We don't need to do this for
   // class-scope specializations because we'll have matched them with
   // the appropriate template.
-  } else if (!IsClassScopeSpecialization) {
+  } else {
     Owner->addDecl(Method);
   }
 
@@ -2839,38 +2853,8 @@ Decl *TemplateDeclInstantiator::VisitUsingPackDecl(UsingPackDecl *D) {
 Decl *TemplateDeclInstantiator::VisitClassScopeFunctionSpecializationDecl(
     ClassScopeFunctionSpecializationDecl *Decl) {
   CXXMethodDecl *OldFD = Decl->getSpecialization();
-  CXXMethodDecl *NewFD =
-    cast_or_null<CXXMethodDecl>(VisitCXXMethodDecl(OldFD, nullptr, true));
-  if (!NewFD)
-    return nullptr;
-
-  TemplateArgumentListInfo ExplicitTemplateArgs;
-  TemplateArgumentListInfo *ExplicitTemplateArgsPtr = nullptr;
-  if (Decl->hasExplicitTemplateArgs()) {
-    if (SemaRef.Subst(Decl->templateArgs().getArgumentArray(),
-                      Decl->templateArgs().size(), ExplicitTemplateArgs,
-                      TemplateArgs))
-      return nullptr;
-    ExplicitTemplateArgsPtr = &ExplicitTemplateArgs;
-  }
-
-  LookupResult Previous(SemaRef, NewFD->getNameInfo(), Sema::LookupOrdinaryName,
-                        Sema::ForExternalRedeclaration);
-  SemaRef.LookupQualifiedName(Previous, SemaRef.CurContext);
-  if (SemaRef.CheckFunctionTemplateSpecialization(
-          NewFD, ExplicitTemplateArgsPtr, Previous)) {
-    NewFD->setInvalidDecl();
-    return NewFD;
-  }
-
-  // Associate the specialization with the pattern.
-  FunctionDecl *Specialization = cast<FunctionDecl>(Previous.getFoundDecl());
-  assert(Specialization && "Class scope Specialization is null");
-  SemaRef.Context.setClassScopeSpecializationPattern(Specialization, OldFD);
-
-  // FIXME: If this is a definition, check for redefinition errors!
-
-  return NewFD;
+  return cast_or_null<CXXMethodDecl>(
+      VisitCXXMethodDecl(OldFD, nullptr, Decl->getTemplateArgsAsWritten()));
 }
 
 Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
@@ -4068,9 +4052,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   // Never instantiate an explicit specialization except if it is a class scope
   // explicit specialization.
-  TemplateSpecializationKind TSK = Function->getTemplateSpecializationKind();
-  if (TSK == TSK_ExplicitSpecialization &&
-      !Function->getClassScopeSpecializationPattern())
+  TemplateSpecializationKind TSK =
+      Function->getTemplateSpecializationKindForInstantiation();
+  if (TSK == TSK_ExplicitSpecialization)
     return;
 
   // Find the function body that we'll be substituting.

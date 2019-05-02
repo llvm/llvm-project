@@ -687,22 +687,20 @@ TemplateArgumentList::CreateCopy(ASTContext &Context,
   return new (Mem) TemplateArgumentList(Args);
 }
 
-FunctionTemplateSpecializationInfo *
-FunctionTemplateSpecializationInfo::Create(ASTContext &C, FunctionDecl *FD,
-                                           FunctionTemplateDecl *Template,
-                                           TemplateSpecializationKind TSK,
-                                       const TemplateArgumentList *TemplateArgs,
-                          const TemplateArgumentListInfo *TemplateArgsAsWritten,
-                                           SourceLocation POI) {
+FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
+    ASTContext &C, FunctionDecl *FD, FunctionTemplateDecl *Template,
+    TemplateSpecializationKind TSK, const TemplateArgumentList *TemplateArgs,
+    const TemplateArgumentListInfo *TemplateArgsAsWritten, SourceLocation POI,
+    MemberSpecializationInfo *MSInfo) {
   const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
   if (TemplateArgsAsWritten)
     ArgsAsWritten = ASTTemplateArgumentListInfo::Create(C,
                                                         *TemplateArgsAsWritten);
 
-  return new (C) FunctionTemplateSpecializationInfo(FD, Template, TSK,
-                                                    TemplateArgs,
-                                                    ArgsAsWritten,
-                                                    POI);
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<MemberSpecializationInfo *>(MSInfo ? 1 : 0));
+  return new (Mem) FunctionTemplateSpecializationInfo(
+      FD, Template, TSK, TemplateArgs, ArgsAsWritten, POI, MSInfo);
 }
 
 //===----------------------------------------------------------------------===//
@@ -935,7 +933,7 @@ ClassScopeFunctionSpecializationDecl *
 ClassScopeFunctionSpecializationDecl::CreateDeserialized(ASTContext &C,
                                                          unsigned ID) {
   return new (C, ID) ClassScopeFunctionSpecializationDecl(
-      nullptr, SourceLocation(), nullptr, false, TemplateArgumentListInfo());
+      nullptr, SourceLocation(), nullptr, nullptr);
 }
 
 //===----------------------------------------------------------------------===//
