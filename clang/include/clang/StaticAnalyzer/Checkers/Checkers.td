@@ -20,7 +20,7 @@ include "CheckerBase.td"
 def Alpha : Package<"alpha">;
 
 def Core : Package<"core">;
-def CoreBuiltin : Package<"builtin">, ParentPackage<Core>;
+def CoreBuiltin : Package<"builtin">, ParentPackage<Core>, Hidden;
 def CoreUninitialized  : Package<"uninitialized">, ParentPackage<Core>;
 def CoreAlpha : Package<"core">, ParentPackage<Alpha>;
 
@@ -97,10 +97,10 @@ def LLVMAlpha : Package<"llvm">, ParentPackage<Alpha>;
 // The APIModeling package is for checkers that model APIs and don't perform
 // any diagnostics. These checkers are always turned on; this package is
 // intended for API modeling that is not controlled by the target triple.
-def APIModeling : Package<"apiModeling">;
-def GoogleAPIModeling : Package<"google">, ParentPackage<APIModeling>;
+def APIModeling : Package<"apiModeling">, Hidden;
+def GoogleAPIModeling : Package<"google">, ParentPackage<APIModeling>, Hidden;
 
-def Debug : Package<"debug">;
+def Debug : Package<"debug">, Hidden;
 
 def CloneDetectionAlpha : Package<"clone">, ParentPackage<Alpha>;
 
@@ -141,7 +141,8 @@ def UndefResultChecker : Checker<"UndefinedBinaryOperatorResult">,
 
 def StackAddrEscapeBase : Checker<"StackAddrEscapeBase">,
   HelpText<"Generate information about stack address escapes.">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def StackAddrEscapeChecker : Checker<"StackAddressEscape">,
   HelpText<"Check that addresses to stack memory do not escape the function">,
@@ -154,7 +155,8 @@ def DynamicTypePropagation : Checker<"DynamicTypePropagation">,
 
 def NonnullGlobalConstantsChecker: Checker<"NonnilStringConstants">,
   HelpText<"Assume that const string-like globals are non-null">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 } // end "core"
 
@@ -231,7 +233,8 @@ let ParentPackage = Nullability in {
 
 def NullabilityBase : Checker<"NullabilityBase">,
   HelpText<"Stores information during the analysis about nullability.">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def NullPassedToNonnullChecker : Checker<"NullPassedToNonnull">,
   HelpText<"Warns when a null pointer is passed to a pointer which has a "
@@ -336,7 +339,8 @@ def CStringModeling : Checker<"CStringModeling">,
   HelpText<"The base of several CString related checkers. On it's own it emits "
            "no reports, but adds valuable information to the analysis when "
            "enabled.">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def CStringNullArg : Checker<"NullArg">,
   HelpText<"Check for null pointers being passed as arguments to C string "
@@ -390,7 +394,8 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "false">
   ]>,
   Dependencies<[CStringModeling]>,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def MallocChecker: Checker<"Malloc">,
   HelpText<"Check for memory leaks, double free, and use-after-free problems. "
@@ -462,11 +467,13 @@ def NewDeleteLeaksChecker : Checker<"NewDeleteLeaks">,
 
 def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
   HelpText<"Checks C++ copy and move assignment operators for self assignment">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def SmartPtrModeling: Checker<"SmartPtr">,
   HelpText<"Model behavior of C++ smart pointers">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def MoveChecker: Checker<"Move">,
   HelpText<"Find use-after-move bugs in C++">,
@@ -559,7 +566,8 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
 
 def IteratorModeling : Checker<"IteratorModeling">,
   HelpText<"Models iterators of C++ containers">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def InvalidatedIteratorChecker : Checker<"InvalidatedIterator">,
   HelpText<"Check for use of invalidated iterators">,
@@ -588,7 +596,8 @@ let ParentPackage = Valist in {
 
 def ValistBase : Checker<"ValistBase">,
   HelpText<"Gathers information about va_lists.">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def UninitializedChecker : Checker<"Uninitialized">,
   HelpText<"Check for usages of uninitialized (or already released) va_lists.">,
@@ -655,7 +664,8 @@ let ParentPackage = InsecureAPI in {
 
 def SecuritySyntaxChecker : Checker<"SecuritySyntaxChecker">,
   HelpText<"Base of various security function related checkers">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def bcmp : Checker<"bcmp">,
   HelpText<"Warn on uses of the 'bcmp' function">,
@@ -787,7 +797,8 @@ let ParentPackage = Cocoa in {
 
 def RetainCountBase : Checker<"RetainCountBase">,
   HelpText<"Common base of various retain count related checkers">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 } // end "osx.cocoa"
 
@@ -795,7 +806,8 @@ let ParentPackage = OSX in {
 
 def NSOrCFErrorDerefChecker : Checker<"NSOrCFErrorDerefChecker">,
   HelpText<"Implementation checker for NSErrorChecker and CFErrorChecker">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
   HelpText<"Check for erroneous conversions of objects representing numbers "
@@ -962,7 +974,8 @@ def IvarInvalidationModeling : Checker<"IvarInvalidationModeling">,
   HelpText<"Gathers information for annotation driven invalidation checking "
            "for classes that contains a method annotated with "
            "'objc_instance_variable_invalidator'">,
-  Documentation<NotDocumented>;
+  Documentation<NotDocumented>,
+  Hidden;
 
 def InstanceVariableInvalidation : Checker<"InstanceVariableInvalidation">,
   HelpText<"Check that the invalidatable instance variables are invalidated in "

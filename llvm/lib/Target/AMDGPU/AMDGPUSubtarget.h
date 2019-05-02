@@ -443,6 +443,8 @@ public:
     return MaxPrivateElementSize;
   }
 
+  unsigned getConstantBusLimit(unsigned Opcode) const;
+
   bool hasIntClamp() const {
     return HasIntClamp;
   }

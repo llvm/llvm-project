@@ -1424,7 +1424,8 @@ void CHR::sortScopes(SmallVectorImpl<CHRScope *> &Input,
 static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
                        HoistStopMapTy &HoistStopMap,
                        DenseSet<Instruction *> &HoistedSet,
-                       DenseSet<PHINode *> &TrivialPHIs) {
+                       DenseSet<PHINode *> &TrivialPHIs,
+                       DominatorTree &DT) {
   auto IT = HoistStopMap.find(R);
   assert(IT != HoistStopMap.end() && "Region must be in hoist stop map");
   DenseSet<Instruction *> &HoistStops = IT->second;
@@ -1444,8 +1445,21 @@ static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
       // Already hoisted, return.
       return;
     assert(isHoistableInstructionType(I) && "Unhoistable instruction type");
+    assert(DT.getNode(I->getParent()) && "DT must contain I's block");
+    assert(DT.getNode(HoistPoint->getParent()) &&
+           "DT must contain HoistPoint block");
+    if (DT.dominates(I, HoistPoint))
+      // We are already above the hoist point. Stop here. This may be necessary
+      // when multiple scopes would independently hoist the same
+      // instruction. Since an outer (dominating) scope would hoist it to its
+      // entry before an inner (dominated) scope would to its entry, the inner
+      // scope may see the instruction already hoisted, in which case it
+      // potentially wrong for the inner scope to hoist it and could cause bad
+      // IR (non-dominating def), but safe to skip hoisting it instead because
+      // it's already in a block that dominates the inner scope.
+      return;
     for (Value *Op : I->operands()) {
-      hoistValue(Op, HoistPoint, R, HoistStopMap, HoistedSet, TrivialPHIs);
+      hoistValue(Op, HoistPoint, R, HoistStopMap, HoistedSet, TrivialPHIs, DT);
     }
     I->moveBefore(HoistPoint);
     HoistedSet.insert(I);
@@ -1456,7 +1470,8 @@ static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
 // Hoist the dependent condition values of the branches and the selects in the
 // scope to the insert point.
 static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
-                                 DenseSet<PHINode *> &TrivialPHIs) {
+                                 DenseSet<PHINode *> &TrivialPHIs,
+                                 DominatorTree &DT) {
   DenseSet<Instruction *> HoistedSet;
   for (const RegInfo &RI : Scope->CHRRegions) {
     Region *R = RI.R;
@@ -1465,7 +1480,7 @@ static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
     if (RI.HasBranch && (IsTrueBiased || IsFalseBiased)) {
       auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
       hoistValue(BI->getCondition(), HoistPoint, R, Scope->HoistStopMap,
-                 HoistedSet, TrivialPHIs);
+                 HoistedSet, TrivialPHIs, DT);
     }
     for (SelectInst *SI : RI.Selects) {
       bool IsTrueBiased = Scope->TrueBiasedSelects.count(SI);
@@ -1473,7 +1488,7 @@ static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
       if (!(IsTrueBiased || IsFalseBiased))
         continue;
       hoistValue(SI->getCondition(), HoistPoint, R, Scope->HoistStopMap,
-                 HoistedSet, TrivialPHIs);
+                 HoistedSet, TrivialPHIs, DT);
     }
   }
 }
@@ -1707,7 +1722,7 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
 #endif
 
   // Hoist the conditional values of the branches/selects.
-  hoistScopeConditions(Scope, PreEntryBlock->getTerminator(), TrivialPHIs);
+  hoistScopeConditions(Scope, PreEntryBlock->getTerminator(), TrivialPHIs, DT);
 
 #ifndef NDEBUG
   assertBranchOrSelectConditionHoisted(Scope, PreEntryBlock);

@@ -14859,7 +14859,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // Implicit instantiation of function templates and member functions of
   // class templates.
   if (Func->isImplicitlyInstantiable()) {
-    TemplateSpecializationKind TSK = Func->getTemplateSpecializationKind();
+    TemplateSpecializationKind TSK =
+        Func->getTemplateSpecializationKindForInstantiation();
     SourceLocation PointOfInstantiation = Func->getPointOfInstantiation();
     bool FirstInstantiation = PointOfInstantiation.isInvalid();
     if (FirstInstantiation) {

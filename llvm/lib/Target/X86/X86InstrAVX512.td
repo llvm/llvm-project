@@ -2651,7 +2651,7 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr,
 //                                  fpclass(reg_vec, broadcast(eltVt), imm)
 multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                                  X86FoldableSchedWrite sched, X86VectorVTInfo _,
-                                 string mem, string broadcast>{
+                                 string mem>{
   let ExeDomain = _.ExeDomain in {
   def rr : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
                       (ins _.RC:$src1, i32u8imm:$src2),
@@ -2685,7 +2685,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                     EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmb : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.ScalarMemOp:$src1, i32u8imm:$src2),
-                    OpcodeStr##_.Suffix##broadcast##"\t{$src2, ${src1}"##
+                    OpcodeStr##_.Suffix##"\t{$src2, ${src1}"##
                                       _.BroadcastStr##", $dst|$dst, ${src1}"
                                                   ##_.BroadcastStr##", $src2}",
                     [(set _.KRC:$dst,(X86Vfpclass
@@ -2695,7 +2695,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                     EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmbk : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.KRCWM:$mask, _.ScalarMemOp:$src1, i32u8imm:$src2),
-                    OpcodeStr##_.Suffix##broadcast##"\t{$src2, ${src1}"##
+                    OpcodeStr##_.Suffix##"\t{$src2, ${src1}"##
                           _.BroadcastStr##", $dst {${mask}}|$dst {${mask}}, ${src1}"##
                                                    _.BroadcastStr##", $src2}",
                     [(set _.KRC:$dst,(and _.KRCWM:$mask, (X86Vfpclass_su
@@ -2708,16 +2708,16 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
 
 multiclass avx512_vector_fpclass_all<string OpcodeStr, AVX512VLVectorVTInfo _,
                                      bits<8> opc, X86SchedWriteWidths sched,
-                                     Predicate prd, string broadcast>{
+                                     Predicate prd>{
   let Predicates = [prd] in {
     defm Z    : avx512_vector_fpclass<opc, OpcodeStr, sched.ZMM,
-                                      _.info512, "{z}", broadcast>, EVEX_V512;
+                                      _.info512, "{z}">, EVEX_V512;
   }
   let Predicates = [prd, HasVLX] in {
     defm Z128 : avx512_vector_fpclass<opc, OpcodeStr, sched.XMM,
-                                      _.info128, "{x}", broadcast>, EVEX_V128;
+                                      _.info128, "{x}">, EVEX_V128;
     defm Z256 : avx512_vector_fpclass<opc, OpcodeStr, sched.YMM,
-                                      _.info256, "{y}", broadcast>, EVEX_V256;
+                                      _.info256, "{y}">, EVEX_V256;
   }
 }
 
@@ -2725,10 +2725,10 @@ multiclass avx512_fp_fpclass_all<string OpcodeStr, bits<8> opcVec,
                                  bits<8> opcScalar, X86SchedWriteWidths sched,
                                  Predicate prd> {
   defm PS : avx512_vector_fpclass_all<OpcodeStr,  avx512vl_f32_info, opcVec,
-                                      sched, prd, "{l}">,
+                                      sched, prd>,
                                       EVEX_CD8<32, CD8VF>;
   defm PD : avx512_vector_fpclass_all<OpcodeStr,  avx512vl_f64_info, opcVec,
-                                      sched, prd, "{q}">,
+                                      sched, prd>,
                                       EVEX_CD8<64, CD8VF> , VEX_W;
   defm SSZ : avx512_scalar_fpclass<opcScalar, OpcodeStr,
                                    sched.Scl, f32x_info, prd>, VEX_LIG,

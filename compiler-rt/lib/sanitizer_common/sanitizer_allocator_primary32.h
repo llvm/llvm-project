@@ -216,7 +216,7 @@ class SizeClassAllocator32 {
     return ClassIdToSize(GetSizeClass(p));
   }
 
-  uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
+  static uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
 
   uptr TotalMemoryUsed() {
     // No need to lock here.
@@ -282,7 +282,7 @@ class SizeClassAllocator32 {
   };
   COMPILER_CHECK(sizeof(SizeClassInfo) % kCacheLineSize == 0);
 
-  uptr ComputeRegionId(uptr mem) {
+  uptr ComputeRegionId(uptr mem) const {
     if (SANITIZER_SIGN_EXTENDED_ADDRESSES)
       mem &= (kSpaceSize - 1);
     const uptr res = mem >> kRegionSizeLog;

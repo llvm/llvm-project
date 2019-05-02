@@ -118,6 +118,12 @@ private:
                                      unsigned VecReg, unsigned LaneIdx,
                                      MachineIRBuilder &MIRBuilder) const;
 
+  /// Helper function for selecting G_FCONSTANT. If the G_FCONSTANT can be
+  /// materialized using a FMOV instruction, then update MI and return it.
+  /// Otherwise, do nothing and return a nullptr.
+  MachineInstr *emitFMovForFConstant(MachineInstr &MI,
+                                     MachineRegisterInfo &MRI) const;
+
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
 
   ComplexRendererFns selectAddrModeUnscaled(MachineOperand &Root,
@@ -1178,14 +1184,18 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     const unsigned MovOpc =
         DefSize == 32 ? AArch64::MOVi32imm : AArch64::MOVi64imm;
 
-    I.setDesc(TII.get(MovOpc));
-
     if (isFP) {
+      // Either emit a FMOV, or emit a copy to emit a normal mov.
       const TargetRegisterClass &GPRRC =
           DefSize == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
       const TargetRegisterClass &FPRRC =
           DefSize == 32 ? AArch64::FPR32RegClass : AArch64::FPR64RegClass;
 
+      // Can we use a FMOV instruction to represent the immediate?
+      if (emitFMovForFConstant(I, MRI))
+        return true;
+
+      // Nope. Emit a copy and use a normal mov instead.
       const unsigned DefGPRReg = MRI.createVirtualRegister(&GPRRC);
       MachineOperand &RegOp = I.getOperand(0);
       RegOp.setReg(DefGPRReg);
@@ -1209,6 +1219,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       I.getOperand(1).ChangeToImmediate(Val);
     }
 
+    I.setDesc(TII.get(MovOpc));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
@@ -2714,6 +2725,39 @@ MachineInstr *AArch64InstructionSelector::emitVectorConcat(
           .addImm(0);
   constrainSelectedInstRegOperands(*InsElt, TII, TRI, RBI);
   return &*InsElt;
+}
+
+MachineInstr *AArch64InstructionSelector::emitFMovForFConstant(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_FCONSTANT &&
+         "Expected a G_FCONSTANT!");
+  MachineOperand &ImmOp = I.getOperand(1);
+  unsigned DefSize = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
+
+  // Only handle 32 and 64 bit defs for now.
+  if (DefSize != 32 && DefSize != 64)
+    return nullptr;
+
+  // Don't handle null values using FMOV.
+  if (ImmOp.getFPImm()->isNullValue())
+    return nullptr;
+
+  // Get the immediate representation for the FMOV.
+  const APFloat &ImmValAPF = ImmOp.getFPImm()->getValueAPF();
+  int Imm = DefSize == 32 ? AArch64_AM::getFP32Imm(ImmValAPF)
+                          : AArch64_AM::getFP64Imm(ImmValAPF);
+
+  // If this is -1, it means the immediate can't be represented as the requested
+  // floating point value. Bail.
+  if (Imm == -1)
+    return nullptr;
+
+  // Update MI to represent the new FMOV instruction, constrain it, and return.
+  ImmOp.ChangeToImmediate(Imm);
+  unsigned MovOpc = DefSize == 32 ? AArch64::FMOVSi : AArch64::FMOVDi;
+  I.setDesc(TII.get(MovOpc));
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  return &I;
 }
 
 bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {

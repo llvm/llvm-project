@@ -43,7 +43,7 @@ At offset 0 of the DBI Stream is a header with the following layout:
     int32_t SectionContributionSize;
     int32_t SectionMapSize;
     int32_t SourceInfoSize;
-    int32_t TypeServerSize;
+    int32_t TypeServerMapSize;
     uint32_t MFCTypeServerIndex;
     int32_t OptionalDbgHeaderSize;
     int32_t ECSubstreamSize;
@@ -105,7 +105,8 @@ further guidance.
   
 - **PdbDllRbld** - Unknown
 
-- **MFCTypeServerIndex** - The length of the :ref:dbi_mfc_type_server_substream
+- **MFCTypeServerIndex** - The index of the MFC type server in the
+  :ref:`dbi_type_server_map_substream`.
 
 - **Flags** - A bitfield with the following layout, containing various
   information about how the program was built:
@@ -141,7 +142,7 @@ of each of the following ``7`` fields.
 
 - **SourceInfoSize** - The length of the :ref:`dbi_file_info_substream`.
 
-- **TypeServerSize** - The length of the :ref:`dbi_type_server_substream`. 
+- **TypeServerMapSize** - The length of the :ref:`dbi_type_server_map_substream`.
 
 - **OptionalDbgHeaderSize** - The length of the :ref:`dbi_optional_dbg_stream`.
 
@@ -381,22 +382,24 @@ each integer is an offset into **NamesBuffer** pointing to a null terminated str
 **NamesBuffer** - An array of null terminated strings containing the actual source
 file names.
 
-.. _dbi_type_server_substream:
+.. _dbi_type_server_map_substream:
 
-Type Server Substream
-^^^^^^^^^^^^^^^^^^^^^
-Begins at offset ``0`` immediately after the :ref:`dbi_file_info_substream` ends,
-and consumes ``Header->TypeServerSize`` bytes.  Neither the purpose nor the layout
-of this substream is understood, although it is assumed to related somehow to the
-usage of ``/Zi`` and ``mspdbsrv.exe``.  This substream will not be discussed further.
+Type Server Map Substream
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Begins at offset ``0`` immediately after the :ref:`dbi_file_info_substream`
+ends, and consumes ``Header->TypeServerMapSize`` bytes.  Neither the purpose
+nor the layout of this substream is understood, although it is assumed to
+related somehow to the usage of ``/Zi`` and ``mspdbsrv.exe``.  This substream
+will not be discussed further.
 
 .. _dbi_ec_substream:
 
 EC Substream
 ^^^^^^^^^^^^
-Begins at offset ``0`` immediately after the :ref:`dbi_type_server_substream` ends,
-and consumes ``Header->ECSubstreamSize`` bytes.  This is presumed to be related to
-Edit & Continue support in MSVC.  LLVM does not support Edit & Continue, so this
+Begins at offset ``0`` immediately after the
+:ref:`dbi_type_server_map_substream` ends, and consumes
+``Header->ECSubstreamSize`` bytes.  This is presumed to be related to Edit &
+Continue support in MSVC.  LLVM does not support Edit & Continue, so this
 stream will not be discussed further.
 
 .. _dbi_optional_dbg_stream:

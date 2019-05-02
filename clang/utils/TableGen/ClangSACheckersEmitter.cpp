@@ -110,6 +110,16 @@ static std::string getCheckerOptionType(const Record &R) {
   return "";
 }
 
+static bool isHidden(const Record *R) {
+  if (R->getValueAsBit("Hidden"))
+    return true;
+  // Not declared as hidden, check the parent package if it is hidden.
+  if (DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
+    return isHidden(DI->getDef());
+
+  return false;
+}
+
 static void printChecker(llvm::raw_ostream &OS, const Record &R) {
     OS << "CHECKER(" << "\"";
     OS.write_escaped(getCheckerFullName(&R)) << "\", ";
@@ -118,7 +128,14 @@ static void printChecker(llvm::raw_ostream &OS, const Record &R) {
     OS.write_escaped(getStringValue(R, "HelpText")) << "\", ";
     OS << "\"";
     OS.write_escaped(getCheckerDocs(R));
-    OS << "\"";
+    OS << "\", ";
+
+    if (!isHidden(&R))
+      OS << "false";
+    else
+      OS << "true";
+
+    OS << ")\n";
 }
 
 namespace clang {
@@ -206,7 +223,6 @@ void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
         "\n";
   for (const Record *checker : checkers) {
     printChecker(OS, *checker);
-    OS << ")\n";
   }
   OS << "\n"
         "#endif // GET_CHECKERS\n"

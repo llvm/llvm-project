@@ -7,7 +7,7 @@ v_add_f32_e64 v0, v1
 // GCN: error: too few operands for instruction
 
 v_div_scale_f32  v24, vcc, v22, 1.1, v22
-// GCN: error: invalid operand for instruction
+// GCN: error: invalid literal operand
 
 v_mqsad_u32_u8 v[0:3], s[2:3], v4, v[0:3]
 // GFX67: error: instruction not supported on this GPU

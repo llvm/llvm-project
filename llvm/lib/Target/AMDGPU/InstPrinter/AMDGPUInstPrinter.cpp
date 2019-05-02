@@ -618,6 +618,14 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_FP16:
       printImmediate16(Op.getImm(), STI, O);
       break;
+    case AMDGPU::OPERAND_REG_IMM_V2INT16:
+    case AMDGPU::OPERAND_REG_IMM_V2FP16:
+      if (!isUInt<16>(Op.getImm()) &&
+          STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal]) {
+        printImmediate32(Op.getImm(), STI, O);
+        break;
+      }
+      LLVM_FALLTHROUGH;
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
       printImmediateV216(Op.getImm(), STI, O);

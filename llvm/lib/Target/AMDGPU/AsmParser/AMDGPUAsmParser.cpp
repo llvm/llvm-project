@@ -236,7 +236,7 @@ public:
   }
 
   bool isRegOrImmWithInputMods(unsigned RCID, MVT type) const {
-    return isRegClass(RCID) || isInlinableImm(type);
+    return isRegClass(RCID) || isInlinableImm(type) || isLiteralImm(type);
   }
 
   bool isRegOrImmWithInt16InputMods() const {
@@ -461,7 +461,7 @@ public:
   }
 
   bool isVSrcB32() const {
-    return isVCSrcF32() || isLiteralImm(MVT::i32) || isExpr();
+    return isVCSrcF32() || isLiteralImm(MVT::i32);
   }
 
   bool isVSrcB64() const {
@@ -473,12 +473,11 @@ public:
   }
 
   bool isVSrcV2B16() const {
-    llvm_unreachable("cannot happen");
-    return isVSrcB16();
+    return isVSrcB16() || isLiteralImm(MVT::v2i16);
   }
 
   bool isVSrcF32() const {
-    return isVCSrcF32() || isLiteralImm(MVT::f32) || isExpr();
+    return isVCSrcF32() || isLiteralImm(MVT::f32);
   }
 
   bool isVSrcF64() const {
@@ -490,8 +489,7 @@ public:
   }
 
   bool isVSrcV2F16() const {
-    llvm_unreachable("cannot happen");
-    return isVSrcF16();
+    return isVSrcF16() || isLiteralImm(MVT::v2f16);
   }
 
   bool isKImmFP32() const {
@@ -1145,6 +1143,7 @@ private:
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst);
   bool validateLdsDirect(const MCInst &Inst);
+  bool validateVOP3Literal(const MCInst &Inst) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
   unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
@@ -1287,6 +1286,8 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
     return &APFloat::IEEEhalf();
   default:
     llvm_unreachable("unsupported fp type");
@@ -1419,8 +1420,14 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
     return false;
   }
 
+  // We allow fp literals with f16x2 operands assuming that the specified
+  // literal goes into the lower half and the upper half is zero. We also
+  // require that the literal may be losslesly converted to f16.
+  MVT ExpectedType = (type == MVT::v2f16)? MVT::f16 :
+                     (type == MVT::v2i16)? MVT::i16 : type;
+
   APFloat FPLiteral(APFloat::IEEEdouble(), APInt(64, Imm.Val));
-  return canLosslesslyConvertToFPType(FPLiteral, type);
+  return canLosslesslyConvertToFPType(FPLiteral, ExpectedType);
 }
 
 bool AMDGPUOperand::isRegClass(unsigned RCID) const {
@@ -1535,7 +1542,9 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-    case AMDGPU::OPERAND_REG_INLINE_C_V2FP16: {
+    case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    case AMDGPU::OPERAND_REG_IMM_V2INT16:
+    case AMDGPU::OPERAND_REG_IMM_V2FP16: {
       bool lost;
       APFloat FPLiteral(APFloat::IEEEdouble(), Literal);
       // Convert literal to single precision
@@ -1562,6 +1571,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
     if (isSafeTruncation(Val, 32) &&
         AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Val),
                                      AsmParser->hasInv2PiInlineImm())) {
@@ -2419,7 +2430,9 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
   case 2: {
     const unsigned OperandType = Desc.OpInfo[OpIdx].OperandType;
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2INT16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16) {
+        OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_V2INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16) {
       return AMDGPU::isInlinableLiteralV216(Val, hasInv2PiInlineImm());
     } else {
       return AMDGPU::isInlinableLiteral16(Val, hasInv2PiInlineImm());
@@ -2443,6 +2456,8 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
   const unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
   unsigned ConstantBusUseCount = 0;
+  unsigned NumLiterals = 0;
+  unsigned LiteralSize;
 
   if (Desc.TSFlags &
       (SIInstrFlags::VOPC |
@@ -2454,8 +2469,10 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
       ++ConstantBusUseCount;
     }
 
+    SmallDenseSet<unsigned> SGPRsUsed;
     unsigned SGPRUsed = findImplicitSGPRReadInVOP(Inst);
     if (SGPRUsed != AMDGPU::NoRegister) {
+      SGPRsUsed.insert(SGPRUsed);
       ++ConstantBusUseCount;
     }
 
@@ -2478,16 +2495,42 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
           //   flat_scratch_lo, flat_scratch_hi
           // are theoretically valid but they are disabled anyway.
           // Note that this code mimics SIInstrInfo::verifyInstruction
-          if (Reg != SGPRUsed) {
+          if (!SGPRsUsed.count(Reg)) {
+            SGPRsUsed.insert(Reg);
             ++ConstantBusUseCount;
           }
           SGPRUsed = Reg;
         } else { // Expression or a literal
-          ++ConstantBusUseCount;
+
+          if (Desc.OpInfo[OpIdx].OperandType == MCOI::OPERAND_IMMEDIATE)
+            continue; // special operand like VINTERP attr_chan
+
+          // An instruction may use only one literal.
+          // This has been validated on the previous step.
+          // See validateVOP3Literal.
+          // This literal may be used as more than one operand.
+          // If all these operands are of the same size,
+          // this literal counts as one scalar value.
+          // Otherwise it counts as 2 scalar values.
+          // See "GFX10 Shader Programming", section 3.6.2.3.
+
+          unsigned Size = AMDGPU::getOperandSize(Desc, OpIdx);
+          if (Size < 4) Size = 4;
+
+          if (NumLiterals == 0) {
+            NumLiterals = 1;
+            LiteralSize = Size;
+          } else if (LiteralSize != Size) {
+            NumLiterals = 2;
+          }
         }
       }
     }
   }
+  ConstantBusUseCount += NumLiterals;
+
+  if (isGFX10())
+    return ConstantBusUseCount <= 2;
 
   return ConstantBusUseCount <= 1;
 }
@@ -2889,6 +2932,42 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
   return NumLiterals <= 1;
 }
 
+// VOP3 literal is only allowed in GFX10+ and only one can be used
+bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
+  unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opcode);
+  if (!(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P)))
+    return true;
+
+  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
+  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
+  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+
+  const int OpIndices[] = { Src0Idx, Src1Idx, Src2Idx };
+
+  unsigned NumLiterals = 0;
+  uint32_t LiteralValue;
+
+  for (int OpIdx : OpIndices) {
+    if (OpIdx == -1) break;
+
+    const MCOperand &MO = Inst.getOperand(OpIdx);
+    if (!MO.isImm() || !AMDGPU::isSISrcOperand(Desc, OpIdx))
+      continue;
+
+    if (!isInlineConstant(Inst, OpIdx)) {
+      uint32_t Value = static_cast<uint32_t>(MO.getImm());
+      if (NumLiterals == 0 || LiteralValue != Value) {
+        LiteralValue = Value;
+        ++NumLiterals;
+      }
+    }
+  }
+
+  return !NumLiterals ||
+         (NumLiterals == 1 && getFeatureBits()[AMDGPU::FeatureVOP3Literal]);
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc) {
   if (!validateLdsDirect(Inst)) {
@@ -2899,6 +2978,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateSOPLiteral(Inst)) {
     Error(IDLoc,
       "only one literal operand is allowed");
+    return false;
+  }
+  if (!validateVOP3Literal(Inst)) {
+    Error(IDLoc,
+      "invalid literal operand");
     return false;
   }
   if (!validateConstantBusLimitations(Inst)) {

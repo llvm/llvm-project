@@ -21,6 +21,8 @@ namespace __sanitizer {
 
 void NORETURN ReportCallocOverflow(uptr count, uptr size,
                                    const StackTrace *stack);
+void NORETURN ReportReallocArrayOverflow(uptr count, uptr size,
+                                         const StackTrace *stack);
 void NORETURN ReportPvallocOverflow(uptr size, const StackTrace *stack);
 void NORETURN ReportInvalidAllocationAlignment(uptr alignment,
                                                const StackTrace *stack);

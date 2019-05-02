@@ -404,8 +404,13 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_task_reduction_get_th_data   269
 # USED FOR 4.5 __kmpc_critical_with_hint    270
         __kmpc_get_target_offload           271
-	__kmpc_omp_reg_task_with_affinity   272
-	__kmpc_pause_resource               273
+        __kmpc_omp_reg_task_with_affinity   272
+        __kmpc_pause_resource               273
+        __kmpc_task_reduction_modifier_init 274
+        __kmpc_task_reduction_modifier_fini 275
+      # __kmpc_task_allow_completion_event  276
+        __kmpc_taskred_init                 277
+        __kmpc_taskred_modifier_init        278
     %endif
 %endif
 

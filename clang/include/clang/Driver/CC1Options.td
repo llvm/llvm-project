@@ -107,7 +107,7 @@ def analyzer_checker : Separate<["-"], "analyzer-checker">,
   ValuesCode<[{
     const char *Values =
     #define GET_CHECKERS
-    #define CHECKER(FULLNAME, CLASS, HT, DOC_URI)  FULLNAME ","
+    #define CHECKER(FULLNAME, CLASS, HT, DOC_URI, IS_HIDDEN)  FULLNAME ","
     #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
     #undef GET_CHECKERS
     #define GET_PACKAGES
@@ -129,6 +129,10 @@ def analyzer_disable_all_checks : Flag<["-"], "analyzer-disable-all-checks">,
 
 def analyzer_checker_help : Flag<["-"], "analyzer-checker-help">,
   HelpText<"Display the list of analyzer checkers that are available">;
+
+def analyzer_checker_help_hidden : Flag<["-"], "analyzer-checker-help-hidden">,
+  HelpText<"Display the list of analyzer checkers that are available, "
+           "including modeling checkers">;
 
 def analyzer_config_help : Flag<["-"], "analyzer-config-help">,
   HelpText<"Display the list of -analyzer-config options">;

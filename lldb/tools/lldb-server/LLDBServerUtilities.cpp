@@ -8,7 +8,6 @@
 
 #include "LLDBServerUtilities.h"
 
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"

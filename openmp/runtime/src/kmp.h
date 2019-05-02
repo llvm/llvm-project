@@ -2682,6 +2682,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   std::atomic<int> t_construct; // count of single directive encountered by team
   char pad[sizeof(kmp_lock_t)]; // padding to maintain performance on big iron
 
+  // [0] - parallel / [1] - worksharing task reduction data shared by taskgroups
+  std::atomic<void *> t_tg_reduce_data[2]; // to support task modifier
+  std::atomic<int> t_tg_fini_counter[2]; // sync end of task reductions
+
   // Master only
   // ---------------------------------------------------------------------------
   KMP_ALIGN_CACHE int t_master_tid; // tid of master in parent team
@@ -3818,7 +3822,15 @@ KMP_EXPORT void __kmpc_taskloop(ident_t *loc, kmp_int32 gtid, kmp_task_t *task,
 #endif
 #if OMP_50_ENABLED
 KMP_EXPORT void *__kmpc_task_reduction_init(int gtid, int num_data, void *data);
+KMP_EXPORT void *__kmpc_taskred_init(int gtid, int num_data, void *data);
 KMP_EXPORT void *__kmpc_task_reduction_get_th_data(int gtid, void *tg, void *d);
+KMP_EXPORT void *__kmpc_task_reduction_modifier_init(ident_t *loc, int gtid,
+                                                     int is_ws, int num,
+                                                     void *data);
+KMP_EXPORT void *__kmpc_taskred_modifier_init(ident_t *loc, int gtid, int is_ws,
+                                              int num, void *data);
+KMP_EXPORT void __kmpc_task_reduction_modifier_fini(ident_t *loc, int gtid,
+                                                    int is_ws);
 KMP_EXPORT kmp_int32 __kmpc_omp_reg_task_with_affinity(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 naffins,
     kmp_task_affinity_info_t *affin_list);

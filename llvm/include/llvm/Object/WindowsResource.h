@@ -120,6 +120,7 @@ private:
                                            const WindowsResource *Owner);
 
   BinaryStreamReader Reader;
+  const WindowsResource *Owner;
   bool IsStringType;
   ArrayRef<UTF16> Type;
   uint16_t TypeID;
