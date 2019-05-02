@@ -238,7 +238,6 @@ def M4WriteNEONK   : SchedWriteRes<[M4UnitNSHF,
                                     M4UnitS0]>    { let Latency = 5;
                                                     let NumMicroOps = 2; }
 def M4WriteNEONL   : SchedWriteRes<[M4UnitNMUL]>  { let Latency = 3; }
-def M4WriteNEONM   : SchedWriteRes<[M4UnitNMUL]>  { let Latency = 3; }
 def M4WriteNEONN   : SchedWriteRes<[M4UnitNMSC,
                                     M4UnitNMSC]>  { let Latency = 5;
                                                     let NumMicroOps = 2; }
@@ -479,8 +478,6 @@ def M4WriteCOPY    : SchedWriteVariant<[SchedVar<ExynosFPPred, [M4WriteNALU1]>,
                                         SchedVar<NoSchedPred,  [M4WriteZ0]>]>;
 def M4WriteMOVI    : SchedWriteVariant<[SchedVar<IsZeroFPIdiomPred, [M4WriteZ0]>,
                                         SchedVar<NoSchedPred,       [M4WriteNALU1]>]>;
-def M4WriteMULL    : SchedWriteVariant<[SchedVar<ExynosLongVectorUpperPred, [M4WriteNEONM]>,
-                                        SchedVar<NoSchedPred,               [M4WriteNMUL3]>]>;
 
 // Fast forwarding.
 def M4ReadAESM1    : SchedReadAdvance<+1, [M4WriteNCRY1]>;
@@ -488,7 +485,8 @@ def M4ReadFMACM1   : SchedReadAdvance<+1, [M4WriteFMAC4,
                                            M4WriteFMAC4H,
                                            M4WriteFMAC5]>;
 def M4ReadNMULM1   : SchedReadAdvance<+1, [M4WriteNMUL3]>;
-def M4ReadMULLP2   : SchedReadAdvance<-2, [M4WriteNEONM]>;
+def M4ReadNMULP2   : SchedReadAdvance<-2, [M4WriteNMUL3]>;
+
 
 //===----------------------------------------------------------------------===//
 // Coarse scheduling model.
@@ -661,10 +659,8 @@ def : InstRW<[M4WriteNEONK],  (instregex "^FMOVDXHighr")>;
 def : InstRW<[M4WriteFCVT3H], (instregex "^F(RECP|RSQRT)Ev1f16")>;
 def : InstRW<[M4WriteFCVT3],  (instregex "^F(RECP|RSQRT)Ev1i(32|64)")>;
 def : InstRW<[M4WriteNMSC1],  (instregex "^FRECPXv1")>;
-def : InstRW<[M4WriteFMAC4H,
-              M4ReadFMACM1],  (instregex "^F(RECP|RSQRT)S16")>;
-def : InstRW<[M4WriteFMAC4,
-              M4ReadFMACM1],  (instregex "^F(RECP|RSQRT)S(32|64)")>;
+def : InstRW<[M4WriteFMAC4H], (instregex "^F(RECP|RSQRT)S16")>;
+def : InstRW<[M4WriteFMAC4],  (instregex "^F(RECP|RSQRT)S(32|64)")>;
 
 // FP load instructions.
 def : InstRW<[WriteVLD],    (instregex "^LDR[SDQ]l")>;
@@ -735,14 +731,20 @@ def : InstRW<[M4WriteNALU1],  (instregex "^(AND|BIC|EOR|NOT|ORN|ORR)v")>;
 def : InstRW<[M4WriteNMSC1],  (instregex "^[SU](MIN|MAX)v")>;
 def : InstRW<[M4WriteNMSC2],  (instregex "^[SU](MIN|MAX)Pv")>;
 def : InstRW<[M4WriteNHAD3],  (instregex "^[SU](MIN|MAX)Vv")>;
-def : InstRW<[M4WriteNMUL3],  (instregex "^(SQR?D)?MULH?v")>;
 def : InstRW<[M4WriteNMUL3,
               M4ReadNMULM1],  (instregex "^ML[AS]v")>;
-def : InstRW<[M4WriteNMUL3],  (instregex "^SQRDML[AS]H")>;
-def : InstRW<[M4WriteMULL,
-              M4ReadMULLP2],  (instregex "^(S|U|SQD)ML[AS]Lv")>;
-def : InstRW<[M4WriteMULL,
-              M4ReadMULLP2],  (instregex "^(S|U|SQD)MULLv")>;
+def : InstRW<[M4WriteNMUL3,
+              M4ReadNMULM1],  (instregex "^(SQR?D)?MULH?v")>;
+def : InstRW<[M4WriteNMUL3,
+              M4ReadNMULM1],  (instregex "^SQRDML[AS]H")>;
+def : InstRW<[M4WriteNMUL3,
+              M4ReadNMULM1],  (instregex "^(S|U|SQD)ML[AS]L(v1(i32|i64)|v2i32|v4i16|v8i8)")>;
+def : InstRW<[M4WriteNMUL3,
+              M4ReadNMULP2],  (instregex "^(S|U|SQD)ML[AS]L(v4i32|v8i16|v16i8)")>;
+def : InstRW<[M4WriteNMUL3,
+              M4ReadNMULM1],  (instregex "^(S|U|SQD)MULL(v1(i32|i64)|v2i32|v4i16|v8i8)")>;
+def : InstRW<[M4WriteNMUL3,
+              M4ReadNMULP2],  (instregex "^(S|U|SQD)MULL(v4i32|v8i16|v16i8)")>;
 def : InstRW<[M4WriteNMUL3],  (instregex "^[SU]DOT(lane)?v")>;
 def : InstRW<[M4WriteNHAD3],  (instregex "^[SU]ADALPv")>;
 def : InstRW<[M4WriteNSHT4A], (instregex "^[SU]R?SRA[dv]")>;
@@ -807,10 +809,8 @@ def : InstRW<[M4WriteNALU1],  (instregex "^FMOVv.f(32|64)")>;
 def : InstRW<[M4WriteFCVT3H], (instregex "^F(RECP|RSQRT)Ev[248]f16")>;
 def : InstRW<[M4WriteFCVT3],  (instregex "^F(RECP|RSQRT)Ev[248]f(32|64)")>;
 def : InstRW<[M4WriteFCVT3],  (instregex "^U(RECP|RSQRT)Ev[24]i32")>;
-def : InstRW<[M4WriteFMAC4H,
-              M4ReadFMACM1],  (instregex "^F(RECP|RSQRT)Sv.f16")>;
-def : InstRW<[M4WriteFMAC4,
-              M4ReadFMACM1],  (instregex "^F(RECP|RSQRT)Sv.f(32|64)")>;
+def : InstRW<[M4WriteFMAC4H], (instregex "^F(RECP|RSQRT)Sv.f16")>;
+def : InstRW<[M4WriteFMAC4],  (instregex "^F(RECP|RSQRT)Sv.f(32|64)")>;
 def : InstRW<[M4WriteNSHF1],  (instregex "^REV(16|32|64)v")>;
 def : InstRW<[M4WriteNSHFA],  (instregex "^TB[LX]v(8|16)i8One")>;
 def : InstRW<[M4WriteNSHFB],  (instregex "^TB[LX]v(8|16)i8Two")>;
