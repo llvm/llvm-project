@@ -38,16 +38,6 @@
 ; RUN: ls %t1.o.thinlto.bc
 ; RUN: ls %t1.o.imports
 
-; Ensure lld generates an error if unable to write an empty index file
-; for lazy object file that is not added to link.
-; RUN: rm -f %t1.o.thinlto.bc
-; RUN: touch %t1.o.thinlto.bc
-; RUN: chmod 400 %t1.o.thinlto.bc
-; RUN: not ld.lld --plugin-opt=thinlto-index-only -shared %t2.o --start-lib %t1.o --end-lib \
-; RUN:   -o %t3 2>&1 | FileCheck %s
-; CHECK: cannot open {{.*}}1.o.thinlto.bc: {{P|p}}ermission denied
-; RUN: rm -f %t1.o.thinlto.bc
-
 ; NM: T f
 
 ; The backend index for this module contains summaries from itself and
