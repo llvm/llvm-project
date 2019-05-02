@@ -60,6 +60,8 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
 #include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 #include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
+#include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
+#include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
 #include "Plugins/ObjectFile/Breakpad/ObjectFileBreakpad.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
@@ -149,6 +151,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   ObjectFileELF::Initialize();
   ObjectFileMachO::Initialize();
   ObjectFilePECOFF::Initialize();
+
+  ObjectContainerBSDArchive::Initialize();
+  ObjectContainerUniversalMachO::Initialize();
 
   ScriptInterpreterNone::Initialize();
 
@@ -387,6 +392,9 @@ void SystemInitializerFull::Terminate() {
   ObjectFileELF::Terminate();
   ObjectFileMachO::Terminate();
   ObjectFilePECOFF::Terminate();
+
+  ObjectContainerBSDArchive::Terminate();
+  ObjectContainerUniversalMachO::Terminate();
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();
