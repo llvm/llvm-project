@@ -70,7 +70,6 @@ ClangUserExpression::ClangUserExpression(
       m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
                                                     eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
-  m_enforce_valid_object = true;
   switch (m_language) {
   case lldb::eLanguageTypeC_plus_plus:
     m_allow_cxx = true;
@@ -96,12 +95,6 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
   m_target = exe_ctx.GetTargetPtr();
 
-  if (!m_target) {
-    if (log)
-      log->Printf("  [CUE::SC] Null target");
-    return;
-  }
-  
   if (!(m_allow_cxx || m_allow_objc)) {
     if (log)
       log->Printf("  [CUE::SC] Settings inhibit C++ and Objective-C");
@@ -393,7 +386,7 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
 
 void ClangUserExpression::UpdateLanguageForExpr(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
-    std::vector<std::string> modules_to_import) {
+    std::vector<std::string> modules_to_import, bool for_completion) {
   m_expr_lang = lldb::LanguageType::eLanguageTypeUnknown;
 
   std::string prefix = m_expr_prefix;
@@ -412,12 +405,9 @@ void ClangUserExpression::UpdateLanguageForExpr(
     else
       m_expr_lang = lldb::eLanguageTypeC;
 
-    m_options.SetLanguage(m_expr_lang);
-
-    if (!source_code->GetText(m_transformed_text, m_expr_lang, 
-                              m_in_static_method,
-                              m_options, exe_ctx,
-                              !m_ctx_obj, modules_to_import)) {
+    if (!source_code->GetText(m_transformed_text, m_expr_lang,
+                              m_in_static_method, exe_ctx, !m_ctx_obj,
+                              for_completion, modules_to_import)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -428,7 +418,7 @@ void ClangUserExpression::UpdateLanguageForExpr(
     std::size_t original_start;
     std::size_t original_end;
     bool found_bounds = source_code->GetOriginalBodyBounds(
-        m_transformed_text, original_start, original_end);
+        m_transformed_text, m_expr_lang, original_start, original_end);
     if (found_bounds)
       m_user_expression_start_pos = original_start;
   }
@@ -492,7 +482,8 @@ ClangUserExpression::GetModulesToImport(ExecutionContext &exe_ctx) {
 }
 
 bool ClangUserExpression::PrepareForParsing(
-    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+    bool for_completion) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   InstallContext(exe_ctx);
@@ -521,7 +512,8 @@ bool ClangUserExpression::PrepareForParsing(
   LLDB_LOG(log, "List of imported modules in expression: {0}",
            llvm::make_range(used_modules.begin(), used_modules.end()));
 
-  UpdateLanguageForExpr(diagnostic_manager, exe_ctx, used_modules);
+  UpdateLanguageForExpr(diagnostic_manager, exe_ctx, used_modules,
+                        for_completion);
   return true;
 }
 
@@ -532,7 +524,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 bool generate_debug_info) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (!PrepareForParsing(diagnostic_manager, exe_ctx))
+  if (!PrepareForParsing(diagnostic_manager, exe_ctx, /*for_completion*/ false))
     return false;
 
   if (log)
@@ -595,7 +587,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
         if (ClangExpressionSourceCode::GetOriginalBodyBounds(
-                fixed_expression, fixed_start, fixed_end))
+                fixed_expression, m_expr_lang, fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }
@@ -664,23 +656,17 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     }
   }
 
-  if (m_options.GetGenerateDebugInfo()) {
-    StreamString jit_module_name;
-    jit_module_name.Printf("%s%u", FunctionName(),
-                           m_options.GetExpressionNumber());
-    const char *limit_file = m_options.GetPoundLineFilePath();
-    FileSpec limit_file_spec;
-    uint32_t limit_start_line = 0;
-    uint32_t limit_end_line = 0;
-    if (limit_file) {
-      limit_file_spec.SetFile(limit_file, FileSpec::Style::native);
-      limit_start_line = m_options.GetPoundLineLine();
-      limit_end_line = limit_start_line +
-                       std::count(m_expr_text.begin(), m_expr_text.end(), '\n');
+  if (generate_debug_info) {
+    lldb::ModuleSP jit_module_sp(m_execution_unit_sp->GetJITModule());
+
+    if (jit_module_sp) {
+      ConstString const_func_name(FunctionName());
+      FileSpec jit_file;
+      jit_file.GetFilename() = const_func_name;
+      jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+      m_jit_module_wp = jit_module_sp;
+      target->GetImages().Append(jit_module_sp);
     }
-    m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().data(),
-                                         limit_file ? &limit_file_spec : NULL,
-                                         limit_start_line, limit_end_line);
   }
 
   if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
@@ -737,7 +723,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   // correct.
   DiagnosticManager diagnostic_manager;
 
-  if (!PrepareForParsing(diagnostic_manager, exe_ctx))
+  if (!PrepareForParsing(diagnostic_manager, exe_ctx, /*for_completion*/ true))
     return false;
 
   if (log)

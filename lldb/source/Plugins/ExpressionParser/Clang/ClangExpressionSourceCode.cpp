@@ -8,17 +8,11 @@
 
 #include "ClangExpressionSourceCode.h"
 
-#include <algorithm>
-
-#include "llvm/ADT/StringRef.h"
 #include "clang/Basic/CharInfo.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
-#include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
-#include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/DebugMacros.h"
@@ -30,10 +24,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/FileSystem.h"
 
 using namespace lldb_private;
 
@@ -71,13 +61,6 @@ extern "C"
     int printf(const char * __restrict, ...);
 }
 )";
-
-uint32_t ClangExpressionSourceCode::GetNumBodyLines() {
-  if (m_num_body_lines == 0)
-    // 2 = <one for zero indexing> + <one for the body start marker>
-    m_num_body_lines = 2 + std::count(m_body.begin(), m_body.end(), '\n');
-  return m_num_body_lines;
-}
 
 static const char *c_start_marker = "    /*LLDB_BODY_START*/\n    ";
 static const char *c_end_marker = ";\n    /*LLDB_BODY_END*/\n";
@@ -181,13 +164,33 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
   }
 }
 
-static bool ExprBodyContainsVar(llvm::StringRef var, llvm::StringRef body) {
-  size_t from = 0;
-  while ((from = body.find(var, from)) != llvm::StringRef::npos) {
-    if ((from != 0 && clang::isIdentifierBody(body[from-1])) ||
-        (from + var.size() != body.size() &&
-         clang::isIdentifierBody(body[from+var.size()]))) {
-      ++from;
+/// Checks if the expression body contains the given variable as a token.
+/// \param body The expression body.
+/// \param var The variable token we are looking for.
+/// \return True iff the expression body containes the variable as a token.
+static bool ExprBodyContainsVar(llvm::StringRef body, llvm::StringRef var) {
+  assert(var.find_if([](char c) { return !clang::isIdentifierBody(c); }) ==
+             llvm::StringRef::npos &&
+         "variable contains non-identifier chars?");
+
+  size_t start = 0;
+  // Iterate over all occurences of the variable string in our expression.
+  while ((start = body.find(var, start)) != llvm::StringRef::npos) {
+    // We found our variable name in the expression. Check that the token
+    // that contains our needle is equal to our variable and not just contains
+    // the character sequence by accident.
+    // Prevents situations where we for example inlcude the variable 'FOO' in an
+    // expression like 'FOObar + 1'.
+    bool has_characters_before =
+        start != 0 && clang::isIdentifierBody(body[start - 1]);
+    bool has_characters_after =
+        start + var.size() < body.size() &&
+        clang::isIdentifierBody(body[start + var.size()]);
+
+    // Our token just contained the variable name as a substring. Continue
+    // searching the rest of the expression.
+    if (has_characters_before || has_characters_after) {
+      ++start;
       continue;
     }
     return true;
@@ -196,7 +199,8 @@ static bool ExprBodyContainsVar(llvm::StringRef var, llvm::StringRef body) {
 }
 
 static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
-                                  StreamString &stream, const std::string &expr) {
+                                  StreamString &stream,
+                                  const std::string &expr) {
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
@@ -204,16 +208,17 @@ static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
     if (!var_name || var_name == "this" || var_name == ".block_descriptor")
       continue;
 
+    if (!expr.empty() && !ExprBodyContainsVar(expr, var_name.GetStringRef()))
+      continue;
+
     stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
   }
 }
 
 bool ClangExpressionSourceCode::GetText(
-    std::string &text, lldb::LanguageType wrapping_language,
-    bool static_method, 
-    const EvaluateExpressionOptions &options,
-    ExecutionContext &exe_ctx,
-    bool add_locals, llvm::ArrayRef<std::string> modules) const {
+    std::string &text, lldb::LanguageType wrapping_language, bool static_method,
+    ExecutionContext &exe_ctx, bool add_locals, bool force_add_all_locals,
+    llvm::ArrayRef<std::string> modules) const {
   const char *target_specific_defines = "typedef signed char BOOL;\n";
   std::string module_macros;
 
@@ -231,16 +236,14 @@ bool ClangExpressionSourceCode::GetText(
       }
     }
 
-    ClangPersistentVariables *persistent_vars =
-        llvm::dyn_cast_or_null<ClangPersistentVariables>(
-            target->GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeC));
-    ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
-
-    if (persistent_vars && decl_vendor) {
+    if (ClangModulesDeclVendor *decl_vendor =
+            target->GetClangModulesDeclVendor()) {
+      ClangPersistentVariables *persistent_vars =
+          llvm::cast<ClangPersistentVariables>(
+              target->GetPersistentExpressionStateForLanguage(
+                  lldb::eLanguageTypeC));
       const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
           persistent_vars->GetHandLoadedClangModules();
-
       ClangModulesDeclVendor::ModuleVector modules_for_macros;
 
       for (ClangModulesDeclVendor::ModuleID module : hand_imported_modules) {
@@ -293,22 +296,14 @@ bool ClangExpressionSourceCode::GetText(
         if (target->GetInjectLocalVariables(&exe_ctx)) {
           lldb::VariableListSP var_list_sp =
               frame->GetInScopeVariableList(false, true);
-          AddLocalVariableDecls(var_list_sp, lldb_local_var_decls, m_body);
+          AddLocalVariableDecls(var_list_sp, lldb_local_var_decls,
+                                force_add_all_locals ? "" : m_body);
         }
       }
     }
   }
 
   if (m_wrap) {
-    const char *body = m_body.c_str();
-    const char *pound_file = options.GetPoundLineFilePath();
-    const uint32_t pound_line = options.GetPoundLineLine();
-    StreamString pound_body;
-    if (pound_file && pound_line) {
-      pound_body.Printf("#line %u \"%s\"\n%s", pound_line, pound_file, body);
-      body = pound_body.GetString().data();
-    }
-
     switch (wrapping_language) {
     default:
       return false;
@@ -415,13 +410,21 @@ bool ClangExpressionSourceCode::GetText(
 }
 
 bool ClangExpressionSourceCode::GetOriginalBodyBounds(
-    std::string transformed_text,
+    std::string transformed_text, lldb::LanguageType wrapping_language,
     size_t &start_loc, size_t &end_loc) {
   const char *start_marker;
   const char *end_marker;
 
-  start_marker = c_start_marker;
-  end_marker = c_end_marker;
+  switch (wrapping_language) {
+  default:
+    return false;
+  case lldb::eLanguageTypeC:
+  case lldb::eLanguageTypeC_plus_plus:
+  case lldb::eLanguageTypeObjC:
+    start_marker = c_start_marker;
+    end_marker = c_end_marker;
+    break;
+  }
 
   start_loc = transformed_text.find(start_marker);
   if (start_loc == std::string::npos)
