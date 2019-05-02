@@ -66,6 +66,8 @@ class TestSwiftHideRuntimeSupport(TestBase):
         for value in values:
             if '_0_0' in value.name:
                 found = True
+            if '$' in value.name:
+                found = True
         self.assertFalse(found, "found the thing I was not expecting")
 
         var_opts.SetIncludeRuntimeSupportValues(True)
