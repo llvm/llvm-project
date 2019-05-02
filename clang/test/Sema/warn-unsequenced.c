@@ -93,4 +93,6 @@ void test() {
   _Generic(++a, default: 0) + ++a; // ok
   sizeof(++a) + ++a; // ok
   _Alignof(++a) + ++a; // expected-warning {{extension}}
+
+  __builtin_constant_p(f(++a, 0)) ? f(f(++a, 0), f(++a, 0)) : 0;
 }
