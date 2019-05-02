@@ -323,6 +323,9 @@ public:
                           ConstString member_name,
                           Status *error = nullptr);
 
+  /// Determines wether \c variable is the "self" object.
+  static bool IsSelf(Variable &variable);
+
   void AddToLibraryNegativeCache(const char *library_name);
 
   bool IsInLibraryNegativeCache(const char *library_name);
@@ -449,7 +452,6 @@ protected:
     m_member_offsets;
 
   CompilerType m_box_metadata_type;
-
 
   // These members are used to track and toggle the state of the "dynamic
   // exclusivity enforcement flag" in the swift runtime. This flag is set to

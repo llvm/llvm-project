@@ -630,13 +630,105 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
 }
 
-static void CountLocals(
+/// Create a \c VariableInfo record for \c variable if there isn't
+/// already shadowing inner declaration in \c processed_variables.
+static void AddVariableInfo(
+    lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
+    SwiftASTContext &ast_context, SwiftLanguageRuntime *language_runtime,
+    llvm::SmallDenseSet<const char *, 8> &processed_variables,
+    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
+  StringRef name = variable_sp->GetUnqualifiedName().GetStringRef();
+  const char *name_cstr = name.data();
+  assert(StringRef(name_cstr) == name && "missing null terminator");
+  if (name.empty())
+    return;
+
+  // To support "guard let self = self" the function argument "self"
+  // is processed (as the special self argument) even if it is
+  // shadowed by a local variable.
+  bool is_self = SwiftLanguageRuntime::IsSelf(*variable_sp);
+  const char *overridden_name = name_cstr;
+  if (is_self)
+    overridden_name = "$__lldb_injected_self";
+
+  if (processed_variables.count(overridden_name))
+    return;
+
+  CompilerType var_type;
+  if (stack_frame_sp) {
+    lldb::ValueObjectSP valobj_sp =
+        stack_frame_sp->GetValueObjectForFrameVariable(variable_sp,
+                                                       lldb::eNoDynamicValues);
+
+    if (!valobj_sp || valobj_sp->GetError().Fail()) {
+      // Ignore the variable if we couldn't find its corresponding
+      // value object.  TODO if the expression tries to use an
+      // ignored variable, produce a sensible error.
+      return;
+    }
+    var_type = valobj_sp->GetCompilerType();
+  }
+
+  if (!var_type.IsValid())
+    if (Type *var_lldb_type = variable_sp->GetType())
+      var_type = var_lldb_type->GetFullCompilerType();
+
+  if (!var_type.IsValid())
+    return;
+
+  if (!llvm::isa<SwiftASTContext>(var_type.GetTypeSystem()))
+    return;
+
+  Status error;
+  CompilerType target_type = ast_context.ImportType(var_type, error);
+
+  // If the import failed, give up.
+  if (!target_type.IsValid())
+    return;
+
+  // Resolve all archetypes in the variable type.
+  if (stack_frame_sp)
+    if (language_runtime)
+      target_type = language_runtime->DoArchetypeBindingForType(*stack_frame_sp,
+                                                                target_type);
+
+  // If we couldn't fully realize the type, then we aren't going
+  // to get very far making a local out of it, so discard it here.
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES |
+                                                  LIBLLDB_LOG_EXPRESSIONS));
+  if (!SwiftASTContext::IsFullyRealized(target_type)) {
+    if (log)
+      log->Printf("Discarding local %s because we couldn't fully realize it, "
+                  "our best attempt was: %s.",
+                  name_cstr, target_type.GetTypeName().AsCString("<unknown>"));
+    return;
+  }
+
+  if (log && is_self)
+    if (swift::Type swift_type = GetSwiftType(target_type)) {
+      std::string s;
+      llvm::raw_string_ostream ss(s);
+      swift_type->dump(ss);
+      ss.flush();
+      log->Printf("Adding injected self: type (%p) context(%p) is: %s",
+                  static_cast<void *>(swift_type.getPointer()),
+                  static_cast<void *>(ast_context.GetASTContext()), s.c_str());
+    }
+  SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
+      new VariableMetadataVariable(variable_sp));
+  SwiftASTManipulator::VariableInfo variable_info(
+      target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
+      metadata_sp, swift::VarDecl::Specifier::Var);
+
+  local_variables.push_back(variable_info);
+  processed_variables.insert(overridden_name);
+}
+
+/// Create a \c VariableInfo record for each visible variable.
+static void RegisterAllVariables(
     SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
     SwiftASTContext &ast_context,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
-  // Avoids shadowing.
-  std::set<ConstString> counted_names;
-
   if (!sc.block && !sc.function)
     return;
 
@@ -645,8 +737,6 @@ static void CountLocals(
 
   if (!top_block)
     top_block = &sc.function->GetBlock(true);
-
-  static ConstString s_self_name("self");
 
   SwiftLanguageRuntime *language_runtime = nullptr;
   ExecutionContextScope *scope = nullptr;
@@ -661,19 +751,20 @@ static void CountLocals(
   // after we go through the current context, then we have to take one
   // more pass through the variables in the CompUnit.
   bool handling_globals = false;
+  VariableList variables;
 
+  // Proceed from the innermost scope outwards, adding all variables
+  // not already shadowed by an inner declaration.
+  llvm::SmallDenseSet<const char *, 8> processed_names;
   while (true) {
-    VariableList variables;
-
     if (!handling_globals) {
-
       constexpr bool can_create = true;
       constexpr bool get_parent_variables = false;
       constexpr bool stop_if_block_is_inlined_function = true;
 
-      block->AppendVariables(can_create, get_parent_variables,
-                             stop_if_block_is_inlined_function,
-                             [](Variable *) { return true; }, &variables);
+      block->AppendVariables(
+          can_create, get_parent_variables, stop_if_block_is_inlined_function,
+          [](Variable *) { return true; }, &variables);
     } else {
       if (sc.comp_unit) {
         lldb::VariableListSP globals_sp = sc.comp_unit->GetVariableList(true);
@@ -682,118 +773,21 @@ static void CountLocals(
       }
     }
 
-    for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi) {
-      lldb::VariableSP variable_sp(variables.GetVariableAtIndex(vi));
+    // Process all variables in this scope.
+    for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
+      AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
+                      ast_context, language_runtime, processed_names,
+                      local_variables);
 
-      const ConstString &name(variable_sp->GetUnqualifiedName());
-      const char *name_cstring = variable_sp->GetUnqualifiedName().GetCString();
-
-      if (name.IsEmpty())
-        continue;
-
-      if (counted_names.count(name))
-        continue;
-
-      CompilerType var_type;
-
-      if (stack_frame_sp) {
-        lldb::ValueObjectSP valobj_sp =
-            stack_frame_sp->GetValueObjectForFrameVariable(
-                variable_sp, lldb::eNoDynamicValues);
-
-        if (!valobj_sp || valobj_sp->GetError().Fail()) {
-          // Ignore the variable if we couldn't find its corresponding
-          // value object.  TODO if the expression tries to use an
-          // ignored variable, produce a sensible error.
-          continue;
-        } else {
-          var_type = valobj_sp->GetCompilerType();
-        }
-      }
-
-      if (!var_type.IsValid()) {
-        Type *var_lldb_type = variable_sp->GetType();
-
-        if (var_lldb_type)
-          var_type = var_lldb_type->GetFullCompilerType();
-      }
-
-      if (!var_type.IsValid())
-        continue;
-
-      if (!llvm::isa<SwiftASTContext>(var_type.GetTypeSystem()))
-        continue;
-
-      Status error;
-      CompilerType target_type = ast_context.ImportType(var_type, error);
-
-      // If the import failed, give up.
-      if (!target_type.IsValid())
-        continue;
-
-      // Make sure to resolve all archetypes in the variable type.
-      if (stack_frame_sp) {
-        if (language_runtime)
-          target_type = language_runtime->DoArchetypeBindingForType(
-              *stack_frame_sp, target_type);
-      }
-
-      // If we couldn't fully realize the type, then we aren't going
-      // to get very far making a local out of it, so discard it here.
-      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES |
-                                                      LIBLLDB_LOG_EXPRESSIONS));
-      if (!SwiftASTContext::IsFullyRealized(target_type)) {
-        if (log) {
-          log->Printf("Discarding local %s because we couldn't fully realize "
-                      "it, our best attempt was: %s.",
-                      name_cstring,
-                      target_type.GetTypeName().AsCString("<unknown>"));
-        }
-        continue;
-      }
-
-      SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
-          new VariableMetadataVariable(variable_sp));
-
-      const char *overridden_name = name_cstring;
-
-      if (name == s_self_name) {
-        overridden_name = ConstString("$__lldb_injected_self").AsCString();
-        if (log) {
-          swift::Type swift_type = GetSwiftType(target_type);
-          if (swift_type) {
-            std::string s;
-            llvm::raw_string_ostream ss(s);
-            swift_type->dump(ss);
-            ss.flush();
-            log->Printf("Adding injected self: type (%p) context(%p) is: %s",
-                        static_cast<void *>(swift_type.getPointer()),
-                        static_cast<void *>(ast_context.GetASTContext()),
-                        s.c_str());
-          }
-        }
-      }
-
-      SwiftASTManipulator::VariableInfo variable_info(
-          target_type,
-          ast_context.GetASTContext()->getIdentifier(overridden_name),
-          metadata_sp,
-          swift::VarDecl::Specifier::Var);
-
-      local_variables.push_back(variable_info);
-
-      counted_names.insert(name);
-    }
-
-    if (handling_globals) {
-      // Okay, now we're done.
-      break;
-    } else if (block == top_block) {
-      // Now add the containing module block, that's what holds the
-      // module globals:
-      handling_globals = true;
+    if (!handling_globals) {
+      if (block == top_block)
+        // Now add the containing module block, that's what holds the
+        // module globals:
+        handling_globals = true;
+      else
+        block = block->GetParent();
     } else
-      block = block->GetParent();
+      break;
   }
 }
 
@@ -1384,7 +1378,8 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
                          *code_manipulator);
 
       // Register all local variables so that lookups to them resolve.
-      CountLocals(sc, stack_frame_sp, *swift_ast_context, local_variables);
+      RegisterAllVariables(sc, stack_frame_sp, *swift_ast_context,
+                           local_variables);
     }
 
     // Register all magic variables.

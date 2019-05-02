@@ -107,7 +107,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   }
 
   StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame == NULL) {
+  if (!frame) {
     if (log)
       log->Printf("  [SUE::SC] Null stack frame");
     return;
@@ -135,95 +135,82 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
       frame_is_swift = true;
   }
 
-  if (frame_is_swift) {
-    m_is_class = false;
-    m_needs_object_ptr = false;
+  if (!frame_is_swift)
+    return;
 
-    // Make sure the target's SwiftASTContext has been setup before
-    // doing any Swift name lookups.
-    if (m_target) {
-      auto swift_ast_ctx = m_target->GetScratchSwiftASTContext(err, *frame);
-      if (!swift_ast_ctx) {
-        if (log)
-          log->Printf("  [SUE::SC] NULL Swift AST Context");
-        return;
-      }
+  m_language_flags &= ~eLanguageFlagIsClass;
+  m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
 
-      if (!swift_ast_ctx->GetClangImporter()) {
-        if (log)
-          log->Printf("  [SUE::SC] Swift AST Context has no Clang importer");
-        return;
-      }
-
-      if (swift_ast_ctx->HasFatalErrors()) {
-        if (log)
-          log->Printf("  [SUE::SC] Swift AST Context has fatal errors");
-        return;
-      }
+  // Make sure the target's SwiftASTContext has been setup before
+  // doing any Swift name lookups.
+  if (m_target) {
+    auto swift_ast_ctx = m_target->GetScratchSwiftASTContext(err, *frame);
+    if (!swift_ast_ctx) {
+      if (log)
+        log->Printf("  [SUE::SC] NULL Swift AST Context");
+      return;
     }
 
-    if (log)
-      log->Printf("  [SUE::SC] Compilation unit is swift");
+    if (!swift_ast_ctx->GetClangImporter()) {
+      if (log)
+        log->Printf("  [SUE::SC] Swift AST Context has no Clang importer");
+      return;
+    }
 
-    Block *function_block = sym_ctx.GetFunctionBlock();
+    if (swift_ast_ctx->HasFatalErrors()) {
+      if (log)
+        log->Printf("  [SUE::SC] Swift AST Context has fatal errors");
+      return;
+    }
+  }
 
-    if (function_block) {
-      lldb::VariableListSP variable_list_sp(
-          function_block->GetBlockVariableList(true));
+  if (log)
+    log->Printf("  [SUE::SC] Compilation unit is swift");
 
-      if (variable_list_sp) {
-        lldb::VariableSP self_var_sp(
-            variable_list_sp->FindVariable(ConstString("self")));
+  Block *function_block = sym_ctx.GetFunctionBlock();
+  if (!function_block)
+    return;
 
-        do {
-          if (!self_var_sp)
-            break;
+  lldb::VariableListSP variable_list_sp(
+      function_block->GetBlockVariableList(true));
 
-          CompilerType self_type;
+  if (!variable_list_sp)
+    return;
 
-          lldb::StackFrameSP stack_frame_sp = exe_ctx.GetFrameSP();
+  lldb::VariableSP self_var_sp(
+      variable_list_sp->FindVariable(ConstString("self")));
 
-          if (stack_frame_sp) {
-            // If we have a self variable, but it has no location at
-            // the current PC, then we can't use it.  Set the self var
-            // back to empty and we'll just pretend we are in a
-            // regular frame, which is really the best we can do.
-            if (!self_var_sp->LocationIsValidForFrame(stack_frame_sp.get())) {
-              self_var_sp.reset();
-              break;
-            }
+  if (!self_var_sp || !SwiftLanguageRuntime::IsSelf(*self_var_sp))
+    return;
 
-            lldb::ValueObjectSP valobj_sp =
-                stack_frame_sp->GetValueObjectForFrameVariable(
-                    self_var_sp, lldb::eDynamicDontRunTarget);
-
-            if (valobj_sp && valobj_sp->GetError().Success())
-              self_type = valobj_sp->GetCompilerType();
-          }
-
-          if (!self_type.IsValid()) {
-            Type *self_lldb_type = self_var_sp->GetType();
-
-            if (self_lldb_type)
-              self_type = self_var_sp->GetType()->GetForwardCompilerType();
-          }
-
-          if (!self_type.IsValid()) {
-            // If the self_type is invalid at this point, reset it.
-            // Code below the phony do/while will assume the existence
-            // of this var means something, but it is useless in this
-            // condition.
-            self_var_sp.reset();
-            break;
-          }
-
+<<<<<<< HEAD
           // Check to see if we are in a class func of a class (or
           // static func of a struct) and adjust our self_type to
           // point to the instance type.
           m_needs_object_ptr = true;
+=======
+  CompilerType self_type;
+  if (lldb::StackFrameSP stack_frame_sp = exe_ctx.GetFrameSP()) {
+    // If we have a self variable, but it has no location at
+    // the current PC, then we can't use it.  Set the self var
+    // back to empty and we'll just pretend we are in a
+    // regular frame, which is really the best we can do.
+    if (!self_var_sp->LocationIsValidForFrame(stack_frame_sp.get()))
+      return;
 
-          Flags self_type_flags(self_type.GetTypeInfo());
+    lldb::ValueObjectSP valobj_sp =
+        stack_frame_sp->GetValueObjectForFrameVariable(
+            self_var_sp, lldb::eDynamicDontRunTarget);
 
+    if (valobj_sp && valobj_sp->GetError().Success())
+      self_type = valobj_sp->GetCompilerType();
+  }
+>>>>>>> origin/stable
+
+  if (!self_type.IsValid()) {
+    Type *self_lldb_type = self_var_sp->GetType();
+
+<<<<<<< HEAD
           if (self_type_flags.AllSet(lldb::eTypeIsSwift |
                                      lldb::eTypeIsMetatype)) {
             self_type = self_type.GetInstanceType();
@@ -238,14 +225,28 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             if (self_type_flags.Test(lldb::eTypeIsClass))
               m_is_class = true;
           }
+=======
+    if (self_lldb_type)
+      self_type = self_var_sp->GetType()->GetForwardCompilerType();
+  }
 
-          swift::Type object_type = GetSwiftType(self_type);
+  if (!self_type.IsValid()) {
+    // If the self_type is invalid at this point, reset it.
+    // Code below the phony do/while will assume the existence
+    // of this var means something, but it is useless in this
+    // condition.
+    return;
+  }
+>>>>>>> origin/stable
 
-          if (object_type.getPointer() &&
-              (object_type.getPointer() != self_type.GetOpaqueQualType()))
-            self_type = CompilerType(self_type.GetTypeSystem(),
-                                     object_type.getPointer());
+  // Check to see if we are in a class func of a class (or
+  // static func of a struct) and adjust our self_type to
+  // point to the instance type.
+  m_language_flags |= eLanguageFlagNeedsObjectPointer;
 
+  Flags self_type_flags(self_type.GetTypeInfo());
+
+<<<<<<< HEAD
           // Handle weak self.
           if (auto *ref_type = llvm::dyn_cast<swift::ReferenceStorageType>(
                   GetSwiftType(self_type).getPointer())) {
@@ -267,14 +268,50 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             self_var_sp.reset();
             break;
           }
+=======
+  if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype)) {
+    self_type = self_type.GetInstanceType();
+    self_type_flags = self_type.GetTypeInfo();
+    if (self_type_flags.Test(lldb::eTypeIsClass))
+      m_language_flags |= eLanguageFlagIsClass;
+    m_language_flags |= eLanguageFlagInStaticMethod;
+  }
 
-          if (log)
-            log->Printf("  [SUE::SC] Containing class name: %s",
-                        self_type.GetTypeName().AsCString());
-        } while (0);
-      }
+  if (self_type_flags.AllSet(lldb::eTypeIsSwift |
+                             lldb::eTypeInstanceIsPointer)) {
+    if (self_type_flags.Test(lldb::eTypeIsClass))
+      m_language_flags |= eLanguageFlagIsClass;
+  }
+>>>>>>> origin/stable
+
+  swift::Type object_type = GetSwiftType(self_type);
+  if (object_type.getPointer() &&
+      (object_type.getPointer() != self_type.GetOpaqueQualType()))
+    self_type =
+        CompilerType(self_type.GetTypeSystem(), object_type.getPointer());
+
+  // Handle weak self.
+  if (auto *ref_type = llvm::dyn_cast<swift::ReferenceStorageType>(
+          GetSwiftType(self_type).getPointer())) {
+    if (ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
+      m_language_flags |= eLanguageFlagIsClass;
+      m_language_flags |= eLanguageFlagIsWeakSelf;
     }
   }
+
+  if (Flags(self_type.GetTypeInfo())
+          .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsStructUnion |
+                  lldb::eTypeIsGeneric) &&
+      self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsReference |
+                             lldb::eTypeHasValue)) {
+    // We can't extend generic structs when "self" is mutating at the
+    // moment.
+    m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+  }
+
+  if (log)
+    log->Printf("  [SUE::SC] Containing class name: %s",
+                self_type.GetTypeName().AsCString());
 }
 
 static SwiftPersistentExpressionState *
@@ -327,7 +364,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   std::string prefix = m_expr_prefix;
 
   std::unique_ptr<SwiftExpressionSourceCode> source_code(
-      SwiftExpressionSourceCode::CreateWrapped(prefix.c_str(), 
+      SwiftExpressionSourceCode::CreateWrapped(prefix.c_str(),
                                                m_expr_text.c_str()));
 
   const lldb::LanguageType lang_type = lldb::eLanguageTypeSwift;
