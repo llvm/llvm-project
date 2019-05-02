@@ -596,6 +596,16 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
 
     Record.AddSourceLocation(FTSInfo->getPointOfInstantiation());
 
+    if (MemberSpecializationInfo *MemberInfo =
+        FTSInfo->getMemberSpecializationInfo()) {
+      Record.push_back(1);
+      Record.AddDeclRef(MemberInfo->getInstantiatedFrom());
+      Record.push_back(MemberInfo->getTemplateSpecializationKind());
+      Record.AddSourceLocation(MemberInfo->getPointOfInstantiation());
+    } else {
+      Record.push_back(0);
+    }
+
     if (D->isCanonicalDecl()) {
       // Write the template that contains the specializations set. We will
       // add a FunctionTemplateSpecializationInfo to it when reading.
@@ -1555,6 +1565,9 @@ void ASTDeclWriter::VisitClassScopeFunctionSpecializationDecl(
                                     ClassScopeFunctionSpecializationDecl *D) {
   VisitDecl(D);
   Record.AddDeclRef(D->getSpecialization());
+  Record.push_back(D->hasExplicitTemplateArgs());
+  if (D->hasExplicitTemplateArgs())
+    Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
   Code = serialization::DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION;
 }
 

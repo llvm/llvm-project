@@ -177,6 +177,19 @@ void ErrorCallocOverflow::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
+void ErrorReallocArrayOverflow::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report(
+      "ERROR: AddressSanitizer: reallocarray parameters overflow: count * size "
+      "(%zd * %zd) cannot be represented in type size_t (thread %s)\n",
+      count, size, AsanThreadIdAndName(tid).c_str());
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
 void ErrorPvallocOverflow::Print() {
   Decorator d;
   Printf("%s", d.Error());

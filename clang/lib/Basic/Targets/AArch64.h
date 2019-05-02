@@ -129,6 +129,8 @@ public:
                         MacroBuilder &Builder) const override;
   TargetInfo::CallingConvKind
   getCallingConvKind(bool ClangABICompat4) const override;
+
+  unsigned getMinGlobalAlign(uint64_t TypeSize) const override;
 };
 
 // ARM64 MinGW target

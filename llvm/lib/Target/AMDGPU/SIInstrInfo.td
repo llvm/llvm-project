@@ -845,6 +845,7 @@ def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT">>;
 
 def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
+def Dim : NamedOperandU8<"Dim", NamedMatchClass<"Dim", 0>>;
 
 def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
 def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;

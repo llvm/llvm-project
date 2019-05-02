@@ -928,12 +928,22 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     TemplateArgumentListInfo TemplArgsInfo(LAngleLoc, RAngleLoc);
     for (unsigned i = 0, e = TemplArgLocs.size(); i != e; ++i)
       TemplArgsInfo.addArgument(TemplArgLocs[i]);
-    FunctionTemplateSpecializationInfo *FTInfo
-        = FunctionTemplateSpecializationInfo::Create(C, FD, Template, TSK,
-                                                     TemplArgList,
-                             HasTemplateArgumentsAsWritten ? &TemplArgsInfo
-                                                           : nullptr,
-                                                     POI);
+
+    MemberSpecializationInfo *MSInfo = nullptr;
+    if (Record.readInt()) {
+      auto *FD = ReadDeclAs<FunctionDecl>();
+      auto TSK = (TemplateSpecializationKind)Record.readInt();
+      SourceLocation POI = ReadSourceLocation();
+
+      MSInfo = new (C) MemberSpecializationInfo(FD, TSK);
+      MSInfo->setPointOfInstantiation(POI);
+    }
+
+    FunctionTemplateSpecializationInfo *FTInfo =
+        FunctionTemplateSpecializationInfo::Create(
+            C, FD, Template, TSK, TemplArgList,
+            HasTemplateArgumentsAsWritten ? &TemplArgsInfo : nullptr, POI,
+            MSInfo);
     FD->TemplateOrSpecialization = FTInfo;
 
     if (FD->isCanonicalDecl()) { // if canonical add to template's set.
@@ -956,7 +966,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       else {
         assert(Reader.getContext().getLangOpts().Modules &&
                "already deserialized this template specialization");
-        mergeRedeclarable(FD, ExistingInfo->Function, Redecl);
+        mergeRedeclarable(FD, ExistingInfo->getFunction(), Redecl);
       }
     }
     break;
@@ -2244,6 +2254,8 @@ void ASTDeclReader::VisitClassScopeFunctionSpecializationDecl(
                                     ClassScopeFunctionSpecializationDecl *D) {
   VisitDecl(D);
   D->Specialization = ReadDeclAs<CXXMethodDecl>();
+  if (Record.readInt())
+    D->TemplateArgs = Record.readASTTemplateArgumentListInfo();
 }
 
 void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {

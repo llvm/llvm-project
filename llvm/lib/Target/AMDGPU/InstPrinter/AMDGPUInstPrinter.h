@@ -78,6 +78,8 @@ private:
                 raw_ostream &O);
   void printDMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
+  void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                raw_ostream &O);
   void printUNorm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printDA(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

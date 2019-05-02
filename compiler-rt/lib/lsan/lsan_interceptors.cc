@@ -83,6 +83,12 @@ INTERCEPTOR(void*, realloc, void *q, uptr size) {
   return lsan_realloc(q, size, stack);
 }
 
+INTERCEPTOR(void*, reallocarray, void *q, uptr nmemb, uptr size) {
+  ENSURE_LSAN_INITED;
+  GET_STACK_TRACE_MALLOC;
+  return lsan_reallocarray(q, nmemb, size, stack);
+}
+
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;

@@ -148,7 +148,7 @@
 //  Specifically, FreeBSD does NOT have timespec_get, even though they have all
 //  the rest of C11 - this is PR#38495
 #    define TEST_HAS_C11_FEATURES
-#  elif defined(__Fuchsia__)
+#  elif defined(__Fuchsia__) || defined(__wasi__)
 #    define TEST_HAS_C11_FEATURES
 #    define TEST_HAS_TIMESPEC_GET
 #  elif defined(__linux__)

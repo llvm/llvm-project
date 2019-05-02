@@ -396,3 +396,19 @@ C<D> func3(D const &d) {
 }
 
 } // end namespace PR34728
+
+namespace ClassScopeExplicitSpecializations {
+  template<int> struct A {
+    template<int> constexpr int f() const { return 1; }
+    template<> constexpr int f<0>() const { return 2; }
+  };
+  template<> template<int> constexpr int A<0>::f() const { return 3; }
+  template<> template<> constexpr int A<0>::f<0>() const { return 4; }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winstantiation-after-specialization"
+  template int A<2>::f<0>() const;
+#pragma clang diagnostic pop
+  template int A<2>::f<1>() const;
+  extern template int A<3>::f<0>() const;
+  extern template int A<3>::f<1>() const;
+}

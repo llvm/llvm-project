@@ -504,29 +504,13 @@ public:
 /// Provides information about a function template specialization,
 /// which is a FunctionDecl that has been explicitly specialization or
 /// instantiated from a function template.
-class FunctionTemplateSpecializationInfo : public llvm::FoldingSetNode {
-  FunctionTemplateSpecializationInfo(FunctionDecl *FD,
-                                     FunctionTemplateDecl *Template,
-                                     TemplateSpecializationKind TSK,
-                                     const TemplateArgumentList *TemplateArgs,
-                       const ASTTemplateArgumentListInfo *TemplateArgsAsWritten,
-                                     SourceLocation POI)
-      : Function(FD), Template(Template, TSK - 1),
-        TemplateArguments(TemplateArgs),
-        TemplateArgumentsAsWritten(TemplateArgsAsWritten),
-        PointOfInstantiation(POI) {}
-
-public:
-  static FunctionTemplateSpecializationInfo *
-  Create(ASTContext &C, FunctionDecl *FD, FunctionTemplateDecl *Template,
-         TemplateSpecializationKind TSK,
-         const TemplateArgumentList *TemplateArgs,
-         const TemplateArgumentListInfo *TemplateArgsAsWritten,
-         SourceLocation POI);
-
-  /// The function template specialization that this structure
-  /// describes.
-  FunctionDecl *Function;
+class FunctionTemplateSpecializationInfo final
+    : public llvm::FoldingSetNode,
+      private llvm::TrailingObjects<FunctionTemplateSpecializationInfo,
+                                    MemberSpecializationInfo *> {
+  /// The function template specialization that this structure describes and a
+  /// flag indicating if the function is a member specialization.
+  llvm::PointerIntPair<FunctionDecl *, 1, bool> Function;
 
   /// The function template from which this function template
   /// specialization was generated.
@@ -534,16 +518,49 @@ public:
   /// The two bits contain the top 4 values of TemplateSpecializationKind.
   llvm::PointerIntPair<FunctionTemplateDecl *, 2> Template;
 
+public:
   /// The template arguments used to produce the function template
   /// specialization from the function template.
   const TemplateArgumentList *TemplateArguments;
 
   /// The template arguments as written in the sources, if provided.
+  /// FIXME: Normally null; tail-allocate this.
   const ASTTemplateArgumentListInfo *TemplateArgumentsAsWritten;
 
   /// The point at which this function template specialization was
   /// first instantiated.
   SourceLocation PointOfInstantiation;
+
+private:
+  FunctionTemplateSpecializationInfo(
+      FunctionDecl *FD, FunctionTemplateDecl *Template,
+      TemplateSpecializationKind TSK, const TemplateArgumentList *TemplateArgs,
+      const ASTTemplateArgumentListInfo *TemplateArgsAsWritten,
+      SourceLocation POI, MemberSpecializationInfo *MSInfo)
+      : Function(FD, MSInfo ? 1 : 0), Template(Template, TSK - 1),
+        TemplateArguments(TemplateArgs),
+        TemplateArgumentsAsWritten(TemplateArgsAsWritten),
+        PointOfInstantiation(POI) {
+    if (MSInfo)
+      getTrailingObjects<MemberSpecializationInfo *>()[0] = MSInfo;
+  }
+
+  size_t numTrailingObjects(OverloadToken<MemberSpecializationInfo*>) const {
+    return Function.getInt();
+  }
+
+public:
+  friend TrailingObjects;
+
+  static FunctionTemplateSpecializationInfo *
+  Create(ASTContext &C, FunctionDecl *FD, FunctionTemplateDecl *Template,
+         TemplateSpecializationKind TSK,
+         const TemplateArgumentList *TemplateArgs,
+         const TemplateArgumentListInfo *TemplateArgsAsWritten,
+         SourceLocation POI, MemberSpecializationInfo *MSInfo);
+
+  /// Retrieve the declaration of the function template specialization.
+  FunctionDecl *getFunction() const { return Function.getPointer(); }
 
   /// Retrieve the template from which this function was specialized.
   FunctionTemplateDecl *getTemplate() const { return Template.getPointer(); }
@@ -587,9 +604,44 @@ public:
     PointOfInstantiation = POI;
   }
 
+  /// Get the specialization info if this function template specialization is
+  /// also a member specialization:
+  ///
+  /// \code
+  /// template<typename> struct A {
+  ///   template<typename> void f();
+  ///   template<> void f<int>(); // ClassScopeFunctionSpecializationDecl
+  /// };
+  /// \endcode
+  ///
+  /// Here, A<int>::f<int> is a function template specialization that is
+  /// an explicit specialization of A<int>::f, but it's also a member
+  /// specialization (an implicit instantiation in this case) of A::f<int>.
+  /// Further:
+  ///
+  /// \code
+  /// template<> template<> void A<int>::f<int>() {}
+  /// \endcode
+  ///
+  /// ... declares a function template specialization that is an explicit
+  /// specialization of A<int>::f, and is also an explicit member
+  /// specialization of A::f<int>.
+  ///
+  /// Note that the TemplateSpecializationKind of the MemberSpecializationInfo
+  /// need not be the same as that returned by getTemplateSpecializationKind(),
+  /// and represents the relationship between the function and the class-scope
+  /// explicit specialization in the original templated class -- whereas our
+  /// TemplateSpecializationKind represents the relationship between the
+  /// function and the function template, and should always be
+  /// TSK_ExplicitSpecialization whenever we have MemberSpecializationInfo.
+  MemberSpecializationInfo *getMemberSpecializationInfo() const {
+    return numTrailingObjects(OverloadToken<MemberSpecializationInfo *>())
+               ? getTrailingObjects<MemberSpecializationInfo *>()[0]
+               : nullptr;
+  }
+
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, TemplateArguments->asArray(),
-            Function->getASTContext());
+    Profile(ID, TemplateArguments->asArray(), getFunction()->getASTContext());
   }
 
   static void
@@ -955,7 +1007,7 @@ SpecEntryTraits<FunctionTemplateSpecializationInfo> {
   using DeclType = FunctionDecl;
 
   static DeclType *getDecl(FunctionTemplateSpecializationInfo *I) {
-    return I->Function;
+    return I->getFunction();
   }
 
   static ArrayRef<TemplateArgument>
@@ -2408,8 +2460,6 @@ public:
 
 /// Declaration of a function specialization at template class scope.
 ///
-/// This is a non-standard extension needed to support MSVC.
-///
 /// For example:
 /// \code
 /// template <class T>
@@ -2422,17 +2472,18 @@ public:
 /// "template<> foo(int a)" will be saved in Specialization as a normal
 /// CXXMethodDecl. Then during an instantiation of class A, it will be
 /// transformed into an actual function specialization.
+///
+/// FIXME: This is redundant; we could store the same information directly on
+/// the CXXMethodDecl as a DependentFunctionTemplateSpecializationInfo.
 class ClassScopeFunctionSpecializationDecl : public Decl {
   CXXMethodDecl *Specialization;
-  bool HasExplicitTemplateArgs;
-  TemplateArgumentListInfo TemplateArgs;
+  const ASTTemplateArgumentListInfo *TemplateArgs;
 
-  ClassScopeFunctionSpecializationDecl(DeclContext *DC, SourceLocation Loc,
-                                       CXXMethodDecl *FD, bool Args,
-                                       TemplateArgumentListInfo TemplArgs)
+  ClassScopeFunctionSpecializationDecl(
+      DeclContext *DC, SourceLocation Loc, CXXMethodDecl *FD,
+      const ASTTemplateArgumentListInfo *TemplArgs)
       : Decl(Decl::ClassScopeFunctionSpecialization, DC, Loc),
-        Specialization(FD), HasExplicitTemplateArgs(Args),
-        TemplateArgs(std::move(TemplArgs)) {}
+        Specialization(FD), TemplateArgs(TemplArgs) {}
 
   ClassScopeFunctionSpecializationDecl(EmptyShell Empty)
       : Decl(Decl::ClassScopeFunctionSpecialization, Empty) {}
@@ -2444,17 +2495,20 @@ public:
   friend class ASTDeclWriter;
 
   CXXMethodDecl *getSpecialization() const { return Specialization; }
-  bool hasExplicitTemplateArgs() const { return HasExplicitTemplateArgs; }
-  const TemplateArgumentListInfo& templateArgs() const { return TemplateArgs; }
+  bool hasExplicitTemplateArgs() const { return TemplateArgs; }
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
+    return TemplateArgs;
+  }
 
-  static ClassScopeFunctionSpecializationDecl *Create(ASTContext &C,
-                                                      DeclContext *DC,
-                                                      SourceLocation Loc,
-                                                      CXXMethodDecl *FD,
-                                                   bool HasExplicitTemplateArgs,
-                                        TemplateArgumentListInfo TemplateArgs) {
+  static ClassScopeFunctionSpecializationDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, CXXMethodDecl *FD,
+         bool HasExplicitTemplateArgs,
+         const TemplateArgumentListInfo &TemplateArgs) {
     return new (C, DC) ClassScopeFunctionSpecializationDecl(
-        DC, Loc, FD, HasExplicitTemplateArgs, std::move(TemplateArgs));
+        DC, Loc, FD,
+        HasExplicitTemplateArgs
+            ? ASTTemplateArgumentListInfo::Create(C, TemplateArgs)
+            : nullptr);
   }
 
   static ClassScopeFunctionSpecializationDecl *

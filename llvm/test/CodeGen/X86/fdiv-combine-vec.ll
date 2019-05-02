@@ -51,17 +51,25 @@ define <4 x double> @splat_fdiv_v4f64(<4 x double> %x, double %y) {
 define <4 x float> @splat_fdiv_v4f32(<4 x float> %x, float %y) {
 ; SSE-LABEL: splat_fdiv_v4f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE-NEXT:    divss %xmm1, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; SSE-NEXT:    mulps %xmm2, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE-NEXT:    rcpps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SSE-NEXT:    subps %xmm1, %xmm3
+; SSE-NEXT:    mulps %xmm2, %xmm3
+; SSE-NEXT:    addps %xmm2, %xmm3
+; SSE-NEXT:    mulps %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: splat_fdiv_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX-NEXT:    vdivss %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX-NEXT:    vrcpps %xmm1, %xmm2
+; AVX-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vmovaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-NEXT:    vsubps %xmm1, %xmm3, %xmm1
+; AVX-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vaddps %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vy = insertelement <4 x float> undef, float %y, i32 0
@@ -82,10 +90,14 @@ define <8 x float> @splat_fdiv_v8f32(<8 x float> %x, float %y) {
 ;
 ; AVX-LABEL: splat_fdiv_v8f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX-NEXT:    vdivss %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX-NEXT:    vrcpps %ymm1, %ymm2
+; AVX-NEXT:    vmulps %ymm2, %ymm1, %ymm1
+; AVX-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-NEXT:    vsubps %ymm1, %ymm3, %ymm1
+; AVX-NEXT:    vmulps %ymm1, %ymm2, %ymm1
+; AVX-NEXT:    vaddps %ymm1, %ymm2, %ymm1
 ; AVX-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %vy = insertelement <8 x float> undef, float %y, i32 0
@@ -97,25 +109,25 @@ define <8 x float> @splat_fdiv_v8f32(<8 x float> %x, float %y) {
 define <4 x float> @splat_fdiv_v4f32_estimate(<4 x float> %x, float %y) #0 {
 ; SSE-LABEL: splat_fdiv_v4f32_estimate:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rcpss %xmm1, %xmm2
-; SSE-NEXT:    mulss %xmm2, %xmm1
-; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE-NEXT:    subss %xmm1, %xmm3
-; SSE-NEXT:    mulss %xmm2, %xmm3
-; SSE-NEXT:    addss %xmm2, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,0,0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE-NEXT:    rcpps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SSE-NEXT:    subps %xmm1, %xmm3
+; SSE-NEXT:    mulps %xmm2, %xmm3
+; SSE-NEXT:    addps %xmm2, %xmm3
 ; SSE-NEXT:    mulps %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: splat_fdiv_v4f32_estimate:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
-; AVX-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX-NEXT:    vsubss %xmm1, %xmm3, %xmm1
-; AVX-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX-NEXT:    vrcpps %xmm1, %xmm2
+; AVX-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vmovaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-NEXT:    vsubps %xmm1, %xmm3, %xmm1
+; AVX-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vaddps %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vy = insertelement <4 x float> undef, float %y, i32 0
@@ -140,14 +152,14 @@ define <8 x float> @splat_fdiv_v8f32_estimate(<8 x float> %x, float %y) #0 {
 ;
 ; AVX-LABEL: splat_fdiv_v8f32_estimate:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
-; AVX-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX-NEXT:    vsubss %xmm1, %xmm3, %xmm1
-; AVX-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX-NEXT:    vrcpps %ymm1, %ymm2
+; AVX-NEXT:    vmulps %ymm2, %ymm1, %ymm1
+; AVX-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-NEXT:    vsubps %ymm1, %ymm3, %ymm1
+; AVX-NEXT:    vmulps %ymm1, %ymm2, %ymm1
+; AVX-NEXT:    vaddps %ymm1, %ymm2, %ymm1
 ; AVX-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %vy = insertelement <8 x float> undef, float %y, i32 0

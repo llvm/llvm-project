@@ -178,6 +178,11 @@ void * __sanitizer_realloc(void *ptr, uptr size) {
   return hwasan_realloc(ptr, size, &stack);
 }
 
+void * __sanitizer_reallocarray(void *ptr, uptr nmemb, uptr size) {
+  GET_MALLOC_STACK_TRACE;
+  return hwasan_reallocarray(ptr, nmemb, size, &stack);
+}
+
 void * __sanitizer_malloc(uptr size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_init_is_running))
@@ -204,6 +209,7 @@ INTERCEPTOR_ALIAS(void, free, void *ptr);
 INTERCEPTOR_ALIAS(uptr, malloc_usable_size, const void *ptr);
 INTERCEPTOR_ALIAS(void *, calloc, SIZE_T nmemb, SIZE_T size);
 INTERCEPTOR_ALIAS(void *, realloc, void *ptr, SIZE_T size);
+INTERCEPTOR_ALIAS(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size);
 INTERCEPTOR_ALIAS(void *, malloc, SIZE_T size);
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD

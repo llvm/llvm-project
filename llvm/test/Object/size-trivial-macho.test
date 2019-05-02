@@ -2,21 +2,21 @@ RUN: llvm-size -A %p/Inputs/macho-text-data-bss.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix A
 RUN: llvm-size -B %p/Inputs/macho-text-data-bss.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix B
-RUN: llvm-size -format darwin %p/Inputs/macho-text-data-bss.macho-x86_64 \
+RUN: llvm-size --format=darwin %p/Inputs/macho-text-data-bss.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix m
 RUN: llvm-size %p/Inputs/macho-archive-x86_64.a \
 RUN:         | FileCheck %s -check-prefix AR
-RUN: llvm-size -format darwin %p/Inputs/macho-archive-x86_64.a \
+RUN: llvm-size --format=darwin %p/Inputs/macho-archive-x86_64.a \
 RUN:         | FileCheck %s -check-prefix mAR
 RUN: llvm-size -m -x -l %p/Inputs/hello-world.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix mxl
-RUN: llvm-size -arch all %p/Inputs/macho-universal.x86_64.i386 \
+RUN: llvm-size --arch all %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix u
-RUN: llvm-size -arch i386 %p/Inputs/macho-universal.x86_64.i386 \
+RUN: llvm-size --arch i386 %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix u-i386
-RUN: llvm-size -arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN: llvm-size --arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix uAR
-RUN: llvm-size -arch x86_64 %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN: llvm-size --arch x86_64 %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix uAR-x86_64
 
 A: section              size   addr

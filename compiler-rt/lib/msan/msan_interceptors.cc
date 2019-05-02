@@ -907,6 +907,11 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
   return msan_realloc(ptr, size, &stack);
 }
 
+INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
+  GET_MALLOC_STACK_TRACE;
+  return msan_reallocarray(ptr, nmemb, size, &stack);
+}
+
 INTERCEPTOR(void *, malloc, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!msan_inited))
@@ -1243,13 +1248,13 @@ int OnExit() {
 
 #define MSAN_INTERCEPT_FUNC(name)                                       \
   do {                                                                  \
-    if ((!INTERCEPT_FUNCTION(name) || !REAL(name)))                     \
+    if (!INTERCEPT_FUNCTION(name))                                      \
       VReport(1, "MemorySanitizer: failed to intercept '" #name "'\n"); \
   } while (0)
 
 #define MSAN_INTERCEPT_FUNC_VER(name, ver)                                    \
   do {                                                                        \
-    if ((!INTERCEPT_FUNCTION_VER(name, ver) || !REAL(name)))                  \
+    if (!INTERCEPT_FUNCTION_VER(name, ver))                                   \
       VReport(                                                                \
           1, "MemorySanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
   } while (0)
@@ -1597,6 +1602,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(realloc);
+  INTERCEPT_FUNCTION(reallocarray);
   INTERCEPT_FUNCTION(free);
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;
