@@ -172,9 +172,7 @@ void SwiftLanguageRuntime::SetupReflection() {
 }
 
 SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
-    : LanguageRuntime(process), m_negative_cache_mutex(),
-      m_SwiftNativeNSErrorISA(), m_memory_reader_sp(), m_promises_map(),
-      m_bridged_synthetics_map(), m_box_metadata_type() {
+    : LanguageRuntime(process) {
   SetupSwiftError();
   SetupExclusivity();
   SetupReflection();
