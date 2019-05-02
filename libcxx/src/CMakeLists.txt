@@ -140,6 +140,10 @@ function(cxx_link_system_libraries target)
   target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
   target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
 
+  if (LIBCXX_HAS_SYSTEM_LIB)
+    target_link_libraries(${target} PUBLIC System)
+  endif()
+
   if (LIBCXX_HAS_PTHREAD_LIB)
     target_link_libraries(${target} PUBLIC pthread)
   endif()
