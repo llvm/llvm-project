@@ -23,7 +23,8 @@ class TestVLA(TestBase):
         var_opts.SetIncludeRuntimeSupportValues(False)
         var_opts.SetUseDynamic(lldb.eDynamicCanRunTarget)
         all_locals = self.frame().GetVariables(var_opts)
-        self.assertEqual(len(all_locals), 1)
+        for value in all_locals:
+            self.assertFalse("vla_expr" in value.name)
 
         def test(a, array):
             for i in range(a):
