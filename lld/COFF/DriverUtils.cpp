@@ -746,7 +746,7 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
     if (!RF)
       fatal("cannot compile non-resource file as resource");
     if (auto EC = Parser.parse(RF))
-      fatal("failed to parse .res file: " + toString(std::move(EC)));
+      fatal(toString(std::move(EC)));
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =

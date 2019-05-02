@@ -1,0 +1,28 @@
+# RUN: %clangxx %p/Inputs/main.cpp -g -o %t.out
+# RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %s %t.out 2>&1 | FileCheck %s
+
+settings show interpreter.stop-command-source-on-error
+# CHECK: interpreter.stop-command-source-on-error (boolean) = false
+
+b main.cpp:11
+run
+# CHECK: stopped
+# CHECK-NEXT: stop reason = breakpoint
+
+watchpoint set
+# CHECK: Commands for setting a watchpoint.
+# CHECK: The following subcommands are supported:
+# CHECK: Set a watchpoint on an address by supplying an expression.
+# CHECK: Set a watchpoint on a variable.
+
+watchpoint set variable -w read_write
+# CHECK: error: required argument missing
+
+watchpoint set expression -w write --
+# CHECK: error: expression evaluation of address to watch failed
+
+watchpoint set expression MyAggregateDataType
+# CHECK: error: expression did not evaluate to an address
+
+watchpoint set variable -s -128
+# CHECK: error: invalid enumeration value

@@ -64,10 +64,8 @@ add_lldb_tool(lldb-server
 
     LINK_LIBS
       lldbBase
-      lldbCore
       lldbHost
       lldbInitialization
-      lldbInterpreter
       ${LLDB_PLUGINS}
       ${LLDB_SYSTEM_LIBS}
 

@@ -744,7 +744,9 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-bt",
           "Show the current thread's call stack.  Any numeric argument "
           "displays at most that many "
-          "frames.  The argument 'all' displays all threads.",
+          "frames.  The argument 'all' displays all threads.  Use 'settings"
+          " set frame-format' to customize the printing of individual frames "
+          "and 'settings set thread-format' to customize the thread header.",
           "bt [<digit> | all]", 2, 0, false));
   if (bt_regex_cmd_up) {
     // accept but don't document "bt -c <number>" -- before bt was a regex
