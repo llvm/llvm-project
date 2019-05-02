@@ -453,7 +453,6 @@ protected:
 
   CompilerType m_box_metadata_type;
 
-
   // These members are used to track and toggle the state of the "dynamic
   // exclusivity enforcement flag" in the swift runtime. This flag is set to
   // true when an LLDB expression starts running, and reset to its original
