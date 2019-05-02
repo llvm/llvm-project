@@ -30,7 +30,7 @@
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"
 #include "lldb/Host/windows/windows.h"
 #endif
@@ -47,7 +47,7 @@ SystemInitializerCommon::SystemInitializerCommon() {}
 SystemInitializerCommon::~SystemInitializerCommon() {}
 
 llvm::Error SystemInitializerCommon::Initialize() {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
   if (disable_crash_dialog_var &&
       llvm::StringRef(disable_crash_dialog_var).equals_lower("true")) {
@@ -120,7 +120,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
   ProcessPOSIXLog::Initialize();
 #endif
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   ProcessWindowsLog::Initialize();
 #endif
 
@@ -140,7 +140,7 @@ void SystemInitializerCommon::Terminate() {
   EmulateInstructionMIPS::Terminate();
   EmulateInstructionMIPS64::Terminate();
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   ProcessWindowsLog::Terminate();
 #endif
 
