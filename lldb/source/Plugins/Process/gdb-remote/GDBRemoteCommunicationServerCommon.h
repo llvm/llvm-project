@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "lldb/Target/Process.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationServer.h"

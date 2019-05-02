@@ -43,6 +43,8 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   ASSERT0(LT_FUSSY, RequiresOMPRuntime,
           "Generic always requires initialized runtime.");
   setExecutionParameters(Generic, RuntimeInitialized);
+  for (int I = 0; I < MAX_THREADS_PER_TEAM / WARPSIZE; ++I)
+    parallelLevel[I] = 0;
 
   int threadIdInBlock = GetThreadIdInBlock();
   ASSERT0(LT_FUSSY, threadIdInBlock == GetMasterThreadID(),
@@ -91,32 +93,32 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
                                     int16_t RequiresDataSharing) {
   PRINT0(LD_IO, "call to __kmpc_spmd_kernel_init\n");
 
+  setExecutionParameters(Spmd, RequiresOMPRuntime ? RuntimeInitialized
+                                                  : RuntimeUninitialized);
+  int threadId = GetThreadIdInBlock();
+  if (threadId == 0) {
+    usedSlotIdx = smid() % MAX_SM;
+    parallelLevel[0] =
+        1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
+  } else if (GetLaneId() == 0) {
+    parallelLevel[GetWarpId()] =
+        1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
+  }
   if (!RequiresOMPRuntime) {
-    // If OMP runtime is not required don't initialize OMP state.
-    setExecutionParameters(Spmd, RuntimeUninitialized);
-    if (GetThreadIdInBlock() == 0) {
-      usedSlotIdx = smid() % MAX_SM;
-      parallelLevel[0] = 0;
-    } else if (GetLaneId() == 0) {
-      parallelLevel[GetWarpId()] = 0;
-    }
+    // Runtime is not required - exit.
     __SYNCTHREADS();
     return;
   }
-  setExecutionParameters(Spmd, RuntimeInitialized);
 
   //
   // Team Context Initialization.
   //
   // In SPMD mode there is no master thread so use any cuda thread for team
   // context initialization.
-  int threadId = GetThreadIdInBlock();
   if (threadId == 0) {
     // Get a state object from the queue.
-    int slot = smid() % MAX_SM;
-    usedSlotIdx = slot;
     omptarget_nvptx_threadPrivateContext =
-        omptarget_nvptx_device_State[slot].Dequeue();
+        omptarget_nvptx_device_State[usedSlotIdx].Dequeue();
 
     omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
     omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
@@ -148,7 +150,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
         "%d threads\n",
         (int)newTaskDescr->ThreadId(), (int)newTaskDescr->ThreadsInTeam());
 
-  if (RequiresDataSharing && threadId % WARPSIZE == 0) {
+  if (RequiresDataSharing && GetLaneId() == 0) {
     // Warp master innitializes data sharing environment.
     unsigned WID = threadId / WARPSIZE;
     __kmpc_data_sharing_slot *RootS = currTeamDescr.RootS(

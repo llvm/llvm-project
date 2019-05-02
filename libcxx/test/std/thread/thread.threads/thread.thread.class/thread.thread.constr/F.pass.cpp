@@ -30,9 +30,10 @@ std::atomic<unsigned> outstanding_new(0);
 
 void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 {
-    if (throw_one == 0)
-        TEST_THROW(std::bad_alloc());
-    --throw_one;
+    unsigned expected = throw_one;
+    do {
+        if (expected == 0) TEST_THROW(std::bad_alloc());
+    } while (!throw_one.compare_exchange_weak(expected, expected - 1));
     ++outstanding_new;
     void* ret = std::malloc(s);
     if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
@@ -41,6 +42,7 @@ void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 
 void  operator delete(void* p) TEST_NOEXCEPT
 {
+    if (!p) return;
     --outstanding_new;
     std::free(p);
 }
@@ -108,13 +110,17 @@ public:
 //  B std::thread's constructor should properly handle exceptions and not leak
 //    memory.
 // Plan:
-//  1 Create a thread and count the number of allocations, 'N', it performs.
+//  1 Create a thread and count the number of allocations, 'numAllocs', it
+//    performs.
 //  2 For each allocation performed run a test where that allocation throws.
 //    2.1 check that the exception can be caught in the parent thread.
 //    2.2 Check that the functor has not been called.
 //    2.3 Check that no memory allocated by the creation of the thread is leaked.
-//  3 Finally check that a thread runs successfully if we throw after 'N+1'
-//    allocations.
+//  3 Finally check that a thread runs successfully if we throw after
+//    'numAllocs + 1' allocations.
+
+int numAllocs;
+
 void test_throwing_new_during_thread_creation() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     throw_one = 0xFFF;
@@ -122,7 +128,7 @@ void test_throwing_new_during_thread_creation() {
         std::thread t(f);
         t.join();
     }
-    const int numAllocs = 0xFFF - throw_one;
+    numAllocs = 0xFFF - throw_one;
     // i <= numAllocs means the last iteration is expected not to throw.
     for (int i=0; i <= numAllocs; ++i) {
         throw_one = i;
@@ -166,7 +172,10 @@ int main(int, char**)
     }
     G::op_run = false;
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    {
+    // The test below expects `std::thread` to call `new`, which may not be the
+    // case for all implementations.
+    LIBCPP_ASSERT(numAllocs > 0); // libc++ should call new.
+    if (numAllocs > 0) {
         try
         {
             throw_one = 0;
@@ -175,7 +184,7 @@ int main(int, char**)
             std::thread t((G()));
             assert(false);
         }
-        catch (...)
+        catch (std::bad_alloc const&)
         {
             throw_one = 0xFFFF;
             assert(G::n_alive == 0);
@@ -201,5 +210,5 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    return 0;
 }
