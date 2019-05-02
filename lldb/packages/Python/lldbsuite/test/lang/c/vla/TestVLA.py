@@ -14,12 +14,23 @@ class TestVLA(TestBase):
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec('main.c'))
 
+        # Make sure no helper expressions show up in frame variable.
+        var_opts = lldb.SBVariablesOptions()
+        var_opts.SetIncludeArguments(False)
+        var_opts.SetIncludeLocals(True)
+        var_opts.SetInScopeOnly(True)
+        var_opts.SetIncludeStatics(False)
+        var_opts.SetIncludeRuntimeSupportValues(False)
+        var_opts.SetUseDynamic(lldb.eDynamicCanRunTarget)
+        all_locals = self.frame().GetVariables(var_opts)
+        self.assertEqual(len(all_locals), 1)
+
         def test(a, array):
             for i in range(a):
                 self.expect("fr v vla[%d]"%i, substrs=["int", "%d"%(a-i)])
                 self.expect("expr vla[%d]"%i, substrs=["int", "%d"%(a-i)])
-            self.expect("frame var vla", substrs=array)
-            self.expect("expr      vla", error=True, substrs=["incomplete"])
+            self.expect("fr v vla", substrs=array)
+            self.expect("expr vla", error=True, substrs=["incomplete"])
 
         test(2, ["int []", "[0] = 2, [1] = 1"])
         process.Continue()
