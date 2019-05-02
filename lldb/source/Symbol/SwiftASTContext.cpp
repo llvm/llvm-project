@@ -65,6 +65,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -3009,9 +3010,17 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   }
 
   // Install the parseable interface module loader.
-  std::string ModuleCachePath = GetClangImporterOptions().ModuleCachePath;
-  StringRef PrebuiltModuleCachePath =
-      GetCompilerInvocation().getFrontendOptions().PrebuiltModuleCachePath;
+  std::string moduleCachePath = GetClangImporterOptions().ModuleCachePath;
+
+  // Use the default location of the prebuilt module cache:
+  // <resource-dir>/<platform>/prebuilt-modules
+  llvm::Triple triple(GetTriple());
+  llvm::SmallString<128> prebuiltModuleCachePath = GetResourceDir(triple);
+  StringRef platform = swift::getPlatformNameForTriple(triple);
+  llvm::sys::path::append(prebuiltModuleCachePath, platform,
+                          "prebuilt-modules");
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using prebuilt module cache path: %s",
+             prebuiltModuleCachePath.c_str());
 
   auto props = ModuleList::GetGlobalModuleListProperties();
   swift::ModuleLoadingMode loading_mode;
@@ -3045,7 +3054,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
         swift::ParseableInterfaceModuleLoader::create(
-            *m_ast_context_ap, ModuleCachePath, PrebuiltModuleCachePath,
+            *m_ast_context_ap, moduleCachePath, prebuiltModuleCachePath,
             tracker, loading_mode));
     if (parseable_module_loader_ap)
       m_ast_context_ap->addModuleLoader(std::move(parseable_module_loader_ap));
