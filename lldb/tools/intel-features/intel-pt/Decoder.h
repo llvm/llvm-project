@@ -29,13 +29,11 @@
 #include "intel-pt.h"
 
 namespace ptdecoder_private {
-//----------------------------------------------------------------------
 /// \class Instruction
 /// Represents an assembly instruction containing raw
 ///     instruction bytes, instruction address along with information
 ///     regarding execution flow context and Intel(R) Processor Trace
 ///     context.
-//----------------------------------------------------------------------
 class Instruction {
 public:
   Instruction() : ip(0), data(), error(), iclass(ptic_error), speculative(0) {}
@@ -79,11 +77,9 @@ private:
   uint32_t speculative : 1; // Instruction was executed speculatively or not
 };
 
-//---------------------------------------------------------------------------
 /// \class InstructionList
 /// Represents a list of assembly instructions. Each instruction is of
 ///     type Instruction.
-//---------------------------------------------------------------------------
 class InstructionList {
 public:
   InstructionList() : m_insn_vec() {}
@@ -109,41 +105,34 @@ private:
   std::vector<Instruction> m_insn_vec;
 };
 
-//----------------------------------------------------------------------
 /// \class TraceOptions
 /// Provides Intel(R) Processor Trace specific configuration options and
 ///     other information obtained by decoding and post-processing the trace
 ///     data. Currently, this information comprises of the total number of
 ///     assembly instructions executed for an inferior.
-//----------------------------------------------------------------------
 class TraceOptions : public lldb::SBTraceOptions {
 public:
   TraceOptions() : lldb::SBTraceOptions(), m_insn_log_size(0) {}
 
   ~TraceOptions() {}
 
-  //------------------------------------------------------------------
   /// Get total number of assembly instructions obtained after decoding the
   /// complete Intel(R) Processor Trace data obtained from LLDB.
   ///
   /// \return
   ///     Total number of instructions.
-  //------------------------------------------------------------------
   uint32_t getInstructionLogSize() const { return m_insn_log_size; }
 
-  //------------------------------------------------------------------
   /// Set total number of assembly instructions.
   ///
   /// \param[in] size
   ///     Value to be set.
-  //------------------------------------------------------------------
   void setInstructionLogSize(uint32_t size) { m_insn_log_size = size; }
 
 private:
   uint32_t m_insn_log_size;
 };
 
-//----------------------------------------------------------------------
 /// \class Decoder
 /// This class makes use of Intel(R) Processor Trace hardware feature
 ///     (implememted inside LLDB) to gather trace data for an inferior (being
@@ -156,7 +145,6 @@ private:
 ///     - stop the trace for a thread/process,
 ///     - get the execution flow (assembly instructions) for a thread and
 ///     - get trace specific information for a thread
-//----------------------------------------------------------------------
 class Decoder {
 public:
   typedef std::vector<Instruction> Instructions;
@@ -216,7 +204,6 @@ private:
   void ParseCPUInfo(CPUInfo &pt_cpu, lldb::SBStructuredData &s,
                     lldb::SBError &sberror);
 
-  ///------------------------------------------------------------------------
   /// Function performs following tasks for a given process and thread:
   ///  - Checks if the given thread is registered in the class or not. If not
   ///  then tries to register it if trace was ever started on the entire
@@ -224,7 +211,6 @@ private:
   ///  - fetches trace and other necessary information from LLDB (using
   ///  ReadTraceDataAndImageInfo()) and decodes the trace (using
   ///  DecodeProcessorTrace())
-  ///------------------------------------------------------------------------
   void FetchAndDecode(lldb::SBProcess &sbprocess, lldb::tid_t tid,
                       lldb::SBError &sberror,
                       ThreadTraceInfo **threadTraceInfo);
@@ -248,12 +234,10 @@ private:
                             ReadExecuteSectionInfos &readExecuteSectionInfos,
                             lldb::SBError &sberror);
 
-  ///------------------------------------------------------------------------
   /// Helper functions of DecodeProcessorTrace() function for:
   ///  - initializing raw trace decoder (provided by Intel(R) Processor Trace
   ///    Decoding library)
   ///  - start trace decoding
-  ///------------------------------------------------------------------------
   void InitializePTInstDecoder(
       struct pt_insn_decoder **decoder, struct pt_config *config,
       const CPUInfo &pt_cpu, Buffer &pt_buffer,

@@ -47,9 +47,7 @@ public:
   static lldb_private::UnwindAssembly *
   CreateInstance(const lldb_private::ArchSpec &arch);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();

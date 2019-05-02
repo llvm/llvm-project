@@ -36,21 +36,37 @@ class ConstantFP;
 class APFloat;
 
 /// Try to constrain Reg to the specified register class. If this fails,
-/// create a new virtual register in the correct class and insert a COPY before
-/// \p InsertPt. The debug location of \p InsertPt is used for the new copy.
+/// create a new virtual register in the correct class.
 ///
 /// \return The virtual register constrained to the right register class.
 unsigned constrainRegToClass(MachineRegisterInfo &MRI,
                              const TargetInstrInfo &TII,
-                             const RegisterBankInfo &RBI,
-                             MachineInstr &InsertPt, unsigned Reg,
+                             const RegisterBankInfo &RBI, unsigned Reg,
                              const TargetRegisterClass &RegClass);
+
+/// Constrain the Register operand OpIdx, so that it is now constrained to the
+/// TargetRegisterClass passed as an argument (RegClass).
+/// If this fails, create a new virtual register in the correct class and
+/// insert a COPY before \p InsertPt if it is a use or after if it is a
+/// definition. The debug location of \p InsertPt is used for the new copy.
+///
+/// \return The virtual register constrained to the right register class.
+unsigned constrainOperandRegClass(const MachineFunction &MF,
+                                  const TargetRegisterInfo &TRI,
+                                  MachineRegisterInfo &MRI,
+                                  const TargetInstrInfo &TII,
+                                  const RegisterBankInfo &RBI,
+                                  MachineInstr &InsertPt,
+                                  const TargetRegisterClass &RegClass,
+                                  const MachineOperand &RegMO, unsigned OpIdx);
 
 /// Try to constrain Reg so that it is usable by argument OpIdx of the
 /// provided MCInstrDesc \p II. If this fails, create a new virtual
-/// register in the correct class and insert a COPY before \p InsertPt.
-/// This is equivalent to constrainRegToClass() with RegClass obtained from the
-/// MCInstrDesc. The debug location of \p InsertPt is used for the new copy.
+/// register in the correct class and insert a COPY before \p InsertPt
+/// if it is a use or after if it is a definition.
+/// This is equivalent to constrainOperandRegClass(..., RegClass, ...)
+/// with RegClass obtained from the MCInstrDesc. The debug location of \p
+/// InsertPt is used for the new copy.
 ///
 /// \return The virtual register constrained to the right register class.
 unsigned constrainOperandRegClass(const MachineFunction &MF,

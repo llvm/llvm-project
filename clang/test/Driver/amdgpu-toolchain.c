@@ -3,4 +3,4 @@
 // AS_LINK: ld.lld{{.*}} "-shared"
 
 // RUN: %clang -### -g -target amdgcn--amdhsa -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
-// DWARF_VER: "-dwarf-version=2"
+// DWARF_VER: "-dwarf-version=5"

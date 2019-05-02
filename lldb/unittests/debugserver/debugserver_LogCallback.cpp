@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-//------------------------------------------------------------------------------
 // this function is defined in debugserver.cpp, but is needed to link the
 // debugserver Common library. It is for logging only, so it is left
 // unimplemented here.
-//------------------------------------------------------------------------------
 
 #include <stdint.h>
 #include <stdarg.h>

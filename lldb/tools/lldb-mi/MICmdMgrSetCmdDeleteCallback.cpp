@@ -12,7 +12,6 @@
 namespace CMICmdMgrSetCmdDeleteCallback {
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CSetClients constructor.
 // Type:    Method.
 // Args:    None.
@@ -22,7 +21,6 @@ namespace CMICmdMgrSetCmdDeleteCallback {
 CSetClients::CSetClients() : m_bClientUnregistered(false) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CSetClients destructor.
 // Type:    Method.
 // Args:    None.
@@ -32,7 +30,6 @@ CSetClients::CSetClients() : m_bClientUnregistered(false) {}
 CSetClients::~CSetClients() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Register an object to be called when a command object is deleted.
 // Type:    Method.
 // Args:    vObject - (R) A new interested client.
@@ -47,7 +44,6 @@ bool CSetClients::Register(ICallback &vObject) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unregister an object from being called when a command object is
 // deleted.
 // Type:    Method.
@@ -64,7 +60,6 @@ bool CSetClients::Unregister(ICallback &vObject) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Iterate all interested clients and tell them a command is being
 // deleted.
 // Type:    Method.

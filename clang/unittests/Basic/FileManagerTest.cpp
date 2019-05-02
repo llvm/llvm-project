@@ -57,9 +57,10 @@ public:
   }
 
   // Implement FileSystemStatCache::getStat().
-  LookupResult getStat(StringRef Path, llvm::vfs::Status &Status, bool isFile,
-                       std::unique_ptr<llvm::vfs::File> *F,
-                       llvm::vfs::FileSystem &FS) override {
+  std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
+                          bool isFile,
+                          std::unique_ptr<llvm::vfs::File> *F,
+                          llvm::vfs::FileSystem &FS) override {
 #ifndef _WIN32
     SmallString<128> NormalizedPath(Path);
     llvm::sys::path::native(NormalizedPath);
@@ -68,10 +69,10 @@ public:
 
     if (StatCalls.count(Path) != 0) {
       Status = StatCalls[Path];
-      return CacheExists;
+      return std::error_code();
     }
 
-    return CacheMissing;  // This means the file/directory doesn't exist.
+    return std::make_error_code(std::errc::no_such_file_or_directory);
   }
 };
 

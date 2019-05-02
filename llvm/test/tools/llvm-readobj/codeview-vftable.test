@@ -17,7 +17,7 @@
 ;   B b;
 ;   C c;
 
-RUN: llvm-readobj -codeview %p/Inputs/codeview-vftable.obj.coff | FileCheck %s
+RUN: llvm-readobj --codeview %p/Inputs/codeview-vftable.obj.coff | FileCheck %s
 
 CHECK:       VFTable (0x10F0) {
 CHECK-NEXT:    TypeLeafKind: LF_VFTABLE (0x151D)

@@ -68,6 +68,11 @@ EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,
                         cl::desc("Run early if-conversion"),
                         cl::init(false));
 
+static cl::opt<bool>
+OptExecMaskPreRA("amdgpu-opt-exec-mask-pre-ra", cl::Hidden,
+            cl::desc("Run pre-RA exec mask optimizations"),
+            cl::init(true));
+
 static cl::opt<bool> EnableR600IfConvert(
   "r600-if-convert",
   cl::desc("Use if conversion pass"),
@@ -144,6 +149,12 @@ static cl::opt<bool> EnableLowerKernelArguments(
   cl::init(true),
   cl::Hidden);
 
+static cl::opt<bool> EnableRegReassign(
+  "amdgpu-reassign-regs",
+  cl::desc("Enable register reassign optimizations on gfx10+"),
+  cl::init(true),
+  cl::Hidden);
+
 // Enable atomic optimization
 static cl::opt<bool> EnableAtomicOptimizations(
   "amdgpu-atomic-optimizations",
@@ -155,6 +166,18 @@ static cl::opt<bool> EnableAtomicOptimizations(
 static cl::opt<bool> EnableSIModeRegisterPass(
   "amdgpu-mode-register",
   cl::desc("Enable mode register pass"),
+  cl::init(true),
+  cl::Hidden);
+
+// Option is used in lit tests to prevent deadcoding of patterns inspected.
+static cl::opt<bool>
+EnableDCEInRA("amdgpu-dce-in-ra",
+    cl::init(true), cl::Hidden,
+    cl::desc("Enable machine DCE inside regalloc"));
+
+static cl::opt<bool> EnableScalarIRPasses(
+  "amdgpu-scalar-ir-passes",
+  cl::desc("Enable scalar IR passes"),
   cl::init(true),
   cl::Hidden);
 
@@ -203,7 +226,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertSkipsPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
-  initializeSIFixWWMLivenessPass(*PR);
+  initializeSIPreAllocateWWMRegsPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
@@ -211,6 +234,8 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
   initializeAMDGPUInlinerPass(*PR);
+  initializeGCNRegBankReassignPass(*PR);
+  initializeGCNNSAReassignPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -535,7 +560,13 @@ public:
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addGCPasses() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
+
+std::unique_ptr<CSEConfigBase> AMDGPUPassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
+}
 
 class R600PassConfig final : public AMDGPUPassConfig {
 public:
@@ -579,9 +610,10 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-  void addFastRegAlloc(FunctionPass *RegAllocPass) override;
-  void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
+  void addFastRegAlloc() override;
+  void addOptimizedRegAlloc() override;
   void addPreRegAlloc() override;
+  bool addPreRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -659,7 +691,8 @@ void AMDGPUPassConfig::addIRPasses() {
     if (EnableSROA)
       addPass(createSROAPass());
 
-    addStraightLineScalarOptimizationPasses();
+    if (EnableScalarIRPasses)
+      addStraightLineScalarOptimizationPasses();
 
     if (EnableAMDGPUAliasAnalysis) {
       addPass(createAMDGPUAAWrapperPass());
@@ -685,7 +718,7 @@ void AMDGPUPassConfig::addIRPasses() {
   //   %1 = shl %a, 2
   //
   // but EarlyCSE can do neither of them.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None && EnableScalarIRPasses)
     addEarlyCSEOrGVNPass();
 }
 
@@ -865,7 +898,7 @@ void GCNPassConfig::addPreRegAlloc() {
   addPass(createSIWholeQuadModePass());
 }
 
-void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
+void GCNPassConfig::addFastRegAlloc() {
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
 
@@ -874,28 +907,40 @@ void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
-  // This must be run after SILowerControlFlow, since it needs to use the
-  // machine-level CFG, but before register allocation.
-  insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
+  // This must be run just after RegisterCoalescing.
+  insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
 
-  TargetPassConfig::addFastRegAlloc(RegAllocPass);
+  TargetPassConfig::addFastRegAlloc();
 }
 
-void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
-  insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
-
-  insertPass(&SIOptimizeExecMaskingPreRAID, &SIFormMemoryClausesID);
+void GCNPassConfig::addOptimizedRegAlloc() {
+  if (OptExecMaskPreRA) {
+    insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+    insertPass(&SIOptimizeExecMaskingPreRAID, &SIFormMemoryClausesID);
+  } else {
+    insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
+  }
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
-  // This must be run after SILowerControlFlow, since it needs to use the
-  // machine-level CFG, but before register allocation.
-  insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
+  // This must be run just after RegisterCoalescing.
+  insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
 
-  TargetPassConfig::addOptimizedRegAlloc(RegAllocPass);
+  if (EnableDCEInRA)
+    insertPass(&RenameIndependentSubregsID, &DeadMachineInstructionElimID);
+
+  TargetPassConfig::addOptimizedRegAlloc();
+}
+
+bool GCNPassConfig::addPreRewrite() {
+  if (EnableRegReassign) {
+    addPass(&GCNNSAReassignID);
+    addPass(&GCNRegBankReassignID);
+  }
+  return true;
 }
 
 void GCNPassConfig::addPostRegAlloc() {

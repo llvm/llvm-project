@@ -69,6 +69,8 @@ inline InstrumentationData GetInstrumentationData() {
   return {};
 }
 
+template <typename T> void RegisterMethods(Registry &R);
+
 } // namespace repro
 } // namespace lldb_private
 

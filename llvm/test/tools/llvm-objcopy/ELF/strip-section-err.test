@@ -43,9 +43,7 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         '0102'
 Symbols:         
-  Local:           
-    - Name:            foo
-      Section:         .data
-      Value:           0x0000000000000001
-DynamicSymbols:  {}
+  - Name:            foo
+    Section:         .data
+    Value:           0x0000000000000001
 ...

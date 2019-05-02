@@ -5,7 +5,7 @@ include(ExternalProject)
 function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
   cmake_parse_arguments(ARG "" "CONFIGURATION" "" ${ARGN})
   if(NOT ARG_CONFIGURATION)
-    set(ARG_CONFIGURATION "$<CONFIGURATION>")
+    set(ARG_CONFIGURATION "$<CONFIG>")
   endif()
   if (CMAKE_GENERATOR MATCHES "Make")
     # Use special command for Makefiles to support parallelism.

@@ -39,17 +39,16 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1234
-      Size:     8
-    - Name:     bar
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x5678
-      Size:     8
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1234
+    Size:     8
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x5678
+    Size:     8
 
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {

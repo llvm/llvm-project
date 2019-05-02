@@ -229,9 +229,7 @@ CommandObjectDisassemble::CommandOptions::GetDefinitions() {
   return llvm::makeArrayRef(g_disassemble_options);
 }
 
-//-------------------------------------------------------------------------
 // CommandObjectDisassemble
-//-------------------------------------------------------------------------
 
 CommandObjectDisassemble::CommandObjectDisassemble(
     CommandInterpreter &interpreter)
@@ -247,7 +245,7 @@ CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 
 bool CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
-  Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+  Target *target = GetDebugger().GetSelectedTarget().get();
   if (target == nullptr) {
     result.AppendError("invalid target, create a debug target using the "
                        "'target create' command");
@@ -322,8 +320,8 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
     ConstString name(m_options.func_name.c_str());
 
     if (Disassembler::Disassemble(
-            m_interpreter.GetDebugger(), m_options.arch, plugin_name,
-            flavor_string, m_exe_ctx, name,
+            GetDebugger(), m_options.arch, plugin_name, flavor_string,
+            m_exe_ctx, name,
             nullptr, // Module *
             m_options.num_instructions, m_options.show_mixed,
             m_options.show_mixed ? m_options.num_lines_context : 0, options,
@@ -486,8 +484,8 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       bool print_sc_header = ranges.size() > 1;
       for (AddressRange cur_range : ranges) {
         if (Disassembler::Disassemble(
-                m_interpreter.GetDebugger(), m_options.arch, plugin_name,
-                flavor_string, m_exe_ctx, cur_range.GetBaseAddress(),
+                GetDebugger(), m_options.arch, plugin_name, flavor_string,
+                m_exe_ctx, cur_range.GetBaseAddress(),
                 m_options.num_instructions, m_options.show_mixed,
                 m_options.show_mixed ? m_options.num_lines_context : 0, options,
                 result.GetOutputStream())) {
@@ -534,8 +532,8 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
           cur_range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
 
         if (Disassembler::Disassemble(
-                m_interpreter.GetDebugger(), m_options.arch, plugin_name,
-                flavor_string, m_exe_ctx, cur_range, m_options.num_instructions,
+                GetDebugger(), m_options.arch, plugin_name, flavor_string,
+                m_exe_ctx, cur_range, m_options.num_instructions,
                 m_options.show_mixed,
                 m_options.show_mixed ? m_options.num_lines_context : 0, options,
                 result.GetOutputStream())) {

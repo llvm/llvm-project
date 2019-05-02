@@ -104,8 +104,6 @@ public:
 
     bool Read(const lldb_private::DWARFDataExtractor &data,
               lldb::offset_t *offset_ptr, DIEInfo &hash_data) const;
-
-    void Dump(lldb_private::Stream &strm, const DIEInfo &hash_data) const;
   };
 
   // A class for reading and using a saved hash table from a block of data

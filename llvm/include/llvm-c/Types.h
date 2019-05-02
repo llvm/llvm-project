@@ -164,6 +164,11 @@ typedef struct LLVMOpaqueModuleFlagEntry LLVMModuleFlagEntry;
 typedef struct LLVMOpaqueJITEventListener *LLVMJITEventListenerRef;
 
 /**
+ * @see llvm::object::Binary
+ */
+typedef struct LLVMOpaqueBinary *LLVMBinaryRef;
+
+/**
  * @}
  */
 

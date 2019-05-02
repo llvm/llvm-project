@@ -1,6 +1,6 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/gcc-simple.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/gcc-simple.afdo -S | FileCheck %s
-; XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
+; XFAIL: host-byteorder-big-endian
 ; Original code:
 ;
 ; #include <stdlib.h>

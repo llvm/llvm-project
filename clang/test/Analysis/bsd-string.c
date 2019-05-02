@@ -15,6 +15,7 @@ void f1() {
 void f2() {
   char buf[5];
   strlcpy(buf, "abcd", sizeof(buf)); // expected-no-warning
+  // FIXME: This should not warn. The string is safely truncated.
   strlcat(buf, "efgh", sizeof(buf)); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
 }
 

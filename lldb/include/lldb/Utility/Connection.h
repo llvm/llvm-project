@@ -29,7 +29,6 @@ template <typename Ratio> class Timeout;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Connection Connection.h "lldb/Utility/Connection.h"
 /// A communication connection class.
 ///
@@ -41,21 +40,15 @@ namespace lldb_private {
 /// Instances can be instantiated and given to a Communication class to
 /// perform communications where clients can listen for broadcasts, and
 /// perform other higher level communications.
-//----------------------------------------------------------------------
 class Connection {
 public:
-  //------------------------------------------------------------------
   /// Default constructor
-  //------------------------------------------------------------------
   Connection() = default;
 
-  //------------------------------------------------------------------
   /// Virtual destructor since this class gets subclassed and handed to a
   /// Communication object.
-  //------------------------------------------------------------------
   virtual ~Connection();
 
-  //------------------------------------------------------------------
   /// Connect using the connect string \a url.
   ///
   /// \param[in] url
@@ -73,11 +66,9 @@ public:
   ///     appropriate value based on the result of this function.
   ///
   /// \see Status& Communication::GetError ();
-  //------------------------------------------------------------------
   virtual lldb::ConnectionStatus Connect(llvm::StringRef url,
                                          Status *error_ptr) = 0;
 
-  //------------------------------------------------------------------
   /// Disconnect the communications connection if one is currently connected.
   ///
   /// \param[out] error_ptr
@@ -91,19 +82,15 @@ public:
   ///     appropriate value based on the result of this function.
   ///
   /// \see Status& Communication::GetError ();
-  //------------------------------------------------------------------
   virtual lldb::ConnectionStatus Disconnect(Status *error_ptr) = 0;
 
-  //------------------------------------------------------------------
   /// Check if the connection is valid.
   ///
   /// \return
   ///     \b True if this object is currently connected, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   virtual bool IsConnected() const = 0;
 
-  //------------------------------------------------------------------
   /// The read function that attempts to read from the connection.
   ///
   /// \param[in] dst
@@ -130,12 +117,10 @@ public:
   ///     The number of bytes actually read.
   ///
   /// \see size_t Communication::Read (void *, size_t, uint32_t);
-  //------------------------------------------------------------------
   virtual size_t Read(void *dst, size_t dst_len,
                       const Timeout<std::micro> &timeout,
                       lldb::ConnectionStatus &status, Status *error_ptr) = 0;
 
-  //------------------------------------------------------------------
   /// The actual write function that attempts to write to the communications
   /// protocol.
   ///
@@ -156,21 +141,17 @@ public:
   ///
   /// \return
   ///     The number of bytes actually Written.
-  //------------------------------------------------------------------
   virtual size_t Write(const void *dst, size_t dst_len,
                        lldb::ConnectionStatus &status, Status *error_ptr) = 0;
 
-  //------------------------------------------------------------------
   /// Returns a URI that describes this connection object
   ///
   /// Subclasses may override this function.
   ///
   /// \return
   ///     Returns URI or an empty string if disconnecteds
-  //------------------------------------------------------------------
   virtual std::string GetURI() = 0;
 
-  //------------------------------------------------------------------
   /// Interrupts an ongoing Read() operation.
   ///
   /// If there is an ongoing read operation in another thread, this operation
@@ -182,10 +163,8 @@ public:
   ///
   /// \return
   ///     Returns true is the interrupt request was successful.
-  //------------------------------------------------------------------
   virtual bool InterruptRead() = 0;
 
-  //------------------------------------------------------------------
   /// Returns the underlying IOObject used by the Connection.
   ///
   /// The IOObject can be used to wait for data to become available on the
@@ -194,13 +173,10 @@ public:
   ///
   /// \return
   ///     The underlying IOObject used for reading.
-  //------------------------------------------------------------------
   virtual lldb::IOObjectSP GetReadObject() { return lldb::IOObjectSP(); }
 
 private:
-  //------------------------------------------------------------------
   // For Connection only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 

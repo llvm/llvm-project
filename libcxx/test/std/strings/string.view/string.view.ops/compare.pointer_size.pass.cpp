@@ -444,8 +444,8 @@ int main(int, char**)
     constexpr SV  sv1;
     constexpr SV  sv2 { "abcde", 5 };
     static_assert ( sv1.compare(0, 0, "") == 0, "" );
-    static_assert ( sv1.compare(0, 0, "abcde") == -1, "" );
-    static_assert ( sv2.compare(0, 2, "") == 1, "" );
+    static_assert ( sv1.compare(0, 0, "abcde") < 0, "" );
+    static_assert ( sv2.compare(0, 2, "") > 0, "" );
     static_assert ( sv2.compare(0, 6, "abcde") == 0, "" );
     }
 #endif

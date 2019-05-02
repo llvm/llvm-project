@@ -4,7 +4,7 @@
 // $ cat example.c
 // int main(void) { return (0); }
 
-RUN: llvm-readobj -dynamic-table %p/Inputs/dtflags.elf-x86-64 | FileCheck %s
+RUN: llvm-readobj --dynamic-table %p/Inputs/dtflags.elf-x86-64 | FileCheck %s
 
 CHECK: 0x000000000000001E FLAGS                ORIGIN BIND_NOW
 CHECK: 0x000000006FFFFFFB FLAGS_1              NOW ORIGIN

@@ -96,7 +96,10 @@ def main():
 
     leftovers = var_re.findall(output)
     if leftovers:
-        print('unprocessed values:\n', '\n'.join(leftovers), file=sys.stderr)
+        print(
+            'unprocessed values:\n',
+            '\n'.join([x[0] or x[1] for x in leftovers]),
+            file=sys.stderr)
         return 1
 
     if not os.path.exists(args.output) or open(args.output).read() != output:

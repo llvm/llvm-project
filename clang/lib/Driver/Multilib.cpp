@@ -51,8 +51,9 @@ static void normalizePathSegment(std::string &Segment) {
 }
 
 Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
-                   StringRef IncludeSuffix)
-    : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix) {
+                   StringRef IncludeSuffix, int Priority)
+    : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
+      Priority(Priority) {
   normalizePathSegment(this->GCCSuffix);
   normalizePathSegment(this->OSSuffix);
   normalizePathSegment(this->IncludeSuffix);
@@ -265,8 +266,19 @@ bool MultilibSet::select(const Multilib::flags_list &Flags, Multilib &M) const {
     return true;
   }
 
-  // TODO: pick the "best" multlib when more than one is suitable
-  assert(false);
+  // Sort multilibs by priority and select the one with the highest priority.
+  llvm::sort(Filtered.begin(), Filtered.end(),
+             [](const Multilib &a, const Multilib &b) -> bool {
+               return a.priority() > b.priority();
+             });
+
+  if (Filtered[0].priority() > Filtered[1].priority()) {
+    M = Filtered[0];
+    return true;
+  }
+
+  // TODO: We should consider returning llvm::Error rather than aborting.
+  assert(false && "More than one multilib with the same priority");
   return false;
 }
 

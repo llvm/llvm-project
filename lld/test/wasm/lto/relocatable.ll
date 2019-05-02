@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t1.o
 ; RUN: wasm-ld %t1.o -r -o %t
-; RUN: llvm-readobj -symbols %t | FileCheck %s
+; RUN: llvm-readobj --symbols %t | FileCheck %s
 
 ; CHECK:      Symbols [
 ; CHECK-NEXT:   Symbol {

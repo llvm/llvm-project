@@ -17,13 +17,13 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include <vector>
 
 namespace llvm {
 
 class MCContext;
+class MCCFIInstruction;
 class MCExpr;
 class MCSection;
 class MCStreamer;
@@ -597,9 +597,7 @@ public:
     return SupportsExtendedDwarfLocDirective;
   }
 
-  void addInitialFrameState(const MCCFIInstruction &Inst) {
-    InitialFrameState.push_back(Inst);
-  }
+  void addInitialFrameState(const MCCFIInstruction &Inst);
 
   const std::vector<MCCFIInstruction> &getInitialFrameState() const {
     return InitialFrameState;

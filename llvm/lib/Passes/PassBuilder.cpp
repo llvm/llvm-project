@@ -56,6 +56,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/SafepointIRVerifier.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -121,6 +122,7 @@
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Scalar/LoopDistribute.h"
+#include "llvm/Transforms/Scalar/LoopFuse.h"
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/Transforms/Scalar/LoopInstSimplify.h"
 #include "llvm/Transforms/Scalar/LoopLoadElimination.h"
@@ -183,10 +185,6 @@ static cl::opt<bool>
               cl::Hidden, cl::ZeroOrMore,
               cl::desc("Run NewGVN instead of GVN"));
 
-static cl::opt<bool> EnableEarlyCSEMemSSA(
-    "enable-npm-earlycse-memssa", cl::init(true), cl::Hidden,
-    cl::desc("Enable the EarlyCSE w/ MemorySSA pass for the new PM (default = on)"));
-
 static cl::opt<bool> EnableGVNHoist(
     "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
     cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
@@ -207,9 +205,18 @@ static cl::opt<bool> EnableSyntheticCounts(
 static Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
 
+// This option is used in simplifying testing SampleFDO optimizations for
+// profile loading.
 static cl::opt<bool>
     EnableCHR("enable-chr-npm", cl::init(true), cl::Hidden,
               cl::desc("Enable control height reduction optimization (CHR)"));
+
+PipelineTuningOptions::PipelineTuningOptions() {
+  LoopInterleaving = EnableLoopInterleaving;
+  LoopVectorization = EnableLoopVectorization;
+  LicmMssaOptCap = SetLicmMssaOptCap;
+  LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
+}
 
 extern cl::opt<bool> EnableHotColdSplit;
 extern cl::opt<bool> EnableOrderFileInstrumentation;
@@ -376,7 +383,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(SROA());
 
   // Catch trivial redundancies
-  FPM.addPass(EarlyCSEPass(EnableEarlyCSEMemSSA));
+  FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
 
   // Hoisting of scalars and load expressions.
   if (EnableGVNHoist)
@@ -437,7 +444,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Rotate Loop - disable header duplication at -Oz
   LPM1.addPass(LoopRotatePass(Level != Oz));
-  LPM1.addPass(LICMPass());
+  LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
   LPM1.addPass(SimpleLoopUnswitchPass());
   LPM2.addPass(IndVarSimplifyPass());
   LPM2.addPass(LoopIdiomRecognizePass());
@@ -497,7 +504,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
   FPM.addPass(DSEPass());
-  FPM.addPass(createFunctionToLoopPassAdaptor(LICMPass(), DebugLogging));
+  FPM.addPass(createFunctionToLoopPassAdaptor(
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
+      DebugLogging));
 
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
@@ -574,8 +583,12 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
     Options.DoCounterPromotion = true;
     Options.UseBFIInPromotion = IsCS;
     MPM.addPass(InstrProfiling(Options, IsCS));
-  } else if (!ProfileFile.empty())
+  } else if (!ProfileFile.empty()) {
     MPM.addPass(PGOInstrumentationUse(ProfileFile, ProfileRemappingFile, IsCS));
+    // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
+    // RequireAnalysisPass for PSI before subsequent non-module passes.
+    MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  }
 }
 
 static InlineParams
@@ -648,6 +661,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
                                         Phase == ThinLTOPhase::PreLink));
+    // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
+    // RequireAnalysisPass for PSI before subsequent non-module passes.
+    MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
     // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
     // for the profile annotation to be accurate in the ThinLTO backend.
     if (Phase != ThinLTOPhase::PreLink)
@@ -846,7 +862,8 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   OptimizePM.addPass(LoopDistributePass());
 
   // Now run the core loop vectorizer.
-  OptimizePM.addPass(LoopVectorizePass());
+  OptimizePM.addPass(LoopVectorizePass(
+      LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
   // of the current iteration.
@@ -890,7 +907,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   OptimizePM.addPass(WarnMissedTransformationsPass());
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass(), DebugLogging));
+  OptimizePM.addPass(createFunctionToLoopPassAdaptor(
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
+      DebugLogging));
 
   // Now that we've vectorized and unrolled loops, we may have more refined
   // alignment information, try to re-derive it here.
@@ -1027,9 +1046,15 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     //
     // Also, WPD has access to more precise information than ICP and can
     // devirtualize more effectively, so it should operate on the IR first.
+    //
+    // The WPD and LowerTypeTest passes need to run at -O0 to lower type
+    // metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(nullptr, ImportSummary));
     MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
+
+  if (Level == O0)
+    return MPM;
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
@@ -1056,14 +1081,24 @@ PassBuilder::buildLTOPreLinkDefaultPipeline(OptimizationLevel Level,
 ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
                                      ModuleSummaryIndex *ExportSummary) {
-  assert(Level != O0 && "Must request optimizations for the default pipeline!");
   ModulePassManager MPM(DebugLogging);
+
+  if (Level == O0) {
+    // The WPD and LowerTypeTest passes need to run at -O0 to lower type
+    // metadata and intrinsics.
+    MPM.addPass(WholeProgramDevirtPass(ExportSummary, nullptr));
+    MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
+    return MPM;
+  }
 
   if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
     // Load sample profile before running the LTO optimization pipeline.
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
                                         false /* ThinLTOPhase::PreLink */));
+    // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
+    // RequireAnalysisPass for PSI before subsequent non-module passes.
+    MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   }
 
   // Remove unused virtual tables to improve the quality of code generated by
@@ -1184,6 +1219,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
 
   // Break up allocas
   FPM.addPass(SROA());
+
+  // LTO provides additional opportunities for tailcall elimination due to
+  // link-time inlining, and visibility of nocapture attribute.
+  FPM.addPass(TailCallElimPass());
 
   // Run a few AA driver optimizations here and now to cleanup the code.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -1417,6 +1456,79 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   return Result;
 }
 
+/// Parser of parameters for SimplifyCFG pass.
+Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
+  SimplifyCFGOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "forward-switch-cond") {
+      Result.forwardSwitchCondToPhi(Enable);
+    } else if (ParamName == "switch-to-lookup") {
+      Result.convertSwitchToLookupTable(Enable);
+    } else if (ParamName == "keep-loops") {
+      Result.needCanonicalLoops(Enable);
+    } else if (ParamName == "sink-common-insts") {
+      Result.sinkCommonInsts(Enable);
+    } else if (Enable && ParamName.consume_front("bonus-inst-threshold=")) {
+      APInt BonusInstThreshold;
+      if (ParamName.getAsInteger(0, BonusInstThreshold))
+        return make_error<StringError>(
+            formatv("invalid argument to SimplifyCFG pass bonus-threshold "
+                    "parameter: '{0}' ",
+                    ParamName).str(),
+            inconvertibleErrorCode());
+      Result.bonusInstThreshold(BonusInstThreshold.getSExtValue());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SimplifyCFG pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+/// Parser of parameters for LoopVectorize pass.
+Expected<LoopVectorizeOptions> parseLoopVectorizeOptions(StringRef Params) {
+  LoopVectorizeOptions Opts;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "interleave-forced-only") {
+      Opts.setInterleaveOnlyWhenForced(Enable);
+    } else if (ParamName == "vectorize-forced-only") {
+      Opts.setVectorizeOnlyWhenForced(Enable);
+    } else {
+      return make_error<StringError>(
+          formatv("invalid LoopVectorize parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Opts;
+}
+
+Expected<bool> parseLoopUnswitchOptions(StringRef Params) {
+  bool Result = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "nontrivial") {
+      Result = Enable;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid LoopUnswitch pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
@@ -1537,6 +1649,9 @@ static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks) {
 
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME)                                                            \
+    return true;
+#define LOOP_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)                       \
+  if (checkParametrizedPassName(Name, NAME))                                   \
     return true;
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
@@ -1923,6 +2038,14 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     LPM.addPass(CREATE_PASS);                                                  \
+    return Error::success();                                                   \
+  }
+#define LOOP_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)                       \
+  if (checkParametrizedPassName(Name, NAME)) {                                 \
+    auto Params = parsePassParameters(PARSER, Name, NAME);                     \
+    if (!Params)                                                               \
+      return Params.takeError();                                               \
+    LPM.addPass(CREATE_PASS(Params.get()));                                    \
     return Error::success();                                                   \
   }
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \

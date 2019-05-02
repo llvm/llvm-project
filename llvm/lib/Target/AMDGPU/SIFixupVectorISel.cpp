@@ -197,6 +197,11 @@ static bool fixupGlobalSaddr(MachineBasicBlock &MBB,
     // Atomics dont have a GLC, so omit the field if not there.
     if (Glc)
       NewGlob->addOperand(MF, *Glc);
+
+    MachineOperand *DLC = TII->getNamedOperand(MI, AMDGPU::OpName::dlc);
+    if (DLC)
+      NewGlob->addOperand(MF, *DLC);
+
     NewGlob->addOperand(*TII->getNamedOperand(MI, AMDGPU::OpName::slc));
     // _D16 have an vdst_in operand, copy it in.
     MachineOperand *VDstInOp = TII->getNamedOperand(MI,

@@ -238,7 +238,14 @@ public:
   /// Return the pointer type for the given address space, defaults to
   /// the pointer type from the data layout.
   /// FIXME: The default needs to be removed once all the code is updated.
-  MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const {
+  virtual MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const {
+    return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
+  }
+
+  /// Return the in-memory pointer type for the given address space, defaults to
+  /// the pointer type from the data layout.  FIXME: The default needs to be
+  /// removed once all the code is updated.
+  MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const {
     return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
   }
 
@@ -527,11 +534,20 @@ public:
   /// There are two ways to clear extreme bits (either low or high):
   /// Mask:    x &  (-1 << y)  (the instcombine canonical form)
   /// Shifts:  x >> y << y
-  /// Return true if the variant with 2 shifts is preferred.
+  /// Return true if the variant with 2 variable shifts is preferred.
   /// Return false if there is no preference.
-  virtual bool preferShiftsToClearExtremeBits(SDValue X) const {
+  virtual bool shouldFoldMaskToVariableShiftPair(SDValue X) const {
     // By default, let's assume that no one prefers shifts.
     return false;
+  }
+
+  /// Return true if it is profitable to fold a pair of shifts into a mask.
+  /// This is usually true on most targets. But some targets, like Thumb1,
+  /// have immediate shift instructions, but no immediate "and" instruction;
+  /// this makes the fold unprofitable.
+  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N,
+                                                 CombineLevel Level) const {
+    return true;
   }
 
   /// Should we tranform the IR-optimal check for whether given truncation
@@ -564,11 +580,6 @@ public:
   /// vector is more efficiently handled by splatting the scalar instead.
   virtual bool shouldSplatInsEltVarIndex(EVT) const {
     return false;
-  }
-
-  /// Return true if target supports floating point exceptions.
-  bool hasFloatingPointExceptions() const {
-    return HasFloatingPointExceptions;
   }
 
   /// Return true if target always beneficiates from combining into FMA for a
@@ -953,12 +964,10 @@ public:
   /// getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
   virtual bool isSuitableForJumpTable(const SwitchInst *SI, uint64_t NumCases,
                                       uint64_t Range) const {
-    const bool OptForSize = SI->getParent()->getParent()->optForSize();
+    const bool OptForSize = SI->getParent()->getParent()->hasOptSize();
     const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
     const unsigned MaxJumpTableSize =
-        OptForSize || getMaximumJumpTableSize() == 0
-            ? UINT_MAX
-            : getMaximumJumpTableSize();
+        OptForSize ? UINT_MAX : getMaximumJumpTableSize();
     // Check whether a range of clusters is dense enough for a jump table.
     if (Range <= MaxJumpTableSize &&
         (NumCases * 100 >= Range * MinDensity)) {
@@ -1172,6 +1181,25 @@ public:
     }
     return EVT::getEVT(Ty, AllowUnknown);
   }
+
+  EVT getMemValueType(const DataLayout &DL, Type *Ty,
+                      bool AllowUnknown = false) const {
+    // Lower scalar pointers to native pointer types.
+    if (PointerType *PTy = dyn_cast<PointerType>(Ty))
+      return getPointerMemTy(DL, PTy->getAddressSpace());
+    else if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
+      Type *Elm = VTy->getElementType();
+      if (PointerType *PT = dyn_cast<PointerType>(Elm)) {
+        EVT PointerTy(getPointerMemTy(DL, PT->getAddressSpace()));
+        Elm = PointerTy.getTypeForEVT(Ty->getContext());
+      }
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(Elm, false),
+                       VTy->getNumElements());
+    }
+
+    return getValueType(DL, Ty, AllowUnknown);
+  }
+
 
   /// Return the MVT corresponding to this LLVM type. See getValueType.
   MVT getSimpleValueType(const DataLayout &DL, Type *Ty,
@@ -1399,12 +1427,11 @@ public:
   /// zero. 'MemcpyStrSrc' indicates whether the memcpy source is constant so it
   /// does not need to be loaded.  It returns EVT::Other if the type should be
   /// determined using generic target-independent logic.
-  virtual EVT getOptimalMemOpType(uint64_t /*Size*/,
-                                  unsigned /*DstAlign*/, unsigned /*SrcAlign*/,
-                                  bool /*IsMemset*/,
-                                  bool /*ZeroMemset*/,
-                                  bool /*MemcpyStrSrc*/,
-                                  MachineFunction &/*MF*/) const {
+  virtual EVT
+  getOptimalMemOpType(uint64_t /*Size*/, unsigned /*DstAlign*/,
+                      unsigned /*SrcAlign*/, bool /*IsMemset*/,
+                      bool /*ZeroMemset*/, bool /*MemcpyStrSrc*/,
+                      const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
 
@@ -1882,12 +1909,6 @@ protected:
   /// predicates into separate sequences that increase the amount of flow
   /// control.
   void setJumpIsExpensive(bool isExpensive = true);
-
-  /// Tells the code generator that this target supports floating point
-  /// exceptions and cares about preserving floating point exception behavior.
-  void setHasFloatingPointExceptions(bool FPExceptions = true) {
-    HasFloatingPointExceptions = FPExceptions;
-  }
 
   /// Tells the code generator which bitwidths to bypass.
   void addBypassSlowDiv(unsigned int SlowBitWidth, unsigned int FastBitWidth) {
@@ -2443,6 +2464,14 @@ public:
     return false;
   }
 
+  /// Return true if extraction of a scalar element from the given vector type
+  /// at the given index is cheap. For example, if scalar operations occur on
+  /// the same register file as vector operations, then an extract element may
+  /// be a sub-register rename rather than an actual instruction.
+  virtual bool isExtractVecEltCheap(EVT VT, unsigned Index) const {
+    return false;
+  }
+
   /// Try to convert math with an overflow comparison into the corresponding DAG
   /// node operation. Targets may want to override this independently of whether
   /// the operation is legal/custom for the given type because it may obscure
@@ -2539,10 +2568,6 @@ private:
   /// instructions and should attempt to combine flow control instructions via
   /// predication.
   bool JumpIsExpensive;
-
-  /// Whether the target supports or cares about preserving floating point
-  /// exception behavior.
-  bool HasFloatingPointExceptions;
 
   /// This target prefers to use _setjmp to implement llvm.setjmp.
   ///
@@ -2920,6 +2945,20 @@ public:
     }
   };
 
+  /// Determines the optimal series of memory ops to replace the memset / memcpy.
+  /// Return true if the number of memory ops is below the threshold (Limit).
+  /// It returns the types of the sequence of memory ops to perform
+  /// memset / memcpy by reference.
+  bool findOptimalMemOpLowering(std::vector<EVT> &MemOps,
+                                unsigned Limit, uint64_t Size,
+                                unsigned DstAlign, unsigned SrcAlign,
+                                bool IsMemset,
+                                bool ZeroMemset,
+                                bool MemcpyStrSrc,
+                                bool AllowOverlap,
+                                unsigned DstAS, unsigned SrcAS,
+                                const AttributeList &FuncAttributes) const;
+
   /// Check to see if the specified operand of the specified instruction is a
   /// constant integer.  If so, check to see if there are any bits set in the
   /// constant that are not demanded.  If so, shrink the constant and return
@@ -3129,15 +3168,6 @@ public:
   /// @param Level the current DAGCombine legalization level.
   virtual bool isDesirableToCommuteWithShift(const SDNode *N,
                                              CombineLevel Level) const {
-    return true;
-  }
-
-  /// Return true if it is profitable to fold a pair of shifts into a mask.
-  /// This is usually true on most targets. But some targets, like Thumb1,
-  /// have immediate shift instructions, but no immediate "and" instruction;
-  /// this makes the fold unprofitable.
-  virtual bool shouldFoldShiftPairToMask(const SDNode *N,
-                                         CombineLevel Level) const {
     return true;
   }
 

@@ -145,7 +145,7 @@ size_t DwarfEHPrepare::pruneUnreachableResumes(
   size_t ResumeIndex = 0;
   for (auto *RI : Resumes) {
     for (auto *LP : CleanupLPads) {
-      if (isPotentiallyReachable(LP, RI, DT)) {
+      if (isPotentiallyReachable(LP, RI, nullptr, DT)) {
         ResumeReachable.set(ResumeIndex);
         break;
       }

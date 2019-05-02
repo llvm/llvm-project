@@ -17,6 +17,7 @@ COMMANDS
 
 * :ref:`merge <profdata-merge>`
 * :ref:`show <profdata-show>`
+* :ref:`overlap <profdata-overlap>`
 
 .. program:: llvm-profdata merge
 
@@ -227,8 +228,75 @@ OPTIONS
  value.
 
 .. option:: -showcs
+
  Only show context sensitive profile counts. The default is to filter all
  context sensitive profile counts.
+
+.. program:: llvm-profdata overlap
+
+.. _profdata-overlap:
+
+OVERLAP
+-------
+
+SYNOPSIS
+^^^^^^^^
+
+:program:`llvm-profdata overlap` [*options*] [*base profile file*] [*test profile file*]
+
+DESCRIPTION
+^^^^^^^^^^^
+
+:program:`llvm-profdata overlap` takes two profile data files and displays the
+*overlap* of counter distribution between the whole files and between any of the
+specified functions.
+
+In this command, *overlap* is defined as follows:
+Suppose *base profile file* has the following counts:
+{c1_1, c1_2, ..., c1_n, c1_u_1, c2_u_2, ..., c2_u_s},
+and *test profile file* has
+{c2_1, c2_2, ..., c2_n, c2_v_1, c2_v_2, ..., c2_v_t}.
+Here c{1|2}_i (i = 1 .. n) are matched counters and c1_u_i (i = 1 .. s) and
+c2_v_i (i = 1 .. v) are unmatched counters (or counters only existing in)
+*base profile file* and *test profile file*, respectively.
+Let sum_1 = c1_1 + c1_2 +  ... + c1_n +  c1_u_1 + c2_u_2 + ... + c2_u_s, and
+sum_2 = c2_1 + c2_2 + ... + c2_n + c2_v_1 + c2_v_2 + ... + c2_v_t.
+*overlap* = min(c1_1/sum_1, c2_1/sum_2) + min(c1_2/sum_1, c2_2/sum_2) + ...
++ min(c1_n/sum_1, c2_n/sum_2).
+
+The result overlap distribution is a percentage number, ranging from 0.0% to
+100.0%, where 0.0% means there is no overlap and 100.0% means a perfect
+overlap.
+
+Here is an example, if *base profile file* has counts of {400, 600}, and
+*test profile file* has matched counts of {60000, 40000}. The *overlap* is 80%.
+
+
+OPTIONS
+^^^^^^^
+
+.. option:: -function=string
+
+ Print details for a function if the function's name contains the given string.
+
+.. option:: -help
+
+ Print a summary of command line options.
+
+.. option:: -o=output or -o output
+
+ Specify the output file name.  If *output* is ``-`` or it isn't specified,
+ then the output is sent to standard output.
+
+.. option:: -value-cutoff=n
+
+ Show only those functions whose max count values are greater or equal to ``n``.
+ By default, the value-cutoff is set to max of unsigned long long.
+
+.. option:: -cs
+
+ Only show overlap for the context sensitive profile counts. The default is to show
+ non-context sensitive profile counts.
 
 EXIT STATUS
 -----------

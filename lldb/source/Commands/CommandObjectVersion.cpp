@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectVersion
-//-------------------------------------------------------------------------
 
 CommandObjectVersion::CommandObjectVersion(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "version",

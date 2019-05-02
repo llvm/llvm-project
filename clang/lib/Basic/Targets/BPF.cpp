@@ -20,7 +20,7 @@ using namespace clang::targets;
 
 void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
-  DefineStd(Builder, "bpf", Opts);
+  Builder.defineMacro("__bpf__");
   Builder.defineMacro("__BPF__");
 }
 

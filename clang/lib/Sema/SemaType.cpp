@@ -255,13 +255,27 @@ namespace {
       return T;
     }
 
+    /// Completely replace the \c auto in \p TypeWithAuto by
+    /// \p Replacement. Also replace \p TypeWithAuto in \c TypeAttrPair if
+    /// necessary.
+    QualType ReplaceAutoType(QualType TypeWithAuto, QualType Replacement) {
+      QualType T = sema.ReplaceAutoType(TypeWithAuto, Replacement);
+      if (auto *AttrTy = TypeWithAuto->getAs<AttributedType>()) {
+        // Attributed type still should be an attributed type after replacement.
+        auto *NewAttrTy = cast<AttributedType>(T.getTypePtr());
+        for (TypeAttrPair &A : AttrsForTypes) {
+          if (A.first == AttrTy)
+            A.first = NewAttrTy;
+        }
+        AttrsForTypesSorted = false;
+      }
+      return T;
+    }
+
     /// Extract and remove the Attr* for a given attributed type.
     const Attr *takeAttrForAttributedType(const AttributedType *AT) {
       if (!AttrsForTypesSorted) {
-        std::stable_sort(AttrsForTypes.begin(), AttrsForTypes.end(),
-                         [](const TypeAttrPair &A, const TypeAttrPair &B) {
-                           return A.first < B.first;
-                         });
+        llvm::stable_sort(AttrsForTypes, llvm::less_first());
         AttrsForTypesSorted = true;
       }
 
@@ -517,8 +531,8 @@ static void distributeObjCPointerTypeAttrFromDeclarator(
       // attribute from being applied multiple times and gives
       // the source-location-filler something to work with.
       state.saveDeclSpecAttrs();
-      moveAttrFromListToList(attr, declarator.getAttributes(),
-                             declarator.getMutableDeclSpec().getAttributes());
+      declarator.getMutableDeclSpec().getAttributes().takeOneFrom(
+          declarator.getAttributes(), &attr);
       return;
     }
   }
@@ -2938,7 +2952,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         // template type parameter.
         // FIXME: Retain some type sugar to indicate that this was written
         // as 'auto'.
-        T = SemaRef.ReplaceAutoType(
+        T = state.ReplaceAutoType(
             T, QualType(CorrespondingTemplateParam->getTypeForDecl(), 0));
       }
       break;
@@ -5629,6 +5643,9 @@ namespace {
       assert(Chunk.Kind == DeclaratorChunk::Pipe);
       TL.setKWLoc(Chunk.Loc);
     }
+    void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+      TL.setExpansionLoc(Chunk.Loc);
+    }
 
     void VisitTypeLoc(TypeLoc TL) {
       llvm_unreachable("unsupported TypeLoc kind in declarator!");
@@ -5706,6 +5723,9 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
       fillAtomicQualLoc(ATL, D.getTypeObject(i));
       CurrTL = ATL.getValueLoc().getUnqualifiedLoc();
     }
+
+    while (MacroQualifiedTypeLoc TL = CurrTL.getAs<MacroQualifiedTypeLoc>())
+      CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
 
     while (AttributedTypeLoc TL = CurrTL.getAs<AttributedTypeLoc>()) {
       fillAttributedTypeLoc(TL, State);
@@ -5913,7 +5933,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
       ExprResult AddrSpace = S.ActOnIdExpression(
-          S.getCurScope(), SS, TemplateKWLoc, id, false, false);
+          S.getCurScope(), SS, TemplateKWLoc, id, /*HasTrailingLParen=*/false,
+          /*IsAddressOfOperand=*/false);
       if (AddrSpace.isInvalid())
         return;
 
@@ -6930,19 +6951,16 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   if (!supportsVariadicCall(CC)) {
     const FunctionProtoType *FnP = dyn_cast<FunctionProtoType>(fn);
     if (FnP && FnP->isVariadic()) {
-      unsigned DiagID = diag::err_cconv_varargs;
-
       // stdcall and fastcall are ignored with a warning for GCC and MS
       // compatibility.
-      bool IsInvalid = true;
-      if (CC == CC_X86StdCall || CC == CC_X86FastCall) {
-        DiagID = diag::warn_cconv_varargs;
-        IsInvalid = false;
-      }
+      if (CC == CC_X86StdCall || CC == CC_X86FastCall)
+        return S.Diag(attr.getLoc(), diag::warn_cconv_ignored)
+               << FunctionType::getNameForCallConv(CC)
+               << (int)Sema::CallingConventionIgnoredReason::VariadicFunction;
 
-      S.Diag(attr.getLoc(), DiagID) << FunctionType::getNameForCallConv(CC);
-      if (IsInvalid) attr.setInvalid();
-      return true;
+      attr.setInvalid();
+      return S.Diag(attr.getLoc(), diag::err_cconv_varargs)
+             << FunctionType::getNameForCallConv(CC);
     }
   }
 
@@ -6969,12 +6987,16 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   return true;
 }
 
-bool Sema::hasExplicitCallingConv(QualType &T) {
-  QualType R = T.IgnoreParens();
-  while (const AttributedType *AT = dyn_cast<AttributedType>(R)) {
+bool Sema::hasExplicitCallingConv(QualType T) {
+  const AttributedType *AT;
+
+  // Stop if we'd be stripping off a typedef sugar node to reach the
+  // AttributedType.
+  while ((AT = T->getAs<AttributedType>()) &&
+         AT->getAs<TypedefType>() == T->getAs<TypedefType>()) {
     if (AT->isCallingConv())
       return true;
-    R = AT->getModifiedType().IgnoreParens();
+    T = AT->getModifiedType();
   }
   return false;
 }
@@ -6997,8 +7019,9 @@ void Sema::adjustMemberFunctionCC(QualType &T, bool IsStatic, bool IsCtorOrDtor,
     // Issue a warning on ignored calling convention -- except of __stdcall.
     // Again, this is what MS compiler does.
     if (CurCC != CC_X86StdCall)
-      Diag(Loc, diag::warn_cconv_structors)
-          << FunctionType::getNameForCallConv(CurCC);
+      Diag(Loc, diag::warn_cconv_ignored)
+          << FunctionType::getNameForCallConv(CurCC)
+          << (int)Sema::CallingConventionIgnoredReason::ConstructorDestructor;
   // Default adjustment.
   } else {
     // Only adjust types with the default convention.  For example, on Windows
@@ -7045,7 +7068,8 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
     Id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
     ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          Id, false, false);
+                                          Id, /*HasTrailingLParen=*/false,
+                                          /*IsAddressOfOperand=*/false);
 
     if (Size.isInvalid())
       return;
@@ -7082,7 +7106,8 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
     ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          id, false, false);
+                                          id, /*HasTrailingLParen=*/false,
+                                          /*IsAddressOfOperand=*/false);
     if (Size.isInvalid())
       return;
 
@@ -7293,8 +7318,10 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
        // otherwise it will fail some sema check.
       IsFuncReturnType || IsFuncType ||
       // Do not deduce addr space for member types of struct, except the pointee
-      // type of a pointer member type.
-      (D.getContext() == DeclaratorContext::MemberContext && !IsPointee) ||
+      // type of a pointer member type or static data members.
+      (D.getContext() == DeclaratorContext::MemberContext &&
+       (!IsPointee &&
+        D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static)) ||
       // Do not deduce addr space for types used to define a typedef and the
       // typedef itself, except the pointee type of a pointer type which is used
       // to define the typedef.
@@ -7553,6 +7580,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       else if (!handleFunctionTypeAttr(state, attr, type))
         distributeFunctionTypeAttr(state, attr, type);
       break;
+    }
+
+    // Handle attributes that are defined in a macro. We do not want this to be
+    // applied to ObjC builtin attributes.
+    if (isa<AttributedType>(type) && attr.hasMacroIdentifier() &&
+        !type.getQualifiers().hasObjCLifetime() &&
+        !type.getQualifiers().hasObjCGCAttr()) {
+      const IdentifierInfo *MacroII = attr.getMacroIdentifier();
+      type = state.getSema().Context.getMacroQualifiedType(type, MacroII);
     }
   }
 

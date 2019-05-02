@@ -37,8 +37,10 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42);
-#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
+#ifdef TEST_WORKAROUND_CONSTEXPR_IMPLIES_NOEXCEPT
     ASSERT_NOEXCEPT(std::get<0>(v));
+#else
+    ASSERT_NOT_NOEXCEPT(std::get<0>(v));
 #endif
     ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
     static_assert(std::get<0>(v) == 42, "");
@@ -53,8 +55,10 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42l);
-#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
+#ifdef TEST_WORKAROUND_CONSTEXPR_IMPLIES_NOEXCEPT
     ASSERT_NOEXCEPT(std::get<1>(v));
+#else
+    ASSERT_NOT_NOEXCEPT(std::get<1>(v));
 #endif
     ASSERT_SAME_TYPE(decltype(std::get<1>(v)), const long &);
     static_assert(std::get<1>(v) == 42, "");

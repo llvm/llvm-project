@@ -2,6 +2,16 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {
 }
 
@@ -77,7 +87,7 @@ int main(int argc, char **argv) {
 #pragma omp task private(S1)                           // expected-error {{'S1' does not refer to a value}}
 #pragma omp task private(a, b, c, d, f)                // expected-error {{a private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
 #pragma omp task private(argv[1])                      // expected-error {{expected variable name}}
-#pragma omp task private(ba)
+#pragma omp task private(ba) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
 #pragma omp task private(ca)           // expected-error {{const-qualified variable without mutable fields cannot be private}}
 #pragma omp task private(da)           // expected-error {{const-qualified variable cannot be private}}
 #pragma omp task private(S2::S2s)      // expected-error {{shared variable cannot be private}}
@@ -92,7 +102,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp task firstprivate(i)
   for (int k = 0; k < 10; ++k) {
-#pragma omp task private(i)
+#pragma omp task private(i) allocate(omp_thread_mem_alloc: i) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'task' directive}}
     foo();
   }
   static int m;

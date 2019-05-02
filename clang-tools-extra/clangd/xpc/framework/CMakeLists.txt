@@ -1,6 +1,7 @@
 
 set(SOURCES
-    ClangdXPC.cpp)
+  ClangdXPC.cpp
+)
 add_clang_library(ClangdXPCLib SHARED
   ${SOURCES}
   DEPENDS

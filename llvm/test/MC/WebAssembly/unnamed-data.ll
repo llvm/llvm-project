@@ -9,7 +9,7 @@ target triple = "wasm32-unknown-unknown"
 @b = global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i32 0, i32 0), align 8
 
 
-; CHECK:        - Type:            DATA
+; CHECK:        - Type:            DATA{{$}}
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           0

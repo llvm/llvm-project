@@ -20,8 +20,8 @@ define void @reduce_compare(double* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> <double 7.000000e+00, double 4.000000e+00>, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> <double 5.000000e+00, double 9.000000e+00>, [[TMP6]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], <double 7.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 5.000000e+00, double 9.000000e+00>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[CMP11:%.*]] = fcmp ogt double [[TMP8]], [[TMP9]]

@@ -172,7 +172,7 @@ namespace {
 
   cl::opt<bool>
   EnableCacheManager("enable-cache-manager",
-        cl::desc("Use cache manager to save/load mdoules"),
+        cl::desc("Use cache manager to save/load modules"),
         cl::init(false));
 
   cl::opt<std::string>
@@ -763,14 +763,17 @@ int runOrcLazyJIT(const char *ProgName) {
     reportError(Err, ProgName);
 
   const auto &TT = MainModule.getModule()->getTargetTriple();
-  orc::JITTargetMachineBuilder JTMB =
+  orc::LLLazyJITBuilder Builder;
+
+  Builder.setJITTargetMachineBuilder(
       TT.empty() ? ExitOnErr(orc::JITTargetMachineBuilder::detectHost())
-                 : orc::JITTargetMachineBuilder(Triple(TT));
+                 : orc::JITTargetMachineBuilder(Triple(TT)));
 
   if (!MArch.empty())
-    JTMB.getTargetTriple().setArchName(MArch);
+    Builder.getJITTargetMachineBuilder()->getTargetTriple().setArchName(MArch);
 
-  JTMB.setCPU(getCPUStr())
+  Builder.getJITTargetMachineBuilder()
+      ->setCPU(getCPUStr())
       .addFeatures(getFeatureList())
       .setRelocationModel(RelocModel.getNumOccurrences()
                               ? Optional<Reloc::Model>(RelocModel)
@@ -779,12 +782,11 @@ int runOrcLazyJIT(const char *ProgName) {
                         ? Optional<CodeModel::Model>(CMModel)
                         : None);
 
-  DataLayout DL = ExitOnErr(JTMB.getDefaultDataLayoutForTarget());
+  Builder.setLazyCompileFailureAddr(
+      pointerToJITTargetAddress(exitOnLazyCallThroughFailure));
+  Builder.setNumCompileThreads(LazyJITCompileThreads);
 
-  auto J = ExitOnErr(orc::LLLazyJIT::Create(
-      std::move(JTMB), DL,
-      pointerToJITTargetAddress(exitOnLazyCallThroughFailure),
-      LazyJITCompileThreads));
+  auto J = ExitOnErr(Builder.create());
 
   if (PerModuleLazy)
     J->setPartitionFunction(orc::CompileOnDemandLayer::compileWholeModule);
@@ -800,9 +802,10 @@ int runOrcLazyJIT(const char *ProgName) {
     return Dump(std::move(TSM), R);
   });
   J->getMainJITDylib().setGenerator(
-      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          J->getDataLayout().getGlobalPrefix())));
 
-  orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
+  orc::MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   ExitOnErr(CXXRuntimeOverrides.enable(J->getMainJITDylib(), Mangle));
 
@@ -861,8 +864,6 @@ int runOrcLazyJIT(const char *ProgName) {
       reinterpret_cast<EntryPointPtr>(static_cast<uintptr_t>(EntryPointSym.getAddress()));
     AltEntryThreads.push_back(std::thread([EntryPoint]() { EntryPoint(); }));
   }
-
-  J->getExecutionSession().dump(llvm::dbgs());
 
   // Run main.
   auto MainSym = ExitOnErr(J->lookup("main"));

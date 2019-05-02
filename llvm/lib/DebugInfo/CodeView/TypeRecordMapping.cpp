@@ -88,11 +88,11 @@ Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
   // split with continuation records.  All other record types cannot be
   // longer than the maximum record length.
   Optional<uint32_t> MaxLen;
-  if (CVR.Type != TypeLeafKind::LF_FIELDLIST &&
-      CVR.Type != TypeLeafKind::LF_METHODLIST)
+  if (CVR.kind() != TypeLeafKind::LF_FIELDLIST &&
+      CVR.kind() != TypeLeafKind::LF_METHODLIST)
     MaxLen = MaxRecordLength - sizeof(RecordPrefix);
   error(IO.beginRecord(MaxLen));
-  TypeKind = CVR.Type;
+  TypeKind = CVR.kind();
   return Error::success();
 }
 
@@ -211,9 +211,9 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ArrayRecord &Record) {
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ClassRecord &Record) {
-  assert((CVR.Type == TypeLeafKind::LF_STRUCTURE) ||
-         (CVR.Type == TypeLeafKind::LF_CLASS) ||
-         (CVR.Type == TypeLeafKind::LF_INTERFACE));
+  assert((CVR.kind() == TypeLeafKind::LF_STRUCTURE) ||
+         (CVR.kind() == TypeLeafKind::LF_CLASS) ||
+         (CVR.kind() == TypeLeafKind::LF_INTERFACE));
 
   error(IO.mapInteger(Record.MemberCount));
   error(IO.mapEnum(Record.Options));

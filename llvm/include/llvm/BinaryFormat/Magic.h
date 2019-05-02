@@ -39,11 +39,13 @@ struct file_magic {
     macho_dsym_companion,                     ///< Mach-O dSYM companion file
     macho_kext_bundle,                        ///< Mach-O kext bundle file
     macho_universal_binary,                   ///< Mach-O universal binary
+    minidump,                                 ///< Windows minidump file
     coff_cl_gl_object,   ///< Microsoft cl.exe's intermediate code file
     coff_object,         ///< COFF object file
     coff_import_library, ///< COFF import library
     pecoff_executable,   ///< PECOFF executable file
     windows_resource,    ///< Windows compiled resource file (.res)
+    xcoff_object_32,     ///< 32-bit XCOFF object file
     wasm_object,         ///< WebAssembly Object file
     pdb,                 ///< Windows PDB debug info file
   };

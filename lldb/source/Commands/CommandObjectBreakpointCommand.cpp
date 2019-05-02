@@ -26,9 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectBreakpointCommandAdd
-//-------------------------------------------------------------------------
 
 // FIXME: "script-type" needs to have its contents determined dynamically, so
 // somebody can add a new scripting
@@ -424,7 +422,7 @@ protected:
       // to set or collect command callback.  Otherwise, call the methods
       // associated with this object.
       if (m_options.m_use_script_language) {
-        ScriptInterpreter *script_interp = m_interpreter.GetScriptInterpreter();
+        ScriptInterpreter *script_interp = GetDebugger().GetScriptInterpreter();
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner) {
           script_interp->SetBreakpointCommandCallback(
@@ -469,9 +467,7 @@ private:
 const char *CommandObjectBreakpointCommandAdd::g_reader_instructions =
     "Enter your debugger command(s).  Type 'DONE' to end.\n";
 
-//-------------------------------------------------------------------------
 // CommandObjectBreakpointCommandDelete
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_breakpoint_delete_options[] = {
     // clang-format off
@@ -606,9 +602,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectBreakpointCommandList
-//-------------------------------------------------------------------------
 
 class CommandObjectBreakpointCommandList : public CommandObjectParsed {
 public:
@@ -636,7 +630,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
 
     if (target == nullptr) {
       result.AppendError("There is not a current executable; there are no "
@@ -726,9 +720,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectBreakpointCommand
-//-------------------------------------------------------------------------
 
 CommandObjectBreakpointCommand::CommandObjectBreakpointCommand(
     CommandInterpreter &interpreter)

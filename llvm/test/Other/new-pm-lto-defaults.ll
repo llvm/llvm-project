@@ -69,6 +69,7 @@
 ; CHECK-O2-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O2-NEXT: Running pass: InstCombinePass
+; CHECK-O2-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-EP-Peephole-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O2-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O2-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}InlinerPass>
@@ -81,6 +82,7 @@
 ; CHECK-O2-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O2-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O2-NEXT: Running pass: SROA on foo
+; CHECK-O2-NEXT: Running pass: TailCallElimPass on foo
 ; CHECK-O2-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O2-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}PostOrderFunctionAttrsPass>
 ; CHECK-O2-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>

@@ -187,6 +187,16 @@ define <8 x float> @combine_vpermilvar_8f32_movshdup(<8 x float> %a0) {
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 undef, i32 5, i32 7, i32 7>)
   ret <8 x float> %1
 }
+define <8 x float> @demandedelts_vpermilvar_8f32_movshdup(<8 x float> %a0, i32 %a1) {
+; CHECK-LABEL: demandedelts_vpermilvar_8f32_movshdup:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = insertelement <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 undef, i32 5, i32 7, i32 7>, i32 %a1, i32 7
+  %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 6>
+  ret <8 x float> %3
+}
 
 define <8 x float> @combine_vpermilvar_8f32_movsldup(<8 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_8f32_movsldup:
@@ -195,6 +205,29 @@ define <8 x float> @combine_vpermilvar_8f32_movsldup(<8 x float> %a0) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>)
   ret <8 x float> %1
+}
+define <8 x float> @demandedelts_vpermilvar_8f32_movsldup(<8 x float> %a0, i32 %a1) {
+; AVX1-LABEL: demandedelts_vpermilvar_8f32_movsldup:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = <u,0,2,2,4,4,6,6>
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],mem[4,5,6,7]
+; AVX1-NEXT:    vpermilps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,2,3,4,5,6,7]
+; AVX1-NEXT:    ret{{[l|q]}}
+;
+; AVX2-LABEL: demandedelts_vpermilvar_8f32_movsldup:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: demandedelts_vpermilvar_8f32_movsldup:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
+; AVX512-NEXT:    ret{{[l|q]}}
+  %1 = insertelement <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>, i32 %a1, i32 0
+  %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> undef, <8 x i32> <i32 1, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x float> %3
 }
 
 define <2 x double> @combine_vpermilvar_2f64_identity(<2 x double> %a0) {
@@ -340,7 +373,7 @@ define void @PR39483() {
 ; X86-AVX512:       # %bb.0: # %entry
 ; X86-AVX512-NEXT:    vmovups 0, %zmm0
 ; X86-AVX512-NEXT:    vmovups 64, %ymm1
-; X86-AVX512-NEXT:    vmovaps {{.*#+}} zmm2 = <2,5,8,11,14,17,20,23,u,u,u,u,u,u,u,u>
+; X86-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
 ; X86-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
 ; X86-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1
@@ -383,7 +416,7 @@ define void @PR39483() {
 ; X64-AVX512:       # %bb.0: # %entry
 ; X64-AVX512-NEXT:    vmovups 0, %zmm0
 ; X64-AVX512-NEXT:    vmovups 64, %ymm1
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} zmm2 = <2,5,8,11,14,17,20,23,u,u,u,u,u,u,u,u>
+; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
 ; X64-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
 ; X64-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1

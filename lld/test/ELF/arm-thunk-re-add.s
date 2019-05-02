@@ -99,6 +99,7 @@ callers:
 // CHECK2-NEXT:  110001c:       ff f6 f8 bf     b.w     #-1048592 <__ThumbV7PILongThunk_imported2>
 
 // CHECK3: Disassembly of section .plt:
+// CHECK3-EMPTY:
 // CHECK3-NEXT: $a:
 // CHECK3-NEXT:  1100020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // CHECK3-NEXT:  1100024:       00 e6 8f e2     add     lr, pc, #0, #12

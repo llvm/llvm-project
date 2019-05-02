@@ -12,7 +12,7 @@
 // extern int __eqsf2vfp(float a, float b);
 //
 // Returns one iff a == b and neither is NaN.
-// Uses Darwin calling convention where single precision arguments are passsed 
+// Uses Darwin calling convention where single precision arguments are passsed
 // like 32-bit ints
 //
 	.syntax unified

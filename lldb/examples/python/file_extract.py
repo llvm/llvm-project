@@ -29,7 +29,7 @@ class FileExtract:
         elif b == '<' or b == '>' or b == '@' or b == '=':
             self.byte_order = b
         else:
-            print "error: invalid byte order specified: '%s'" % b
+            print("error: invalid byte order specified: '%s'" % b)
 
     def is_in_memory(self):
         return False

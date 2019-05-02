@@ -76,9 +76,7 @@ public:
   const lldb_private::RegisterInfo *
   GetRegisterInfoArray(uint32_t &count) override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
 
   static void Initialize();
 
@@ -86,9 +84,7 @@ public:
 
   static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
 
   static lldb_private::ConstString GetPluginNameStatic();
 

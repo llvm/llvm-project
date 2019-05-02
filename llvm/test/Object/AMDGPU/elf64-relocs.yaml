@@ -65,13 +65,11 @@ Sections:
         Type:            R_AMDGPU_RELATIVE64
 
 Symbols:
-  Local:
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
-
-  Global:
-    - Name:            main
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x08
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x08
+    Binding:         STB_GLOBAL

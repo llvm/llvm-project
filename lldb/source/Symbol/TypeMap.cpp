@@ -34,9 +34,7 @@ using namespace clang;
 
 TypeMap::TypeMap() : m_types() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 TypeMap::~TypeMap() {}
 
 void TypeMap::Insert(const TypeSP &type_sp) {
@@ -61,9 +59,7 @@ bool TypeMap::InsertUnique(const TypeSP &type_sp) {
   return true;
 }
 
-//----------------------------------------------------------------------
 // Find a base type by its unique ID.
-//----------------------------------------------------------------------
 // TypeSP
 // TypeMap::FindType(lldb::user_id_t uid)
 //{
@@ -73,9 +69,7 @@ bool TypeMap::InsertUnique(const TypeSP &type_sp) {
 //    return TypeSP();
 //}
 
-//----------------------------------------------------------------------
 // Find a type by name.
-//----------------------------------------------------------------------
 // TypeMap
 // TypeMap::FindTypes (ConstString name)
 //{

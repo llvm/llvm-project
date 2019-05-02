@@ -26,18 +26,24 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
 Symbols:
-  Global:
-    - Name: notype
-      Type: STT_NOTYPE
-    - Name: normal_type
-      Type: STT_OBJECT
-    - Name: .text
-      Type: STT_SECTION
-    - Name: known_hex
-      Type: 0x1
-    - Name: unknown_hex
-      Type: 0xb
-    - Name: known_int
-      Type: 1
-    - Name: unknown_int
-      Type: 11
+  - Name:    notype
+    Type:    STT_NOTYPE
+    Binding: STB_GLOBAL 
+  - Name:    normal_type
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+  - Name:    .text
+    Type:    STT_SECTION
+    Binding: STB_GLOBAL
+  - Name:    known_hex
+    Type:    0x1
+    Binding: STB_GLOBAL
+  - Name:    unknown_hex
+    Type:    0xb
+    Binding: STB_GLOBAL
+  - Name:    known_int
+    Type:    1
+    Binding: STB_GLOBAL
+  - Name:    unknown_int
+    Type:    11
+    Binding: STB_GLOBAL

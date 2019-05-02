@@ -86,7 +86,7 @@ public:
 
   size_t bytes() const {
     return sizeof(*this) + Arena.getTotalMemory() +
-           sizeof(value_type) * Refs.size();
+           sizeof(value_type) * Refs.capacity();
   }
 
   /// RefSlab::Builder is a mutable container that can 'freeze' to RefSlab.

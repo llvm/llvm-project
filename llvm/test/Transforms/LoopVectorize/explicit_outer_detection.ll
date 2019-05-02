@@ -21,7 +21,7 @@
 ; CHECK-LABEL: vector_width
 ; CHECK: LV: Loop hints: force=enabled width=4 unroll=0
 ; CHECK: LV: We can vectorize this outer loop!
-; CHECK: LV: Using user VF 4.
+; CHECK: LV: Using user VF 4 to build VPlans.
 ; CHECK-NOT: LV: Loop hints: force=?
 ; CHECK-NOT: LV: Found a loop: inner.body
 
@@ -68,14 +68,12 @@ for.end15:                                        ; preds = %outer.inc, %entry
   ret void
 }
 
-; Case 2: Annotated outer loop WITHOUT vector width information doesn't have to
-; be collected.
+; Case 2: Annotated outer loop WITHOUT vector width information must be collected.
 
 ; CHECK-LABEL: case2
-; CHECK-NOT: LV: Loop hints: force=enabled
-; CHECK-NOT: LV: We can vectorize this outer loop!
-; CHECK: LV: Loop hints: force=?
-; CHECK: LV: Found a loop: inner.body
+; CHECK: LV: Loop hints: force=enabled width=0 unroll=0
+; CHECK: LV: We can vectorize this outer loop!
+; CHECK: LV: Using VF 1 to build VPlans.
 
 define void @case2(i32* nocapture %a, i32* nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
 entry:

@@ -16,27 +16,34 @@
 
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T>
 void test1()
 {
-    static_assert( std::is_same<void, std::void_t<T>>::value, "");
-    static_assert( std::is_same<void, std::void_t<const T>>::value, "");
-    static_assert( std::is_same<void, std::void_t<volatile T>>::value, "");
-    static_assert( std::is_same<void, std::void_t<const volatile T>>::value, "");
+    ASSERT_SAME_TYPE(void, std::void_t<T>);
+    ASSERT_SAME_TYPE(void, std::void_t<const T>);
+    ASSERT_SAME_TYPE(void, std::void_t<volatile T>);
+    ASSERT_SAME_TYPE(void, std::void_t<const volatile T>);
 }
 
 template <class T, class U>
 void test2()
 {
-    static_assert( std::is_same<void, std::void_t<T, U>>::value, "");
-    static_assert( std::is_same<void, std::void_t<const T, U>>::value, "");
-    static_assert( std::is_same<void, std::void_t<volatile T, U>>::value, "");
-    static_assert( std::is_same<void, std::void_t<const volatile T, U>>::value, "");
+    ASSERT_SAME_TYPE(void, std::void_t<T, U>);
+    ASSERT_SAME_TYPE(void, std::void_t<const T, U>);
+    ASSERT_SAME_TYPE(void, std::void_t<volatile T, U>);
+    ASSERT_SAME_TYPE(void, std::void_t<const volatile T, U>);
 
-    static_assert( std::is_same<void, std::void_t<T, const U>>::value, "");
-    static_assert( std::is_same<void, std::void_t<const T, const U>>::value, "");
-    static_assert( std::is_same<void, std::void_t<volatile T, const U>>::value, "");
-    static_assert( std::is_same<void, std::void_t<const volatile T, const U>>::value, "");
+    ASSERT_SAME_TYPE(void, std::void_t<U, T>);
+    ASSERT_SAME_TYPE(void, std::void_t<U, const T>);
+    ASSERT_SAME_TYPE(void, std::void_t<U, volatile T>);
+    ASSERT_SAME_TYPE(void, std::void_t<U, const volatile T>);
+
+    ASSERT_SAME_TYPE(void, std::void_t<T, const U>);
+    ASSERT_SAME_TYPE(void, std::void_t<const T, const U>);
+    ASSERT_SAME_TYPE(void, std::void_t<volatile T, const U>);
+    ASSERT_SAME_TYPE(void, std::void_t<const volatile T, const U>);
 }
 
 class Class
@@ -47,7 +54,7 @@ public:
 
 int main(int, char**)
 {
-    static_assert( std::is_same<void, std::void_t<>>::value, "");
+    ASSERT_SAME_TYPE(void, std::void_t<>);
 
     test1<void>();
     test1<int>();
@@ -63,7 +70,7 @@ int main(int, char**)
     test2<Class&, bool>();
     test2<void *, int&>();
 
-    static_assert( std::is_same<void, std::void_t<int, double const &, Class, volatile int[], void>>::value, "");
+    ASSERT_SAME_TYPE(void, std::void_t<int, double const &, Class, volatile int[], void>);
 
   return 0;
 }

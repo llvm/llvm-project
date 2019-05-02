@@ -256,10 +256,34 @@ public:
     return child_range(ChildStorage, ChildStorage + 1);
   }
 
+  const_child_range children() const {
+    if (!hasAssociatedStmt())
+      return const_child_range(const_child_iterator(), const_child_iterator());
+    Stmt **ChildStorage = reinterpret_cast<Stmt **>(
+        const_cast<OMPExecutableDirective *>(this)->getClauses().end());
+    return const_child_range(ChildStorage, ChildStorage + 1);
+  }
+
   ArrayRef<OMPClause *> clauses() { return getClauses(); }
 
   ArrayRef<OMPClause *> clauses() const {
     return const_cast<OMPExecutableDirective *>(this)->getClauses();
+  }
+
+  /// Returns whether or not this is a Standalone directive.
+  ///
+  /// Stand-alone directives are executable directives
+  /// that have no associated user code.
+  bool isStandaloneDirective() const;
+
+  /// Returns the AST node representing OpenMP structured-block of this
+  /// OpenMP executable directive,
+  /// Prerequisite: Executable Directive must not be Standalone directive.
+  const Stmt *getStructuredBlock() const;
+
+  Stmt *getStructuredBlock() {
+    return const_cast<Stmt *>(
+        const_cast<const OMPExecutableDirective *>(this)->getStructuredBlock());
   }
 };
 

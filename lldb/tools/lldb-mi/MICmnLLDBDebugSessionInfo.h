@@ -242,7 +242,6 @@ private:
 };
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Command instances can create and share data between other instances
 // of commands.
 //          This function adds new data to the shared data. Using the same ID
@@ -268,7 +267,6 @@ bool CMICmnLLDBDebugSessionInfo::SharedDataAdd(const CMIUtilString &vKey,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Command instances can create and share data between other instances
 // of commands.
 //          This function retrieves data from the shared data container.

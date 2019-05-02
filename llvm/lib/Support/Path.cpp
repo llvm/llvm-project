@@ -297,7 +297,8 @@ reverse_iterator rbegin(StringRef Path, Style style) {
   I.Path = Path;
   I.Position = Path.size();
   I.S = style;
-  return ++I;
+  ++I;
+  return I;
 }
 
 reverse_iterator rend(StringRef Path) {
@@ -959,6 +960,7 @@ static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   return std::error_code();
 }
 
+#ifndef __APPLE__
 std::error_code copy_file(const Twine &From, const Twine &To) {
   int ReadFD, WriteFD;
   if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
@@ -976,6 +978,7 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
 
   return EC;
 }
+#endif
 
 std::error_code copy_file(const Twine &From, int ToFD) {
   int ReadFD;

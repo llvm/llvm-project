@@ -7,6 +7,7 @@ struct A; // expected-note 4 {{forward declaration of 'A'}}
 struct Abstract { virtual void f() = 0; }; // expected-note {{unimplemented pure virtual method 'f'}}
 
 void trys() {
+  int k = 42;
   try {
   } catch(int i) { // expected-note {{previous definition}}
     int j = i;
@@ -18,6 +19,10 @@ void trys() {
   } catch(A &a) { // expected-error {{cannot catch reference to incomplete type 'A'}}
   } catch(Abstract) { // expected-error {{variable type 'Abstract' is an abstract class}}
   } catch(...) {
+    int ref = k;
+    {
+      int ref = k;
+    }
     int j = i; // expected-error {{use of undeclared identifier 'i'}}
   }
 

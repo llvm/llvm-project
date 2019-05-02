@@ -1,8 +1,8 @@
 RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 | FileCheck %s
 
-# Check the two-letter alias -dt is equivalent to the --dyn-symbols full flag
+# Check the two-letter alias --dt is equivalent to the --dyn-symbols full flag
 # name.
-RUN: llvm-readobj -dt %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-alias
+RUN: llvm-readobj --dt %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-alias
 RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-no-alias
 RUN: diff %t.readobj-dt-alias %t.readobj-dt-no-alias
 

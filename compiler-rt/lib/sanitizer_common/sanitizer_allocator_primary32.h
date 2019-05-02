@@ -46,6 +46,11 @@ struct SizeClassAllocator32FlagMasks {  //  Bit masks.
 
 template <class Params>
 class SizeClassAllocator32 {
+ private:
+  static const u64 kTwoLevelByteMapSize1 =
+      (Params::kSpaceSize >> Params::kRegionSizeLog) >> 12;
+  static const u64 kMinFirstMapSizeTwoLevelByteMap = 4;
+
  public:
   using AddressSpaceView = typename Params::AddressSpaceView;
   static const uptr kSpaceBeg = Params::kSpaceBeg;
@@ -53,12 +58,12 @@ class SizeClassAllocator32 {
   static const uptr kMetadataSize = Params::kMetadataSize;
   typedef typename Params::SizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = Params::kRegionSizeLog;
-  typedef typename Params::ByteMap ByteMap;
   typedef typename Params::MapUnmapCallback MapUnmapCallback;
-
-  static_assert(
-      is_same<typename ByteMap::AddressSpaceView, AddressSpaceView>::value,
-      "AddressSpaceView type mismatch");
+  using ByteMap = typename conditional<
+      (kTwoLevelByteMapSize1 < kMinFirstMapSizeTwoLevelByteMap),
+      FlatByteMap<(Params::kSpaceSize >> Params::kRegionSizeLog),
+                  AddressSpaceView>,
+      TwoLevelByteMap<kTwoLevelByteMapSize1, 1 << 12, AddressSpaceView>>::type;
 
   COMPILER_CHECK(!SANITIZER_SIGN_EXTENDED_ADDRESSES ||
                  (kSpaceSize & (kSpaceSize - 1)) == 0);
@@ -211,7 +216,7 @@ class SizeClassAllocator32 {
     return ClassIdToSize(GetSizeClass(p));
   }
 
-  uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
+  static uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
 
   uptr TotalMemoryUsed() {
     // No need to lock here.
@@ -277,7 +282,7 @@ class SizeClassAllocator32 {
   };
   COMPILER_CHECK(sizeof(SizeClassInfo) % kCacheLineSize == 0);
 
-  uptr ComputeRegionId(uptr mem) {
+  uptr ComputeRegionId(uptr mem) const {
     if (SANITIZER_SIGN_EXTENDED_ADDRESSES)
       mem &= (kSpaceSize - 1);
     const uptr res = mem >> kRegionSizeLog;

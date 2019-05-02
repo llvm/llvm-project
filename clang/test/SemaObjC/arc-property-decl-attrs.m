@@ -287,3 +287,7 @@ __attribute__((objc_root_class))
 @synthesize collision = _collision; // expected-note {{property synthesized here}}
 
 @end
+
+// This used to crash because we'd temporarly store the weak attribute on the
+// declaration specifier, then deallocate it when clearing the declarator.
+id i1, __weak i2, i3;

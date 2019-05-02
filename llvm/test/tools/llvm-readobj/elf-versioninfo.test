@@ -1,106 +1,130 @@
 // Test that llvm-readobj dumps version info tags correctly.
 
-RUN: llvm-readobj -dynamic-table -V %p/Inputs/verdef.elf-x86-64 | FileCheck %s
+RUN: llvm-readobj --dynamic-table -V %p/Inputs/verdef.elf-x86-64 | FileCheck %s --check-prefix=LLVM-VERDEF
+RUN: llvm-readelf --dynamic-table -V %p/Inputs/verdef.elf-x86-64 | FileCheck %s --check-prefix=GNU-VERDEF
 
-CHECK: 0x000000006FFFFFF0 VERSYM               0x24C
-CHECK: 0x000000006FFFFFFC VERDEF               0x25C
-CHECK: 0x000000006FFFFFFD VERDEFNUM            3
+LLVM-VERDEF: 0x000000006FFFFFF0 VERSYM               0x24C
+LLVM-VERDEF: 0x000000006FFFFFFC VERDEF               0x25C
+LLVM-VERDEF: 0x000000006FFFFFFD VERDEFNUM            3
 
-CHECK: Version symbols {
-CHECK-NEXT:   Section Name: .gnu.version (20)
-CHECK-NEXT:   Address: 0x24C
-CHECK-NEXT:   Offset: 0x24C
-CHECK-NEXT:   Link: 1
-CHECK-NEXT:   Symbols [
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 0
-CHECK-NEXT:       Name: {{$}}
-CHECK-NEXT:     }
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 1
-CHECK-NEXT:       Name: _end{{$}}
-CHECK-NEXT:     }
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 1
-CHECK-NEXT:       Name: _edata{{$}}
-CHECK-NEXT:     }
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 3
-CHECK-NEXT:       Name: goo@@VERSION2
-CHECK-NEXT:     }
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 1
-CHECK-NEXT:       Name: __bss_start{{$}}
-CHECK-NEXT:     }
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 2
-CHECK-NEXT:       Name: foo@@VERSION1
-CHECK-NEXT:     }
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 2
-CHECK-NEXT:       Name: VERSION1@@VERSION1
-CHECK-NEXT:     }
-CHECK-NEXT:     Symbol {
-CHECK-NEXT:       Version: 3
-CHECK-NEXT:       Name: VERSION2@@VERSION2
-CHECK-NEXT:     }
-CHECK-NEXT:   ]
-CHECK-NEXT: }
+LLVM-VERDEF: Version symbols {
+LLVM-VERDEF-NEXT:   Section Name: .gnu.version (20)
+LLVM-VERDEF-NEXT:   Address: 0x24C
+LLVM-VERDEF-NEXT:   Offset: 0x24C
+LLVM-VERDEF-NEXT:   Link: 1
+LLVM-VERDEF-NEXT:   Symbols [
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 0
+LLVM-VERDEF-NEXT:       Name: {{$}}
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 1
+LLVM-VERDEF-NEXT:       Name: _end{{$}}
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 1
+LLVM-VERDEF-NEXT:       Name: _edata{{$}}
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 3
+LLVM-VERDEF-NEXT:       Name: goo@@VERSION2
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 1
+LLVM-VERDEF-NEXT:       Name: __bss_start{{$}}
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 2
+LLVM-VERDEF-NEXT:       Name: foo@@VERSION1
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 2
+LLVM-VERDEF-NEXT:       Name: VERSION1@@VERSION1
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:     Symbol {
+LLVM-VERDEF-NEXT:       Version: 3
+LLVM-VERDEF-NEXT:       Name: VERSION2@@VERSION2
+LLVM-VERDEF-NEXT:     }
+LLVM-VERDEF-NEXT:   ]
+LLVM-VERDEF-NEXT: }
 
-CHECK:      SHT_GNU_verdef {
-CHECK-NEXT:   Definition {
-CHECK-NEXT:     Version: 1
-CHECK-NEXT:     Flags: Base (0x1)
-CHECK-NEXT:     Index: 1
-CHECK-NEXT:     Hash: 430712
-CHECK-NEXT:     Name: blah
-CHECK-NEXT:   }
-CHECK-NEXT:   Definition {
-CHECK-NEXT:     Version: 1
-CHECK-NEXT:     Flags: 0x0
-CHECK-NEXT:     Index: 2
-CHECK-NEXT:     Hash: 175630257
-CHECK-NEXT:     Name: VERSION1
-CHECK-NEXT:   }
-CHECK-NEXT:   Definition {
-CHECK-NEXT:     Version: 1
-CHECK-NEXT:     Flags: 0x0
-CHECK-NEXT:     Index: 3
-CHECK-NEXT:     Hash: 175630258
-CHECK-NEXT:     Name: VERSION2
-CHECK-NEXT:     Predecessor: VERSION1
-CHECK-NEXT:   }
-CHECK-NEXT: }
+LLVM-VERDEF:      SHT_GNU_verdef {
+LLVM-VERDEF-NEXT:   Definition {
+LLVM-VERDEF-NEXT:     Version: 1
+LLVM-VERDEF-NEXT:     Flags: Base (0x1)
+LLVM-VERDEF-NEXT:     Index: 1
+LLVM-VERDEF-NEXT:     Hash: 430712
+LLVM-VERDEF-NEXT:     Name: blah
+LLVM-VERDEF-NEXT:   }
+LLVM-VERDEF-NEXT:   Definition {
+LLVM-VERDEF-NEXT:     Version: 1
+LLVM-VERDEF-NEXT:     Flags: 0x0
+LLVM-VERDEF-NEXT:     Index: 2
+LLVM-VERDEF-NEXT:     Hash: 175630257
+LLVM-VERDEF-NEXT:     Name: VERSION1
+LLVM-VERDEF-NEXT:   }
+LLVM-VERDEF-NEXT:   Definition {
+LLVM-VERDEF-NEXT:     Version: 1
+LLVM-VERDEF-NEXT:     Flags: 0x0
+LLVM-VERDEF-NEXT:     Index: 3
+LLVM-VERDEF-NEXT:     Hash: 175630258
+LLVM-VERDEF-NEXT:     Name: VERSION2
+LLVM-VERDEF-NEXT:     Predecessor: VERSION1
+LLVM-VERDEF-NEXT:   }
+LLVM-VERDEF-NEXT: }
 
-RUN: llvm-readobj -V %p/Inputs/verneed.elf-x86-64 | FileCheck %s --check-prefix=VERNEED
+GNU-VERDEF: 0x000000006ffffff0 VERSYM               0x24c
+GNU-VERDEF: 0x000000006ffffffc VERDEF               0x25c
+GNU-VERDEF: 0x000000006ffffffd VERDEFNUM            3
 
-VERNEED:       SHT_GNU_verneed {
-VERNEED-NEXT:   Dependency {
-VERNEED-NEXT:     Version: 1
-VERNEED-NEXT:     Count: 2
-VERNEED-NEXT:     FileName: verneed1.so.0
-VERNEED-NEXT:     Entry {
-VERNEED-NEXT:       Hash: 1938
-VERNEED-NEXT:       Flags: 0x0
-VERNEED-NEXT:       Index: 3
-VERNEED-NEXT:       Name: v2
-VERNEED-NEXT:     }
-VERNEED-NEXT:     Entry {
-VERNEED-NEXT:       Hash: 1939
-VERNEED-NEXT:       Flags: 0x0
-VERNEED-NEXT:       Index: 2
-VERNEED-NEXT:       Name: v3
-VERNEED-NEXT:     }
-VERNEED-NEXT:   }
-VERNEED-NEXT:   Dependency {
-VERNEED-NEXT:     Version: 1
-VERNEED-NEXT:     Count: 1
-VERNEED-NEXT:     FileName: verneed2.so.0
-VERNEED-NEXT:     Entry {
-VERNEED-NEXT:       Hash: 1937
-VERNEED-NEXT:       Flags: 0x0
-VERNEED-NEXT:       Index: 4
-VERNEED-NEXT:       Name: v1
-VERNEED-NEXT:     }
-VERNEED-NEXT:   }
-VERNEED-NEXT: }
+GNU-VERDEF:      Version symbols section '.gnu.version' contains 8 entries:
+GNU-VERDEF-NEXT:  Addr: 000000000000024c  Offset: 0x00024c  Link: 1 (.dynsym)
+GNU-VERDEF-NEXT:   000:   0 (*local*)       1 (*global*)      1 (*global*)      3 (VERSION2)
+GNU-VERDEF-NEXT:   004:   1 (*global*)      2 (VERSION1)      2 (VERSION1)      3 (VERSION2)
+
+GNU-VERDEF: Dumper for .gnu.version_d is not implemented
+
+RUN: llvm-readobj -V %p/Inputs/verneed.elf-x86-64 | FileCheck %s --check-prefix=LLVM-VERNEED
+RUN: llvm-readelf -V %p/Inputs/verneed.elf-x86-64 | FileCheck %s --check-prefix=GNU-VERNEED
+
+LLVM-VERNEED:       SHT_GNU_verneed {
+LLVM-VERNEED-NEXT:   Dependency {
+LLVM-VERNEED-NEXT:     Version: 1
+LLVM-VERNEED-NEXT:     Count: 2
+LLVM-VERNEED-NEXT:     FileName: verneed1.so.0
+LLVM-VERNEED-NEXT:     Entries [
+LLVM-VERNEED-NEXT:       Entry {
+LLVM-VERNEED-NEXT:         Hash: 1938
+LLVM-VERNEED-NEXT:         Flags: 0x0
+LLVM-VERNEED-NEXT:         Index: 3
+LLVM-VERNEED-NEXT:         Name: v2
+LLVM-VERNEED-NEXT:       }
+LLVM-VERNEED-NEXT:       Entry {
+LLVM-VERNEED-NEXT:         Hash: 1939
+LLVM-VERNEED-NEXT:         Flags: 0x0
+LLVM-VERNEED-NEXT:         Index: 2
+LLVM-VERNEED-NEXT:         Name: v3
+LLVM-VERNEED-NEXT:       }
+LLVM-VERNEED-NEXT:     ]
+LLVM-VERNEED-NEXT:   }
+LLVM-VERNEED-NEXT:   Dependency {
+LLVM-VERNEED-NEXT:     Version: 1
+LLVM-VERNEED-NEXT:     Count: 1
+LLVM-VERNEED-NEXT:     FileName: verneed2.so.0
+LLVM-VERNEED-NEXT:     Entries [
+LLVM-VERNEED-NEXT:       Entry {
+LLVM-VERNEED-NEXT:         Hash: 1937
+LLVM-VERNEED-NEXT:         Flags: 0x0
+LLVM-VERNEED-NEXT:         Index: 4
+LLVM-VERNEED-NEXT:         Name: v1
+LLVM-VERNEED-NEXT:       }
+LLVM-VERNEED-NEXT:     ]
+LLVM-VERNEED-NEXT:   }
+LLVM-VERNEED-NEXT: }
+
+GNU-VERNEED:      Version symbols section '.gnu.version' contains 4 entries:
+GNU-VERNEED-NEXT:  Addr: 0000000000010228  Offset: 0x000228  Link: 1 (.dynsym)
+GNU-VERNEED-NEXT:   000:   0 (*local*)       2 (v3)            3 (v2)            4 (v1)
+
+GNU-VERNEED: Dumper for .gnu.version_r is not implemented
+

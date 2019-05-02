@@ -15,7 +15,7 @@
 
 RUN: llvm-readobj -g %p/Inputs/elf-groups.x86_64 \
 RUN:   | FileCheck %s
-RUN: llvm-readobj -g -elf-output-style=GNU %p/Inputs/elf-groups.x86_64 \
+RUN: llvm-readelf -g %p/Inputs/elf-groups.x86_64 \
 RUN:   | FileCheck --check-prefix="GNU" %s
 CHECK:         Groups {
 CHECK-NEXT:      Group {

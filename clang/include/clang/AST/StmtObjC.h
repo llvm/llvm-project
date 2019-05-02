@@ -67,6 +67,10 @@ public:
   child_range children() {
     return child_range(&SubExprs[0], &SubExprs[END_EXPR]);
   }
+
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[END_EXPR]);
+  }
 };
 
 /// Represents Objective-C's \@catch statement.
@@ -113,6 +117,10 @@ public:
   }
 
   child_range children() { return child_range(&Body, &Body + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Body, &Body + 1);
+  }
 };
 
 /// Represents Objective-C's \@finally statement
@@ -146,6 +154,10 @@ public:
 
   child_range children() {
     return child_range(&AtFinallyStmt, &AtFinallyStmt+1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(&AtFinallyStmt, &AtFinallyStmt + 1);
   }
 };
 
@@ -248,6 +260,10 @@ public:
     return child_range(getStmts(),
                        getStmts() + 1 + NumCatchStmts + HasFinally);
   }
+
+  const_child_range children() const {
+    return const_child_range(const_cast<ObjCAtTryStmt *>(this)->children());
+  }
 };
 
 /// Represents Objective-C's \@synchronized statement.
@@ -306,6 +322,10 @@ public:
   child_range children() {
     return child_range(&SubStmts[0], &SubStmts[0]+END_EXPR);
   }
+
+  const_child_range children() const {
+    return const_child_range(&SubStmts[0], &SubStmts[0] + END_EXPR);
+  }
 };
 
 /// Represents Objective-C's \@throw statement.
@@ -338,6 +358,10 @@ public:
   }
 
   child_range children() { return child_range(&Throw, &Throw+1); }
+
+  const_child_range children() const {
+    return const_child_range(&Throw, &Throw + 1);
+  }
 };
 
 /// Represents Objective-C's \@autoreleasepool Statement
@@ -369,6 +393,10 @@ public:
   }
 
   child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&SubStmt, &SubStmt + 1);
+  }
 };
 
 }  // end namespace clang

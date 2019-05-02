@@ -742,16 +742,16 @@ def fno_coverage_mapping : Flag<["-"], "fno-coverage-mapping">,
     Group<f_Group>, Flags<[DriverOption, CoreOption]>,
     HelpText<"Disable code coverage analysis">;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
-    Group<f_Group>, Flags<[DriverOption]>,
+    Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_generate_EQ : Joined<["-"], "fprofile-generate=">,
-    Group<f_Group>, Flags<[DriverOption]>, MetaVarName<"<directory>">,
+    Group<f_Group>, Flags<[CoreOption]>, MetaVarName<"<directory>">,
     HelpText<"Generate instrumented code to collect execution counts into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fcs_profile_generate : Flag<["-"], "fcs-profile-generate">,
-    Group<f_Group>, Flags<[DriverOption]>,
+    Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Generate instrumented code to collect context sensitive execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fcs_profile_generate_EQ : Joined<["-"], "fcs-profile-generate=">,
-    Group<f_Group>, Flags<[DriverOption]>, MetaVarName<"<directory>">,
+    Group<f_Group>, Flags<[CoreOption]>, MetaVarName<"<directory>">,
     HelpText<"Generate instrumented code to collect context sensitive execution counts into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_use : Flag<["-"], "fprofile-use">, Group<f_Group>,
     Alias<fprofile_instr_use>;
@@ -759,13 +759,13 @@ def fprofile_use_EQ : Joined<["-"], "fprofile-use=">,
     Group<f_Group>, Flags<[DriverOption]>, MetaVarName<"<pathname>">,
     HelpText<"Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.">;
 def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
-    Group<f_Group>, Flags<[DriverOption]>,
+    Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_generate : Flag<["-"], "fno-profile-generate">,
-    Group<f_Group>, Flags<[DriverOption]>,
+    Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
-    Group<f_Group>, Flags<[DriverOption]>,
+    Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Disable using instrumentation data for profile-guided optimization">;
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
@@ -1745,6 +1745,7 @@ def Wframe_larger_than_EQ : Joined<["-"], "Wframe-larger-than=">, Group<f_Group>
 def : Flag<["-"], "fterminated-vtables">, Alias<fapple_kext>;
 def fthreadsafe_statics : Flag<["-"], "fthreadsafe-statics">, Group<f_Group>;
 def ftime_report : Flag<["-"], "ftime-report">, Group<f_Group>, Flags<[CC1Option]>;
+def ftime_trace : Flag<["-"], "ftime-trace">, Group<f_Group>, Flags<[CC1Option]>;
 def ftlsmodel_EQ : Joined<["-"], "ftls-model=">, Group<f_Group>, Flags<[CC1Option]>;
 def ftrapv : Flag<["-"], "ftrapv">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Trap on integer overflow">;
@@ -2016,8 +2017,8 @@ def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of data access to code sections (ARM only)">;
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of data access to code sections (ARM only)">;
-def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft, cp15">,
-  HelpText<"Read thread pointer from coprocessor register (ARM only)">;
+def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,el0,el1,el2,el3">,
+  HelpText<"Thread pointer access method (AArch32/AArch64 only)">;
 def mpure_code : Flag<["-"], "mpure-code">, Alias<mexecute_only>; // Alias for GCC compatibility
 def mno_pure_code : Flag<["-"], "mno-pure-code">, Alias<mno_execute_only>;
 def mtvos_version_min_EQ : Joined<["-"], "mtvos-version-min=">, Group<m_Group>;
@@ -2177,6 +2178,8 @@ def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
+def mmutable_globals : Flag<["-"], "mmutable-globals">, Group<m_wasm_Features_Group>;
+def mno_mutable_globals : Flag<["-"], "mno-mutable-globals">, Group<m_wasm_Features_Group>;
 
 def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   Flags<[HelpHidden]>,
@@ -2591,6 +2594,8 @@ def std_EQ : Joined<["-", "--"], "std=">, Flags<[CC1Option]>,
   }]>;
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">, Flags<[CC1Option]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
+def unwindlib_EQ : Joined<["-", "--"], "unwindlib=">, Flags<[CC1Option]>,
+  HelpText<"Unwind library to use">, Values<"libgcc,unwindlib,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;
 def sub__umbrella : JoinedOrSeparate<["-"], "sub_umbrella">;
 def system_header_prefix : Joined<["--"], "system-header-prefix=">,

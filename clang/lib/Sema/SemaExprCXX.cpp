@@ -1870,11 +1870,12 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     if (Braced && !getLangOpts().CPlusPlus17)
       Diag(Initializer->getBeginLoc(), diag::ext_auto_new_list_init)
           << AllocType << TypeRange;
+    Expr *Deduce = Inits[0];
     QualType DeducedType;
-    if (DeduceAutoType(AllocTypeInfo, Inits[0], DeducedType) == DAR_Failed)
+    if (DeduceAutoType(AllocTypeInfo, Deduce, DeducedType) == DAR_Failed)
       return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
-                       << AllocType << Inits[0]->getType()
-                       << TypeRange << Inits[0]->getSourceRange());
+                       << AllocType << Deduce->getType()
+                       << TypeRange << Deduce->getSourceRange());
     if (DeducedType.isNull())
       return ExprError();
     AllocType = DeducedType;
@@ -2338,8 +2339,7 @@ static bool resolveAllocationOverload(
   case OR_Deleted: {
     if (Diagnose) {
       S.Diag(R.getNameLoc(), diag::err_ovl_deleted_call)
-          << Best->Function->isDeleted() << R.getLookupName()
-          << S.getDeletedOrUnavailableSuffix(Best->Function) << Range;
+          << R.getLookupName() << Range;
       Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
     }
     return true;
@@ -3517,8 +3517,7 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
 
   case OR_Deleted: {
     S.Diag(R.getNameLoc(), diag::err_ovl_deleted_call)
-        << Best->Function->isDeleted() << R.getLookupName()
-        << S.getDeletedOrUnavailableSuffix(Best->Function) << Range;
+        << R.getLookupName() << Range;
     Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
     return true;
   }

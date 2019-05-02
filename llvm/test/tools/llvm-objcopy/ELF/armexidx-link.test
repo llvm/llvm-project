@@ -36,13 +36,12 @@ Sections:
     AddressAlign:    0x0000000000000004
     Content:         ''
 Symbols:         
-  Local:           
-    - Name:            .text.bar
-      Type:            STT_SECTION
-      Section:         .text.bar
-    - Name:            .text.foo
-      Type:            STT_SECTION
-      Section:         .text.foo
-    - Name:            .ARM.exidx.text.foo
-      Type:            STT_SECTION
-      Section:         .ARM.exidx.text.foo
+  - Name:            .text.bar
+    Type:            STT_SECTION
+    Section:         .text.bar
+  - Name:            .text.foo
+    Type:            STT_SECTION
+    Section:         .text.foo
+  - Name:            .ARM.exidx.text.foo
+    Type:            STT_SECTION
+    Section:         .ARM.exidx.text.foo

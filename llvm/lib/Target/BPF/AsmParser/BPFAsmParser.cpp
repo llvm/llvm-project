@@ -125,7 +125,7 @@ public:
   bool isMem() const override { return false; }
 
   bool isConstantImm() const {
-    return isImm() && dyn_cast<MCConstantExpr>(getImm());
+    return isImm() && isa<MCConstantExpr>(getImm());
   }
 
   int64_t getConstantImm() const {

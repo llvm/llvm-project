@@ -359,6 +359,7 @@ HasExplicitOwnershipAttr(Sema &S, ParmVarDecl *Param) {
 /// ActOnStartOfObjCMethodDef - This routine sets up parameters; invisible
 /// and user declared, in the method definition's AST.
 void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
+  ImplicitlyRetainedSelfLocs.clear();
   assert((getCurMethodDecl() == nullptr) && "Methodparsing confused");
   ObjCMethodDecl *MDecl = dyn_cast_or_null<ObjCMethodDecl>(D);
 
@@ -499,7 +500,7 @@ namespace {
 // Callback to only accept typo corrections that are Objective-C classes.
 // If an ObjCInterfaceDecl* is given to the constructor, then the validation
 // function will reject corrections to that class.
-class ObjCInterfaceValidatorCCC : public CorrectionCandidateCallback {
+class ObjCInterfaceValidatorCCC final : public CorrectionCandidateCallback {
  public:
   ObjCInterfaceValidatorCCC() : CurrentIDecl(nullptr) {}
   explicit ObjCInterfaceValidatorCCC(ObjCInterfaceDecl *IDecl)
@@ -508,6 +509,10 @@ class ObjCInterfaceValidatorCCC : public CorrectionCandidateCallback {
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     ObjCInterfaceDecl *ID = candidate.getCorrectionDeclAs<ObjCInterfaceDecl>();
     return ID && !declaresSameEntity(ID, CurrentIDecl);
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<ObjCInterfaceValidatorCCC>(*this);
   }
 
  private:
@@ -549,11 +554,10 @@ ActOnSuperClassOfClassInterface(Scope *S,
   if (!PrevDecl) {
     // Try to correct for a typo in the superclass name without correcting
     // to the class we're defining.
+    ObjCInterfaceValidatorCCC CCC(IDecl);
     if (TypoCorrection Corrected = CorrectTypo(
-            DeclarationNameInfo(SuperName, SuperLoc),
-            LookupOrdinaryName, TUScope,
-            nullptr, llvm::make_unique<ObjCInterfaceValidatorCCC>(IDecl),
-            CTK_ErrorRecovery)) {
+            DeclarationNameInfo(SuperName, SuperLoc), LookupOrdinaryName,
+            TUScope, nullptr, CCC, CTK_ErrorRecovery)) {
       diagnoseTypo(Corrected, PDiag(diag::err_undef_superclass_suggest)
                    << SuperName << ClassName);
       PrevDecl = Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>();
@@ -1292,11 +1296,10 @@ Sema::FindProtocolDeclaration(bool WarnOnDeclarations, bool ForObjCContainer,
   for (const IdentifierLocPair &Pair : ProtocolId) {
     ObjCProtocolDecl *PDecl = LookupProtocol(Pair.first, Pair.second);
     if (!PDecl) {
+      DeclFilterCCC<ObjCProtocolDecl> CCC{};
       TypoCorrection Corrected = CorrectTypo(
-          DeclarationNameInfo(Pair.first, Pair.second),
-          LookupObjCProtocolName, TUScope, nullptr,
-          llvm::make_unique<DeclFilterCCC<ObjCProtocolDecl>>(),
-          CTK_ErrorRecovery);
+          DeclarationNameInfo(Pair.first, Pair.second), LookupObjCProtocolName,
+          TUScope, nullptr, CCC, CTK_ErrorRecovery);
       if ((PDecl = Corrected.getCorrectionDeclAs<ObjCProtocolDecl>()))
         diagnoseTypo(Corrected, PDiag(diag::err_undeclared_protocol_suggest)
                                     << Pair.first);
@@ -1334,7 +1337,8 @@ Sema::FindProtocolDeclaration(bool WarnOnDeclarations, bool ForObjCContainer,
 namespace {
 // Callback to only accept typo corrections that are either
 // Objective-C protocols or valid Objective-C type arguments.
-class ObjCTypeArgOrProtocolValidatorCCC : public CorrectionCandidateCallback {
+class ObjCTypeArgOrProtocolValidatorCCC final
+    : public CorrectionCandidateCallback {
   ASTContext &Context;
   Sema::LookupNameKind LookupKind;
  public:
@@ -1380,6 +1384,10 @@ class ObjCTypeArgOrProtocolValidatorCCC : public CorrectionCandidateCallback {
     }
 
     return false;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<ObjCTypeArgOrProtocolValidatorCCC>(*this);
   }
 };
 } // end anonymous namespace
@@ -1670,12 +1678,10 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     }
 
     // Perform typo correction on the name.
-    TypoCorrection corrected = CorrectTypo(
-        DeclarationNameInfo(identifiers[i], identifierLocs[i]), lookupKind, S,
-        nullptr,
-        llvm::make_unique<ObjCTypeArgOrProtocolValidatorCCC>(Context,
-                                                             lookupKind),
-        CTK_ErrorRecovery);
+    ObjCTypeArgOrProtocolValidatorCCC CCC(Context, lookupKind);
+    TypoCorrection corrected =
+        CorrectTypo(DeclarationNameInfo(identifiers[i], identifierLocs[i]),
+                    lookupKind, S, nullptr, CCC, CTK_ErrorRecovery);
     if (corrected) {
       // Did we find a protocol?
       if (auto proto = corrected.getCorrectionDeclAs<ObjCProtocolDecl>()) {
@@ -1887,7 +1893,8 @@ Decl *Sema::ActOnStartCategoryInterface(
 Decl *Sema::ActOnStartCategoryImplementation(
                       SourceLocation AtCatImplLoc,
                       IdentifierInfo *ClassName, SourceLocation ClassLoc,
-                      IdentifierInfo *CatName, SourceLocation CatLoc) {
+                      IdentifierInfo *CatName, SourceLocation CatLoc,
+                      const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
   ObjCCategoryDecl *CatIDecl = nullptr;
   if (IDecl && IDecl->hasDefinition()) {
@@ -1914,6 +1921,9 @@ Decl *Sema::ActOnStartCategoryImplementation(
                                  diag::err_undef_interface)) {
     CDecl->setInvalidDecl();
   }
+
+  ProcessDeclAttributeList(TUScope, CDecl, Attrs);
+  AddPragmaAttributes(TUScope, CDecl);
 
   // FIXME: PushOnScopeChains?
   CurContext->addDecl(CDecl);
@@ -1950,7 +1960,8 @@ Decl *Sema::ActOnStartClassImplementation(
                       SourceLocation AtClassImplLoc,
                       IdentifierInfo *ClassName, SourceLocation ClassLoc,
                       IdentifierInfo *SuperClassname,
-                      SourceLocation SuperClassLoc) {
+                      SourceLocation SuperClassLoc,
+                      const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = nullptr;
   // Check for another declaration kind with the same name.
   NamedDecl *PrevDecl
@@ -1967,9 +1978,10 @@ Decl *Sema::ActOnStartClassImplementation(
   } else {
     // We did not find anything with the name ClassName; try to correct for
     // typos in the class name.
-    TypoCorrection Corrected = CorrectTypo(
-        DeclarationNameInfo(ClassName, ClassLoc), LookupOrdinaryName, TUScope,
-        nullptr, llvm::make_unique<ObjCInterfaceValidatorCCC>(), CTK_NonError);
+    ObjCInterfaceValidatorCCC CCC{};
+    TypoCorrection Corrected =
+        CorrectTypo(DeclarationNameInfo(ClassName, ClassLoc),
+                    LookupOrdinaryName, TUScope, nullptr, CCC, CTK_NonError);
     if (Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>()) {
       // Suggest the (potentially) correct interface name. Don't provide a
       // code-modification hint or use the typo name for recovery, because
@@ -2042,6 +2054,9 @@ Decl *Sema::ActOnStartClassImplementation(
   ObjCImplementationDecl* IMPDecl =
     ObjCImplementationDecl::Create(Context, CurContext, IDecl, SDecl,
                                    ClassLoc, AtClassImplLoc, SuperClassLoc);
+
+  ProcessDeclAttributeList(TUScope, IMPDecl, Attrs);
+  AddPragmaAttributes(TUScope, IMPDecl);
 
   if (CheckObjCDeclScope(IMPDecl))
     return ActOnObjCContainerStartDefinition(IMPDecl);
@@ -4151,13 +4166,12 @@ namespace {
 /// overrides.
 class OverrideSearch {
 public:
-  Sema &S;
-  ObjCMethodDecl *Method;
+  const ObjCMethodDecl *Method;
   llvm::SmallSetVector<ObjCMethodDecl*, 4> Overridden;
   bool Recursive;
 
 public:
-  OverrideSearch(Sema &S, ObjCMethodDecl *method) : S(S), Method(method) {
+  OverrideSearch(Sema &S, const ObjCMethodDecl *method) : Method(method) {
     Selector selector = method->getSelector();
 
     // Bypass this search if we've never seen an instance/class method
@@ -4171,19 +4185,20 @@ public:
       if (it == S.MethodPool.end())
         return;
     }
-    ObjCMethodList &list =
+    const ObjCMethodList &list =
       method->isInstanceMethod() ? it->second.first : it->second.second;
     if (!list.getMethod()) return;
 
-    ObjCContainerDecl *container
+    const ObjCContainerDecl *container
       = cast<ObjCContainerDecl>(method->getDeclContext());
 
     // Prevent the search from reaching this container again.  This is
     // important with categories, which override methods from the
     // interface and each other.
-    if (ObjCCategoryDecl *Category = dyn_cast<ObjCCategoryDecl>(container)) {
+    if (const ObjCCategoryDecl *Category =
+            dyn_cast<ObjCCategoryDecl>(container)) {
       searchFromContainer(container);
-      if (ObjCInterfaceDecl *Interface = Category->getClassInterface())
+      if (const ObjCInterfaceDecl *Interface = Category->getClassInterface())
         searchFromContainer(Interface);
     } else {
       searchFromContainer(container);
@@ -4195,7 +4210,7 @@ public:
   iterator end() const { return Overridden.end(); }
 
 private:
-  void searchFromContainer(ObjCContainerDecl *container) {
+  void searchFromContainer(const ObjCContainerDecl *container) {
     if (container->isInvalidDecl()) return;
 
     switch (container->getDeclKind()) {
@@ -4211,7 +4226,7 @@ private:
     }
   }
 
-  void searchFrom(ObjCProtocolDecl *protocol) {
+  void searchFrom(const ObjCProtocolDecl *protocol) {
     if (!protocol->hasDefinition())
       return;
 
@@ -4220,14 +4235,14 @@ private:
     search(protocol->getReferencedProtocols());
   }
 
-  void searchFrom(ObjCCategoryDecl *category) {
+  void searchFrom(const ObjCCategoryDecl *category) {
     // A method in a category declaration overrides declarations from
     // the main class and from protocols the category references.
     // The main class is handled in the constructor.
     search(category->getReferencedProtocols());
   }
 
-  void searchFrom(ObjCCategoryImplDecl *impl) {
+  void searchFrom(const ObjCCategoryImplDecl *impl) {
     // A method in a category definition that has a category
     // declaration overrides declarations from the category
     // declaration.
@@ -4237,12 +4252,12 @@ private:
         search(Interface);
 
     // Otherwise it overrides declarations from the class.
-    } else if (ObjCInterfaceDecl *Interface = impl->getClassInterface()) {
+    } else if (const auto *Interface = impl->getClassInterface()) {
       search(Interface);
     }
   }
 
-  void searchFrom(ObjCInterfaceDecl *iface) {
+  void searchFrom(const ObjCInterfaceDecl *iface) {
     // A method in a class declaration overrides declarations from
     if (!iface->hasDefinition())
       return;
@@ -4259,20 +4274,19 @@ private:
     search(iface->getReferencedProtocols());
   }
 
-  void searchFrom(ObjCImplementationDecl *impl) {
+  void searchFrom(const ObjCImplementationDecl *impl) {
     // A method in a class implementation overrides declarations from
     // the class interface.
-    if (ObjCInterfaceDecl *Interface = impl->getClassInterface())
+    if (const auto *Interface = impl->getClassInterface())
       search(Interface);
   }
 
   void search(const ObjCProtocolList &protocols) {
-    for (ObjCProtocolList::iterator i = protocols.begin(), e = protocols.end();
-         i != e; ++i)
-      search(*i);
+    for (const auto *Proto : protocols)
+      search(Proto);
   }
 
-  void search(ObjCContainerDecl *container) {
+  void search(const ObjCContainerDecl *container) {
     // Check for a method in this container which matches this selector.
     ObjCMethodDecl *meth = container->getMethod(Method->getSelector(),
                                                 Method->isInstanceMethod(),
@@ -4298,6 +4312,8 @@ private:
 void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
                                     ObjCInterfaceDecl *CurrentClass,
                                     ResultTypeCompatibilityKind RTC) {
+  if (!ObjCMethod)
+    return;
   // Search for overridden methods and merge information down from them.
   OverrideSearch overrides(*this, ObjCMethod);
   // Keep track if the method overrides any method in the class's base classes,
@@ -4306,10 +4322,7 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
   // For this info, a method in an implementation is not considered as
   // overriding the same method in the interface or its categories.
   bool hasOverriddenMethodsInBaseOrProtocol = false;
-  for (OverrideSearch::iterator
-         i = overrides.begin(), e = overrides.end(); i != e; ++i) {
-    ObjCMethodDecl *overridden = *i;
-
+  for (ObjCMethodDecl *overridden : overrides) {
     if (!hasOverriddenMethodsInBaseOrProtocol) {
       if (isa<ObjCProtocolDecl>(overridden->getDeclContext()) ||
           CurrentClass != overridden->getClassInterface() ||
@@ -4336,9 +4349,7 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
             if (CategCount > 1 ||
                 !isa<ObjCCategoryImplDecl>(overridden->getDeclContext())) {
               OverrideSearch overrides(*this, overridden);
-              for (OverrideSearch::iterator
-                     OI= overrides.begin(), OE= overrides.end(); OI!=OE; ++OI) {
-                ObjCMethodDecl *SuperOverridden = *OI;
+              for (ObjCMethodDecl *SuperOverridden : overrides) {
                 if (isa<ObjCProtocolDecl>(SuperOverridden->getDeclContext()) ||
                     CurrentClass != SuperOverridden->getClassInterface()) {
                   hasOverriddenMethodsInBaseOrProtocol = true;

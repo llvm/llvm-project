@@ -1905,6 +1905,11 @@ struct SequenceTraits<SmallVector<T, N>,
                       typename std::enable_if<CheckIsBool<
                           SequenceElementTraits<T>::flow>::value>::type>
     : SequenceTraitsImpl<SmallVector<T, N>, SequenceElementTraits<T>::flow> {};
+template <typename T>
+struct SequenceTraits<SmallVectorImpl<T>,
+                      typename std::enable_if<CheckIsBool<
+                          SequenceElementTraits<T>::flow>::value>::type>
+    : SequenceTraitsImpl<SmallVectorImpl<T>, SequenceElementTraits<T>::flow> {};
 
 // Sequences of fundamental types use flow formatting.
 template <typename T>

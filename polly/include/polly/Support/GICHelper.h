@@ -16,23 +16,9 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/raw_ostream.h"
-#include "isl/aff.h"
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
-#include "isl/map.h"
 #include "isl/options.h"
-#include "isl/set.h"
-#include "isl/union_map.h"
-#include "isl/union_set.h"
-#include <functional>
-#include <string>
-
-struct isl_schedule;
-struct isl_multi_aff;
-
-namespace llvm {
-class Value;
-} // namespace llvm
 
 namespace polly {
 

@@ -41,7 +41,6 @@
 #include "MIDriver.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecRun constructor.
 // Type:    Method.
 // Args:    None.
@@ -57,7 +56,6 @@ CMICmdCmdExecRun::CMICmdCmdExecRun() : m_constStrArgStart("start") {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecRun destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -67,7 +65,6 @@ CMICmdCmdExecRun::CMICmdCmdExecRun() : m_constStrArgStart("start") {
 CMICmdCmdExecRun::~CMICmdCmdExecRun() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. It parses the command line
 // options'
 //          arguments to extract values for each of those arguments.
@@ -85,7 +82,6 @@ bool CMICmdCmdExecRun::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -147,7 +143,6 @@ bool CMICmdCmdExecRun::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -181,7 +176,6 @@ bool CMICmdCmdExecRun::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -192,12 +186,8 @@ bool CMICmdCmdExecRun::Acknowledge() {
 //--
 CMICmdBase *CMICmdCmdExecRun::CreateSelf() { return new CMICmdCmdExecRun(); }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecContinue constructor.
 // Type:    Method.
 // Args:    None.
@@ -213,7 +203,6 @@ CMICmdCmdExecContinue::CMICmdCmdExecContinue() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecContinue destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -223,7 +212,6 @@ CMICmdCmdExecContinue::CMICmdCmdExecContinue() {
 CMICmdCmdExecContinue::~CMICmdCmdExecContinue() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -253,7 +241,6 @@ bool CMICmdCmdExecContinue::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -270,7 +257,6 @@ bool CMICmdCmdExecContinue::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -283,12 +269,8 @@ CMICmdBase *CMICmdCmdExecContinue::CreateSelf() {
   return new CMICmdCmdExecContinue();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecNext constructor.
 // Type:    Method.
 // Args:    None.
@@ -304,7 +286,6 @@ CMICmdCmdExecNext::CMICmdCmdExecNext() : m_constStrArgNumber("number") {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecNext destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -314,7 +295,6 @@ CMICmdCmdExecNext::CMICmdCmdExecNext() : m_constStrArgNumber("number") {
 CMICmdCmdExecNext::~CMICmdCmdExecNext() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -330,7 +310,6 @@ bool CMICmdCmdExecNext::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -375,7 +354,6 @@ bool CMICmdCmdExecNext::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -392,7 +370,6 @@ bool CMICmdCmdExecNext::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -403,12 +380,8 @@ bool CMICmdCmdExecNext::Acknowledge() {
 //--
 CMICmdBase *CMICmdCmdExecNext::CreateSelf() { return new CMICmdCmdExecNext(); }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecStep constructor.
 // Type:    Method.
 // Args:    None.
@@ -424,7 +397,6 @@ CMICmdCmdExecStep::CMICmdCmdExecStep() : m_constStrArgNumber("number") {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecStep destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -434,7 +406,6 @@ CMICmdCmdExecStep::CMICmdCmdExecStep() : m_constStrArgNumber("number") {
 CMICmdCmdExecStep::~CMICmdCmdExecStep() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -450,7 +421,6 @@ bool CMICmdCmdExecStep::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -496,7 +466,6 @@ bool CMICmdCmdExecStep::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -513,7 +482,6 @@ bool CMICmdCmdExecStep::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -524,12 +492,8 @@ bool CMICmdCmdExecStep::Acknowledge() {
 //--
 CMICmdBase *CMICmdCmdExecStep::CreateSelf() { return new CMICmdCmdExecStep(); }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecNextInstruction constructor.
 // Type:    Method.
 // Args:    None.
@@ -546,7 +510,6 @@ CMICmdCmdExecNextInstruction::CMICmdCmdExecNextInstruction()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecNextInstruction destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -556,7 +519,6 @@ CMICmdCmdExecNextInstruction::CMICmdCmdExecNextInstruction()
 CMICmdCmdExecNextInstruction::~CMICmdCmdExecNextInstruction() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -572,7 +534,6 @@ bool CMICmdCmdExecNextInstruction::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -618,7 +579,6 @@ bool CMICmdCmdExecNextInstruction::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -635,7 +595,6 @@ bool CMICmdCmdExecNextInstruction::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -648,12 +607,8 @@ CMICmdBase *CMICmdCmdExecNextInstruction::CreateSelf() {
   return new CMICmdCmdExecNextInstruction();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecStepInstruction constructor.
 // Type:    Method.
 // Args:    None.
@@ -670,7 +625,6 @@ CMICmdCmdExecStepInstruction::CMICmdCmdExecStepInstruction()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecStepInstruction destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -680,7 +634,6 @@ CMICmdCmdExecStepInstruction::CMICmdCmdExecStepInstruction()
 CMICmdCmdExecStepInstruction::~CMICmdCmdExecStepInstruction() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -696,7 +649,6 @@ bool CMICmdCmdExecStepInstruction::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -742,7 +694,6 @@ bool CMICmdCmdExecStepInstruction::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -759,7 +710,6 @@ bool CMICmdCmdExecStepInstruction::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -772,12 +722,8 @@ CMICmdBase *CMICmdCmdExecStepInstruction::CreateSelf() {
   return new CMICmdCmdExecStepInstruction();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecFinish constructor.
 // Type:    Method.
 // Args:    None.
@@ -793,7 +739,6 @@ CMICmdCmdExecFinish::CMICmdCmdExecFinish() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecFinish destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -803,7 +748,6 @@ CMICmdCmdExecFinish::CMICmdCmdExecFinish() {
 CMICmdCmdExecFinish::~CMICmdCmdExecFinish() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -816,7 +760,6 @@ CMICmdCmdExecFinish::~CMICmdCmdExecFinish() {}
 bool CMICmdCmdExecFinish::ParseArgs() { return ParseValidateCmdOptions(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -861,7 +804,6 @@ bool CMICmdCmdExecFinish::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -878,7 +820,6 @@ bool CMICmdCmdExecFinish::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -891,12 +832,8 @@ CMICmdBase *CMICmdCmdExecFinish::CreateSelf() {
   return new CMICmdCmdExecFinish();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecInterrupt constructor.
 // Type:    Method.
 // Args:    None.
@@ -912,7 +849,6 @@ CMICmdCmdExecInterrupt::CMICmdCmdExecInterrupt() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecInterrupt destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -922,7 +858,6 @@ CMICmdCmdExecInterrupt::CMICmdCmdExecInterrupt() {
 CMICmdCmdExecInterrupt::~CMICmdCmdExecInterrupt() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -953,7 +888,6 @@ bool CMICmdCmdExecInterrupt::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -970,7 +904,6 @@ bool CMICmdCmdExecInterrupt::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -983,12 +916,8 @@ CMICmdBase *CMICmdCmdExecInterrupt::CreateSelf() {
   return new CMICmdCmdExecInterrupt();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecArguments constructor.
 // Type:    Method.
 // Args:    None.
@@ -1005,7 +934,6 @@ CMICmdCmdExecArguments::CMICmdCmdExecArguments()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecArguments destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -1015,7 +943,6 @@ CMICmdCmdExecArguments::CMICmdCmdExecArguments()
 CMICmdCmdExecArguments::~CMICmdCmdExecArguments() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -1033,7 +960,6 @@ bool CMICmdCmdExecArguments::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -1074,7 +1000,6 @@ bool CMICmdCmdExecArguments::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -1091,7 +1016,6 @@ bool CMICmdCmdExecArguments::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -1104,12 +1028,8 @@ CMICmdBase *CMICmdCmdExecArguments::CreateSelf() {
   return new CMICmdCmdExecArguments();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecAbort constructor.
 // Type:    Method.
 // Args:    None.
@@ -1125,7 +1045,6 @@ CMICmdCmdExecAbort::CMICmdCmdExecAbort() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdExecAbort destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -1135,7 +1054,6 @@ CMICmdCmdExecAbort::CMICmdCmdExecAbort() {
 CMICmdCmdExecAbort::~CMICmdCmdExecAbort() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -1168,7 +1086,6 @@ bool CMICmdCmdExecAbort::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -1185,7 +1102,6 @@ bool CMICmdCmdExecAbort::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.

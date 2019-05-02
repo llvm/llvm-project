@@ -28,8 +28,8 @@ protected:
 
 public:
   S7(typename T::type v) : a(v) {
-#pragma omp taskgroup task_reduction(+:b)
-#pragma omp task private(a) private(this->a) private(T::a) in_reduction(+:this->b)
+#pragma omp taskgroup allocate(b) task_reduction(+:b)
+#pragma omp task private(a) private(this->a) private(T::a) in_reduction(+:this->b) allocate(b)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -41,8 +41,8 @@ public:
   }
 };
 
-// CHECK: #pragma omp taskgroup task_reduction(+: this->b)
-// CHECK: #pragma omp task private(this->a) private(this->a) private(T::a) in_reduction(+: this->b){{$}}
+// CHECK: #pragma omp taskgroup allocate(this->b) task_reduction(+: this->b)
+// CHECK: #pragma omp task private(this->a) private(this->a) private(T::a) in_reduction(+: this->b) allocate(this->b){{$}}
 // CHECK: #pragma omp task private(this->a) private(this->a)
 // CHECK: #pragma omp task private(this->a) private(this->a) private(this->S1::a)
 

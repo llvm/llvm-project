@@ -3,7 +3,7 @@
 # RUN: llvm-mc -triple=i686-windows-gnu %s -filetype=obj -o %t.obj
 
 # RUN: lld-link -lldmingw -dll -out:%t.dll -entry:DllMainCRTStartup@12 %t.obj -implib:%t.lib
-# RUN: llvm-readobj -coff-exports %t.dll | grep Name: | FileCheck %s
+# RUN: llvm-readobj --coff-exports %t.dll | grep Name: | FileCheck %s
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
 # CHECK: Name:
@@ -43,7 +43,7 @@ __imp__unexported:
 # RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
 #
 # RUN: lld-link -out:%t.dll -dll %t.obj -lldmingw -export-all-symbols -output-def:%t.def
-# RUN: llvm-readobj -coff-exports %t.dll | FileCheck -check-prefix=CHECK2 %s
+# RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=CHECK2 %s
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
 
 # Note, this will actually export _DllMainCRTStartup as well, since

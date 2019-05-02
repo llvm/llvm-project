@@ -30,14 +30,13 @@
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 
+#include "DWARFContext.h"
 #include "DWARFDataExtractor.h"
 #include "DWARFDefines.h"
 #include "DWARFIndex.h"
 #include "UniqueDWARFASTType.h"
 
-//----------------------------------------------------------------------
 // Forward Declarations for this DWARF plugin
-//----------------------------------------------------------------------
 class DebugMapModule;
 class DWARFAbbreviationDeclaration;
 class DWARFAbbreviationDeclarationSet;
@@ -67,9 +66,7 @@ public:
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -83,11 +80,9 @@ public:
   static lldb_private::SymbolFile *
   CreateInstance(lldb_private::ObjectFile *obj_file);
 
-  static const lldb_private::FileSpecList &GetSymlinkPaths();
+  static lldb_private::FileSpecList GetSymlinkPaths();
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
 
   SymbolFileDWARF(lldb_private::ObjectFile *ofile);
 
@@ -97,9 +92,7 @@ public:
 
   void InitializeObject() override;
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
 
   uint32_t GetNumCompileUnits() override;
 
@@ -218,16 +211,13 @@ public:
 
   std::recursive_mutex &GetModuleMutex() const override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
 
   virtual const lldb_private::DWARFDataExtractor &get_debug_abbrev_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_addr_data();
-  const lldb_private::DWARFDataExtractor &get_debug_aranges_data();
   const lldb_private::DWARFDataExtractor &get_debug_frame_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_info_data();
   const lldb_private::DWARFDataExtractor &get_debug_line_data();
@@ -458,11 +448,10 @@ protected:
   llvm::once_flag m_dwp_symfile_once_flag;
   std::unique_ptr<SymbolFileDWARFDwp> m_dwp_symfile;
 
-  lldb_private::DWARFDataExtractor m_dwarf_data;
+  lldb_private::DWARFContext m_context;
 
   DWARFDataSegment m_data_debug_abbrev;
   DWARFDataSegment m_data_debug_addr;
-  DWARFDataSegment m_data_debug_aranges;
   DWARFDataSegment m_data_debug_frame;
   DWARFDataSegment m_data_debug_info;
   DWARFDataSegment m_data_debug_line;

@@ -24,8 +24,8 @@ insn2:
 # Test PC-rel GOT relocation.
 # Verify both the contents of the GOT entry for y, and that the movq instruction
 # references the correct GOT entry address:
-# rtdyld-check: *{8}(stub_addr(test_x86-64.o, __text, y)) = y
-# rtdyld-check: decode_operand(insn3, 4) = stub_addr(test_x86-64.o, __text, y) - next_pc(insn3)
+# rtdyld-check: *{8}(stub_addr(test_x86-64.o/__text, y)) = y
+# rtdyld-check: decode_operand(insn3, 4) = stub_addr(test_x86-64.o/__text, y) - next_pc(insn3)
 insn3:
         movq	y@GOTPCREL(%rip), %rax
 

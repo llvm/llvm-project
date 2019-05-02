@@ -29,6 +29,7 @@ int main(int, char**)
     S s1;
     S s2;
     int i = s1.begin() - s2.begin();
+    (void) i;
     assert(false);
     }
 #if TEST_STD_VER >= 11
@@ -37,6 +38,7 @@ int main(int, char**)
     S s1;
     S s2;
     int i = s1.begin() - s2.begin();
+    (void) i;
     assert(false);
     }
 #endif

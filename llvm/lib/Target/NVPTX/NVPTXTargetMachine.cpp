@@ -166,8 +166,16 @@ public:
   void addMachineSSAOptimization() override;
 
   FunctionPass *createTargetRegisterAllocator(bool) override;
-  void addFastRegAlloc(FunctionPass *RegAllocPass) override;
-  void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
+  void addFastRegAlloc() override;
+  void addOptimizedRegAlloc() override;
+
+  bool addRegAssignmentFast() override {
+    llvm_unreachable("should not be used");
+  }
+
+  bool addRegAssignmentOptimized() override {
+    llvm_unreachable("should not be used");
+  }
 
 private:
   // If the opt level is aggressive, add GVN; otherwise, add EarlyCSE. This
@@ -322,15 +330,12 @@ FunctionPass *NVPTXPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr; // No reg alloc
 }
 
-void NVPTXPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
-  assert(!RegAllocPass && "NVPTX uses no regalloc!");
+void NVPTXPassConfig::addFastRegAlloc() {
   addPass(&PHIEliminationID);
   addPass(&TwoAddressInstructionPassID);
 }
 
-void NVPTXPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
-  assert(!RegAllocPass && "NVPTX uses no regalloc!");
-
+void NVPTXPassConfig::addOptimizedRegAlloc() {
   addPass(&ProcessImplicitDefsID);
   addPass(&LiveVariablesID);
   addPass(&MachineLoopInfoID);

@@ -40,7 +40,7 @@ body: |
     $rax = MOVSX64rr32 $edi
     $eax = MOV32rm $rsp, 4, $rax, 0, _
     CMP64rm $rcx, $rsp, 1, _, 512, _, implicit-def $eflags
-    JNE_1 %bb.2.entry, implicit $eflags
+    JCC_1 %bb.2.entry, 5, implicit $eflags
 
   bb.1.entry:
     liveins: $eax

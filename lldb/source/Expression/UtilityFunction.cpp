@@ -29,7 +29,6 @@
 using namespace lldb_private;
 using namespace lldb;
 
-//------------------------------------------------------------------
 /// Constructor
 ///
 /// \param[in] text
@@ -37,7 +36,6 @@ using namespace lldb;
 ///
 /// \param[in] name
 ///     The name of the function, as used in the text.
-//------------------------------------------------------------------
 UtilityFunction::UtilityFunction(ExecutionContextScope &exe_scope,
                                  const char *text, const char *name,
                                  ExpressionKind kind)

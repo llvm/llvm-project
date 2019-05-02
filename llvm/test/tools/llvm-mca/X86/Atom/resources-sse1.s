@@ -126,7 +126,7 @@ pminsw      (%rax), %mm2
 pminub      %mm0, %mm2
 pminub      (%rax), %mm2
 
-pmovmskb    %xmm0, %rcx
+pmovmskb    %mm0, %rcx
 
 pmulhuw     %mm0, %mm2
 pmulhuw     (%rax), %mm2
@@ -279,7 +279,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   pminsw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pminub	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   pminub	(%rax), %mm2
-# CHECK-NEXT:  1      3     3.00                        pmovmskb	%xmm0, %ecx
+# CHECK-NEXT:  1      3     3.00                        pmovmskb	%mm0, %ecx
 # CHECK-NEXT:  1      4     4.00                        pmulhuw	%mm0, %mm2
 # CHECK-NEXT:  1      4     4.00    *                   pmulhuw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00    *      *            prefetcht0	(%rax)
@@ -414,7 +414,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     pminsw	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   pminub	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     pminub	(%rax), %mm2
-# CHECK-NEXT: 3.00    -     pmovmskb	%xmm0, %ecx
+# CHECK-NEXT: 3.00    -     pmovmskb	%mm0, %ecx
 # CHECK-NEXT: 4.00    -     pmulhuw	%mm0, %mm2
 # CHECK-NEXT: 4.00    -     pmulhuw	(%rax), %mm2
 # CHECK-NEXT: 1.00    -     prefetcht0	(%rax)

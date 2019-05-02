@@ -72,7 +72,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !3 = !DIFile(filename: "foo.cpp", directory: "/home/evgeny/work/cpp_lexer/sample3")
 !4 = !{}
 !5 = !{!0}
-!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !7, line: 1, size: 8, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !4, identifier: "_ZTS1S")
+!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !7, line: 1, size: 8, flags: DIFlagTypePassByValue, elements: !4, identifier: "_ZTS1S")
 !7 = !DIFile(filename: "./inc1.h", directory: "/home/evgeny/work/cpp_lexer/sample3")
 !8 = !DIGlobalVariableExpression(var: !9, expr: !DIExpression())
 !9 = distinct !DIGlobalVariable(name: "x", scope: !10, file: !13, line: 2, type: !14, isLocal: false, isDefinition: true)
@@ -89,7 +89,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !20 = !DISubroutineType(types: !21)
 !21 = !{null}
 !22 = !DILocalVariable(name: "n", scope: !19, file: !11, line: 4, type: !23)
-!23 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Nested", scope: !6, file: !7, line: 2, size: 8, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !4, identifier: "_ZTSN1S6NestedE")
+!23 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Nested", scope: !6, file: !7, line: 2, size: 8, flags: DIFlagTypePassByValue, elements: !4, identifier: "_ZTSN1S6NestedE")
 !24 = !DILocation(line: 4, column: 13, scope: !19)
 !25 = !DILocalVariable(name: "n2", scope: !19, file: !11, line: 5, type: !26)
 !26 = !DIDerivedType(tag: DW_TAG_typedef, name: "NestedTypedef", scope: !6, file: !7, line: 3, baseType: !14)

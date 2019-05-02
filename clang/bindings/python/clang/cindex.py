@@ -2121,6 +2121,8 @@ TypeKind.OCLEVENT = TypeKind(158)
 TypeKind.OCLQUEUE = TypeKind(159)
 TypeKind.OCLRESERVEID = TypeKind(160)
 
+TypeKind.EXTVECTOR = TypeKind(176)
+
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
 

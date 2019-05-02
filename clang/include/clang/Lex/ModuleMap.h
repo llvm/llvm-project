@@ -520,14 +520,18 @@ public:
                                                bool IsFramework,
                                                bool IsExplicit);
 
-  /// Create a 'global module' for a C++ Modules TS module interface unit.
+  /// Create a global module fragment for a C++ module unit.
   ///
-  /// We model the global module as a submodule of the module interface unit.
-  /// Unfortunately, we can't create the module interface unit's Module until
-  /// later, because we don't know what it will be called.
-  Module *createGlobalModuleForInterfaceUnit(SourceLocation Loc);
+  /// We model the global module fragment as a submodule of the module
+  /// interface unit. Unfortunately, we can't create the module interface
+  /// unit's Module until later, because we don't know what it will be called.
+  Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc);
 
-  /// Create a new module for a C++ Modules TS module interface unit.
+  /// Create a global module fragment for a C++ module interface unit.
+  Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,
+                                                      SourceLocation Loc);
+
+  /// Create a new module for a C++ module interface unit.
   /// The module must not already exist, and will be configured for the current
   /// compilation.
   ///

@@ -35,9 +35,7 @@ class Module;
 }
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A frozen ValueObject copied into host memory
-//----------------------------------------------------------------------
 class ValueObjectConstResult : public ValueObject {
 public:
   ~ValueObjectConstResult() override;

@@ -163,6 +163,21 @@ struct ErrorCallocOverflow : ErrorBase {
   void Print();
 };
 
+struct ErrorReallocArrayOverflow : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr count;
+  uptr size;
+
+  ErrorReallocArrayOverflow() = default;  // (*)
+  ErrorReallocArrayOverflow(u32 tid, BufferedStackTrace *stack_, uptr count_,
+                            uptr size_)
+      : ErrorBase(tid, 10, "reallocarray-overflow"),
+        stack(stack_),
+        count(count_),
+        size(size_) {}
+  void Print();
+};
+
 struct ErrorPvallocOverflow : ErrorBase {
   const BufferedStackTrace *stack;
   uptr size;
@@ -371,6 +386,7 @@ struct ErrorGeneric : ErrorBase {
   macro(MallocUsableSizeNotOwned)               \
   macro(SanitizerGetAllocatedSizeNotOwned)      \
   macro(CallocOverflow)                         \
+  macro(ReallocArrayOverflow)                   \
   macro(PvallocOverflow)                        \
   macro(InvalidAllocationAlignment)             \
   macro(InvalidAlignedAllocAlignment)           \

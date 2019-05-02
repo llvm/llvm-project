@@ -43,11 +43,11 @@ void LLVMAddNamedMetadataOperand2(LLVMModuleRef M, const char *name,
                                   LLVMMetadataRef Val);
 void LLVMSetMetadata2(LLVMValueRef Inst, unsigned KindID, LLVMMetadataRef MD);
 
-void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Bref, unsigned Line,
+void LLVMGoSetCurrentDebugLocation(LLVMBuilderRef Bref, unsigned Line,
                                   unsigned Col, LLVMMetadataRef Scope,
                                   LLVMMetadataRef InlinedAt);
 
-struct LLVMDebugLocMetadata LLVMGetCurrentDebugLocation2(LLVMBuilderRef Bref);
+struct LLVMDebugLocMetadata LLVMGoGetCurrentDebugLocation(LLVMBuilderRef Bref);
 
 #ifdef __cplusplus
 }

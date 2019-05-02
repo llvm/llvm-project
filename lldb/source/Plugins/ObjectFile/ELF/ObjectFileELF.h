@@ -49,7 +49,6 @@ struct ELFNote {
   }
 };
 
-//------------------------------------------------------------------------------
 /// \class ObjectFileELF
 /// Generic ELF object file reader.
 ///
@@ -59,9 +58,7 @@ class ObjectFileELF : public lldb_private::ObjectFile {
 public:
   ~ObjectFileELF() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -89,16 +86,12 @@ public:
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
 
-  //------------------------------------------------------------------
   // ObjectFile Protocol.
-  //------------------------------------------------------------------
   bool ParseHeader() override;
 
   bool SetLoadAddress(lldb_private::Target &target, lldb::addr_t value,

@@ -150,7 +150,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX803:
     case GK_GFX802:
     case GK_GFX801:
-      Features["vi-insts"] = true;
+      Features["gfx8-insts"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["s-memrealtime"] = true;
@@ -251,6 +251,9 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
                      !isAMDGCN(Triple));
   UseAddrSpaceMapMangling = true;
+
+  HasLegalHalfType = true;
+  HasFloat16 = true;
 
   // Set pointer width and alignment for target address space 0.
   PointerWidth = PointerAlign = DataLayout->getPointerSizeInBits();

@@ -12,7 +12,7 @@
 
 ; Check that @f is inlined after optimizations.
 ; CHECK-LABEL: define i32 @_start
-; CHECK-NEXT:  %a.i = call i32 @bar()
+; CHECK-NEXT:  %a.i = tail call i32 @bar()
 ; CHECK-NEXT:  ret i32 %a.i
 ; CHECK-NEXT: }
 

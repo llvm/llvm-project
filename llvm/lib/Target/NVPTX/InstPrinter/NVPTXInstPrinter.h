@@ -40,6 +40,8 @@ public:
                     const char *Modifier = nullptr);
   void printLdStCode(const MCInst *MI, int OpNum,
                      raw_ostream &O, const char *Modifier = nullptr);
+  void printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
+                    const char *Modifier = nullptr);
   void printMemOperand(const MCInst *MI, int OpNum,
                        raw_ostream &O, const char *Modifier = nullptr);
   void printProtoIdent(const MCInst *MI, int OpNum,

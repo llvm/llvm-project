@@ -111,7 +111,7 @@ if.end:                                           ; preds = %if.then, %lor.lhs.f
 ; CHECK: b.le [[BLOCK:LBB[0-9_]+]]
 ; CHECK: [[BLOCK]]:
 ; CHECK: bl _foo
-; CHECK: orr w0, wzr, #0x7
+; CHECK: mov w0, #7
 define i32 @speculate_division(i32 %a, i32 %b) nounwind ssp {
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -323,7 +323,7 @@ define i64 @gccbug(i64 %x0, i64 %x1) {
 ; CHECK: cmp x0, #2
 ; CHECK-NEXT: ccmp x0, #4, #4, ne
 ; CHECK-NEXT: ccmp x1, #0, #0, eq
-; CHECK-NEXT: orr w[[REGNUM:[0-9]+]], wzr, #0x1
+; CHECK-NEXT: mov w[[REGNUM:[0-9]+]], #1
 ; CHECK-NEXT: cinc x0, x[[REGNUM]], eq
 ; CHECK-NEXT: ret
   %cmp0 = icmp eq i64 %x1, 0

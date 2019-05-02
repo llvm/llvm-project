@@ -100,16 +100,14 @@ private:
   SmallVector<Value, 1> Values;
 
 public:
-  DebugLocEntry(const MCSymbol *B, const MCSymbol *E, Value Val)
-      : Begin(B), End(E) {
-    Values.push_back(std::move(Val));
+  /// Create a location list entry for the range [\p Begin, \p End).
+  ///
+  /// \param Vals One or more values describing (parts of) the variable.
+  DebugLocEntry(const MCSymbol *Begin, const MCSymbol *End,
+                ArrayRef<Value> Vals)
+      : Begin(Begin), End(End) {
+    addValues(Vals);
   }
-
-  /// If this and Next are describing different pieces of the same
-  /// variable, merge them by appending Next's values to the current
-  /// list of values.
-  /// Return true if the merge was successful.
-  bool MergeValues(const DebugLocEntry &Next);
 
   /// Attempt to merge this DebugLocEntry with Next and return
   /// true if the merge was successful. Entries can be merged if they
@@ -130,9 +128,10 @@ public:
   void addValues(ArrayRef<DebugLocEntry::Value> Vals) {
     Values.append(Vals.begin(), Vals.end());
     sortUniqueValues();
-    assert(all_of(Values, [](DebugLocEntry::Value V) {
-          return V.isFragment();
-        }) && "value must be a piece");
+    assert((Values.size() == 1 ||
+            all_of(Values,
+                   [](DebugLocEntry::Value V) { return V.isFragment(); })) &&
+           "must either have a single value or multiple pieces");
   }
 
   // Sort the pieces by offset.
@@ -148,8 +147,10 @@ public:
   }
 
   /// Lower this entry into a DWARF expression.
-  void finalize(const AsmPrinter &AP, DebugLocStream::ListBuilder &List,
-                const DIBasicType *BT);
+  void finalize(const AsmPrinter &AP,
+                DebugLocStream::ListBuilder &List,
+                const DIBasicType *BT,
+                DwarfCompileUnit &TheCU);
 };
 
 /// Compare two Values for equality.

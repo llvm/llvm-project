@@ -39,9 +39,7 @@ using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
 using namespace llvm;
 
-//----------------------------------------------------------------------
 // option descriptors for getopt_long_only()
-//----------------------------------------------------------------------
 
 static int g_debug = 0;
 static int g_verbose = 0;
@@ -69,9 +67,7 @@ static struct option g_long_options[] = {
 #define HIGH_PORT (49151u)
 #endif
 
-//----------------------------------------------------------------------
 // Watch for signals
-//----------------------------------------------------------------------
 static void signal_handler(int signo) {
   switch (signo) {
   case SIGHUP:
@@ -129,9 +125,7 @@ static Status save_socket_id_to_file(const std::string &socket_id,
   return Status();
 }
 
-//----------------------------------------------------------------------
 // main
-//----------------------------------------------------------------------
 int main_platform(int argc, char *argv[]) {
   const char *progname = argv[0];
   const char *subcommand = argv[1];

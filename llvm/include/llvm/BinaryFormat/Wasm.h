@@ -48,6 +48,11 @@ struct WasmProducerInfo {
   std::vector<std::pair<std::string, std::string>> SDKs;
 };
 
+struct WasmFeatureEntry {
+  uint8_t Prefix;
+  std::string Name;
+};
+
 struct WasmExport {
   StringRef Name;
   uint8_t Kind;
@@ -236,11 +241,14 @@ enum : unsigned {
 // Opcodes used in initializer expressions.
 enum : unsigned {
   WASM_OPCODE_END = 0x0b,
+  WASM_OPCODE_CALL = 0x10,
   WASM_OPCODE_GLOBAL_GET = 0x23,
+  WASM_OPCODE_I32_STORE = 0x36,
   WASM_OPCODE_I32_CONST = 0x41,
   WASM_OPCODE_I64_CONST = 0x42,
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
+  WASM_OPCODE_I32_ADD = 0x6a,
 };
 
 enum : unsigned {
@@ -251,6 +259,13 @@ enum : unsigned {
 enum : unsigned {
   WASM_SEGMENT_IS_PASSIVE = 0x01,
   WASM_SEGMENT_HAS_MEMINDEX = 0x02,
+};
+
+// Feature policy prefixes used in the custom "target_features" section
+enum : uint8_t {
+  WASM_FEATURE_PREFIX_USED = '+',
+  WASM_FEATURE_PREFIX_REQUIRED = '=',
+  WASM_FEATURE_PREFIX_DISALLOWED = '-',
 };
 
 // Kind codes used in the custom "name" section

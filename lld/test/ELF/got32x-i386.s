@@ -35,11 +35,11 @@
 # CHECK:       _start:
 # CHECK-NEXT:   401001: 8b 05 {{.*}} movl 4202496, %eax
 # CHECK-NEXT:   401007: 8b 1d {{.*}} movl 4202496, %ebx
-# CHECK-NEXT:   40100d: 8b 80 {{.*}} movl -4(%eax), %eax
-# CHECK-NEXT:   401013: 8b 83 {{.*}} movl -4(%ebx), %eax
+# CHECK-NEXT:   40100d: 8b 80 {{.*}} movl -4096(%eax), %eax
+# CHECK-NEXT:   401013: 8b 83 {{.*}} movl -4096(%ebx), %eax
 # CHECK: Sections:
 # CHECK:  Name Size     VMA
-# CHECK:  .got 00000004 0000000000402000
+# CHECK:  .got.plt 0000000c 0000000000403000
 
 # RUN: not ld.lld %S/Inputs/i386-got32x-baseless.elf -o %t1 -pie 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR

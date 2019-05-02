@@ -529,26 +529,6 @@ define <8 x i32> @mm256_min_epu32(<8 x i32> %a0, <8 x i32> %a1) {
 }
 declare <8 x i32> @llvm.x86.avx2.pminu.d(<8 x i32>, <8 x i32>) nounwind readnone
 
-define <32 x i8> @mm256_avg_epu8(<32 x i8> %a0, <32 x i8> %a1) {
-; CHECK-LABEL: mm256_avg_epu8:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpavgb %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
-  ret <32 x i8> %res
-}
-declare <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8>, <32 x i8>) nounwind readnone
-
-define <16 x i16> @mm256_avg_epu16(<16 x i16> %a0, <16 x i16> %a1) {
-; CHECK-LABEL: mm256_avg_epu16:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpavgw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
-  ret <16 x i16> %res
-}
-declare <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16>, <16 x i16>) nounwind readnone
-
 define <32 x i8> @test_x86_avx2_pabs_b(<32 x i8> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pabs_b:
 ; CHECK:       ## %bb.0:

@@ -48,6 +48,11 @@ private:
 
   bool tryMergeLessLess();
   bool tryMergeNSStringLiteral();
+  bool tryMergeJSPrivateIdentifier();
+  bool tryMergeCSharpVerbatimStringLiteral();
+  bool tryMergeCSharpKeywordVariables();
+  bool tryMergeCSharpNullConditionals();
+  bool tryMergeCSharpDoubleQuestion();
 
   bool tryMergeTokens(ArrayRef<tok::TokenKind> Kinds, TokenType NewType);
 

@@ -21,7 +21,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class DataEncoder DataEncoder.h "lldb/Core/DataEncoder.h" An binary data
 /// encoding class.
 ///
@@ -30,17 +29,13 @@ namespace lldb_private {
 /// that can be shared between multiple DataEncoder or DataEncoder instances.
 ///
 /// \see DataBuffer
-//----------------------------------------------------------------------
 class DataEncoder {
 public:
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Initialize all members to a default empty state.
-  //------------------------------------------------------------------
   DataEncoder();
 
-  //------------------------------------------------------------------
   /// Construct with a buffer that is owned by the caller.
   ///
   /// This constructor allows us to use data that is owned by the caller. The
@@ -57,11 +52,9 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  //------------------------------------------------------------------
   DataEncoder(void *data, uint32_t data_length, lldb::ByteOrder byte_order,
               uint8_t addr_size);
 
-  //------------------------------------------------------------------
   /// Construct with shared data.
   ///
   /// Copies the data shared pointer which adds a reference to the contained
@@ -77,57 +70,45 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  //------------------------------------------------------------------
   DataEncoder(const lldb::DataBufferSP &data_sp, lldb::ByteOrder byte_order,
               uint8_t addr_size);
 
-  //------------------------------------------------------------------
   /// Destructor
   ///
   /// If this object contains a valid shared data reference, the reference
   /// count on the data will be decremented, and if zero, the data will be
   /// freed.
-  //------------------------------------------------------------------
   ~DataEncoder();
 
-  //------------------------------------------------------------------
   /// Clears the object state.
   ///
   /// Clears the object contents back to a default invalid state, and release
   /// any references to shared data that this object may contain.
-  //------------------------------------------------------------------
   void Clear();
 
-  //------------------------------------------------------------------
   /// Get the current address size.
   ///
   /// Return the size in bytes of any address values this object will extract.
   ///
   /// \return
   ///     The size in bytes of address values that will be extracted.
-  //------------------------------------------------------------------
   uint8_t GetAddressByteSize() const { return m_addr_size; }
 
-  //------------------------------------------------------------------
   /// Get the number of bytes contained in this object.
   ///
   /// \return
   ///     The total number of bytes of data this object refers to.
-  //------------------------------------------------------------------
   size_t GetByteSize() const { return m_end - m_start; }
 
-  //------------------------------------------------------------------
   /// Get the data end pointer.
   ///
   /// \return
   ///     Returns a pointer to the next byte contained in this
   ///     object's data, or NULL of there is no data in this object.
-  //------------------------------------------------------------------
   uint8_t *GetDataEnd() { return m_end; }
 
   const uint8_t *GetDataEnd() const { return m_end; }
 
-  //------------------------------------------------------------------
   /// Get the shared data offset.
   ///
   /// Get the offset of the first byte of data in the shared data (if any).
@@ -135,30 +116,24 @@ public:
   /// \return
   ///     If this object contains shared data, this function returns
   ///     the offset in bytes into that shared data, zero otherwise.
-  //------------------------------------------------------------------
   size_t GetSharedDataOffset() const;
 
-  //------------------------------------------------------------------
   /// Get the current byte order value.
   ///
   /// \return
   ///     The current byte order value from this object's internal
   ///     state.
-  //------------------------------------------------------------------
   lldb::ByteOrder GetByteOrder() const { return m_byte_order; }
 
-  //------------------------------------------------------------------
   /// Get the data start pointer.
   ///
   /// \return
   ///     Returns a pointer to the first byte contained in this
   ///     object's data, or NULL of there is no data in this object.
-  //------------------------------------------------------------------
   uint8_t *GetDataStart() { return m_start; }
 
   const uint8_t *GetDataStart() const { return m_start; }
 
-  //------------------------------------------------------------------
   /// Encode unsigned integer values into the data at \a offset.
   ///
   /// \param[in] offset
@@ -171,7 +146,6 @@ public:
   /// \return
   ///     The next offset in the bytes of this data if the data
   ///     was successfully encoded, UINT32_MAX if the encoding failed.
-  //------------------------------------------------------------------
   uint32_t PutU8(uint32_t offset, uint8_t value);
 
   uint32_t PutU16(uint32_t offset, uint16_t value);
@@ -180,7 +154,6 @@ public:
 
   uint32_t PutU64(uint32_t offset, uint64_t value);
 
-  //------------------------------------------------------------------
   /// Encode an unsigned integer of size \a byte_size to \a offset.
   ///
   /// Encode a single integer value at \a offset and return the offset that
@@ -203,10 +176,8 @@ public:
   /// \return
   ///     The next offset in the bytes of this data if the integer
   ///     was successfully encoded, UINT32_MAX if the encoding failed.
-  //------------------------------------------------------------------
   uint32_t PutMaxU64(uint32_t offset, uint32_t byte_size, uint64_t value);
 
-  //------------------------------------------------------------------
   /// Encode an arbitrary number of bytes.
   ///
   /// \param[in] offset
@@ -222,10 +193,8 @@ public:
   /// \return
   ///     The next valid offset within data if the put operation
   ///     was successful, else UINT32_MAX to indicate the put failed.
-  //------------------------------------------------------------------
   uint32_t PutData(uint32_t offset, const void *src, uint32_t src_len);
 
-  //------------------------------------------------------------------
   /// Encode an address in the existing buffer at \a offset bytes into the
   /// buffer.
   ///
@@ -245,10 +214,8 @@ public:
   /// \return
   ///     The next valid offset within data if the put operation
   ///     was successful, else UINT32_MAX to indicate the put failed.
-  //------------------------------------------------------------------
   uint32_t PutAddress(uint32_t offset, lldb::addr_t addr);
 
-  //------------------------------------------------------------------
   /// Put a C string to \a offset.
   ///
   /// Encodes a C string into the existing data including the terminating
@@ -265,12 +232,10 @@ public:
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     NULL will be returned.
-  //------------------------------------------------------------------
   uint32_t PutCString(uint32_t offset_ptr, const char *cstr);
 
   lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
 
-  //------------------------------------------------------------------
   /// Set the address byte size.
   ///
   /// Set the size in bytes that will be used when extracting any address and
@@ -278,10 +243,8 @@ public:
   ///
   /// \param[in] addr_size
   ///     The size in bytes to use when extracting addresses.
-  //------------------------------------------------------------------
   void SetAddressByteSize(uint8_t addr_size) { m_addr_size = addr_size; }
 
-  //------------------------------------------------------------------
   /// Set data with a buffer that is caller owned.
   ///
   /// Use data that is owned by the caller when extracting values. The data
@@ -300,10 +263,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  //------------------------------------------------------------------
   uint32_t SetData(void *bytes, uint32_t length, lldb::ByteOrder byte_order);
 
-  //------------------------------------------------------------------
   /// Adopt a subset of shared data in \a data_sp.
   ///
   /// Copies the data shared pointer which adds a reference to the contained
@@ -326,11 +287,9 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  //------------------------------------------------------------------
   uint32_t SetData(const lldb::DataBufferSP &data_sp, uint32_t offset = 0,
                    uint32_t length = UINT32_MAX);
 
-  //------------------------------------------------------------------
   /// Set the byte_order value.
   ///
   /// Sets the byte order of the data to extract. Extracted values will be
@@ -338,25 +297,20 @@ public:
   ///
   /// \param[in] byte_order
   ///     The byte order value to use when extracting data.
-  //------------------------------------------------------------------
   void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
 
-  //------------------------------------------------------------------
   /// Test the validity of \a offset.
   ///
   /// \return
   ///     \b true if \a offset is a valid offset into the data in this
   ///     object, \b false otherwise.
-  //------------------------------------------------------------------
   bool ValidOffset(uint32_t offset) const { return offset < GetByteSize(); }
 
-  //------------------------------------------------------------------
   /// Test the availability of \a length bytes of data from \a offset.
   ///
   /// \return
   ///     \b true if \a offset is a valid offset and there are \a
   ///     length bytes available at that offset, \b false otherwise.
-  //------------------------------------------------------------------
   bool ValidOffsetForDataOfSize(uint32_t offset, uint32_t length) const {
     return length <= BytesLeft(offset);
   }
@@ -369,9 +323,7 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   uint8_t *m_start; ///< A pointer to the first byte of data.
   uint8_t *m_end;   ///< A pointer to the byte that is past the end of the data.
   lldb::ByteOrder

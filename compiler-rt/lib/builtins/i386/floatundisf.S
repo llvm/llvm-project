@@ -49,7 +49,7 @@ END_COMPILERRT_FUNCTION(__floatundisf)
 
 */
 
-/* branch-free, x87-free implementation - faster at the expense of code size */
+// branch-free, x87-free implementation - faster at the expense of code size
 
 #ifdef __i386__
 
@@ -79,7 +79,7 @@ DEFINE_COMPILERRT_FUNCTION(__floatundisf)
 	movd		8(%esp),		%xmm1
 	movd		4(%esp),		%xmm0
 	punpckldq	%xmm1,			%xmm0
-	
+
 	calll		0f
 0:	popl		%ecx
 	shrl		%eax					// high 31 bits of input as sint32

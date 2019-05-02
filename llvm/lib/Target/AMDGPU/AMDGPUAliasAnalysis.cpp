@@ -76,7 +76,8 @@ static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
 }
 
 AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
-                                  const MemoryLocation &LocB) {
+                                  const MemoryLocation &LocB,
+                                  AAQueryInfo &AAQI) {
   unsigned asA = LocA.Ptr->getType()->getPointerAddressSpace();
   unsigned asB = LocB.Ptr->getType()->getPointerAddressSpace();
 
@@ -85,11 +86,11 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
     return Result;
 
   // Forward the query to the next alias analysis.
-  return AAResultBase::alias(LocA, LocB);
+  return AAResultBase::alias(LocA, LocB, AAQI);
 }
 
 bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
-                                            bool OrLocal) {
+                                            AAQueryInfo &AAQI, bool OrLocal) {
   const Value *Base = GetUnderlyingObject(Loc.Ptr, DL);
   unsigned AS = Base->getType()->getPointerAddressSpace();
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
@@ -106,7 +107,7 @@ bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
     // Only assume constant memory for arguments on kernels.
     switch (F->getCallingConv()) {
     default:
-      return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
+      return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
     case CallingConv::AMDGPU_LS:
     case CallingConv::AMDGPU_HS:
     case CallingConv::AMDGPU_ES:
@@ -133,5 +134,5 @@ bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
       return true;
     }
   }
-  return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
+  return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
 }

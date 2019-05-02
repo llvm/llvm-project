@@ -5,9 +5,8 @@ define void @load_store(<4 x i16>* %in) {
 ; CHECK-LABEL: load_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    pmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    paddw %xmm0, %xmm0
-; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-NEXT:    movq %xmm0, (%eax)
 ; CHECK-NEXT:    retl
 entry:

@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -168,3 +169,36 @@ bool ConstrainedFPIntrinsic::isTernaryOp() const {
   }
 }
 
+Instruction::BinaryOps WithOverflowInst::getBinaryOp() const {
+  switch (getIntrinsicID()) {
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+      return Instruction::Add;
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+      return Instruction::Sub;
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow:
+      return Instruction::Mul;
+    default:
+      llvm_unreachable("Invalid intrinsic");
+  }
+}
+
+bool WithOverflowInst::isSigned() const {
+  switch (getIntrinsicID()) {
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::smul_with_overflow:
+      return true;
+    default:
+      return false;
+  }
+}
+
+unsigned WithOverflowInst::getNoWrapKind() const {
+  if (isSigned())
+    return OverflowingBinaryOperator::NoSignedWrap;
+  else
+    return OverflowingBinaryOperator::NoUnsignedWrap;
+}

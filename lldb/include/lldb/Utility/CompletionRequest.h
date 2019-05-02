@@ -17,9 +17,7 @@
 
 namespace lldb_private {
 class CompletionResult {
-  //----------------------------------------------------------
   /// A single completion and all associated data.
-  //----------------------------------------------------------
   struct Completion {
     Completion(llvm::StringRef completion, llvm::StringRef description)
         : m_completion(completion.str()), m_descripton(description.str()) {}
@@ -38,24 +36,19 @@ class CompletionResult {
 public:
   void AddResult(llvm::StringRef completion, llvm::StringRef description);
 
-  //----------------------------------------------------------
   /// Adds all collected completion matches to the given list.
   /// The list will be cleared before the results are added. The number of
   /// results here is guaranteed to be equal to GetNumberOfResults().
-  //----------------------------------------------------------
   void GetMatches(StringList &matches) const;
 
-  //----------------------------------------------------------
   /// Adds all collected completion descriptions to the given list.
   /// The list will be cleared before the results are added. The number of
   /// results here is guaranteed to be equal to GetNumberOfResults().
-  //----------------------------------------------------------
   void GetDescriptions(StringList &descriptions) const;
 
   std::size_t GetNumberOfResults() const { return m_results.size(); }
 };
 
-//----------------------------------------------------------------------
 /// \class CompletionRequest CompletionRequest.h
 ///   "lldb/Utility/ArgCompletionRequest.h"
 ///
@@ -63,10 +56,8 @@ public:
 /// for the user. Will be filled with the generated completions by the different
 /// completions functions.
 ///
-//----------------------------------------------------------------------
 class CompletionRequest {
 public:
-  //----------------------------------------------------------
   /// Constructs a completion request.
   ///
   /// \param [in] command_line
@@ -87,7 +78,6 @@ public:
   /// \param [out] result
   ///     The CompletionResult that will be filled with the results after this
   ///     request has been handled.
-  //----------------------------------------------------------
   CompletionRequest(llvm::StringRef command_line, unsigned raw_cursor_pos,
                     int match_start_point, int max_return_elements,
                     CompletionResult &result);

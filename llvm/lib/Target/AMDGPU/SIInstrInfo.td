@@ -5,20 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-def isCI : Predicate<"Subtarget->getGeneration() "
-                      ">= AMDGPUSubtarget::SEA_ISLANDS">;
-def isCIOnly : Predicate<"Subtarget->getGeneration() =="
-                         "AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate <"FeatureSeaIslands">;
-def isVIOnly : Predicate<"Subtarget->getGeneration() =="
-                         "AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate <"FeatureVolcanicIslands">;
 
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
 class GCNPredicateControl : PredicateControl {
-  Predicate SIAssemblerPredicate = isSICI;
-  Predicate VIAssemblerPredicate = isVI;
+  Predicate SIAssemblerPredicate = isGFX6GFX7;
+  Predicate VIAssemblerPredicate = isGFX8GFX9;
 }
 
 // Execpt for the NONE field, this must be kept in sync with the
@@ -31,6 +23,8 @@ def SIEncodingFamily {
   int SDWA9 = 3;
   int GFX80 = 4;
   int GFX9 = 5;
+  int GFX10 = 6;
+  int SDWA10 = 7;
 }
 
 //===----------------------------------------------------------------------===//
@@ -108,9 +102,6 @@ def SDTtbuffer_store : SDTypeProfile<0, 9,
 
 def SItbuffer_store : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT", SDTtbuffer_store,
                              [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
-def SItbuffer_store_x3 : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT_X3",
-                                SDTtbuffer_store,
-                                [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 def SItbuffer_store_d16 : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT_D16",
                                 SDTtbuffer_store,
                                 [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
@@ -126,6 +117,14 @@ def SDTBufferLoad : SDTypeProfile<1, 7,
      SDTCisVT<7, i1>]>;  // idxen(imm)
 
 def SIbuffer_load : SDNode <"AMDGPUISD::BUFFER_LOAD", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_ubyte : SDNode <"AMDGPUISD::BUFFER_LOAD_UBYTE", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_ushort : SDNode <"AMDGPUISD::BUFFER_LOAD_USHORT", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_byte : SDNode <"AMDGPUISD::BUFFER_LOAD_BYTE", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_short: SDNode <"AMDGPUISD::BUFFER_LOAD_SHORT", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 def SIbuffer_load_format : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
@@ -145,6 +144,12 @@ def SDTBufferStore : SDTypeProfile<0, 8,
 
 def SIbuffer_store : SDNode <"AMDGPUISD::BUFFER_STORE", SDTBufferStore,
                              [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_store_byte: SDNode <"AMDGPUISD::BUFFER_STORE_BYTE",
+                         SDTBufferStore,
+                         [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_store_short : SDNode <"AMDGPUISD::BUFFER_STORE_SHORT",
+                           SDTBufferStore,
+                           [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 def SIbuffer_store_format : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT",
                             SDTBufferStore,
                             [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
@@ -825,6 +830,7 @@ def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
 def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
 def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
 
+def DLC : NamedOperandBit<"DLC", NamedMatchClass<"DLC">>;
 def GLC : NamedOperandBit<"GLC", NamedMatchClass<"GLC">>;
 def SLC : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
@@ -839,6 +845,7 @@ def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT">>;
 
 def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
+def Dim : NamedOperandU8<"Dim", NamedMatchClass<"Dim", 0>>;
 
 def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
 def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
@@ -887,7 +894,9 @@ def KImmFP16MatchClass : KImmMatchClass<16>;
 def f16kimm : kimmOperand<i16>;
 
 
-def VOPDstS64 : VOPDstOperand <SReg_64>;
+def VOPDstS64 : VOPDstOperand <SReg_64> {
+  let PrintMethod = "printVOPDst";
+}
 
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";
@@ -1138,16 +1147,16 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _si : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
                 EXPe {
-        let AssemblerPredicates = [isSICI];
-        let DecoderNamespace = "SICI";
+        let AssemblerPredicates = [isGFX6GFX7];
+        let DecoderNamespace = "GFX6GFX7";
         let DisableDecoder = DisableSIDecoder;
       }
 
       def _vi : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
                 EXPe_vi {
-        let AssemblerPredicates = [isVI];
-        let DecoderNamespace = "VI";
+        let AssemblerPredicates = [isGFX8GFX9];
+        let DecoderNamespace = "GFX8";
         let DisableDecoder = DisableVIDecoder;
       }
     }
@@ -1200,7 +1209,7 @@ class getVOPSrc0ForVT<ValueType VT> {
          !if(!eq(VT.Value, f16.Value),
             VSrc_f16,
             !if(!eq(VT.Value, v2f16.Value),
-               VCSrc_v2f16,
+               VSrc_v2f16,
                VSrc_f32
             )
          )
@@ -1210,7 +1219,7 @@ class getVOPSrc0ForVT<ValueType VT> {
           !if(!eq(VT.Value, i16.Value),
              VSrc_b16,
              !if(!eq(VT.Value, v2i16.Value),
-                VCSrc_v2b16,
+                VSrc_v2b16,
                 VSrc_b32
              )
           )
@@ -1246,23 +1255,23 @@ class getVOP3SrcForVT<ValueType VT> {
      VSrc_128,
      !if(!eq(VT.Size, 64),
         !if(isFP,
-           VCSrc_f64,
-           VCSrc_b64),
+           VSrc_f64,
+           VSrc_b64),
         !if(!eq(VT.Value, i1.Value),
            SCSrc_i1,
            !if(isFP,
               !if(!eq(VT.Value, f16.Value),
-                 VCSrc_f16,
+                 VSrc_f16,
                  !if(!eq(VT.Value, v2f16.Value),
-                    VCSrc_v2f16,
-                    VCSrc_f32
+                    VSrc_v2f16,
+                    VSrc_f32
                  )
               ),
               !if(!eq(VT.Value, i16.Value),
-                 VCSrc_b16,
+                 VSrc_b16,
                  !if(!eq(VT.Value, v2i16.Value),
-                    VCSrc_v2b16,
-                    VCSrc_b32
+                    VSrc_v2b16,
+                    VSrc_b32
                  )
               )
            )
@@ -1885,6 +1894,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
                             getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
+
+  field string TieRegDPP = "$old";
 }
 
 class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
@@ -1995,7 +2006,7 @@ class VINTRP_Real_si <bits <2> op, string opName, dag outs, dag ins,
   VINTRPe <op>,
   SIMCInstr<opName, SIEncodingFamily.SI> {
   let AssemblerPredicate = SIAssemblerPredicate;
-  let DecoderNamespace = "SICI";
+  let DecoderNamespace = "GFX6GFX7";
   let DisableDecoder = DisableSIDecoder;
 }
 
@@ -2005,7 +2016,7 @@ class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
   VINTRPe_vi <op>,
   SIMCInstr<opName, SIEncodingFamily.VI> {
   let AssemblerPredicate = VIAssemblerPredicate;
-  let DecoderNamespace = "VI";
+  let DecoderNamespace = "GFX8";
   let DisableDecoder = DisableVIDecoder;
 }
 
@@ -2099,7 +2110,9 @@ def getMCOpcodeGen : InstrMapping {
                    // does not actually change the encoding, and thus may be
                    // removed later.
                    [!cast<string>(SIEncodingFamily.GFX80)],
-                   [!cast<string>(SIEncodingFamily.GFX9)]];
+                   [!cast<string>(SIEncodingFamily.GFX9)],
+                   [!cast<string>(SIEncodingFamily.GFX10)],
+                   [!cast<string>(SIEncodingFamily.SDWA10)]];
 }
 
 // Get equivalent SOPK instruction.
@@ -2160,6 +2173,15 @@ def getGlobalSaddrOp : InstrMapping {
   let ColFields = ["IsSaddr"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+// Maps a v_cmpx opcode with sdst to opcode without sdst.
+def getVCMPXNoSDstOp : InstrMapping {
+  let FilterClass = "VCMPXNoSDstTable";
+  let RowFields = ["NoSDstOp"];
+  let ColFields = ["HasSDst"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
 }
 
 include "SIInstructions.td"

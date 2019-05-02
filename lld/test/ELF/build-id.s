@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 
 # RUN: ld.lld --build-id %t -o %t2
-# RUN: llvm-readobj -s %t2 | FileCheck -check-prefix=ALIGN %s
+# RUN: llvm-readobj -S %t2 | FileCheck -check-prefix=ALIGN %s
 
 # RUN: ld.lld --build-id %t -o %t2 -threads
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s

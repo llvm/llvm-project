@@ -22,6 +22,7 @@
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
@@ -154,6 +155,8 @@ private:
 
   /// The flag, which specifies the mode of inlining for the engine.
   InliningModes HowToInline;
+
+  NoteTag::Factory NoteTags;
 
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
@@ -395,6 +398,8 @@ public:
 
   SymbolManager &getSymbolManager() { return SymMgr; }
   MemRegionManager &getRegionManager() { return MRMgr; }
+
+  NoteTag::Factory &getNoteTags() { return NoteTags; }
 
 
   // Functions for external checking of whether we have unfinished work
@@ -712,6 +717,25 @@ private:
                                      const ExplodedNode *Pred,
                                      AnalyzerOptions &Opts,
                                      const EvalCallOptions &CallOpts);
+
+  /// See if the given AnalysisDeclContext is built for a function that we
+  /// should always inline simply because it's small enough.
+  /// Apart from "small" functions, we also have "large" functions
+  /// (cf. isLarge()), some of which are huge (cf. isHuge()), and we classify
+  /// the remaining functions as "medium".
+  bool isSmall(AnalysisDeclContext *ADC) const;
+
+  /// See if the given AnalysisDeclContext is built for a function that we
+  /// should inline carefully because it looks pretty large.
+  bool isLarge(AnalysisDeclContext *ADC) const;
+
+  /// See if the given AnalysisDeclContext is built for a function that we
+  /// should never inline because it's legit gigantic.
+  bool isHuge(AnalysisDeclContext *ADC) const;
+
+  /// See if the given AnalysisDeclContext is built for a function that we
+  /// should inline, just by looking at the declaration of the function.
+  bool mayInlineDecl(AnalysisDeclContext *ADC) const;
 
   /// Checks our policies and decides weither the given call should be inlined.
   bool shouldInlineCall(const CallEvent &Call, const Decl *D,

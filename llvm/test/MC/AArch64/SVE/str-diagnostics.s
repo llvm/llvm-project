@@ -22,3 +22,11 @@ str z0, [x0, #256, MUL VL]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-256, 255].
 // CHECK-NEXT: str z0, [x0, #256, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Unexpected element width suffix
+
+str z0.b, [x0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expected register without element width suffix
+// CHECK-NEXT: str z0.b, [x0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

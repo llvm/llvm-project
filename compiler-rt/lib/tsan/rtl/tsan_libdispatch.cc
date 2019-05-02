@@ -479,34 +479,54 @@ TSAN_INTERCEPTOR(void, dispatch_apply, size_t iterations,
                  DISPATCH_NOESCAPE void (^block)(size_t)) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_apply, iterations, queue, block);
 
-  void *parent_to_child_sync = nullptr;
-  uptr parent_to_child_sync_uptr = (uptr)&parent_to_child_sync;
-  void *child_to_parent_sync = nullptr;
-  uptr child_to_parent_sync_uptr = (uptr)&child_to_parent_sync;
+  u8 sync1, sync2;
+  uptr parent_to_child_sync = (uptr)&sync1;
+  uptr child_to_parent_sync = (uptr)&sync2;
 
-  Release(thr, pc, parent_to_child_sync_uptr);
+  Release(thr, pc, parent_to_child_sync);
   void (^new_block)(size_t) = ^(size_t iteration) {
     SCOPED_INTERCEPTOR_RAW(dispatch_apply);
-    Acquire(thr, pc, parent_to_child_sync_uptr);
+    Acquire(thr, pc, parent_to_child_sync);
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
     block(iteration);
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
-    Release(thr, pc, child_to_parent_sync_uptr);
+    Release(thr, pc, child_to_parent_sync);
   };
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
   REAL(dispatch_apply)(iterations, queue, new_block);
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
-  Acquire(thr, pc, child_to_parent_sync_uptr);
+  Acquire(thr, pc, child_to_parent_sync);
+}
+
+static void invoke_block_iteration(void *param, size_t iteration) {
+  auto block = (void (^)(size_t)) param;
+  block(iteration);
 }
 
 TSAN_INTERCEPTOR(void, dispatch_apply_f, size_t iterations,
                  dispatch_queue_t queue, void *context,
                  void (*work)(void *, size_t)) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_apply_f, iterations, queue, context, work);
+
+  // Unfortunately, we cannot delegate to dispatch_apply, since libdispatch
+  // implements dispatch_apply in terms of dispatch_apply_f.
+  u8 sync1, sync2;
+  uptr parent_to_child_sync = (uptr)&sync1;
+  uptr child_to_parent_sync = (uptr)&sync2;
+
+  Release(thr, pc, parent_to_child_sync);
   void (^new_block)(size_t) = ^(size_t iteration) {
+    SCOPED_INTERCEPTOR_RAW(dispatch_apply_f);
+    Acquire(thr, pc, parent_to_child_sync);
+    SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
     work(context, iteration);
+    SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+    Release(thr, pc, child_to_parent_sync);
   };
-  WRAP(dispatch_apply)(iterations, queue, new_block);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+  REAL(dispatch_apply_f)(iterations, queue, new_block, invoke_block_iteration);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+  Acquire(thr, pc, child_to_parent_sync);
 }
 
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)

@@ -43,8 +43,6 @@ namespace llvm {
     OS.flush();
     reportError(Buf);
   }
-  bool relocAddressLess(object::RelocationRef A,
-                        object::RelocationRef B);
 } // namespace llvm
 
 namespace opts {

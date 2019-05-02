@@ -38,18 +38,14 @@ lldb_private::ConstString ObjCPlusPlusLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjCPlusPlusLanguage::GetPluginName() {
   return GetPluginNameStatic();
 }
 
 uint32_t ObjCPlusPlusLanguage::GetPluginVersion() { return 1; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 Language *ObjCPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
   switch (language) {
   case lldb::eLanguageTypeObjC_plus_plus:

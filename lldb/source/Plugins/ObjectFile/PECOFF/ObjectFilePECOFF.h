@@ -52,9 +52,7 @@ public:
 
   ~ObjectFilePECOFF() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -123,9 +121,7 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -290,6 +286,7 @@ private:
   llvm::Optional<lldb_private::FileSpecList> m_deps_filespec;
   typedef llvm::object::OwningBinary<llvm::object::Binary> OWNBINType;
   llvm::Optional<OWNBINType> m_owningbin;
+  lldb_private::UUID m_uuid;
 };
 
 #endif // liblldb_ObjectFilePECOFF_h_

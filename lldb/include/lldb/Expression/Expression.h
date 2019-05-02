@@ -22,7 +22,6 @@ namespace lldb_private {
 
 class RecordingMemoryManager;
 
-//----------------------------------------------------------------------
 /// \class Expression Expression.h "lldb/Expression/Expression.h" Encapsulates
 /// a single expression for use in lldb
 ///
@@ -31,7 +30,6 @@ class RecordingMemoryManager;
 /// objects needed to parse and interpret or JIT an expression.  It uses the
 /// expression parser appropriate to the language of the expression to produce
 /// LLVM IR from the expression.
-//----------------------------------------------------------------------
 class Expression {
 public:
   /// Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
@@ -51,65 +49,43 @@ public:
 
   Expression(ExecutionContextScope &exe_scope, ExpressionKind kind);
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   virtual ~Expression() {}
 
-  //------------------------------------------------------------------
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
-  //------------------------------------------------------------------
   virtual const char *Text() = 0;
 
-  //------------------------------------------------------------------
   /// Return the function name that should be used for executing the
   /// expression.  Text() should contain the definition of this function.
-  //------------------------------------------------------------------
   virtual const char *FunctionName() = 0;
 
-  //------------------------------------------------------------------
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
-  //------------------------------------------------------------------
   virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
 
-  //------------------------------------------------------------------
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
-  //------------------------------------------------------------------
   virtual ResultType DesiredResultType() { return eResultTypeAny; }
 
-  //------------------------------------------------------------------
   /// Flags
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Return true if validation code should be inserted into the expression.
-  //------------------------------------------------------------------
   virtual bool NeedsValidation() = 0;
 
-  //------------------------------------------------------------------
   /// Return true if external variables in the expression should be resolved.
-  //------------------------------------------------------------------
   virtual bool NeedsVariableResolution() = 0;
 
   virtual EvaluateExpressionOptions *GetOptions() { return nullptr; };
 
-  //------------------------------------------------------------------
   /// Return the address of the function's JIT-compiled code, or
   /// LLDB_INVALID_ADDRESS if the function is not JIT compiled
-  //------------------------------------------------------------------
   lldb::addr_t StartAddress() { return m_jit_start_addr; }
 
-  //------------------------------------------------------------------
   /// Called to notify the expression that it is about to be executed.
-  //------------------------------------------------------------------
   virtual void WillStartExecuting() {}
 
-  //------------------------------------------------------------------
   /// Called to notify the expression that its execution has finished.
-  //------------------------------------------------------------------
   virtual void DidFinishExecuting() {}
 
   virtual ExpressionTypeSystemHelper *GetTypeSystemHelper() { return nullptr; }

@@ -31,9 +31,7 @@ class ValueObject;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A child of a ValueObjectConstResult.
-//----------------------------------------------------------------------
 class ValueObjectConstResultChild : public ValueObjectChild {
 public:
   ValueObjectConstResultChild(ValueObject &parent,

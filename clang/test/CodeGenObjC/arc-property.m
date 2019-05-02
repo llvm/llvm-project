@@ -126,7 +126,7 @@ void test3(Test3 *t) {
 }
 // CHECK:    define internal i8* @"\01-[Test3 copyMachine]"(
 // CHECK:      [[T0:%.*]] = call i8* @test3_helper()
-// CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+// CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
 // CHECK-NEXT: ret i8* [[T1]]
 - (void) setCopyMachine: (id) x {}
 @end

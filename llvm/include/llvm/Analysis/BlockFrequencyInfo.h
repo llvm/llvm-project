@@ -67,7 +67,8 @@ public:
   /// Returns the estimated profile count of \p BB.
   /// This computes the relative block frequency of \p BB and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
-  Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB) const;
+  Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB,
+                                          bool AllowSynthetic = false) const;
 
   /// Returns the estimated profile count of \p Freq.
   /// This uses the frequency \p Freq and multiplies it by

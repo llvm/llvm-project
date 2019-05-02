@@ -5,6 +5,9 @@ static_library("Remarks") {
   ]
 
   sources = [
+    "Remark.cpp",
     "RemarkParser.cpp",
+    "RemarkStringTable.cpp",
+    "YAMLRemarkParser.cpp",
   ]
 }

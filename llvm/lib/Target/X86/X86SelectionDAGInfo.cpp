@@ -248,7 +248,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
       Repeats.AVT = Subtarget.is64Bit() ? MVT::i64 : MVT::i32;
 
     if (Repeats.BytesLeft() > 0 &&
-        DAG.getMachineFunction().getFunction().optForMinSize()) {
+        DAG.getMachineFunction().getFunction().hasMinSize()) {
       // When aggressively optimizing for size, avoid generating the code to
       // handle BytesLeft.
       Repeats.AVT = MVT::i8;

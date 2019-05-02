@@ -10,7 +10,6 @@
 #include "MICmnLLDBBroadcaster.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLLDBBroadcaster constructor.
 // Type:    Method.
 // Args:    None.
@@ -21,7 +20,6 @@ CMICmnLLDBBroadcaster::CMICmnLLDBBroadcaster()
     : lldb::SBBroadcaster("MI driver") {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLLDBBroadcaster destructor.
 // Type:    Overridable.
 // Args:    None.
@@ -31,7 +29,6 @@ CMICmnLLDBBroadcaster::CMICmnLLDBBroadcaster()
 CMICmnLLDBBroadcaster::~CMICmnLLDBBroadcaster() { Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize resources for *this broadcaster object.
 // Type:    Method.
 // Args:    None.
@@ -51,7 +48,6 @@ bool CMICmnLLDBBroadcaster::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources for *this broadcaster object.
 // Type:    Method.
 // Args:    None.

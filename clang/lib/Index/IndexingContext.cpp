@@ -411,10 +411,9 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
   FinalRelations.reserve(Relations.size()+1);
 
   auto addRelation = [&](SymbolRelation Rel) {
-    auto It = std::find_if(FinalRelations.begin(), FinalRelations.end(),
-                [&](SymbolRelation Elem)->bool {
-                  return Elem.RelatedSymbol == Rel.RelatedSymbol;
-                });
+    auto It = llvm::find_if(FinalRelations, [&](SymbolRelation Elem) -> bool {
+      return Elem.RelatedSymbol == Rel.RelatedSymbol;
+    });
     if (It != FinalRelations.end()) {
       It->Roles |= Rel.Roles;
     } else {

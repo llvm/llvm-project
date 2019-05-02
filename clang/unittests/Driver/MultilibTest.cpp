@@ -349,3 +349,27 @@ TEST(MultilibTest, SetCombineWith) {
   Latte.combineWith(Milk);
   ASSERT_EQ(Latte.size(), (unsigned)2);
 }
+
+TEST(MultilibTest, SetPriority) {
+  MultilibSet MS;
+  MS.push_back(Multilib("foo", {}, {}, 1).flag("+foo"));
+  MS.push_back(Multilib("bar", {}, {}, 2).flag("+bar"));
+
+  Multilib::flags_list Flags1;
+  Flags1.push_back("+foo");
+  Flags1.push_back("-bar");
+  Multilib Selection1;
+  ASSERT_TRUE(MS.select(Flags1, Selection1))
+      << "Flag set was {\"+foo\"}, but selection not found";
+  ASSERT_TRUE(Selection1.gccSuffix() == "/foo")
+      << "Selection picked " << Selection1 << " which was not expected";
+
+  Multilib::flags_list Flags2;
+  Flags2.push_back("+foo");
+  Flags2.push_back("+bar");
+  Multilib Selection2;
+  ASSERT_TRUE(MS.select(Flags2, Selection2))
+      << "Flag set was {\"+bar\"}, but selection not found";
+  ASSERT_TRUE(Selection2.gccSuffix() == "/bar")
+      << "Selection picked " << Selection2 << " which was not expected";
+}

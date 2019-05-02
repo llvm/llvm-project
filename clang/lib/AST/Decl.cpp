@@ -567,7 +567,14 @@ static bool isSingleLineLanguageLinkage(const Decl &D) {
   return false;
 }
 
-static bool isExportedFromModuleIntefaceUnit(const NamedDecl *D) {
+/// Determine whether D is declared in the purview of a named module.
+static bool isInModulePurview(const NamedDecl *D) {
+  if (auto *M = D->getOwningModule())
+    return M->isModulePurview();
+  return false;
+}
+
+static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
   // FIXME: Handle isModulePrivate.
   switch (D->getModuleOwnershipKind()) {
   case Decl::ModuleOwnershipKind::Unowned:
@@ -575,8 +582,7 @@ static bool isExportedFromModuleIntefaceUnit(const NamedDecl *D) {
     return false;
   case Decl::ModuleOwnershipKind::Visible:
   case Decl::ModuleOwnershipKind::VisibleWhenImported:
-    if (auto *M = D->getOwningModule())
-      return M->Kind == Module::ModuleInterfaceUnit;
+    return isInModulePurview(D);
   }
   llvm_unreachable("unexpected module ownership kind");
 }
@@ -586,9 +592,8 @@ static LinkageInfo getInternalLinkageFor(const NamedDecl *D) {
   // as "module-internal linkage", which means that they have internal linkage
   // formally but can be indirectly accessed from outside the module via inline
   // functions and templates defined within the module.
-  if (auto *M = D->getOwningModule())
-    if (M->Kind == Module::ModuleInterfaceUnit)
-      return LinkageInfo(ModuleInternalLinkage, DefaultVisibility, false);
+  if (isInModulePurview(D))
+    return LinkageInfo(ModuleInternalLinkage, DefaultVisibility, false);
 
   return LinkageInfo::internal();
 }
@@ -598,13 +603,23 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   //   - A name declared at namespace scope that does not have internal linkage
   //     by the previous rules and that is introduced by a non-exported
   //     declaration has module linkage.
-  if (auto *M = D->getOwningModule())
-    if (M->Kind == Module::ModuleInterfaceUnit)
-      if (!isExportedFromModuleIntefaceUnit(
-              cast<NamedDecl>(D->getCanonicalDecl())))
-        return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
+  if (isInModulePurview(D) && !isExportedFromModuleInterfaceUnit(
+                                  cast<NamedDecl>(D->getCanonicalDecl())))
+    return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
 
   return LinkageInfo::external();
+}
+
+static StorageClass getStorageClass(const Decl *D) {
+  if (auto *TD = dyn_cast<TemplateDecl>(D))
+    D = TD->getTemplatedDecl();
+  if (D) {
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      return VD->getStorageClass();
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->getStorageClass();
+  }
+  return SC_None;
 }
 
 LinkageInfo
@@ -618,24 +633,28 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   // C++ [basic.link]p3:
   //   A name having namespace scope (3.3.6) has internal linkage if it
   //   is the name of
-  //     - an object, reference, function or function template that is
-  //       explicitly declared static; or,
-  // (This bullet corresponds to C99 6.2.2p3.)
-  if (const auto *Var = dyn_cast<VarDecl>(D)) {
-    // Explicitly declared static.
-    if (Var->getStorageClass() == SC_Static)
-      return getInternalLinkageFor(Var);
 
-    // - a non-inline, non-volatile object or reference that is explicitly
-    //   declared const or constexpr and neither explicitly declared extern
-    //   nor previously declared to have external linkage; or (there is no
-    //   equivalent in C99)
-    // The C++ modules TS adds "non-exported" to this list.
+  if (getStorageClass(D->getCanonicalDecl()) == SC_Static) {
+    // - a variable, variable template, function, or function template
+    //   that is explicitly declared static; or
+    // (This bullet corresponds to C99 6.2.2p3.)
+    return getInternalLinkageFor(D);
+  }
+
+  if (const auto *Var = dyn_cast<VarDecl>(D)) {
+    // - a non-template variable of non-volatile const-qualified type, unless
+    //   - it is explicitly declared extern, or
+    //   - it is inline or exported, or
+    //   - it was previously declared and the prior declaration did not have
+    //     internal linkage
+    // (There is no equivalent in C99.)
     if (Context.getLangOpts().CPlusPlus &&
         Var->getType().isConstQualified() &&
         !Var->getType().isVolatileQualified() &&
         !Var->isInline() &&
-        !isExportedFromModuleIntefaceUnit(Var)) {
+        !isExportedFromModuleInterfaceUnit(Var) &&
+        !isa<VarTemplateSpecializationDecl>(Var) &&
+        !Var->getDescribedVarTemplate()) {
       const VarDecl *PrevVar = Var->getPreviousDecl();
       if (PrevVar)
         return getLVForDecl(PrevVar, computation);
@@ -655,14 +674,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       if (PrevVar->getStorageClass() == SC_Static)
         return getInternalLinkageFor(Var);
     }
-  } else if (const FunctionDecl *Function = D->getAsFunction()) {
-    // C++ [temp]p4:
-    //   A non-member function template can have internal linkage; any
-    //   other template name shall have external linkage.
-
-    // Explicitly declared static.
-    if (Function->getCanonicalDecl()->getStorageClass() == SC_Static)
-      return getInternalLinkageFor(Function);
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(D)) {
     //   - a data member of an anonymous union.
     const VarDecl *VD = IFD->getVarDecl();
@@ -671,6 +682,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   }
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 
+  // FIXME: This gives internal linkage to names that should have no linkage
+  // (those not covered by [basic.link]p6).
   if (D->isInAnonymousNamespace()) {
     const auto *Var = dyn_cast<VarDecl>(D);
     const auto *Func = dyn_cast<FunctionDecl>(D);
@@ -730,10 +743,20 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
   // C++ [basic.link]p4:
 
-  //   A name having namespace scope has external linkage if it is the
-  //   name of
+  //   A name having namespace scope that has not been given internal linkage
+  //   above and that is the name of
+  //   [...bullets...]
+  //   has its linkage determined as follows:
+  //     - if the enclosing namespace has internal linkage, the name has
+  //       internal linkage; [handled above]
+  //     - otherwise, if the declaration of the name is attached to a named
+  //       module and is not exported, the name has module linkage;
+  //     - otherwise, the name has external linkage.
+  // LV is currently set up to handle the last two bullets.
   //
-  //     - an object or reference, unless it has internal linkage; or
+  //   The bullets are:
+
+  //     - a variable; or
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
     // GCC applies the following optimization to variables and static
     // data members, but not to functions:
@@ -779,7 +802,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       mergeTemplateLV(LV, spec, computation);
     }
 
-  //     - a function, unless it has internal linkage; or
+  //     - a function; or
   } else if (const auto *Function = dyn_cast<FunctionDecl>(D)) {
     // In theory, we can modify the function's LV by the LV of its
     // type unless it has C linkage (see comment above about variables
@@ -833,7 +856,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       mergeTemplateLV(LV, spec, computation);
     }
 
-  //     - an enumerator belonging to an enumeration with external linkage;
+  // FIXME: This is not part of the C++ standard any more.
+  //     - an enumerator belonging to an enumeration with external linkage; or
   } else if (isa<EnumConstantDecl>(D)) {
     LinkageInfo EnumLV = getLVForDecl(cast<NamedDecl>(D->getDeclContext()),
                                       computation);
@@ -841,16 +865,16 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       return LinkageInfo::none();
     LV.merge(EnumLV);
 
-  //     - a template, unless it is a function template that has
-  //       internal linkage (Clause 14);
+  //     - a template
   } else if (const auto *temp = dyn_cast<TemplateDecl>(D)) {
     bool considerVisibility = !hasExplicitVisibilityAlready(computation);
     LinkageInfo tempLV =
       getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
     LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
 
-  //     - a namespace (7.3), unless it is declared within an unnamed
-  //       namespace.
+  //     An unnamed namespace or a namespace declared directly or indirectly
+  //     within an unnamed namespace has internal linkage. All other namespaces
+  //     have external linkage.
   //
   // We handled names in anonymous namespaces above.
   } else if (isa<NamespaceDecl>(D)) {
@@ -1507,6 +1531,11 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
     }
     return InternalLinkage ? M->Parent : nullptr;
   }
+
+  case Module::PrivateModuleFragment:
+    // The private module fragment is part of its containing module for linkage
+    // purposes.
+    return M->Parent;
   }
 
   llvm_unreachable("unknown module kind");
@@ -1531,10 +1560,16 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
                                    const PrintingPolicy &P) const {
   const DeclContext *Ctx = getDeclContext();
 
-  // For ObjC methods, look through categories and use the interface as context.
+  // For ObjC methods and properties, look through categories and use the
+  // interface as context.
   if (auto *MD = dyn_cast<ObjCMethodDecl>(this))
     if (auto *ID = MD->getClassInterface())
       Ctx = ID;
+  if (auto *PD = dyn_cast<ObjCPropertyDecl>(this)) {
+    if (auto *MD = PD->getGetterMethodDecl())
+      if (auto *ID = MD->getClassInterface())
+        Ctx = ID;
+  }
 
   if (Ctx->isFunctionOrMethod()) {
     printName(OS);
@@ -3340,7 +3375,13 @@ FunctionDecl *FunctionDecl::getInstantiatedFromMemberFunction() const {
 }
 
 MemberSpecializationInfo *FunctionDecl::getMemberSpecializationInfo() const {
-  return TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>();
+  if (auto *MSI =
+          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+    return MSI;
+  if (auto *FTSI = TemplateOrSpecialization
+                       .dyn_cast<FunctionTemplateSpecializationInfo *>())
+    return FTSI->getMemberSpecializationInfo();
+  return nullptr;
 }
 
 void
@@ -3359,6 +3400,8 @@ FunctionTemplateDecl *FunctionDecl::getDescribedFunctionTemplate() const {
 }
 
 void FunctionDecl::setDescribedFunctionTemplate(FunctionTemplateDecl *Template) {
+  assert(TemplateOrSpecialization.isNull() &&
+         "Member function is already a specialization");
   TemplateOrSpecialization = Template;
 }
 
@@ -3367,18 +3410,14 @@ bool FunctionDecl::isImplicitlyInstantiable() const {
   if (isInvalidDecl())
     return false;
 
-  switch (getTemplateSpecializationKind()) {
+  switch (getTemplateSpecializationKindForInstantiation()) {
   case TSK_Undeclared:
   case TSK_ExplicitInstantiationDefinition:
+  case TSK_ExplicitSpecialization:
     return false;
 
   case TSK_ImplicitInstantiation:
     return true;
-
-  // It is possible to instantiate TSK_ExplicitSpecialization kind
-  // if the FunctionDecl has a class scope specialization pattern.
-  case TSK_ExplicitSpecialization:
-    return getClassScopeSpecializationPattern() != nullptr;
 
   case TSK_ExplicitInstantiationDeclaration:
     // Handled below.
@@ -3402,26 +3441,12 @@ bool FunctionDecl::isImplicitlyInstantiable() const {
 }
 
 bool FunctionDecl::isTemplateInstantiation() const {
-  switch (getTemplateSpecializationKind()) {
-    case TSK_Undeclared:
-    case TSK_ExplicitSpecialization:
-      return false;
-    case TSK_ImplicitInstantiation:
-    case TSK_ExplicitInstantiationDeclaration:
-    case TSK_ExplicitInstantiationDefinition:
-      return true;
-  }
-  llvm_unreachable("All TSK values handled.");
+  // FIXME: Remove this, it's not clear what it means. (Which template
+  // specialization kind?)
+  return clang::isTemplateInstantiation(getTemplateSpecializationKind());
 }
 
 FunctionDecl *FunctionDecl::getTemplateInstantiationPattern() const {
-  // Handle class scope explicit specialization special case.
-  if (getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {
-    if (auto *Spec = getClassScopeSpecializationPattern())
-      return getDefinitionOrSelf(Spec);
-    return nullptr;
-  }
-
   // If this is a generic lambda call operator specialization, its
   // instantiation pattern is always its primary template's pattern
   // even if its primary template was instantiated from another
@@ -3437,6 +3462,15 @@ FunctionDecl *FunctionDecl::getTemplateInstantiationPattern() const {
     return getDefinitionOrSelf(getPrimaryTemplate()->getTemplatedDecl());
   }
 
+  if (MemberSpecializationInfo *Info = getMemberSpecializationInfo()) {
+    if (!clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
+      return nullptr;
+    return getDefinitionOrSelf(cast<FunctionDecl>(Info->getInstantiatedFrom()));
+  }
+
+  if (!clang::isTemplateInstantiation(getTemplateSpecializationKind()))
+    return nullptr;
+
   if (FunctionTemplateDecl *Primary = getPrimaryTemplate()) {
     while (Primary->getInstantiatedFromMemberTemplate()) {
       // If we have hit a point where the user provided a specialization of
@@ -3449,9 +3483,6 @@ FunctionDecl *FunctionDecl::getTemplateInstantiationPattern() const {
     return getDefinitionOrSelf(Primary->getTemplatedDecl());
   }
 
-  if (auto *MFD = getInstantiatedFromMemberFunction())
-    return getDefinitionOrSelf(MFD);
-
   return nullptr;
 }
 
@@ -3459,13 +3490,9 @@ FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
   if (FunctionTemplateSpecializationInfo *Info
         = TemplateOrSpecialization
             .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
-    return Info->Template.getPointer();
+    return Info->getTemplate();
   }
   return nullptr;
-}
-
-FunctionDecl *FunctionDecl::getClassScopeSpecializationPattern() const {
-    return getASTContext().getClassScopeSpecializationPattern(this);
 }
 
 FunctionTemplateSpecializationInfo *
@@ -3502,15 +3529,19 @@ FunctionDecl::setFunctionTemplateSpecialization(ASTContext &C,
                                                 TemplateSpecializationKind TSK,
                         const TemplateArgumentListInfo *TemplateArgsAsWritten,
                                           SourceLocation PointOfInstantiation) {
+  assert((TemplateOrSpecialization.isNull() ||
+          TemplateOrSpecialization.is<MemberSpecializationInfo *>()) &&
+         "Member function is already a specialization");
   assert(TSK != TSK_Undeclared &&
          "Must specify the type of function template specialization");
-  FunctionTemplateSpecializationInfo *Info
-    = TemplateOrSpecialization.dyn_cast<FunctionTemplateSpecializationInfo*>();
-  if (!Info)
-    Info = FunctionTemplateSpecializationInfo::Create(C, this, Template, TSK,
-                                                      TemplateArgs,
-                                                      TemplateArgsAsWritten,
-                                                      PointOfInstantiation);
+  assert((TemplateOrSpecialization.isNull() ||
+          TSK == TSK_ExplicitSpecialization) &&
+         "Member specialization must be an explicit specialization");
+  FunctionTemplateSpecializationInfo *Info =
+      FunctionTemplateSpecializationInfo::Create(
+          C, this, Template, TSK, TemplateArgs, TemplateArgsAsWritten,
+          PointOfInstantiation,
+          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>());
   TemplateOrSpecialization = Info;
   Template->addSpecialization(Info, InsertPos);
 }
@@ -3561,14 +3592,47 @@ DependentFunctionTemplateSpecializationInfo(const UnresolvedSetImpl &Ts,
 TemplateSpecializationKind FunctionDecl::getTemplateSpecializationKind() const {
   // For a function template specialization, query the specialization
   // information object.
-  FunctionTemplateSpecializationInfo *FTSInfo
-    = TemplateOrSpecialization.dyn_cast<FunctionTemplateSpecializationInfo*>();
-  if (FTSInfo)
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          TemplateOrSpecialization
+              .dyn_cast<FunctionTemplateSpecializationInfo *>())
     return FTSInfo->getTemplateSpecializationKind();
 
-  MemberSpecializationInfo *MSInfo
-    = TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo*>();
-  if (MSInfo)
+  if (MemberSpecializationInfo *MSInfo =
+          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+    return MSInfo->getTemplateSpecializationKind();
+
+  return TSK_Undeclared;
+}
+
+TemplateSpecializationKind
+FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
+  // This is the same as getTemplateSpecializationKind(), except that for a
+  // function that is both a function template specialization and a member
+  // specialization, we prefer the member specialization information. Eg:
+  //
+  // template<typename T> struct A {
+  //   template<typename U> void f() {}
+  //   template<> void f<int>() {}
+  // };
+  //
+  // For A<int>::f<int>():
+  // * getTemplateSpecializationKind() will return TSK_ExplicitSpecialization
+  // * getTemplateSpecializationKindForInstantiation() will return
+  //       TSK_ImplicitInstantiation
+  //
+  // This reflects the facts that A<int>::f<int> is an explicit specialization
+  // of A<int>::f, and that A<int>::f<int> should be implicitly instantiated
+  // from A::f<int> if a definition is needed.
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          TemplateOrSpecialization
+              .dyn_cast<FunctionTemplateSpecializationInfo *>()) {
+    if (auto *MSInfo = FTSInfo->getMemberSpecializationInfo())
+      return MSInfo->getTemplateSpecializationKind();
+    return FTSInfo->getTemplateSpecializationKind();
+  }
+
+  if (MemberSpecializationInfo *MSInfo =
+          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
     return MSInfo->getTemplateSpecializationKind();
 
   return TSK_Undeclared;

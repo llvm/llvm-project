@@ -88,8 +88,11 @@ enum : int32_t {
   COMPUTE_PGM_RSRC1(ENABLE_IEEE_MODE, 23, 1),
   COMPUTE_PGM_RSRC1(BULKY, 24, 1),
   COMPUTE_PGM_RSRC1(CDBG_USER, 25, 1),
-  COMPUTE_PGM_RSRC1(FP16_OVFL, 26, 1), // GFX9+
-  COMPUTE_PGM_RSRC1(RESERVED0, 27, 5),
+  COMPUTE_PGM_RSRC1(FP16_OVFL, 26, 1),    // GFX9+
+  COMPUTE_PGM_RSRC1(RESERVED0, 27, 2),
+  COMPUTE_PGM_RSRC1(WGP_MODE, 29, 1),     // GFX10+
+  COMPUTE_PGM_RSRC1(MEM_ORDERED, 30, 1),  // GFX10+
+  COMPUTE_PGM_RSRC1(FWD_PROGRESS, 31, 1), // GFX10+
 };
 #undef COMPUTE_PGM_RSRC1
 
@@ -119,6 +122,15 @@ enum : int32_t {
 };
 #undef COMPUTE_PGM_RSRC2
 
+// Compute program resource register 3. Must match hardware definition.
+#define COMPUTE_PGM_RSRC3(NAME, SHIFT, WIDTH) \
+  AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC3_ ## NAME, SHIFT, WIDTH)
+enum : int32_t {
+  COMPUTE_PGM_RSRC3(SHARED_VGPR_COUNT, 0, 4), // GFX10+
+  COMPUTE_PGM_RSRC3(RESERVED0, 4, 28),
+};
+#undef COMPUTE_PGM_RSRC3
+
 // Kernel code properties. Must be kept backwards compatible.
 #define KERNEL_CODE_PROPERTY(NAME, SHIFT, WIDTH) \
   AMDHSA_BITS_ENUM_ENTRY(KERNEL_CODE_PROPERTY_ ## NAME, SHIFT, WIDTH)
@@ -130,7 +142,8 @@ enum : int32_t {
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_DISPATCH_ID, 4, 1),
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_FLAT_SCRATCH_INIT, 5, 1),
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_PRIVATE_SEGMENT_SIZE, 6, 1),
-  KERNEL_CODE_PROPERTY(RESERVED0, 7, 9),
+  KERNEL_CODE_PROPERTY(RESERVED0, 7, 3),
+  KERNEL_CODE_PROPERTY(RESERVED1, 11, 5),
 };
 #undef KERNEL_CODE_PROPERTY
 
@@ -140,7 +153,8 @@ struct kernel_descriptor_t {
   uint32_t private_segment_fixed_size;
   uint8_t reserved0[8];
   int64_t kernel_code_entry_byte_offset;
-  uint8_t reserved1[24];
+  uint8_t reserved1[20];
+  uint32_t compute_pgm_rsrc3; // GFX10+
   uint32_t compute_pgm_rsrc1;
   uint32_t compute_pgm_rsrc2;
   uint16_t kernel_code_properties;
@@ -165,6 +179,9 @@ static_assert(
 static_assert(
     offsetof(kernel_descriptor_t, reserved1) == 24,
     "invalid offset for reserved1");
+static_assert(
+    offsetof(kernel_descriptor_t, compute_pgm_rsrc3) == 44,
+    "invalid offset for compute_pgm_rsrc3");
 static_assert(
     offsetof(kernel_descriptor_t, compute_pgm_rsrc1) == 48,
     "invalid offset for compute_pgm_rsrc1");

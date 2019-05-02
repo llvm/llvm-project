@@ -24,10 +24,10 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace llvm;
-using namespace object;
+using namespace llvm::object;
 using namespace llvm::Win64EH;
 
+namespace llvm {
 // Returns the name of the unwind code.
 static StringRef getUnwindCodeTypeName(uint8_t Code) {
   switch(Code) {
@@ -155,70 +155,70 @@ static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
 }
 
 // Given a symbol sym this functions returns the address and section of it.
-static std::error_code
-resolveSectionAndAddress(const COFFObjectFile *Obj, const SymbolRef &Sym,
-                         const coff_section *&ResolvedSection,
-                         uint64_t &ResolvedAddr) {
+static Error resolveSectionAndAddress(const COFFObjectFile *Obj,
+                                      const SymbolRef &Sym,
+                                      const coff_section *&ResolvedSection,
+                                      uint64_t &ResolvedAddr) {
   Expected<uint64_t> ResolvedAddrOrErr = Sym.getAddress();
   if (!ResolvedAddrOrErr)
-    return errorToErrorCode(ResolvedAddrOrErr.takeError());
+    return ResolvedAddrOrErr.takeError();
   ResolvedAddr = *ResolvedAddrOrErr;
   Expected<section_iterator> Iter = Sym.getSection();
   if (!Iter)
-    return errorToErrorCode(Iter.takeError());
+    return Iter.takeError();
   ResolvedSection = Obj->getCOFFSection(**Iter);
-  return std::error_code();
+  return Error::success();
 }
 
 // Given a vector of relocations for a section and an offset into this section
 // the function returns the symbol used for the relocation at the offset.
-static std::error_code resolveSymbol(const std::vector<RelocationRef> &Rels,
+static Error resolveSymbol(const std::vector<RelocationRef> &Rels,
                                      uint64_t Offset, SymbolRef &Sym) {
   for (auto &R : Rels) {
     uint64_t Ofs = R.getOffset();
     if (Ofs == Offset) {
       Sym = *R.getSymbol();
-      return std::error_code();
+      return Error::success();
     }
   }
-  return object_error::parse_failed;
+  return make_error<BinaryError>();
 }
 
 // Given a vector of relocations for a section and an offset into this section
 // the function resolves the symbol used for the relocation at the offset and
 // returns the section content and the address inside the content pointed to
 // by the symbol.
-static std::error_code
+static Error
 getSectionContents(const COFFObjectFile *Obj,
                    const std::vector<RelocationRef> &Rels, uint64_t Offset,
                    ArrayRef<uint8_t> &Contents, uint64_t &Addr) {
   SymbolRef Sym;
-  if (std::error_code EC = resolveSymbol(Rels, Offset, Sym))
-    return EC;
+  if (Error E = resolveSymbol(Rels, Offset, Sym))
+    return E;
   const coff_section *Section;
-  if (std::error_code EC = resolveSectionAndAddress(Obj, Sym, Section, Addr))
-    return EC;
+  if (Error E = resolveSectionAndAddress(Obj, Sym, Section, Addr))
+    return E;
   if (std::error_code EC = Obj->getSectionContents(Section, Contents))
-    return EC;
-  return std::error_code();
+    return errorCodeToError(EC);
+  return Error::success();
 }
 
 // Given a vector of relocations for a section and an offset into this section
 // the function returns the name of the symbol used for the relocation at the
 // offset.
-static std::error_code resolveSymbolName(const std::vector<RelocationRef> &Rels,
-                                         uint64_t Offset, StringRef &Name) {
+static Error resolveSymbolName(const std::vector<RelocationRef> &Rels,
+                               uint64_t Offset, StringRef &Name) {
   SymbolRef Sym;
-  if (std::error_code EC = resolveSymbol(Rels, Offset, Sym))
+  if (Error EC = resolveSymbol(Rels, Offset, Sym))
     return EC;
   Expected<StringRef> NameOrErr = Sym.getName();
   if (!NameOrErr)
-    return errorToErrorCode(NameOrErr.takeError());
+    return NameOrErr.takeError();
   Name = *NameOrErr;
-  return std::error_code();
+  return Error::success();
 }
 
-static void printCOFFSymbolAddress(llvm::raw_ostream &Out,
+static void printCOFFSymbolAddress(raw_ostream &Out,
                                    const std::vector<RelocationRef> &Rels,
                                    uint64_t Offset, uint32_t Disp) {
   StringRef Sym;
@@ -468,17 +468,16 @@ static bool getPDataSection(const COFFObjectFile *Obj,
   return false;
 }
 
-std::error_code
-llvm::getCOFFRelocationValueString(const COFFObjectFile *Obj,
-                                   const RelocationRef &Rel,
-                                   SmallVectorImpl<char> &Result) {
+Error getCOFFRelocationValueString(const COFFObjectFile *Obj,
+                                         const RelocationRef &Rel,
+                                         SmallVectorImpl<char> &Result) {
   symbol_iterator SymI = Rel.getSymbol();
   Expected<StringRef> SymNameOrErr = SymI->getName();
   if (!SymNameOrErr)
-    return errorToErrorCode(SymNameOrErr.takeError());
+    return SymNameOrErr.takeError();
   StringRef SymName = *SymNameOrErr;
   Result.append(SymName.begin(), SymName.end());
-  return std::error_code();
+  return Error::success();
 }
 
 static void printWin64EHUnwindInfo(const Win64EH::UnwindInfo *UI) {
@@ -590,7 +589,7 @@ static void printRuntimeFunctionRels(const COFFObjectFile *Obj,
   printWin64EHUnwindInfo(UI);
 }
 
-void llvm::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
+void printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   if (Obj->getMachine() != COFF::IMAGE_FILE_MACHINE_AMD64) {
     WithColor::error(errs(), "llvm-objdump")
         << "unsupported image machine type "
@@ -619,7 +618,7 @@ void llvm::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   }
 }
 
-void llvm::printCOFFFileHeader(const object::ObjectFile *Obj) {
+void printCOFFFileHeader(const object::ObjectFile *Obj) {
   const COFFObjectFile *file = dyn_cast<const COFFObjectFile>(Obj);
   printTLSDirectory(file);
   printLoadConfiguration(file);
@@ -627,7 +626,7 @@ void llvm::printCOFFFileHeader(const object::ObjectFile *Obj) {
   printExportTable(file);
 }
 
-void llvm::printCOFFSymbolTable(const object::COFFImportFile *i) {
+void printCOFFSymbolTable(const object::COFFImportFile *i) {
   unsigned Index = 0;
   bool IsCode = i->getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
 
@@ -650,11 +649,11 @@ void llvm::printCOFFSymbolTable(const object::COFFImportFile *i) {
   }
 }
 
-void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
+void printCOFFSymbolTable(const COFFObjectFile *coff) {
   for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
     Expected<COFFSymbolRef> Symbol = coff->getSymbol(SI);
     StringRef Name;
-    error(errorToErrorCode(Symbol.takeError()));
+    error(Symbol.takeError());
     error(coff->getSymbolName(*Symbol, Name));
 
     outs() << "[" << format("%2d", SI) << "]"
@@ -721,3 +720,4 @@ void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
     }
   }
 }
+} // namespace llvm

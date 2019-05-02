@@ -113,12 +113,11 @@ public:
     }
 
     DeclsTy &Vec = *getAsVector();
-    DeclsTy::iterator I = std::find(Vec.begin(), Vec.end(), D);
+    DeclsTy::iterator I = llvm::find(Vec, D);
     assert(I != Vec.end() && "list does not contain decl");
     Vec.erase(I);
 
-    assert(std::find(Vec.begin(), Vec.end(), D)
-             == Vec.end() && "list still contains decl");
+    assert(llvm::find(Vec, D) == Vec.end() && "list still contains decl");
   }
 
   /// Remove any declarations which were imported from an external

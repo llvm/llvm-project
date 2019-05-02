@@ -708,6 +708,10 @@ class shiftop<SDPatternOperator operator>
              [(operator node:$val, node:$count),
               (operator node:$val, (and node:$count, imm32bottom6set))]>;
 
+def imm32mod64  : PatLeaf<(i32 imm), [{
+  return (N->getZExtValue() % 64 == 0);
+}]>;
+
 // Load a scalar and replicate it in all elements of a vector.
 class z_replicate_load<ValueType scalartype, SDPatternOperator load>
   : PatFrag<(ops node:$addr),

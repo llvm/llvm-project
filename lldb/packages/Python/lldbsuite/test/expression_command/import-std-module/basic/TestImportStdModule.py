@@ -31,7 +31,7 @@ class ImportStdModule(TestBase):
         # Using types from std.
         self.expect("expr (std::size_t)33U", substrs=['(size_t) $2 = 33'])
         # Calling templated functions that return non-template types.
-        self.expect("expr char a = 'b'; char b = 'a'; std::swap(a, b); a",
+        self.expect("expr char char_a = 'b'; char char_b = 'a'; std::swap(char_a, char_b); char_a",
                     substrs=["(char) $3 = 'a'"])
 
     # FIXME: This should work on more setups, so remove these

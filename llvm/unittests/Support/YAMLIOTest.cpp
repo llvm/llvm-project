@@ -688,6 +688,7 @@ struct StringTypes {
   std::string stdstr10;
   std::string stdstr11;
   std::string stdstr12;
+  std::string stdstr13;
 };
 
 namespace llvm {
@@ -718,6 +719,7 @@ namespace yaml {
       io.mapRequired("stdstr10",  st.stdstr10);
       io.mapRequired("stdstr11",  st.stdstr11);
       io.mapRequired("stdstr12",  st.stdstr12);
+      io.mapRequired("stdstr13",  st.stdstr13);
     }
   };
 }
@@ -750,6 +752,7 @@ TEST(YAMLIO, TestReadWriteStringTypes) {
     map.stdstr10 = "0.2e20";
     map.stdstr11 = "0x30";
     map.stdstr12 = "- match";
+    map.stdstr13.assign("\0a\0b\0", 5);
 
     llvm::raw_string_ostream ostr(intermediate);
     Output yout(ostr);
@@ -775,6 +778,7 @@ TEST(YAMLIO, TestReadWriteStringTypes) {
   EXPECT_NE(std::string::npos, flowOut.find("'@hhh'"));
   EXPECT_NE(std::string::npos, flowOut.find("''\n"));
   EXPECT_NE(std::string::npos, flowOut.find("'0000000004000000'\n"));
+  EXPECT_NE(std::string::npos, flowOut.find("\"\\0a\\0b\\0\""));
 
   {
     Input yin(intermediate);
@@ -794,6 +798,7 @@ TEST(YAMLIO, TestReadWriteStringTypes) {
     EXPECT_TRUE(map.stdstr4 == "@hhh");
     EXPECT_TRUE(map.stdstr5 == "");
     EXPECT_TRUE(map.stdstr6 == "0000000004000000");
+    EXPECT_EQ(std::string("\0a\0b\0", 5), map.stdstr13);
   }
 }
 

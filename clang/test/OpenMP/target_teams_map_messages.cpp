@@ -57,6 +57,8 @@ struct SA {
     {}
     #pragma omp target teams map(b[:-1]) // expected-error {{section length is evaluated to a negative value -1}}
     {}
+    #pragma omp target teams map(b[true:true])
+    {}
 
     #pragma omp target teams map(always, tofrom: c,f)
     {}

@@ -85,9 +85,10 @@ class InputCorpus {
 
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
-  void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   bool HasFocusFunction, const Vector<uint32_t> &FeatureSet,
-                   const DataFlowTrace &DFT, const InputInfo *BaseII) {
+  InputInfo *AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
+                         bool HasFocusFunction,
+                         const Vector<uint32_t> &FeatureSet,
+                         const DataFlowTrace &DFT, const InputInfo *BaseII) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -113,6 +114,7 @@ class InputCorpus {
     UpdateCorpusDistribution();
     PrintCorpus();
     // ValidateFeatureSet();
+    return &II;
   }
 
   // Debug-only

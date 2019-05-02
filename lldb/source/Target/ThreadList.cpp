@@ -37,8 +37,10 @@ const ThreadList &ThreadList::operator=(const ThreadList &rhs) {
   if (this != &rhs) {
     // Lock both mutexes to make sure neither side changes anyone on us while
     // the assignment occurs
-    std::lock_guard<std::recursive_mutex> guard(GetMutex());
-    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.GetMutex());
+    std::lock(GetMutex(), rhs.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetMutex(), std::adopt_lock);
+    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.GetMutex(), 
+                                                    std::adopt_lock);
 
     m_process = rhs.m_process;
     m_stop_id = rhs.m_stop_id;

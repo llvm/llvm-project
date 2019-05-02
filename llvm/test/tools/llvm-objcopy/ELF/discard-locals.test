@@ -32,27 +32,26 @@ Sections:
   - Name:            .LLVM.Custom.Section
     Type:            SHT_PROGBITS
 Symbols:
-  Local:
-    - Name:     Local
-      Type:     STT_FUNC
-      Section:  .text
-    - Name:     .L.LocalSection
-      Type:     STT_SECTION
-      Section:  .text
-    - Type:     STT_SECTION
-      Section:  .LLVM.Custom.Section
-    - Name:     .L.LocalFile
-      Type:     STT_FILE
-    - Name:     .L.str
-      Type:     STT_OBJECT
-      Section:  .text
-    - Name:     .L.undefined
-    - Name:     .L.abs
-      Index:    SHN_ABS
-  Global:
-    - Name:     .L.Global
-      Type:     STT_FUNC
-      Section:  .text
+  - Name:     Local
+    Type:     STT_FUNC
+    Section:  .text
+  - Name:     .L.LocalSection
+    Type:     STT_SECTION
+    Section:  .text
+  - Type:     STT_SECTION
+    Section:  .LLVM.Custom.Section
+  - Name:     .L.LocalFile
+    Type:     STT_FILE
+  - Name:     .L.str
+    Type:     STT_OBJECT
+    Section:  .text
+  - Name:     .L.undefined
+  - Name:     .L.abs
+    Index:    SHN_ABS
+  - Name:     .L.Global
+    Type:     STT_FUNC
+    Section:  .text
+    Binding:  STB_GLOBAL
 
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {

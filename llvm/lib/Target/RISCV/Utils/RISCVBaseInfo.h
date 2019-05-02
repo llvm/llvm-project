@@ -48,8 +48,10 @@ enum {
 
 enum {
   MO_None,
+  MO_CALL,
   MO_LO,
   MO_HI,
+  MO_PCREL_LO,
   MO_PCREL_HI,
 };
 } // namespace RISCVII
@@ -171,6 +173,14 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
                      StringRef ABIName);
 
 } // namespace RISCVABI
+
+namespace RISCVFeatures {
+
+// Validates if the given combination of features are valid for the target
+// triple. Exits with report_fatal_error if not.
+void validate(const Triple &TT, const FeatureBitset &FeatureBits);
+
+} // namespace RISCVFeatures
 
 } // namespace llvm
 

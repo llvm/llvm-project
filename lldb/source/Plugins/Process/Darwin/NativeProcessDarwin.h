@@ -59,9 +59,7 @@ class NativeProcessDarwin : public NativeProcessProtocol {
 public:
   ~NativeProcessDarwin() override;
 
-  // -----------------------------------------------------------------
   // NativeProcessProtocol Interface
-  // -----------------------------------------------------------------
   Status Resume(const ResumeActionList &resume_actions) override;
 
   Status Halt() override;
@@ -112,9 +110,7 @@ public:
 
   task_t GetTask() const { return m_task; }
 
-  // -----------------------------------------------------------------
   // Interface used by NativeRegisterContext-derived classes.
-  // -----------------------------------------------------------------
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               void *data = nullptr, size_t data_size = 0,
                               long *result = nullptr);
@@ -122,18 +118,14 @@ public:
   bool SupportHardwareSingleStepping() const;
 
 protected:
-  // -----------------------------------------------------------------
   // NativeProcessProtocol protected interface
-  // -----------------------------------------------------------------
   Status
   GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
                                   size_t &actual_opcode_size,
                                   const uint8_t *&trap_opcode_bytes) override;
 
 private:
-  // -----------------------------------------------------------------
   /// Mach task-related Member Variables
-  // -----------------------------------------------------------------
 
   // The task port for the inferior process.
   mutable task_t m_task;
@@ -145,9 +137,7 @@ private:
   // The CPU type of this process.
   mutable cpu_type_t m_cpu_type;
 
-  // -----------------------------------------------------------------
   /// Exception/Signal Handling Member Variables
-  // -----------------------------------------------------------------
 
   // Exception port on which we will receive child exceptions
   mach_port_t m_exception_port;
@@ -175,15 +165,11 @@ private:
   // interrupt signal (if this is non-zero).
   int m_auto_resume_signo;
 
-  // -----------------------------------------------------------------
   /// Thread-related Member Variables
-  // -----------------------------------------------------------------
   NativeThreadListDarwin m_thread_list;
   ResumeActionList m_thread_actions;
 
-  // -----------------------------------------------------------------
   /// Process Lifetime Member Variable
-  // -----------------------------------------------------------------
 
   // The pipe over which the waitpid thread and the main loop will
   // communicate.
@@ -195,12 +181,9 @@ private:
   // waitpid reader callback handle.
   MainLoop::ReadHandleUP m_waitpid_reader_handle;
 
-  // -----------------------------------------------------------------
   // Private Instance Methods
-  // -----------------------------------------------------------------
   NativeProcessDarwin(lldb::pid_t pid, int pty_master_fd);
 
-  // -----------------------------------------------------------------
   /// Finalize the launch.
   ///
   /// This method associates the NativeProcessDarwin instance with the host
@@ -220,7 +203,6 @@ private:
   ///     Any error that occurred during the aforementioned
   ///     operations.  Failure here will force termination of the
   ///     launched process and debugging session.
-  // -----------------------------------------------------------------
   Status FinalizeLaunch(LaunchFlavor launch_flavor, MainLoop &main_loop);
 
   Status SaveExceptionPortInfo();

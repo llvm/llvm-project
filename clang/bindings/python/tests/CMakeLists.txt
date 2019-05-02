@@ -32,11 +32,11 @@ if(WIN32)
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 
-# AArch64 and Hexagon have known test failures that need to be
+# AArch64, Hexagon, and Sparc have known test failures that need to be
 # addressed.
 # SystemZ has broken Python/FFI interface:
 # https://reviews.llvm.org/D52840#1265716
-if(${LLVM_NATIVE_ARCH} MATCHES "^(AArch64|Hexagon|SystemZ)$")
+if(${LLVM_NATIVE_ARCH} MATCHES "^(AArch64|Hexagon|Sparc|SystemZ)$")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 

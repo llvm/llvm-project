@@ -396,7 +396,7 @@ body:             |
     DBG_VALUE $edi, _, !36, !38, debug-location !63
     MOV32mr $rbp, 1, _, -60, _, $edi, debug-location !63 :: (store 4 into %ir.intf, !tbaa !47)
     TEST32rr killed $eax, $eax, implicit-def $eflags, debug-location !67
-    JNE_1 %bb.5.cleanup, implicit $eflags
+    JCC_1 %bb.5.cleanup, 5, implicit $eflags
   
   bb.1.if.end:
     successors: %bb.2(0x30000000), %bb.3.if.then4(0x50000000)
@@ -414,7 +414,7 @@ body:             |
     $edi = MOV32rr killed $ebx, debug-location !73
     CALL64pcrel32 @use, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !73
     TEST32rr killed $r12d, $r12d, implicit-def $eflags, debug-location !74
-    JE_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
   
   bb.3.if.then4:
     successors: %bb.4.if.end13(0x80000000)

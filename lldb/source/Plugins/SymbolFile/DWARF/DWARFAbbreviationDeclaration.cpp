@@ -67,22 +67,6 @@ DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,
       "entry");
 }
 
-void DWARFAbbreviationDeclaration::Dump(Stream *s) const {
-  s->Printf("Debug Abbreviation Declaration: code = 0x%4.4x, tag = %s, "
-            "has_children = %s\n",
-            m_code, DW_TAG_value_to_name(m_tag),
-            DW_CHILDREN_value_to_name(m_has_children));
-
-  DWARFAttribute::const_iterator pos;
-
-  for (pos = m_attributes.begin(); pos != m_attributes.end(); ++pos)
-    s->Printf("        attr = %s, form = %s\n",
-              DW_AT_value_to_name(pos->get_attr()),
-              DW_FORM_value_to_name(pos->get_form()));
-
-  s->Printf("\n");
-}
-
 bool DWARFAbbreviationDeclaration::IsValid() {
   return m_code != 0 && m_tag != 0;
 }
@@ -101,5 +85,5 @@ DWARFAbbreviationDeclaration::FindAttributeIndex(dw_attr_t attr) const {
 bool DWARFAbbreviationDeclaration::
 operator==(const DWARFAbbreviationDeclaration &rhs) const {
   return Tag() == rhs.Tag() && HasChildren() == rhs.HasChildren() &&
-         Attributes() == rhs.Attributes();
+         m_attributes == rhs.m_attributes;
 }

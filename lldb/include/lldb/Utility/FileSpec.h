@@ -37,7 +37,6 @@ template <typename T> class SmallVectorImpl;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class FileSpec FileSpec.h "lldb/Host/FileSpec.h"
 /// A file utility class.
 ///
@@ -53,14 +52,12 @@ namespace lldb_private {
 /// are already split up, it makes it easy for us to compare only the
 /// basenames of a lot of file specifications without having to split up the
 /// file path each time to get to the basename.
-//----------------------------------------------------------------------
 class FileSpec {
 public:
   using Style = llvm::sys::path::Style;
 
   FileSpec();
 
-  //------------------------------------------------------------------
   /// Constructor with path.
   ///
   /// Takes a path to a file which can be just a filename, or a full path. If
@@ -74,22 +71,18 @@ public:
   ///     The style of the path
   ///
   /// \see FileSpec::SetFile (const char *path)
-  //------------------------------------------------------------------
   explicit FileSpec(llvm::StringRef path, Style style = Style::native);
 
   explicit FileSpec(llvm::StringRef path, const llvm::Triple &Triple);
 
-  //------------------------------------------------------------------
   /// Copy constructor
   ///
   /// Makes a copy of the uniqued directory and filename strings from \a rhs.
   ///
   /// \param[in] rhs
   ///     A const FileSpec object reference to copy.
-  //------------------------------------------------------------------
   FileSpec(const FileSpec &rhs);
 
-  //------------------------------------------------------------------
   /// Copy constructor
   ///
   /// Makes a copy of the uniqued directory and filename strings from \a rhs
@@ -97,19 +90,15 @@ public:
   ///
   /// \param[in] rhs
   ///     A const FileSpec object pointer to copy if non-nullptr.
-  //------------------------------------------------------------------
   FileSpec(const FileSpec *rhs);
 
-  //------------------------------------------------------------------
   /// Destructor.
-  //------------------------------------------------------------------
   ~FileSpec();
 
   bool DirectoryEquals(const FileSpec &other) const;
 
   bool FileEquals(const FileSpec &other) const;
 
-  //------------------------------------------------------------------
   /// Assignment operator.
   ///
   /// Makes a copy of the uniqued directory and filename strings from \a rhs.
@@ -119,10 +108,8 @@ public:
   ///
   /// \return
   ///     A const reference to this object.
-  //------------------------------------------------------------------
   const FileSpec &operator=(const FileSpec &rhs);
 
-  //------------------------------------------------------------------
   /// Equal to operator
   ///
   /// Tests if this object is equal to \a rhs.
@@ -134,10 +121,8 @@ public:
   /// \return
   ///     \b true if this object is equal to \a rhs, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool operator==(const FileSpec &rhs) const;
 
-  //------------------------------------------------------------------
   /// Not equal to operator
   ///
   /// Tests if this object is not equal to \a rhs.
@@ -149,10 +134,8 @@ public:
   /// \return
   ///     \b true if this object is equal to \a rhs, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool operator!=(const FileSpec &rhs) const;
 
-  //------------------------------------------------------------------
   /// Less than to operator
   ///
   /// Tests if this object is less than \a rhs.
@@ -164,10 +147,8 @@ public:
   /// \return
   ///     \b true if this object is less than \a rhs, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool operator<(const FileSpec &rhs) const;
 
-  //------------------------------------------------------------------
   /// Convert to pointer operator.
   ///
   /// This allows code to check a FileSpec object to see if it contains
@@ -182,10 +163,8 @@ public:
   /// \return
   ///     A pointer to this object if either the directory or filename
   ///     is valid, nullptr otherwise.
-  //------------------------------------------------------------------
   explicit operator bool() const;
 
-  //------------------------------------------------------------------
   /// Logical NOT operator.
   ///
   /// This allows code to check a FileSpec object to see if it is invalid
@@ -200,18 +179,14 @@ public:
   /// \return
   ///     Returns \b true if the object has an empty directory and
   ///     filename, \b false otherwise.
-  //------------------------------------------------------------------
   bool operator!() const;
 
-  //------------------------------------------------------------------
   /// Clears the object state.
   ///
   /// Clear this object by releasing both the directory and filename string
   /// values and reverting them to empty strings.
-  //------------------------------------------------------------------
   void Clear();
 
-  //------------------------------------------------------------------
   /// Compare two FileSpec objects.
   ///
   /// If \a full is true, then both the directory and the filename must match.
@@ -237,7 +212,6 @@ public:
   ///     \li -1 if \a lhs is less than \a rhs
   ///     \li 0 if \a lhs is equal to \a rhs
   ///     \li 1 if \a lhs is greater than \a rhs
-  //------------------------------------------------------------------
   static int Compare(const FileSpec &lhs, const FileSpec &rhs, bool full);
 
   static bool Equal(const FileSpec &a, const FileSpec &b, bool full);
@@ -249,16 +223,13 @@ public:
   /// unreliable (e.g. "c:\foo.txt" is a valid relative posix path).
   static llvm::Optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
 
-  //------------------------------------------------------------------
   /// Case sensitivity of path.
   ///
   /// \return
   ///     \b true if the file path is case sensitive (POSIX), false
   ///		if case insensitive (Windows).
-  //------------------------------------------------------------------
   bool IsCaseSensitive() const { return m_style != Style::windows; }
 
-  //------------------------------------------------------------------
   /// Dump this object to a Stream.
   ///
   /// Dump the object to the supplied stream \a s. If the object contains a
@@ -267,69 +238,54 @@ public:
   ///
   /// \param[in] s
   ///     The stream to which to dump the object description.
-  //------------------------------------------------------------------
   void Dump(Stream *s) const;
 
   Style GetPathStyle() const;
 
-  //------------------------------------------------------------------
   /// Directory string get accessor.
   ///
   /// \return
   ///     A reference to the directory string object.
-  //------------------------------------------------------------------
   ConstString &GetDirectory();
 
-  //------------------------------------------------------------------
   /// Directory string const get accessor.
   ///
   /// \return
   ///     A const reference to the directory string object.
-  //------------------------------------------------------------------
   ConstString GetDirectory() const;
 
-  //------------------------------------------------------------------
   /// Filename string get accessor.
   ///
   /// \return
   ///     A reference to the filename string object.
-  //------------------------------------------------------------------
   ConstString &GetFilename();
 
-  //------------------------------------------------------------------
   /// Filename string const get accessor.
   ///
   /// \return
   ///     A const reference to the filename string object.
-  //------------------------------------------------------------------
   ConstString GetFilename() const;
 
-  //------------------------------------------------------------------
   /// Returns true if the filespec represents an implementation source file
   /// (files with a ".c", ".cpp", ".m", ".mm" (many more) extension).
   ///
   /// \return
   ///     \b true if the filespec represents an implementation source
   ///     file, \b false otherwise.
-  //------------------------------------------------------------------
   bool IsSourceImplementationFile() const;
 
-  //------------------------------------------------------------------
   /// Returns true if the filespec represents a relative path.
   ///
   /// \return
   ///     \b true if the filespec represents a relative path,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool IsRelative() const;
 
-  //------------------------------------------------------------------
   /// Returns true if the filespec represents an absolute path.
   ///
   /// \return
   ///     \b true if the filespec represents an absolute path,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool IsAbsolute() const;
 
   /// Make the FileSpec absolute by treating it relative to \a dir. Absolute
@@ -339,7 +295,6 @@ public:
   /// Temporary helper for FileSystem change.
   void SetPath(llvm::StringRef p) { SetFile(p); }
 
-  //------------------------------------------------------------------
   /// Extract the full path to the file.
   ///
   /// Extract the directory and path into a fixed buffer. This is needed as
@@ -358,11 +313,9 @@ public:
   ///     properly copied and terminated. If the return value is
   ///     >= \a max_path_length, then the path was truncated (but is
   ///     still NULL terminated).
-  //------------------------------------------------------------------
   size_t GetPath(char *path, size_t max_path_length,
                  bool denormalize = true) const;
 
-  //------------------------------------------------------------------
   /// Extract the full path to the file.
   ///
   /// Extract the directory and path into a std::string, which is returned.
@@ -370,12 +323,10 @@ public:
   /// \return
   ///     Returns a std::string with the directory and filename
   ///     concatenated.
-  //------------------------------------------------------------------
   std::string GetPath(bool denormalize = true) const;
 
   const char *GetCString(bool denormalize = true) const;
 
-  //------------------------------------------------------------------
   /// Extract the full path to the file.
   ///
   /// Extract the directory and path into an llvm::SmallVectorImpl<>
@@ -383,11 +334,9 @@ public:
   /// \return
   ///     Returns a std::string with the directory and filename
   ///     concatenated.
-  //------------------------------------------------------------------
   void GetPath(llvm::SmallVectorImpl<char> &path,
                bool denormalize = true) const;
 
-  //------------------------------------------------------------------
   /// Extract the extension of the file.
   ///
   /// Returns a ConstString that represents the extension of the filename for
@@ -397,10 +346,8 @@ public:
   ///
   /// \return
   ///     Returns the extension of the file as a ConstString object.
-  //------------------------------------------------------------------
   ConstString GetFileNameExtension() const;
 
-  //------------------------------------------------------------------
   /// Return the filename without the extension part
   ///
   /// Returns a ConstString that represents the filename of this object
@@ -410,10 +357,8 @@ public:
   /// \return
   ///     Returns the filename without extension
   ///     as a ConstString object.
-  //------------------------------------------------------------------
   ConstString GetFileNameStrippingExtension() const;
 
-  //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
   /// Return the size in bytes that this object takes in memory. This returns
@@ -424,10 +369,8 @@ public:
   ///     The number of bytes that this object occupies in memory.
   ///
   /// \see ConstString::StaticMemorySize ()
-  //------------------------------------------------------------------
   size_t MemorySize() const;
 
-  //------------------------------------------------------------------
   /// Change the file specified with a new path.
   ///
   /// Update the contents of this object with a new path. The path will be
@@ -440,14 +383,12 @@ public:
   /// \param[in] resolve_path
   ///     If \b true, then we will try to resolve links the path using
   ///     the static FileSpec::Resolve.
-  //------------------------------------------------------------------
   void SetFile(llvm::StringRef path, Style style);
 
   void SetFile(llvm::StringRef path, const llvm::Triple &Triple);
 
   bool IsResolved() const { return m_is_resolved; }
 
-  //------------------------------------------------------------------
   /// Set if the file path has been resolved or not.
   ///
   /// If you know a file path is already resolved and avoided passing a \b
@@ -459,7 +400,6 @@ public:
   /// \param[in] is_resolved
   ///     A boolean value that will replace the current value that
   ///     indicates if the paths in this object have been resolved.
-  //------------------------------------------------------------------
   void SetIsResolved(bool is_resolved) { m_is_resolved = is_resolved; }
 
   FileSpec CopyByAppendingPathComponent(llvm::StringRef component) const;
@@ -471,35 +411,27 @@ public:
   void AppendPathComponent(llvm::StringRef component);
   void AppendPathComponent(const FileSpec &new_path);
 
-  //------------------------------------------------------------------
   /// Removes the last path component by replacing the current path with its
   /// parent. When the current path has no parent, this is a no-op.
   ///
   /// \return
   ///     A boolean value indicating whether the path was updated.
-  //------------------------------------------------------------------
   bool RemoveLastPathComponent();
 
   ConstString GetLastPathComponent() const;
 
 protected:
-  //------------------------------------------------------------------
   // Convenience method for setting the file without changing the style.
-  //------------------------------------------------------------------
   void SetFile(llvm::StringRef path);
 
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   ConstString m_directory;            ///< The uniqued directory path
   ConstString m_filename;             ///< The uniqued filename path
   mutable bool m_is_resolved = false; ///< True if this path has been resolved.
   Style m_style; ///< The syntax that this path uses (e.g. Windows / Posix)
 };
 
-//----------------------------------------------------------------------
 /// Dump a FileSpec object to a stream
-//----------------------------------------------------------------------
 Stream &operator<<(Stream &s, const FileSpec &f);
 
 } // namespace lldb_private

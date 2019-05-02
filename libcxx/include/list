@@ -2167,6 +2167,7 @@ template <class _Pred>
 void
 list<_Tp, _Alloc>::remove_if(_Pred __pred)
 {
+    list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
     for (iterator __i = begin(), __e = end(); __i != __e;)
     {
         if (__pred(*__i))
@@ -2174,7 +2175,8 @@ list<_Tp, _Alloc>::remove_if(_Pred __pred)
             iterator __j = _VSTD::next(__i);
             for (; __j != __e && __pred(*__j); ++__j)
                 ;
-            __i = erase(__i, __j);
+            __deleted_nodes.splice(__deleted_nodes.end(), *this, __i, __j);
+            __i = __j;
             if (__i != __e)
                 ++__i;
         }
@@ -2196,13 +2198,16 @@ template <class _BinaryPred>
 void
 list<_Tp, _Alloc>::unique(_BinaryPred __binary_pred)
 {
+    list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
     for (iterator __i = begin(), __e = end(); __i != __e;)
     {
         iterator __j = _VSTD::next(__i);
         for (; __j != __e && __binary_pred(*__i, *__j); ++__j)
             ;
-        if (++__i != __j)
-            __i = erase(__i, __j);
+        if (++__i != __j) {
+            __deleted_nodes.splice(__deleted_nodes.end(), *this, __i, __j);
+            __i = __j;
+            }
     }
 }
 

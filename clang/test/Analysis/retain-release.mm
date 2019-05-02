@@ -515,3 +515,35 @@ void foo() {
 }
 
 }
+
+namespace reinterpret_casts {
+
+void *foo() {
+  void *p = const_cast<void *>(
+      reinterpret_cast<const void *>(CFArrayCreate(0, 0, 0, 0)));
+  void *q = reinterpret_cast<void *>(
+      reinterpret_cast<char *>(p) + 1);
+  // FIXME: Should warn about a leak here. The function should return at +0,
+  // but it returns at +1 instead.
+  return q;
+}
+
+void *fooCreate() {
+  void *p = const_cast<void *>(
+      reinterpret_cast<const void *>(CFArrayCreate(0, 0, 0, 0)));
+  void *q = reinterpret_cast<void *>(
+      reinterpret_cast<char *>(p) + 1);
+  // The function follows the Create Rule.
+  return q; // no-warning
+}
+
+void *fooBar() CF_RETURNS_RETAINED {
+  void *p = const_cast<void *>(
+      reinterpret_cast<const void *>(CFArrayCreate(0, 0, 0, 0)));
+  void *q = reinterpret_cast<void *>(
+      reinterpret_cast<char *>(p) + 1);
+  // The function follows the Create Rule.
+  return q; // no-warning
+}
+
+}

@@ -15,9 +15,7 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // Thread Step Types
-//----------------------------------------------------------------------
 typedef enum StepType {
   eStepTypeNone,
   eStepTypeTrace,     ///< Single step one instruction.
@@ -28,9 +26,7 @@ typedef enum StepType {
   eStepTypeScripted   ///< A step type implemented by the script interpreter.
 } StepType;
 
-//----------------------------------------------------------------------
 // Address Types
-//----------------------------------------------------------------------
 typedef enum AddressType {
   eAddressTypeInvalid = 0,
   eAddressTypeFile, ///< Address is an address as found in an object or symbol
@@ -41,7 +37,6 @@ typedef enum AddressType {
                     ///this code
 } AddressType;
 
-//----------------------------------------------------------------------
 // Address Class
 //
 // A way of classifying an address used for disassembling and setting
@@ -50,7 +45,6 @@ typedef enum AddressType {
 // beyond just looking at the section types. For example, code might contain PC
 // relative data and the object file might be able to tell us that an address
 // in code is data.
-//----------------------------------------------------------------------
 enum class AddressClass {
   eInvalid,
   eUnknown,
@@ -61,9 +55,7 @@ enum class AddressClass {
   eRuntime
 };
 
-//----------------------------------------------------------------------
 // Votes - Need a tri-state, yes, no, no opinion...
-//----------------------------------------------------------------------
 typedef enum Vote { eVoteNo = -1, eVoteNoOpinion = 0, eVoteYes = 1 } Vote;
 
 typedef enum ArchitectureType {
@@ -74,10 +66,8 @@ typedef enum ArchitectureType {
   kNumArchTypes
 } ArchitectureType;
 
-//----------------------------------------------------------------------
 /// Settable state variable types.
 ///
-//----------------------------------------------------------------------
 
 // typedef enum SettableVariableType
 //{
@@ -123,20 +113,16 @@ typedef enum SortOrder {
   eSortOrderByName
 } SortOrder;
 
-//----------------------------------------------------------------------
 // LazyBool is for boolean values that need to be calculated lazily. Values
 // start off set to eLazyBoolCalculate, and then they can be calculated once
 // and set to eLazyBoolNo or eLazyBoolYes.
-//----------------------------------------------------------------------
 typedef enum LazyBool {
   eLazyBoolCalculate = -1,
   eLazyBoolNo = 0,
   eLazyBoolYes = 1
 } LazyBool;
 
-//------------------------------------------------------------------
 /// Instruction types
-//------------------------------------------------------------------
 typedef enum InstructionType {
   eInstructionTypeAny, // Support for any instructions at all (at least one)
   eInstructionTypePrologueEpilogue, // All prologue and epilogue instructions
@@ -148,9 +134,7 @@ typedef enum InstructionType {
 
 } InstructionType;
 
-//------------------------------------------------------------------
 /// Format category entry types
-//------------------------------------------------------------------
 typedef enum FormatCategoryItem {
   eFormatCategoryItemSummary = 0x0001,
   eFormatCategoryItemRegexSummary = 0x0002,
@@ -164,9 +148,7 @@ typedef enum FormatCategoryItem {
   eFormatCategoryItemRegexValidator = 0x0200
 } FormatCategoryItem;
 
-//------------------------------------------------------------------
 /// Expression execution policies
-//------------------------------------------------------------------
 typedef enum {
   eExecutionPolicyOnlyWhenNeeded,
   eExecutionPolicyNever,
@@ -174,9 +156,7 @@ typedef enum {
   eExecutionPolicyTopLevel // used for top-level code
 } ExecutionPolicy;
 
-//----------------------------------------------------------------------
 // Ways that the FormatManager picks a particular format for a type
-//----------------------------------------------------------------------
 typedef enum FormatterChoiceCriterion {
   eFormatterChoiceCriterionDirectChoice = 0x00000000,
   eFormatterChoiceCriterionStrippedPointerReference = 0x00000001,
@@ -188,9 +168,7 @@ typedef enum FormatterChoiceCriterion {
   eFormatterChoiceCriterionWentToStaticValue = 0x00000020
 } FormatterChoiceCriterion;
 
-//----------------------------------------------------------------------
 // Synchronicity behavior of scripted commands
-//----------------------------------------------------------------------
 typedef enum ScriptedCommandSynchronicity {
   eScriptedCommandSynchronicitySynchronous,
   eScriptedCommandSynchronicityAsynchronous,
@@ -198,9 +176,7 @@ typedef enum ScriptedCommandSynchronicity {
                                             // synchronicity is
 } ScriptedCommandSynchronicity;
 
-//----------------------------------------------------------------------
 // Verbosity mode of "po" output
-//----------------------------------------------------------------------
 typedef enum LanguageRuntimeDescriptionDisplayVerbosity {
   eLanguageRuntimeDescriptionDisplayVerbosityCompact, // only print the
                                                       // description string, if
@@ -209,18 +185,14 @@ typedef enum LanguageRuntimeDescriptionDisplayVerbosity {
                                                       // output
 } LanguageRuntimeDescriptionDisplayVerbosity;
 
-//----------------------------------------------------------------------
 // Loading modules from memory
-//----------------------------------------------------------------------
 typedef enum MemoryModuleLoadLevel {
   eMemoryModuleLoadLevelMinimal,  // Load sections only
   eMemoryModuleLoadLevelPartial,  // Load function bounds but no symbols
   eMemoryModuleLoadLevelComplete, // Load sections and all symbols
 } MemoryModuleLoadLevel;
 
-//----------------------------------------------------------------------
 // Result enums for when reading multiple lines from IOHandlers
-//----------------------------------------------------------------------
 enum class LineStatus {
   Success, // The line that was just edited if good and should be added to the
            // lines
@@ -230,14 +202,10 @@ enum class LineStatus {
   Done     // Lines are complete
 };
 
-//----------------------------------------------------------------------
 // Boolean result of running a Type Validator
-//----------------------------------------------------------------------
 enum class TypeValidatorResult : bool { Success = true, Failure = false };
 
-//----------------------------------------------------------------------
 // Enumerations that can be used to specify scopes types when looking up types.
-//----------------------------------------------------------------------
 enum class CompilerContextKind {
   Invalid = 0,
   TranslationUnit,
@@ -252,10 +220,8 @@ enum class CompilerContextKind {
   Typedef
 };
 
-//----------------------------------------------------------------------
 // Enumerations that can be used to specify the kind of metric we're looking at
 // when collecting stats.
-//----------------------------------------------------------------------
 enum StatisticKind {
   ExpressionSuccessful = 0,
   ExpressionFailure = 1,

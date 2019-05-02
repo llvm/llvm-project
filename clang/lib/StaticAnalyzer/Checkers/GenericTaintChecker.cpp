@@ -13,6 +13,8 @@
 // aggressively, even if the involved symbols are under constrained.
 //
 //===----------------------------------------------------------------------===//
+
+#include "Taint.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/Builtins.h"
@@ -27,6 +29,7 @@
 
 using namespace clang;
 using namespace ento;
+using namespace taint;
 
 namespace {
 class GenericTaintChecker
@@ -40,6 +43,9 @@ public:
   void checkPostStmt(const CallExpr *CE, CheckerContext &C) const;
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
+
+  void printState(raw_ostream &Out, ProgramStateRef State,
+                  const char *NL, const char *Sep) const override;
 
 private:
   static const unsigned InvalidArgIndex = UINT_MAX;
@@ -152,14 +158,14 @@ private:
 
     static bool isTaintedOrPointsToTainted(const Expr *E, ProgramStateRef State,
                                            CheckerContext &C) {
-      if (State->isTainted(E, C.getLocationContext()) || isStdin(E, C))
+      if (isTainted(State, E, C.getLocationContext()) || isStdin(E, C))
         return true;
 
       if (!E->getType().getTypePtr()->isPointerType())
         return false;
 
       Optional<SVal> V = getPointedToSVal(C, E);
-      return (V && State->isTainted(*V));
+      return (V && isTainted(State, *V));
     }
 
     /// Pre-process a function which propagates taint according to the
@@ -313,6 +319,11 @@ void GenericTaintChecker::checkPostStmt(const CallExpr *CE,
   propagateFromPre(CE, C);
 }
 
+void GenericTaintChecker::printState(raw_ostream &Out, ProgramStateRef State,
+                                     const char *NL, const char *Sep) const {
+  printTaint(State, Out, NL, Sep);
+}
+
 void GenericTaintChecker::addSourcesPre(const CallExpr *CE,
                                         CheckerContext &C) const {
   ProgramStateRef State = nullptr;
@@ -354,7 +365,7 @@ bool GenericTaintChecker::propagateFromPre(const CallExpr *CE,
   for (unsigned ArgNum : TaintArgs) {
     // Special handling for the tainted return value.
     if (ArgNum == ReturnValueIndex) {
-      State = State->addTaint(CE, C.getLocationContext());
+      State = addTaint(State, CE, C.getLocationContext());
       continue;
     }
 
@@ -365,7 +376,7 @@ bool GenericTaintChecker::propagateFromPre(const CallExpr *CE,
     const Expr *Arg = CE->getArg(ArgNum);
     Optional<SVal> V = getPointedToSVal(C, Arg);
     if (V)
-      State = State->addTaint(*V);
+      State = addTaint(State, *V);
   }
 
   // Clear up the taint info from the state.
@@ -570,9 +581,9 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E,
   ProgramStateRef State = C.getState();
   Optional<SVal> PointedToSVal = getPointedToSVal(C, E);
   SVal TaintedSVal;
-  if (PointedToSVal && State->isTainted(*PointedToSVal))
+  if (PointedToSVal && isTainted(State, *PointedToSVal))
     TaintedSVal = *PointedToSVal;
-  else if (State->isTainted(E, C.getLocationContext()))
+  else if (isTainted(State, E, C.getLocationContext()))
     TaintedSVal = C.getSVal(E);
   else
     return false;

@@ -1494,7 +1494,7 @@ entry:
 define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ; SSE2-LABEL: load_sext_4i1_to_4i32:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movzbl (%rdi), %eax
+; SSE2-NEXT:    movl (%rdi), %eax
 ; SSE2-NEXT:    movq %rax, %rcx
 ; SSE2-NEXT:    shlq $60, %rcx
 ; SSE2-NEXT:    sarq $63, %rcx
@@ -1517,7 +1517,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ;
 ; SSSE3-LABEL: load_sext_4i1_to_4i32:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movzbl (%rdi), %eax
+; SSSE3-NEXT:    movl (%rdi), %eax
 ; SSSE3-NEXT:    movq %rax, %rcx
 ; SSSE3-NEXT:    shlq $60, %rcx
 ; SSSE3-NEXT:    sarq $63, %rcx
@@ -1540,7 +1540,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ;
 ; SSE41-LABEL: load_sext_4i1_to_4i32:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movzbl (%rdi), %eax
+; SSE41-NEXT:    movl (%rdi), %eax
 ; SSE41-NEXT:    movq %rax, %rcx
 ; SSE41-NEXT:    shlq $62, %rcx
 ; SSE41-NEXT:    sarq $63, %rcx
@@ -1560,7 +1560,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_4i1_to_4i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movzbl (%rdi), %eax
+; AVX1-NEXT:    movl (%rdi), %eax
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    shlq $62, %rcx
 ; AVX1-NEXT:    sarq $63, %rcx
@@ -1580,7 +1580,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ;
 ; AVX2-LABEL: load_sext_4i1_to_4i32:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movzbl (%rdi), %eax
+; AVX2-NEXT:    movl (%rdi), %eax
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    shlq $62, %rcx
 ; AVX2-NEXT:    sarq $63, %rcx
@@ -1781,7 +1781,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_4i1_to_4i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movzbl (%rdi), %eax
+; AVX1-NEXT:    movl (%rdi), %eax
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    shlq $62, %rcx
 ; AVX1-NEXT:    sarq $63, %rcx
@@ -1805,7 +1805,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ;
 ; AVX2-LABEL: load_sext_4i1_to_4i64:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movzbl (%rdi), %eax
+; AVX2-NEXT:    movl (%rdi), %eax
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    shlq $60, %rcx
 ; AVX2-NEXT:    sarq $63, %rcx

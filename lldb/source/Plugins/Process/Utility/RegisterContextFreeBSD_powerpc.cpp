@@ -168,10 +168,8 @@ typedef struct _VMX {
   uint32_t vscr;
 } VMX;
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_powerpc to declare our g_register_infos_powerpc
 // structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_POWERPC_STRUCT
 #include "RegisterInfos_powerpc.h"
 #undef DECLARE_REGISTER_INFOS_POWERPC_STRUCT

@@ -1120,7 +1120,7 @@ void Module::ReportError(const char *format, ...) {
     const int format_len = strlen(format);
     if (format_len > 0) {
       const char last_char = format[format_len - 1];
-      if (last_char != '\n' || last_char != '\r')
+      if (last_char != '\n' && last_char != '\r')
         strm.EOL();
     }
     Host::SystemLog(Host::eSystemLogError, "%s", strm.GetData());
@@ -1152,7 +1152,7 @@ void Module::ReportErrorIfModifyDetected(const char *format, ...) {
         const int format_len = strlen(format);
         if (format_len > 0) {
           const char last_char = format[format_len - 1];
-          if (last_char != '\n' || last_char != '\r')
+          if (last_char != '\n' && last_char != '\r')
             strm.EOL();
         }
         strm.PutCString("The debug session should be aborted as the original "
@@ -1178,7 +1178,7 @@ void Module::ReportWarning(const char *format, ...) {
     const int format_len = strlen(format);
     if (format_len > 0) {
       const char last_char = format[format_len - 1];
-      if (last_char != '\n' || last_char != '\r')
+      if (last_char != '\n' && last_char != '\r')
         strm.EOL();
     }
     Host::SystemLog(Host::eSystemLogWarning, "%s", strm.GetData());
@@ -1545,8 +1545,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 
     const uint32_t num_specs = file_specs.GetSize();
     if (num_specs) {
-      ScriptInterpreter *script_interpreter =
-          debugger.GetCommandInterpreter().GetScriptInterpreter();
+      ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
       if (script_interpreter) {
         for (uint32_t i = 0; i < num_specs; ++i) {
           FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));

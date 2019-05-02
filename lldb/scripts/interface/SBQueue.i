@@ -14,7 +14,7 @@ public:
     SBQueue ();
 
     SBQueue (const lldb::QueueSP& queue_sp);
-    
+
    ~SBQueue();
 
     bool
@@ -32,8 +32,7 @@ public:
     Returns an lldb::queue_id_t type unique identifier number for this
     queue that will not be used by any other queue during this process'
     execution.  These ID numbers often start at 1 with the first
-    system-created queues and increment from there.
-    ")
+    system-created queues and increment from there.")
     GetQueueID;
 
     lldb::queue_id_t
@@ -43,10 +42,9 @@ public:
     GetName () const;
 
     %feature("autodoc", "
-    Returns an lldb::QueueKind enumerated value (e.g. eQueueKindUnknown, 
+    Returns an lldb::QueueKind enumerated value (e.g. eQueueKindUnknown,
     eQueueKindSerial, eQueueKindConcurrent) describing the type of this
-    queue.
-    ")
+    queue.")
     GetKind();
 
     lldb::QueueKind

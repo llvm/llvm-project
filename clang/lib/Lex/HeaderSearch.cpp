@@ -1579,7 +1579,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
                                 DirNative);
 
         // Search each of the ".framework" directories to load them as modules.
-        llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+        llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
         for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                            DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
@@ -1650,7 +1650,7 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   FileMgr.makeAbsolutePath(Dir);
   SmallString<128> DirNative;
   llvm::sys::path::native(Dir, DirNative);
-  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
@@ -1685,11 +1685,10 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
     StringRef Dir = SearchDirs[I].getDir()->getName();
     llvm::SmallString<32> DirPath(Dir.begin(), Dir.end());
-    if (!WorkingDir.empty() && !path::is_absolute(Dir)) {
+    if (!WorkingDir.empty() && !path::is_absolute(Dir))
       fs::make_absolute(WorkingDir, DirPath);
-      path::remove_dots(DirPath, /*remove_dot_dot=*/true);
-      Dir = DirPath;
-    }
+    path::remove_dots(DirPath, /*remove_dot_dot=*/true);
+    Dir = DirPath;
     for (auto NI = path::begin(File), NE = path::end(File),
               DI = path::begin(Dir), DE = path::end(Dir);
          /*termination condition in loop*/; ++NI, ++DI) {
@@ -1720,5 +1719,5 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
   if (IsSystem)
     *IsSystem = BestPrefixLength ? BestSearchDir >= SystemDirIdx : false;
-  return File.drop_front(BestPrefixLength);
+  return path::convert_to_slash(File.drop_front(BestPrefixLength));
 }

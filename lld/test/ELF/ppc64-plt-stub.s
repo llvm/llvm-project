@@ -13,6 +13,7 @@
 // RUN: llvm-objdump -d %t | FileCheck %s
 
 // CHECK:      Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: __plt_foo:
 // CHECK-NEXT:      std 2, 24(1)
 // CHECK-NEXT:      addis 12, 2, 0

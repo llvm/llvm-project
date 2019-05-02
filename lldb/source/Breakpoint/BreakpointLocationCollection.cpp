@@ -16,15 +16,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // BreakpointLocationCollection constructor
-//----------------------------------------------------------------------
 BreakpointLocationCollection::BreakpointLocationCollection()
     : m_break_loc_collection(), m_collection_mutex() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 BreakpointLocationCollection::~BreakpointLocationCollection() {}
 
 void BreakpointLocationCollection::Add(const BreakpointLocationSP &bp_loc) {
@@ -177,4 +173,15 @@ void BreakpointLocationCollection::GetDescription(
       s->PutChar(' ');
     (*pos)->GetDescription(s, level);
   }
+}
+
+BreakpointLocationCollection &BreakpointLocationCollection::operator=(
+    const BreakpointLocationCollection &rhs) {
+  if (this != &rhs) {
+      std::lock(m_collection_mutex, rhs.m_collection_mutex);
+      std::lock_guard<std::mutex> lhs_guard(m_collection_mutex, std::adopt_lock);
+      std::lock_guard<std::mutex> rhs_guard(rhs.m_collection_mutex, std::adopt_lock);
+      m_break_loc_collection = rhs.m_break_loc_collection;
+  }
+  return *this;
 }

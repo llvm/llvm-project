@@ -27,7 +27,7 @@ namespace llvm {
 class AsmPrinter;
 class APInt;
 class ByteStreamer;
-class DwarfUnit;
+class DwarfCompileUnit;
 class DIELoc;
 class TargetRegisterInfo;
 
@@ -104,6 +104,8 @@ protected:
     const char *Comment;
   };
 
+  DwarfCompileUnit &CU;
+
   /// The register location, if any.
   SmallVector<Register, 2> DwarfRegs;
 
@@ -136,6 +138,10 @@ protected:
 
   /// Emit a raw unsigned value.
   virtual void emitUnsigned(uint64_t Value) = 0;
+
+  virtual void emitData1(uint8_t Value) = 0;
+
+  virtual void emitBaseTypeRef(uint64_t Idx) = 0;
 
   /// Emit a normalized unsigned constant.
   void emitConstu(uint64_t Value);
@@ -199,7 +205,8 @@ protected:
   ~DwarfExpression() = default;
 
 public:
-  DwarfExpression(unsigned DwarfVersion) : DwarfVersion(DwarfVersion) {}
+  DwarfExpression(unsigned DwarfVersion, DwarfCompileUnit &CU)
+    : CU(CU), DwarfVersion(DwarfVersion) {}
 
   /// This needs to be called last to commit any pending changes.
   void finalize();
@@ -247,6 +254,9 @@ public:
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
   /// the fragment described by \c Expr.
   void addFragmentOffset(const DIExpression *Expr);
+
+  void emitLegacySExt(unsigned FromBits);
+  void emitLegacyZExt(unsigned FromBits);
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
@@ -256,27 +266,30 @@ class DebugLocDwarfExpression final : public DwarfExpression {
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
+  void emitData1(uint8_t Value) override;
+  void emitBaseTypeRef(uint64_t Idx) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
 
 public:
-  DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS)
-      : DwarfExpression(DwarfVersion), BS(BS) {}
+  DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS, DwarfCompileUnit &CU)
+      : DwarfExpression(DwarfVersion, CU), BS(BS) {}
 };
 
 /// DwarfExpression implementation for singular DW_AT_location.
 class DIEDwarfExpression final : public DwarfExpression {
 const AsmPrinter &AP;
-  DwarfUnit &DU;
   DIELoc &DIE;
 
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
+  void emitData1(uint8_t Value) override;
+  void emitBaseTypeRef(uint64_t Idx) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
 public:
-  DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU, DIELoc &DIE);
+  DIEDwarfExpression(const AsmPrinter &AP, DwarfCompileUnit &CU, DIELoc &DIE);
 
   DIELoc *finalize() {
     DwarfExpression::finalize();

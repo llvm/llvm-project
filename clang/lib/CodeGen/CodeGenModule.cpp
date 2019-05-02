@@ -58,6 +58,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -1557,12 +1558,8 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
 
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
 
-  if (!IsIncompleteFunction) {
+  if (!IsIncompleteFunction)
     SetLLVMFunctionAttributes(GD, getTypes().arrangeGlobalDeclaration(GD), F);
-    // Setup target-specific attributes.
-    if (F->isDeclaration())
-      getTargetCodeGenInfo().setTargetAttributes(FD, F, *this);
-  }
 
   // Add the Returned attribute for "this", except for iOS 5 and earlier
   // where substantial code, including the libstdc++ dylib, was compiled with
@@ -1581,6 +1578,10 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
 
   setLinkageForGV(F, FD);
   setGVProperties(F, FD);
+
+  // Setup target-specific attributes.
+  if (!IsIncompleteFunction && F->isDeclaration())
+    getTargetCodeGenInfo().setTargetAttributes(FD, F, *this);
 
   if (const auto *CSA = FD->getAttr<CodeSegAttr>())
     F->setSection(CSA->getName());
@@ -2482,13 +2483,14 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
     if (!shouldEmitFunction(GD))
       return;
 
+    llvm::TimeTraceScope TimeScope(
+        "CodeGen Function", [&]() { return FD->getQualifiedNameAsString(); });
+
     if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
       // Make sure to emit the definition(s) before we emit the thunks.
       // This is necessary for the generation of certain thunks.
-      if (const auto *CD = dyn_cast<CXXConstructorDecl>(Method))
-        ABI->emitCXXStructor(CD, getFromCtorType(GD.getCtorType()));
-      else if (const auto *DD = dyn_cast<CXXDestructorDecl>(Method))
-        ABI->emitCXXStructor(DD, getFromDtorType(GD.getDtorType()));
+      if (isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method))
+        ABI->emitCXXStructor(GD);
       else if (FD->isMultiVersion())
         EmitMultiVersionFunctionDefinition(GD, GV);
       else
@@ -2572,10 +2574,9 @@ void CodeGenModule::emitMultiVersionFunctions() {
       ResolverFunc->setComdat(
           getModule().getOrInsertComdat(ResolverFunc->getName()));
 
-    std::stable_sort(
-        Options.begin(), Options.end(),
-        [&TI](const CodeGenFunction::MultiVersionResolverOption &LHS,
-              const CodeGenFunction::MultiVersionResolverOption &RHS) {
+    llvm::stable_sort(
+        Options, [&TI](const CodeGenFunction::MultiVersionResolverOption &LHS,
+                       const CodeGenFunction::MultiVersionResolverOption &RHS) {
           return TargetMVPriority(TI, LHS) > TargetMVPriority(TI, RHS);
         });
     CodeGenFunction CGF(*this);
@@ -2999,9 +3000,13 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
     if (F->empty()) {
       F->setCallingConv(getRuntimeCC());
 
-      if (!Local && getTriple().isOSBinFormatCOFF() &&
-          !getCodeGenOpts().LTOVisibilityPublicStd &&
-          !getTriple().isWindowsGNUEnvironment()) {
+      // In Windows Itanium environments, try to mark runtime functions
+      // dllimport. For Mingw and MSVC, don't. We don't really know if the user
+      // will link their standard library statically or dynamically. Marking
+      // functions imported when they are not imported can cause linker errors
+      // and warnings.
+      if (!Local && getTriple().isWindowsItaniumEnvironment() &&
+          !getCodeGenOpts().LTOVisibilityPublicStd) {
         const FunctionDecl *FD = GetRuntimeFunctionDecl(Context, Name);
         if (!FD || FD->hasAttr<DLLImportAttr>()) {
           F->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
@@ -3234,15 +3239,8 @@ llvm::Constant *
 CodeGenModule::GetAddrOfGlobal(GlobalDecl GD,
                                ForDefinition_t IsForDefinition) {
   const Decl *D = GD.getDecl();
-  if (isa<CXXConstructorDecl>(D))
-    return getAddrOfCXXStructor(cast<CXXConstructorDecl>(D),
-                                getFromCtorType(GD.getCtorType()),
-                                /*FnInfo=*/nullptr, /*FnType=*/nullptr,
-                                /*DontDefer=*/false, IsForDefinition);
-  else if (isa<CXXDestructorDecl>(D))
-    return getAddrOfCXXStructor(cast<CXXDestructorDecl>(D),
-                                getFromDtorType(GD.getDtorType()),
-                                /*FnInfo=*/nullptr, /*FnType=*/nullptr,
+  if (isa<CXXConstructorDecl>(D) || isa<CXXDestructorDecl>(D))
+    return getAddrOfCXXStructor(GD, /*FnInfo=*/nullptr, /*FnType=*/nullptr,
                                 /*DontDefer=*/false, IsForDefinition);
   else if (isa<CXXMethodDecl>(D)) {
     auto FInfo = &getTypes().arrangeCXXMethodDeclaration(
@@ -3387,6 +3385,11 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
       return LangAS::cuda_device;
   }
 
+  if (LangOpts.OpenMP) {
+    LangAS AS;
+    if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))
+      return AS;
+  }
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
 

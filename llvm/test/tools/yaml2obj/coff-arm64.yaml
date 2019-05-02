@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -file-headers %t | FileCheck %s
+# RUN: llvm-readobj --file-headers %t | FileCheck %s
 # RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP
 
 # CHECK: OptionalHeaderSize: 240

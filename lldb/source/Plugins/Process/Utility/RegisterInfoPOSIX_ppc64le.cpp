@@ -15,9 +15,7 @@
 
 #include "RegisterInfoPOSIX_ppc64le.h"
 
-//-----------------------------------------------------------------------------
 // Include RegisterInfoPOSIX_ppc64le to declare our g_register_infos_ppc64le
-//-----------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 #include "RegisterInfos_ppc64le.h"
 #undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT

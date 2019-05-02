@@ -88,6 +88,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -134,6 +135,7 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
 #include <cassert>
@@ -274,6 +276,13 @@ static cl::opt<bool> VPlanBuildStressTest(
         "Build VPlan for every supported loop nest in the function and bail "
         "out right after the build (stress test the VPlan H-CFG construction "
         "in the VPlan-native vectorization path)."));
+
+cl::opt<bool> llvm::EnableLoopInterleaving(
+    "interleave-loops", cl::init(true), cl::Hidden,
+    cl::desc("Enable loop interleaving in Loop vectorization passes"));
+cl::opt<bool> llvm::EnableLoopVectorization(
+    "vectorize-loops", cl::init(true), cl::Hidden,
+    cl::desc("Run the Loop vectorization passes"));
 
 /// A helper function for converting Scalar types to vector types.
 /// If the incoming type is void, we return void. If the VF is 1, we return
@@ -1383,12 +1392,6 @@ static bool isExplicitVecOuterLoop(Loop *OuterLp,
     return false;
   }
 
-  if (!Hints.getWidth()) {
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: No user vector width.\n");
-    Hints.emitRemarkWithHints();
-    return false;
-  }
-
   if (Hints.getInterleave() > 1) {
     // TODO: Interleave support is future work.
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Interleave is not supported for "
@@ -1458,12 +1461,13 @@ struct LoopVectorize : public FunctionPass {
     auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
     auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
     return Impl.runImpl(F, *SE, *LI, *TTI, *DT, *BFI, TLI, *DB, *AA, *AC,
-                        GetLAA, *ORE);
+                        GetLAA, *ORE, PSI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1489,6 +1493,7 @@ struct LoopVectorize : public FunctionPass {
 
     AU.addPreserved<BasicAAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
   }
 };
 
@@ -2870,17 +2875,35 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
     OrigPhi->setIncomingValue(BlockIdx, BCResumeVal);
   }
 
+  // We need the OrigLoop (scalar loop part) latch terminator to help
+  // produce correct debug info for the middle block BB instructions.
+  // The legality check stage guarantees that the loop will have a single
+  // latch.
+  assert(isa<BranchInst>(OrigLoop->getLoopLatch()->getTerminator()) &&
+         "Scalar loop latch terminator isn't a branch");
+  BranchInst *ScalarLatchBr =
+      cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
+
   // Add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.
   // If (N - N%VF) == N, then we *don't* need to run the remainder.
   // If tail is to be folded, we know we don't need to run the remainder.
   Value *CmpN = Builder.getTrue();
-  if (!Cost->foldTailByMasking())
+  if (!Cost->foldTailByMasking()) {
     CmpN =
         CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
                         CountRoundDown, "cmp.n", MiddleBlock->getTerminator());
-  ReplaceInstWithInst(MiddleBlock->getTerminator(),
-                      BranchInst::Create(ExitBlock, ScalarPH, CmpN));
+
+    // Provide correct stepping behaviour by using the same DebugLoc as the
+    // scalar loop latch branch cmp if it exists.
+    if (CmpInst *ScalarLatchCmp =
+            dyn_cast_or_null<CmpInst>(ScalarLatchBr->getCondition()))
+      cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchCmp->getDebugLoc());
+  }
+
+  BranchInst *BrInst = BranchInst::Create(ExitBlock, ScalarPH, CmpN);
+  BrInst->setDebugLoc(ScalarLatchBr->getDebugLoc());
+  ReplaceInstWithInst(MiddleBlock->getTerminator(), BrInst);
 
   // Get ready to start creating new instructions into the vectorized body.
   Builder.SetInsertPoint(&*VecBody->getFirstInsertionPt());
@@ -6042,9 +6065,12 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(LoopVectorize, LV_NAME, lv_name, false, false)
 
 namespace llvm {
+
+Pass *createLoopVectorizePass() { return new LoopVectorize(); }
 
 Pass *createLoopVectorizePass(bool InterleaveOnlyWhenForced,
                               bool VectorizeOnlyWhenForced) {
@@ -6081,31 +6107,51 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   }
 }
 
+// TODO: we could return a pair of values that specify the max VF and
+// min VF, to be used in `buildVPlans(MinVF, MaxVF)` instead of
+// `buildVPlans(VF, VF)`. We cannot do it because VPLAN at the moment
+// doesn't have a cost model that can choose which plan to execute if
+// more than one is generated.
+static unsigned determineVPlanVF(const unsigned WidestVectorRegBits,
+                                 LoopVectorizationCostModel &CM) {
+  unsigned WidestType;
+  std::tie(std::ignore, WidestType) = CM.getSmallestAndWidestTypes();
+  return WidestVectorRegBits / WidestType;
+}
+
 VectorizationFactor
 LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
                                                 unsigned UserVF) {
+  unsigned VF = UserVF;
   // Outer loop handling: They may require CFG and instruction level
   // transformations before even evaluating whether vectorization is profitable.
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
   // the vectorization pipeline.
   if (!OrigLoop->empty()) {
-    // TODO: If UserVF is not provided, we set UserVF to 4 for stress testing.
-    // This won't be necessary when UserVF is not required in the VPlan-native
-    // path.
-    if (VPlanBuildStressTest && !UserVF)
-      UserVF = 4;
+    // If the user doesn't provide a vectorization factor, determine a
+    // reasonable one.
+    if (!UserVF) {
+      VF = determineVPlanVF(TTI->getRegisterBitWidth(true /* Vector*/), CM);
+      LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
 
+      // Make sure we have a VF > 1 for stress testing.
+      if (VPlanBuildStressTest && VF < 2) {
+        LLVM_DEBUG(dbgs() << "LV: VPlan stress testing: "
+                          << "overriding computed VF.\n");
+        VF = 4;
+      }
+    }
     assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
-    assert(UserVF && "Expected UserVF for outer loop vectorization.");
-    assert(isPowerOf2_32(UserVF) && "VF needs to be a power of two");
-    LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-    buildVPlans(UserVF, UserVF);
+    assert(isPowerOf2_32(VF) && "VF needs to be a power of two");
+    LLVM_DEBUG(dbgs() << "LV: Using " << (UserVF ? "user " : "") << "VF " << VF
+                      << " to build VPlans.\n");
+    buildVPlans(VF, VF);
 
     // For VPlan build stress testing, we bail out after VPlan construction.
     if (VPlanBuildStressTest)
       return VectorizationFactor::Disabled();
 
-    return {UserVF, 0};
+    return {VF, 0};
   }
 
   LLVM_DEBUG(
@@ -7115,7 +7161,8 @@ static bool processLoopInVPlanNativePath(
     Loop *L, PredicatedScalarEvolution &PSE, LoopInfo *LI, DominatorTree *DT,
     LoopVectorizationLegality *LVL, TargetTransformInfo *TTI,
     TargetLibraryInfo *TLI, DemandedBits *DB, AssumptionCache *AC,
-    OptimizationRemarkEmitter *ORE, LoopVectorizeHints &Hints) {
+    OptimizationRemarkEmitter *ORE, BlockFrequencyInfo *BFI,
+    ProfileSummaryInfo *PSI, LoopVectorizeHints &Hints) {
 
   assert(EnableVPlanNativePath && "VPlan-native path is disabled.");
   Function *F = L->getHeader()->getParent();
@@ -7128,24 +7175,28 @@ static bool processLoopInVPlanNativePath(
   LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM);
 
   // Get user vectorization factor.
-  unsigned UserVF = Hints.getWidth();
+  const unsigned UserVF = Hints.getWidth();
 
-  // Check the function attributes to find out if this function should be
-  // optimized for size.
+  // Check the function attributes and profiles to find out if this function
+  // should be optimized for size.
   bool OptForSize =
-      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
+      Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
+      (F->hasOptSize() ||
+       llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI));
 
   // Plan how to best vectorize, return the best VF and its cost.
-  VectorizationFactor VF = LVP.planInVPlanNativePath(OptForSize, UserVF);
+  const VectorizationFactor VF = LVP.planInVPlanNativePath(OptForSize, UserVF);
 
   // If we are stress testing VPlan builds, do not attempt to generate vector
   // code. Masked vector code generation support will follow soon.
-  if (VPlanBuildStressTest || EnableVPlanPredication)
+  // Also, do not attempt to vectorize if no vector code will be produced.
+  if (VPlanBuildStressTest || EnableVPlanPredication ||
+      VectorizationFactor::Disabled() == VF)
     return false;
 
   LVP.setBestPlan(VF.Width, 1);
 
-  InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, UserVF, 1, LVL,
+  InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, 1, LVL,
                          &CM);
   LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
                     << L->getHeader()->getParent()->getName() << "\"\n");
@@ -7211,10 +7262,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  // Check the function attributes to find out if this function should be
-  // optimized for size.
+  // Check the function attributes and profiles to find out if this function
+  // should be optimized for size.
   bool OptForSize =
-      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
+      Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
+      (F->hasOptSize() ||
+       llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI));
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
@@ -7223,7 +7276,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // pipeline.
   if (!L->empty())
     return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
-                                        ORE, Hints);
+                                        ORE, BFI, PSI, Hints);
 
   assert(L->empty() && "Inner loop expected.");
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
@@ -7489,7 +7542,7 @@ bool LoopVectorizePass::runImpl(
     DominatorTree &DT_, BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
     DemandedBits &DB_, AliasAnalysis &AA_, AssumptionCache &AC_,
     std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
-    OptimizationRemarkEmitter &ORE_) {
+    OptimizationRemarkEmitter &ORE_, ProfileSummaryInfo *PSI_) {
   SE = &SE_;
   LI = &LI_;
   TTI = &TTI_;
@@ -7501,6 +7554,7 @@ bool LoopVectorizePass::runImpl(
   GetLAA = &GetLAA_;
   DB = &DB_;
   ORE = &ORE_;
+  PSI = PSI_;
 
   // Don't attempt if
   // 1. the target claims to have no vector registers, and
@@ -7569,8 +7623,12 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
       LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
       return LAM.getResult<LoopAccessAnalysis>(L, AR);
     };
+    const ModuleAnalysisManager &MAM =
+        AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+    ProfileSummaryInfo *PSI =
+        MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
     bool Changed =
-        runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AA, AC, GetLAA, ORE);
+        runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AA, AC, GetLAA, ORE, PSI);
     if (!Changed)
       return PreservedAnalyses::all();
     PreservedAnalyses PA;

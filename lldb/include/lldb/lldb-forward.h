@@ -13,9 +13,7 @@
 
 #include "lldb/Utility/SharingPtr.h"
 
-//----------------------------------------------------------------------
 // lldb forward declarations
-//----------------------------------------------------------------------
 namespace lldb_private {
 
 class ABI;
@@ -273,7 +271,6 @@ class TypeEnumMemberImpl;
 class TypeEnumMemberListImpl;
 class TypeFormatImpl;
 class TypeNameSpecifierImpl;
-class TypePair;
 class TypeValidatorImpl;
 class UUID;
 class UnixSignals;
@@ -302,9 +299,7 @@ struct LineEntry;
 
 } // namespace lldb_private
 
-//----------------------------------------------------------------------
 // lldb forward declarations
-//----------------------------------------------------------------------
 namespace lldb {
 
 typedef std::shared_ptr<lldb_private::ABI> ABISP;
@@ -493,9 +488,7 @@ typedef std::shared_ptr<lldb_private::Watchpoint> WatchpointSP;
 
 } // namespace lldb
 
-//----------------------------------------------------------------------
 // llvm forward declarations
-//----------------------------------------------------------------------
 namespace llvm {
 
 struct ItaniumPartialDemangler;

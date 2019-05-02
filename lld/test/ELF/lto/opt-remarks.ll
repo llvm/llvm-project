@@ -14,7 +14,7 @@
 
 ; Check that @tinkywinky is inlined after optimizations.
 ; CHECK-LABEL: define i32 @main
-; CHECK-NEXT:  %a.i = call i32 @patatino()
+; CHECK-NEXT:  %a.i = {{.*}}call i32 @patatino()
 ; CHECK-NEXT:  ret i32 %a.i
 ; CHECK-NEXT: }
 

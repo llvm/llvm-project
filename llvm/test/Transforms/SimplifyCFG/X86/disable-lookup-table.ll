@@ -1,4 +1,5 @@
 ; RUN: opt < %s -simplifycfg -switch-to-lookup -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: opt < %s -passes='simplify-cfg<switch-to-lookup>' -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 ; In the presence of "-no-jump-tables"="true", simplifycfg should not convert switches to lookup tables.
 

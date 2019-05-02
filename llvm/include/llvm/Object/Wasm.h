@@ -130,6 +130,9 @@ public:
 
   const wasm::WasmDylinkInfo &dylinkInfo() const { return DylinkInfo; }
   const wasm::WasmProducerInfo &getProducerInfo() const { return ProducerInfo; }
+  ArrayRef<wasm::WasmFeatureEntry> getTargetFeatures() const {
+    return TargetFeatures;
+  }
   ArrayRef<wasm::WasmSignature> types() const { return Signatures; }
   ArrayRef<uint32_t> functionTypes() const { return FunctionTypes; }
   ArrayRef<wasm::WasmImport> imports() const { return Imports; }
@@ -168,8 +171,7 @@ public:
 
   // Overrides from SectionRef.
   void moveSectionNext(DataRefImpl &Sec) const override;
-  std::error_code getSectionName(DataRefImpl Sec,
-                                 StringRef &Res) const override;
+  Expected<StringRef> getSectionName(DataRefImpl Sec) const override;
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
@@ -244,6 +246,7 @@ private:
   Error parseElemSection(ReadContext &Ctx);
   Error parseCodeSection(ReadContext &Ctx);
   Error parseDataSection(ReadContext &Ctx);
+  Error parseDataCountSection(ReadContext &Ctx);
 
   // Custom section types
   Error parseDylinkSection(ReadContext &Ctx);
@@ -252,12 +255,14 @@ private:
   Error parseLinkingSectionSymtab(ReadContext &Ctx);
   Error parseLinkingSectionComdat(ReadContext &Ctx);
   Error parseProducersSection(ReadContext &Ctx);
+  Error parseTargetFeaturesSection(ReadContext &Ctx);
   Error parseRelocSection(StringRef Name, ReadContext &Ctx);
 
   wasm::WasmObjectHeader Header;
   std::vector<WasmSection> Sections;
   wasm::WasmDylinkInfo DylinkInfo;
   wasm::WasmProducerInfo ProducerInfo;
+  std::vector<wasm::WasmFeatureEntry> TargetFeatures;
   std::vector<wasm::WasmSignature> Signatures;
   std::vector<uint32_t> FunctionTypes;
   std::vector<wasm::WasmTable> Tables;
@@ -268,6 +273,7 @@ private:
   std::vector<wasm::WasmExport> Exports;
   std::vector<wasm::WasmElemSegment> ElemSegments;
   std::vector<WasmSegment> DataSegments;
+  llvm::Optional<size_t> DataCount;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
   std::vector<wasm::WasmFunctionName> DebugNames;
@@ -318,6 +324,8 @@ public:
     WASM_SEC_ORDER_NAME,
     // "producers" section must appear after "name" section.
     WASM_SEC_ORDER_PRODUCERS,
+    // "target_features" section must appear after producers section
+    WASM_SEC_ORDER_TARGET_FEATURES,
 
     // Must be last
     WASM_NUM_SEC_ORDERS

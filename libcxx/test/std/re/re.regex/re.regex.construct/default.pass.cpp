@@ -21,7 +21,7 @@ void
 test()
 {
     std::basic_regex<CharT> r;
-    assert(r.flags() == 0);
+    assert(r.flags() == std::regex_constants::ECMAScript);
     assert(r.mark_count() == 0);
 }
 

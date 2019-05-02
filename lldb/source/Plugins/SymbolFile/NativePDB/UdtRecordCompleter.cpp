@@ -188,7 +188,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   TypeIndex method_list_idx = overloaded.MethodList;
 
   CVType method_list_type = m_tpi.getType(method_list_idx);
-  assert(method_list_type.Type == LF_METHODLIST);
+  assert(method_list_type.kind() == LF_METHODLIST);
 
   MethodOverloadListRecord method_list;
   llvm::cantFail(TypeDeserializer::deserializeAs<MethodOverloadListRecord>(

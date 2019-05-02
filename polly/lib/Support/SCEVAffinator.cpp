@@ -15,7 +15,6 @@
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
-#include "polly/Support/ScopHelper.h"
 #include "isl/aff.h"
 #include "isl/local_space.h"
 #include "isl/set.h"

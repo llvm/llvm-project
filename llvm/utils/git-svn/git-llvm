@@ -40,6 +40,13 @@ else:
     def iteritems(d):
         return d.iteritems()
 
+try:
+    # Python 3
+    from shlex import quote
+except ImportError:
+    # Python 2
+    from pipes import quote
+
 # It's *almost* a straightforward mapping from the monorepo to svn...
 GIT_TO_SVN_DIR = {
     d: (d + '/trunk')
@@ -110,7 +117,9 @@ def get_dev_null():
 
 def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
           ignore_errors=False, text=True):
-    log_verbose('Running in %s: %s' % (cwd, ' '.join(cmd)))
+    # Escape args when logging for easy repro.
+    quoted_cmd = [quote(arg) for arg in cmd]
+    log_verbose('Running in %s: %s' % (cwd, ' '.join(quoted_cmd)))
 
     err_pipe = subprocess.PIPE
     if ignore_errors:
@@ -128,7 +137,7 @@ def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
 
     if p.returncode == 0 or ignore_errors:
         if stderr and not ignore_errors:
-            eprint('`%s` printed to stderr:' % ' '.join(cmd))
+            eprint('`%s` printed to stderr:' % ' '.join(quoted_cmd))
             eprint(stderr.rstrip())
         if strip:
             if text:
@@ -139,7 +148,7 @@ def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
             for l in stdout.splitlines():
                 log_verbose("STDOUT: %s" % l)
         return stdout
-    err_msg = '`%s` returned %s' % (' '.join(cmd), p.returncode)
+    err_msg = '`%s` returned %s' % (' '.join(quoted_cmd), p.returncode)
     eprint(err_msg)
     if stderr:
         eprint(stderr.rstrip())
@@ -398,6 +407,85 @@ def cmd_push(args):
         svn_push_one_rev(svn_root, r, dry_run)
 
 
+def lookup_llvm_svn_id(git_commit_hash):
+    commit_msg = git('log', '-1', git_commit_hash, ignore_errors=True)
+    if len(commit_msg) == 0:
+      die("Can't find git commit " + git_commit_hash)
+    svn_match = re.search('llvm-svn: (\d{5,7})$', commit_msg)
+    if svn_match:
+      return int(svn_match.group(1))
+    die("Can't find svn revision in git commit " + git_commit_hash)
+
+
+def cmd_svn_lookup(args):
+    '''Find the SVN revision id for a given git commit hash.
+
+    This is identified by 'llvm-svn: NNNNNN' in the git commit message.'''
+    # Get the git root
+    git_root = git('rev-parse', '--show-toplevel')
+    if not os.path.isdir(git_root):
+        die("Can't find git root dir")
+
+    # Run commands from the root
+    os.chdir(git_root)
+
+    log('r' + str(lookup_llvm_svn_id(args.git_commit_hash)))
+
+
+def cmd_revert(args):
+    '''Revert a commit by either SVN id (rNNNNNN) or git hash. This also
+    populates the git commit message with both the SVN revision and git hash of
+    the change being reverted.'''
+
+    # Get the git root
+    git_root = git('rev-parse', '--show-toplevel')
+    if not os.path.isdir(git_root):
+        die("Can't find git root dir")
+
+    # Run commands from the root
+    os.chdir(git_root)
+
+    # Check for a client branch first.
+    open_files = git('status', '-uno', '-s', '--porcelain')
+    if len(open_files) > 0:
+      die("Found open files. Please stash and then revert.\n" + open_files)
+
+    # If the revision looks like rNNNNNN, use that. Otherwise, look for it in
+    # the git commit.
+    svn_match = re.match('^r(\d{5,7})$', args.revision)
+    if svn_match:
+      svn_rev = svn_match.group(1)
+    else:
+      svn_rev = str(lookup_llvm_svn_id(args.revision))
+
+    oneline = git('log', '--all',  '-1', '--format=%H %s', '--grep',
+                  'llvm-svn: ' + svn_rev)
+    if len(oneline) == 0:
+      die("Can't find svn revision r" + svn_rev)
+    (git_hash, msg) = oneline.split(' ', 1)
+
+    log_verbose('Ready to revert r%s/%s: "%s"' % (svn_rev, git_hash, msg))
+
+    revert_args = ['revert', '--no-commit', git_hash]
+    # TODO: Running --edit doesn't seem to work, with errors that stdin is not
+    # a tty.
+    commit_args = [
+        'commit', '-m', 'Revert ' + msg,
+        '-m', 'This reverts r%s (git commit %s)' % (svn_rev, git_hash)]
+    if args.dry_run:
+      log("Would have run the following commands, if this weren't a dry run:\n"
+          '1) git %s\n2) git %s' % (
+              ' '.join(quote(arg) for arg in revert_args),
+              ' '.join(quote(arg) for arg in commit_args)))
+      return
+
+    git(*revert_args)
+    commit_log = git(*commit_args)
+
+    log('Created revert of r%s: %s' % (svn_rev, commit_log))
+    log("Run 'git llvm push -n' to inspect your changes and "
+        "run 'git llvm push' when ready")
+
 if __name__ == '__main__':
     if not program_exists('svn'):
         die('error: git-llvm needs svn command, but svn is not installed.')
@@ -435,6 +523,32 @@ if __name__ == '__main__':
         'upstream, or not in origin/master if the branch lacks '
         'an explicit upstream)')
     parser_push.set_defaults(func=cmd_push)
+
+    parser_revert = subcommands.add_parser(
+        'revert', description=cmd_revert.__doc__,
+        help='Revert a commit locally.')
+    parser_revert.add_argument(
+        'revision',
+        help='Revision to revert. Can either be an SVN revision number '
+        "(rNNNNNN) or a git commit hash (anything that doesn't look "
+        'like an SVN revision number).')
+    parser_revert.add_argument(
+        '-n',
+        '--dry-run',
+        dest='dry_run',
+        action='store_true',
+        help='Do everything other than perform a revert. Prints the git '
+        'revert command it would have run.')
+    parser_revert.set_defaults(func=cmd_revert)
+
+    parser_svn_lookup = subcommands.add_parser(
+        'svn-lookup', description=cmd_svn_lookup.__doc__,
+        help='Find the llvm-svn revision for a given commit.')
+    parser_svn_lookup.add_argument(
+        'git_commit_hash',
+        help='git_commit_hash for which we will look up the svn revision id.')
+    parser_svn_lookup.set_defaults(func=cmd_svn_lookup)
+
     args = p.parse_args(argv)
     VERBOSE = args.verbose
     QUIET = args.quiet

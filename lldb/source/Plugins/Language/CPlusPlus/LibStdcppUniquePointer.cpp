@@ -130,12 +130,11 @@ size_t LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
 
 size_t LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  if (name == ConstString("ptr") || name == ConstString("pointer"))
+  if (name == "ptr" || name == "pointer")
     return 0;
-  if (name == ConstString("del") || name == ConstString("deleter"))
+  if (name == "del" || name == "deleter")
     return 1;
-  if (name == ConstString("obj") || name == ConstString("object") ||
-      name == ConstString("$$dereference$$"))
+  if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
   return UINT32_MAX;
 }

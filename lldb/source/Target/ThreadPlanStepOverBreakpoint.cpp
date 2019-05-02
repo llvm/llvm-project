@@ -16,10 +16,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepOverBreakpoint: Single steps over a breakpoint bp_site_sp at
 // the pc.
-//----------------------------------------------------------------------
 
 ThreadPlanStepOverBreakpoint::ThreadPlanStepOverBreakpoint(Thread &thread)
     : ThreadPlan(

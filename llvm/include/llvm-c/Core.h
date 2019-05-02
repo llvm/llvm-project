@@ -2403,6 +2403,13 @@ LLVMValueRef LLVMGetPersonalityFn(LLVMValueRef Fn);
 void LLVMSetPersonalityFn(LLVMValueRef Fn, LLVMValueRef PersonalityFn);
 
 /**
+ * Obtain the intrinsic ID number which matches the given function name.
+ *
+ * @see llvm::Function::lookupIntrinsicID()
+ */
+unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
+
+/**
  * Obtain the ID number from a function instance.
  *
  * @see llvm::Function::getIntrinsicID()
@@ -2728,34 +2735,23 @@ void LLVMRemoveGlobalIFunc(LLVMValueRef IFunc);
  */
 
 /**
- * Obtain a MDString value from a context.
+ * Create an MDString value from a given string value.
  *
- * The returned instance corresponds to the llvm::MDString class.
+ * The MDString value does not take ownership of the given string, it remains
+ * the responsibility of the caller to free it.
  *
- * The instance is specified by string data of a specified length. The
- * string content is copied, so the backing memory can be freed after
- * this function returns.
+ * @see llvm::MDString::get()
  */
-LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
-                                   unsigned SLen);
+LLVMMetadataRef LLVMMDStringInContext2(LLVMContextRef C, const char *Str,
+                                       size_t SLen);
 
 /**
- * Obtain a MDString value from the global context.
- */
-LLVMValueRef LLVMMDString(const char *Str, unsigned SLen);
-
-/**
- * Obtain a MDNode value from a context.
+ * Create an MDNode value with the given array of operands.
  *
- * The returned value corresponds to the llvm::MDNode class.
+ * @see llvm::MDNode::get()
  */
-LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C, LLVMValueRef *Vals,
-                                 unsigned Count);
-
-/**
- * Obtain a MDNode value from the global context.
- */
-LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
+LLVMMetadataRef LLVMMDNodeInContext2(LLVMContextRef C, LLVMMetadataRef *MDs,
+                                     size_t Count);
 
 /**
  * Obtain a Metadata as a Value.
@@ -2796,6 +2792,17 @@ unsigned LLVMGetMDNodeNumOperands(LLVMValueRef V);
  * @param Dest Destination array for operands.
  */
 void LLVMGetMDNodeOperands(LLVMValueRef V, LLVMValueRef *Dest);
+
+/** Deprecated: Use LLVMMDStringInContext2 instead. */
+LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
+                                   unsigned SLen);
+/** Deprecated: Use LLVMMDStringInContext2 instead. */
+LLVMValueRef LLVMMDString(const char *Str, unsigned SLen);
+/** Deprecated: Use LLVMMDNodeInContext2 instead. */
+LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C, LLVMValueRef *Vals,
+                                 unsigned Count);
+/** Deprecated: Use LLVMMDNodeInContext2 instead. */
+LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
 
 /**
  * @}
@@ -2909,6 +2916,24 @@ LLVMBasicBlockRef LLVMGetPreviousBasicBlock(LLVMBasicBlockRef BB);
  */
 LLVMBasicBlockRef LLVMGetEntryBasicBlock(LLVMValueRef Fn);
 
+/**
+ * Insert the given basic block after the insertion point of the given builder.
+ *
+ * The insertion point must be valid.
+ *
+ * @see llvm::Function::BasicBlockListType::insertAfter()
+ */
+void LLVMInsertExistingBasicBlockAfterInsertBlock(LLVMBuilderRef Builder,
+                                                  LLVMBasicBlockRef BB);
+
+/**
+ * Append the given basic block to the basic block list of the given function.
+ *
+ * @see llvm::Function::BasicBlockListType::push_back()
+ */
+void LLVMAppendExistingBasicBlock(LLVMValueRef Fn,
+                                  LLVMBasicBlockRef BB);
+  
 /**
  * Create a new basic block without inserting it into a function.
  *
@@ -3485,9 +3510,59 @@ void LLVMInsertIntoBuilderWithName(LLVMBuilderRef Builder, LLVMValueRef Instr,
 void LLVMDisposeBuilder(LLVMBuilderRef Builder);
 
 /* Metadata */
-void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L);
-LLVMValueRef LLVMGetCurrentDebugLocation(LLVMBuilderRef Builder);
+
+/**
+ * Get location information used by debugging information.
+ *
+ * @see llvm::IRBuilder::getCurrentDebugLocation()
+ */
+LLVMMetadataRef LLVMGetCurrentDebugLocation2(LLVMBuilderRef Builder);
+
+/**
+ * Set location information used by debugging information.
+ *
+ * To clear the location metadata of the given instruction, pass NULL to \p Loc.
+ *
+ * @see llvm::IRBuilder::SetCurrentDebugLocation()
+ */
+void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc);
+
+/**
+ * Attempts to set the debug location for the given instruction using the
+ * current debug location for the given builder.  If the builder has no current
+ * debug location, this function is a no-op.
+ *
+ * @see llvm::IRBuilder::SetInstDebugLocation()
+ */
 void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst);
+
+/**
+ * Get the dafult floating-point math metadata for a given builder.
+ *
+ * @see llvm::IRBuilder::getDefaultFPMathTag()
+ */
+LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder);
+
+/**
+ * Set the default floating-point math metadata for the given builder.
+ *
+ * To clear the metadata, pass NULL to \p FPMathTag.
+ *
+ * @see llvm::IRBuilder::setDefaultFPMathTag()
+ */
+void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
+                                    LLVMMetadataRef FPMathTag);
+
+/**
+ * Deprecated: Passing the NULL location will crash.
+ * Use LLVMGetCurrentDebugLocation2 instead.
+ */
+void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L);
+/**
+ * Deprecated: Returning the NULL location will crash.
+ * Use LLVMGetCurrentDebugLocation2 instead.
+ */
+LLVMValueRef LLVMGetCurrentDebugLocation(LLVMBuilderRef Builder);
 
 /* Terminators */
 LLVMValueRef LLVMBuildRetVoid(LLVMBuilderRef);

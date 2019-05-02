@@ -20,9 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // BreakpointResolverAddress:
-//----------------------------------------------------------------------
 BreakpointResolverAddress::BreakpointResolverAddress(
     Breakpoint *bkpt, const Address &addr, const FileSpec &module_spec)
     : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver),

@@ -26,7 +26,7 @@
 ; CHECK: br i1 %cmp, label %while.body, label %while.end{{.*}} !prof ![[IDX1:[0-9]*]]
 ; CHECK: br i1 %cmp1, label %if.then, label %if.else{{.*}} !prof ![[IDX2:[0-9]*]]
 ; CHECK: call i32 (i8*, ...) @printf{{.*}} !prof ![[IDX3:[0-9]*]]
-; CHECK: = !{!"TotalCount", i64 10944}
+; CHECK: = !{!"TotalCount", i64 26781}
 ; CHECK: = !{!"MaxCount", i64 5553}
 ; CHECK: ![[IDX1]] = !{!"branch_weights", i32 5392, i32 163}
 ; CHECK: ![[IDX2]] = !{!"branch_weights", i32 5280, i32 113}

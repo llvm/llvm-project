@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t
-// RUN: llvm-readobj -s %t | FileCheck --check-prefix=SECTIONS %s
-// RUN: llvm-readobj -t %t | FileCheck --check-prefix=SYMBOLS %s
+// RUN: llvm-readobj -S %t | FileCheck --check-prefix=SECTIONS %s
+// RUN: llvm-readobj --symbols %t | FileCheck --check-prefix=SYMBOLS %s
 
 // Test that we create a .symtab_shndx if a symbol points to a section
 // numbered SHN_LORESERVE (0xFF00) or higher.

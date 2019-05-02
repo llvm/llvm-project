@@ -332,8 +332,6 @@ class Configuration(object):
             # FIXME this is a hack.
             if self.get_lit_conf('enable_experimental') is None:
                 self.config.enable_experimental = 'true'
-            if self.get_lit_conf('enable_filesystem') is None:
-                self.config.enable_filesystem = 'true'
 
     def configure_use_clang_verify(self):
         '''If set, run clang with -verify on failing tests.'''
@@ -436,6 +434,11 @@ class Configuration(object):
 
         if self.long_tests:
             self.config.available_features.add('long_tests')
+
+        if not self.get_lit_bool('enable_filesystem', default=True):
+            self.config.available_features.add('c++filesystem-disabled')
+            self.config.available_features.add('dylib-has-no-filesystem')
+
 
         # Run a compile test for the -fsized-deallocation flag. This is needed
         # in test/std/language.support/support.dynamic/new.delete
@@ -707,10 +710,6 @@ class Configuration(object):
           self.cxx.compile_flags += ['-D_LIBCPP_ABI_UNSTABLE']
 
     def configure_filesystem_compile_flags(self):
-        enable_fs = self.get_lit_bool('enable_filesystem', default=False)
-        if not enable_fs:
-            return
-        self.config.available_features.add('c++filesystem')
         static_env = os.path.join(self.libcxx_src_root, 'test', 'std',
                                   'input.output', 'filesystems', 'Inputs', 'static_test_env')
         static_env = os.path.realpath(static_env)
@@ -748,12 +747,8 @@ class Configuration(object):
             self.configure_link_flags_abi_library()
             self.configure_extra_library_flags()
         elif self.cxx_stdlib_under_test == 'libstdc++':
-            enable_fs = self.get_lit_bool('enable_filesystem',
-                                          default=False)
-            if enable_fs:
-                self.config.available_features.add('c++experimental')
-                self.cxx.link_flags += ['-lstdc++fs']
-            self.cxx.link_flags += ['-lm', '-pthread']
+            self.config.available_features.add('c++experimental')
+            self.cxx.link_flags += ['-lstdc++fs', '-lm', '-pthread']
         elif self.cxx_stdlib_under_test == 'msvc':
             # FIXME: Correctly setup debug/release flags here.
             pass
@@ -803,10 +798,6 @@ class Configuration(object):
         if libcxx_experimental:
             self.config.available_features.add('c++experimental')
             self.cxx.link_flags += ['-lc++experimental']
-        libcxx_fs = self.get_lit_bool('enable_filesystem', default=False)
-        if libcxx_fs:
-            self.config.available_features.add('c++fs')
-            self.cxx.link_flags += ['-lc++fs']
         if self.link_shared:
             self.cxx.link_flags += ['-lc++']
         else:
@@ -827,7 +818,11 @@ class Configuration(object):
         elif cxx_abi == 'libsupc++':
             self.cxx.link_flags += ['-lsupc++']
         elif cxx_abi == 'libcxxabi':
-            if self.target_info.allow_cxxabi_link():
+            # If the C++ library requires explicitly linking to libc++abi, or
+            # if we're testing libc++abi itself (the test configs are shared),
+            # then link it.
+            testing_libcxxabi = self.get_lit_conf('name', '') == 'libc++abi'
+            if self.target_info.allow_cxxabi_link() or testing_libcxxabi:
                 libcxxabi_shared = self.get_lit_bool('libcxxabi_shared', default=True)
                 if libcxxabi_shared:
                     self.cxx.link_flags += ['-lc++abi']
@@ -1154,6 +1149,10 @@ class Configuration(object):
         # features are enabled/disabled. Otherwise, disable availability markup,
         # which is not relevant for non-shipped flavors of libc++.
         if self.use_system_cxx_lib:
+            # Dylib support for shared_mutex was added in macosx10.12.
+            if name == 'macosx' and version in ('10.%s' % v for v in range(7, 12)):
+                self.config.available_features.add('dylib-has-no-shared_mutex')
+                self.lit_config.note("shared_mutex is not supported by the deployment target")
             # Throwing bad_optional_access, bad_variant_access and bad_any_cast is
             # supported starting in macosx10.14.
             if name == 'macosx' and version in ('10.%s' % v for v in range(7, 14)):
@@ -1165,6 +1164,10 @@ class Configuration(object):
 
                 self.config.available_features.add('dylib-has-no-bad_any_cast')
                 self.lit_config.note("throwing bad_any_cast is not supported by the deployment target")
+            # Filesystem is not supported on Apple platforms yet
+            if name == 'macosx':
+                self.config.available_features.add('dylib-has-no-filesystem')
+                self.lit_config.note("the deployment target does not support the dylib parts of <filesystem>")
         else:
             self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 

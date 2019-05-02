@@ -572,10 +572,9 @@ public:
   SampleSorter(const std::map<LocationT, SampleT> &Samples) {
     for (const auto &I : Samples)
       V.push_back(&I);
-    std::stable_sort(V.begin(), V.end(),
-                     [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
-                       return A->first < B->first;
-                     });
+    llvm::stable_sort(V, [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
+      return A->first < B->first;
+    });
   }
 
   const SamplesWithLocList &get() const { return V; }

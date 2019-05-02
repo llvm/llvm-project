@@ -149,10 +149,8 @@ public:
     return nullptr;
   }
 
-  //------------------------------------------------------------------
   // Return the size in bytes that this object and any items in its collection
   // of uniqued strings + data count values takes in memory.
-  //------------------------------------------------------------------
   size_t MemorySize() const {
     size_t mem_size = sizeof(Pool);
     for (const auto &pool : m_string_pools) {
@@ -177,7 +175,6 @@ protected:
   std::array<PoolEntry, 256> m_string_pools;
 };
 
-//----------------------------------------------------------------------
 // Frameworks and dylibs aren't supposed to have global C++ initializers so we
 // hide the string pool in a static function so that it will get initialized on
 // the first call to this static function.
@@ -186,7 +183,6 @@ protected:
 // can't guarantee that some objects won't get destroyed after the global
 // destructor chain is run, and trying to make sure no destructors touch
 // ConstStrings is difficult.  So we leak the pool instead.
-//----------------------------------------------------------------------
 static Pool &StringPool() {
   static llvm::once_flag g_pool_initialization_flag;
   static Pool *g_string_pool = nullptr;
@@ -204,7 +200,7 @@ ConstString::ConstString(const char *cstr, size_t cstr_len)
     : m_string(StringPool().GetConstCStringWithLength(cstr, cstr_len)) {}
 
 ConstString::ConstString(const llvm::StringRef &s)
-    : m_string(StringPool().GetConstCStringWithLength(s.data(), s.size())) {}
+    : m_string(StringPool().GetConstCStringWithStringRef(s)) {}
 
 bool ConstString::operator<(ConstString rhs) const {
   if (m_string == rhs.m_string)

@@ -110,7 +110,6 @@ public:
 
   void RefreshStateAfterStop();
 
-  //------------------------------------------------------------------
   /// The thread list asks tells all the threads it is about to resume.
   /// If a thread can "resume" without having to resume the target, it
   /// will return false for WillResume, and then the process will not be
@@ -122,7 +121,6 @@ public:
   ///    the process will not actually run.  The thread must then return
   ///    the correct StopInfo when asked.
   ///
-  //------------------------------------------------------------------
   bool WillResume();
 
   void DidResume();
@@ -144,9 +142,7 @@ protected:
 
   void NotifySelectedThreadChanged(lldb::tid_t tid);
 
-  //------------------------------------------------------------------
   // Classes that inherit from Process can see and modify these
-  //------------------------------------------------------------------
   Process *m_process; ///< The process that manages this thread list.
   uint32_t
       m_stop_id; ///< The process stop ID that this thread list is valid for.

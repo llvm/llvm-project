@@ -52,4 +52,25 @@
                   Category="General">
   </StringProperty>
 
+
+  <BoolProperty Name="UseLlvmLib"
+                DisplayName="Use llvm-lib"
+                Description="Use llvm-lib for managing libraries.  If this option is disabled, the Microsoft librarian (lib.exe) will be used instead."
+                Category="General"
+                Default="true">
+  </BoolProperty>
+  <StringProperty Name="LlvmLibExecutable"
+                  DisplayName="llvm-lib Executable"
+                  Description="Specifies the path to llvm-lib.exe."
+                  Category="General"
+                  Default="$(LLVMInstallDir)bin\llvm-lib.exe"
+                  Subtype="file">
+  </StringProperty>
+
+  <StringProperty Name="LlvmLibAdditionalOptions"
+                  DisplayName="Additional Librarian Options"
+                  Description="Additional options to pass to llvm-lib.  This is essentially the same as General > Librarian > Command Line > Additional Options, except that it is safe to put options here that will be rejected by lib.exe in case you switch toolchains back and forth."
+                  Category="General">
+  </StringProperty>
+
 </Rule>

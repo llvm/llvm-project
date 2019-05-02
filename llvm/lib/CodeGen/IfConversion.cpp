@@ -1316,7 +1316,7 @@ void IfConverter::AnalyzeBlocks(
     AnalyzeBlock(MBB, Tokens);
 
   // Sort to favor more complex ifcvt scheme.
-  std::stable_sort(Tokens.begin(), Tokens.end(), IfcvtTokenCmp);
+  llvm::stable_sort(Tokens, IfcvtTokenCmp);
 }
 
 /// Returns true either if ToMBB is the next block after MBB or that all the

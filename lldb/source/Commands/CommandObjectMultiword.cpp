@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiword
-//-------------------------------------------------------------------------
 
 CommandObjectMultiword::CommandObjectMultiword(CommandInterpreter &interpreter,
                                                const char *name,

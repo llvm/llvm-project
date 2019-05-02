@@ -1,6 +1,5 @@
 # Tests the data flow tracer.
-REQUIRES: linux
-UNSUPPORTED: aarch64
+REQUIRES: linux, x86_64
 
 # Build the tracer and the test.
 RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow  %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-DataFlow.o

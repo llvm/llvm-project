@@ -18,27 +18,27 @@
 template <class T, class U>
 void test_add_lvalue_reference()
 {
-    static_assert((std::is_same<typename std::add_lvalue_reference<T>::type, U>::value), "");
+    ASSERT_SAME_TYPE(U, typename std::add_lvalue_reference<T>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::add_lvalue_reference_t<T>, U>::value), "");
+    ASSERT_SAME_TYPE(U, std::add_lvalue_reference_t<T>);
 #endif
 }
 
 template <class F>
 void test_function0()
 {
-    static_assert((std::is_same<typename std::add_lvalue_reference<F>::type, F&>::value), "");
+    ASSERT_SAME_TYPE(F&, typename std::add_lvalue_reference<F>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::add_lvalue_reference_t<F>, F&>::value), "");
+    ASSERT_SAME_TYPE(F&, std::add_lvalue_reference_t<F>);
 #endif
 }
 
 template <class F>
 void test_function1()
 {
-    static_assert((std::is_same<typename std::add_lvalue_reference<F>::type, F>::value), "");
+    ASSERT_SAME_TYPE(F, typename std::add_lvalue_reference<F>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::add_lvalue_reference_t<F>, F>::value), "");
+    ASSERT_SAME_TYPE(F, std::add_lvalue_reference_t<F>);
 #endif
 }
 

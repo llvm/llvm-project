@@ -110,7 +110,6 @@ private:
   // user somehow.
   bool IsSkipFrame() const;
 
-  //------------------------------------------------------------------
   /// Determines if a SymbolContext is a trap handler or not
   ///
   /// Given a SymbolContext, determines if this is a trap handler function
@@ -118,7 +117,6 @@ private:
   ///
   /// \return
   ///     Returns true if the SymbolContext is a trap handler.
-  //------------------------------------------------------------------
   bool IsTrapHandlerSymbol(lldb_private::Process *process,
                            const lldb_private::SymbolContext &m_sym_ctx) const;
 
@@ -154,7 +152,6 @@ private:
       const lldb_private::RegisterInfo *reg_info,
       const lldb_private::RegisterValue &value);
 
-  //------------------------------------------------------------------
   /// If the unwind has to the caller frame has failed, try something else
   ///
   /// If lldb is using an assembly language based UnwindPlan for a frame and
@@ -165,10 +162,8 @@ private:
   ///
   /// \return
   ///     Returns true if a fallback unwindplan was found & was installed.
-  //------------------------------------------------------------------
   bool TryFallbackUnwindPlan();
 
-  //------------------------------------------------------------------
   /// Switch to the fallback unwind plan unconditionally without any safety
   /// checks that it is providing better results than the normal unwind plan.
   ///
@@ -176,7 +171,6 @@ private:
   /// found to be fundamentally incorrect/impossible.
   ///
   /// Returns true if it was able to install the fallback unwind plan.
-  //------------------------------------------------------------------
   bool ForceSwitchToFallbackUnwindPlan();
 
   // Get the contents of a general purpose (address-size) register for this
@@ -249,9 +243,7 @@ private:
   lldb_private::UnwindLLDB &m_parent_unwind; // The UnwindLLDB that is creating
                                              // this RegisterContextLLDB
 
-  //------------------------------------------------------------------
   // For RegisterContextLLDB only
-  //------------------------------------------------------------------
 
   DISALLOW_COPY_AND_ASSIGN(RegisterContextLLDB);
 };

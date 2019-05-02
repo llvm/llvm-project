@@ -137,7 +137,6 @@ public:
   lldb::SBValue CreateValueFromData(const char *name, lldb::SBData data,
                                     lldb::SBType type);
 
-  //------------------------------------------------------------------
   /// Get a child value by index from a value.
   ///
   /// Structs, unions, classes, arrays and pointers have child
@@ -190,7 +189,6 @@ public:
   ///
   /// \return
   ///     A new SBValue object that represents the child member value.
-  //------------------------------------------------------------------
   lldb::SBValue GetChildAtIndex(uint32_t idx,
                                 lldb::DynamicValueType use_dynamic,
                                 bool can_create_synthetic);
@@ -217,7 +215,6 @@ public:
 
   lldb::SBAddress GetAddress();
 
-  //------------------------------------------------------------------
   /// Get an SBData wrapping what this SBValue points to.
   ///
   /// This method will dereference the current SBValue, if its
@@ -237,10 +234,8 @@ public:
   /// \return
   ///     An SBData with the contents of the copied items, on success.
   ///     An empty SBData otherwise.
-  //------------------------------------------------------------------
   lldb::SBData GetPointeeData(uint32_t item_idx = 0, uint32_t item_count = 1);
 
-  //------------------------------------------------------------------
   /// Get an SBData wrapping the contents of this SBValue.
   ///
   /// This method will read the contents of this object in memory
@@ -249,14 +244,12 @@ public:
   /// \return
   ///     An SBData with the contents of this SBValue, on success.
   ///     An empty SBData otherwise.
-  //------------------------------------------------------------------
   lldb::SBData GetData();
 
   bool SetData(lldb::SBData &data, lldb::SBError &error);
 
   lldb::SBDeclaration GetDeclaration();
 
-  //------------------------------------------------------------------
   /// Find out if a SBValue might have children.
   ///
   /// This call is much more efficient than GetNumChildren() as it
@@ -271,7 +264,6 @@ public:
   /// \return
   ///     Returns \b true if the SBValue might have children, or \b
   ///     false otherwise.
-  //------------------------------------------------------------------
   bool MightHaveChildren();
 
   bool IsRuntimeSupportValue();
@@ -315,7 +307,6 @@ public:
 
   SBValue(const lldb::ValueObjectSP &value_sp);
 
-  //------------------------------------------------------------------
   /// Watch this value if it resides in memory.
   ///
   /// Sets a watchpoint on the value.
@@ -340,14 +331,12 @@ public:
   ///     return due to a value not being contained in memory, too
   ///     large, or watchpoint resources are not available or all in
   ///     use.
-  //------------------------------------------------------------------
   lldb::SBWatchpoint Watch(bool resolve_location, bool read, bool write,
                            SBError &error);
 
   // Backward compatibility fix in the interim.
   lldb::SBWatchpoint Watch(bool resolve_location, bool read, bool write);
 
-  //------------------------------------------------------------------
   /// Watch this value that this value points to in memory
   ///
   /// Sets a watchpoint on the value.
@@ -372,11 +361,9 @@ public:
   ///     return due to a value not being contained in memory, too
   ///     large, or watchpoint resources are not available or all in
   ///     use.
-  //------------------------------------------------------------------
   lldb::SBWatchpoint WatchPointee(bool resolve_location, bool read, bool write,
                                   SBError &error);
 
-  //------------------------------------------------------------------
   /// Same as the protected version of GetSP that takes a locker, except that we
   /// make the
   /// locker locally in the function.  Since the Target API mutex is recursive,
@@ -388,7 +375,6 @@ public:
   /// \return
   ///     A ValueObjectSP of the best kind (static, dynamic or synthetic) we
   ///     can cons up, in accordance with the SBValue's settings.
-  //------------------------------------------------------------------
   lldb::ValueObjectSP GetSP() const;
 
 protected:
@@ -398,7 +384,6 @@ protected:
   friend class SBThread;
   friend class SBValueList;
 
-  //------------------------------------------------------------------
   /// Get the appropriate ValueObjectSP from this SBValue, consulting the
   /// use_dynamic and use_synthetic options passed in to SetSP when the
   /// SBValue's contents were set.  Since this often requires examining memory,
@@ -422,7 +407,6 @@ protected:
   /// \return
   ///     A ValueObjectSP of the best kind (static, dynamic or synthetic) we
   ///     can cons up, in accordance with the SBValue's settings.
-  //------------------------------------------------------------------
   lldb::ValueObjectSP GetSP(ValueLocker &value_locker) const;
 
   // these calls do the right thing WRT adjusting their settings according to

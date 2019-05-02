@@ -278,7 +278,7 @@ class Su_ni1<PatFrag Op>
             if (hasOneUse(N)){
               // Check if Op1 is an immediate operand.
               SDValue Op1 = N->getOperand(1);
-              return !dyn_cast<ConstantSDNode>(Op1);
+              return !isa<ConstantSDNode>(Op1);
             }
             return false;}],
             Op.OperandTransform>;

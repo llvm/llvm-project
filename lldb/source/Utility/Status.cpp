@@ -95,9 +95,7 @@ llvm::Error Status::ToError() const {
                                              llvm::inconvertibleErrorCode());
 }
 
-//----------------------------------------------------------------------
 // Assignment operator
-//----------------------------------------------------------------------
 const Status &Status::operator=(const Status &rhs) {
   if (this != &rhs) {
     m_code = rhs.m_code;
@@ -126,11 +124,9 @@ static std::string RetrieveWin32ErrorString(uint32_t error_code) {
 }
 #endif
 
-//----------------------------------------------------------------------
 // Get the error value as a NULL C string. The error string will be fetched and
 // cached on demand. The cached error string value will remain until the error
 // value is changed or cleared.
-//----------------------------------------------------------------------
 const char *Status::AsCString(const char *default_error_str) const {
   if (Success())
     return nullptr;
@@ -167,35 +163,25 @@ const char *Status::AsCString(const char *default_error_str) const {
   return m_string.c_str();
 }
 
-//----------------------------------------------------------------------
 // Clear the error and any cached error string that it might contain.
-//----------------------------------------------------------------------
 void Status::Clear() {
   m_code = 0;
   m_type = eErrorTypeInvalid;
   m_string.clear();
 }
 
-//----------------------------------------------------------------------
 // Access the error value.
-//----------------------------------------------------------------------
 Status::ValueType Status::GetError() const { return m_code; }
 
-//----------------------------------------------------------------------
 // Access the error type.
-//----------------------------------------------------------------------
 ErrorType Status::GetType() const { return m_type; }
 
-//----------------------------------------------------------------------
 // Returns true if this object contains a value that describes an error or
 // otherwise non-success result.
-//----------------------------------------------------------------------
 bool Status::Fail() const { return m_code != 0; }
 
-//----------------------------------------------------------------------
 // Set accessor for the error value to "err" and the type to
 // "eErrorTypeMachKernel"
-//----------------------------------------------------------------------
 void Status::SetMachError(uint32_t err) {
   m_code = err;
   m_type = eErrorTypeMachKernel;
@@ -226,40 +212,32 @@ int Status::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
   return length;
 }
 
-//----------------------------------------------------------------------
 // Set accessor for the error value and type.
-//----------------------------------------------------------------------
 void Status::SetError(ValueType err, ErrorType type) {
   m_code = err;
   m_type = type;
   m_string.clear();
 }
 
-//----------------------------------------------------------------------
 // Update the error value to be "errno" and update the type to be "POSIX".
-//----------------------------------------------------------------------
 void Status::SetErrorToErrno() {
   m_code = errno;
   m_type = eErrorTypePOSIX;
   m_string.clear();
 }
 
-//----------------------------------------------------------------------
 // Update the error value to be LLDB_GENERIC_ERROR and update the type to be
 // "Generic".
-//----------------------------------------------------------------------
 void Status::SetErrorToGenericError() {
   m_code = LLDB_GENERIC_ERROR;
   m_type = eErrorTypeGeneric;
   m_string.clear();
 }
 
-//----------------------------------------------------------------------
 // Set accessor for the error string value for a specific error. This allows
 // any string to be supplied as an error explanation. The error string value
 // will remain until the error value is cleared or a new error value/type is
 // assigned.
-//----------------------------------------------------------------------
 void Status::SetErrorString(llvm::StringRef err_str) {
   if (!err_str.empty()) {
     // If we have an error string, we should always at least have an error set
@@ -270,12 +248,10 @@ void Status::SetErrorString(llvm::StringRef err_str) {
   m_string = err_str;
 }
 
-//------------------------------------------------------------------
 /// Set the current error string to a formatted error string.
 ///
 /// \param format
 ///     A printf style format string
-//------------------------------------------------------------------
 int Status::SetErrorStringWithFormat(const char *format, ...) {
   if (format != nullptr && format[0]) {
     va_list args;
@@ -306,10 +282,8 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Returns true if the error code in this object is considered a successful
 // return value.
-//----------------------------------------------------------------------
 bool Status::Success() const { return m_code == 0; }
 
 bool Status::WasInterrupted() const {

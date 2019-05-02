@@ -93,18 +93,14 @@ elseif(NOT LLDB_NO_DEBUGSERVER)
   # Default case: on Darwin we need the right code signing ID.
   # See lldb/docs/code-signing.txt for details.
   if(CMAKE_HOST_APPLE AND NOT LLVM_CODESIGNING_IDENTITY STREQUAL "lldb_codesign")
-    set(problem "Cannot code sign debugserver with LLVM_CODESIGNING_IDENTITY '${LLVM_CODESIGNING_IDENTITY}'.")
-    set(advice "Pass -DLLDB_CODESIGN_IDENTITY=lldb_codesign to override the LLVM value for debugserver.")
-    if(system_debugserver)
-      set(effect "Will fall back to system's debugserver.")
-      set(use_system_debugserver ON)
-    else()
-      set(effect "debugserver will not be available.")
-    endif()
-    message(WARNING "${problem} ${effect} ${advice}")
-  else()
-    set(build_and_sign_debugserver ON)
+    message(WARNING "Codesigning debugserver with identity ${LLVM_CODESIGNING_IDENTITY}. "
+                    "The usual setup uses the \"lldb_codesign\" identity created with "
+                    "scripts/macos-setup-codesign.sh. As a result your debugserver might "
+                    "not be able to attach to processes.\n"
+                    "Pass -DLLDB_CODESIGN_IDENTITY=lldb_codesign to use the development "
+                    "signing identity.")
   endif()
+  set(build_and_sign_debugserver ON)
 endif()
 
 # TODO: We don't use the $<TARGET_FILE:debugserver> generator expression here,

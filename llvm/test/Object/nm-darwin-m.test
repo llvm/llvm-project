@@ -1,6 +1,6 @@
-RUN: llvm-nm -format darwin %p/Inputs/darwin-m-test1.mach0-armv7 \
+RUN: llvm-nm --format=darwin %p/Inputs/darwin-m-test1.mach0-armv7 \
 RUN:         | FileCheck %s -check-prefix test1
-RUN: llvm-nm -format darwin %p/Inputs/darwin-m-test2.macho-i386 \
+RUN: llvm-nm --format=darwin %p/Inputs/darwin-m-test2.macho-i386 \
 RUN:         | FileCheck %s -check-prefix test2
 RUN: llvm-nm -m %p/Inputs/darwin-m-test3.macho-x86-64 \
 RUN:         | FileCheck %s -check-prefix test3

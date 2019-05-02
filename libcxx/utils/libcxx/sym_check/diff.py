@@ -14,10 +14,10 @@ from libcxx.sym_check import util
 
 
 def _symbol_difference(lhs, rhs):
-    lhs_names = set((n['name'] for n in lhs))
-    rhs_names = set((n['name'] for n in rhs))
+    lhs_names = set(((n['name'], n['type']) for n in lhs))
+    rhs_names = set(((n['name'], n['type']) for n in rhs))
     diff_names = lhs_names - rhs_names
-    return [n for n in lhs if n['name'] in diff_names]
+    return [n for n in lhs if (n['name'], n['type']) in diff_names]
 
 
 def _find_by_key(sym_list, k):

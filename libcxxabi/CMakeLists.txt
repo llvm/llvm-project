@@ -46,6 +46,7 @@ include(HandleCompilerRT)
 option(LIBCXXABI_ENABLE_EXCEPTIONS "Use exceptions." ON)
 option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
+option(LIBCXXABI_ENABLE_PIC "Build Position-Independent Code, even in static library" ON)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF)
@@ -450,9 +451,7 @@ set(LIBCXXABI_LIBUNWIND_PATH "${LIBCXXABI_LIBUNWIND_PATH}" CACHE PATH
 
 include_directories(include)
 if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
-  find_path(
-    LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL
-    libunwind.h
+  find_path(LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL libunwind.h
     PATHS ${LIBCXXABI_LIBUNWIND_INCLUDES}
           ${LIBCXXABI_LIBUNWIND_PATH}/include
           ${CMAKE_BINARY_DIR}/${LIBCXXABI_LIBUNWIND_INCLUDES}

@@ -1,22 +1,8 @@
 /*===---- emmintrin.h - SSE2 intrinsics ------------------------------------===
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  *===-----------------------------------------------------------------------===
  */
@@ -2319,11 +2305,7 @@ _mm_adds_epu16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_avg_epu8(__m128i __a, __m128i __b)
 {
-  typedef unsigned short __v16hu __attribute__ ((__vector_size__ (32)));
-  return (__m128i)__builtin_convertvector(
-               ((__builtin_convertvector((__v16qu)__a, __v16hu) +
-                 __builtin_convertvector((__v16qu)__b, __v16hu)) + 1)
-                 >> 1, __v16qu);
+  return (__m128i)__builtin_ia32_pavgb128((__v16qi)__a, (__v16qi)__b);
 }
 
 /// Computes the rounded avarages of corresponding elements of two
@@ -2343,11 +2325,7 @@ _mm_avg_epu8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_avg_epu16(__m128i __a, __m128i __b)
 {
-  typedef unsigned int __v8su __attribute__ ((__vector_size__ (32)));
-  return (__m128i)__builtin_convertvector(
-               ((__builtin_convertvector((__v8hu)__a, __v8su) +
-                 __builtin_convertvector((__v8hu)__b, __v8su)) + 1)
-                 >> 1, __v8hu);
+  return (__m128i)__builtin_ia32_pavgw128((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Multiplies the corresponding elements of two 128-bit signed [8 x i16]

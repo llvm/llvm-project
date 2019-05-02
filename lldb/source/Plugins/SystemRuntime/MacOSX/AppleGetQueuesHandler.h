@@ -56,7 +56,6 @@ public:
           count(0) {}
   };
 
-  //----------------------------------------------------------
   /// Get the list of queues that exist (with any active or pending items) via
   /// a call to introspection_get_dispatch_queues().  If there's a page of
   /// memory that needs to be freed, pass in the address and size and it will
@@ -83,7 +82,6 @@ public:
   ///     failure of any kind while getting
   ///     the information, the queues_buffer_ptr value will be
   ///     LLDB_INVALID_ADDRESS.
-  //----------------------------------------------------------
   GetQueuesReturnInfo GetCurrentQueues(Thread &thread,
                                        lldb::addr_t page_to_free,
                                        uint64_t page_to_free_size,

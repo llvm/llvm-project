@@ -16,6 +16,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/FileSpec.h"
@@ -40,25 +41,43 @@ static bool VerifyClangPath(const llvm::Twine &clang_path) {
 /// This will compute the clang resource directory assuming that clang was
 /// installed with the same prefix as lldb.
 ///
+/// If verify is true, the first candidate resource directory will be returned.
+/// This mode is only used for testing.
+///
 static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
-                                         FileSpec &file_spec, bool verify) {
+                                                 FileSpec &file_spec,
+                                                 bool verify) {
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
   std::string raw_path = lldb_shlib_spec.GetPath();
   llvm::StringRef parent_dir = llvm::sys::path::parent_path(raw_path);
 
-  llvm::SmallString<256> clang_dir(parent_dir);
-  llvm::SmallString<32> relative_path;
-  llvm::sys::path::append(relative_path,
-                          llvm::Twine("lib") + CLANG_LIBDIR_SUFFIX, "clang",
-                          CLANG_VERSION_STRING);
+  static const llvm::StringRef kResourceDirSuffixes[] = {
+      // LLVM.org's build of LLDB uses the clang resource directory placed
+      // in $install_dir/lib{,64}/clang/$clang_version.
+      "lib" CLANG_LIBDIR_SUFFIX "/clang/" CLANG_VERSION_STRING,
+      // swift-lldb uses the clang resource directory copied from swift, which
+      // by default is placed in $install_dir/lib{,64}/lldb/clang. LLDB places
+      // it there, so we use LLDB_LIBDIR_SUFFIX.
+      "lib" LLDB_LIBDIR_SUFFIX "/lldb/clang",
+  };
 
-  llvm::sys::path::append(clang_dir, relative_path);
-  if (!verify || VerifyClangPath(clang_dir)) {
-    file_spec.GetDirectory().SetString(clang_dir);
-    FileSystem::Instance().Resolve(file_spec);
-    return true;
+  for (const auto &Suffix : kResourceDirSuffixes) {
+    llvm::SmallString<256> clang_dir(parent_dir);
+    llvm::SmallString<32> relative_path(Suffix);
+    llvm::sys::path::native(relative_path);
+    llvm::sys::path::append(clang_dir, relative_path);
+    if (!verify || VerifyClangPath(clang_dir)) {
+      if (log)
+        log->Printf("DefaultComputeClangResourceDir: Setting ClangResourceDir "
+                    "to \"%s\", verify = %s",
+                    clang_dir.str().str().c_str(), verify ? "true" : "false");
+      file_spec.GetDirectory().SetString(clang_dir);
+      FileSystem::Instance().Resolve(file_spec);
+      return true;
+    }
   }
 
-  return HostInfo::ComputePathRelativeToLibrary(file_spec, relative_path);
+  return false;
 }
 
 bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,

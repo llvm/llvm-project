@@ -89,3 +89,51 @@ TEST(ConstStringTest, NullAndEmptyStates) {
   EXPECT_TRUE(null.IsEmpty());
   EXPECT_TRUE(null.IsNull());
 }
+
+TEST(ConstStringTest, CompareConstString) {
+  ConstString foo("foo");
+  ConstString foo2("foo");
+  ConstString bar("bar");
+
+  EXPECT_TRUE(foo == foo2);
+  EXPECT_TRUE(foo2 == foo);
+  EXPECT_TRUE(foo == ConstString("foo"));
+
+  EXPECT_FALSE(foo == bar);
+  EXPECT_FALSE(foo2 == bar);
+  EXPECT_FALSE(foo == ConstString("bar"));
+  EXPECT_FALSE(foo == ConstString("different"));
+  EXPECT_FALSE(foo == ConstString(""));
+  EXPECT_FALSE(foo == ConstString());
+
+  ConstString empty("");
+  EXPECT_FALSE(empty == ConstString("bar"));
+  EXPECT_FALSE(empty == ConstString());
+  EXPECT_TRUE(empty == ConstString(""));
+
+  ConstString null;
+  EXPECT_FALSE(null == ConstString("bar"));
+  EXPECT_TRUE(null == ConstString());
+  EXPECT_FALSE(null == ConstString(""));
+}
+
+TEST(ConstStringTest, CompareStringRef) {
+  ConstString foo("foo");
+
+  EXPECT_TRUE(foo == "foo");
+  EXPECT_TRUE(foo != "");
+  EXPECT_FALSE(foo == static_cast<const char *>(nullptr));
+  EXPECT_TRUE(foo != "bar");
+
+  ConstString empty("");
+  EXPECT_FALSE(empty == "foo");
+  EXPECT_FALSE(empty != "");
+  EXPECT_FALSE(empty == static_cast<const char *>(nullptr));
+  EXPECT_TRUE(empty != "bar");
+
+  ConstString null;
+  EXPECT_FALSE(null == "foo");
+  EXPECT_TRUE(null != "");
+  EXPECT_TRUE(null == static_cast<const char *>(nullptr));
+  EXPECT_TRUE(null != "bar");
+}

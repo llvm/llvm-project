@@ -1,10 +1,9 @@
-RUN: llvm-readobj -stackmap %p/Inputs/stackmap-test.macho-x86-64 | FileCheck %s
+RUN: llvm-readobj --stackmap %p/Inputs/stackmap-test.macho-x86-64 | FileCheck %s
 
 ; Note: the macho object file in this test was generated in the following way:
-; llc -mtriple=x86_64-apple-darwin %p/test/CodeGen/X86/stackmap.ll -o stackmap.s
-; clang -c stackmap.s -o %p/test/Object/Inputs/stackmap-test.macho-x86-64
+; llc -mtriple=x86_64-apple-darwin test/CodeGen/X86/stackmap.ll -o test/Object/Inputs/stackmap-test.macho-x86-64 -filetype=obj
 
-CHECK: LLVM StackMap Version: 2
+CHECK: LLVM StackMap Version: 3
 CHECK-NEXT: Num Functions: 16
 CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
 CHECK-NEXT:   Function address: 0, stack size: 24, callsite record count: 1
@@ -13,8 +12,8 @@ CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
 CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
 CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
 CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
-CHECK-NEXT:   Function address: 0, stack size: 56, callsite record count: 1
-CHECK-NEXT:   Function address: 0, stack size: 56, callsite record count: 1
+CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
+CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
 CHECK-NEXT:   Function address: 0, stack size: 56, callsite record count: 1
 CHECK-NEXT:   Function address: 0, stack size: 56, callsite record count: 1
 CHECK-NEXT:   Function address: 0, stack size: 8, callsite record count: 1
@@ -29,123 +28,123 @@ CHECK-NEXT:   #3: 4294967296
 CHECK-NEXT: Num Records: 20
 CHECK-NEXT:   Record ID: 1, instruction offset: 4
 CHECK-NEXT:     12 locations:
-CHECK-NEXT:       #1: Constant 4294967295
-CHECK-NEXT:       #2: Constant 4294967295
-CHECK-NEXT:       #3: Constant 65536
-CHECK-NEXT:       #4: Constant 2000000000
-CHECK-NEXT:       #5: Constant 2147483647
-CHECK-NEXT:       #6: Constant 4294967295
-CHECK-NEXT:       #7: Constant 4294967295
-CHECK-NEXT:       #8: Constant 0
-CHECK-NEXT:       #9: ConstantIndex #0 (2147483648)
-CHECK-NEXT:       #10: ConstantIndex #1 (4294967295)
-CHECK-NEXT:       #11: ConstantIndex #2 (4294967296)
-CHECK-NEXT:       #12: Constant 4294967295
+CHECK-NEXT:       #1: Constant 4294967295, size: 8
+CHECK-NEXT:       #2: Constant 4294967295, size: 8
+CHECK-NEXT:       #3: Constant 65536, size: 8
+CHECK-NEXT:       #4: Constant 2000000000, size: 8
+CHECK-NEXT:       #5: Constant 2147483647, size: 8
+CHECK-NEXT:       #6: Constant 4294967295, size: 8
+CHECK-NEXT:       #7: Constant 4294967295, size: 8
+CHECK-NEXT:       #8: Constant 0, size: 8
+CHECK-NEXT:       #9: ConstantIndex #0 (2147483648), size: 8
+CHECK-NEXT:       #10: ConstantIndex #1 (4294967295), size: 8
+CHECK-NEXT:       #11: ConstantIndex #2 (4294967296), size: 8
+CHECK-NEXT:       #12: Constant 4294967295, size: 8
 CHECK-NEXT:     1 live-outs: [ R#7 (8-bytes) ]
 
 CHECK:        Record ID: 3, instruction offset: 22
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Register R#3
-CHECK-NEXT:       #2: Register R#14
+CHECK-NEXT:       #1: Register R#3, size: 8
+CHECK-NEXT:       #2: Register R#14, size: 8
 CHECK-NEXT:     0 live-outs: [ ]
 
 CHECK:        Record ID: 4, instruction offset: 10
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Register R#5
-CHECK-NEXT:       #2: Register R#4
+CHECK-NEXT:       #1: Register R#5, size: 8
+CHECK-NEXT:       #2: Register R#4, size: 8
 CHECK-NEXT:     0 live-outs: [ ]
 
 CHECK:        Record ID: 5, instruction offset: 4
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Register R#0
-CHECK-NEXT:       #2: Register R#5
+CHECK-NEXT:       #1: Register R#0, size: 8
+CHECK-NEXT:       #2: Register R#5, size: 8
 CHECK-NEXT:     2 live-outs: [ R#0 (8-bytes) R#7 (8-bytes) ]
 
 CHECK:        Record ID: 6, instruction offset: 4
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Register R#4
-CHECK-NEXT:       #2: Register R#2
+CHECK-NEXT:       #1: Register R#4, size: 8
+CHECK-NEXT:       #2: Register R#2, size: 8
 CHECK-NEXT:     1 live-outs: [ R#7 (8-bytes) ]
 
 CHECK:        Record ID: 7, instruction offset: 10
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Register R#2
-CHECK-NEXT:       #2: Register R#8
+CHECK-NEXT:       #1: Register R#2, size: 8
+CHECK-NEXT:       #2: Register R#8, size: 8
 CHECK-NEXT:     1 live-outs: [ R#7 (8-bytes) ]
 
 CHECK:        Record ID: 8, instruction offset: 10
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Register R#2
-CHECK-NEXT:       #2: Register R#8
+CHECK-NEXT:       #1: Register R#2, size: 8
+CHECK-NEXT:       #2: Register R#8, size: 8
 CHECK-NEXT:     2 live-outs: [ R#0 (8-bytes) R#7 (8-bytes) ]
 
-CHECK:        Record ID: 11, instruction offset: 42
+CHECK:        Record ID: 11, instruction offset: 4
 CHECK-NEXT:     17 locations:
-CHECK-NEXT:       #1: Register R#9
-CHECK-NEXT:       #2: Register R#14
-CHECK-NEXT:       #3: Register R#10
-CHECK-NEXT:       #4: Register R#3
-CHECK-NEXT:       #5: Register R#0
-CHECK-NEXT:       #6: Register R#13
-CHECK-NEXT:       #7: Register R#12
-CHECK-NEXT:       #8: Register R#15
-CHECK-NEXT:       #9: Indirect [R#6 + 72]
-CHECK-NEXT:       #10: Indirect [R#6 + 80]
-CHECK-NEXT:       #11: Indirect [R#6 + 88]
-CHECK-NEXT:       #12: Indirect [R#6 + 96]
-CHECK-NEXT:       #13: Indirect [R#6 + 104]
-CHECK-NEXT:       #14: Indirect [R#6 + 112]
-CHECK-NEXT:       #15: Indirect [R#6 + 120]
-CHECK-NEXT:       #16: Indirect [R#6 + 128]
-CHECK-NEXT:       #17: Indirect [R#6 + 136]
+CHECK-NEXT:       #1: Register R#9, size: 8
+CHECK-NEXT:       #2: Indirect [R#6 + 16], size: 8
+CHECK-NEXT:       #3: Indirect [R#6 + 24], size: 8
+CHECK-NEXT:       #4: Indirect [R#6 + 32], size: 8
+CHECK-NEXT:       #5: Indirect [R#6 + 40], size: 8
+CHECK-NEXT:       #6: Indirect [R#6 + 48], size: 8
+CHECK-NEXT:       #7: Indirect [R#6 + 56], size: 8
+CHECK-NEXT:       #8: Indirect [R#6 + 64], size: 8
+CHECK-NEXT:       #9: Indirect [R#6 + 72], size: 8
+CHECK-NEXT:       #10: Indirect [R#6 + 80], size: 8
+CHECK-NEXT:       #11: Indirect [R#6 + 88], size: 8
+CHECK-NEXT:       #12: Indirect [R#6 + 96], size: 8
+CHECK-NEXT:       #13: Indirect [R#6 + 104], size: 8
+CHECK-NEXT:       #14: Indirect [R#6 + 112], size: 8
+CHECK-NEXT:       #15: Indirect [R#6 + 120], size: 8
+CHECK-NEXT:       #16: Indirect [R#6 + 128], size: 8
+CHECK-NEXT:       #17: Indirect [R#6 + 136], size: 8
 CHECK-NEXT:     1 live-outs: [ R#7 (8-bytes) ]
 
-CHECK:        Record ID: 12, instruction offset: 62
+CHECK:        Record ID: 12, instruction offset: 4
 CHECK-NEXT:     17 locations:
-CHECK-NEXT:       #1: Register R#0
-CHECK-NEXT:       #2: Register R#14
-CHECK-NEXT:       #3: Register R#10
-CHECK-NEXT:       #4: Register R#9
-CHECK-NEXT:       #5: Register R#8
-CHECK-NEXT:       #6: Register R#4
-CHECK-NEXT:       #7: Register R#1
-CHECK-NEXT:       #8: Register R#2
-CHECK-NEXT:       #9: Register R#5
-CHECK-NEXT:       #10: Register R#3
-CHECK-NEXT:       #11: Register R#13
-CHECK-NEXT:       #12: Register R#12
-CHECK-NEXT:       #13: Register R#15
-CHECK-NEXT:       #14: Indirect [R#6 + 112]
-CHECK-NEXT:       #15: Indirect [R#6 + 120]
-CHECK-NEXT:       #16: Indirect [R#6 + 128]
-CHECK-NEXT:       #17: Indirect [R#6 + 136]
+CHECK-NEXT:       #1: Register R#0, size: 8
+CHECK-NEXT:       #2: Indirect [R#6 + 16], size: 8
+CHECK-NEXT:       #3: Indirect [R#6 + 24], size: 8
+CHECK-NEXT:       #4: Indirect [R#6 + 32], size: 8
+CHECK-NEXT:       #5: Indirect [R#6 + 40], size: 8
+CHECK-NEXT:       #6: Indirect [R#6 + 48], size: 8
+CHECK-NEXT:       #7: Indirect [R#6 + 56], size: 8
+CHECK-NEXT:       #8: Indirect [R#6 + 64], size: 8
+CHECK-NEXT:       #9: Indirect [R#6 + 72], size: 8
+CHECK-NEXT:       #10: Indirect [R#6 + 80], size: 8
+CHECK-NEXT:       #11: Indirect [R#6 + 88], size: 8
+CHECK-NEXT:       #12: Indirect [R#6 + 96], size: 8
+CHECK-NEXT:       #13: Indirect [R#6 + 104], size: 8
+CHECK-NEXT:       #14: Indirect [R#6 + 112], size: 8
+CHECK-NEXT:       #15: Indirect [R#6 + 120], size: 8
+CHECK-NEXT:       #16: Indirect [R#6 + 128], size: 8
+CHECK-NEXT:       #17: Indirect [R#6 + 136], size: 8
 CHECK-NEXT:     0 live-outs: [ ]
 
 CHECK:        Record ID: 13, instruction offset: 50
 CHECK-NEXT:     1 locations:
-CHECK-NEXT:       #1: Indirect [R#6 + -48]
+CHECK-NEXT:       #1: Indirect [R#6 + -48], size: 4
 CHECK-NEXT:     0 live-outs: [ ]
 
 CHECK:        Record ID: 14, instruction offset: 24
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Register R#0
-CHECK-NEXT:       #2: Register R#3
+CHECK-NEXT:       #1: Register R#0, size: 1
+CHECK-NEXT:       #2: Register R#3, size: 1
 CHECK-NEXT:     0 live-outs: [ ]
 
 CHECK:        Record ID: 15, instruction offset: 4
 CHECK-NEXT:     1 locations:
-CHECK-NEXT:       #1: Constant 33
+CHECK-NEXT:       #1: Constant 33, size: 8
 CHECK-NEXT:     0 live-outs: [ ]
 
-CHECK:        Record ID: 16, instruction offset: 32
+CHECK:        Record ID: 16, instruction offset: 16
 CHECK-NEXT:     1 locations:
-CHECK-NEXT:       #1: Direct R#6 + -32
+CHECK-NEXT:       #1: Direct R#6 + -40, size: 8
 CHECK-NEXT:     0 live-outs: [ ]
 
-CHECK:        Record ID: 17, instruction offset: 32
+CHECK:        Record ID: 17, instruction offset: 16
 CHECK-NEXT:     2 locations:
-CHECK-NEXT:       #1: Direct R#6 + -8
-CHECK-NEXT:       #2: Direct R#6 + -40
+CHECK-NEXT:       #1: Direct R#6 + -8, size: 8
+CHECK-NEXT:       #2: Direct R#6 + -16, size: 8
 CHECK-NEXT:     1 live-outs: [ R#7 (8-bytes) ]
 
 CHECK:        Record ID: 4294967295, instruction offset: 4
@@ -166,9 +165,9 @@ CHECK-NEXT:     1 live-outs: [ R#7 (8-bytes) ]
 
 CHECK:        Record ID: 16, instruction offset: 18
 CHECK-NEXT:     1 locations:
-CHECK-NEXT:       #1: Indirect [R#6 + -44]
+CHECK-NEXT:       #1: Indirect [R#6 + -44], size: 4
 CHECK-NEXT:     0 live-outs: [ ]
 
-CHECK:        Record ID: 0, instruction offset: 26
+CHECK:        Record ID: 0, instruction offset: 25
 CHECK-NEXT:     0 locations:
 CHECK-NEXT:     0 live-outs: [ ]

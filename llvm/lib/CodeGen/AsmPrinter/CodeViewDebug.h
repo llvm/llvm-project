@@ -147,6 +147,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     SmallVector<LexicalBlock *, 1> ChildBlocks;
 
     std::vector<std::pair<MCSymbol *, MDNode *>> Annotations;
+    std::vector<std::tuple<MCSymbol *, MCSymbol *, DIType *>> HeapAllocSites;
 
     const MCSymbol *Begin = nullptr;
     const MCSymbol *End = nullptr;
@@ -222,7 +223,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex getFuncIdForSubprogram(const DISubprogram *SP);
 
   void calculateRanges(LocalVariable &Var,
-                       const DbgValueHistoryMap::InstrRanges &Ranges);
+                       const DbgValueHistoryMap::Entries &Entries);
 
   static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
                                         const FunctionInfo &FI,

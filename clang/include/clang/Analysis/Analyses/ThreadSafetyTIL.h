@@ -1604,7 +1604,7 @@ public:
 
   /// Return the index of BB, or Predecessors.size if BB is not a predecessor.
   unsigned findPredecessorIndex(const BasicBlock *BB) const {
-    auto I = std::find(Predecessors.cbegin(), Predecessors.cend(), BB);
+    auto I = llvm::find(Predecessors, BB);
     return std::distance(Predecessors.cbegin(), I);
   }
 

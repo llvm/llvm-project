@@ -31,7 +31,7 @@ using namespace llvm::opt;
 
 namespace {
 
-static void addBCLib(Compilation &C, const ArgList &Args,
+static void addBCLib(const Driver &D, const ArgList &Args,
                      ArgStringList &CmdArgs, ArgStringList LibraryPaths,
                      StringRef BCName) {
   StringRef FullName;
@@ -40,11 +40,12 @@ static void addBCLib(Compilation &C, const ArgList &Args,
     llvm::sys::path::append(Path, BCName);
     FullName = Path;
     if (llvm::sys::fs::exists(FullName)) {
+      CmdArgs.push_back("-mlink-builtin-bitcode");
       CmdArgs.push_back(Args.MakeArgString(FullName));
       return;
     }
   }
-  C.getDriver().Diag(diag::err_drv_no_such_file) << BCName;
+  D.Diag(diag::err_drv_no_such_file) << BCName;
 }
 
 } // namespace
@@ -57,44 +58,6 @@ const char *AMDGCN::Linker::constructLLVMLinkCommand(
   // Add the input bc's created by compile step.
   for (const auto &II : Inputs)
     CmdArgs.push_back(II.getFilename());
-
-  ArgStringList LibraryPaths;
-
-  // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
-  for (auto Path : Args.getAllArgValues(options::OPT_hip_device_lib_path_EQ))
-    LibraryPaths.push_back(Args.MakeArgString(Path));
-
-  addDirectoryList(Args, LibraryPaths, "-L", "HIP_DEVICE_LIB_PATH");
-
-  llvm::SmallVector<std::string, 10> BCLibs;
-
-  // Add bitcode library in --hip-device-lib.
-  for (auto Lib : Args.getAllArgValues(options::OPT_hip_device_lib_EQ)) {
-    BCLibs.push_back(Args.MakeArgString(Lib));
-  }
-
-  // If --hip-device-lib is not set, add the default bitcode libraries.
-  if (BCLibs.empty()) {
-    // Get the bc lib file name for ISA version. For example,
-    // gfx803 => oclc_isa_version_803.amdgcn.bc.
-    std::string ISAVerBC =
-        "oclc_isa_version_" + SubArchName.drop_front(3).str() + ".amdgcn.bc";
-
-    llvm::StringRef FlushDenormalControlBC;
-    if (Args.hasArg(options::OPT_fcuda_flush_denormals_to_zero))
-      FlushDenormalControlBC = "oclc_daz_opt_on.amdgcn.bc";
-    else
-      FlushDenormalControlBC = "oclc_daz_opt_off.amdgcn.bc";
-
-    BCLibs.append({"hip.amdgcn.bc", "opencl.amdgcn.bc",
-                   "ocml.amdgcn.bc", "ockl.amdgcn.bc",
-                   "oclc_finite_only_off.amdgcn.bc",
-                   FlushDenormalControlBC,
-                   "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
-                   "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC});
-  }
-  for (auto Lib : BCLibs)
-    addBCLib(C, Args, CmdArgs, LibraryPaths, Lib);
 
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
@@ -324,6 +287,44 @@ void HIPToolChain::addClangTargetOptions(
     CC1Args.append({"-fvisibility", "hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+  ArgStringList LibraryPaths;
+
+  // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
+  for (auto Path :
+       DriverArgs.getAllArgValues(options::OPT_hip_device_lib_path_EQ))
+    LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
+
+  addDirectoryList(DriverArgs, LibraryPaths, "-L", "HIP_DEVICE_LIB_PATH");
+
+  llvm::SmallVector<std::string, 10> BCLibs;
+
+  // Add bitcode library in --hip-device-lib.
+  for (auto Lib : DriverArgs.getAllArgValues(options::OPT_hip_device_lib_EQ)) {
+    BCLibs.push_back(DriverArgs.MakeArgString(Lib));
+  }
+
+  // If --hip-device-lib is not set, add the default bitcode libraries.
+  if (BCLibs.empty()) {
+    // Get the bc lib file name for ISA version. For example,
+    // gfx803 => oclc_isa_version_803.amdgcn.bc.
+    std::string ISAVerBC =
+        "oclc_isa_version_" + GpuArch.drop_front(3).str() + ".amdgcn.bc";
+
+    llvm::StringRef FlushDenormalControlBC;
+    if (DriverArgs.hasArg(options::OPT_fcuda_flush_denormals_to_zero))
+      FlushDenormalControlBC = "oclc_daz_opt_on.amdgcn.bc";
+    else
+      FlushDenormalControlBC = "oclc_daz_opt_off.amdgcn.bc";
+
+    BCLibs.append({"hip.amdgcn.bc", "opencl.amdgcn.bc", "ocml.amdgcn.bc",
+                   "ockl.amdgcn.bc", "oclc_finite_only_off.amdgcn.bc",
+                   FlushDenormalControlBC,
+                   "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
+                   "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC});
+  }
+  for (auto Lib : BCLibs)
+    addBCLib(getDriver(), DriverArgs, CC1Args, LibraryPaths, Lib);
+
 }
 
 llvm::opt::DerivedArgList *

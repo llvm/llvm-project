@@ -4501,8 +4501,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
        << ", // " << Record->getName() << "\n";
   OS << "};\n\n";
 
-  std::stable_sort(Rules.begin(), Rules.end(), [&](const RuleMatcher &A,
-                                                   const RuleMatcher &B) {
+  llvm::stable_sort(Rules, [&](const RuleMatcher &A, const RuleMatcher &B) {
     int ScoreA = RuleMatcherScores[A.getRuleID()];
     int ScoreB = RuleMatcherScores[B.getRuleID()];
     if (ScoreA > ScoreB)

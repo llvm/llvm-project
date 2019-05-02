@@ -24,9 +24,7 @@
 
 namespace llvm {
 class Pass;
-class PassInfo;
 class PassRegistry;
-class RegionPass;
 } // namespace llvm
 
 namespace polly {

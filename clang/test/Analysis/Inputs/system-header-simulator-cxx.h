@@ -789,6 +789,7 @@ namespace std {
 
     typename std::add_lvalue_reference<T>::type operator*() const;
     T *operator->() const;
+    operator bool() const;
   };
 }
 #endif

@@ -14,12 +14,14 @@ define i32 @PR32420() {
 ; CHECK-NEXT:    movzwl (%rcx), %eax
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    shll $12, %edx
-; CHECK-NEXT:    sarw $12, %dx
+; CHECK-NEXT:    movswl %dx, %edx
+; CHECK-NEXT:    shrl $12, %edx
 ; CHECK-NEXT:    movq _b@{{.*}}(%rip), %rsi
 ; CHECK-NEXT:    orw (%rsi), %dx
 ; CHECK-NEXT:    movl (%rcx), %ecx
 ; CHECK-NEXT:    shll $12, %ecx
-; CHECK-NEXT:    sarw $12, %cx
+; CHECK-NEXT:    movswl %cx, %ecx
+; CHECK-NEXT:    shrl $12, %ecx
 ; CHECK-NEXT:    andl %edx, %ecx
 ; CHECK-NEXT:    movw %cx, (%rsi)
 ; CHECK-NEXT:    retq

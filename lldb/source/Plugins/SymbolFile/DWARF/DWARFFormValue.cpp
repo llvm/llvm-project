@@ -115,7 +115,7 @@ DWARFFormValue::DWARFFormValue(const DWARFUnit *cu, dw_form_t form)
 void DWARFFormValue::Clear() {
   m_cu = nullptr;
   m_form = 0;
-  memset(&m_value, 0, sizeof(m_value));
+  m_value = ValueTypeTag();
 }
 
 bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,

@@ -25,15 +25,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // SymbolVendorMacOSX constructor
-//----------------------------------------------------------------------
 SymbolVendorMacOSX::SymbolVendorMacOSX(const lldb::ModuleSP &module_sp)
     : SymbolVendor(module_sp) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SymbolVendorMacOSX::~SymbolVendorMacOSX() {}
 
 static bool UUIDsMatch(Module *module, ObjectFile *ofile,
@@ -90,13 +86,11 @@ const char *SymbolVendorMacOSX::GetPluginDescriptionStatic() {
          "executables.";
 }
 
-//----------------------------------------------------------------------
 // CreateInstance
 //
 // Platforms can register a callback to use when creating symbol vendors to
 // allow for complex debug information file setups, and to also allow for
 // finding separate debug information files.
-//----------------------------------------------------------------------
 SymbolVendor *
 SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                    lldb_private::Stream *feedback_strm) {
@@ -312,9 +306,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
   return symbol_vendor;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString SymbolVendorMacOSX::GetPluginName() {
   return GetPluginNameStatic();
 }

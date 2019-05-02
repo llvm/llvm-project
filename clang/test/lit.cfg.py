@@ -61,8 +61,7 @@ config.substitutions.append(('%PATH%', config.environment['PATH']))
 tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
 tools = [
-    'c-index-test', 'clang-check', 'clang-diff', 'clang-format', 'clang-tblgen',
-    'opt',
+    'c-index-test', 'clang-diff', 'clang-format', 'clang-tblgen', 'opt',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
 ]
@@ -70,6 +69,14 @@ tools = [
 if config.clang_examples:
     config.available_features.add('examples')
     tools.append('clang-interpreter')
+
+if config.clang_staticanalyzer:
+    config.available_features.add('staticanalyzer')
+    tools.append('clang-check')
+
+    if config.clang_staticanalyzer_z3 == '1':
+        config.available_features.add('z3')
+
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
@@ -91,13 +98,6 @@ if has_plugins and config.llvm_plugin_ext:
 #
 if config.clang_default_cxx_stdlib != '':
     config.available_features.add('default-cxx-stdlib-set')
-
-# Enabled/disabled features
-if config.clang_staticanalyzer:
-    config.available_features.add('staticanalyzer')
-
-    if config.clang_staticanalyzer_z3 == '1':
-        config.available_features.add('z3')
 
 # As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
 if platform.system() not in ['FreeBSD']:

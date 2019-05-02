@@ -17,7 +17,7 @@
 !3 = !DIFile(filename: "loc.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch", checksumkind: CSK_MD5, checksum: "e579a1a06fae14a4526216e905198a01")
 !4 = !{}
 !5 = !{!0}
-!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo", file: !3, line: 1, size: 32, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !7, identifier: "_ZTS3foo")
+!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo", file: !3, line: 1, size: 32, flags: DIFlagTypePassByValue, elements: !7, identifier: "_ZTS3foo")
 !7 = !{!8}
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "i", scope: !6, file: !3, line: 2, baseType: !9, size: 32)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

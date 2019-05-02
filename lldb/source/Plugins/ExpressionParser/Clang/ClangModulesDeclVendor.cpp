@@ -229,15 +229,23 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
                             std::equal(sysroot_begin, sysroot_end, path_begin);
     // No need to inject search paths to modules in the sysroot.
     if (!is_system_module) {
+      auto error = [&]() {
+        error_stream.Printf("error: No module map file in %s\n",
+                            module.search_path.AsCString());
+        return false;
+      };
+
       bool is_system = true;
       bool is_framework = false;
       auto *dir =
           HS.getFileMgr().getDirectory(module.search_path.GetStringRef());
+      if (!dir)
+        return error();
       auto *file = HS.lookupModuleMapFile(dir, is_framework);
+      if (!file)
+        return error();
       if (!HS.loadModuleMapFile(file, is_system))
-        error_stream.Printf("error: No module map file in %s\n",
-                            module.search_path.AsCString());
-      return false;
+        return error();
     }
   }
   if (!HS.lookupModule(module.path.front().GetStringRef())) {
@@ -600,7 +608,7 @@ ClangModulesDeclVendor::Create(Target &target) {
     compiler_invocation_arguments.push_back(module_cache_argument);
   }
 
-  FileSpecList &module_search_paths = target.GetClangModuleSearchPaths();
+  FileSpecList module_search_paths = target.GetClangModuleSearchPaths();
 
   for (size_t spi = 0, spe = module_search_paths.GetSize(); spi < spe; ++spi) {
     const FileSpec &search_path = module_search_paths.GetFileSpecAtIndex(spi);
@@ -671,7 +679,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   }
 
   // Make sure clang uses the same VFS as LLDB.
-  instance->setVirtualFileSystem(FileSystem::Instance().GetVirtualFileSystem());
+  instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
   instance->setDiagnostics(diagnostics_engine.get());
   instance->setInvocation(invocation);
 

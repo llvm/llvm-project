@@ -36,3 +36,4 @@ def fuzz_obj(obj):
     obj.Clear()
     for frame in obj:
         s = str(frame)
+    len(obj)

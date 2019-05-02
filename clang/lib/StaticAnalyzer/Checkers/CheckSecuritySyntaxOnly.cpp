@@ -740,7 +740,11 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
   // Issue a warning. ArgIndex == -1: Deprecated but not unsafe (has size
   // restrictions).
   enum { DEPR_ONLY = -1, UNKNOWN_CALL = -2 };
+
   StringRef Name = FD->getIdentifier()->getName();
+  if (Name.startswith("__builtin_"))
+    Name = Name.substr(10);
+
   int ArgIndex =
       llvm::StringSwitch<int>(Name)
           .Cases("scanf", "wscanf", "vscanf", "vwscanf", 0)

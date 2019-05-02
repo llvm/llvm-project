@@ -768,14 +768,34 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
     AsanGlobalsDeadStripping =
         !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
+        TC.getTriple().isPS4() ||
         Args.hasArg(options::OPT_fsanitize_address_globals_dead_stripping);
 
     AsanUseOdrIndicator =
         Args.hasFlag(options::OPT_fsanitize_address_use_odr_indicator,
                      options::OPT_fno_sanitize_address_use_odr_indicator,
                      AsanUseOdrIndicator);
+
+    if (AllAddedKinds & SanitizerKind::PointerCompare & ~AllRemove) {
+      AsanInvalidPointerCmp = true;
+    }
+
+    if (AllAddedKinds & SanitizerKind::PointerSubtract & ~AllRemove) {
+      AsanInvalidPointerSub = true;
+    }
+
   } else {
     AsanUseAfterScope = false;
+    // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
+    SanitizerMask DetectInvalidPointerPairs =
+        SanitizerKind::PointerCompare | SanitizerKind::PointerSubtract;
+    if (AllAddedKinds & DetectInvalidPointerPairs & ~AllRemove) {
+      TC.getDriver().Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << lastArgumentForMask(D, Args,
+                                 SanitizerKind::PointerCompare |
+                                     SanitizerKind::PointerSubtract)
+          << "-fsanitize=address";
+    }
   }
 
   if (AllAddedKinds & SanitizerKind::HWAddress) {
@@ -961,6 +981,16 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (AsanUseOdrIndicator)
     CmdArgs.push_back("-fsanitize-address-use-odr-indicator");
+
+  if (AsanInvalidPointerCmp) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-asan-detect-invalid-pointer-cmp");
+  }
+
+  if (AsanInvalidPointerSub) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-asan-detect-invalid-pointer-sub");
+  }
 
   if (!HwasanAbi.empty()) {
     CmdArgs.push_back("-default-function-attr");

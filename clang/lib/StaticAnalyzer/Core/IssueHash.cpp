@@ -120,7 +120,7 @@ static std::string GetEnclosingDeclContextSignature(const Decl *D) {
   return "";
 }
 
-static StringRef GetNthLineOfFile(llvm::MemoryBuffer *Buffer, int Line) {
+static StringRef GetNthLineOfFile(const llvm::MemoryBuffer *Buffer, int Line) {
   if (!Buffer)
     return "";
 
@@ -144,7 +144,7 @@ static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
     col++;
   SourceLocation StartOfLine =
       SM.translateLineCol(SM.getFileID(L), L.getExpansionLineNumber(), col);
-  llvm::MemoryBuffer *Buffer =
+  const llvm::MemoryBuffer *Buffer =
       SM.getBuffer(SM.getFileID(StartOfLine), StartOfLine);
   if (!Buffer)
     return {};

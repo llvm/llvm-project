@@ -1,5 +1,4 @@
 //===-- AppleThreadPlanStepThroughObjCTrampoline.cpp
-//--------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,9 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepThroughObjCTrampoline constructor
-//----------------------------------------------------------------------
 AppleThreadPlanStepThroughObjCTrampoline::
     AppleThreadPlanStepThroughObjCTrampoline(
         Thread &thread, AppleObjCTrampolineHandler *trampoline_handler,
@@ -42,9 +39,7 @@ AppleThreadPlanStepThroughObjCTrampoline::
       m_isa_addr(isa_addr), m_sel_addr(sel_addr), m_impl_function(NULL),
       m_stop_others(stop_others) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 AppleThreadPlanStepThroughObjCTrampoline::
     ~AppleThreadPlanStepThroughObjCTrampoline() {}
 

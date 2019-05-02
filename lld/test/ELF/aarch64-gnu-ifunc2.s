@@ -5,6 +5,7 @@
 # RUN: llvm-readobj -r %tout | FileCheck %s --check-prefix=RELOC
 
 # CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: myfunc:
 # CHECK-NEXT:   210000:
 
@@ -15,6 +16,7 @@
 # CHECK-NEXT:   21000c: {{.*}} ret
 
 # CHECK:      Disassembly of section .plt:
+# CHECK-EMPTY:
 # CHECK-NEXT: .plt:
 # adrp x16, 0x220000, 0x220000 == address in .got.plt
 # CHECK-NEXT:   210010: {{.*}} adrp    x16, #65536
@@ -23,6 +25,7 @@
 # CHECK-NEXT:   21001c: {{.*}} br      x17
 
 # CHECK:      Disassembly of section .got.plt:
+# CHECK-EMPTY:
 # CHECK-NEXT: .got.plt:
 # CHECK-NEXT:   220000:
 

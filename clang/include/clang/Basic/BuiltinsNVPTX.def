@@ -18,13 +18,22 @@
 #endif
 
 #pragma push_macro("SM_70")
-#define SM_70 "sm_70|sm_71"
+#pragma push_macro("SM_72")
+#pragma push_macro("SM_75")
+#define SM_75 "sm_75"
+#define SM_72 "sm_72|" SM_75
+#define SM_70 "sm_70|" SM_72
+
 #pragma push_macro("SM_60")
 #define SM_60 "sm_60|sm_61|sm_62|" SM_70
 
-#pragma push_macro("PTX61")
-#define PTX61 "ptx61"
 #pragma push_macro("PTX60")
+#pragma push_macro("PTX61")
+#pragma push_macro("PTX63")
+#pragma push_macro("PTX64")
+#define PTX64 "ptx64"
+#define PTX63 "ptx63|" PTX64
+#define PTX61 "ptx61|" PTX63
 #define PTX60 "ptx60|" PTX61
 
 #pragma push_macro("AND")
@@ -666,10 +675,53 @@ TARGET_BUILTIN(__hmma_m8n32k16_mma_f32f16, "vf*iC*iC*iC*IiIi", "", AND(SM_70,PTX
 TARGET_BUILTIN(__hmma_m8n32k16_mma_f32f32, "vf*iC*iC*fC*IiIi", "", AND(SM_70,PTX61))
 TARGET_BUILTIN(__hmma_m8n32k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", AND(SM_70,PTX61))
 
+// Builtins to support integer and sub-integer WMMA instructions on sm_72/sm_75
+TARGET_BUILTIN(__bmma_m8n8k128_ld_a_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__bmma_m8n8k128_ld_b_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__bmma_m8n8k128_ld_c, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__bmma_m8n8k128_mma_xor_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__bmma_m8n8k128_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_ld_a_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_ld_a_u8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_ld_b_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_ld_b_u8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_ld_c, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_mma_s8, "vi*iC*iC*iC*IiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_mma_u8, "vi*iC*iC*iC*IiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m16n16k16_st_c_i32, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_ld_a_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_ld_a_u8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_ld_b_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_ld_b_u8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_ld_c, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_mma_s8, "vi*iC*iC*iC*IiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_mma_u8, "vi*iC*iC*iC*IiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m32n8k16_st_c_i32, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_ld_a_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_ld_a_u8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_ld_b_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_ld_b_u8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_ld_c, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_mma_s8, "vi*iC*iC*iC*IiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_mma_u8, "vi*iC*iC*iC*IiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n32k16_st_c_i32, "vi*iC*UiIi", "", AND(SM_72,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_ld_a_s4, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_ld_a_u4, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_ld_b_s4, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_ld_b_u4, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_ld_c, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_mma_s4, "vi*iC*iC*iC*IiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_mma_u4, "vi*iC*iC*iC*IiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__imma_m8n8k32_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
 #pragma pop_macro("AND")
 #pragma pop_macro("SM_60")
 #pragma pop_macro("SM_70")
+#pragma pop_macro("SM_72")
+#pragma pop_macro("SM_75")
 #pragma pop_macro("PTX60")
 #pragma pop_macro("PTX61")
+#pragma pop_macro("PTX63")
+#pragma pop_macro("PTX64")

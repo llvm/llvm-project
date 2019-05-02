@@ -55,8 +55,10 @@ TodoCommentCheck::TodoCommentCheck(StringRef Name, ClangTidyContext *Context)
       Handler(llvm::make_unique<TodoCommentHandler>(
           *this, Context->getOptions().User)) {}
 
-void TodoCommentCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addCommentHandler(Handler.get());
+void TodoCommentCheck::registerPPCallbacks(const SourceManager &SM,
+                                           Preprocessor *PP,
+                                           Preprocessor *ModuleExpanderPP) {
+  PP->addCommentHandler(Handler.get());
 }
 
 } // namespace readability

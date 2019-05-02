@@ -494,6 +494,35 @@ long test_InterlockedDecrement(long volatile *Addend) {
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
 
+char test_iso_volatile_load8(char volatile *p) { return __iso_volatile_load8(p); }
+short test_iso_volatile_load16(short volatile *p) { return __iso_volatile_load16(p); }
+int test_iso_volatile_load32(int volatile *p) { return __iso_volatile_load32(p); }
+__int64 test_iso_volatile_load64(__int64 volatile *p) { return __iso_volatile_load64(p); }
+
+// CHECK: define{{.*}}i8 @test_iso_volatile_load8(i8*{{[a-z_ ]*}}%p)
+// CHECK: = load volatile i8, i8* %p
+// CHECK: define{{.*}}i16 @test_iso_volatile_load16(i16*{{[a-z_ ]*}}%p)
+// CHECK: = load volatile i16, i16* %p
+// CHECK: define{{.*}}i32 @test_iso_volatile_load32(i32*{{[a-z_ ]*}}%p)
+// CHECK: = load volatile i32, i32* %p
+// CHECK: define{{.*}}i64 @test_iso_volatile_load64(i64*{{[a-z_ ]*}}%p)
+// CHECK: = load volatile i64, i64* %p
+
+void test_iso_volatile_store8(char volatile *p, char v) { __iso_volatile_store8(p, v); }
+void test_iso_volatile_store16(short volatile *p, short v) { __iso_volatile_store16(p, v); }
+void test_iso_volatile_store32(int volatile *p, int v) { __iso_volatile_store32(p, v); }
+void test_iso_volatile_store64(__int64 volatile *p, __int64 v) { __iso_volatile_store64(p, v); }
+
+// CHECK: define{{.*}}void @test_iso_volatile_store8(i8*{{[a-z_ ]*}}%p, i8 {{[a-z_ ]*}}%v)
+// CHECK: store volatile i8 %v, i8* %p
+// CHECK: define{{.*}}void @test_iso_volatile_store16(i16*{{[a-z_ ]*}}%p, i16 {{[a-z_ ]*}}%v)
+// CHECK: store volatile i16 %v, i16* %p
+// CHECK: define{{.*}}void @test_iso_volatile_store32(i32*{{[a-z_ ]*}}%p, i32 {{[a-z_ ]*}}%v)
+// CHECK: store volatile i32 %v, i32* %p
+// CHECK: define{{.*}}void @test_iso_volatile_store64(i64*{{[a-z_ ]*}}%p, i64 {{[a-z_ ]*}}%v)
+// CHECK: store volatile i64 %v, i64* %p
+
+
 #if defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
 __int64 test_InterlockedExchange64(__int64 volatile *value, __int64 mask) {
   return _InterlockedExchange64(value, mask);

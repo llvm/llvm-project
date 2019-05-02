@@ -82,10 +82,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-toc-reg-deps"
 
-namespace llvm {
-  void initializePPCTOCRegDepsPass(PassRegistry&);
-}
-
 namespace {
   // PPCTOCRegDeps pass - For simple functions without epilogue code, move
   // returns up, and create conditional returns, to avoid unnecessary

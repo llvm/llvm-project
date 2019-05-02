@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ;
 ; -- lexicablock.cxx begin ----------------------------------------------------
 ; int main(int argc, char *argv[]) {

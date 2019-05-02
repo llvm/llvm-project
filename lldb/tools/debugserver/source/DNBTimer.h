@@ -21,9 +21,7 @@
 
 class DNBTimer {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   DNBTimer(bool threadSafe) : m_mutexAP() {
     if (threadSafe)
       m_mutexAP.reset(new PThreadMutex(PTHREAD_MUTEX_RECURSIVE));
@@ -50,16 +48,12 @@ public:
   ~DNBTimer() {}
 
   bool IsThreadSafe() const { return m_mutexAP.get() != NULL; }
-  //------------------------------------------------------------------
   // Reset the time value to now
-  //------------------------------------------------------------------
   void Reset() {
     PTHREAD_MUTEX_LOCKER(locker, m_mutexAP.get());
     gettimeofday(&m_timeval, NULL);
   }
-  //------------------------------------------------------------------
   // Get the total mircoseconds since Jan 1, 1970
-  //------------------------------------------------------------------
   uint64_t TotalMicroSeconds() const {
     PTHREAD_MUTEX_LOCKER(locker, m_mutexAP.get());
     return (uint64_t)(m_timeval.tv_sec) * 1000000ull +
@@ -71,10 +65,8 @@ public:
     sec = m_timeval.tv_sec;
     usec = m_timeval.tv_usec;
   }
-  //------------------------------------------------------------------
   // Return the number of microseconds elapsed between now and the
   // m_timeval
-  //------------------------------------------------------------------
   uint64_t ElapsedMicroSeconds(bool update) {
     PTHREAD_MUTEX_LOCKER(locker, m_mutexAP.get());
     struct timeval now;
@@ -134,9 +126,7 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from DNBTimer can see and modify these
-  //------------------------------------------------------------------
   std::unique_ptr<PThreadMutex> m_mutexAP;
   struct timeval m_timeval;
 };

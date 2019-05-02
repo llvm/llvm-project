@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONS_IN_HEADERS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONS_IN_HEADERS_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include "../utils/HeaderFileExtensionsUtils.h"
 
 namespace clang {

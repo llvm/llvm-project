@@ -201,10 +201,17 @@ libc++ specific options
 
   **Default**: ``OFF``
 
-  Do not export any symbols from the static libc++ library. This is useful when
+  Do not export any symbols from the static libc++ library.
   This is useful when the static libc++ library is being linked into shared
   libraries that may be used in with other shared libraries that use different
   C++ library. We want to avoid avoid exporting any libc++ symbols in that case.
+
+.. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
+
+   **Default**: ``ON`` except on Windows.
+
+   This option can be used to enable or disable the filesystem components on
+   platforms that may not support them. For example on Windows.
 
 .. _libc++experimental options:
 
@@ -223,18 +230,6 @@ libc++experimental Specific Options
 
   Install libc++experimental.a alongside libc++.
 
-
-.. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
-
-  **Default**: ``ON``
-
-  Build filesystem as a standalone library libc++fs.a.
-
-.. option:: LIBCXX_INSTALL_FILESYSTEM_LIBRARY:BOOL
-
-  **Default**: ``LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_INSTALL_LIBRARY``
-
-  Install libc++fs.a alongside libc++.
 
 .. _ABI Library Specific Options:
 

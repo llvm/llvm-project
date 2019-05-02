@@ -1,6 +1,6 @@
-# RUN: llvm-mc -filetype=obj -triple=powerpc-unknown-linux-gnu %s | llvm-readobj -s -sd - | FileCheck -check-prefix=CHECK-BE %s
-# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux-gnu %s | llvm-readobj -s -sd - | FileCheck -check-prefix=CHECK-BE %s
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux-gnu %s | llvm-readobj -s -sd - | FileCheck -check-prefix=CHECK-LE %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc-unknown-linux-gnu %s | llvm-readobj -S --sd - | FileCheck -check-prefix=CHECK-BE %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux-gnu %s | llvm-readobj -S --sd - | FileCheck -check-prefix=CHECK-BE %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux-gnu %s | llvm-readobj -S --sd - | FileCheck -check-prefix=CHECK-LE %s
 
 blr
 .p2align 3

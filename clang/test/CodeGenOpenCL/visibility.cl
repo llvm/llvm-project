@@ -72,6 +72,57 @@ __attribute__((visibility("protected"))) void func_protected() {}
 // FVIS-HIDDEN: define void @func_default()
 __attribute__((visibility("default"))) void func_default() {}
 
+extern kernel void ext_kern();
+__attribute__((visibility("hidden"))) extern kernel void ext_kern_hidden();
+__attribute__((visibility("protected"))) extern kernel void ext_kern_protected();
+__attribute__((visibility("default"))) extern kernel void ext_kern_default();
+
+extern void ext_func();
+__attribute__((visibility("hidden"))) extern void ext_func_hidden();
+__attribute__((visibility("protected"))) extern void ext_func_protected();
+__attribute__((visibility("default"))) extern void ext_func_default();
+
 void use() {
     glob = ext + ext_hidden + ext_protected + ext_default;
+    ext_kern();
+    ext_kern_hidden();
+    ext_kern_protected();
+    ext_kern_default();
+    ext_func();
+    ext_func_hidden();
+    ext_func_protected();
+    ext_func_default();
 }
+
+// FVIS-DEFAULT: declare amdgpu_kernel void @ext_kern()
+// FVIS-PROTECTED: declare protected amdgpu_kernel void @ext_kern()
+// FVIS-HIDDEN: declare protected amdgpu_kernel void @ext_kern()
+
+// FVIS-DEFAULT: declare protected amdgpu_kernel void @ext_kern_hidden()
+// FVIS-PROTECTED: declare protected amdgpu_kernel void @ext_kern_hidden()
+// FVIS-HIDDEN: declare protected amdgpu_kernel void @ext_kern_hidden()
+
+// FVIS-DEFAULT: declare protected amdgpu_kernel void @ext_kern_protected()
+// FVIS-PROTECTED: declare protected amdgpu_kernel void @ext_kern_protected()
+// FVIS-HIDDEN: declare protected amdgpu_kernel void @ext_kern_protected()
+
+// FVIS-DEFAULT: declare amdgpu_kernel void @ext_kern_default()
+// FVIS-PROTECTED: declare amdgpu_kernel void @ext_kern_default()
+// FVIS-HIDDEN: declare amdgpu_kernel void @ext_kern_default()
+
+
+// FVIS-DEFAULT: declare void @ext_func()
+// FVIS-PROTECTED: declare protected void @ext_func()
+// FVIS-HIDDEN: declare hidden void @ext_func()
+
+// FVIS-DEFAULT: declare hidden void @ext_func_hidden()
+// FVIS-PROTECTED: declare hidden void @ext_func_hidden()
+// FVIS-HIDDEN: declare hidden void @ext_func_hidden()
+
+// FVIS-DEFAULT: declare protected void @ext_func_protected()
+// FVIS-PROTECTED: declare protected void @ext_func_protected()
+// FVIS-HIDDEN: declare protected void @ext_func_protected()
+
+// FVIS-DEFAULT: declare void @ext_func_default()
+// FVIS-PROTECTED: declare void @ext_func_default()
+// FVIS-HIDDEN: declare void @ext_func_default()

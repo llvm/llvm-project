@@ -50,7 +50,7 @@ public:
     SBFrame ();
 
     SBFrame (const lldb::SBFrame &rhs);
-    
+
    ~SBFrame();
 
     bool
@@ -104,50 +104,46 @@ public:
     GetSymbol () const;
 
     %feature("docstring", "
-    /// Gets the deepest block that contains the frame PC.
-    ///
-    /// See also GetFrameBlock().
-    ") GetBlock;
+    Gets the deepest block that contains the frame PC.
+
+    See also GetFrameBlock().") GetBlock;
     lldb::SBBlock
     GetBlock () const;
 
     %feature("docstring", "
-    /// Get the appropriate function name for this frame. Inlined functions in
-    /// LLDB are represented by Blocks that have inlined function information, so
-    /// just looking at the SBFunction or SBSymbol for a frame isn't enough.
-    /// This function will return the appropriate function, symbol or inlined
-    /// function name for the frame.
-    ///
-    /// This function returns:
-    /// - the name of the inlined function (if there is one)
-    /// - the name of the concrete function (if there is one)
-    /// - the name of the symbol (if there is one)
-    /// - NULL
-    ///
-    /// See also IsInlined().
-    ") GetFunctionName;
+    Get the appropriate function name for this frame. Inlined functions in
+    LLDB are represented by Blocks that have inlined function information, so
+    just looking at the SBFunction or SBSymbol for a frame isn't enough.
+    This function will return the appropriate function, symbol or inlined
+    function name for the frame.
+
+    This function returns:
+    - the name of the inlined function (if there is one)
+    - the name of the concrete function (if there is one)
+    - the name of the symbol (if there is one)
+    - NULL
+
+    See also IsInlined().") GetFunctionName;
     const char *
     GetFunctionName();
-             
+
      const char *
      GetDisplayFunctionName ();
 
     const char *
     GetFunctionName() const;
-             
+
     %feature("docstring", "
-    /// Returns the language of the frame's SBFunction, or if there.
-    /// is no SBFunction, guess the language from the mangled name.
-    /// .
-    ") GuessLanguage;
+    Returns the language of the frame's SBFunction, or if there.
+    is no SBFunction, guess the language from the mangled name.
+    .") GuessLanguage;
     lldb::LanguageType
     GuessLanguage() const;
 
     %feature("docstring", "
-    /// Return true if this frame represents an inlined function.
-    ///
-    /// See also GetFunctionName().
-    ") IsInlined;
+    Return true if this frame represents an inlined function.
+
+    See also GetFunctionName().") IsInlined;
     bool
     IsInlined();
 
@@ -155,10 +151,9 @@ public:
     IsInlined() const;
 
     %feature("docstring", "
-    /// Return true if this frame is artificial (e.g a frame synthesized to
-    /// capture a tail call). Local variables may not be available in an artificial
-    /// frame.
-    ") IsArtificial;
+    Return true if this frame is artificial (e.g a frame synthesized to
+    capture a tail call). Local variables may not be available in an artificial
+    frame.") IsArtificial;
     bool
     IsArtificial();
 
@@ -166,35 +161,33 @@ public:
     IsArtificial() const;
 
     %feature("docstring", "
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") EvaluateExpression;
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") EvaluateExpression;
     lldb::SBValue
-    EvaluateExpression (const char *expr);    
+    EvaluateExpression (const char *expr);
 
     lldb::SBValue
     EvaluateExpression (const char *expr, lldb::DynamicValueType use_dynamic);
 
     lldb::SBValue
     EvaluateExpression (const char *expr, lldb::DynamicValueType use_dynamic, bool unwind_on_error);
-    
+
     lldb::SBValue
     EvaluateExpression (const char *expr, SBExpressionOptions &options);
 
     %feature("docstring", "
-    /// Gets the lexical block that defines the stack frame. Another way to think
-    /// of this is it will return the block that contains all of the variables
-    /// for a stack frame. Inlined functions are represented as SBBlock objects
-    /// that have inlined function information: the name of the inlined function,
-    /// where it was called from. The block that is returned will be the first 
-    /// block at or above the block for the PC (SBFrame::GetBlock()) that defines
-    /// the scope of the frame. When a function contains no inlined functions,
-    /// this will be the top most lexical block that defines the function. 
-    /// When a function has inlined functions and the PC is currently
-    /// in one of those inlined functions, this method will return the inlined
-    /// block that defines this frame. If the PC isn't currently in an inlined
-    /// function, the lexical block that defines the function is returned.
-    ") GetFrameBlock;
+    Gets the lexical block that defines the stack frame. Another way to think
+    of this is it will return the block that contains all of the variables
+    for a stack frame. Inlined functions are represented as SBBlock objects
+    that have inlined function information: the name of the inlined function,
+    where it was called from. The block that is returned will be the first
+    block at or above the block for the PC (SBFrame::GetBlock()) that defines
+    the scope of the frame. When a function contains no inlined functions,
+    this will be the top most lexical block that defines the function.
+    When a function has inlined functions and the PC is currently
+    in one of those inlined functions, this method will return the inlined
+    block that defines this frame. If the PC isn't currently in an inlined
+    function, the lexical block that defines the function is returned.") GetFrameBlock;
     lldb::SBBlock
     GetFrameBlock () const;
 
@@ -210,19 +203,15 @@ public:
     void
     Clear();
 
-#ifndef SWIG
     bool
     operator == (const lldb::SBFrame &rhs) const;
 
     bool
     operator != (const lldb::SBFrame &rhs) const;
 
-#endif
-
     %feature("docstring", "
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") GetVariables;
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") GetVariables;
     lldb::SBValueList
     GetVariables (bool arguments,
                   bool locals,
@@ -238,14 +227,13 @@ public:
 
     lldb::SBValueList
     GetVariables (const lldb::SBVariablesOptions& options);
-             
+
     lldb::SBValueList
     GetRegisters ();
 
     %feature("docstring", "
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") FindVariable;
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") FindVariable;
     lldb::SBValue
     FindVariable (const char *var_name);
 
@@ -256,40 +244,38 @@ public:
     FindRegister (const char *name);
 
     %feature("docstring", "
-    /// Get a lldb.SBValue for a variable path. 
-    ///
-    /// Variable paths can include access to pointer or instance members:
-    ///     rect_ptr->origin.y
-    ///     pt.x
-    /// Pointer dereferences:
-    ///     *this->foo_ptr
-    ///     **argv
-    /// Address of:
-    ///     &pt
-    ///     &my_array[3].x
-    /// Array accesses and treating pointers as arrays:
-    ///     int_array[1]
-    ///     pt_ptr[22].x
-    ///
-    /// Unlike EvaluateExpression() which returns lldb.SBValue objects
-    /// with constant copies of the values at the time of evaluation,
-    /// the result of this function is a value that will continue to
-    /// track the current value of the value as execution progresses
-    /// in the current frame.
-    ") GetValueForVariablePath;
+    Get a lldb.SBValue for a variable path.
+
+    Variable paths can include access to pointer or instance members:
+        rect_ptr->origin.y
+        pt.x
+    Pointer dereferences:
+        *this->foo_ptr
+        **argv
+    Address of:
+        &pt
+        &my_array[3].x
+    Array accesses and treating pointers as arrays:
+        int_array[1]
+        pt_ptr[22].x
+
+    Unlike EvaluateExpression() which returns lldb.SBValue objects
+    with constant copies of the values at the time of evaluation,
+    the result of this function is a value that will continue to
+    track the current value of the value as execution progresses
+    in the current frame.") GetValueForVariablePath;
     lldb::SBValue
     GetValueForVariablePath (const char *var_path);
-             
+
     lldb::SBValue
     GetValueForVariablePath (const char *var_path, lldb::DynamicValueType use_dynamic);
 
     %feature("docstring", "
-    /// Find variables, register sets, registers, or persistent variables using
-    /// the frame as the scope.
-    ///
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") FindValue;
+    Find variables, register sets, registers, or persistent variables using
+    the frame as the scope.
+
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") FindValue;
     lldb::SBValue
     FindValue (const char *name, ValueType value_type);
 
@@ -298,11 +284,11 @@ public:
 
     bool
     GetDescription (lldb::SBStream &description);
-    
+
     %pythoncode %{
         def get_all_variables(self):
             return self.GetVariables(True,True,True,True)
-        
+
         def get_parent_frame(self):
             parent_idx = self.idx + 1
             if parent_idx >= 0 and parent_idx < len(self.thread.frame):
@@ -320,7 +306,7 @@ public:
             return self.GetVariables(False,False,True,False)
 
         def var(self, var_expr_path):
-            '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns 
+            '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns
             a value that represents the variable expression path'''
             return self.GetValueForVariablePath(var_expr_path)
 

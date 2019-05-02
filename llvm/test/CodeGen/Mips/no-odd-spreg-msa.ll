@@ -1,8 +1,8 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,-nooddspreg \
-; RUN:   -no-integrated-as -relocation-model=pic < %s | \
+; RUN:   -verify-machineinstrs -no-integrated-as -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,ODDSPREG
 ; RUN: llc -march=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,+nooddspreg \
-; RUN:   -no-integrated-as -relocation-model=pic < %s | \
+; RUN:   -verify-machineinstrs -no-integrated-as -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,NOODDSPREG
 
 @v4f32 = global <4 x float> zeroinitializer
@@ -31,9 +31,9 @@ entry:
 
 ; ALL-LABEL:  msa_insert_0:
 ; ALL:            mov.s $f13, $f12
+; NOODDSPREG:     mov.s $f[[F0:[0-9]+]], $f13
 ; ALL:            lw $[[R0:[0-9]+]], %got(v4f32)(
 ; ALL:            ld.w $w[[W0:[0-9]+]], 0($[[R0]])
-; NOODDSPREG:     mov.s $f[[F0:[0-9]+]], $f13
 ; NOODDSPREG:     insve.w $w[[W0]][0], $w[[F0]][0]
 ; ODDSPREG:       insve.w $w[[W0]][0], $w13[0]
 ; ALL:            teqi $zero, 1
@@ -65,9 +65,9 @@ entry:
 
 ; ALL-LABEL:  msa_insert_1:
 ; ALL:            mov.s $f13, $f12
+; NOODDSPREG:     mov.s $f[[F0:[0-9]+]], $f13
 ; ALL:            lw $[[R0:[0-9]+]], %got(v4f32)(
 ; ALL:            ld.w $w[[W0:[0-9]+]], 0($[[R0]])
-; NOODDSPREG:     mov.s $f[[F0:[0-9]+]], $f13
 ; NOODDSPREG:     insve.w $w[[W0]][1], $w[[F0]][0]
 ; ODDSPREG:       insve.w $w[[W0]][1], $w13[0]
 ; ALL:            teqi $zero, 1

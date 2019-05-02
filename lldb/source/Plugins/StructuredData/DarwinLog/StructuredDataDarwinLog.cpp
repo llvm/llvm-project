@@ -39,9 +39,7 @@ using namespace lldb_private;
 #pragma mark -
 #pragma mark Anonymous Namespace
 
-// -----------------------------------------------------------------------------
 // Anonymous namespace
-// -----------------------------------------------------------------------------
 
 namespace sddarwinlog_private {
 const uint64_t NANOS_PER_MICRO = 1000;
@@ -52,13 +50,11 @@ const uint64_t NANOS_PER_HOUR = NANOS_PER_MINUTE * 60;
 
 static bool DEFAULT_FILTER_FALLTHROUGH_ACCEPTS = true;
 
-//------------------------------------------------------------------
 /// Global, sticky enable switch.  If true, the user has explicitly
 /// run the enable command.  When a process launches or is attached to,
 /// we will enable DarwinLog if either the settings for auto-enable is
 /// on, or if the user had explicitly run enable at some point prior
 /// to the launch/attach.
-//------------------------------------------------------------------
 static bool s_is_explicitly_enabled;
 
 class EnableOptions;
@@ -106,9 +102,7 @@ void SetGlobalEnableOptions(const DebuggerSP &debugger_sp,
 #pragma mark -
 #pragma mark Settings Handling
 
-//------------------------------------------------------------------
 /// Code to handle the StructuredDataDarwinLog settings
-//------------------------------------------------------------------
 
 static constexpr PropertyDefinition g_properties[] = {
     {
@@ -391,12 +385,10 @@ static void RegisterFilterOperations() {
 // Commands
 // =========================================================================
 
-// -------------------------------------------------------------------------
 /// Provides the main on-off switch for enabling darwin logging.
 ///
 /// It is valid to run the enable command when logging is already enabled.
 /// This resets the logging with whatever settings are currently set.
-// -------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_enable_option_table[] = {
     // Source stream include/exclude options (the first-level filter). This one
@@ -890,9 +882,7 @@ private:
   EnableOptionsSP m_options_sp;
 };
 
-// -------------------------------------------------------------------------
 /// Provides the status command.
-// -------------------------------------------------------------------------
 class StatusCommand : public CommandObjectParsed {
 public:
   StatusCommand(CommandInterpreter &interpreter)
@@ -968,9 +958,7 @@ protected:
   }
 };
 
-// -------------------------------------------------------------------------
 /// Provides the darwin-log base command
-// -------------------------------------------------------------------------
 class BaseCommand : public CommandObjectMultiword {
 public:
   BaseCommand(CommandInterpreter &interpreter)
@@ -1082,9 +1070,7 @@ using namespace sddarwinlog_private;
 #pragma mark -
 #pragma mark Public static API
 
-// -----------------------------------------------------------------------------
 // Public static API
-// -----------------------------------------------------------------------------
 
 void StructuredDataDarwinLog::Initialize() {
   RegisterFilterOperations();
@@ -1105,9 +1091,7 @@ ConstString StructuredDataDarwinLog::GetStaticPluginName() {
 #pragma mark -
 #pragma mark PluginInterface API
 
-// -----------------------------------------------------------------------------
 // PluginInterface API
-// -----------------------------------------------------------------------------
 
 ConstString StructuredDataDarwinLog::GetPluginName() {
   return GetStaticPluginName();
@@ -1118,9 +1102,7 @@ uint32_t StructuredDataDarwinLog::GetPluginVersion() { return 1; }
 #pragma mark -
 #pragma mark StructuredDataPlugin API
 
-// -----------------------------------------------------------------------------
 // StructuredDataPlugin API
-// -----------------------------------------------------------------------------
 
 bool StructuredDataDarwinLog::SupportsStructuredDataType(
     ConstString type_name) {
@@ -1370,9 +1352,7 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
   EnableNow();
 }
 
-// -----------------------------------------------------------------------------
 // public destructor
-// -----------------------------------------------------------------------------
 
 StructuredDataDarwinLog::~StructuredDataDarwinLog() {
   if (m_breakpoint_id != LLDB_INVALID_BREAK_ID) {
@@ -1387,9 +1367,7 @@ StructuredDataDarwinLog::~StructuredDataDarwinLog() {
 #pragma mark -
 #pragma mark Private instance methods
 
-// -----------------------------------------------------------------------------
 // Private constructors
-// -----------------------------------------------------------------------------
 
 StructuredDataDarwinLog::StructuredDataDarwinLog(const ProcessWP &process_wp)
     : StructuredDataPlugin(process_wp), m_recorded_first_timestamp(false),
@@ -1397,9 +1375,7 @@ StructuredDataDarwinLog::StructuredDataDarwinLog(const ProcessWP &process_wp)
       m_added_breakpoint_mutex(), m_added_breakpoint(),
       m_breakpoint_id(LLDB_INVALID_BREAK_ID) {}
 
-// -----------------------------------------------------------------------------
 // Private static methods
-// -----------------------------------------------------------------------------
 
 StructuredDataPluginSP
 StructuredDataDarwinLog::CreateInstance(Process &process) {

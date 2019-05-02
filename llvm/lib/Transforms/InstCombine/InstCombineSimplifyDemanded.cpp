@@ -1003,8 +1003,7 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
       NewDMask = ConstantInt::get(DMask->getType(), NewDMaskVal);
   }
 
-  // TODO: Handle 3 vectors when supported in code gen.
-  unsigned NewNumElts = PowerOf2Ceil(DemandedElts.countPopulation());
+  unsigned NewNumElts = DemandedElts.countPopulation();
   if (!NewNumElts)
     return UndefValue::get(II->getType());
 
@@ -1170,6 +1169,18 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
   default: break;
 
   case Instruction::GetElementPtr: {
+    // The LangRef requires that struct geps have all constant indices.  As
+    // such, we can't convert any operand to partial undef.
+    auto mayIndexStructType = [](GetElementPtrInst &GEP) {
+      for (auto I = gep_type_begin(GEP), E = gep_type_end(GEP);
+           I != E; I++)
+        if (I.isStruct())
+          return true;;
+      return false;
+    };
+    if (mayIndexStructType(cast<GetElementPtrInst>(*I)))
+      break;
+    
     // Conservatively track the demanded elements back through any vector
     // operands we may have.  We know there must be at least one, or we
     // wouldn't have a vector result to get here. Note that we intentionally
@@ -1436,6 +1447,30 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
     if (!II) break;
     switch (II->getIntrinsicID()) {
+    case Intrinsic::masked_gather: // fallthrough
+    case Intrinsic::masked_load: {
+      // Subtlety: If we load from a pointer, the pointer must be valid
+      // regardless of whether the element is demanded.  Doing otherwise risks
+      // segfaults which didn't exist in the original program.
+      APInt DemandedPtrs(APInt::getAllOnesValue(VWidth)),
+        DemandedPassThrough(DemandedElts);
+      if (auto *CV = dyn_cast<ConstantVector>(II->getOperand(2)))
+        for (unsigned i = 0; i < VWidth; i++) {
+          Constant *CElt = CV->getAggregateElement(i);
+          if (CElt->isNullValue())
+            DemandedPtrs.clearBit(i);
+          else if (CElt->isAllOnesValue())
+            DemandedPassThrough.clearBit(i);
+        }
+      if (II->getIntrinsicID() == Intrinsic::masked_gather)
+        simplifyAndSetOp(II, 0, DemandedPtrs, UndefElts2);
+      simplifyAndSetOp(II, 3, DemandedPassThrough, UndefElts3);
+      
+      // Output elements are undefined if the element from both sources are.
+      // TODO: can strengthen via mask as well.
+      UndefElts = UndefElts2 & UndefElts3;
+      break;
+    }
     case Intrinsic::x86_xop_vfrcz_ss:
     case Intrinsic::x86_xop_vfrcz_sd:
       // The instructions for these intrinsics are speced to zero upper bits not

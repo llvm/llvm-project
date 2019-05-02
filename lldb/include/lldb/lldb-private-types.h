@@ -28,10 +28,8 @@ class ExecutionContext;
 typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
     const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
 
-//----------------------------------------------------------------------
 // Every register is described in detail including its name, alternate name
 // (optional), encoding, size in bytes and the default display format.
-//----------------------------------------------------------------------
 struct RegisterInfo {
   const char *name;     // Name of this register, can't be NULL
   const char *alt_name; // Alternate name of this register, can be NULL
@@ -73,9 +71,7 @@ struct RegisterInfo {
   }
 };
 
-//----------------------------------------------------------------------
 // Registers are grouped into register sets
-//----------------------------------------------------------------------
 struct RegisterSet {
   const char *name;          // Name of this register set
   const char *short_name;    // A short name for this register set

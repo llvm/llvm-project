@@ -463,3 +463,25 @@ body:             |
   bb.4:
     S_ENDPGM 0
 ...
+
+# GCN: name: negated_cond_subreg
+# GCN:      %0.sub0_sub1:sreg_128 = IMPLICIT_DEF
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0.sub0_sub1, implicit-def $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
+---
+name:            negated_cond_subreg
+body:             |
+  bb.0:
+    %0.sub0_sub1:sreg_128 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0.sub0_sub1, implicit $exec
+    %2.sub0_sub1:sreg_128 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+    $vcc = S_AND_B64 $exec, killed %2.sub0_sub1:sreg_128, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.0
+
+  bb.2:
+    S_ENDPGM 0
+...

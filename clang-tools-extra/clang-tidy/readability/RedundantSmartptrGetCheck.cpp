@@ -30,6 +30,10 @@ internal::Matcher<Expr> callToGet(const internal::Matcher<Decl> &OnClass) {
       .bind("redundant_get");
 }
 
+internal::Matcher<Decl> knownSmartptr() {
+  return recordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr"));
+}
+
 void registerMatchersForGetArrowStart(MatchFinder *Finder,
                                       MatchFinder::MatchCallback *Callback) {
   const auto QuacksLikeASmartptr = recordDecl(
@@ -39,21 +43,23 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
       has(cxxMethodDecl(hasName("operator*"), returns(qualType(references(
                                                   type().bind("op*Type")))))));
 
+  // Make sure we are not missing the known standard types.
+  const auto Smartptr = anyOf(knownSmartptr(), QuacksLikeASmartptr);
+
   // Catch 'ptr.get()->Foo()'
-  Finder->addMatcher(memberExpr(expr().bind("memberExpr"), isArrow(),
-                                hasObjectExpression(ignoringImpCasts(
-                                    callToGet(QuacksLikeASmartptr)))),
-                     Callback);
+  Finder->addMatcher(
+      memberExpr(expr().bind("memberExpr"), isArrow(),
+                 hasObjectExpression(ignoringImpCasts(callToGet(Smartptr)))),
+      Callback);
 
   // Catch '*ptr.get()' or '*ptr->get()'
   Finder->addMatcher(
-      unaryOperator(hasOperatorName("*"),
-                    hasUnaryOperand(callToGet(QuacksLikeASmartptr))),
+      unaryOperator(hasOperatorName("*"), hasUnaryOperand(callToGet(Smartptr))),
       Callback);
 
   // Catch '!ptr.get()'
-  const auto CallToGetAsBool = ignoringParenImpCasts(callToGet(recordDecl(
-      QuacksLikeASmartptr, has(cxxConversionDecl(returns(booleanType()))))));
+  const auto CallToGetAsBool = ignoringParenImpCasts(callToGet(
+      recordDecl(Smartptr, has(cxxConversionDecl(returns(booleanType()))))));
   Finder->addMatcher(
       unaryOperator(hasOperatorName("!"), hasUnaryOperand(CallToGetAsBool)),
       Callback);
@@ -71,10 +77,7 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
   // This one is harder to do with duck typing.
   // The operator==/!= that we are looking for might be member or non-member,
   // might be on global namespace or found by ADL, might be a template, etc.
-  // For now, lets keep a list of known standard types.
-
-  const auto IsAKnownSmartptr =
-      recordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr"));
+  // For now, lets keep it to the known standard types.
 
   // Matches against nullptr.
   Finder->addMatcher(
@@ -82,7 +85,7 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
                      hasEitherOperand(ignoringImpCasts(
                          anyOf(cxxNullPtrLiteralExpr(), gnuNullExpr(),
                                integerLiteral(equals(0))))),
-                     hasEitherOperand(callToGet(IsAKnownSmartptr))),
+                     hasEitherOperand(callToGet(knownSmartptr()))),
       Callback);
 
   // FIXME: Match and fix if (l.get() == r.get()).

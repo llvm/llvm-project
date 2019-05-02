@@ -286,6 +286,10 @@ TEST(Option, FindNearest) {
   EXPECT_EQ(Nearest, "-blorp");
   EXPECT_EQ(1U, T.findNearest("--blorm", Nearest));
   EXPECT_EQ(Nearest, "--blorp");
+  EXPECT_EQ(1U, T.findNearest("-blarg", Nearest));
+  EXPECT_EQ(Nearest, "-blarn");
+  EXPECT_EQ(1U, T.findNearest("--blarm", Nearest));
+  EXPECT_EQ(Nearest, "--blarn");
   EXPECT_EQ(1U, T.findNearest("-fjormp", Nearest));
   EXPECT_EQ(Nearest, "--fjormp");
 
@@ -293,6 +297,20 @@ TEST(Option, FindNearest) {
   // of the original string.
   EXPECT_EQ(1U, T.findNearest("/framb:foo", Nearest));
   EXPECT_EQ(Nearest, "/cramb:foo");
+
+  // `--glormp` should have an editing distance > 0 from `--glormp=`.
+  EXPECT_GT(T.findNearest("--glorrmp", Nearest), 0U);
+  EXPECT_EQ(Nearest, "--glorrmp=");
+  EXPECT_EQ(0U, T.findNearest("--glorrmp=foo", Nearest));
+
+  // `--blurmps` should correct to `--blurmp`, not `--blurmp=`, even though
+  // both naively have an editing distance of 1.
+  EXPECT_EQ(1U, T.findNearest("--blurmps", Nearest));
+  EXPECT_EQ(Nearest, "--blurmp");
+
+  // ...but `--blurmps=foo` should correct to `--blurmp=foo`.
+  EXPECT_EQ(1U, T.findNearest("--blurmps=foo", Nearest));
+  EXPECT_EQ(Nearest, "--blurmp=foo");
 
   // Flags should be included and excluded as specified.
   EXPECT_EQ(1U, T.findNearest("-doopf", Nearest, /*FlagsToInclude=*/OptFlag2));

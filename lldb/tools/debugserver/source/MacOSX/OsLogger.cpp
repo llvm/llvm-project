@@ -19,10 +19,8 @@
 #define LLDB_OS_LOG_MAX_BUFFER_LENGTH 256
 
 namespace {
-//----------------------------------------------------------------------
 // Darwin os_log logging callback that can be registered with
 // DNBLogSetLogCallback
-//----------------------------------------------------------------------
 void DarwinLogCallback(void *baton, uint32_t flags, const char *format,
                        va_list args) {
   if (format == nullptr)

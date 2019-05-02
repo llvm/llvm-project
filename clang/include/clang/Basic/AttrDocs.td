@@ -606,6 +606,7 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
 
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
+  let Heading = "pass_object_size, pass_dynamic_object_size";
   let Content = [{
 .. Note:: The mangling of functions with parameters that are annotated with
   ``pass_object_size`` is subject to change. You can get around this by
@@ -698,6 +699,15 @@ Currently, ``pass_object_size`` is a bit restricted in terms of its usage:
 * It is an error to apply the ``pass_object_size`` attribute to parameters that
   are not pointers. Additionally, any parameter that ``pass_object_size`` is
   applied to must be marked ``const`` at its function's definition.
+
+Clang also supports the ``pass_dynamic_object_size`` attribute, which behaves
+identically to ``pass_object_size``, but evaluates a call to
+``__builtin_dynamic_object_size`` at the callee instead of
+``__builtin_object_size``. ``__builtin_dynamic_object_size`` provides some extra
+runtime checks when the object size can't be determined at compile-time. You can
+read more about ``__builtin_dynamic_object_size`` `here
+<https://clang.llvm.org/docs/LanguageExtensions.html#evaluating-object-size-dynamically>`_.
+
   }];
 }
 
@@ -911,8 +921,6 @@ and Objective-C methods.
   }];
 }
 
-
-
 def NoDebugDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -1047,7 +1055,7 @@ implementation of an override in a subclass does not call super.  For example:
 }
 
 def ObjCRuntimeNameDocs : Documentation {
-    let Category = DocCatFunction;
+    let Category = DocCatDecl;
     let Content = [{
 By default, the Objective-C interface or protocol identifier is used
 in the metadata name for that object. The `objc_runtime_name`
@@ -1068,14 +1076,17 @@ can only be placed before an @protocol or @interface declaration:
 }
 
 def ObjCRuntimeVisibleDocs : Documentation {
-    let Category = DocCatFunction;
+    let Category = DocCatDecl;
     let Content = [{
-This attribute specifies that the Objective-C class to which it applies is visible to the Objective-C runtime but not to the linker. Classes annotated with this attribute cannot be subclassed and cannot have categories defined for them.
+This attribute specifies that the Objective-C class to which it applies is
+visible to the Objective-C runtime but not to the linker. Classes annotated
+with this attribute cannot be subclassed and cannot have categories defined for
+them.
     }];
 }
 
 def ObjCBoxableDocs : Documentation {
-    let Category = DocCatFunction;
+    let Category = DocCatDecl;
     let Content = [{
 Structs and unions marked with the ``objc_boxable`` attribute can be used
 with the Objective-C boxed expression syntax, ``@(...)``.
@@ -1295,7 +1306,7 @@ Also see the documentation for `@available
 }
 
 def ExternalSourceSymbolDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocCatDecl;
   let Content = [{
 The ``external_source_symbol`` attribute specifies that a declaration originates
 from an external source and describes the nature of that source.
@@ -2439,7 +2450,7 @@ behavior of the program is undefined.
 }
 
 def FlagEnumDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be added to an enumerator to signal to the compiler that it
 is intended to be used as a flag type. This will cause the compiler to assume
@@ -2449,7 +2460,7 @@ manipulating bits of the enumerator when issuing warnings.
 }
 
 def EnumExtensibilityDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 Attribute ``enum_extensibility`` is used to distinguish between enum definitions
 that are extensible and those that are not. The attribute can take either
@@ -2498,7 +2509,7 @@ standard and instructs clang to be more lenient when issuing warnings.
 }
 
 def EmptyBasesDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 The empty_bases attribute permits the compiler to utilize the
 empty-base-optimization more frequently.
@@ -2508,7 +2519,7 @@ It is only supported when using the Microsoft C++ ABI.
 }
 
 def LayoutVersionDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 The layout_version attribute requests that the compiler utilize the class
 layout rules of a particular compiler version.
@@ -2534,7 +2545,7 @@ changes.
 }
 
 def TrivialABIDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatDecl;
   let Content = [{
 The ``trivial_abi`` attribute can be applied to a C++ class, struct, or union.
 It instructs the compiler to pass and return the type using the C ABI for the
@@ -2576,7 +2587,7 @@ Attribute ``trivial_abi`` has no effect in the following cases:
 }
 
 def MSInheritanceDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Heading = "__single_inhertiance, __multiple_inheritance, __virtual_inheritance";
   let Content = [{
 This collection of keywords is enabled under ``-fms-extensions`` and controls
@@ -2623,7 +2634,7 @@ an error:
 }
 
 def MSNoVTableDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be added to a class declaration or definition to signal to
 the compiler that constructors and destructors will not reference the virtual
@@ -2763,8 +2774,6 @@ def PipelineHintDocs : Documentation {
 
   }];
 }
-
-
 
 def OpenCLUnrollHintDocs : Documentation {
   let Category = DocCatStmt;
@@ -3335,7 +3344,7 @@ jumps from i386 arch code).
   }];
 }
 
-def AnyX86NoCfCheckDocs : Documentation{
+def AnyX86NoCfCheckDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 Jump Oriented Programming attacks rely on tampering with addresses used by
@@ -3603,7 +3612,7 @@ experimental at this time.
 }
 
 def DeprecatedDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocCatDecl;
   let Content = [{
 The ``deprecated`` attribute can be applied to a function, a variable, or a
 type. This is useful when identifying functions, variables, or types that are
@@ -3638,7 +3647,7 @@ Not all targets support this attribute. ELF target support depends on both the l
 }
 
 def LTOVisibilityDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 See :doc:`LTOVisibility`.
   }];
@@ -3674,7 +3683,7 @@ If a function has neither of these attributes, they become subject to the XRay h
 }
 
 def TransparentUnionDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be applied to a union to change the behaviour of calls to
 functions that have an argument with a transparent union type. The compiler
@@ -3692,7 +3701,7 @@ Transparent unions are not supported in C++.
 }
 
 def ObjCSubclassingRestrictedDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be added to an Objective-C ``@interface`` declaration to
 ensure that this class cannot be subclassed.
@@ -3700,21 +3709,21 @@ ensure that this class cannot be subclassed.
 }
 
 def ObjCNonLazyClassDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
-This attribute can be added to an Objective-C ``@interface`` declaration to
-add the class to the list of non-lazily initialized classes. A non-lazy class
-will be initialized eagerly when the Objective-C runtime is loaded.  This is
-required for certain system classes which have instances allocated in
-non-standard ways, such as the classes for blocks and constant strings.  Adding
-this attribute is essentially equivalent to providing a trivial `+load` method 
-but avoids the (fairly small) load-time overheads associated with defining and
-calling such a method.
+This attribute can be added to an Objective-C ``@interface`` or
+``@implementation`` declaration to add the class to the list of non-lazily
+initialized classes. A non-lazy class will be initialized eagerly when the
+Objective-C runtime is loaded. This is required for certain system classes which
+have instances allocated in non-standard ways, such as the classes for blocks
+and constant strings. Adding this attribute is essentially equivalent to
+providing a trivial `+load` method but avoids the (fairly small) load-time
+overheads associated with defining and calling such a method.
   }];
 }
 
 def SelectAnyDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute appertains to a global symbol, causing it to have a weak
 definition (
@@ -3887,7 +3896,7 @@ it rather documents the programmer's intent.
 }
 
 def CallbackDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatFunction;
   let Content = [{
 The ``callback`` attribute specifies that the annotated function may invoke the
 specified callback zero or more times. The callback, as well as the passed
@@ -4060,7 +4069,7 @@ When compiled without ``-fobjc-arc``, this attribute is ignored.
 }]; }
 
 def MIGConventionDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatFunction;
   let Content = [{
   The Mach Interface Generator release-on-success convention dictates
 functions that follow it to only release arguments passed to them when they
@@ -4077,5 +4086,22 @@ that have their return value of type ``kern_return_t`` unconditionally returned
 from the routine. The attribute can be applied to C++ methods, and in this case
 it will be automatically applied to overrides if the method is virtual. The
 attribute can also be written using C++11 syntax: ``[[mig::server_routine]]``.
+}];
+}
+
+def MSAllocatorDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``__declspec(allocator)`` attribute is applied to functions that allocate
+memory, such as operator new in C++. When CodeView debug information is emitted
+(enabled by ``clang -gcodeview`` or ``clang-cl /Z7``), Clang will attempt to
+record the code offset of heap allocation call sites in the debug info. It will
+also record the type being allocated using some local heuristics. The Visual
+Studio debugger uses this information to `profile memory usage`_.
+
+.. _profile memory usage: https://docs.microsoft.com/en-us/visualstudio/profiling/memory-usage
+
+This attribute does not affect optimizations in any way, unlike GCC's
+``__attribute__((malloc))``.
 }];
 }

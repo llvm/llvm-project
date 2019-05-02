@@ -71,7 +71,6 @@ bool AddressSanitizerRuntime::CheckIfRuntimeIsValid(
   return symbol != nullptr;
 }
 
-static constexpr std::chrono::seconds g_retrieve_report_data_function_timeout(2);
 const char *address_sanitizer_retrieve_report_data_prefix = R"(
 extern "C"
 {
@@ -126,7 +125,7 @@ StructuredData::ObjectSP AddressSanitizerRuntime::RetrieveReportData() {
   options.SetTryAllThreads(true);
   options.SetStopOthers(true);
   options.SetIgnoreBreakpoints(true);
-  options.SetTimeout(g_retrieve_report_data_function_timeout);
+  options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
   options.SetPrefix(address_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);

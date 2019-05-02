@@ -1,11 +1,15 @@
-# REQUIRES: system-windows
+# REQUIRES: lld
 # RUN: yaml2obj < %s > %t.obj
 #
-# RUN: lld-link /machine:x64 /out:%t.dll /noentry /nodefaultlib /dll %t.obj /export:DllFunc
+# RUN: lld-link /machine:x64 /out:%t.dll /noentry /nodefaultlib /debug /dll %t.obj /export:DllFunc
 #
 # RUN: lldb-test object-file %t.dll | FileCheck -check-prefix=BASIC-CHECK %s
 # RUN: lldb-test object-file -dep-modules %t.dll | FileCheck -check-prefix=DEPS %s
 
+# BASIC-CHECK: Plugin name: pe-coff
+
+# UUID should not be empty if the module is built with debug info.
+# BASIC-CHECK-DAG: UUID: {{[0-9A-F]{7,}[0-9A-F]}}-{{.*}}
 
 # BASIC-CHECK: Showing 3 subsections
 # BASIC-CHECK:  Index: 0

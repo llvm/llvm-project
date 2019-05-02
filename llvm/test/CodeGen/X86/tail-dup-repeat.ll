@@ -7,7 +7,7 @@
 ; and if.then64, and then the block dup2 gets duplicated into land.lhs.true
 ; and if.end70
 
-define void @repeated_tail_dup(i1 %a1, i1 %a2, i32* %a4, i32* %a5, i8* %a6) #0 align 2 {
+define void @repeated_tail_dup(i1 %a1, i1 %a2, i32* %a4, i32* %a5, i8* %a6, i32 %a7) #0 align 2 {
 ; CHECK-LABEL: repeated_tail_dup:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -27,7 +27,7 @@ define void @repeated_tail_dup(i1 %a1, i1 %a2, i32* %a4, i32* %a5, i8* %a6) #0 a
 ; CHECK-NEXT:  # %bb.4: # %if.then64
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movb $1, (%r8)
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testl %r9d, %r9d
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:    jmp .LBB0_8
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -37,7 +37,7 @@ define void @repeated_tail_dup(i1 %a1, i1 %a2, i32* %a4, i32* %a5, i8* %a6) #0 a
 ; CHECK-NEXT:  .LBB0_6: # %dup2
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $2, (%rcx)
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testl %r9d, %r9d
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  .LBB0_8: # %for.end
 ; CHECK-NEXT:    retq
@@ -68,7 +68,7 @@ dup2:                                             ; preds = %if.end70, %land.lhs
 
 dup1:                                             ; preds = %dup2, %if.then64
   %val = load i32, i32* %a4, align 8
-  %switch = icmp ult i32 undef, 1
+  %switch = icmp ult i32 %a7, 1
   br i1 %switch, label %for.cond, label %for.end
 
 for.end:                                          ; preds = %dup1

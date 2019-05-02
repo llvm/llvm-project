@@ -8,7 +8,7 @@ void foo() {
 bool foobool(int argc) {
   return argc;
 }
-
+extern int omp_default_mem_alloc;
 struct S1; // expected-note 2 {{declared here}} expected-note 2 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
@@ -102,7 +102,7 @@ int foomain(int argc, char **argv) {
     ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for lastprivate(argc)
+#pragma omp distribute parallel for lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target

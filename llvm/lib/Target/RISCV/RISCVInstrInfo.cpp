@@ -438,6 +438,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 0;
   case RISCV::PseudoCALL:
   case RISCV::PseudoTAIL:
+  case RISCV::PseudoLLA:
     return 8;
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR: {

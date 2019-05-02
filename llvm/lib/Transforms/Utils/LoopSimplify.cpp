@@ -48,6 +48,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -740,6 +741,7 @@ namespace {
       AU.addPreservedID(LCSSAID);
       AU.addPreserved<DependenceAnalysisWrapperPass>();
       AU.addPreservedID(BreakCriticalEdgesID);  // No critical edges added.
+      AU.addPreserved<BranchProbabilityInfoWrapperPass>();
     }
 
     /// verifyAnalysis() - Verify LoopSimplifyForm's guarantees.
@@ -812,6 +814,12 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   PA.preserve<SCEVAA>();
   PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<DependenceAnalysis>();
+  // BPI maps conditional terminators to probabilities, LoopSimplify can insert
+  // blocks, but it does so only by splitting existing blocks and edges. This
+  // results in the interesting property that all new terminators inserted are
+  // unconditional branches which do not appear in BPI. All deletions are
+  // handled via ValueHandle callbacks w/in BPI. 
+  PA.preserve<BranchProbabilityAnalysis>();
   return PA;
 }
 

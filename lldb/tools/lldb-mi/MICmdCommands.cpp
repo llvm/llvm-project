@@ -45,7 +45,6 @@ template <typename T> static bool Register();
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Command to command factory registration function.
 // Type:    Template function.
 // Args:    typename T  - A command type class.
@@ -61,7 +60,6 @@ template <typename T> static bool MICmnCommands::Register() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Register commands with MI command factory
 // Type:    Function.
 // Args:    None.

@@ -1516,8 +1516,9 @@ PluginManager::GetScriptInterpreterCreateCallbackAtIndex(uint32_t idx) {
   return nullptr;
 }
 
-lldb::ScriptInterpreterSP PluginManager::GetScriptInterpreterForLanguage(
-    lldb::ScriptLanguage script_lang, CommandInterpreter &interpreter) {
+lldb::ScriptInterpreterSP
+PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
+                                               Debugger &debugger) {
   std::lock_guard<std::recursive_mutex> guard(GetScriptInterpreterMutex());
   ScriptInterpreterInstances &instances = GetScriptInterpreterInstances();
 
@@ -1528,20 +1529,18 @@ lldb::ScriptInterpreterSP PluginManager::GetScriptInterpreterForLanguage(
       none_instance = pos->create_callback;
 
     if (script_lang == pos->language)
-      return pos->create_callback(interpreter);
+      return pos->create_callback(debugger);
   }
 
   // If we didn't find one, return the ScriptInterpreter for the null language.
   assert(none_instance != nullptr);
-  return none_instance(interpreter);
+  return none_instance(debugger);
 }
 
 #pragma mark -
 #pragma mark StructuredDataPlugin
 
-// -----------------------------------------------------------------------------
 // StructuredDataPlugin
-// -----------------------------------------------------------------------------
 
 struct StructuredDataPluginInstance {
   StructuredDataPluginInstance()

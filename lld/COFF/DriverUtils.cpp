@@ -315,6 +315,27 @@ void parseManifestUAC(StringRef Arg) {
   }
 }
 
+// Parses a string in the form of "cd|net[,(cd|net)]*"
+// Results are directly written to Config.
+void parseSwaprun(StringRef Arg) {
+  do {
+    StringRef Swaprun, NewArg;
+    std::tie(Swaprun, NewArg) = Arg.split(',');
+    if (Swaprun.equals_lower("cd"))
+      Config->SwaprunCD = true;
+    else if (Swaprun.equals_lower("net"))
+      Config->SwaprunNet = true;
+    else if (Swaprun.empty())
+      error("/swaprun: missing argument");
+    else
+      error("/swaprun: invalid argument: " + Swaprun);
+    // To catch trailing commas, e.g. `/spawrun:cd,`
+    if (NewArg.empty() && Arg.endswith(","))
+      error("/swaprun: missing argument");
+    Arg = NewArg;
+  } while (!Arg.empty());
+}
+
 // An RAII temporary file class that automatically removes a temporary file.
 namespace {
 class TemporaryFile {
@@ -698,16 +719,19 @@ void assignExportOrdinals() {
 
 // Parses a string in the form of "key=value" and check
 // if value matches previous values for the same key.
-void checkFailIfMismatch(StringRef Arg, StringRef Source) {
+void checkFailIfMismatch(StringRef Arg, InputFile *Source) {
   StringRef K, V;
   std::tie(K, V) = Arg.split('=');
   if (K.empty() || V.empty())
     fatal("/failifmismatch: invalid argument: " + Arg);
-  std::pair<StringRef, StringRef> Existing = Config->MustMatch[K];
+  std::pair<StringRef, InputFile *> Existing = Config->MustMatch[K];
   if (!Existing.first.empty() && V != Existing.first) {
+    std::string SourceStr = Source ? toString(Source) : "cmd-line";
+    std::string ExistingStr =
+        Existing.second ? toString(Existing.second) : "cmd-line";
     fatal("/failifmismatch: mismatch detected for '" + K + "':\n>>> " +
-          Existing.second + " has value " + Existing.first + "\n>>> " +
-          Source + " has value " + V);
+          ExistingStr + " has value " + Existing.first + "\n>>> " + SourceStr +
+          " has value " + V);
   }
   Config->MustMatch[K] = {V, Source};
 }
@@ -722,7 +746,7 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
     if (!RF)
       fatal("cannot compile non-resource file as resource");
     if (auto EC = Parser.parse(RF))
-      fatal("failed to parse .res file: " + toString(std::move(EC)));
+      fatal(toString(std::move(EC)));
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =

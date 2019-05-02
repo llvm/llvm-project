@@ -21,7 +21,7 @@ define void @f_f___un_3C_unf_3E_un_3C_unf_3E_(<16 x i1> %x) {
 ; CHECK-NEXT:    vpmovd2m %zmm0, %k1
 ; CHECK-NEXT:    vmovapd 0, %zmm0
 ; CHECK-NEXT:    vmovapd 64, %zmm1
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [3.3951932655444357E-313,3.3951932655444357E-313,3.3951932655444357E-313,3.3951932655444357E-313,3.3951932655444357E-313,3.3951932655444357E-313,3.3951932655444357E-313,3.3951932655444357E-313]
 ; CHECK-NEXT:    kshiftrw $8, %k1, %k2
 ; CHECK-NEXT:    vorpd %zmm2, %zmm1, %zmm1 {%k2}
 ; CHECK-NEXT:    vorpd %zmm2, %zmm0, %zmm0 {%k1}

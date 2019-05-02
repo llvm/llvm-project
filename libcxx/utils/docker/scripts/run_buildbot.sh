@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -x
 
+script_dir=`dirname "$0"`
+
+# TODO(EricWF): Replace this file with the new script once the existing
+# bots have been migrated.
+if [ "$1" == "--new" ]; then
+  shift
+  $script_dir/run_buildbot_new.sh "$@"
+  shutdown now
+fi
+
 BOT_DIR=/b
 BOT_NAME=$1
 BOT_PASS=$2

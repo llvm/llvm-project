@@ -16,12 +16,10 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class BreakpointResolverScripted BreakpointResolverScripted.h
 /// "lldb/Breakpoint/BreakpointResolverScripted.h" This class sets breakpoints
 /// on a given Address.  This breakpoint only takes once, and then it won't
 /// attempt to reset itself.
-//----------------------------------------------------------------------
 
 class BreakpointResolverScripted : public BreakpointResolver {
 public:

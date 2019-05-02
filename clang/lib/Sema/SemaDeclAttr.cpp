@@ -2508,6 +2508,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
               else
                 return VersionTuple(NewMajor, Version.getMinor().getValue());
             }
+            return VersionTuple(NewMajor);
           }
 
           return VersionTuple(2, 0);
@@ -2612,6 +2613,14 @@ static void handleVisibilityAttr(Sema &S, Decl *D, const ParsedAttr &AL,
     S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type)
         << AL << ExpectedTypeOrNamespace;
     return;
+  }
+
+  // Visibility attributes have no effect on symbols with internal linkage.
+  if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+    if (!ND->isExternallyVisible())
+      S.Diag(AL.getRange().getBegin(),
+             diag::warn_attribute_ignored_on_non_external)
+          << AL;
   }
 
   // Check that the argument is a string literal.
@@ -4651,7 +4660,8 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   }
   if (A != TargetInfo::CCCR_OK) {
     if (A == TargetInfo::CCCR_Warning)
-      Diag(Attrs.getLoc(), diag::warn_cconv_ignored) << Attrs;
+      Diag(Attrs.getLoc(), diag::warn_cconv_ignored)
+          << Attrs << (int)CallingConventionIgnoredReason::ForThisTarget;
 
     // This convention is not valid for the target. Use the default function or
     // method calling convention.
@@ -6546,6 +6556,20 @@ static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<MIGServerRoutineAttr>(S, D, AL);
 }
 
+static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // Warn if the return type is not a pointer or reference type.
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    QualType RetTy = FD->getReturnType();
+    if (!RetTy->isPointerType() && !RetTy->isReferenceType()) {
+      S.Diag(AL.getLoc(), diag::warn_declspec_allocator_nonpointer)
+          << AL.getRange() << RetTy;
+      return;
+    }
+  }
+
+  handleSimpleAttribute<MSAllocatorAttr>(S, D, AL);
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -7278,6 +7302,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_MIGServerRoutine:
     handleMIGServerRoutineAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_MSAllocator:
+    handleMSAllocatorAttr(S, D, AL);
     break;
   }
 }

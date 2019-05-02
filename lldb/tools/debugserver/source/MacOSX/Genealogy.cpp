@@ -16,9 +16,7 @@
 #include "GenealogySPI.h"
 #include "MachThreadList.h"
 
-//---------------------------
 /// Constructor
-//---------------------------
 
 Genealogy::Genealogy()
     : m_os_activity_diagnostic_for_pid(nullptr),

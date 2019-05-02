@@ -101,6 +101,8 @@ def X86vzmovl  : SDNode<"X86ISD::VZEXT_MOVL",
 
 def X86vzload  : SDNode<"X86ISD::VZEXT_LOAD", SDTLoad,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def X86vextractstore  : SDNode<"X86ISD::VEXTRACT_STORE", SDTStore,
+                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def SDTVtrunc    : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>,
                                         SDTCisInt<0>, SDTCisInt<1>,
@@ -681,18 +683,8 @@ def sse_load_f64 : ComplexPattern<v2f64, 5, "selectScalarSSELoad", [],
                                   [SDNPHasChain, SDNPMayLoad, SDNPMemOperand,
                                    SDNPWantRoot, SDNPWantParent]>;
 
-def ssmem : Operand<v4f32> {
-  let PrintMethod = "printdwordmem";
-  let MIOperandInfo = (ops ptr_rc, i8imm, ptr_rc_nosp, i32imm, SEGMENT_REG);
-  let ParserMatchClass = X86Mem32AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
-}
-def sdmem : Operand<v2f64> {
-  let PrintMethod = "printqwordmem";
-  let MIOperandInfo = (ops ptr_rc, i8imm, ptr_rc_nosp, i32imm, SEGMENT_REG);
-  let ParserMatchClass = X86Mem64AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
-}
+def ssmem : X86MemOperand<"printdwordmem", X86Mem32AsmOperand>;
+def sdmem : X86MemOperand<"printqwordmem", X86Mem64AsmOperand>;
 
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
@@ -929,17 +921,6 @@ def fp32imm0 : PatLeaf<(f32 fpimm), [{
 
 def fp64imm0 : PatLeaf<(f64 fpimm), [{
   return N->isExactlyValue(+0.0);
-}]>;
-
-def I8Imm : SDNodeXForm<imm, [{
-  // Transformation function: get the low 8 bits.
-  return getI8Imm((uint8_t)N->getZExtValue(), SDLoc(N));
-}]>;
-
-// BYTE_imm - Transform bit immediates into byte immediates.
-def BYTE_imm  : SDNodeXForm<imm, [{
-  // Transformation function: imm >> 3
-  return getI32Imm(N->getZExtValue() >> 3, SDLoc(N));
 }]>;
 
 // EXTRACT_get_vextract128_imm xform function: convert extract_subvector index

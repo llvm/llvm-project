@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin %s -filetype=obj -o - | llvm-readobj -file-headers -s -sd -r -macho-segment | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin %s -filetype=obj -o - | llvm-readobj --file-headers -S --sd -r --macho-segment | FileCheck %s
 
 	.thread_init_func
 	.quad 0

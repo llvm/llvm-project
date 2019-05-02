@@ -133,8 +133,6 @@ public:
   }
 };
 
-typedef llvm::PointerUnion<const MemRegion *, SymbolRef> RegionOrSymbol;
-
 // Structure to record the symbolic begin and end position of a container
 struct ContainerData {
 private:
@@ -172,41 +170,21 @@ public:
   }
 };
 
-// Structure fo recording iterator comparisons. We needed to retrieve the
-// original comparison expression in assumptions.
-struct IteratorComparison {
-private:
-  RegionOrSymbol Left, Right;
-  bool Equality;
-
-public:
-  IteratorComparison(RegionOrSymbol L, RegionOrSymbol R, bool Eq)
-      : Left(L), Right(R), Equality(Eq) {}
-
-  RegionOrSymbol getLeft() const { return Left; }
-  RegionOrSymbol getRight() const { return Right; }
-  bool isEquality() const { return Equality; }
-  bool operator==(const IteratorComparison &X) const {
-    return Left == X.Left && Right == X.Right && Equality == X.Equality;
-  }
-  bool operator!=(const IteratorComparison &X) const {
-    return Left != X.Left || Right != X.Right || Equality != X.Equality;
-  }
-  void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(Equality); }
-};
-
 class IteratorChecker
     : public Checker<check::PreCall, check::PostCall,
                      check::PostStmt<MaterializeTemporaryExpr>, check::Bind,
-                     check::LiveSymbols, check::DeadSymbols,
-                     eval::Assume> {
+                     check::LiveSymbols, check::DeadSymbols> {
 
   std::unique_ptr<BugType> OutOfRangeBugType;
   std::unique_ptr<BugType> MismatchedBugType;
   std::unique_ptr<BugType> InvalidatedBugType;
 
-  void handleComparison(CheckerContext &C, const SVal &RetVal, const SVal &LVal,
-                        const SVal &RVal, OverloadedOperatorKind Op) const;
+  void handleComparison(CheckerContext &C, const Expr *CE, const SVal &RetVal,
+                        const SVal &LVal, const SVal &RVal,
+                        OverloadedOperatorKind Op) const;
+  void processComparison(CheckerContext &C, ProgramStateRef State,
+                         SymbolRef Sym1, SymbolRef Sym2, const SVal &RetVal,
+                         OverloadedOperatorKind Op) const;
   void verifyAccess(CheckerContext &C, const SVal &Val) const;
   void verifyDereference(CheckerContext &C, const SVal &Val) const;
   void handleIncrement(CheckerContext &C, const SVal &RetVal, const SVal &Iter,
@@ -281,8 +259,6 @@ public:
                      CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
-  ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
-                             bool Assumption) const;
 };
 } // namespace
 
@@ -291,9 +267,6 @@ REGISTER_MAP_WITH_PROGRAMSTATE(IteratorRegionMap, const MemRegion *,
                                IteratorPosition)
 
 REGISTER_MAP_WITH_PROGRAMSTATE(ContainerMap, const MemRegion *, ContainerData)
-
-REGISTER_MAP_WITH_PROGRAMSTATE(IteratorComparisonMap, const SymExpr *,
-                               IteratorComparison)
 
 namespace {
 
@@ -324,16 +297,6 @@ bool isRandomIncrOrDecrOperator(OverloadedOperatorKind OK);
 bool hasSubscriptOperator(ProgramStateRef State, const MemRegion *Reg);
 bool frontModifiable(ProgramStateRef State, const MemRegion *Reg);
 bool backModifiable(ProgramStateRef State, const MemRegion *Reg);
-BinaryOperator::Opcode getOpcode(const SymExpr *SE);
-const RegionOrSymbol getRegionOrSymbol(const SVal &Val);
-const ProgramStateRef processComparison(ProgramStateRef State,
-                                        RegionOrSymbol LVal,
-                                        RegionOrSymbol RVal, bool Equal);
-const ProgramStateRef saveComparison(ProgramStateRef State,
-                                     const SymExpr *Condition, const SVal &LVal,
-                                     const SVal &RVal, bool Eq);
-const IteratorComparison *loadComparison(ProgramStateRef State,
-                                         const SymExpr *Condition);
 SymbolRef getContainerBegin(ProgramStateRef State, const MemRegion *Cont);
 SymbolRef getContainerEnd(ProgramStateRef State, const MemRegion *Cont);
 ProgramStateRef createContainerBegin(ProgramStateRef State,
@@ -343,21 +306,11 @@ ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
                                    const SymbolRef Sym);
 const IteratorPosition *getIteratorPosition(ProgramStateRef State,
                                             const SVal &Val);
-const IteratorPosition *getIteratorPosition(ProgramStateRef State,
-                                            RegionOrSymbol RegOrSym);
 ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
                                     const IteratorPosition &Pos);
-ProgramStateRef setIteratorPosition(ProgramStateRef State,
-                                    RegionOrSymbol RegOrSym,
-                                    const IteratorPosition &Pos);
 ProgramStateRef removeIteratorPosition(ProgramStateRef State, const SVal &Val);
-ProgramStateRef adjustIteratorPosition(ProgramStateRef State,
-                                       RegionOrSymbol RegOrSym,
-                                       const IteratorPosition &Pos, bool Equal);
-ProgramStateRef relateIteratorPositions(ProgramStateRef State,
-                                        const IteratorPosition &Pos1,
-                                        const IteratorPosition &Pos2,
-                                        bool Equal);
+ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
+                                 long Scale);
 ProgramStateRef invalidateAllIteratorPositions(ProgramStateRef State,
                                                const MemRegion *Cont);
 ProgramStateRef
@@ -383,6 +336,8 @@ ProgramStateRef reassignAllIteratorPositionsUnless(ProgramStateRef State,
 ProgramStateRef rebaseSymbolInIteratorPositionsIf(
     ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym,
     SymbolRef NewSym, SymbolRef CondSym, BinaryOperator::Opcode Opc);
+ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
+                              SymbolRef Sym2, bool Equal);
 const ContainerData *getContainerData(ProgramStateRef State,
                                       const MemRegion *Cont);
 ProgramStateRef setContainerData(ProgramStateRef State, const MemRegion *Cont,
@@ -608,78 +563,123 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
     const auto Op = Func->getOverloadedOperator();
     if (isAssignmentOperator(Op)) {
       const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call);
-      if (Func->getParamDecl(0)->getType()->isRValueReferenceType()) {
+      if (cast<CXXMethodDecl>(Func)->isMoveAssignmentOperator()) {
         handleAssign(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
                      Call.getArgSVal(0));
-      } else {
-        handleAssign(C, InstCall->getCXXThisVal());
+        return;
       }
+
+      handleAssign(C, InstCall->getCXXThisVal());
+      return;
     } else if (isSimpleComparisonOperator(Op)) {
+      const auto *OrigExpr = Call.getOriginExpr();
+      if (!OrigExpr)
+        return;
+
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleComparison(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
-                         Call.getArgSVal(0), Op);
-      } else {
-        handleComparison(C, Call.getReturnValue(), Call.getArgSVal(0),
-                         Call.getArgSVal(1), Op);
+        handleComparison(C, OrigExpr, Call.getReturnValue(),
+                         InstCall->getCXXThisVal(), Call.getArgSVal(0), Op);
+        return;
       }
+
+      handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
+                         Call.getArgSVal(1), Op);
+      return;
     } else if (isRandomIncrOrDecrOperator(Func->getOverloadedOperator())) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         if (Call.getNumArgs() >= 1) {
           handleRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                  Call.getReturnValue(),
                                  InstCall->getCXXThisVal(), Call.getArgSVal(0));
+          return;
         }
       } else {
         if (Call.getNumArgs() >= 2) {
           handleRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                  Call.getReturnValue(), Call.getArgSVal(0),
                                  Call.getArgSVal(1));
+          return;
         }
       }
     } else if (isIncrementOperator(Func->getOverloadedOperator())) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         handleIncrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
                         Call.getNumArgs());
-      } else {
-        handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                        Call.getNumArgs());
+        return;
       }
+
+      handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                      Call.getNumArgs());
+      return;
     } else if (isDecrementOperator(Func->getOverloadedOperator())) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         handleDecrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
                         Call.getNumArgs());
-      } else {
-        handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                        Call.getNumArgs());
+        return;
       }
+
+      handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                        Call.getNumArgs());
+      return;
     }
   } else {
     if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
       if (isAssignCall(Func)) {
         handleAssign(C, InstCall->getCXXThisVal());
-      } else if (isClearCall(Func)) {
+        return;
+      }
+
+      if (isClearCall(Func)) {
         handleClear(C, InstCall->getCXXThisVal());
-      } else if (isPushBackCall(Func) || isEmplaceBackCall(Func)) {
+        return;
+      }
+
+      if (isPushBackCall(Func) || isEmplaceBackCall(Func)) {
         handlePushBack(C, InstCall->getCXXThisVal());
-      } else if (isPopBackCall(Func)) {
+        return;
+      }
+
+      if (isPopBackCall(Func)) {
         handlePopBack(C, InstCall->getCXXThisVal());
-      } else if (isPushFrontCall(Func) || isEmplaceFrontCall(Func)) {
+        return;
+      }
+
+      if (isPushFrontCall(Func) || isEmplaceFrontCall(Func)) {
         handlePushFront(C, InstCall->getCXXThisVal());
-      } else if (isPopFrontCall(Func)) {
+        return;
+      }
+
+      if (isPopFrontCall(Func)) {
         handlePopFront(C, InstCall->getCXXThisVal());
-      } else if (isInsertCall(Func) || isEmplaceCall(Func)) {
+        return;
+      }
+
+      if (isInsertCall(Func) || isEmplaceCall(Func)) {
         handleInsert(C, Call.getArgSVal(0));
-      } else if (isEraseCall(Func)) {
+        return;
+      }
+
+      if (isEraseCall(Func)) {
         if (Call.getNumArgs() == 1) {
           handleErase(C, Call.getArgSVal(0));
-        } else if (Call.getNumArgs() == 2) {
-          handleErase(C, Call.getArgSVal(0), Call.getArgSVal(1));
+          return;
         }
-      } else if (isEraseAfterCall(Func)) {
+
+        if (Call.getNumArgs() == 2) {
+          handleErase(C, Call.getArgSVal(0), Call.getArgSVal(1));
+          return;
+        }
+      }
+
+      if (isEraseAfterCall(Func)) {
         if (Call.getNumArgs() == 1) {
           handleEraseAfter(C, Call.getArgSVal(0));
-        } else if (Call.getNumArgs() == 2) {
+          return;
+        }
+
+        if (Call.getNumArgs() == 2) {
           handleEraseAfter(C, Call.getArgSVal(0), Call.getArgSVal(1));
+          return;
         }
       }
     }
@@ -699,6 +699,7 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
                     InstCall->getCXXThisVal());
         return;
       }
+      
       if (isEndCall(Func)) {
         handleEnd(C, OrigExpr, Call.getReturnValue(),
                   InstCall->getCXXThisVal());
@@ -838,77 +839,79 @@ void IteratorChecker::checkDeadSymbols(SymbolReaper &SR,
     }
   }
 
-  auto ComparisonMap = State->get<IteratorComparisonMap>();
-  for (const auto Comp : ComparisonMap) {
-    if (!SR.isLive(Comp.first)) {
-      State = State->remove<IteratorComparisonMap>(Comp.first);
-    }
-  }
-
   C.addTransition(State);
 }
 
-ProgramStateRef IteratorChecker::evalAssume(ProgramStateRef State, SVal Cond,
-                                            bool Assumption) const {
-  // Load recorded comparison and transfer iterator state between sides
-  // according to comparison operator and assumption
-  const auto *SE = Cond.getAsSymExpr();
-  if (!SE)
-    return State;
-
-  auto Opc = getOpcode(SE);
-  if (Opc != BO_EQ && Opc != BO_NE)
-    return State;
-
-  bool Negated = false;
-  const auto *Comp = loadComparison(State, SE);
-  if (!Comp) {
-    // Try negated comparison, which is a SymExpr to 0 integer comparison
-    const auto *SIE = dyn_cast<SymIntExpr>(SE);
-    if (!SIE)
-      return State;
-
-    if (SIE->getRHS() != 0)
-      return State;
-
-    SE = SIE->getLHS();
-    Negated = SIE->getOpcode() == BO_EQ; // Equal to zero means negation
-    Opc = getOpcode(SE);
-    if (Opc != BO_EQ && Opc != BO_NE)
-      return State;
-
-    Comp = loadComparison(State, SE);
-    if (!Comp)
-      return State;
-  }
-
-  return processComparison(State, Comp->getLeft(), Comp->getRight(),
-                           (Comp->isEquality() == Assumption) != Negated);
-}
-
-void IteratorChecker::handleComparison(CheckerContext &C, const SVal &RetVal,
-                                       const SVal &LVal, const SVal &RVal,
+void IteratorChecker::handleComparison(CheckerContext &C, const Expr *CE,
+                                       const SVal &RetVal, const SVal &LVal,
+                                       const SVal &RVal,
                                        OverloadedOperatorKind Op) const {
   // Record the operands and the operator of the comparison for the next
   // evalAssume, if the result is a symbolic expression. If it is a concrete
   // value (only one branch is possible), then transfer the state between
   // the operands according to the operator and the result
-  auto State = C.getState();
-  if (const auto *Condition = RetVal.getAsSymbolicExpression()) {
-    const auto *LPos = getIteratorPosition(State, LVal);
-    const auto *RPos = getIteratorPosition(State, RVal);
-    if (!LPos && !RPos)
-      return;
-    State = saveComparison(State, Condition, LVal, RVal, Op == OO_EqualEqual);
-    C.addTransition(State);
-  } else if (const auto TruthVal = RetVal.getAs<nonloc::ConcreteInt>()) {
-    if ((State = processComparison(
-             State, getRegionOrSymbol(LVal), getRegionOrSymbol(RVal),
-             (Op == OO_EqualEqual) == (TruthVal->getValue() != 0)))) {
+   auto State = C.getState();
+  const auto *LPos = getIteratorPosition(State, LVal);
+  const auto *RPos = getIteratorPosition(State, RVal);
+  const MemRegion *Cont = nullptr;
+  if (LPos) {
+    Cont = LPos->getContainer();
+  } else if (RPos) {
+    Cont = RPos->getContainer();
+  }
+  if (!Cont)
+    return;
+
+  // At least one of the iterators have recorded positions. If one of them has
+  // not then create a new symbol for the offset.
+  SymbolRef Sym;
+  if (!LPos || !RPos) {
+    auto &SymMgr = C.getSymbolManager();
+    Sym = SymMgr.conjureSymbol(CE, C.getLocationContext(),
+                               C.getASTContext().LongTy, C.blockCount());
+    State = assumeNoOverflow(State, Sym, 4);
+  }
+
+  if (!LPos) {
+    State = setIteratorPosition(State, LVal,
+                                IteratorPosition::getPosition(Cont, Sym));
+    LPos = getIteratorPosition(State, LVal);
+  } else if (!RPos) {
+    State = setIteratorPosition(State, RVal,
+                                IteratorPosition::getPosition(Cont, Sym));
+    RPos = getIteratorPosition(State, RVal);
+  }
+
+  processComparison(C, State, LPos->getOffset(), RPos->getOffset(), RetVal, Op);
+}
+
+void IteratorChecker::processComparison(CheckerContext &C,
+                                        ProgramStateRef State, SymbolRef Sym1,
+                                        SymbolRef Sym2, const SVal &RetVal,
+                                        OverloadedOperatorKind Op) const {
+  if (const auto TruthVal = RetVal.getAs<nonloc::ConcreteInt>()) {
+    if ((State = relateSymbols(State, Sym1, Sym2,
+                              (Op == OO_EqualEqual) ==
+                               (TruthVal->getValue() != 0)))) {
       C.addTransition(State);
     } else {
       C.generateSink(State, C.getPredecessor());
     }
+    return;
+  }
+
+  const auto ConditionVal = RetVal.getAs<DefinedSVal>();
+  if (!ConditionVal)
+    return;
+  
+  if (auto StateTrue = relateSymbols(State, Sym1, Sym2, Op == OO_EqualEqual)) {
+    StateTrue = StateTrue->assume(*ConditionVal, true);
+    C.addTransition(StateTrue);
+  }
+  
+  if (auto StateFalse = relateSymbols(State, Sym1, Sym2, Op != OO_EqualEqual)) {
+    StateFalse = StateFalse->assume(*ConditionVal, false);
+    C.addTransition(StateFalse);
   }
 }
 
@@ -971,47 +974,6 @@ void IteratorChecker::handleDecrement(CheckerContext &C, const SVal &RetVal,
     State = setIteratorPosition(State, RetVal, Postfix ? *Pos : NewPos);
     C.addTransition(State);
   }
-}
-
-// This function tells the analyzer's engine that symbols produced by our
-// checker, most notably iterator positions, are relatively small.
-// A distance between items in the container should not be very large.
-// By assuming that it is within around 1/8 of the address space,
-// we can help the analyzer perform operations on these symbols
-// without being afraid of integer overflows.
-// FIXME: Should we provide it as an API, so that all checkers could use it?
-static ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
-                                        long Scale) {
-  SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  BasicValueFactory &BV = SVB.getBasicValueFactory();
-
-  QualType T = Sym->getType();
-  assert(T->isSignedIntegerOrEnumerationType());
-  APSIntType AT = BV.getAPSIntType(T);
-
-  ProgramStateRef NewState = State;
-
-  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(Scale);
-  SVal IsCappedFromAbove =
-      SVB.evalBinOpNN(State, BO_LE, nonloc::SymbolVal(Sym),
-                      nonloc::ConcreteInt(Max), SVB.getConditionType());
-  if (auto DV = IsCappedFromAbove.getAs<DefinedSVal>()) {
-    NewState = NewState->assume(*DV, true);
-    if (!NewState)
-      return State;
-  }
-
-  llvm::APSInt Min = -Max;
-  SVal IsCappedFromBelow =
-      SVB.evalBinOpNN(State, BO_GE, nonloc::SymbolVal(Sym),
-                      nonloc::ConcreteInt(Min), SVB.getConditionType());
-  if (auto DV = IsCappedFromBelow.getAs<DefinedSVal>()) {
-    NewState = NewState->assume(*DV, true);
-    if (!NewState)
-      return State;
-  }
-
-  return NewState;
 }
 
 void IteratorChecker::handleRandomIncrOrDecr(CheckerContext &C,
@@ -1895,23 +1857,6 @@ bool isRandomIncrOrDecrOperator(OverloadedOperatorKind OK) {
          OK == OO_MinusEqual;
 }
 
-BinaryOperator::Opcode getOpcode(const SymExpr *SE) {
-  if (const auto *BSE = dyn_cast<BinarySymExpr>(SE)) {
-    return BSE->getOpcode();
-  } else if (const auto *SC = dyn_cast<SymbolConjured>(SE)) {
-    const auto *COE = dyn_cast_or_null<CXXOperatorCallExpr>(SC->getStmt());
-    if (!COE)
-      return BO_Comma; // Extremal value, neither EQ nor NE
-    if (COE->getOperator() == OO_EqualEqual) {
-      return BO_EQ;
-    } else if (COE->getOperator() == OO_ExclaimEqual) {
-      return BO_NE;
-    }
-    return BO_Comma; // Extremal value, neither EQ nor NE
-  }
-  return BO_Comma; // Extremal value, neither EQ nor NE
-}
-
 bool hasSubscriptOperator(ProgramStateRef State, const MemRegion *Reg) {
   const auto *CRD = getCXXRecordDecl(State, Reg);
   if (!CRD)
@@ -1970,48 +1915,6 @@ const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
   }
 
   return Type->getUnqualifiedDesugaredType()->getAsCXXRecordDecl();
-}
-
-const RegionOrSymbol getRegionOrSymbol(const SVal &Val) {
-  if (const auto Reg = Val.getAsRegion()) {
-    return Reg;
-  } else if (const auto Sym = Val.getAsSymbol()) {
-    return Sym;
-  } else if (const auto LCVal = Val.getAs<nonloc::LazyCompoundVal>()) {
-    return LCVal->getRegion();
-  }
-  return RegionOrSymbol();
-}
-
-const ProgramStateRef processComparison(ProgramStateRef State,
-                                        RegionOrSymbol LVal,
-                                        RegionOrSymbol RVal, bool Equal) {
-  const auto *LPos = getIteratorPosition(State, LVal);
-  const auto *RPos = getIteratorPosition(State, RVal);
-  if (LPos && !RPos) {
-    State = adjustIteratorPosition(State, RVal, *LPos, Equal);
-  } else if (!LPos && RPos) {
-    State = adjustIteratorPosition(State, LVal, *RPos, Equal);
-  } else if (LPos && RPos) {
-    State = relateIteratorPositions(State, *LPos, *RPos, Equal);
-  }
-  return State;
-}
-
-const ProgramStateRef saveComparison(ProgramStateRef State,
-                                     const SymExpr *Condition, const SVal &LVal,
-                                     const SVal &RVal, bool Eq) {
-  const auto Left = getRegionOrSymbol(LVal);
-  const auto Right = getRegionOrSymbol(RVal);
-  if (!Left || !Right)
-    return State;
-  return State->set<IteratorComparisonMap>(Condition,
-                                           IteratorComparison(Left, Right, Eq));
-}
-
-const IteratorComparison *loadComparison(ProgramStateRef State,
-                                         const SymExpr *Condition) {
-  return State->get<IteratorComparisonMap>(Condition);
 }
 
 SymbolRef getContainerBegin(ProgramStateRef State, const MemRegion *Cont) {
@@ -2084,17 +1987,6 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State,
   return nullptr;
 }
 
-const IteratorPosition *getIteratorPosition(ProgramStateRef State,
-                                            RegionOrSymbol RegOrSym) {
-  if (RegOrSym.is<const MemRegion *>()) {
-    auto Reg = RegOrSym.get<const MemRegion *>()->getMostDerivedObjectRegion();
-    return State->get<IteratorRegionMap>(Reg);
-  } else if (RegOrSym.is<SymbolRef>()) {
-    return State->get<IteratorSymbolMap>(RegOrSym.get<SymbolRef>());
-  }
-  return nullptr;
-}
-
 ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
                                     const IteratorPosition &Pos) {
   if (auto Reg = Val.getAsRegion()) {
@@ -2104,18 +1996,6 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
     return State->set<IteratorSymbolMap>(Sym, Pos);
   } else if (const auto LCVal = Val.getAs<nonloc::LazyCompoundVal>()) {
     return State->set<IteratorRegionMap>(LCVal->getRegion(), Pos);
-  }
-  return nullptr;
-}
-
-ProgramStateRef setIteratorPosition(ProgramStateRef State,
-                                    RegionOrSymbol RegOrSym,
-                                    const IteratorPosition &Pos) {
-  if (RegOrSym.is<const MemRegion *>()) {
-    auto Reg = RegOrSym.get<const MemRegion *>()->getMostDerivedObjectRegion();
-    return State->set<IteratorRegionMap>(Reg, Pos);
-  } else if (RegOrSym.is<SymbolRef>()) {
-    return State->set<IteratorSymbolMap>(RegOrSym.get<SymbolRef>(), Pos);
   }
   return nullptr;
 }
@@ -2132,21 +2012,8 @@ ProgramStateRef removeIteratorPosition(ProgramStateRef State, const SVal &Val) {
   return nullptr;
 }
 
-ProgramStateRef adjustIteratorPosition(ProgramStateRef State,
-                                       RegionOrSymbol RegOrSym,
-                                       const IteratorPosition &Pos,
-                                       bool Equal) {
-  if (Equal) {
-    return setIteratorPosition(State, RegOrSym, Pos);
-  } else {
-    return State;
-  }
-}
-
-ProgramStateRef relateIteratorPositions(ProgramStateRef State,
-                                        const IteratorPosition &Pos1,
-                                        const IteratorPosition &Pos2,
-                                        bool Equal) {
+ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
+                              SymbolRef Sym2, bool Equal) {
   auto &SVB = State->getStateManager().getSValBuilder();
 
   // FIXME: This code should be reworked as follows:
@@ -2155,14 +2022,16 @@ ProgramStateRef relateIteratorPositions(ProgramStateRef State,
   // 3. Compare the result to 0.
   // 4. Assume the result of the comparison.
   const auto comparison =
-      SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Pos1.getOffset()),
-                    nonloc::SymbolVal(Pos2.getOffset()),
-                    SVB.getConditionType());
+    SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Sym1),
+                  nonloc::SymbolVal(Sym2), SVB.getConditionType());
 
   assert(comparison.getAs<DefinedSVal>() &&
     "Symbol comparison must be a `DefinedSVal`");
 
   auto NewState = State->assume(comparison.castAs<DefinedSVal>(), Equal);
+  if (!NewState)
+    return nullptr;
+
   if (const auto CompSym = comparison.getAsSymbol()) {
     assert(isa<SymIntExpr>(CompSym) &&
            "Symbol comparison must be a `SymIntExpr`");
@@ -2201,6 +2070,47 @@ bool isBoundThroughLazyCompoundVal(const Environment &Env,
   }
 
   return false;
+}
+
+// This function tells the analyzer's engine that symbols produced by our
+// checker, most notably iterator positions, are relatively small.
+// A distance between items in the container should not be very large.
+// By assuming that it is within around 1/8 of the address space,
+// we can help the analyzer perform operations on these symbols
+// without being afraid of integer overflows.
+// FIXME: Should we provide it as an API, so that all checkers could use it?
+ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
+                                 long Scale) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  BasicValueFactory &BV = SVB.getBasicValueFactory();
+
+  QualType T = Sym->getType();
+  assert(T->isSignedIntegerOrEnumerationType());
+  APSIntType AT = BV.getAPSIntType(T);
+
+  ProgramStateRef NewState = State;
+
+  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(Scale);
+  SVal IsCappedFromAbove =
+      SVB.evalBinOpNN(State, BO_LE, nonloc::SymbolVal(Sym),
+                      nonloc::ConcreteInt(Max), SVB.getConditionType());
+  if (auto DV = IsCappedFromAbove.getAs<DefinedSVal>()) {
+    NewState = NewState->assume(*DV, true);
+    if (!NewState)
+      return State;
+  }
+
+  llvm::APSInt Min = -Max;
+  SVal IsCappedFromBelow =
+      SVB.evalBinOpNN(State, BO_GE, nonloc::SymbolVal(Sym),
+                      nonloc::ConcreteInt(Min), SVB.getConditionType());
+  if (auto DV = IsCappedFromBelow.getAs<DefinedSVal>()) {
+    NewState = NewState->assume(*DV, true);
+    if (!NewState)
+      return State;
+  }
+
+  return NewState;
 }
 
 template <typename Condition, typename Process>

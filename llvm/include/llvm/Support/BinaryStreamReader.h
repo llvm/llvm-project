@@ -96,6 +96,18 @@ public:
     return Error::success();
   }
 
+  /// Read an unsigned LEB128 encoded value.
+  ///
+  /// \returns a success error code if the data was successfully read, otherwise
+  /// returns an appropriate error code.
+  Error readULEB128(uint64_t &Dest);
+
+  /// Read a signed LEB128 encoded value.
+  ///
+  /// \returns a success error code if the data was successfully read, otherwise
+  /// returns an appropriate error code.
+  Error readSLEB128(int64_t &Dest);
+
   /// Read a null terminated string from \p Dest.  Whether a copy occurs depends
   /// on the implementation of the underlying stream.  Updates the stream's
   /// offset to point after the newly read data.

@@ -18,4 +18,4 @@ ProgramHeaders:
   - Type: PT_NOTE
     Flags: [ PF_R ]
     Sections:
-      - Section: .note.gnu.foo
+      - Section: .note.foo

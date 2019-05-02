@@ -372,7 +372,7 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<32> &Checksum) const {
 
   SourceManager &SM = CGM.getContext().getSourceManager();
   bool Invalid;
-  llvm::MemoryBuffer *MemBuffer = SM.getBuffer(FID, &Invalid);
+  const llvm::MemoryBuffer *MemBuffer = SM.getBuffer(FID, &Invalid);
   if (Invalid)
     return None;
 
@@ -915,6 +915,11 @@ static SmallString<256> getTypeIdentifier(const TagType *Ty, CodeGenModule &CGM,
 
   if (!needsTypeIdentifier(TD, CGM, TheCU))
     return Identifier;
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(TD))
+    if (RD->getDefinition())
+      if (RD->isDynamicClass() &&
+          CGM.getVTableLinkage(RD) == llvm::GlobalValue::ExternalLinkage)
+        return Identifier;
 
   // TODO: This is using the RTTI name. Is there a better way to get
   // a unique string for a type?
@@ -1822,32 +1827,24 @@ CGDebugInfo::CollectFunctionTemplateParams(const FunctionDecl *FD,
 }
 
 llvm::DINodeArray CGDebugInfo::CollectVarTemplateParams(const VarDecl *VL,
-    llvm::DIFile *Unit) {
-  if (auto *TS = dyn_cast<VarTemplateSpecializationDecl>(VL)) {
-    auto T = TS->getSpecializedTemplateOrPartial();
-    auto TA = TS->getTemplateArgs().asArray();
-    // Collect parameters for a partial specialization
-    if (T.is<VarTemplatePartialSpecializationDecl *>()) {
-      const TemplateParameterList *TList =
-        T.get<VarTemplatePartialSpecializationDecl *>()
-        ->getTemplateParameters();
-      return CollectTemplateParams(TList, TA, Unit);
-    }
-
-    // Collect parameters for an explicit specialization
-    if (T.is<VarTemplateDecl *>()) {
-      const TemplateParameterList *TList = T.get<VarTemplateDecl *>()
-        ->getTemplateParameters();
-      return CollectTemplateParams(TList, TA, Unit);
-    }
-  }
-  return llvm::DINodeArray();
+                                                        llvm::DIFile *Unit) {
+  // Always get the full list of parameters, not just the ones from the
+  // specialization. A partial specialization may have fewer parameters than
+  // there are arguments.
+  auto *TS = dyn_cast<VarTemplateSpecializationDecl>(VL);
+  if (!TS)
+    return llvm::DINodeArray();
+  VarTemplateDecl *T = TS->getSpecializedTemplate();
+  const TemplateParameterList *TList = T->getTemplateParameters();
+  auto TA = TS->getTemplateArgs().asArray();
+  return CollectTemplateParams(TList, TA, Unit);
 }
 
 llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(
     const ClassTemplateSpecializationDecl *TSpecial, llvm::DIFile *Unit) {
-  // Always get the full list of parameters, not just the ones from
-  // the specialization.
+  // Always get the full list of parameters, not just the ones from the
+  // specialization. A partial specialization may have fewer parameters than
+  // there are arguments.
   TemplateParameterList *TPList =
       TSpecial->getSpecializedTemplate()->getTemplateParameters();
   const TemplateArgumentList &TAList = TSpecial->getTemplateArgs();
@@ -1878,6 +1875,58 @@ llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
 StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
   // Copy the gdb compatible name on the side and use its reference.
   return internString("_vptr$", RD->getNameAsString());
+}
+
+StringRef CGDebugInfo::getDynamicInitializerName(const VarDecl *VD,
+                                                 DynamicInitKind StubKind,
+                                                 llvm::Function *InitFn) {
+  // If we're not emitting codeview, use the mangled name. For Itanium, this is
+  // arbitrary.
+  if (!CGM.getCodeGenOpts().EmitCodeView)
+    return InitFn->getName();
+
+  // Print the normal qualified name for the variable, then break off the last
+  // NNS, and add the appropriate other text. Clang always prints the global
+  // variable name without template arguments, so we can use rsplit("::") and
+  // then recombine the pieces.
+  SmallString<128> QualifiedGV;
+  StringRef Quals;
+  StringRef GVName;
+  {
+    llvm::raw_svector_ostream OS(QualifiedGV);
+    VD->printQualifiedName(OS, getPrintingPolicy());
+    std::tie(Quals, GVName) = OS.str().rsplit("::");
+    if (GVName.empty())
+      std::swap(Quals, GVName);
+  }
+
+  SmallString<128> InitName;
+  llvm::raw_svector_ostream OS(InitName);
+  if (!Quals.empty())
+    OS << Quals << "::";
+
+  switch (StubKind) {
+  case DynamicInitKind::NoStub:
+    llvm_unreachable("not an initializer");
+  case DynamicInitKind::Initializer:
+    OS << "`dynamic initializer for '";
+    break;
+  case DynamicInitKind::AtExit:
+    OS << "`dynamic atexit destructor for '";
+    break;
+  }
+
+  OS << GVName;
+
+  // Add any template specialization args.
+  if (const auto *VTpl = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
+    printTemplateArgumentList(OS, VTpl->getTemplateArgs().asArray(),
+                              getPrintingPolicy());
+  }
+
+  OS << '\'';
+
+  return internString(OS.str());
 }
 
 void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
@@ -1957,6 +2006,20 @@ llvm::DIType *CGDebugInfo::getOrCreateStandaloneType(QualType D,
 
   RetainedTypes.push_back(D.getAsOpaquePtr());
   return T;
+}
+
+void CGDebugInfo::addHeapAllocSiteMetadata(llvm::Instruction *CI,
+                                           QualType D,
+                                           SourceLocation Loc) {
+  llvm::MDNode *node;
+  if (D.getTypePtr()->isVoidPointerType()) {
+    node = llvm::MDNode::get(CGM.getLLVMContext(), None);
+  } else {
+    QualType PointeeTy = D.getTypePtr()->getPointeeType();
+    node = getOrCreateType(PointeeTy, getOrCreateFile(Loc));
+  }
+
+  CI->setMetadata("heapallocsite", node);
 }
 
 void CGDebugInfo::completeType(const EnumDecl *ED) {
@@ -2781,6 +2844,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::Paren:
       T = cast<ParenType>(T)->getInnerType();
       break;
+    case Type::MacroQualified:
+      T = cast<MacroQualifiedType>(T)->getUnderlyingType();
+      break;
     case Type::SubstTemplateTypeParm:
       T = cast<SubstTemplateTypeParmType>(T)->getReplacementType();
       break;
@@ -2960,6 +3026,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::DeducedTemplateSpecialization:
   case Type::Elaborated:
   case Type::Paren:
+  case Type::MacroQualified:
   case Type::SubstTemplateTypeParm:
   case Type::TypeOfExpr:
   case Type::TypeOf:
@@ -3034,10 +3101,8 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     else
       Flags |= llvm::DINode::FlagTypePassByValue;
 
-    // Record if a C++ record is trivial type.
-    if (CXXRD->isTrivial())
-      Flags |= llvm::DINode::FlagTrivial;
-    else
+    // Record if a C++ record is non-trivial type.
+    if (!CXXRD->isTrivial())
       Flags |= llvm::DINode::FlagNonTrivial;
   }
 
@@ -3458,6 +3523,11 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D)) {
     Name = getObjCMethodName(OMD);
     Flags |= llvm::DINode::FlagPrototyped;
+  } else if (isa<VarDecl>(D) &&
+             GD.getDynamicInitKind() != DynamicInitKind::NoStub) {
+    // This is a global initializer or atexit destructor for a global variable.
+    Name = getDynamicInitializerName(cast<VarDecl>(D), GD.getDynamicInitKind(),
+                                     Fn);
   } else {
     // Use llvm function name.
     Name = Fn->getName();

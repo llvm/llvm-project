@@ -259,7 +259,7 @@ void MCDwarfLineTable::Emit(MCObjectStreamer *MCOS,
 
 void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
                                MCSection *Section) const {
-  if (Header.MCDwarfFiles.empty())
+  if (!HasSplitLineTable)
     return;
   Optional<MCDwarfLineStr> NoLineStr(None);
   MCOS.SwitchSection(Section);
@@ -361,10 +361,10 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
   }
   MCOS->EmitULEB128IntValue(DwarfFile.DirIndex); // Directory number.
   if (EmitMD5) {
-    MD5::MD5Result *Cksum = DwarfFile.Checksum;
+    const MD5::MD5Result &Cksum = *DwarfFile.Checksum;
     MCOS->EmitBinaryData(
-        StringRef(reinterpret_cast<const char *>(Cksum->Bytes.data()),
-                  Cksum->Bytes.size()));
+        StringRef(reinterpret_cast<const char *>(Cksum.Bytes.data()),
+                  Cksum.Bytes.size()));
   }
   if (HasSource) {
     if (LineStr)
@@ -378,8 +378,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
 }
 
 void MCDwarfLineTableHeader::emitV5FileDirTables(
-    MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr,
-    StringRef CtxCompilationDir) const {
+    MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const {
   // The directory format, which is just a list of the directory paths.  In a
   // non-split object, these are references to .debug_line_str; in a split
   // object, they are inline strings.
@@ -389,8 +388,9 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
                                     : dwarf::DW_FORM_string);
   MCOS->EmitULEB128IntValue(MCDwarfDirs.size() + 1);
   // Try not to emit an empty compilation directory.
-  const StringRef CompDir =
-      CompilationDir.empty() ? CtxCompilationDir : StringRef(CompilationDir);
+  const StringRef CompDir = CompilationDir.empty()
+                                ? MCOS->getContext().getCompilationDir()
+                                : StringRef(CompilationDir);
   if (LineStr) {
     // Record path strings, emit references here.
     LineStr->emitRef(MCOS, CompDir);
@@ -509,7 +509,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Put out the directory and file tables.  The formats vary depending on
   // the version.
   if (LineTableVersion >= 5)
-    emitV5FileDirTables(MCOS, LineStr, context.getCompilationDir());
+    emitV5FileDirTables(MCOS, LineStr);
   else
     emitV2FileDirTables(MCOS);
 
@@ -536,17 +536,27 @@ void MCDwarfLineTable::EmitCU(MCObjectStreamer *MCOS,
 
 Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
                                                 StringRef &FileName,
-                                                MD5::MD5Result *Checksum,
+                                                Optional<MD5::MD5Result> Checksum,
                                                 Optional<StringRef> Source,
+                                                uint16_t DwarfVersion,
                                                 unsigned FileNumber) {
-  return Header.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
+  return Header.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
+                           FileNumber);
+}
+
+bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
+                StringRef &FileName, Optional<MD5::MD5Result> Checksum) {
+  if (RootFile.Name.empty() || RootFile.Name != FileName.data())
+    return false;
+  return RootFile.Checksum == Checksum;
 }
 
 Expected<unsigned>
 MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    StringRef &FileName,
-                                   MD5::MD5Result *Checksum,
-                                   Optional<StringRef> &Source,
+                                   Optional<MD5::MD5Result> Checksum,
+                                   Optional<StringRef> Source,
+                                   uint16_t DwarfVersion,
                                    unsigned FileNumber) {
   if (Directory == CompilationDir)
     Directory = "";
@@ -558,9 +568,11 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   // Keep track of whether any or all files have an MD5 checksum.
   // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
-    trackMD5Usage(Checksum);
+    trackMD5Usage(Checksum.hasValue());
     HasSource = (Source != None);
   }
+  if (isRootFile(RootFile, Directory, FileName, Checksum) && DwarfVersion >= 5)
+    return 0;
   if (FileNumber == 0) {
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.
@@ -606,11 +618,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     // For FileNames with no directories a DirIndex of 0 is used.
     DirIndex = 0;
   } else {
-    DirIndex = 0;
-    for (unsigned End = MCDwarfDirs.size(); DirIndex < End; DirIndex++) {
-      if (Directory == MCDwarfDirs[DirIndex])
-        break;
-    }
+    DirIndex = llvm::find(MCDwarfDirs, Directory) - MCDwarfDirs.begin();
     if (DirIndex >= MCDwarfDirs.size())
       MCDwarfDirs.push_back(Directory);
     // The DirIndex is one based, as DirIndex of 0 is used for FileNames with
@@ -623,7 +631,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   File.Name = FileName;
   File.DirIndex = DirIndex;
   File.Checksum = Checksum;
-  trackMD5Usage(Checksum);
+  trackMD5Usage(Checksum.hasValue());
   File.Source = Source;
   if (Source)
     HasSource = true;
@@ -758,9 +766,7 @@ bool MCDwarfLineAddr::FixedEncode(MCContext &Context,
     *Offset = OS.tell();
     *Size = AddrSize;
     SetDelta = false;
-    std::vector<uint8_t> FillData;
-    FillData.insert(FillData.begin(), AddrSize, 0);
-    OS.write(reinterpret_cast<char *>(FillData.data()), AddrSize);
+    OS.write_zeros(AddrSize);
   } else {
     OS << char(dwarf::DW_LNS_fixed_advance_pc);
     // Generate fixup for 2-bytes address delta.
@@ -1859,11 +1865,10 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
   std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  std::stable_sort(
-      FrameArrayX.begin(), FrameArrayX.end(),
-      [&](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) -> bool {
-        return CIEKey(X) < CIEKey(Y);
-      });
+  llvm::stable_sort(FrameArrayX,
+                    [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
+                      return CIEKey(X) < CIEKey(Y);
+                    });
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;

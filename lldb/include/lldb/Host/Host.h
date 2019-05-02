@@ -30,9 +30,7 @@ class ProcessInstanceInfo;
 class ProcessInstanceInfoList;
 class ProcessInstanceInfoMatch;
 
-//----------------------------------------------------------------------
 // Exit Type for inferior processes
-//----------------------------------------------------------------------
 struct WaitStatus {
   enum Type : uint8_t {
     Exit,   // The status represents the return code from normal
@@ -57,12 +55,10 @@ inline bool operator==(WaitStatus a, WaitStatus b) {
 
 inline bool operator!=(WaitStatus a, WaitStatus b) { return !(a == b); }
 
-//----------------------------------------------------------------------
 /// \class Host Host.h "lldb/Host/Host.h"
 /// A class that provides host computer information.
 ///
 /// Host is a class that answers information about the host operating system.
-//----------------------------------------------------------------------
 class Host {
 public:
   typedef std::function<bool(
@@ -71,7 +67,6 @@ public:
       int status)> // Exit value of process if signal is zero
       MonitorChildProcessCallback;
 
-  //------------------------------------------------------------------
   /// Start monitoring a child process.
   ///
   /// Allows easy monitoring of child processes. \a callback will be called
@@ -104,7 +99,6 @@ public:
   ///     was spawned to monitor \a pid.
   ///
   /// \see static void Host::StopMonitoringChildProcess (uint32_t)
-  //------------------------------------------------------------------
   static HostThread
   StartMonitoringChildProcess(const MonitorChildProcessCallback &callback,
                               lldb::pid_t pid, bool monitor_signals);
@@ -116,28 +110,23 @@ public:
 
   static void SystemLog(SystemLogType type, const char *format, va_list args);
 
-  //------------------------------------------------------------------
   /// Get the process ID for the calling process.
   ///
   /// \return
   ///     The process ID for the current process.
-  //------------------------------------------------------------------
   static lldb::pid_t GetCurrentProcessID();
 
   static void Kill(lldb::pid_t pid, int signo);
 
-  //------------------------------------------------------------------
   /// Get the thread token (the one returned by ThreadCreate when the thread
   /// was created) for the calling thread in the current process.
   ///
   /// \return
   ///     The thread token for the calling thread in the current process.
-  //------------------------------------------------------------------
   static lldb::thread_t GetCurrentThread();
 
   static const char *GetSignalAsCString(int signo);
 
-  //------------------------------------------------------------------
   /// Given an address in the current process (the process that is running the
   /// LLDB code), return the name of the module that it comes from. This can
   /// be useful when you need to know the path to the shared library that your
@@ -151,10 +140,8 @@ public:
   ///     \b A file spec with the module that contains \a host_addr,
   ///     which may be invalid if \a host_addr doesn't fall into
   ///     any valid module address range.
-  //------------------------------------------------------------------
   static FileSpec GetModuleFileSpecForHostAddress(const void *host_addr);
 
-  //------------------------------------------------------------------
   /// If you have an executable that is in a bundle and want to get back to
   /// the bundle directory from the path itself, this function will change a
   /// path to a file within a bundle to the bundle directory itself.
@@ -170,11 +157,9 @@ public:
   /// \return
   ///     \b true if \a file was resolved in \a bundle_directory,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   static bool GetBundleDirectory(const FileSpec &file,
                                  FileSpec &bundle_directory);
 
-  //------------------------------------------------------------------
   /// When executable files may live within a directory, where the directory
   /// represents an executable bundle (like the MacOSX app bundles), then
   /// locate the executable within the containing bundle.
@@ -187,7 +172,6 @@ public:
   /// \return
   ///     \b true if \a file was resolved, \b false if this function
   ///     was not able to resolve the path.
-  //------------------------------------------------------------------
   static bool ResolveExecutableInBundle(FileSpec &file);
 
   static uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
@@ -204,37 +188,42 @@ public:
   /// terminates.
   static Status LaunchProcess(ProcessLaunchInfo &launch_info);
 
-  //------------------------------------------------------------------
   /// Perform expansion of the command-line for this launch info This can
   /// potentially involve wildcard expansion
   /// environment variable replacement, and whatever other
   /// argument magic the platform defines as part of its typical
   /// user experience
-  //------------------------------------------------------------------
   static Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
-  // TODO: Convert this function to take a StringRef.
-  static Status RunShellCommand(
-      const char *command,         // Shouldn't be NULL
-      const FileSpec &working_dir, // Pass empty FileSpec to use the current
-                                   // working directory
-      int *status_ptr, // Pass NULL if you don't want the process exit status
-      int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
-                       // process to exit
-      std::string
-          *command_output, // Pass NULL if you don't want the command output
-      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
+  /// Run a shell command.
+  /// \arg command  shouldn't be NULL
+  /// \arg working_dir Pass empty FileSpec to use the current working directory
+  /// \arg status_ptr  Pass NULL if you don't want the process exit status
+  /// \arg signo_ptr   Pass NULL if you don't want the signal that caused the
+  ///                  process to exit
+  /// \arg command_output  Pass NULL if you don't want the command output
+  /// \arg hide_stderr if this is false, redirect stderr to stdout
+  /// TODO: Convert this function to take a StringRef.
+  static Status RunShellCommand(const char *command,
+                                const FileSpec &working_dir, int *status_ptr,
+                                int *signo_ptr, std::string *command_output,
+                                const Timeout<std::micro> &timeout,
+                                bool run_in_default_shell = true,
+                                bool hide_stderr = false);
 
-  static Status RunShellCommand(
-      const Args &args,
-      const FileSpec &working_dir, // Pass empty FileSpec to use the current
-                                   // working directory
-      int *status_ptr, // Pass NULL if you don't want the process exit status
-      int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
-                       // process to exit
-      std::string
-          *command_output, // Pass NULL if you don't want the command output
-      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
+  /// Run a shell command.
+  /// \arg working_dir Pass empty FileSpec to use the current working directory
+  /// \arg status_ptr  Pass NULL if you don't want the process exit status
+  /// \arg signo_ptr   Pass NULL if you don't want the signal that caused the
+  ///                  process to exit
+  /// \arg command_output  Pass NULL if you don't want the command output
+  /// \arg hide_stderr if this is false, redirect stderr to stdout
+  static Status RunShellCommand(const Args &args, const FileSpec &working_dir,
+                                int *status_ptr, int *signo_ptr,
+                                std::string *command_output,
+                                const Timeout<std::micro> &timeout,
+                                bool run_in_default_shell = true,
+                                bool hide_stderr = false);
 
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);

@@ -1,27 +1,5 @@
-# REQUIRES: x86
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc %s -o %t/simple.o -filetype=obj -triple x86_64-pc-linux
 # RUN: echo > %t/empty.o
 # RUN: llvm-ar --format=gnu cr %t/not-elf.a %t/empty.o
-
-# RUN: not ld.lld --whole-archive %t/not-elf.a -o %t2 2>&1 | \
-# RUN:   FileCheck --check-prefix=NOT-ELF %s
-# NOT-ELF: not-elf.a(empty.o): not an ELF file
-
-# RUN: not ld.lld %t/simple.o %p/Inputs/file-class.a -o %t2 2>&1 | \
-# RUN:   FileCheck --check-prefix=INVALID-FILE-CLASS %s
-# INVALID-FILE-CLASS: file-class.a(test.o): corrupted ELF file: invalid file class
-
-# RUN: not ld.lld %p/Inputs/binding.elf -o %t2 2>&1 | \
-# RUN:   FileCheck --check-prefix=INVALID-BINDING %s
-# INVALID-BINDING: unexpected binding
-
-# RUN: not ld.lld %p/Inputs/section-index.elf -o %t2 2>&1 | \
-# RUN:   FileCheck --check-prefix=INVALID-SECTION-INDEX-LLD %s
-# INVALID-SECTION-INDEX-LLD: invalid section index
-
-# RUN: not ld.lld %p/Inputs/multiple-eh-relocs.elf -o %t2 2>&1 | \
-# RUN:   FileCheck --check-prefix=INVALID-EH-RELOCS %s
-# INVALID-EH-RELOCS: multiple relocation sections to one section are not supported
-
-.long foo
+# RUN: not ld.lld --whole-archive %t/not-elf.a -o %t2 2>&1 | FileCheck %s
+# CHECK: not-elf.a(empty.o): not an ELF file

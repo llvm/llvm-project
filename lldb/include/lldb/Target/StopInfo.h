@@ -22,9 +22,7 @@ class StopInfo {
   friend class ThreadPlanBase;
 
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   StopInfo(Thread &thread, uint64_t value);
 
   virtual ~StopInfo() {}
@@ -156,9 +154,7 @@ protected:
   // to consult this later on.
   virtual bool ShouldStop(Event *event_ptr) { return true; }
 
-  //------------------------------------------------------------------
   // Classes that inherit from StackID can see and modify these
-  //------------------------------------------------------------------
   lldb::ThreadWP m_thread_wp; // The thread corresponding to the stop reason.
   uint32_t m_stop_id;   // The process stop ID for which this stop info is valid
   uint32_t m_resume_id; // This is the resume ID when we made this stop ID.

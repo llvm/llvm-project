@@ -50,6 +50,7 @@
     __cpp_lib_incomplete_container_elements        201505L [C++17]
     __cpp_lib_integer_sequence                     201304L [C++14]
     __cpp_lib_integral_constant_callable           201304L [C++14]
+    __cpp_lib_interpolate                          201902L [C++2a]
     __cpp_lib_invoke                               201411L [C++17]
     __cpp_lib_is_aggregate                         201703L [C++17]
     __cpp_lib_is_constant_evaluated                201811L [C++2a]
@@ -246,6 +247,10 @@
 
 # ifdef __cpp_lib_integral_constant_callable
 #   error "__cpp_lib_integral_constant_callable should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_invoke
@@ -594,6 +599,10 @@
 # endif
 # if __cpp_lib_integral_constant_callable != 201304L
 #   error "__cpp_lib_integral_constant_callable should have the value 201304L in c++14"
+# endif
+
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_invoke
@@ -1080,6 +1089,10 @@
 # endif
 # if __cpp_lib_integral_constant_callable != 201304L
 #   error "__cpp_lib_integral_constant_callable should have the value 201304L in c++17"
+# endif
+
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++2a"
 # endif
 
 # ifndef __cpp_lib_invoke
@@ -1778,6 +1791,13 @@
 #   error "__cpp_lib_integral_constant_callable should have the value 201304L in c++2a"
 # endif
 
+# ifndef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should be defined in c++2a"
+# endif
+# if __cpp_lib_interpolate != 201902L
+#   error "__cpp_lib_interpolate should have the value 201902L in c++2a"
+# endif
+
 # ifndef __cpp_lib_invoke
 #   error "__cpp_lib_invoke should be defined in c++2a"
 # endif
@@ -1798,16 +1818,16 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900
 #   ifndef __cpp_lib_is_constant_evaluated
 #     error "__cpp_lib_is_constant_evaluated should be defined in c++2a"
 #   endif
 #   if __cpp_lib_is_constant_evaluated != 201811L
 #     error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++2a"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_is_constant_evaluated should not be defined when TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900 is not defined!"
 #   endif
 # endif
 

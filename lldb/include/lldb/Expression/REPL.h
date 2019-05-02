@@ -20,9 +20,7 @@ namespace lldb_private {
 
 class REPL : public IOHandlerDelegate {
 public:
-  //----------------------------------------------------------------------
   // See TypeSystem.h for how to add subclasses to this.
-  //----------------------------------------------------------------------
   enum LLVMCastKind { eKindClang, eKindSwift, eKindGo, kNumKinds };
 
   LLVMCastKind getKind() const { return m_kind; }
@@ -31,7 +29,6 @@ public:
 
   ~REPL() override;
 
-  //------------------------------------------------------------------
   /// Get a REPL with an existing target (or, failing that, a debugger to use),
   /// and (optional) extra arguments for the compiler.
   ///
@@ -55,7 +52,6 @@ public:
   ///
   /// \return
   ///     The range of the containing object in the target process.
-  //------------------------------------------------------------------
   static lldb::REPLSP Create(Status &Status, lldb::LanguageType language,
                              Debugger *debugger, Target *target,
                              const char *repl_options);
@@ -82,9 +78,7 @@ public:
 
   Status RunLoop();
 
-  //------------------------------------------------------------------
   // IOHandler::Delegate functions
-  //------------------------------------------------------------------
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
@@ -117,9 +111,7 @@ public:
 protected:
   static int CalculateActualIndentation(const StringList &lines);
 
-  //----------------------------------------------------------------------
   // Subclasses should override these functions to implement a functional REPL.
-  //----------------------------------------------------------------------
 
   virtual Status DoInitialization() = 0;
 

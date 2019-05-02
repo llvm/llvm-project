@@ -219,6 +219,8 @@
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Loop Access Analysis
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Loop Load Elimination
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
@@ -274,7 +276,6 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Scalar Evolution Analysis
-; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Loop Pass Manager
 ; CHECK-NEXT:         Loop Sink
