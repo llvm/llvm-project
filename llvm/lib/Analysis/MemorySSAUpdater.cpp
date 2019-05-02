@@ -72,7 +72,10 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
     // potential phi node. This will insert phi nodes if we cycle in order to
     // break the cycle and have an operand.
     for (auto *Pred : predecessors(BB))
-      PhiOps.push_back(getPreviousDefFromEnd(Pred, CachedPreviousDef));
+      if (MSSA->DT->isReachableFromEntry(Pred))
+        PhiOps.push_back(getPreviousDefFromEnd(Pred, CachedPreviousDef));
+      else
+        PhiOps.push_back(MSSA->getLiveOnEntryDef());
 
     // Now try to simplify the ops to avoid placing a phi.
     // This may return null if we never created a phi yet, that's okay
