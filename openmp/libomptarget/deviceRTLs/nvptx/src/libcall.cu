@@ -54,14 +54,11 @@ EXTERN int omp_get_num_threads(void) {
 }
 
 EXTERN int omp_get_max_threads(void) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
+  if (isSPMDMode())
     // We're already in parallel region.
     return 1;  // default is 1 thread avail
-  }
   omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(isSPMDMode());
+      getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
   int rc = 1; // default is 1 thread avail
   if (!currTaskDescr->InParallelRegion()) {
     // Not currently in a parallel region, return what was set.
@@ -73,14 +70,11 @@ EXTERN int omp_get_max_threads(void) {
 }
 
 EXTERN int omp_get_thread_limit(void) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
-    return 0;  // default is 0
-  }
+  if (isSPMDMode())
+    return GetNumberOfThreadsInBlock();
   // per contention group.. meaning threads in current team
   omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(isSPMDMode());
+      getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
   int rc = currTaskDescr->ThreadLimit();
   PRINT(LD_IO, "call omp_get_thread_limit() return %d\n", rc);
   return rc;
