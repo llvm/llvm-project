@@ -61,6 +61,8 @@ void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack);
 void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,
                                              BufferedStackTrace *stack);
 void ReportCallocOverflow(uptr count, uptr size, BufferedStackTrace *stack);
+void ReportReallocArrayOverflow(uptr count, uptr size,
+                                BufferedStackTrace *stack);
 void ReportPvallocOverflow(uptr size, BufferedStackTrace *stack);
 void ReportInvalidAllocationAlignment(uptr alignment,
                                       BufferedStackTrace *stack);

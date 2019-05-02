@@ -34,6 +34,7 @@ void user_free(ThreadState *thr, uptr pc, void *p, bool signal = true);
 void *user_alloc(ThreadState *thr, uptr pc, uptr sz);
 void *user_calloc(ThreadState *thr, uptr pc, uptr sz, uptr n);
 void *user_realloc(ThreadState *thr, uptr pc, void *p, uptr sz);
+void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr sz, uptr n);
 void *user_memalign(ThreadState *thr, uptr pc, uptr align, uptr sz);
 int user_posix_memalign(ThreadState *thr, uptr pc, void **memptr, uptr align,
                         uptr sz);

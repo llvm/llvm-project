@@ -165,13 +165,16 @@ FunctionPass *llvm::createSIFoldOperandsPass() {
 
 static bool updateOperand(FoldCandidate &Fold,
                           const SIInstrInfo &TII,
-                          const TargetRegisterInfo &TRI) {
+                          const TargetRegisterInfo &TRI,
+                          const GCNSubtarget &ST) {
   MachineInstr *MI = Fold.UseMI;
   MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
   assert(Old.isReg());
 
   if (Fold.isImm()) {
-    if (MI->getDesc().TSFlags & SIInstrFlags::IsPacked) {
+    if (MI->getDesc().TSFlags & SIInstrFlags::IsPacked &&
+        AMDGPU::isInlinableLiteralV216(static_cast<uint16_t>(Fold.ImmToFold),
+                                       ST.hasInv2PiInlineImm())) {
       // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
       // already set.
       unsigned Opcode = MI->getOpcode();
@@ -192,6 +195,8 @@ static bool updateOperand(FoldCandidate &Fold,
       // Only apply the following transformation if that operand requries
       // a packed immediate.
       switch (TII.get(Opcode).OpInfo[OpNo].OperandType) {
+      case AMDGPU::OPERAND_REG_IMM_V2FP16:
+      case AMDGPU::OPERAND_REG_IMM_V2INT16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
         // If upper part is all zero we do not need op_sel_hi.
@@ -203,6 +208,8 @@ static bool updateOperand(FoldCandidate &Fold,
             return true;
           }
           Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+          Old.ChangeToImmediate(Fold.ImmToFold & 0xffff);
+          return true;
         }
         break;
       default:
@@ -891,7 +898,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     Copy->addImplicitDefUseOperands(*MF);
 
   for (FoldCandidate &Fold : FoldList) {
-    if (updateOperand(Fold, *TII, *TRI)) {
+    if (updateOperand(Fold, *TII, *TRI, *ST)) {
       // Clear kill flags.
       if (Fold.isReg()) {
         assert(Fold.OpToFold && Fold.OpToFold->isReg());

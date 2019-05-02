@@ -100,11 +100,13 @@ typedef SizeClassAllocator32<AP32> PrimaryT;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 #include "scudo_allocator_secondary.h"
+
+typedef LargeMmapAllocator SecondaryT;
+
 #include "scudo_allocator_combined.h"
 
-typedef SizeClassAllocatorLocalCache<PrimaryT> AllocatorCacheT;
-typedef LargeMmapAllocator SecondaryT;
-typedef CombinedAllocator<PrimaryT, AllocatorCacheT, SecondaryT> BackendT;
+typedef CombinedAllocator BackendT;
+typedef CombinedAllocator::AllocatorCache AllocatorCacheT;
 
 void initScudo();
 

@@ -46,15 +46,17 @@ if(CLANG_TEST_USE_VG)
 endif ()
 
 list(APPEND CLANG_TEST_DEPS
-  clang clang-resource-headers
+  c-index-test
+  clang
+  clang-resource-headers
   clang-format
-  c-index-test diagtool
   clang-tblgen
   clang-offload-bundler
   clang-import-test
   clang-rename
   clang-refactor
   clang-diff
+  diagtool
   hmaptool
   )
   

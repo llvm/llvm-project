@@ -46,11 +46,12 @@ WindowsResource::WindowsResource(MemoryBufferRef Source)
                          support::little);
 }
 
+// static
 Expected<std::unique_ptr<WindowsResource>>
 WindowsResource::createWindowsResource(MemoryBufferRef Source) {
   if (Source.getBufferSize() < WIN_RES_MAGIC_SIZE + WIN_RES_NULL_ENTRY_SIZE)
     return make_error<GenericBinaryError>(
-        "File too small to be a resource file",
+        Source.getBufferIdentifier() + ": too small to be a resource file",
         object_error::invalid_file_type);
   std::unique_ptr<WindowsResource> Ret(new WindowsResource(Source));
   return std::move(Ret);
@@ -58,14 +59,14 @@ WindowsResource::createWindowsResource(MemoryBufferRef Source) {
 
 Expected<ResourceEntryRef> WindowsResource::getHeadEntry() {
   if (BBS.getLength() < sizeof(WinResHeaderPrefix) + sizeof(WinResHeaderSuffix))
-    return make_error<EmptyResError>(".res contains no entries",
+    return make_error<EmptyResError>(getFileName() + " contains no entries",
                                      object_error::unexpected_eof);
   return ResourceEntryRef::create(BinaryStreamRef(BBS), this);
 }
 
 ResourceEntryRef::ResourceEntryRef(BinaryStreamRef Ref,
                                    const WindowsResource *Owner)
-    : Reader(Ref) {}
+    : Reader(Ref), Owner(Owner) {}
 
 Expected<ResourceEntryRef>
 ResourceEntryRef::create(BinaryStreamRef BSR, const WindowsResource *Owner) {
@@ -108,7 +109,8 @@ Error ResourceEntryRef::loadNext() {
   RETURN_IF_ERROR(Reader.readObject(Prefix));
 
   if (Prefix->HeaderSize < MIN_HEADER_SIZE)
-    return make_error<GenericBinaryError>("Header size is too small.",
+    return make_error<GenericBinaryError>(Owner->getFileName() +
+                                              ": header size too small",
                                           object_error::parse_failed);
 
   RETURN_IF_ERROR(readStringOrId(Reader, TypeID, Type, IsStringType));

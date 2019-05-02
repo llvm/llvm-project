@@ -60,13 +60,12 @@ File Layout
 
 The MSF Container
 -----------------
-A PDB file is really just a special case of an MSF (Multi-Stream Format) file.
-An MSF file is actually a miniature "file system within a file".  It contains
-multiple streams (aka files) which can represent arbitrary data, and these
-streams are divided into blocks which may not necessarily be contiguously
-laid out within the file (aka fragmented).  Additionally, the MSF contains a
-stream directory (aka MFT) which describes how the streams (files) are laid
-out within the MSF.
+A PDB file is an MSF (Multi-Stream Format) file.  An MSF file is a "file system
+within a file".  It contains multiple streams (aka files) which can represent
+arbitrary data, and these streams are divided into blocks which may not
+necessarily be contiguously laid out within the MSF container file.
+Additionally, the MSF contains a stream directory (aka MFT) which describes how
+the streams (files) are laid out within the MSF.
 
 For more information about the MSF container format, stream directory, and
 block layout, see :doc:`MsfFile`.

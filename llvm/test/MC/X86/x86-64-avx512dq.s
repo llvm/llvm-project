@@ -3511,9 +3511,9 @@
 // CHECK:  encoding: [0x62,0xb3,0xfd,0x48,0x66,0x94,0xf0,0x23,0x01,0x00,0x00,0x7b]
           vfpclasspdz $0x7b,291(%rax,%r14,8), %k2
 
-// CHECK: vfpclasspdq $123, (%rcx){1to8}, %k2
+// CHECK: vfpclasspd $123, (%rcx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x11,0x7b]
-          vfpclasspdq $0x7b,(%rcx){1to8}, %k2
+          vfpclasspd $0x7b,(%rcx){1to8}, %k2
 
 // CHECK: vfpclasspdz $123, 8128(%rdx), %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x48,0x66,0x52,0x7f,0x7b]
@@ -3531,21 +3531,21 @@
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x48,0x66,0x92,0xc0,0xdf,0xff,0xff,0x7b]
           vfpclasspdz $0x7b,-8256(%rdx), %k2
 
-// CHECK: vfpclasspdq $123, 1016(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, 1016(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x52,0x7f,0x7b]
-          vfpclasspdq $0x7b,1016(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,1016(%rdx){1to8}, %k2
 
-// CHECK: vfpclasspdq $123, 1024(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, 1024(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x92,0x00,0x04,0x00,0x00,0x7b]
-          vfpclasspdq $0x7b,1024(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,1024(%rdx){1to8}, %k2
 
-// CHECK: vfpclasspdq $123, -1024(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, -1024(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x52,0x80,0x7b]
-          vfpclasspdq $0x7b,-1024(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,-1024(%rdx){1to8}, %k2
 
-// CHECK: vfpclasspdq $123, -1032(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, -1032(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x92,0xf8,0xfb,0xff,0xff,0x7b]
-          vfpclasspdq $0x7b,-1032(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,-1032(%rdx){1to8}, %k2
 
 // CHECK: vfpclassps $171, %zmm21, %k2
 // CHECK:  encoding: [0x62,0xb3,0x7d,0x48,0x66,0xd5,0xab]
@@ -3567,9 +3567,9 @@
 // CHECK:  encoding: [0x62,0xb3,0x7d,0x48,0x66,0x94,0xf0,0x23,0x01,0x00,0x00,0x7b]
           vfpclasspsz $0x7b,291(%rax,%r14,8), %k2
 
-// CHECK: vfpclasspsl $123, (%rcx){1to16}, %k2
+// CHECK: vfpclassps $123, (%rcx){1to16}, %k2
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x11,0x7b]
-          vfpclasspsl $0x7b,(%rcx){1to16}, %k2
+          vfpclassps $0x7b,(%rcx){1to16}, %k2
 
 // CHECK: vfpclasspsz $123, 8128(%rdx), %k2
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x48,0x66,0x52,0x7f,0x7b]
@@ -3587,21 +3587,21 @@
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x48,0x66,0x92,0xc0,0xdf,0xff,0xff,0x7b]
           vfpclasspsz $0x7b,-8256(%rdx), %k2
 
-// CHECK: vfpclasspsl $123, 508(%rdx){1to16}, %k2
+// CHECK: vfpclassps $123, 508(%rdx){1to16}, %k2
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x52,0x7f,0x7b]
-          vfpclasspsl $0x7b,508(%rdx){1to16}, %k2
+          vfpclassps $0x7b,508(%rdx){1to16}, %k2
 
-// CHECK: vfpclasspsl $123, 512(%rdx){1to16}, %k2
+// CHECK: vfpclassps $123, 512(%rdx){1to16}, %k2
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x92,0x00,0x02,0x00,0x00,0x7b]
-          vfpclasspsl $0x7b,512(%rdx){1to16}, %k2
+          vfpclassps $0x7b,512(%rdx){1to16}, %k2
 
-// CHECK: vfpclasspsl $123, -512(%rdx){1to16}, %k2
+// CHECK: vfpclassps $123, -512(%rdx){1to16}, %k2
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x52,0x80,0x7b]
-          vfpclasspsl $0x7b,-512(%rdx){1to16}, %k2
+          vfpclassps $0x7b,-512(%rdx){1to16}, %k2
 
-// CHECK: vfpclasspsl $123, -516(%rdx){1to16}, %k2
+// CHECK: vfpclassps $123, -516(%rdx){1to16}, %k2
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x92,0xfc,0xfd,0xff,0xff,0x7b]
-          vfpclasspsl $0x7b,-516(%rdx){1to16}, %k2
+          vfpclassps $0x7b,-516(%rdx){1to16}, %k2
 
 // CHECK: vfpclasspd $171, %zmm19, %k2
 // CHECK:  encoding: [0x62,0xb3,0xfd,0x48,0x66,0xd3,0xab]
@@ -3623,9 +3623,9 @@
 // CHECK:  encoding: [0x62,0xb3,0xfd,0x48,0x66,0x94,0xf0,0x34,0x12,0x00,0x00,0x7b]
           vfpclasspdz $0x7b,4660(%rax,%r14,8), %k2
 
-// CHECK: vfpclasspdq $123, (%rcx){1to8}, %k2
+// CHECK: vfpclasspd $123, (%rcx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x11,0x7b]
-          vfpclasspdq $0x7b,(%rcx){1to8}, %k2
+          vfpclasspd $0x7b,(%rcx){1to8}, %k2
 
 // CHECK: vfpclasspdz $123, 8128(%rdx), %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x48,0x66,0x52,0x7f,0x7b]
@@ -3643,21 +3643,21 @@
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x48,0x66,0x92,0xc0,0xdf,0xff,0xff,0x7b]
           vfpclasspdz $0x7b,-8256(%rdx), %k2
 
-// CHECK: vfpclasspdq $123, 1016(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, 1016(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x52,0x7f,0x7b]
-          vfpclasspdq $0x7b,1016(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,1016(%rdx){1to8}, %k2
 
-// CHECK: vfpclasspdq $123, 1024(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, 1024(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x92,0x00,0x04,0x00,0x00,0x7b]
-          vfpclasspdq $0x7b,1024(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,1024(%rdx){1to8}, %k2
 
-// CHECK: vfpclasspdq $123, -1024(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, -1024(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x52,0x80,0x7b]
-          vfpclasspdq $0x7b,-1024(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,-1024(%rdx){1to8}, %k2
 
-// CHECK: vfpclasspdq $123, -1032(%rdx){1to8}, %k2
+// CHECK: vfpclasspd $123, -1032(%rdx){1to8}, %k2
 // CHECK:  encoding: [0x62,0xf3,0xfd,0x58,0x66,0x92,0xf8,0xfb,0xff,0xff,0x7b]
-          vfpclasspdq $0x7b,-1032(%rdx){1to8}, %k2
+          vfpclasspd $0x7b,-1032(%rdx){1to8}, %k2
 
 // CHECK: vfpclassps $171, %zmm17, %k4
 // CHECK:  encoding: [0x62,0xb3,0x7d,0x48,0x66,0xe1,0xab]
@@ -3679,9 +3679,9 @@
 // CHECK:  encoding: [0x62,0xb3,0x7d,0x48,0x66,0xa4,0xf0,0x34,0x12,0x00,0x00,0x7b]
           vfpclasspsz $0x7b,4660(%rax,%r14,8), %k4
 
-// CHECK: vfpclasspsl $123, (%rcx){1to16}, %k4
+// CHECK: vfpclassps $123, (%rcx){1to16}, %k4
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x21,0x7b]
-          vfpclasspsl $0x7b,(%rcx){1to16}, %k4
+          vfpclassps $0x7b,(%rcx){1to16}, %k4
 
 // CHECK: vfpclasspsz $123, 8128(%rdx), %k4
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x48,0x66,0x62,0x7f,0x7b]
@@ -3699,21 +3699,21 @@
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x48,0x66,0xa2,0xc0,0xdf,0xff,0xff,0x7b]
           vfpclasspsz $0x7b,-8256(%rdx), %k4
 
-// CHECK: vfpclasspsl $123, 508(%rdx){1to16}, %k4
+// CHECK: vfpclassps $123, 508(%rdx){1to16}, %k4
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x62,0x7f,0x7b]
-          vfpclasspsl $0x7b,508(%rdx){1to16}, %k4
+          vfpclassps $0x7b,508(%rdx){1to16}, %k4
 
-// CHECK: vfpclasspsl $123, 512(%rdx){1to16}, %k4
+// CHECK: vfpclassps $123, 512(%rdx){1to16}, %k4
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0xa2,0x00,0x02,0x00,0x00,0x7b]
-          vfpclasspsl $0x7b,512(%rdx){1to16}, %k4
+          vfpclassps $0x7b,512(%rdx){1to16}, %k4
 
-// CHECK: vfpclasspsl $123, -512(%rdx){1to16}, %k4
+// CHECK: vfpclassps $123, -512(%rdx){1to16}, %k4
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0x62,0x80,0x7b]
-          vfpclasspsl $0x7b,-512(%rdx){1to16}, %k4
+          vfpclassps $0x7b,-512(%rdx){1to16}, %k4
 
-// CHECK: vfpclasspsl $123, -516(%rdx){1to16}, %k4
+// CHECK: vfpclassps $123, -516(%rdx){1to16}, %k4
 // CHECK:  encoding: [0x62,0xf3,0x7d,0x58,0x66,0xa2,0xfc,0xfd,0xff,0xff,0x7b]
-          vfpclasspsl $0x7b,-516(%rdx){1to16}, %k4
+          vfpclassps $0x7b,-516(%rdx){1to16}, %k4
 
 
 // CHECK: vcvtuqq2ps {rn-sae}, %zmm21, %ymm18

@@ -115,9 +115,9 @@ CheckerRegistry::CheckerRegistry(
 
   // Register builtin checkers.
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
   addChecker(register##CLASS, shouldRegister##CLASS, FULLNAME, HELPTEXT,       \
-             DOC_URI);
+             DOC_URI, IS_HIDDEN);
 
 #define GET_PACKAGES
 #define PACKAGE(FULLNAME) addPackage(FULLNAME);
@@ -350,8 +350,9 @@ void CheckerRegistry::addPackageOption(StringRef OptionType,
 
 void CheckerRegistry::addChecker(InitializationFunction Rfn,
                                  ShouldRegisterFunction Sfn, StringRef Name,
-                                 StringRef Desc, StringRef DocsUri) {
-  Checkers.emplace_back(Rfn, Sfn, Name, Desc, DocsUri);
+                                 StringRef Desc, StringRef DocsUri,
+                                 bool IsHidden) {
+  Checkers.emplace_back(Rfn, Sfn, Name, Desc, DocsUri, IsHidden);
 
   // Record the presence of the checker in its packages.
   StringRef PackageName, LeafName;
@@ -421,6 +422,9 @@ void CheckerRegistry::printCheckerWithDescList(raw_ostream &Out,
 
   const size_t InitialPad = 2;
   for (const auto &Checker : Checkers) {
+    if (!AnOpts.ShowCheckerHelpHidden && Checker.IsHidden)
+      continue;
+
     Out.indent(InitialPad) << Checker.FullName;
 
     int Pad = OptionFieldWidth - Checker.FullName.size();

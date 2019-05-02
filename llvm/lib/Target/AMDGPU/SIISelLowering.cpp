@@ -3540,6 +3540,33 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::V_ADD_I32_e32:
+  case AMDGPU::V_SUB_I32_e32:
+  case AMDGPU::V_SUBREV_I32_e32: {
+    // TODO: Define distinct V_*_I32_Pseudo instructions instead.
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc = MI.getOpcode();
+
+    bool NeedClampOperand = false;
+    if (TII->pseudoToMCOpcode(Opc) == -1) {
+      Opc = AMDGPU::getVOPe64(Opc);
+      NeedClampOperand = true;
+    }
+
+    auto I = BuildMI(*BB, MI, DL, TII->get(Opc), MI.getOperand(0).getReg());
+    if (TII->isVOP3(*I)) {
+      I.addReg(AMDGPU::VCC, RegState::Define);
+    }
+    I.add(MI.getOperand(1))
+     .add(MI.getOperand(2));
+    if (NeedClampOperand)
+      I.addImm(0); // clamp bit for e64 encoding
+
+    TII->legalizeOperands(*I);
+
+    MI.eraseFromParent();
+    return BB;
+  }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
