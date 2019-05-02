@@ -31,7 +31,6 @@ config("compiler_defaults") {
     cflags += [ "-fdiagnostics-color" ]
     cflags_cc = [
       "-std=c++11",
-      "-fno-exceptions",
       "-fvisibility-inlines-hidden",
     ]
   } else {
@@ -136,6 +135,12 @@ config("compiler_defaults") {
   # On Windows, the linker is not invoked through the compiler driver.
   if (use_lld && host_os != "win") {
     ldflags += [ "-fuse-ld=lld" ]
+  }
+}
+
+config("no_exceptions") {
+  if (host_os != "win") {
+    cflags_cc = [ "-fno-exceptions" ]
   }
 }
 

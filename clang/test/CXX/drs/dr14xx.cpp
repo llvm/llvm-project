@@ -13,22 +13,22 @@ namespace dr1460 { // dr1460: 3.5
 #if __cplusplus >= 201103L
   namespace DRExample {
     union A {
-      union {};
-      union {};
+      union {}; // expected-error {{does not declare anything}}
+      union {}; // expected-error {{does not declare anything}}
       constexpr A() {}
     };
     constexpr A a = A();
 
     union B {
-      union {};
-      union {};
+      union {}; // expected-error {{does not declare anything}}
+      union {}; // expected-error {{does not declare anything}}
       constexpr B() = default;
     };
     constexpr B b = B();
 
     union C {
-      union {};
-      union {};
+      union {}; // expected-error {{does not declare anything}}
+      union {}; // expected-error {{does not declare anything}}
     };
     constexpr C c = C();
 #if __cplusplus > 201103L
@@ -40,7 +40,7 @@ namespace dr1460 { // dr1460: 3.5
   union A {};
   union B { int n; }; // expected-note +{{here}}
   union C { int n = 0; };
-  struct D { union {}; };
+  struct D { union {}; }; // expected-error {{does not declare anything}}
   struct E { union { int n; }; }; // expected-note +{{here}}
   struct F { union { int n = 0; }; };
 
@@ -66,7 +66,7 @@ namespace dr1460 { // dr1460: 3.5
     union A { constexpr A() = default; };
     union B { int n; constexpr B() = default; }; // expected-error {{not constexpr}}
     union C { int n = 0; constexpr C() = default; };
-    struct D { union {}; constexpr D() = default; };
+    struct D { union {}; constexpr D() = default; }; // expected-error {{does not declare anything}}
     struct E { union { int n; }; constexpr E() = default; }; // expected-error {{not constexpr}}
     struct F { union { int n = 0; }; constexpr F() = default; };
 

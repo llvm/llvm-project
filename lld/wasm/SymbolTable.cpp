@@ -58,7 +58,7 @@ void SymbolTable::addCombinedLTOObject() {
     LTO->add(*F);
 
   for (StringRef Filename : LTO->compile()) {
-    auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"));
+    auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"), "");
     Obj->parse();
     ObjectFiles.push_back(Obj);
   }
@@ -132,7 +132,8 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
 // Check the type of new symbol matches that of the symbol is replacing.
 // Returns true if the function types match, false is there is a singature
 // mismatch.
-bool signatureMatches(FunctionSymbol *Existing, const WasmSignature *NewSig) {
+static bool signatureMatches(FunctionSymbol *Existing,
+                             const WasmSignature *NewSig) {
   if (!NewSig)
     return true;
 
@@ -490,7 +491,7 @@ bool SymbolTable::getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
   // Linear search through symbol variants.  Should never be more than two
   // or three entries here.
   auto &Variants = SymVariants[CachedHashStringRef(Sym->getName())];
-  if (Variants.size() == 0)
+  if (Variants.empty())
     Variants.push_back(Sym);
 
   for (Symbol* V : Variants) {

@@ -100,11 +100,10 @@ public:
 
 /// Handle array type.
 class BTFTypeArray : public BTFTypeBase {
-  const DICompositeType *ATy;
   struct BTF::BTFArray ArrayInfo;
 
 public:
-  BTFTypeArray(const DICompositeType *ATy);
+  BTFTypeArray(uint32_t ElemTypeId, uint32_t NumElems);
   uint32_t getSize() { return BTFTypeBase::getSize() + BTF::BTFArraySize; }
   void completeType(BTFDebug &BDebug);
   void emitType(MCStreamer &OS);
@@ -229,10 +228,10 @@ class BTFDebug : public DebugHandlerBase {
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
   std::unordered_map<const DIType *, uint32_t> DIToIdMap;
-  std::unordered_map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
-  std::unordered_map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
+  std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
+  std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   StringMap<std::vector<std::string>> FileContent;
-  std::unordered_map<std::string, std::unique_ptr<BTFKindDataSec>>
+  std::map<std::string, std::unique_ptr<BTFKindDataSec>>
       DataSecEntries;
 
   /// Add types to TypeEntries.

@@ -101,7 +101,7 @@ operator=(const lldb::SBSourceManager &rhs) {
                      rhs);
 
   m_opaque_up.reset(new SourceManagerImpl(*(rhs.m_opaque_up.get())));
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBSourceManager::~SBSourceManager() {}
@@ -137,4 +137,28 @@ size_t SBSourceManager::DisplaySourceLinesWithLineNumbersAndColumn(
   return m_opaque_up->DisplaySourceLinesWithLineNumbers(
       file.ref(), line, column, context_before, context_after,
       current_line_cstr, s.get());
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBSourceManager>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBSourceManager, (const lldb::SBDebugger &));
+  LLDB_REGISTER_CONSTRUCTOR(SBSourceManager, (const lldb::SBTarget &));
+  LLDB_REGISTER_CONSTRUCTOR(SBSourceManager, (const lldb::SBSourceManager &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBSourceManager &,
+      SBSourceManager, operator=,(const lldb::SBSourceManager &));
+  LLDB_REGISTER_METHOD(size_t, SBSourceManager,
+                       DisplaySourceLinesWithLineNumbers,
+                       (const lldb::SBFileSpec &, uint32_t, uint32_t,
+                        uint32_t, const char *, lldb::SBStream &));
+  LLDB_REGISTER_METHOD(size_t, SBSourceManager,
+                       DisplaySourceLinesWithLineNumbersAndColumn,
+                       (const lldb::SBFileSpec &, uint32_t, uint32_t,
+                        uint32_t, uint32_t, const char *, lldb::SBStream &));
+}
+
+}
 }

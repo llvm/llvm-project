@@ -167,6 +167,8 @@ public:
 private:
   IdentifierInfo *AttrName;
   IdentifierInfo *ScopeName;
+  IdentifierInfo *MacroII = nullptr;
+  SourceLocation MacroExpansionLoc;
   SourceRange AttrRange;
   SourceLocation ScopeLoc;
   SourceLocation EllipsisLoc;
@@ -547,6 +549,27 @@ public:
     return getPropertyDataBuffer().SetterId;
   }
 
+  /// Set the macro identifier info object that this parsed attribute was
+  /// declared in if it was declared in a macro. Also set the expansion location
+  /// of the macro.
+  void setMacroIdentifier(IdentifierInfo *MacroName, SourceLocation Loc) {
+    MacroII = MacroName;
+    MacroExpansionLoc = Loc;
+  }
+
+  /// Returns true if this attribute was declared in a macro.
+  bool hasMacroIdentifier() const { return MacroII != nullptr; }
+
+  /// Return the macro identifier if this attribute was declared in a macro.
+  /// nullptr is returned if it was not declared in a macro.
+  IdentifierInfo *getMacroIdentifier() const { return MacroII; }
+
+  SourceLocation getMacroExpansionLoc() const {
+    assert(hasMacroIdentifier() && "Can only get the macro expansion location "
+                                   "if this attribute has a macro identifier.");
+    return MacroExpansionLoc;
+  }
+
   /// Get an index into the attribute spelling list
   /// defined in Attr.td. This index is used by an attribute
   /// to pretty print itself.
@@ -659,6 +682,7 @@ public:
 
 class AttributePool {
   friend class AttributeFactory;
+  friend class ParsedAttributes;
   AttributeFactory &Factory;
   llvm::TinyPtrVector<ParsedAttr *> Attrs;
 
@@ -890,6 +914,13 @@ public:
     addAll(attrs.begin(), attrs.end());
     attrs.clearListOnly();
     pool.takeAllFrom(attrs.pool);
+  }
+
+  void takeOneFrom(ParsedAttributes &Attrs, ParsedAttr *PA) {
+    Attrs.getPool().remove(PA);
+    Attrs.remove(PA);
+    getPool().add(PA);
+    addAtEnd(PA);
   }
 
   void clear() {

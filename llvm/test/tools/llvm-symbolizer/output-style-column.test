@@ -1,0 +1,20 @@
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM
+
+RUN: llvm-symbolizer --output-style=GNU -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=GNU
+
+RUN: llvm-symbolizer --output-style=LLVM -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM
+
+RUN: llvm-addr2line -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=GNU
+
+RUN: llvm-addr2line --output-style=GNU -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=GNU
+
+RUN: llvm-addr2line --output-style=LLVM -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM
+
+LLVM: {{^}}/tmp{{\\|/}}x.c:3:3{{$}}
+GNU: {{^}}/tmp{{\\|/}}x.c:3{{$}}

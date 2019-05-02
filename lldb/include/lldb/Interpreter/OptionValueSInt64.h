@@ -36,9 +36,7 @@ public:
 
   ~OptionValueSInt64() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeSInt64; }
 
@@ -60,9 +58,7 @@ public:
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   const int64_t &operator=(int64_t value) {
     m_current_value = value;

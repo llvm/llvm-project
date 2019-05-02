@@ -29,7 +29,7 @@ class MipsTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   // Selected ABI
   MipsABIInfo ABI;
-  MipsSubtarget *Subtarget;
+  const MipsSubtarget *Subtarget;
   MipsSubtarget DefaultSubtarget;
   MipsSubtarget NoMips16Subtarget;
   MipsSubtarget Mips16Subtarget;
@@ -65,10 +65,6 @@ public:
 
   bool isLittleEndian() const { return isLittle; }
   const MipsABIInfo &getABI() const { return ABI; }
-
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
 };
 
 /// Mips32/64 big endian target machine.

@@ -559,3 +559,80 @@ define i16 @fshr_bswap(i16 %x) {
   ret i16 %r
 }
 
+define i32 @fshl_mask_args_same1(i32 %a) {
+; CHECK-LABEL: @fshl_mask_args_same1(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[A:%.*]], 16
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %tmp1 = and i32 %a, 4294901760 ; 0xffff0000
+  %tmp2 = call i32 @llvm.fshl.i32(i32 %tmp1, i32 %tmp1, i32 16)
+  ret i32 %tmp2
+}
+
+define i32 @fshl_mask_args_same2(i32 %a) {
+; CHECK-LABEL: @fshl_mask_args_same2(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 65280
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %tmp1 = and i32 %a, 255
+  %tmp2 = call i32 @llvm.fshl.i32(i32 %tmp1, i32 %tmp1, i32 8)
+  ret i32 %tmp2
+}
+
+define i32 @fshl_mask_args_same3(i32 %a) {
+; CHECK-LABEL: @fshl_mask_args_same3(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[A:%.*]], 24
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %tmp1 = and i32 %a, 255
+  %tmp2 = call i32 @llvm.fshl.i32(i32 %tmp1, i32 %tmp1, i32 24)
+  ret i32 %tmp2
+}
+
+define i32 @fshl_mask_args_different(i32 %a) {
+; CHECK-LABEL: @fshl_mask_args_different(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1]], 130560
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %tmp2 = and i32 %a, 4294901760 ; 0xfffff00f
+  %tmp1 = and i32 %a, 4278190080 ; 0xff00f00f
+  %tmp3 = call i32 @llvm.fshl.i32(i32 %tmp2, i32 %tmp1, i32 17)
+  ret i32 %tmp3
+}
+
+define <2 x i31> @fshr_mask_args_same_vector(<2 x i31> %a) {
+; CHECK-LABEL: @fshr_mask_args_same_vector(
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i31> [[A:%.*]], <i31 10, i31 10>
+; CHECK-NEXT:    ret <2 x i31> [[TMP3]]
+;
+  %tmp1 = and <2 x i31> %a, <i31 1000, i31 1000>
+  %tmp2 = and <2 x i31> %a, <i31 6442450943, i31 6442450943>
+  %tmp3 = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %tmp2, <2 x i31> %tmp1, <2 x i31> <i31 10, i31 10>)
+  ret <2 x i31> %tmp3
+}
+
+define <2 x i32> @fshr_mask_args_same_vector2(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @fshr_mask_args_same_vector2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1000000, i32 100000>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
+;
+  %tmp1 = and <2 x i32> %a, <i32 1000000, i32 100000>
+  %tmp2 = and <2 x i32> %a, <i32 6442450943, i32 6442450943>
+  %tmp3 = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> <i32 3, i32 3>)
+  ret <2 x i32> %tmp3
+}
+
+define <2 x i31> @fshr_mask_args_same_vector3_different_but_still_prunable(<2 x i31> %a) {
+; CHECK-LABEL: @fshr_mask_args_same_vector3_different_but_still_prunable(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i31> [[A:%.*]], <i31 1000, i31 1000>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[A]], <2 x i31> [[TMP1]], <2 x i31> <i31 10, i31 3>)
+; CHECK-NEXT:    ret <2 x i31> [[TMP3]]
+;
+  %tmp1 = and <2 x i31> %a, <i31 1000, i31 1000>
+  %tmp2 = and <2 x i31> %a, <i31 6442450943, i31 6442450943>
+  %tmp3 = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %tmp2, <2 x i31> %tmp1, <2 x i31> <i31 10, i31 3>)
+  ret <2 x i31> %tmp3
+}

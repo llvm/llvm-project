@@ -19,14 +19,11 @@ class ProcessMessage;
 class ProcessMonitor;
 class POSIXBreakpointProtocol;
 
-//------------------------------------------------------------------------------
 // @class FreeBSDThread
 // Abstraction of a FreeBSD thread.
 class FreeBSDThread : public lldb_private::Thread {
 public:
-  //------------------------------------------------------------------
   // Constructors and destructors
-  //------------------------------------------------------------------
   FreeBSDThread(lldb_private::Process &process, lldb::tid_t tid);
 
   virtual ~FreeBSDThread();
@@ -50,7 +47,6 @@ public:
 
   lldb::addr_t GetThreadPointer() override;
 
-  //--------------------------------------------------------------------------
   // These functions provide a mapping from the register offset
   // back to the register index or name for use in debugging or log
   // output.
@@ -61,14 +57,12 @@ public:
 
   const char *GetRegisterNameFromOffset(unsigned offset);
 
-  //--------------------------------------------------------------------------
   // These methods form a specialized interface to POSIX threads.
   //
   bool Resume();
 
   void Notify(const ProcessMessage &message);
 
-  //--------------------------------------------------------------------------
   // These methods provide an interface to watchpoints
   //
   bool EnableHardwareWatchpoint(lldb_private::Watchpoint *wp);
@@ -110,7 +104,6 @@ protected:
 
   lldb_private::Unwind *GetUnwinder() override;
 
-  //--------------------------------------------------------------------------
   // FreeBSDThread internal API.
 
   // POSIXThread override

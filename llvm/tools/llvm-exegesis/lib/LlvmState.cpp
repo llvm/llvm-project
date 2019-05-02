@@ -38,8 +38,11 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName,
   }
   PfmCounters = &TheExegesisTarget->getPfmCounters(CpuName);
 
-  RATC.reset(new RegisterAliasingTrackerCache(
-      getRegInfo(), getFunctionReservedRegs(getTargetMachine())));
+  BitVector ReservedRegs = getFunctionReservedRegs(getTargetMachine());
+  for (const unsigned Reg : TheExegesisTarget->getUnavailableRegisters())
+    ReservedRegs.set(Reg);
+  RATC.reset(
+      new RegisterAliasingTrackerCache(getRegInfo(), std::move(ReservedRegs)));
   IC.reset(new InstructionsCache(getInstrInfo(), getRATC()));
 }
 

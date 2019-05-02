@@ -457,6 +457,17 @@ def nonQuadwOffsetStore : PatFrag<(ops node:$val, node:$ptr),
   return !isOffsetMultipleOf(N, 16);
 }]>;
 
+// PatFrag for binary operation whose operands are both non-constant
+class BinOpWithoutSImm16Operand<SDNode opcode> :
+  PatFrag<(ops node:$left, node:$right), (opcode node:$left, node:$right), [{
+    int16_t Imm;
+    return !isIntS16Immediate(N->getOperand(0), Imm)
+             && !isIntS16Immediate(N->getOperand(1), Imm);
+}]>;
+
+def add_without_simm16 : BinOpWithoutSImm16Operand<add>;
+def mul_without_simm16 : BinOpWithoutSImm16Operand<mul>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Flag Definitions.
 
@@ -1308,6 +1319,15 @@ let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7 in {
                                 "bcctr 4, $bi, 0", IIC_BrB, []>;
     }
   }
+}
+
+// Set the float rounding mode.
+let Uses = [RM], Defs = [RM] in { 
+def SETRNDi : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins u2imm:$RND),
+                    "#SETRNDi", [(set f64:$FRT, (int_ppc_setrnd (i32 imm:$RND)))]>;
+
+def SETRND : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins gprc:$in),
+                    "#SETRND", [(set f64:$FRT, (int_ppc_setrnd gprc :$in))]>;
 }
 
 let Defs = [LR] in
@@ -4071,6 +4091,10 @@ def SLBMFEV : XLForm_1_gen<31, 851, (outs gprc:$RT), (ins gprc:$RB),
                        "slbmfev $RT, $RB", IIC_SprSLBMFEV, []>;
 
 def SLBIA : XForm_0<31, 498, (outs), (ins), "slbia", IIC_SprSLBIA, []>;
+
+let Defs = [CR0] in
+def SLBFEEo : XForm_26<31, 979, (outs gprc:$RT), (ins gprc:$RB),
+                         "slbfee. $RT, $RB", IIC_SprSLBFEE, []>, isDOT;
 
 def TLBIA : XForm_0<31, 370, (outs), (ins),
                         "tlbia", IIC_SprTLBIA, []>;

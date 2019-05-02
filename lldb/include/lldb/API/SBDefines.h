@@ -16,10 +16,6 @@
 #include "lldb/lldb-types.h"
 #include "lldb/lldb-versioning.h"
 
-#ifdef SWIG
-#define LLDB_API
-#endif
-
 // Forward Declarations
 namespace lldb {
 

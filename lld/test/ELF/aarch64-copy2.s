@@ -3,7 +3,7 @@
 // RUN: llvm-mc %p/Inputs/aarch64-copy2.s -o %t2.o -filetype=obj -triple=aarch64-pc-linux
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: ld.lld %t.o %t2.so -o %t
-// RUN: llvm-readobj -t %t | FileCheck %s
+// RUN: llvm-readobj --symbols %t | FileCheck %s
 
         .global _start
 _start:

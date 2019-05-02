@@ -1277,29 +1277,84 @@ auto partition(R &&Range, UnaryPredicate P) -> decltype(adl_begin(Range)) {
 
 /// Provide wrappers to std::lower_bound which take ranges instead of having to
 /// pass begin/end explicitly.
-template <typename R, typename ForwardIt>
-auto lower_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
-  return std::lower_bound(adl_begin(Range), adl_end(Range), I);
+template <typename R, typename T>
+auto lower_bound(R &&Range, T &&Value) -> decltype(adl_begin(Range)) {
+  return std::lower_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value));
 }
 
-template <typename R, typename ForwardIt, typename Compare>
-auto lower_bound(R &&Range, ForwardIt I, Compare C)
+template <typename R, typename T, typename Compare>
+auto lower_bound(R &&Range, T &&Value, Compare C)
     -> decltype(adl_begin(Range)) {
-  return std::lower_bound(adl_begin(Range), adl_end(Range), I, C);
+  return std::lower_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value), C);
 }
 
 /// Provide wrappers to std::upper_bound which take ranges instead of having to
 /// pass begin/end explicitly.
-template <typename R, typename ForwardIt>
-auto upper_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
-  return std::upper_bound(adl_begin(Range), adl_end(Range), I);
+template <typename R, typename T>
+auto upper_bound(R &&Range, T &&Value) -> decltype(adl_begin(Range)) {
+  return std::upper_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value));
 }
 
-template <typename R, typename ForwardIt, typename Compare>
-auto upper_bound(R &&Range, ForwardIt I, Compare C)
+template <typename R, typename T, typename Compare>
+auto upper_bound(R &&Range, T &&Value, Compare C)
     -> decltype(adl_begin(Range)) {
-  return std::upper_bound(adl_begin(Range), adl_end(Range), I, C);
+  return std::upper_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value), C);
 }
+
+template <typename R>
+void stable_sort(R &&Range) {
+  std::stable_sort(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare>
+void stable_sort(R &&Range, Compare C) {
+  std::stable_sort(adl_begin(Range), adl_end(Range), C);
+}
+
+/// Binary search for the first index where a predicate is true.
+/// Returns the first I in [Lo, Hi) where C(I) is true, or Hi if it never is.
+/// Requires that C is always false below some limit, and always true above it.
+///
+/// Example:
+///   size_t DawnModernEra = bsearch(1776, 2050, [](size_t Year){
+///     return Presidents.for(Year).twitterHandle() != None;
+///   });
+///
+/// Note the return value differs from std::binary_search!
+template <typename Predicate>
+size_t bsearch(size_t Lo, size_t Hi, Predicate P) {
+  while (Lo != Hi) {
+    assert(Hi > Lo);
+    size_t Mid = Lo + (Hi - Lo) / 2;
+    if (P(Mid))
+      Hi = Mid;
+    else
+      Lo = Mid + 1;
+  }
+  return Hi;
+}
+
+/// Binary search for the first iterator where a predicate is true.
+/// Returns the first I in [Lo, Hi) where C(*I) is true, or Hi if it never is.
+/// Requires that C is always false below some limit, and always true above it.
+template <typename It, typename Predicate,
+          typename Val = decltype(*std::declval<It>())>
+It bsearch(It Lo, It Hi, Predicate P) {
+  return std::lower_bound(Lo, Hi, 0u,
+                          [&](const Val &V, unsigned) { return !P(V); });
+}
+
+/// Binary search for the first iterator in a range where a predicate is true.
+/// Requires that C is always false below some limit, and always true above it.
+template <typename R, typename Predicate>
+auto bsearch(R &&Range, Predicate P) -> decltype(adl_begin(Range)) {
+  return bsearch(adl_begin(Range), adl_end(Range), P);
+}
+
 /// Wrapper function around std::equal to detect if all elements
 /// in a container are same.
 template <typename R>

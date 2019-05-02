@@ -14,6 +14,8 @@ public:
 };
 
 __global E globE;
+volatile __global int globVI;
+__global int globI;
 //CHECK-LABEL: define spir_func void @_Z3barv()
 void bar() {
   C c;
@@ -25,13 +27,18 @@ void bar() {
   c.OrAssign(a);
 
   E e;
-  // CHECK: store i32 1, i32* %e
+  //CHECK: store i32 1, i32* %e
   e = b;
-  // CHECK: store i32 0, i32 addrspace(1)* @globE
+  //CHECK: store i32 0, i32 addrspace(1)* @globE
   globE = a;
-  // FIXME: Sema fails here because it thinks the types are incompatible.
-  //e = b;
-  //globE = a;
+  //CHECK: store i32 %or, i32 addrspace(1)* @globI
+  globI |= b;
+  //CHECK: store i32 %add, i32 addrspace(1)* @globI
+  globI += a;
+  //CHECK: store volatile i32 %and, i32 addrspace(1)* @globVI
+  globVI &= b;
+  //CHECK: store volatile i32 %sub, i32 addrspace(1)* @globVI
+  globVI -= a;
 }
 
 //CHECK: define linkonce_odr void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* %this, i32 %e)

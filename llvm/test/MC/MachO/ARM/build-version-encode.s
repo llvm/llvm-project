@@ -1,4 +1,4 @@
-// RUN: llvm-mc %s -triple x86_64-apple-tvos -filetype=obj | llvm-readobj -macho-version-min | FileCheck %s
+// RUN: llvm-mc %s -triple x86_64-apple-tvos -filetype=obj | llvm-readobj --macho-version-min | FileCheck %s
 
 .build_version tvos,1,2,3
 // CHECK: MinVersion {

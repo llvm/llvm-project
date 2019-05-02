@@ -68,9 +68,9 @@ public:
         [&](Function &F) -> AssumptionCache & {
       return ACT->getAssumptionCache(F);
     };
-    return llvm::getInlineCost(CS, Params, TTI, GetAssumptionCache,
-                               /*GetBFI=*/None, PSI,
-                               RemarksEnabled ? &ORE : nullptr);
+    return llvm::getInlineCost(
+        cast<CallBase>(*CS.getInstruction()), Params, TTI, GetAssumptionCache,
+        /*GetBFI=*/None, PSI, RemarksEnabled ? &ORE : nullptr);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;

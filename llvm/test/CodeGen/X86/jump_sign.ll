@@ -238,8 +238,8 @@ define void @func_o() nounwind uwtable {
 ; CHECK-NEXT:    movzwl (%eax), %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    imull $52429, %eax, %ecx # imm = 0xCCCD
-; CHECK-NEXT:    shrl $19, %ecx
-; CHECK-NEXT:    addl %ecx, %ecx
+; CHECK-NEXT:    shrl $18, %ecx
+; CHECK-NEXT:    andl $-2, %ecx
 ; CHECK-NEXT:    leal (%ecx,%ecx,4), %ecx
 ; CHECK-NEXT:    cmpw %cx, %ax
 ; CHECK-NEXT:    jne .LBB12_5

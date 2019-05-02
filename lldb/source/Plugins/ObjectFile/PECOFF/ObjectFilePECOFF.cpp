@@ -40,6 +40,54 @@
 using namespace lldb;
 using namespace lldb_private;
 
+struct CVInfoPdb70 {
+  // 16-byte GUID
+  struct _Guid {
+    llvm::support::ulittle32_t Data1;
+    llvm::support::ulittle16_t Data2;
+    llvm::support::ulittle16_t Data3;
+    uint8_t Data4[8];
+  } Guid;
+
+  llvm::support::ulittle32_t Age;
+};
+
+static UUID GetCoffUUID(llvm::object::COFFObjectFile *coff_obj) {
+  if (!coff_obj)
+    return UUID();
+
+  const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  llvm::StringRef pdb_file;
+
+  // This part is similar with what has done in minidump parser.
+  if (!coff_obj->getDebugPDBInfo(pdb_info, pdb_file) && pdb_info) {
+    if (pdb_info->PDB70.CVSignature == llvm::OMF::Signature::PDB70) {
+      using llvm::support::endian::read16be;
+      using llvm::support::endian::read32be;
+
+      const uint8_t *sig = pdb_info->PDB70.Signature;
+      struct CVInfoPdb70 info;
+      info.Guid.Data1 = read32be(sig);
+      sig += 4;
+      info.Guid.Data2 = read16be(sig);
+      sig += 2;
+      info.Guid.Data3 = read16be(sig);
+      sig += 2;
+      memcpy(info.Guid.Data4, sig, 8);
+
+      // Return 20-byte UUID if the Age is not zero
+      if (pdb_info->PDB70.Age) {
+        info.Age = read32be(&pdb_info->PDB70.Age);
+        return UUID::fromOptionalData(&info, sizeof(info));
+      }
+      // Otherwise return 16-byte GUID
+      return UUID::fromOptionalData(&info.Guid, sizeof(info.Guid));
+    }
+  }
+
+  return UUID();
+}
+
 void ObjectFilePECOFF::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
@@ -113,36 +161,43 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
+  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+    return initial_count;
 
-  if (ObjectFilePECOFF::MagicBytesMatch(data_sp)) {
-    DataExtractor data;
-    data.SetData(data_sp, data_offset, length);
-    data.SetByteOrder(eByteOrderLittle);
+  auto binary = llvm::object::createBinary(file.GetPath());
+  if (!binary)
+    return initial_count;
 
-    dos_header_t dos_header;
-    coff_header_t coff_header;
+  if (!binary->getBinary()->isCOFF() &&
+      !binary->getBinary()->isCOFFImportFile())
+    return initial_count;
 
-    if (ParseDOSHeader(data, dos_header)) {
-      lldb::offset_t offset = dos_header.e_lfanew;
-      uint32_t pe_signature = data.GetU32(&offset);
-      if (pe_signature != IMAGE_NT_SIGNATURE)
-        return false;
-      if (ParseCOFFHeader(data, &offset, coff_header)) {
-        ArchSpec spec;
-        if (coff_header.machine == MachineAmd64) {
-          spec.SetTriple("x86_64-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-        } else if (coff_header.machine == MachineX86) {
-          spec.SetTriple("i386-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-          spec.SetTriple("i686-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-        } else if (coff_header.machine == MachineArmNt) {
-          spec.SetTriple("arm-pc-windows");
-          specs.Append(ModuleSpec(file, spec));
-        }
-      }
-    }
+  auto COFFObj =
+    llvm::cast<llvm::object::COFFObjectFile>(binary->getBinary());
+
+  ModuleSpec module_spec(file);
+  ArchSpec &spec = module_spec.GetArchitecture();
+  lldb_private::UUID &uuid = module_spec.GetUUID();
+  if (!uuid.IsValid())
+    uuid = GetCoffUUID(COFFObj);
+
+  switch (COFFObj->getMachine()) {
+  case MachineAmd64:
+    spec.SetTriple("x86_64-pc-windows");
+    specs.Append(module_spec);
+    break;
+  case MachineX86:
+    spec.SetTriple("i386-pc-windows");
+    specs.Append(module_spec);
+    spec.SetTriple("i686-pc-windows");
+    specs.Append(module_spec);
+    break;
+  case MachineArmNt:
+    spec.SetTriple("arm-pc-windows");
+    specs.Append(module_spec);
+    break;
+  default:
+    break;
   }
 
   return specs.GetSize() - initial_count;
@@ -303,12 +358,10 @@ uint32_t ObjectFilePECOFF::GetAddressByteSize() const {
   return 4;
 }
 
-//----------------------------------------------------------------------
 // NeedsEndianSwap
 //
 // Return true if an endian swap needs to occur when extracting data from this
 // file.
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::NeedsEndianSwap() const {
 #if defined(__LITTLE_ENDIAN__)
   return false;
@@ -316,9 +369,7 @@ bool ObjectFilePECOFF::NeedsEndianSwap() const {
   return true;
 #endif
 }
-//----------------------------------------------------------------------
 // ParseDOSHeader
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::ParseDOSHeader(DataExtractor &data,
                                       dos_header_t &dos_header) {
   bool success = false;
@@ -377,9 +428,7 @@ bool ObjectFilePECOFF::ParseDOSHeader(DataExtractor &data,
   return success;
 }
 
-//----------------------------------------------------------------------
 // ParserCOFFHeader
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::ParseCOFFHeader(DataExtractor &data,
                                        lldb::offset_t *offset_ptr,
                                        coff_header_t &coff_header) {
@@ -489,9 +538,7 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   return data;
 }
 
-//----------------------------------------------------------------------
 // ParseSectionHeaders
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::ParseSectionHeaders(
     uint32_t section_header_data_offset) {
   const uint32_t nsects = m_coff_header.nsects;
@@ -544,9 +591,7 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
   return hdr_name;
 }
 
-//----------------------------------------------------------------------
 // GetNListSymtab
-//----------------------------------------------------------------------
 Symtab *ObjectFilePECOFF::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
@@ -838,7 +883,19 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   }
 }
 
-UUID ObjectFilePECOFF::GetUUID() { return UUID(); }
+UUID ObjectFilePECOFF::GetUUID() {
+  if (m_uuid.IsValid())
+    return m_uuid;
+
+  if (!CreateBinary())
+    return UUID();
+
+  auto COFFObj =
+    llvm::cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
+
+  m_uuid = GetCoffUUID(COFFObj);
+  return m_uuid;
+}
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
   ModuleSP module_sp(GetModule());
@@ -860,8 +917,7 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
                 static_cast<void *>(this), static_cast<void *>(module_sp.get()),
                 module_sp->GetSpecificationDescription().c_str(),
                 static_cast<void *>(m_owningbin.getPointer()),
-                m_owningbin ? static_cast<void *>(m_owningbin->getBinary())
-                            : nullptr);
+                static_cast<void *>(m_owningbin->getBinary()));
 
   auto COFFObj =
       llvm::dyn_cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
@@ -922,7 +978,8 @@ lldb_private::Address ObjectFilePECOFF::GetEntryPointAddress() {
   if (!section_list)
     m_entry_point_address.SetOffset(file_addr);
   else
-    m_entry_point_address.ResolveAddressUsingFileSections(file_addr, section_list);
+    m_entry_point_address.ResolveAddressUsingFileSections(file_addr,
+                                                          section_list);
   return m_entry_point_address;
 }
 
@@ -930,12 +987,10 @@ Address ObjectFilePECOFF::GetBaseAddress() {
   return Address(GetSectionList()->GetSectionAtIndex(0), 0);
 }
 
-//----------------------------------------------------------------------
 // Dump
 //
 // Dump the specifics of the runtime file container (such as any headers
 // segments, sections, etc).
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::Dump(Stream *s) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
@@ -972,11 +1027,9 @@ void ObjectFilePECOFF::Dump(Stream *s) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpDOSHeader
 //
 // Dump the MS-DOS header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpDOSHeader(Stream *s, const dos_header_t &header) {
   s->PutCString("MSDOS Header\n");
   s->Printf("  e_magic    = 0x%4.4x\n", header.e_magic);
@@ -1006,11 +1059,9 @@ void ObjectFilePECOFF::DumpDOSHeader(Stream *s, const dos_header_t &header) {
   s->Printf("  e_lfanew   = 0x%8.8x\n", header.e_lfanew);
 }
 
-//----------------------------------------------------------------------
 // DumpCOFFHeader
 //
 // Dump the COFF header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpCOFFHeader(Stream *s, const coff_header_t &header) {
   s->PutCString("COFF Header\n");
   s->Printf("  machine = 0x%4.4x\n", header.machine);
@@ -1021,11 +1072,9 @@ void ObjectFilePECOFF::DumpCOFFHeader(Stream *s, const coff_header_t &header) {
   s->Printf("  hdrsize = 0x%4.4x\n", header.hdrsize);
 }
 
-//----------------------------------------------------------------------
 // DumpOptCOFFHeader
 //
 // Dump the optional COFF header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpOptCOFFHeader(Stream *s,
                                          const coff_opt_header_t &header) {
   s->PutCString("Optional COFF Header\n");
@@ -1079,11 +1128,9 @@ void ObjectFilePECOFF::DumpOptCOFFHeader(Stream *s,
               header.data_dirs[i].vmaddr, header.data_dirs[i].vmsize);
   }
 }
-//----------------------------------------------------------------------
 // DumpSectionHeader
 //
 // Dump a single ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpSectionHeader(Stream *s,
                                          const section_header_t &sh) {
   std::string name = GetSectionName(sh);
@@ -1093,11 +1140,9 @@ void ObjectFilePECOFF::DumpSectionHeader(Stream *s,
             sh.lineoff, sh.nreloc, sh.nline, sh.flags);
 }
 
-//----------------------------------------------------------------------
 // DumpSectionHeaders
 //
 // Dump all of the ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
 
   s->PutCString("Section Headers\n");
@@ -1115,11 +1160,9 @@ void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpDependentModules
 //
 // Dump all of the dependent modules to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpDependentModules(lldb_private::Stream *s) {
   auto num_modules = ParseDependentModules();
   if (num_modules > 0) {
@@ -1179,9 +1222,7 @@ ObjectFile::Type ObjectFilePECOFF::CalculateType() {
 
 ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString ObjectFilePECOFF::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ObjectFilePECOFF::GetPluginVersion() { return 1; }

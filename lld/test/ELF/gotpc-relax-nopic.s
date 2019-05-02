@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o -o %t1
-# RUN: llvm-readobj -symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
+# RUN: llvm-readobj --symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
 # RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
 
 ## There is no relocations.
@@ -14,6 +14,7 @@
 
 ## 2105344 = 0x202000 (bar)
 # DISASM:      Disassembly of section .text:
+# DISASM-EMPTY:
 # DISASM-NEXT: _start:
 # DISASM-NEXT:   201000: {{.*}} adcq  $2105344, %rax
 # DISASM-NEXT:   201007: {{.*}} addq  $2105344, %rbx
@@ -26,7 +27,7 @@
 # DISASM-NEXT:   201038: {{.*}} testq $2105344, %r15
 
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t2
-# RUN: llvm-readobj -s -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s
+# RUN: llvm-readobj -S -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s
 # RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=DISASM-PIC %s
 # SEC-PIC:      Section {
 # SEC-PIC:        Index:
@@ -55,6 +56,7 @@
 ## Ex: 0x1000 + 4249 + 7 = 0x20A0
 ##     0x102a + 4207 + 7 = 0x20A0
 # DISASM-PIC:      Disassembly of section .text:
+# DISASM-PIC-EMPTY:
 # DISASM-PIC-NEXT: _start:
 # DISASM-PIC-NEXT: 1000: {{.*}} adcq  4249(%rip), %rax
 # DISASM-PIC-NEXT: 1007: {{.*}} addq  4242(%rip), %rbx

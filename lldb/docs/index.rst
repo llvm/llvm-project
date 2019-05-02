@@ -7,7 +7,7 @@ LLDB is a next generation, high-performance debugger. It is built as a set of
 reusable components which highly leverage existing libraries in the larger LLVM
 Project, such as the Clang expression parser and LLVM disassembler.
 
-LLDB is the default debugger in Xcode on Mac OS X and supports debugging C,
+LLDB is the default debugger in Xcode on macOS and supports debugging C,
 Objective-C and C++ on the desktop and iOS devices and simulator.
 
 All of the code in the LLDB project is available under the standard
@@ -52,12 +52,20 @@ Resources
 
    resources/download
    resources/build
+   resources/source
    resources/test
+   resources/bots
    resources/sbapi
-   resources/external
 
-Indices and tables
-==================
+API Documentation
+=================
 
-* :ref:`genindex`
-* :ref:`search`
+* `C++ API Documentation <https://lldb.llvm.org/cpp_reference/index.html>`_
+* `Python API Documentation <https://lldb.llvm.org/python_reference/index.html>`_
+
+External Links
+==============
+
+* `Source Code <http://llvm.org/viewvc/llvm-project/lldb/trunk/>`_
+* `Code Reviews <https://reviews.llvm.org>`_
+* `Bug Reports <https://bugs.llvm.org/>`_

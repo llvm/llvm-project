@@ -29,9 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsSource
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_history_options[] = {
     // clang-format off
@@ -188,9 +186,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsSource
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_options[] = {
     // clang-format off
@@ -313,8 +309,13 @@ protected:
         m_options.m_stop_on_continue.OptionWasSet()) {
       // Use user set settings
       CommandInterpreterRunOptions options;
-      options.SetStopOnContinue(m_options.m_stop_on_continue.GetCurrentValue());
-      options.SetStopOnError(m_options.m_stop_on_error.GetCurrentValue());
+
+      if (m_options.m_stop_on_continue.OptionWasSet())
+        options.SetStopOnContinue(
+            m_options.m_stop_on_continue.GetCurrentValue());
+
+      if (m_options.m_stop_on_error.OptionWasSet())
+        options.SetStopOnError(m_options.m_stop_on_error.GetCurrentValue());
 
       // Individual silent setting is override for global command echo settings.
       if (m_options.m_silent_run.GetCurrentValue()) {
@@ -339,9 +340,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsAlias
-//-------------------------------------------------------------------------
 // CommandObjectCommandsAlias
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_alias_options[] = {
     // clang-format off
@@ -765,9 +764,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsUnalias
-//-------------------------------------------------------------------------
 // CommandObjectCommandsUnalias
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsUnalias : public CommandObjectParsed {
 public:
@@ -848,9 +845,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsDelete
-//-------------------------------------------------------------------------
 // CommandObjectCommandsDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsDelete : public CommandObjectParsed {
 public:
@@ -913,9 +908,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsAddRegex
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_regex_options[] = {
     // clang-format off
@@ -997,11 +990,8 @@ protected:
           llvm::StringRef bytes_strref(lines[i]);
           Status error = AppendRegexSubstitution(bytes_strref, check_only);
           if (error.Fail()) {
-            if (!m_interpreter.GetDebugger()
-                     .GetCommandInterpreter()
-                     .GetBatchCommandMode()) {
-              StreamSP out_stream =
-                  m_interpreter.GetDebugger().GetAsyncOutputStream();
+            if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode()) {
+              StreamSP out_stream = GetDebugger().GetAsyncOutputStream();
               out_stream->Printf("error: %s\n", error.AsCString());
             }
           }
@@ -1030,7 +1020,7 @@ protected:
         true);
 
     if (argc == 1) {
-      Debugger &debugger = m_interpreter.GetDebugger();
+      Debugger &debugger = GetDebugger();
       bool color_prompt = debugger.GetUseColor();
       const bool multiple_lines = true; // Get multiple lines
       IOHandlerSP io_handler_sp(new IOHandlerEditline(
@@ -1258,7 +1248,7 @@ public:
     if (m_fetched_help_long)
       return CommandObjectRaw::GetHelpLong();
 
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return CommandObjectRaw::GetHelpLong();
 
@@ -1273,7 +1263,7 @@ public:
 protected:
   bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
     Status error;
 
@@ -1316,7 +1306,7 @@ public:
     StreamString stream;
     stream.Printf("For more information run 'help %s'", name.c_str());
     SetHelp(stream.GetString());
-    if (ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter())
+    if (ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter())
       GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
   }
 
@@ -1331,7 +1321,7 @@ public:
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
       return CommandObjectRaw::GetHelp();
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return CommandObjectRaw::GetHelp();
     std::string docstring;
@@ -1347,7 +1337,7 @@ public:
     if (m_fetched_help_long)
       return CommandObjectRaw::GetHelpLong();
 
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return CommandObjectRaw::GetHelpLong();
 
@@ -1362,7 +1352,7 @@ public:
 protected:
   bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
     Status error;
 
@@ -1393,9 +1383,7 @@ private:
   bool m_fetched_help_long : 1;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptImport
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_script_import_options[] = {
     // clang-format off
@@ -1476,8 +1464,7 @@ protected:
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (m_interpreter.GetDebugger().GetScriptLanguage() !=
-        lldb::eScriptLanguagePython) {
+    if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for module "
                          "importing is currently Python");
       result.SetStatus(eReturnStatusFailed);
@@ -1503,7 +1490,7 @@ protected:
       // won't stomp on each other (wrt to execution contents, options, and
       // more)
       m_exe_ctx.Clear();
-      if (m_interpreter.GetScriptInterpreter()->LoadScriptingModule(
+      if (GetDebugger().GetScriptInterpreter()->LoadScriptingModule(
               entry.c_str(), m_options.m_allow_reload, init_session, error)) {
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
@@ -1519,9 +1506,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptAdd
-//-------------------------------------------------------------------------
 static constexpr OptionEnumValueElement g_script_synchro_type[] = {
   {eScriptedCommandSynchronicitySynchronous, "synchronous",
    "Run synchronous"},
@@ -1646,7 +1631,7 @@ protected:
                               std::string &data) override {
     StreamFileSP error_sp = io_handler.GetErrorStreamFile();
 
-    ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter) {
 
       StringList lines;
@@ -1692,8 +1677,7 @@ protected:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (m_interpreter.GetDebugger().GetScriptLanguage() !=
-        lldb::eScriptLanguagePython) {
+    if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for scripted "
                          "commands is currently Python");
       result.SetStatus(eReturnStatusFailed);
@@ -1731,8 +1715,7 @@ protected:
         }
       }
     } else {
-      ScriptInterpreter *interpreter =
-          GetCommandInterpreter().GetScriptInterpreter();
+      ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
       if (!interpreter) {
         result.AppendError("cannot find ScriptInterpreter");
         result.SetStatus(eReturnStatusFailed);
@@ -1766,9 +1749,7 @@ protected:
   ScriptedCommandSynchronicity m_synchronicity;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptList
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptList : public CommandObjectParsed {
 public:
@@ -1787,9 +1768,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptClear
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptClear : public CommandObjectParsed {
 public:
@@ -1809,9 +1788,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptDelete : public CommandObjectParsed {
 public:
@@ -1861,9 +1838,7 @@ protected:
 
 #pragma mark CommandObjectMultiwordCommandsScript
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordCommandsScript
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordCommandsScript : public CommandObjectMultiword {
 public:
@@ -1893,9 +1868,7 @@ public:
 
 #pragma mark CommandObjectMultiwordCommands
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordCommands
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordCommands::CommandObjectMultiwordCommands(
     CommandInterpreter &interpreter)

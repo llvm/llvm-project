@@ -1,4 +1,4 @@
-# REQUIRES: system-windows
+# REQUIRES: lld
 # RUN: yaml2obj < %p/export-dllfunc.yaml > %t.export-dllfunc.obj
 # RUN: yaml2obj < %s > %t.obj
 #

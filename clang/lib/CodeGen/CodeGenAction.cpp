@@ -943,7 +943,8 @@ static void BitcodeInlineAsmDiagHandler(const llvm::SMDiagnostic &SM,
   Diags->Report(DiagID).AddString("cannot compile inline asm");
 }
 
-std::unique_ptr<llvm::Module> CodeGenAction::loadModule(MemoryBufferRef MBRef) {
+std::unique_ptr<llvm::Module>
+CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   CompilerInstance &CI = getCompilerInstance();
   SourceManager &SM = CI.getSourceManager();
 
@@ -1021,7 +1022,7 @@ void CodeGenAction::ExecuteAction() {
     bool Invalid;
     SourceManager &SM = CI.getSourceManager();
     FileID FID = SM.getMainFileID();
-    llvm::MemoryBuffer *MainFile = SM.getBuffer(FID, &Invalid);
+    const llvm::MemoryBuffer *MainFile = SM.getBuffer(FID, &Invalid);
     if (Invalid)
       return;
 

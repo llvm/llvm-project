@@ -11,14 +11,36 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace clangd {
+
+namespace {
+llvm::Optional<llvm::ArrayRef<TemplateArgumentLoc>>
+getTemplateSpecializationArgLocs(const NamedDecl &ND) {
+  if (auto *Func = llvm::dyn_cast<FunctionDecl>(&ND)) {
+    if (const ASTTemplateArgumentListInfo *Args =
+            Func->getTemplateSpecializationArgsAsWritten())
+      return Args->arguments();
+  } else if (auto *Cls =
+                 llvm::dyn_cast<ClassTemplatePartialSpecializationDecl>(&ND)) {
+    if (auto *Args = Cls->getTemplateArgsAsWritten())
+      return Args->arguments();
+  } else if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND))
+    return Var->getTemplateArgsInfo().arguments();
+  // We return None for ClassTemplateSpecializationDecls because it does not
+  // contain TemplateArgumentLoc information.
+  return llvm::None;
+}
+} // namespace
 
 // Returns true if the complete name of decl \p D is spelled in the source code.
 // This is not the case for:
@@ -65,17 +87,6 @@ std::string printQualifiedName(const NamedDecl &ND) {
   return QName;
 }
 
-static const TemplateArgumentList *
-getTemplateSpecializationArgs(const NamedDecl &ND) {
-  if (auto *Func = llvm::dyn_cast<FunctionDecl>(&ND))
-    return Func->getTemplateSpecializationArgs();
-  if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND))
-    return &Cls->getTemplateInstantiationArgs();
-  if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND))
-    return &Var->getTemplateInstantiationArgs();
-  return nullptr;
-}
-
 std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   std::string Name;
   llvm::raw_string_ostream Out(Name);
@@ -90,9 +101,7 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   }
   ND.getDeclName().print(Out, PP);
   if (!Out.str().empty()) {
-    // FIXME(ibiryukov): do not show args not explicitly written by the user.
-    if (auto *ArgList = getTemplateSpecializationArgs(ND))
-      printTemplateArgumentList(Out, ArgList->asArray(), PP);
+    Out << printTemplateSpecializationArgs(ND);
     return Out.str();
   }
   // The name was empty, so present an anonymous entity.
@@ -103,6 +112,35 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   if (isa<EnumDecl>(ND))
     return "(anonymous enum)";
   return "(anonymous)";
+}
+
+std::string printTemplateSpecializationArgs(const NamedDecl &ND) {
+  std::string TemplateArgs;
+  llvm::raw_string_ostream OS(TemplateArgs);
+  PrintingPolicy Policy(ND.getASTContext().getLangOpts());
+  if (llvm::Optional<llvm::ArrayRef<TemplateArgumentLoc>> Args =
+          getTemplateSpecializationArgLocs(ND)) {
+    printTemplateArgumentList(OS, *Args, Policy);
+  } else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
+    if (const TypeSourceInfo *TSI = Cls->getTypeAsWritten()) {
+      // ClassTemplateSpecializationDecls do not contain
+      // TemplateArgumentTypeLocs, they only have TemplateArgumentTypes. So we
+      // create a new argument location list from TypeSourceInfo.
+      auto STL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
+      llvm::SmallVector<TemplateArgumentLoc, 8> ArgLocs;
+      ArgLocs.reserve(STL.getNumArgs());
+      for (unsigned I = 0; I < STL.getNumArgs(); ++I)
+        ArgLocs.push_back(STL.getArgLoc(I));
+      printTemplateArgumentList(OS, ArgLocs, Policy);
+    } else {
+      // FIXME: Fix cases when getTypeAsWritten returns null inside clang AST,
+      // e.g. friend decls. Currently we fallback to Template Arguments without
+      // location information.
+      printTemplateArgumentList(OS, Cls->getTemplateArgs().asArray(), Policy);
+    }
+  }
+  OS.flush();
+  return TemplateArgs;
 }
 
 std::string printNamespaceScope(const DeclContext &DC) {

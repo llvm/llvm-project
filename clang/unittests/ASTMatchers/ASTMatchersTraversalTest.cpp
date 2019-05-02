@@ -454,6 +454,20 @@ TEST(Matcher, HasReceiver) {
       objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))));
 }
 
+TEST(Matcher, isClassMessage) {
+  EXPECT_TRUE(matchesObjC(
+      "@interface NSString +(NSString *) stringWithFormat; @end "
+      "void f() { [NSString stringWithFormat]; }",
+      objcMessageExpr(isClassMessage())));
+
+  EXPECT_FALSE(matchesObjC(
+      "@interface NSString @end "
+      "void f(NSString *x) {"
+      "[x containsString];"
+      "}",
+      objcMessageExpr(isClassMessage())));
+}
+
 TEST(Matcher, isInstanceMessage) {
   EXPECT_TRUE(matchesObjC(
       "@interface NSString @end "
@@ -467,6 +481,46 @@ TEST(Matcher, isInstanceMessage) {
       "void f() { [NSString stringWithFormat]; }",
       objcMessageExpr(isInstanceMessage())));
 
+}
+
+TEST(Matcher, isClassMethod) {
+  EXPECT_TRUE(matchesObjC(
+    "@interface Bar + (void)bar; @end",
+    objcMethodDecl(isClassMethod())));
+
+  EXPECT_TRUE(matchesObjC(
+    "@interface Bar @end"
+    "@implementation Bar + (void)bar {} @end",
+    objcMethodDecl(isClassMethod())));
+
+  EXPECT_FALSE(matchesObjC(
+    "@interface Foo - (void)foo; @end",
+    objcMethodDecl(isClassMethod())));
+
+  EXPECT_FALSE(matchesObjC(
+    "@interface Foo @end "
+    "@implementation Foo - (void)foo {} @end",
+    objcMethodDecl(isClassMethod())));
+}
+
+TEST(Matcher, isInstanceMethod) {
+  EXPECT_TRUE(matchesObjC(
+    "@interface Foo - (void)foo; @end",
+    objcMethodDecl(isInstanceMethod())));
+
+  EXPECT_TRUE(matchesObjC(
+    "@interface Foo @end "
+    "@implementation Foo - (void)foo {} @end",
+    objcMethodDecl(isInstanceMethod())));
+
+  EXPECT_FALSE(matchesObjC(
+    "@interface Bar + (void)bar; @end",
+    objcMethodDecl(isInstanceMethod())));
+
+  EXPECT_FALSE(matchesObjC(
+    "@interface Bar @end"
+    "@implementation Bar + (void)bar {} @end",
+    objcMethodDecl(isInstanceMethod())));
 }
 
 TEST(MatcherCXXMemberCallExpr, On) {

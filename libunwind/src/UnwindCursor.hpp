@@ -1740,7 +1740,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
     --personalityIndex; // change 1-based to zero-based index
     if (personalityIndex > sectionHeader.personalityArrayCount()) {
       _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d,  "
-                            "but personality table has only %d entires",
+                            "but personality table has only %d entries",
                             encoding, personalityIndex,
                             sectionHeader.personalityArrayCount());
       return false;

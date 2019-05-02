@@ -17,6 +17,7 @@
 #include "DwarfUnit.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -103,7 +104,7 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
   // extend .file to support this.
   unsigned CUID = Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID();
   if (!File)
-    return Asm->OutStreamer->EmitDwarfFileDirective(0, "", "", nullptr, None, CUID);
+    return Asm->OutStreamer->EmitDwarfFileDirective(0, "", "", None, None, CUID);
   return Asm->OutStreamer->EmitDwarfFileDirective(
       0, File->getDirectory(), File->getFilename(), getMD5AsBytes(File),
       File->getSource(), CUID);
@@ -122,7 +123,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
   // Construct the context before querying for the existence of the DIE in
   // case such construction creates the DIE.
-  DIE *ContextDIE = getOrCreateContextDIE(GVContext);
+  auto *CB = GVContext ? dyn_cast<DICommonBlock>(GVContext) : nullptr;
+  DIE *ContextDIE = CB ? getOrCreateCommonBlock(CB, GlobalExprs)
+    : getOrCreateContextDIE(GVContext);
 
   // Add to map.
   DIE *VariableDIE = &createAndAddDIE(GV->getTag(), *ContextDIE, GV);
@@ -165,6 +168,13 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addTemplateParams(*VariableDIE, DINodeArray(TP));
 
   // Add location.
+  addLocationAttribute(VariableDIE, GV, GlobalExprs);
+
+  return VariableDIE;
+}
+
+void DwarfCompileUnit::addLocationAttribute(
+    DIE *VariableDIE, const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   bool addToAccelTable = false;
   DIELoc *Loc = nullptr;
   Optional<unsigned> NVPTXAddressSpace;
@@ -287,8 +297,25 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         DD->useAllLinkageNames())
       DD->addAccelName(*CUNode, GV->getLinkageName(), *VariableDIE);
   }
+}
 
-  return VariableDIE;
+DIE *DwarfCompileUnit::getOrCreateCommonBlock(
+    const DICommonBlock *CB, ArrayRef<GlobalExpr> GlobalExprs) {
+  // Construct the context before querying for the existence of the DIE in case
+  // such construction creates the DIE.
+  DIE *ContextDIE = getOrCreateContextDIE(CB->getScope());
+
+  if (DIE *NDie = getDIE(CB))
+    return NDie;
+  DIE &NDie = createAndAddDIE(dwarf::DW_TAG_common_block, *ContextDIE, CB);
+  StringRef Name = CB->getName().empty() ? "_BLNK_" : CB->getName();
+  addString(NDie, dwarf::DW_AT_name, Name);
+  addGlobalName(Name, NDie, CB->getScope());
+  if (CB->getFile())
+    addSourceLine(NDie, CB->getLineNo(), CB->getFile());
+  if (DIGlobalVariable *V = CB->getDecl())
+    getCU().addLocationAttribute(&NDie, V, GlobalExprs);
+  return &NDie;
 }
 
 void DwarfCompileUnit::addRange(RangeSpan Range) {
@@ -1009,7 +1036,9 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
     return true;
   case DICompileUnit::DebugNameTableKind::Default:
     return DD->tuneForGDB() && !includeMinimalInlineScopes() &&
-           !CUNode->isDebugDirectivesOnly();
+           !CUNode->isDebugDirectivesOnly() &&
+           DD->getAccelTableKind() != AccelTableKind::Apple &&
+           DD->getDwarfVersion() < 5;
   }
   llvm_unreachable("Unhandled DICompileUnit::DebugNameTableKind enum");
 }
@@ -1172,6 +1201,10 @@ bool DwarfCompileUnit::isDwoUnit() const {
   return DD->useSplitDwarf() && Skeleton;
 }
 
+void DwarfCompileUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
+  constructTypeDIE(D, CTy);
+}
+
 bool DwarfCompileUnit::includeMinimalInlineScopes() const {
   return getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly ||
          (DD->useSplitDwarf() && !Skeleton);
@@ -1184,4 +1217,28 @@ void DwarfCompileUnit::addAddrTableBase() {
                   getDwarfVersion() >= 5 ? dwarf::DW_AT_addr_base
                                          : dwarf::DW_AT_GNU_addr_base,
                   Label, TLOF.getDwarfAddrSection()->getBeginSymbol());
+}
+
+void DwarfCompileUnit::addBaseTypeRef(DIEValueList &Die, int64_t Idx) {
+  Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, dwarf::DW_FORM_udata,
+               new (DIEValueAllocator) DIEBaseTypeRef(this, Idx));
+}
+
+void DwarfCompileUnit::createBaseTypeDIEs() {
+  // Insert the base_type DIEs directly after the CU so that their offsets will
+  // fit in the fixed size ULEB128 used inside the location expressions.
+  // Maintain order by iterating backwards and inserting to the front of CU
+  // child list.
+  for (auto &Btr : reverse(ExprRefedBaseTypes)) {
+    DIE &Die = getUnitDie().addChildFront(
+      DIE::get(DIEValueAllocator, dwarf::DW_TAG_base_type));
+    SmallString<32> Str;
+    addString(Die, dwarf::DW_AT_name,
+              Twine(dwarf::AttributeEncodingString(Btr.Encoding) +
+                    "_" + Twine(Btr.BitSize)).toStringRef(Str));
+    addUInt(Die, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1, Btr.Encoding);
+    addUInt(Die, dwarf::DW_AT_byte_size, None, Btr.BitSize / 8);
+
+    Btr.Die = &Die;
+  }
 }

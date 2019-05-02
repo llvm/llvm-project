@@ -3,7 +3,7 @@
 // RUN: llvm-mc %p/Inputs/copy-rel-pie.s -o %t2.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t.exe -pie
-// RUN: llvm-readobj -s -r %t.exe | FileCheck %s
+// RUN: llvm-readobj -S -r %t.exe | FileCheck %s
 // RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=DISASM %s
 
 .global _start
@@ -42,6 +42,7 @@ _start:
 // 0x3020          - 0x100a = 8214
 
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: _start:
 // DISASM-NEXT:     1000:       e8 1b 00 00 00  callq   27
 // DISASM-NEXT:     1005:       e8 16 20 00 00  callq   8214 <foo>

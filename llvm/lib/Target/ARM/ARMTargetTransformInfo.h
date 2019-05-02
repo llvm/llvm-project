@@ -94,7 +94,7 @@ public:
   bool enableInterleavedAccessVectorization() { return true; }
 
   bool shouldFavorBackedgeIndex(const Loop *L) const {
-    if (L->getHeader()->getParent()->optForSize())
+    if (L->getHeader()->getParent()->hasOptSize())
       return false;
     return ST->isMClass() && ST->isThumb2() && L->getNumBlocks() == 1;
   }
@@ -147,6 +147,8 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF) {
     return ST->getMaxInterleaveFactor();
   }
+
+  int getMemcpyCost(const Instruction *I);
 
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
 

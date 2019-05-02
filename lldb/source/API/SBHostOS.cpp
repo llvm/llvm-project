@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DISABLE_PYTHON
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-#endif
-
 #include "SBReproducerPrivate.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBHostOS.h"
@@ -168,4 +164,23 @@ bool SBHostOS::ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
     error_ptr->SetError(error);
   host_thread.Release();
   return error.Success();
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBHostOS>(Registry &R) {
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS, GetProgramFileSpec,
+                              ());
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS, GetLLDBPythonPath,
+                              ());
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS, GetLLDBPath,
+                              (lldb::PathType));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS,
+                              GetUserHomeDirectory, ());
+  LLDB_REGISTER_STATIC_METHOD(void, SBHostOS, ThreadCreated, (const char *));
+}
+
+}
 }

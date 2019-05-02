@@ -229,8 +229,9 @@ define <4 x i64> @_mul4xi32toi64b(<4 x i32>, <4 x i32>) {
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    vpunpckhqdq {{.*#+}} xmm1 = xmm2[1],xmm0[1]
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %even0 = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
   %even1 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
@@ -312,18 +313,10 @@ define <4 x i64> @_mul4xi32toi64c(<4 x i32>, <4 x i32>) {
 ; %ext0 = zext <2 x i32> %0 to <2 x i64>
 ; %ext1 = zext <2 x i32> %1 to <2 x i64>
 define <2 x i64> @_mul2xi64toi64a(<2 x i64>, <2 x i64>) {
-; SSE2-LABEL: _mul2xi64toi64a:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,4294967295]
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: _mul2xi64toi64a:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    pmuludq %xmm1, %xmm0
-; SSE42-NEXT:    retq
+; SSE-LABEL: _mul2xi64toi64a:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmuludq %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: _mul2xi64toi64a:
 ; AVX:       # %bb.0:

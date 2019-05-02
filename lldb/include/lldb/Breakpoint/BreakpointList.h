@@ -16,15 +16,11 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class BreakpointList BreakpointList.h "lldb/Breakpoint/BreakpointList.h"
 /// This class manages a list of breakpoints.
-//----------------------------------------------------------------------
 
-//----------------------------------------------------------------------
 /// General Outline:
 /// Allows adding and removing breakpoints and find by ID and index.
-//----------------------------------------------------------------------
 
 class BreakpointList {
 public:
@@ -32,7 +28,6 @@ public:
 
   ~BreakpointList();
 
-  //------------------------------------------------------------------
   /// Add the breakpoint \a bp_sp to the list.
   ///
   /// \param[in] bp_sp
@@ -40,15 +35,11 @@ public:
   ///
   /// \result
   ///   Returns breakpoint id.
-  //------------------------------------------------------------------
   lldb::break_id_t Add(lldb::BreakpointSP &bp_sp, bool notify);
 
-  //------------------------------------------------------------------
   /// Standard "Dump" method.  At present it does nothing.
-  //------------------------------------------------------------------
   void Dump(Stream *s) const;
 
-  //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint with id \a breakID.  Const
   /// version.
   ///
@@ -58,10 +49,8 @@ public:
   /// \result
   ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
   ///   breakpoint doesn't exist.
-  //------------------------------------------------------------------
   lldb::BreakpointSP FindBreakpointByID(lldb::break_id_t breakID) const;
 
-  //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint with index \a i.
   ///
   /// \param[in] i
@@ -70,10 +59,8 @@ public:
   /// \result
   ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
   ///   breakpoint doesn't exist.
-  //------------------------------------------------------------------
   lldb::BreakpointSP GetBreakpointAtIndex(size_t i) const;
 
-  //------------------------------------------------------------------
   /// Find all the breakpoints with a given name
   ///
   /// \param[in] name
@@ -81,21 +68,17 @@ public:
   ///
   /// \result
   ///   \bfalse if the input name was not a legal breakpoint name.
-  //------------------------------------------------------------------
   bool FindBreakpointsByName(const char *name, BreakpointList &matching_bps);
 
-  //------------------------------------------------------------------
   /// Returns the number of elements in this breakpoint list.
   ///
   /// \result
   ///   The number of elements.
-  //------------------------------------------------------------------
   size_t GetSize() const {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_breakpoints.size();
   }
 
-  //------------------------------------------------------------------
   /// Removes the breakpoint given by \b breakID from this list.
   ///
   /// \param[in] breakID
@@ -103,10 +86,8 @@ public:
   ///
   /// \result
   ///   \b true if the breakpoint \a breakID was in the list.
-  //------------------------------------------------------------------
   bool Remove(lldb::break_id_t breakID, bool notify);
 
-  //------------------------------------------------------------------
   /// Removes all invalid breakpoint locations.
   ///
   /// Removes all breakpoint locations in the list with architectures that
@@ -120,26 +101,20 @@ public:
   /// \param[in] arch
   ///     If valid, check the module in each breakpoint to make sure
   ///     they are compatible, otherwise, ignore architecture.
-  //------------------------------------------------------------------
   void RemoveInvalidLocations(const ArchSpec &arch);
 
   void SetEnabledAll(bool enabled);
 
   void SetEnabledAllowed(bool enabled);
 
-  //------------------------------------------------------------------
   /// Removes all the breakpoints from this list.
-  //------------------------------------------------------------------
   void RemoveAll(bool notify);
 
-  //------------------------------------------------------------------
   /// Removes all the breakpoints from this list - first checking the
   /// ePermDelete on the breakpoints.  This call should be used unless you are
   /// shutting down and need to actually clear them all.
-  //------------------------------------------------------------------
   void RemoveAllowed(bool notify);
 
-  //------------------------------------------------------------------
   /// Tell all the breakpoints to update themselves due to a change in the
   /// modules in \a module_list.  \a added says whether the module was loaded
   /// or unloaded.
@@ -153,7 +128,6 @@ public:
   /// \param[in] delete_locations
   ///   If \a load is \b false, then delete breakpoint locations when
   ///   when updating breakpoints.
-  //------------------------------------------------------------------
   void UpdateBreakpoints(ModuleList &module_list, bool load,
                          bool delete_locations);
 
@@ -162,12 +136,10 @@ public:
 
   void ClearAllBreakpointSites();
 
-  //------------------------------------------------------------------
   /// Sets the passed in Locker to hold the Breakpoint List mutex.
   ///
   /// \param[in] locker
   ///   The locker object that is set.
-  //------------------------------------------------------------------
   void GetListMutex(std::unique_lock<std::recursive_mutex> &lock);
 
 protected:

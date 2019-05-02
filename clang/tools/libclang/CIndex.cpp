@@ -171,7 +171,6 @@ CXSourceRange cxloc::translateSourceRange(const SourceManager &SM,
 static SourceRange getRawCursorExtent(CXCursor C);
 static SourceRange getFullCursorExtent(CXCursor C, SourceManager &SrcMgr);
 
-
 RangeComparisonResult CursorVisitor::CompareRegionOfInterest(SourceRange R) {
   return RangeCompare(AU->getSourceManager(), R, RegionOfInterest);
 }
@@ -1615,6 +1614,10 @@ bool CursorVisitor::VisitParenTypeLoc(ParenTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
+bool CursorVisitor::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
 bool CursorVisitor::VisitPointerTypeLoc(PointerTypeLoc TL) {
   return Visit(TL.getPointeeLoc());
 }
@@ -2263,6 +2266,10 @@ void OMPClauseEnqueue::VisitOMPClauseList(T *Node) {
   }
 }
 
+void OMPClauseEnqueue::VisitOMPAllocateClause(const OMPAllocateClause *C) {
+  VisitOMPClauseList(C);
+  Visitor->AddStmt(C->getAllocator());
+}
 void OMPClauseEnqueue::VisitOMPPrivateClause(const OMPPrivateClause *C) {
   VisitOMPClauseList(C);
   for (const auto *E : C->private_copies()) {
@@ -4224,7 +4231,7 @@ const char *clang_getFileContents(CXTranslationUnit TU, CXFile file,
   const SourceManager &SM = cxtu::getASTUnit(TU)->getSourceManager();
   FileID fid = SM.translateFile(static_cast<FileEntry *>(file));
   bool Invalid = true;
-  llvm::MemoryBuffer *buf = SM.getBuffer(fid, &Invalid);
+  const llvm::MemoryBuffer *buf = SM.getBuffer(fid, &Invalid);
   if (Invalid) {
     if (size)
       *size = 0;
@@ -8719,8 +8726,8 @@ void clang::setThreadBackgroundPriority() {
   if (getenv("LIBCLANG_BGPRIO_DISABLE"))
     return;
 
-#ifdef USE_DARWIN_THREADS
-  setpriority(PRIO_DARWIN_THREAD, 0, PRIO_DARWIN_BG);
+#if LLVM_ENABLE_THREADS
+  llvm::set_thread_priority(llvm::ThreadPriority::Background);
 #endif
 }
 

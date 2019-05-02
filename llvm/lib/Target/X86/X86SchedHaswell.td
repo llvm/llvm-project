@@ -165,7 +165,6 @@ defm : HWWriteResPair<WriteJump,   [HWPort06],  1>;
 defm : HWWriteResPair<WriteCRC32,  [HWPort1],   3>;
 
 defm : HWWriteResPair<WriteCMOV,  [HWPort06,HWPort0156], 2, [1,1], 2>; // Conditional move.
-defm : HWWriteResPair<WriteCMOV2, [HWPort06,HWPort0156], 3, [1,2], 3>; // Conditional (CF + ZF flag) move.
 defm : X86WriteRes<WriteFCMOV, [HWPort1], 3, [1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [HWPort06]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [HWPort06,HWPort4,HWPort237]> {
@@ -1127,7 +1126,6 @@ def HWWriteResGroup35 : SchedWriteRes<[HWPort06,HWPort0156]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup35], (instrs CWD, JCXZ, JECXZ, JRCXZ)>;
-def: InstRW<[HWWriteResGroup35], (instregex "SET(A|BE)r")>;
 
 def HWWriteResGroup36_2 : SchedWriteRes<[HWPort5,HWPort23]> {
   let Latency = 7;
@@ -1173,7 +1171,6 @@ def HWWriteResGroup45 : SchedWriteRes<[HWPort4,HWPort237,HWPort06,HWPort0156]> {
   let ResourceCycles = [1,1,1,1];
 }
 def: InstRW<[HWWriteResGroup45], (instrs CALL64pcrel32)>;
-def: InstRW<[HWWriteResGroup45], (instregex "SET(A|BE)m")>;
 
 def HWWriteResGroup46 : SchedWriteRes<[HWPort4,HWPort23,HWPort237,HWPort06]> {
   let Latency = 8;
@@ -1400,8 +1397,8 @@ def HWWriteResGroup78_1 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[HWWriteResGroup78_1], (instrs MMX_CVTPI2PDirm,
-                                           CVTSD2SSrm,
-                                           VCVTSD2SSrm)>;
+                                           CVTSD2SSrm, CVTSD2SSrm_Int,
+                                           VCVTSD2SSrm, VCVTSD2SSrm_Int)>;
 
 def HWWriteResGroup80 : SchedWriteRes<[HWPort5,HWPort23,HWPort015]> {
   let Latency = 9;
@@ -1885,5 +1882,57 @@ def HWWriteADC : SchedWriteVariant<[
 
 def : InstRW<[HWWriteADC], (instrs ADC16ri8, ADC32ri8, ADC64ri8,
                                       SBB16ri8, SBB32ri8, SBB64ri8)>;
+
+// CMOVs that use both Z and C flag require an extra uop.
+def HWWriteCMOVA_CMOVBErr : SchedWriteRes<[HWPort06,HWPort0156]> {
+  let Latency = 3;
+  let ResourceCycles = [1,2];
+  let NumMicroOps = 3;
+}
+
+def HWWriteCMOVA_CMOVBErm : SchedWriteRes<[HWPort23,HWPort06,HWPort0156]> {
+  let Latency = 8;
+  let ResourceCycles = [1,1,2];
+  let NumMicroOps = 4;
+}
+
+def HWCMOVA_CMOVBErr :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsCMOVArr_Or_CMOVBErr>, [HWWriteCMOVA_CMOVBErr]>,
+  SchedVar<NoSchedPred,                             [WriteCMOV]>
+]>;
+
+def HWCMOVA_CMOVBErm :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsCMOVArm_Or_CMOVBErm>, [HWWriteCMOVA_CMOVBErm]>,
+  SchedVar<NoSchedPred,                             [WriteCMOV.Folded]>
+]>;
+
+def : InstRW<[HWCMOVA_CMOVBErr], (instrs CMOV16rr, CMOV32rr, CMOV64rr)>;
+def : InstRW<[HWCMOVA_CMOVBErm], (instrs CMOV16rm, CMOV32rm, CMOV64rm)>;
+
+// SETCCs that use both Z and C flag require an extra uop.
+def HWWriteSETA_SETBEr : SchedWriteRes<[HWPort06,HWPort0156]> {
+  let Latency = 2;
+  let ResourceCycles = [1,1];
+  let NumMicroOps = 2;
+}
+
+def HWWriteSETA_SETBEm : SchedWriteRes<[HWPort4,HWPort237,HWPort06,HWPort0156]> {
+  let Latency = 3;
+  let ResourceCycles = [1,1,1,1];
+  let NumMicroOps = 4;
+}
+
+def HWSETA_SETBErr :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsSETAr_Or_SETBEr>, [HWWriteSETA_SETBEr]>,
+  SchedVar<NoSchedPred,                         [WriteSETCC]>
+]>;
+
+def HWSETA_SETBErm :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsSETAm_Or_SETBEm>, [HWWriteSETA_SETBEm]>,
+  SchedVar<NoSchedPred,                         [WriteSETCCStore]>
+]>;
+
+def : InstRW<[HWSETA_SETBErr], (instrs SETCCr)>;
+def : InstRW<[HWSETA_SETBErm], (instrs SETCCm)>;
 
 } // SchedModel

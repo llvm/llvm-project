@@ -2,7 +2,7 @@
 RUN: obj2yaml %p/Inputs/sectionGroup.elf.x86-64 > %t1.sectiongroup.yaml
 RUN: FileCheck %s --check-prefix ELF-GROUP < %t1.sectiongroup.yaml
 RUN: yaml2obj %t1.sectiongroup.yaml -o %t2.o.elf
-RUN: llvm-readobj -sections %t2.o.elf | FileCheck %s -check-prefix=SECTIONS
+RUN: llvm-readobj --sections %t2.o.elf | FileCheck %s -check-prefix=SECTIONS
 #ELF-GROUP:  - Name:            .group
 #ELF-GROUP:    Type:            SHT_GROUP
 #ELF-GROUP:    Link:            .symtab

@@ -16,11 +16,11 @@
 
 int main(int, char**)
 {
-    static_assert((std::is_same<std::enable_if<true>::type, void>::value), "");
-    static_assert((std::is_same<std::enable_if<true, int>::type, int>::value), "");
+    ASSERT_SAME_TYPE(void, std::enable_if<true>::type);
+    ASSERT_SAME_TYPE(int,  std::enable_if<true, int>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::enable_if_t<true>, void>::value), "");
-    static_assert((std::is_same<std::enable_if_t<true, int>, int>::value), "");
+    ASSERT_SAME_TYPE(void, std::enable_if_t<true, void>);
+    ASSERT_SAME_TYPE(int,  std::enable_if_t<true, int>);
 #endif
 
   return 0;

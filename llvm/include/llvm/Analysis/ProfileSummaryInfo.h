@@ -92,7 +92,8 @@ public:
 
   /// Returns the profile count for \p CallInst.
   Optional<uint64_t> getProfileCount(const Instruction *CallInst,
-                                     BlockFrequencyInfo *BFI);
+                                     BlockFrequencyInfo *BFI,
+                                     bool AllowSynthetic = false);
   /// Returns true if the working set size of the code is considered huge.
   bool hasHugeWorkingSetSize();
   /// Returns true if \p F has hot function entry.

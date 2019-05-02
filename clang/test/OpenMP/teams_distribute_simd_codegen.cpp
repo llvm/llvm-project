@@ -39,7 +39,7 @@ int teams_argument_global(int n) {
   // CK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
   // CK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],
 
-  // CK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 5, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 {{.+}}, i32 {{.+}})
+  // CK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 5, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 {{.+}}, i32 1)
 
   // CK1: call void @[[OFFL1:.+]](i{{32|64}} [[TE_PAR]], i{{32|64}} [[TH_PAR]],
   #pragma omp target
@@ -48,7 +48,7 @@ int teams_argument_global(int n) {
     a[i] = 0;
   }
 
-  // CK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+  // CK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
   // CK1: call void @[[OFFL2:.+]](i{{64|32}} %{{.+}})
   #pragma omp target
   {{{
@@ -119,7 +119,7 @@ int teams_local_arg(void) {
   int n = 100;
   int a[n];
 
-  // CK2: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+  // CK2: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
   // CK2: call void @[[OFFL1:.+]](i{{64|32}} %{{.+}})
   #pragma omp target
   #pragma omp teams distribute simd
@@ -135,7 +135,7 @@ int teams_local_arg(void) {
   // CK2: define internal void @[[OUTL1]]({{.+}})
   // CK2: call void @__kmpc_for_static_init_4(
   // CK2: call void @__kmpc_for_static_fini(
-  // CK2: ret void  
+  // CK2: ret void
 
   return a[0];
 }
@@ -168,7 +168,7 @@ struct SS{
   // CK3: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
 
-  // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+  // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
   // CK3: call void @[[OFFL1:.+]]([[SSI]]* %{{.+}})
     #pragma omp target
     #pragma omp teams distribute simd
@@ -184,7 +184,7 @@ struct SS{
   // CK3: define internal void @[[OUTL1]]({{.+}})
   // CK3: call void @__kmpc_for_static_init_4(
   // CK3: call void @__kmpc_for_static_fini(
-  // CK3: ret void  
+  // CK3: ret void
 
     return a[0];
   }
@@ -241,7 +241,7 @@ int main (int argc, char **argv) {
 }
 
 // CK4:  define {{.*}}i32 @{{[^,]+}}(i{{.+}}{{.+}} %[[ARGC:.+]], {{.+}})
-// CK4:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+// CK4:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
 // CK4: call void @[[OFFL1:.+]]({{.+}})
 // CK4: {{%.+}} = call{{.*}} i32 @[[TMAIN:.+]]({{.+}})
 // CK4:  ret
@@ -256,7 +256,7 @@ int main (int argc, char **argv) {
 // CK4: ret void
 
 // CK4:  define {{.*}}i32 @[[TMAIN]]({{.+}})
-// CK4:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 {{.+}}, i32 {{.+}})
+// CK4:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 {{.+}}, i32 1)
 // CK4: call void @[[OFFLT:.+]]({{.+}})
 // CK4:  ret
 // CK4-NEXT: }

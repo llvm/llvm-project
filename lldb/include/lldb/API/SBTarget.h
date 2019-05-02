@@ -28,9 +28,7 @@ class SBPlatform;
 
 class LLDB_API SBTarget {
 public:
-  //------------------------------------------------------------------
   // Broadcaster bits.
-  //------------------------------------------------------------------
   enum {
     eBroadcastBitBreakpointChanged = (1 << 0),
     eBroadcastBitModulesLoaded = (1 << 1),
@@ -39,18 +37,14 @@ public:
     eBroadcastBitSymbolsLoaded = (1 << 4)
   };
 
-  //------------------------------------------------------------------
   // Constructors
-  //------------------------------------------------------------------
   SBTarget();
 
   SBTarget(const lldb::SBTarget &rhs);
 
   SBTarget(const lldb::TargetSP &target_sp);
 
-  //------------------------------------------------------------------
   // Destructor
-  //------------------------------------------------------------------
   ~SBTarget();
 
   const lldb::SBTarget &operator=(const lldb::SBTarget &rhs);
@@ -72,32 +66,25 @@ public:
 
   lldb::SBProcess GetProcess();
 
-  //------------------------------------------------------------------
   /// Sets whether we should collect statistics on lldb or not.
   ///
   /// \param[in] v
   ///     A boolean to control the collection.
-  //------------------------------------------------------------------
   void SetCollectingStats(bool v);
 
-  //------------------------------------------------------------------
   /// Returns whether statistics collection are enabled.
   ///
   /// \return
   ///     true if statistics are currently being collected, false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool GetCollectingStats();
 
-  //------------------------------------------------------------------
   /// Returns a dump of the collected statistics.
   ///
   /// \return
   ///     A SBStructuredData with the statistics collected.
-  //------------------------------------------------------------------
   lldb::SBStructuredData GetStatistics();
 
-  //------------------------------------------------------------------
   /// Return the platform object associated with the target.
   ///
   /// After return, the platform object should be checked for
@@ -105,10 +92,8 @@ public:
   ///
   /// \return
   ///     A platform object.
-  //------------------------------------------------------------------
   lldb::SBPlatform GetPlatform();
 
-  //------------------------------------------------------------------
   /// Install any binaries that need to be installed.
   ///
   /// This function does nothing when debugging on the host system.
@@ -121,10 +106,8 @@ public:
   /// \return
   ///     An error describing anything that went wrong during
   ///     installation.
-  //------------------------------------------------------------------
   SBError Install();
 
-  //------------------------------------------------------------------
   /// Launch a new process.
   ///
   /// Launch a new process by spawning a new process using the
@@ -176,7 +159,6 @@ public:
   ///
   /// \return
   ///      A process object for the newly created process.
-  //------------------------------------------------------------------
   lldb::SBProcess Launch(SBListener &listener, char const **argv,
                          char const **envp, const char *stdin_path,
                          const char *stdout_path, const char *stderr_path,
@@ -187,7 +169,6 @@ public:
   SBProcess LoadCore(const char *core_file);
   SBProcess LoadCore(const char *core_file, lldb::SBError &error);
 
-  //------------------------------------------------------------------
   /// Launch a new process with sensible defaults.
   ///
   /// \param[in] argv
@@ -212,7 +193,6 @@ public:
   ///
   /// \return
   ///      A process object for the newly created process.
-  //------------------------------------------------------------------
   SBProcess LaunchSimple(const char **argv, const char **envp,
                          const char *working_directory);
 
@@ -220,7 +200,6 @@ public:
 
   SBProcess Attach(SBAttachInfo &attach_info, SBError &error);
 
-  //------------------------------------------------------------------
   /// Attach to process with pid.
   ///
   /// \param[in] listener
@@ -237,11 +216,9 @@ public:
   ///
   /// \return
   ///      A process object for the attached process.
-  //------------------------------------------------------------------
   lldb::SBProcess AttachToProcessWithID(SBListener &listener, lldb::pid_t pid,
                                         lldb::SBError &error);
 
-  //------------------------------------------------------------------
   /// Attach to process with name.
   ///
   /// \param[in] listener
@@ -261,12 +238,10 @@ public:
   ///
   /// \return
   ///      A process object for the attached process.
-  //------------------------------------------------------------------
   lldb::SBProcess AttachToProcessWithName(SBListener &listener,
                                           const char *name, bool wait_for,
                                           lldb::SBError &error);
 
-  //------------------------------------------------------------------
   /// Connect to a remote debug server with url.
   ///
   /// \param[in] listener
@@ -286,7 +261,6 @@ public:
   ///
   /// \return
   ///      A process object for the connected process.
-  //------------------------------------------------------------------
   lldb::SBProcess ConnectRemote(SBListener &listener, const char *url,
                                 const char *plugin_name, SBError &error);
 
@@ -316,7 +290,6 @@ public:
 
   lldb::SBModule FindModule(const lldb::SBFileSpec &file_spec);
 
-  //------------------------------------------------------------------
   /// Find compile units related to *this target and passed source
   /// file.
   ///
@@ -327,7 +300,6 @@ public:
   /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
-  //------------------------------------------------------------------
   lldb::SBSymbolContextList
   FindCompileUnits(const lldb::SBFileSpec &sb_file_spec);
 
@@ -337,25 +309,20 @@ public:
 
   const char *GetTriple();
 
-  //------------------------------------------------------------------
   /// Architecture data byte width accessor
   ///
   /// \return
   /// The size in 8-bit (host) bytes of a minimum addressable
   /// unit from the Architecture's data bus
-  //------------------------------------------------------------------
   uint32_t GetDataByteSize();
 
-  //------------------------------------------------------------------
   /// Architecture code byte width accessor
   ///
   /// \return
   /// The size in 8-bit (host) bytes of a minimum addressable
   /// unit from the Architecture's code bus
-  //------------------------------------------------------------------
   uint32_t GetCodeByteSize();
 
-  //------------------------------------------------------------------
   /// Set the base load address for a module section.
   ///
   /// \param[in] section
@@ -368,11 +335,9 @@ public:
   /// \return
   ///      An error to indicate success, fail, and any reason for
   ///     failure.
-  //------------------------------------------------------------------
   lldb::SBError SetSectionLoadAddress(lldb::SBSection section,
                                       lldb::addr_t section_base_addr);
 
-  //------------------------------------------------------------------
   /// Clear the base load address for a module section.
   ///
   /// \param[in] section
@@ -382,10 +347,8 @@ public:
   /// \return
   ///      An error to indicate success, fail, and any reason for
   ///     failure.
-  //------------------------------------------------------------------
   lldb::SBError ClearSectionLoadAddress(lldb::SBSection section);
 
-  //------------------------------------------------------------------
   /// Slide all file addresses for all module sections so that \a module
   /// appears to loaded at these slide addresses.
   ///
@@ -404,11 +367,9 @@ public:
   /// \return
   ///     An error to indicate success, fail, and any reason for
   ///     failure.
-  //------------------------------------------------------------------
   lldb::SBError SetModuleLoadAddress(lldb::SBModule module,
                                      int64_t sections_offset);
 
-  //------------------------------------------------------------------
   /// Clear the section base load addresses for all sections in a module.
   ///
   /// \param[in] module
@@ -417,10 +378,8 @@ public:
   /// \return
   ///     An error to indicate success, fail, and any reason for
   ///     failure.
-  //------------------------------------------------------------------
   lldb::SBError ClearModuleLoadAddress(lldb::SBModule module);
 
-  //------------------------------------------------------------------
   /// Find functions by name.
   ///
   /// \param[in] name
@@ -436,12 +395,10 @@ public:
   /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
-  //------------------------------------------------------------------
   lldb::SBSymbolContextList
   FindFunctions(const char *name,
                 uint32_t name_type_mask = lldb::eFunctionNameTypeAny);
 
-  //------------------------------------------------------------------
   /// Find global and static variables by name.
   ///
   /// \param[in] name
@@ -453,10 +410,8 @@ public:
   ///
   /// \return
   ///     A list of matched variables in an SBValueList.
-  //------------------------------------------------------------------
   lldb::SBValueList FindGlobalVariables(const char *name, uint32_t max_matches);
 
-  //------------------------------------------------------------------
   /// Find the first global (or static) variable by name.
   ///
   /// \param[in] name
@@ -465,10 +420,8 @@ public:
   ///
   /// \return
   ///     An SBValue that gets filled in with the found variable (if any).
-  //------------------------------------------------------------------
   lldb::SBValue FindFirstGlobalVariable(const char *name);
 
-  //------------------------------------------------------------------
   /// Find global and static variables by pattern.
   ///
   /// \param[in] name
@@ -482,11 +435,9 @@ public:
   ///
   /// \return
   ///     A list of matched variables in an SBValueList.
-  //------------------------------------------------------------------
   lldb::SBValueList FindGlobalVariables(const char *name, uint32_t max_matches,
                                         MatchType matchtype);
 
-  //------------------------------------------------------------------
   /// Find global functions by their name with pattern matching.
   ///
   /// \param[in] name
@@ -500,14 +451,12 @@ public:
   ///
   /// \return
   ///     A list of matched variables in an SBValueList.
-  //------------------------------------------------------------------
   lldb::SBSymbolContextList FindGlobalFunctions(const char *name,
                                                 uint32_t max_matches,
                                                 MatchType matchtype);
 
   void Clear();
 
-  //------------------------------------------------------------------
   /// Resolve a current file address into a section offset address.
   ///
   /// \param[in] file_addr
@@ -515,10 +464,8 @@ public:
   ///
   /// \return
   ///     An SBAddress which will be valid if...
-  //------------------------------------------------------------------
   lldb::SBAddress ResolveFileAddress(lldb::addr_t file_addr);
 
-  //------------------------------------------------------------------
   /// Resolve a current load address into a section offset address.
   ///
   /// \param[in] vm_addr
@@ -530,10 +477,8 @@ public:
   ///     successfully resolved into a section offset address, or an
   ///     invalid SBAddress if \a vm_addr doesn't resolve to a section
   ///     in a module.
-  //------------------------------------------------------------------
   lldb::SBAddress ResolveLoadAddress(lldb::addr_t vm_addr);
 
-  //------------------------------------------------------------------
   /// Resolve a current load address into a section offset address
   /// using the process stop ID to identify a time in the past.
   ///
@@ -554,14 +499,12 @@ public:
   ///     successfully resolved into a section offset address, or an
   ///     invalid SBAddress if \a vm_addr doesn't resolve to a section
   ///     in a module.
-  //------------------------------------------------------------------
   lldb::SBAddress ResolvePastLoadAddress(uint32_t stop_id,
                                          lldb::addr_t vm_addr);
 
   SBSymbolContext ResolveSymbolContextForAddress(const SBAddress &addr,
                                                  uint32_t resolve_scope);
 
-  //------------------------------------------------------------------
   /// Read target memory. If a target process is running then memory
   /// is read from here. Otherwise the memory is read from the object
   /// files. For a target whose bytes are sized as a multiple of host
@@ -582,7 +525,6 @@ public:
   ///
   /// \return
   ///     The amount of data read in host bytes.
-  //------------------------------------------------------------------
   size_t ReadMemory(const SBAddress addr, void *buf, size_t size,
                     lldb::SBError &error);
 
@@ -683,7 +625,6 @@ public:
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
   
-  //------------------------------------------------------------------
   /// Create a breakpoint using a scripted resolver.
   ///
   /// \param[in] class_name
@@ -706,7 +647,6 @@ public:
   /// \return
   ///     An SBBreakpoint that will set locations based on the logic in the
   ///     resolver's search callback.
-  //------------------------------------------------------------------
   lldb::SBBreakpoint BreakpointCreateFromScript(
       const char *class_name,
       SBStructuredData &extra_args,
@@ -714,7 +654,6 @@ public:
       const SBFileSpecList &file_list,
       bool request_hardware = false);
 
-  //------------------------------------------------------------------
   /// Read breakpoints from source_file and return the newly created
   /// breakpoints in bkpt_list.
   ///
@@ -726,11 +665,9 @@ public:
   ///
   /// \return
   ///     An SBError detailing any errors in reading in the breakpoints.
-  //------------------------------------------------------------------
   lldb::SBError BreakpointsCreateFromFile(SBFileSpec &source_file,
                                           SBBreakpointList &new_bps);
 
-  //------------------------------------------------------------------
   /// Read breakpoints from source_file and return the newly created
   /// breakpoints in bkpt_list.
   ///
@@ -746,12 +683,10 @@ public:
   ///
   /// \return
   ///     An SBError detailing any errors in reading in the breakpoints.
-  //------------------------------------------------------------------
   lldb::SBError BreakpointsCreateFromFile(SBFileSpec &source_file,
                                           SBStringList &matching_names,
                                           SBBreakpointList &new_bps);
 
-  //------------------------------------------------------------------
   /// Write breakpoints to dest_file.
   ///
   /// \param[in] dest_file
@@ -759,10 +694,8 @@ public:
   ///
   /// \return
   ///     An SBError detailing any errors in writing in the breakpoints.
-  //------------------------------------------------------------------
   lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file);
 
-  //------------------------------------------------------------------
   /// Write breakpoints listed in bkpt_list to dest_file.
   ///
   /// \param[in] dest_file
@@ -772,13 +705,12 @@ public:
   ///    Only write breakpoints from this list.
   ///
   /// \param[in] append
-  ///    If \btrue, append the breakpoints in bkpt_list to the others
+  ///    If \b true, append the breakpoints in bkpt_list to the others
   ///    serialized in dest_file.  If dest_file doesn't exist, then a new
   ///    file will be created and the breakpoints in bkpt_list written to it.
   ///
   /// \return
   ///     An SBError detailing any errors in writing in the breakpoints.
-  //------------------------------------------------------------------
   lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file,
                                        SBBreakpointList &bkpt_list,
                                        bool append = false);
@@ -904,10 +836,8 @@ protected:
   friend class SBValue;
   friend class SBVariablesOptions;
 
-  //------------------------------------------------------------------
   // Constructors are private, use static Target::Create function to create an
   // instance of this class.
-  //------------------------------------------------------------------
 
   lldb::TargetSP GetSP() const;
 

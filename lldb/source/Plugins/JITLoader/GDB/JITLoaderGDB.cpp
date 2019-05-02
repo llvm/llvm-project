@@ -34,9 +34,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 // Debug Interface Structures
-//------------------------------------------------------------------
 typedef enum {
   JIT_NOACTION = 0,
   JIT_REGISTER_FN,
@@ -177,9 +175,7 @@ void JITLoaderGDB::ModulesDidLoad(ModuleList &module_list) {
     SetJITBreakpoint(module_list);
 }
 
-//------------------------------------------------------------------
 // Setup the JIT Breakpoint
-//------------------------------------------------------------------
 void JITLoaderGDB::SetJITBreakpoint(lldb_private::ModuleList &module_list) {
   if (DidSetJITBreakpoint())
     return;
@@ -405,9 +401,7 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
   return false; // Continue Running.
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString JITLoaderGDB::GetPluginNameStatic() {
   static ConstString g_name("gdb");
   return g_name;

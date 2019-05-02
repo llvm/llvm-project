@@ -24,10 +24,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Basic function information is contained in the FunctionInfo class. It is
 // designed to contain the name, linkage name, and declaration location.
-//----------------------------------------------------------------------
 FunctionInfo::FunctionInfo(const char *name, const Declaration *decl_ptr)
     : m_name(name), m_declaration(decl_ptr) {}
 
@@ -129,9 +127,7 @@ size_t InlineFunctionInfo::MemorySize() const {
   return FunctionInfo::MemorySize() + m_mangled.MemorySize();
 }
 
-//----------------------------------------------------------------------
 //
-//----------------------------------------------------------------------
 CallEdge::CallEdge(const char *symbol_name, lldb::addr_t return_pc)
     : return_pc(return_pc), resolved(false) {
   lazy_callee.symbol_name = symbol_name;
@@ -182,9 +178,7 @@ lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
   return base.GetLoadAddress(&target) + return_pc;
 }
 
-//----------------------------------------------------------------------
 //
-//----------------------------------------------------------------------
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
                    const AddressRange &range)

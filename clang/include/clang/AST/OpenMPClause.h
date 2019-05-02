@@ -290,8 +290,102 @@ public:
 
   child_range children() { return child_range(&Allocator, &Allocator + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&Allocator, &Allocator + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_allocator;
+  }
+};
+
+/// This represents clause 'allocate' in the '#pragma omp ...' directives.
+///
+/// \code
+/// #pragma omp parallel private(a) allocate(omp_default_mem_alloc :a)
+/// \endcode
+/// In this example directive '#pragma omp parallel' has clause 'private'
+/// and clause 'allocate' for the variable 'a'.
+class OMPAllocateClause final
+    : public OMPVarListClause<OMPAllocateClause>,
+      private llvm::TrailingObjects<OMPAllocateClause, Expr *> {
+  friend class OMPClauseReader;
+  friend OMPVarListClause;
+  friend TrailingObjects;
+
+  /// Allocator specified in the clause, or 'nullptr' if the default one is
+  /// used.
+  Expr *Allocator = nullptr;
+  /// Position of the ':' delimiter in the clause;
+  SourceLocation ColonLoc;
+
+  /// Build clause with number of variables \a N.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param Allocator Allocator expression.
+  /// \param ColonLoc Location of ':' delimiter.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of the variables in the clause.
+  OMPAllocateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                    Expr *Allocator, SourceLocation ColonLoc,
+                    SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause<OMPAllocateClause>(OMPC_allocate, StartLoc, LParenLoc,
+                                            EndLoc, N),
+        Allocator(Allocator), ColonLoc(ColonLoc) {}
+
+  /// Build an empty clause.
+  ///
+  /// \param N Number of variables.
+  explicit OMPAllocateClause(unsigned N)
+      : OMPVarListClause<OMPAllocateClause>(OMPC_allocate, SourceLocation(),
+                                            SourceLocation(), SourceLocation(),
+                                            N) {}
+
+  /// Sets location of ':' symbol in clause.
+  void setColonLoc(SourceLocation CL) { ColonLoc = CL; }
+
+  void setAllocator(Expr *A) { Allocator = A; }
+
+public:
+  /// Creates clause with a list of variables \a VL.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param Allocator Allocator expression.
+  /// \param ColonLoc Location of ':' delimiter.
+  /// \param EndLoc Ending location of the clause.
+  /// \param VL List of references to the variables.
+  static OMPAllocateClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc, Expr *Allocator,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation EndLoc, ArrayRef<Expr *> VL);
+
+  /// Returns the allocator expression or nullptr, if no allocator is specified.
+  Expr *getAllocator() const { return Allocator; }
+
+  /// Returns the location of the ':' delimiter.
+  SourceLocation getColonLoc() const { return ColonLoc; }
+
+  /// Creates an empty clause with the place for \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  static OMPAllocateClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPAllocateClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_allocate;
   }
 };
 
@@ -380,6 +474,10 @@ public:
 
   child_range children() { return child_range(&Condition, &Condition + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&Condition, &Condition + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_if;
   }
@@ -430,6 +528,10 @@ public:
   Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
 
   child_range children() { return child_range(&Condition, &Condition + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Condition, &Condition + 1);
+  }
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_final;
@@ -492,6 +594,10 @@ public:
 
   child_range children() { return child_range(&NumThreads, &NumThreads + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&NumThreads, &NumThreads + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_num_threads;
   }
@@ -547,6 +653,10 @@ public:
 
   child_range children() { return child_range(&Safelen, &Safelen + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&Safelen, &Safelen + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_safelen;
   }
@@ -600,6 +710,10 @@ public:
   Expr *getSimdlen() const { return cast_or_null<Expr>(Simdlen); }
 
   child_range children() { return child_range(&Simdlen, &Simdlen + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Simdlen, &Simdlen + 1);
+  }
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_simdlen;
@@ -655,6 +769,10 @@ public:
   Expr *getNumForLoops() const { return cast_or_null<Expr>(NumForLoops); }
 
   child_range children() { return child_range(&NumForLoops, &NumForLoops + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&NumForLoops, &NumForLoops + 1);
+  }
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_collapse;
@@ -722,6 +840,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -794,6 +916,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_proc_bind;
   }
@@ -823,6 +949,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -856,6 +986,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_unified_shared_memory;
   }
@@ -885,6 +1019,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -917,6 +1055,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -996,6 +1138,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -1179,6 +1325,11 @@ public:
                        reinterpret_cast<Stmt **>(&ChunkSize) + 1);
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPScheduleClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_schedule;
   }
@@ -1264,6 +1415,10 @@ public:
 
   child_range children() { return child_range(&NumForLoops, &NumForLoops + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&NumForLoops, &NumForLoops + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_ordered;
   }
@@ -1292,6 +1447,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_nowait;
   }
@@ -1318,6 +1477,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -1349,6 +1512,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_mergeable;
   }
@@ -1374,6 +1541,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -1402,6 +1573,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -1433,6 +1608,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_update;
   }
@@ -1462,6 +1641,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_capture;
   }
@@ -1489,6 +1672,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -1582,6 +1769,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPPrivateClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
@@ -1709,6 +1901,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPFirstprivateClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
@@ -1910,6 +2107,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPLastprivateClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_lastprivate;
   }
@@ -1968,6 +2170,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPSharedClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
@@ -2192,6 +2399,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPReductionClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_reduction;
   }
@@ -2410,6 +2622,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPTaskReductionClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
@@ -2655,6 +2872,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPInReductionClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_in_reduction;
   }
@@ -2894,6 +3116,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPLinearClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_linear;
   }
@@ -2979,6 +3206,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPAlignedClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
@@ -3145,6 +3377,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPCopyinClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_copyin;
   }
@@ -3296,6 +3533,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPCopyprivateClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_copyprivate;
   }
@@ -3359,6 +3601,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPFlushClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
@@ -3480,6 +3727,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPDependClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_depend;
   }
@@ -3543,6 +3795,10 @@ public:
 
   child_range children() { return child_range(&Device, &Device + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&Device, &Device + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_device;
   }
@@ -3571,6 +3827,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_threads;
   }
@@ -3596,6 +3856,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -4430,6 +4694,11 @@ public:
         reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPMapClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_map;
   }
@@ -4493,6 +4762,10 @@ public:
   Expr *getNumTeams() const { return cast<Expr>(NumTeams); }
 
   child_range children() { return child_range(&NumTeams, &NumTeams + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&NumTeams, &NumTeams + 1);
+  }
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_num_teams;
@@ -4559,6 +4832,10 @@ public:
 
   child_range children() { return child_range(&ThreadLimit, &ThreadLimit + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&ThreadLimit, &ThreadLimit + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_thread_limit;
   }
@@ -4616,6 +4893,10 @@ public:
 
   child_range children() { return child_range(&Priority, &Priority + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&Priority, &Priority + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_priority;
   }
@@ -4667,6 +4948,10 @@ public:
 
   child_range children() { return child_range(&Grainsize, &Grainsize + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&Grainsize, &Grainsize + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_grainsize;
   }
@@ -4693,6 +4978,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -4746,6 +5035,10 @@ public:
 
   child_range children() { return child_range(&NumTasks, &NumTasks + 1); }
 
+  const_child_range children() const {
+    return const_child_range(&NumTasks, &NumTasks + 1);
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_num_tasks;
   }
@@ -4795,6 +5088,10 @@ public:
   Expr *getHint() const { return cast_or_null<Expr>(Hint); }
 
   child_range children() { return child_range(&Hint, &Hint + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Hint, &Hint + 1);
+  }
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_hint;
@@ -4903,6 +5200,11 @@ public:
                        reinterpret_cast<Stmt **>(&ChunkSize) + 1);
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPDistScheduleClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_dist_schedule;
   }
@@ -5002,6 +5304,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const OMPClause *T) {
@@ -5109,6 +5415,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPToClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_to;
   }
@@ -5213,6 +5524,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPFromClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
@@ -5366,6 +5682,11 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<OMPUseDevicePtrClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_use_device_ptr;
   }
@@ -5455,6 +5776,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPIsDevicePtrClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {

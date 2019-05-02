@@ -118,7 +118,7 @@ private:
 
   void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
-                        StringRef ParentName);
+                        StringRef ParentName, uint64_t OffsetInArchive);
 
   void enqueuePath(StringRef Path, bool WholeArchive);
 
@@ -167,6 +167,9 @@ void parseManifest(StringRef Arg);
 // Parses a string in the form of "level=<string>|uiAccess=<string>"
 void parseManifestUAC(StringRef Arg);
 
+// Parses a string in the form of "cd|net[,(cd|net)]*"
+void parseSwaprun(StringRef Arg);
+
 // Create a resource file containing a manifest XML.
 std::unique_ptr<MemoryBuffer> createManifestRes();
 void createSideBySideManifest();
@@ -180,7 +183,7 @@ void assignExportOrdinals();
 // if value matches previous values for the key.
 // This feature used in the directive section to reject
 // incompatible objects.
-void checkFailIfMismatch(StringRef Arg, StringRef Source);
+void checkFailIfMismatch(StringRef Arg, InputFile *Source);
 
 // Convert Windows resource files (.res files) to a .obj file.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs);

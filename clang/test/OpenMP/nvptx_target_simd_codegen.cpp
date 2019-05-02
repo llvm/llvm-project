@@ -9,10 +9,10 @@
 #define HEADER
 
 // Check that the execution mode of all 2 target regions on the gpu is set to NonSPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l25}}_exec_mode = weak constant i8 1
-// CHECK-DAG: {{@__omp_offloading_.+l30}}_exec_mode = weak constant i8 1
-// CHECK-DAG: {{@__omp_offloading_.+l35}}_exec_mode = weak constant i8 1
-// CHECK-DAG: {{@__omp_offloading_.+l40}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l25}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l30}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l35}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l40}}_exec_mode = weak constant i8 0
 
 #define N 1000
 
@@ -54,33 +54,33 @@ int bar(int n){
 }
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l25}}(
-// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 %{{.+}}, i16 0, i16 0)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK: call void @__kmpc_kernel_deinit(i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l30}}(
-// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 %{{.+}}, i16 0, i16 0)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK: call void @__kmpc_kernel_deinit(i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l35}}(
-// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 %{{.+}}, i16 0, i16 0)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK: call void @__kmpc_kernel_deinit(i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l40}}(
-// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 %{{.+}}, i16 0, i16 0)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
 // CHECK-NOT: call i32 @__kmpc_nvptx_simd_reduce_nowait(
 // CHECK-NOT: call void @__kmpc_nvptx_end_reduce_nowait(
-// CHECK: call void @__kmpc_kernel_deinit(i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 

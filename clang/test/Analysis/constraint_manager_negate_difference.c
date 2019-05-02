@@ -96,3 +96,17 @@ void negate_mixed(int m, int n) {
     return;
   clang_analyzer_eval(n - m <= 0); // expected-warning{{TRUE}}
 }
+
+void effective_range(int m, int n) {
+  assert(m - n >= 0);
+  assert(n - m >= 0);
+  clang_analyzer_eval(m - n == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(n - m == 0); // expected-warning{{TRUE}}
+}
+
+void effective_range_2(int m, int n) {
+  assert(m - n <= 0);
+  assert(n - m <= 0);
+  clang_analyzer_eval(m - n == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+  clang_analyzer_eval(n - m == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+}

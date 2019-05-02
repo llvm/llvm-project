@@ -300,17 +300,37 @@ kmp_uint64 __kmp_taskloop_min_tasks = 0;
 
 #if OMP_50_ENABLED
 int __kmp_memkind_available = 0;
-int __kmp_hbw_mem_available = 0;
-const omp_allocator_t *OMP_NULL_ALLOCATOR = NULL;
-const omp_allocator_t *omp_default_mem_alloc = (const omp_allocator_t *)1;
-const omp_allocator_t *omp_large_cap_mem_alloc = (const omp_allocator_t *)2;
-const omp_allocator_t *omp_const_mem_alloc = (const omp_allocator_t *)3;
-const omp_allocator_t *omp_high_bw_mem_alloc = (const omp_allocator_t *)4;
-const omp_allocator_t *omp_low_lat_mem_alloc = (const omp_allocator_t *)5;
-const omp_allocator_t *omp_cgroup_mem_alloc = (const omp_allocator_t *)6;
-const omp_allocator_t *omp_pteam_mem_alloc = (const omp_allocator_t *)7;
-const omp_allocator_t *omp_thread_mem_alloc = (const omp_allocator_t *)8;
-void *const *__kmp_def_allocator = omp_default_mem_alloc;
+omp_allocator_handle_t const omp_null_allocator = NULL;
+omp_allocator_handle_t const omp_default_mem_alloc =
+    (omp_allocator_handle_t const)1;
+omp_allocator_handle_t const omp_large_cap_mem_alloc =
+    (omp_allocator_handle_t const)2;
+omp_allocator_handle_t const omp_const_mem_alloc =
+    (omp_allocator_handle_t const)3;
+omp_allocator_handle_t const omp_high_bw_mem_alloc =
+    (omp_allocator_handle_t const)4;
+omp_allocator_handle_t const omp_low_lat_mem_alloc =
+    (omp_allocator_handle_t const)5;
+omp_allocator_handle_t const omp_cgroup_mem_alloc =
+    (omp_allocator_handle_t const)6;
+omp_allocator_handle_t const omp_pteam_mem_alloc =
+    (omp_allocator_handle_t const)7;
+omp_allocator_handle_t const omp_thread_mem_alloc =
+    (omp_allocator_handle_t const)8;
+omp_allocator_handle_t const kmp_max_mem_alloc =
+    (omp_allocator_handle_t const)1024;
+omp_allocator_handle_t __kmp_def_allocator = omp_default_mem_alloc;
+
+omp_memspace_handle_t const omp_default_mem_space =
+    (omp_memspace_handle_t const)0;
+omp_memspace_handle_t const omp_large_cap_mem_space =
+    (omp_memspace_handle_t const)1;
+omp_memspace_handle_t const omp_const_mem_space =
+    (omp_memspace_handle_t const)2;
+omp_memspace_handle_t const omp_high_bw_mem_space =
+    (omp_memspace_handle_t const)3;
+omp_memspace_handle_t const omp_low_lat_mem_space =
+    (omp_memspace_handle_t const)4;
 #endif
 
 /* This check ensures that the compiler is passing the correct data type for the
@@ -414,7 +434,6 @@ kmp_root_t **__kmp_root = NULL;
 KMP_ALIGN_CACHE
 volatile int __kmp_nth = 0;
 volatile int __kmp_all_nth = 0;
-int __kmp_thread_pool_nth = 0;
 volatile kmp_info_t *__kmp_thread_pool = NULL;
 volatile kmp_team_t *__kmp_team_pool = NULL;
 

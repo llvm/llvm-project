@@ -23,7 +23,7 @@ define i32 @reduce(double* nocapture %A, i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i32 [[MUL]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> <double 7.000000e+00, double 7.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 7.000000e+00, double 7.000000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[ADD5:%.*]] = fadd double [[TMP3]], [[TMP4]]

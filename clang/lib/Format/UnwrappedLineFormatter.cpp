@@ -94,7 +94,7 @@ private:
   /// characters to the left from their level.
   int getIndentOffset(const FormatToken &RootToken) {
     if (Style.Language == FormatStyle::LK_Java ||
-        Style.Language == FormatStyle::LK_JavaScript)
+        Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp())
       return 0;
     if (RootToken.isAccessSpecifier(false) ||
         RootToken.isObjCAccessSpecifier() ||
@@ -1073,7 +1073,9 @@ unsigned UnwrappedLineFormatter::format(
           TheLine.Last->TotalLength + Indent <= ColumnLimit ||
           (TheLine.Type == LT_ImportStatement &&
            (Style.Language != FormatStyle::LK_JavaScript ||
-            !Style.JavaScriptWrapImports));
+            !Style.JavaScriptWrapImports)) ||
+          (Style.isCSharp() &&
+           TheLine.InPPDirective); // don't split #regions in C#
       if (Style.ColumnLimit == 0)
         NoColumnLimitLineFormatter(Indenter, Whitespaces, Style, this)
             .formatLine(TheLine, NextStartColumn + Indent,
@@ -1178,8 +1180,10 @@ void UnwrappedLineFormatter::formatFirstToken(
   if (Newlines)
     Indent = NewlineIndent;
 
-  // Preprocessor directives get indented after the hash, if indented.
-  if (Line.Type == LT_PreprocessorDirective || Line.Type == LT_ImportStatement)
+  // Preprocessor directives get indented before the hash only if specified
+  if (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      (Line.Type == LT_PreprocessorDirective ||
+       Line.Type == LT_ImportStatement))
     Indent = 0;
 
   Whitespaces->replaceWhitespace(RootToken, Newlines, Indent, Indent,

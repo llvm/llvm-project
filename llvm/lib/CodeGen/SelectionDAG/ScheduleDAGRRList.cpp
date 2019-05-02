@@ -219,6 +219,14 @@ public:
     return Topo.WillCreateCycle(SU, TargetSU);
   }
 
+  /// AddPredQueued - Queues and update to add a predecessor edge to SUnit SU.
+  /// This returns true if this is a new predecessor.
+  /// Does *NOT* update the topological ordering! It just queues an update.
+  void AddPredQueued(SUnit *SU, const SDep &D) {
+    Topo.AddPredQueued(SU, D.getSUnit());
+    SU->addPred(D);
+  }
+
   /// AddPred - adds a predecessor edge to SUnit SU.
   /// This returns true if this is a new predecessor.
   /// Updates the topological ordering if required.
@@ -266,24 +274,22 @@ private:
   void ListScheduleBottomUp();
 
   /// CreateNewSUnit - Creates a new SUnit and returns a pointer to it.
-  /// Updates the topological ordering if required.
   SUnit *CreateNewSUnit(SDNode *N) {
     unsigned NumSUnits = SUnits.size();
     SUnit *NewNode = newSUnit(N);
     // Update the topological ordering.
     if (NewNode->NodeNum >= NumSUnits)
-      Topo.InitDAGTopologicalSorting();
+      Topo.MarkDirty();
     return NewNode;
   }
 
   /// CreateClone - Creates a new SUnit from an existing one.
-  /// Updates the topological ordering if required.
   SUnit *CreateClone(SUnit *N) {
     unsigned NumSUnits = SUnits.size();
     SUnit *NewNode = Clone(N);
     // Update the topological ordering.
     if (NewNode->NodeNum >= NumSUnits)
-      Topo.InitDAGTopologicalSorting();
+      Topo.MarkDirty();
     return NewNode;
   }
 
@@ -365,7 +371,7 @@ void ScheduleDAGRRList::Schedule() {
   BuildSchedGraph(nullptr);
 
   LLVM_DEBUG(dump());
-  Topo.InitDAGTopologicalSorting();
+  Topo.MarkDirty();
 
   AvailableQueue->initNodes(SUnits);
 
@@ -1017,8 +1023,9 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
     NewSU = &SUnits[N->getNodeId()];
     // If NewSU has already been scheduled, we need to clone it, but this
     // negates the benefit to unfolding so just return SU.
-    if (NewSU->isScheduled)
+    if (NewSU->isScheduled) {
       return SU;
+    }
     isNewN = false;
   } else {
     NewSU = CreateNewSUnit(N);
@@ -1071,23 +1078,23 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
   for (const SDep &Pred : ChainPreds) {
     RemovePred(SU, Pred);
     if (isNewLoad)
-      AddPred(LoadSU, Pred);
+      AddPredQueued(LoadSU, Pred);
   }
   for (const SDep &Pred : LoadPreds) {
     RemovePred(SU, Pred);
     if (isNewLoad)
-      AddPred(LoadSU, Pred);
+      AddPredQueued(LoadSU, Pred);
   }
   for (const SDep &Pred : NodePreds) {
     RemovePred(SU, Pred);
-    AddPred(NewSU, Pred);
+    AddPredQueued(NewSU, Pred);
   }
   for (SDep D : NodeSuccs) {
     SUnit *SuccDep = D.getSUnit();
     D.setSUnit(SU);
     RemovePred(SuccDep, D);
     D.setSUnit(NewSU);
-    AddPred(SuccDep, D);
+    AddPredQueued(SuccDep, D);
     // Balance register pressure.
     if (AvailableQueue->tracksRegPressure() && SuccDep->isScheduled &&
         !D.isCtrl() && NewSU->NumRegDefsLeft > 0)
@@ -1099,7 +1106,7 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
     RemovePred(SuccDep, D);
     if (isNewLoad) {
       D.setSUnit(LoadSU);
-      AddPred(SuccDep, D);
+      AddPredQueued(SuccDep, D);
     }
   }
 
@@ -1107,7 +1114,7 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
   // by LoadSU.
   SDep D(LoadSU, SDep::Data, 0);
   D.setLatency(LoadSU->Latency);
-  AddPred(NewSU, D);
+  AddPredQueued(NewSU, D);
 
   if (isNewLoad)
     AvailableQueue->addNode(LoadSU);
@@ -1179,7 +1186,7 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
   // New SUnit has the exact same predecessors.
   for (SDep &Pred : SU->Preds)
     if (!Pred.isArtificial())
-      AddPred(NewSU, Pred);
+      AddPredQueued(NewSU, Pred);
 
   // Only copy scheduled successors. Cut them from old node's successor
   // list and move them over.
@@ -1191,7 +1198,7 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
     if (SuccSU->isScheduled) {
       SDep D = Succ;
       D.setSUnit(NewSU);
-      AddPred(SuccSU, D);
+      AddPredQueued(SuccSU, D);
       D.setSUnit(SU);
       DelDeps.push_back(std::make_pair(SuccSU, D));
     }
@@ -1230,14 +1237,14 @@ void ScheduleDAGRRList::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
     if (SuccSU->isScheduled) {
       SDep D = Succ;
       D.setSUnit(CopyToSU);
-      AddPred(SuccSU, D);
+      AddPredQueued(SuccSU, D);
       DelDeps.push_back(std::make_pair(SuccSU, Succ));
     }
     else {
       // Avoid scheduling the def-side copy before other successors. Otherwise
       // we could introduce another physreg interference on the copy and
       // continue inserting copies indefinitely.
-      AddPred(SuccSU, SDep(CopyFromSU, SDep::Artificial));
+      AddPredQueued(SuccSU, SDep(CopyFromSU, SDep::Artificial));
     }
   }
   for (auto &DelDep : DelDeps)
@@ -1245,10 +1252,10 @@ void ScheduleDAGRRList::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
 
   SDep FromDep(SU, SDep::Data, Reg);
   FromDep.setLatency(SU->Latency);
-  AddPred(CopyFromSU, FromDep);
+  AddPredQueued(CopyFromSU, FromDep);
   SDep ToDep(CopyFromSU, SDep::Data, 0);
   ToDep.setLatency(CopyFromSU->Latency);
-  AddPred(CopyToSU, ToDep);
+  AddPredQueued(CopyToSU, ToDep);
 
   AvailableQueue->updateNode(SU);
   AvailableQueue->addNode(CopyFromSU);
@@ -1478,6 +1485,11 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
   if (CurSU)
     return CurSU;
 
+  // We query the topological order in the loop body, so make sure outstanding
+  // updates are applied before entering it (we only enter the loop if there
+  // are some interferences). If we make changes to the ordering, we exit
+  // the loop.
+
   // All candidates are delayed due to live physical reg dependencies.
   // Try backtracking, code duplication, or inserting cross class copies
   // to resolve it.
@@ -1507,7 +1519,7 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
       }
       LLVM_DEBUG(dbgs() << "ARTIFICIAL edge from SU(" << BtSU->NodeNum
                         << ") to SU(" << TrySU->NodeNum << ")\n");
-      AddPred(TrySU, SDep(BtSU, SDep::Artificial));
+      AddPredQueued(TrySU, SDep(BtSU, SDep::Artificial));
 
       // If one or more successors has been unscheduled, then the current
       // node is no longer available.
@@ -1561,14 +1573,14 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
       InsertCopiesAndMoveSuccs(LRDef, Reg, DestRC, RC, Copies);
       LLVM_DEBUG(dbgs() << "    Adding an edge from SU #" << TrySU->NodeNum
                         << " to SU #" << Copies.front()->NodeNum << "\n");
-      AddPred(TrySU, SDep(Copies.front(), SDep::Artificial));
+      AddPredQueued(TrySU, SDep(Copies.front(), SDep::Artificial));
       NewDef = Copies.back();
     }
 
     LLVM_DEBUG(dbgs() << "    Adding an edge from SU #" << NewDef->NodeNum
                       << " to SU #" << TrySU->NodeNum << "\n");
     LiveRegDefs[Reg] = NewDef;
-    AddPred(NewDef, SDep(TrySU, SDep::Artificial));
+    AddPredQueued(NewDef, SDep(TrySU, SDep::Artificial));
     TrySU->isAvailable = false;
     CurSU = NewDef;
   }
@@ -3017,9 +3029,9 @@ void RegReductionPQBase::PrescheduleNodesWithMultipleUses() {
       if (SuccSU != &SU) {
         Edge.setSUnit(PredSU);
         scheduleDAG->RemovePred(SuccSU, Edge);
-        scheduleDAG->AddPred(&SU, Edge);
+        scheduleDAG->AddPredQueued(&SU, Edge);
         Edge.setSUnit(&SU);
-        scheduleDAG->AddPred(SuccSU, Edge);
+        scheduleDAG->AddPredQueued(SuccSU, Edge);
         --i;
       }
     }
@@ -3101,7 +3113,7 @@ void RegReductionPQBase::AddPseudoTwoAddrDeps() {
           LLVM_DEBUG(dbgs()
                      << "    Adding a pseudo-two-addr edge from SU #"
                      << SU.NodeNum << " to SU #" << SuccSU->NodeNum << "\n");
-          scheduleDAG->AddPred(&SU, SDep(SuccSU, SDep::Artificial));
+          scheduleDAG->AddPredQueued(&SU, SDep(SuccSU, SDep::Artificial));
         }
       }
     }

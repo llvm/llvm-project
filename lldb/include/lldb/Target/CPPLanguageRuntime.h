@@ -1,5 +1,4 @@
 //===-- CPPLanguageRuntime.h
-//---------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,9 +64,7 @@ public:
                                                   bool stop_others);
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from CPPLanguageRuntime can see and modify these
-  //------------------------------------------------------------------
   CPPLanguageRuntime(Process *process);
 
 private:

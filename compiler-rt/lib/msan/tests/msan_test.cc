@@ -2123,6 +2123,16 @@ TEST(MemorySanitizer, wcrtomb) {
   EXPECT_EQ(buff[0], 'a');
 }
 
+TEST(MemorySanitizer, wctomb) {
+  wchar_t x = L'a';
+  char buff[10];
+  wctomb(nullptr, x);
+  int res = wctomb(buff, x);
+  EXPECT_EQ(res, 1);
+  EXPECT_EQ(buff[0], 'a');
+  EXPECT_POISONED(buff[1]);
+}
+
 TEST(MemorySanitizer, wmemset) {
     wchar_t x[25];
     break_optimization(x);

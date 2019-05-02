@@ -19,10 +19,10 @@ namespace clang {
 namespace tidy {
 namespace cert {
 
-const char SetLongJmpCheck::DiagWording[] =
+namespace {
+const char DiagWording[] =
     "do not call %0; consider using exception handling instead";
 
-namespace {
 class SetJmpMacroCallbacks : public PPCallbacks {
   SetLongJmpCheck &Check;
 
@@ -36,12 +36,14 @@ public:
       return;
 
     if (II->getName() == "setjmp")
-      Check.diag(Range.getBegin(), Check.DiagWording) << II;
+      Check.diag(Range.getBegin(), DiagWording) << II;
   }
 };
 } // namespace
 
-void SetLongJmpCheck::registerPPCallbacks(CompilerInstance &Compiler) {
+void SetLongJmpCheck::registerPPCallbacks(const SourceManager &SM,
+                                          Preprocessor *PP,
+                                          Preprocessor *ModuleExpanderPP) {
   // This checker only applies to C++, where exception handling is a superior
   // solution to setjmp/longjmp calls.
   if (!getLangOpts().CPlusPlus)
@@ -49,8 +51,7 @@ void SetLongJmpCheck::registerPPCallbacks(CompilerInstance &Compiler) {
 
   // Per [headers]p5, setjmp must be exposed as a macro instead of a function,
   // despite the allowance in C for setjmp to also be an extern function.
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<SetJmpMacroCallbacks>(*this));
+  PP->addPPCallbacks(llvm::make_unique<SetJmpMacroCallbacks>(*this));
 }
 
 void SetLongJmpCheck::registerMatchers(MatchFinder *Finder) {
@@ -62,10 +63,10 @@ void SetLongJmpCheck::registerMatchers(MatchFinder *Finder) {
   // In case there is an implementation that happens to define setjmp as a
   // function instead of a macro, this will also catch use of it. However, we
   // are primarily searching for uses of longjmp.
-  Finder->addMatcher(callExpr(callee(functionDecl(anyOf(hasName("setjmp"),
-                                                        hasName("longjmp")))))
-                         .bind("expr"),
-                     this);
+  Finder->addMatcher(
+      callExpr(callee(functionDecl(hasAnyName("setjmp", "longjmp"))))
+          .bind("expr"),
+      this);
 }
 
 void SetLongJmpCheck::check(const MatchFinder::MatchResult &Result) {

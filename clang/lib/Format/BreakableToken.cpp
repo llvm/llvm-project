@@ -329,7 +329,7 @@ static bool mayReflowContent(StringRef Content) {
 BreakableBlockComment::BreakableBlockComment(
     const FormatToken &Token, unsigned StartColumn,
     unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
-    encoding::Encoding Encoding, const FormatStyle &Style)
+    encoding::Encoding Encoding, const FormatStyle &Style, bool UseCRLF)
     : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style),
       DelimitersOnNewline(false),
       UnbreakableTailLength(Token.UnbreakableTailLength) {
@@ -338,7 +338,8 @@ BreakableBlockComment::BreakableBlockComment(
 
   StringRef TokenText(Tok.TokenText);
   assert(TokenText.startswith("/*") && TokenText.endswith("*/"));
-  TokenText.substr(2, TokenText.size() - 4).split(Lines, "\n");
+  TokenText.substr(2, TokenText.size() - 4).split(Lines,
+                                                  UseCRLF ? "\r\n" : "\n");
 
   int IndentDelta = StartColumn - OriginalStartColumn;
   Content.resize(Lines.size());
@@ -472,7 +473,7 @@ void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,
   // Calculate the start of the non-whitespace text in the current line.
   size_t StartOfLine = Lines[LineIndex].find_first_not_of(Blanks);
   if (StartOfLine == StringRef::npos)
-    StartOfLine = Lines[LineIndex].rtrim("\r\n").size();
+    StartOfLine = Lines[LineIndex].size();
 
   StringRef Whitespace = Lines[LineIndex].substr(0, StartOfLine);
   // Adjust Lines to only contain relevant text.

@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupUUID
-//-------------------------------------------------------------------------
 
 class OptionGroupUUID : public OptionGroup {
 public:

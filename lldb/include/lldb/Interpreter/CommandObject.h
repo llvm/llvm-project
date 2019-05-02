@@ -121,6 +121,7 @@ public:
   GetArgumentDescriptionAsCString(const lldb::CommandArgumentType arg_type);
 
   CommandInterpreter &GetCommandInterpreter() { return m_interpreter; }
+  Debugger &GetDebugger();
 
   virtual llvm::StringRef GetHelp();
 
@@ -220,7 +221,6 @@ public:
 
   void SetCommandName(llvm::StringRef name);
 
-  //------------------------------------------------------------------
   /// This default version handles calling option argument completions and then
   /// calls HandleArgumentCompletion if the cursor is on an argument, not an
   /// option. Don't override this method, override HandleArgumentCompletion
@@ -235,10 +235,8 @@ public:
   ///
   /// \return
   ///     \btrue if we were in an option, \bfalse otherwise.
-  //------------------------------------------------------------------
   virtual int HandleCompletion(CompletionRequest &request);
 
-  //------------------------------------------------------------------
   /// The input array contains a parsed version of the line.  The insertion
   /// point is given by cursor_index (the index in input of the word containing
   /// the cursor) and cursor_char_position (the position of the cursor in that
@@ -255,7 +253,6 @@ public:
   ///
   /// \return
   ///     The number of completions.
-  //------------------------------------------------------------------
   virtual int
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) {
@@ -268,23 +265,18 @@ public:
                             bool search_syntax = true,
                             bool search_options = true);
 
-  //------------------------------------------------------------------
   /// The flags accessor.
   ///
   /// \return
   ///     A reference to the Flags member variable.
-  //------------------------------------------------------------------
   Flags &GetFlags() { return m_flags; }
 
-  //------------------------------------------------------------------
   /// The flags const accessor.
   ///
   /// \return
   ///     A const reference to the Flags member variable.
-  //------------------------------------------------------------------
   const Flags &GetFlags() const { return m_flags; }
 
-  //------------------------------------------------------------------
   /// Get the command that appropriate for a "repeat" of the current command.
   ///
   /// \param[in] current_command_line
@@ -296,7 +288,6 @@ public:
   ///     Otherwise a pointer to the command to be repeated.
   ///     If the returned string is the empty string, the command won't be
   ///     repeated.
-  //------------------------------------------------------------------
   virtual const char *GetRepeatCommand(Args &current_command_args,
                                        uint32_t index) {
     return nullptr;
@@ -367,7 +358,6 @@ protected:
   // insulates you from the details of this calculation.
   Thread *GetDefaultThread();
 
-  //------------------------------------------------------------------
   /// Check the command to make sure anything required by this
   /// command is available.
   ///
@@ -377,7 +367,6 @@ protected:
   ///
   /// \return
   ///     \b true if it is okay to run this command, \b false otherwise.
-  //------------------------------------------------------------------
   bool CheckRequirements(CommandReturnObject &result);
 
   void Cleanup();

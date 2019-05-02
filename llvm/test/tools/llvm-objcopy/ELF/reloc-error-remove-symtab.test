@@ -1,5 +1,7 @@
 # RUN: yaml2obj %s > %t
-# RUN: not llvm-objcopy -R .symtab %t %t2 2>&1 >/dev/null | FileCheck %s
+# RUN: not llvm-objcopy -R .symtab %t %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
+# RUN: cp %t %t3
+# RUN: not llvm-strip --no-strip-all -R .symtab %t3 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
 
 !ELF
 FileHeader:
@@ -24,9 +26,19 @@ Sections:
         Type:   R_X86_64_PC32
 
 Symbols:
-  Global:
-    - Name:     foo
-      Type:     STT_FUNC
-      Size:     4
+  - Name:     foo
+    Type:     STT_FUNC
+    Size:     4
+    Binding:  STB_GLOBAL
 
-# CHECK: Symbol table .symtab cannot be removed because it is referenced by the relocation section .rel.text.
+# ERR: Symbol table .symtab cannot be removed because it is referenced by the relocation section .rel.text.
+
+# RUN: llvm-objcopy --allow-broken-links -R .symtab %t %t4
+# RUN: llvm-readobj --sections %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.symtab
+# RUN: cp %t %t5
+# RUN: llvm-strip --no-strip-all --allow-broken-links -R .symtab %t5
+# RUN: llvm-readobj --sections %t5 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.symtab
+
+# SECTIONS:        Name: .rel.text
+# SECTIONS:        Link
+# SECTIONS-SAME: : 0

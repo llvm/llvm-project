@@ -1141,23 +1141,19 @@ bool ARMDAGToDAGISel::SelectThumbAddrModeSP(SDValue N,
   if (!CurDAG->isBaseWithConstantOffset(N))
     return false;
 
-  RegisterSDNode *LHSR = dyn_cast<RegisterSDNode>(N.getOperand(0));
-  if (N.getOperand(0).getOpcode() == ISD::FrameIndex ||
-      (LHSR && LHSR->getReg() == ARM::SP)) {
+  if (N.getOperand(0).getOpcode() == ISD::FrameIndex) {
     // If the RHS is + imm8 * scale, fold into addr mode.
     int RHSC;
     if (isScaledConstantInRange(N.getOperand(1), /*Scale=*/4, 0, 256, RHSC)) {
       Base = N.getOperand(0);
-      if (Base.getOpcode() == ISD::FrameIndex) {
-        int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-        // For LHS+RHS to result in an offset that's a multiple of 4 the object
-        // indexed by the LHS must be 4-byte aligned.
-        MachineFrameInfo &MFI = MF->getFrameInfo();
-        if (MFI.getObjectAlignment(FI) < 4)
-          MFI.setObjectAlignment(FI, 4);
-        Base = CurDAG->getTargetFrameIndex(
-            FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-      }
+      int FI = cast<FrameIndexSDNode>(Base)->getIndex();
+      // For LHS+RHS to result in an offset that's a multiple of 4 the object
+      // indexed by the LHS must be 4-byte aligned.
+      MachineFrameInfo &MFI = MF->getFrameInfo();
+      if (MFI.getObjectAlignment(FI) < 4)
+        MFI.setObjectAlignment(FI, 4);
+      Base = CurDAG->getTargetFrameIndex(
+          FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
       return true;
     }
@@ -2096,10 +2092,12 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
   default: llvm_unreachable("unhandled vld/vst lane type");
     // Double-register operations:
   case MVT::v8i8:  OpcodeIndex = 0; break;
+  case MVT::v4f16:
   case MVT::v4i16: OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32: OpcodeIndex = 2; break;
     // Quad-register operations:
+  case MVT::v8f16:
   case MVT::v8i16: OpcodeIndex = 0; break;
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 1; break;
@@ -2216,7 +2214,10 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   case MVT::v8i8:
   case MVT::v16i8: OpcodeIndex = 0; break;
   case MVT::v4i16:
-  case MVT::v8i16: OpcodeIndex = 1; break;
+  case MVT::v8i16:
+  case MVT::v4f16:
+  case MVT::v8f16:
+                  OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32:
   case MVT::v4f32:
@@ -2601,6 +2602,44 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
   switch (N->getOpcode()) {
   default: break;
+  case ISD::STORE: {
+    // For Thumb1, match an sp-relative store in C++. This is a little
+    // unfortunate, but I don't think I can make the chain check work
+    // otherwise.  (The chain of the store has to be the same as the chain
+    // of the CopyFromReg, or else we can't replace the CopyFromReg with
+    // a direct reference to "SP".)
+    //
+    // This is only necessary on Thumb1 because Thumb1 sp-relative stores use
+    // a different addressing mode from other four-byte stores.
+    //
+    // This pattern usually comes up with call arguments.
+    StoreSDNode *ST = cast<StoreSDNode>(N);
+    SDValue Ptr = ST->getBasePtr();
+    if (Subtarget->isThumb1Only() && ST->isUnindexed()) {
+      int RHSC = 0;
+      if (Ptr.getOpcode() == ISD::ADD &&
+          isScaledConstantInRange(Ptr.getOperand(1), /*Scale=*/4, 0, 256, RHSC))
+        Ptr = Ptr.getOperand(0);
+
+      if (Ptr.getOpcode() == ISD::CopyFromReg &&
+          cast<RegisterSDNode>(Ptr.getOperand(1))->getReg() == ARM::SP &&
+          Ptr.getOperand(0) == ST->getChain()) {
+        SDValue Ops[] = {ST->getValue(),
+                         CurDAG->getRegister(ARM::SP, MVT::i32),
+                         CurDAG->getTargetConstant(RHSC, dl, MVT::i32),
+                         getAL(CurDAG, dl),
+                         CurDAG->getRegister(0, MVT::i32),
+                         ST->getChain()};
+        MachineSDNode *ResNode =
+            CurDAG->getMachineNode(ARM::tSTRspi, dl, MVT::Other, Ops);
+        MachineMemOperand *MemOp = ST->getMemOperand();
+        CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {MemOp});
+        ReplaceNode(N, ResNode);
+        return;
+      }
+    }
+    break;
+  }
   case ISD::WRITE_REGISTER:
     if (tryWriteRegister(N))
       return;

@@ -28,5 +28,5 @@ Sections:
         Symbol:          main
         Type:            0xFF
 Symbols:
-  Global:
-    - Name: main
+  - Name:    main
+    Binding: STB_GLOBAL

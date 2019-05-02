@@ -1,8 +1,20 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
+; RUN: llc -mtriple=riscv32 -mattr=+f -target-abi ilp32f -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32I
+; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi ilp32f -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32I
+; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi ilp32d -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32I
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs -frame-pointer=all < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I-WITH-FP
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64I
+; RUN: llc -mtriple=riscv64 -mattr=+f -target-abi ilp32f -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64I
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi ilp32f -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64I
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi ilp32d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -frame-pointer=all < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I-WITH-FP

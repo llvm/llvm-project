@@ -1006,8 +1006,8 @@ private:
   // Is to use the context sensitive profile.
   bool IsCS;
 
-  // Find the Instrumented BB and set the value.
-  void setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
+  // Find the Instrumented BB and set the value. Return false on error.
+  bool setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
 
   // Set the edge counter value for the unknown edge -- there should be only
   // one unknown edge.
@@ -1036,10 +1036,14 @@ private:
 } // end anonymous namespace
 
 // Visit all the edges and assign the count value for the instrumented
-// edges and the BB.
-void PGOUseFunc::setInstrumentedCounts(
+// edges and the BB. Return false on error.
+bool PGOUseFunc::setInstrumentedCounts(
     const std::vector<uint64_t> &CountFromProfile) {
-  assert(FuncInfo.getNumCounters() == CountFromProfile.size());
+  // The number of counters here should match the number of counters
+  // in profile. Return if they mismatch.
+  if (FuncInfo.getNumCounters() != CountFromProfile.size()) {
+    return false;
+  }
   // Use a worklist as we will update the vector during the iteration.
   std::vector<PGOUseEdge *> WorkList;
   for (auto &E : FuncInfo.MST.AllEdges)
@@ -1071,6 +1075,7 @@ void PGOUseFunc::setInstrumentedCounts(
   }
   ProfileCountSize = CountFromProfile.size();
   CountPosition = I;
+  return true;
 }
 
 // Set the count value for the unknown edge. There should be one and only one
@@ -1146,7 +1151,16 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros)
   getBBInfo(nullptr).UnknownCountOutEdge = 2;
   getBBInfo(nullptr).UnknownCountInEdge = 2;
 
-  setInstrumentedCounts(CountFromProfile);
+  if (!setInstrumentedCounts(CountFromProfile)) {
+    LLVM_DEBUG(
+        dbgs() << "Inconsistent number of counts, skipping this function");
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M->getName().data(),
+        Twine("Inconsistent number of counts in ") + F.getName().str()
+        + Twine(": the profile may be stale or there is a function name collision."),
+        DS_Warning));
+    return false;
+  }
   ProgramMaxCount = PGOReader->getMaximumFunctionCount(IsCS);
   return true;
 }
@@ -1369,7 +1383,7 @@ void MemIntrinsicVisitor::instrumentOneMemIntrinsic(MemIntrinsic &MI) {
   Type *Int64Ty = Builder.getInt64Ty();
   Type *I8PtrTy = Builder.getInt8PtrTy();
   Value *Length = MI.getLength();
-  assert(!dyn_cast<ConstantInt>(Length));
+  assert(!isa<ConstantInt>(Length));
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
       {ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
@@ -1412,8 +1426,14 @@ void PGOUseFunc::annotateValueSites() {
     annotateValueSites(Kind);
 }
 
+static const char *ValueProfKindDescr[] = {
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Descr,
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
 // Annotate the instructions for a specific value kind.
 void PGOUseFunc::annotateValueSites(uint32_t Kind) {
+  assert(Kind <= IPVK_Last);
   unsigned ValueSiteIndex = 0;
   auto &ValueSites = FuncInfo.ValueSites[Kind];
   unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
@@ -1421,8 +1441,10 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     auto &Ctx = M->getContext();
     Ctx.diagnose(DiagnosticInfoPGOProfile(
         M->getName().data(),
-        Twine("Inconsistent number of value sites for kind = ") + Twine(Kind) +
-            " in " + F.getName().str(),
+        Twine("Inconsistent number of value sites for ") +
+            Twine(ValueProfKindDescr[Kind]) +
+            Twine(" profiling in \"") + F.getName().str() +
+            Twine("\", possibly due to the use of a stale profile."),
         DS_Warning));
     return;
   }

@@ -32,5 +32,5 @@ class TestImportStdModuleConflicts(TestBase):
         self.expect("expr std::abs(-42)", substrs=['(int) $0 = 42'])
         self.expect("expr std::div(2, 1).quot", substrs=['(int) $1 = 2'])
         self.expect("expr (std::size_t)33U", substrs=['(size_t) $2 = 33'])
-        self.expect("expr char a = 'b'; char b = 'a'; std::swap(a, b); a",
+        self.expect("expr char char_a = 'b'; char char_b = 'a'; std::swap(char_a, char_b); char_a",
                     substrs=["(char) $3 = 'a'"])

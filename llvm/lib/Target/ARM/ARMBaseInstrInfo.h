@@ -567,6 +567,16 @@ bool rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                          unsigned FrameReg, int &Offset,
                          const ARMBaseInstrInfo &TII);
 
+/// Return true if Reg is defd between From and To
+bool registerDefinedBetween(unsigned Reg, MachineBasicBlock::iterator From,
+                            MachineBasicBlock::iterator To,
+                            const TargetRegisterInfo *TRI);
+
+/// Search backwards from a tBcc to find a tCMPi8 against 0, meaning
+/// we can convert them to a tCBZ or tCBNZ. Return nullptr if not found.
+MachineInstr *findCMPToFoldIntoCBZ(MachineInstr *Br,
+                                   const TargetRegisterInfo *TRI);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARMBASEINSTRINFO_H

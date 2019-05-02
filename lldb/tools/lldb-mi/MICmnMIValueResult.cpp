@@ -14,7 +14,6 @@
 const CMIUtilString CMICmnMIValueResult::ms_constStrEqual("=");
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueResult constructor.
 // Type:    Method.
 // Args:    None.
@@ -24,7 +23,6 @@ const CMIUtilString CMICmnMIValueResult::ms_constStrEqual("=");
 CMICmnMIValueResult::CMICmnMIValueResult() : m_bEmptyConstruction(true) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueResult constructor.
 // Type:    Method.
 // Args:    vrVariable  - (R) MI value's name.
@@ -40,7 +38,6 @@ CMICmnMIValueResult::CMICmnMIValueResult(const CMIUtilString &vrVariable,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueResult constructor.
 // Type:    Method.
 // Args:    vrVariable      - (R) MI value's name.
@@ -59,7 +56,6 @@ CMICmnMIValueResult::CMICmnMIValueResult(const CMIUtilString &vrVariable,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueResult destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -69,7 +65,6 @@ CMICmnMIValueResult::CMICmnMIValueResult(const CMIUtilString &vrVariable,
 CMICmnMIValueResult::~CMICmnMIValueResult() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Build the MI value result string.
 // Type:    Method.
 // Args:    None.
@@ -84,7 +79,6 @@ void CMICmnMIValueResult::BuildResult() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Build the MI value result string.
 // Type:    Method.
 // Args:    vrVariable  - (R) MI value's name.
@@ -101,7 +95,6 @@ void CMICmnMIValueResult::BuildResult(const CMIUtilString &vVariable,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Append another MI value object to *this MI value result.
 // Type:    Method.
 // Args:    vrVariable  - (R) MI value's name.

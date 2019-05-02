@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCTARGETDESC_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCTARGETDESC_H
 
+#include "../WebAssemblySubtarget.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
@@ -89,12 +90,23 @@ namespace WebAssemblyII {
 enum TOF {
   MO_NO_FLAG = 0,
 
-  // Flags to indicate the type of the symbol being referenced
-  MO_SYMBOL_FUNCTION = 0x1,
-  MO_SYMBOL_GLOBAL = 0x2,
-  MO_SYMBOL_EVENT = 0x4,
-  MO_SYMBOL_MASK = 0x7,
+  // On a symbol operand this indicates that the immediate is a wasm global
+  // index.  The value of the wasm global will be set to the symbol address at
+  // runtime.  This adds a level of indirection similar to the GOT on native
+  // platforms.
+  MO_GOT,
+
+  // On a symbol operand this indicates that the immediate is the symbol
+  // address relative the __memory_base wasm global.
+  // Only applicable to data symbols.
+  MO_MEMORY_BASE_REL,
+
+  // On a symbol operand this indicates that the immediate is the symbol
+  // address relative the __table_base wasm global.
+  // Only applicable to function symbols.
+  MO_TABLE_BASE_REL,
 };
+
 } // end namespace WebAssemblyII
 
 } // end namespace llvm
@@ -109,9 +121,6 @@ enum TOF {
 //
 #define GET_INSTRINFO_ENUM
 #include "WebAssemblyGenInstrInfo.inc"
-
-#define GET_SUBTARGETINFO_ENUM
-#include "WebAssemblyGenSubtargetInfo.inc"
 
 namespace llvm {
 namespace WebAssembly {

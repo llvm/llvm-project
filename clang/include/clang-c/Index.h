@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 54
+#define CINDEX_VERSION_MINOR 56
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -3315,7 +3315,9 @@ enum CXTypeKind {
   CXType_OCLIntelSubgroupAVCImeResultDualRefStreamout = 173,
   CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174,
 
-  CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175
+  CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175,
+
+  CXType_ExtVector = 176
 };
 
 /**
@@ -3919,10 +3921,16 @@ CINDEX_LINKAGE CXType clang_Type_getModifiedType(CXType T);
 CINDEX_LINKAGE long long clang_Cursor_getOffsetOfField(CXCursor C);
 
 /**
+ * Determine whether the given cursor represents an anonymous
+ * tag or namespace
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isAnonymous(CXCursor C);
+
+/**
  * Determine whether the given cursor represents an anonymous record
  * declaration.
  */
-CINDEX_LINKAGE unsigned clang_Cursor_isAnonymous(CXCursor C);
+CINDEX_LINKAGE unsigned clang_Cursor_isAnonymousRecordDecl(CXCursor C);
 
 enum CXRefQualifierKind {
   /** No ref-qualifier was provided. */

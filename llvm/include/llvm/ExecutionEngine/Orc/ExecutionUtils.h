@@ -217,28 +217,29 @@ public:
 
   /// Create a DynamicLibrarySearchGenerator that searches for symbols in the
   /// given sys::DynamicLibrary.
+  ///
   /// If the Allow predicate is given then only symbols matching the predicate
-  /// will be searched for in the DynamicLibrary. If the predicate is not given
-  /// then all symbols will be searched for.
-  DynamicLibrarySearchGenerator(sys::DynamicLibrary Dylib, const DataLayout &DL,
+  /// will be searched for. If the predicate is not given then all symbols will
+  /// be searched for.
+  DynamicLibrarySearchGenerator(sys::DynamicLibrary Dylib, char GlobalPrefix,
                                 SymbolPredicate Allow = SymbolPredicate());
 
   /// Permanently loads the library at the given path and, on success, returns
   /// a DynamicLibrarySearchGenerator that will search it for symbol definitions
   /// in the library. On failure returns the reason the library failed to load.
   static Expected<DynamicLibrarySearchGenerator>
-  Load(const char *FileName, const DataLayout &DL,
+  Load(const char *FileName, char GlobalPrefix,
        SymbolPredicate Allow = SymbolPredicate());
 
   /// Creates a DynamicLibrarySearchGenerator that searches for symbols in
   /// the current process.
   static Expected<DynamicLibrarySearchGenerator>
-  GetForCurrentProcess(const DataLayout &DL,
+  GetForCurrentProcess(char GlobalPrefix,
                        SymbolPredicate Allow = SymbolPredicate()) {
-    return Load(nullptr, DL, std::move(Allow));
+    return Load(nullptr, GlobalPrefix, std::move(Allow));
   }
 
-  SymbolNameSet operator()(JITDylib &JD, const SymbolNameSet &Names);
+  Expected<SymbolNameSet> operator()(JITDylib &JD, const SymbolNameSet &Names);
 
 private:
   sys::DynamicLibrary Dylib;

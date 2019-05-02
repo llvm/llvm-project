@@ -1,7 +1,7 @@
 ; runtime library implementations should be added to llvm.compiler.used
 ; RUN: llvm-as <%s >%t1
 ; RUN: llvm-lto -o %t2 %t1
-; RUN: llvm-nm -no-sort %t2 | FileCheck %s -check-prefix=KEEP -check-prefix=LOSE
+; RUN: llvm-nm --no-sort %t2 | FileCheck %s -check-prefix=KEEP -check-prefix=LOSE
 
 target triple = "x86_64-apple-darwin9"
 

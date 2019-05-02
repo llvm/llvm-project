@@ -49,7 +49,10 @@ add_clang_unittest(ToolingTests
   RefactoringTest.cpp
   ReplacementsYamlTest.cpp
   RewriterTest.cpp
+  SourceCodeTest.cpp
+  StencilTest.cpp
   ToolingTest.cpp
+  TransformerTest.cpp
   )
 
 target_link_libraries(ToolingTests

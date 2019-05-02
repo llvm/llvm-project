@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t.o
-# RUN: llvm-readobj -demangle -r %t.o | FileCheck %s --check-prefix LLVM
-# RUN: llvm-readelf -demangle -r %t.o | FileCheck %s --check-prefix GNU
+# RUN: llvm-readobj --demangle -r %t.o | FileCheck %s --check-prefix LLVM
+# RUN: llvm-readelf --demangle -r %t.o | FileCheck %s --check-prefix GNU
 
 # GNU:      Relocation section '.rela.plt' at offset {{.*}} contains 5 entries:
 # GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
@@ -84,17 +84,25 @@ Sections:
         Symbol:          f3
         Type:            R_X86_64_JUMP_SLOT
 Symbols:
-  Global:
-    - Name:            f1
-    - Name:            f2
-    - Name:            g1
-    - Name:            _Z2f1v
-    - Name:            f3
+  - Name:            f1
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Binding:         STB_GLOBAL
+  - Name:            g1
+    Binding:         STB_GLOBAL
+  - Name:            _Z2f1v
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Binding:         STB_GLOBAL
 DynamicSymbols:  
-  Global:          
-    - Name:            f1
-    - Name:            f2
-    - Name:            g1
-    - Name:            _Z2f1v
-    - Name:            f3
+  - Name:            f1
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Binding:         STB_GLOBAL
+  - Name:            g1
+    Binding:         STB_GLOBAL
+  - Name:            _Z2f1v
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Binding:         STB_GLOBAL
 ...

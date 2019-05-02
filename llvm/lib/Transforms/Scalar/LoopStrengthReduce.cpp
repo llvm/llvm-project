@@ -164,9 +164,9 @@ static cl::opt<unsigned> ComplexityLimit(
   cl::init(std::numeric_limits<uint16_t>::max()),
   cl::desc("LSR search space complexity limit"));
 
-static cl::opt<bool> EnableRecursiveSetupCost(
-  "lsr-recursive-setupcost", cl::Hidden, cl::init(true),
-  cl::desc("Enable more thorough lsr setup cost calculation"));
+static cl::opt<unsigned> SetupCostDepthLimit(
+    "lsr-setupcost-depth-limit", cl::Hidden, cl::init(7),
+    cl::desc("The limit on recursion depth for LSRs setup cost"));
 
 #ifndef NDEBUG
 // Stress test IV chain generation.
@@ -1212,22 +1212,23 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  bool HasBaseReg, int64_t Scale,
                                  Instruction *Fixup = nullptr);
 
-static unsigned getSetupCost(const SCEV *Reg) {
+static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
   if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
     return 1;
-  if (!EnableRecursiveSetupCost)
+  if (Depth == 0)
     return 0;
   if (const auto *S = dyn_cast<SCEVAddRecExpr>(Reg))
-    return getSetupCost(S->getStart());
+    return getSetupCost(S->getStart(), Depth - 1);
   if (auto S = dyn_cast<SCEVCastExpr>(Reg))
-    return getSetupCost(S->getOperand());
+    return getSetupCost(S->getOperand(), Depth - 1);
   if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
     return std::accumulate(S->op_begin(), S->op_end(), 0,
-                           [](unsigned i, const SCEV *Reg) {
-                             return i + getSetupCost(Reg);
+                           [&](unsigned i, const SCEV *Reg) {
+                             return i + getSetupCost(Reg, Depth - 1);
                            });
   if (auto S = dyn_cast<SCEVUDivExpr>(Reg))
-    return getSetupCost(S->getLHS()) + getSetupCost(S->getRHS());
+    return getSetupCost(S->getLHS(), Depth - 1) +
+           getSetupCost(S->getRHS(), Depth - 1);
   return 0;
 }
 
@@ -1293,7 +1294,9 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
   // Rough heuristic; favor registers which don't require extra setup
   // instructions in the preheader.
-  C.SetupCost += getSetupCost(Reg);
+  C.SetupCost += getSetupCost(Reg, SetupCostDepthLimit);
+  // Ensure we don't, even with the recusion limit, produce invalid costs.
+  C.SetupCost = std::min<unsigned>(C.SetupCost, 1 << 16);
 
   C.NumIVMuls += isa<SCEVMulExpr>(Reg) &&
                SE->hasComputableLoopEvolution(Reg, L);
@@ -1929,7 +1932,7 @@ class LSRInstance {
   SmallSetVector<Type *, 4> Types;
 
   /// The list of interesting uses.
-  SmallVector<LSRUse, 16> Uses;
+  mutable SmallVector<LSRUse, 16> Uses;
 
   /// Track which uses use which register candidates.
   RegUseTracker RegUses;
@@ -4133,11 +4136,17 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
 
       // Conservatively examine offsets between this orig reg a few selected
       // other orig regs.
+      int64_t First = Imms.begin()->first;
+      int64_t Last = std::prev(Imms.end())->first;
+      // Compute (First + Last)  / 2 without overflow using the fact that
+      // First + Last = 2 * (First + Last) + (First ^ Last).
+      int64_t Avg = (First & Last) + ((First ^ Last) >> 1);
+      // If the result is negative and First is odd and Last even (or vice versa),
+      // we rounded towards -inf. Add 1 in that case, to round towards 0.
+      Avg = Avg + ((First ^ Last) & ((uint64_t)Avg >> 63));
       ImmMapTy::const_iterator OtherImms[] = {
-        Imms.begin(), std::prev(Imms.end()),
-        Imms.lower_bound((Imms.begin()->first + std::prev(Imms.end())->first) /
-                         2)
-      };
+          Imms.begin(), std::prev(Imms.end()),
+         Imms.lower_bound(Avg)};
       for (size_t i = 0, e = array_lengthof(OtherImms); i != e; ++i) {
         ImmMapTy::const_iterator M = OtherImms[i];
         if (M == J || M == JE) continue;
@@ -5284,6 +5293,7 @@ void LSRInstance::RewriteForPHI(
   DenseMap<BasicBlock *, Value *> Inserted;
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
     if (PN->getIncomingValue(i) == LF.OperandValToReplace) {
+      bool needUpdateFixups = false;
       BasicBlock *BB = PN->getIncomingBlock(i);
 
       // If this is a critical edge, split the edge so that we do not insert
@@ -5322,6 +5332,8 @@ void LSRInstance::RewriteForPHI(
             e = PN->getNumIncomingValues();
             BB = NewBB;
             i = PN->getBasicBlockIndex(BB);
+
+            needUpdateFixups = true;
           }
         }
       }
@@ -5345,6 +5357,44 @@ void LSRInstance::RewriteForPHI(
 
         PN->setIncomingValue(i, FullV);
         Pair.first->second = FullV;
+      }
+
+      // If LSR splits critical edge and phi node has other pending
+      // fixup operands, we need to update those pending fixups. Otherwise
+      // formulae will not be implemented completely and some instructions
+      // will not be eliminated.
+      if (needUpdateFixups) {
+        for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
+          for (LSRFixup &Fixup : Uses[LUIdx].Fixups)
+            // If fixup is supposed to rewrite some operand in the phi
+            // that was just updated, it may be already moved to
+            // another phi node. Such fixup requires update.
+            if (Fixup.UserInst == PN) {
+              // Check if the operand we try to replace still exists in the
+              // original phi.
+              bool foundInOriginalPHI = false;
+              for (const auto &val : PN->incoming_values())
+                if (val == Fixup.OperandValToReplace) {
+                  foundInOriginalPHI = true;
+                  break;
+                }
+
+              // If fixup operand found in original PHI - nothing to do.
+              if (foundInOriginalPHI)
+                continue;
+
+              // Otherwise it might be moved to another PHI and requires update.
+              // If fixup operand not found in any of the incoming blocks that
+              // means we have already rewritten it - nothing to do.
+              for (const auto &Block : PN->blocks())
+                for (BasicBlock::iterator I = Block->begin(); isa<PHINode>(I);
+                     ++I) {
+                  PHINode *NewPN = cast<PHINode>(I);
+                  for (const auto &val : NewPN->incoming_values())
+                    if (val == Fixup.OperandValToReplace)
+                      Fixup.UserInst = NewPN;
+                }
+            }
       }
     }
 }

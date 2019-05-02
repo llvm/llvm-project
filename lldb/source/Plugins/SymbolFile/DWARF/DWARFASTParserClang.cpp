@@ -959,6 +959,14 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           }
         }
 
+        if (calling_convention == llvm::dwarf::DW_CC_pass_by_reference) {
+          clang::CXXRecordDecl *record_decl =
+              m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
+          if (record_decl)
+            record_decl->setArgPassingRestrictions(
+                clang::RecordDecl::APK_CannotPassInRegs);
+        }
+
       } break;
 
       case DW_TAG_enumeration_type: {
@@ -1590,6 +1598,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
           if (!type_handled) {
             clang::FunctionDecl *function_decl = nullptr;
+            clang::FunctionDecl *template_function_decl = nullptr;
 
             if (abstract_origin_die_form.IsValid()) {
               DWARFDIE abs_die =
@@ -1617,10 +1626,14 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               if (has_template_params) {
                 ClangASTContext::TemplateParameterInfos template_param_infos;
                 ParseTemplateParameterInfos(die, template_param_infos);
+                template_function_decl = m_ast.CreateFunctionDeclaration(
+                    ignore_containing_context ? m_ast.GetTranslationUnitDecl()
+                                              : containing_decl_ctx,
+                    type_name_cstr, clang_type, storage, is_inline);
                 clang::FunctionTemplateDecl *func_template_decl =
                     m_ast.CreateFunctionTemplateDecl(
-                        containing_decl_ctx, function_decl, type_name_cstr,
-                        template_param_infos);
+                        containing_decl_ctx, template_function_decl,
+                        type_name_cstr, template_param_infos);
                 m_ast.CreateFunctionTemplateSpecializationInfo(
                     function_decl, func_template_decl, template_param_infos);
               }
@@ -1630,10 +1643,15 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               if (function_decl) {
                 LinkDeclContextToDIE(function_decl, die);
 
-                if (!function_param_decls.empty())
+                if (!function_param_decls.empty()) {
                   m_ast.SetFunctionParameters(function_decl,
                                               &function_param_decls.front(),
                                               function_param_decls.size());
+                  if (template_function_decl)
+                    m_ast.SetFunctionParameters(template_function_decl,
+                                                &function_param_decls.front(),
+                                                function_param_decls.size());
+                }
 
                 ClangASTMetadata metadata;
                 metadata.SetUserID(die.GetID());
@@ -2115,7 +2133,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
     return false;
 
 #if defined LLDB_CONFIGURATION_DEBUG
-  //----------------------------------------------------------------------
   // For debugging purposes, the LLDB_DWARF_DONT_COMPLETE_TYPENAMES environment
   // variable can be set with one or more typenames separated by ';'
   // characters. This will cause this function to not complete any types whose
@@ -2125,7 +2142,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   //
   // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo
   // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo;Bar;Baz
-  //----------------------------------------------------------------------
   const char *dont_complete_typenames_cstr =
       getenv("LLDB_DWARF_DONT_COMPLETE_TYPENAMES");
   if (dont_complete_typenames_cstr && dont_complete_typenames_cstr[0]) {

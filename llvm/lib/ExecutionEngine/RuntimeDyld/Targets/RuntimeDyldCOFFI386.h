@@ -27,7 +27,7 @@ public:
                       JITSymbolResolver &Resolver)
       : RuntimeDyldCOFF(MM, Resolver) {}
 
-  unsigned getMaxStubSize() override {
+  unsigned getMaxStubSize() const override {
     return 8; // 2-byte jmp instruction + 32-bit relative address + 2 byte pad
   }
 

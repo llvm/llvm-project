@@ -1927,10 +1927,11 @@ getConverterOperandID(const std::string &Name,
   return ID;
 }
 
-static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
-                             std::vector<std::unique_ptr<MatchableInfo>> &Infos,
-                             bool HasMnemonicFirst, bool HasOptionalOperands,
-                             raw_ostream &OS) {
+static unsigned
+emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
+                 std::vector<std::unique_ptr<MatchableInfo>> &Infos,
+                 bool HasMnemonicFirst, bool HasOptionalOperands,
+                 raw_ostream &OS) {
   SmallSetVector<CachedHashString, 16> OperandConversionKinds;
   SmallSetVector<CachedHashString, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t> > ConversionTable;
@@ -2336,6 +2337,8 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
   // Spit out the operand number lookup function.
   OS << OpOS.str();
+
+  return ConversionTable.size();
 }
 
 /// emitMatchClassEnumeration - Emit the enumeration for match class kinds.
@@ -3128,10 +3131,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Sort the instruction table using the partial order on classes. We use
   // stable_sort to ensure that ambiguous instructions are still
   // deterministically ordered.
-  std::stable_sort(Info.Matchables.begin(), Info.Matchables.end(),
-                   [](const std::unique_ptr<MatchableInfo> &a,
-                      const std::unique_ptr<MatchableInfo> &b){
-                     return *a < *b;});
+  llvm::stable_sort(
+      Info.Matchables,
+      [](const std::unique_ptr<MatchableInfo> &a,
+         const std::unique_ptr<MatchableInfo> &b) { return *a < *b; });
 
 #ifdef EXPENSIVE_CHECKS
   // Verify that the table is sorted and operator < works transitively.
@@ -3274,8 +3277,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Generate the convertToMCInst function to convert operands into an MCInst.
   // Also, generate the convertToMapAndConstraints function for MS-style inline
   // assembly.  The latter doesn't actually generate a MCInst.
-  emitConvertFuncs(Target, ClassName, Info.Matchables, HasMnemonicFirst,
-                   HasOptionalOperands, OS);
+  unsigned NumConverters = emitConvertFuncs(Target, ClassName, Info.Matchables,
+                                            HasMnemonicFirst,
+                                            HasOptionalOperands, OS);
 
   // Emit the enumeration for classes which participate in matching.
   emitMatchClassEnumeration(Target, Info.Classes, OS);
@@ -3390,7 +3394,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    " << getMinimalTypeForRange(MaxMnemonicIndex)
                << " Mnemonic;\n";
   OS << "    uint16_t Opcode;\n";
-  OS << "    " << getMinimalTypeForRange(Info.Matchables.size())
+  OS << "    " << getMinimalTypeForRange(NumConverters)
                << " ConvertFn;\n";
   OS << "    " << getMinimalTypeForRange(FeatureBitsets.size())
                << " RequiredFeaturesIdx;\n";

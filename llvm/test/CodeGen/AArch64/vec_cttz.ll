@@ -54,7 +54,7 @@ define <2 x i32> @cttz_v2i32(<2 x i32> %a) nounwind {
 define <1 x i64> @cttz_v1i64(<1 x i64> %a) nounwind {
 ; CHECK-LABEL: cttz_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, wzr, #0x1
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    sub d1, d0, d1
 ; CHECK-NEXT:    bic v0.8b, v1.8b, v0.8b
@@ -110,7 +110,7 @@ define <4 x i32> @cttz_v4i32(<4 x i32> %a) nounwind {
 define <2 x i64> @cttz_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: cttz_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, wzr, #0x1
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    sub v1.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b

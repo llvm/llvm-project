@@ -49,9 +49,7 @@ public:
            MainLoop &mainloop) const override;
   };
 
-  // ---------------------------------------------------------------------
   // NativeProcessProtocol Interface
-  // ---------------------------------------------------------------------
   Status Resume(const ResumeActionList &resume_actions) override;
 
   Status Halt() override;
@@ -120,9 +118,7 @@ public:
 
   Status GetTraceConfig(lldb::user_id_t traceid, TraceOptions &config) override;
 
-  // ---------------------------------------------------------------------
   // Interface used by NativeRegisterContext-derived classes.
-  // ---------------------------------------------------------------------
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               void *data = nullptr, size_t data_size = 0,
                               long *result = nullptr);
@@ -146,9 +142,7 @@ private:
   // the relevan breakpoint
   std::map<lldb::tid_t, lldb::addr_t> m_threads_stepping_with_breakpoint;
 
-  // ---------------------------------------------------------------------
   // Private Instance Methods
-  // ---------------------------------------------------------------------
   NativeProcessLinux(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
                      const ArchSpec &arch, MainLoop &mainloop,
                      llvm::ArrayRef<::pid_t> tids);

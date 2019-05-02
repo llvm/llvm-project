@@ -47,7 +47,10 @@ function(get_xray_lib_for_arch arch lib)
 endfunction()
 
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
-set(XRAY_UNITTEST_LINK_FLAGS ${CMAKE_THREAD_LIBS_INIT})
+set(XRAY_UNITTEST_LINK_FLAGS
+  ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${CMAKE_THREAD_LIBS_INIT}
+  )
 
 if (NOT APPLE)
   # Needed by LLVMSupport.

@@ -25,9 +25,7 @@ using namespace lldb_private;
 #pragma mark -
 #pragma mark Event
 
-//------------------------------------------------------------------
 // Event functions
-//------------------------------------------------------------------
 
 Event::Event(Broadcaster *broadcaster, uint32_t event_type, EventData *data)
     : m_broadcaster_wp(broadcaster->GetBroadcasterImpl()), m_type(event_type),
@@ -87,9 +85,7 @@ void Event::DoOnRemoval() {
 #pragma mark -
 #pragma mark EventData
 
-//------------------------------------------------------------------
 // EventData functions
-//------------------------------------------------------------------
 
 EventData::EventData() = default;
 
@@ -100,9 +96,7 @@ void EventData::Dump(Stream *s) const { s->PutCString("Generic Event Data"); }
 #pragma mark -
 #pragma mark EventDataBytes
 
-//------------------------------------------------------------------
 // EventDataBytes functions
-//------------------------------------------------------------------
 
 EventDataBytes::EventDataBytes() : m_bytes() {}
 
@@ -193,9 +187,7 @@ void EventDataBytes::SwapBytes(std::string &new_bytes) {
 #pragma mark -
 #pragma mark EventStructuredData
 
-//------------------------------------------------------------------
 // EventDataStructuredData definitions
-//------------------------------------------------------------------
 
 EventDataStructuredData::EventDataStructuredData()
     : EventData(), m_process_sp(), m_object_sp(), m_plugin_sp() {}
@@ -208,9 +200,7 @@ EventDataStructuredData::EventDataStructuredData(
 
 EventDataStructuredData::~EventDataStructuredData() {}
 
-//------------------------------------------------------------------
 // EventDataStructuredData member functions
-//------------------------------------------------------------------
 
 ConstString EventDataStructuredData::GetFlavor() const {
   return EventDataStructuredData::GetFlavorString();
@@ -251,9 +241,7 @@ void EventDataStructuredData::SetStructuredDataPlugin(
   m_plugin_sp = plugin_sp;
 }
 
-//------------------------------------------------------------------
 // EventDataStructuredData static functions
-//------------------------------------------------------------------
 
 const EventDataStructuredData *
 EventDataStructuredData::GetEventDataFromEvent(const Event *event_ptr) {

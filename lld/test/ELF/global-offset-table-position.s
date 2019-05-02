@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 // RUN: ld.lld --hash-style=sysv -shared %t -o %t2
-// RUN: llvm-readobj -t %t2 | FileCheck %s
+// RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
 // The X86_64 _GLOBAL_OFFSET_TABLE_ is defined at the start of the .got.plt
 // section.

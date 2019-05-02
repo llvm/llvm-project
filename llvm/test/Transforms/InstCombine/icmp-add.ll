@@ -407,7 +407,7 @@ define i1 @sum_ugt_op_uses(i8 %p1, i8 %p2, i8* %p3) {
 ; CHECK-LABEL: @sum_ugt_op_uses(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[P1:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[P2:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X]], [[Y]]
 ; CHECK-NEXT:    store i8 [[A]], i8* [[P3:%.*]], align 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], [[A]]
 ; CHECK-NEXT:    ret i1 [[C]]

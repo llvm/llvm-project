@@ -23,7 +23,6 @@ class raw_ostream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class ConstString ConstString.h "lldb/Utility/ConstString.h"
 /// A uniqued constant string class.
 ///
@@ -36,29 +35,23 @@ namespace lldb_private {
 /// No reference counting is done on strings that are added to the string
 /// pool, once strings are added they are in the string pool for the life of
 /// the program.
-//----------------------------------------------------------------------
 class ConstString {
 public:
-  //------------------------------------------------------------------
   /// Default constructor
   ///
   /// Initializes the string to an empty string.
-  //------------------------------------------------------------------
   ConstString() : m_string(nullptr) {}
 
-  //------------------------------------------------------------------
   /// Copy constructor
   ///
   /// Copies the string value in \a rhs into this object.
   ///
   /// \param[in] rhs
   ///     Another string object to copy.
-  //------------------------------------------------------------------
   ConstString(const ConstString &rhs) : m_string(rhs.m_string) {}
 
   explicit ConstString(const llvm::StringRef &s);
 
-  //------------------------------------------------------------------
   /// Construct with C String value
   ///
   /// Constructs this object with a C string by looking to see if the
@@ -67,10 +60,8 @@ public:
   ///
   /// \param[in] cstr
   ///     A NULL terminated C string to add to the string pool.
-  //------------------------------------------------------------------
   explicit ConstString(const char *cstr);
 
-  //------------------------------------------------------------------
   /// Construct with C String value with max length
   ///
   /// Constructs this object with a C string with a length. If \a max_cstr_len
@@ -91,23 +82,17 @@ public:
   ///     truncated. If the string length of \a cstr is greater than
   ///     \a max_cstr_len, then only max_cstr_len bytes will be used
   ///     from \a cstr.
-  //------------------------------------------------------------------
   explicit ConstString(const char *cstr, size_t max_cstr_len);
 
-  //------------------------------------------------------------------
   /// Destructor
   ///
   /// Since constant string values are currently not reference counted, there
   /// isn't much to do here.
-  //------------------------------------------------------------------
   ~ConstString() = default;
 
-  //----------------------------------------------------------------------
   /// C string equality binary predicate function object for ConstString
   /// objects.
-  //----------------------------------------------------------------------
   struct StringIsEqual {
-    //--------------------------------------------------------------
     /// C equality test.
     ///
     /// Two C strings are equal when they are contained in ConstString objects
@@ -116,13 +101,11 @@ public:
     /// \return
     ///     Returns \b true if the C string in \a lhs is equal to
     ///     the C string value in \a rhs, \b false otherwise.
-    //--------------------------------------------------------------
     bool operator()(const char *lhs, const char *rhs) const {
       return lhs == rhs;
     }
   };
 
-  //------------------------------------------------------------------
   /// Convert to bool operator.
   ///
   /// This allows code to check a ConstString object to see if it contains a
@@ -137,10 +120,8 @@ public:
   /// \return
   ///     /b True this object contains a valid non-empty C string, \b
   ///     false otherwise.
-  //------------------------------------------------------------------
   explicit operator bool() const { return !IsEmpty(); }
 
-  //------------------------------------------------------------------
   /// Assignment operator
   ///
   /// Assigns the string in this object with the value from \a rhs.
@@ -150,13 +131,11 @@ public:
   ///
   /// \return
   ///     A const reference to this object.
-  //------------------------------------------------------------------
   ConstString operator=(ConstString rhs) {
     m_string = rhs.m_string;
     return *this;
   }
 
-  //------------------------------------------------------------------
   /// Equal to operator
   ///
   /// Returns true if this string is equal to the string in \a rhs. This
@@ -169,14 +148,36 @@ public:
   /// \return
   ///     \li \b true if this object is equal to \a rhs.
   ///     \li \b false if this object is not equal to \a rhs.
-  //------------------------------------------------------------------
   bool operator==(ConstString rhs) const {
     // We can do a pointer compare to compare these strings since they must
     // come from the same pool in order to be equal.
     return m_string == rhs.m_string;
   }
 
-  //------------------------------------------------------------------
+  /// Equal to operator against a non-ConstString value.
+  ///
+  /// Returns true if this string is equal to the string in \a rhs. This
+  /// overload is usually slower than comparing against a ConstString value.
+  /// However, if the rhs string not already a ConstString and it is impractical
+  /// to turn it into a non-temporary variable, then this overload is faster.
+  ///
+  /// \param[in] rhs
+  ///     Another string object to compare this object to.
+  ///
+  /// \return
+  ///     \li \b true if this object is equal to \a rhs.
+  ///     \li \b false if this object is not equal to \a rhs.
+  bool operator==(const char *rhs) const {
+    // ConstString differentiates between empty strings and nullptr strings, but
+    // StringRef doesn't. Therefore we have to do this check manually now.
+    if (m_string == nullptr && rhs != nullptr)
+      return false;
+    if (m_string != nullptr && rhs == nullptr)
+      return false;
+
+    return GetStringRef() == rhs;
+  }
+
   /// Not equal to operator
   ///
   /// Returns true if this string is not equal to the string in \a rhs. This
@@ -189,14 +190,27 @@ public:
   /// \return
   ///     \li \b true if this object is not equal to \a rhs.
   ///     \li \b false if this object is equal to \a rhs.
-  //------------------------------------------------------------------
   bool operator!=(ConstString rhs) const {
     return m_string != rhs.m_string;
   }
 
+  /// Not equal to operator against a non-ConstString value.
+  ///
+  /// Returns true if this string is not equal to the string in \a rhs. This
+  /// overload is usually slower than comparing against a ConstString value.
+  /// However, if the rhs string not already a ConstString and it is impractical
+  /// to turn it into a non-temporary variable, then this overload is faster.
+  ///
+  /// \param[in] rhs
+  ///     Another string object to compare this object to.
+  ///
+  /// \return
+  ///     \li \b true if this object is not equal to \a rhs.
+  ///     \li \b false if this object is equal to \a rhs.
+  bool operator!=(const char *rhs) const { return !(*this == rhs); }
+
   bool operator<(ConstString rhs) const;
 
-  //------------------------------------------------------------------
   /// Get the string value as a C string.
   ///
   /// Get the value of the contained string as a NULL terminated C string
@@ -207,23 +221,19 @@ public:
   /// \return
   ///     Returns \a value_if_empty if the string is empty, otherwise
   ///     the C string value contained in this object.
-  //------------------------------------------------------------------
   const char *AsCString(const char *value_if_empty = nullptr) const {
     return (IsEmpty() ? value_if_empty : m_string);
   }
 
-  //------------------------------------------------------------------
   /// Get the string value as a llvm::StringRef
   ///
   /// \return
   ///     Returns a new llvm::StringRef object filled in with the
   ///     needed data.
-  //------------------------------------------------------------------
   llvm::StringRef GetStringRef() const {
     return llvm::StringRef(m_string, GetLength());
   }
 
-  //------------------------------------------------------------------
   /// Get the string value as a C string.
   ///
   /// Get the value of the contained string as a NULL terminated C string
@@ -234,10 +244,8 @@ public:
   /// \return
   ///     Returns nullptr the string is invalid, otherwise the C string
   ///     value contained in this object.
-  //------------------------------------------------------------------
   const char *GetCString() const { return m_string; }
 
-  //------------------------------------------------------------------
   /// Get the length in bytes of string value.
   ///
   /// The string pool stores the length of the string, so we can avoid calling
@@ -246,18 +254,14 @@ public:
   /// \return
   ///     Returns the number of bytes that this string occupies in
   ///     memory, not including the NULL termination byte.
-  //------------------------------------------------------------------
   size_t GetLength() const;
 
-  //------------------------------------------------------------------
   /// Clear this object's state.
   ///
   /// Clear any contained string and reset the value to the empty string
   /// value.
-  //------------------------------------------------------------------
   void Clear() { m_string = nullptr; }
 
-  //------------------------------------------------------------------
   /// Equal to operator
   ///
   /// Returns true if this string is equal to the string in \a rhs. If case
@@ -278,11 +282,9 @@ public:
   /// \return
   ///     \li \b true if this object is equal to \a rhs.
   ///     \li \b false if this object is not equal to \a rhs.
-  //------------------------------------------------------------------
   static bool Equals(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
 
-  //------------------------------------------------------------------
   /// Compare two string objects.
   ///
   /// Compares the C string values contained in \a lhs and \a rhs and returns
@@ -307,11 +309,9 @@ public:
   ///     \li -1 if lhs < rhs
   ///     \li 0 if lhs == rhs
   ///     \li 1 if lhs > rhs
-  //------------------------------------------------------------------
   static int Compare(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
 
-  //------------------------------------------------------------------
   /// Dump the object description to a stream.
   ///
   /// Dump the string value to the stream \a s. If the contained string is
@@ -324,36 +324,28 @@ public:
   /// \param[in] value_if_empty
   ///     The value to dump if the string is empty. If nullptr, nothing
   ///     will be output to the stream.
-  //------------------------------------------------------------------
   void Dump(Stream *s, const char *value_if_empty = nullptr) const;
 
-  //------------------------------------------------------------------
   /// Dump the object debug description to a stream.
   ///
   /// \param[in] s
   ///     The stream that will be used to dump the object description.
-  //------------------------------------------------------------------
   void DumpDebug(Stream *s) const;
 
-  //------------------------------------------------------------------
   /// Test for empty string.
   ///
   /// \return
   ///     \li \b true if the contained string is empty.
   ///     \li \b false if the contained string is not empty.
-  //------------------------------------------------------------------
   bool IsEmpty() const { return m_string == nullptr || m_string[0] == '\0'; }
 
-  //------------------------------------------------------------------
   /// Test for null string.
   ///
   /// \return
   ///     \li \b true if there is no string associated with this instance.
   ///     \li \b false if there is a string associated with this instance.
-  //------------------------------------------------------------------
   bool IsNull() const { return m_string == nullptr; }
 
-  //------------------------------------------------------------------
   /// Set the C string value.
   ///
   /// Set the string value in the object by uniquing the \a cstr string value
@@ -365,12 +357,10 @@ public:
   ///
   /// \param[in] cstr
   ///     A NULL terminated C string to add to the string pool.
-  //------------------------------------------------------------------
   void SetCString(const char *cstr);
 
   void SetString(const llvm::StringRef &s);
 
-  //------------------------------------------------------------------
   /// Set the C string value and its mangled counterpart.
   ///
   /// Object files and debug symbols often use mangled string to represent the
@@ -386,11 +376,9 @@ public:
   /// \param[in] mangled
   ///     The already uniqued mangled ConstString to correlate the
   ///     soon to be uniqued version of \a demangled.
-  //------------------------------------------------------------------
   void SetStringWithMangledCounterpart(llvm::StringRef demangled,
                                        ConstString mangled);
 
-  //------------------------------------------------------------------
   /// Retrieve the mangled or demangled counterpart for a mangled or demangled
   /// ConstString.
   ///
@@ -408,10 +396,8 @@ public:
   /// \return
   ///     /b True if \a counterpart was filled in with the counterpart
   ///     /b false otherwise.
-  //------------------------------------------------------------------
   bool GetMangledCounterpart(ConstString &counterpart) const;
 
-  //------------------------------------------------------------------
   /// Set the C string value with length.
   ///
   /// Set the string value in the object by uniquing \a cstr_len bytes
@@ -428,18 +414,14 @@ public:
   ///
   /// \param[in] cstr_len
   ///     The maximum length of the C string.
-  //------------------------------------------------------------------
   void SetCStringWithLength(const char *cstr, size_t cstr_len);
 
-  //------------------------------------------------------------------
   /// Set the C string value with the minimum length between \a fixed_cstr_len
   /// and the actual length of the C string. This can be used for data
   /// structures that have a fixed length to store a C string where the string
   /// might not be NULL terminated if the string takes the entire buffer.
-  //------------------------------------------------------------------
   void SetTrimmedCStringWithLength(const char *cstr, size_t fixed_cstr_len);
 
-  //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
   /// Return the size in bytes that this object takes in memory. This returns
@@ -450,10 +432,8 @@ public:
   ///     The number of bytes that this object occupies in memory.
   ///
   /// \see ConstString::StaticMemorySize ()
-  //------------------------------------------------------------------
   size_t MemorySize() const { return sizeof(ConstString); }
 
-  //------------------------------------------------------------------
   /// Get the size in bytes of the current global string pool.
   ///
   /// Reports the size in bytes of all shared C string values, containers and
@@ -462,19 +442,14 @@ public:
   /// \return
   ///     The number of bytes that the global string pool occupies
   ///     in memory.
-  //------------------------------------------------------------------
   static size_t StaticMemorySize();
 
 protected:
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   const char *m_string;
 };
 
-//------------------------------------------------------------------
 /// Stream the string value \a str to the stream \a s
-//------------------------------------------------------------------
 Stream &operator<<(Stream &s, ConstString str);
 
 } // namespace lldb_private

@@ -62,7 +62,9 @@ class SchedulerStatistics final : public View {
     uint64_t CumulativeNumUsedSlots;
   };
 
-  std::vector<unsigned> IssuedPerCycle;
+  using Histogram = std::map<unsigned, unsigned>;
+  Histogram IssueWidthPerCycle;
+
   std::vector<BufferUsage> Usage;
 
   void updateHistograms();

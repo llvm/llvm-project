@@ -516,6 +516,316 @@ recovered, then an undef dbg.value is necessary to terminate earlier variable
 locations. Additional undef dbg.values may be necessary when the debugger can
 observe re-ordering of assignments.
 
+How variable location metadata is transformed during CodeGen
+============================================================
+
+LLVM preserves debug information throughout mid-level and backend passes,
+ultimately producing a mapping between source-level information and
+instruction ranges. This
+is relatively straightforwards for line number information, as mapping
+instructions to line numbers is a simple association. For variable locations
+however the story is more complex. As each ``llvm.dbg.value`` intrinsic
+represents a source-level assignment of a value to a source variable, the
+variable location intrinsics effectively embed a small imperative program
+within the LLVM IR. By the end of CodeGen, this becomes a mapping from each
+variable to their machine locations over ranges of instructions.
+From IR to object emission, the major transformations which affect variable
+location fidelity are:
+1. Instruction Selection
+2. Register allocation
+3. Block layout
+
+each of which are discussed below. In addition, instruction scheduling can
+significantly change the ordering of the program, and occurs in a number of
+different passes.
+
+Variable locations in Instruction Selection and MIR
+---------------------------------------------------
+
+Instruction selection creates a MIR function from an IR function, and just as
+it transforms ``intermediate`` instructions into machine instructions, so must
+``intermediate`` variable locations become machine variable locations.
+Within IR, variable locations are always identified by a Value, but in MIR
+there can be different types of variable locations. In addition, some IR
+locations become unavailable, for example if the operation of multiple IR
+instructions are combined into one machine instruction (such as
+multiply-and-accumulate) then intermediate Values are lost. To track variable
+locations through instruction selection, they are first separated into
+locations that do not depend on code generation (constants, stack locations,
+allocated virtual registers) and those that do. For those that do, debug
+metadata is attached to SDNodes in SelectionDAGs. After instruction selection
+has occurred and a MIR function is created, if the SDNode associated with debug
+metadata is allocated a virtual register, that virtual register is used as the
+variable location. If the SDNode is folded into a machine instruction or
+otherwise transformed into a non-register, the variable location becomes
+unavailable.
+
+Locations that are unavailable are treated as if they have been optimized out:
+in IR the location would be assigned ``undef`` by a debug intrinsic, and in MIR
+the equivalent location is used.
+
+After MIR locations are assigned to each variable, machine pseudo-instructions
+corresponding to each ``llvm.dbg.value`` and ``llvm.dbg.addr`` intrinsic are
+inserted. These ``DBG_VALUE`` instructions appear thus:
+
+.. code-block:: text
+
+  DBG_VALUE %1, $noreg, !123, !DIExpression()
+
+And have the following operands:
+ * The first operand can record the variable location as a register, an
+   immediate, or the base address register if the original debug intrinsic
+   referred to memory. ``$noreg`` indicates the variable location is undefined,
+   equivalent to an ``undef`` dbg.value operand.
+ * The type of the second operand indicates whether the variable location is
+   directly referred to by the DBG_VALUE, or whether it is indirect. The
+   ``$noreg`` register signifies the former, an immediate operand (0) the
+   latter.
+ * Operand 3 is the Variable field of the original debug intrinsic.
+ * Operand 4 is the Expression field of the original debug intrinsic.
+
+The position at which the DBG_VALUEs are inserted should correspond to the
+positions of their matching ``llvm.dbg.value`` intrinsics in the IR block.  As
+with optimization, LLVM aims to preserve the order in which variable
+assignments occurred in the source program. However SelectionDAG performs some
+instruction scheduling, which can reorder assignments (discussed below).
+Function parameter locations are moved to the beginning of the function if
+they're not already, to ensure they're immediately available on function entry.
+
+To demonstrate variable locations during instruction selection, consider
+the following example:
+
+.. code-block:: llvm
+
+  define i32 @foo(i32* %addr) {
+  entry:
+    call void @llvm.dbg.value(metadata i32 0, metadata !3, metadata !DIExpression()), !dbg !5
+    br label %bb1, !dbg !5
+
+  bb1:                                              ; preds = %bb1, %entry
+    %bar.0 = phi i32 [ 0, %entry ], [ %add, %bb1 ]
+    call void @llvm.dbg.value(metadata i32 %bar.0, metadata !3, metadata !DIExpression()), !dbg !5
+    %addr1 = getelementptr i32, i32 *%addr, i32 1, !dbg !5
+    call void @llvm.dbg.value(metadata i32 *%addr1, metadata !3, metadata !DIExpression()), !dbg !5
+    %loaded1 = load i32, i32* %addr1, !dbg !5
+    %addr2 = getelementptr i32, i32 *%addr, i32 %bar.0, !dbg !5
+    call void @llvm.dbg.value(metadata i32 *%addr2, metadata !3, metadata !DIExpression()), !dbg !5
+    %loaded2 = load i32, i32* %addr2, !dbg !5
+    %add = add i32 %bar.0, 1, !dbg !5
+    call void @llvm.dbg.value(metadata i32 %add, metadata !3, metadata !DIExpression()), !dbg !5
+    %added = add i32 %loaded1, %loaded2
+    %cond = icmp ult i32 %added, %bar.0, !dbg !5
+    br i1 %cond, label %bb1, label %bb2, !dbg !5
+
+  bb2:                                              ; preds = %bb1
+    ret i32 0, !dbg !5
+  }
+
+If one compiles this IR with ``llc -o - -start-after=codegen-prepare -stop-after=expand-isel-pseudos -mtriple=x86_64--``, the following MIR is produced:
+
+.. code-block:: text
+
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $rdi
+
+    %2:gr64 = COPY $rdi
+    %3:gr32 = MOV32r0 implicit-def dead $eflags
+    DBG_VALUE 0, $noreg, !3, !DIExpression(), debug-location !5
+
+  bb.1.bb1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %0:gr32 = PHI %3, %bb.0, %1, %bb.1
+    DBG_VALUE %0, $noreg, !3, !DIExpression(), debug-location !5
+    DBG_VALUE %2, $noreg, !3, !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value), debug-location !5
+    %4:gr32 = MOV32rm %2, 1, $noreg, 4, $noreg, debug-location !5 :: (load 4 from %ir.addr1)
+    %5:gr64_nosp = MOVSX64rr32 %0, debug-location !5
+    DBG_VALUE $noreg, $noreg, !3, !DIExpression(), debug-location !5
+    %1:gr32 = INC32r %0, implicit-def dead $eflags, debug-location !5
+    DBG_VALUE %1, $noreg, !3, !DIExpression(), debug-location !5
+    %6:gr32 = ADD32rm %4, %2, 4, killed %5, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.addr2)
+    %7:gr32 = SUB32rr %6, %0, implicit-def $eflags, debug-location !5
+    JB_1 %bb.1, implicit $eflags, debug-location !5
+    JMP_1 %bb.2, debug-location !5
+
+  bb.2.bb2:
+    %8:gr32 = MOV32r0 implicit-def dead $eflags
+    $eax = COPY %8, debug-location !5
+    RET 0, $eax, debug-location !5
+
+Observe first that there is a DBG_VALUE instruction for every ``llvm.dbg.value``
+intrinsic in the source IR, ensuring no source level assignments go missing.
+Then consider the different ways in which variable locations have been recorded:
+
+* For the first dbg.value an immediate operand is used to record a zero value.
+* The dbg.value of the PHI instruction leads to a DBG_VALUE of virtual register
+  ``%0``.
+* The first GEP has its effect folded into the first load instruction
+  (as a 4-byte offset), but the variable location is salvaged by folding
+  the GEPs effect into the DIExpression.
+* The second GEP is also folded into the corresponding load. However, it is
+  insufficiently simple to be salvaged, and is emitted as a ``$noreg``
+  DBG_VALUE, indicating that the variable takes on an undefined location.
+* The final dbg.value has its Value placed in virtual register ``%1``.
+
+Instruction Scheduling
+----------------------
+
+A number of passes can reschedule instructions, notably instruction selection
+and the pre-and-post RA machine schedulers. Instruction scheduling can
+significantly change the nature of the program -- in the (very unlikely) worst
+case the instruction sequence could be completely reversed. In such
+circumstances LLVM follows the principle applied to optimizations, that it is
+better for the debugger not to display any state than a misleading state.
+Thus, whenever instructions are advanced in order of execution, any
+corresponding DBG_VALUE is kept in its original position, and if an instruction
+is delayed then the variable is given an undefined location for the duration
+of the delay. To illustrate, consider this pseudo-MIR:
+
+.. code-block:: text
+
+  %1:gr32 = MOV32rm %0, 1, $noreg, 4, $noreg, debug-location !5 :: (load 4 from %ir.addr1)
+  DBG_VALUE %1, $noreg, !1, !2
+  %4:gr32 = ADD32rr %3, %2, implicit-def dead $eflags
+  DBG_VALUE %4, $noreg, !3, !4
+  %7:gr32 = SUB32rr %6, %5, implicit-def dead $eflags
+  DBG_VALUE %7, $noreg, !5, !6
+
+Imagine that the SUB32rr were moved forward to give us the following MIR:
+
+.. code-block:: text
+
+  %7:gr32 = SUB32rr %6, %5, implicit-def dead $eflags
+  %1:gr32 = MOV32rm %0, 1, $noreg, 4, $noreg, debug-location !5 :: (load 4 from %ir.addr1)
+  DBG_VALUE %1, $noreg, !1, !2
+  %4:gr32 = ADD32rr %3, %2, implicit-def dead $eflags
+  DBG_VALUE %4, $noreg, !3, !4
+  DBG_VALUE %7, $noreg, !5, !6
+
+In this circumstance LLVM would leave the MIR as shown above. Were we to move
+the DBG_VALUE of virtual register %7 upwards with the SUB32rr, we would re-order
+assignments and introduce a new state of the program. Wheras with the solution
+above, the debugger will see one fewer combination of variable values, because
+``!3`` and ``!5`` will change value at the same time. This is preferred over
+misrepresenting the original program.
+
+In comparison, if one sunk the MOV32rm, LLVM would produce the following:
+
+.. code-block:: text
+
+  DBG_VALUE $noreg, $noreg, !1, !2
+  %4:gr32 = ADD32rr %3, %2, implicit-def dead $eflags
+  DBG_VALUE %4, $noreg, !3, !4
+  %7:gr32 = SUB32rr %6, %5, implicit-def dead $eflags
+  DBG_VALUE %7, $noreg, !5, !6
+  %1:gr32 = MOV32rm %0, 1, $noreg, 4, $noreg, debug-location !5 :: (load 4 from %ir.addr1)
+  DBG_VALUE %1, $noreg, !1, !2
+
+Here, to avoid presenting a state in which the first assignment to ``!1``
+disappears, the DBG_VALUE at the top of the block assigns the variable the
+undefined location, until its value is available at the end of the block where
+an additional DBG_VALUE is added. Were any other DBG_VALUE for ``!1`` to occur
+in the instructions that the MOV32rm was sunk past, the DBG_VALUE for ``%1``
+would be dropped and the debugger would never observe it in the variable. This
+accurately reflects that the value is not available during the corresponding
+portion of the original program.
+
+Variable locations during Register Allocation
+---------------------------------------------
+
+To avoid debug instructions interfering with the register allocator, the
+LiveDebugVariables pass extracts variable locations from a MIR function and
+deletes the corresponding DBG_VALUE instructions. Some localized copy
+propagation is performed within blocks. After register allocation, the
+VirtRegRewriter pass re-inserts DBG_VALUE instructions in their orignal
+positions, translating virtual register references into their physical
+machine locations. To avoid encoding incorrect variable locations, in this
+pass any DBG_VALUE of a virtual register that is not live, is replaced by
+the undefined location.
+
+LiveDebugValues expansion of variable locations
+-----------------------------------------------
+
+After all optimizations have run and shortly before emission, the
+LiveDebugValues pass runs to achieve two aims:
+
+* To propagate the location of variables through copies and register spills,
+* For every block, to record every valid variable location in that block.
+
+After this pass the DBG_VALUE instruction changes meaning: rather than
+corresponding to a source-level assignment where the variable may change value,
+it asserts the location of a variable in a block, and loses effect outside the
+block. Propagating variable locations through copies and spills is
+straightforwards: determining the variable location in every basic block
+requries the consideraton of control flow. Consider the following IR, which
+presents several difficulties:
+
+.. code-block:: text
+
+  define dso_local i32 @foo(i1 %cond, i32 %input) !dbg !12 {
+  entry:
+    br i1 %cond, label %truebr, label %falsebr
+
+  bb1: 
+    %value = phi i32 [ %value1, %truebr ], [ %value2, %falsebr ]
+    br label %exit, !dbg !26
+
+  truebr:
+    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
+    call void @llvm.dbg.value(metadata i32 1, metadata !23, metadata !DIExpression()), !dbg !24
+    %value1 = add i32 %input, 1
+    br label %bb1
+
+  falsebr:
+    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
+    call void @llvm.dbg.value(metadata i32 2, metadata !23, metadata !DIExpression()), !dbg !24
+    %value = add i32 %input, 2
+    br label %bb1
+
+  exit: 
+    ret i32 %value, !dbg !30
+  }
+
+Here the difficulties are:
+
+* The control flow is roughly the opposite of basic block order
+* The value of the ``!23`` variable merges into ``%bb1``, but there is no PHI
+  node
+
+As mentioned above, the ``llvm.dbg.value`` intrinsics essentially form an
+imperative program embedded in the IR, with each intrinsic defining a variable
+location. This *could* be converted to an SSA form by mem2reg, in the same way
+that it uses use-def chains to identify control flow merges and insert phi
+nodes for IR Values. However, because debug variable locations are defined for
+every machine instruction, in effect every IR instruction uses every variable
+location, which would lead to a large number of debugging intrinsics being
+generated.
+
+Examining the example above, variable ``!30`` is assigned ``%input`` on both
+conditional paths through the function, while ``!23`` is assigned differing
+constant values on either path. Where control flow merges in ``%bb1`` we would
+want ``!30`` to keep its location (``%input``), but ``!23`` to become undefined
+as we cannot determine at runtime what value it should have in %bb1 without
+inserting a PHI node. mem2reg does not insert the PHI node to avoid changing
+codegen when debugging is enabled, and does not insert the other dbg.values
+to avoid adding very large numbers of intrinsics.
+
+Instead, LiveDebugValues determines variable locations when control
+flow merges. A dataflow analysis is used to propagate locations between blocks:
+when control flow merges, if a variable has the same location in all
+predecessors then that location is propagated into the successor. If the
+predecessor locations disagree, the location becomes undefined.
+
+Once LiveDebugValues has run, every block should have all valid variable
+locations described by DBG_VALUE instructions within the block. Very little
+effort is then required by supporting classes (such as
+DbgEntityHistoryCalculator) to build a map of each instruction to every
+valid variable location, without the need to consider control flow. From
+the example above, it is otherwise difficult to determine that the location
+of variable ``!30`` should flow "up" into block ``%bb1``, but that the location
+of variable ``!23`` should not flow "down" into the ``%exit`` block.
+
 .. _ccxx_frontend:
 
 C/C++ front-end specific debug information
@@ -1622,7 +1932,7 @@ embedded in ``llvm-readobj``.
 * Testing MSVC's output::
 
     $ cl -c -Z7 foo.cpp # Use /Z7 to keep types in the object file
-    $ llvm-readobj -codeview foo.obj
+    $ llvm-readobj --codeview foo.obj
 
 * Getting LLVM IR debug info out of Clang::
 
@@ -1633,7 +1943,7 @@ embedded in ``llvm-readobj``.
 * Generate and dump CodeView from LLVM IR metadata::
 
     $ llc foo.ll -filetype=obj -o foo.obj
-    $ llvm-readobj -codeview foo.obj > foo.txt
+    $ llvm-readobj --codeview foo.obj > foo.txt
 
   Use this pattern in lit test cases and FileCheck the output of llvm-readobj
 

@@ -1,10 +1,10 @@
-RUN: llvm-readobj -dt %p/Inputs/elf-versioning-test.i386 \
+RUN: llvm-readobj --dyn-syms %p/Inputs/elf-versioning-test.i386 \
 RUN:         | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -dt %p/Inputs/elf-versioning-test.i386 \
+RUN: llvm-readobj --dyn-syms %p/Inputs/elf-versioning-test.i386 \
 RUN:         | FileCheck %s -check-prefix ELF32
-RUN: llvm-readobj -dt %p/Inputs/elf-versioning-test.x86_64 \
+RUN: llvm-readobj --dyn-syms %p/Inputs/elf-versioning-test.x86_64 \
 RUN:         | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -dt %p/Inputs/elf-versioning-test.x86_64 \
+RUN: llvm-readobj --dyn-syms %p/Inputs/elf-versioning-test.x86_64 \
 RUN:         | FileCheck %s -check-prefix ELF64
 
 ELF: DynamicSymbols [

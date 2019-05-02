@@ -12,7 +12,7 @@
 // extern double __extendsfdf2vfp(float a);
 //
 // Converts single precision float to double precision result.
-// Uses Darwin calling convention where a single precision parameter is 
+// Uses Darwin calling convention where a single precision parameter is
 // passed in a GPR and a double precision result is returned in R0/R1 pair.
 //
 	.syntax unified

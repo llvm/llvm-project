@@ -84,10 +84,12 @@ public:
   //------------------------------------------------
   // Implement the AliasAnalysis API
   //
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
+  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+                    AAQueryInfo &AAQI);
 
   using AAResultBase::getModRefInfo;
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc);
+  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
+                           AAQueryInfo &AAQI);
 
   /// getModRefBehavior - Return the behavior of the specified function if
   /// called from the specified call site.  The call site may be null in which
@@ -113,7 +115,7 @@ private:
 
   bool isNonEscapingGlobalNoAlias(const GlobalValue *GV, const Value *V);
   ModRefInfo getModRefInfoForArgument(const CallBase *Call,
-                                      const GlobalValue *GV);
+                                      const GlobalValue *GV, AAQueryInfo &AAQI);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

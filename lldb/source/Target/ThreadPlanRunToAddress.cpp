@@ -17,9 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanRunToAddress: Continue plan
-//----------------------------------------------------------------------
 
 ThreadPlanRunToAddress::ThreadPlanRunToAddress(Thread &thread, Address &address,
                                                bool stop_others)

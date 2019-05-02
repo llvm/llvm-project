@@ -4,7 +4,7 @@
 
 # RUN: llvm-objcopy --strip-all %t.in.o %t.out.o
 # RUN: llvm-objdump -t %t.out.o | FileCheck %s --check-prefix=SYMBOLS
-# RUN: llvm-readobj -relocs %t.out.o | FileCheck %s --check-prefix=RELOCS
+# RUN: llvm-readobj -r %t.out.o | FileCheck %s --check-prefix=RELOCS
 
 # Test that -S, llvm-strip without arguments and --strip-all-gnu produces
 # output identical to --strip-all above.

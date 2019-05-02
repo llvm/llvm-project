@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlan constructor
-//----------------------------------------------------------------------
 ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
                        Vote stop_vote, Vote run_vote)
     : m_thread(thread), m_stop_vote(stop_vote), m_run_vote(run_vote),
@@ -32,9 +30,7 @@ ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
   SetID(GetNextID());
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ThreadPlan::~ThreadPlan() = default;
 
 bool ThreadPlan::PlanExplainsStop(Event *event_ptr) {
@@ -160,9 +156,7 @@ bool ThreadPlan::IsUsuallyUnexplainedStopReason(lldb::StopReason reason) {
   }
 }
 
-//----------------------------------------------------------------------
 // ThreadPlanNull
-//----------------------------------------------------------------------
 
 ThreadPlanNull::ThreadPlanNull(Thread &thread)
     : ThreadPlan(ThreadPlan::eKindNull, "Null Thread Plan", thread,

@@ -194,9 +194,7 @@ ArchSpec ObjectFileJIT::GetArchitecture() {
   return ArchSpec();
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjectFileJIT::GetPluginName() {
   return GetPluginNameStatic();
 }

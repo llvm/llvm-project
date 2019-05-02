@@ -22,7 +22,7 @@ define i32 @replace_isinf_call_f16(half %x) {
 ; Check if INFINITY for float is materialized
 define i32 @replace_isinf_call_f32(float %x) {
 ; CHECK-LABEL: replace_isinf_call_f32:
-; CHECK:       orr    [[INFSCALARREG:w[0-9]+]], wzr, #0x7f800000
+; CHECK:       mov    [[INFSCALARREG:w[0-9]+]], #2139095040
 ; CHECK-NEXT:  fabs   [[ABS:s[0-9]+]], s0
 ; CHECK-NEXT:  fmov   [[INFREG:s[0-9]+]], [[INFSCALARREG]]
 ; CHECK-NEXT:  fcmp   [[ABS]], [[INFREG]]
@@ -36,7 +36,7 @@ define i32 @replace_isinf_call_f32(float %x) {
 ; Check if INFINITY for double is materialized
 define i32 @replace_isinf_call_f64(double %x) {
 ; CHECK-LABEL: replace_isinf_call_f64:
-; CHECK:       orr    [[INFSCALARREG:x[0-9]+]], xzr, #0x7ff0000000000000
+; CHECK:       mov    [[INFSCALARREG:x[0-9]+]], #9218868437227405312
 ; CHECK-NEXT:  fabs   [[ABS:d[0-9]+]], d0
 ; CHECK-NEXT:  fmov   [[INFREG:d[0-9]+]], [[INFSCALARREG]]
 ; CHECK-NEXT:  fcmp   [[ABS]], [[INFREG]]

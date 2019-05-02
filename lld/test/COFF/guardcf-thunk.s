@@ -7,7 +7,7 @@
 # Make an obj that takes the address of that exported function.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc %s -o %t2.obj
 # RUN: lld-link -entry:main -guard:cf %t2.obj %t.lib -nodefaultlib -out:%t.exe
-# RUN: llvm-readobj -coff-load-config %t.exe | FileCheck %s
+# RUN: llvm-readobj --coff-load-config %t.exe | FileCheck %s
 
 # Check that the gfids table contains *exactly* two entries, one for exportfn1
 # and one for main.

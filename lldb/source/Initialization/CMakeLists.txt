@@ -17,8 +17,6 @@ add_lldb_library(lldbInitialization
     lldbPluginInstructionARM
     lldbPluginInstructionMIPS
     lldbPluginInstructionMIPS64
-    lldbPluginObjectContainerBSDArchive
-    lldbPluginObjectContainerMachOArchive
     lldbPluginProcessGDBRemote
     ${EXTRA_PLUGINS}
     ${LLDB_SYSTEM_LIBS}

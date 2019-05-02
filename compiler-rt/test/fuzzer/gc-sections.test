@@ -1,4 +1,6 @@
 REQUIRES: linux, lld-available
+# LLD isn't pruning functions as we expect it to with ASAN on i386.
+UNSUPPORTED: i386
 
 No gc-sections:
 RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t

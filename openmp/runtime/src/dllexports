@@ -404,8 +404,13 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_task_reduction_get_th_data   269
 # USED FOR 4.5 __kmpc_critical_with_hint    270
         __kmpc_get_target_offload           271
-	__kmpc_omp_reg_task_with_affinity   272
-	__kmpc_pause_resource               273
+        __kmpc_omp_reg_task_with_affinity   272
+        __kmpc_pause_resource               273
+        __kmpc_task_reduction_modifier_init 274
+        __kmpc_task_reduction_modifier_fini 275
+      # __kmpc_task_allow_completion_event  276
+        __kmpc_taskred_init                 277
+        __kmpc_taskred_modifier_init        278
     %endif
 %endif
 
@@ -546,6 +551,16 @@ kmp_set_disp_num_buffers                    890
     omp_alloc                               894
     omp_free                                895
     omp_get_device_num                      896
+    omp_init_allocator                      897
+    omp_destroy_allocator                   898
+    %ifndef stub
+        __kmpc_set_default_allocator
+        __kmpc_get_default_allocator
+        __kmpc_alloc
+        __kmpc_free
+        __kmpc_init_allocator
+        __kmpc_destroy_allocator
+    %endif
     omp_set_affinity_format                 748
     omp_get_affinity_format                 749
     omp_display_affinity                    750
@@ -558,7 +573,7 @@ kmp_set_disp_num_buffers                    890
     omp_pause_resource_all                  757
     omp_get_supported_active_levels         758
 
-    OMP_NULL_ALLOCATOR                     DATA
+    omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA
     omp_large_cap_mem_alloc                DATA
     omp_const_mem_alloc                    DATA
@@ -567,6 +582,12 @@ kmp_set_disp_num_buffers                    890
     omp_cgroup_mem_alloc                   DATA
     omp_pteam_mem_alloc                    DATA
     omp_thread_mem_alloc                   DATA
+
+    omp_default_mem_space                  DATA
+    omp_large_cap_mem_space                DATA
+    omp_const_mem_space                    DATA
+    omp_high_bw_mem_space                  DATA
+    omp_low_lat_mem_space                  DATA
 %endif # OMP_50
 
 %ifndef stub

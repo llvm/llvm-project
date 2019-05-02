@@ -53,6 +53,8 @@ test0:
 # BIN-NEXT:             Initial:         0x00000000
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
+# BIN-NEXT:   - Type:            DATACOUNT
+# BIN-NEXT:     Count:           1
 # BIN-NEXT:   - Type:            CODE
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
@@ -91,4 +93,3 @@ test0:
 # BIN-NEXT:         Alignment:       0
 # BIN-NEXT:         Flags:           [  ]
 # BIN-NEXT: ...
-

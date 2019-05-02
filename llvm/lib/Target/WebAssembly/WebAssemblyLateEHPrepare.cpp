@@ -307,7 +307,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
     const char *CPPExnSymbol = MF.createExternalSymbolName("__cpp_exception");
     BuildMI(EHPad, DL, TII.get(WebAssembly::BR_ON_EXN))
         .addMBB(ThenMBB)
-        .addExternalSymbol(CPPExnSymbol, WebAssemblyII::MO_SYMBOL_EVENT)
+        .addExternalSymbol(CPPExnSymbol)
         .addReg(ExnReg);
     BuildMI(EHPad, DL, TII.get(WebAssembly::BR)).addMBB(ElseMBB);
 

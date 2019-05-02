@@ -20,7 +20,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Args Args.h "lldb/Utility/Args.h"
 /// A command line argument class.
 ///
@@ -30,7 +29,6 @@ namespace lldb_private {
 /// quotes) surrounding the argument. Spaces can be escaped using a \
 /// character to avoid having to surround an argument that contains a space
 /// with quotes.
-//----------------------------------------------------------------------
 class Args {
 public:
   struct ArgEntry {
@@ -48,13 +46,10 @@ public:
     char quote;
     const char *c_str() const { return ptr.get(); }
 
-    //------------------------------------------------------------------
     /// Returns true if this argument was quoted in any way.
-    //------------------------------------------------------------------
     bool IsQuoted() const { return quote != '\0'; }
   };
 
-  //------------------------------------------------------------------
   /// Construct with an option command string.
   ///
   /// \param[in] command
@@ -62,7 +57,6 @@ public:
   ///     into arguments.
   ///
   /// \see Args::SetCommandString(llvm::StringRef)
-  //------------------------------------------------------------------
   Args(llvm::StringRef command = llvm::StringRef());
 
   Args(const Args &rhs);
@@ -70,9 +64,7 @@ public:
 
   Args &operator=(const Args &rhs);
 
-  //------------------------------------------------------------------
   /// Destructor.
-  //------------------------------------------------------------------
   ~Args();
 
   explicit Args(const Environment &env) : Args() {
@@ -81,7 +73,6 @@ public:
 
   explicit operator Environment() const { return GetConstArgumentVector(); }
 
-  //------------------------------------------------------------------
   /// Dump all entries to the stream \a s using label \a label_name.
   ///
   /// If label_name is nullptr, the dump operation is skipped.
@@ -93,10 +84,8 @@ public:
   ///     The label_name to use as the label printed for each
   ///     entry of the args like so:
   ///       {label_name}[{index}]={value}
-  //------------------------------------------------------------------
   void Dump(Stream &s, const char *label_name = "argv") const;
 
-  //------------------------------------------------------------------
   /// Sets the command string contained by this object.
   ///
   /// The command string will be copied and split up into arguments that can
@@ -110,30 +99,25 @@ public:
   /// \see Args::GetArgumentAtIndex (size_t) const @see
   /// Args::GetArgumentVector () \see Args::Shift () \see Args::Unshift (const
   /// char *)
-  //------------------------------------------------------------------
   void SetCommandString(llvm::StringRef command);
 
   bool GetCommandString(std::string &command) const;
 
   bool GetQuotedCommandString(std::string &command) const;
 
-  //------------------------------------------------------------------
   /// Gets the number of arguments left in this command object.
   ///
   /// \return
   ///     The number or arguments in this object.
-  //------------------------------------------------------------------
   size_t GetArgumentCount() const;
   bool empty() const { return GetArgumentCount() == 0; }
 
-  //------------------------------------------------------------------
   /// Gets the NULL terminated C string argument pointer for the argument at
   /// index \a idx.
   ///
   /// \return
   ///     The NULL terminated C string argument pointer if \a idx is a
   ///     valid argument index, NULL otherwise.
-  //------------------------------------------------------------------
   const char *GetArgumentAtIndex(size_t idx) const;
 
   llvm::ArrayRef<ArgEntry> entries() const { return m_entries; }
@@ -147,7 +131,6 @@ public:
   size_t size() const { return GetArgumentCount(); }
   const ArgEntry &operator[](size_t n) const { return m_entries[n]; }
 
-  //------------------------------------------------------------------
   /// Gets the argument vector.
   ///
   /// The value returned by this function can be used by any function that
@@ -160,10 +143,8 @@ public:
   /// \return
   ///     An array of NULL terminated C string argument pointers that
   ///     also has a terminating NULL C string pointer
-  //------------------------------------------------------------------
   char **GetArgumentVector();
 
-  //------------------------------------------------------------------
   /// Gets the argument vector.
   ///
   /// The value returned by this function can be used by any function that
@@ -176,19 +157,15 @@ public:
   /// \return
   ///     An array of NULL terminate C string argument pointers that
   ///     also has a terminating NULL C string pointer
-  //------------------------------------------------------------------
   const char **GetConstArgumentVector() const;
 
-  //------------------------------------------------------------------
   /// Gets the argument as an ArrayRef. Note that the return value does *not*
   /// have a nullptr const char * at the end, as the size of the list is
   /// embedded in the ArrayRef object.
-  //------------------------------------------------------------------
   llvm::ArrayRef<const char *> GetArgumentArrayRef() const {
     return llvm::makeArrayRef(m_argv).drop_back();
   }
 
-  //------------------------------------------------------------------
   /// Appends a new argument to the end of the list argument list.
   ///
   /// \param[in] arg_cstr
@@ -196,14 +173,12 @@ public:
   ///
   /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
-  //------------------------------------------------------------------
   void AppendArgument(llvm::StringRef arg_str, char quote_char = '\0');
 
   void AppendArguments(const Args &rhs);
 
   void AppendArguments(const char **argv);
 
-  //------------------------------------------------------------------
   /// Insert the argument value at index \a idx to \a arg_cstr.
   ///
   /// \param[in] idx
@@ -217,11 +192,9 @@ public:
   ///
   /// \return
   ///     The NULL terminated C string of the copy of \a arg_cstr.
-  //------------------------------------------------------------------
   void InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
                              char quote_char = '\0');
 
-  //------------------------------------------------------------------
   /// Replaces the argument value at index \a idx to \a arg_cstr if \a idx is
   /// a valid argument index.
   ///
@@ -233,21 +206,17 @@ public:
   ///
   /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
-  //------------------------------------------------------------------
   void ReplaceArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
                               char quote_char = '\0');
 
-  //------------------------------------------------------------------
   /// Deletes the argument value at index
   /// if \a idx is a valid argument index.
   ///
   /// \param[in] idx
   ///     The index of the argument that will have its value replaced.
   ///
-  //------------------------------------------------------------------
   void DeleteArgumentAtIndex(size_t idx);
 
-  //------------------------------------------------------------------
   /// Sets the argument vector value, optionally copying all arguments into an
   /// internal buffer.
   ///
@@ -255,12 +224,10 @@ public:
   /// will be copied into an internal buffers.
   //
   //  FIXME: Handle the quote character somehow.
-  //------------------------------------------------------------------
   void SetArguments(size_t argc, const char **argv);
 
   void SetArguments(const char **argv);
 
-  //------------------------------------------------------------------
   /// Shifts the first argument C string value of the array off the argument
   /// array.
   ///
@@ -269,10 +236,8 @@ public:
   /// returned value before calling Args::Shift().
   ///
   /// \see Args::GetArgumentAtIndex (size_t) const
-  //------------------------------------------------------------------
   void Shift();
 
-  //------------------------------------------------------------------
   /// Inserts a class owned copy of \a arg_cstr at the beginning of the
   /// argument vector.
   ///
@@ -283,14 +248,11 @@ public:
   ///
   /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
-  //------------------------------------------------------------------
   void Unshift(llvm::StringRef arg_str, char quote_char = '\0');
 
-  //------------------------------------------------------------------
   // Clear the arguments.
   //
   // For re-setting or blanking out the list of arguments.
-  //------------------------------------------------------------------
   void Clear();
 
   static const char *StripSpaces(std::string &s, bool leading = true,
@@ -357,7 +319,6 @@ private:
   std::vector<char *> m_argv;
 };
 
-//----------------------------------------------------------------------
 /// \class OptionsWithRaw Args.h "lldb/Utility/Args.h"
 /// A pair of an option list with a 'raw' string as a suffix.
 ///
@@ -377,70 +338,55 @@ private:
 /// string without any options.
 ///
 /// \see Args
-//----------------------------------------------------------------------
 class OptionsWithRaw {
 public:
-  //------------------------------------------------------------------
   /// Parse the given string as a list of optional arguments with a raw suffix.
   ///
   /// See the class description for a description of the input format.
   ///
   /// \param[in] argument_string
   ///     The string that should be parsed.
-  //------------------------------------------------------------------
   explicit OptionsWithRaw(llvm::StringRef argument_string);
 
-  //------------------------------------------------------------------
   /// Returns true if there are any arguments before the raw suffix.
-  //------------------------------------------------------------------
   bool HasArgs() const { return m_has_args; }
 
-  //------------------------------------------------------------------
   /// Returns the list of arguments.
   ///
   /// You can only call this method if HasArgs returns true.
-  //------------------------------------------------------------------
   Args &GetArgs() {
     assert(m_has_args);
     return m_args;
   }
 
-  //------------------------------------------------------------------
   /// Returns the list of arguments.
   ///
   /// You can only call this method if HasArgs returns true.
-  //------------------------------------------------------------------
   const Args &GetArgs() const {
     assert(m_has_args);
     return m_args;
   }
 
-  //------------------------------------------------------------------
   /// Returns the part of the input string that was used for parsing the
   /// argument list. This string also includes the double dash that is used
   /// for separating the argument list from the suffix.
   ///
   /// You can only call this method if HasArgs returns true.
-  //------------------------------------------------------------------
   llvm::StringRef GetArgStringWithDelimiter() const {
     assert(m_has_args);
     return m_arg_string_with_delimiter;
   }
 
-  //------------------------------------------------------------------
   /// Returns the part of the input string that was used for parsing the
   /// argument list.
   ///
   /// You can only call this method if HasArgs returns true.
-  //------------------------------------------------------------------
   llvm::StringRef GetArgString() const {
     assert(m_has_args);
     return m_arg_string;
   }
 
-  //------------------------------------------------------------------
   /// Returns the raw suffix part of the parsed string.
-  //------------------------------------------------------------------
   const std::string &GetRawPart() const { return m_suffix; }
 
 private:

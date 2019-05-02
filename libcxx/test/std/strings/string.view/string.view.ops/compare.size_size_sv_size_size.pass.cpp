@@ -5840,8 +5840,8 @@ int main(int, char**) {
     typedef std::basic_string_view<char, constexpr_char_traits<char>> SV;
     constexpr SV  sv1 { "abcde", 5 };
     static_assert ( sv1.compare(5, 1, "", 0, 0) == 0, "" );
-    static_assert ( sv1.compare(2, 4, "", 0, 0) == 1, "" );
-    static_assert ( sv1.compare(2, 4, "abcde", 3, 4) == -1, "" );
+    static_assert ( sv1.compare(2, 4, "", 0, 0) > 0, "" );
+    static_assert ( sv1.compare(2, 4, "abcde", 3, 4) < 0, "" );
     }
 #endif
 

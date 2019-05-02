@@ -167,7 +167,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  17     20    1.50    *                   dppd	$22, (%rax), %xmm2
 # CHECK-NEXT:  16     25    1.50                        dpps	$22, %xmm0, %xmm2
 # CHECK-NEXT:  18     30    1.50    *                   dpps	$22, (%rax), %xmm2
-# CHECK-NEXT:  2      13    1.00                        extractps	$1, %xmm0, %ecx
+# CHECK-NEXT:  2      12    1.00                        extractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      13    1.00           *            extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      2     0.50                        insertps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   insertps	$1, (%rax), %xmm2
@@ -182,11 +182,11 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   pblendw	$11, (%rax), %xmm2
 # CHECK-NEXT:  1      2     0.50                        pcmpeqq	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   pcmpeqq	(%rax), %xmm2
-# CHECK-NEXT:  2      13    1.00                        pextrb	$1, %xmm0, %ecx
+# CHECK-NEXT:  2      12    1.00                        pextrb	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      13    1.00           *            pextrb	$1, %xmm0, (%rax)
-# CHECK-NEXT:  2      13    1.00                        pextrd	$1, %xmm0, %ecx
+# CHECK-NEXT:  2      12    1.00                        pextrd	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      13    1.00           *            pextrd	$1, %xmm0, (%rax)
-# CHECK-NEXT:  2      13    1.00                        pextrq	$1, %xmm0, %rcx
+# CHECK-NEXT:  2      12    1.00                        pextrq	$1, %xmm0, %rcx
 # CHECK-NEXT:  2      13    1.00           *            pextrq	$1, %xmm0, (%rax)
 # CHECK-NEXT:  2      13    1.00           *            pextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  2      4     1.00                        phminposuw	%xmm0, %xmm2

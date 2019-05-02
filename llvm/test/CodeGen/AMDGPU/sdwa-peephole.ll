@@ -523,5 +523,6 @@ bb2:                                              ; preds = %bb1
 
 bb11:                                             ; preds = %bb10, %bb2
   %tmp12 = phi <2 x i32> [ %tmp6, %bb2 ], [ %tmp, %bb1 ]
+  store volatile <2 x i32> %tmp12, <2 x i32> addrspace(1)* undef
   br label %bb1
 }

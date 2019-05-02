@@ -77,7 +77,7 @@ class GCNScheduleDAGMILive : public ScheduleDAGMILive {
   // Current region index.
   size_t RegionIdx;
 
-  // Vecor of regions recorder for later rescheduling
+  // Vector of regions recorder for later rescheduling
   SmallVector<std::pair<MachineBasicBlock::iterator,
                         MachineBasicBlock::iterator>, 32> Regions;
 

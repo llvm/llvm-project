@@ -17,6 +17,7 @@ executable("clang-tidy") {
     "//clang-tools-extra/clang-tidy/misc",
     "//clang-tools-extra/clang-tidy/modernize",
     "//clang-tools-extra/clang-tidy/objc",
+    "//clang-tools-extra/clang-tidy/openmp",
     "//clang-tools-extra/clang-tidy/performance",
     "//clang-tools-extra/clang-tidy/portability",
     "//clang-tools-extra/clang-tidy/readability",

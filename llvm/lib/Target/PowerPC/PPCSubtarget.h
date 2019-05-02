@@ -136,6 +136,8 @@ protected:
   bool UseLongCalls;
   bool SecurePlt;
   bool VectorsUseTwoUnits;
+  bool UsePPCPreRASchedStrategy;
+  bool UsePPCPostRASchedStrategy;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -268,6 +270,8 @@ public:
   bool hasInvariantFunctionDescriptors() const {
     return HasInvariantFunctionDescriptors;
   }
+  bool usePPCPreRASchedStrategy() const { return UsePPCPreRASchedStrategy; }
+  bool usePPCPostRASchedStrategy() const { return UsePPCPostRASchedStrategy; }
   bool hasPartwordAtomics() const { return HasPartwordAtomics; }
   bool hasDirectMove() const { return HasDirectMove; }
 

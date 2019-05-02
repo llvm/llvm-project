@@ -69,7 +69,7 @@ def write_header(module_path, module, check_name, check_name_camel):
 #ifndef %(header_guard)s
 #define %(header_guard)s
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -137,7 +137,8 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
   if (MatchedDecl->getName().startswith("awesome_"))
     return;
   diag(MatchedDecl->getLocation(), "function %%0 is insufficiently awesome")
-      << MatchedDecl
+      << MatchedDecl;
+  diag(MatchedDecl->getLocation(), "insert 'awesome'", DiagnosticIDs::Note)
       << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
 }
 
@@ -198,7 +199,7 @@ def add_release_notes(module_path, module, check_name):
     lines = f.readlines()
 
   lineMatcher = re.compile('Improvements to clang-tidy')
-  nextSectionMatcher = re.compile('Improvements to include-fixer')
+  nextSectionMatcher = re.compile('Improvements to clang-include-fixer')
   checkerMatcher = re.compile('- New :doc:`(.*)')
 
   print('Updating %s...' % filename)

@@ -1084,9 +1084,7 @@ bool ABISysV_x86_64::GetPointerReturnRegister(const char *&name) {
 
 size_t ABISysV_x86_64::GetRedZoneSize() const { return 128; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -1897,9 +1895,7 @@ lldb_private::ConstString ABISysV_x86_64::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_x86_64::GetPluginName() {
   return GetPluginNameStatic();

@@ -34,9 +34,7 @@ PlatformRemoteDarwinDevice::SDKDirectoryInfo::SDKDirectoryInfo(
   build.SetString(build_str);
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformRemoteDarwinDevice::PlatformRemoteDarwinDevice()
     : PlatformDarwin(false), // This is a remote platform
       m_sdk_directory_infos(), m_device_support_directory(),
@@ -44,12 +42,10 @@ PlatformRemoteDarwinDevice::PlatformRemoteDarwinDevice()
       m_last_module_sdk_idx(UINT32_MAX),
       m_connected_module_sdk_idx(UINT32_MAX) {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformRemoteDarwinDevice::~PlatformRemoteDarwinDevice() {}
 
 void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {

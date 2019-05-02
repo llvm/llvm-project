@@ -57,6 +57,10 @@ enum {
   NT_PROCINFO_CPI_SIGLWP_SIZE = 4,
 };
 
+namespace AARCH64 {
+enum { NT_REGS = 32, NT_FPREGS = 34 };
+}
+
 namespace AMD64 {
 enum { NT_REGS = 33, NT_FPREGS = 35 };
 }
@@ -124,6 +128,7 @@ constexpr RegsetDesc FPR_Desc[] = {
     // The result from FXSAVE is in NT_PRXFPREG for i386 core files
     {llvm::Triple::Linux, llvm::Triple::x86, LINUX::NT_PRXFPREG},
     {llvm::Triple::Linux, llvm::Triple::UnknownArch, LINUX::NT_FPREGSET},
+    {llvm::Triple::NetBSD, llvm::Triple::aarch64, NETBSD::AARCH64::NT_FPREGS},
     {llvm::Triple::NetBSD, llvm::Triple::x86_64, NETBSD::AMD64::NT_FPREGS},
     {llvm::Triple::OpenBSD, llvm::Triple::UnknownArch, OPENBSD::NT_FPREGS},
 };

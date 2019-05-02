@@ -314,3 +314,9 @@ void test23() {
   memcpy(buf, src, 11); // expected-warning{{'memcpy' will always overflow; destination buffer has size 10, but size argument is 11}}
   my_memcpy(buf, src, 11); // expected-warning{{'memcpy' will always overflow; destination buffer has size 10, but size argument is 11}}
 }
+
+// Test that __builtin_is_constant_evaluated() is not allowed in C
+int test_cxx_builtin() {
+  // expected-error@+1 {{use of unknown builtin '__builtin_is_constant_evaluated'}}
+  return __builtin_is_constant_evaluated();
+}

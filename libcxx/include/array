@@ -91,7 +91,7 @@ template <class T, size_t N >
   void swap(array<T,N>& x, array<T,N>& y) noexcept(noexcept(x.swap(y))); // C++17
 
 template <class T> struct tuple_size;
-template <size_t I, class T> class tuple_element;
+template <size_t I, class T> struct tuple_element;
 template <class T, size_t N> struct tuple_size<array<T, N>>;
 template <size_t I, class T, size_t N> struct tuple_element<I, array<T, N>>;
 template <size_t I, class T, size_t N> T& get(array<T, N>&) noexcept; // constexpr in C++14
@@ -433,10 +433,9 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size<array<_Tp, _Size> >
     : public integral_constant<size_t, _Size> {};
 
 template <size_t _Ip, class _Tp, size_t _Size>
-class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, array<_Tp, _Size> >
+struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, array<_Tp, _Size> >
 {
     static_assert(_Ip < _Size, "Index out of bounds in std::tuple_element<> (std::array)");
-public:
     typedef _Tp type;
 };
 

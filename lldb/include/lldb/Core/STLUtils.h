@@ -16,28 +16,22 @@
 #include <vector>
 
 
-//----------------------------------------------------------------------
 // C string less than compare function object
-//----------------------------------------------------------------------
 struct CStringCompareFunctionObject {
   bool operator()(const char *s1, const char *s2) const {
     return strcmp(s1, s2) < 0;
   }
 };
 
-//----------------------------------------------------------------------
 // C string equality function object (binary predicate).
-//----------------------------------------------------------------------
 struct CStringEqualBinaryPredicate {
   bool operator()(const char *s1, const char *s2) const {
     return strcmp(s1, s2) == 0;
   }
 };
 
-//----------------------------------------------------------------------
 // Templated type for finding an entry in a std::map<F,S> whose value is equal
 // to something
-//----------------------------------------------------------------------
 template <class F, class S> class ValueEquals {
 public:
   ValueEquals(const S &val) : second_value(val) {}

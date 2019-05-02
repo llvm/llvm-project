@@ -414,7 +414,8 @@ protected:
                   "exit:\n"
                   "  ret void\n"
                   "}\n")),
-        CallbacksHandle(), PB(nullptr, None, &CallbacksHandle.Callbacks),
+        CallbacksHandle(),
+        PB(nullptr, PipelineTuningOptions(), None, &CallbacksHandle.Callbacks),
         PM(true), LAM(true), FAM(true), CGAM(true), AM(true) {
 
     /// Register a callback for analysis registration.

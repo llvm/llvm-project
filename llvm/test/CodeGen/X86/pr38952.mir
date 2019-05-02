@@ -77,7 +77,7 @@ body:             |
     renamable $eax = MOV32r0 implicit-def dead $eflags
     DBG_VALUE $ebx, $noreg, !21, !DIExpression()
     CMP32ri $edi, 255, implicit-def $eflags
-    JG_1 %bb.2, implicit killed $eflags
+    JCC_1 %bb.2, 15, implicit killed $eflags
     JMP_1 %bb.1
   
   bb.1.if.end:

@@ -36,12 +36,11 @@ define float @ext_fmul_v4f32(<4 x float> %x) {
   ret float %ext
 }
 
-; TODO: X / 1.0 --> X
+; X / 1.0 --> X
 
 define float @ext_fdiv_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: ext_fdiv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    divss {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bo = fdiv <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 42.0>
   %ext = extractelement <4 x float> %bo, i32 0
@@ -84,3 +83,55 @@ define float @ext_frem_v4f32_constant_op0(<4 x float> %x) {
   ret float %ext
 }
 
+define float @ext_maxnum_v4f32(<4 x float> %x) nounwind {
+; CHECK-LABEL: ext_maxnum_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    cmpunordss %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm3
+; CHECK-NEXT:    andps %xmm2, %xmm3
+; CHECK-NEXT:    maxss %xmm0, %xmm2
+; CHECK-NEXT:    andnps %xmm2, %xmm1
+; CHECK-NEXT:    orps %xmm3, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %v = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> <float 0.0, float 1.0, float 2.0, float 3.0>)
+  %r = extractelement <4 x float> %v, i32 2
+  ret float %r
+}
+
+define double @ext_minnum_v2f64(<2 x double> %x) nounwind {
+; CHECK-LABEL: ext_minnum_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movapd %xmm0, %xmm1
+; CHECK-NEXT:    cmpunordsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm3
+; CHECK-NEXT:    andpd %xmm2, %xmm3
+; CHECK-NEXT:    minsd %xmm0, %xmm2
+; CHECK-NEXT:    andnpd %xmm2, %xmm1
+; CHECK-NEXT:    orpd %xmm3, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %v = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0.0, double 1.0>, <2 x double> %x)
+  %r = extractelement <2 x double> %v, i32 1
+  ret double %r
+}
+
+;define double @ext_maximum_v4f64(<2 x double> %x) nounwind {
+;  %v = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> <double 42.0, double 43.0>)
+;  %r = extractelement <2 x double> %v, i32 1
+;  ret double %r
+;}
+
+;define float @ext_minimum_v4f32(<4 x float> %x) nounwind {
+;  %v = call <4 x float> @llvm.minimum.v4f32(<4 x float> %x, <4 x float> <float 0.0, float 1.0, float 2.0, float 42.0>)
+;  %r = extractelement <4 x float> %v, i32 1
+;  ret float %r
+;}
+
+declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
+declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>)

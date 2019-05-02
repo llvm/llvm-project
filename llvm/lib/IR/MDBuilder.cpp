@@ -68,9 +68,7 @@ MDNode *MDBuilder::createFunctionEntryCount(
   Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
   if (Imports) {
     SmallVector<GlobalValue::GUID, 2> OrderID(Imports->begin(), Imports->end());
-    std::stable_sort(OrderID.begin(), OrderID.end(),
-      [] (GlobalValue::GUID A, GlobalValue::GUID B) {
-        return A < B;});
+    llvm::stable_sort(OrderID);
     for (auto ID : OrderID)
       Ops.push_back(createConstant(ConstantInt::get(Int64Ty, ID)));
   }

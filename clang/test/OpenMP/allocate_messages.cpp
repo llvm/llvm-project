@@ -146,4 +146,6 @@ label:
 #pragma omp allocate(a) // expected-error {{'#pragma omp allocate' must appear in the scope of the 'a' variable declaration}}
   return (y);
 #pragma omp allocate(d) // expected-error {{'#pragma omp allocate' must appear in the scope of the 'd' variable declaration}}
+#pragma omp parallel allocate(d) // expected-error {{the referenced item is not found in any private clause on the same directive}}
+  ;
 }

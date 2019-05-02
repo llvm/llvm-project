@@ -712,7 +712,7 @@ define <2 x float> @faddp_2s(<2 x float>* %A, <2 x float>* %B) nounwind {
 ;CHECK: faddp.2s
         %tmp1 = load <2 x float>, <2 x float>* %A
         %tmp2 = load <2 x float>, <2 x float>* %B
-        %tmp3 = call <2 x float> @llvm.aarch64.neon.addp.v2f32(<2 x float> %tmp1, <2 x float> %tmp2)
+        %tmp3 = call <2 x float> @llvm.aarch64.neon.faddp.v2f32(<2 x float> %tmp1, <2 x float> %tmp2)
         ret <2 x float> %tmp3
 }
 
@@ -721,7 +721,7 @@ define <4 x float> @faddp_4s(<4 x float>* %A, <4 x float>* %B) nounwind {
 ;CHECK: faddp.4s
         %tmp1 = load <4 x float>, <4 x float>* %A
         %tmp2 = load <4 x float>, <4 x float>* %B
-        %tmp3 = call <4 x float> @llvm.aarch64.neon.addp.v4f32(<4 x float> %tmp1, <4 x float> %tmp2)
+        %tmp3 = call <4 x float> @llvm.aarch64.neon.faddp.v4f32(<4 x float> %tmp1, <4 x float> %tmp2)
         ret <4 x float> %tmp3
 }
 
@@ -730,13 +730,13 @@ define <2 x double> @faddp_2d(<2 x double>* %A, <2 x double>* %B) nounwind {
 ;CHECK: faddp.2d
         %tmp1 = load <2 x double>, <2 x double>* %A
         %tmp2 = load <2 x double>, <2 x double>* %B
-        %tmp3 = call <2 x double> @llvm.aarch64.neon.addp.v2f64(<2 x double> %tmp1, <2 x double> %tmp2)
+        %tmp3 = call <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double> %tmp1, <2 x double> %tmp2)
         ret <2 x double> %tmp3
 }
 
-declare <2 x float> @llvm.aarch64.neon.addp.v2f32(<2 x float>, <2 x float>) nounwind readnone
-declare <4 x float> @llvm.aarch64.neon.addp.v4f32(<4 x float>, <4 x float>) nounwind readnone
-declare <2 x double> @llvm.aarch64.neon.addp.v2f64(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x float> @llvm.aarch64.neon.faddp.v2f32(<2 x float>, <2 x float>) nounwind readnone
+declare <4 x float> @llvm.aarch64.neon.faddp.v4f32(<4 x float>, <4 x float>) nounwind readnone
+declare <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double>, <2 x double>) nounwind readnone
 
 define <2 x i64> @uaddl_duprhs(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-LABEL: uaddl_duprhs

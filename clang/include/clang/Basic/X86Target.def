@@ -66,7 +66,7 @@ PROC(PentiumMMX, "pentium-mmx", PROC_32_BIT)
 /// i686-generation processors, P6 / Pentium M microarchitecture based.
 //@{
 PROC(PentiumPro, "pentiumpro", PROC_32_BIT)
-PROC_ALIAS(PentiumPro, "i686")
+PROC(i686, "i686", PROC_32_BIT)
 PROC(Pentium2, "pentium2", PROC_32_BIT)
 PROC(Pentium3, "pentium3", PROC_32_BIT)
 PROC_ALIAS(Pentium3, "pentium3m")

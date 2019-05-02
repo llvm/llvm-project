@@ -26,6 +26,23 @@ body: |
 ...
 
 ---
+name:            test_constant_s96
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_s96
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -4780896129847249538
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -547834910
+    ; CHECK: [[DEF:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+    ; CHECK: [[INSERT:%[0-9]+]]:_(s96) = G_INSERT [[DEF]], [[C]](s64), 0
+    ; CHECK: [[INSERT1:%[0-9]+]]:_(s96) = G_INSERT [[INSERT]], [[C1]](s32), 64
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[INSERT1]](s96)
+    %0:_(s96) = G_CONSTANT i96  -10105770365747857631829412482
+    $vgpr0_vgpr1_vgpr2 = COPY %0
+
+...
+
+---
 name:            test_constant_s1
 body: |
   bb.0:

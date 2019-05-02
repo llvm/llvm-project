@@ -221,7 +221,7 @@ define void @test_zero_reg(i32* %addr) {
 ; CHECK: USE(wzr)
 
   tail call void asm sideeffect "USE(${0:w})", "zr"(i32 1)
-; CHECK: orr [[VAL1:w[0-9]+]], wzr, #0x1
+; CHECK: mov [[VAL1:w[0-9]+]], #1
 ; CHECK: USE([[VAL1]])
 
   tail call void asm sideeffect "USE($0), USE($1)", "z,z"(i32 0, i32 0) nounwind

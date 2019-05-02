@@ -1292,9 +1292,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   auto *DIVar = DII->getVariable();
   assert(DIVar && "Missing variable");
   auto *DIExpr = DII->getExpression();
-  Value *DV = SI->getOperand(0);
+  Value *DV = SI->getValueOperand();
 
-  if (!valueCoversEntireFragment(SI->getValueOperand()->getType(), DII)) {
+  if (!valueCoversEntireFragment(DV->getType(), DII)) {
     // FIXME: If storing to a part of the variable described by the dbg.declare,
     // then we want to insert a dbg.value for the corresponding fragment.
     LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: "
@@ -1666,11 +1666,10 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
-    if (!CI->isNoopCast(DL))
-      return nullptr;
-
-    // No-op casts are irrelevant for debug info.
-    return SrcDIExpr;
+    // No-op casts and zexts are irrelevant for debug info.
+    if (CI->isNoopCast(DL) || isa<ZExtInst>(&I))
+      return SrcDIExpr;
+    return nullptr;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
         M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
@@ -1861,21 +1860,10 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
         return None;
 
       bool Signed = *Signedness == DIBasicType::Signedness::Signed;
-
-      if (!Signed) {
-        // In the unsigned case, assume that a debugger will initialize the
-        // high bits to 0 and do a no-op conversion.
-        return Identity(DII);
-      } else {
-        // In the signed case, the high bits are given by sign extension, i.e:
-        //   (To >> (ToBits - 1)) * ((2 ^ FromBits) - 1)
-        // Calculate the high bits and OR them together with the low bits.
-        SmallVector<uint64_t, 8> Ops({dwarf::DW_OP_dup, dwarf::DW_OP_constu,
-                                      (ToBits - 1), dwarf::DW_OP_shr,
-                                      dwarf::DW_OP_lit0, dwarf::DW_OP_not,
-                                      dwarf::DW_OP_mul, dwarf::DW_OP_or});
-        return DIExpression::appendToStack(DII.getExpression(), Ops);
-      }
+      dwarf::TypeKind TK = Signed ? dwarf::DW_ATE_signed : dwarf::DW_ATE_unsigned;
+      SmallVector<uint64_t, 8> Ops({dwarf::DW_OP_LLVM_convert, ToBits, TK,
+                                   dwarf::DW_OP_LLVM_convert, FromBits, TK});
+      return DIExpression::appendToStack(DII.getExpression(), Ops);
     };
     return rewriteDebugUsers(From, To, DomPoint, DT, SignOrZeroExt);
   }
@@ -2065,7 +2053,7 @@ static bool markAliveBlocks(Function &F,
           Changed = true;
           break;
         }
-        if (CI->doesNotReturn()) {
+        if (CI->doesNotReturn() && !CI->isMustTailCall()) {
           // If we found a call to a no-return function, insert an unreachable
           // instruction after it.  Make sure there isn't *already* one there
           // though.
@@ -2896,4 +2884,42 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
         return false;
     return true;
   }
+}
+
+using AllocaForValueMapTy = DenseMap<Value *, AllocaInst *>;
+AllocaInst *llvm::findAllocaForValue(Value *V,
+                                     AllocaForValueMapTy &AllocaForValue) {
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
+    return AI;
+  // See if we've already calculated (or started to calculate) alloca for a
+  // given value.
+  AllocaForValueMapTy::iterator I = AllocaForValue.find(V);
+  if (I != AllocaForValue.end())
+    return I->second;
+  // Store 0 while we're calculating alloca for value V to avoid
+  // infinite recursion if the value references itself.
+  AllocaForValue[V] = nullptr;
+  AllocaInst *Res = nullptr;
+  if (CastInst *CI = dyn_cast<CastInst>(V))
+    Res = findAllocaForValue(CI->getOperand(0), AllocaForValue);
+  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    for (Value *IncValue : PN->incoming_values()) {
+      // Allow self-referencing phi-nodes.
+      if (IncValue == PN)
+        continue;
+      AllocaInst *IncValueAI = findAllocaForValue(IncValue, AllocaForValue);
+      // AI for incoming values should exist and should all be equal.
+      if (IncValueAI == nullptr || (Res != nullptr && IncValueAI != Res))
+        return nullptr;
+      Res = IncValueAI;
+    }
+  } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
+    Res = findAllocaForValue(EP->getPointerOperand(), AllocaForValue);
+  } else {
+    LLVM_DEBUG(dbgs() << "Alloca search cancelled on unknown instruction: "
+                      << *V << "\n");
+  }
+  if (Res)
+    AllocaForValue[V] = Res;
+  return Res;
 }

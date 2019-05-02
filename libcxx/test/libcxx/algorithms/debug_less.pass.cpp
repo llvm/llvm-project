@@ -235,10 +235,58 @@ void test_non_const_arg_cmp() {
     }
 }
 
+struct ValueIterator {
+    typedef std::input_iterator_tag iterator_category;
+    typedef size_t value_type;
+    typedef ptrdiff_t difference_type;
+    typedef size_t reference;
+    typedef size_t* pointer;
+
+    ValueIterator() { }
+
+    reference operator*() { return 0; }
+    ValueIterator& operator++() { return *this; }
+
+    friend bool operator==(ValueIterator, ValueIterator) { return true; }
+    friend bool operator!=(ValueIterator, ValueIterator) { return false; }
+};
+
+void test_value_iterator() {
+    // Ensure no build failures when iterators return values, not references.
+    assert(0 == std::lexicographical_compare(ValueIterator(), ValueIterator(),
+                                             ValueIterator(), ValueIterator()));
+}
+
+void test_value_categories() {
+    std::less<int> l;
+    std::__debug_less<std::less<int> > dl(l);
+    int lvalue = 42;
+    const int const_lvalue = 101;
+
+    assert(dl(lvalue, const_lvalue));
+    assert(dl(/*rvalue*/1, lvalue));
+    assert(dl(static_cast<int&&>(1), static_cast<const int&&>(2)));
+}
+
+#if TEST_STD_VER > 17
+constexpr bool test_constexpr() {
+    std::less<> cmp{};
+    __debug_less<std::less<> > dcmp(cmp);
+    assert(dcmp(1, 2));
+    assert(!dcmp(1, 1));
+    return true;
+}
+#endif
+
 int main(int, char**) {
     test_passing();
     test_failing();
     test_upper_and_lower_bound();
     test_non_const_arg_cmp();
+    test_value_iterator();
+    test_value_categories();
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr(), "");
+#endif
     return 0;
 }

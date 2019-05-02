@@ -24,7 +24,6 @@ namespace lldb_private {
 class ASTStructExtractor;
 class ClangExpressionParser;
 
-//----------------------------------------------------------------------
 /// \class ClangFunctionCaller ClangFunctionCaller.h
 /// "lldb/Expression/ClangFunctionCaller.h" Encapsulates a function that can
 /// be called.
@@ -57,7 +56,6 @@ class ClangExpressionParser;
 ///
 /// Any of the methods that take arg_addr_ptr can be passed NULL, and the
 /// argument space will be managed for you.
-//----------------------------------------------------------------------
 class ClangFunctionCaller : public FunctionCaller {
   friend class ASTStructExtractor;
 
@@ -72,20 +70,16 @@ class ClangFunctionCaller : public FunctionCaller {
 
     ~ClangFunctionCallerHelper() override = default;
 
-    //------------------------------------------------------------------
     /// Return the object that the parser should use when resolving external
     /// values.  May be NULL if everything should be self-contained.
-    //------------------------------------------------------------------
     ClangExpressionDeclMap *DeclMap() override { return NULL; }
 
-    //------------------------------------------------------------------
     /// Return the object that the parser should allow to access ASTs. May be
     /// NULL if the ASTs do not need to be transformed.
     ///
     /// \param[in] passthrough
     ///     The ASTConsumer that the returned transformer should send
     ///     the ASTs to after transformation.
-    //------------------------------------------------------------------
     clang::ASTConsumer *
     ASTTransformer(clang::ASTConsumer *passthrough) override;
 
@@ -98,7 +92,6 @@ class ClangFunctionCaller : public FunctionCaller {
   };
 
 public:
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// \param[in] exe_scope
@@ -118,7 +111,6 @@ public:
   /// \param[in] arg_value_list
   ///     The default values to use when calling this function.  Can
   ///     be overridden using WriteFunctionArguments().
-  //------------------------------------------------------------------
   ClangFunctionCaller(ExecutionContextScope &exe_scope,
                       const CompilerType &return_type,
                       const Address &function_address,
@@ -126,7 +118,6 @@ public:
 
   ~ClangFunctionCaller() override;
 
-  //------------------------------------------------------------------
   /// Compile the wrapper function
   ///
   /// \param[in] thread_to_use_sp
@@ -139,7 +130,6 @@ public:
   ///
   /// \return
   ///     The number of errors.
-  //------------------------------------------------------------------
   unsigned CompileFunction(lldb::ThreadSP thread_to_use_sp,
                            DiagnosticManager &diagnostic_manager) override;
 
@@ -151,9 +141,7 @@ protected:
   const char *GetWrapperStructName() { return m_wrapper_struct_name.c_str(); }
 
 private:
-  //------------------------------------------------------------------
   // For ClangFunctionCaller only
-  //------------------------------------------------------------------
 
   // Note: the parser needs to be destructed before the execution unit, so
   // declare the execution unit first.

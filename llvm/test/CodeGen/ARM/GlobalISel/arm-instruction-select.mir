@@ -1,11 +1,23 @@
 # RUN: llc -O0 -mtriple arm-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 --- |
-  define void @test_trunc_and_zext_s1() { ret void }
-  define void @test_trunc_and_sext_s1() { ret void }
-  define void @test_trunc_and_sext_s8() { ret void }
-  define void @test_trunc_and_zext_s16() { ret void }
-  define void @test_trunc_and_anyext_s8() { ret void }
-  define void @test_trunc_and_anyext_s16() { ret void }
+  define void @test_trunc_and_zext_s1_to_s32() { ret void }
+  define void @test_trunc_and_sext_s1_to_s32() { ret void }
+  define void @test_trunc_and_sext_s8_to_s32() { ret void }
+  define void @test_trunc_and_zext_s16_to_s32() { ret void }
+  define void @test_trunc_and_anyext_s8_to_s32() { ret void }
+  define void @test_trunc_and_anyext_s16_to_s32() { ret void }
+
+  define void @test_trunc_and_zext_s1_to_s16() { ret void }
+  define void @test_trunc_and_sext_s1_to_s16() { ret void }
+  define void @test_trunc_and_anyext_s1_to_s16() { ret void }
+
+  define void @test_trunc_and_zext_s8_to_s16() { ret void }
+  define void @test_trunc_and_sext_s8_to_s16() { ret void }
+  define void @test_trunc_and_anyext_s8_to_s16() { ret void }
+
+  define void @test_trunc_and_zext_s1_to_s8() { ret void }
+  define void @test_trunc_and_sext_s1_to_s8() { ret void }
+  define void @test_trunc_and_anyext_s1_to_s8() { ret void }
 
   define void @test_add_s32() { ret void }
   define void @test_add_fold_imm_s32() { ret void }
@@ -54,8 +66,8 @@
   attributes #2 = { "target-features"="+v6t2" }
 ...
 ---
-name:            test_trunc_and_zext_s1
-# CHECK-LABEL: name: test_trunc_and_zext_s1
+name:            test_trunc_and_zext_s1_to_s32
+# CHECK-LABEL: name: test_trunc_and_zext_s1_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -83,8 +95,8 @@ body:             |
     ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_trunc_and_sext_s1
-# CHECK-LABEL: name: test_trunc_and_sext_s1
+name:            test_trunc_and_sext_s1_to_s32
+# CHECK-LABEL: name: test_trunc_and_sext_s1_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -113,8 +125,8 @@ body:             |
     ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_trunc_and_sext_s8
-# CHECK-LABEL: name: test_trunc_and_sext_s8
+name:            test_trunc_and_sext_s8_to_s32
+# CHECK-LABEL: name: test_trunc_and_sext_s8_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -143,8 +155,8 @@ body:             |
     ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_trunc_and_zext_s16
-# CHECK-LABEL: name: test_trunc_and_zext_s16
+name:            test_trunc_and_zext_s16_to_s32
+# CHECK-LABEL: name: test_trunc_and_zext_s16_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -173,8 +185,8 @@ body:             |
     ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_trunc_and_anyext_s8
-# CHECK-LABEL: name: test_trunc_and_anyext_s8
+name:            test_trunc_and_anyext_s8_to_s32
+# CHECK-LABEL: name: test_trunc_and_anyext_s8_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -201,8 +213,8 @@ body:             |
     ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_trunc_and_anyext_s16
-# CHECK-LABEL: name: test_trunc_and_anyext_s16
+name:            test_trunc_and_anyext_s16_to_s32
+# CHECK-LABEL: name: test_trunc_and_anyext_s16_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -227,6 +239,314 @@ body:             |
 
     BX_RET 14, $noreg, implicit $r0
     ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_zext_s1_to_s16
+# CHECK-LABEL: name: test_trunc_and_zext_s1_to_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s1) = G_TRUNC %1(s32)
+
+    %3(s16) = G_ZEXT %2(s1)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = ANDri [[VREG]], 1, 14, $noreg, $noreg
+
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    ; CHECK: STRH [[VREGEXT]], [[PTR]], $noreg, 0, 14, $noreg :: (store 2)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_sext_s1_to_s16
+# CHECK-LABEL: name: test_trunc_and_sext_s1_to_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s1) = G_TRUNC %1(s32)
+
+    %3(s16) = G_SEXT %2(s1)
+    ; CHECK: [[VREGAND:%[0-9]+]]:gpr = ANDri [[VREG]], 1, 14, $noreg, $noreg
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = RSBri [[VREGAND]], 0, 14, $noreg, $noreg
+
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    ; CHECK: STRH [[VREGEXT]], [[PTR]], $noreg, 0, 14, $noreg :: (store 2)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_anyext_s1_to_s16
+# CHECK-LABEL: name: test_trunc_and_anyext_s1_to_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s1) = G_TRUNC %1(s32)
+
+    %3(s16) = G_ANYEXT %2(s1)
+
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    ; CHECK: STRH [[VREG]], [[PTR]], $noreg, 0, 14, $noreg :: (store 2)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_zext_s8_to_s16
+# CHECK-LABEL: name: test_trunc_and_zext_s8_to_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s8) = G_TRUNC %1(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gprnopc = COPY [[VREG]]
+
+    %3(s16) = G_ZEXT %2(s8)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = UXTB [[VREGTRUNC]], 0, 14, $noreg
+
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    ; CHECK: STRH [[VREGEXT]], [[PTR]], $noreg, 0, 14, $noreg :: (store 2)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_sext_s8_to_s16
+# CHECK-LABEL: name: test_trunc_and_sext_s8_to_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s8) = G_TRUNC %1(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gprnopc = COPY [[VREG]]
+
+    %3(s16) = G_SEXT %2(s8)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = SXTB [[VREGTRUNC]], 0, 14, $noreg
+
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    ; CHECK: STRH [[VREGEXT]], [[PTR]], $noreg, 0, 14, $noreg :: (store 2)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_anyext_s8_to_s16
+# CHECK-LABEL: name: test_trunc_and_anyext_s8_to_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s8) = G_TRUNC %1(s32)
+
+    %3(s16) = G_ANYEXT %2(s8)
+
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    ; CHECK: STRH [[VREG]], [[PTR]], $noreg, 0, 14, $noreg :: (store 2)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_zext_s1_to_s8
+# CHECK-LABEL: name: test_trunc_and_zext_s1_to_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s1) = G_TRUNC %1(s32)
+
+    %3(s8) = G_ZEXT %2(s1)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = ANDri [[VREG]], 1, 14, $noreg, $noreg
+
+    G_STORE %3(s8), %0(p0) :: (store 1)
+    ; CHECK: STRBi12 [[VREGEXT]], [[PTR]], 0, 14, $noreg :: (store 1)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_sext_s1_to_s8
+# CHECK-LABEL: name: test_trunc_and_sext_s1_to_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s1) = G_TRUNC %1(s32)
+
+    %3(s8) = G_SEXT %2(s1)
+    ; CHECK: [[VREGAND:%[0-9]+]]:gpr = ANDri [[VREG]], 1, 14, $noreg, $noreg
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = RSBri [[VREGAND]], 0, 14, $noreg, $noreg
+
+    G_STORE %3(s8), %0(p0) :: (store 1)
+    ; CHECK: STRBi12 [[VREGEXT]], [[PTR]], 0, 14, $noreg :: (store 1)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_trunc_and_anyext_s1_to_s8
+# CHECK-LABEL: name: test_trunc_and_anyext_s1_to_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r1
+
+    %2(s1) = G_TRUNC %1(s32)
+
+    %3(s8) = G_ANYEXT %2(s1)
+
+    G_STORE %3(s8), %0(p0) :: (store 1)
+    ; CHECK: [[RVREG:%[0-9]+]]:gprnopc = COPY [[VREG]]
+    ; CHECK: STRBi12 [[RVREG]], [[PTR]], 0, 14, $noreg :: (store 1)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
 ...
 ---
 name:            test_add_s32
@@ -671,27 +991,36 @@ registers:
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
   - { id: 3, class: gprb }
-# CHECK: id: [[P:[0-9]+]], class: gpr
-# CHECK: id: [[I8:[0-9]+]], class: gpr
-# CHECK: id: [[I16:[0-9]+]], class: gpr
-# CHECK: id: [[I32:[0-9]+]], class: gpr
+  - { id: 4, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
 
     %0(p0) = COPY $r0
+    ; CHECK: [[P:%[0-9]+]]:gpr = COPY $r0
+
     %3(s32) = COPY $r1
+    ; CHECK: [[V32:%[0-9]+]]:gpr = COPY $r1
+
+    %4(s1) = G_TRUNC %3(s32)
+
     %1(s8) = G_TRUNC %3(s32)
+    ; CHECK: [[V8:%[0-9]+]]:gprnopc = COPY [[V32]]
+
     %2(s16) = G_TRUNC %3(s32)
 
+    G_STORE %4(s1), %0(p0) :: (store 1)
+    ; CHECK: [[V1:%[0-9]+]]:gprnopc = ANDri [[V32]], 1, 14, $noreg, $noreg
+    ; CHECK: STRBi12 [[V1]], [[P]], 0, 14, $noreg
+
     G_STORE %1(s8), %0(p0) :: (store 1)
-    ; CHECK: STRBi12 %[[I8]], %[[P]], 0, 14, $noreg
+    ; CHECK: STRBi12 [[V8]], [[P]], 0, 14, $noreg
 
     G_STORE %2(s16), %0(p0) :: (store 2)
-    ; CHECK: STRH %[[I32]], %[[P]], $noreg, 0, 14, $noreg
+    ; CHECK: STRH [[V32]], [[P]], $noreg, 0, 14, $noreg
 
     G_STORE %3(s32), %0(p0) :: (store 4)
-    ; CHECK: STRi12 %[[I32]], %[[P]], 0, 14, $noreg
+    ; CHECK: STRi12 [[V32]], [[P]], 0, 14, $noreg
 
     BX_RET 14, $noreg
 ...
@@ -881,7 +1210,7 @@ body:             |
     %2(s1) = G_TRUNC %1(s32)
 
     %3(s32) = G_SELECT %2(s1),  %0, %1
-    ; CHECK: CMPri [[VREGY]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: TSTri [[VREGY]], 1, 14, $noreg, implicit-def $cpsr
     ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
 
     $r0 = COPY %3(s32)
@@ -919,7 +1248,7 @@ body:             |
     %3(s1) = G_TRUNC %2(s32)
 
     %4(p0) = G_SELECT %3(s1),  %0, %1
-    ; CHECK: CMPri [[VREGC]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: TSTri [[VREGC]], 1, 14, $noreg, implicit-def $cpsr
     ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
 
     $r0 = COPY %4(p0)

@@ -109,24 +109,37 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   return true;
 }
 
-PHINode *Loop::getCanonicalInductionVariable() const {
+bool Loop::getIncomingAndBackEdge(BasicBlock *&Incoming,
+                                  BasicBlock *&Backedge) const {
   BasicBlock *H = getHeader();
 
-  BasicBlock *Incoming = nullptr, *Backedge = nullptr;
+  Incoming = nullptr;
+  Backedge = nullptr;
   pred_iterator PI = pred_begin(H);
   assert(PI != pred_end(H) && "Loop must have at least one backedge!");
   Backedge = *PI++;
   if (PI == pred_end(H))
-    return nullptr; // dead loop
+    return false; // dead loop
   Incoming = *PI++;
   if (PI != pred_end(H))
-    return nullptr; // multiple backedges?
+    return false; // multiple backedges?
 
   if (contains(Incoming)) {
     if (contains(Backedge))
-      return nullptr;
+      return false;
     std::swap(Incoming, Backedge);
   } else if (!contains(Backedge))
+    return false;
+
+  assert(Incoming && Backedge && "expected non-null incoming and backedges");
+  return true;
+}
+
+PHINode *Loop::getCanonicalInductionVariable() const {
+  BasicBlock *H = getHeader();
+
+  BasicBlock *Incoming = nullptr, *Backedge = nullptr;
+  if (!getIncomingAndBackEdge(Incoming, Backedge))
     return nullptr;
 
   // Loop over all of the PHI nodes, looking for a canonical indvar.
@@ -241,16 +254,10 @@ void Loop::setLoopID(MDNode *LoopID) const {
   assert((!LoopID || LoopID->getOperand(0) == LoopID) &&
          "Loop ID should refer to itself");
 
-  BasicBlock *H = getHeader();
-  for (BasicBlock *BB : this->blocks()) {
-    Instruction *TI = BB->getTerminator();
-    for (BasicBlock *Successor : successors(TI)) {
-      if (Successor == H) {
-        TI->setMetadata(LLVMContext::MD_loop, LoopID);
-        break;
-      }
-    }
-  }
+  SmallVector<BasicBlock *, 4> LoopLatches;
+  getLoopLatches(LoopLatches);
+  for (BasicBlock *BB : LoopLatches)
+    BB->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
 }
 
 void Loop::setLoopAlreadyUnrolled() {

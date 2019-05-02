@@ -78,7 +78,6 @@ private:
 };
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the first argument or option value from the list of 1 or
 // more options
 //          parsed from the command's options string.

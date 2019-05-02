@@ -92,6 +92,8 @@ public:
 
   static bool classof(const InputChunk *C) { return C->kind() == DataSegment; }
 
+  void generateRelocationCode(raw_ostream &OS) const;
+
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   StringRef getName() const override { return Segment.Data.Name; }
   StringRef getDebugName() const override { return StringRef(); }
@@ -218,6 +220,8 @@ protected:
 } // namespace wasm
 
 std::string toString(const wasm::InputChunk *);
+StringRef relocTypeToString(uint8_t RelocType);
+
 } // namespace lld
 
 #endif // LLD_WASM_INPUT_CHUNKS_H

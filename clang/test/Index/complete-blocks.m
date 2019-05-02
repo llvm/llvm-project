@@ -50,6 +50,15 @@ void test_f2(I1 *o) {
   [o method7:0];
 }
 
+// Crash regression test. Param info for broken function types isn't available.
+typedef UnresolvedType *(^XXX)(float);
+@interface Foo
+-(void) foo:(XXX)arg;
+@end
+void testUnresolved(Foo* f) {
+  [f foo:0];
+}
+
 // RUN: c-index-test -code-completion-at=%s:8:1 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: FunctionDecl:{ResultType void}{TypedText f}{LeftParen (}{Placeholder ^int(int x, int y)block}{RightParen )} (50)
 // CHECK-CC1: FunctionDecl:{ResultType void}{TypedText g}{LeftParen (}{Placeholder ^(float f, double d)b}{RightParen )} (50)
@@ -74,3 +83,6 @@ void test_f2(I1 *o) {
 // CHECK-CC7: FunctionDecl:{ResultType void}{TypedText f2}{LeftParen (}{Placeholder ^int(int x, int y)block}{RightParen )} (50)
 // RUN: c-index-test -code-completion-at=%s:50:6 %s | FileCheck -check-prefix=CHECK-CC8 %s
 // CHECK-CC8: ObjCInstanceMethodDecl:{ResultType id}{TypedText method7:}{Placeholder ^int(int x, int y)b} (35)
+
+// RUN: c-index-test -code-completion-at=%s:59:6 %s | FileCheck -check-prefix=CHECK-CC9 %s
+// CHECK-CC9: ObjCInstanceMethodDecl:{ResultType void}{TypedText foo:}{Placeholder ^int *(int)arg} (35)

@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: ld.lld -pie %t.o -o %t
-// RUN: llvm-readobj -V -dyn-symbols %t | FileCheck %s
+// RUN: llvm-readobj -V --dyn-syms %t | FileCheck %s
 
         .globl _start
 _start:

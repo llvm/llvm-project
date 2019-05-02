@@ -22,9 +22,7 @@ public:
 
   ~PlatformRemoteiOS() override = default;
 
-  //------------------------------------------------------------
   // Class Functions
-  //------------------------------------------------------------
   static lldb::PlatformSP CreateInstance(bool force,
                                          const lldb_private::ArchSpec *arch);
 
@@ -36,15 +34,11 @@ public:
 
   static const char *GetDescriptionStatic();
 
-  //------------------------------------------------------------
   // lldb_private::Platform functions
-  //------------------------------------------------------------
 
   const char *GetDescription() override { return GetDescriptionStatic(); }
 
-  //------------------------------------------------------------
   // lldb_private::PluginInterface functions
-  //------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override {
     return GetPluginNameStatic();
   }
@@ -56,9 +50,7 @@ public:
 
 protected:
 
-  //------------------------------------------------------------
   // lldb_private::PlatformRemoteDarwinDevice functions
-  //------------------------------------------------------------
 
   void GetDeviceSupportDirectoryNames (std::vector<std::string> &dirnames) override;
 

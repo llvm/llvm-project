@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-readobj -file-headers %t | FileCheck -check-prefix=OBJ %s
+# RUN: llvm-readobj --file-headers %t | FileCheck -check-prefix=OBJ %s
 # RUN: obj2yaml %t | FileCheck -check-prefix=YAML %s
 
 # OBJ:      Flags [ (0x9E8B1727)
@@ -44,9 +44,9 @@ Sections:
     Size:          4
 
 Symbols:
-  Global:
-    - Name:    T1
-      Section: .text
-      Value:   0
-      Size:    4
+  - Name:    T1
+    Section: .text
+    Value:   0
+    Size:    4
+    Binding: STB_GLOBAL
 ...

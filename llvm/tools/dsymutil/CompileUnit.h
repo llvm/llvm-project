@@ -114,6 +114,8 @@ public:
 
   bool hasODR() const { return HasODR; }
   bool isClangModule() const { return !ClangModuleName.empty(); }
+  uint16_t getLanguage();
+
   const std::string &getClangModuleName() const { return ClangModuleName; }
 
   DIEInfo &getInfo(unsigned Idx) { return Info[Idx]; }
@@ -315,6 +317,9 @@ private:
 
   /// Did a DIE actually contain a valid reloc?
   bool HasInterestingContent;
+
+  /// The DW_AT_language of this unit.
+  uint16_t Language = 0;
 
   /// If this is a Clang module, this holds the module's name.
   std::string ClangModuleName;

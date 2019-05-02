@@ -845,7 +845,7 @@ void RegPressureTracker::recedeSkipDebugValues() {
   CurrPos = skipDebugInstructionsBackward(std::prev(CurrPos), MBB->begin());
 
   SlotIndex SlotIdx;
-  if (RequireIntervals)
+  if (RequireIntervals && !CurrPos->isDebugInstr())
     SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
 
   // Open the top of the region using slot indexes.
@@ -855,6 +855,12 @@ void RegPressureTracker::recedeSkipDebugValues() {
 
 void RegPressureTracker::recede(SmallVectorImpl<RegisterMaskPair> *LiveUses) {
   recedeSkipDebugValues();
+  if (CurrPos->isDebugValue()) {
+    // It's possible to only have debug_value instructions and hit the start of
+    // the block.
+    assert(CurrPos == MBB->begin());
+    return;
+  }
 
   const MachineInstr &MI = *CurrPos;
   RegisterOperands RegOpers;

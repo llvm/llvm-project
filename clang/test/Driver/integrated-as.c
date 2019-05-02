@@ -13,3 +13,8 @@
 // NOFIAS-NOT: cc1as
 // NOFIAS: -cc1
 // NOFIAS: -no-integrated-as
+
+// RUN: %clang -target arm-linux-androideabi -### \
+// RUN:   -integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM-ANDROID %s
+// CHECK-ARM-ANDROID: "-mnoexecstack"

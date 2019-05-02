@@ -11,7 +11,7 @@
 //
 // extern double __negdf2vfp(double a, double b);
 //
-// Returns the negation a double precision floating point numbers using the 
+// Returns the negation a double precision floating point numbers using the
 // Darwin calling convention where double arguments are passsed in GPR pairs.
 //
 	.syntax unified

@@ -18,20 +18,15 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // The Decl vendor class is intended as a generic interface to search for named
 // declarations that are not necessarily backed by a specific symbol file.
-//----------------------------------------------------------------------
 class DeclVendor {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   DeclVendor() {}
 
   virtual ~DeclVendor() {}
 
-  //------------------------------------------------------------------
   /// Look up the set of Decls that the DeclVendor currently knows about
   /// matching a given name.
   ///
@@ -48,24 +43,19 @@ public:
   /// \return
   ///     The number of Decls added to decls; will not exceed
   ///     max_matches.
-  //------------------------------------------------------------------
   virtual uint32_t FindDecls(ConstString name, bool append,
                              uint32_t max_matches,
                              std::vector<clang::NamedDecl *> &decls) = 0;
 
-  //------------------------------------------------------------------
   /// Interface for ExternalASTMerger.  Returns an ImporterSource 
   /// allowing type completion.
   ///
   /// \return
   ///     An ImporterSource for this DeclVendor.
-  //------------------------------------------------------------------
   virtual clang::ExternalASTMerger::ImporterSource GetImporterSource() = 0;
 
 private:
-  //------------------------------------------------------------------
   // For DeclVendor only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(DeclVendor);
 };
 

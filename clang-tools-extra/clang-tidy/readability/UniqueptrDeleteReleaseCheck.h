@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_UNIQUEPTR_DELETE_RELEASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_UNIQUEPTR_DELETE_RELEASE_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

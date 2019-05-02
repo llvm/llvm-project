@@ -53,7 +53,7 @@ void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
     SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output,
-                   SplitDebugName(Args, Output));
+                   SplitDebugName(Args, Inputs[0], Output));
 }
 
 void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
@@ -252,16 +252,16 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                                     ToolChain::FT_Shared));
         CmdArgs.push_back(
             TC.getCompilerRTArgString(Args, "asan_dynamic_runtime_thunk"));
-        CmdArgs.push_back(Args.MakeArgString("--require-defined"));
-        CmdArgs.push_back(Args.MakeArgString(TC.getArch() == llvm::Triple::x86
-                                                 ? "___asan_seh_interceptor"
-                                                 : "__asan_seh_interceptor"));
+        CmdArgs.push_back("--require-defined");
+        CmdArgs.push_back(TC.getArch() == llvm::Triple::x86
+                              ? "___asan_seh_interceptor"
+                              : "__asan_seh_interceptor");
         // Make sure the linker consider all object files from the dynamic
         // runtime thunk.
-        CmdArgs.push_back(Args.MakeArgString("--whole-archive"));
-        CmdArgs.push_back(Args.MakeArgString(
-            TC.getCompilerRT(Args, "asan_dynamic_runtime_thunk")));
-        CmdArgs.push_back(Args.MakeArgString("--no-whole-archive"));
+        CmdArgs.push_back("--whole-archive");
+        CmdArgs.push_back(
+            TC.getCompilerRTArgString(Args, "asan_dynamic_runtime_thunk"));
+        CmdArgs.push_back("--no-whole-archive");
       }
 
       TC.addProfileRTLibs(Args, CmdArgs);
@@ -459,6 +459,8 @@ toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
 SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   return Res;
 }
 

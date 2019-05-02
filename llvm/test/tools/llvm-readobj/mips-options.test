@@ -1,6 +1,6 @@
 # Check DT_MIPS_OPTIONS .dynamic section tag reading
 
-RUN: llvm-readobj -dynamic-table %p/Inputs/mips-options.elf-mips64el | \
+RUN: llvm-readobj --dynamic-table %p/Inputs/mips-options.elf-mips64el | \
 RUN:   FileCheck %s
 
 CHECK:      DynamicSection [ (14 entries)

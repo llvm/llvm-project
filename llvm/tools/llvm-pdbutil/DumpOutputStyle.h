@@ -34,6 +34,7 @@ class COFFObjectFile;
 namespace pdb {
 class GSIHashTable;
 class InputFile;
+class TypeReferenceTracker;
 
 struct StatCollection {
   struct Stat {
@@ -48,6 +49,8 @@ struct StatCollection {
     }
   };
 
+  using KindAndStat = std::pair<uint32_t, Stat>;
+
   void update(uint32_t Kind, uint32_t RecordSize) {
     Totals.update(RecordSize);
     auto Iter = Individual.try_emplace(Kind, 1, RecordSize);
@@ -56,12 +59,15 @@ struct StatCollection {
   }
   Stat Totals;
   DenseMap<uint32_t, Stat> Individual;
+
+  std::vector<KindAndStat> getStatsSortedBySize() const;
 };
 
 class DumpOutputStyle : public OutputStyle {
 
 public:
   DumpOutputStyle(InputFile &File);
+  ~DumpOutputStyle() override;
 
   Error dump() override;
 
@@ -76,6 +82,7 @@ private:
   Error dumpStreamSummary();
   Error dumpSymbolStats();
   Error dumpUdtStats();
+  Error dumpTypeStats();
   Error dumpNamedStreams();
   Error dumpStringTable();
   Error dumpStringTableFromPdb();
@@ -89,6 +96,7 @@ private:
   Error dumpNewFpo(PDBFile &File);
   Error dumpTpiStream(uint32_t StreamIdx);
   Error dumpTypesFromObjectFile();
+  Error dumpTypeRefStats();
   Error dumpModules();
   Error dumpModuleFiles();
   Error dumpModuleSymsForPdb();
@@ -104,6 +112,7 @@ private:
   void dumpSectionHeaders(StringRef Label, DbgHeaderType Type);
 
   InputFile &File;
+  std::unique_ptr<TypeReferenceTracker> RefTracker;
   LinePrinter P;
   SmallVector<StreamInfo, 32> StreamPurposes;
 };

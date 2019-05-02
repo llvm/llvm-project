@@ -101,6 +101,13 @@ bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
 bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
                           ScalarEvolution *SE);
 
+struct SinkAndHoistLICMFlags {
+  bool NoOfMemAccTooLarge;
+  unsigned LicmMssaOptCounter;
+  unsigned LicmMssaOptCap;
+  unsigned LicmMssaNoAccForPromotionCap;
+};
+
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
@@ -112,7 +119,7 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, TargetTransformInfo *, Loop *,
                 AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                bool, int &, OptimizationRemarkEmitter *);
+                SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -124,8 +131,8 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 MemorySSAUpdater *, ICFLoopSafetyInfo *, bool, int &,
-                 OptimizationRemarkEmitter *);
+                 MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -276,8 +283,7 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
                         MemorySSAUpdater *MSSAU, bool TargetExecutesOncePerLoop,
-                        bool NoOfMemAccessesTooLarge,
-                        int *LicmMssaOptCap = nullptr,
+                        SinkAndHoistLICMFlags *LICMFlags = nullptr,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.

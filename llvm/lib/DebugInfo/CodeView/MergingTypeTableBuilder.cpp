@@ -52,11 +52,7 @@ Optional<TypeIndex> MergingTypeTableBuilder::getNext(TypeIndex Prev) {
 }
 
 CVType MergingTypeTableBuilder::getType(TypeIndex Index) {
-  CVType Type;
-  Type.RecordData = SeenRecords[Index.toArrayIndex()];
-  const RecordPrefix *P =
-      reinterpret_cast<const RecordPrefix *>(Type.RecordData.data());
-  Type.Type = static_cast<TypeLeafKind>(uint16_t(P->RecordKind));
+  CVType Type(SeenRecords[Index.toArrayIndex()]);
   return Type;
 }
 

@@ -43,6 +43,7 @@
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -569,29 +570,6 @@ static const EnumEntry<uint8_t> FileChecksumKindNames[] = {
   LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
 };
 
-static const EnumEntry<COFF::ResourceTypeID> ResourceTypeNames[]{
-    {"kRT_CURSOR (ID 1)", COFF::RID_Cursor},
-    {"kRT_BITMAP (ID 2)", COFF::RID_Bitmap},
-    {"kRT_ICON (ID 3)", COFF::RID_Icon},
-    {"kRT_MENU (ID 4)", COFF::RID_Menu},
-    {"kRT_DIALOG (ID 5)", COFF::RID_Dialog},
-    {"kRT_STRING (ID 6)", COFF::RID_String},
-    {"kRT_FONTDIR (ID 7)", COFF::RID_FontDir},
-    {"kRT_FONT (ID 8)", COFF::RID_Font},
-    {"kRT_ACCELERATOR (ID 9)", COFF::RID_Accelerator},
-    {"kRT_RCDATA (ID 10)", COFF::RID_RCData},
-    {"kRT_MESSAGETABLE (ID 11)", COFF::RID_MessageTable},
-    {"kRT_GROUP_CURSOR (ID 12)", COFF::RID_Group_Cursor},
-    {"kRT_GROUP_ICON (ID 14)", COFF::RID_Group_Icon},
-    {"kRT_VERSION (ID 16)", COFF::RID_Version},
-    {"kRT_DLGINCLUDE (ID 17)", COFF::RID_DLGInclude},
-    {"kRT_PLUGPLAY (ID 19)", COFF::RID_PlugPlay},
-    {"kRT_VXD (ID 20)", COFF::RID_VXD},
-    {"kRT_ANICURSOR (ID 21)", COFF::RID_AniCursor},
-    {"kRT_ANIICON (ID 22)", COFF::RID_AniIcon},
-    {"kRT_HTML (ID 23)", COFF::RID_HTML},
-    {"kRT_MANIFEST (ID 24)", COFF::RID_Manifest}};
-
 template <typename T>
 static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
                                         COFFSymbolRef Symbol,
@@ -614,11 +592,14 @@ void COFFDumper::cacheRelocations() {
       RelocMap[Section].push_back(Reloc);
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[Section], relocAddressLess);
+    llvm::sort(RelocMap[Section], [](RelocationRef L, RelocationRef R) {
+      return L.getOffset() < R.getOffset();
+    });
   }
 }
 
-void COFFDumper::printDataDirectory(uint32_t Index, const std::string &FieldName) {
+void COFFDumper::printDataDirectory(uint32_t Index,
+                                    const std::string &FieldName) {
   const data_directory *Data;
   if (Obj->getDataDirectory(Index, Data))
     return;
@@ -1256,8 +1237,9 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
       if (GHash) {
         std::vector<GloballyHashedType> Hashes =
             GloballyHashedType::hashTypes(Types);
-        if (auto EC = mergeTypeAndIdRecords(GlobalCVIDs, GlobalCVTypes, SourceToDest, Types,
-                                            Hashes, PCHSignature))
+        if (auto EC =
+                mergeTypeAndIdRecords(GlobalCVIDs, GlobalCVTypes, SourceToDest,
+                                      Types, Hashes, PCHSignature))
           return error(std::move(EC));
       } else {
         if (auto EC = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
@@ -1410,15 +1392,11 @@ void COFFDumper::printSymbols() {
 
 void COFFDumper::printDynamicSymbols() { ListScope Group(W, "DynamicSymbols"); }
 
-static ErrorOr<StringRef>
+static Expected<StringRef>
 getSectionName(const llvm::object::COFFObjectFile *Obj, int32_t SectionNumber,
                const coff_section *Section) {
-  if (Section) {
-    StringRef SectionName;
-    if (std::error_code EC = Obj->getSectionName(Section, SectionName))
-      return EC;
-    return SectionName;
-  }
+  if (Section)
+    return Obj->getSectionName(Section);
   if (SectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
     return StringRef("IMAGE_SYM_DEBUG");
   if (SectionNumber == llvm::COFF::IMAGE_SYM_ABSOLUTE)
@@ -1443,11 +1421,10 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
   if (Obj->getSymbolName(Symbol, SymbolName))
     SymbolName = "";
 
-  StringRef SectionName = "";
-  ErrorOr<StringRef> Res =
-      getSectionName(Obj, Symbol.getSectionNumber(), Section);
-  if (Res)
-    SectionName = *Res;
+  StringRef SectionName;
+  if (Expected<StringRef> NameOrErr =
+          getSectionName(Obj, Symbol.getSectionNumber(), Section))
+    SectionName = *NameOrErr;
 
   W.printString("Name", SymbolName);
   W.printNumber("Value", Symbol.getValue());
@@ -1515,16 +1492,12 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
           && Aux->Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
         const coff_section *Assoc;
         StringRef AssocName = "";
-        std::error_code EC = Obj->getSection(AuxNumber, Assoc);
-        ErrorOr<StringRef> Res = getSectionName(Obj, AuxNumber, Assoc);
-        if (Res)
-          AssocName = *Res;
-        if (!EC)
-          EC = Res.getError();
-        if (EC) {
-          AssocName = "";
+        if (std::error_code EC = Obj->getSection(AuxNumber, Assoc))
           error(EC);
-        }
+        Expected<StringRef> Res = getSectionName(Obj, AuxNumber, Assoc);
+        if (!Res)
+          error(Res.takeError());
+        AssocName = *Res;
 
         W.printNumber("AssocSection", AssocName, AuxNumber);
       }
@@ -1571,7 +1544,8 @@ void COFFDumper::printUnwindInfo() {
   case COFF::IMAGE_FILE_MACHINE_ARMNT: {
     ARM::WinEH::Decoder Decoder(W, Obj->getMachine() ==
                                        COFF::IMAGE_FILE_MACHINE_ARM64);
-    Decoder.dumpProcedureData(*Obj);
+    // TODO Propagate the error.
+    consumeError(Decoder.dumpProcedureData(*Obj));
     break;
   }
   default:
@@ -1593,7 +1567,7 @@ void COFFDumper::printNeededLibraries() {
       Libs.push_back(Name);
   }
 
-  std::stable_sort(Libs.begin(), Libs.end());
+  llvm::stable_sort(Libs);
 
   for (const auto &L : Libs) {
     outs() << "  " << L << "\n";
@@ -1789,7 +1763,8 @@ void COFFDumper::printResourceDirectoryTable(
     SmallString<20> IDStr;
     raw_svector_ostream OS(IDStr);
     if (i < Table.NumberOfNameEntries) {
-      ArrayRef<UTF16> RawEntryNameString = unwrapOrError(RSF.getEntryNameString(Entry));
+      ArrayRef<UTF16> RawEntryNameString =
+          unwrapOrError(RSF.getEntryNameString(Entry));
       std::vector<UTF16> EndianCorrectedNameString;
       if (llvm::sys::IsBigEndianHost) {
         EndianCorrectedNameString.resize(RawEntryNameString.size() + 1);
@@ -1805,9 +1780,8 @@ void COFFDumper::printResourceDirectoryTable(
       OS << EntryNameString;
     } else {
       if (Level == "Type") {
-        ScopedPrinter Printer(OS);
-        Printer.printEnum("", Entry.Identifier.ID,
-                          makeArrayRef(ResourceTypeNames));
+        OS << ": ";
+        printResourceTypeName(Entry.Identifier.ID, OS);
         IDStr = IDStr.slice(0, IDStr.find_first_of(")", 0) + 1);
       } else {
         OS << ": (ID " << Entry.Identifier.ID << ")";
@@ -1862,16 +1836,15 @@ void COFFDumper::printStackMap() const {
 
   StringRef StackMapContents;
   StackMapSection.getContents(StackMapContents);
-  ArrayRef<uint8_t> StackMapContentsArray(
-      reinterpret_cast<const uint8_t*>(StackMapContents.data()),
-      StackMapContents.size());
+  ArrayRef<uint8_t> StackMapContentsArray =
+      arrayRefFromStringRef(StackMapContents);
 
   if (Obj->isLittleEndian())
     prettyPrintStackMap(
-        W, StackMapV2Parser<support::little>(StackMapContentsArray));
+        W, StackMapParser<support::little>(StackMapContentsArray));
   else
-    prettyPrintStackMap(W,
-                        StackMapV2Parser<support::big>(StackMapContentsArray));
+    prettyPrintStackMap(
+        W, StackMapParser<support::big>(StackMapContentsArray));
 }
 
 void COFFDumper::printAddrsig() {
@@ -1890,13 +1863,12 @@ void COFFDumper::printAddrsig() {
 
   StringRef AddrsigContents;
   AddrsigSection.getContents(AddrsigContents);
-  ArrayRef<uint8_t> AddrsigContentsArray(
-      reinterpret_cast<const uint8_t*>(AddrsigContents.data()),
-      AddrsigContents.size());
+  ArrayRef<uint8_t> AddrsigContentsArray(AddrsigContents.bytes_begin(),
+                                         AddrsigContents.size());
 
   ListScope L(W, "Addrsig");
-  auto *Cur = reinterpret_cast<const uint8_t *>(AddrsigContents.begin());
-  auto *End = reinterpret_cast<const uint8_t *>(AddrsigContents.end());
+  const uint8_t *Cur = AddrsigContents.bytes_begin();
+  const uint8_t *End = AddrsigContents.bytes_end();
   while (Cur != End) {
     unsigned Size;
     const char *Err;

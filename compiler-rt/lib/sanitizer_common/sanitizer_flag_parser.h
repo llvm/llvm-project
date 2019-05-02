@@ -22,6 +22,9 @@ namespace __sanitizer {
 class FlagHandlerBase {
  public:
   virtual bool Parse(const char *value) { return false; }
+
+ protected:
+  ~FlagHandlerBase() {};
 };
 
 template <typename T>
@@ -93,6 +96,15 @@ inline bool FlagHandler<uptr>::Parse(const char *value) {
   *t_ = internal_simple_strtoll(value, &value_end, 10);
   bool ok = *value_end == 0;
   if (!ok) Printf("ERROR: Invalid value for uptr option: '%s'\n", value);
+  return ok;
+}
+
+template <>
+inline bool FlagHandler<s64>::Parse(const char *value) {
+  const char *value_end;
+  *t_ = internal_simple_strtoll(value, &value_end, 10);
+  bool ok = *value_end == 0;
+  if (!ok) Printf("ERROR: Invalid value for s64 option: '%s'\n", value);
   return ok;
 }
 

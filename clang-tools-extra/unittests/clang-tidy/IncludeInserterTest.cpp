@@ -31,12 +31,11 @@ public:
   IncludeInserterCheckBase(StringRef CheckName, ClangTidyContext *Context)
       : ClangTidyCheck(CheckName, Context) {}
 
-  void registerPPCallbacks(CompilerInstance &Compiler) override {
-    Inserter.reset(new utils::IncludeInserter(
-        Compiler.getSourceManager(),
-        Compiler.getLangOpts(),
-        utils::IncludeSorter::IS_Google));
-    Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override {
+    Inserter = llvm::make_unique<utils::IncludeInserter>(
+        SM, getLangOpts(), utils::IncludeSorter::IS_Google);
+    PP->addPPCallbacks(Inserter->CreatePPCallbacks());
   }
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override {

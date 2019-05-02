@@ -81,9 +81,7 @@ struct UserArea {
 #define DR_OFFSET(reg_index) (DR_0_OFFSET + (reg_index * 4))
 #define FPR_SIZE(reg) sizeof(((FPR_i386 *)NULL)->reg)
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_i386 to declare our g_register_infos_i386 structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_I386_STRUCT
 #include "RegisterInfos_i386.h"
 #undef DECLARE_REGISTER_INFOS_I386_STRUCT

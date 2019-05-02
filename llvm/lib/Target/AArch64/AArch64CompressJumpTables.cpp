@@ -140,7 +140,7 @@ bool AArch64CompressJumpTables::runOnMachineFunction(MachineFunction &MFIn) {
   const auto &ST = MF->getSubtarget<AArch64Subtarget>();
   TII = ST.getInstrInfo();
 
-  if (ST.force32BitJumpTables() && !MF->getFunction().optForMinSize())
+  if (ST.force32BitJumpTables() && !MF->getFunction().hasMinSize())
     return false;
 
   scanFunction();

@@ -467,10 +467,9 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // From now on, sections in Sections vector are ordered so that sections
   // in the same equivalence class are consecutive in the vector.
-  std::stable_sort(Sections.begin(), Sections.end(),
-                   [](InputSection *A, InputSection *B) {
-                     return A->Class[0] < B->Class[0];
-                   });
+  llvm::stable_sort(Sections, [](const InputSection *A, const InputSection *B) {
+    return A->Class[0] < B->Class[0];
+  });
 
   // Compare static contents and assign unique IDs for each static content.
   forEachClass([&](size_t Begin, size_t End) { segregate(Begin, End, true); });

@@ -44,6 +44,7 @@ target(libclang_target_type, "libclang") {
   }
 
   sources = [
+    "../../include/clang-c/Index.h",
     "ARCMigrate.cpp",
     "BuildSystem.cpp",
     "CIndex.cpp",

@@ -55,4 +55,3 @@ int main(int argc, const char *argv[]) {
 // CHECK: array[0] = 142
 // CHECK: array[1] = 143
 // CHECK: done
-// CHECK-NOT: WARNING: ThreadSanitizer

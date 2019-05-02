@@ -12,7 +12,7 @@ define void @mainTest(i32 %param, i32 * %vals, i32 %len) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i32> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i32> [[SHUFFLE]], i32 15
 ; CHECK-NEXT:    store atomic i32 [[TMP3]], i32* [[VALS:%.*]] unordered, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 -1>, [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <16 x i32> [[SHUFFLE]], <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 -1>
 ; CHECK-NEXT:    [[V14:%.*]] = and i32 [[TMP2]], undef
 ; CHECK-NEXT:    [[V16:%.*]] = and i32 undef, [[V14]]
 ; CHECK-NEXT:    [[V18:%.*]] = and i32 undef, [[V16]]

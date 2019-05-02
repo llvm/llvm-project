@@ -4,5 +4,5 @@
 
 void test_vi_s_dcache_wb()
 {
-  __builtin_amdgcn_s_dcache_wb(); // expected-error {{'__builtin_amdgcn_s_dcache_wb' needs target feature vi-insts}}
+  __builtin_amdgcn_s_dcache_wb(); // expected-error {{'__builtin_amdgcn_s_dcache_wb' needs target feature gfx8-insts}}
 }

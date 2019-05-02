@@ -37,7 +37,6 @@ public:
 
   void Clear();
 
-  //------------------------------------------------------------------
   /// Get const accessor for the module file specification.
   ///
   /// This function returns the file for the module on the host system
@@ -46,10 +45,8 @@ public:
   ///
   /// \return
   ///     A const reference to the file specification object.
-  //------------------------------------------------------------------
   lldb::SBFileSpec GetFileSpec() const;
 
-  //------------------------------------------------------------------
   /// Get accessor for the module platform file specification.
   ///
   /// Platform file refers to the path of the module as it is known on
@@ -63,12 +60,10 @@ public:
   ///
   /// \return
   ///     A const reference to the file specification object.
-  //------------------------------------------------------------------
   lldb::SBFileSpec GetPlatformFileSpec() const;
 
   bool SetPlatformFileSpec(const lldb::SBFileSpec &platform_file);
 
-  //------------------------------------------------------------------
   /// Get accessor for the remote install path for a module.
   ///
   /// When debugging to a remote platform by connecting to a remote
@@ -79,10 +74,8 @@ public:
   ///
   /// \return
   ///     A file specification object.
-  //------------------------------------------------------------------
   lldb::SBFileSpec GetRemoteInstallFileSpec();
 
-  //------------------------------------------------------------------
   /// Set accessor for the remote install path for a module.
   ///
   /// When debugging to a remote platform by connecting to a remote
@@ -99,7 +92,6 @@ public:
   ///
   /// \param[in] file
   ///     A file specification object.
-  //------------------------------------------------------------------
   bool SetRemoteInstallFileSpec(lldb::SBFileSpec &file);
 
   lldb::ByteOrder GetByteOrder();
@@ -130,7 +122,6 @@ public:
 
   lldb::SBCompileUnit GetCompileUnitAtIndex(uint32_t);
 
-  //------------------------------------------------------------------
   /// Find compile units related to *this module and passed source
   /// file.
   ///
@@ -141,7 +132,6 @@ public:
   /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
-  //------------------------------------------------------------------
   lldb::SBSymbolContextList
   FindCompileUnits(const lldb::SBFileSpec &sb_file_spec);
 
@@ -158,7 +148,6 @@ public:
   size_t GetNumSections();
 
   lldb::SBSection GetSectionAtIndex(size_t idx);
-  //------------------------------------------------------------------
   /// Find functions by name.
   ///
   /// \param[in] name
@@ -174,12 +163,10 @@ public:
   /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
-  //------------------------------------------------------------------
   lldb::SBSymbolContextList
   FindFunctions(const char *name,
                 uint32_t name_type_mask = lldb::eFunctionNameTypeAny);
 
-  //------------------------------------------------------------------
   /// Find global and static variables by name.
   ///
   /// \param[in] target
@@ -194,11 +181,9 @@ public:
   ///
   /// \return
   ///     A list of matched variables in an SBValueList.
-  //------------------------------------------------------------------
   lldb::SBValueList FindGlobalVariables(lldb::SBTarget &target,
                                         const char *name, uint32_t max_matches);
 
-  //------------------------------------------------------------------
   /// Find the first global (or static) variable by name.
   ///
   /// \param[in] target
@@ -210,7 +195,6 @@ public:
   ///
   /// \return
   ///     An SBValue that gets filled in with the found variable (if any).
-  //------------------------------------------------------------------
   lldb::SBValue FindFirstGlobalVariable(lldb::SBTarget &target,
                                         const char *name);
 
@@ -218,7 +202,6 @@ public:
 
   lldb::SBTypeList FindTypes(const char *type);
 
-  //------------------------------------------------------------------
   /// Get a type using its type ID.
   ///
   /// Each symbol file reader will assign different user IDs to their
@@ -233,12 +216,10 @@ public:
   /// \return
   ///     An SBType for the given type ID, or an empty SBType if the
   ///     type was not found.
-  //------------------------------------------------------------------
   lldb::SBType GetTypeByID(lldb::user_id_t uid);
 
   lldb::SBType GetBasicType(lldb::BasicType type);
 
-  //------------------------------------------------------------------
   /// Get all types matching \a type_mask from debug info in this
   /// module.
   ///
@@ -251,10 +232,8 @@ public:
   ///
   /// \return
   ///     A list of types in this module that match \a type_mask
-  //------------------------------------------------------------------
   lldb::SBTypeList GetTypes(uint32_t type_mask = lldb::eTypeClassAny);
 
-  //------------------------------------------------------------------
   /// Get the module version numbers.
   ///
   /// Many object files have a set of version numbers that describe
@@ -293,10 +272,8 @@ public:
   ///     This function always returns the number of version numbers
   ///     that this object file has regardless of the number of
   ///     version numbers that were copied into \a versions.
-  //------------------------------------------------------------------
   uint32_t GetVersion(uint32_t *versions, uint32_t num_versions);
 
-  //------------------------------------------------------------------
   /// Get accessor for the symbol file specification.
   ///
   /// When debugging an object file an additional debug information can
@@ -306,7 +283,6 @@ public:
   ///
   /// \return
   ///     A const reference to the file specification object.
-  //------------------------------------------------------------------
   lldb::SBFileSpec GetSymbolFileSpec() const;
 
   lldb::SBAddress GetObjectFileHeaderAddress() const;

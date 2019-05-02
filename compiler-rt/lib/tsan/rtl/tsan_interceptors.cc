@@ -706,6 +706,19 @@ TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
   return p;
 }
 
+TSAN_INTERCEPTOR(void*, reallocarray, void *p, uptr size, uptr n) {
+  if (in_symbolizer())
+    return InternalReallocArray(p, size, n);
+  if (p)
+    invoke_free_hook(p);
+  {
+    SCOPED_INTERCEPTOR_RAW(reallocarray, p, size, n);
+    p = user_reallocarray(thr, pc, p, size, n);
+  }
+  invoke_malloc_hook(p, size);
+  return p;
+}
+
 TSAN_INTERCEPTOR(void, free, void *p) {
   if (p == 0)
     return;
@@ -2646,14 +2659,13 @@ void InitializeInterceptors() {
 #if !SANITIZER_MAC
   // We can not use TSAN_INTERCEPT to get setjmp addr,
   // because it does &setjmp and setjmp is not present in some versions of libc.
-  using __interception::GetRealFunctionAddress;
-  GetRealFunctionAddress(TSAN_STRING_SETJMP,
-                         (uptr*)&REAL(setjmp_symname), 0, 0);
-  GetRealFunctionAddress("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
-  GetRealFunctionAddress(TSAN_STRING_SIGSETJMP,
-                         (uptr*)&REAL(sigsetjmp_symname), 0, 0);
+  using __interception::InterceptFunction;
+  InterceptFunction(TSAN_STRING_SETJMP, (uptr*)&REAL(setjmp_symname), 0, 0);
+  InterceptFunction("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
+  InterceptFunction(TSAN_STRING_SIGSETJMP, (uptr*)&REAL(sigsetjmp_symname), 0,
+                    0);
 #if !SANITIZER_NETBSD
-  GetRealFunctionAddress("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
+  InterceptFunction("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
 #endif
 #endif
 
@@ -2667,6 +2679,7 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(__libc_memalign);
   TSAN_INTERCEPT(calloc);
   TSAN_INTERCEPT(realloc);
+  TSAN_INTERCEPT(reallocarray);
   TSAN_INTERCEPT(free);
   TSAN_INTERCEPT(cfree);
   TSAN_INTERCEPT(munmap);

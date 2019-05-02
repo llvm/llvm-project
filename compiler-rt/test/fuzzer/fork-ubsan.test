@@ -1,0 +1,6 @@
+# UNSUPPORTED: darwin, freebsd
+# Tests how the fork mode works together with ubsan.
+RUN: %cpp_compiler %S/IntegerOverflowTest.cpp -o %t-IntegerOverflowTest -fsanitize=signed-integer-overflow -fno-sanitize-recover=signed-integer-overflow
+RUN: not %run %t-IntegerOverflowTest -fork=1 -ignore_crashes=1  -runs=10000 2>&1 | FileCheck %s --check-prefix=UBSAN_FORK
+UBSAN_FORK: runtime error: signed integer overflow: 1073741824 + 1073741824 cannot be represented in type 'int'
+UBSAN_FORK: INFO: fuzzed for {{.*}} iterations, wrapping up soon

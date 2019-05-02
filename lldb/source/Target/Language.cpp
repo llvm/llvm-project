@@ -443,12 +443,8 @@ void Language::GetDefaultExceptionResolverDescription(bool catch_on,
   s.Printf("Exception breakpoint (catch: %s throw: %s)",
            catch_on ? "on" : "off", throw_on ? "on" : "off");
 }
-//----------------------------------------------------------------------
 // Constructor
-//----------------------------------------------------------------------
 Language::Language() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 Language::~Language() {}

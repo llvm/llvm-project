@@ -32,10 +32,8 @@
 using namespace clang;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 // Scoped class that will remove an active lexical decl from the set when it
 // goes out of scope.
-//------------------------------------------------------------------
 namespace {
 class ScopedLexicalDeclEraser {
 public:
@@ -761,6 +759,10 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
     if (clang_namespace_decl)
       clang_namespace_decl->setHasExternalVisibleStorage();
   }
+}
+
+clang::Sema *ClangASTSource::getSema() {
+  return ClangASTContext::GetASTContext(m_ast_context)->getSema();
 }
 
 bool ClangASTSource::IgnoreName(const ConstString name,

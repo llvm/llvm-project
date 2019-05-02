@@ -107,8 +107,8 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
                  });
 
   // COMMON-LABEL: call i32 @__enqueue_kernel_basic_events
-  // COMMON-SAME: (%opencl.queue_t{{.*}}* {{%[0-9]+}}, i32 {{%[0-9]+}}, %struct.ndrange_t* {{.*}}, i32 1, %opencl.clk_event_t{{.*}}* addrspace(4)* {{%[0-9]+}}, %opencl.clk_event_t{{.*}}* addrspace(4)* null,
-  enqueue_kernel(default_queue, flags, ndrange, 1, &event_wait_list, 0,
+  // COMMON-SAME: (%opencl.queue_t{{.*}}* {{%[0-9]+}}, i32 {{%[0-9]+}}, %struct.ndrange_t* {{.*}}, i32 1, %opencl.clk_event_t{{.*}}* addrspace(4)* null, %opencl.clk_event_t{{.*}}* addrspace(4)* null,
+  enqueue_kernel(default_queue, flags, ndrange, 1, 0, 0,
                  ^(void) {
                    return;
                  });

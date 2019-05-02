@@ -161,9 +161,7 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   std::string m_thread_name;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
 

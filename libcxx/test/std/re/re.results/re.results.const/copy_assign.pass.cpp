@@ -27,7 +27,7 @@ test(const Allocator& a)
 
     m1 = m0;
     assert(m1.size()          == m0.size());
-    assert(m1.str()           == m0.str());
+    assert(m1.ready()         == m0.ready());
     if (std::allocator_traits<Allocator>::propagate_on_container_copy_assignment::value)
         assert(m1.get_allocator() == m0.get_allocator());
     else

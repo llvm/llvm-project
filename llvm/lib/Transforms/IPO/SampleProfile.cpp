@@ -752,8 +752,9 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
   // when cost exceeds threshold without checking all IRs in the callee.
   // The acutal cost does not matter because we only checks isNever() to
   // see if it is legal to inline the callsite.
-  InlineCost Cost = getInlineCost(CS, Params, GetTTI(*CalledFunction), GetAC,
-                                  None, nullptr, nullptr);
+  InlineCost Cost =
+      getInlineCost(cast<CallBase>(*I), Params, GetTTI(*CalledFunction), GetAC,
+                    None, nullptr, nullptr);
   if (Cost.isNever()) {
     ORE->emit(OptimizationRemark(DEBUG_TYPE, "Not inline", DLoc, BB)
               << "incompatible inlining");
@@ -832,6 +833,9 @@ bool SampleProfileLoader::inlineHotFunctions(
           // recursive. As llvm does not inline recursive calls, we will
           // simply ignore it instead of handling it explicitly.
           if (CalleeFunctionName == F.getName())
+            continue;
+
+          if (!callsiteIsHot(FS, PSI))
             continue;
 
           const char *Reason = "Callee function not available";
@@ -1326,7 +1330,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           annotateValueSite(*I.getParent()->getParent()->getParent(), I,
                             SortedCallTargets, Sum, IPVK_IndirectCallTarget,
                             SortedCallTargets.size());
-        } else if (!dyn_cast<IntrinsicInst>(&I)) {
+        } else if (!isa<IntrinsicInst>(&I)) {
           I.setMetadata(LLVMContext::MD_prof,
                         MDB.createBranchWeights(
                             {static_cast<uint32_t>(BlockWeights[BB])}));

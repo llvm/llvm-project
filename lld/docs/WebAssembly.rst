@@ -4,20 +4,17 @@ WebAssembly lld port
 The WebAssembly version of lld takes WebAssembly binaries as inputs and produces
 a WebAssembly binary as its output.  For the most part it tries to mimic the
 behaviour of traditional ELF linkers and specifically the ELF lld port.  Where
-possible that command line flags and the semantics should be the same.
+possible the command line flags and the semantics should be the same.
 
 
 Object file format
 ------------------
 
-The format the input object files that lld expects is specified as part of the
+The WebAssembly object file format used by LLVM and LLD is specified as part of
 the WebAssembly tool conventions on linking_.
 
-This is object format that the llvm will produce when run with the
-``wasm32-unknown-unknown`` target.  To build llvm with WebAssembly support
-currently requires enabling the experimental backed using
-``-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly``.
-
+This is the object format that the llvm will produce when run with the
+``wasm32-unknown-unknown`` target.
 
 Usage
 -----
@@ -87,31 +84,31 @@ WebAssembly-specific options:
 By default the function table is neither imported nor exported, but defined
 for internal use only.
 
-Bahaviour
+Behaviour
 ---------
 
 In general, where possible, the WebAssembly linker attempts to emulate the
-behavior of a traditional ELF linker, and in particular the ELF port of lld.
+behaviour of a traditional ELF linker, and in particular the ELF port of lld.
 For more specific details on how this is achieved see the tool conventions on
 linking_.
 
-Function Signatrues
+Function Signatures
 ~~~~~~~~~~~~~~~~~~~
 
 One way in which the WebAssembly linker differs from traditional native linkers
 is that function signature checking is strict in WebAssembly.  It is a
-validation error for a module to contain to call site that doesn't agree with
-the target signature.  Even though this is undefined behavior in C/C++ its not
-uncommon to find this in real world C/C++ programs.  For example, a call site in
-one complication unit which calls a function defined in another complication
+validation error for a module to contain a call site that doesn't agree with
+the target signature.  Even though this is undefined behaviour in C/C++, it is not
+uncommon to find this in real-world C/C++ programs.  For example, a call site in
+one compilation unit which calls a function defined in another compilation
 unit but with too many arguments.
 
-In order not to generate such invalid modules lld has two modes of handling such
-mismatches: it can simply error out or it can create stub functions that will
+In order not to generate such invalid modules, lld has two modes of handling such
+mismatches: it can simply error-out or it can create stub functions that will
 trap at runtime (functions that contain only an ``unreachable`` instruction)
 and use these stub functions at the otherwise invalid call sites.
 
-The the default befviour is to generate these stub function and to produce
+The default behaviour is to generate these stub function and to produce
 a warning.  The ``--falal-warnings`` flag can be used to disable this behaviour
 and error out if mismatched are found.
 

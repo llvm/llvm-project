@@ -1,12 +1,12 @@
-RUN: llvm-readobj --symbols %p/Inputs/symbols-proc-specific.elf-hexagon \
-RUN:  --elf-output-style=GNU | FileCheck %s --check-prefix ELF32
-RUN: llvm-readobj --symbols %p/Inputs/relocs.obj.elf-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf --symbols %p/Inputs/symbols-proc-specific.elf-hexagon \
+RUN:  | FileCheck %s --check-prefix ELF32
+RUN: llvm-readelf --symbols %p/Inputs/relocs.obj.elf-x86_64 \
 RUN:   | FileCheck %s --check-prefix ELF64
-RUN: llvm-readobj --symbols %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf --symbols %p/Inputs/gnuhash.so.elf-x86_64 \
 RUN:   | FileCheck %s --check-prefixes=SYMTAB,DYN
-RUN: llvm-readobj --dyn-symbols %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf --dyn-symbols %p/Inputs/gnuhash.so.elf-x86_64 \
 RUN:   | FileCheck %s --check-prefixes=NO-SYMTAB,DYN
-RUN: llvm-readobj --symbols --dyn-symbols %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf --symbols --dyn-symbols %p/Inputs/gnuhash.so.elf-x86_64 \
 RUN:   | FileCheck %s --check-prefixes=SYMTAB,DYN
 
 ELF32: Symbol table '.symtab' contains 5 entries:

@@ -354,7 +354,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     StringRef Str = Data.getData().substr(*OffsetPtr, Value.uval);
     Value.data = nullptr;
     if (!Str.empty()) {
-      Value.data = reinterpret_cast<const uint8_t *>(Str.data());
+      Value.data = Str.bytes_begin();
       *OffsetPtr += Value.uval;
     }
   }

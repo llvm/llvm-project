@@ -101,14 +101,14 @@ namespace {
 
         SmallVector<BasicBlock*, 32> Worklist;
         Worklist.append(succ_begin(BB), succ_end(BB));
-        return !isPotentiallyReachableFromMany(Worklist, BB, DT);
+        return !isPotentiallyReachableFromMany(Worklist, BB, nullptr, DT);
       }
 
       // If the value is defined in the same basic block as use and BeforeHere,
       // there is no need to explore the use if BeforeHere dominates use.
       // Check whether there is a path from I to BeforeHere.
       if (BeforeHere != I && DT->dominates(BeforeHere, I) &&
-          !isPotentiallyReachable(I, BeforeHere, DT))
+          !isPotentiallyReachable(I, BeforeHere, nullptr, DT))
         return true;
 
       return false;

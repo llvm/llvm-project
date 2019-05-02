@@ -86,6 +86,8 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute map(l[:-1]) // expected-error 2 {{section length is evaluated to a negative value -1}}
   for (i = 0; i < argc; ++i) foo();
+#pragma omp target teams distribute map(l[true:true])
+  for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute map(x)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute map(tofrom: t[:I])
@@ -205,6 +207,8 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute map(l[-1:]) // expected-error {{array section must be a subset of the original array}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute map(l[:-1]) // expected-error {{section length is evaluated to a negative value -1}}
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target teams distribute map(l[true:true])
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute map(x)
   for (i = 0; i < argc; ++i) foo();

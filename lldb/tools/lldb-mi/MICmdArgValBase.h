@@ -85,7 +85,6 @@ protected:
 };
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValBaseTemplate constructor.
 // Type:    Method.
 // Args:    vrArgName       - (R) Argument's name to search by.
@@ -103,7 +102,6 @@ CMICmdArgValBaseTemplate<T>::CMICmdArgValBaseTemplate(
     : CMICmdArgValBase(vrArgName, vbMandatory, vbHandleByCmd) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the value the argument parsed from the command's argument /
 // options
 //          text string.

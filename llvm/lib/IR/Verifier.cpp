@@ -1156,6 +1156,14 @@ void Verifier::visitDILexicalBlockFile(const DILexicalBlockFile &N) {
   visitDILexicalBlockBase(N);
 }
 
+void Verifier::visitDICommonBlock(const DICommonBlock &N) {
+  AssertDI(N.getTag() == dwarf::DW_TAG_common_block, "invalid tag", &N);
+  if (auto *S = N.getRawScope())
+    AssertDI(isa<DIScope>(S), "invalid scope ref", &N, S);
+  if (auto *S = N.getRawDecl())
+    AssertDI(isa<DIGlobalVariable>(S), "invalid declaration", &N, S);
+}
+
 void Verifier::visitDINamespace(const DINamespace &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_namespace, "invalid tag", &N);
   if (auto *S = N.getRawScope())
@@ -1224,7 +1232,6 @@ void Verifier::visitDIGlobalVariable(const DIGlobalVariable &N) {
   visitDIVariable(N);
 
   AssertDI(N.getTag() == dwarf::DW_TAG_variable, "invalid tag", &N);
-  AssertDI(!N.getName().empty(), "missing global variable name", &N);
   AssertDI(isType(N.getRawType()), "invalid type ref", &N, N.getRawType());
   AssertDI(N.getType(), "missing global variable type", &N);
   if (auto *Member = N.getRawStaticDataMemberDeclaration()) {
@@ -3269,7 +3276,7 @@ void Verifier::visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty) {
   unsigned NumRanges = NumOperands / 2;
   Assert(NumRanges >= 1, "It should have at least one range!", Range);
 
-  ConstantRange LastRange(1); // Dummy initial value
+  ConstantRange LastRange(1, true); // Dummy initial value
   for (unsigned i = 0; i < NumRanges; ++i) {
     ConstantInt *Low =
         mdconst::dyn_extract<ConstantInt>(Range->getOperand(2 * i));
@@ -4634,17 +4641,68 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   unsigned NumOperands = FPI.getNumArgOperands();
-  Assert(((NumOperands == 5 && FPI.isTernaryOp()) ||
-          (NumOperands == 3 && FPI.isUnaryOp()) || (NumOperands == 4)),
-           "invalid arguments for constrained FP intrinsic", &FPI);
-  Assert(isa<MetadataAsValue>(FPI.getArgOperand(NumOperands-1)),
-         "invalid exception behavior argument", &FPI);
-  Assert(isa<MetadataAsValue>(FPI.getArgOperand(NumOperands-2)),
-         "invalid rounding mode argument", &FPI);
-  Assert(FPI.getRoundingMode() != ConstrainedFPIntrinsic::rmInvalid,
-         "invalid rounding mode argument", &FPI);
-  Assert(FPI.getExceptionBehavior() != ConstrainedFPIntrinsic::ebInvalid,
-         "invalid exception behavior argument", &FPI);
+  bool HasExceptionMD = false;
+  bool HasRoundingMD = false;
+  switch (FPI.getIntrinsicID()) {
+  case Intrinsic::experimental_constrained_sqrt:
+  case Intrinsic::experimental_constrained_sin:
+  case Intrinsic::experimental_constrained_cos:
+  case Intrinsic::experimental_constrained_exp:
+  case Intrinsic::experimental_constrained_exp2:
+  case Intrinsic::experimental_constrained_log:
+  case Intrinsic::experimental_constrained_log10:
+  case Intrinsic::experimental_constrained_log2:
+  case Intrinsic::experimental_constrained_rint:
+  case Intrinsic::experimental_constrained_nearbyint:
+  case Intrinsic::experimental_constrained_ceil:
+  case Intrinsic::experimental_constrained_floor:
+  case Intrinsic::experimental_constrained_round:
+  case Intrinsic::experimental_constrained_trunc:
+    Assert((NumOperands == 3), "invalid arguments for constrained FP intrinsic",
+           &FPI);
+    HasExceptionMD = true;
+    HasRoundingMD = true;
+    break;
+
+  case Intrinsic::experimental_constrained_fma:
+    Assert((NumOperands == 5), "invalid arguments for constrained FP intrinsic",
+           &FPI);
+    HasExceptionMD = true;
+    HasRoundingMD = true;
+    break;
+
+  case Intrinsic::experimental_constrained_fadd:
+  case Intrinsic::experimental_constrained_fsub:
+  case Intrinsic::experimental_constrained_fmul:
+  case Intrinsic::experimental_constrained_fdiv:
+  case Intrinsic::experimental_constrained_frem:
+  case Intrinsic::experimental_constrained_pow:
+  case Intrinsic::experimental_constrained_powi:
+  case Intrinsic::experimental_constrained_maxnum:
+  case Intrinsic::experimental_constrained_minnum:
+    Assert((NumOperands == 4), "invalid arguments for constrained FP intrinsic",
+           &FPI);
+    HasExceptionMD = true;
+    HasRoundingMD = true;
+    break;
+
+  default:
+    llvm_unreachable("Invalid constrained FP intrinsic!");
+  }
+
+  // If a non-metadata argument is passed in a metadata slot then the
+  // error will be caught earlier when the incorrect argument doesn't
+  // match the specification in the intrinsic call table. Thus, no
+  // argument type check is needed here.
+
+  if (HasExceptionMD) {
+    Assert(FPI.getExceptionBehavior() != ConstrainedFPIntrinsic::ebInvalid,
+           "invalid exception behavior argument", &FPI);
+  }
+  if (HasRoundingMD) {
+    Assert(FPI.getRoundingMode() != ConstrainedFPIntrinsic::rmInvalid,
+           "invalid rounding mode argument", &FPI);
+  }
 }
 
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {

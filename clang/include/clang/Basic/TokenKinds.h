@@ -86,7 +86,7 @@ inline bool isLiteral(TokenKind K) {
   return K == tok::numeric_constant || K == tok::char_constant ||
          K == tok::wide_char_constant || K == tok::utf8_char_constant ||
          K == tok::utf16_char_constant || K == tok::utf32_char_constant ||
-         isStringLiteral(K) || K == tok::angle_string_literal;
+         isStringLiteral(K) || K == tok::header_name;
 }
 
 /// Return true if this is any of tok::annot_* kinds.

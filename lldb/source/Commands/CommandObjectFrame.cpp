@@ -50,13 +50,9 @@ using namespace lldb_private;
 
 #pragma mark CommandObjectFrameDiagnose
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameInfo
-//-------------------------------------------------------------------------
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameDiagnose
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_frame_diag_options[] = {
     // clang-format off
@@ -216,9 +212,7 @@ protected:
 
 #pragma mark CommandObjectFrameInfo
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameInfo
-//-------------------------------------------------------------------------
 
 class CommandObjectFrameInfo : public CommandObjectParsed {
 public:
@@ -242,9 +236,7 @@ protected:
 
 #pragma mark CommandObjectFrameSelect
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameSelect
-//-------------------------------------------------------------------------
 
 static OptionDefinition g_frame_select_options[] = {
     // clang-format off
@@ -412,9 +404,7 @@ protected:
 };
 
 #pragma mark CommandObjectFrameVariable
-//----------------------------------------------------------------------
 // List images with associated information
-//----------------------------------------------------------------------
 class CommandObjectFrameVariable : public CommandObjectParsed {
 public:
   CommandObjectFrameVariable(CommandInterpreter &interpreter)
@@ -900,7 +890,7 @@ bool CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
     return false;
   }
 
-  ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+  ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
   if (interpreter &&
       !interpreter->CheckObjectExists(m_options.m_class_name.c_str())) {
@@ -1118,9 +1108,7 @@ class CommandObjectFrameRecognizer : public CommandObjectMultiword {
 
 #pragma mark CommandObjectMultiwordFrame
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordFrame
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
     CommandInterpreter &interpreter)

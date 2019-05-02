@@ -173,6 +173,22 @@ RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
   return newRanges;
 }
 
+// Returns a set containing the values in the receiving set, intersected with
+// the range set passed as parameter.
+RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
+                             const RangeSet &Other) const {
+  PrimRangeSet newRanges = F.getEmptySet();
+
+  for (iterator i = Other.begin(), e = Other.end(); i != e; ++i) {
+    RangeSet newPiece = Intersect(BV, F, i->From(), i->To());
+    for (iterator j = newPiece.begin(), ee = newPiece.end(); j != ee; ++j) {
+      newRanges = F.add(newRanges, *j);
+    }
+  }
+
+  return newRanges;
+}
+
 // Turn all [A, B] ranges to [-B, -A]. Ranges [MIN, B] are turned to range set
 // [MIN, MIN] U [-B, MAX], when MIN and MAX are the minimal and the maximal
 // signed values of the type.
@@ -461,14 +477,21 @@ static RangeSet applyBitwiseConstraints(
 
 RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
                                           SymbolRef Sym) {
-  if (ConstraintRangeTy::data_type *V = State->get<ConstraintRange>(Sym))
-    return *V;
-
-  BasicValueFactory &BV = getBasicVals();
+  ConstraintRangeTy::data_type *V = State->get<ConstraintRange>(Sym);
 
   // If Sym is a difference of symbols A - B, then maybe we have range set
   // stored for B - A.
-  if (const RangeSet *R = getRangeForMinusSymbol(State, Sym))
+  BasicValueFactory &BV = getBasicVals();
+  const RangeSet *R = getRangeForMinusSymbol(State, Sym);
+
+  // If we have range set stored for both A - B and B - A then calculate the
+  // effective range set by intersecting the range set for A - B and the
+  // negated range set of B - A.
+  if (V && R)
+    return V->Intersect(BV, F, R->Negate(BV, F));
+  if (V)
+    return *V;
+  if (R)
     return R->Negate(BV, F);
 
   // Lazily generate a new RangeSet representing all possible values for the

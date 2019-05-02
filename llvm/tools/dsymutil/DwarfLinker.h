@@ -193,7 +193,7 @@ private:
   /// A skeleton CU is a CU without children, a DW_AT_gnu_dwo_name
   /// pointing to the module, and a DW_AT_gnu_dwo_id with the module
   /// hash.
-  bool registerModuleReference(const DWARFDie &CUDie, const DWARFUnit &Unit,
+  bool registerModuleReference(DWARFDie CUDie, const DWARFUnit &Unit,
                                DebugMap &ModuleMap, const DebugMapObject &DMO,
                                RangesTy &Ranges,
                                OffsetsStringPool &OffsetsStringPool,
@@ -206,7 +206,7 @@ private:
   /// Recursively add the debug info in this clang module .pcm
   /// file (and all the modules imported by it in a bottom-up fashion)
   /// to Units.
-  Error loadClangModule(StringRef Filename, StringRef ModulePath,
+  Error loadClangModule(DWARFDie CUDie, StringRef FilePath,
                         StringRef ModuleName, uint64_t DwoId,
                         DebugMap &ModuleMap, const DebugMapObject &DMO,
                         RangesTy &Ranges, OffsetsStringPool &OffsetsStringPool,
@@ -494,6 +494,12 @@ private:
   /// Mapping the PCM filename to the DwoId.
   StringMap<uint64_t> ClangModules;
 
+  /// A list of all .swiftinterface files referenced by the debug
+  /// info, mapping Module name to path on disk. The entries need to
+  /// be uniqued and sorted and there are only few entries expected
+  /// per compile unit, which is why this is a std::map.
+  std::map<std::string, std::string> ParseableSwiftInterfaces;
+  
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;
 };

@@ -69,7 +69,7 @@ define void @widen_f16_build_vector(half* %addr) {
 define <1 x i64> @single_element_vector_i64(<1 x i64> %arg) {
 ; CHECK-LABEL: single_element_vector_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    orr w8, wzr, #0x1
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    add d0, d0, d1
 ; CHECK-NEXT:    ret

@@ -18,9 +18,7 @@
 
 class UniqueDWARFASTType {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   UniqueDWARFASTType()
       : m_type_sp(), m_die(), m_declaration(),
         m_byte_size(

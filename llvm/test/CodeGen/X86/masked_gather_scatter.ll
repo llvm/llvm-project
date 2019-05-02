@@ -2645,9 +2645,9 @@ define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_32-NEXT:    vpslld $24, %ymm0, %ymm0
 ; SKX_32-NEXT:    vpsrad $24, %ymm0, %ymm1
-; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_32-NEXT:    vgatherdps (%eax,%ymm1,4), %ymm0 {%k1}
 ; SKX_32-NEXT:    retl
 

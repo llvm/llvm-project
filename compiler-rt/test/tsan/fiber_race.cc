@@ -1,7 +1,7 @@
 // RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: darwin
+// UNSUPPORTED: tvos, watchos
+#include "sanitizer_common/sanitizer_ucontext.h"
 #include "test.h"
-#include <ucontext.h>
 
 char stack[64 * 1024] __attribute__((aligned(16)));
 

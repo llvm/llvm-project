@@ -10,9 +10,9 @@
 # compiled as clang++ source.cpp
 # and  clang++ -m32 source.cpp
 
-RUN: llvm-readobj -program-headers %p/Inputs/phdrs-elf.exe-i386 --elf-output-style=GNU \
+RUN: llvm-readelf -l %p/Inputs/phdrs-elf.exe-i386 \
 RUN:   | FileCheck %s -check-prefix ELF32
-RUN: llvm-readobj -program-headers %p/Inputs/phdrs-elf.exe-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf -l %p/Inputs/phdrs-elf.exe-x86_64 \
 RUN:   | FileCheck %s -check-prefixes ELF64-PHDRS,ELF64-MAPPING
 RUN: llvm-readelf -program-headers %p/Inputs/phdrs-elf.exe-x86_64 \
 RUN:   | FileCheck %s -check-prefixes ELF64-PHDRS,ELF64-MAPPING

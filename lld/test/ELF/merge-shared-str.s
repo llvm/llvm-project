@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t.so -shared -O3
-// RUN: llvm-readobj -r -s %t.so | FileCheck %s
+// RUN: llvm-readobj -r -S %t.so | FileCheck %s
 
 
         .section        foo,"aMS",@progbits,1

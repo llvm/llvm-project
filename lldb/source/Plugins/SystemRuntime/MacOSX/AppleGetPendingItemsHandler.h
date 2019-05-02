@@ -60,7 +60,6 @@ public:
           count(0) {}
   };
 
-  //----------------------------------------------------------
   /// Get the list of pending items for a given queue via a call to
   /// __introspection_dispatch_queue_get_pending_items.  If there's a page of
   /// memory that needs to be freed, pass in the address and size and it will
@@ -90,7 +89,6 @@ public:
   ///     failure of any kind while getting
   ///     the information, the items_buffer_ptr value will be
   ///     LLDB_INVALID_ADDRESS.
-  //----------------------------------------------------------
   GetPendingItemsReturnInfo GetPendingItems(Thread &thread, lldb::addr_t queue,
                                             lldb::addr_t page_to_free,
                                             uint64_t page_to_free_size,

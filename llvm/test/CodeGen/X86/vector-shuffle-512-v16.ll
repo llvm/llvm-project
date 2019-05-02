@@ -156,6 +156,17 @@ define <16 x float> @shuffle_v16f32_03_uu_uu_uu_uu_04_uu_uu_uu_uu_11_uu_uu_uu_uu
   ret <16 x float> %shuffle
 }
 
+; PR41203
+define <16 x float> @shuffle_v16f32_00_17_02_19_04_21_06_23_08_25_10_27_12_29_14_31(<16 x float> %a) {
+; ALL-LABEL: shuffle_v16f32_00_17_02_19_04_21_06_23_08_25_10_27_12_29_14_31:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %tmp1 = shufflevector <16 x float> %a, <16 x float> undef, <16 x i32> <i32 undef, i32 17, i32 undef, i32 19, i32 undef, i32 5, i32 undef, i32 7, i32 undef, i32 9, i32 undef, i32 11, i32 undef, i32 13, i32 undef, i32 15>
+  %tmp2 = shufflevector <16 x float> %tmp1, <16 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef>, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
+  ret <16 x float> %tmp2
+}
+
 define <16 x i32> @shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<16 x i32> %a, <16 x i32> %b) {
 ; ALL-LABEL: shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; ALL:       # %bb.0:
@@ -314,7 +325,7 @@ define <4 x i32> @test_v16i32_0_4_8_12(<16 x i32> %v) {
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; ALL-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; ALL-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,0,4,u,u,u,u>
+; ALL-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [17179869184,17179869184,17179869184,17179869184]
 ; ALL-NEXT:    vpermps %ymm0, %ymm2, %ymm0
 ; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; ALL-NEXT:    vzeroupper
@@ -352,10 +363,10 @@ define <8 x float> @test_v16f32_0_1_2_3_4_6_7_10 (<16 x float> %v) {
 define <4 x float> @test_v16f32_0_1_3_6 (<16 x float> %v) {
 ; ALL-LABEL: test_v16f32_0_1_3_6:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,3,3]
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; ALL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,1,3,6,0,1,3,6,0,1,3,6,0,1,3,6]
+; ALL-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; ALL-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %res = shufflevector <16 x float> %v, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 6>

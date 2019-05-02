@@ -22,7 +22,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class SystemRuntime SystemRuntime.h "lldb/Target/SystemRuntime.h"
 /// A plug-in interface definition class for system runtimes.
 ///
@@ -39,11 +38,9 @@ namespace lldb_private {
 /// collecting information.  Later when it comes time to augment a Thread, it
 /// can be asked to provide that information.
 ///
-//----------------------------------------------------------------------
 
 class SystemRuntime : public PluginInterface {
 public:
-  //------------------------------------------------------------------
   /// Find a system runtime plugin for a given process.
   ///
   /// Scans the installed SystemRuntime plugins and tries to find an instance
@@ -52,55 +49,41 @@ public:
   /// \param[in] process
   ///     The process for which to try and locate a system runtime
   ///     plugin instance.
-  //------------------------------------------------------------------
   static SystemRuntime *FindPlugin(Process *process);
 
-  //------------------------------------------------------------------
   /// Construct with a process.
-  // -----------------------------------------------------------------
   SystemRuntime(lldb_private::Process *process);
 
-  //------------------------------------------------------------------
   /// Destructor.
   ///
   /// The destructor is virtual since this class is designed to be inherited
   /// by the plug-in instance.
-  //------------------------------------------------------------------
   ~SystemRuntime() override;
 
-  //------------------------------------------------------------------
   /// Called after attaching to a process.
   ///
   /// Allow the SystemRuntime plugin to execute some code after attaching to a
   /// process.
-  //------------------------------------------------------------------
   virtual void DidAttach();
 
-  //------------------------------------------------------------------
   /// Called after launching a process.
   ///
   /// Allow the SystemRuntime plugin to execute some code after launching a
   /// process.
-  //------------------------------------------------------------------
   virtual void DidLaunch();
 
-  //------------------------------------------------------------------
   /// Called when modules have been loaded in the process.
   ///
   /// Allow the SystemRuntime plugin to enable logging features in the system
   /// runtime libraries.
-  //------------------------------------------------------------------
   virtual void ModulesDidLoad(lldb_private::ModuleList &module_list);
 
-  //------------------------------------------------------------------
   /// Called before detaching from a process.
   ///
   /// This will give a SystemRuntime plugin a chance to free any resources in
   /// the inferior process before we detach.
-  //------------------------------------------------------------------
   virtual void Detach();
 
-  //------------------------------------------------------------------
   /// Return a list of thread origin extended backtraces that may be
   /// available.
   ///
@@ -122,10 +105,8 @@ public:
   ///   A vector of ConstStrings with names like "pthread" or "libdispatch".
   ///   An empty vector may be returned if no thread origin extended
   ///   backtrace capabilities are available.
-  //------------------------------------------------------------------
   virtual const std::vector<ConstString> &GetExtendedBacktraceTypes();
 
-  //------------------------------------------------------------------
   /// Return a Thread which shows the origin of this thread's creation.
   ///
   /// This likely returns a HistoryThread which shows how thread was
@@ -150,11 +131,9 @@ public:
   ///   view thread and may be only useful for showing a backtrace.
   ///
   ///   An empty ThreadSP will be returned if no thread origin is available.
-  //------------------------------------------------------------------
   virtual lldb::ThreadSP GetExtendedBacktraceThread(lldb::ThreadSP thread,
                                                     ConstString type);
 
-  //------------------------------------------------------------------
   /// Get the extended backtrace thread for a QueueItem
   ///
   /// A QueueItem represents a function/block that will be executed on
@@ -174,14 +153,12 @@ public:
   /// \return
   ///     If an extended backtrace is available, it is returned.  Else
   ///     an empty ThreadSP is returned.
-  //------------------------------------------------------------------
   virtual lldb::ThreadSP
   GetExtendedBacktraceForQueueItem(lldb::QueueItemSP queue_item_sp,
                                    ConstString type) {
     return lldb::ThreadSP();
   }
 
-  //------------------------------------------------------------------
   /// Populate the Process' QueueList with libdispatch / GCD queues that
   /// exist.
   ///
@@ -192,10 +169,8 @@ public:
   ///     This QueueList will be cleared, and any queues that currently exist
   ///     will be added.  An empty QueueList will be returned if no queues
   ///     exist or if this Systemruntime does not support libdispatch queues.
-  //------------------------------------------------------------------
   virtual void PopulateQueueList(lldb_private::QueueList &queue_list) {}
 
-  //------------------------------------------------------------------
   /// Get the queue name for a thread given a thread's dispatch_qaddr.
   ///
   /// On systems using libdispatch queues, a thread may be associated with a
@@ -210,13 +185,11 @@ public:
   /// \return
   ///     The string of this queue's name.  An empty string is returned if the
   ///     name could not be found.
-  //------------------------------------------------------------------
   virtual std::string
   GetQueueNameFromThreadQAddress(lldb::addr_t dispatch_qaddr) {
     return "";
   }
 
-  //------------------------------------------------------------------
   /// Get the QueueID for the libdispatch queue given the thread's
   /// dispatch_qaddr.
   ///
@@ -231,13 +204,11 @@ public:
   ///
   /// \return
   ///     The queue ID, or if it could not be retrieved, LLDB_INVALID_QUEUE_ID.
-  //------------------------------------------------------------------
   virtual lldb::queue_id_t
   GetQueueIDFromThreadQAddress(lldb::addr_t dispatch_qaddr) {
     return LLDB_INVALID_QUEUE_ID;
   }
 
-  //------------------------------------------------------------------
   /// Get the libdispatch_queue_t address for the queue given the thread's
   /// dispatch_qaddr.
   ///
@@ -252,13 +223,11 @@ public:
   /// \return
   ///     The libdispatch_queue_t address, or LLDB_INVALID_ADDRESS if
   ///     unavailable/not found.
-  //------------------------------------------------------------------
   virtual lldb::addr_t
   GetLibdispatchQueueAddressFromThreadQAddress(lldb::addr_t dispatch_qaddr) {
     return LLDB_INVALID_ADDRESS;
   }
 
-  //------------------------------------------------------------------
   /// Retrieve the Queue kind for the queue at a thread's dispatch_qaddr.
   ///
   /// Retrieve the Queue kind - either eQueueKindSerial or
@@ -267,12 +236,10 @@ public:
   ///
   /// \return
   ///     The Queue kind, if it could be read, else eQueueKindUnknown.
-  //------------------------------------------------------------------
   virtual lldb::QueueKind GetQueueKind(lldb::addr_t dispatch_qaddr) {
     return lldb::eQueueKindUnknown;
   }
 
-  //------------------------------------------------------------------
   /// Get the pending work items for a libdispatch Queue
   ///
   /// If this system/process is using libdispatch and the runtime can do so,
@@ -281,10 +248,8 @@ public:
   ///
   /// \param [in] queue
   ///     The queue of interest.
-  //------------------------------------------------------------------
   virtual void PopulatePendingItemsForQueue(lldb_private::Queue *queue) {}
 
-  //------------------------------------------------------------------
   /// Complete the fields in a QueueItem
   ///
   /// PopulatePendingItemsForQueue() may not fill in all of the QueueItem
@@ -297,11 +262,9 @@ public:
   /// \param [in] item_ref
   ///     The item_ref token that is needed to retrieve the rest of the
   ///     information about the QueueItem.
-  //------------------------------------------------------------------
   virtual void CompleteQueueItem(lldb_private::QueueItem *queue_item,
                                  lldb::addr_t item_ref) {}
 
-  //------------------------------------------------------------------
   /// Add key-value pairs to the StructuredData dictionary object with
   /// information debugserver  may need when constructing the
   /// jThreadExtendedInfo packet.
@@ -310,7 +273,6 @@ public:
   ///     Dictionary to which key-value pairs should be added; they will
   ///     be sent to the remote gdb server stub as arguments in the
   ///     jThreadExtendedInfo request.
-  //------------------------------------------------------------------
   virtual void AddThreadExtendedInfoPacketHints(
       lldb_private::StructuredData::ObjectSP dict) {}
 
@@ -327,15 +289,12 @@ public:
   ///     True will be returned if there are no known problems with running an
   ///     expression on this thread.  False means that the inferior function
   ///     call should not be made on this thread.
-  //------------------------------------------------------------------
   virtual bool SafeToCallFunctionsOnThisThread(lldb::ThreadSP thread_sp) {
     return true;
   }
 
 protected:
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   Process *m_process;
 
   std::vector<ConstString> m_types;

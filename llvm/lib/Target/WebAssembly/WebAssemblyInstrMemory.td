@@ -95,7 +95,7 @@ def : LoadPatImmOff<f64, load, or_is_add, LOAD_F64>;
 
 class LoadPatGlobalAddr<ValueType ty, PatFrag kind, NI inst> :
   Pat<(ty (kind (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off)))),
-      (inst 0, tglobaladdr:$off, I32:$addr)>;
+      (inst 0, tglobaladdr:$off, I32:$addr)>, Requires<[IsNotPIC]>;
 
 def : LoadPatGlobalAddr<i32, load, LOAD_I32>;
 def : LoadPatGlobalAddr<i64, load, LOAD_I64>;
@@ -113,7 +113,7 @@ def : LoadPatOffsetOnly<f64, load, LOAD_F64>;
 
 class LoadPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, NI inst> :
   Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off))),
-      (inst 0, tglobaladdr:$off, (CONST_I32 0))>;
+      (inst 0, tglobaladdr:$off, (CONST_I32 0))>, Requires<[IsNotPIC]>;
 
 def : LoadPatGlobalAddrOffOnly<i32, load, LOAD_I32>;
 def : LoadPatGlobalAddrOffOnly<i64, load, LOAD_I64>;
@@ -285,7 +285,7 @@ def : StorePatImmOff<f64, store, or_is_add, STORE_F64>;
 class StorePatGlobalAddr<ValueType ty, PatFrag kind, NI inst> :
   Pat<(kind ty:$val,
             (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off))),
-      (inst 0, tglobaladdr:$off, I32:$addr, ty:$val)>;
+      (inst 0, tglobaladdr:$off, I32:$addr, ty:$val)>, Requires<[IsNotPIC]>;
 def : StorePatGlobalAddr<i32, store, STORE_I32>;
 def : StorePatGlobalAddr<i64, store, STORE_I64>;
 def : StorePatGlobalAddr<f32, store, STORE_F32>;
@@ -301,7 +301,7 @@ def : StorePatOffsetOnly<f64, store, STORE_F64>;
 
 class StorePatGlobalAddrOffOnly<ValueType ty, PatFrag kind, NI inst> :
   Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
-      (inst 0, tglobaladdr:$off, (CONST_I32 0), ty:$val)>;
+      (inst 0, tglobaladdr:$off, (CONST_I32 0), ty:$val)>, Requires<[IsNotPIC]>;
 def : StorePatGlobalAddrOffOnly<i32, store, STORE_I32>;
 def : StorePatGlobalAddrOffOnly<i64, store, STORE_I64>;
 def : StorePatGlobalAddrOffOnly<f32, store, STORE_F32>;

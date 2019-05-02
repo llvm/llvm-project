@@ -838,16 +838,24 @@ def : Pat<(store (rotr (loadi64 addr:$dst), (i8 63)), addr:$dst),
 
 // Sandy Bridge and newer Intel processors support faster rotates using
 // SHLD to avoid a partial flag update on the normal rotate instructions.
-let Predicates = [HasFastSHLDRotate], AddedComplexity = 5 in {
-  def : Pat<(rotl GR32:$src, (i8 imm:$shamt)),
-            (SHLD32rri8 GR32:$src, GR32:$src, imm:$shamt)>;
-  def : Pat<(rotl GR64:$src, (i8 imm:$shamt)),
-            (SHLD64rri8 GR64:$src, GR64:$src, imm:$shamt)>;
+// Use a pseudo so that TwoInstructionPass and register allocation will see
+// this as unary instruction.
+let Predicates = [HasFastSHLDRotate], AddedComplexity = 5,
+    Defs = [EFLAGS], isPseudo = 1, SchedRW = [WriteSHDrri],
+    Constraints = "$src1 = $dst" in {
+  def SHLDROT32ri  : I<0, Pseudo, (outs GR32:$dst),
+                       (ins GR32:$src1, u8imm:$shamt), "",
+                     [(set GR32:$dst, (rotl GR32:$src1, (i8 imm:$shamt)))]>;
+  def SHLDROT64ri  : I<0, Pseudo, (outs GR64:$dst),
+                       (ins GR64:$src1, u8imm:$shamt), "",
+                     [(set GR64:$dst, (rotl GR64:$src1, (i8 imm:$shamt)))]>;
 
-  def : Pat<(rotr GR32:$src, (i8 imm:$shamt)),
-            (SHRD32rri8 GR32:$src, GR32:$src, imm:$shamt)>;
-  def : Pat<(rotr GR64:$src, (i8 imm:$shamt)),
-            (SHRD64rri8 GR64:$src, GR64:$src, imm:$shamt)>;
+  def SHRDROT32ri  : I<0, Pseudo, (outs GR32:$dst),
+                       (ins GR32:$src1, u8imm:$shamt), "",
+                     [(set GR32:$dst, (rotr GR32:$src1, (i8 imm:$shamt)))]>;
+  def SHRDROT64ri  : I<0, Pseudo, (outs GR64:$dst),
+                       (ins GR64:$src1, u8imm:$shamt), "",
+                     [(set GR64:$dst, (rotr GR64:$src1, (i8 imm:$shamt)))]>;
 }
 
 def ROT32L2R_imm8  : SDNodeXForm<imm, [{

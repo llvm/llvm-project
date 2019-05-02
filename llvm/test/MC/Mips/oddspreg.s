@@ -2,14 +2,14 @@
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64 -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-O32
 #
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N32
 
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnu | \
@@ -18,19 +18,19 @@
 # Repeat the -filetype=obj tests but this time use an empty assembly file. The
 # output should be unchanged.
 # RUN: llvm-mc /dev/null -triple mips64-unknown-linux-gnu -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N64
 
 # RUN: llvm-mc /dev/null -triple mips-unknown-linux-gnu -mattr=+fp64 -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-O32
 #
 # RUN: llvm-mc /dev/null -triple mips64-unknown-linux-gnuabin32 -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N32
 
 # RUN: llvm-mc /dev/null -triple mips64-unknown-linux-gnu -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N64
 
 # CHECK-ASM: .module oddspreg

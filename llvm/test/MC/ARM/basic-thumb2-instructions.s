@@ -1409,7 +1409,15 @@ _func:
         mcr2  p7, #1, r5, c1, c1, #4
         mcr p14, #0, r4, c0, c5
         mcr2 p4, #2, r2, c1, c3
+        MCR  P7, #1, R5, C1, C1, #4
+        MCR2  P7, #1, R5, C1, C1, #4
+        MCR P14, #0, R4, C0, C5
+        MCR2 P4, #2, R2, C1, C3
 
+@ CHECK: mcr	p7, #1, r5, c1, c1, #4  @ encoding: [0x21,0xee,0x91,0x57]
+@ CHECK: mcr2	p7, #1, r5, c1, c1, #4  @ encoding: [0x21,0xfe,0x91,0x57]
+@ CHECK: mcr	p14, #0, r4, c0, c5, #0 @ encoding: [0x00,0xee,0x15,0x4e]
+@ CHECK: mcr2	p4, #2, r2, c1, c3, #0  @ encoding: [0x41,0xfe,0x13,0x24]
 @ CHECK: mcr	p7, #1, r5, c1, c1, #4  @ encoding: [0x21,0xee,0x91,0x57]
 @ CHECK: mcr2	p7, #1, r5, c1, c1, #4  @ encoding: [0x21,0xfe,0x91,0x57]
 @ CHECK: mcr	p14, #0, r4, c0, c5, #0 @ encoding: [0x00,0xee,0x15,0x4e]
@@ -1421,7 +1429,11 @@ _func:
 @------------------------------------------------------------------------------
         mcrr  p7, #15, r5, r4, c1
         mcrr2  p7, #15, r5, r4, c1
+        MCRR  P7, #15, R5, R4, C1
+        MCRR2  P7, #15, R5, R4, C1
 
+@ CHECK: mcrr	p7, #15, r5, r4, c1     @ encoding: [0x44,0xec,0xf1,0x57]
+@ CHECK: mcrr2	p7, #15, r5, r4, c1     @ encoding: [0x44,0xfc,0xf1,0x57]
 @ CHECK: mcrr	p7, #15, r5, r4, c1     @ encoding: [0x44,0xec,0xf1,0x57]
 @ CHECK: mcrr2	p7, #15, r5, r4, c1     @ encoding: [0x44,0xfc,0xf1,0x57]
 
@@ -1571,7 +1583,19 @@ _func:
         mrc2 p12, #3, r3, c3, c4
         mrc2 p14, #0, r1, c1, c2, #4
         mrc2 p8, #7, apsr_nzcv, c15, c0, #1
+        MRC  P14, #0, R1, C1, C2, #4
+        MRC  P15, #7, APSR_NZCV, C15, C6, #6
+        MRC  P9, #1, R1, C2, C2
+        MRC2 P12, #3, R3, C3, C4
+        MRC2 P14, #0, R1, C1, C2, #4
+        MRC2 P8, #7, APSR_NZCV, C15, C0, #1
  
+@ CHECK: mrc  p14, #0, r1, c1, c2, #4            @ encoding: [0x11,0xee,0x92,0x1e]
+@ CHECK: mrc  p15, #7, apsr_nzcv, c15, c6, #6    @ encoding: [0xff,0xee,0xd6,0xff]
+@ CHECK: mrc  p9, #1, r1, c2, c2, #0             @ encoding: [0x32,0xee,0x12,0x19]
+@ CHECK: mrc2 p12, #3, r3, c3, c4, #0            @ encoding: [0x73,0xfe,0x14,0x3c]
+@ CHECK: mrc2 p14, #0, r1, c1, c2, #4            @ encoding: [0x11,0xfe,0x92,0x1e]
+@ CHECK: mrc2 p8, #7, apsr_nzcv, c15, c0, #1     @ encoding: [0xff,0xfe,0x30,0xf8]
 @ CHECK: mrc  p14, #0, r1, c1, c2, #4            @ encoding: [0x11,0xee,0x92,0x1e]
 @ CHECK: mrc  p15, #7, apsr_nzcv, c15, c6, #6    @ encoding: [0xff,0xee,0xd6,0xff]
 @ CHECK: mrc  p9, #1, r1, c2, c2, #0             @ encoding: [0x32,0xee,0x12,0x19]
@@ -1584,7 +1608,11 @@ _func:
 @------------------------------------------------------------------------------
         mrrc  p7, #1, r5, r4, c1
         mrrc2  p7, #1, r5, r4, c1
+        MRRC  P7, #1, R5, R4, C1
+        MRRC2  P7, #1, R5, R4, C1
 
+@ CHECK: mrrc	p7, #1, r5, r4, c1      @ encoding: [0x54,0xec,0x11,0x57]
+@ CHECK: mrrc2	p7, #1, r5, r4, c1      @ encoding: [0x54,0xfc,0x11,0x57]
 @ CHECK: mrrc	p7, #1, r5, r4, c1      @ encoding: [0x54,0xec,0x11,0x57]
 @ CHECK: mrrc2	p7, #1, r5, r4, c1      @ encoding: [0x54,0xfc,0x11,0x57]
 

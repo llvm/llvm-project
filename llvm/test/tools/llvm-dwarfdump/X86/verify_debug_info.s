@@ -22,13 +22,6 @@
 # CHECK-NEXT: DW_AT_prototyped [DW_FORM_flag_present]   (true)
 # CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0052 => {0x00000052} "")
 # CHECK-NEXT: DW_AT_external [DW_FORM_flag_present]     (true){{[[:space:]]}}
-# CHECK-NEXT: error: DIE with tag DW_TAG_variable is missing type attribute:{{[[:space:]]}}
-# CHECK-NEXT: 0x00000044: DW_TAG_variable [3]
-# CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]  (DW_OP_fbreg -8)
-# CHECK-NEXT: DW_AT_name [DW_FORM_strp] ( .debug_str[0x0000006a] = "a")
-# CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1]   (0x01)
-# CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1]   (2)
-# CHECK-NEXT: DW_AT_use_location [DW_FORM_ref4] (cu + 0x0053 => {0x00000053}){{[[:space:]]}}
 # CHECK-NEXT: error: Compilation unit root DIE is not a unit DIE: DW_TAG_null.
 # CHECK-NEXT: error: Compilation unit type (DW_UT_compile) and root DIE (DW_TAG_null) do not match.
 # CHECK-NEXT: error: Units[2] - start offset: 0x00000068

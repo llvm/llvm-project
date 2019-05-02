@@ -93,12 +93,18 @@ bb19:                                             ; preds = %bb6
   ret void
 }
 
-; A simple loop 2 blocks that are both entries.
+; A simple loop 2 blocks that are both entries: A1 and A2.
+; Even though A1 and A2 both have 3 predecessors (A0, A1, and A2), not 6 but
+; only 4 new routing blocks to the dispatch block should be generated.
 
 ; CHECK-LABEL: test2:
 ; CHECK: br_if
 ; CHECK: i32.const $[[REG:[^,]+]]=
+; CHECK: i32.const $[[REG]]=
 ; CHECK: br_table  $[[REG]],
+; CHECK: i32.const $[[REG]]=
+; CHECK: i32.const $[[REG]]=
+; CHECK-NOT: i32.const $[[REG]]=
 define i32 @test2(i32) {
 entry:
   br label %A0

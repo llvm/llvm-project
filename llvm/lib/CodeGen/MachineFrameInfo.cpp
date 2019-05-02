@@ -56,7 +56,8 @@ int MachineFrameInfo::CreateStackObject(uint64_t Size, unsigned Alignment,
                                 !IsSpillSlot, StackID));
   int Index = (int)Objects.size() - NumFixedObjects - 1;
   assert(Index >= 0 && "Bad frame index!");
-  ensureMaxAlignment(Alignment);
+  if (StackID == 0)
+    ensureMaxAlignment(Alignment);
   return Index;
 }
 
@@ -141,11 +142,15 @@ unsigned MachineFrameInfo::estimateStackSize(const MachineFunction &MF) const {
   // should keep in mind that there's tight coupling between the two.
 
   for (int i = getObjectIndexBegin(); i != 0; ++i) {
+    // Only estimate stack size of default stack.
+    if (getStackID(i))
+      continue;
     int FixedOff = -getObjectOffset(i);
     if (FixedOff > Offset) Offset = FixedOff;
   }
   for (unsigned i = 0, e = getObjectIndexEnd(); i != e; ++i) {
-    if (isDeadObjectIndex(i))
+    // Only estimate stack size of live objects on default stack.
+    if (isDeadObjectIndex(i) || getStackID(i))
       continue;
     Offset += getObjectSize(i);
     unsigned Align = getObjectAlignment(i);

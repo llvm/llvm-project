@@ -875,9 +875,9 @@ struct __enforce_unordered_container_requirements {
 template <class _Key, class _Hash, class _Equal>
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
-    "the specified comparator type does not provide a const call operator")
+    "the specified comparator type does not provide a viable const call operator")
     _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
-    "the specified hash functor does not provide a const call operator")
+    "the specified hash functor does not provide a viable const call operator")
 #endif
 typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
 __diagnose_unordered_container_requirements(int);
@@ -2248,7 +2248,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(
         return _InsertReturnType{end(), false, _NodeHandle()};
     pair<iterator, bool> __result = __node_insert_unique(__nh.__ptr_);
     if (__result.second)
-        __nh.__release();
+        __nh.__release_ptr();
     return _InsertReturnType{__result.first, __result.second, _VSTD::move(__nh)};
 }
 
@@ -2263,7 +2263,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(
         return end();
     pair<iterator, bool> __result = __node_insert_unique(__nh.__ptr_);
     if (__result.second)
-        __nh.__release();
+        __nh.__release_ptr();
     return __result.first;
 }
 
@@ -2327,7 +2327,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_multi(
     if (__nh.empty())
         return end();
     iterator __result = __node_insert_multi(__nh.__ptr_);
-    __nh.__release();
+    __nh.__release_ptr();
     return __result;
 }
 
@@ -2341,7 +2341,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_multi(
     if (__nh.empty())
         return end();
     iterator __result = __node_insert_multi(__hint, __nh.__ptr_);
-    __nh.__release();
+    __nh.__release_ptr();
     return __result;
 }
 

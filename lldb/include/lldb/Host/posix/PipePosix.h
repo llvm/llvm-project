@@ -14,13 +14,11 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class PipePosix PipePosix.h "lldb/Host/posix/PipePosix.h"
 /// A posix-based implementation of Pipe, a class that abtracts
 ///        unix style pipes.
 ///
 /// A class that abstracts the LLDB core from host pipe functionality.
-//----------------------------------------------------------------------
 class PipePosix : public PipeBase {
 public:
   static int kInvalidDescriptor;

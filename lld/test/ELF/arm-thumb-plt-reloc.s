@@ -6,7 +6,7 @@
 // RUN: ld.lld --hash-style=sysv -shared %t1 %t2 -o %t3
 // RUN: llvm-objdump -triple=thumbv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOTHUMB %s
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOARM %s
-// RUN: llvm-readobj -s -r %t3 | FileCheck -check-prefix=DSOREL %s
+// RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 //
 // Test PLT entry generation
  .syntax unified
@@ -24,6 +24,7 @@ _start:
 
 // Executable, expect no PLT
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: func1:
 // CHECK-NEXT:   11000: 70 47   bx      lr
 // CHECK: func2:
@@ -43,6 +44,7 @@ _start:
 // .text is Thumb and .plt is ARM, llvm-objdump can currently only disassemble
 // as ARM or Thumb. Work around by disassembling twice.
 // DSOTHUMB: Disassembly of section .text:
+// DSOTHUMB-EMPTY:
 // DSOTHUMB-NEXT: func1:
 // DSOTHUMB-NEXT:     1000:     70 47   bx      lr
 // DSOTHUMB: func2:
@@ -58,6 +60,7 @@ _start:
 // 0x1010 + 0x4C + 4 = 0x1060 = PLT func3
 // DSOTHUMB-NEXT:     1010:     00 f0 26 e8     blx     #76
 // DSOARM: Disassembly of section .plt:
+// DSOARM-EMPTY:
 // DSOARM-NEXT: $a:
 // DSOARM-NEXT:     1020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // (0x1024 + 8) + (0 RoR 12) + 4096 + (0xfdc) = 0x3008 = .got.plt[3]

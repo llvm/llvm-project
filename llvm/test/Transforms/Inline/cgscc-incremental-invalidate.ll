@@ -8,7 +8,6 @@
 ;
 ; CHECK-LABEL: Starting llvm::Module pass manager run.
 ; CHECK: Running pass: InlinerPass on (test1_f, test1_g, test1_h)
-; CHECK: Running analysis: FunctionAnalysisManagerCGSCCProxy on (test1_f, test1_g, test1_h)
 ; CHECK: Running analysis: DominatorTreeAnalysis on test1_f
 ; CHECK: Running analysis: DominatorTreeAnalysis on test1_g
 ; CHECK: Invalidating all non-preserved analyses for: (test1_f)

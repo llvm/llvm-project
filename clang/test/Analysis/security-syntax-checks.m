@@ -1,11 +1,40 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -DUSE_BUILTINS -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -DVARIANT -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -DUSE_BUILTINS -DVARIANT -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi -DUSE_BUILTINS -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi -DVARIANT -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi -DUSE_BUILTINS -DVARIANT -analyzer-checker=security.insecureAPI,security.FloatLoopCounter %s -verify
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
+
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN:   -DUSE_BUILTINS \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
+
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN:   -DVARIANT \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
+
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN:   -DUSE_BUILTINS -DVARIANT \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
+
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
+
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN:   -DUSE_BUILTINS \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
+
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN:   -DVARIANT \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
+
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN:   -DUSE_BUILTINS -DVARIANT \
+// RUN:   -analyzer-checker=security.insecureAPI \
+// RUN:   -analyzer-checker=security.FloatLoopCounter
 
 #ifdef USE_BUILTINS
 # define BUILTIN(f) __builtin_ ## f

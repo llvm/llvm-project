@@ -102,8 +102,8 @@ and from the command line.
 
 .. option:: -D<VAR=VALUE>
 
-  Sets a filecheck variable ``VAR`` with value ``VALUE`` that can be used in
-  ``CHECK:`` lines.
+  Sets a filecheck pattern variable ``VAR`` with value ``VALUE`` that can be
+  used in ``CHECK:`` lines.
 
 .. option:: -version
 
@@ -520,14 +520,14 @@ braces like you would in C.  In the rare case that you want to match double
 braces explicitly from the input, you can use something ugly like
 ``{{[{][{]}}`` as your pattern.
 
-FileCheck Variables
-~~~~~~~~~~~~~~~~~~~
+FileCheck Pattern Expressions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is often useful to match a pattern and then verify that it occurs again
 later in the file.  For codegen tests, this can be useful to allow any register,
 but verify that that register is used consistently later.  To do this,
-:program:`FileCheck` allows named variables to be defined and substituted into
-patterns.  Here is a simple example:
+:program:`FileCheck` supports pattern expressions that allow pattern variables
+to be defined and substituted into patterns.  Here is a simple example:
 
 .. code-block:: llvm
 
@@ -560,30 +560,37 @@ CHECK-LABEL block. Global variables are not affected by CHECK-LABEL.
 This makes it easier to ensure that individual tests are not affected
 by variables set in preceding tests.
 
-FileCheck Expressions
-~~~~~~~~~~~~~~~~~~~~~
+FileCheck Numeric Expressions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Sometimes there's a need to verify output which refers line numbers of the
+Sometimes there's a need to verify output that contains line numbers of the
 match file, e.g. when testing compiler diagnostics.  This introduces a certain
 fragility of the match file structure, as "``CHECK:``" lines contain absolute
 line numbers in the same file, which have to be updated whenever line numbers
 change due to text addition or deletion.
 
-To support this case, FileCheck allows using ``[[@LINE]]``,
-``[[@LINE+<offset>]]``, ``[[@LINE-<offset>]]`` expressions in patterns. These
-expressions expand to a number of the line where a pattern is located (with an
-optional integer offset).
+To support this case, FileCheck allows using ``[[#@LINE]]``,
+``[[#@LINE+<offset>]]`` and ``[[#@LINE-<offset>]]`` numeric expressions in
+patterns, with an arbitrary number of spaces between each element of the
+expression. These expressions expand to the number of the line where a pattern
+is located (with an optional integer offset).
 
 This way match patterns can be put near the relevant test lines and include
 relative line number references, for example:
 
 .. code-block:: c++
 
-   // CHECK: test.cpp:[[@LINE+4]]:6: error: expected ';' after top level declarator
+   // CHECK: test.cpp:[[# @LINE + 4]]:6: error: expected ';' after top level declarator
    // CHECK-NEXT: {{^int a}}
    // CHECK-NEXT: {{^     \^}}
    // CHECK-NEXT: {{^     ;}}
    int a
+
+To support legacy uses of ``@LINE`` as a special pattern variable,
+:program:`FileCheck` also accepts the following uses of ``@LINE`` with pattern
+variable syntax: ``[[@LINE]]``, ``[[@LINE+<offset>]]`` and
+``[[@LINE-<offset>]]`` without any spaces inside the brackets and where
+``offset`` is an integer.
 
 Matching Newline Characters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

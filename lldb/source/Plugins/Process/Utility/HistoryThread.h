@@ -22,7 +22,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class HistoryThread HistoryThread.h "HistoryThread.h"
 /// A thread object representing a backtrace from a previous point in the
 /// process execution
@@ -31,7 +30,6 @@ namespace lldb_private {
 /// process execution.  It is given a backtrace list of pc addresses and
 /// optionally a stop_id of when those pc addresses were collected, and it
 /// will create stack frames for them.
-//----------------------------------------------------------------------
 
 class HistoryThread : public lldb_private::Thread {
 public:

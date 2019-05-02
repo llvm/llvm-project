@@ -55,17 +55,16 @@ Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
 Symbols:
-  Local:
-    - Name:     Local
-      Type:     STT_FUNC
-      Section:  .text
-    - Name:     .L.str
-      Type:     STT_OBJECT
-      Section:  .text
-  Global:
-    - Name:     Global
-      Type:     STT_FUNC
-      Section:  .text
+  - Name:     Local
+    Type:     STT_FUNC
+    Section:  .text
+  - Name:     .L.str
+    Type:     STT_OBJECT
+    Section:  .text
+  - Name:     Global
+    Type:     STT_FUNC
+    Section:  .text
+    Binding:  STB_GLOBAL
 
 # CHECK:               Symbols [
 # CHECK-NEXT:            Symbol {

@@ -11,7 +11,7 @@
 //
 // extern float __negsf2vfp(float a);
 //
-// Returns the negation of a single precision floating point numbers using the 
+// Returns the negation of a single precision floating point numbers using the
 // Darwin calling convention where single arguments are passsed like 32-bit ints
 //
 	.syntax unified

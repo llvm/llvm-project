@@ -166,16 +166,6 @@ template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #else  // Fallback to SizeClassAllocator32.
-static const uptr kRegionSizeLog = 20;
-static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
-# if SANITIZER_WORDSIZE == 32
-template <typename AddressSpaceView>
-using ByteMapASVT = FlatByteMap<kNumRegions, AddressSpaceView>;
-# elif SANITIZER_WORDSIZE == 64
-template <typename AddressSpaceView>
-using ByteMapASVT =
-    TwoLevelByteMap<(kNumRegions >> 12), 1 << 12, AddressSpaceView>;
-# endif
 typedef CompactSizeClassMap SizeClassMap;
 template <typename AddressSpaceViewTy>
 struct AP32 {
@@ -183,9 +173,8 @@ struct AP32 {
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = 16;
   typedef __asan::SizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = __asan::kRegionSizeLog;
+  static const uptr kRegionSizeLog = 20;
   using AddressSpaceView = AddressSpaceViewTy;
-  using ByteMap = __asan::ByteMapASVT<AddressSpaceView>;
   typedef AsanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };
@@ -195,22 +184,12 @@ using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 static const uptr kNumberOfSizeClasses = SizeClassMap::kNumClasses;
-template <typename AddressSpaceView>
-using AllocatorCacheASVT =
-    SizeClassAllocatorLocalCache<PrimaryAllocatorASVT<AddressSpaceView>>;
-using AllocatorCache = AllocatorCacheASVT<LocalAddressSpaceView>;
 
 template <typename AddressSpaceView>
-using SecondaryAllocatorASVT =
-    LargeMmapAllocator<AsanMapUnmapCallback, DefaultLargeMmapAllocatorPtrArray,
-                       AddressSpaceView>;
-template <typename AddressSpaceView>
 using AsanAllocatorASVT =
-    CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>,
-                      AllocatorCacheASVT<AddressSpaceView>,
-                      SecondaryAllocatorASVT<AddressSpaceView>,
-                      AddressSpaceView>;
+    CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
 using AsanAllocator = AsanAllocatorASVT<LocalAddressSpaceView>;
+using AllocatorCache = AsanAllocator::AllocatorCache;
 
 struct AsanThreadLocalMallocStorage {
   uptr quarantine_cache[16];
@@ -230,6 +209,8 @@ void asan_delete(void *ptr, uptr size, uptr alignment,
 void *asan_malloc(uptr size, BufferedStackTrace *stack);
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack);
+void *asan_reallocarray(void *p, uptr nmemb, uptr size,
+                        BufferedStackTrace *stack);
 void *asan_valloc(uptr size, BufferedStackTrace *stack);
 void *asan_pvalloc(uptr size, BufferedStackTrace *stack);
 

@@ -29,7 +29,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class ClangExpressionDeclMap ClangExpressionDeclMap.h
 /// "lldb/Expression/ClangExpressionDeclMap.h" Manages named entities that are
 /// defined in LLDB's debug information.
@@ -53,10 +52,8 @@ namespace lldb_private {
 ///
 /// Fourth and finally, it "dematerializes" the struct after the JITted code
 /// has has executed, placing the new values back where it found the old ones.
-//----------------------------------------------------------------------
 class ClangExpressionDeclMap : public ClangASTSource {
 public:
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// Initializes class variables.
@@ -76,19 +73,15 @@ public:
   /// \param[in] ctx_obj
   ///     If not empty, then expression is evaluated in context of this object.
   ///     See the comment to `UserExpression::Evaluate` for details.
-  //------------------------------------------------------------------
   ClangExpressionDeclMap(
       bool keep_result_in_memory,
       Materializer::PersistentVariableDelegate *result_delegate,
       ExecutionContext &exe_ctx,
       ValueObject *ctx_obj);
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~ClangExpressionDeclMap() override;
 
-  //------------------------------------------------------------------
   /// Enable the state needed for parsing and IR transformation.
   ///
   /// \param[in] exe_ctx
@@ -101,26 +94,20 @@ public:
   ///
   /// \return
   ///     True if parsing is possible; false if it is unsafe to continue.
-  //------------------------------------------------------------------
   bool WillParse(ExecutionContext &exe_ctx, Materializer *materializer);
 
   void InstallCodeGenerator(clang::ASTConsumer *code_gen);
 
-  //------------------------------------------------------------------
   /// [Used by ClangExpressionParser] For each variable that had an unknown
   ///     type at the beginning of parsing, determine its final type now.
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool ResolveUnknownTypes();
 
-  //------------------------------------------------------------------
   /// Disable the state needed for parsing and IR transformation.
-  //------------------------------------------------------------------
   void DidParse();
 
-  //------------------------------------------------------------------
   /// [Used by IRForTarget] Add a variable to the list of persistent
   ///     variables for the process.
   ///
@@ -136,12 +123,10 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool AddPersistentVariable(const clang::NamedDecl *decl,
                              ConstString name, TypeFromParser type,
                              bool is_result, bool is_lvalue);
 
-  //------------------------------------------------------------------
   /// [Used by IRForTarget] Add a variable to the struct that needs to
   ///     be materialized each time the expression runs.
   ///
@@ -162,21 +147,17 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool AddValueToStruct(const clang::NamedDecl *decl, ConstString name,
                         llvm::Value *value, size_t size,
                         lldb::offset_t alignment);
 
-  //------------------------------------------------------------------
   /// [Used by IRForTarget] Finalize the struct, laying out the position of
   /// each object in it.
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool DoStructLayout();
 
-  //------------------------------------------------------------------
   /// [Used by IRForTarget] Get general information about the laid-out struct
   /// after DoStructLayout() has been called.
   ///
@@ -191,11 +172,9 @@ public:
   ///
   /// \return
   ///     True if the information could be retrieved; false otherwise.
-  //------------------------------------------------------------------
   bool GetStructInfo(uint32_t &num_elements, size_t &size,
                      lldb::offset_t &alignment);
 
-  //------------------------------------------------------------------
   /// [Used by IRForTarget] Get specific information about one field of the
   /// laid-out struct after DoStructLayout() has been called.
   ///
@@ -225,12 +204,10 @@ public:
   ///
   /// \return
   ///     True if the information could be retrieved; false otherwise.
-  //------------------------------------------------------------------
   bool GetStructElement(const clang::NamedDecl *&decl, llvm::Value *&value,
                         lldb::offset_t &offset, ConstString &name,
                         uint32_t index);
 
-  //------------------------------------------------------------------
   /// [Used by IRForTarget] Get information about a function given its Decl.
   ///
   /// \param[in] decl
@@ -242,10 +219,8 @@ public:
   ///
   /// \return
   ///     True if the information could be retrieved; false otherwise.
-  //------------------------------------------------------------------
   bool GetFunctionInfo(const clang::NamedDecl *decl, uint64_t &ptr);
 
-  //------------------------------------------------------------------
   /// [Used by IRForTarget] Get the address of a symbol given nothing but its
   /// name.
   ///
@@ -266,7 +241,6 @@ public:
   ///
   /// \return
   ///     Valid load address for the symbol
-  //------------------------------------------------------------------
   lldb::addr_t GetSymbolAddress(Target &target, Process *process,
                                 ConstString name,
                                 lldb::SymbolType symbol_type,
@@ -275,7 +249,6 @@ public:
   lldb::addr_t GetSymbolAddress(ConstString name,
                                 lldb::SymbolType symbol_type);
 
-  //------------------------------------------------------------------
   /// [Used by IRInterpreter] Get basic target information.
   ///
   /// \param[out] byte_order
@@ -287,7 +260,6 @@ public:
   /// \return
   ///     True if the information could be determined; false
   ///     otherwise.
-  //------------------------------------------------------------------
   struct TargetInfo {
     lldb::ByteOrder byte_order;
     size_t address_byte_size;
@@ -300,7 +272,6 @@ public:
   };
   TargetInfo GetTargetInfo();
 
-  //------------------------------------------------------------------
   /// [Used by ClangASTSource] Find all entities matching a given name, using
   /// a NameSearchContext to make Decls for them.
   ///
@@ -309,10 +280,8 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   void FindExternalVisibleDecls(NameSearchContext &context) override;
 
-  //------------------------------------------------------------------
   /// Find all entities matching a given name in a given module/namespace,
   /// using a NameSearchContext to make Decls for them.
   ///
@@ -331,7 +300,6 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   void FindExternalVisibleDecls(NameSearchContext &context,
                                 lldb::ModuleSP module,
                                 CompilerDeclContext &namespace_decl,
@@ -353,9 +321,7 @@ private:
                           ///For details see the comment to
                           ///`UserExpression::Evaluate`.
 
-  //----------------------------------------------------------------------
   /// The following values should not live beyond parsing
-  //----------------------------------------------------------------------
   class ParserVars {
   public:
     ParserVars() {}
@@ -388,23 +354,17 @@ private:
 
   std::unique_ptr<ParserVars> m_parser_vars;
 
-  //----------------------------------------------------------------------
   /// Activate parser-specific variables
-  //----------------------------------------------------------------------
   void EnableParserVars() {
     if (!m_parser_vars.get())
       m_parser_vars = llvm::make_unique<ParserVars>();
   }
 
-  //----------------------------------------------------------------------
   /// Deallocate parser-specific variables
-  //----------------------------------------------------------------------
   void DisableParserVars() { m_parser_vars.reset(); }
 
-  //----------------------------------------------------------------------
   /// The following values contain layout information for the materialized
   /// struct, but are not specific to a single materialization
-  //----------------------------------------------------------------------
   struct StructVars {
     StructVars()
         : m_struct_alignment(0), m_struct_size(0), m_struct_laid_out(false),
@@ -424,26 +384,19 @@ private:
 
   std::unique_ptr<StructVars> m_struct_vars;
 
-  //----------------------------------------------------------------------
   /// Activate struct variables
-  //----------------------------------------------------------------------
   void EnableStructVars() {
     if (!m_struct_vars.get())
       m_struct_vars.reset(new struct StructVars);
   }
 
-  //----------------------------------------------------------------------
   /// Deallocate struct variables
-  //----------------------------------------------------------------------
   void DisableStructVars() { m_struct_vars.reset(); }
 
-  //----------------------------------------------------------------------
   /// Get this parser's ID for use in extracting parser- and JIT-specific data
   /// from persistent variables.
-  //----------------------------------------------------------------------
   uint64_t GetParserID() { return (uint64_t) this; }
 
-  //------------------------------------------------------------------
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target
@@ -465,13 +418,11 @@ private:
   ///
   /// \return
   ///     The LLDB Variable found, or NULL if none was found.
-  //------------------------------------------------------------------
   lldb::VariableSP FindGlobalVariable(Target &target, lldb::ModuleSP &module,
                                       ConstString name,
                                       CompilerDeclContext *namespace_decl,
                                       TypeFromUser *type = NULL);
 
-  //------------------------------------------------------------------
   /// Get the value of a variable in a given execution context and return the
   /// associated Types if needed.
   ///
@@ -496,13 +447,11 @@ private:
   ///
   /// \return
   ///     Return true if the value was successfully filled in.
-  //------------------------------------------------------------------
   bool GetVariableValue(lldb::VariableSP &var,
                         lldb_private::Value &var_location,
                         TypeFromUser *found_type = NULL,
                         TypeFromParser *parser_type = NULL);
 
-  //------------------------------------------------------------------
   /// Use the NameSearchContext to generate a Decl for the given LLDB
   /// Variable, and put it in the Tuple list.
   ///
@@ -514,11 +463,9 @@ private:
   ///
   /// \param[in] valobj
   ///     The LLDB ValueObject for that variable.
-  //------------------------------------------------------------------
   void AddOneVariable(NameSearchContext &context, lldb::VariableSP var,
                       lldb::ValueObjectSP valobj, unsigned int current_id);
 
-  //------------------------------------------------------------------
   /// Use the NameSearchContext to generate a Decl for the given persistent
   /// variable, and put it in the list of found entities.
   ///
@@ -531,12 +478,10 @@ private:
   /// \param[in] current_id
   ///     The ID of the current invocation of FindExternalVisibleDecls
   ///     for logging purposes.
-  //------------------------------------------------------------------
   void AddOneVariable(NameSearchContext &context,
                       lldb::ExpressionVariableSP &pvar_sp,
                       unsigned int current_id);
 
-  //------------------------------------------------------------------
   /// Use the NameSearchContext to generate a Decl for the given LLDB symbol
   /// (treated as a variable), and put it in the list of found entities.
   ///
@@ -545,11 +490,9 @@ private:
   ///
   /// \param[in] var
   ///     The LLDB Variable that needs a Decl.
-  //------------------------------------------------------------------
   void AddOneGenericVariable(NameSearchContext &context, const Symbol &symbol,
                              unsigned int current_id);
 
-  //------------------------------------------------------------------
   /// Use the NameSearchContext to generate a Decl for the given function.
   /// (Functions are not placed in the Tuple list.)  Can handle both fully
   /// typed functions and generic functions.
@@ -564,11 +507,9 @@ private:
   /// \param[in] sym
   ///     The Symbol that corresponds to a function that needs to be
   ///     created with generic type (unitptr_t foo(...)).
-  //------------------------------------------------------------------
   void AddOneFunction(NameSearchContext &context, Function *fun, Symbol *sym,
                       unsigned int current_id);
 
-  //------------------------------------------------------------------
   /// Use the NameSearchContext to generate a Decl for the given register.
   ///
   /// \param[in] context
@@ -576,11 +517,9 @@ private:
   ///
   /// \param[in] reg_info
   ///     The information corresponding to that register.
-  //------------------------------------------------------------------
   void AddOneRegister(NameSearchContext &context, const RegisterInfo *reg_info,
                       unsigned int current_id);
 
-  //------------------------------------------------------------------
   /// Use the NameSearchContext to generate a Decl for the given type.  (Types
   /// are not placed in the Tuple list.)
   ///
@@ -589,11 +528,9 @@ private:
   ///
   /// \param[in] type
   ///     The type that needs to be created.
-  //------------------------------------------------------------------
   void AddOneType(NameSearchContext &context, const TypeFromUser &type,
                   unsigned int current_id);
 
-  //------------------------------------------------------------------
   /// Generate a Decl for "*this" and add a member function declaration to it
   /// for the expression, then report it.
   ///
@@ -602,11 +539,9 @@ private:
   ///
   /// \param[in] type
   ///     The type for *this.
-  //------------------------------------------------------------------
   void AddThisType(NameSearchContext &context, const TypeFromUser &type,
                    unsigned int current_id);
 
-  //------------------------------------------------------------------
   /// Move a type out of the current ASTContext into another, but make sure to
   /// export all components of the type also.
   ///
@@ -619,7 +554,6 @@ private:
   ///
   /// \return
   ///     Returns the moved type, or an empty type if there was a problem.
-  //------------------------------------------------------------------
   TypeFromUser DeportType(ClangASTContext &target, ClangASTContext &source,
                           TypeFromParser parser_type);
 

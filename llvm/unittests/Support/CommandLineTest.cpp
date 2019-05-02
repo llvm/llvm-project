@@ -620,6 +620,68 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
   }
 }
 
+TEST(CommandLineTest, DefaultOptions) {
+  cl::ResetCommandLineParser();
+
+  StackOption<std::string> Bar("bar", cl::sub(*cl::AllSubCommands),
+                               cl::DefaultOption);
+  StackOption<std::string, cl::alias> Bar_Alias(
+      "b", cl::desc("Alias for -bar"), cl::aliasopt(Bar), cl::DefaultOption);
+
+  StackOption<bool> Foo("foo", cl::init(false), cl::sub(*cl::AllSubCommands),
+                        cl::DefaultOption);
+  StackOption<bool, cl::alias> Foo_Alias("f", cl::desc("Alias for -foo"),
+                                         cl::aliasopt(Foo), cl::DefaultOption);
+
+  StackSubCommand SC1("sc1", "First Subcommand");
+  // Override "-b" and change type in sc1 SubCommand.
+  StackOption<bool> SC1_B("b", cl::sub(SC1), cl::init(false));
+  StackSubCommand SC2("sc2", "Second subcommand");
+  // Override "-foo" and change type in sc2 SubCommand.  Note that this does not
+  // affect "-f" alias, which continues to work correctly.
+  StackOption<std::string> SC2_Foo("foo", cl::sub(SC2));
+
+  const char *args0[] = {"prog", "-b", "args0 bar string", "-f"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(sizeof(args0) / sizeof(char *), args0,
+                                          StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(Bar == "args0 bar string");
+  EXPECT_TRUE(Foo);
+  EXPECT_FALSE(SC1_B);
+  EXPECT_TRUE(SC2_Foo.empty());
+
+  cl::ResetAllOptionOccurrences();
+
+  const char *args1[] = {"prog", "sc1", "-b", "-bar", "args1 bar string", "-f"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(sizeof(args1) / sizeof(char *), args1,
+                                          StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(Bar == "args1 bar string");
+  EXPECT_TRUE(Foo);
+  EXPECT_TRUE(SC1_B);
+  EXPECT_TRUE(SC2_Foo.empty());
+  for (auto *S : cl::getRegisteredSubcommands()) {
+    if (*S) {
+      EXPECT_EQ("sc1", S->getName());
+    }
+  }
+
+  cl::ResetAllOptionOccurrences();
+
+  const char *args2[] = {"prog", "sc2", "-b", "args2 bar string",
+                         "-f", "-foo", "foo string"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(sizeof(args2) / sizeof(char *), args2,
+                                          StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(Bar == "args2 bar string");
+  EXPECT_TRUE(Foo);
+  EXPECT_FALSE(SC1_B);
+  EXPECT_TRUE(SC2_Foo == "foo string");
+  for (auto *S : cl::getRegisteredSubcommands()) {
+    if (*S) {
+      EXPECT_EQ("sc2", S->getName());
+    }
+  }
+  cl::ResetCommandLineParser();
+}
+
 TEST(CommandLineTest, ArgumentLimit) {
   std::string args(32 * 4096, 'a');
   EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
@@ -720,6 +782,77 @@ TEST(CommandLineTest, ResponseFiles) {
   llvm::sys::fs::remove(TestDir);
 }
 
+TEST(CommandLineTest, RecursiveResponseFiles) {
+  SmallString<128> TestDir;
+  std::error_code EC = sys::fs::createUniqueDirectory("unittest", TestDir);
+  EXPECT_TRUE(!EC);
+
+  SmallString<128> ResponseFilePath;
+  sys::path::append(ResponseFilePath, TestDir, "recursive.rsp");
+  std::string ResponseFileRef = std::string("@") + ResponseFilePath.c_str();
+
+  std::ofstream ResponseFile(ResponseFilePath.str());
+  EXPECT_TRUE(ResponseFile.is_open());
+  ResponseFile << ResponseFileRef << "\n";
+  ResponseFile << ResponseFileRef << "\n";
+  ResponseFile.close();
+
+  // Ensure the recursive expansion terminates.
+  SmallVector<const char *, 4> Argv = {"test/test", ResponseFileRef.c_str()};
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+#ifdef _WIN32
+  cl::TokenizerCallback Tokenizer = cl::TokenizeWindowsCommandLine;
+#else
+  cl::TokenizerCallback Tokenizer = cl::TokenizeGNUCommandLine;
+#endif
+  bool Res = cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false);
+  EXPECT_FALSE(Res);
+
+  // Ensure some expansion took place.
+  EXPECT_GT(Argv.size(), 2U);
+  EXPECT_STREQ(Argv[0], "test/test");
+  for (size_t i = 1; i < Argv.size(); ++i)
+    EXPECT_STREQ(Argv[i], ResponseFileRef.c_str());
+}
+
+TEST(CommandLineTest, ResponseFilesAtArguments) {
+  SmallString<128> TestDir;
+  std::error_code EC = sys::fs::createUniqueDirectory("unittest", TestDir);
+  EXPECT_TRUE(!EC);
+
+  SmallString<128> ResponseFilePath;
+  sys::path::append(ResponseFilePath, TestDir, "test.rsp");
+
+  std::ofstream ResponseFile(ResponseFilePath.c_str());
+  EXPECT_TRUE(ResponseFile.is_open());
+  ResponseFile << "-foo" << "\n";
+  ResponseFile << "-bar" << "\n";
+  ResponseFile.close();
+
+  // Ensure we expand rsp files after lots of non-rsp arguments starting with @.
+  constexpr size_t NON_RSP_AT_ARGS = 64;
+  SmallVector<const char *, 4> Argv = {"test/test"};
+  Argv.append(NON_RSP_AT_ARGS, "@non_rsp_at_arg");
+  std::string ResponseFileRef = std::string("@") + ResponseFilePath.c_str();
+  Argv.push_back(ResponseFileRef.c_str());
+
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  bool Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
+                                     false, false);
+  EXPECT_FALSE(Res);
+
+  // ASSERT instead of EXPECT to prevent potential out-of-bounds access.
+  ASSERT_EQ(Argv.size(), 1 + NON_RSP_AT_ARGS + 2);
+  size_t i = 0;
+  EXPECT_STREQ(Argv[i++], "test/test");
+  for (; i < 1 + NON_RSP_AT_ARGS; ++i)
+    EXPECT_STREQ(Argv[i], "@non_rsp_at_arg");
+  EXPECT_STREQ(Argv[i++], "-foo");
+  EXPECT_STREQ(Argv[i++], "-bar");
+}
+
 TEST(CommandLineTest, SetDefautValue) {
   cl::ResetCommandLineParser();
 
@@ -811,13 +944,21 @@ TEST(CommandLineTest, ReadConfigFile) {
 }
 
 TEST(CommandLineTest, PositionalEatArgsError) {
+  cl::ResetCommandLineParser();
+
   StackOption<std::string, cl::list<std::string>> PosEatArgs(
       "positional-eat-args", cl::Positional, cl::desc("<arguments>..."),
+      cl::ZeroOrMore, cl::PositionalEatsArgs);
+  StackOption<std::string, cl::list<std::string>> PosEatArgs2(
+      "positional-eat-args2", cl::Positional, cl::desc("Some strings"),
       cl::ZeroOrMore, cl::PositionalEatsArgs);
 
   const char *args[] = {"prog", "-positional-eat-args=XXXX"};
   const char *args2[] = {"prog", "-positional-eat-args=XXXX", "-foo"};
   const char *args3[] = {"prog", "-positional-eat-args", "-foo"};
+  const char *args4[] = {"prog", "-positional-eat-args",
+                         "-foo", "-positional-eat-args2",
+                         "-bar", "foo"};
 
   std::string Errs;
   raw_string_ostream OS(Errs);
@@ -826,6 +967,12 @@ TEST(CommandLineTest, PositionalEatArgsError) {
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS)); OS.flush();
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(Errs.empty()); Errs.clear();
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(6, args4, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(PosEatArgs.size() == 1);
+  EXPECT_TRUE(PosEatArgs2.size() == 2);
   EXPECT_TRUE(Errs.empty());
 }
 

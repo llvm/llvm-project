@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFRELOCMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Object/RelocationResolver.h"
 #include <cstdint>
 
 namespace llvm {
@@ -18,7 +19,9 @@ namespace llvm {
 /// Section index is -1LL if relocation points to absolute symbol.
 struct RelocAddrEntry {
   uint64_t SectionIndex;
-  uint64_t Value;
+  object::RelocationRef Reloc;
+  object::RelocationResolver Resolver;
+  uint64_t SymbolValue;
 };
 
 /// In place of applying the relocations to the data we've read from disk we use

@@ -64,7 +64,6 @@ UnixSignalsSP &GetFreeBSDSignals() {
 }
 }
 
-//------------------------------------------------------------------------------
 // Static functions.
 
 lldb::ProcessSP
@@ -96,7 +95,6 @@ const char *ProcessFreeBSD::GetPluginDescriptionStatic() {
   return "Process plugin for FreeBSD";
 }
 
-//------------------------------------------------------------------------------
 // ProcessInterface protocol.
 
 lldb_private::ConstString ProcessFreeBSD::GetPluginName() {
@@ -250,7 +248,6 @@ void ProcessFreeBSD::SendMessage(const ProcessMessage &message) {
   m_message_queue.push(message);
 }
 
-//------------------------------------------------------------------------------
 // Constructors and destructors.
 
 ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp,
@@ -269,7 +266,6 @@ ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp,
 
 ProcessFreeBSD::~ProcessFreeBSD() { delete m_monitor; }
 
-//------------------------------------------------------------------------------
 // Process protocol.
 void ProcessFreeBSD::Finalize() {
   Process::Finalize();
@@ -835,7 +831,6 @@ size_t ProcessFreeBSD::PutSTDIN(const char *buf, size_t len, Status &error) {
   return status;
 }
 
-//------------------------------------------------------------------------------
 // Utility functions.
 
 bool ProcessFreeBSD::HasExited() {

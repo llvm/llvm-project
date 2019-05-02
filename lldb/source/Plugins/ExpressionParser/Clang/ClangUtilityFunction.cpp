@@ -29,7 +29,6 @@
 
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 /// Constructor
 ///
 /// \param[in] text
@@ -37,7 +36,6 @@ using namespace lldb_private;
 ///
 /// \param[in] name
 ///     The name of the function, as used in the text.
-//------------------------------------------------------------------
 ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
                                            const char *text, const char *name)
     : UtilityFunction(exe_scope, text, name, eKindClangUtilityFunction) {
@@ -48,7 +46,6 @@ ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
 
 ClangUtilityFunction::~ClangUtilityFunction() {}
 
-//------------------------------------------------------------------
 /// Install the utility function into a process
 ///
 /// \param[in] diagnostic_manager
@@ -59,7 +56,6 @@ ClangUtilityFunction::~ClangUtilityFunction() {}
 ///
 /// \return
 ///     True on success (no errors); false otherwise.
-//------------------------------------------------------------------
 bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx) {
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS) {

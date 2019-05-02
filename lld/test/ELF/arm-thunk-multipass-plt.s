@@ -70,6 +70,7 @@ preemptible2:
 
 
 // CHECK-PLT: Disassembly of section .plt:
+// CHECK-PLT-EMPTY:
 // CHECK-PLT-NEXT: 0000000000d00020 $a:
 // CHECK-PLT-NEXT:   d00020:    04 e0 2d e5     str     lr, [sp, #-4]!
 // CHECK-PLT-NEXT:   d00024:    00 e6 8f e2     add     lr, pc, #0, #12

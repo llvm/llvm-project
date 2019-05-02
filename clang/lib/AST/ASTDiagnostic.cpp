@@ -41,6 +41,11 @@ static QualType Desugar(ASTContext &Context, QualType QT, bool &ShouldAKA) {
       QT = PT->desugar();
       continue;
     }
+    // ... or a macro defined type ...
+    if (const MacroQualifiedType *MDT = dyn_cast<MacroQualifiedType>(Ty)) {
+      QT = MDT->desugar();
+      continue;
+    }
     // ...or a substituted template type parameter ...
     if (const SubstTemplateTypeParmType *ST =
           dyn_cast<SubstTemplateTypeParmType>(Ty)) {

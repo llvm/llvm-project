@@ -159,7 +159,6 @@ defm : SKXWriteResPair<WriteCRC32, [SKXPort1], 3>;
 def : WriteRes<WriteLEA, [SKXPort15]>; // LEA instructions can't fold loads.
 
 defm : SKXWriteResPair<WriteCMOV,  [SKXPort06], 1, [1], 1>; // Conditional move.
-defm : SKXWriteResPair<WriteCMOV2, [SKXPort06], 2, [2], 2>; // Conditional (CF + ZF flag) move.
 defm : X86WriteRes<WriteFCMOV, [SKXPort1], 3, [1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [SKXPort06]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
@@ -723,13 +722,6 @@ def SKXWriteResGroup14 : SchedWriteRes<[SKXPort05]> {
 def: InstRW<[SKXWriteResGroup14], (instrs FDECSTP,
                                           MMX_MOVDQ2Qrr)>;
 
-def SKXWriteResGroup15 : SchedWriteRes<[SKXPort06]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def: InstRW<[SKXWriteResGroup15], (instregex "SET(A|BE)r")>;
-
 def SKXWriteResGroup17 : SchedWriteRes<[SKXPort0156]> {
   let Latency = 2;
   let NumMicroOps = 2;
@@ -901,13 +893,6 @@ def SKXWriteResGroup45 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort237]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[SKXWriteResGroup45], (instrs FNSTSWm)>;
-
-def SKXWriteResGroup46 : SchedWriteRes<[SKXPort4,SKXPort237,SKXPort06]> {
-  let Latency = 3;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,1,2];
-}
-def: InstRW<[SKXWriteResGroup46], (instregex "SET(A|BE)m")>;
 
 def SKXWriteResGroup47 : SchedWriteRes<[SKXPort4,SKXPort6,SKXPort237,SKXPort0156]> {
   let Latency = 3;
@@ -2472,5 +2457,57 @@ def SKXWriteResGroup267 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
 def: InstRW<[SKXWriteResGroup267], (instrs PAUSE)>;
 
 def: InstRW<[WriteZero], (instrs CLC)>;
+
+// CMOVs that use both Z and C flag require an extra uop.
+def SKXWriteCMOVA_CMOVBErr : SchedWriteRes<[SKXPort06]> {
+  let Latency = 2;
+  let ResourceCycles = [2];
+  let NumMicroOps = 2;
+}
+
+def SKXWriteCMOVA_CMOVBErm : SchedWriteRes<[SKXPort23,SKXPort06]> {
+  let Latency = 7;
+  let ResourceCycles = [1,2];
+  let NumMicroOps = 3;
+}
+
+def SKXCMOVA_CMOVBErr :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsCMOVArr_Or_CMOVBErr>, [SKXWriteCMOVA_CMOVBErr]>,
+  SchedVar<NoSchedPred,                             [WriteCMOV]>
+]>;
+
+def SKXCMOVA_CMOVBErm :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsCMOVArm_Or_CMOVBErm>, [SKXWriteCMOVA_CMOVBErm]>,
+  SchedVar<NoSchedPred,                             [WriteCMOV.Folded]>
+]>;
+
+def : InstRW<[SKXCMOVA_CMOVBErr], (instrs CMOV16rr, CMOV32rr, CMOV64rr)>;
+def : InstRW<[SKXCMOVA_CMOVBErm], (instrs CMOV16rm, CMOV32rm, CMOV64rm)>;
+
+// SETCCs that use both Z and C flag require an extra uop.
+def SKXWriteSETA_SETBEr : SchedWriteRes<[SKXPort06]> {
+  let Latency = 2;
+  let ResourceCycles = [2];
+  let NumMicroOps = 2;
+}
+
+def SKXWriteSETA_SETBEm : SchedWriteRes<[SKXPort4,SKXPort237,SKXPort06]> {
+  let Latency = 3;
+  let ResourceCycles = [1,1,2];
+  let NumMicroOps = 4;
+}
+
+def SKXSETA_SETBErr :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsSETAr_Or_SETBEr>, [SKXWriteSETA_SETBEr]>,
+  SchedVar<NoSchedPred,                         [WriteSETCC]>
+]>;
+
+def SKXSETA_SETBErm :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsSETAm_Or_SETBEm>, [SKXWriteSETA_SETBEm]>,
+  SchedVar<NoSchedPred,                         [WriteSETCCStore]>
+]>;
+
+def : InstRW<[SKXSETA_SETBErr], (instrs SETCCr)>;
+def : InstRW<[SKXSETA_SETBErm], (instrs SETCCm)>;
 
 } // SchedModel

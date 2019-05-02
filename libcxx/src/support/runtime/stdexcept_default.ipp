@@ -10,8 +10,7 @@
 
 /* For _LIBCPPABI_VERSION */
 #if !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY) &&                           \
-    (defined(LIBCXX_BUILDING_LIBCXXABI) || defined(__APPLE__) ||               \
-     defined(LIBCXXRT))
+    (defined(LIBCXX_BUILDING_LIBCXXABI) || defined(LIBCXXRT))
 #include <cxxabi.h>
 #endif
 

@@ -90,6 +90,13 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
       .legalFor({p0});
 
+  // FP instructions
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalFor({s32, s64});
+
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
+      .legalFor({s32, s64});
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

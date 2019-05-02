@@ -105,10 +105,8 @@ void PThreadEvent::ResetEvents(const uint32_t mask) {
   }
 }
 
-//----------------------------------------------------------------------
 // Wait until 'timeout_abstime' for any events that are set in
 // 'mask'. If 'timeout_abstime' is NULL, then wait forever.
-//----------------------------------------------------------------------
 uint32_t
 PThreadEvent::WaitForSetEvents(const uint32_t mask,
                                const struct timespec *timeout_abstime) const {
@@ -149,10 +147,8 @@ PThreadEvent::WaitForSetEvents(const uint32_t mask,
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Wait until 'timeout_abstime' for any events in 'mask' to reset.
 // If 'timeout_abstime' is NULL, then wait forever.
-//----------------------------------------------------------------------
 uint32_t PThreadEvent::WaitForEventsToReset(
     const uint32_t mask, const struct timespec *timeout_abstime) const {
   // DNBLogThreadedIf(LOG_EVENTS, "%p PThreadEvent::%s (0x%8.8x, %p)", this,

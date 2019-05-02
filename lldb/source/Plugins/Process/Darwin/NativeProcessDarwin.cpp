@@ -37,9 +37,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_darwin;
 using namespace lldb_private::darwin_process_launcher;
 
-// -----------------------------------------------------------------------------
 // Hidden Impl
-// -----------------------------------------------------------------------------
 
 namespace {
 struct hack_task_dyld_info {
@@ -48,9 +46,7 @@ struct hack_task_dyld_info {
 };
 }
 
-// -----------------------------------------------------------------------------
 // Public Static Methods
-// -----------------------------------------------------------------------------
 
 Status NativeProcessProtocol::Launch(
     ProcessLaunchInfo &launch_info,
@@ -153,9 +149,7 @@ Status NativeProcessProtocol::Attach(
   return error;
 }
 
-// -----------------------------------------------------------------------------
 // ctor/dtor
-// -----------------------------------------------------------------------------
 
 NativeProcessDarwin::NativeProcessDarwin(lldb::pid_t pid, int pty_master_fd)
     : NativeProcessProtocol(pid), m_task(TASK_NULL), m_did_exec(false),
@@ -170,9 +164,7 @@ NativeProcessDarwin::NativeProcessDarwin(lldb::pid_t pid, int pty_master_fd)
 
 NativeProcessDarwin::~NativeProcessDarwin() {}
 
-// -----------------------------------------------------------------------------
 // Instance methods
-// -----------------------------------------------------------------------------
 
 Status NativeProcessDarwin::FinalizeLaunch(LaunchFlavor launch_flavor,
                                            MainLoop &main_loop) {
@@ -1547,9 +1539,7 @@ Status NativeProcessDarwin::GetFileLoadAddress(const llvm::StringRef &file_name,
   return error;
 }
 
-// -----------------------------------------------------------------
 // NativeProcessProtocol protected interface
-// -----------------------------------------------------------------
 Status NativeProcessDarwin::GetSoftwareBreakpointTrapOpcode(
     size_t trap_opcode_size_hint, size_t &actual_opcode_size,
     const uint8_t *&trap_opcode_bytes) {

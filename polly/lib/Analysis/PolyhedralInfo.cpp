@@ -26,8 +26,7 @@
 #include "polly/Support/GICHelper.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/Debug.h"
-#include <isl/map.h>
-#include <isl/union_map.h>
+#include "isl/union_map.h"
 
 using namespace llvm;
 using namespace polly;

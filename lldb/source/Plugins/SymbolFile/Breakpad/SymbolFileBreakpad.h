@@ -20,9 +20,7 @@ namespace breakpad {
 
 class SymbolFileBreakpad : public SymbolFile {
 public:
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
   static void Terminate();
   static void DebuggerInitialize(Debugger &debugger) {}
@@ -36,9 +34,7 @@ public:
     return new SymbolFileBreakpad(obj_file);
   }
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolFileBreakpad(ObjectFile *object_file) : SymbolFile(object_file) {}
 
   ~SymbolFileBreakpad() override {}
@@ -47,9 +43,7 @@ public:
 
   void InitializeObject() override {}
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
 
   uint32_t GetNumCompileUnits() override;
 

@@ -23,50 +23,50 @@ SYMNAME: invalid string offset
 RUN: not llvm-readobj %p/Inputs/corrupt-version.elf-x86_64 -dt \
 RUN:     2>&1 | FileCheck --check-prefix=VER %s
 
-VER: Error reading file: Invalid version entry.
+VER: error: Invalid version entry
 
 
 // The file is missing the dynamic string table but has references to it.
-RUN: not llvm-readobj -dynamic-table %p/Inputs/corrupt-invalid-strtab.elf.x86-64 \
+RUN: not llvm-readobj --dynamic-table %p/Inputs/corrupt-invalid-strtab.elf.x86-64 \
 RUN:     2>&1 | FileCheck --check-prefix=STRTAB %s
 
 STRTAB: Invalid dynamic string table reference
 
-RUN: not llvm-readobj -program-headers \
+RUN: not llvm-readobj -l \
 RUN:   %p/Inputs/corrupt-invalid-phentsize.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=PHENTSIZE %s
 
 PHENTSIZE: invalid e_phentsize
 
-RUN: not llvm-readobj -dynamic-table \
+RUN: not llvm-readobj --dynamic-table \
 RUN:   %p/Inputs/corrupt-invalid-virtual-addr.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=VIRTADDR %s
 
 VIRTADDR: Virtual address is not in any segment
 
 
-RUN: not llvm-readobj -dyn-relocations \
+RUN: not llvm-readobj --dyn-relocations \
 RUN:   %p/Inputs/corrupt-invalid-relocation-size.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=RELOC %s
 
 RELOC:  Invalid entity size
 
-RUN: not llvm-readobj -dyn-relocations \
+RUN: not llvm-readobj --dyn-relocations \
 RUN:   %p/Inputs/corrupt-invalid-dynamic-table-size.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=DYN-TABLE-SIZE %s
 
 DYN-TABLE-SIZE:  Invalid entity size
 
 
-RUN: not llvm-readobj -dyn-relocations \
+RUN: not llvm-readobj --dyn-relocations \
 RUN:   %p/Inputs/corrupt-invalid-dynamic-table-offset.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=DYN-TABLE-OFFSET %s
 
-DYN-TABLE-OFFSET: Invalid data was encountered while parsing the file.
+DYN-TABLE-OFFSET: error: Invalid data was encountered while parsing the file
 
 
-RUN: not llvm-readobj -dyn-relocations \
+RUN: not llvm-readobj --dyn-relocations \
 RUN:   %p/Inputs/corrupt-invalid-dynamic-table-too-large.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=DYN-TABLE-TOO-LARGE %s
 
-DYN-TABLE-TOO-LARGE: Invalid data was encountered while parsing the file.
+DYN-TABLE-TOO-LARGE: error: Invalid data was encountered while parsing the file

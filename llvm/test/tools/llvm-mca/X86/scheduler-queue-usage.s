@@ -13,7 +13,7 @@
 
 xor %eax, %ebx
 
-# ALL:             Schedulers - number of cycles where we saw N instructions issued:
+# ALL:             Schedulers - number of cycles where we saw N micro opcodes issued:
 # ALL-NEXT:        [# issued], [# cycles]
 # ALL-NEXT:         0,          3  (75.0%)
 # ALL-NEXT:         1,          1  (25.0%)

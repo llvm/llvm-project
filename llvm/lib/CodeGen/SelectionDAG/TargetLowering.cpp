@@ -153,6 +153,107 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   return LowerCallTo(CLI);
 }
 
+bool
+TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
+                                         unsigned Limit, uint64_t Size,
+                                         unsigned DstAlign, unsigned SrcAlign,
+                                         bool IsMemset,
+                                         bool ZeroMemset,
+                                         bool MemcpyStrSrc,
+                                         bool AllowOverlap,
+                                         unsigned DstAS, unsigned SrcAS,
+                                         const AttributeList &FuncAttributes) const {
+  // If 'SrcAlign' is zero, that means the memory operation does not need to
+  // load the value, i.e. memset or memcpy from constant string. Otherwise,
+  // it's the inferred alignment of the source. 'DstAlign', on the other hand,
+  // is the specified alignment of the memory operation. If it is zero, that
+  // means it's possible to change the alignment of the destination.
+  // 'MemcpyStrSrc' indicates whether the memcpy source is constant so it does
+  // not need to be loaded.
+  if (!(SrcAlign == 0 || SrcAlign >= DstAlign))
+    return false;
+
+  EVT VT = getOptimalMemOpType(Size, DstAlign, SrcAlign,
+                               IsMemset, ZeroMemset, MemcpyStrSrc,
+                               FuncAttributes);
+
+  if (VT == MVT::Other) {
+    // Use the largest integer type whose alignment constraints are satisfied.
+    // We only need to check DstAlign here as SrcAlign is always greater or
+    // equal to DstAlign (or zero).
+    VT = MVT::i64;
+    while (DstAlign && DstAlign < VT.getSizeInBits() / 8 &&
+           !allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign))
+      VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
+    assert(VT.isInteger());
+
+    // Find the largest legal integer type.
+    MVT LVT = MVT::i64;
+    while (!isTypeLegal(LVT))
+      LVT = (MVT::SimpleValueType)(LVT.SimpleTy - 1);
+    assert(LVT.isInteger());
+
+    // If the type we've chosen is larger than the largest legal integer type
+    // then use that instead.
+    if (VT.bitsGT(LVT))
+      VT = LVT;
+  }
+
+  unsigned NumMemOps = 0;
+  while (Size != 0) {
+    unsigned VTSize = VT.getSizeInBits() / 8;
+    while (VTSize > Size) {
+      // For now, only use non-vector load / store's for the left-over pieces.
+      EVT NewVT = VT;
+      unsigned NewVTSize;
+
+      bool Found = false;
+      if (VT.isVector() || VT.isFloatingPoint()) {
+        NewVT = (VT.getSizeInBits() > 64) ? MVT::i64 : MVT::i32;
+        if (isOperationLegalOrCustom(ISD::STORE, NewVT) &&
+            isSafeMemOpType(NewVT.getSimpleVT()))
+          Found = true;
+        else if (NewVT == MVT::i64 &&
+                 isOperationLegalOrCustom(ISD::STORE, MVT::f64) &&
+                 isSafeMemOpType(MVT::f64)) {
+          // i64 is usually not legal on 32-bit targets, but f64 may be.
+          NewVT = MVT::f64;
+          Found = true;
+        }
+      }
+
+      if (!Found) {
+        do {
+          NewVT = (MVT::SimpleValueType)(NewVT.getSimpleVT().SimpleTy - 1);
+          if (NewVT == MVT::i8)
+            break;
+        } while (!isSafeMemOpType(NewVT.getSimpleVT()));
+      }
+      NewVTSize = NewVT.getSizeInBits() / 8;
+
+      // If the new VT cannot cover all of the remaining bits, then consider
+      // issuing a (or a pair of) unaligned and overlapping load / store.
+      bool Fast;
+      if (NumMemOps && AllowOverlap && NewVTSize < Size &&
+          allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign, &Fast) &&
+          Fast)
+        VTSize = Size;
+      else {
+        VT = NewVT;
+        VTSize = NewVTSize;
+      }
+    }
+
+    if (++NumMemOps > Limit)
+      return false;
+
+    MemOps.push_back(VT);
+    Size -= VTSize;
+  }
+
+  return true;
+}
+
 /// Soften the operands of a comparison. This code is shared among BR_CC,
 /// SELECT_CC, and SETCC handlers.
 void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
@@ -557,6 +658,83 @@ bool TargetLowering::SimplifyDemandedBits(
       Known.Zero &= Known2.Zero;
     }
     return false; // Don't fall through, will infinitely loop.
+  case ISD::INSERT_VECTOR_ELT: {
+    SDValue Vec = Op.getOperand(0);
+    SDValue Scl = Op.getOperand(1);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    EVT VecVT = Vec.getValueType();
+
+    // If index isn't constant, assume we need all vector elements AND the
+    // inserted element.
+    APInt DemandedVecElts(OriginalDemandedElts);
+    if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements())) {
+      unsigned Idx = CIdx->getZExtValue();
+      DemandedVecElts.clearBit(Idx);
+
+      // Inserted element is not required.
+      if (!OriginalDemandedElts[Idx])
+        return TLO.CombineTo(Op, Vec);
+    }
+
+    KnownBits KnownScl;
+    unsigned NumSclBits = Scl.getScalarValueSizeInBits();
+    APInt DemandedSclBits = OriginalDemandedBits.zextOrTrunc(NumSclBits);
+    if (SimplifyDemandedBits(Scl, DemandedSclBits, KnownScl, TLO, Depth + 1))
+      return true;
+
+    Known = KnownScl.zextOrTrunc(BitWidth, false);
+
+    KnownBits KnownVec;
+    if (SimplifyDemandedBits(Vec, OriginalDemandedBits, DemandedVecElts,
+                             KnownVec, TLO, Depth + 1))
+      return true;
+
+    if (!!DemandedVecElts) {
+      Known.One &= KnownVec.One;
+      Known.Zero &= KnownVec.Zero;
+    }
+
+    return false;
+  }
+  case ISD::INSERT_SUBVECTOR: {
+    SDValue Base = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
+    EVT SubVT = Sub.getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+
+    // If index isn't constant, assume we need the original demanded base
+    // elements and ALL the inserted subvector elements.
+    APInt BaseElts = DemandedElts;
+    APInt SubElts = APInt::getAllOnesValue(NumSubElts);
+    if (isa<ConstantSDNode>(Op.getOperand(2))) {
+      const APInt &Idx = Op.getConstantOperandAPInt(2);
+      if (Idx.ule(NumElts - NumSubElts)) {
+        unsigned SubIdx = Idx.getZExtValue();
+        SubElts = DemandedElts.extractBits(NumSubElts, SubIdx);
+        BaseElts.insertBits(APInt::getNullValue(NumSubElts), SubIdx);
+      }
+    }
+
+    KnownBits KnownSub, KnownBase;
+    if (SimplifyDemandedBits(Sub, DemandedBits, SubElts, KnownSub, TLO,
+                             Depth + 1))
+      return true;
+    if (SimplifyDemandedBits(Base, DemandedBits, BaseElts, KnownBase, TLO,
+                             Depth + 1))
+      return true;
+
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    if (!!SubElts) {
+        Known.One &= KnownSub.One;
+        Known.Zero &= KnownSub.Zero;
+    }
+    if (!!BaseElts) {
+        Known.One &= KnownBase.One;
+        Known.Zero &= KnownBase.Zero;
+    }
+    break;
+  }
   case ISD::CONCAT_VECTORS: {
     Known.Zero.setAllBits();
     Known.One.setAllBits();
@@ -884,6 +1062,12 @@ bool TargetLowering::SimplifyDemandedBits(
                                Known, TLO, Depth + 1))
         return true;
 
+      // Try shrinking the operation as long as the shift amount will still be
+      // in range.
+      if ((ShAmt < DemandedBits.getActiveBits()) &&
+          ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
+        return true;
+
       // Convert (shl (anyext x, c)) to (anyext (shl x, c)) if the high bits
       // are not demanded. This will likely allow the anyext to be folded away.
       if (Op0.getOpcode() == ISD::ANY_EXTEND) {
@@ -1092,8 +1276,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If we only care about the highest bit, don't bother shifting right.
     if (DemandedBits.isSignMask()) {
-      bool AlreadySignExtended =
-          TLO.DAG.ComputeNumSignBits(Op0) >= BitWidth - ExVTBits + 1;
+      unsigned NumSignBits = TLO.DAG.ComputeNumSignBits(Op0);
+      bool AlreadySignExtended = NumSignBits >= BitWidth - ExVTBits + 1;
       // However if the input is already sign extended we expect the sign
       // extension to be dropped altogether later and do not simplify.
       if (!AlreadySignExtended) {
@@ -1257,29 +1441,29 @@ bool TargetLowering::SimplifyDemandedBits(
           // Do not turn (vt1 truncate (vt2 srl)) into (vt1 srl) if vt1 is
           // undesirable.
           break;
-        ConstantSDNode *ShAmt = dyn_cast<ConstantSDNode>(Src.getOperand(1));
-        if (!ShAmt)
+
+        auto *ShAmt = dyn_cast<ConstantSDNode>(Src.getOperand(1));
+        if (!ShAmt || ShAmt->getAPIntValue().uge(BitWidth))
           break;
+
         SDValue Shift = Src.getOperand(1);
-        if (TLO.LegalTypes()) {
-          uint64_t ShVal = ShAmt->getZExtValue();
+        uint64_t ShVal = ShAmt->getZExtValue();
+
+        if (TLO.LegalTypes())
           Shift = TLO.DAG.getConstant(ShVal, dl, getShiftAmountTy(VT, DL));
-        }
 
-        if (ShAmt->getZExtValue() < BitWidth) {
-          APInt HighBits = APInt::getHighBitsSet(OperandBitWidth,
-                                                 OperandBitWidth - BitWidth);
-          HighBits.lshrInPlace(ShAmt->getZExtValue());
-          HighBits = HighBits.trunc(BitWidth);
+        APInt HighBits =
+            APInt::getHighBitsSet(OperandBitWidth, OperandBitWidth - BitWidth);
+        HighBits.lshrInPlace(ShVal);
+        HighBits = HighBits.trunc(BitWidth);
 
-          if (!(HighBits & DemandedBits)) {
-            // None of the shifted in bits are needed.  Add a truncate of the
-            // shift input, then shift it.
-            SDValue NewTrunc =
-                TLO.DAG.getNode(ISD::TRUNCATE, dl, VT, Src.getOperand(0));
-            return TLO.CombineTo(
-                Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, Shift));
-          }
+        if (!(HighBits & DemandedBits)) {
+          // None of the shifted in bits are needed.  Add a truncate of the
+          // shift input, then shift it.
+          SDValue NewTrunc =
+              TLO.DAG.getNode(ISD::TRUNCATE, dl, VT, Src.getOperand(0));
+          return TLO.CombineTo(
+              Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, Shift));
         }
         break;
       }
@@ -1356,40 +1540,68 @@ bool TargetLowering::SimplifyDemandedBits(
                              TLO.DAG.getNode(ISD::SHL, dl, VT, Sign, ShAmt));
       }
     }
-    // If bitcast from a vector, see if we can use SimplifyDemandedVectorElts by
-    // demanding the element if any bits from it are demanded.
+
+    // Bitcast from a vector using SimplifyDemanded Bits/VectorElts.
+    // Demand the elt/bit if any of the original elts/bits are demanded.
     // TODO - bigendian once we have test coverage.
     // TODO - bool vectors once SimplifyDemandedVectorElts has SETCC support.
     if (SrcVT.isVector() && NumSrcEltBits > 1 &&
         (BitWidth % NumSrcEltBits) == 0 &&
         TLO.DAG.getDataLayout().isLittleEndian()) {
       unsigned Scale = BitWidth / NumSrcEltBits;
-      auto GetDemandedSubMask = [&](APInt &DemandedSubElts) -> bool {
-        DemandedSubElts = APInt::getNullValue(Scale);
-        for (unsigned i = 0; i != Scale; ++i) {
-          unsigned Offset = i * NumSrcEltBits;
-          APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
-          if (!Sub.isNullValue())
-            DemandedSubElts.setBit(i);
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      APInt DemandedSrcBits = APInt::getNullValue(NumSrcEltBits);
+      APInt DemandedSrcElts = APInt::getNullValue(NumSrcElts);
+      for (unsigned i = 0; i != Scale; ++i) {
+        unsigned Offset = i * NumSrcEltBits;
+        APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
+        if (!Sub.isNullValue()) {
+          DemandedSrcBits |= Sub;
+          for (unsigned j = 0; j != NumElts; ++j)
+            if (DemandedElts[j])
+              DemandedSrcElts.setBit((j * Scale) + i);
         }
+      }
+
+      APInt KnownSrcUndef, KnownSrcZero;
+      if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
+                                     KnownSrcZero, TLO, Depth + 1))
         return true;
-      };
 
-      APInt DemandedSubElts;
-      if (GetDemandedSubMask(DemandedSubElts)) {
-        unsigned NumSrcElts = SrcVT.getVectorNumElements();
-        APInt DemandedElts = APInt::getSplat(NumSrcElts, DemandedSubElts);
+      KnownBits KnownSrcBits;
+      if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts,
+                               KnownSrcBits, TLO, Depth + 1))
+        return true;
+    } else if ((NumSrcEltBits % BitWidth) == 0 &&
+               TLO.DAG.getDataLayout().isLittleEndian()) {
+      unsigned Scale = NumSrcEltBits / BitWidth;
+      unsigned NumSrcElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
+      APInt DemandedSrcBits = APInt::getNullValue(NumSrcEltBits);
+      APInt DemandedSrcElts = APInt::getNullValue(NumSrcElts);
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i]) {
+          unsigned Offset = (i % Scale) * BitWidth;
+          DemandedSrcBits.insertBits(DemandedBits, Offset);
+          DemandedSrcElts.setBit(i / Scale);
+        }
 
-        APInt KnownUndef, KnownZero;
-        if (SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
-                                       TLO, Depth + 1))
+      if (SrcVT.isVector()) {
+        APInt KnownSrcUndef, KnownSrcZero;
+        if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
+                                       KnownSrcZero, TLO, Depth + 1))
           return true;
       }
+
+      KnownBits KnownSrcBits;
+      if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts,
+                               KnownSrcBits, TLO, Depth + 1))
+        return true;
     }
+
     // If this is a bitcast, let computeKnownBits handle it.  Only do this on a
     // recursive call where Known may be useful to the caller.
     if (Depth > 0) {
-      Known = TLO.DAG.computeKnownBits(Op, Depth);
+      Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
       return false;
     }
     break;

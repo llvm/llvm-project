@@ -33,9 +33,7 @@ public:
 
   ~OptionValueEnumeration() override;
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeEnum; }
 
@@ -60,9 +58,7 @@ public:
   size_t AutoComplete(CommandInterpreter &interpreter,
                       CompletionRequest &request) override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   enum_type operator=(enum_type value) {
     m_current_value = value;

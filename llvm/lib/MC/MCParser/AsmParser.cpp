@@ -3388,13 +3388,14 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
       Ctx.setGenDwarfForAssembly(false);
     }
 
-    MD5::MD5Result *CKMem = nullptr;
+    Optional<MD5::MD5Result> CKMem;
     if (HasMD5) {
-      CKMem = (MD5::MD5Result *)Ctx.allocate(sizeof(MD5::MD5Result), 1);
+      MD5::MD5Result Sum;
       for (unsigned i = 0; i != 8; ++i) {
-        CKMem->Bytes[i] = uint8_t(MD5Hi >> ((7 - i) * 8));
-        CKMem->Bytes[i + 8] = uint8_t(MD5Lo >> ((7 - i) * 8));
+        Sum.Bytes[i] = uint8_t(MD5Hi >> ((7 - i) * 8));
+        Sum.Bytes[i + 8] = uint8_t(MD5Lo >> ((7 - i) * 8));
       }
+      CKMem = Sum;
     }
     if (HasSource) {
       char *SourceBuf = static_cast<char *>(Ctx.allocate(SourceString.size()));

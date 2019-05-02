@@ -34,9 +34,7 @@ ConstString &TargetList::GetStaticBroadcasterClass() {
   return class_name;
 }
 
-//----------------------------------------------------------------------
 // TargetList constructor
-//----------------------------------------------------------------------
 TargetList::TargetList(Debugger &debugger)
     : Broadcaster(debugger.GetBroadcasterManager(),
                   TargetList::GetStaticBroadcasterClass().AsCString()),
@@ -44,9 +42,7 @@ TargetList::TargetList(Debugger &debugger)
   CheckInWithManager();
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 TargetList::~TargetList() {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   m_target_list.clear();
@@ -426,7 +422,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     if (file.GetDirectory()) {
       FileSpec file_dir;
       file_dir.GetDirectory() = file.GetDirectory();
-      target_sp->GetExecutableSearchPaths().Append(file_dir);
+      target_sp->AppendExecutableSearchPaths(file_dir);
     }
 
     // Don't put the dummy target in the target list, it's held separately.

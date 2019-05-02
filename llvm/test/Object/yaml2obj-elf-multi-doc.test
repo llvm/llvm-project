@@ -1,7 +1,7 @@
 # RUN: yaml2obj -docnum=1 %s \
-# RUN:   | llvm-readobj -symbols - | FileCheck -check-prefix=DOC1 %s
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC1 %s
 # RUN: yaml2obj -docnum=2 %s \
-# RUN:   | llvm-readobj -symbols - | FileCheck -check-prefix=DOC2 %s
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC2 %s
 # RUN: not yaml2obj -docnum=3 %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=DOC3 %s
 
@@ -25,12 +25,12 @@ Sections:
   Flags: [SHF_EXECINSTR, SHF_ALLOC]
 
 Symbols:
-  Global:
-    - Name: T1
-      Section: .text
-      Type: STT_FUNC
-      Value: 0x0
-      Size: 8
+- Name: T1
+  Section: .text
+  Type: STT_FUNC
+  Value: 0x0
+  Size: 8
+  Binding: STB_GLOBAL
 
 --- !ELF
 FileHeader: !FileHeader
@@ -47,10 +47,10 @@ Sections:
   Flags: [SHF_EXECINSTR, SHF_ALLOC]
 
 Symbols:
-  Global:
-    - Name: T2
-      Section: .text
-      Type: STT_FUNC
-      Value: 0x0
-      Size: 4
+- Name:    T2
+  Section: .text
+  Type:    STT_FUNC
+  Value:   0x0
+  Size:    4
+  Binding: STB_GLOBAL
 ...

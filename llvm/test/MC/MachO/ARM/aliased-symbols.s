@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple thumbv7m-apple-darwin-eabi %s -filetype=obj -o %t
-// RUN:     llvm-readobj -symbols %t | FileCheck %s
+// RUN:     llvm-readobj --symbols %t | FileCheck %s
 
         .data
         var1 = var2

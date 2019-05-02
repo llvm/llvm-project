@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
-# RUN: llvm-readobj -file-headers -sections -program-headers -symbols %t2 \
+# RUN: llvm-readobj --file-headers --sections -l --symbols %t2 \
 # RUN:   | FileCheck %s
 # RUN: ld.lld %t -o /dev/null
 
@@ -204,7 +204,7 @@ _start:
 # Test for the response file (POSIX quoting style)
 # RUN: echo " -o %t2" > %t.responsefile
 # RUN: ld.lld %t --rsp-quoting=posix @%t.responsefile
-# RUN: llvm-readobj -file-headers -sections -program-headers -symbols %t2 \
+# RUN: llvm-readobj --file-headers --sections -l --symbols %t2 \
 # RUN:   | FileCheck %s
 
 # Test for the response file (Windows quoting style)

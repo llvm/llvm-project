@@ -37,8 +37,8 @@ body:             |
   bb.2:
     successors: %bb.3
 
-    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0
-    renamable $sgpr3 = S_BUFFER_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0
+    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0, 0
+    renamable $sgpr3 = S_BUFFER_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0
 
   bb.3:
     successors: %bb.1, %bb.4
@@ -73,12 +73,12 @@ name: irreducible_loop_extended
 body: |
   bb.0:
     successors: %bb.1, %bb.2
-    $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 0, 0
+    $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 0, 0, 0
     S_CBRANCH_VCCZ %bb.2, implicit $vcc
 
   bb.1:
     successors: %bb.2
-    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, renamable $vgpr2, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, renamable $vgpr2, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2:
     successors: %bb.3, %bb.6
@@ -86,18 +86,18 @@ body: |
 
   bb.3:
     successors: %bb.4, %bb.5
-    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, killed renamable $vgpr2, killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, killed renamable $vgpr2, killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, implicit $exec
     S_CBRANCH_VCCNZ %bb.5, implicit $vcc
 
   bb.4:
     successors: %bb.5
-    renamable $sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX4_IMM killed renamable $sgpr2_sgpr3, 64, 0
+    renamable $sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX4_IMM killed renamable $sgpr2_sgpr3, 64, 0, 0
     renamable $vgpr2 = BUFFER_ATOMIC_ADD_OFFSET_RTN killed renamable $vgpr2, killed renamable $sgpr12_sgpr13_sgpr14_sgpr15, 0, 0, 0, implicit $exec
 
   bb.5:
     successors: %bb.6
 
   bb.6:
-    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...

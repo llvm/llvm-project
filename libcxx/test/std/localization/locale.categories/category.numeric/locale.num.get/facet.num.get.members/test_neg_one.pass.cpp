@@ -19,7 +19,6 @@
 #include <cassert>
 #include <streambuf>
 #include <sstream>
-#include <iostream>
 #include "test_iterators.h"
 #include "test_macros.h"
 

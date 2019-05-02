@@ -144,10 +144,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       size_t PaddedSize = 5;
       switch (Info.OperandType) {
       case WebAssembly::OPERAND_I32IMM:
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i32);
+        FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i32);
         break;
       case WebAssembly::OPERAND_I64IMM:
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i64);
+        FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i64);
         PaddedSize = 10;
         break;
       case WebAssembly::OPERAND_FUNCTION32:
@@ -155,7 +155,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       case WebAssembly::OPERAND_TYPEINDEX:
       case WebAssembly::OPERAND_GLOBAL:
       case WebAssembly::OPERAND_EVENT:
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
+        FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
         break;
       default:
         llvm_unreachable("unexpected symbolic operand kind");

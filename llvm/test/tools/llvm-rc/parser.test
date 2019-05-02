@@ -100,156 +100,156 @@
 
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-stringtable-no-string.rc 2>&1 | FileCheck %s --check-prefix PSTRINGTABLE1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-stringtable-no-string.rc 2>&1 | FileCheck %s --check-prefix PSTRINGTABLE1
 
 ; PSTRINGTABLE1:  llvm-rc: Error parsing file: expected string, got }
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-stringtable-weird-option.rc 2>&1 | FileCheck %s --check-prefix PSTRINGTABLE2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-stringtable-weird-option.rc 2>&1 | FileCheck %s --check-prefix PSTRINGTABLE2
 
 ; PSTRINGTABLE2:  llvm-rc: Error parsing file: expected optional statement type, BEGIN or '{', got NONSENSETYPE
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-eof.rc 2>&1 | FileCheck %s --check-prefix PEOF
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-eof.rc 2>&1 | FileCheck %s --check-prefix PEOF
 
 ; PEOF:  llvm-rc: Error parsing file: expected '-', '~', integer or '(', got <EOF>
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-no-characteristics-arg.rc 2>&1 | FileCheck %s --check-prefix PCHARACTERISTICS1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-no-characteristics-arg.rc 2>&1 | FileCheck %s --check-prefix PCHARACTERISTICS1
 
 ; PCHARACTERISTICS1:  llvm-rc: Error parsing file: expected '-', '~', integer or '(', got BEGIN
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-nonsense-token.rc 2>&1 | FileCheck %s --check-prefix PNONSENSE1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-nonsense-token.rc 2>&1 | FileCheck %s --check-prefix PNONSENSE1
 
 ; PNONSENSE1:  llvm-rc: Error parsing file: expected int or identifier, got &
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-nonsense-type.rc 2>&1 | FileCheck %s --check-prefix PNONSENSE2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-nonsense-type.rc 2>&1 | FileCheck %s --check-prefix PNONSENSE2
 
 ; PNONSENSE2:  llvm-rc: Error parsing file: expected filename, '{' or BEGIN, got <EOF>
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-nonsense-type-eof.rc 2>&1 | FileCheck %s --check-prefix PNONSENSE3
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-nonsense-type-eof.rc 2>&1 | FileCheck %s --check-prefix PNONSENSE3
 
 ; PNONSENSE3:  llvm-rc: Error parsing file: expected int or identifier, got <EOF>
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-language-no-comma.rc 2>&1 | FileCheck %s --check-prefix PLANGUAGE1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-language-no-comma.rc 2>&1 | FileCheck %s --check-prefix PLANGUAGE1
 
 ; PLANGUAGE1:  llvm-rc: Error parsing file: expected ',', got 7
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-language-too-many-commas.rc 2>&1 | FileCheck %s --check-prefix PLANGUAGE2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-language-too-many-commas.rc 2>&1 | FileCheck %s --check-prefix PLANGUAGE2
 
 ; PLANGUAGE2:  llvm-rc: Error parsing file: expected '-', '~', integer or '(', got ,
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-html-extra-comma.rc 2>&1 | FileCheck %s --check-prefix PHTML2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-html-extra-comma.rc 2>&1 | FileCheck %s --check-prefix PHTML2
 
 ; PHTML2:  llvm-rc: Error parsing file: expected string, got ,
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-accelerators-bad-flag.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-accelerators-bad-flag.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS1
 
 ; PACCELERATORS1:  llvm-rc: Error parsing file: expected ASCII/VIRTKEY/NOINVERT/ALT/SHIFT/CONTROL, got HELLO
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-accelerators-bad-int-or-string.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-accelerators-bad-int-or-string.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS2
 
 ; PACCELERATORS2:  llvm-rc: Error parsing file: expected int or string, got NotIntOrString
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-accelerators-no-comma.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS3
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-accelerators-no-comma.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS3
 
 ; PACCELERATORS3:  llvm-rc: Error parsing file: expected int or string, got CONTROL
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-accelerators-no-comma-2.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS4
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-accelerators-no-comma-2.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS4
 
 ; PACCELERATORS4:  llvm-rc: Error parsing file: expected ',', got 10
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-menu-bad-id.rc 2>&1 | FileCheck %s --check-prefix PMENU1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-menu-bad-id.rc 2>&1 | FileCheck %s --check-prefix PMENU1
 
 ; PMENU1:  llvm-rc: Error parsing file: expected '-', '~', integer or '(', got A
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-menu-bad-flag.rc 2>&1 | FileCheck %s --check-prefix PMENU2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-menu-bad-flag.rc 2>&1 | FileCheck %s --check-prefix PMENU2
 
 ; PMENU2:  llvm-rc: Error parsing file: expected CHECKED/GRAYED/HELP/INACTIVE/MENUBARBREAK/MENUBREAK, got ERRONEOUS
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-menu-missing-block.rc 2>&1 | FileCheck %s --check-prefix PMENU3
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-menu-missing-block.rc 2>&1 | FileCheck %s --check-prefix PMENU3
 
 ; PMENU3:  llvm-rc: Error parsing file: expected '{', got POPUP
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-menu-misspelled-separator.rc 2>&1 | FileCheck %s --check-prefix PMENU4
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-menu-misspelled-separator.rc 2>&1 | FileCheck %s --check-prefix PMENU4
 
 ; PMENU4:  llvm-rc: Error parsing file: expected SEPARATOR or string, got NOTSEPARATOR
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-cant-give-helpid.rc 2>&1 | FileCheck %s --check-prefix PDIALOG1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-dialog-cant-give-helpid.rc 2>&1 | FileCheck %s --check-prefix PDIALOG1
 
 ; PDIALOG1:  llvm-rc: Error parsing file: expected identifier, got ,
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-too-few-args.rc 2>&1 | FileCheck %s --check-prefix PDIALOG2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-dialog-too-few-args.rc 2>&1 | FileCheck %s --check-prefix PDIALOG2
 
 ; PDIALOG2:  llvm-rc: Error parsing file: expected ',', got }
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-too-many-args.rc 2>&1 | FileCheck %s --check-prefix PDIALOG3
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-dialog-too-many-args.rc 2>&1 | FileCheck %s --check-prefix PDIALOG3
 
 ; PDIALOG3:  llvm-rc: Error parsing file: expected identifier, got ,
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-unknown-type.rc 2>&1 | FileCheck %s --check-prefix PDIALOG4
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-dialog-unknown-type.rc 2>&1 | FileCheck %s --check-prefix PDIALOG4
 
 ; PDIALOG4:  llvm-rc: Error parsing file: expected control type, END or '}', got UNKNOWN
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-unnecessary-string.rc 2>&1 | FileCheck %s --check-prefix PDIALOG5
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-dialog-unnecessary-string.rc 2>&1 | FileCheck %s --check-prefix PDIALOG5
 
 ; PDIALOG5:  llvm-rc: Error parsing file: expected '-', '~', integer or '(', got "This shouldn't be here"
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-simple-font.rc 2>&1 | FileCheck %s --check-prefix PDIALOG6
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-dialog-simple-font.rc 2>&1 | FileCheck %s --check-prefix PDIALOG6
 
 ; PDIALOG6:  llvm-rc: Error parsing file: expected identifier, got ,
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-versioninfo-wrong-fixed.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-versioninfo-wrong-fixed.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO1
 
 ; PVERSIONINFO1:  llvm-rc: Error parsing file: expected fixed VERSIONINFO statement type, got WEIRDFIXED
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-versioninfo-named-main-block.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-versioninfo-named-main-block.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO2
 
 ; PVERSIONINFO2:  llvm-rc: Error parsing file: expected fixed VERSIONINFO statement type, got BLOCK
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-versioninfo-unnamed-inner-block.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO3
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-versioninfo-unnamed-inner-block.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO3
 
 ; PVERSIONINFO3:  llvm-rc: Error parsing file: expected string, got {
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-versioninfo-unnamed-value.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO4
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-versioninfo-unnamed-value.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO4
 
 ; PVERSIONINFO4:  llvm-rc: Error parsing file: expected string, got END
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-versioninfo-bad-type.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO5
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-versioninfo-bad-type.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO5
 
 ; PVERSIONINFO5:  llvm-rc: Error parsing file: expected BLOCK or VALUE, got INCORRECT
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-versioninfo-repeated-fixed.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO6
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-versioninfo-repeated-fixed.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO6
 
 ; PVERSIONINFO6:  llvm-rc: Error parsing file: expected yet unread fixed VERSIONINFO statement type, got FILEVERSION
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-user-invalid-contents.rc 2>&1 | FileCheck %s --check-prefix PUSER1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-user-invalid-contents.rc 2>&1 | FileCheck %s --check-prefix PUSER1
 
 ; PUSER1:  llvm-rc: Error parsing file: expected int or string, got InvalidToken

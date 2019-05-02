@@ -1806,44 +1806,20 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ;
 ; SSE41-LABEL: constant_shift_v4i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <0,1,2,3,u,u,u,u>
-; SSE41-NEXT:    pcmpeqw %xmm2, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = <u,32768,16384,8192,u,u,u,u>
-; SSE41-NEXT:    pmulhw %xmm1, %xmm3
-; SSE41-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
-; SSE41-NEXT:    pcmpeqw {{.*}}(%rip), %xmm2
-; SSE41-NEXT:    psraw $1, %xmm1
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
-; SSE41-NEXT:    movdqa %xmm3, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,32768,16384,8192,u,u,u,u>
+; SSE41-NEXT:    pmulhw %xmm0, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; SSE41-NEXT:    psraw $1, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3,4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: constant_shift_v4i16:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [4.1720559249406128E-309,4.1720559249406128E-309]
-; AVX1-NEXT:    # xmm2 = mem[0,0]
-; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vpmulhw {{.*}}(%rip), %xmm0, %xmm3
-; AVX1-NEXT:    vpblendvb %xmm1, %xmm0, %xmm3, %xmm1
-; AVX1-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vpsraw $1, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: constant_shift_v4i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [844433520132096,844433520132096]
-; AVX2-NEXT:    vpcmpeqw %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vpmulhw {{.*}}(%rip), %xmm0, %xmm3
-; AVX2-NEXT:    vpblendvb %xmm1, %xmm0, %xmm3, %xmm1
-; AVX2-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm2, %xmm2
-; AVX2-NEXT:    vpsraw $1, %xmm0, %xmm0
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: constant_shift_v4i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulhw {{.*}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; AVX-NEXT:    vpsraw $1, %xmm0, %xmm0
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3,4,5,6,7]
+; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: constant_shift_v4i16:
 ; XOP:       # %bb.0:

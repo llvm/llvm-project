@@ -789,6 +789,31 @@ template <> struct MDNodeKeyImpl<DINamespace> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DICommonBlock> {
+  Metadata *Scope;
+  Metadata *Decl;
+  MDString *Name;
+  Metadata *File;
+  unsigned LineNo;
+
+  MDNodeKeyImpl(Metadata *Scope, Metadata *Decl, MDString *Name,
+                Metadata *File, unsigned LineNo)
+      : Scope(Scope), Decl(Decl), Name(Name), File(File), LineNo(LineNo) {}
+  MDNodeKeyImpl(const DICommonBlock *N)
+      : Scope(N->getRawScope()), Decl(N->getRawDecl()), Name(N->getRawName()),
+        File(N->getRawFile()), LineNo(N->getLineNo()) {}
+
+  bool isKeyOf(const DICommonBlock *RHS) const {
+    return Scope == RHS->getRawScope() && Decl == RHS->getRawDecl() &&
+      Name == RHS->getRawName() && File == RHS->getRawFile() &&
+      LineNo == RHS->getLineNo();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Scope, Decl, Name, File, LineNo);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIModule> {
   Metadata *Scope;
   MDString *Name;

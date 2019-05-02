@@ -356,7 +356,8 @@ bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
           .add(I.getOperand(0))
           .addImm(0)  // offset
           .addImm(0)  // glc
-          .addImm(0); // slc
+          .addImm(0)  // slc
+          .addImm(0); // dlc
 
 
   // Now that we selected an opcode, we need to constrain the register
@@ -532,7 +533,8 @@ bool AMDGPUInstructionSelector::selectG_LOAD(MachineInstr &I) const {
                                .addReg(PtrReg)
                                .addImm(0)  // offset
                                .addImm(0)  // glc
-                               .addImm(0); // slc
+                               .addImm(0)  // slc
+                               .addImm(0); // dlc
 
   bool Ret = constrainSelectedInstRegOperands(*Flat, TII, TRI, RBI);
   I.eraseFromParent();

@@ -382,10 +382,14 @@ def CPUSPReg : RegisterClass<"Mips", [i32], 32, (add SP)>, Unallocatable;
 // 32bit fp:
 // * FGR32 - 16 32-bit even registers
 // * FGR32 - 32 32-bit registers (single float only mode)
-def FGR32 : RegisterClass<"Mips", [f32], 32, (sequence "F%u", 0, 31)>;
-
-def FGRH32 : RegisterClass<"Mips", [f32], 32, (sequence "F_HI%u", 0, 31)>,
-             Unallocatable;
+def FGR32 : RegisterClass<"Mips", [f32], 32, (sequence "F%u", 0, 31)> {
+  // Do not allocate odd registers when given -mattr=+nooddspreg.
+  let AltOrders = [(decimate FGR32, 2)];
+  let AltOrderSelect = [{
+    const auto & S = MF.getSubtarget<MipsSubtarget>();
+    return S.isABI_O32() && !S.useOddSPReg();
+  }];
+}
 
 def AFGR64 : RegisterClass<"Mips", [f64], 64, (add
   // Return Values and Arguments
@@ -399,16 +403,14 @@ def AFGR64 : RegisterClass<"Mips", [f64], 64, (add
   // Callee save
   D10, D11, D12, D13, D14, D15)>;
 
-def FGR64 : RegisterClass<"Mips", [f64], 64, (sequence "D%u_64", 0, 31)>;
-
-// Used to reserve odd registers when given -mattr=+nooddspreg
-// FIXME: Remove double precision registers from this set.
-def OddSP : RegisterClass<"Mips", [f32], 32,
-                          (add (decimate (sequence "F%u", 1, 31), 2),
-                               (decimate (sequence "F_HI%u", 1, 31), 2),
-                               (decimate (sequence "D%u", 1, 15), 2),
-                               (decimate (sequence "D%u_64", 1, 31), 2))>,
-            Unallocatable;
+def FGR64 : RegisterClass<"Mips", [f64], 64, (sequence "D%u_64", 0, 31)> {
+  // Do not allocate odd registers when given -mattr=+nooddspreg.
+  let AltOrders = [(decimate FGR64, 2)];
+  let AltOrderSelect = [{
+    const auto & S = MF.getSubtarget<MipsSubtarget>();
+    return S.isABI_O32() && !S.useOddSPReg();
+  }];
+}
 
 // FP control registers.
 def CCR : RegisterClass<"Mips", [i32], 32, (sequence "FCR%u", 0, 31)>,
@@ -590,11 +592,6 @@ def StrictlyFGR32AsmOperand : MipsAsmRegOperand {
   let PredicateMethod = "isStrictlyFGRAsmReg";
 }
 
-def FGRH32AsmOperand : MipsAsmRegOperand {
-  let Name = "FGRH32AsmReg";
-  let PredicateMethod = "isFGRAsmReg";
-}
-
 def FCCRegsAsmOperand : MipsAsmRegOperand {
   let Name = "FCCAsmReg";
 }
@@ -700,10 +697,6 @@ def FGRCCOpnd : RegisterOperand<FGRCC> {
   // The assembler doesn't use register classes so we can re-use
   // FGR32AsmOperand.
   let ParserMatchClass = FGR32AsmOperand;
-}
-
-def FGRH32Opnd : RegisterOperand<FGRH32> {
-  let ParserMatchClass = FGRH32AsmOperand;
 }
 
 def FCCRegsOpnd : RegisterOperand<FCC> {

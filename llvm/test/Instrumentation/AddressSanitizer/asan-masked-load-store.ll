@@ -75,39 +75,39 @@ define void @store.v4f32.variable(<4 x float> %arg, <4 x i1> %mask) sanitize_add
   %p = load <4 x float>*, <4 x float>** @v4f32, align 8
 ; STORE: [[MASK0:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 0
 ; STORE: br i1 [[MASK0]], label %[[THEN0:[0-9A-Za-z]+]], label %[[AFTER0:[0-9A-Za-z]+]]
-; STORE: <label>:[[THEN0]]:
+; STORE: [[THEN0]]:
 ; STORE: [[GEP0:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 0
 ; STORE: [[PGEP0:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP0]] to i64
 ; STORE: call void @__asan_store4(i64 [[PGEP0]])
 ; STORE: br label %[[AFTER0]]
-; STORE: <label>:[[AFTER0]]
+; STORE: [[AFTER0]]:
 
 ; STORE: [[MASK1:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 1
 ; STORE: br i1 [[MASK1]], label %[[THEN1:[0-9A-Za-z]+]], label %[[AFTER1:[0-9A-Za-z]+]]
-; STORE: <label>:[[THEN1]]:
+; STORE: [[THEN1]]:
 ; STORE: [[GEP1:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 1
 ; STORE: [[PGEP1:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP1]] to i64
 ; STORE: call void @__asan_store4(i64 [[PGEP1]])
 ; STORE: br label %[[AFTER1]]
-; STORE: <label>:[[AFTER1]]
+; STORE: [[AFTER1]]:
 
 ; STORE: [[MASK2:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 2
 ; STORE: br i1 [[MASK2]], label %[[THEN2:[0-9A-Za-z]+]], label %[[AFTER2:[0-9A-Za-z]+]]
-; STORE: <label>:[[THEN2]]:
+; STORE: [[THEN2]]:
 ; STORE: [[GEP2:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 2
 ; STORE: [[PGEP2:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP2]] to i64
 ; STORE: call void @__asan_store4(i64 [[PGEP2]])
 ; STORE: br label %[[AFTER2]]
-; STORE: <label>:[[AFTER2]]
+; STORE: [[AFTER2]]:
 
 ; STORE: [[MASK3:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 3
 ; STORE: br i1 [[MASK3]], label %[[THEN3:[0-9A-Za-z]+]], label %[[AFTER3:[0-9A-Za-z]+]]
-; STORE: <label>:[[THEN3]]:
+; STORE: [[THEN3]]:
 ; STORE: [[GEP3:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 3
 ; STORE: [[PGEP3:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP3]] to i64
 ; STORE: call void @__asan_store4(i64 [[PGEP3]])
 ; STORE: br label %[[AFTER3]]
-; STORE: <label>:[[AFTER3]]
+; STORE: [[AFTER3]]:
 
 ; STORE: tail call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %arg, <4 x float>* %p, i32 4, <4 x i1> %mask)
   tail call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %arg, <4 x float>* %p, i32 4, <4 x i1> %mask)
@@ -203,39 +203,39 @@ define <4 x float> @load.v4f32.variable(<4 x float> %arg, <4 x i1> %mask) saniti
   %p = load <4 x float>*, <4 x float>** @v4f32, align 8
 ; LOAD: [[MASK0:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 0
 ; LOAD: br i1 [[MASK0]], label %[[THEN0:[0-9A-Za-z]+]], label %[[AFTER0:[0-9A-Za-z]+]]
-; LOAD: <label>:[[THEN0]]:
+; LOAD: [[THEN0]]:
 ; LOAD: [[GEP0:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 0
 ; LOAD: [[PGEP0:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP0]] to i64
 ; LOAD: call void @__asan_load4(i64 [[PGEP0]])
 ; LOAD: br label %[[AFTER0]]
-; LOAD: <label>:[[AFTER0]]
+; LOAD: [[AFTER0]]:
 
 ; LOAD: [[MASK1:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 1
 ; LOAD: br i1 [[MASK1]], label %[[THEN1:[0-9A-Za-z]+]], label %[[AFTER1:[0-9A-Za-z]+]]
-; LOAD: <label>:[[THEN1]]:
+; LOAD: [[THEN1]]:
 ; LOAD: [[GEP1:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 1
 ; LOAD: [[PGEP1:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP1]] to i64
 ; LOAD: call void @__asan_load4(i64 [[PGEP1]])
 ; LOAD: br label %[[AFTER1]]
-; LOAD: <label>:[[AFTER1]]
+; LOAD: [[AFTER1]]:
 
 ; LOAD: [[MASK2:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 2
 ; LOAD: br i1 [[MASK2]], label %[[THEN2:[0-9A-Za-z]+]], label %[[AFTER2:[0-9A-Za-z]+]]
-; LOAD: <label>:[[THEN2]]:
+; LOAD: [[THEN2]]:
 ; LOAD: [[GEP2:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 2
 ; LOAD: [[PGEP2:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP2]] to i64
 ; LOAD: call void @__asan_load4(i64 [[PGEP2]])
 ; LOAD: br label %[[AFTER2]]
-; LOAD: <label>:[[AFTER2]]
+; LOAD: [[AFTER2]]:
 
 ; LOAD: [[MASK3:%[0-9A-Za-z]+]] = extractelement <4 x i1> %mask, i64 3
 ; LOAD: br i1 [[MASK3]], label %[[THEN3:[0-9A-Za-z]+]], label %[[AFTER3:[0-9A-Za-z]+]]
-; LOAD: <label>:[[THEN3]]:
+; LOAD: [[THEN3]]:
 ; LOAD: [[GEP3:%[0-9A-Za-z]+]] = getelementptr <4 x float>, <4 x float>* %p, i64 0, i64 3
 ; LOAD: [[PGEP3:%[0-9A-Za-z]+]] = ptrtoint float* [[GEP3]] to i64
 ; LOAD: call void @__asan_load4(i64 [[PGEP3]])
 ; LOAD: br label %[[AFTER3]]
-; LOAD: <label>:[[AFTER3]]
+; LOAD: [[AFTER3]]:
 
 ; LOAD: tail call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %p, i32 4, <4 x i1> %mask, <4 x float> %arg)
   %res = tail call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %p, i32 4, <4 x i1> %mask, <4 x float> %arg)

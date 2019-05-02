@@ -1657,9 +1657,7 @@ ABIMacOSX_arm64::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABIMacOSX_arm64::GetRedZoneSize() const { return 128; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABIMacOSX_arm64::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
@@ -2439,9 +2437,7 @@ void ABIMacOSX_arm64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 ConstString ABIMacOSX_arm64::GetPluginNameStatic() {
   static ConstString g_plugin_name("ABIMacOSX_arm64");

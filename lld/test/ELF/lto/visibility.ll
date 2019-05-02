@@ -3,7 +3,7 @@
 ; RUN: llvm-mc -triple=x86_64-pc-linux %p/Inputs/visibility.s -o %t2.o -filetype=obj
 ; RUN: ld.lld %t1.o %t2.o -o %t.so -shared -save-temps
 ; RUN: llvm-dis < %t.so.0.2.internalize.bc | FileCheck --check-prefix=IR %s
-; RUN: llvm-readobj -t %t.so | FileCheck %s
+; RUN: llvm-readobj --symbols %t.so | FileCheck %s
 
 ; CHECK:      Name: g
 ; CHECK-NEXT: Value: 0x1000

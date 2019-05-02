@@ -25,7 +25,7 @@ static bool inferAllPrototypeAttributes(Module &M,
   for (Function &F : M.functions())
     // We only infer things using the prototype and the name; we don't need
     // definitions.
-    if (F.isDeclaration() && !F.hasFnAttribute((Attribute::OptimizeNone)))
+    if (F.isDeclaration() && !F.hasOptNone())
       Changed |= inferLibFuncAttributes(F, TLI);
 
   return Changed;

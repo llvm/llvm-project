@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -program-headers %t | FileCheck %s
+# RUN: llvm-readobj -l %t | FileCheck %s
 
 !ELF
 FileHeader:

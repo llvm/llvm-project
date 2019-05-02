@@ -3,19 +3,19 @@
 
 // Todo: ELF-PPC, ELF-HEXAGON
 
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-i386     | FileCheck %s -check-prefix ELF-32
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-x86_64   | FileCheck %s -check-prefix ELF-64
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-aarch64  | FileCheck %s -check-prefix ELF-AARCH64
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-arm      | FileCheck %s -check-prefix ELF-ARM
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-lanai    | FileCheck %s -check-prefix ELF-LANAI
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-mips     | FileCheck %s -check-prefix ELF-MIPS
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-mips64el | FileCheck %s -check-prefix ELF-MIPS64EL
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-ppc64    | FileCheck %s -check-prefix ELF-PPC64
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.coff-i386    | FileCheck %s -check-prefix COFF-32
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.coff-x86_64  | FileCheck %s -check-prefix COFF-64
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.macho-arm    | FileCheck %s -check-prefix MACHO-ARM
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.macho-i386   | FileCheck %s -check-prefix MACHO-32
-RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.macho-x86_64 | FileCheck %s -check-prefix MACHO-64
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-i386     | FileCheck %s -check-prefix ELF-32
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-x86_64   | FileCheck %s -check-prefix ELF-64
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-aarch64  | FileCheck %s -check-prefix ELF-AARCH64
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-arm      | FileCheck %s -check-prefix ELF-ARM
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-lanai    | FileCheck %s -check-prefix ELF-LANAI
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-mips     | FileCheck %s -check-prefix ELF-MIPS
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-mips64el | FileCheck %s -check-prefix ELF-MIPS64EL
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-ppc64    | FileCheck %s -check-prefix ELF-PPC64
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.coff-i386    | FileCheck %s -check-prefix COFF-32
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.coff-x86_64  | FileCheck %s -check-prefix COFF-64
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.macho-arm    | FileCheck %s -check-prefix MACHO-ARM
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.macho-i386   | FileCheck %s -check-prefix MACHO-32
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.macho-x86_64 | FileCheck %s -check-prefix MACHO-64
 
 
 ELF-32: Type: R_386_NONE (0)

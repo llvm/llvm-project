@@ -690,32 +690,21 @@ ModuleSP Type::GetModule() {
   return ModuleSP();
 }
 
-TypeAndOrName::TypeAndOrName() : m_type_pair(), m_type_name() {}
-
-TypeAndOrName::TypeAndOrName(TypeSP &in_type_sp) : m_type_pair(in_type_sp) {
-  if (in_type_sp)
+TypeAndOrName::TypeAndOrName(TypeSP &in_type_sp) {
+  if (in_type_sp) {
+    m_compiler_type = in_type_sp->GetForwardCompilerType();
     m_type_name = in_type_sp->GetName();
+  }
 }
 
 TypeAndOrName::TypeAndOrName(const char *in_type_str)
     : m_type_name(in_type_str) {}
 
-TypeAndOrName::TypeAndOrName(const TypeAndOrName &rhs)
-    : m_type_pair(rhs.m_type_pair), m_type_name(rhs.m_type_name) {}
-
 TypeAndOrName::TypeAndOrName(ConstString &in_type_const_string)
     : m_type_name(in_type_const_string) {}
 
-TypeAndOrName &TypeAndOrName::operator=(const TypeAndOrName &rhs) {
-  if (this != &rhs) {
-    m_type_name = rhs.m_type_name;
-    m_type_pair = rhs.m_type_pair;
-  }
-  return *this;
-}
-
 bool TypeAndOrName::operator==(const TypeAndOrName &other) const {
-  if (m_type_pair != other.m_type_pair)
+  if (m_compiler_type != other.m_compiler_type)
     return false;
   if (m_type_name != other.m_type_name)
     return false;
@@ -729,8 +718,8 @@ bool TypeAndOrName::operator!=(const TypeAndOrName &other) const {
 ConstString TypeAndOrName::GetName() const {
   if (m_type_name)
     return m_type_name;
-  if (m_type_pair)
-    return m_type_pair.GetName();
+  if (m_compiler_type)
+    return m_compiler_type.GetTypeName();
   return ConstString("<invalid>");
 }
 
@@ -743,30 +732,32 @@ void TypeAndOrName::SetName(const char *type_name_cstr) {
 }
 
 void TypeAndOrName::SetTypeSP(lldb::TypeSP type_sp) {
-  m_type_pair.SetType(type_sp);
-  if (m_type_pair)
-    m_type_name = m_type_pair.GetName();
+  if (type_sp) {
+    m_compiler_type = type_sp->GetForwardCompilerType();
+    m_type_name = type_sp->GetName();
+  } else
+    Clear();
 }
 
 void TypeAndOrName::SetCompilerType(CompilerType compiler_type) {
-  m_type_pair.SetType(compiler_type);
-  if (m_type_pair)
-    m_type_name = m_type_pair.GetName();
+  m_compiler_type = compiler_type;
+  if (m_compiler_type)
+    m_type_name = m_compiler_type.GetTypeName();
 }
 
 bool TypeAndOrName::IsEmpty() const {
-  return !((bool)m_type_name || (bool)m_type_pair);
+  return !((bool)m_type_name || (bool)m_compiler_type);
 }
 
 void TypeAndOrName::Clear() {
   m_type_name.Clear();
-  m_type_pair.Clear();
+  m_compiler_type.Clear();
 }
 
 bool TypeAndOrName::HasName() const { return (bool)m_type_name; }
 
 bool TypeAndOrName::HasCompilerType() const {
-  return m_type_pair.GetCompilerType().IsValid();
+  return m_compiler_type.IsValid();
 }
 
 TypeImpl::TypeImpl() : m_module_wp(), m_static_type(), m_dynamic_type() {}
@@ -786,7 +777,7 @@ TypeImpl::TypeImpl(const CompilerType &compiler_type)
 }
 
 TypeImpl::TypeImpl(const lldb::TypeSP &type_sp, const CompilerType &dynamic)
-    : m_module_wp(), m_static_type(type_sp), m_dynamic_type(dynamic) {
+    : m_module_wp(), m_static_type(), m_dynamic_type(dynamic) {
   SetType(type_sp, dynamic);
 }
 
@@ -796,22 +787,19 @@ TypeImpl::TypeImpl(const CompilerType &static_type,
   SetType(static_type, dynamic_type);
 }
 
-TypeImpl::TypeImpl(const TypePair &pair, const CompilerType &dynamic)
-    : m_module_wp(), m_static_type(), m_dynamic_type() {
-  SetType(pair, dynamic);
-}
-
 void TypeImpl::SetType(const lldb::TypeSP &type_sp) {
-  m_static_type.SetType(type_sp);
-  if (type_sp)
+  if (type_sp) {
+    m_static_type = type_sp->GetForwardCompilerType();
     m_module_wp = type_sp->GetModule();
-  else
+  } else {
+    m_static_type.Clear();
     m_module_wp = lldb::ModuleWP();
+  }
 }
 
 void TypeImpl::SetType(const CompilerType &compiler_type) {
   m_module_wp = lldb::ModuleWP();
-  m_static_type.SetType(compiler_type);
+  m_static_type = compiler_type;
 }
 
 void TypeImpl::SetType(const lldb::TypeSP &type_sp,
@@ -823,13 +811,7 @@ void TypeImpl::SetType(const lldb::TypeSP &type_sp,
 void TypeImpl::SetType(const CompilerType &compiler_type,
                        const CompilerType &dynamic) {
   m_module_wp = lldb::ModuleWP();
-  m_static_type.SetType(compiler_type);
-  m_dynamic_type = dynamic;
-}
-
-void TypeImpl::SetType(const TypePair &pair, const CompilerType &dynamic) {
-  m_module_wp.reset();
-  m_static_type = pair;
+  m_static_type = compiler_type;
   m_dynamic_type = dynamic;
 }
 
@@ -900,7 +882,7 @@ ConstString TypeImpl::GetName() const {
   if (CheckModule(module_sp)) {
     if (m_dynamic_type)
       return m_dynamic_type.GetTypeName();
-    return m_static_type.GetName();
+    return m_static_type.GetTypeName();
   }
   return ConstString();
 }
@@ -943,10 +925,10 @@ TypeImpl TypeImpl::GetReferenceType() const {
   ModuleSP module_sp;
   if (CheckModule(module_sp)) {
     if (m_dynamic_type.IsValid()) {
-      return TypeImpl(m_static_type.GetReferenceType(),
+      return TypeImpl(m_static_type.GetLValueReferenceType(),
                       m_dynamic_type.GetLValueReferenceType());
     }
-    return TypeImpl(m_static_type.GetReferenceType());
+    return TypeImpl(m_static_type.GetLValueReferenceType());
   }
   return TypeImpl();
 }
@@ -967,10 +949,10 @@ TypeImpl TypeImpl::GetDereferencedType() const {
   ModuleSP module_sp;
   if (CheckModule(module_sp)) {
     if (m_dynamic_type.IsValid()) {
-      return TypeImpl(m_static_type.GetDereferencedType(),
+      return TypeImpl(m_static_type.GetNonReferenceType(),
                       m_dynamic_type.GetNonReferenceType());
     }
-    return TypeImpl(m_static_type.GetDereferencedType());
+    return TypeImpl(m_static_type.GetNonReferenceType());
   }
   return TypeImpl();
 }
@@ -979,10 +961,10 @@ TypeImpl TypeImpl::GetUnqualifiedType() const {
   ModuleSP module_sp;
   if (CheckModule(module_sp)) {
     if (m_dynamic_type.IsValid()) {
-      return TypeImpl(m_static_type.GetUnqualifiedType(),
+      return TypeImpl(m_static_type.GetFullyUnqualifiedType(),
                       m_dynamic_type.GetFullyUnqualifiedType());
     }
-    return TypeImpl(m_static_type.GetUnqualifiedType());
+    return TypeImpl(m_static_type.GetFullyUnqualifiedType());
   }
   return TypeImpl();
 }
@@ -1006,7 +988,7 @@ CompilerType TypeImpl::GetCompilerType(bool prefer_dynamic) {
       if (m_dynamic_type.IsValid())
         return m_dynamic_type;
     }
-    return m_static_type.GetCompilerType();
+    return m_static_type;
   }
   return CompilerType();
 }
@@ -1018,7 +1000,7 @@ TypeSystem *TypeImpl::GetTypeSystem(bool prefer_dynamic) {
       if (m_dynamic_type.IsValid())
         return m_dynamic_type.GetTypeSystem();
     }
-    return m_static_type.GetCompilerType().GetTypeSystem();
+    return m_static_type.GetTypeSystem();
   }
   return NULL;
 }
@@ -1032,7 +1014,7 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
       m_dynamic_type.DumpTypeDescription(&strm);
       strm.Printf("\nStatic:\n");
     }
-    m_static_type.GetCompilerType().DumpTypeDescription(&strm);
+    m_static_type.DumpTypeDescription(&strm);
   } else {
     strm.PutCString("Invalid TypeImpl module for type has been deleted\n");
   }

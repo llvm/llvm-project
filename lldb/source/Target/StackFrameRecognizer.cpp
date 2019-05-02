@@ -17,8 +17,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#ifndef LLDB_DISABLE_PYTHON
-
 class ScriptedRecognizedStackFrame : public RecognizedStackFrame {
 public:
   ScriptedRecognizedStackFrame(ValueObjectListSP args) {
@@ -49,8 +47,6 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
   return RecognizedStackFrameSP(
       new ScriptedRecognizedStackFrame(args_synthesized));
 }
-
-#endif
 
 class StackFrameRecognizerManagerImpl {
 public:

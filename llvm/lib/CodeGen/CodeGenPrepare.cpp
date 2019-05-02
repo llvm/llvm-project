@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -297,6 +298,10 @@ class TypePromotionTransaction;
     /// DataLayout for the Function being processed.
     const DataLayout *DL = nullptr;
 
+    /// Building the dominator tree can be expensive, so we only build it
+    /// lazily and update it when required.
+    std::unique_ptr<DominatorTree> DT;
+
   public:
     static char ID; // Pass identification, replacement for typeid
 
@@ -335,6 +340,13 @@ class TypePromotionTransaction;
       }
     }
 
+    // Get the DominatorTree, building if necessary.
+    DominatorTree &getDT(Function &F) {
+      if (!DT)
+        DT = llvm::make_unique<DominatorTree>(F);
+      return *DT;
+    }
+
     bool eliminateFallThrough(Function &F);
     bool eliminateMostlyEmptyBlocks(Function &F);
     BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
@@ -342,8 +354,8 @@ class TypePromotionTransaction;
     void eliminateMostlyEmptyBlock(BasicBlock *BB);
     bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                        bool isPreheader);
-    bool optimizeBlock(BasicBlock &BB, DominatorTree &DT, bool &ModifiedDT);
-    bool optimizeInst(Instruction *I, DominatorTree &DT, bool &ModifiedDT);
+    bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT);
+    bool optimizeInst(Instruction *I, bool &ModifiedDT);
     bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
                             Type *AccessTy, unsigned AddrSpace);
     bool optimizeInlineAsmInst(CallInst *CS);
@@ -351,7 +363,7 @@ class TypePromotionTransaction;
     bool optimizeExt(Instruction *&I);
     bool optimizeExtUses(Instruction *I);
     bool optimizeLoadExt(LoadInst *Load);
-    bool optimizeSelectInst(SelectInst *SI, bool &ModifiedDT);
+    bool optimizeSelectInst(SelectInst *SI);
     bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
     bool optimizeSwitchInst(SwitchInst *SI);
     bool optimizeExtractElementInst(Instruction *Inst);
@@ -363,7 +375,7 @@ class TypePromotionTransaction;
                           const SmallVectorImpl<Instruction *> &Exts,
                           SmallVectorImpl<Instruction *> &ProfitablyMovedExts,
                           unsigned CreatedInstsCost = 0);
-    bool mergeSExts(Function &F, DominatorTree &DT);
+    bool mergeSExts(Function &F);
     bool splitLargeGEPOffsets();
     bool performAddressTypePromotion(
         Instruction *&Inst,
@@ -374,6 +386,11 @@ class TypePromotionTransaction;
     bool simplifyOffsetableRelocate(Instruction &I);
 
     bool tryToSinkFreeOperands(Instruction *I);
+    bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
+                                     Intrinsic::ID IID);
+    bool optimizeCmp(CmpInst *Cmp, bool &ModifiedDT);
+    bool combineToUSubWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
+    bool combineToUAddWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
   };
 
 } // end anonymous namespace
@@ -410,7 +427,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   BPI.reset(new BranchProbabilityInfo(F, *LI));
   BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
-  OptSize = F.optForSize();
+  OptSize = F.hasOptSize();
 
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
@@ -452,18 +469,18 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   bool MadeChange = true;
   while (MadeChange) {
     MadeChange = false;
-    DominatorTree DT(F);
+    DT.reset();
     for (Function::iterator I = F.begin(); I != F.end(); ) {
       BasicBlock *BB = &*I++;
       bool ModifiedDTOnIteration = false;
-      MadeChange |= optimizeBlock(*BB, DT, ModifiedDTOnIteration);
+      MadeChange |= optimizeBlock(*BB, ModifiedDTOnIteration);
 
       // Restart BB iteration if the dominator tree of the Function was changed
       if (ModifiedDTOnIteration)
         break;
     }
     if (EnableTypePromotionMerge && !ValToSExtendedUses.empty())
-      MadeChange |= mergeSExts(F, DT);
+      MadeChange |= mergeSExts(F);
     if (!LargeOffsetGEPMap.empty())
       MadeChange |= splitLargeGEPOffsets();
 
@@ -1157,8 +1174,9 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
-static bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
-                                        Intrinsic::ID IID, DominatorTree &DT) {
+bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
+                                                 CmpInst *Cmp,
+                                                 Intrinsic::ID IID) {
   // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
   Value *Arg0 = BO->getOperand(0);
   Value *Arg1 = BO->getOperand(1);
@@ -1177,15 +1195,20 @@ static bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
   } else {
     // The math and compare may be independent instructions. Check dominance to
     // determine the insertion point for the intrinsic.
-    bool MathDominates = DT.dominates(BO, Cmp);
-    if (!MathDominates && !DT.dominates(Cmp, BO))
+    bool MathDominates = getDT(*BO->getFunction()).dominates(BO, Cmp);
+    if (!MathDominates && !getDT(*BO->getFunction()).dominates(Cmp, BO))
       return false;
 
-    // Check that the insertion doesn't create a value that is live across more
-    // than two blocks, so to minimise the increase in register pressure.
-    if (BO->getParent() != Cmp->getParent()) {
-      BasicBlock *Dominator = MathDominates ? BO->getParent() : Cmp->getParent();
-      BasicBlock *Dominated = MathDominates ? Cmp->getParent() : BO->getParent();
+    BasicBlock *MathBB = BO->getParent(), *CmpBB = Cmp->getParent();
+    if (MathBB != CmpBB) {
+      // Avoid hoisting an extra op into a dominating block and creating a
+      // potentially longer critical path.
+      if (!MathDominates)
+        return false;
+      // Check that the insertion doesn't create a value that is live across
+      // more than two blocks, so to minimise the increase in register pressure.
+      BasicBlock *Dominator = MathDominates ? MathBB : CmpBB;
+      BasicBlock *Dominated = MathDominates ? CmpBB : MathBB;
       auto Successors = successors(Dominator);
       if (llvm::find(Successors, Dominated) == Successors.end())
         return false;
@@ -1237,17 +1260,16 @@ static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
 
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
-static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
-                                      const DataLayout &DL, DominatorTree &DT,
-                                      bool &ModifiedDT) {
+bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp,
+                                               bool &ModifiedDT) {
   Value *A, *B;
   BinaryOperator *Add;
   if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add))))
     if (!matchUAddWithOverflowConstantEdgeCases(Cmp, Add))
       return false;
 
-  if (!TLI.shouldFormOverflowOp(ISD::UADDO,
-                                TLI.getValueType(DL, Add->getType())))
+  if (!TLI->shouldFormOverflowOp(ISD::UADDO,
+                                 TLI->getValueType(*DL, Add->getType())))
     return false;
 
   // We don't want to move around uses of condition values this late, so we
@@ -1256,7 +1278,7 @@ static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
   if (Add->getParent() != Cmp->getParent() && !Add->hasOneUse())
     return false;
 
-  if (!replaceMathCmpWithIntrinsic(Add, Cmp, Intrinsic::uadd_with_overflow, DT))
+  if (!replaceMathCmpWithIntrinsic(Add, Cmp, Intrinsic::uadd_with_overflow))
     return false;
 
   // Reset callers - do not crash by iterating over a dead instruction.
@@ -1264,9 +1286,8 @@ static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
   return true;
 }
 
-static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
-                                      const DataLayout &DL, DominatorTree &DT,
-                                      bool &ModifiedDT) {
+bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
+                                               bool &ModifiedDT) {
   // We are not expecting non-canonical/degenerate code. Just bail out.
   Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
   if (isa<Constant>(A) && isa<Constant>(B))
@@ -1314,11 +1335,11 @@ static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
   if (!Sub)
     return false;
 
-  if (!TLI.shouldFormOverflowOp(ISD::USUBO,
-                                TLI.getValueType(DL, Sub->getType())))
+  if (!TLI->shouldFormOverflowOp(ISD::USUBO,
+                                 TLI->getValueType(*DL, Sub->getType())))
     return false;
 
-  if (!replaceMathCmpWithIntrinsic(Sub, Cmp, Intrinsic::usub_with_overflow, DT))
+  if (!replaceMathCmpWithIntrinsic(Sub, Cmp, Intrinsic::usub_with_overflow))
     return false;
 
   // Reset callers - do not crash by iterating over a dead instruction.
@@ -1392,16 +1413,14 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
   return MadeChange;
 }
 
-static bool optimizeCmp(CmpInst *Cmp, const TargetLowering &TLI,
-                        const DataLayout &DL, DominatorTree &DT,
-                        bool &ModifiedDT) {
-  if (sinkCmpExpression(Cmp, TLI))
+bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, bool &ModifiedDT) {
+  if (sinkCmpExpression(Cmp, *TLI))
     return true;
 
-  if (combineToUAddWithOverflow(Cmp, TLI, DL, DT, ModifiedDT))
+  if (combineToUAddWithOverflow(Cmp, ModifiedDT))
     return true;
 
-  if (combineToUSubWithOverflow(Cmp, TLI, DL, DT, ModifiedDT))
+  if (combineToUSubWithOverflow(Cmp, ModifiedDT))
     return true;
 
   return false;
@@ -2013,7 +2032,9 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB, bool &ModifiedDT
   SmallVector<CallInst*, 4> TailCalls;
   if (PN) {
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
-      CallInst *CI = dyn_cast<CallInst>(PN->getIncomingValue(I));
+      // Look through bitcasts.
+      Value *IncomingVal = PN->getIncomingValue(I)->stripPointerCasts();
+      CallInst *CI = dyn_cast<CallInst>(IncomingVal);
       // Make sure the phi value is indeed produced by the tail call.
       if (CI && CI->hasOneUse() && CI->getParent() == PN->getIncomingBlock(I) &&
           TLI->mayBeEmittedAsTailCall(CI) &&
@@ -4436,7 +4457,7 @@ static bool FindAllMemoryUses(
   if (!MightBeFoldableInst(I))
     return true;
 
-  const bool OptSize = I->getFunction()->optForSize();
+  const bool OptSize = I->getFunction()->hasOptSize();
 
   // Loop over all the uses, recursively processing them.
   for (Use &U : I->uses()) {
@@ -5212,7 +5233,7 @@ bool CodeGenPrepare::tryToPromoteExts(
 }
 
 /// Merging redundant sexts when one is dominating the other.
-bool CodeGenPrepare::mergeSExts(Function &F, DominatorTree &DT) {
+bool CodeGenPrepare::mergeSExts(Function &F) {
   bool Changed = false;
   for (auto &Entry : ValToSExtendedUses) {
     SExts &Insts = Entry.second;
@@ -5223,7 +5244,7 @@ bool CodeGenPrepare::mergeSExts(Function &F, DominatorTree &DT) {
         continue;
       bool inserted = false;
       for (auto &Pt : CurPts) {
-        if (DT.dominates(Inst, Pt)) {
+        if (getDT(F).dominates(Inst, Pt)) {
           Pt->replaceAllUsesWith(Inst);
           RemovedInsts.insert(Pt);
           Pt->removeFromParent();
@@ -5232,7 +5253,7 @@ bool CodeGenPrepare::mergeSExts(Function &F, DominatorTree &DT) {
           Changed = true;
           break;
         }
-        if (!DT.dominates(Pt, Inst))
+        if (!getDT(F).dominates(Pt, Inst))
           // Give up if we need to merge in a common dominator as the
           // experiments show it is not profitable.
           continue;
@@ -5903,7 +5924,7 @@ static Value *getTrueOrFalseValue(
 
 /// If we have a SelectInst that will likely profit from branch prediction,
 /// turn it into a branch.
-bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI, bool &ModifiedDT) {
+bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // If branch conversion isn't desirable, exit early.
   if (DisableSelectToBranch || OptSize || !TLI)
     return false;
@@ -5944,7 +5965,11 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI, bool &ModifiedDT) {
       !isFormingBranchFromSelectProfitable(TTI, TLI, SI))
     return false;
 
-  ModifiedDT = true;
+  // The DominatorTree needs to be rebuilt by any consumers after this
+  // transformation. We simply reset here rather than setting the ModifiedDT
+  // flag to avoid restarting the function walk in runOnFunction for each
+  // select optimized.
+  DT.reset();
 
   // Transform a sequence like this:
   //    start:
@@ -6869,13 +6894,13 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   return true;
 }
 
-bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
-                                  bool &ModifiedDT) {
+bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
   if (InsertedInsts.count(I))
     return false;
 
+  // TODO: Move into the switch on opcode below here.
   if (PHINode *P = dyn_cast<PHINode>(I)) {
     // It is possible for very late stage optimizations (such as SimplifyCFG)
     // to introduce PHI nodes too late to be cleaned up.  If we detect such a
@@ -6920,7 +6945,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
   }
 
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    if (TLI && optimizeCmp(Cmp, *TLI, *DL, DT, ModifiedDT))
+    if (TLI && optimizeCmp(Cmp, ModifiedDT))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
@@ -6982,7 +7007,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
       GEPI->replaceAllUsesWith(NC);
       GEPI->eraseFromParent();
       ++NumGEPsElim;
-      optimizeInst(NC, DT, ModifiedDT);
+      optimizeInst(NC, ModifiedDT);
       return true;
     }
     if (tryUnmergingGEPsAcrossIndirectBr(GEPI, TTI)) {
@@ -6994,20 +7019,18 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
   if (tryToSinkFreeOperands(I))
     return true;
 
-  if (CallInst *CI = dyn_cast<CallInst>(I))
-    return optimizeCallInst(CI, ModifiedDT);
-
-  if (SelectInst *SI = dyn_cast<SelectInst>(I))
-    return optimizeSelectInst(SI, ModifiedDT);
-
-  if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I))
-    return optimizeShuffleVectorInst(SVI);
-
-  if (auto *Switch = dyn_cast<SwitchInst>(I))
-    return optimizeSwitchInst(Switch);
-
-  if (isa<ExtractElementInst>(I))
-    return optimizeExtractElementInst(I);
+  switch (I->getOpcode()) {
+  case Instruction::Call:
+    return optimizeCallInst(cast<CallInst>(I), ModifiedDT);
+  case Instruction::Select:
+    return optimizeSelectInst(cast<SelectInst>(I));
+  case Instruction::ShuffleVector:
+    return optimizeShuffleVectorInst(cast<ShuffleVectorInst>(I));
+  case Instruction::Switch:
+    return optimizeSwitchInst(cast<SwitchInst>(I));
+  case Instruction::ExtractElement:
+    return optimizeExtractElementInst(cast<ExtractElementInst>(I));
+  }
 
   return false;
 }
@@ -7033,14 +7056,13 @@ static bool makeBitReverse(Instruction &I, const DataLayout &DL,
 // In this pass we look for GEP and cast instructions that are used
 // across basic blocks and rewrite them to improve basic-block-at-a-time
 // selection.
-bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, DominatorTree &DT,
-                                   bool &ModifiedDT) {
+bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
   SunkAddrs.clear();
   bool MadeChange = false;
 
   CurInstIterator = BB.begin();
   while (CurInstIterator != BB.end()) {
-    MadeChange |= optimizeInst(&*CurInstIterator++, DT, ModifiedDT);
+    MadeChange |= optimizeInst(&*CurInstIterator++, ModifiedDT);
     if (ModifiedDT)
       return true;
   }

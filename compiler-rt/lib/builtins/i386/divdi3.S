@@ -23,9 +23,9 @@
 .balign 4
 DEFINE_COMPILERRT_FUNCTION(__divdi3)
 
-/* This is currently implemented by wrapping the unsigned divide up in an absolute
-   value, then restoring the correct sign at the end of the computation.  This could
-   certainly be improved upon. */
+// This is currently implemented by wrapping the unsigned divide up in an absolute
+// value, then restoring the correct sign at the end of the computation.  This could
+// certainly be improved upon.
 
 	pushl		%esi
 	movl	 20(%esp),			%edx	// high word of b
@@ -39,7 +39,7 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	movl		%edx,		 20(%esp)
 	movl		%eax,		 16(%esp)	// store abs(b) back to stack
 	movl		%ecx,			%esi	// set aside sign of b
-	
+
 	movl	 12(%esp),			%edx	// high word of b
 	movl	  8(%esp),			%eax	// low word of b
 	movl		%edx,			%ecx
@@ -56,11 +56,11 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	movl	 24(%esp),			%ebx	// Find the index i of the leading bit in b.
 	bsrl		%ebx,			%ecx	// If the high word of b is zero, jump to
 	jz			9f						// the code to handle that special case [9].
-	
-	/* High word of b is known to be non-zero on this branch */
-	
+
+	// High word of b is known to be non-zero on this branch
+
 	movl	 20(%esp),			%eax	// Construct bhi, containing bits [1+i:32+i] of b
-	
+
 	shrl		%cl,			%eax	// Practically, this means that bhi is given by:
 	shrl		%eax					//
 	notl		%ecx					//		bhi = (high word of b) << (31 - i) |
@@ -69,10 +69,10 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	movl	 16(%esp),			%edx	// Load the high and low words of a, and jump
 	movl	 12(%esp),			%eax	// to [1] if the high word is larger than bhi
 	cmpl		%ebx,			%edx	// to avoid overflowing the upcoming divide.
-	jae			1f						
-		
-	/* High word of a is greater than or equal to (b >> (1 + i)) on this branch */
-	
+	jae			1f
+
+	// High word of a is greater than or equal to (b >> (1 + i)) on this branch
+
 	divl		%ebx					// eax <-- qs, edx <-- r such that ahi:alo = bs*qs + r
 
 	pushl		%edi
@@ -91,7 +91,7 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	sbbl		$0,				%edi	// decrement q if remainder is negative
 	xorl		%edx,			%edx
 	movl		%edi,			%eax
-	
+
 	addl		%esi,			%eax	// Restore correct sign to result
 	adcl		%esi,			%edx
 	xorl		%esi,			%eax
@@ -102,8 +102,8 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	retl								// Return
 
 
-1:	/* High word of a is greater than or equal to (b >> (1 + i)) on this branch */
-	 
+1:	// High word of a is greater than or equal to (b >> (1 + i)) on this branch
+
 	subl		%ebx,			%edx	// subtract bhi from ahi so that divide will not
 	divl		%ebx					// overflow, and find q and r such that
 										//
@@ -129,7 +129,7 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	sbbl		$0,				%edi	// decrement q if remainder is negative
 	xorl		%edx,			%edx
 	movl		%edi,			%eax
-	
+
 	addl		%esi,			%eax	// Restore correct sign to result
 	adcl		%esi,			%edx
 	xorl		%esi,			%eax
@@ -139,8 +139,8 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	popl		%esi
 	retl								// Return
 
-	
-9:	/* High word of b is zero on this branch */
+
+9:	// High word of b is zero on this branch
 
 	movl	 16(%esp),			%eax	// Find qhi and rhi such that
 	movl	 20(%esp),			%ecx	//
@@ -150,7 +150,7 @@ DEFINE_COMPILERRT_FUNCTION(__divdi3)
 	movl	 12(%esp),			%eax	// Find qlo such that
 	divl		%ecx					//
 	movl		%ebx,			%edx	//		rhi:alo = qlo*b + rlo  with 0 ≤ rlo < b
-	
+
 	addl		%esi,			%eax	// Restore correct sign to result
 	adcl		%esi,			%edx
 	xorl		%esi,			%eax

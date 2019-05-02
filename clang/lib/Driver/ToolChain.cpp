@@ -112,6 +112,10 @@ bool ToolChain::useRelaxRelocations() const {
   return ENABLE_X86_RELAX_RELOCATIONS;
 }
 
+bool ToolChain::isNoExecStackDefault() const {
+    return false;
+}
+
 const SanitizerArgs& ToolChain::getSanitizerArgs() const {
   if (!SanitizerArguments.get())
     SanitizerArguments.reset(new SanitizerArgs(*this, Args));
@@ -691,6 +695,33 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
     getDriver().Diag(diag::err_drv_invalid_rtlib_name) << A->getAsString(Args);
 
   return GetDefaultRuntimeLibType();
+}
+
+ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
+    const ArgList &Args) const {
+  const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
+  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_UNWINDLIB;
+
+  if (LibName == "none")
+    return ToolChain::UNW_None;
+  else if (LibName == "platform" || LibName == "") {
+    ToolChain::RuntimeLibType RtLibType = GetRuntimeLibType(Args);
+    if (RtLibType == ToolChain::RLT_CompilerRT)
+      return ToolChain::UNW_None;
+    else if (RtLibType == ToolChain::RLT_Libgcc)
+      return ToolChain::UNW_Libgcc;
+  } else if (LibName == "libunwind") {
+    if (GetRuntimeLibType(Args) == RLT_Libgcc)
+      getDriver().Diag(diag::err_drv_incompatible_unwindlib);
+    return ToolChain::UNW_CompilerRT;
+  } else if (LibName == "libgcc")
+    return ToolChain::UNW_Libgcc;
+
+  if (A)
+    getDriver().Diag(diag::err_drv_invalid_unwindlib_name)
+        << A->getAsString(Args);
+
+  return GetDefaultUnwindLibType();
 }
 
 ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{

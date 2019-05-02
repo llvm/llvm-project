@@ -1,0 +1,231 @@
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=dbscan | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-DBSCAN-05 %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.49 -analysis-numpoints=1 -analysis-clustering=dbscan | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-DBSCAN-049 %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-NAIVE %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.49 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-NAIVE %s
+
+# CHECK-CLUSTERS-ALL: {{^}}cluster_id,opcode_name,config,sched_class,inverse_throughput{{$}}
+
+# By default with -analysis-clustering-epsilon=0.5 everything ends up in the
+# same cluster, because each next point is a neighbour of the previous point.
+
+# CHECK-CLUSTERS-DBSCAN-05-NEXT: {{^}}0,
+# CHECK-CLUSTERS-DBSCAN-05-SAME: ,1.00{{$}}
+# CHECK-CLUSTERS-DBSCAN-05-NEXT: {{^}}0,
+# CHECK-CLUSTERS-DBSCAN-05-SAME: ,1.50{{$}}
+# CHECK-CLUSTERS-DBSCAN-05-NEXT: {{^}}0,
+# CHECK-CLUSTERS-DBSCAN-05-SAME: ,2.00{{$}}
+# CHECK-CLUSTERS-DBSCAN-05-NEXT: {{^}}0,
+# CHECK-CLUSTERS-DBSCAN-05-SAME: ,2.50{{$}}
+
+# With -analysis-clustering-epsilon=0.49 every point goes into separate cluster.
+
+# CHECK-CLUSTERS-DBSCAN-049-NEXT: {{^}}0,
+# CHECK-CLUSTERS-DBSCAN-049-SAME: ,1.00{{$}}
+# CHECK-CLUSTERS-DBSCAN-049: {{^}}1,
+# CHECK-CLUSTERS-DBSCAN-049-SAME: ,1.50{{$}}
+# CHECK-CLUSTERS-DBSCAN-049: {{^}}2,
+# CHECK-CLUSTERS-DBSCAN-049-SAME: ,2.00{{$}}
+# CHECK-CLUSTERS-DBSCAN-049: {{^}}3,
+# CHECK-CLUSTERS-DBSCAN-049-SAME: ,2.50{{$}}
+
+# And -analysis-clustering=naive every opcode goes into separate cluster.
+
+# CHECK-CLUSTERS-NAIVE-049-NEXT: {{^}}0,
+# CHECK-CLUSTERS-NAIVE-049-SAME: ,1.50{{$}}
+# CHECK-CLUSTERS-NAIVE-049: {{^}}1,
+# CHECK-CLUSTERS-NAIVE-049-SAME: ,2.00{{$}}
+# CHECK-CLUSTERS-NAIVE-049: {{^}}2,
+# CHECK-CLUSTERS-NAIVE-049-SAME: ,2.50{{$}}
+# CHECK-CLUSTERS-NAIVE-049: {{^}}3,
+# CHECK-CLUSTERS-NAIVE-049-SAME: ,1.00{{$}}
+
+# The "value" is manually specified, not measured.
+
+---
+mode:            inverse_throughput
+key:
+  instructions:
+    - 'ROL8ri AH AH i_0x1'
+    - 'ROL8ri AL AL i_0x1'
+    - 'ROL8ri BH BH i_0x1'
+    - 'ROL8ri BL BL i_0x1'
+    - 'ROL8ri BPL BPL i_0x1'
+    - 'ROL8ri CH CH i_0x1'
+    - 'ROL8ri CL CL i_0x1'
+    - 'ROL8ri DH DH i_0x1'
+    - 'ROL8ri DIL DIL i_0x1'
+    - 'ROL8ri DL DL i_0x1'
+    - 'ROL8ri SIL SIL i_0x1'
+    - 'ROL8ri R8B R8B i_0x1'
+    - 'ROL8ri R9B R9B i_0x1'
+    - 'ROL8ri R10B R10B i_0x1'
+    - 'ROL8ri R11B R11B i_0x1'
+    - 'ROL8ri R12B R12B i_0x1'
+    - 'ROL8ri R13B R13B i_0x1'
+    - 'ROL8ri R14B R14B i_0x1'
+    - 'ROL8ri R15B R15B i_0x1'
+  config:          ''
+  register_initial_values:
+    - 'AH=0x0'
+    - 'AL=0x0'
+    - 'BH=0x0'
+    - 'BL=0x0'
+    - 'BPL=0x0'
+    - 'CH=0x0'
+    - 'CL=0x0'
+    - 'DH=0x0'
+    - 'DIL=0x0'
+    - 'DL=0x0'
+    - 'SIL=0x0'
+    - 'R8B=0x0'
+    - 'R9B=0x0'
+    - 'R10B=0x0'
+    - 'R11B=0x0'
+    - 'R12B=0x0'
+    - 'R13B=0x0'
+    - 'R14B=0x0'
+    - 'R15B=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 1000000
+measurements:
+  - { key: inverse_throughput, value: 1.0000, per_snippet_value: 30.4026 }
+error:           ''
+info:            instruction has tied variables, using static renaming.
+assembled_snippet: 55415741564155415453B400B000B700B30040B500B500B100B60040B700B20040B60041B00041B10041B20041B30041B40041B50041B60041B700C0C401C0C001C0C701C0C30140C0C501C0C501C0C101C0C60140C0C701C0C20140C0C60141C0C00141C0C10141C0C20141C0C30141C0C40141C0C50141C0C60141C0C7015B415C415D415E415F5DC3
+...
+---
+mode:            inverse_throughput
+key:
+  instructions:
+    - 'ROL16ri AX AX i_0x1'
+    - 'ROL16ri BP BP i_0x1'
+    - 'ROL16ri BX BX i_0x1'
+    - 'ROL16ri CX CX i_0x1'
+    - 'ROL16ri DI DI i_0x1'
+    - 'ROL16ri DX DX i_0x1'
+    - 'ROL16ri SI SI i_0x1'
+    - 'ROL16ri R8W R8W i_0x1'
+    - 'ROL16ri R9W R9W i_0x1'
+    - 'ROL16ri R10W R10W i_0x1'
+    - 'ROL16ri R11W R11W i_0x1'
+    - 'ROL16ri R12W R12W i_0x1'
+    - 'ROL16ri R13W R13W i_0x1'
+    - 'ROL16ri R14W R14W i_0x1'
+    - 'ROL16ri R15W R15W i_0x1'
+  config:          ''
+  register_initial_values:
+    - 'AX=0x0'
+    - 'BP=0x0'
+    - 'BX=0x0'
+    - 'CX=0x0'
+    - 'DI=0x0'
+    - 'DX=0x0'
+    - 'SI=0x0'
+    - 'R8W=0x0'
+    - 'R9W=0x0'
+    - 'R10W=0x0'
+    - 'R11W=0x0'
+    - 'R12W=0x0'
+    - 'R13W=0x0'
+    - 'R14W=0x0'
+    - 'R15W=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 1000000
+measurements:
+  - { key: inverse_throughput, value: 1.5000, per_snippet_value: 30.154 }
+error:           ''
+info:            instruction has tied variables, using static renaming.
+assembled_snippet: 5541574156415541545366B8000066BD000066BB000066B9000066BF000066BA000066BE00006641B800006641B900006641BA00006641BB00006641BC00006641BD00006641BE00006641BF000066C1C00166C1C50166C1C30166C1C10166C1C70166C1C20166C1C6016641C1C0016641C1C1016641C1C2016641C1C3016641C1C4016641C1C5016641C1C6016641C1C70166C1C0015B415C415D415E415F5DC3
+...
+---
+mode:            inverse_throughput
+key:
+  instructions:
+    - 'ROL32ri EAX EAX i_0x1'
+    - 'ROL32ri EBP EBP i_0x1'
+    - 'ROL32ri EBX EBX i_0x1'
+    - 'ROL32ri ECX ECX i_0x1'
+    - 'ROL32ri EDI EDI i_0x1'
+    - 'ROL32ri EDX EDX i_0x1'
+    - 'ROL32ri ESI ESI i_0x1'
+    - 'ROL32ri R8D R8D i_0x1'
+    - 'ROL32ri R9D R9D i_0x1'
+    - 'ROL32ri R10D R10D i_0x1'
+    - 'ROL32ri R11D R11D i_0x1'
+    - 'ROL32ri R12D R12D i_0x1'
+    - 'ROL32ri R13D R13D i_0x1'
+    - 'ROL32ri R14D R14D i_0x1'
+    - 'ROL32ri R15D R15D i_0x1'
+  config:          ''
+  register_initial_values:
+    - 'EAX=0x0'
+    - 'EBP=0x0'
+    - 'EBX=0x0'
+    - 'ECX=0x0'
+    - 'EDI=0x0'
+    - 'EDX=0x0'
+    - 'ESI=0x0'
+    - 'R8D=0x0'
+    - 'R9D=0x0'
+    - 'R10D=0x0'
+    - 'R11D=0x0'
+    - 'R12D=0x0'
+    - 'R13D=0x0'
+    - 'R14D=0x0'
+    - 'R15D=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 1000000
+measurements:
+  - { key: inverse_throughput, value: 2.0000, per_snippet_value: 23.2762 }
+error:           ''
+info:            instruction has tied variables, using static renaming.
+assembled_snippet: 55415741564155415453B800000000BD00000000BB00000000B900000000BF00000000BA00000000BE0000000041B80000000041B90000000041BA0000000041BB0000000041BC0000000041BD0000000041BE0000000041BF00000000C1C001C1C501C1C301C1C101C1C701C1C201C1C60141C1C00141C1C10141C1C20141C1C30141C1C40141C1C50141C1C60141C1C701C1C0015B415C415D415E415F5DC3
+...
+---
+mode:            inverse_throughput
+key:
+  instructions:
+    - 'ROL64ri RAX RAX i_0x1'
+    - 'ROL64ri RBP RBP i_0x1'
+    - 'ROL64ri RBX RBX i_0x1'
+    - 'ROL64ri RCX RCX i_0x1'
+    - 'ROL64ri RDI RDI i_0x1'
+    - 'ROL64ri RDX RDX i_0x1'
+    - 'ROL64ri RSI RSI i_0x1'
+    - 'ROL64ri R8 R8 i_0x1'
+    - 'ROL64ri R9 R9 i_0x1'
+    - 'ROL64ri R10 R10 i_0x1'
+    - 'ROL64ri R11 R11 i_0x1'
+    - 'ROL64ri R12 R12 i_0x1'
+    - 'ROL64ri R13 R13 i_0x1'
+    - 'ROL64ri R14 R14 i_0x1'
+    - 'ROL64ri R15 R15 i_0x1'
+  config:          ''
+  register_initial_values:
+    - 'RAX=0x0'
+    - 'RBP=0x0'
+    - 'RBX=0x0'
+    - 'RCX=0x0'
+    - 'RDI=0x0'
+    - 'RDX=0x0'
+    - 'RSI=0x0'
+    - 'R8=0x0'
+    - 'R9=0x0'
+    - 'R10=0x0'
+    - 'R11=0x0'
+    - 'R12=0x0'
+    - 'R13=0x0'
+    - 'R14=0x0'
+    - 'R15=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 1000000
+measurements:
+  - { key: inverse_throughput, value: 2.5000, per_snippet_value: 26.2268 }
+error:           ''
+info:            instruction has tied variables, using static renaming.
+assembled_snippet: 5541574156415541545348B8000000000000000048BD000000000000000048BB000000000000000048B9000000000000000048BF000000000000000048BA000000000000000048BE000000000000000049B8000000000000000049B9000000000000000049BA000000000000000049BB000000000000000049BC000000000000000049BD000000000000000049BE000000000000000049BF000000000000000048C1C00148C1C50148C1C30148C1C10148C1C70148C1C20148C1C60149C1C00149C1C10149C1C20149C1C30149C1C40149C1C50149C1C60149C1C70148C1C0015B415C415D415E415F5DC3
+...

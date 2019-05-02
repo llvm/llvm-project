@@ -372,5 +372,11 @@
 // Check that we can pass the outliner down to the linker.
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
 // RUN:   %clang -target arm64-apple-darwin -moutline -### %t.o 2> %t.log
-// MOUTLINE: ld
+// RUN: FileCheck -check-prefix=MOUTLINE %s < %t.log
+// MOUTLINE: {{ld(.exe)?"}}
 // MOUTLINE-SAME: "-mllvm" "-enable-machine-outliner" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target arm64-apple-darwin -mno-outline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=MNO_OUTLINE %s < %t.log
+// MNO_OUTLINE: {{ld(.exe)?"}}
+// MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never"

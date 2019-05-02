@@ -19,7 +19,6 @@
 #include "MIUtilSingletonHelper.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIDriverMgr constructor.
 // Type:    Method.
 // Args:    None.
@@ -29,7 +28,6 @@
 CMIDriverMgr::CMIDriverMgr() : m_pDriverCurrent(nullptr), m_bInMi2Mode(false) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIDriverMgr destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -39,7 +37,6 @@ CMIDriverMgr::CMIDriverMgr() : m_pDriverCurrent(nullptr), m_bInMi2Mode(false) {}
 CMIDriverMgr::~CMIDriverMgr() { Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize *this manager.
 // Type:    Method.
 // Args:    None.
@@ -76,7 +73,6 @@ bool CMIDriverMgr::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unbind detach or release resources used by this server in general
 // common
 //          functionality shared between versions of any server interfaces
@@ -119,7 +115,6 @@ bool CMIDriverMgr::Shutdown() {
   return bOk;
 }
 //++
-//------------------------------------------------------------------------------------
 // Details: Unregister all the Driver registered with *this manager. The manager
 // also
 //          deletes
@@ -146,7 +141,6 @@ bool CMIDriverMgr::UnregisterDriverAll() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Register a driver with *this Driver Manager. Call
 // SetUseThisDriverToDoWork()
 //          inform the manager which driver is the one to the work. The manager
@@ -183,7 +177,6 @@ bool CMIDriverMgr::RegisterDriver(const IDriver &vrDriver,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Query the Driver Manager to see if *this manager has the driver
 // already
 //          registered.
@@ -208,7 +201,6 @@ bool CMIDriverMgr::HaveDriverAlready(const IDriver &vrDriver) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unregister a driver from the Driver Manager. Call the
 // SetUseThisDriverToDoWork()
 //          function to define another driver to do work if the one being
@@ -240,7 +232,6 @@ bool CMIDriverMgr::UnregisterDriver(const IDriver &vrDriver) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Specify the driver to do work. The Driver Manager drives this
 // driver. Any
 //          previous driver doing work is not called anymore (so be sure the
@@ -266,7 +257,6 @@ bool CMIDriverMgr::SetUseThisDriverToDoWork(const IDriver &vrADriver) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Ask *this manager which driver is currently doing the work.
 // Type:    Method.
 // Args:    None.
@@ -279,7 +269,6 @@ CMIDriverMgr::IDriver *CMIDriverMgr::GetUseThisDriverToDoWork() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Call this function puts *this driver to work.
 // Type:    Method.
 // Args:    None.
@@ -306,7 +295,6 @@ bool CMIDriverMgr::DriverMainLoop() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the current driver to validate executable command line
 // arguments.
 // Type:    Method.
@@ -356,7 +344,6 @@ bool CMIDriverMgr::DriverParseArgs(const int argc, const char *argv[],
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the current driver's last error condition.
 // Type:    Method.
 // Args:    None.
@@ -375,7 +362,6 @@ CMIUtilString CMIDriverMgr::DriverGetError() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the current driver's name.
 // Type:    Method.
 // Args:    None.
@@ -395,7 +381,6 @@ CMIUtilString CMIDriverMgr::DriverGetName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the current driver's debugger object.
 // Type:    Method.
 // Args:    None.
@@ -416,7 +401,6 @@ lldb::SBDebugger *CMIDriverMgr::DriverGetTheDebugger() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Check the arguments given on the command line. The main purpose of
 // this
 //          function is to check for the presence of the --interpreter option.
@@ -605,7 +589,6 @@ bool CMIDriverMgr::ParseArgs(const int argc, const char *argv[],
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Return formatted application version and name information.
 // Type:    Method.
 // Args:    None.
@@ -623,7 +606,6 @@ CMIUtilString CMIDriverMgr::GetAppVersion() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Return formatted help information on all the MI command line
 // options.
 // Type:    Method.
@@ -655,7 +637,6 @@ CMIUtilString CMIDriverMgr::GetHelpOnCmdLineArgOptions() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Search the registered drivers and return the first driver which says
 // it is
 //          GDB/MI compatible i.e. the CMIDriver class.
@@ -684,7 +665,6 @@ CMIDriverMgr::IDriver *CMIDriverMgr::GetFirstMIDriver() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Search the registered drivers and return the first driver which says
 // it is
 //          not GDB/MI compatible i.e. the LLDB Driver class.
@@ -713,7 +693,6 @@ CMIDriverMgr::IDriver *CMIDriverMgr::GetFirstNonMIDriver() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Search the registered drivers and return driver with the specified
 // ID.
 // Type:    Method.
@@ -734,7 +713,6 @@ CMIDriverMgr::GetDriver(const CMIUtilString &vrDriverId) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Gets called when lldb-mi gets a signal. Passed signal to current
 // driver.
 //

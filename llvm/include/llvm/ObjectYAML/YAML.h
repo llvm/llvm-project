@@ -73,8 +73,7 @@ class BinaryRef {
 public:
   BinaryRef() = default;
   BinaryRef(ArrayRef<uint8_t> Data) : Data(Data), DataIsHexString(false) {}
-  BinaryRef(StringRef Data)
-      : Data(reinterpret_cast<const uint8_t *>(Data.data()), Data.size()) {}
+  BinaryRef(StringRef Data) : Data(arrayRefFromStringRef(Data)) {}
 
   /// The number of bytes that are represented by this BinaryRef.
   /// This is the number of bytes that writeAsBinary() will write.

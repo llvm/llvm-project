@@ -133,11 +133,9 @@ public:
   BindRebaseSegInfo(const MachOObjectFile *Obj);
 
   // Used to check a Mach-O Bind or Rebase entry for errors when iterating.
-  const char *checkSegAndOffset(int32_t SegIndex, uint64_t SegOffset,
-                                bool endInvalid);
-  const char *checkCountAndSkip(uint32_t Count, uint32_t Skip,
-                                uint8_t PointerSize, int32_t SegIndex,
-                                uint64_t SegOffset);
+  const char* checkSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
+                                 uint8_t PointerSize, uint32_t Count=1,
+                                 uint32_t Skip=0);
   // Used with valid SegIndex/SegOffset values from checked entries.
   StringRef segmentName(int32_t SegIndex);
   StringRef sectionName(int32_t SegIndex, uint64_t SegOffset);
@@ -295,8 +293,7 @@ public:
   unsigned getSectionID(SectionRef Sec) const;
 
   void moveSectionNext(DataRefImpl &Sec) const override;
-  std::error_code getSectionName(DataRefImpl Sec,
-                                 StringRef &Res) const override;
+  Expected<StringRef> getSectionName(DataRefImpl Sec) const override;
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
@@ -412,36 +409,32 @@ public:
                                                  bool is64,
                                                  MachOBindEntry::Kind);
 
-  /// For use with a SegIndex,SegOffset pair in MachOBindEntry::moveNext() to
-  /// validate a MachOBindEntry.
-  const char *BindEntryCheckSegAndOffset(int32_t SegIndex, uint64_t SegOffset,
-                                         bool endInvalid) const {
-    return BindRebaseSectionTable->checkSegAndOffset(SegIndex, SegOffset,
-                                                     endInvalid);
-  }
-  /// For use in MachOBindEntry::moveNext() to validate a MachOBindEntry for
-  /// the BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB opcode.
-  const char *BindEntryCheckCountAndSkip(uint32_t Count, uint32_t Skip,
-                                         uint8_t PointerSize, int32_t SegIndex,
-                                         uint64_t SegOffset) const {
-    return BindRebaseSectionTable->checkCountAndSkip(Count, Skip, PointerSize,
-                                                     SegIndex, SegOffset);
+  // Given a SegIndex, SegOffset, and PointerSize, verify a valid section exists
+  // that fully contains a pointer at that location. Multiple fixups in a bind
+  // (such as with the BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB opcode) can
+  // be tested via the Count and Skip parameters.
+  //
+  // This is used by MachOBindEntry::moveNext() to validate a MachOBindEntry.
+  const char *BindEntryCheckSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
+                                         uint8_t PointerSize, uint32_t Count=1,
+                                          uint32_t Skip=0) const {
+    return BindRebaseSectionTable->checkSegAndOffsets(SegIndex, SegOffset,
+                                                     PointerSize, Count, Skip);
   }
 
-  /// For use with a SegIndex,SegOffset pair in MachORebaseEntry::moveNext() to
-  /// validate a MachORebaseEntry.
-  const char *RebaseEntryCheckSegAndOffset(int32_t SegIndex, uint64_t SegOffset,
-                                           bool endInvalid) const {
-    return BindRebaseSectionTable->checkSegAndOffset(SegIndex, SegOffset,
-                                                     endInvalid);
-  }
-  /// For use in MachORebaseEntry::moveNext() to validate a MachORebaseEntry for
-  /// the REBASE_OPCODE_DO_*_TIMES* opcodes.
-  const char *RebaseEntryCheckCountAndSkip(uint32_t Count, uint32_t Skip,
-                                         uint8_t PointerSize, int32_t SegIndex,
-                                         uint64_t SegOffset) const {
-    return BindRebaseSectionTable->checkCountAndSkip(Count, Skip, PointerSize,
-                                                     SegIndex, SegOffset);
+  // Given a SegIndex, SegOffset, and PointerSize, verify a valid section exists
+  // that fully contains a pointer at that location. Multiple fixups in a rebase
+  // (such as with the REBASE_OPCODE_DO_*_TIMES* opcodes) can be tested via the
+  // Count and Skip parameters.
+  //
+  // This is used by MachORebaseEntry::moveNext() to validate a MachORebaseEntry
+  const char *RebaseEntryCheckSegAndOffsets(int32_t SegIndex,
+                                            uint64_t SegOffset,
+                                            uint8_t PointerSize,
+                                            uint32_t Count=1,
+                                            uint32_t Skip=0) const {
+    return BindRebaseSectionTable->checkSegAndOffsets(SegIndex, SegOffset,
+                                                      PointerSize, Count, Skip);
   }
 
   /// For use with the SegIndex of a checked Mach-O Bind or Rebase entry to

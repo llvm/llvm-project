@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// http://mentorembedded.github.io/cxx-abi/abi.html#rtti-layout
+// https://itanium-cxx-abi.github.io/cxx-abi/abi.html#rtti-layout
 
 // Two abi::__pbase_type_info objects can always be compared for equality
 // (i.e. of the types represented) or ordering by comparison of their name

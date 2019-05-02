@@ -9,6 +9,7 @@
 #include "PostingList.h"
 #include "Iterator.h"
 #include "Token.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -49,7 +50,8 @@ public:
       return;
     advanceToChunk(ID);
     // Try to find ID within current chunk.
-    CurrentID = std::lower_bound(CurrentID, std::end(DecompressedChunk), ID);
+    CurrentID = llvm::bsearch(CurrentID, DecompressedChunk.end(),
+                              [&](const DocID D) { return D >= ID; });
     normalizeCursor();
   }
 
@@ -100,10 +102,9 @@ private:
   void advanceToChunk(DocID ID) {
     if ((CurrentChunk != Chunks.end() - 1) &&
         ((CurrentChunk + 1)->Head <= ID)) {
-      // Find the next chunk with Head >= ID.
-      CurrentChunk = std::lower_bound(
-          CurrentChunk + 1, Chunks.end(), ID,
-          [](const Chunk &C, const DocID ID) { return C.Head <= ID; });
+      CurrentChunk =
+          llvm::bsearch(CurrentChunk + 1, Chunks.end(),
+                        [&](const Chunk &C) { return C.Head >= ID; });
       --CurrentChunk;
       DecompressedChunk = CurrentChunk->decompress();
       CurrentID = DecompressedChunk.begin();

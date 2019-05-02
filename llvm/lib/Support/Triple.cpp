@@ -208,6 +208,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case HermitCore: return "hermit";
   case Hurd: return "hurd";
   case WASI: return "wasi";
+  case Emscripten: return "emscripten";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -506,6 +507,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("hermit", Triple::HermitCore)
     .StartsWith("hurd", Triple::Hurd)
     .StartsWith("wasi", Triple::WASI)
+    .StartsWith("emscripten", Triple::Emscripten)
     .Default(Triple::UnknownOS);
 }
 

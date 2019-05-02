@@ -27,7 +27,6 @@ namespace lldb_private {
 
 class IRExecutionUnit;
 
-//----------------------------------------------------------------------
 /// \class ClangExpressionParser ClangExpressionParser.h
 /// "lldb/Expression/ClangExpressionParser.h" Encapsulates an instance of
 /// Clang that can parse expressions.
@@ -37,10 +36,8 @@ class IRExecutionUnit;
 /// as a glorified parameter list, performing the required parsing and
 /// conversion to formats (DWARF bytecode, or JIT compiled machine code) that
 /// can be executed.
-//----------------------------------------------------------------------
 class ClangExpressionParser : public ExpressionParser {
 public:
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// Initializes class variables.
@@ -56,20 +53,16 @@ public:
   /// @param[in] include_directories
   ///     List of include directories that should be used when parsing the
   ///     expression.
-  //------------------------------------------------------------------
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
                         bool generate_debug_info,
                         std::vector<ConstString> include_directories = {});
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~ClangExpressionParser() override;
 
   bool Complete(CompletionRequest &request, unsigned line, unsigned pos,
                 unsigned typed_pos) override;
 
-  //------------------------------------------------------------------
   /// Parse a single expression and convert it to IR using Clang.  Don't wrap
   /// the expression in anything at all.
   ///
@@ -79,12 +72,10 @@ public:
   /// \return
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
-  //------------------------------------------------------------------
   unsigned Parse(DiagnosticManager &diagnostic_manager) override;
 
   bool RewriteExpression(DiagnosticManager &diagnostic_manager) override;
 
-  //------------------------------------------------------------------
   /// Ready an already-parsed expression for execution, possibly evaluating it
   /// statically.
   ///
@@ -120,14 +111,12 @@ public:
   /// \return
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
-  //------------------------------------------------------------------
   Status
   PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
                       lldb::IRExecutionUnitSP &execution_unit_sp,
                       ExecutionContext &exe_ctx, bool &can_interpret,
                       lldb_private::ExecutionPolicy execution_policy) override;
 
-  //------------------------------------------------------------------
   /// Run all static initializers for an execution unit.
   ///
   /// \param[in] execution_unit_sp
@@ -138,11 +127,9 @@ public:
   ///
   /// \return
   ///     The error code indicating the
-  //------------------------------------------------------------------
   Status RunStaticInitializers(lldb::IRExecutionUnitSP &execution_unit_sp,
                                ExecutionContext &exe_ctx);
 
-  //------------------------------------------------------------------
   /// Returns a string representing current ABI.
   ///
   /// \param[in] target_arch
@@ -150,11 +137,9 @@ public:
   ///
   /// \return
   ///     A string representing target ABI for the current architecture.
-  //-------------------------------------------------------------------
   std::string GetClangTargetABI(const ArchSpec &target_arch);
 
 private:
-  //------------------------------------------------------------------
   /// Parses the expression.
   ///
   /// \param[in] diagnostic_manager
@@ -175,7 +160,6 @@ private:
   ///
   /// \return
   ///    The number of parsing errors.
-  //-------------------------------------------------------------------
   unsigned ParseInternal(DiagnosticManager &diagnostic_manager,
                          clang::CodeCompleteConsumer *completion = nullptr,
                          unsigned completion_line = 0,

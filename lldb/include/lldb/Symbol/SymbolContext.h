@@ -23,7 +23,6 @@ namespace lldb_private {
 
 class SymbolContextScope;
 
-//----------------------------------------------------------------------
 /// \class SymbolContext SymbolContext.h "lldb/Symbol/SymbolContext.h" Defines
 /// a symbol context baton that can be handed other debug core functions.
 ///
@@ -31,28 +30,22 @@ class SymbolContextScope;
 /// provides a common structure that can be used as the result of a query that
 /// can contain a single result. Examples of such queries include
 ///     \li Looking up a load address.
-//----------------------------------------------------------------------
 class SymbolContext {
 public:
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Initialize all pointer members to nullptr and all struct members to
   /// their default state.
-  //------------------------------------------------------------------
   SymbolContext();
 
-  //------------------------------------------------------------------
   /// Construct with an object that knows how to reconstruct its symbol
   /// context.
   ///
   /// \param[in] sc_scope
   ///     A symbol context scope object that knows how to reconstruct
   ///     it's context.
-  //------------------------------------------------------------------
   explicit SymbolContext(SymbolContextScope *sc_scope);
 
-  //------------------------------------------------------------------
   /// Construct with module, and optional compile unit, function, block, line
   /// table, line entry and symbol.
   ///
@@ -75,7 +68,6 @@ public:
   ///
   /// \param[in] symbol
   ///     A Symbol pointer to the symbol for this context.
-  //------------------------------------------------------------------
   explicit SymbolContext(const lldb::TargetSP &target_sp,
                          const lldb::ModuleSP &module_sp,
                          CompileUnit *comp_unit = nullptr,
@@ -90,19 +82,16 @@ public:
                          LineEntry *line_entry = nullptr,
                          Symbol *symbol = nullptr);
 
-  //------------------------------------------------------------------
   /// Copy constructor
   ///
   /// Makes a copy of the another SymbolContext object \a rhs.
   ///
   /// \param[in] rhs
   ///     A const SymbolContext object reference to copy.
-  //------------------------------------------------------------------
   SymbolContext(const SymbolContext &rhs);
 
   ~SymbolContext();
 
-  //------------------------------------------------------------------
   /// Assignment operator.
   ///
   /// Copies the address value from another SymbolContext object \a rhs into
@@ -113,18 +102,14 @@ public:
   ///
   /// \return
   ///     A const SymbolContext object reference to \a this.
-  //------------------------------------------------------------------
   const SymbolContext &operator=(const SymbolContext &rhs);
 
-  //------------------------------------------------------------------
   /// Clear the object's state.
   ///
   /// Resets all pointer members to nullptr, and clears any class objects to
   /// their default state.
-  //------------------------------------------------------------------
   void Clear(bool clear_target);
 
-  //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of this object to the supplied stream
@@ -132,10 +117,8 @@ public:
   ///
   /// \param[in] s
   ///     The stream to which to dump the object description.
-  //------------------------------------------------------------------
   void Dump(Stream *s, Target *target) const;
 
-  //------------------------------------------------------------------
   /// Dump the stop context in this object to a Stream.
   ///
   /// Dump the best description of this object to the stream. The information
@@ -176,14 +159,12 @@ public:
   ///     be printed.  In disassembly formatting, where we want a format
   ///     like "<*+36>", this should be false and "*" will be printed
   ///     instead.
-  //------------------------------------------------------------------
   bool DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                        const Address &so_addr, bool show_fullpaths,
                        bool show_module, bool show_inlined_frames,
                        bool show_function_arguments,
                        bool show_function_name) const;
 
-  //------------------------------------------------------------------
   /// Get the address range contained within a symbol context.
   ///
   /// Address range priority is as follows:
@@ -221,14 +202,12 @@ public:
   /// \return
   ///     \b True if this symbol context contains items that describe
   ///     an address range, \b false otherwise.
-  //------------------------------------------------------------------
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
 
   bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
                                         Status &error);
 
-  //------------------------------------------------------------------
   /// Find the best global data symbol visible from this context.
   ///
   /// Symbol priority is:
@@ -248,7 +227,6 @@ public:
   ///
   /// \return
   ///     The symbol that was found, or \b nullptr if none was found.
-  //------------------------------------------------------------------
   const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
@@ -258,7 +236,6 @@ public:
 
   lldb::LanguageType GetLanguage() const;
 
-  //------------------------------------------------------------------
   /// Find a block that defines the function represented by this symbol
   /// context.
   ///
@@ -278,10 +255,8 @@ public:
   /// \return
   ///     The block object pointer that defines the function that is
   ///     represented by this symbol context object, nullptr otherwise.
-  //------------------------------------------------------------------
   Block *GetFunctionBlock();
 
-  //------------------------------------------------------------------
   /// If this symbol context represents a function that is a method, return
   /// true and provide information about the method.
   ///
@@ -299,18 +274,14 @@ public:
   /// \return
   ///     \b True if this symbol context represents a function that
   ///     is a method of a class, \b false otherwise.
-  //------------------------------------------------------------------
   bool GetFunctionMethodInfo(lldb::LanguageType &language,
                              bool &is_instance_method,
                              ConstString &language_object_name);
 
-  //------------------------------------------------------------------
   /// Sorts the types in TypeMap according to SymbolContext to TypeList
   ///
-  //------------------------------------------------------------------
   void SortTypeList(TypeMap &type_map, TypeList &type_list) const;
 
-  //------------------------------------------------------------------
   /// Find a name of the innermost function for the symbol context.
   ///
   /// For instance, if the symbol context contains an inlined block, it will
@@ -323,11 +294,9 @@ public:
   ///
   /// \return
   ///     The name of the function represented by this symbol context.
-  //------------------------------------------------------------------
   ConstString GetFunctionName(
       Mangled::NamePreference preference = Mangled::ePreferDemangled) const;
 
-  //------------------------------------------------------------------
   /// Get the line entry that corresponds to the function.
   ///
   /// If the symbol context contains an inlined block, the line entry for the
@@ -345,10 +314,8 @@ public:
   ///
   /// \return
   ///     The name of the function represented by this symbol context.
-  //------------------------------------------------------------------
   LineEntry GetFunctionStartLineEntry() const;
 
-  //------------------------------------------------------------------
   /// Find the block containing the inlined block that contains this block.
   ///
   /// For instance, if the symbol context contains an inlined block, it will
@@ -367,14 +334,11 @@ public:
   ///     \b true if this SymbolContext specifies a block contained in an
   ///     inlined block.  If this returns \b true, \a next_frame_sc and
   ///     \a next_frame_addr will be filled in correctly.
-  //------------------------------------------------------------------
   bool GetParentOfInlinedScope(const Address &curr_frame_pc,
                                SymbolContext &next_frame_sc,
                                Address &inlined_frame_addr) const;
 
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   lldb::TargetSP target_sp; ///< The Target for a given query
   lldb::ModuleSP module_sp; ///< The Module for a given query
   CompileUnit *comp_unit;   ///< The CompileUnit for a given query
@@ -428,7 +392,6 @@ private:
   uint32_t m_type; // Or'ed bits from SpecificationType
 };
 
-//----------------------------------------------------------------------
 /// \class SymbolContextList SymbolContext.h "lldb/Symbol/SymbolContext.h"
 /// Defines a list of symbol context objects.
 ///
@@ -437,27 +400,20 @@ private:
 /// queries include:
 ///     \li Looking up a function by name.
 ///     \li Finding all addresses for a specified file and line number.
-//----------------------------------------------------------------------
 class SymbolContextList {
 public:
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Initialize with an empty list.
-  //------------------------------------------------------------------
   SymbolContextList();
 
-  //------------------------------------------------------------------
   /// Destructor.
-  //------------------------------------------------------------------
   ~SymbolContextList();
 
-  //------------------------------------------------------------------
   /// Append a new symbol context to the list.
   ///
   /// \param[in] sc
   ///     A symbol context to append to the list.
-  //------------------------------------------------------------------
   void Append(const SymbolContext &sc);
 
   void Append(const SymbolContextList &sc_list);
@@ -467,14 +423,11 @@ public:
   uint32_t AppendIfUnique(const SymbolContextList &sc_list,
                           bool merge_symbol_into_function);
 
-  //------------------------------------------------------------------
   /// Clear the object's state.
   ///
   /// Clears the symbol context list.
-  //------------------------------------------------------------------
   void Clear();
 
-  //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of each symbol context in the list to
@@ -482,10 +435,8 @@ public:
   ///
   /// \param[in] s
   ///     The stream to which to dump the object description.
-  //------------------------------------------------------------------
   void Dump(Stream *s, Target *target) const;
 
-  //------------------------------------------------------------------
   /// Get accessor for a symbol context at index \a idx.
   ///
   /// Dump a description of the contents of each symbol context in the list to
@@ -501,10 +452,8 @@ public:
   ///     Returns \b true if \a idx was a valid index into this
   ///     symbol context list and \a sc was filled in, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool GetContextAtIndex(size_t idx, SymbolContext &sc) const;
 
-  //------------------------------------------------------------------
   /// Direct reference accessor for a symbol context at index \a idx.
   ///
   /// The index \a idx must be a valid index, no error checking will be done
@@ -515,7 +464,6 @@ public:
   ///
   /// \return
   ///     A const reference to the symbol context to fill in.
-  //------------------------------------------------------------------
   SymbolContext &operator[](size_t idx) { return m_symbol_contexts[idx]; }
 
   const SymbolContext &operator[](size_t idx) const {
@@ -524,12 +472,10 @@ public:
 
   bool RemoveContextAtIndex(size_t idx);
 
-  //------------------------------------------------------------------
   /// Get accessor for a symbol context list size.
   ///
   /// \return
   ///     Returns the number of symbol context objects in the list.
-  //------------------------------------------------------------------
   uint32_t GetSize() const;
 
   uint32_t NumLineEntriesWithLine(uint32_t line) const;
@@ -541,9 +487,7 @@ protected:
   typedef std::vector<SymbolContext>
       collection; ///< The collection type for the list.
 
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   collection m_symbol_contexts; ///< The list of symbol contexts.
 
 public:

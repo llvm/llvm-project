@@ -14,7 +14,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Declaration Declaration.h "lldb/Symbol/Declaration.h"
 /// A class that describes the declaration location of a
 ///        lldb object.
@@ -22,12 +21,9 @@ namespace lldb_private {
 /// The declarations include the file specification, line number, and the
 /// column info and can help track where functions, blocks, inlined functions,
 /// types, variables, any many other debug core objects were declared.
-//----------------------------------------------------------------------
 class Declaration {
 public:
-  //------------------------------------------------------------------
   /// Default constructor.
-  //------------------------------------------------------------------
   Declaration()
       : m_file(), m_line(0)
 #ifdef LLDB_ENABLE_DECLARATION_COLUMNS
@@ -37,7 +33,6 @@ public:
   {
   }
 
-  //------------------------------------------------------------------
   /// Construct with file specification, and optional line and column.
   ///
   /// \param[in] file_spec
@@ -51,7 +46,6 @@ public:
   /// \param[in] column
   ///     The column number that describes where this was declared.
   ///     Set to zero if there is no column number information.
-  //------------------------------------------------------------------
   Declaration(const FileSpec &file_spec, uint32_t line = 0, uint32_t column = 0)
       : m_file(file_spec), m_line(line)
 #ifdef LLDB_ENABLE_DECLARATION_COLUMNS
@@ -61,9 +55,7 @@ public:
   {
   }
 
-  //------------------------------------------------------------------
   /// Construct with a reference to another Declaration object.
-  //------------------------------------------------------------------
   Declaration(const Declaration &rhs)
       : m_file(rhs.m_file), m_line(rhs.m_line)
 #ifdef LLDB_ENABLE_DECLARATION_COLUMNS
@@ -73,9 +65,7 @@ public:
   {
   }
 
-  //------------------------------------------------------------------
   /// Construct with a pointer to another Declaration object.
-  //------------------------------------------------------------------
   Declaration(const Declaration *decl_ptr)
       : m_file(), m_line(0)
 #ifdef LLDB_ENABLE_DECLARATION_COLUMNS
@@ -87,12 +77,10 @@ public:
       *this = *decl_ptr;
   }
 
-  //------------------------------------------------------------------
   /// Clear the object's state.
   ///
   /// Sets the file specification to be empty, and the line and column to
   /// zero.
-  //------------------------------------------------------------------
   void Clear() {
     m_file.Clear();
     m_line = 0;
@@ -101,7 +89,6 @@ public:
 #endif
   }
 
-  //------------------------------------------------------------------
   /// Compare two declaration objects.
   ///
   /// Compares the two file specifications from \a lhs and \a rhs. If the file
@@ -118,10 +105,8 @@ public:
   ///     \li -1 if lhs < rhs
   ///     \li 0 if lhs == rhs
   ///     \li 1 if lhs > rhs
-  //------------------------------------------------------------------
   static int Compare(const Declaration &lhs, const Declaration &rhs);
 
-  //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of this object to the supplied stream
@@ -129,17 +114,14 @@ public:
   ///
   /// \param[in] s
   ///     The stream to which to dump the object description.
-  //------------------------------------------------------------------
   void Dump(Stream *s, bool show_fullpaths) const;
 
   bool DumpStopContext(Stream *s, bool show_fullpaths) const;
-  //------------------------------------------------------------------
   /// Get accessor for the declaration column number.
   ///
   /// \return
   ///     Non-zero indicates a valid column number, zero indicates no
   ///     column information is available.
-  //------------------------------------------------------------------
   uint32_t GetColumn() const {
 #ifdef LLDB_ENABLE_DECLARATION_COLUMNS
     return m_column;
@@ -148,34 +130,27 @@ public:
 #endif
   }
 
-  //------------------------------------------------------------------
   /// Get accessor for file specification.
   ///
   /// \return
   ///     A reference to the file specification object.
-  //------------------------------------------------------------------
   FileSpec &GetFile() { return m_file; }
 
-  //------------------------------------------------------------------
   /// Get const accessor for file specification.
   ///
   /// \return
   ///     A const reference to the file specification object.
-  //------------------------------------------------------------------
   const FileSpec &GetFile() const { return m_file; }
 
-  //------------------------------------------------------------------
   /// Get accessor for the declaration line number.
   ///
   /// \return
   ///     Non-zero indicates a valid line number, zero indicates no
   ///     line information is available.
-  //------------------------------------------------------------------
   uint32_t GetLine() const { return m_line; }
 
   bool IsValid() const { return m_file && m_line != 0; }
 
-  //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
   /// \return
@@ -184,43 +159,34 @@ public:
   ///     shared string values.
   ///
   /// \see ConstString::StaticMemorySize ()
-  //------------------------------------------------------------------
   size_t MemorySize() const;
 
-  //------------------------------------------------------------------
   /// Set accessor for the declaration column number.
   ///
   /// \param[in] column
   ///     Non-zero indicates a valid column number, zero indicates no
   ///     column information is available.
-  //------------------------------------------------------------------
   void SetColumn(uint32_t column) {
 #ifdef LLDB_ENABLE_DECLARATION_COLUMNS
     m_column = col;
 #endif
   }
 
-  //------------------------------------------------------------------
   /// Set accessor for the declaration file specification.
   ///
   /// \param[in] file_spec
   ///     The new declaration file specification.
-  //------------------------------------------------------------------
   void SetFile(const FileSpec &file_spec) { m_file = file_spec; }
 
-  //------------------------------------------------------------------
   /// Set accessor for the declaration line number.
   ///
   /// \param[in] line
   ///     Non-zero indicates a valid line number, zero indicates no
   ///     line information is available.
-  //------------------------------------------------------------------
   void SetLine(uint32_t line) { m_line = line; }
 
 protected:
-  //------------------------------------------------------------------
   /// Member variables.
-  //------------------------------------------------------------------
   FileSpec m_file; ///< The file specification that points to the
                    ///< source file where the declaration occurred.
   uint32_t m_line; ///< Non-zero values indicates a valid line number,

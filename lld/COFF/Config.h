@@ -28,6 +28,7 @@ class DefinedAbsolute;
 class DefinedRelative;
 class StringChunk;
 class Symbol;
+class InputFile;
 
 // Short aliases.
 static const auto AMD64 = llvm::COFF::IMAGE_FILE_MACHINE_AMD64;
@@ -166,7 +167,7 @@ struct Configuration {
   std::map<std::string, int> AlignComm;
 
   // Used for /failifmismatch.
-  std::map<StringRef, std::pair<StringRef, std::string>> MustMatch;
+  std::map<StringRef, std::pair<StringRef, InputFile *>> MustMatch;
 
   // Used for /alternatename.
   std::map<StringRef, StringRef> AlternateNames;
@@ -204,6 +205,8 @@ struct Configuration {
   bool IntegrityCheck = false;
   bool KillAt = false;
   bool Repro = false;
+  bool SwaprunCD = false;
+  bool SwaprunNet = false;
 };
 
 extern Configuration *Config;

@@ -42,9 +42,7 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ClangFunctionCaller constructor
-//----------------------------------------------------------------------
 ClangFunctionCaller::ClangFunctionCaller(ExecutionContextScope &exe_scope,
                                          const CompilerType &return_type,
                                          const Address &functionAddress,
@@ -58,9 +56,7 @@ ClangFunctionCaller::ClangFunctionCaller(ExecutionContextScope &exe_scope,
   assert(m_jit_process_wp.lock());
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ClangFunctionCaller::~ClangFunctionCaller() {}
 
 unsigned

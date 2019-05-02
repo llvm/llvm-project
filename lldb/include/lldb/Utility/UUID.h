@@ -76,7 +76,6 @@ public:
   // Decode as many UUID bytes (up to 16) as possible from the C string "cstr"
   // This is used for auto completion where a partial UUID might have been
   // typed in. It
-  //------------------------------------------------------------------
   /// Decode as many UUID bytes (up to 16) as possible from the C
   /// string \a cstr.
   ///
@@ -91,7 +90,6 @@ public:
   ///
   /// \return
   ///     The original string, with all decoded bytes removed.
-  //------------------------------------------------------------------
   static llvm::StringRef
   DecodeUUIDBytesFromString(llvm::StringRef str,
                             llvm::SmallVectorImpl<uint8_t> &uuid_bytes,
