@@ -138,8 +138,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   if (!frame_is_swift)
     return;
 
-  m_language_flags &= ~eLanguageFlagIsClass;
-  m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+  m_is_class = false;
+  m_needs_object_ptr = false;
 
   // Make sure the target's SwiftASTContext has been setup before
   // doing any Swift name lookups.
@@ -183,12 +183,6 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   if (!self_var_sp || !SwiftLanguageRuntime::IsSelf(*self_var_sp))
     return;
 
-<<<<<<< HEAD
-          // Check to see if we are in a class func of a class (or
-          // static func of a struct) and adjust our self_type to
-          // point to the instance type.
-          m_needs_object_ptr = true;
-=======
   CompilerType self_type;
   if (lldb::StackFrameSP stack_frame_sp = exe_ctx.GetFrameSP()) {
     // If we have a self variable, but it has no location at
@@ -205,27 +199,10 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     if (valobj_sp && valobj_sp->GetError().Success())
       self_type = valobj_sp->GetCompilerType();
   }
->>>>>>> origin/stable
 
   if (!self_type.IsValid()) {
     Type *self_lldb_type = self_var_sp->GetType();
 
-<<<<<<< HEAD
-          if (self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                     lldb::eTypeIsMetatype)) {
-            self_type = self_type.GetInstanceType();
-            self_type_flags = self_type.GetTypeInfo();
-            if (self_type_flags.Test(lldb::eTypeIsClass))
-              m_is_class = true;
-            m_in_static_method = true;
-          }
-
-          if (self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                     lldb::eTypeInstanceIsPointer)) {
-            if (self_type_flags.Test(lldb::eTypeIsClass))
-              m_is_class = true;
-          }
-=======
     if (self_lldb_type)
       self_type = self_var_sp->GetType()->GetForwardCompilerType();
   }
@@ -237,52 +214,27 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // condition.
     return;
   }
->>>>>>> origin/stable
 
   // Check to see if we are in a class func of a class (or
   // static func of a struct) and adjust our self_type to
   // point to the instance type.
-  m_language_flags |= eLanguageFlagNeedsObjectPointer;
+  m_needs_object_ptr = true;
 
   Flags self_type_flags(self_type.GetTypeInfo());
 
-<<<<<<< HEAD
-          // Handle weak self.
-          if (auto *ref_type = llvm::dyn_cast<swift::ReferenceStorageType>(
-                  GetSwiftType(self_type).getPointer())) {
-            if (ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
-              m_is_class = true;
-              m_is_weak_self = true;
-            }
-          }
-
-          if (Flags(self_type.GetTypeInfo())
-                  .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsStructUnion |
-                          lldb::eTypeIsGeneric) &&
-              self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                     lldb::eTypeIsReference |
-                                     lldb::eTypeHasValue)) {
-            // We can't extend generic structs when "self" is mutating at the
-            // moment.
-            m_needs_object_ptr = false;
-            self_var_sp.reset();
-            break;
-          }
-=======
   if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype)) {
     self_type = self_type.GetInstanceType();
     self_type_flags = self_type.GetTypeInfo();
     if (self_type_flags.Test(lldb::eTypeIsClass))
-      m_language_flags |= eLanguageFlagIsClass;
-    m_language_flags |= eLanguageFlagInStaticMethod;
+      m_is_class = true;
+    m_in_static_method = true;
   }
 
   if (self_type_flags.AllSet(lldb::eTypeIsSwift |
                              lldb::eTypeInstanceIsPointer)) {
     if (self_type_flags.Test(lldb::eTypeIsClass))
-      m_language_flags |= eLanguageFlagIsClass;
+      m_is_class = true;
   }
->>>>>>> origin/stable
 
   swift::Type object_type = GetSwiftType(self_type);
   if (object_type.getPointer() &&
@@ -294,8 +246,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   if (auto *ref_type = llvm::dyn_cast<swift::ReferenceStorageType>(
           GetSwiftType(self_type).getPointer())) {
     if (ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
-      m_language_flags |= eLanguageFlagIsClass;
-      m_language_flags |= eLanguageFlagIsWeakSelf;
+      m_is_class = true;
+      m_is_weak_self = true;
     }
   }
 
@@ -306,7 +258,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                              lldb::eTypeHasValue)) {
     // We can't extend generic structs when "self" is mutating at the
     // moment.
-    m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+    m_needs_object_ptr = false;
   }
 
   if (log)
@@ -364,7 +316,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   std::string prefix = m_expr_prefix;
 
   std::unique_ptr<SwiftExpressionSourceCode> source_code(
-      SwiftExpressionSourceCode::CreateWrapped(prefix.c_str(),
+      SwiftExpressionSourceCode::CreateWrapped(prefix.c_str(), 
                                                m_expr_text.c_str()));
 
   const lldb::LanguageType lang_type = lldb::eLanguageTypeSwift;
