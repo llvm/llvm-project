@@ -140,3 +140,11 @@ AEABI_RTABI int __aeabi_dcmpun(fp_t a, fp_t b) { return __unorddf2(a, b); }
 COMPILER_RT_ALIAS(__unorddf2, __aeabi_dcmpun)
 #endif
 #endif
+
+#if defined(_WIN32)
+// The alias mechanism doesn't work on Windows, so emit wrapper functions.
+int __eqdf2(fp_t a, fp_t b) { return __ledf2(a, b); }
+int __ltdf2(fp_t a, fp_t b) { return __ledf2(a, b); }
+int __nedf2(fp_t a, fp_t b) { return __ledf2(a, b); }
+int __gtdf2(fp_t a, fp_t b) { return __gedf2(a, b); }
+#endif

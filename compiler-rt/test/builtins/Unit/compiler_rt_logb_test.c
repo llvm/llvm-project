@@ -35,11 +35,15 @@ double cases[] = {
     -0.0,  0.0,    1,   -2,   2,        -0.5,      0.5,
 };
 
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(x, y) 0
+#endif
+
 int main() {
   // Do not the run the compiler-rt logb test case if using GLIBC version
   // < 2.23. Older versions might not compute to the same value as the
   // compiler-rt value.
-#if !defined(__GLIBC__) || (defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 23))
+#if __GLIBC_PREREQ(2, 23)
   const unsigned N = sizeof(cases) / sizeof(cases[0]);
   unsigned i;
   for (i = 0; i < N; ++i) {
