@@ -178,11 +178,12 @@ private:
   std::vector<std::string> GetModulesToImport(ExecutionContext &exe_ctx);
   void UpdateLanguageForExpr(DiagnosticManager &diagnostic_manager,
                              ExecutionContext &exe_ctx,
-                             std::vector<std::string> modules_to_import);
+                             std::vector<std::string> modules_to_import,
+                             bool for_completion);
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx);
   bool PrepareForParsing(DiagnosticManager &diagnostic_manager,
-                         ExecutionContext &exe_ctx);
+                         ExecutionContext &exe_ctx, bool for_completion);
 
   ClangUserExpressionHelper m_type_system_helper;
 

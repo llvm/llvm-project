@@ -1,14 +1,11 @@
-@LIT_SITE_CFG_IN_HEADER@
-# This is a shim to run the gtest unittests in ../unittests using lit.
-
 import lit.formats
 config.name = "Clangd Unit Tests"
 config.test_format = lit.formats.GoogleTest('.', 'Tests')
-config.test_source_root = "@CMAKE_CURRENT_BINARY_DIR@"
-config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
+config.test_source_root = config.clangd_binary_dir + "/unittests"
+config.test_exec_root = config.clangd_binary_dir + "/unittests"
 
 # Point the dynamic loader at dynamic libraries in 'lib'.
-# XXX: it seems every project has a copy of this logic. Move it somewhere.
+# FIXME: it seems every project has a copy of this logic. Move it somewhere.
 import platform
 if platform.system() == 'Darwin':
     shlibpath_var = 'DYLD_LIBRARY_PATH'
@@ -19,5 +16,6 @@ else:
 config.environment[shlibpath_var] = os.path.pathsep.join((
     "@SHLIBDIR@", "@LLVM_LIBS_DIR@",
     config.environment.get(shlibpath_var,'')))
+
 
 

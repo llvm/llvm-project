@@ -1389,13 +1389,11 @@ WasmObjectFile::getSymbolSection(DataRefImpl Symb) const {
 
 void WasmObjectFile::moveSectionNext(DataRefImpl &Sec) const { Sec.d.a++; }
 
-std::error_code WasmObjectFile::getSectionName(DataRefImpl Sec,
-                                               StringRef &Res) const {
+Expected<StringRef> WasmObjectFile::getSectionName(DataRefImpl Sec) const {
   const WasmSection &S = Sections[Sec.d.a];
 #define ECase(X)                                                               \
   case wasm::WASM_SEC_##X:                                                     \
-    Res = #X;                                                                  \
-    break
+    return #X;
   switch (S.Type) {
     ECase(TYPE);
     ECase(IMPORT);
@@ -1411,13 +1409,11 @@ std::error_code WasmObjectFile::getSectionName(DataRefImpl Sec,
     ECase(DATA);
     ECase(DATACOUNT);
   case wasm::WASM_SEC_CUSTOM:
-    Res = S.Name;
-    break;
+    return S.Name;
   default:
-    return object_error::invalid_section_index;
+    return createStringError(object_error::invalid_section_index, "");
   }
 #undef ECase
-  return std::error_code();
 }
 
 uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const { return 0; }

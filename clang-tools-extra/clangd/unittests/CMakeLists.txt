@@ -93,5 +93,5 @@ if (CLANGD_BUILD_XPC)
 endif ()
 
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.cfg)
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)

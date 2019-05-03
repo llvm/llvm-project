@@ -582,11 +582,6 @@ public:
     return false;
   }
 
-  /// Return true if target supports floating point exceptions.
-  bool hasFloatingPointExceptions() const {
-    return HasFloatingPointExceptions;
-  }
-
   /// Return true if target always beneficiates from combining into FMA for a
   /// given value type. This must typically return false on targets where FMA
   /// takes more cycles to execute than FADD.
@@ -1915,12 +1910,6 @@ protected:
   /// control.
   void setJumpIsExpensive(bool isExpensive = true);
 
-  /// Tells the code generator that this target supports floating point
-  /// exceptions and cares about preserving floating point exception behavior.
-  void setHasFloatingPointExceptions(bool FPExceptions = true) {
-    HasFloatingPointExceptions = FPExceptions;
-  }
-
   /// Tells the code generator which bitwidths to bypass.
   void addBypassSlowDiv(unsigned int SlowBitWidth, unsigned int FastBitWidth) {
     BypassSlowDivWidths[SlowBitWidth] = FastBitWidth;
@@ -2579,10 +2568,6 @@ private:
   /// instructions and should attempt to combine flow control instructions via
   /// predication.
   bool JumpIsExpensive;
-
-  /// Whether the target supports or cares about preserving floating point
-  /// exception behavior.
-  bool HasFloatingPointExceptions;
 
   /// This target prefers to use _setjmp to implement llvm.setjmp.
   ///

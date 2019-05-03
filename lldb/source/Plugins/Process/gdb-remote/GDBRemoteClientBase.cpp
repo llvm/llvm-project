@@ -10,7 +10,6 @@
 
 #include "llvm/ADT/StringExtras.h"
 
-#include "lldb/Target/Process.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBAssert.h"
 

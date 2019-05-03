@@ -45,9 +45,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setBooleanContents(ZeroOrOneBooleanContent);
   // Except in SIMD vectors
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
-  // WebAssembly does not produce floating-point exceptions on normal floating
-  // point operations.
-  setHasFloatingPointExceptions(false);
   // We don't know the microarchitecture here, so just reduce register pressure.
   setSchedulingPreference(Sched::RegPressure);
   // Tell ISel that we have a stack pointer.

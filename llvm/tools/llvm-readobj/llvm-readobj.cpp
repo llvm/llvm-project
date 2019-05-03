@@ -386,10 +386,6 @@ void error(std::error_code EC) {
   reportError(EC.message());
 }
 
-bool relocAddressLess(RelocationRef a, RelocationRef b) {
-  return a.getOffset() < b.getOffset();
-}
-
 } // namespace llvm
 
 static void reportError(StringRef Input, Error Err) {

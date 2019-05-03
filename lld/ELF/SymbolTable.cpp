@@ -115,8 +115,11 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
 // Because all bitcode files that the program consists of are passed
 // to the compiler at once, it can do whole-program optimization.
 template <class ELFT> void SymbolTable::addCombinedLTOObject() {
-  if (BitcodeFiles.empty())
+  if (BitcodeFiles.empty()) {
+    if (Config->ThinLTOIndexOnly)
+      thinLTOCreateEmptyIndexFiles();
     return;
+  }
 
   // Compile bitcode files and replace bitcode symbols.
   LTO.reset(new BitcodeCompiler);

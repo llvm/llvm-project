@@ -1,9 +1,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not llvm-objcopy -R .foo %t.o %t1 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
 # RUN: cp %t.o %t2
-## Use --strip-debug to suppress the default --strip-all behavior of llvm-strip.
-## TODO: Implement a better way to suppress --strip-all behavior.
-# RUN: not llvm-strip --strip-debug -R .foo %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-strip --no-strip-all -R .foo %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
 
 --- !ELF
 FileHeader:
@@ -23,7 +21,7 @@ Sections:
 # RUN: llvm-objcopy --allow-broken-links -R .foo %t.o %t3
 # RUN: llvm-readobj --sections %t3 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.foo
 # RUN: cp %t.o %t4
-# RUN: llvm-strip --strip-debug --allow-broken-links -R .foo %t4
+# RUN: llvm-strip --no-strip-all --allow-broken-links -R .foo %t4
 # RUN: llvm-readobj --sections %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.foo
 
 # SECTIONS:      Name: .bar
