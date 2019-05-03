@@ -9,7 +9,6 @@ class TestVLA(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(compiler="clang", compiler_version=['<', '8.0'])
-    @expectedFailureAll(oslist=no_match(lldbplatformutil.getDarwinOSTriples()))
     def test_variable_list(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
