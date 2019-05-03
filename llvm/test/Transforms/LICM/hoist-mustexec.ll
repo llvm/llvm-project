@@ -133,6 +133,32 @@ fail:
 ; pointers; should handle integers too
 define i32 @test4(i32* noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: @test4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[FAIL:%.*]], label [[PREHEADER:%.*]]
+; CHECK:       preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[INC:%.*]], [[CONTINUE:%.*]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[ADD:%.*]], [[CONTINUE]] ]
+; CHECK-NEXT:    [[R_CHK:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    br i1 [[R_CHK]], label [[CONTINUE]], label [[FAIL_LOOPEXIT:%.*]]
+; CHECK:       continue:
+; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I1]], [[ACC]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[CONTINUE]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
+; CHECK:       fail.loopexit:
+; CHECK-NEXT:    br label [[FAIL]]
+; CHECK:       fail:
+; CHECK-NEXT:    call void @f()
+; CHECK-NEXT:    ret i32 -1
+;
 entry:
   %len = load i32, i32* %a, align 4, !range !{i32 0, i32 512}
   %is.zero = icmp eq i32 %len, 0
@@ -145,8 +171,6 @@ for.body:
   %r.chk = icmp ult i32 %iv, %len
   br i1 %r.chk, label %continue, label %fail
 continue:
-; CHECK-LABEL: continue
-; CHECK: %i1 = load i32, i32* %a, align 4
   %i1 = load i32, i32* %a, align 4
   %add = add nsw i32 %i1, %acc
   %inc = add nuw nsw i32 %iv, 1
@@ -221,7 +245,7 @@ define i32 @test-wrongphi(i32* noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: @test-wrongphi(
 entry:
   br label %for.body
-  
+
 for.body:
   %iv = phi i32 [ 0, %entry ], [ %inc, %continue ]
   %acc = phi i32 [ 0, %entry ], [ %add, %continue ]
