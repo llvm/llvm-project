@@ -70,10 +70,7 @@ EXTERN int omp_get_max_threads(void) {
 EXTERN int omp_get_thread_limit(void) {
   if (isSPMDMode())
     return GetNumberOfThreadsInBlock();
-  // per contention group.. meaning threads in current team
-  omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
-  int rc = currTaskDescr->ThreadLimit();
+  int rc = threadLimit;
   PRINT(LD_IO, "call omp_get_thread_limit() return %d\n", rc);
   return rc;
 }

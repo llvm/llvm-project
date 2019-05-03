@@ -249,9 +249,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   uint16_t &NumThreadsClause =
       omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
 
-  uint16_t NumThreads =
-      determineNumberOfThreads(NumThreadsClause, currTaskDescr->NThreads(),
-                               currTaskDescr->ThreadLimit());
+  uint16_t NumThreads = determineNumberOfThreads(
+      NumThreadsClause, currTaskDescr->NThreads(), threadLimit);
 
   if (NumThreadsClause != 0) {
     // Reset request to avoid propagating to successive #parallel

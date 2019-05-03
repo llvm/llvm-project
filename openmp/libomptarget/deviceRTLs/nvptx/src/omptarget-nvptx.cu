@@ -74,7 +74,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   omptarget_nvptx_TaskDescr *currTaskDescr =
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
   currTaskDescr->NThreads() = GetNumberOfWorkersInTeam();
-  currTaskDescr->ThreadLimit() = ThreadLimit;
+  threadLimit = ThreadLimit;
 }
 
 EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
@@ -139,7 +139,6 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   ASSERT0(LT_FUSSY, newTaskDescr, "expected a task descr");
   newTaskDescr->InitLevelOneTaskDescr(ThreadLimit,
                                       currTeamDescr.LevelZeroTaskDescr());
-  newTaskDescr->ThreadLimit() = ThreadLimit;
   // install new top descriptor
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
                                                              newTaskDescr);
