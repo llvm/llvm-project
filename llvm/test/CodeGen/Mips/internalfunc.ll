@@ -27,8 +27,7 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry, %if.then
 ; CHECK: lw  $[[R2:[0-9]+]], %got(sf2)
 ; CHECK: addiu ${{[0-9]+}}, $[[R2]], %lo(sf2)
-; CHECK: lw  $[[R3:[0-9]+]], %got(caller.sf1)
-; CHECK: sw  ${{[0-9]+}}, %lo(caller.sf1)($[[R3]])
+; CHECK: sw  ${{[0-9]+}}, %lo(caller.sf1)($[[R1]])
   %tobool3 = icmp ne i32 %a0, 0
   %tmp4 = load void (...)*, void (...)** @gf1, align 4
   %cond = select i1 %tobool3, void (...)* %tmp4, void (...)* bitcast (void ()* @sf2 to void (...)*)
