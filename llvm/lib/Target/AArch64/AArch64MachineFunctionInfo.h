@@ -91,6 +91,11 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// other stack allocations.
   bool CalleeSaveStackHasFreeSpace = false;
 
+  /// SRetReturnReg - sret lowering includes returning the value of the
+  /// returned struct in a register. This field holds the virtual register into
+  /// which the sret argument is passed.
+  unsigned SRetReturnReg = 0;
+
   /// Has a value when it is known whether or not the function uses a
   /// redzone, and no value otherwise.
   /// Initialized during frame lowering, unless the function has the noredzone
@@ -164,6 +169,9 @@ public:
 
   unsigned getVarArgsFPRSize() const { return VarArgsFPRSize; }
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
+
+  unsigned getSRetReturnReg() const { return SRetReturnReg; }
+  void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
   unsigned getJumpTableEntrySize(int Idx) const {
     auto It = JumpTableEntryInfo.find(Idx);

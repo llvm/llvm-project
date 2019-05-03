@@ -34,7 +34,23 @@ def CC_AArch64_AAPCS : CallingConv<[
   CCIfBigEndian<CCIfType<[v2i64, v2f64, v4i32, v4f32, v8i16, v8f16, v16i8],
                          CCBitConvertToType<f128>>>,
 
-  // An SRet is passed in X8, not X0 like a normal pointer parameter.
+  // In AAPCS, an SRet is passed in X8, not X0 like a normal pointer parameter.
+  // However, on windows, in some circumstances, the SRet is passed in X0 or X1
+  // instead.  The presence of the inreg attribute indicates that SRet is
+  // passed in the alternative register (X0 or X1), not X8:
+  // - X0 for non-instance methods.
+  // - X1 for instance methods.
+
+  // The "sret" attribute identifies indirect returns.
+  // The "inreg" attribute identifies non-aggregate types.
+  // The position of the "sret" attribute identifies instance/non-instance
+  // methods.
+  // "sret" on argument 0 means non-instance methods.
+  // "sret" on argument 1 means instance methods.
+
+  CCIfInReg<CCIfType<[i64],
+    CCIfSRet<CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1], [W0, W1]>>>>>,
+
   CCIfSRet<CCIfType<[i64], CCAssignToRegWithShadow<[X8], [W8]>>>,
 
   // Put ByVal arguments directly on the stack. Minimum size and alignment of a

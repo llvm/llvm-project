@@ -90,6 +90,9 @@ public:
   /// Return true if this argument has the sret attribute.
   bool hasStructRetAttr() const;
 
+  /// Return true if this argument has the inreg attribute.
+  bool hasInRegAttr() const;
+
   /// Return true if this argument has the returned attribute.
   bool hasReturnedAttr() const;
 
