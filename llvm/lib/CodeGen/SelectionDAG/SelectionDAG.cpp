@@ -8239,19 +8239,17 @@ void SelectionDAG::updateDivergence(SDNode * N)
   }
 }
 
-
-void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode*>& Order) {
+void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   DenseMap<SDNode *, unsigned> Degree;
   Order.reserve(AllNodes.size());
-  for (auto & N : allnodes()) {
+  for (auto &N : allnodes()) {
     unsigned NOps = N.getNumOperands();
     Degree[&N] = NOps;
     if (0 == NOps)
       Order.push_back(&N);
   }
-  for (std::vector<SDNode *>::iterator I = Order.begin();
-  I!=Order.end();++I) {
-    SDNode * N = *I;
+  for (size_t I = 0; I != Order.size(); ++I) {
+    SDNode *N = Order[I];
     for (auto U : N->uses()) {
       unsigned &UnsortedOps = Degree[U];
       if (0 == --UnsortedOps)
@@ -8261,9 +8259,8 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode*>& Order) {
 }
 
 #ifndef NDEBUG
-void SelectionDAG::VerifyDAGDiverence()
-{
-  std::vector<SDNode*> TopoOrder;
+void SelectionDAG::VerifyDAGDiverence() {
+  std::vector<SDNode *> TopoOrder;
   CreateTopologicalOrder(TopoOrder);
   const TargetLowering &TLI = getTargetLoweringInfo();
   DenseMap<const SDNode *, bool> DivergenceMap;
@@ -8288,7 +8285,6 @@ void SelectionDAG::VerifyDAGDiverence()
   }
 }
 #endif
-
 
 /// ReplaceAllUsesOfValuesWith - Replace any uses of From with To, leaving
 /// uses of other values produced by From.getNode() alone.  The same value
