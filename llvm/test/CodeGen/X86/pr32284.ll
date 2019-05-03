@@ -186,8 +186,8 @@ define void @f1() {
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 16
 ; 686-O0-NEXT:    pushl %esi
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 20
-; 686-O0-NEXT:    subl $24, %esp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 44
+; 686-O0-NEXT:    subl $1, %esp
+; 686-O0-NEXT:    .cfi_def_cfa_offset 21
 ; 686-O0-NEXT:    .cfi_offset %esi, -20
 ; 686-O0-NEXT:    .cfi_offset %edi, -16
 ; 686-O0-NEXT:    .cfi_offset %ebx, -12
@@ -198,7 +198,7 @@ define void @f1() {
 ; 686-O0-NEXT:    xorl $208307499, %eax # imm = 0xC6A852B
 ; 686-O0-NEXT:    xorl $-2, %ecx
 ; 686-O0-NEXT:    orl %ecx, %eax
-; 686-O0-NEXT:    setne {{[0-9]+}}(%esp)
+; 686-O0-NEXT:    setne (%esp)
 ; 686-O0-NEXT:    movl var_5, %ecx
 ; 686-O0-NEXT:    movl %ecx, %edx
 ; 686-O0-NEXT:    sarl $31, %edx
@@ -220,12 +220,7 @@ define void @f1() {
 ; 686-O0-NEXT:    movzbl %bl, %ebp
 ; 686-O0-NEXT:    movl %ebp, _ZN8struct_210member_2_0E
 ; 686-O0-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
-; 686-O0-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; 686-O0-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; 686-O0-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; 686-O0-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; 686-O0-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; 686-O0-NEXT:    addl $24, %esp
+; 686-O0-NEXT:    addl $1, %esp
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 20
 ; 686-O0-NEXT:    popl %esi
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 16
