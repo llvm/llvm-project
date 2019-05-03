@@ -1325,6 +1325,14 @@ public:
   /// \note This does NOT include a check for union-ness.
   bool isEmpty() const { return data().Empty; }
 
+  bool hasPrivateFields() const {
+    return data().HasPrivateFields;
+  }
+
+  bool hasProtectedFields() const {
+    return data().HasProtectedFields;
+  }
+
   /// Determine whether this class has direct non-static data members.
   bool hasDirectFields() const {
     auto &D = data();
