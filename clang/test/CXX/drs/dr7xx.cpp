@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr705 { // dr705: yes
   namespace N {
@@ -66,7 +67,7 @@ namespace dr727 { // dr727: partial
   struct D {
     template<typename T> struct C { typename T::error e; }; // expected-error {{no members}}
     template<typename T> void f() { T::error; } // expected-error {{no members}}
-    template<typename T> static const int N = T::error; // expected-error 2{{no members}} expected-error 0-1{{C++14}}
+    template<typename T> static const int N = T::error; // expected-error {{no members}} expected-error 0-1{{C++14}}
 
     template<> struct C<int> {};
     template<> void f<int>() {}
@@ -79,7 +80,7 @@ namespace dr727 { // dr727: partial
   void d(D<int> di) {
     D<int>::C<int>();
     di.f<int>();
-    int a = D<int>::N<int>; // FIXME: expected-note {{instantiation of}}
+    int a = D<int>::N<int>;
 
     D<int>::C<int*>();
     int b = D<int>::N<int*>;
@@ -88,6 +89,98 @@ namespace dr727 { // dr727: partial
     di.f<float>(); // expected-note {{instantiation of}}
     int c = D<int>::N<float>; // expected-note {{instantiation of}}
   }
+
+  namespace mixed_inner_outer_specialization {
+#if __cplusplus >= 201103L
+    template<int> struct A {
+      template<int> constexpr int f() const { return 1; }
+      template<> constexpr int f<0>() const { return 2; }
+    };
+    template<> template<int> constexpr int A<0>::f() const { return 3; }
+    template<> template<> constexpr int A<0>::f<0>() const { return 4; }
+    static_assert(A<1>().f<1>() == 1, "");
+    static_assert(A<1>().f<0>() == 2, "");
+    static_assert(A<0>().f<1>() == 3, "");
+    static_assert(A<0>().f<0>() == 4, "");
+#endif
+
+#if __cplusplus >= 201402L
+    template<int> struct B {
+      template<int> static const int u = 1;
+      template<> static const int u<0> = 2; // expected-note {{here}}
+
+      // Note that in C++17 onwards, these are implicitly inline, and so the
+      // initializer of v<0> is not instantiated with the declaration. In
+      // C++14, v<0> is a non-defining declaration and its initializer is
+      // instantiated with the class.
+      template<int> static constexpr int v = 1;
+      template<> static constexpr int v<0> = 2; // #v0
+
+      template<int> static const inline int w = 1; // expected-error 0-1{{C++17 extension}}
+      template<> static const inline int w<0> = 2; // expected-error 0-1{{C++17 extension}}
+    };
+
+    template<> template<int> constexpr int B<0>::u = 3;
+    template<> template<> constexpr int B<0>::u<0> = 4; // expected-error {{already has an initializer}}
+
+    template<> template<int> constexpr int B<0>::v = 3;
+    template<> template<> constexpr int B<0>::v<0> = 4;
+#if __cplusplus < 201702L
+    // expected-error@-2 {{already has an initializer}}
+    // expected-note@#v0 {{here}}
+#endif
+
+    template<> template<int> constexpr int B<0>::w = 3;
+    template<> template<> constexpr int B<0>::w<0> = 4;
+
+    static_assert(B<1>().u<1> == 1, "");
+    static_assert(B<1>().u<0> == 2, "");
+    static_assert(B<0>().u<1> == 3, "");
+
+    static_assert(B<1>().v<1> == 1, "");
+    static_assert(B<1>().v<0> == 2, "");
+    static_assert(B<0>().v<1> == 3, "");
+    static_assert(B<0>().v<0> == 4, "");
+#if __cplusplus < 201702L
+    // expected-error@-2 {{failed}}
+#endif
+
+    static_assert(B<1>().w<1> == 1, "");
+    static_assert(B<1>().w<0> == 2, "");
+    static_assert(B<0>().w<1> == 3, "");
+    static_assert(B<0>().w<0> == 4, "");
+#endif
+  }
+
+  template<typename T, typename U> struct Collision {
+    // FIXME: Missing diagnostic for duplicate function explicit specialization declaration.
+    template<typename> int f1();
+    template<> int f1<T>();
+    template<> int f1<U>();
+
+    // FIXME: Missing diagnostic for fucntion redefinition!
+    template<typename> int f2();
+    template<> int f2<T>() {}
+    template<> int f2<U>() {}
+
+    template<typename> static int v1; // expected-error 0-1{{C++14 extension}}
+    template<> static int v1<T>; // expected-note {{previous}}
+    template<> static int v1<U>; // expected-error {{duplicate member}}
+
+    template<typename> static inline int v2; // expected-error 0-1{{C++17 extension}} expected-error 0-1{{C++14 extension}}
+    template<> static inline int v2<T>;      // expected-error 0-1{{C++17 extension}} expected-note {{previous}}
+    template<> static inline int v2<U>;      // expected-error 0-1{{C++17 extension}} expected-error {{duplicate member}}
+
+    // FIXME: Missing diagnostic for duplicate class explicit specialization.
+    template<typename> struct S1;
+    template<> struct S1<T>;
+    template<> struct S1<U>;
+
+    template<typename> struct S2;
+    template<> struct S2<T> {}; // expected-note {{previous}}
+    template<> struct S2<U> {}; // expected-error {{redefinition}}
+  };
+  Collision<int, int> c; // expected-note {{in instantiation of}}
 }
 
 namespace dr777 { // dr777: 3.7
