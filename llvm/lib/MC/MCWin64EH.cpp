@@ -255,8 +255,12 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
                               MCSymbolRefExpr::create(RHS, Context), Context);
   MCObjectStreamer *OS = (MCObjectStreamer *)(&Streamer);
+  // It should normally be possible to calculate the length of a function
+  // at this point, but it might not be possible in the presence of certain
+  // unusual constructs, like an inline asm with an alignment directive.
   int64_t value;
-  Diff->evaluateAsAbsolute(value, OS->getAssembler());
+  if (!Diff->evaluateAsAbsolute(value, OS->getAssembler()))
+    report_fatal_error("Failed to evaluate function length in SEH unwind info");
   return value;
 }
 
@@ -498,11 +502,44 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   streamer.EmitLabel(Label);
   info->Symbol = Label;
 
-  uint32_t FuncLength = 0x0;
-  if (info->FuncletOrFuncEnd)
-    FuncLength = (uint32_t)GetAbsDifference(streamer, info->FuncletOrFuncEnd,
-                                            info->Begin);
-  FuncLength /= 4;
+  int64_t RawFuncLength;
+  if (!info->FuncletOrFuncEnd) {
+    // FIXME: This is very wrong; we emit SEH data which covers zero bytes
+    // of code. But otherwise test/MC/AArch64/seh.s crashes.
+    RawFuncLength = 0;
+  } else {
+    // FIXME: GetAbsDifference tries to compute the length of the function
+    // immediately, before the whole file is emitted, but in general
+    // that's impossible: the size in bytes of certain assembler directives
+    // like .align and .fill is not known until the whole file is parsed and
+    // relaxations are applied. Currently, GetAbsDifference fails with a fatal
+    // error in that case. (We mostly don't hit this because inline assembly
+    // specifying those directives is rare, and we don't normally try to
+    // align loops on AArch64.)
+    //
+    // There are two potential approaches to delaying the computation. One,
+    // we could emit something like ".word (endfunc-beginfunc)/4+0x10800000",
+    // as long as we have some conservative estimate we could use to prove
+    // that we don't need to split the unwind data. Emitting the constant
+    // is straightforward, but there's no existing code for estimating the
+    // size of the function.
+    //
+    // The other approach would be to use a dedicated, relaxable fragment,
+    // which could grow to accommodate splitting the unwind data if
+    // necessary. This is more straightforward, since it automatically works
+    // without any new infrastructure, and it's consistent with how we handle
+    // relaxation in other contexts.  But it would require some refactoring
+    // to move parts of the pdata/xdata emission into the implementation of
+    // a fragment. We could probably continue to encode the unwind codes
+    // here, but we'd have to emit the pdata, the xdata header, and the
+    // epilogue scopes later, since they depend on whether the we need to
+    // split the unwind data.
+    RawFuncLength = GetAbsDifference(streamer, info->FuncletOrFuncEnd,
+                                     info->Begin);
+  }
+  if (RawFuncLength > 0xFFFFF)
+    report_fatal_error("SEH unwind data splitting not yet implemented");
+  uint32_t FuncLength = (uint32_t)RawFuncLength / 4;
   uint32_t PrologCodeBytes = ARM64CountOfUnwindCodes(info->Instructions);
   uint32_t TotalCodeBytes = PrologCodeBytes;
 

@@ -1,4 +1,5 @@
 ; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 | FileCheck %s
+; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 -filetype=obj | llvm-readobj -unwind | FileCheck %s -check-prefix=UNWIND
 
 define void @f(i32 %x) {
 entry:
@@ -46,3 +47,6 @@ declare void @g(i32, i32)
 ; CHECK:    .seh_handlerdata
 ; CHECK:    .text
 ; CHECK:    .seh_endproc
+
+; Check that we can emit an object file with correct unwind info.
+; UNWIND: FunctionLength: {{[1-9][0-9]*}}
