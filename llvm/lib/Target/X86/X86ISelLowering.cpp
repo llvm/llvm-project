@@ -24459,9 +24459,6 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
   // Signed AVX2 implementation - extend xmm subvectors to ymm.
   if (VT == MVT::v32i8 && IsSigned) {
-    SDValue Lo = DAG.getIntPtrConstant(0, dl);
-    SDValue Hi = DAG.getIntPtrConstant(NumElts / 2, dl);
-
     MVT ExVT = MVT::v16i16;
     SDValue ALo = extract128BitVector(A, 0, DAG, dl);
     SDValue BLo = extract128BitVector(B, 0, DAG, dl);
@@ -24471,8 +24468,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     BLo = DAG.getNode(ExAVX, dl, ExVT, BLo);
     AHi = DAG.getNode(ExAVX, dl, ExVT, AHi);
     BHi = DAG.getNode(ExAVX, dl, ExVT, BHi);
-    Lo = DAG.getNode(ISD::MUL, dl, ExVT, ALo, BLo);
-    Hi = DAG.getNode(ISD::MUL, dl, ExVT, AHi, BHi);
+    SDValue Lo = DAG.getNode(ISD::MUL, dl, ExVT, ALo, BLo);
+    SDValue Hi = DAG.getNode(ISD::MUL, dl, ExVT, AHi, BHi);
     Lo = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, Lo, 8, DAG);
     Hi = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, Hi, 8, DAG);
 
