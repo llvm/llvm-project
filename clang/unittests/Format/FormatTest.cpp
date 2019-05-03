@@ -11150,6 +11150,24 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 20;
 
+  // See PR41213
+  EXPECT_EQ("/*\n"
+            " *\t9012345\n"
+            " * /8901\n"
+            " */",
+            format("/*\n"
+                   " *\t9012345 /8901\n"
+                   " */",
+                   Style));
+  EXPECT_EQ("/*\n"
+            " *345678\n"
+            " *\t/8901\n"
+            " */",
+            format("/*\n"
+                   " *345678\t/8901\n"
+                   " */",
+                   Style));
+
   verifyFormat("int a; // the\n"
                "       // comment", Style);
   EXPECT_EQ("int a; /* first line\n"
