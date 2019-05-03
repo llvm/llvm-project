@@ -11,7 +11,7 @@
 # serve to show the default.
 from __future__ import print_function
 
-import sys, os
+import sys, os, re
 from datetime import date
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -223,31 +223,49 @@ basedir = os.path.dirname(__file__)
 man_page_authors = "Maintained by the LLVM Team (https://llvm.org/)."
 command_guide_subpath = 'CommandGuide'
 command_guide_path = os.path.join(basedir, command_guide_subpath)
-for name in os.listdir(command_guide_path):
-    # Ignore non-ReST files and the index page.
-    if not name.endswith('.rst') or name in ('index.rst',):
-        continue
 
-    # Otherwise, automatically extract the description.
+
+def process_md(name):
+    file_subpath = os.path.join(command_guide_subpath, name)
+    with open(os.path.join(command_guide_path, name)) as f:
+        title = f.readline().rstrip('\n')
+
+        m = re.match(r'^# (\S+) - (.+)$', title)
+        if m is None:
+            print("error: invalid title in %r "
+                  "(expected '# <name> - <description>')" % file_subpath,
+                  file=sys.stderr)
+        else:
+            man_pages.append((file_subpath.replace('.md',''), m.group(1),
+                              m.group(2), man_page_authors, 1))
+
+
+def process_rst(name):
     file_subpath = os.path.join(command_guide_subpath, name)
     with open(os.path.join(command_guide_path, name)) as f:
         title = f.readline().rstrip('\n')
         header = f.readline().rstrip('\n')
 
         if len(header) != len(title):
-            print((
-                "error: invalid header in %r (does not match title)" % (
-                    file_subpath,)), file=sys.stderr)
+            print('error: invalid header in %r (does not match title)' %
+                  file_subpath, file=sys.stderr)
         if ' - ' not in title:
-            print((
-                ("error: invalid title in %r "
-                 "(expected '<name> - <description>')") % (
-                    file_subpath,)), file=sys.stderr)
-
+            print("error: invalid title in %r "
+                  "(expected '<name> - <description>')" % file_subpath,
+                  file=sys.stderr)
         # Split the name out of the title.
         name,description = title.split(' - ', 1)
         man_pages.append((file_subpath.replace('.rst',''), name,
                           description, man_page_authors, 1))
+
+
+for name in os.listdir(command_guide_path):
+    # Process Markdown files
+    if name.endswith('.md'):
+        process_md(name)
+    # Process ReST files apart from the index page.
+    elif name.endswith('.rst') and name != 'index.rst':
+        process_rst(name)
 
 # If true, show URL addresses after external links.
 #man_show_urls = False
