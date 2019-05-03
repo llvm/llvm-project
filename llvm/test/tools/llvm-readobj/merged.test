@@ -10,4 +10,4 @@ RUN: FileCheck %s --input-file %t.merged
 RUN: not llvm-readobj -aeWhSrnudlVgIs %p/Inputs/trivial.obj.elf-i386 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 CHECK-NOT: Unknown command line argument
-UNKNOWN:   Unknown command line argument
+UNKNOWN:   for the --section-headers option: may only occur zero or one times!
