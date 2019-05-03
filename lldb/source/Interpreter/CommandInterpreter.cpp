@@ -433,6 +433,11 @@ void CommandInterpreter::Initialize() {
     AddAlias("var", cmd_obj_sp);
     AddAlias("vo", cmd_obj_sp, "--object-description");
   }
+
+  cmd_obj_sp = GetCommandSPExact("register", false);
+  if (cmd_obj_sp) {
+    AddAlias("re", cmd_obj_sp);
+  }
 }
 
 void CommandInterpreter::Clear() {
