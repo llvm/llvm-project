@@ -366,6 +366,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isExternC);
   REGISTER_MATCHER(isFinal);
   REGISTER_MATCHER(isImplicit);
+  REGISTER_MATCHER(isInStdNamespace);
   REGISTER_MATCHER(isInTemplateInstantiation);
   REGISTER_MATCHER(isInline);
   REGISTER_MATCHER(isInstanceMessage);
