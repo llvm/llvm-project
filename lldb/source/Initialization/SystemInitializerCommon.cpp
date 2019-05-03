@@ -9,6 +9,9 @@
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
 #include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
+#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
+#include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
+#include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -105,6 +108,10 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
   SwiftREPL::Initialize();
 
+  EmulateInstructionARM::Initialize();
+  EmulateInstructionMIPS::Initialize();
+  EmulateInstructionMIPS64::Initialize();
+
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
   ProcessPOSIXLog::Initialize();
 #endif
@@ -123,6 +130,10 @@ void SystemInitializerCommon::Terminate() {
   SwiftASTContext::Terminate();
 
   SwiftREPL::Terminate();
+
+  EmulateInstructionARM::Terminate();
+  EmulateInstructionMIPS::Terminate();
+  EmulateInstructionMIPS64::Terminate();
 
 #if defined(_WIN32)
   ProcessWindowsLog::Terminate();

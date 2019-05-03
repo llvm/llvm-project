@@ -74,7 +74,7 @@ public:
 
   bool SetData(DataExtractor &data, Status &error) override;
 
-  virtual lldb::VariableSP GetVariable() override { return m_variable_sp; }
+  lldb::VariableSP GetVariable() override { return m_variable_sp; }
 
 protected:
   bool UpdateValue() override;

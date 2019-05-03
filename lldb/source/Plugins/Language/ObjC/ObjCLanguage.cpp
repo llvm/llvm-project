@@ -1000,7 +1000,7 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
   
   class ObjCDebugInfoScavenger : public Language::ImageListTypeScavenger {
   public:
-    virtual CompilerType AdjustForInclusion(CompilerType &candidate) override {
+    CompilerType AdjustForInclusion(CompilerType &candidate) override {
       LanguageType lang_type(candidate.GetMinimumLanguage());
       if (!Language::LanguageIsObjC(lang_type))
         return CompilerType();
