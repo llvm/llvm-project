@@ -9056,7 +9056,7 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
 
   // If this is a direct reference to a stack slot, use information about the
   // stack slot's alignment.
-  int FrameIdx = 1 << 31;
+  int FrameIdx = INT_MIN;
   int64_t FrameOffset = 0;
   if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Ptr)) {
     FrameIdx = FI->getIndex();
@@ -9067,7 +9067,7 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
     FrameOffset = Ptr.getConstantOperandVal(1);
   }
 
-  if (FrameIdx != (1 << 31)) {
+  if (FrameIdx != INT_MIN) {
     const MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
     unsigned FIInfoAlign = MinAlign(MFI.getObjectAlignment(FrameIdx),
                                     FrameOffset);
