@@ -683,7 +683,7 @@ public:
     m_option_group.Finalize();
   }
 
-  ~CommandObjectProcessMinidumpDump() {}
+  ~CommandObjectProcessMinidumpDump() override {}
 
   Options *GetOptions() override { return &m_option_group; }
 
@@ -813,7 +813,7 @@ public:
         CommandObjectSP(new CommandObjectProcessMinidumpDump(interpreter)));
   }
 
-  ~CommandObjectMultiwordProcessMinidump() {}
+  ~CommandObjectMultiwordProcessMinidump() override {}
 };
 
 CommandObject *ProcessMinidump::GetPluginCommandObject() {

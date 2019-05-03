@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "gmock/gmock-matchers.h"
 #include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -34,9 +35,9 @@ namespace {
 using testing::_;
 using testing::AllOf;
 using testing::Contains;
+using testing::Each;
 using testing::ElementsAre;
 using testing::Field;
-using testing::IsEmpty;
 using testing::Not;
 using testing::Pair;
 using testing::UnorderedElementsAre;
@@ -1026,6 +1027,26 @@ TEST_F(SymbolCollectorTest, IncFileInNonHeader) {
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
                                                   Not(IncludeHeader()))));
+}
+
+// Features that depend on header-guards are fragile. Header guards are only
+// recognized when the file ends, so we have to defer checking for them.
+TEST_F(SymbolCollectorTest, HeaderGuardDetected) {
+  CollectorOpts.CollectIncludePath = true;
+  CollectorOpts.CollectMacro = true;
+  runSymbolCollector(R"cpp(
+    #ifndef HEADER_GUARD_
+    #define HEADER_GUARD_
+
+    // Symbols are seen before the header guard is complete.
+    #define MACRO
+    int decl();
+
+    #endif // Header guard is recognized here.
+  )cpp",
+                     "");
+  EXPECT_THAT(Symbols, Not(Contains(QName("HEADER_GUARD_"))));
+  EXPECT_THAT(Symbols, Each(IncludeHeader()));
 }
 
 TEST_F(SymbolCollectorTest, NonModularHeader) {

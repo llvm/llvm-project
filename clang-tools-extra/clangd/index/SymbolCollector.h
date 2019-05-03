@@ -125,6 +125,12 @@ private:
 
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
+  // File IDs for Symbol.IncludeHeaders.
+  // The final spelling is calculated in finish().
+  llvm::DenseMap<SymbolID, FileID> IncludeFiles;
+  void setIncludeLocation(const Symbol &S, SourceLocation);
+  // Indexed macros, to be erased if they turned out to be include guards.
+  llvm::DenseSet<const IdentifierInfo *> IndexedMacros;
   // All refs collected from the AST.
   // Only symbols declared in preamble (from #include) and referenced from the
   // main file will be included.
