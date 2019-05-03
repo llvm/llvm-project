@@ -51,8 +51,8 @@ public:
     class Prefix : public Matcher {
     public:
       Prefix(ConstString p);
-      virtual ~Prefix() = default;
-      virtual bool Match(ConstString class_name) override;
+      ~Prefix() override = default;
+      bool Match(ConstString class_name) override;
 
     private:
       ConstString m_prefix;
@@ -60,8 +60,8 @@ public:
     class Full : public Matcher {
     public:
       Full(ConstString n);
-      virtual ~Full() = default;
-      virtual bool Match(ConstString class_name) override;
+      ~Full() override = default;
+      bool Match(ConstString class_name) override;
 
     private:
       ConstString m_name;

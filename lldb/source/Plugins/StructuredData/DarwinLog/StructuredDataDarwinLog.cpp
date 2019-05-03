@@ -141,7 +141,7 @@ public:
     m_collection_sp->Initialize(g_properties);
   }
 
-  virtual ~StructuredDataDarwinLogProperties() {}
+  ~StructuredDataDarwinLogProperties() override {}
 
   bool GetEnableOnStartup() const {
     const uint32_t idx = ePropertyEnableOnStartup;

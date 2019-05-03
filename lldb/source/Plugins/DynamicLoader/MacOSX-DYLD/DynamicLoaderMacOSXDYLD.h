@@ -36,7 +36,7 @@ class DynamicLoaderMacOSXDYLD : public lldb_private::DynamicLoaderDarwin {
 public:
   DynamicLoaderMacOSXDYLD(lldb_private::Process *process);
 
-  virtual ~DynamicLoaderMacOSXDYLD() override;
+  ~DynamicLoaderMacOSXDYLD() override;
 
   // Static Functions
   static void Initialize();

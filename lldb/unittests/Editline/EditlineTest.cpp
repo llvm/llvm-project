@@ -250,7 +250,7 @@ public:
     setenv("TERM", "vt100", 1);
   }
 
-  void SetUp() {
+  void SetUp() override {
     FileSystem::Initialize();
 
     // Validate the editline adapter.
@@ -263,7 +263,7 @@ public:
         std::make_shared<std::thread>([&] { _el_adapter.ConsumeAllOutput(); });
   }
 
-  void TearDown() {
+  void TearDown() override {
     _el_adapter.CloseInput();
     if (_sp_output_thread)
       _sp_output_thread->join();
