@@ -2527,8 +2527,8 @@ When BPF_CLASS(code) == BPF_ALU or BPF_ALU64 or BPF_JMP,
 
 ::
 
-  BPF_X     0x0  use src_reg register as source operand
-  BPF_K     0x1  use 32 bit immediate as source operand
+  BPF_X     0x1  use src_reg register as source operand
+  BPF_K     0x0  use 32 bit immediate as source operand
 
 and four MSB bits store operation code
 
