@@ -1033,7 +1033,8 @@ void loadMainFilePreambleMacros(const Preprocessor &PP,
     return;
   for (const auto& MacroName : Preamble.MainFileMacros)
     if (auto *II = PreambleIdentifiers->get(MacroName))
-      PreambleMacros->updateOutOfDateIdentifier(*II);
+      if (II->isOutOfDate())
+        PreambleMacros->updateOutOfDateIdentifier(*II);
 }
 
 // Invokes Sema code completion on a file.

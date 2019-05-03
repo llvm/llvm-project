@@ -219,7 +219,7 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   if (FrameIndices.find(&AI) != FrameIndices.end())
     return FrameIndices[&AI];
 
-  unsigned ElementSize = DL->getTypeStoreSize(AI.getAllocatedType());
+  unsigned ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
   unsigned Size =
       ElementSize * cast<ConstantInt>(AI.getArraySize())->getZExtValue();
 

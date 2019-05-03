@@ -149,40 +149,29 @@ INLINE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode,
-                          bool isRuntimeUninitialized) {
+INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode) {
   // omp_thread_num
   int rc;
-
-  if (isRuntimeUninitialized) {
-    ASSERT0(LT_FUSSY, isSPMDExecutionMode,
-            "Uninitialized runtime with non-SPMD mode.");
-    // For level 2 parallelism all parallel regions are executed sequentially.
-    if (parallelLevel[GetWarpId()] > 0)
-      rc = 0;
-    else
-      rc = GetThreadIdInBlock();
+  if ((parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1)) > 1) {
+    rc = 0;
+  } else if (isSPMDExecutionMode) {
+    rc = GetThreadIdInBlock();
   } else {
     omptarget_nvptx_TaskDescr *currTaskDescr =
         omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
+    ASSERT0(LT_FUSSY, currTaskDescr, "expected a top task descr");
     rc = currTaskDescr->ThreadId();
   }
   return rc;
 }
 
-INLINE int GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode,
-                                 bool isRuntimeUninitialized) {
+INLINE int GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode) {
   // omp_num_threads
   int rc;
-
-  if (isRuntimeUninitialized) {
-    ASSERT0(LT_FUSSY, isSPMDExecutionMode,
-            "Uninitialized runtime with non-SPMD mode.");
-    // For level 2 parallelism all parallel regions are executed sequentially.
-    if (parallelLevel[GetWarpId()] > 0)
-      rc = 1;
-    else
-      rc = GetNumberOfThreadsInBlock();
+  if ((parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1)) > 1) {
+    rc = 1;
+  } else if (isSPMDExecutionMode) {
+    rc = GetNumberOfThreadsInBlock();
   } else {
     omptarget_nvptx_TaskDescr *currTaskDescr =
         omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
@@ -210,6 +199,31 @@ INLINE int GetNumberOfOmpTeams() {
 // Masters
 
 INLINE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
+
+////////////////////////////////////////////////////////////////////////////////
+// Parallel level
+
+INLINE void IncParallelLevel(bool ActiveParallel) {
+  unsigned tnum = __ACTIVEMASK();
+  int leader = __ffs(tnum) - 1;
+  __SHFL_SYNC(tnum, leader, leader);
+  if (GetLaneId() == leader) {
+    parallelLevel[GetWarpId()] +=
+        (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
+  }
+  __SHFL_SYNC(tnum, leader, leader);
+}
+
+INLINE void DecParallelLevel(bool ActiveParallel) {
+  unsigned tnum = __ACTIVEMASK();
+  int leader = __ffs(tnum) - 1;
+  __SHFL_SYNC(tnum, leader, leader);
+  if (GetLaneId() == leader) {
+    parallelLevel[GetWarpId()] -=
+        (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
+  }
+  __SHFL_SYNC(tnum, leader, leader);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // get OpenMP number of procs

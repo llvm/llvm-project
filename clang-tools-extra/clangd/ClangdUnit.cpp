@@ -108,7 +108,6 @@ public:
   }
 
   void MacroDefined(const Token &MacroName, const MacroDirective *MD) {
-    assert(MacroName.is(tok::identifier));
     if (InMainFile)
       MainFileMacros.insert(MacroName.getIdentifierInfo()->getName());
   }

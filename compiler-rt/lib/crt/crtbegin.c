@@ -77,7 +77,7 @@ static void __attribute__((used)) __do_fini() {
     __deregister_frame_info(__EH_FRAME_LIST__);
 
   const size_t n = __DTOR_LIST_END__ - __DTOR_LIST__ - 1;
-  for (size_t i = 1; i < n; i++) __DTOR_LIST__[i]();
+  for (size_t i = 1; i <= n; i++) __DTOR_LIST__[i]();
 #endif
 }
 

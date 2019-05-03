@@ -183,8 +183,8 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
 
 static bool isLEA(unsigned Opcode) {
-  return Opcode == X86::LEA16r || Opcode == X86::LEA32r ||
-         Opcode == X86::LEA64r || Opcode == X86::LEA64_32r;
+  return Opcode == X86::LEA32r || Opcode == X86::LEA64r ||
+         Opcode == X86::LEA64_32r;
 }
 
 bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
@@ -322,8 +322,6 @@ static inline unsigned getADDrrFromLEA(unsigned LEAOpcode) {
   switch (LEAOpcode) {
   default:
     llvm_unreachable("Unexpected LEA instruction");
-  case X86::LEA16r:
-    return X86::ADD16rr;
   case X86::LEA32r:
     return X86::ADD32rr;
   case X86::LEA64_32r:
@@ -338,8 +336,6 @@ static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
   switch (LEAOpcode) {
   default:
     llvm_unreachable("Unexpected LEA instruction");
-  case X86::LEA16r:
-    return IsInt8 ? X86::ADD16ri8 : X86::ADD16ri;
   case X86::LEA32r:
   case X86::LEA64_32r:
     return IsInt8 ? X86::ADD32ri8 : X86::ADD32ri;
@@ -370,9 +366,6 @@ bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
     unsigned NewOpcode;
     bool isINC = MI.getOperand(1 + X86::AddrDisp).getImm() == 1;
     switch (MI.getOpcode()) {
-    case X86::LEA16r:
-      NewOpcode = isINC ? X86::INC16r : X86::DEC16r;
-      break;
     case X86::LEA32r:
     case X86::LEA64_32r:
       NewOpcode = isINC ? X86::INC32r : X86::DEC32r;
