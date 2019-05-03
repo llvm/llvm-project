@@ -2708,7 +2708,6 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
          "The values should reside in two registers");
 
   SDValue Lo, Hi;
-  unsigned Reg;
   SDValue ArgValueLo, ArgValueHi;
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -2718,7 +2717,7 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
   if (nullptr == InFlag) {
     // When no physical register is present,
     // create an intermediate virtual register.
-    Reg = MF.addLiveIn(VA.getLocReg(), RC);
+    unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
     ArgValueLo = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
     Reg = MF.addLiveIn(NextVA.getLocReg(), RC);
     ArgValueHi = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
