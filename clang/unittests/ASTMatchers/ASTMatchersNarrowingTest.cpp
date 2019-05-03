@@ -2031,6 +2031,57 @@ TEST(NS, Anonymous) {
   EXPECT_TRUE(matches("namespace {}", namespaceDecl(isAnonymous())));
 }
 
+TEST(DeclarationMatcher, InStdNamespace) {
+  EXPECT_TRUE(notMatches("class vector {};"
+                         "namespace foo {"
+                         "  class vector {};"
+                         "}"
+                         "namespace foo {"
+                         "  namespace std {"
+                         "    class vector {};"
+                         "  }"
+                         "}",
+                         cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+
+  EXPECT_TRUE(matches("namespace std {"
+                      "  class vector {};"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+  EXPECT_TRUE(matches("namespace std {"
+                      "  inline namespace __1 {"
+                      "    class vector {};"
+                      "  }"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+  EXPECT_TRUE(notMatches("namespace std {"
+                         "  inline namespace __1 {"
+                         "    inline namespace __fs {"
+                         "      namespace filesystem {"
+                         "        inline namespace v1 {"
+                         "          class path {};"
+                         "        }"
+                         "      }"
+                         "    }"
+                         "  }"
+                         "}",
+                         cxxRecordDecl(hasName("path"), isInStdNamespace())));
+  EXPECT_TRUE(
+      matches("namespace std {"
+              "  inline namespace __1 {"
+              "    inline namespace __fs {"
+              "      namespace filesystem {"
+              "        inline namespace v1 {"
+              "          class path {};"
+              "        }"
+              "      }"
+              "    }"
+              "  }"
+              "}",
+              cxxRecordDecl(hasName("path"),
+                            hasAncestor(namespaceDecl(hasName("filesystem"),
+                                                      isInStdNamespace())))));
+}
+
 TEST(EqualsBoundNodeMatcher, QualType) {
   EXPECT_TRUE(matches(
     "int i = 1;", varDecl(hasType(qualType().bind("type")),

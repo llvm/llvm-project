@@ -354,7 +354,8 @@ bool Decl::isInAnonymousNamespace() const {
 }
 
 bool Decl::isInStdNamespace() const {
-  return getDeclContext()->isStdNamespace();
+  const DeclContext *DC = getDeclContext();
+  return DC && DC->isStdNamespace();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {

@@ -6212,6 +6212,29 @@ AST_MATCHER(NamespaceDecl, isAnonymous) {
   return Node.isAnonymousNamespace();
 }
 
+/// Matches declarations in the namespace `std`, but not in nested namespaces.
+///
+/// Given
+/// \code
+///   class vector {};
+///   namespace foo {
+///     class vector {};
+///     namespace std {
+///       class vector {};
+///     }
+///   }
+///   namespace std {
+///     inline namespace __1 {
+///       class vector {}; // #1
+///       namespace experimental {
+///         class vector {};
+///       }
+///     }
+///   }
+/// \endcode
+/// cxxRecordDecl(hasName("vector"), isInStdNamespace()) will match only #1.
+AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
+
 /// If the given case statement does not use the GNU case range
 /// extension, matches the constant given in the statement.
 ///
