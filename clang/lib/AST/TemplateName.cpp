@@ -250,6 +250,20 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
   return DB << NameStr;
 }
 
+const PartialDiagnostic&clang::operator<<(const PartialDiagnostic &PD,
+                                           TemplateName N) {
+  std::string NameStr;
+  llvm::raw_string_ostream OS(NameStr);
+  LangOptions LO;
+  LO.CPlusPlus = true;
+  LO.Bool = true;
+  OS << '\'';
+  N.print(OS, PrintingPolicy(LO));
+  OS << '\'';
+  OS.flush();
+  return PD << NameStr;
+}
+
 void TemplateName::dump(raw_ostream &OS) const {
   LangOptions LO;  // FIXME!
   LO.CPlusPlus = true;
