@@ -392,6 +392,11 @@ def cmd_push(args):
 
     # We need a staging area for SVN, let's hide it in the .git directory.
     dot_git_dir = git('rev-parse', '--git-common-dir')
+    # Not all versions of git support --git-common-dir and just print the
+    # unknown command back. If this happens, fall back to --git-dir
+    if dot_git_dir == '--git-common-dir':
+      dot_git_dir = git('rev-parse', '--git-dir')
+
     svn_root = os.path.join(dot_git_dir, 'llvm-upstream-svn')
     svn_init(svn_root)
 
