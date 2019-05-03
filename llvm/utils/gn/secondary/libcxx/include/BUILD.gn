@@ -1,0 +1,266 @@
+import("//clang/resource_dir.gni")
+import("//libcxx/config.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+declare_args() {
+  # Install libc++ support headers.
+  libcxx_install_support_headers = true
+}
+
+libcxx_needs_site_config =
+    libcxx_abi_version != 1 || libcxx_abi_namespace != "" || libcxx_abi_unstable
+
+if (libcxx_needs_site_config) {
+  write_cmake_config("write_config") {
+    input = "__config_site.in"
+    output = "$target_gen_dir/__config_site"
+
+    values = []
+    if (libcxx_abi_version != 1) {
+      values += [ "_LIBCPP_ABI_VERSION=$libcxx_abi_version" ]
+    }
+    if (libcxx_abi_namespace != "") {
+      values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
+    }
+    if (libcxx_abi_unstable) {
+      values += [ "_LIBCPP_ABI_UNSTABLE=" ]
+    }
+  }
+
+  # Generate a custom __config header. The new header is created
+  # by prepending __config_site to the current __config header.
+  action("concat_config") {
+    script = "//libcxx/utils/cat_files.py"
+    inputs = [
+      "$target_gen_dir/__config_site",
+      "__config",
+    ]
+    outputs = [
+      "$target_gen_dir/__config",
+    ]
+    args = [
+      "$target_gen_dir/__config_site",
+      "__config",
+      "-o",
+      "$target_gen_dir/__config",
+    ]
+    deps = [
+      ":write_config",
+    ]
+  }
+
+  copy("copy_config") {
+    sources = [
+      "$target_gen_dir/__config",
+    ]
+    outputs = [
+      "$clang_resource_dir/include/c++/v1/{{source_file_part}}",
+    ]
+    deps = [
+      ":concat_config",
+    ]
+  }
+}
+
+copy("include") {
+  sources = [
+    "__bit_reference",
+    "__bsd_locale_defaults.h",
+    "__bsd_locale_fallbacks.h",
+    "__debug",
+    "__errc",
+    "__functional_03",
+    "__functional_base",
+    "__functional_base_03",
+    "__hash_table",
+    "__libcpp_version",
+    "__locale",
+    "__mutex_base",
+    "__node_handle",
+    "__nullptr",
+    "__split_buffer",
+    "__sso_allocator",
+    "__std_stream",
+    "__string",
+    "__threading_support",
+    "__tree",
+    "__tuple",
+    "__undef_macros",
+    "algorithm",
+    "any",
+    "array",
+    "atomic",
+    "bit",
+    "bitset",
+    "cassert",
+    "ccomplex",
+    "cctype",
+    "cerrno",
+    "cfenv",
+    "cfloat",
+    "charconv",
+    "chrono",
+    "cinttypes",
+    "ciso646",
+    "climits",
+    "clocale",
+    "cmath",
+    "codecvt",
+    "compare",
+    "complex",
+    "complex.h",
+    "condition_variable",
+    "csetjmp",
+    "csignal",
+    "cstdarg",
+    "cstdbool",
+    "cstddef",
+    "cstdint",
+    "cstdio",
+    "cstdlib",
+    "cstring",
+    "ctgmath",
+    "ctime",
+    "ctype.h",
+    "cwchar",
+    "cwctype",
+    "deque",
+    "errno.h",
+    "exception",
+    "experimental/__config",
+    "experimental/__memory",
+    "experimental/algorithm",
+    "experimental/any",
+    "experimental/chrono",
+    "experimental/coroutine",
+    "experimental/deque",
+    "experimental/filesystem",
+    "experimental/forward_list",
+    "experimental/functional",
+    "experimental/iterator",
+    "experimental/list",
+    "experimental/map",
+    "experimental/memory_resource",
+    "experimental/numeric",
+    "experimental/optional",
+    "experimental/propagate_const",
+    "experimental/ratio",
+    "experimental/regex",
+    "experimental/set",
+    "experimental/simd",
+    "experimental/string",
+    "experimental/string_view",
+    "experimental/system_error",
+    "experimental/tuple",
+    "experimental/type_traits",
+    "experimental/unordered_map",
+    "experimental/unordered_set",
+    "experimental/utility",
+    "experimental/vector",
+    "ext/__hash",
+    "ext/hash_map",
+    "ext/hash_set",
+    "fenv.h",
+    "filesystem",
+    "float.h",
+    "forward_list",
+    "fstream",
+    "functional",
+    "future",
+    "initializer_list",
+    "inttypes.h",
+    "iomanip",
+    "ios",
+    "iosfwd",
+    "iostream",
+    "istream",
+    "iterator",
+    "limits",
+    "limits.h",
+    "list",
+    "locale",
+    "locale.h",
+    "map",
+    "math.h",
+    "memory",
+    "module.modulemap",
+    "mutex",
+    "new",
+    "numeric",
+    "optional",
+    "ostream",
+    "queue",
+    "random",
+    "ratio",
+    "regex",
+    "scoped_allocator",
+    "set",
+    "setjmp.h",
+    "shared_mutex",
+    "span",
+    "sstream",
+    "stack",
+    "stdbool.h",
+    "stddef.h",
+    "stdexcept",
+    "stdint.h",
+    "stdio.h",
+    "stdlib.h",
+    "streambuf",
+    "string",
+    "string.h",
+    "string_view",
+    "strstream",
+    "system_error",
+    "tgmath.h",
+    "thread",
+    "tuple",
+    "type_traits",
+    "typeindex",
+    "typeinfo",
+    "unordered_map",
+    "unordered_set",
+    "utility",
+    "valarray",
+    "variant",
+    "vector",
+    "version",
+    "wchar.h",
+    "wctype.h",
+  ]
+  deps = [
+    "//libcxxabi/include",
+  ]
+  if (!libcxx_needs_site_config) {
+    sources += [ "__config" ]
+  } else {
+    deps += [ ":copy_config" ]
+  }
+  if (libcxx_install_support_headers) {
+    sources += [
+      "support/android/locale_bionic.h",
+      "support/fuchsia/xlocale.h",
+      "support/ibm/limits.h",
+      "support/ibm/locale_mgmt_aix.h",
+      "support/ibm/support.h",
+      "support/ibm/xlocale.h",
+      "support/musl/xlocale.h",
+      "support/newlib/xlocale.h",
+      "support/solaris/floatingpoint.h",
+      "support/solaris/wchar.h",
+      "support/solaris/xlocale.h",
+      "support/xlocale/__nop_locale_mgmt.h",
+      "support/xlocale/__posix_l_fallback.h",
+      "support/xlocale/__strtonum_fallback.h",
+    ]
+    if (target_os == "win") {
+      sources += [
+        "support/win32/limits_msvc_win32.h",
+        "support/win32/locale_win32.h",
+      ]
+    }
+  }
+  outputs = [
+    "$clang_resource_dir/include/c++/v1/{{source_target_relative}}",
+  ]
+}

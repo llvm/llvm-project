@@ -3,20 +3,23 @@
 set(LIBUNWIND_CXX_SOURCES
     libunwind.cpp
     Unwind-EHABI.cpp
-    Unwind-seh.cpp)
+    Unwind-seh.cpp
+    )
 unwind_append_if(LIBUNWIND_CXX_SOURCES APPLE Unwind_AppleExtras.cpp)
 
 set(LIBUNWIND_C_SOURCES
     UnwindLevel1.c
     UnwindLevel1-gcc-ext.c
-    Unwind-sjlj.c)
+    Unwind-sjlj.c
+    )
 set_source_files_properties(${LIBUNWIND_C_SOURCES}
                             PROPERTIES
                               COMPILE_FLAGS "-std=c99")
 
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
-    UnwindRegistersSave.S)
+    UnwindRegistersSave.S
+    )
 set_source_files_properties(${LIBUNWIND_ASM_SOURCES}
                             PROPERTIES
                               LANGUAGE C)
@@ -33,11 +36,13 @@ set(LIBUNWIND_HEADERS
     Registers.hpp
     RWMutex.hpp
     UnwindCursor.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/libunwind.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/unwind.h)
+    ../include/libunwind.h
+    ../include/unwind.h
+    )
 
 unwind_append_if(LIBUNWIND_HEADERS APPLE
-          "${CMAKE_CURRENT_SOURCE_DIR}/../include/mach-o/compact_unwind_encoding.h")
+    ../include/mach-o/compact_unwind_encoding.h
+    )
 
 if (MSVC_IDE)
   # Force them all into the headers dir on MSVC, otherwise they end up at

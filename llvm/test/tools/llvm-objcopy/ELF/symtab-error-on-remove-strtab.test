@@ -1,9 +1,7 @@
 # RUN: yaml2obj %s > %t
 # RUN: not llvm-objcopy -R .strtab %t %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
 # RUN: cp %t %t3
-## Use --strip-debug to suppress the default --strip-all behavior of llvm-strip.
-## TODO: Implement a better way to suppress --strip-all behavior.
-# RUN: not llvm-strip --strip-debug -R .strtab %t3 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-strip --no-strip-all -R .strtab %t3 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
 
 !ELF
 FileHeader:
@@ -17,7 +15,7 @@ FileHeader:
 # RUN: llvm-objcopy --allow-broken-links -R .strtab %t %t4
 # RUN: llvm-objdump --section-headers %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
 # RUN: cp %t %t5
-# RUN: llvm-strip --strip-debug --allow-broken-links -R .strtab %t %t5
+# RUN: llvm-strip --no-strip-all --allow-broken-links -R .strtab %t %t5
 # RUN: llvm-objdump --section-headers %t5 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
 
 # SECTIONS: .symtab

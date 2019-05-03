@@ -5643,6 +5643,9 @@ namespace {
       assert(Chunk.Kind == DeclaratorChunk::Pipe);
       TL.setKWLoc(Chunk.Loc);
     }
+    void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+      TL.setExpansionLoc(Chunk.Loc);
+    }
 
     void VisitTypeLoc(TypeLoc TL) {
       llvm_unreachable("unsupported TypeLoc kind in declarator!");
@@ -5720,6 +5723,9 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
       fillAtomicQualLoc(ATL, D.getTypeObject(i));
       CurrTL = ATL.getValueLoc().getUnqualifiedLoc();
     }
+
+    while (MacroQualifiedTypeLoc TL = CurrTL.getAs<MacroQualifiedTypeLoc>())
+      CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
 
     while (AttributedTypeLoc TL = CurrTL.getAs<AttributedTypeLoc>()) {
       fillAttributedTypeLoc(TL, State);
@@ -6981,12 +6987,16 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   return true;
 }
 
-bool Sema::hasExplicitCallingConv(QualType &T) {
-  QualType R = T.IgnoreParens();
-  while (const AttributedType *AT = dyn_cast<AttributedType>(R)) {
+bool Sema::hasExplicitCallingConv(QualType T) {
+  const AttributedType *AT;
+
+  // Stop if we'd be stripping off a typedef sugar node to reach the
+  // AttributedType.
+  while ((AT = T->getAs<AttributedType>()) &&
+         AT->getAs<TypedefType>() == T->getAs<TypedefType>()) {
     if (AT->isCallingConv())
       return true;
-    R = AT->getModifiedType().IgnoreParens();
+    T = AT->getModifiedType();
   }
   return false;
 }
@@ -7308,8 +7318,10 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
        // otherwise it will fail some sema check.
       IsFuncReturnType || IsFuncType ||
       // Do not deduce addr space for member types of struct, except the pointee
-      // type of a pointer member type.
-      (D.getContext() == DeclaratorContext::MemberContext && !IsPointee) ||
+      // type of a pointer member type or static data members.
+      (D.getContext() == DeclaratorContext::MemberContext &&
+       (!IsPointee &&
+        D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static)) ||
       // Do not deduce addr space for types used to define a typedef and the
       // typedef itself, except the pointee type of a pointer type which is used
       // to define the typedef.
@@ -7568,6 +7580,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       else if (!handleFunctionTypeAttr(state, attr, type))
         distributeFunctionTypeAttr(state, attr, type);
       break;
+    }
+
+    // Handle attributes that are defined in a macro. We do not want this to be
+    // applied to ObjC builtin attributes.
+    if (isa<AttributedType>(type) && attr.hasMacroIdentifier() &&
+        !type.getQualifiers().hasObjCLifetime() &&
+        !type.getQualifiers().hasObjCGCAttr()) {
+      const IdentifierInfo *MacroII = attr.getMacroIdentifier();
+      type = state.getSema().Context.getMacroQualifiedType(type, MacroII);
     }
   }
 

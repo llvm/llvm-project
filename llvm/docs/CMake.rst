@@ -266,6 +266,10 @@ LLVM-specific variables
 **LLVM_ENABLE_THREADS**:BOOL
   Build with threads support, if available. Defaults to ON.
 
+**LLVM_ENABLE_UNWIND_TABLES**:BOOL
+  Enable unwind tables in the binary.  Disabling unwind tables can reduce the
+  size of the libraries.  Defaults to ON.
+
 **LLVM_CXX_STD**:STRING
   Build with the specified C++ standard. Defaults to "c++11".
 

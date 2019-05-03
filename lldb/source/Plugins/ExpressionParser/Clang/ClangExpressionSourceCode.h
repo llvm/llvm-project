@@ -43,13 +43,14 @@ public:
   ///        evaluated.
   /// \param add_locals True iff local variables should be injected into the
   ///        expression source code.
+  /// \param force_add_all_locals True iff all local variables should be
+  ///        injected even if they are not used in the expression.
   /// \param modules A list of (C++) modules that the expression should import.
   ///
   /// \return true iff the source code was successfully generated.
   bool GetText(std::string &text, lldb::LanguageType wrapping_language,
-               bool static_method,
-               ExecutionContext &exe_ctx,
-               bool add_locals,
+               bool static_method, ExecutionContext &exe_ctx, bool add_locals,
+               bool force_add_all_locals,
                llvm::ArrayRef<std::string> modules) const;
 
   // Given a string returned by GetText, find the beginning and end of the body

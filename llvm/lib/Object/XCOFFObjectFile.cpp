@@ -119,14 +119,12 @@ void XCOFFObjectFile::moveSectionNext(DataRefImpl &Sec) const {
   Sec.p = reinterpret_cast<uintptr_t>(Ptr + getSectionHeaderSize());
 }
 
-std::error_code XCOFFObjectFile::getSectionName(DataRefImpl Sec,
-                                                StringRef &Res) const {
+Expected<StringRef> XCOFFObjectFile::getSectionName(DataRefImpl Sec) const {
   const char *Name = toSection(Sec)->Name;
   auto NulCharPtr =
       static_cast<const char *>(memchr(Name, '\0', XCOFF::SectionNameSize));
-  Res = NulCharPtr ? StringRef(Name, NulCharPtr - Name)
-                   : StringRef(Name, XCOFF::SectionNameSize);
-  return std::error_code();
+  return NulCharPtr ? StringRef(Name, NulCharPtr - Name)
+                    : StringRef(Name, XCOFF::SectionNameSize);
 }
 
 uint64_t XCOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {

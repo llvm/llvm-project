@@ -1,10 +1,7 @@
 import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
-
-clangd_lit_site_cfg_file = "$root_gen_dir/clang-tools-extra/clangd/test/lit.cfg"
-clangd_lit_unit_site_cfg_file =
-    "$root_gen_dir/clang-tools-extra/clangd/unittests/lit.cfg"
+import("clangd_lit_site_cfg_files.gni")
 
 template("write_lit_config") {
   write_cmake_config(target_name) {
@@ -20,7 +17,7 @@ template("write_lit_config") {
 
 write_lit_config("lit_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
-  input = "//clang-tools-extra/clangd/test/lit.cfg.in"
+  input = "//clang-tools-extra/clangd/test/lit.site.cfg.py.in"
   output = clangd_lit_site_cfg_file
 
   extra_values = [
@@ -46,12 +43,14 @@ write_lit_config("lit_site_cfg") {
 
 write_lit_config("lit_unit_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
-  input = "//clang-tools-extra/clangd/unittests/lit.cfg.in"
+  input = "//clang-tools-extra/clangd/unittests/lit.site.cfg.py.in"
   output = clangd_lit_unit_site_cfg_file
   extra_values =
       [ "CMAKE_CURRENT_BINARY_DIR=" +
         rebase_path(get_label_info("//clang-tools-extra/clangd/unittests",
-                                   "target_out_dir")) ]
+                                   "target_out_dir")),
+        "CMAKE_CURRENT_SOURCE_DIR=" +
+            rebase_path("//clang-tools-extra/clangd/unittest")]
   if (host_os == "win") {
     # See comment for Windows solink in llvm/utils/gn/build/toolchain/BUILD.gn
     extra_values += [ "SHLIBDIR=" + rebase_path("$root_out_dir/bin") ]

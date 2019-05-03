@@ -25,17 +25,23 @@ if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
 endif()
 
 if (LIBCXXABI_ENABLE_EXCEPTIONS)
-  list(APPEND LIBCXXABI_SOURCES cxa_exception.cpp)
-  list(APPEND LIBCXXABI_SOURCES cxa_personality.cpp)
+  list(APPEND LIBCXXABI_SOURCES
+    cxa_exception.cpp
+    cxa_personality.cpp
+  )
 else()
-  list(APPEND LIBCXXABI_SOURCES cxa_noexception.cpp)
+  list(APPEND LIBCXXABI_SOURCES
+    cxa_noexception.cpp
+  )
 endif()
 
 if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN))
   list(APPEND LIBCXXABI_SOURCES cxa_thread_atexit.cpp)
 endif()
 
-set(LIBCXXABI_HEADERS ../include/cxxabi.h)
+set(LIBCXXABI_HEADERS
+  ../include/cxxabi.h
+)
 
 # Add all the headers to the project for IDEs.
 if (MSVC_IDE OR XCODE)

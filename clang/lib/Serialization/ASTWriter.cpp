@@ -516,6 +516,12 @@ void ASTTypeWriter::VisitParenType(const ParenType *T) {
   Code = TYPE_PAREN;
 }
 
+void ASTTypeWriter::VisitMacroQualifiedType(const MacroQualifiedType *T) {
+  Record.AddTypeRef(T->getUnderlyingType());
+  Record.AddIdentifierRef(T->getMacroIdentifier());
+  Code = TYPE_MACRO_QUALIFIED;
+}
+
 void ASTTypeWriter::VisitElaboratedType(const ElaboratedType *T) {
   Record.push_back(T->getKeyword());
   Record.AddNestedNameSpecifier(T->getQualifier());
@@ -800,6 +806,10 @@ void TypeLocWriter::VisitTemplateSpecializationTypeLoc(
 void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
   Record.AddSourceLocation(TL.getLParenLoc());
   Record.AddSourceLocation(TL.getRParenLoc());
+}
+
+void TypeLocWriter::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+  Record.AddSourceLocation(TL.getExpansionLoc());
 }
 
 void TypeLocWriter::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
@@ -1219,6 +1229,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION);
   RECORD(TYPE_DEPENDENT_SIZED_ARRAY);
   RECORD(TYPE_PAREN);
+  RECORD(TYPE_MACRO_QUALIFIED);
   RECORD(TYPE_PACK_EXPANSION);
   RECORD(TYPE_ATTRIBUTED);
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK);

@@ -53,8 +53,9 @@ Expected<std::string> MinidumpFile::getString(size_t Offset) const {
   return Result;
 }
 
-Expected<ArrayRef<Module>> MinidumpFile::getModuleList() const {
-  auto OptionalStream = getRawStream(StreamType::ModuleList);
+template <typename T>
+Expected<ArrayRef<T>> MinidumpFile::getListStream(StreamType Stream) const {
+  auto OptionalStream = getRawStream(Stream);
   if (!OptionalStream)
     return createError("No such stream");
   auto ExpectedSize =
@@ -65,14 +66,18 @@ Expected<ArrayRef<Module>> MinidumpFile::getModuleList() const {
   size_t ListSize = ExpectedSize.get()[0];
 
   size_t ListOffset = 4;
-  // Some producers insert additional padding bytes to align the module list to
-  // 8-byte boundary. Check for that by comparing the module list size with the
-  // overall stream size.
-  if (ListOffset + sizeof(Module) * ListSize < OptionalStream->size())
+  // Some producers insert additional padding bytes to align the list to an
+  // 8-byte boundary. Check for that by comparing the list size with the overall
+  // stream size.
+  if (ListOffset + sizeof(T) * ListSize < OptionalStream->size())
     ListOffset = 8;
 
-  return getDataSliceAs<Module>(*OptionalStream, ListOffset, ListSize);
+  return getDataSliceAs<T>(*OptionalStream, ListOffset, ListSize);
 }
+template Expected<ArrayRef<Module>>
+    MinidumpFile::getListStream(StreamType) const;
+template Expected<ArrayRef<Thread>>
+    MinidumpFile::getListStream(StreamType) const;
 
 Expected<ArrayRef<uint8_t>>
 MinidumpFile::getDataSlice(ArrayRef<uint8_t> Data, size_t Offset, size_t Size) {

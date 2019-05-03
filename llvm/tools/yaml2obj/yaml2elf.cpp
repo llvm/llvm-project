@@ -60,27 +60,28 @@ public:
 // sections and symbols can be referenced by name instead of by index.
 namespace {
 class NameToIdxMap {
-  StringMap<int> Map;
+  StringMap<unsigned> Map;
+
 public:
-  /// \returns true if name is already present in the map.
-  bool addName(StringRef Name, unsigned i) {
-    return !Map.insert(std::make_pair(Name, (int)i)).second;
+  /// \Returns false if name is already present in the map.
+  bool addName(StringRef Name, unsigned Ndx) {
+    return Map.insert({Name, Ndx}).second;
   }
-  /// \returns true if name is not present in the map
+  /// \Returns false if name is not present in the map.
   bool lookup(StringRef Name, unsigned &Idx) const {
-    StringMap<int>::const_iterator I = Map.find(Name);
+    auto I = Map.find(Name);
     if (I == Map.end())
-      return true;
+      return false;
     Idx = I->getValue();
-    return false;
+    return true;
   }
-  /// asserts if name is not present in the map
+  /// Asserts if name is not present in the map.
   unsigned get(StringRef Name) const {
-    unsigned Idx = 0;
-    auto missing = lookup(Name, Idx);
-    (void)missing;
-    assert(!missing && "Expected section not found in index");
-    return Idx;
+    unsigned Idx;
+    if (lookup(Name, Idx))
+      return Idx;
+    assert(false && "Expected section not found in index");
+    return 0;
   }
   unsigned size() const { return Map.size(); }
 };
@@ -238,7 +239,7 @@ void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
 
 static bool convertSectionIndex(NameToIdxMap &SN2I, StringRef SecName,
                                 StringRef IndexSrc, unsigned &IndexDest) {
-  if (SN2I.lookup(IndexSrc, IndexDest) && !to_integer(IndexSrc, IndexDest)) {
+  if (!SN2I.lookup(IndexSrc, IndexDest) && !to_integer(IndexSrc, IndexDest)) {
     WithColor::error() << "Unknown section referenced: '" << IndexSrc
                        << "' at YAML section '" << SecName << "'.\n";
     return false;
@@ -395,7 +396,7 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
     std::vector<Elf_Shdr *> Sections;
     for (const ELFYAML::SectionName &SecName : YamlPhdr.Sections) {
       unsigned Index;
-      if (SN2I.lookup(SecName.Section, Index)) {
+      if (!SN2I.lookup(SecName.Section, Index)) {
         WithColor::error() << "Unknown section referenced: '" << SecName.Section
                            << "' by program header.\n";
         exit(1);
@@ -472,7 +473,7 @@ void ELFState<ELFT>::addSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
     Symbol.setBindingAndType(Sym.Binding, Sym.Type);
     if (!Sym.Section.empty()) {
       unsigned Index;
-      if (SN2I.lookup(Sym.Section, Index)) {
+      if (!SN2I.lookup(Sym.Section, Index)) {
         WithColor::error() << "Unknown section referenced: '" << Sym.Section
                            << "' by YAML symbol " << Sym.Name << ".\n";
         exit(1);
@@ -546,7 +547,7 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     unsigned SymIdx = 0;
     // If a relocation references a symbol, try to look one up in the symbol
     // table. If it is not there, treat the value as a symbol index.
-    if (Rel.Symbol && SymN2I.lookup(*Rel.Symbol, SymIdx) &&
+    if (Rel.Symbol && !SymN2I.lookup(*Rel.Symbol, SymIdx) &&
         !to_integer(*Rel.Symbol, SymIdx)) {
       WithColor::error() << "Unknown symbol referenced: '" << *Rel.Symbol
                          << "' at YAML section '" << Section.Name << "'.\n";
@@ -582,7 +583,7 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   SHeader.sh_size = SHeader.sh_entsize * Section.Members.size();
 
   unsigned SymIdx;
-  if (SymN2I.lookup(Section.Signature, SymIdx) &&
+  if (!SymN2I.lookup(Section.Signature, SymIdx) &&
       !to_integer(Section.Signature, SymIdx)) {
     WithColor::error() << "Unknown symbol referenced: '" << Section.Signature
                        << "' at YAML section '" << Section.Name << "'.\n";
@@ -783,7 +784,7 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
     StringRef Name = Doc.Sections[i]->Name;
     DotShStrtab.add(Name);
     // "+ 1" to take into account the SHT_NULL entry.
-    if (SN2I.addName(Name, i + 1)) {
+    if (!SN2I.addName(Name, i + 1)) {
       WithColor::error() << "Repeated section name: '" << Name
                          << "' at YAML section number " << i << ".\n";
       return false;
@@ -793,7 +794,7 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
   auto SecNo = 1 + Doc.Sections.size();
   // Add special sections after input sections, if necessary.
   for (StringRef Name : implicitSectionNames())
-    if (!SN2I.addName(Name, SecNo)) {
+    if (SN2I.addName(Name, SecNo)) {
       // Account for this section, since it wasn't in the Doc
       ++SecNo;
       DotShStrtab.add(Name);
@@ -819,7 +820,7 @@ bool ELFState<ELFT>::buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols) {
     if (Sym.Binding.value != ELF::STB_LOCAL)
       GlobalSymbolSeen = true;
 
-    if (!Name.empty() && SymN2I.addName(Name, I)) {
+    if (!Name.empty() && !SymN2I.addName(Name, I)) {
       WithColor::error() << "Repeated symbol name: '" << Name << "'.\n";
       return false;
     }

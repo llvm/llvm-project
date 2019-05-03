@@ -232,7 +232,14 @@ set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X})
 set(ALL_CRT_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64})
 set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64})
-if(LINUX)
+
+if(ANDROID)
+  set(OS_NAME "Android")
+else()
+  set(OS_NAME "${CMAKE_SYSTEM_NAME}")
+endif()
+
+if(OS_NAME MATCHES "Linux")
   set(ALL_FUZZER_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM64})
 else()
   set(ALL_FUZZER_SUPPORTED_ARCH ${X86_64} ${ARM64})
@@ -525,12 +532,6 @@ if(COMPILER_RT_SUPPORTED_ARCH)
   list(REMOVE_DUPLICATES COMPILER_RT_SUPPORTED_ARCH)
 endif()
 message(STATUS "Compiler-RT supported architectures: ${COMPILER_RT_SUPPORTED_ARCH}")
-
-if(ANDROID)
-  set(OS_NAME "Android")
-else()
-  set(OS_NAME "${CMAKE_SYSTEM_NAME}")
-endif()
 
 set(ALL_SANITIZERS asan;dfsan;msan;hwasan;tsan;safestack;cfi;scudo;ubsan_minimal)
 set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING

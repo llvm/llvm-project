@@ -6,6 +6,8 @@ if (NOT DEFINED CLANGD_BUILD_XPC)
     set(CLANGD_BUILD_XPC_DEFAULT OFF)
   endif ()
 
+  llvm_canonicalize_cmake_booleans(CLANGD_BUILD_XPC_DEFAULT)
+
   set(CLANGD_BUILD_XPC ${CLANGD_BUILD_XPC_DEFAULT} CACHE BOOL "Build XPC Support For Clangd." FORCE)
   unset(CLANGD_BUILD_XPC_DEFAULT)
 endif ()

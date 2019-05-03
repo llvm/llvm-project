@@ -47,21 +47,17 @@ EXTERN void omp_set_num_threads(int num) {
 EXTERN int omp_get_num_threads(void) {
   bool isSPMDExecutionMode = isSPMDMode();
   int tid = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
-  int rc =
-      GetNumberOfOmpThreads(tid, isSPMDExecutionMode, isRuntimeUninitialized());
+  int rc = GetNumberOfOmpThreads(tid, isSPMDExecutionMode);
   PRINT(LD_IO, "call omp_get_num_threads() return %d\n", rc);
   return rc;
 }
 
 EXTERN int omp_get_max_threads(void) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
+  if (isSPMDMode())
     // We're already in parallel region.
     return 1;  // default is 1 thread avail
-  }
   omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(isSPMDMode());
+      getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
   int rc = 1; // default is 1 thread avail
   if (!currTaskDescr->InParallelRegion()) {
     // Not currently in a parallel region, return what was set.
@@ -73,14 +69,11 @@ EXTERN int omp_get_max_threads(void) {
 }
 
 EXTERN int omp_get_thread_limit(void) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
-    return 0;  // default is 0
-  }
+  if (isSPMDMode())
+    return GetNumberOfThreadsInBlock();
   // per contention group.. meaning threads in current team
   omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(isSPMDMode());
+      getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
   int rc = currTaskDescr->ThreadLimit();
   PRINT(LD_IO, "call omp_get_thread_limit() return %d\n", rc);
   return rc;
@@ -89,7 +82,7 @@ EXTERN int omp_get_thread_limit(void) {
 EXTERN int omp_get_thread_num() {
   bool isSPMDExecutionMode = isSPMDMode();
   int tid = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
-  int rc = GetOmpThreadId(tid, isSPMDExecutionMode, isRuntimeUninitialized());
+  int rc = GetOmpThreadId(tid, isSPMDExecutionMode);
   PRINT(LD_IO, "call omp_get_thread_num() returns %d\n", rc);
   return rc;
 }
@@ -101,18 +94,7 @@ EXTERN int omp_get_num_procs(void) {
 }
 
 EXTERN int omp_in_parallel(void) {
-  int rc = 0;
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
-    rc = 1;  // SPMD mode is always in parallel.
-  } else {
-    omptarget_nvptx_TaskDescr *currTaskDescr =
-        getMyTopTaskDescriptor(isSPMDMode());
-    if (currTaskDescr->InParallelRegion()) {
-      rc = 1;
-    }
-  }
+  int rc = parallelLevel[GetWarpId()] > OMP_ACTIVE_PARALLEL_LEVEL ? 1 : 0;
   PRINT(LD_IO, "call omp_in_parallel() returns %d\n", rc);
   return rc;
 }
@@ -161,46 +143,13 @@ EXTERN int omp_get_max_active_levels(void) {
 }
 
 EXTERN int omp_get_level(void) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
-    // parallelLevel starts from 0, need to add 1 for correct level.
-    return parallelLevel[GetWarpId()] + 1;
-  }
-  int level = 0;
-  omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(isSPMDMode());
-  ASSERT0(LT_FUSSY, currTaskDescr,
-          "do not expect fct to be called in a non-active thread");
-  do {
-    if (currTaskDescr->IsParallelConstruct()) {
-      level++;
-    }
-    currTaskDescr = currTaskDescr->GetPrevTaskDescr();
-  } while (currTaskDescr);
+  int level = parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
   PRINT(LD_IO, "call omp_get_level() returns %d\n", level);
   return level;
 }
 
 EXTERN int omp_get_active_level(void) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
-    return 1;
-  }
-  int level = 0; // no active level parallelism
-  omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(isSPMDMode());
-  ASSERT0(LT_FUSSY, currTaskDescr,
-          "do not expect fct to be called in a non-active thread");
-  do {
-    if (currTaskDescr->ThreadsInTeam() > 1) {
-      // has a parallel with more than one thread in team
-      level = 1;
-      break;
-    }
-    currTaskDescr = currTaskDescr->GetPrevTaskDescr();
-  } while (currTaskDescr);
+  int level = parallelLevel[GetWarpId()] > OMP_ACTIVE_PARALLEL_LEVEL ? 1 : 0;
   PRINT(LD_IO, "call omp_get_active_level() returns %d\n", level)
   return level;
 }

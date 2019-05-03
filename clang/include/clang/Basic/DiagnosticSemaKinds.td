@@ -2778,6 +2778,9 @@ def warn_attribute_ignored : Warning<"%0 attribute ignored">,
 def warn_attribute_ignored_on_inline :
   Warning<"%0 attribute ignored on inline function">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_ignored_on_non_external :
+  Warning<"%0 attribute is ignored on a non-external symbol">,
+  InGroup<IgnoredAttributes>;
 def warn_nocf_check_attribute_ignored :
   Warning<"'nocf_check' attribute ignored; use -fcf-protection to enable the attribute">,
   InGroup<IgnoredAttributes>;

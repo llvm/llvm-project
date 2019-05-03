@@ -909,9 +909,6 @@ bool SymbolFileDWARF::ParseImportedModules(
     return false;
   UpdateExternalModuleListIfNeeded();
 
-  if (!sc.comp_unit)
-    return false;
-
   const DWARFDIE die = dwarf_cu->DIE();
   if (!die)
     return false;

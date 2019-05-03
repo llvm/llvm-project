@@ -43,7 +43,10 @@
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
+#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
+#include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
+#include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
 #include "Plugins/InstrumentationRuntime/ASan/ASanRuntime.h"
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
@@ -58,6 +61,8 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
 #include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 #include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
+#include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
+#include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
 #include "Plugins/ObjectFile/Breakpad/ObjectFileBreakpad.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
@@ -129,6 +134,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   ObjectFileMachO::Initialize();
   ObjectFilePECOFF::Initialize();
 
+  ObjectContainerBSDArchive::Initialize();
+  ObjectContainerUniversalMachO::Initialize();
+
   ScriptInterpreterNone::Initialize();
 
 #ifndef LLDB_DISABLE_PYTHON
@@ -197,8 +205,13 @@ llvm::Error SystemInitializerFull::Initialize() {
   SymbolFileSymtab::Initialize();
   UnwindAssemblyInstEmulation::Initialize();
   UnwindAssembly_x86::Initialize();
+
+  EmulateInstructionARM::Initialize();
   EmulateInstructionARM64::Initialize();
+  EmulateInstructionMIPS::Initialize();
+  EmulateInstructionMIPS64::Initialize();
   EmulateInstructionPPC64::Initialize();
+
   SymbolFileDWARFDebugMap::Initialize();
   ItaniumABILanguageRuntime::Initialize();
   AppleObjCRuntimeV2::Initialize();
@@ -299,8 +312,13 @@ void SystemInitializerFull::Terminate() {
   SymbolFileSymtab::Terminate();
   UnwindAssembly_x86::Terminate();
   UnwindAssemblyInstEmulation::Terminate();
+
+  EmulateInstructionARM::Terminate();
   EmulateInstructionARM64::Terminate();
+  EmulateInstructionMIPS::Terminate();
+  EmulateInstructionMIPS64::Terminate();
   EmulateInstructionPPC64::Terminate();
+
   SymbolFileDWARFDebugMap::Terminate();
   ItaniumABILanguageRuntime::Terminate();
   AppleObjCRuntimeV2::Terminate();
@@ -359,6 +377,9 @@ void SystemInitializerFull::Terminate() {
   ObjectFileELF::Terminate();
   ObjectFileMachO::Terminate();
   ObjectFilePECOFF::Terminate();
+
+  ObjectContainerBSDArchive::Terminate();
+  ObjectContainerUniversalMachO::Terminate();
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();
