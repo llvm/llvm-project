@@ -233,8 +233,6 @@ static bool updateOperand(FoldCandidate &Fold,
 
       const TargetRegisterClass *Dst0RC = MRI.getRegClass(Dst0.getReg());
       unsigned NewReg0 = MRI.createVirtualRegister(Dst0RC);
-      const TargetRegisterClass *Dst1RC = MRI.getRegClass(Dst1.getReg());
-      unsigned NewReg1 = MRI.createVirtualRegister(Dst1RC);
 
       MachineInstr *Inst32 = TII.buildShrunkInst(*MI, Op32);
 
@@ -244,9 +242,15 @@ static bool updateOperand(FoldCandidate &Fold,
       }
 
       // Keep the old instruction around to avoid breaking iterators, but
-      // replace the outputs with dummy registers.
+      // replace it with a dummy instruction to remove uses.
+      //
+      // FIXME: We should not invert how this pass looks at operands to avoid
+      // this. Should track set of foldable movs instead of looking for uses
+      // when looking at a use.
       Dst0.setReg(NewReg0);
-      Dst1.setReg(NewReg1);
+      for (unsigned I = MI->getNumOperands() - 1; I > 0; --I)
+        MI->RemoveOperand(I);
+      MI->setDesc(TII.get(AMDGPU::IMPLICIT_DEF));
 
       if (Fold.isCommuted())
         TII.commuteInstruction(*Inst32, false);
