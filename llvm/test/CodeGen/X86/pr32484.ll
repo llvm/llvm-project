@@ -11,6 +11,7 @@ define void @foo() {
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    # implicit-def: $rax
 ; CHECK-NEXT:    movdqu %xmm1, (%rax)
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    retq
   indirectbr i8* undef, [label %9, label %1]

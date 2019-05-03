@@ -1274,14 +1274,14 @@ define i64 @AtomicCmpSwap64(i64 signext %oldval, i64 signext %newval) nounwind {
 ;
 ; MIPS64R6O0-LABEL: AtomicCmpSwap64:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
+; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -32
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicCmpSwap64)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap64)))
 ; MIPS64R6O0-NEXT:    move $2, $5
 ; MIPS64R6O0-NEXT:    move $3, $4
-; MIPS64R6O0-NEXT:    sd $5, 8($sp)
-; MIPS64R6O0-NEXT:    ld $5, 8($sp)
+; MIPS64R6O0-NEXT:    sd $5, 24($sp)
+; MIPS64R6O0-NEXT:    ld $5, 24($sp)
 ; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB7_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1293,9 +1293,10 @@ define i64 @AtomicCmpSwap64(i64 signext %oldval, i64 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:    scd $7, 0($1)
 ; MIPS64R6O0-NEXT:    beqzc $7, .LBB7_1
 ; MIPS64R6O0-NEXT:  .LBB7_3: # %entry
-; MIPS64R6O0-NEXT:    sd $2, 0($sp) # 8-byte Folded Spill
+; MIPS64R6O0-NEXT:    sd $2, 16($sp) # 8-byte Folded Spill
 ; MIPS64R6O0-NEXT:    move $2, $6
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    sd $3, 8($sp) # 8-byte Folded Spill
+; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 32
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; O1-LABEL: AtomicCmpSwap64:

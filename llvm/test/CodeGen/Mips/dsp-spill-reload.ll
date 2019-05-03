@@ -23,7 +23,9 @@ entry:
 
 ; ASM: SWDSP
 ; ASM: SWDSP
+; ASM: SWDSP
 
+; MM-OBJ:   sw  ${{[0-9]+}}, {{[0-9]+}}($sp)
 ; MM-OBJ:   sw  ${{[0-9]+}}, {{[0-9]+}}($sp)
 ; MM-OBJ:   sw  ${{[0-9]+}}, {{[0-9]+}}($sp)
 ; MM-OBJ:   sw  ${{[0-9]+}}, {{[0-9]+}}($sp)
