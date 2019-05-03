@@ -94,7 +94,7 @@ public:
     m_collection_sp->Initialize(g_properties);
   }
 
-  virtual ~DynamicLoaderDarwinKernelProperties() {}
+  ~DynamicLoaderDarwinKernelProperties() override {}
 
   bool GetLoadKexts() const {
     const uint32_t idx = ePropertyLoadKexts;

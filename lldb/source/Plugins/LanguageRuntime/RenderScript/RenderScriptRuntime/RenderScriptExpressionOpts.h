@@ -34,7 +34,7 @@ public:
   RenderScriptRuntimeModulePass(const lldb_private::Process *process)
       : ModulePass(ID), m_process_ptr(process) {}
 
-  bool runOnModule(llvm::Module &module);
+  bool runOnModule(llvm::Module &module) override;
 
 private:
   const lldb_private::Process *m_process_ptr;
