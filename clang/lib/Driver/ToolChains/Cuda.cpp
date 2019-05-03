@@ -656,6 +656,9 @@ void CudaToolChain::addClangTargetOptions(
     case CudaVersion::CUDA_100:
       PtxFeature = "+ptx63";
       break;
+    case CudaVersion::CUDA_92:
+      PtxFeature = "+ptx61";
+      break;
     case CudaVersion::CUDA_91:
       PtxFeature = "+ptx61";
       break;
