@@ -10994,10 +10994,10 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // When the operand is immediate, using the two least significant bits of
     // the immediate to set the bits 62:63 of FPSCR.
     unsigned Mode = MI.getOperand(1).getImm();
-    BuildMI(*BB, MI, dl, TII->get(Mode & 1 ? PPC::MTFSB1 : PPC::MTFSB0))
+    BuildMI(*BB, MI, dl, TII->get((Mode & 1) ? PPC::MTFSB1 : PPC::MTFSB0))
       .addImm(31);
 
-    BuildMI(*BB, MI, dl, TII->get(Mode & 2 ? PPC::MTFSB1 : PPC::MTFSB0))
+    BuildMI(*BB, MI, dl, TII->get((Mode & 2) ? PPC::MTFSB1 : PPC::MTFSB0))
       .addImm(30);
   } else if (MI.getOpcode() == PPC::SETRND) {
     DebugLoc dl = MI.getDebugLoc();

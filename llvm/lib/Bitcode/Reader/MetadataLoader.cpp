@@ -103,7 +103,7 @@ static cl::opt<bool> DisableLazyLoading(
 
 namespace {
 
-static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
+static int64_t unrotateSign(uint64_t U) { return (U & 1) ? ~(U >> 1) : U >> 1; }
 
 class BitcodeReaderMetadataList {
   /// Array of metadata references.
