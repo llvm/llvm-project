@@ -1,0 +1,5 @@
+group("libunwind") {
+  deps = [
+    "//libunwind/src(//llvm/utils/gn/build/toolchain:stage2_unix)",
+  ]
+}

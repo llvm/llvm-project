@@ -68,9 +68,8 @@ std::error_code ObjectFile::printSymbolName(raw_ostream &OS,
 uint32_t ObjectFile::getSymbolAlignment(DataRefImpl DRI) const { return 0; }
 
 bool ObjectFile::isSectionBitcode(DataRefImpl Sec) const {
-  StringRef SectName;
-  if (!getSectionName(Sec, SectName))
-    return SectName == ".llvmbc";
+  if (Expected<StringRef> NameOrErr = getSectionName(Sec))
+    return *NameOrErr == ".llvmbc";
   return false;
 }
 

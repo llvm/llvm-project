@@ -1235,7 +1235,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
 
   // FIXME: once we fix LoopPass Manager, add LICM here.
   // FIXME: once we provide support for enabling MLSM, add it here.
-  // FIXME: once we provide support for enabling NewGVN, add it here.
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());
   else
@@ -1248,7 +1247,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   MainFPM.addPass(DSEPass());
 
   // FIXME: at this point, we run a bunch of loop passes:
-  // indVarSimplify, loopDeletion, loopInterchange, loopUnrool,
+  // indVarSimplify, loopDeletion, loopInterchange, loopUnroll,
   // loopVectorize. Enable them once the remaining issue with LPM
   // are sorted out.
 
@@ -1298,7 +1297,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   // Now that we have optimized the program, discard unreachable functions.
   MPM.addPass(GlobalDCEPass());
 
-  // FIXME: Enable MergeFuncs, conditionally, after ported, maybe.
+  // FIXME: Maybe enable MergeFuncs conditionally after it's ported.
   return MPM;
 }
 

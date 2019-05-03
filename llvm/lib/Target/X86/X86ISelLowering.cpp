@@ -19037,13 +19037,12 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
 
   // Creating a 256-bit horizontal op would be wasteful, and there is no 512-bit
   // equivalent, so extract the 256/512-bit source op to 128-bit if we can.
-  // This is free if we're extracting from the bottom lane: ymm/zmm -> xmm.
-  if (NumEltsPerLane <= LExtIndex)
-   return Op;
-
   SDLoc DL(Op);
-  if (BitWidth == 256 || BitWidth == 512)
-    X = extract128BitVector(X, 0, DAG, DL);
+  if (BitWidth == 256 || BitWidth == 512) {
+    unsigned LaneIdx = LExtIndex / NumEltsPerLane;
+    X = extract128BitVector(X, LaneIdx * NumEltsPerLane, DAG, DL);
+    LExtIndex %= NumEltsPerLane;
+  }
 
   // add (extractelt (X, 0), extractelt (X, 1)) --> extractelt (hadd X, X), 0
   // add (extractelt (X, 1), extractelt (X, 0)) --> extractelt (hadd X, X), 0
@@ -39344,7 +39343,9 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
 /// In short, LHS and RHS are inspected to see if LHS op RHS is of the form
 /// A horizontal-op B, for some already available A and B, and if so then LHS is
 /// set to A, RHS to B, and the routine returns 'true'.
-static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
+static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget,
+                              bool IsCommutative) {
   // If either operand is undef, bail out. The binop should be simplified.
   if (LHS.isUndef() || RHS.isUndef())
     return false;
@@ -39465,6 +39466,12 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
 
   LHS = A.getNode() ? A : B; // If A is 'UNDEF', use B for it.
   RHS = B.getNode() ? B : A; // If B is 'UNDEF', use A for it.
+
+  if (!shouldUseHorizontalOp(LHS == RHS, DAG, Subtarget))
+    return false;
+
+  LHS = DAG.getBitcast(VT, LHS);
+  RHS = DAG.getBitcast(VT, RHS);
   return true;
 }
 
@@ -39481,10 +39488,8 @@ static SDValue combineFaddFsub(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal add/sub from adds/subs of shuffles.
   if (((Subtarget.hasSSE3() && (VT == MVT::v4f32 || VT == MVT::v2f64)) ||
        (Subtarget.hasAVX() && (VT == MVT::v8f32 || VT == MVT::v4f64))) &&
-      isHorizontalBinOp(LHS, RHS, IsFadd) &&
-      shouldUseHorizontalOp(LHS == RHS, DAG, Subtarget))
-    return DAG.getNode(HorizOpcode, SDLoc(N), VT, DAG.getBitcast(VT, LHS),
-                       DAG.getBitcast(VT, RHS));
+      isHorizontalBinOp(LHS, RHS, DAG, Subtarget, IsFadd))
+    return DAG.getNode(HorizOpcode, SDLoc(N), VT, LHS, RHS);
 
   return SDValue();
 }
@@ -42380,14 +42385,12 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal adds from adds of shuffles.
   if ((VT == MVT::v8i16 || VT == MVT::v4i32 || VT == MVT::v16i16 ||
        VT == MVT::v8i32) &&
-      Subtarget.hasSSSE3() && isHorizontalBinOp(Op0, Op1, true) &&
-      shouldUseHorizontalOp(Op0 == Op1, DAG, Subtarget)) {
+      Subtarget.hasSSSE3() &&
+      isHorizontalBinOp(Op0, Op1, DAG, Subtarget, true)) {
     auto HADDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                           ArrayRef<SDValue> Ops) {
       return DAG.getNode(X86ISD::HADD, DL, Ops[0].getValueType(), Ops);
     };
-    Op0 = DAG.getBitcast(VT, Op0);
-    Op1 = DAG.getBitcast(VT, Op1);
     return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT, {Op0, Op1},
                             HADDBuilder);
   }
@@ -42513,14 +42516,12 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   if ((VT == MVT::v8i16 || VT == MVT::v4i32 || VT == MVT::v16i16 ||
        VT == MVT::v8i32) &&
-      Subtarget.hasSSSE3() && isHorizontalBinOp(Op0, Op1, false) &&
-      shouldUseHorizontalOp(Op0 == Op1, DAG, Subtarget)) {
+      Subtarget.hasSSSE3() &&
+      isHorizontalBinOp(Op0, Op1, DAG, Subtarget, false)) {
     auto HSUBBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                           ArrayRef<SDValue> Ops) {
       return DAG.getNode(X86ISD::HSUB, DL, Ops[0].getValueType(), Ops);
     };
-    Op0 = DAG.getBitcast(VT, Op0);
-    Op1 = DAG.getBitcast(VT, Op1);
     return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT, {Op0, Op1},
                             HSUBBuilder);
   }
@@ -43889,6 +43890,18 @@ static bool isFRClass(const TargetRegisterClass &RC) {
          RC.hasSuperClassEq(&X86::VR512RegClass);
 }
 
+/// Check if \p RC is a mask register class.
+/// I.e., VK* or one of their variant.
+static bool isVKClass(const TargetRegisterClass &RC) {
+  return RC.hasSuperClassEq(&X86::VK1RegClass) ||
+         RC.hasSuperClassEq(&X86::VK2RegClass) ||
+         RC.hasSuperClassEq(&X86::VK4RegClass) ||
+         RC.hasSuperClassEq(&X86::VK8RegClass) ||
+         RC.hasSuperClassEq(&X86::VK16RegClass) ||
+         RC.hasSuperClassEq(&X86::VK32RegClass) ||
+         RC.hasSuperClassEq(&X86::VK64RegClass);
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
@@ -44198,6 +44211,22 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       Res.second = &X86::VR256RegClass;
     else if (TRI->isTypeLegalForClass(X86::VR512RegClass, VT))
       Res.second = &X86::VR512RegClass;
+    else {
+      // Type mismatch and not a clobber: Return an error;
+      Res.first = 0;
+      Res.second = nullptr;
+    }
+  } else if (isVKClass(*Class)) {
+    if (VT == MVT::i1)
+      Res.second = &X86::VK1RegClass;
+    else if (VT == MVT::i8)
+      Res.second = &X86::VK8RegClass;
+    else if (VT == MVT::i16)
+      Res.second = &X86::VK16RegClass;
+    else if (VT == MVT::i32)
+      Res.second = &X86::VK32RegClass;
+    else if (VT == MVT::i64)
+      Res.second = &X86::VK64RegClass;
     else {
       // Type mismatch and not a clobber: Return an error;
       Res.first = 0;

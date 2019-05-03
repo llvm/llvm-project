@@ -42,6 +42,8 @@ def strip_all : Flag<["--"], "strip-all">,
                 HelpText<"Remove non-allocated sections outside segments. "
                          ".gnu.warning* sections are not removed">;
 def s : Flag<["-"], "s">, Alias<strip_all>;
+def no_strip_all : Flag<["--"], "no-strip-all">,
+                   HelpText<"Disable --strip-all">;
 
 def strip_all_gnu : Flag<["--"], "strip-all-gnu">,
                     HelpText<"Compatible with GNU strip's --strip-all">;

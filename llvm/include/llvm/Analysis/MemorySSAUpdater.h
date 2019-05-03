@@ -261,6 +261,7 @@ private:
   MemoryAccess *recursePhi(MemoryAccess *Phi);
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);
+  void tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs);
   void fixupDefs(const SmallVectorImpl<WeakVH> &);
   // Clone all uses and defs from BB to NewBB given a 1:1 map of all
   // instructions and blocks cloned, and a map of MemoryPhi : Definition

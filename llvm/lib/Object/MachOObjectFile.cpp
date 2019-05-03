@@ -1863,11 +1863,9 @@ void MachOObjectFile::moveSectionNext(DataRefImpl &Sec) const {
   Sec.d.a++;
 }
 
-std::error_code MachOObjectFile::getSectionName(DataRefImpl Sec,
-                                                StringRef &Result) const {
+Expected<StringRef> MachOObjectFile::getSectionName(DataRefImpl Sec) const {
   ArrayRef<char> Raw = getSectionRawName(Sec);
-  Result = parseSegmentOrSectionName(Raw.data());
-  return std::error_code();
+  return parseSegmentOrSectionName(Raw.data());
 }
 
 uint64_t MachOObjectFile::getSectionAddress(DataRefImpl Sec) const {
@@ -2000,9 +1998,8 @@ bool MachOObjectFile::isSectionVirtual(DataRefImpl Sec) const {
 
 bool MachOObjectFile::isSectionBitcode(DataRefImpl Sec) const {
   StringRef SegmentName = getSectionFinalSegmentName(Sec);
-  StringRef SectName;
-  if (!getSectionName(Sec, SectName))
-    return (SegmentName == "__LLVM" && SectName == "__bitcode");
+  if (Expected<StringRef> NameOrErr = getSectionName(Sec))
+    return (SegmentName == "__LLVM" && *NameOrErr == "__bitcode");
   return false;
 }
 

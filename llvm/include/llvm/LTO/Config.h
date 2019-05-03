@@ -141,7 +141,7 @@ struct Config {
   ///
   /// Note that in out-of-process backend scenarios, none of the hooks will be
   /// called for ThinLTO tasks.
-  typedef std::function<bool(unsigned Task, const Module &)> ModuleHookFn;
+  using ModuleHookFn = std::function<bool(unsigned Task, const Module &)>;
 
   /// This module hook is called after linking (regular LTO) or loading
   /// (ThinLTO) the module, before modifying it.
@@ -174,8 +174,8 @@ struct Config {
   ///
   /// It is called regardless of whether the backend is in-process, although it
   /// is not called from individual backend processes.
-  typedef std::function<bool(const ModuleSummaryIndex &Index)>
-      CombinedIndexHookFn;
+  using CombinedIndexHookFn =
+      std::function<bool(const ModuleSummaryIndex &Index)>;
   CombinedIndexHookFn CombinedIndexHook;
 
   /// This is a convenience function that configures this Config object to write

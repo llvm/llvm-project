@@ -878,9 +878,8 @@ define i16 @extract_extract89_v16i16_add_i16(<16 x i16> %x) {
 ; AVX1-FAST-LABEL: extract_extract89_v16i16_add_i16:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-FAST-NEXT:    vmovd %xmm0, %ecx
-; AVX1-FAST-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX1-FAST-NEXT:    addl %ecx, %eax
+; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
@@ -898,9 +897,8 @@ define i16 @extract_extract89_v16i16_add_i16(<16 x i16> %x) {
 ; AVX2-FAST-LABEL: extract_extract89_v16i16_add_i16:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-FAST-NEXT:    vmovd %xmm0, %ecx
-; AVX2-FAST-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX2-FAST-NEXT:    addl %ecx, %eax
+; AVX2-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX2-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq
@@ -918,9 +916,8 @@ define i16 @extract_extract89_v16i16_add_i16(<16 x i16> %x) {
 ; AVX512-FAST-LABEL: extract_extract89_v16i16_add_i16:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512-FAST-NEXT:    vmovd %xmm0, %ecx
-; AVX512-FAST-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX512-FAST-NEXT:    addl %ecx, %eax
+; AVX512-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX512-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX512-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-FAST-NEXT:    vzeroupper
 ; AVX512-FAST-NEXT:    retq
@@ -1035,9 +1032,8 @@ define i16 @extract_extract89_v16i16_add_i16_commute(<16 x i16> %x) {
 ; AVX1-FAST-LABEL: extract_extract89_v16i16_add_i16_commute:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-FAST-NEXT:    vmovd %xmm0, %ecx
-; AVX1-FAST-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX1-FAST-NEXT:    addl %ecx, %eax
+; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
@@ -1055,9 +1051,8 @@ define i16 @extract_extract89_v16i16_add_i16_commute(<16 x i16> %x) {
 ; AVX2-FAST-LABEL: extract_extract89_v16i16_add_i16_commute:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-FAST-NEXT:    vmovd %xmm0, %ecx
-; AVX2-FAST-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX2-FAST-NEXT:    addl %ecx, %eax
+; AVX2-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX2-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq
@@ -1075,9 +1070,8 @@ define i16 @extract_extract89_v16i16_add_i16_commute(<16 x i16> %x) {
 ; AVX512-FAST-LABEL: extract_extract89_v16i16_add_i16_commute:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512-FAST-NEXT:    vmovd %xmm0, %ecx
-; AVX512-FAST-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX512-FAST-NEXT:    addl %ecx, %eax
+; AVX512-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX512-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX512-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-FAST-NEXT:    vzeroupper
 ; AVX512-FAST-NEXT:    retq

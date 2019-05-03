@@ -192,8 +192,8 @@ public:
 /// the fly.
 ///
 /// Stream callbacks must be thread safe.
-typedef std::function<std::unique_ptr<NativeObjectStream>(unsigned Task)>
-    AddStreamFn;
+using AddStreamFn =
+    std::function<std::unique_ptr<NativeObjectStream>(unsigned Task)>;
 
 /// This is the type of a native object cache. To request an item from the
 /// cache, pass a unique string as the Key. For hits, the cached file will be
@@ -207,17 +207,16 @@ typedef std::function<std::unique_ptr<NativeObjectStream>(unsigned Task)>
 ///
 /// if (AddStreamFn AddStream = Cache(Task, Key))
 ///   ProduceContent(AddStream);
-typedef std::function<AddStreamFn(unsigned Task, StringRef Key)>
-    NativeObjectCache;
+using NativeObjectCache =
+    std::function<AddStreamFn(unsigned Task, StringRef Key)>;
 
 /// A ThinBackend defines what happens after the thin-link phase during ThinLTO.
 /// The details of this type definition aren't important; clients can only
 /// create a ThinBackend using one of the create*ThinBackend() functions below.
-typedef std::function<std::unique_ptr<ThinBackendProc>(
+using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
     Config &C, ModuleSummaryIndex &CombinedIndex,
     StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-    AddStreamFn AddStream, NativeObjectCache Cache)>
-    ThinBackend;
+    AddStreamFn AddStream, NativeObjectCache Cache)>;
 
 /// This ThinBackend runs the individual backend jobs in-process.
 ThinBackend createInProcessThinBackend(unsigned ParallelismLevel);
