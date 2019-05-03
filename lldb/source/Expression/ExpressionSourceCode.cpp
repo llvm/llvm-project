@@ -198,14 +198,28 @@ static bool ExprBodyContainsVar(llvm::StringRef var, llvm::StringRef body) {
 }
 
 static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
-                                  StreamString &stream, const std::string &expr) {
+                                  StreamString &stream, const std::string &expr,
+                                  lldb::LanguageType wrapping_language) {
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
     ConstString var_name = var_sp->GetName();
-    if (!var_name || var_name == ConstString("this") ||
-        var_name == ConstString(".block_descriptor") ||
-        !ExprBodyContainsVar(var_name.AsCString(), expr))
+
+    // We can check for .block_descriptor w/o checking for langauge since this
+    // is not a valid identifier in either C or C++.
+    if (!var_name || var_name == ConstString(".block_descriptor"))
+      continue;
+
+    if (!expr.empty() && !ExprBodyContainsVar(expr, var_name.GetStringRef()))
+      continue;
+
+    if ((var_name == ConstString("self") || var_name == ConstString("_cmd")) &&
+        (wrapping_language == lldb::eLanguageTypeObjC ||
+         wrapping_language == lldb::eLanguageTypeObjC_plus_plus))
+      continue;
+
+    if (var_name == ConstString("this") &&
+        wrapping_language == lldb::eLanguageTypeC_plus_plus)
       continue;
 
     stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
@@ -361,12 +375,10 @@ bool ExpressionSourceCode::GetText(
     }
 
     ConstString object_name;
-    if (Language::LanguageIsCPlusPlus(frame->GetLanguage())) {
-      if (target->GetInjectLocalVariables(&exe_ctx)) {
-        lldb::VariableListSP var_list_sp =
-            frame->GetInScopeVariableList(false, true);
-        AddLocalVariableDecls(var_list_sp, lldb_local_var_decls, m_body);
-      }
+    if (target->GetInjectLocalVariables(&exe_ctx)) {
+      lldb::VariableListSP var_list_sp =
+          frame->GetInScopeVariableList(false, true);
+      AddLocalVariableDecls(var_list_sp, lldb_local_var_decls, m_body, wrapping_language);
     }
   }
 
@@ -451,10 +463,12 @@ bool ExpressionSourceCode::GetText(
             "@implementation $__lldb_objc_class ($__lldb_category)   \n"
             "+(void)%s:(void *)$__lldb_arg                           \n"
             "{                                                       \n"
+            "    %s;                                                 \n"
             "%s"
             "}                                                       \n"
             "@end                                                    \n",
-            m_name.c_str(), m_name.c_str(), tagged_body.c_str());
+            m_name.c_str(), m_name.c_str(),
+            lldb_local_var_decls.GetData(), tagged_body.c_str());
       } else {
         wrap_stream.Printf(
             "@interface $__lldb_objc_class ($__lldb_category)       \n"
@@ -463,10 +477,12 @@ bool ExpressionSourceCode::GetText(
             "@implementation $__lldb_objc_class ($__lldb_category)  \n"
             "-(void)%s:(void *)$__lldb_arg                          \n"
             "{                                                      \n"
+            "    %s;                                                 \n"
             "%s"
             "}                                                      \n"
             "@end                                                   \n",
-            m_name.c_str(), m_name.c_str(), tagged_body.c_str());
+            m_name.c_str(), m_name.c_str(),
+            lldb_local_var_decls.GetData(), tagged_body.c_str());
       }
       break;
     case lldb::eLanguageTypeSwift: {
