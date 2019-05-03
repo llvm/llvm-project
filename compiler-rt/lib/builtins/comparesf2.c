@@ -141,8 +141,9 @@ COMPILER_RT_ALIAS(__unordsf2, __aeabi_fcmpun)
 #endif
 #endif
 
-#if defined(_WIN32)
-// The alias mechanism doesn't work on Windows, so emit wrapper functions.
+#if defined(_WIN32) && !defined(__MINGW32__)
+// The alias mechanism doesn't work on Windows except for MinGW, so emit
+// wrapper functions.
 int __eqsf2(fp_t a, fp_t b) { return __lesf2(a, b); }
 int __ltsf2(fp_t a, fp_t b) { return __lesf2(a, b); }
 int __nesf2(fp_t a, fp_t b) { return __lesf2(a, b); }
