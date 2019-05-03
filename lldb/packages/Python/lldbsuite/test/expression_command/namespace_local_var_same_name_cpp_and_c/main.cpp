@@ -1,21 +1,21 @@
 namespace error {
-  int x;
+int x;
 }
 
 struct A {
   void foo() {
-    int error=1;
+    int error = 1;
 
     return; // break here
   }
 };
 
 int main() {
- int error=1;
+  int error = 1;
 
- A a;
+  A a;
 
- a.foo();
+  a.foo();
 
- return 0; // break here
+  return 0; // break here
 }

@@ -210,18 +210,18 @@ static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
 
     // We can check for .block_descriptor w/o checking for langauge since this
     // is not a valid identifier in either C or C++.
-    if (!var_name || var_name == ConstString(".block_descriptor"))
+    if (!var_name || var_name == ".block_descriptor")
       continue;
 
     if (!expr.empty() && !ExprBodyContainsVar(expr, var_name.GetStringRef()))
       continue;
 
-    if ((var_name == ConstString("self") || var_name == ConstString("_cmd")) &&
+    if ((var_name == "self" || var_name == "_cmd") &&
         (wrapping_language == lldb::eLanguageTypeObjC ||
          wrapping_language == lldb::eLanguageTypeObjC_plus_plus))
       continue;
 
-    if (var_name == ConstString("this") &&
+    if (var_name == "this" &&
         wrapping_language == lldb::eLanguageTypeC_plus_plus)
       continue;
 
@@ -405,7 +405,7 @@ bool ClangExpressionSourceCode::GetText(
             "@implementation $__lldb_objc_class ($__lldb_category)  \n"
             "-(void)%s:(void *)$__lldb_arg                          \n"
             "{                                                      \n"
-            "    %s;                                                 \n"
+            "    %s;                                                \n"
             "%s"
             "}                                                      \n"
             "@end                                                   \n",
