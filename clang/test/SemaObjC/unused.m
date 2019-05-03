@@ -33,7 +33,7 @@ void test2() {
                       // expected-note {{introduce a parameter name to make 'x' part of the selector}} \
                       // expected-note {{or insert whitespace before ':' to use 'x' as parameter name and have an empty entry in the selector}}
 
-(int)y:  // expected-warning {{unused}}  expected-warning {{'y' used as the name of the previous parameter rather than as part of the selector}} \
+(int)y:  // expected-warning {{'y' used as the name of the previous parameter rather than as part of the selector}} \
          // expected-note {{introduce a parameter name to make 'y' part of the selector}} \
          // expected-note {{or insert whitespace before ':' to use 'y' as parameter name and have an empty entry in the selector}}
 (int) __attribute__((unused))z { return x; }
