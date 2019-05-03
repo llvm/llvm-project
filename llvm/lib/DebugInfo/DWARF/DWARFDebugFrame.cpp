@@ -301,7 +301,7 @@ void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
   OS << format("  Data alignment factor: %d\n", (int32_t)DataAlignmentFactor);
   OS << format("  Return address column: %d\n", (int32_t)ReturnAddressRegister);
   if (Personality)
-    OS << format("  Personality Address: %08x\n", *Personality);
+    OS << format("  Personality Address: %016" PRIx64 "\n", *Personality);
   if (!AugmentationData.empty()) {
     OS << "  Augmentation data:    ";
     for (uint8_t Byte : AugmentationData)
@@ -320,7 +320,7 @@ void FDE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
                (uint32_t)InitialLocation,
                (uint32_t)InitialLocation + (uint32_t)AddressRange);
   if (LSDAAddress)
-    OS << format("  LSDA Address: %08x\n", *LSDAAddress);
+    OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
   CFIs.dump(OS, MRI, IsEH);
   OS << "\n";
 }
