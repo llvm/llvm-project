@@ -30,11 +30,16 @@ namespace lld {
 namespace coff {
 
 SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
-    : Chunk(SectionKind), File(F), Header(H),
-      Relocs(File->getCOFFObj()->getRelocations(Header)), Repl(this) {
+    : Chunk(SectionKind), File(F), Header(H), Repl(this) {
+  // Initialize Relocs.
+  setRelocs(File->getCOFFObj()->getRelocations(Header));
+
   // Initialize SectionName.
+  StringRef SectionName;
   if (Expected<StringRef> E = File->getCOFFObj()->getSectionName(Header))
     SectionName = *E;
+  SectionNameData = SectionName.data();
+  SectionNameSize = SectionName.size();
 
   Alignment = Header->getAlignment();
 
@@ -48,7 +53,7 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
-static_assert(sizeof(SectionChunk) <= 128, "SectionChunk grew unexpectedly");
+static_assert(sizeof(SectionChunk) <= 120, "SectionChunk grew unexpectedly");
 
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
@@ -343,8 +348,8 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
 
   // Apply relocations.
   size_t InputSize = getSize();
-  for (size_t I = 0, E = Relocs.size(); I < E; I++) {
-    const coff_relocation &Rel = Relocs[I];
+  for (size_t I = 0, E = RelocsSize; I < E; I++) {
+    const coff_relocation &Rel = RelocsData[I];
 
     // Check for an invalid relocation offset. This check isn't perfect, because
     // we don't have the relocation size, which is only known after checking the
@@ -437,8 +442,8 @@ static uint8_t getBaserelType(const coff_relocation &Rel) {
 // fixed by the loader if load-time relocation is needed.
 // Only called when base relocation is enabled.
 void SectionChunk::getBaserels(std::vector<Baserel> *Res) {
-  for (size_t I = 0, E = Relocs.size(); I < E; I++) {
-    const coff_relocation &Rel = Relocs[I];
+  for (size_t I = 0, E = RelocsSize; I < E; I++) {
+    const coff_relocation &Rel = RelocsData[I];
     uint8_t Ty = getBaserelType(Rel);
     if (Ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
@@ -534,7 +539,7 @@ static int getRuntimePseudoRelocSize(uint16_t Type) {
 // imported from another DLL).
 void SectionChunk::getRuntimePseudoRelocs(
     std::vector<RuntimePseudoReloc> &Res) {
-  for (const coff_relocation &Rel : Relocs) {
+  for (const coff_relocation &Rel : getRelocs()) {
     auto *Target =
         dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
     if (!Target || !Target->IsRuntimePseudoReloc)
@@ -587,7 +592,7 @@ ArrayRef<uint8_t> SectionChunk::getContents() const {
 
 ArrayRef<uint8_t> SectionChunk::consumeDebugMagic() {
   assert(isCodeView());
-  return consumeDebugMagic(getContents(), SectionName);
+  return consumeDebugMagic(getContents(), getSectionName());
 }
 
 ArrayRef<uint8_t> SectionChunk::consumeDebugMagic(ArrayRef<uint8_t> Data,
