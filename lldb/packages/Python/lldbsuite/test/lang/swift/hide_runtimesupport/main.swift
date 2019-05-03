@@ -9,10 +9,10 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func use(_ t: T) {}
+func use<T>(_ t: T) {}
 
 func foo<T>(_ x: T) -> () {
-  use("(\x)")
+  use("\(x)")
   use("break here")
 }
 
