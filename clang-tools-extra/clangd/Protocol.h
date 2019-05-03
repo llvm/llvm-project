@@ -206,11 +206,10 @@ struct TextEdit {
   /// The string to be inserted. For delete operations use an
   /// empty string.
   std::string newText;
-
-  bool operator==(const TextEdit &rhs) const {
-    return newText == rhs.newText && range == rhs.range;
-  }
 };
+inline bool operator==(const TextEdit &L, const TextEdit &R) {
+  return std::tie(L.newText, L.range) == std::tie(R.newText, R.range);
+}
 bool fromJSON(const llvm::json::Value &, TextEdit &);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
@@ -294,7 +293,7 @@ using CompletionItemKindBitset = std::bitset<CompletionItemKindMax + 1>;
 bool fromJSON(const llvm::json::Value &, CompletionItemKindBitset &);
 CompletionItemKind
 adjustKindToCapability(CompletionItemKind Kind,
-                       CompletionItemKindBitset &supportedCompletionItemKinds);
+                       CompletionItemKindBitset &SupportedCompletionItemKinds);
 
 /// A symbol kind.
 enum class SymbolKind {
@@ -352,7 +351,7 @@ enum class OffsetEncoding {
 };
 llvm::json::Value toJSON(const OffsetEncoding &);
 bool fromJSON(const llvm::json::Value &, OffsetEncoding &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, OffsetEncoding OS);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, OffsetEncoding);
 
 // This struct doesn't mirror LSP!
 // The protocol defines deeply nested structures for client capabilities.
