@@ -71,7 +71,6 @@ private:
 
   const XCOFFSectionHeader *toSection(DataRefImpl Ref) const;
 
-  uint16_t getNumberOfSections() const;
 
 public:
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -122,6 +121,18 @@ public:
   XCOFFObjectFile(MemoryBufferRef Object, std::error_code &EC);
 
   const XCOFFFileHeader *getFileHeader() const { return FileHdrPtr; }
+
+  uint16_t getMagic() const;
+  uint16_t getNumberOfSections() const;
+  int32_t  getTimeStamp() const;
+  uint32_t  getSymbolTableOffset() const;
+
+  // Note that this value is signed and might return a negative value. Negative
+  // values are reserved for future use.
+  int32_t  getNumberOfSymbolTableEntries() const;
+
+  uint16_t getOptionalHeaderSize() const;
+  uint16_t getFlags() const;
 }; // XCOFFObjectFile
 
 } // namespace object
