@@ -209,8 +209,10 @@ void test(int i) {
 }
 }
 
+namespace {
 // CHECK: struct {{\[\[gnu::visibility\(\"hidden\"\)\]\]}} S;
 struct [[gnu::visibility("hidden")]] S;
+}
 
 // CHECK:      struct CXXFunctionalCastExprPrint {
 // CHECK-NEXT: } fce = CXXFunctionalCastExprPrint{};
