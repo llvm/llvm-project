@@ -68,12 +68,6 @@ void (^blk)(ObjCTy *, ObjCTy *) =
   second = 0; // expected-error{{variable declared with 'objc_externally_retained' cannot be modified in ARC}}
 };
 
-void (^blk2)(ObjCTy *, ObjCTy *) =
-    ^(__strong ObjCTy *first, ObjCTy *second) __attribute__((objc_externally_retained)) {
-  first = 0;
-  second = 0; // expected-error{{variable declared with 'objc_externally_retained' cannot be modified in ARC}}
-};
-
 void test8(EXT_RET ObjCTy *x) {} // expected-warning{{'objc_externally_retained' attribute only applies to variables}}
 
 #pragma clang attribute ext_ret.push(__attribute__((objc_externally_retained)), apply_to=any(function, block, objc_method))

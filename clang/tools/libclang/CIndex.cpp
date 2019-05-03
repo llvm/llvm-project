@@ -1614,10 +1614,6 @@ bool CursorVisitor::VisitParenTypeLoc(ParenTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
-bool CursorVisitor::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
-  return Visit(TL.getInnerLoc());
-}
-
 bool CursorVisitor::VisitPointerTypeLoc(PointerTypeLoc TL) {
   return Visit(TL.getPointeeLoc());
 }

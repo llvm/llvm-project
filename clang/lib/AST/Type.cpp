@@ -973,7 +973,6 @@ public:
 
   SUGARED_TYPE_CLASS(Typedef)
   SUGARED_TYPE_CLASS(ObjCTypeParam)
-  SUGARED_TYPE_CLASS(MacroQualified)
 
   QualType VisitAdjustedType(const AdjustedType *T) {
     QualType originalType = recurse(T->getOriginalType());
@@ -1734,10 +1733,6 @@ namespace {
 
     Type *VisitAttributedType(const AttributedType *T) {
       return Visit(T->getModifiedType());
-    }
-
-    Type *VisitMacroQualifiedType(const MacroQualifiedType *T) {
-      return Visit(T->getUnderlyingType());
     }
 
     Type *VisitAdjustedType(const AdjustedType *T) {
@@ -3163,20 +3158,6 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
 
 QualType TypedefType::desugar() const {
   return getDecl()->getUnderlyingType();
-}
-
-QualType MacroQualifiedType::desugar() const { return getUnderlyingType(); }
-
-QualType MacroQualifiedType::getModifiedType() const {
-  // Step over MacroQualifiedTypes from the same macro to find the type
-  // ultimately qualified by the macro qualifier.
-  QualType Inner = cast<AttributedType>(getUnderlyingType())->getModifiedType();
-  while (auto *InnerMQT = dyn_cast<MacroQualifiedType>(Inner)) {
-    if (InnerMQT->getMacroIdentifier() != getMacroIdentifier())
-      break;
-    Inner = InnerMQT->getModifiedType();
-  }
-  return Inner;
 }
 
 TypeOfExprType::TypeOfExprType(Expr *E, QualType can)

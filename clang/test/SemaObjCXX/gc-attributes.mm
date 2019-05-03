@@ -3,7 +3,7 @@
 @interface A
 @end
 
-void f0(__strong A **); // expected-note{{candidate function not viable: 1st argument ('A *__weak *') has __weak ownership, but parameter has __strong ownership}}
+void f0(__strong A**); // expected-note{{candidate function not viable: 1st argument ('A *__weak *') has __weak ownership, but parameter has __strong ownership}}
 
 void test_f0() {
   A *a;
@@ -12,7 +12,7 @@ void test_f0() {
   f0(&a2); // expected-error{{no matching function}}
 }
 
-void f1(__weak A **); // expected-note{{candidate function not viable: 1st argument ('A *__strong *') has __strong ownership, but parameter has __weak ownership}}
+void f1(__weak A**); // expected-note{{candidate function not viable: 1st argument ('A *__strong *') has __strong ownership, but parameter has __weak ownership}}
 
 void test_f1() {
   A *a;
