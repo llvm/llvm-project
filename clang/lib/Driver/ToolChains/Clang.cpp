@@ -2651,6 +2651,11 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
 }
 
 void Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
+  if (const char *ModuleCacheStrDir = ::getenv("CUSTOM_CLANG_MODULE_CACHE")) {
+    Result.append(ModuleCacheStrDir,
+                  ModuleCacheStrDir + strlen(ModuleCacheStrDir));
+    return;
+  }
   llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false, Result);
   llvm::sys::path::append(Result, "org.llvm.clang.");
   appendUserToPath(Result);
