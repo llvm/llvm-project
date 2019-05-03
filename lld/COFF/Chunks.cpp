@@ -33,7 +33,8 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
     : Chunk(SectionKind), File(F), Header(H),
       Relocs(File->getCOFFObj()->getRelocations(Header)), Repl(this) {
   // Initialize SectionName.
-  File->getCOFFObj()->getSectionName(Header, SectionName);
+  if (Expected<StringRef> E = File->getCOFFObj()->getSectionName(Header))
+    SectionName = *E;
 
   Alignment = Header->getAlignment();
 

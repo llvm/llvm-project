@@ -24,16 +24,17 @@ class TestStdGen(unittest.TestCase):
 
     actual = ParseIndexPage(html)
     expected = [
-      ("abs", "abs.html"),
-      ("abs", "complex/abs.html"),
-      ("acos", "acos.html"),
-      ("acosh", "acosh.html"),
-      ("as_bytes", "as_bytes.html"),
+      ("abs", "abs.html", True),
+      ("abs", "complex/abs.html", True),
+      ("acos", "acos.html", False),
+      ("acosh", "acosh.html", False),
+      ("as_bytes", "as_bytes.html", False),
     ]
     self.assertEqual(len(actual), len(expected))
     for i in range(0, len(actual)):
       self.assertEqual(expected[i][0], actual[i][0])
       self.assertTrue(actual[i][1].endswith(expected[i][1]))
+      self.assertEqual(expected[i][2], actual[i][2])
 
 
   def testParseSymbolPage_SingleHeader(self):
@@ -46,9 +47,13 @@ class TestStdGen(unittest.TestCase):
   <td></td>
   <td></td>
   </tr>
+  <tr class="t-dcl">
+    <td>void foo()</td>
+    <td>this is matched</td>
+  </tr>
 </tbody></table>
 """
-    self.assertEqual(ParseSymbolPage(html), ['<cmath>'])
+    self.assertEqual(ParseSymbolPage(html, 'foo'), set(['<cmath>']))
 
 
   def testParseSymbolPage_MulHeaders(self):
@@ -63,6 +68,10 @@ class TestStdGen(unittest.TestCase):
      <td></td>
     <td></td>
   </tr>
+  <tr class="t-dcl">
+    <td>void bar()</td>
+    <td>this mentions foo, but isn't matched</td>
+  </tr>
   <tr class="t-dsc-header">
     <td> <div>Defined in header <code><a href="cstdio.html" title="cstdio">&lt;cstdio&gt;</a></code>
      </div></td>
@@ -75,10 +84,14 @@ class TestStdGen(unittest.TestCase):
     <td></td>
     <td></td>
   </tr>
+  <tr class="t-dcl">
+    <td>void foo()</td>
+    <td>this is matched</td>
+  </tr>
 </tbody></table>
 """
-    self.assertEqual(ParseSymbolPage(html),
-                    ['<cstddef>', '<cstdio>', '<cstdlib>'])
+    self.assertEqual(ParseSymbolPage(html, "foo"),
+                     set(['<cstdio>', '<cstdlib>']))
 
 
   def testParseSymbolPage_MulHeadersInSameDiv(self):
@@ -86,6 +99,7 @@ class TestStdGen(unittest.TestCase):
     # Defined in header <algorithm>
     # Defined in header <utility>
     html = """
+<table class="t-dcl-begin"><tbody>
 <tr class="t-dsc-header">
 <td><div>
      Defined in header <code><a href="../header/algorithm.html" title="cpp/header/algorithm">&lt;algorithm&gt;</a></code><br>
@@ -93,8 +107,14 @@ class TestStdGen(unittest.TestCase):
 </div></td>
 <td></td>
 </tr>
+<tr class="t-dcl">
+  <td>void foo()</td>
+  <td>this is matched</td>
+</tr>
+</tbody></table>
 """
-    self.assertEqual(ParseSymbolPage(html), ['<algorithm>', '<utility>'])
+    self.assertEqual(ParseSymbolPage(html, "foo"),
+                     set(['<algorithm>', '<utility>']))
 
 
 if __name__ == '__main__':

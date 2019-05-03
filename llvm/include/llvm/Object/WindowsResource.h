@@ -120,6 +120,7 @@ private:
                                            const WindowsResource *Owner);
 
   BinaryStreamReader Reader;
+  const WindowsResource *Owner;
   bool IsStringType;
   ArrayRef<UTF16> Type;
   uint16_t TypeID;
@@ -151,7 +152,7 @@ class WindowsResourceParser {
 public:
   class TreeNode;
   WindowsResourceParser();
-  Error parse(WindowsResource *WR);
+  Error parse(WindowsResource *WR, std::vector<std::string> &Duplicates);
   void printTree(raw_ostream &OS) const;
   const TreeNode &getTree() const { return Root; }
   const ArrayRef<std::vector<uint8_t>> getData() const { return Data; }

@@ -7,7 +7,6 @@ add_lldb_library(lldbPluginInstructionMIPS PLUGIN
 
   LINK_LIBS
     lldbCore
-    lldbInterpreter
     lldbSymbol
     lldbTarget
     lldbPluginProcessUtility

@@ -235,42 +235,52 @@ private:
 
   typedef std::map<const clang::Decl *, DeclOrigin> OriginMap;
 
-  class Minion : public clang::ASTImporter {
+  /// ASTImporter that intercepts and records the import process of the
+  /// underlying ASTImporter.
+  ///
+  /// This class updates the map from declarations to their original
+  /// declarations and can record and complete declarations that have been
+  /// imported in a certain interval.
+  ///
+  /// When intercepting a declaration import, the ASTImporterDelegate uses the
+  /// CxxModuleHandler to replace any missing or malformed declarations with
+  /// their counterpart from a C++ module.
+  class ASTImporterDelegate : public clang::ASTImporter {
   public:
-    Minion(ClangASTImporter &master, clang::ASTContext *target_ctx,
-           clang::ASTContext *source_ctx)
+    ASTImporterDelegate(ClangASTImporter &master, clang::ASTContext *target_ctx,
+                        clang::ASTContext *source_ctx)
         : clang::ASTImporter(*target_ctx, master.m_file_manager, *source_ctx,
                              master.m_file_manager, true /*minimal*/),
           m_decls_to_deport(nullptr), m_decls_already_deported(nullptr),
           m_master(master), m_source_ctx(source_ctx) {}
 
-    /// Scope guard that attaches a CxxModuleHandler to a Minion and deattaches
-    /// it at the end of the scope. Supports being used multiple times on the
-    /// same Minion instance in nested scopes.
+    /// Scope guard that attaches a CxxModuleHandler to an ASTImporterDelegate
+    /// and deattaches it at the end of the scope. Supports being used multiple
+    /// times on the same ASTImporterDelegate instance in nested scopes.
     class CxxModuleScope {
-      /// The handler we attach to the Minion.
+      /// The handler we attach to the ASTImporterDelegate.
       CxxModuleHandler m_handler;
-      /// The Minion we are supposed to attach the handler to.
-      Minion &m_minion;
-      /// True iff we attached the handler to the Minion.
+      /// The ASTImporterDelegate we are supposed to attach the handler to.
+      ASTImporterDelegate &m_delegate;
+      /// True iff we attached the handler to the ASTImporterDelegate.
       bool m_valid = false;
 
     public:
-      CxxModuleScope(Minion &minion, clang::ASTContext *dst_ctx)
-          : m_minion(minion) {
-        // If the minion doesn't have a CxxModuleHandler yet, create one
+      CxxModuleScope(ASTImporterDelegate &delegate, clang::ASTContext *dst_ctx)
+          : m_delegate(delegate) {
+        // If the delegate doesn't have a CxxModuleHandler yet, create one
         // and attach it.
-        if (!minion.m_std_handler) {
-          m_handler = CxxModuleHandler(minion, dst_ctx);
+        if (!delegate.m_std_handler) {
+          m_handler = CxxModuleHandler(delegate, dst_ctx);
           m_valid = true;
-          minion.m_std_handler = &m_handler;
+          delegate.m_std_handler = &m_handler;
         }
       }
       ~CxxModuleScope() {
         if (m_valid) {
           // Make sure no one messed with the handler we placed.
-          assert(m_minion.m_std_handler == &m_handler);
-          m_minion.m_std_handler = nullptr;
+          assert(m_delegate.m_std_handler == &m_handler);
+          m_delegate.m_std_handler = nullptr;
         }
       }
     };
@@ -279,7 +289,7 @@ private:
     llvm::Expected<clang::Decl *> ImportImpl(clang::Decl *From) override;
 
   public:
-    // A call to "InitDeportWorkQueues" puts the minion into deport mode.
+    // A call to "InitDeportWorkQueues" puts the delegate into deport mode.
     // In deport mode, every copied Decl that could require completion is
     // recorded and placed into the decls_to_deport set.
     //
@@ -287,8 +297,8 @@ private:
     // are in decls_to_deport, adding any Decls it sees along the way that it
     // hasn't already deported.  It proceeds until decls_to_deport is empty.
     //
-    // These calls must be paired.  Leaving a minion in deport mode or trying
-    // to start deport minion with a new pair of queues will result in an
+    // These calls must be paired.  Leaving a delegate in deport mode or trying
+    // to start deport delegate with a new pair of queues will result in an
     // assertion failure.
 
     void
@@ -314,18 +324,18 @@ private:
     CxxModuleHandler *m_std_handler = nullptr;
   };
 
-  typedef std::shared_ptr<Minion> MinionSP;
-  typedef std::map<clang::ASTContext *, MinionSP> MinionMap;
+  typedef std::shared_ptr<ASTImporterDelegate> ImporterDelegateSP;
+  typedef std::map<clang::ASTContext *, ImporterDelegateSP> DelegateMap;
   typedef std::map<const clang::NamespaceDecl *, NamespaceMapSP>
       NamespaceMetaMap;
 
   struct ASTContextMetadata {
     ASTContextMetadata(clang::ASTContext *dst_ctx)
-        : m_dst_ctx(dst_ctx), m_minions(), m_origins(), m_namespace_maps(),
+        : m_dst_ctx(dst_ctx), m_delegates(), m_origins(), m_namespace_maps(),
           m_map_completer(nullptr) {}
 
     clang::ASTContext *m_dst_ctx;
-    MinionMap m_minions;
+    DelegateMap m_delegates;
     OriginMap m_origins;
 
     NamespaceMetaMap m_namespace_maps;
@@ -360,18 +370,20 @@ private:
       return ASTContextMetadataSP();
   }
 
-  MinionSP GetMinion(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx) {
+  ImporterDelegateSP GetDelegate(clang::ASTContext *dst_ctx,
+                                 clang::ASTContext *src_ctx) {
     ASTContextMetadataSP context_md = GetContextMetadata(dst_ctx);
 
-    MinionMap &minions = context_md->m_minions;
-    MinionMap::iterator minion_iter = minions.find(src_ctx);
+    DelegateMap &delegates = context_md->m_delegates;
+    DelegateMap::iterator delegate_iter = delegates.find(src_ctx);
 
-    if (minion_iter == minions.end()) {
-      MinionSP minion = MinionSP(new Minion(*this, dst_ctx, src_ctx));
-      minions[src_ctx] = minion;
-      return minion;
+    if (delegate_iter == delegates.end()) {
+      ImporterDelegateSP delegate =
+          ImporterDelegateSP(new ASTImporterDelegate(*this, dst_ctx, src_ctx));
+      delegates[src_ctx] = delegate;
+      return delegate;
     } else {
-      return minion_iter->second;
+      return delegate_iter->second;
     }
   }
 

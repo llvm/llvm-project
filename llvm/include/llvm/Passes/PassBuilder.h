@@ -432,7 +432,7 @@ public:
   /// {{@ Parse a textual pass pipeline description into a specific PassManager
   ///
   /// Automatic deduction of an appropriate pass manager stack is not supported.
-  /// For example, to insert a loop pass 'lpass' into a FunctinoPassManager,
+  /// For example, to insert a loop pass 'lpass' into a FunctionPassManager,
   /// this is the valid pipeline text:
   ///
   ///   function(lpass)

@@ -11,7 +11,12 @@ group("default") {
     "//llvm/test",
   ]
   if (current_os == "linux") {
-    deps += [ "//compiler-rt" ]
+    deps += [
+      "//compiler-rt",
+      "//libcxx",
+      "//libcxxabi",
+      "//libunwind",
+    ]
   }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]

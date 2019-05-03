@@ -4339,6 +4339,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::SIGN_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid SIGN_EXTEND!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "SIGN_EXTEND result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4355,6 +4358,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::ZERO_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid ZERO_EXTEND!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "ZERO_EXTEND result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4371,6 +4377,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::ANY_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid ANY_EXTEND!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "ANY_EXTEND result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4398,6 +4407,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::TRUNCATE:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid TRUNCATE!");
+    assert(VT.isVector() == Operand.getValueType().isVector() &&
+           "TRUNCATE result type type should be vector iff the operand "
+           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop truncate
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4804,38 +4816,30 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
 
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
                                          EVT VT, SDValue N1, SDValue N2) {
+  // TODO: We don't do any constant folding for strict FP opcodes here, but we
+  //       should. That will require dealing with a potentially non-default
+  //       rounding mode, checking the "opStatus" return value from the APFloat
+  //       math calculations, and possibly other variations.
   auto *N1CFP = dyn_cast<ConstantFPSDNode>(N1.getNode());
   auto *N2CFP = dyn_cast<ConstantFPSDNode>(N2.getNode());
-  bool HasFPExceptions = TLI->hasFloatingPointExceptions();
   if (N1CFP && N2CFP) {
     APFloat C1 = N1CFP->getValueAPF(), C2 = N2CFP->getValueAPF();
-    APFloat::opStatus Status;
     switch (Opcode) {
     case ISD::FADD:
-      Status = C1.add(C2, APFloat::rmNearestTiesToEven);
-      if (!HasFPExceptions || Status != APFloat::opInvalidOp)
-        return getConstantFP(C1, DL, VT);
-      break;
+      C1.add(C2, APFloat::rmNearestTiesToEven);
+      return getConstantFP(C1, DL, VT);
     case ISD::FSUB:
-      Status = C1.subtract(C2, APFloat::rmNearestTiesToEven);
-      if (!HasFPExceptions || Status != APFloat::opInvalidOp)
-        return getConstantFP(C1, DL, VT);
-      break;
+      C1.subtract(C2, APFloat::rmNearestTiesToEven);
+      return getConstantFP(C1, DL, VT);
     case ISD::FMUL:
-      Status = C1.multiply(C2, APFloat::rmNearestTiesToEven);
-      if (!HasFPExceptions || Status != APFloat::opInvalidOp)
-        return getConstantFP(C1, DL, VT);
-      break;
+      C1.multiply(C2, APFloat::rmNearestTiesToEven);
+      return getConstantFP(C1, DL, VT);
     case ISD::FDIV:
-      Status = C1.divide(C2, APFloat::rmNearestTiesToEven);
-      if (!HasFPExceptions || Status != APFloat::opInvalidOp)
-        return getConstantFP(C1, DL, VT);
-      break;
+      C1.divide(C2, APFloat::rmNearestTiesToEven);
+      return getConstantFP(C1, DL, VT);
     case ISD::FREM:
-      Status = C1.mod(C2);
-      if (!HasFPExceptions || Status != APFloat::opInvalidOp)
-        return getConstantFP(C1, DL, VT);
-      break;
+      C1.mod(C2);
+      return getConstantFP(C1, DL, VT);
     case ISD::FCOPYSIGN:
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);
@@ -5311,10 +5315,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       APFloat  V1 = N1CFP->getValueAPF();
       const APFloat &V2 = N2CFP->getValueAPF();
       const APFloat &V3 = N3CFP->getValueAPF();
-      APFloat::opStatus s =
-        V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
-      if (!TLI->hasFloatingPointExceptions() || s != APFloat::opInvalidOp)
-        return getConstantFP(V1, DL, VT);
+      V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
+      return getConstantFP(V1, DL, VT);
     }
     break;
   }

@@ -1827,32 +1827,24 @@ CGDebugInfo::CollectFunctionTemplateParams(const FunctionDecl *FD,
 }
 
 llvm::DINodeArray CGDebugInfo::CollectVarTemplateParams(const VarDecl *VL,
-    llvm::DIFile *Unit) {
-  if (auto *TS = dyn_cast<VarTemplateSpecializationDecl>(VL)) {
-    auto T = TS->getSpecializedTemplateOrPartial();
-    auto TA = TS->getTemplateArgs().asArray();
-    // Collect parameters for a partial specialization
-    if (T.is<VarTemplatePartialSpecializationDecl *>()) {
-      const TemplateParameterList *TList =
-        T.get<VarTemplatePartialSpecializationDecl *>()
-        ->getTemplateParameters();
-      return CollectTemplateParams(TList, TA, Unit);
-    }
-
-    // Collect parameters for an explicit specialization
-    if (T.is<VarTemplateDecl *>()) {
-      const TemplateParameterList *TList = T.get<VarTemplateDecl *>()
-        ->getTemplateParameters();
-      return CollectTemplateParams(TList, TA, Unit);
-    }
-  }
-  return llvm::DINodeArray();
+                                                        llvm::DIFile *Unit) {
+  // Always get the full list of parameters, not just the ones from the
+  // specialization. A partial specialization may have fewer parameters than
+  // there are arguments.
+  auto *TS = dyn_cast<VarTemplateSpecializationDecl>(VL);
+  if (!TS)
+    return llvm::DINodeArray();
+  VarTemplateDecl *T = TS->getSpecializedTemplate();
+  const TemplateParameterList *TList = T->getTemplateParameters();
+  auto TA = TS->getTemplateArgs().asArray();
+  return CollectTemplateParams(TList, TA, Unit);
 }
 
 llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(
     const ClassTemplateSpecializationDecl *TSpecial, llvm::DIFile *Unit) {
-  // Always get the full list of parameters, not just the ones from
-  // the specialization.
+  // Always get the full list of parameters, not just the ones from the
+  // specialization. A partial specialization may have fewer parameters than
+  // there are arguments.
   TemplateParameterList *TPList =
       TSpecial->getSpecializedTemplate()->getTemplateParameters();
   const TemplateArgumentList &TAList = TSpecial->getTemplateArgs();

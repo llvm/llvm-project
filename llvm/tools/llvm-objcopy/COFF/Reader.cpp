@@ -75,8 +75,10 @@ Error COFFReader::readSections(Object &Obj) const {
     ArrayRef<coff_relocation> Relocs = COFFObj.getRelocations(Sec);
     for (const coff_relocation &R : Relocs)
       S.Relocs.push_back(R);
-    if (auto EC = COFFObj.getSectionName(Sec, S.Name))
-      return errorCodeToError(EC);
+    if (Expected<StringRef> NameOrErr = COFFObj.getSectionName(Sec))
+      S.Name = *NameOrErr;
+    else
+      return NameOrErr.takeError();
     if (Sec->hasExtendedRelocations())
       return createStringError(object_error::parse_failed,
                                "Extended relocations not supported yet");

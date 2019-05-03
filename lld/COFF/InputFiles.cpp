@@ -168,9 +168,11 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   const coff_section *Sec = getSection(SectionNumber);
 
   StringRef Name;
-  if (auto EC = COFFObj->getSectionName(Sec, Name))
+  if (Expected<StringRef> E = COFFObj->getSectionName(Sec))
+    Name = *E;
+  else
     fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
-          EC.message());
+          toString(E.takeError()));
 
   if (Name == ".drectve") {
     ArrayRef<uint8_t> Data;
@@ -242,7 +244,8 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
     COFFObj->getSymbolName(Sym, Name);
 
     const coff_section *ParentSec = getSection(ParentIndex);
-    COFFObj->getSectionName(ParentSec, ParentName);
+    if (Expected<StringRef> E = COFFObj->getSectionName(ParentSec))
+      ParentName = *E;
     error(toString(this) + ": associative comdat " + Name + " (sec " +
           Twine(SectionNumber) + ") has invalid reference to section " +
           ParentName + " (sec " + Twine(ParentIndex) + ")");

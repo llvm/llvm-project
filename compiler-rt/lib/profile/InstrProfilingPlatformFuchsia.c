@@ -70,7 +70,7 @@ static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
       return -1;
 
     /* Create VMO to hold the profile data. */
-    Status = _zx_vmo_create(0, 0, &__llvm_profile_vmo);
+    Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &__llvm_profile_vmo);
     if (Status != ZX_OK)
       return -1;
 

@@ -48,6 +48,7 @@ namespace clangd {
 struct PreambleData {
   PreambleData(PrecompiledPreamble Preamble, std::vector<Diag> Diags,
                IncludeStructure Includes,
+               std::vector<std::string> MainFileMacros,
                std::unique_ptr<PreambleFileStatusCache> StatCache,
                CanonicalIncludes CanonIncludes);
 
@@ -57,6 +58,10 @@ struct PreambleData {
   // Processes like code completions and go-to-definitions will need #include
   // information, and their compile action skips preamble range.
   IncludeStructure Includes;
+  // Macros defined in the preamble section of the main file.
+  // Users care about headers vs main-file, not preamble vs non-preamble.
+  // These should be treated as main-file entities e.g. for code completion.
+  std::vector<std::string> MainFileMacros;
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::unique_ptr<PreambleFileStatusCache> StatCache;

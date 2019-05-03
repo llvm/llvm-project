@@ -4257,9 +4257,11 @@ ClangASTContext::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
   if (qual_type->isAnyPointerType()) {
     if (qual_type->isObjCObjectPointerType())
       return lldb::eLanguageTypeObjC;
+    if (qual_type->getPointeeCXXRecordDecl())
+      return lldb::eLanguageTypeC_plus_plus;
 
     clang::QualType pointee_type(qual_type->getPointeeType());
-    if (pointee_type->getPointeeCXXRecordDecl() != nullptr)
+    if (pointee_type->getPointeeCXXRecordDecl())
       return lldb::eLanguageTypeC_plus_plus;
     if (pointee_type->isObjCObjectOrInterfaceType())
       return lldb::eLanguageTypeObjC;
