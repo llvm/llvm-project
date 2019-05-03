@@ -1152,7 +1152,6 @@ private:
     Parser *Self;
     CachedTokens Toks;
     IdentifierInfo &AttrName;
-    IdentifierInfo *MacroII = nullptr;
     SourceLocation AttrNameLoc;
     SmallVector<Decl*, 2> Decls;
 

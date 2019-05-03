@@ -6200,16 +6200,6 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     return Context.getParenType(InnerType);
   }
 
-  case TYPE_MACRO_QUALIFIED: {
-    if (Record.size() != 2) {
-      Error("incorrect encoding of macro defined type");
-      return QualType();
-    }
-    QualType UnderlyingTy = readType(*Loc.F, Record, Idx);
-    IdentifierInfo *MacroII = GetIdentifierInfo(*Loc.F, Record, Idx);
-    return Context.getMacroQualifiedType(UnderlyingTy, MacroII);
-  }
-
   case TYPE_PACK_EXPANSION: {
     if (Record.size() != 2) {
       Error("incorrect encoding of pack expansion type");
@@ -6529,10 +6519,6 @@ void TypeLocReader::VisitDecayedTypeLoc(DecayedTypeLoc TL) {
 
 void TypeLocReader::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   // nothing to do
-}
-
-void TypeLocReader::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
-  TL.setExpansionLoc(ReadSourceLocation());
 }
 
 void TypeLocReader::VisitBlockPointerTypeLoc(BlockPointerTypeLoc TL) {

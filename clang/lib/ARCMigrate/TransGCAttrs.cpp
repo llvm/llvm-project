@@ -68,9 +68,6 @@ public:
         if (handleAttr(Attr, D))
           break;
         TL = Attr.getModifiedLoc();
-      } else if (MacroQualifiedTypeLoc MDTL =
-                     TL.getAs<MacroQualifiedTypeLoc>()) {
-        TL = MDTL.getInnerLoc();
       } else if (ArrayTypeLoc Arr = TL.getAs<ArrayTypeLoc>()) {
         TL = Arr.getElementLoc();
       } else if (PointerTypeLoc PT = TL.getAs<PointerTypeLoc>()) {
