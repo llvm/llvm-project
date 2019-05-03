@@ -3059,21 +3059,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::EXTRACT_ELEMENT: {
     Known = computeKnownBits(Op.getOperand(0), Depth+1);
     const unsigned Index = Op.getConstantOperandVal(1);
-    const unsigned BitWidth = Op.getValueSizeInBits();
+    const unsigned EltBitWidth = Op.getValueSizeInBits();
 
     // Remove low part of known bits mask
-    Known.Zero = Known.Zero.getHiBits(Known.Zero.getBitWidth() - Index * BitWidth);
-    Known.One = Known.One.getHiBits(Known.One.getBitWidth() - Index * BitWidth);
+    Known.Zero = Known.Zero.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
+    Known.One = Known.One.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
 
     // Remove high part of known bit mask
-    Known = Known.trunc(BitWidth);
+    Known = Known.trunc(EltBitWidth);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
     SDValue InVec = Op.getOperand(0);
     SDValue EltNo = Op.getOperand(1);
     EVT VecVT = InVec.getValueType();
-    const unsigned BitWidth = Op.getValueSizeInBits();
     const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
     const unsigned NumSrcElts = VecVT.getVectorNumElements();
     // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
@@ -3670,7 +3669,6 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     SDValue InVec = Op.getOperand(0);
     SDValue InVal = Op.getOperand(1);
     SDValue EltNo = Op.getOperand(2);
-    unsigned NumElts = InVec.getValueType().getVectorNumElements();
 
     ConstantSDNode *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
     if (CEltNo && CEltNo->getAPIntValue().ult(NumElts)) {
