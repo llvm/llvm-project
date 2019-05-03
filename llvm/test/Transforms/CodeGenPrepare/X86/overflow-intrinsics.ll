@@ -47,16 +47,15 @@ define i64 @uaddo3(i64 %a, i64 %b) nounwind ssp {
   ret i64 %Q
 }
 
-; TODO? CGP sinks the compare before we have a chance to form the overflow intrinsic.
-
 define i64 @uaddo4(i64 %a, i64 %b, i1 %c) nounwind ssp {
 ; CHECK-LABEL: @uaddo4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[B]], [[ADD]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[TMP0]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i64 0
@@ -363,7 +362,7 @@ define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
   ret i1 %ov
 }
 
-; This used to verify insertion point for multi-BB, but now we just bail out.
+; Verify insertion point for multi-BB.
 
 declare void @call(i1)
 
@@ -372,14 +371,15 @@ define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[S:%.*]] = sub i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i64 [[S]], i64* [[P:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[F]]
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[COND]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
 entry:
   br i1 %cond, label %t, label %f

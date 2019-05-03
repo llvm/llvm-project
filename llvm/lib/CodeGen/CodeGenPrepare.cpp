@@ -388,9 +388,9 @@ class TypePromotionTransaction;
     bool tryToSinkFreeOperands(Instruction *I);
     bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
                                      Intrinsic::ID IID);
-    bool optimizeCmp(CmpInst *Cmp);
-    bool combineToUSubWithOverflow(CmpInst *Cmp);
-    bool combineToUAddWithOverflow(CmpInst *Cmp);
+    bool optimizeCmp(CmpInst *Cmp, bool &ModifiedDT);
+    bool combineToUSubWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
+    bool combineToUAddWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
   };
 
 } // end anonymous namespace
@@ -484,13 +484,9 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     if (!LargeOffsetGEPMap.empty())
       MadeChange |= splitLargeGEPOffsets();
 
-    // Really free instructions removed during promotion or kept around to
-    // improve efficiency (see comments in overflow intrinsic transforms).
-    for (Instruction *I : RemovedInsts) {
-      if (I->getParent())
-        I->removeFromParent();
+    // Really free removed instructions during promotion.
+    for (Instruction *I : RemovedInsts)
       I->deleteValue();
-    }
 
     EverMadeChange |= MadeChange;
     SeenChainsForSExt.clear();
@@ -1181,20 +1177,6 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  CmpInst *Cmp,
                                                  Intrinsic::ID IID) {
-  if (BO->getParent() != Cmp->getParent()) {
-    // We used to use a dominator tree here to allow multi-block optimization.
-    // But that was problematic because:
-    // 1. It could cause a perf regression by hoisting the math op into the
-    //    critical path.
-    // 2. It could cause a perf regression by creating a value that was live
-    //    across multiple blocks and increasing register pressure.
-    // 3. Use of a dominator tree could cause large compile-time regression.
-    //    This is because we recompute the DT on every change in the main CGP
-    //    run-loop. The recomputing is probably unnecessary in many cases, so if
-    //    that was fixed, using a DT here would be ok.
-    return false;
-  }
-
   // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
   Value *Arg0 = BO->getOperand(0);
   Value *Arg1 = BO->getOperand(1);
@@ -1204,28 +1186,45 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     Arg1 = ConstantExpr::getNeg(cast<Constant>(Arg1));
   }
 
-  // Insert at the first instruction of the pair.
-  Instruction *InsertPt = nullptr;
-  for (Instruction &Iter : *Cmp->getParent()) {
-    if (&Iter == BO || &Iter == Cmp) {
-      InsertPt = &Iter;
-      break;
+  Instruction *InsertPt;
+  if (BO->hasOneUse() && BO->user_back() == Cmp) {
+    // If the math is only used by the compare, insert at the compare to keep
+    // the condition in the same block as its users. (CGP aggressively sinks
+    // compares to help out SDAG.)
+    InsertPt = Cmp;
+  } else {
+    // The math and compare may be independent instructions. Check dominance to
+    // determine the insertion point for the intrinsic.
+    bool MathDominates = getDT(*BO->getFunction()).dominates(BO, Cmp);
+    if (!MathDominates && !getDT(*BO->getFunction()).dominates(Cmp, BO))
+      return false;
+
+    BasicBlock *MathBB = BO->getParent(), *CmpBB = Cmp->getParent();
+    if (MathBB != CmpBB) {
+      // Avoid hoisting an extra op into a dominating block and creating a
+      // potentially longer critical path.
+      if (!MathDominates)
+        return false;
+      // Check that the insertion doesn't create a value that is live across
+      // more than two blocks, so to minimise the increase in register pressure.
+      BasicBlock *Dominator = MathDominates ? MathBB : CmpBB;
+      BasicBlock *Dominated = MathDominates ? CmpBB : MathBB;
+      auto Successors = successors(Dominator);
+      if (llvm::find(Successors, Dominated) == Successors.end())
+        return false;
     }
+
+    InsertPt = MathDominates ? cast<Instruction>(BO) : cast<Instruction>(Cmp);
   }
-  assert(InsertPt != nullptr && "Parent block did not contain cmp or binop");
 
   IRBuilder<> Builder(InsertPt);
   Value *MathOV = Builder.CreateBinaryIntrinsic(IID, Arg0, Arg1);
   Value *Math = Builder.CreateExtractValue(MathOV, 0, "math");
   Value *OV = Builder.CreateExtractValue(MathOV, 1, "ov");
-
-  // Delay the actual removal/deletion of the binop and compare for efficiency.
-  // If we delete those now, we would invalidate the instruction iterator and
-  // trigger dominator tree updates.
   BO->replaceAllUsesWith(Math);
   Cmp->replaceAllUsesWith(OV);
-  RemovedInsts.insert(BO);
-  RemovedInsts.insert(Cmp);
+  BO->eraseFromParent();
+  Cmp->eraseFromParent();
   return true;
 }
 
@@ -1261,7 +1260,8 @@ static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
 
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
-bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp) {
+bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp,
+                                               bool &ModifiedDT) {
   Value *A, *B;
   BinaryOperator *Add;
   if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add))))
@@ -1281,10 +1281,13 @@ bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp) {
   if (!replaceMathCmpWithIntrinsic(Add, Cmp, Intrinsic::uadd_with_overflow))
     return false;
 
+  // Reset callers - do not crash by iterating over a dead instruction.
+  ModifiedDT = true;
   return true;
 }
 
-bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp) {
+bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
+                                               bool &ModifiedDT) {
   // We are not expecting non-canonical/degenerate code. Just bail out.
   Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
   if (isa<Constant>(A) && isa<Constant>(B))
@@ -1339,6 +1342,8 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp) {
   if (!replaceMathCmpWithIntrinsic(Sub, Cmp, Intrinsic::usub_with_overflow))
     return false;
 
+  // Reset callers - do not crash by iterating over a dead instruction.
+  ModifiedDT = true;
   return true;
 }
 
@@ -1408,14 +1413,14 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
   return MadeChange;
 }
 
-bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp) {
+bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, bool &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
 
-  if (combineToUAddWithOverflow(Cmp))
+  if (combineToUAddWithOverflow(Cmp, ModifiedDT))
     return true;
 
-  if (combineToUSubWithOverflow(Cmp))
+  if (combineToUSubWithOverflow(Cmp, ModifiedDT))
     return true;
 
   return false;
@@ -6940,7 +6945,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   }
 
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    if (TLI && optimizeCmp(Cmp))
+    if (TLI && optimizeCmp(Cmp, ModifiedDT))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
