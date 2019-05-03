@@ -14,11 +14,10 @@ define i1 @PR41004(i32 %x, i32 %y, i32 %t1) {
 ; CHECK-NEXT:    br label [[SELECT_END]]
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[MUL:%.*]] = phi i32 [ [[REM]], [[SELECT_TRUE_SINK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[T1:%.*]], i32 1)
-; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MATH]], [[MUL]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[NEG:%.*]] = add i32 [[T1:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[NEG]], [[MUL]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
 entry:
   %rem = srem i32 %x, 2
