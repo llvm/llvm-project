@@ -69,6 +69,11 @@ struct BaseNoByval : Small {
   int bb;
 };
 
+struct SmallWithPrivate {
+private:
+ int i;
+};
+
 // WIN32: declare dso_local void @"{{.*take_bools_and_chars.*}}"
 // WIN32:       (<{ i8, [3 x i8], i8, [3 x i8], %struct.SmallWithDtor,
 // WIN32:           i8, [3 x i8], i8, [3 x i8], i32, i8, [3 x i8] }>* inalloca)
@@ -165,13 +170,19 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 // WIN64:   call void @"??1SmallWithDtor@@QEAA@XZ"
 // WIN64: }
 // WOA64: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i64 %s.coerce) {{.*}} {
-// WOA64:   call void @"??1SmallWithDtor@@QEAA@XZ"
+// WOA64:   call void @"??1SmallWithDtor@@QEAA@XZ"(%struct.SmallWithDtor* %s)
 // WOA64: }
 
 // FIXME: MSVC incompatible!
 // WOA: define dso_local arm_aapcs_vfpcc void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(%struct.SmallWithDtor* %s) {{.*}} {
 // WOA:   call arm_aapcs_vfpcc void @"??1SmallWithDtor@@QAA@XZ"(%struct.SmallWithDtor* %s)
 // WOA: }
+
+
+// Test that the eligible non-aggregate is passed directly, but returned
+// indirectly on ARM64 Windows.
+// WOA64: define dso_local void @"?small_arg_with_private_member@@YA?AUSmallWithPrivate@@U1@@Z"(%struct.SmallWithPrivate* inreg noalias sret %agg.result, i64 %s.coerce) {{.*}} {
+SmallWithPrivate small_arg_with_private_member(SmallWithPrivate s) { return s; }
 
 void call_small_arg_with_dtor() {
   small_arg_with_dtor(SmallWithDtor());
