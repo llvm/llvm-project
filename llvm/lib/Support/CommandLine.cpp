@@ -88,7 +88,36 @@ void parser<char>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 
+static StringRef ArgPrefix = "  -";
+static StringRef ArgPrefixLong = "  --";
+static StringRef ArgHelpPrefix = " - ";
+
+static size_t argPlusPrefixesSize(StringRef ArgName) {
+  size_t Len = ArgName.size();
+  if (Len == 1)
+    return Len + ArgPrefix.size() + ArgHelpPrefix.size();
+  return Len + ArgPrefixLong.size() + ArgHelpPrefix.size();
+}
+
+static StringRef argPrefix(StringRef ArgName) {
+  if (ArgName.size() == 1)
+    return ArgPrefix;
+  return ArgPrefixLong;
+}
+
 namespace {
+
+class PrintArg {
+  StringRef ArgName;
+public:
+  PrintArg(StringRef ArgName) : ArgName(ArgName) {}
+  friend raw_ostream &operator<<(raw_ostream &OS, const PrintArg&);
+};
+
+raw_ostream &operator<<(raw_ostream &OS, const PrintArg& Arg) {
+  OS << argPrefix(Arg.ArgName) << Arg.ArgName;
+  return OS;
+}
 
 class CommandLineParser {
 public:
@@ -1339,12 +1368,12 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     if (!Handler) {
       if (SinkOpts.empty()) {
         *Errs << ProgramName << ": Unknown command line argument '" << argv[i]
-              << "'.  Try: '" << argv[0] << " -help'\n";
+              << "'.  Try: '" << argv[0] << " --help'\n";
 
         if (NearestHandler) {
           // If we know a near match, report it as well.
-          *Errs << ProgramName << ": Did you mean '-" << NearestHandlerString
-                 << "'?\n";
+          *Errs << ProgramName << ": Did you mean '"
+                << PrintArg(NearestHandlerString) << "'?\n";
         }
 
         ErrorParsing = true;
@@ -1378,14 +1407,14 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
              << ": Not enough positional command line arguments specified!\n"
              << "Must specify at least " << NumPositionalRequired
              << " positional argument" << (NumPositionalRequired > 1 ? "s" : "")
-             << ": See: " << argv[0] << " -help\n";
+             << ": See: " << argv[0] << " --help\n";
 
     ErrorParsing = true;
   } else if (!HasUnlimitedPositionals &&
              PositionalVals.size() > PositionalOpts.size()) {
     *Errs << ProgramName << ": Too many positional arguments specified!\n"
           << "Can specify at most " << PositionalOpts.size()
-          << " positional arguments: See: " << argv[0] << " -help\n";
+          << " positional arguments: See: " << argv[0] << " --help\n";
     ErrorParsing = true;
 
   } else if (!ConsumeAfterOpt) {
@@ -1498,7 +1527,7 @@ bool Option::error(const Twine &Message, StringRef ArgName, raw_ostream &Errs) {
   if (ArgName.empty())
     Errs << HelpStr; // Be nice for positional arguments
   else
-    Errs << GlobalParser->ProgramName << ": for the -" << ArgName;
+    Errs << GlobalParser->ProgramName << ": for the " << PrintArg(ArgName);
 
   Errs << " option: " << Message << "\n";
   return true;
@@ -1536,16 +1565,14 @@ static StringRef getValueStr(const Option &O, StringRef DefaultMsg) {
   return O.ValueStr;
 }
 
-static StringRef ArgPrefix = "  -";
-static StringRef ArgHelpPrefix = " - ";
-static size_t ArgPrefixesSize = ArgPrefix.size() + ArgHelpPrefix.size();
-
 //===----------------------------------------------------------------------===//
 // cl::alias class implementation
 //
 
 // Return the width of the option tag for printing...
-size_t alias::getOptionWidth() const { return ArgStr.size() + ArgPrefixesSize; }
+size_t alias::getOptionWidth() const {
+  return argPlusPrefixesSize(ArgStr);
+}
 
 void Option::printHelpStr(StringRef HelpStr, size_t Indent,
                           size_t FirstLineIndentedBy) {
@@ -1561,8 +1588,8 @@ void Option::printHelpStr(StringRef HelpStr, size_t Indent,
 
 // Print out the option for the alias.
 void alias::printOptionInfo(size_t GlobalWidth) const {
-  outs() << ArgPrefix << ArgStr;
-  printHelpStr(HelpStr, GlobalWidth, ArgStr.size() + ArgPrefixesSize);
+  outs() << PrintArg(ArgStr);
+  printHelpStr(HelpStr, GlobalWidth, argPlusPrefixesSize(ArgStr));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1574,7 +1601,7 @@ void alias::printOptionInfo(size_t GlobalWidth) const {
 
 // Return the width of the option tag for printing...
 size_t basic_parser_impl::getOptionWidth(const Option &O) const {
-  size_t Len = O.ArgStr.size();
+  size_t Len = argPlusPrefixesSize(O.ArgStr);
   auto ValName = getValueName();
   if (!ValName.empty()) {
     size_t FormattingLen = 3;
@@ -1583,7 +1610,7 @@ size_t basic_parser_impl::getOptionWidth(const Option &O) const {
     Len += getValueStr(O, ValName).size() + FormattingLen;
   }
 
-  return Len + ArgPrefixesSize;
+  return Len;
 }
 
 // printOptionInfo - Print out information about this option.  The
@@ -1591,7 +1618,7 @@ size_t basic_parser_impl::getOptionWidth(const Option &O) const {
 //
 void basic_parser_impl::printOptionInfo(const Option &O,
                                         size_t GlobalWidth) const {
-  outs() << ArgPrefix << O.ArgStr;
+  outs() << PrintArg(O.ArgStr);
 
   auto ValName = getValueName();
   if (!ValName.empty()) {
@@ -1607,7 +1634,7 @@ void basic_parser_impl::printOptionInfo(const Option &O,
 
 void basic_parser_impl::printOptionName(const Option &O,
                                         size_t GlobalWidth) const {
-  outs() << ArgPrefix << O.ArgStr;
+  outs() << PrintArg(O.ArgStr);
   outs().indent(GlobalWidth - O.ArgStr.size());
 }
 
@@ -1739,7 +1766,8 @@ static bool shouldPrintOption(StringRef Name, StringRef Description,
 // Return the width of the option tag for printing...
 size_t generic_parser_base::getOptionWidth(const Option &O) const {
   if (O.hasArgStr()) {
-    size_t Size = O.ArgStr.size() + ArgPrefixesSize + EqValue.size();
+    size_t Size =
+        argPlusPrefixesSize(O.ArgStr) + EqValue.size();
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
       StringRef Name = getOption(i);
       if (!shouldPrintOption(Name, getDescription(i), O))
@@ -1767,17 +1795,18 @@ void generic_parser_base::printOptionInfo(const Option &O,
     if (O.getValueExpectedFlag() == ValueOptional) {
       for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
         if (getOption(i).empty()) {
-          outs() << ArgPrefix << O.ArgStr;
+          outs() << PrintArg(O.ArgStr);
           Option::printHelpStr(O.HelpStr, GlobalWidth,
-                               O.ArgStr.size() + ArgPrefixesSize);
+                               argPlusPrefixesSize(O.ArgStr));
           break;
         }
       }
     }
 
-    outs() << ArgPrefix << O.ArgStr << EqValue;
+    outs() << PrintArg(O.ArgStr) << EqValue;
     Option::printHelpStr(O.HelpStr, GlobalWidth,
-                         O.ArgStr.size() + EqValue.size() + ArgPrefixesSize);
+                         EqValue.size() +
+                             argPlusPrefixesSize(O.ArgStr));
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
       StringRef OptionName = getOption(i);
       StringRef Description = getDescription(i);
@@ -1799,8 +1828,8 @@ void generic_parser_base::printOptionInfo(const Option &O,
     if (!O.HelpStr.empty())
       outs() << "  " << O.HelpStr << '\n';
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
-      auto Option = getOption(i);
-      outs() << "    -" << Option;
+      StringRef Option = getOption(i);
+      outs() << "    " << PrintArg(Option);
       Option::printHelpStr(getDescription(i), GlobalWidth, Option.size() + 8);
     }
   }
@@ -1814,7 +1843,7 @@ static const size_t MaxOptWidth = 8; // arbitrary spacing for printOptionDiff
 void generic_parser_base::printGenericOptionDiff(
     const Option &O, const GenericOptionValue &Value,
     const GenericOptionValue &Default, size_t GlobalWidth) const {
-  outs() << "  -" << O.ArgStr;
+  outs() << "  " << PrintArg(O.ArgStr);
   outs().indent(GlobalWidth - O.ArgStr.size());
 
   unsigned NumOpts = getNumOptions();
@@ -2034,7 +2063,7 @@ public:
       printSubCommands(Subs, MaxSubLen);
       outs() << "\n";
       outs() << "  Type \"" << GlobalParser->ProgramName
-             << " <subcommand> -help\" to get more help on a specific "
+             << " <subcommand> --help\" to get more help on a specific "
                 "subcommand";
     }
 
@@ -2111,7 +2140,7 @@ protected:
              Category = SortedCategories.begin(),
              E = SortedCategories.end();
          Category != E; ++Category) {
-      // Hide empty categories for -help, but show for -help-hidden.
+      // Hide empty categories for --help, but show for --help-hidden.
       const auto &CategoryOptions = CategorizedOptions[*Category];
       bool IsEmptyCategory = CategoryOptions.empty();
       if (!ShowHidden && IsEmptyCategory)
@@ -2127,7 +2156,7 @@ protected:
       else
         outs() << "\n";
 
-      // When using -help-hidden explicitly state if the category has no
+      // When using --help-hidden explicitly state if the category has no
       // options associated with it.
       if (IsEmptyCategory) {
         outs() << "  This option category has no options.\n";
@@ -2177,11 +2206,11 @@ static HelpPrinterWrapper WrappedHiddenPrinter(UncategorizedHiddenPrinter,
 static cl::OptionCategory GenericCategory("Generic Options");
 
 // Define uncategorized help printers.
-// -help-list is hidden by default because if Option categories are being used
-// then -help behaves the same as -help-list.
+// --help-list is hidden by default because if Option categories are being used
+// then --help behaves the same as --help-list.
 static cl::opt<HelpPrinter, true, parser<bool>> HLOp(
     "help-list",
-    cl::desc("Display list of available options (-help-list-hidden for more)"),
+    cl::desc("Display list of available options (--help-list-hidden for more)"),
     cl::location(UncategorizedNormalPrinter), cl::Hidden, cl::ValueDisallowed,
     cl::cat(GenericCategory), cl::sub(*AllSubCommands));
 
@@ -2195,11 +2224,11 @@ static cl::opt<HelpPrinter, true, parser<bool>>
 // behaviour at runtime depending on whether one or more Option categories have
 // been declared.
 static cl::opt<HelpPrinterWrapper, true, parser<bool>>
-    HOp("help", cl::desc("Display available options (-help-hidden for more)"),
+    HOp("help", cl::desc("Display available options (--help-hidden for more)"),
         cl::location(WrappedNormalPrinter), cl::ValueDisallowed,
         cl::cat(GenericCategory), cl::sub(*AllSubCommands));
 
-static cl::alias HOpA("h", cl::desc("Alias for -help"), cl::aliasopt(HOp),
+static cl::alias HOpA("h", cl::desc("Alias for --help"), cl::aliasopt(HOp),
                       cl::DefaultOption);
 
 static cl::opt<HelpPrinterWrapper, true, parser<bool>>
@@ -2226,7 +2255,7 @@ void HelpPrinterWrapper::operator=(bool Value) {
   // registered then it is useful to show the categorized help instead of
   // uncategorized help.
   if (GlobalParser->RegisteredOptionCategories.size() > 1) {
-    // unhide -help-list option so user can have uncategorized output if they
+    // unhide --help-list option so user can have uncategorized output if they
     // want it.
     HLOp.setHiddenFlag(NotHidden);
 

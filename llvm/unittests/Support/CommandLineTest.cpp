@@ -1042,7 +1042,7 @@ public:
 
       StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
                                           OptionAttributes...);
-      printOptionInfo(TestOption, 25);
+      printOptionInfo(TestOption, 26);
       outs().flush();
     }
     auto Buffer = MemoryBuffer::getFile(File.FilePath);
@@ -1069,8 +1069,8 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithoutSentinel) {
               cl::values(clEnumValN(OptionValue::Val, "v1", "desc1")));
 
   // clang-format off
-  EXPECT_EQ(Output, ("  -" + Opt + "=<value> - " + HelpText + "\n"
-                     "    =v1                -   desc1\n")
+  EXPECT_EQ(Output, ("  --" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                 -   desc1\n")
                         .str());
   // clang-format on
 }
@@ -1082,9 +1082,9 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinel) {
 
   // clang-format off
   EXPECT_EQ(Output,
-            ("  -" + Opt + "         - " + HelpText + "\n"
-             "  -" + Opt + "=<value> - " + HelpText + "\n"
-             "    =v1                -   desc1\n")
+            ("  --" + Opt + "         - " + HelpText + "\n"
+             "  --" + Opt + "=<value> - " + HelpText + "\n"
+             "    =v1                 -   desc1\n")
                 .str());
   // clang-format on
 }
@@ -1095,10 +1095,10 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinelWithHelp) {
                                     clEnumValN(OptionValue::Val, "", "desc2")));
 
   // clang-format off
-  EXPECT_EQ(Output, ("  -" + Opt + "         - " + HelpText + "\n"
-                     "  -" + Opt + "=<value> - " + HelpText + "\n"
-                     "    =v1                -   desc1\n"
-                     "    =<empty>           -   desc2\n")
+  EXPECT_EQ(Output, ("  --" + Opt + "         - " + HelpText + "\n"
+                     "  --" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                 -   desc1\n"
+                     "    =<empty>            -   desc2\n")
                         .str());
   // clang-format on
 }
@@ -1109,8 +1109,8 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueRequiredWithEmptyValueName) {
                                     clEnumValN(OptionValue::Val, "", "")));
 
   // clang-format off
-  EXPECT_EQ(Output, ("  -" + Opt + "=<value> - " + HelpText + "\n"
-                     "    =v1                -   desc1\n"
+  EXPECT_EQ(Output, ("  --" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                 -   desc1\n"
                      "    =<empty>\n")
                         .str());
   // clang-format on
@@ -1122,7 +1122,7 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoEmptyValueDescription) {
 
   // clang-format off
   EXPECT_EQ(Output,
-            ("  -" + Opt + "=<value> - " + HelpText + "\n"
+            ("  --" + Opt + "=<value> - " + HelpText + "\n"
              "    =v1\n").str());
   // clang-format on
 }
@@ -1147,7 +1147,7 @@ private:
 
 TEST_F(GetOptionWidthTest, GetOptionWidthArgNameLonger) {
   StringRef ArgName("a-long-argument-name");
-  size_t ExpectedStrSize = ("  -" + ArgName + "=<value> - ").str().size();
+  size_t ExpectedStrSize = ("  --" + ArgName + "=<value> - ").str().size();
   EXPECT_EQ(
       runTest(ArgName, cl::values(clEnumValN(OptionValue::Val, "v", "help"))),
       ExpectedStrSize);
