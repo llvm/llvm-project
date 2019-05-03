@@ -3330,9 +3330,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   }
 
   // Fold away ALL boolean setcc's.
-  SDValue Temp;
   if (N0.getValueType().getScalarType() == MVT::i1 && foldBooleans) {
-    EVT OpVT = N0.getValueType();
+    SDValue Temp;
     switch (Cond) {
     default: llvm_unreachable("Unknown integer setcc!");
     case ISD::SETEQ:  // X == Y  -> ~(X^Y)
