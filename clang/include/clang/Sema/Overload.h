@@ -961,13 +961,23 @@ class Sema;
     OverloadingResult BestViableFunction(Sema &S, SourceLocation Loc,
                                          OverloadCandidateSet::iterator& Best);
 
-    void NoteCandidates(Sema &S,
-                        OverloadCandidateDisplayKind OCD,
-                        ArrayRef<Expr *> Args,
+    SmallVector<OverloadCandidate *, 32> CompleteCandidates(
+        Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
+        SourceLocation OpLoc = SourceLocation(),
+        llvm::function_ref<bool(OverloadCandidate &)> Filter =
+            [](OverloadCandidate &) { return true; });
+
+    void NoteCandidates(
+        PartialDiagnosticAt PA, Sema &S, OverloadCandidateDisplayKind OCD,
+        ArrayRef<Expr *> Args, StringRef Opc = "",
+        SourceLocation Loc = SourceLocation(),
+        llvm::function_ref<bool(OverloadCandidate &)> Filter =
+            [](OverloadCandidate &) { return true; });
+
+    void NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
+                        ArrayRef<OverloadCandidate *> Cands,
                         StringRef Opc = "",
-                        SourceLocation Loc = SourceLocation(),
-                        llvm::function_ref<bool(OverloadCandidate&)> Filter =
-                          [](OverloadCandidate&) { return true; });
+                        SourceLocation OpLoc = SourceLocation());
   };
 
   bool isBetterOverloadCandidate(Sema &S,

@@ -399,11 +399,11 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     break;
   }
 
-  S.Diag(range.getBegin(), msg)
-    << CT << srcType << destType
-    << range << src->getSourceRange();
-
-  candidates.NoteCandidates(S, howManyCandidates, src);
+  candidates.NoteCandidates(
+      PartialDiagnosticAt(range.getBegin(),
+                          S.PDiag(msg) << CT << srcType << destType << range
+                                       << src->getSourceRange()),
+      S, howManyCandidates, src);
 
   return true;
 }

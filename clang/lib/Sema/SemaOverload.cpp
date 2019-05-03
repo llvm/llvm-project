@@ -3505,18 +3505,25 @@ Sema::DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType) {
   OverloadingResult OvResult =
     IsUserDefinedConversion(*this, From, ToType, ICS.UserDefined,
                             CandidateSet, false, false);
+
+  if (!(OvResult == OR_Ambiguous ||
+        (OvResult == OR_No_Viable_Function && !CandidateSet.empty())))
+    return false;
+
+  auto Cands = CandidateSet.CompleteCandidates(*this, OCD_AllCandidates, From);
   if (OvResult == OR_Ambiguous)
     Diag(From->getBeginLoc(), diag::err_typecheck_ambiguous_condition)
         << From->getType() << ToType << From->getSourceRange();
-  else if (OvResult == OR_No_Viable_Function && !CandidateSet.empty()) {
+  else { // OR_No_Viable_Function && !CandidateSet.empty()
     if (!RequireCompleteType(From->getBeginLoc(), ToType,
                              diag::err_typecheck_nonviable_condition_incomplete,
                              From->getType(), From->getSourceRange()))
       Diag(From->getBeginLoc(), diag::err_typecheck_nonviable_condition)
           << false << From->getType() << From->getSourceRange() << ToType;
-  } else
-    return false;
-  CandidateSet.NoteCandidates(*this, OCD_AllCandidates, From);
+  }
+
+  CandidateSet.NoteCandidates(
+                              *this, From, Cands);
   return true;
 }
 
@@ -10745,11 +10752,9 @@ static void CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   }
 }
 
-/// When overload resolution fails, prints diagnostic messages containing the
-/// candidates in the candidate set.
-void OverloadCandidateSet::NoteCandidates(
+SmallVector<OverloadCandidate *, 32> OverloadCandidateSet::CompleteCandidates(
     Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
-    StringRef Opc, SourceLocation OpLoc,
+    SourceLocation OpLoc,
     llvm::function_ref<bool(OverloadCandidate &)> Filter) {
   // Sort the candidates by viability and position.  Sorting directly would
   // be prohibitive, so we make a set of pointers and sort those.
@@ -10772,12 +10777,32 @@ void OverloadCandidateSet::NoteCandidates(
   llvm::stable_sort(
       Cands, CompareOverloadCandidatesForDisplay(S, OpLoc, Args.size(), Kind));
 
+  return Cands;
+}
+
+/// When overload resolution fails, prints diagnostic messages containing the
+/// candidates in the candidate set.
+void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
+    Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
+    StringRef Opc, SourceLocation OpLoc,
+    llvm::function_ref<bool(OverloadCandidate &)> Filter) {
+
+  auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
+
+  S.Diag(PD.first, PD.second);
+
+  NoteCandidates(S, Args, Cands, Opc, OpLoc);
+}
+
+void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
+                                          ArrayRef<OverloadCandidate *> Cands,
+                                          StringRef Opc, SourceLocation OpLoc) {
   bool ReportedAmbiguousConversions = false;
 
-  SmallVectorImpl<OverloadCandidate*>::iterator I, E;
   const OverloadsShown ShowOverloads = S.Diags.getShowOverloads();
   unsigned CandsShown = 0;
-  for (I = Cands.begin(), E = Cands.end(); I != E; ++I) {
+  auto I = Cands.begin(), E = Cands.end();
+  for (; I != E; ++I) {
     OverloadCandidate *Cand = *I;
 
     // Set an arbitrary limit on the number of candidate functions we'll spam
@@ -12096,22 +12121,29 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       }
     }
 
-    SemaRef.Diag(Fn->getBeginLoc(), diag::err_ovl_no_viable_function_in_call)
-        << ULE->getName() << Fn->getSourceRange();
-    CandidateSet->NoteCandidates(SemaRef, OCD_AllCandidates, Args);
+    CandidateSet->NoteCandidates(
+        PartialDiagnosticAt(
+            Fn->getBeginLoc(),
+            SemaRef.PDiag(diag::err_ovl_no_viable_function_in_call)
+                << ULE->getName() << Fn->getSourceRange()),
+        SemaRef, OCD_AllCandidates, Args);
     break;
   }
 
   case OR_Ambiguous:
-    SemaRef.Diag(Fn->getBeginLoc(), diag::err_ovl_ambiguous_call)
-        << ULE->getName() << Fn->getSourceRange();
-    CandidateSet->NoteCandidates(SemaRef, OCD_ViableCandidates, Args);
+    CandidateSet->NoteCandidates(
+        PartialDiagnosticAt(Fn->getBeginLoc(),
+                            SemaRef.PDiag(diag::err_ovl_ambiguous_call)
+                                << ULE->getName() << Fn->getSourceRange()),
+        SemaRef, OCD_ViableCandidates, Args);
     break;
 
   case OR_Deleted: {
-    SemaRef.Diag(Fn->getBeginLoc(), diag::err_ovl_deleted_call)
-        << ULE->getName() << Fn->getSourceRange();
-    CandidateSet->NoteCandidates(SemaRef, OCD_AllCandidates, Args);
+    CandidateSet->NoteCandidates(
+        PartialDiagnosticAt(Fn->getBeginLoc(),
+                            SemaRef.PDiag(diag::err_ovl_deleted_call)
+                                << ULE->getName() << Fn->getSourceRange()),
+        SemaRef, OCD_AllCandidates, Args);
 
     // We emitted an error for the unavailable/deleted function call but keep
     // the call in the AST.
@@ -12345,19 +12377,22 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     break;
 
   case OR_Ambiguous:
-    Diag(OpLoc,  diag::err_ovl_ambiguous_oper_unary)
-        << UnaryOperator::getOpcodeStr(Opc)
-        << Input->getType()
-        << Input->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_ViableCandidates, ArgsArray,
-                                UnaryOperator::getOpcodeStr(Opc), OpLoc);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(OpLoc,
+                            PDiag(diag::err_ovl_ambiguous_oper_unary)
+                                << UnaryOperator::getOpcodeStr(Opc)
+                                << Input->getType() << Input->getSourceRange()),
+        *this, OCD_ViableCandidates, ArgsArray,
+        UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
 
   case OR_Deleted:
-    Diag(OpLoc, diag::err_ovl_deleted_oper)
-        << UnaryOperator::getOpcodeStr(Opc) << Input->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_AllCandidates, ArgsArray,
-                                UnaryOperator::getOpcodeStr(Opc), OpLoc);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
+                                       << UnaryOperator::getOpcodeStr(Opc)
+                                       << Input->getSourceRange()),
+        *this, OCD_AllCandidates, ArgsArray, UnaryOperator::getOpcodeStr(Opc),
+        OpLoc);
     return ExprError();
   }
 
@@ -12591,6 +12626,9 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       // operator do not fall through to handling in built-in, but report that
       // no overloaded assignment operator found
       ExprResult Result = ExprError();
+      StringRef OpcStr = BinaryOperator::getOpcodeStr(Opc);
+      auto Cands = CandidateSet.CompleteCandidates(*this, OCD_AllCandidates,
+                                                   Args, OpLoc);
       if (Args[0]->getType()->isRecordType() &&
           Opc >= BO_Assign && Opc <= BO_OrAssign) {
         Diag(OpLoc,  diag::err_ovl_no_viable_oper)
@@ -12615,19 +12653,20 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       }
       assert(Result.isInvalid() &&
              "C++ binary operator overloading is missing candidates!");
-      if (Result.isInvalid())
-        CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args,
-                                    BinaryOperator::getOpcodeStr(Opc), OpLoc);
+      CandidateSet.NoteCandidates(*this, Args, Cands, OpcStr, OpLoc);
       return Result;
     }
 
     case OR_Ambiguous:
-      Diag(OpLoc,  diag::err_ovl_ambiguous_oper_binary)
-          << BinaryOperator::getOpcodeStr(Opc)
-          << Args[0]->getType() << Args[1]->getType()
-          << Args[0]->getSourceRange() << Args[1]->getSourceRange();
-      CandidateSet.NoteCandidates(*this, OCD_ViableCandidates, Args,
-                                  BinaryOperator::getOpcodeStr(Opc), OpLoc);
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_ambiguous_oper_binary)
+                                         << BinaryOperator::getOpcodeStr(Opc)
+                                         << Args[0]->getType()
+                                         << Args[1]->getType()
+                                         << Args[0]->getSourceRange()
+                                         << Args[1]->getSourceRange()),
+          *this, OCD_ViableCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
+          OpLoc);
       return ExprError();
 
     case OR_Deleted:
@@ -12641,13 +12680,14 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // explain why it's deleted.
         NoteDeletedFunction(Method);
         return ExprError();
-      } else {
-        Diag(OpLoc, diag::err_ovl_deleted_oper)
-            << BinaryOperator::getOpcodeStr(Opc) << Args[0]->getSourceRange()
-            << Args[1]->getSourceRange();
       }
-      CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args,
-                                  BinaryOperator::getOpcodeStr(Opc), OpLoc);
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
+                                         << BinaryOperator::getOpcodeStr(Opc)
+                                         << Args[0]->getSourceRange()
+                                         << Args[1]->getSourceRange()),
+          *this, OCD_AllCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
+          OpLoc);
       return ExprError();
   }
 
@@ -12789,32 +12829,34 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
     }
 
     case OR_No_Viable_Function: {
-      if (CandidateSet.empty())
-        Diag(LLoc, diag::err_ovl_no_oper)
-          << Args[0]->getType() << /*subscript*/ 0
-          << Args[0]->getSourceRange() << Args[1]->getSourceRange();
-      else
-        Diag(LLoc, diag::err_ovl_no_viable_subscript)
-          << Args[0]->getType()
-          << Args[0]->getSourceRange() << Args[1]->getSourceRange();
-      CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args,
-                                  "[]", LLoc);
+      PartialDiagnostic PD = CandidateSet.empty()
+          ? (PDiag(diag::err_ovl_no_oper)
+             << Args[0]->getType() << /*subscript*/ 0
+             << Args[0]->getSourceRange() << Args[1]->getSourceRange())
+          : (PDiag(diag::err_ovl_no_viable_subscript)
+             << Args[0]->getType() << Args[0]->getSourceRange()
+             << Args[1]->getSourceRange());
+      CandidateSet.NoteCandidates(PartialDiagnosticAt(LLoc, PD), *this,
+                                  OCD_AllCandidates, Args, "[]", LLoc);
       return ExprError();
     }
 
     case OR_Ambiguous:
-      Diag(LLoc,  diag::err_ovl_ambiguous_oper_binary)
-          << "[]"
-          << Args[0]->getType() << Args[1]->getType()
-          << Args[0]->getSourceRange() << Args[1]->getSourceRange();
-      CandidateSet.NoteCandidates(*this, OCD_ViableCandidates, Args,
-                                  "[]", LLoc);
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(LLoc, PDiag(diag::err_ovl_ambiguous_oper_binary)
+                                        << "[]" << Args[0]->getType()
+                                        << Args[1]->getType()
+                                        << Args[0]->getSourceRange()
+                                        << Args[1]->getSourceRange()),
+          *this, OCD_ViableCandidates, Args, "[]", LLoc);
       return ExprError();
 
     case OR_Deleted:
-      Diag(LLoc, diag::err_ovl_deleted_oper)
-          << "[]" << Args[0]->getSourceRange() << Args[1]->getSourceRange();
-      CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args, "[]", LLoc);
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(LLoc, PDiag(diag::err_ovl_deleted_oper)
+                                        << "[]" << Args[0]->getSourceRange()
+                                        << Args[1]->getSourceRange()),
+          *this, OCD_AllCandidates, Args, "[]", LLoc);
       return ExprError();
     }
 
@@ -12983,24 +13025,30 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       break;
 
     case OR_No_Viable_Function:
-      Diag(UnresExpr->getMemberLoc(),
-           diag::err_ovl_no_viable_member_function_in_call)
-        << DeclName << MemExprE->getSourceRange();
-      CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(
+              UnresExpr->getMemberLoc(),
+              PDiag(diag::err_ovl_no_viable_member_function_in_call)
+                  << DeclName << MemExprE->getSourceRange()),
+          *this, OCD_AllCandidates, Args);
       // FIXME: Leaking incoming expressions!
       return ExprError();
 
     case OR_Ambiguous:
-      Diag(UnresExpr->getMemberLoc(), diag::err_ovl_ambiguous_member_call)
-        << DeclName << MemExprE->getSourceRange();
-      CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(UnresExpr->getMemberLoc(),
+                              PDiag(diag::err_ovl_ambiguous_member_call)
+                                  << DeclName << MemExprE->getSourceRange()),
+          *this, OCD_AllCandidates, Args);
       // FIXME: Leaking incoming expressions!
       return ExprError();
 
     case OR_Deleted:
-      Diag(UnresExpr->getMemberLoc(), diag::err_ovl_deleted_member_call)
-          << DeclName << MemExprE->getSourceRange();
-      CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(UnresExpr->getMemberLoc(),
+                              PDiag(diag::err_ovl_deleted_member_call)
+                                  << DeclName << MemExprE->getSourceRange()),
+          *this, OCD_AllCandidates, Args);
       // FIXME: Leaking incoming expressions!
       return ExprError();
     }
@@ -13204,27 +13252,35 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     // below.
     break;
 
-  case OR_No_Viable_Function:
-    if (CandidateSet.empty())
-      Diag(Object.get()->getBeginLoc(), diag::err_ovl_no_oper)
-          << Object.get()->getType() << /*call*/ 1
-          << Object.get()->getSourceRange();
-    else
-      Diag(Object.get()->getBeginLoc(), diag::err_ovl_no_viable_object_call)
-          << Object.get()->getType() << Object.get()->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
+  case OR_No_Viable_Function: {
+    PartialDiagnostic PD =
+        CandidateSet.empty()
+            ? (PDiag(diag::err_ovl_no_oper)
+               << Object.get()->getType() << /*call*/ 1
+               << Object.get()->getSourceRange())
+            : (PDiag(diag::err_ovl_no_viable_object_call)
+               << Object.get()->getType() << Object.get()->getSourceRange());
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(Object.get()->getBeginLoc(), PD), *this,
+        OCD_AllCandidates, Args);
     break;
-
+  }
   case OR_Ambiguous:
-    Diag(Object.get()->getBeginLoc(), diag::err_ovl_ambiguous_object_call)
-        << Object.get()->getType() << Object.get()->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_ViableCandidates, Args);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(Object.get()->getBeginLoc(),
+                            PDiag(diag::err_ovl_ambiguous_object_call)
+                                << Object.get()->getType()
+                                << Object.get()->getSourceRange()),
+        *this, OCD_ViableCandidates, Args);
     break;
 
   case OR_Deleted:
-    Diag(Object.get()->getBeginLoc(), diag::err_ovl_deleted_object_call)
-        << Object.get()->getType() << Object.get()->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(Object.get()->getBeginLoc(),
+                            PDiag(diag::err_ovl_deleted_object_call)
+                                << Object.get()->getType()
+                                << Object.get()->getSourceRange()),
+        *this, OCD_AllCandidates, Args);
     break;
   }
 
@@ -13423,7 +13479,8 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
     // Overload resolution succeeded; we'll build the call below.
     break;
 
-  case OR_No_Viable_Function:
+  case OR_No_Viable_Function: {
+    auto Cands = CandidateSet.CompleteCandidates(*this, OCD_AllCandidates, Base);
     if (CandidateSet.empty()) {
       QualType BaseType = Base->getType();
       if (NoArrowOperatorFound) {
@@ -13441,18 +13498,22 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
     } else
       Diag(OpLoc, diag::err_ovl_no_viable_oper)
         << "operator->" << Base->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Base);
+    CandidateSet.NoteCandidates(*this, Base, Cands);
     return ExprError();
-
+  }
   case OR_Ambiguous:
-    Diag(OpLoc,  diag::err_ovl_ambiguous_oper_unary)
-      << "->" << Base->getType() << Base->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_ViableCandidates, Base);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_ambiguous_oper_unary)
+                                       << "->" << Base->getType()
+                                       << Base->getSourceRange()),
+        *this, OCD_ViableCandidates, Base);
     return ExprError();
 
   case OR_Deleted:
-    Diag(OpLoc, diag::err_ovl_deleted_oper) << "->" << Base->getSourceRange();
-    CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Base);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
+                                       << "->" << Base->getSourceRange()),
+        *this, OCD_AllCandidates, Base);
     return ExprError();
   }
 
@@ -13514,14 +13575,18 @@ ExprResult Sema::BuildLiteralOperatorCall(LookupResult &R,
     break;
 
   case OR_No_Viable_Function:
-    Diag(UDSuffixLoc, diag::err_ovl_no_viable_function_in_call)
-      << R.getLookupName();
-    CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(UDSuffixLoc,
+                            PDiag(diag::err_ovl_no_viable_function_in_call)
+                                << R.getLookupName()),
+        *this, OCD_AllCandidates, Args);
     return ExprError();
 
   case OR_Ambiguous:
-    Diag(R.getNameLoc(), diag::err_ovl_ambiguous_call) << R.getLookupName();
-    CandidateSet.NoteCandidates(*this, OCD_ViableCandidates, Args);
+    CandidateSet.NoteCandidates(
+        PartialDiagnosticAt(R.getNameLoc(), PDiag(diag::err_ovl_ambiguous_call)
+                                                << R.getLookupName()),
+        *this, OCD_ViableCandidates, Args);
     return ExprError();
   }
 

@@ -2301,8 +2301,8 @@ static bool resolveAllocationOverload(
     }
 
     if (Diagnose) {
-      S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
-          << R.getLookupName() << Range;
+      PartialDiagnosticAt PD(R.getNameLoc(), S.PDiag(diag::err_ovl_no_viable_function_in_call)
+          << R.getLookupName() << Range);
 
       // If we have aligned candidates, only note the align_val_t candidates
       // from AlignedCandidates and the non-align_val_t candidates from
@@ -2317,30 +2317,34 @@ static bool resolveAllocationOverload(
         // This was an overaligned allocation, so list the aligned candidates
         // first.
         Args.insert(Args.begin() + 1, AlignArg);
-        AlignedCandidates->NoteCandidates(S, OCD_AllCandidates, Args, "",
+        AlignedCandidates->NoteCandidates(PD, S, OCD_AllCandidates, Args, "",
                                           R.getNameLoc(), IsAligned);
         Args.erase(Args.begin() + 1);
-        Candidates.NoteCandidates(S, OCD_AllCandidates, Args, "", R.getNameLoc(),
+        Candidates.NoteCandidates(PD, S, OCD_AllCandidates, Args, "", R.getNameLoc(),
                                   IsUnaligned);
       } else {
-        Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
+        Candidates.NoteCandidates(PD, S, OCD_AllCandidates, Args);
       }
     }
     return true;
 
   case OR_Ambiguous:
     if (Diagnose) {
-      S.Diag(R.getNameLoc(), diag::err_ovl_ambiguous_call)
-          << R.getLookupName() << Range;
-      Candidates.NoteCandidates(S, OCD_ViableCandidates, Args);
+      Candidates.NoteCandidates(
+          PartialDiagnosticAt(R.getNameLoc(),
+                              S.PDiag(diag::err_ovl_ambiguous_call)
+                                  << R.getLookupName() << Range),
+          S, OCD_ViableCandidates, Args);
     }
     return true;
 
   case OR_Deleted: {
     if (Diagnose) {
-      S.Diag(R.getNameLoc(), diag::err_ovl_deleted_call)
-          << R.getLookupName() << Range;
-      Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
+      Candidates.NoteCandidates(
+          PartialDiagnosticAt(R.getNameLoc(),
+                              S.PDiag(diag::err_ovl_deleted_call)
+                                  << R.getLookupName() << Range),
+          S, OCD_AllCandidates, Args);
     }
     return true;
   }
@@ -3504,21 +3508,26 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
   }
 
   case OR_No_Viable_Function:
-    S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
-        << R.getLookupName() << Range;
-    Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
+    Candidates.NoteCandidates(
+        PartialDiagnosticAt(R.getNameLoc(),
+                            S.PDiag(diag::err_ovl_no_viable_function_in_call)
+                                << R.getLookupName() << Range),
+        S, OCD_AllCandidates, Args);
     return true;
 
   case OR_Ambiguous:
-    S.Diag(R.getNameLoc(), diag::err_ovl_ambiguous_call)
-        << R.getLookupName() << Range;
-    Candidates.NoteCandidates(S, OCD_ViableCandidates, Args);
+    Candidates.NoteCandidates(
+        PartialDiagnosticAt(R.getNameLoc(),
+                            S.PDiag(diag::err_ovl_ambiguous_call)
+                                << R.getLookupName() << Range),
+        S, OCD_ViableCandidates, Args);
     return true;
 
   case OR_Deleted: {
-    S.Diag(R.getNameLoc(), diag::err_ovl_deleted_call)
-        << R.getLookupName() << Range;
-    Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
+    Candidates.NoteCandidates(
+        PartialDiagnosticAt(R.getNameLoc(), S.PDiag(diag::err_ovl_deleted_call)
+                                                << R.getLookupName() << Range),
+        S, OCD_AllCandidates, Args);
     return true;
   }
   }

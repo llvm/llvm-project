@@ -2227,9 +2227,11 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
           return Sema::FRS_Success;
 
         case Sema::FRS_NoViableFunction:
-          SemaRef.Diag(BeginRange->getBeginLoc(), diag::err_for_range_invalid)
-              << BeginRange->getType() << BEFFound;
-          CandidateSet->NoteCandidates(SemaRef, OCD_AllCandidates, BeginRange);
+          CandidateSet->NoteCandidates(
+              PartialDiagnosticAt(BeginRange->getBeginLoc(),
+                                  SemaRef.PDiag(diag::err_for_range_invalid)
+                                      << BeginRange->getType() << BEFFound),
+              SemaRef, OCD_AllCandidates, BeginRange);
           LLVM_FALLTHROUGH;
 
         case Sema::FRS_DiagnosticIssued:
@@ -2526,9 +2528,12 @@ StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
       // Otherwise, emit diagnostics if we haven't already.
       if (RangeStatus == FRS_NoViableFunction) {
         Expr *Range = BEFFailure ? EndRangeRef.get() : BeginRangeRef.get();
-        Diag(Range->getBeginLoc(), diag::err_for_range_invalid)
-            << RangeLoc << Range->getType() << BEFFailure;
-        CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Range);
+        CandidateSet.NoteCandidates(
+            PartialDiagnosticAt(Range->getBeginLoc(),
+                                PDiag(diag::err_for_range_invalid)
+                                    << RangeLoc << Range->getType()
+                                    << BEFFailure),
+            *this, OCD_AllCandidates, Range);
       }
       // Return an error if no fix was discovered.
       if (RangeStatus != FRS_Success)
