@@ -101,6 +101,10 @@ namespace {
 
     DenseMap<unsigned, SmallVector<MachineInstr *, 2>> LiveDbgValueMap;
 
+    /// Has a bit set for every virtual register for which it was determined
+    /// that it is alive across blocks.
+    BitVector MayLiveAcrossBlocks;
+
     /// State of a physical register.
     enum RegState {
       /// A disabled register is not available for allocation, but an alias may
@@ -208,7 +212,7 @@ namespace {
                             unsigned Hint);
     LiveReg &reloadVirtReg(MachineInstr &MI, unsigned OpNum, unsigned VirtReg,
                            unsigned Hint);
-    void spillAll(MachineBasicBlock::iterator MI);
+    void spillAll(MachineBasicBlock::iterator MI, bool OnlyLiveOut);
     bool setPhysReg(MachineInstr &MI, MachineOperand &MO, MCPhysReg PhysReg);
 
     int getStackSpaceFor(unsigned VirtReg);
@@ -216,6 +220,8 @@ namespace {
                MCPhysReg AssignedReg, bool Kill);
     void reload(MachineBasicBlock::iterator Before, unsigned VirtReg,
                 MCPhysReg PhysReg);
+
+    bool mayLiveOut(unsigned VirtReg);
 
     void dumpState();
   };
@@ -249,6 +255,33 @@ int RegAllocFast::getStackSpaceFor(unsigned VirtReg) {
   // Assign the slot.
   StackSlotForVirtReg[VirtReg] = FrameIdx;
   return FrameIdx;
+}
+
+/// Returns false if \p VirtReg is known to not live out of the current block.
+bool RegAllocFast::mayLiveOut(unsigned VirtReg) {
+  if (MayLiveAcrossBlocks.test(TargetRegisterInfo::virtReg2Index(VirtReg))) {
+    // Cannot be live-out if there are no successors.
+    return !MBB->succ_empty();
+  }
+
+  // If this block loops back to itself, it would be necessary to check whether
+  // the use comes after the def.
+  if (MBB->isSuccessor(MBB))
+    return true;
+
+  // See if the first \p Limit uses of the register are all in the current
+  // block.
+  static const unsigned Limit = 8;
+  unsigned C = 0;
+  for (const MachineInstr &UseInst : MRI->reg_nodbg_instructions(VirtReg)) {
+    if (UseInst.getParent() != MBB || ++C >= Limit) {
+      MayLiveAcrossBlocks.set(TargetRegisterInfo::virtReg2Index(VirtReg));
+      // Cannot be live-out if there are no successors.
+      return !MBB->succ_empty();
+    }
+  }
+
+  return false;
 }
 
 /// Insert spill instruction for \p AssignedReg before \p Before. Update
@@ -374,13 +407,15 @@ void RegAllocFast::spillVirtReg(MachineBasicBlock::iterator MI, LiveReg &LR) {
 }
 
 /// Spill all dirty virtregs without killing them.
-void RegAllocFast::spillAll(MachineBasicBlock::iterator MI) {
+void RegAllocFast::spillAll(MachineBasicBlock::iterator MI, bool OnlyLiveOut) {
   if (LiveVirtRegs.empty())
     return;
   // The LiveRegMap is keyed by an unsigned (the virtreg number), so the order
   // of spilling here is deterministic, if arbitrary.
   for (LiveReg &LR : LiveVirtRegs) {
     if (!LR.PhysReg)
+      continue;
+    if (OnlyLiveOut && !mayLiveOut(LR.VirtReg))
       continue;
     spillVirtReg(MI, LR);
   }
@@ -1019,7 +1054,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
     // definitions may be used later on and we do not want to reuse
     // those for virtual registers in between.
     LLVM_DEBUG(dbgs() << "  Spilling remaining registers before call.\n");
-    spillAll(MI);
+    spillAll(MI, /*OnlyLiveOut*/ false);
   }
 
   // Third scan.
@@ -1129,7 +1164,7 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
 
   // Spill all physical registers holding virtual registers now.
   LLVM_DEBUG(dbgs() << "Spilling live registers at end of block.\n");
-  spillAll(MBB.getFirstTerminator());
+  spillAll(MBB.getFirstTerminator(), /*OnlyLiveOut*/ true);
 
   // Erase all the coalesced copies. We are delaying it until now because
   // LiveVirtRegs might refer to the instrs.
@@ -1158,6 +1193,8 @@ bool RegAllocFast::runOnMachineFunction(MachineFunction &MF) {
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
   StackSlotForVirtReg.resize(NumVirtRegs);
   LiveVirtRegs.setUniverse(NumVirtRegs);
+  MayLiveAcrossBlocks.clear();
+  MayLiveAcrossBlocks.resize(NumVirtRegs);
 
   // Loop over all of the basic blocks, eliminating virtual register references
   for (MachineBasicBlock &MBB : MF)
