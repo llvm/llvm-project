@@ -13311,8 +13311,6 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     assert(MD == getCurMethodDecl() && "Method parsing confused");
     MD->setBody(Body);
     if (!MD->isInvalidDecl()) {
-      if (!MD->hasSkippedBody())
-        DiagnoseUnusedParameters(MD->parameters());
       DiagnoseSizeOfParametersAndReturnValue(MD->parameters(),
                                              MD->getReturnType(), MD);
 
