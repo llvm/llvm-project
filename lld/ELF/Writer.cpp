@@ -1999,11 +1999,12 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   if (Config->ZWxneeded)
     AddHdr(PT_OPENBSD_WXNEEDED, PF_X);
 
-  // Create one PT_NOTE per a group of contiguous .note sections.
+  // Create one PT_NOTE per a group of contiguous SHT_NOTE sections with the
+  // same alignment.
   PhdrEntry *Note = nullptr;
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Type == SHT_NOTE && (Sec->Flags & SHF_ALLOC)) {
-      if (!Note || Sec->LMAExpr)
+      if (!Note || Sec->LMAExpr || Note->LastSec->Alignment != Sec->Alignment)
         Note = AddHdr(PT_NOTE, PF_R);
       Note->add(Sec);
     } else {
