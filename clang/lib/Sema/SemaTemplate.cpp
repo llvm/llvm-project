@@ -3927,13 +3927,6 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     Specialization->setAccess(VarTemplate->getAccess());
   }
 
-  // Link instantiations of static data members back to the template from
-  // which they were instantiated.
-  if (Specialization->isStaticDataMember())
-    Specialization->setInstantiationOfStaticDataMember(
-        VarTemplate->getTemplatedDecl(),
-        Specialization->getSpecializationKind());
-
   return Specialization;
 }
 
@@ -9198,7 +9191,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
 
     if (!PrevTemplate) {
       if (!Prev || !Prev->isStaticDataMember()) {
-        // We expect to see a data data member here.
+        // We expect to see a static data member here.
         Diag(D.getIdentifierLoc(), diag::err_explicit_instantiation_not_known)
             << Name;
         for (LookupResult::iterator P = Previous.begin(), PEnd = Previous.end();

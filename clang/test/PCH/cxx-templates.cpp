@@ -1,21 +1,21 @@
 // Test this without pch.
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include %S/cxx-templates.h -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include %S/cxx-templates.h %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include %S/cxx-templates.h -verify %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include %S/cxx-templates.h %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
 
 // Test with pch.
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -x c++-header -emit-pch -o %t %S/cxx-templates.h
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t %s -emit-llvm -o - -error-on-deserialized-decl doNotDeserialize -DNO_ERRORS | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -x c++-header -emit-pch -o %t %S/cxx-templates.h
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t -verify %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t %s -emit-llvm -o - -error-on-deserialized-decl doNotDeserialize -DNO_ERRORS | FileCheck %s
 
 // Test with modules.
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -x c++-header -emit-pch -o %t %S/cxx-templates.h
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -include-pch %t -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -include-pch %t %s -emit-llvm -o - -error-on-deserialized-decl doNotDeserialize -DNO_ERRORS -fmodules-ignore-macro=NO_ERRORS | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -x c++-header -emit-pch -o %t %S/cxx-templates.h
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -include-pch %t -verify %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -include-pch %t %s -emit-llvm -o - -error-on-deserialized-decl doNotDeserialize -DNO_ERRORS -fmodules-ignore-macro=NO_ERRORS | FileCheck %s
 
 // Test with pch and delayed template parsing.
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -x c++-header -emit-pch -o %t %S/cxx-templates.h
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -x c++-header -emit-pch -o %t %S/cxx-templates.h
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t -verify %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
 
 // CHECK: define weak_odr {{.*}}void @_ZN2S4IiE1mEv
 // CHECK: define linkonce_odr {{.*}}void @_ZN2S3IiE1mEv
@@ -143,14 +143,16 @@ namespace ClassScopeExplicitSpecializations {
   template int A<4>::f<1>() const;
   // expected-note@cxx-templates.h:403 2{{here}}
 
-  static_assert(A<0>().f<1>() == 3, "");
   static_assert(A<0>().f<0>() == 4, "");
-  static_assert(A<1>().f<1>() == 1, "");
+  static_assert(A<0>().f<1>() == 5, "");
+  static_assert(A<0>().f<2>() == 3, "");
   static_assert(A<1>().f<0>() == 2, "");
-  static_assert(A<2>().f<1>() == 1, "");
+  static_assert(A<1>().f<1>() == 1, "");
+  static_assert(A<1>().f<2>() == 1, "");
   static_assert(A<2>().f<0>() == 2, "");
-  static_assert(A<3>().f<1>() == 1, "");
+  static_assert(A<2>().f<1>() == 1, "");
   static_assert(A<3>().f<0>() == 2, "");
-  static_assert(A<4>().f<1>() == 1, "");
+  static_assert(A<3>().f<1>() == 1, "");
   static_assert(A<4>().f<0>() == 2, "");
+  static_assert(A<4>().f<1>() == 1, "");
 }

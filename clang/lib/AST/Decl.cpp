@@ -2414,48 +2414,61 @@ bool VarDecl::isNonEscapingByref() const {
 }
 
 VarDecl *VarDecl::getTemplateInstantiationPattern() const {
-  // If it's a variable template specialization, find the template or partial
-  // specialization from which it was instantiated.
-  if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(this)) {
-    auto From = VDTemplSpec->getInstantiatedFrom();
-    if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
-      while (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate()) {
-        if (NewVTD->isMemberSpecialization())
-          break;
-        VTD = NewVTD;
-      }
-      return getDefinitionOrSelf(VTD->getTemplatedDecl());
-    }
-    if (auto *VTPSD =
-            From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      while (auto *NewVTPSD = VTPSD->getInstantiatedFromMember()) {
-        if (NewVTPSD->isMemberSpecialization())
-          break;
-        VTPSD = NewVTPSD;
-      }
-      return getDefinitionOrSelf<VarDecl>(VTPSD);
-    }
-  }
+  const VarDecl *VD = this;
 
-  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo()) {
+  // If this is an instantiated member, walk back to the template from which
+  // it was instantiated.
+  if (MemberSpecializationInfo *MSInfo = VD->getMemberSpecializationInfo()) {
     if (isTemplateInstantiation(MSInfo->getTemplateSpecializationKind())) {
-      VarDecl *VD = getInstantiatedFromStaticDataMember();
+      VD = VD->getInstantiatedFromStaticDataMember();
       while (auto *NewVD = VD->getInstantiatedFromStaticDataMember())
         VD = NewVD;
-      return getDefinitionOrSelf(VD);
     }
   }
 
-  if (VarTemplateDecl *VarTemplate = getDescribedVarTemplate()) {
-    while (VarTemplate->getInstantiatedFromMemberTemplate()) {
-      if (VarTemplate->isMemberSpecialization())
+  // If it's an instantiated variable template specialization, find the
+  // template or partial specialization from which it was instantiated.
+  if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
+    if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
+      auto From = VDTemplSpec->getInstantiatedFrom();
+      if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+        while (!VTD->isMemberSpecialization()) {
+          auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
+          if (!NewVTD)
+            break;
+          VTD = NewVTD;
+        }
+        return getDefinitionOrSelf(VTD->getTemplatedDecl());
+      }
+      if (auto *VTPSD =
+              From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+        while (!VTPSD->isMemberSpecialization()) {
+          auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
+          if (!NewVTPSD)
+            break;
+          VTPSD = NewVTPSD;
+        }
+        return getDefinitionOrSelf<VarDecl>(VTPSD);
+      }
+    }
+  }
+
+  // If this is the pattern of a variable template, find where it was
+  // instantiated from. FIXME: Is this necessary?
+  if (VarTemplateDecl *VarTemplate = VD->getDescribedVarTemplate()) {
+    while (!VarTemplate->isMemberSpecialization()) {
+      auto *NewVT = VarTemplate->getInstantiatedFromMemberTemplate();
+      if (!NewVT)
         break;
-      VarTemplate = VarTemplate->getInstantiatedFromMemberTemplate();
+      VarTemplate = NewVT;
     }
 
     return getDefinitionOrSelf(VarTemplate->getTemplatedDecl());
   }
-  return nullptr;
+
+  if (VD == this)
+    return nullptr;
+  return getDefinitionOrSelf(const_cast<VarDecl*>(VD));
 }
 
 VarDecl *VarDecl::getInstantiatedFromStaticDataMember() const {
@@ -2471,6 +2484,17 @@ TemplateSpecializationKind VarDecl::getTemplateSpecializationKind() const {
 
   if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo())
     return MSI->getTemplateSpecializationKind();
+
+  return TSK_Undeclared;
+}
+
+TemplateSpecializationKind
+VarDecl::getTemplateSpecializationKindForInstantiation() const {
+  if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo())
+    return MSI->getTemplateSpecializationKind();
+
+  if (const auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(this))
+    return Spec->getSpecializationKind();
 
   return TSK_Undeclared;
 }
@@ -2535,15 +2559,14 @@ void VarDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
   if (VarTemplateSpecializationDecl *Spec =
           dyn_cast<VarTemplateSpecializationDecl>(this)) {
     Spec->setSpecializationKind(TSK);
-    if (TSK != TSK_ExplicitSpecialization && PointOfInstantiation.isValid() &&
+    if (TSK != TSK_ExplicitSpecialization &&
+        PointOfInstantiation.isValid() &&
         Spec->getPointOfInstantiation().isInvalid()) {
       Spec->setPointOfInstantiation(PointOfInstantiation);
       if (ASTMutationListener *L = getASTContext().getASTMutationListener())
         L->InstantiationRequested(this);
     }
-  }
-
-  if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo()) {
+  } else if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo()) {
     MSI->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization && PointOfInstantiation.isValid() &&
         MSI->getPointOfInstantiation().isInvalid()) {
@@ -3472,12 +3495,13 @@ FunctionDecl *FunctionDecl::getTemplateInstantiationPattern() const {
     return nullptr;
 
   if (FunctionTemplateDecl *Primary = getPrimaryTemplate()) {
-    while (Primary->getInstantiatedFromMemberTemplate()) {
-      // If we have hit a point where the user provided a specialization of
-      // this template, we're done looking.
-      if (Primary->isMemberSpecialization())
+    // If we hit a point where the user provided a specialization of this
+    // template, we're done looking.
+    while (!Primary->isMemberSpecialization()) {
+      auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate();
+      if (!NewPrimary)
         break;
-      Primary = Primary->getInstantiatedFromMemberTemplate();
+      Primary = NewPrimary;
     }
 
     return getDefinitionOrSelf(Primary->getTemplatedDecl());

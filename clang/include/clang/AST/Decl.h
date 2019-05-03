@@ -1434,6 +1434,12 @@ public:
   /// template specialization or instantiation this is.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
 
+  /// Get the template specialization kind of this variable for the purposes of
+  /// template instantiation. This differs from getTemplateSpecializationKind()
+  /// for an instantiation of a class-scope explicit specialization.
+  TemplateSpecializationKind
+  getTemplateSpecializationKindForInstantiation() const;
+
   /// If this variable is an instantiation of a variable template or a
   /// static data member of a class template, determine its point of
   /// instantiation.
