@@ -1270,9 +1270,11 @@ public:
   bool isExtend64() const {
     if (!isExtend())
       return false;
-    // UXTX and SXTX require a 64-bit source register (the ExtendLSL64 class).
+    // Make sure the extend expects a 32-bit source register.
     AArch64_AM::ShiftExtendType ET = getShiftExtendType();
-    return ET != AArch64_AM::UXTX && ET != AArch64_AM::SXTX;
+    return ET == AArch64_AM::UXTB || ET == AArch64_AM::SXTB ||
+           ET == AArch64_AM::UXTH || ET == AArch64_AM::SXTH ||
+           ET == AArch64_AM::UXTW || ET == AArch64_AM::SXTW;
   }
 
   bool isExtendLSL64() const {
@@ -4189,7 +4191,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "expected AArch64 condition code");
   case Match_AddSubRegExtendSmall:
     return Error(Loc,
-      "expected '[su]xt[bhw]' or 'lsl' with optional integer in range [0, 4]");
+      "expected '[su]xt[bhw]' with optional integer in range [0, 4]");
   case Match_AddSubRegExtendLarge:
     return Error(Loc,
       "expected 'sxtx' 'uxtx' or 'lsl' with optional integer in range [0, 4]");
