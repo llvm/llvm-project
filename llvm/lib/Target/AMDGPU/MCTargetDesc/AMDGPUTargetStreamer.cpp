@@ -235,6 +235,13 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
   return true;
 }
 
+bool AMDGPUTargetAsmStreamer::EmitCodeEnd() {
+  const uint32_t Encoded_s_code_end = 0xbf9f0000;
+  OS << "\t.p2alignl 6, " << Encoded_s_code_end << '\n';
+  OS << "\t.fill 32, 4, " << Encoded_s_code_end << '\n';
+  return true;
+}
+
 void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KD, uint64_t NextVGPR, uint64_t NextSGPR,
@@ -549,6 +556,18 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
              OS.EmitBytes(HSAMetadataString);
              OS.EmitLabel(DescEnd);
            });
+  return true;
+}
+
+bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
+  const uint32_t Encoded_s_code_end = 0xbf9f0000;
+
+  MCStreamer &OS = getStreamer();
+  OS.PushSection();
+  OS.EmitValueToAlignment(64, Encoded_s_code_end, 4);
+  for (unsigned I = 0; I < 32; ++I)
+    OS.EmitIntValue(Encoded_s_code_end, 4);
+  OS.PopSection();
   return true;
 }
 

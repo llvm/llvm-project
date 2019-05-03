@@ -74,6 +74,9 @@ public:
   /// \returns True on success, false on failure.
   virtual bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) = 0;
 
+  /// \returns True on success, false on failure.
+  virtual bool EmitCodeEnd() = 0;
+
   virtual void EmitAmdhsaKernelDescriptor(
       const MCSubtargetInfo &STI, StringRef KernelName,
       const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
@@ -112,6 +115,9 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;
+
+  /// \returns True on success, false on failure.
+  bool EmitCodeEnd() override;
 
   void EmitAmdhsaKernelDescriptor(
       const MCSubtargetInfo &STI, StringRef KernelName,
@@ -154,6 +160,9 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;
+
+  /// \returns True on success, false on failure.
+  bool EmitCodeEnd() override;
 
   void EmitAmdhsaKernelDescriptor(
       const MCSubtargetInfo &STI, StringRef KernelName,
