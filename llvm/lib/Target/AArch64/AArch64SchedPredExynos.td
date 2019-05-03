@@ -103,17 +103,6 @@ def ExynosScaledIdxPred : MCSchedPredicate<ExynosScaledIdxFn>;
 // Identify FP instructions.
 def ExynosFPPred : MCSchedPredicate<CheckAny<[CheckDForm, CheckQForm]>>;
 
-// Identify whether an instruction whose result is a long vector
-// operates on the upper half of the input registers.
-def ExynosLongVectorUpperFn   : TIIPredicate<
-                                  "isExynosLongVectorUpper",
-                                  MCOpcodeSwitchStatement<
-                                  [MCOpcodeSwitchCase<
-                                    IsLongVectorUpperOp.ValidOpcodes,
-                                    MCReturnStatement<TruePred>>],
-                                  MCReturnStatement<FalsePred>>>;
-def ExynosLongVectorUpperPred : MCSchedPredicate<ExynosLongVectorUpperFn>;
-
 // Identify 128-bit NEON instructions.
 def ExynosQFormPred : MCSchedPredicate<CheckQForm>;
 
