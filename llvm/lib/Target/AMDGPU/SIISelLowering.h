@@ -367,6 +367,8 @@ public:
                                     bool SNaN = false,
                                     unsigned Depth = 0) const override;
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+
+  unsigned getPrefLoopAlignment(MachineLoop *ML) const override;
 };
 
 } // End namespace llvm
