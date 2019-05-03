@@ -8,8 +8,8 @@ class TestVLA(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipIf(compiler="clang", compiler_version=['<', '8.0'])
-    def test_vla(self):
+    @skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    def test_variable_list(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec('main.c'))
