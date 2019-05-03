@@ -521,6 +521,36 @@ static bool selectSubregisterCopy(MachineInstr &I, MachineRegisterInfo &MRI,
   return true;
 }
 
+/// Helper function to get the source and destination register classes for a
+/// copy. Returns a std::pair containing the source register class for the
+/// copy, and the destination register class for the copy. If a register class
+/// cannot be determined, then it will be nullptr.
+static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
+getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
+                     MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                     const RegisterBankInfo &RBI) {
+  unsigned DstReg = I.getOperand(0).getReg();
+  unsigned SrcReg = I.getOperand(1).getReg();
+  const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+  const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
+  unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+  unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+
+  // Special casing for cross-bank copies of s1s. We can technically represent
+  // a 1-bit value with any size of register. The minimum size for a GPR is 32
+  // bits. So, we need to put the FPR on 32 bits as well.
+  //
+  // FIXME: I'm not sure if this case holds true outside of copies. If it does,
+  // then we can pull it into the helpers that get the appropriate class for a
+  // register bank. Or make a new helper that carries along some constraint
+  // information.
+  if (SrcRegBank != DstRegBank && (DstSize == 1 && SrcSize == 1))
+    SrcSize = DstSize = 32;
+
+  return {getMinClassForRegBank(SrcRegBank, SrcSize, true),
+          getMinClassForRegBank(DstRegBank, DstSize, true)};
+}
+
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
@@ -529,8 +559,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   unsigned SrcReg = I.getOperand(1).getReg();
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
-  const TargetRegisterClass *DstRC = getMinClassForRegBank(
-      DstRegBank, RBI.getSizeInBits(DstReg, MRI, TRI), true);
+
+  // Find the correct register classes for the source and destination registers.
+  const TargetRegisterClass *SrcRC;
+  const TargetRegisterClass *DstRC;
+  std::tie(SrcRC, DstRC) = getRegClassesForCopy(I, TII, MRI, TRI, RBI);
+
   if (!DstRC) {
     LLVM_DEBUG(dbgs() << "Unexpected dest size "
                       << RBI.getSizeInBits(DstReg, MRI, TRI) << '\n');
@@ -563,8 +597,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   // a SUBREG_TO_REG.
   if (I.isCopy()) {
     // Yes. Check if there's anything to fix up.
-    const TargetRegisterClass *SrcRC = getMinClassForRegBank(
-        SrcRegBank, RBI.getSizeInBits(SrcReg, MRI, TRI), true);
     if (!SrcRC) {
       LLVM_DEBUG(dbgs() << "Couldn't determine source register class\n");
       return false;
@@ -1724,12 +1756,16 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     const unsigned TReg = I.getOperand(2).getReg();
     const unsigned FReg = I.getOperand(3).getReg();
 
+    // If we have a floating-point result, then we should use a floating point
+    // select instead of an integer select.
+    bool IsFP = (RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI)->getID() !=
+                 AArch64::GPRRegBankID);
     unsigned CSelOpc = 0;
 
     if (Ty == LLT::scalar(32)) {
-      CSelOpc = AArch64::CSELWr;
+      CSelOpc = IsFP ? AArch64::FCSELSrrr : AArch64::CSELWr;
     } else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64)) {
-      CSelOpc = AArch64::CSELXr;
+      CSelOpc = IsFP ? AArch64::FCSELDrrr : AArch64::CSELXr;
     } else {
       return false;
     }
