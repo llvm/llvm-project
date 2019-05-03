@@ -17,8 +17,8 @@ declare i32 @check_mask16(i16 zeroext %res_mask, i16 zeroext %exp_mask, i8* %fna
 define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,i8* %arraydecay,i8* %fname){
 ; CHECK-LABEL: test_xmm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    subq $72, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k0
 ; CHECK-NEXT:    movl $2, %esi
 ; CHECK-NEXT:    movl $8, %eax
@@ -50,16 +50,17 @@ define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,i8* %arraydecay,i8* %f
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edx ## 4-byte Reload
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK-NEXT:    movw %r8w, (%rsp) ## 2-byte Spill
+; CHECK-NEXT:    movw %r8w, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; CHECK-NEXT:    callq _calc_expected_mask_val
 ; CHECK-NEXT:    movw %ax, %r8w
-; CHECK-NEXT:    movw (%rsp), %r10w ## 2-byte Reload
+; CHECK-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %r10w ## 2-byte Reload
 ; CHECK-NEXT:    movzwl %r10w, %edi
 ; CHECK-NEXT:    movzwl %r8w, %esi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx ## 8-byte Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
 ; CHECK-NEXT:    callq _check_mask16
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    retq
   %d2 = bitcast <2 x i64> %a to <8 x i16>
   %m2 = call i8 @llvm.x86.avx512.cvtw2mask.128(<8 x i16> %d2)

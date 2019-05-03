@@ -816,14 +816,16 @@ define void @atomic_fetch_cmpxchg64() nounwind {
 ; X32-LABEL: atomic_fetch_cmpxchg64:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
+; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    movl $1, %ebx
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X32-NEXT:    lock cmpxchg8b sc64
-; X32-NEXT:    addl $4, %esp
+; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
   %t1 = cmpxchg i64* @sc64, i64 0, i64 1 acquire acquire

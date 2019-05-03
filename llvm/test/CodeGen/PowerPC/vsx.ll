@@ -396,6 +396,8 @@ define <4 x i32> @test14(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    xxlor vs0, v2, v3
 ; CHECK-FISL-NEXT:    xxlnor v2, v2, v3
+; CHECK-FISL-NEXT:    li r3, -16
+; CHECK-FISL-NEXT:    stxvd2x vs0, r1, r3 # 16-byte Folded Spill
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test14:
@@ -428,6 +430,8 @@ define <8 x i16> @test15(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-FISL-NEXT:    xxlnor vs0, v2, v3
 ; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    li r3, -16
+; CHECK-FISL-NEXT:    stxvd2x v4, r1, r3 # 16-byte Folded Spill
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test15:
@@ -460,6 +464,8 @@ define <16 x i8> @test16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-FISL-NEXT:    xxlnor vs0, v2, v3
 ; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    li r3, -16
+; CHECK-FISL-NEXT:    stxvd2x v4, r1, r3 # 16-byte Folded Spill
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test16:
@@ -522,6 +528,8 @@ define <8 x i16> @test18(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-FISL-NEXT:    xxlandc vs0, v2, v3
 ; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    li r3, -16
+; CHECK-FISL-NEXT:    stxvd2x v4, r1, r3 # 16-byte Folded Spill
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test18:
@@ -554,6 +562,8 @@ define <16 x i8> @test19(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-FISL-NEXT:    xxlandc vs0, v2, v3
 ; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    li r3, -16
+; CHECK-FISL-NEXT:    stxvd2x v4, r1, r3 # 16-byte Folded Spill
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test19:
@@ -1680,6 +1690,8 @@ define <2 x double> @test51(<2 x double> %a, <2 x double> %b) {
 ; CHECK-FISL-LABEL: test51:
 ; CHECK-FISL:       # %bb.0:
 ; CHECK-FISL-NEXT:    xxspltd v2, v2, 0
+; CHECK-FISL-NEXT:    li r3, -16
+; CHECK-FISL-NEXT:    stxvd2x v3, r1, r3 # 16-byte Folded Spill
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test51:
