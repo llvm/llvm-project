@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -50,8 +49,6 @@ using namespace llvm;
 
 STATISTIC(NumCoalesces, "Number of copies coalesced");
 STATISTIC(NumCSEs,      "Number of common subexpression eliminated");
-STATISTIC(NumPREs,      "Number of partial redundant expression"
-                        " transformed to fully redundant");
 STATISTIC(NumPhysCSEs,
           "Number of physreg referencing common subexpr eliminated");
 STATISTIC(NumCrossBBCSEs,
@@ -87,7 +84,6 @@ namespace {
 
     void releaseMemory() override {
       ScopeMap.clear();
-      PREMap.clear();
       Exps.clear();
     }
 
@@ -102,8 +98,6 @@ namespace {
 
     unsigned LookAheadLimit = 0;
     DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
-    DenseMap<MachineInstr *, MachineBasicBlock *, MachineInstrExpressionTrait>
-        PREMap;
     ScopedHTType VNT;
     SmallVector<MachineInstr *, 64> Exps;
     unsigned CurrVN = 0;
@@ -122,17 +116,13 @@ namespace {
                           PhysDefVector &PhysDefs, bool &NonLocal) const;
     bool isCSECandidate(MachineInstr *MI);
     bool isProfitableToCSE(unsigned CSReg, unsigned Reg,
-                           MachineBasicBlock *CSBB, MachineInstr *MI);
+                           MachineInstr *CSMI, MachineInstr *MI);
     void EnterScope(MachineBasicBlock *MBB);
     void ExitScope(MachineBasicBlock *MBB);
-    bool ProcessBlockCSE(MachineBasicBlock *MBB);
+    bool ProcessBlock(MachineBasicBlock *MBB);
     void ExitScopeIfDone(MachineDomTreeNode *Node,
                          DenseMap<MachineDomTreeNode*, unsigned> &OpenChildren);
     bool PerformCSE(MachineDomTreeNode *Node);
-
-    bool isPRECandidate(MachineInstr *MI);
-    bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
-    bool PerformSimplePRE(MachineDominatorTree *DT);
   };
 
 } // end anonymous namespace
@@ -415,10 +405,9 @@ bool MachineCSE::isCSECandidate(MachineInstr *MI) {
 }
 
 /// isProfitableToCSE - Return true if it's profitable to eliminate MI with a
-/// common expression that defines Reg. CSBB is basic block where CSReg is
-/// defined.
+/// common expression that defines Reg.
 bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
-                                   MachineBasicBlock *CSBB, MachineInstr *MI) {
+                                   MachineInstr *CSMI, MachineInstr *MI) {
   // FIXME: Heuristics that works around the lack the live range splitting.
 
   // If CSReg is used at all uses of Reg, CSE should not increase register
@@ -444,6 +433,7 @@ bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
   // an immediate predecessor. We don't want to increase register pressure and
   // end up causing other computation to be spilled.
   if (TII->isAsCheapAsAMove(*MI)) {
+    MachineBasicBlock *CSBB = CSMI->getParent();
     MachineBasicBlock *BB = MI->getParent();
     if (CSBB != BB && !CSBB->isSuccessor(BB))
       return false;
@@ -498,7 +488,7 @@ void MachineCSE::ExitScope(MachineBasicBlock *MBB) {
   ScopeMap.erase(SI);
 }
 
-bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
+bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
   bool Changed = false;
 
   SmallVector<std::pair<unsigned, unsigned>, 8> CSEPairs;
@@ -608,7 +598,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
              TargetRegisterInfo::isVirtualRegister(NewReg) &&
              "Do not CSE physical register defs!");
 
-      if (!isProfitableToCSE(NewReg, OldReg, CSMI->getParent(), MI)) {
+      if (!isProfitableToCSE(NewReg, OldReg, CSMI, MI)) {
         LLVM_DEBUG(dbgs() << "*** Not profitable, avoid CSE!\n");
         DoCSE = false;
         break;
@@ -748,105 +738,10 @@ bool MachineCSE::PerformCSE(MachineDomTreeNode *Node) {
   for (MachineDomTreeNode *Node : Scopes) {
     MachineBasicBlock *MBB = Node->getBlock();
     EnterScope(MBB);
-    Changed |= ProcessBlockCSE(MBB);
+    Changed |= ProcessBlock(MBB);
     // If it's a leaf node, it's done. Traverse upwards to pop ancestors.
     ExitScopeIfDone(Node, OpenChildren);
   }
-
-  return Changed;
-}
-
-// We use stronger checks for PRE candidate rather than for CSE ones to embrace
-// checks inside ProcessBlockCSE(), not only inside isCSECandidate(). This helps
-// to exclude instrs created by PRE that won't be CSEed later.
-bool MachineCSE::isPRECandidate(MachineInstr *MI) {
-  if (!isCSECandidate(MI) ||
-      MI->isNotDuplicable() ||
-      MI->isAsCheapAsAMove() ||
-      MI->getNumDefs() != 1 ||
-      MI->getNumExplicitDefs() != 1)
-    return false;
-
-  for (auto def : MI->defs())
-    if (!TRI->isVirtualRegister(def.getReg()))
-      return false;
-
-  for (auto use : MI->uses())
-    if (use.isReg() && !TRI->isVirtualRegister(use.getReg()))
-      return false;
-
-  return true;
-}
-
-bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
-                                 MachineBasicBlock *MBB) {
-  bool Changed = false;
-  for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;) {
-    MachineInstr *MI = &*I;
-    ++I;
-
-    if (!isPRECandidate(MI))
-      continue;
-
-    if (!PREMap.count(MI)) {
-      PREMap[MI] = MBB;
-      continue;
-    }
-
-    auto MBB1 = PREMap[MI];
-    assert(
-        !DT->properlyDominates(MBB, MBB1) &&
-        "MBB cannot properly dominate MBB1 while DFS through dominators tree!");
-    auto CMBB = DT->findNearestCommonDominator(MBB, MBB1);
-
-    // Two instrs are partial redundant if their basic blocks are reachable
-    // from one to another but one doesn't dominate another.
-    if (CMBB != MBB1) {
-      auto BB = MBB->getBasicBlock(), BB1 = MBB1->getBasicBlock();
-      if (BB != nullptr && BB1 != nullptr &&
-          (isPotentiallyReachable(BB1, BB) ||
-           isPotentiallyReachable(BB, BB1))) {
-
-        assert(MI->getOperand(0).isDef() &&
-               "First operand of instr with one explicit def must be this def");
-        unsigned VReg = MI->getOperand(0).getReg();
-        unsigned NewReg = MRI->cloneVirtualRegister(VReg);
-        if (!isProfitableToCSE(NewReg, VReg, CMBB, MI))
-          continue;
-        MachineInstr &NewMI =
-            TII->duplicate(*CMBB, CMBB->getFirstTerminator(), *MI);
-        NewMI.getOperand(0).setReg(NewReg);
-
-        PREMap[MI] = CMBB;
-        ++NumPREs;
-        Changed = true;
-      }
-    }
-  }
-  return Changed;
-}
-
-// This simple PRE (partial redundancy elimination) pass doesn't actually
-// eliminate partial redundancy but transforms it to full redundancy,
-// anticipating that the next CSE step will eliminate this created redundancy.
-// If CSE doesn't eliminate this, than created instruction will remain dead
-// and eliminated later by Remove Dead Machine Instructions pass.
-bool MachineCSE::PerformSimplePRE(MachineDominatorTree *DT) {
-  SmallVector<MachineDomTreeNode *, 32> BBs;
-
-  PREMap.clear();
-  bool Changed = false;
-  BBs.push_back(DT->getRootNode());
-  do {
-    auto Node = BBs.pop_back_val();
-    const std::vector<MachineDomTreeNode *> &Children = Node->getChildren();
-    for (MachineDomTreeNode *Child : Children)
-      BBs.push_back(Child);
-
-    MachineBasicBlock *MBB = Node->getBlock();
-    Changed |= ProcessBlockPRE(DT, MBB);
-
-  } while (!BBs.empty());
 
   return Changed;
 }
@@ -861,8 +756,5 @@ bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   DT = &getAnalysis<MachineDominatorTree>();
   LookAheadLimit = TII->getMachineCSELookAheadLimit();
-  bool ChangedPRE, ChangedCSE;
-  ChangedPRE = PerformSimplePRE(DT);
-  ChangedCSE = PerformCSE(DT->getRootNode());
-  return ChangedPRE || ChangedCSE;
+  return PerformCSE(DT->getRootNode());
 }
