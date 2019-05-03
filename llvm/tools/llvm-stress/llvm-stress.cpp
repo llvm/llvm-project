@@ -276,7 +276,7 @@ protected:
 
   /// Pick a random type.
   Type *pickType() {
-    return (getRandom() & 1 ? pickVectorType() : pickScalarType());
+    return (getRandom() & 1) ? pickVectorType() : pickScalarType();
   }
 
   /// Pick a random pointer type.

@@ -2827,6 +2827,29 @@ by the compiler (eg. implicit default/copy constructors).
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInStdNamespace0')"><a name="isInStdNamespace0Anchor">isInStdNamespace</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInStdNamespace0"><pre>Matches declarations in the namespace `std`, but not in nested namespaces.
+
+Given
+  class vector {};
+  namespace foo {
+    class vector {};
+    namespace std {
+      class vector {};
+    }
+  }
+  namespace std {
+    inline namespace __1 {
+      class vector {}; // #1
+      namespace experimental {
+        class vector {};
+      }
+    }
+  }
+cxxRecordDecl(hasName("vector"), isInStdNamespace()) will match only #1.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isPrivate0')"><a name="isPrivate0Anchor">isPrivate</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isPrivate0"><pre>Matches private C++ declarations.
 

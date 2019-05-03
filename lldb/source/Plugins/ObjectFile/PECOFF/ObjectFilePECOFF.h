@@ -113,7 +113,7 @@ public:
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
-  virtual lldb_private::Address GetEntryPointAddress() override;
+  lldb_private::Address GetEntryPointAddress() override;
 
   lldb_private::Address GetBaseAddress() override;
 

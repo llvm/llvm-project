@@ -1,6 +1,6 @@
 import lldb
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
@@ -8,8 +8,9 @@ class TestVLA(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipIf(compiler="clang", compiler_version=['<', '8.0'])
-    def test_vla(self):
+    @skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    @expectedFailureAll(oslist=no_match(lldbplatformutil.getDarwinOSTriples()))
+    def test_variable_list(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec('main.c'))
@@ -25,6 +26,12 @@ class TestVLA(TestBase):
         all_locals = self.frame().GetVariables(var_opts)
         for value in all_locals:
             self.assertFalse("vla_expr" in value.name)
+
+    @decorators.skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    def test_vla(self):
+        self.build()
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec('main.c'))
 
         def test(a, array):
             for i in range(a):
