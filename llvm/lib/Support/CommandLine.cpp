@@ -421,6 +421,8 @@ void Option::setArgStr(StringRef S) {
     GlobalParser->updateArgStr(this, S);
   assert((S.empty() || S[0] != '-') && "Option can't start with '-");
   ArgStr = S;
+  if (ArgStr.size() == 1)
+    setMiscFlag(Grouping);
 }
 
 void Option::reset() {

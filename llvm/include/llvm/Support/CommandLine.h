@@ -1200,7 +1200,11 @@ template <> struct applicator<FormattingFlags> {
 };
 
 template <> struct applicator<MiscFlags> {
-  static void opt(MiscFlags MF, Option &O) { O.setMiscFlag(MF); }
+  static void opt(MiscFlags MF, Option &O) {
+    assert((MF != Grouping || O.ArgStr.size() == 1) &&
+           "cl::Grouping can only apply to single charater Options.");
+    O.setMiscFlag(MF);
+  }
 };
 
 // apply method - Apply modifiers to an option in a type safe way.
