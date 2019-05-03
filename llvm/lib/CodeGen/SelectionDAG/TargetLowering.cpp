@@ -5325,17 +5325,16 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
   EVT VT = Val.getValueType();
   int Alignment = ST->getAlignment();
   auto &MF = DAG.getMachineFunction();
-  EVT MemVT = ST->getMemoryVT();
+  EVT StoreMemVT = ST->getMemoryVT();
 
   SDLoc dl(ST);
-  if (MemVT.isFloatingPoint() || MemVT.isVector()) {
+  if (StoreMemVT.isFloatingPoint() || StoreMemVT.isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
     if (isTypeLegal(intVT)) {
       if (!isOperationLegalOrCustom(ISD::STORE, intVT) &&
-          MemVT.isVector()) {
+          StoreMemVT.isVector()) {
         // Scalarize the store and let the individual components be handled.
         SDValue Result = scalarizeVectorStore(ST, DAG);
-
         return Result;
       }
       // Expand to a bitconvert of the value to the integer type of the
@@ -5348,24 +5347,22 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
     }
     // Do a (aligned) store to a stack slot, then copy from the stack slot
     // to the final destination using (unaligned) integer loads and stores.
-    EVT StoredVT = ST->getMemoryVT();
-    MVT RegVT =
-      getRegisterType(*DAG.getContext(),
-                      EVT::getIntegerVT(*DAG.getContext(),
-                                        StoredVT.getSizeInBits()));
+    MVT RegVT = getRegisterType(
+        *DAG.getContext(),
+        EVT::getIntegerVT(*DAG.getContext(), StoreMemVT.getSizeInBits()));
     EVT PtrVT = Ptr.getValueType();
-    unsigned StoredBytes = StoredVT.getStoreSize();
+    unsigned StoredBytes = StoreMemVT.getStoreSize();
     unsigned RegBytes = RegVT.getSizeInBits() / 8;
     unsigned NumRegs = (StoredBytes + RegBytes - 1) / RegBytes;
 
     // Make sure the stack slot is also aligned for the register type.
-    SDValue StackPtr = DAG.CreateStackTemporary(StoredVT, RegVT);
+    SDValue StackPtr = DAG.CreateStackTemporary(StoreMemVT, RegVT);
     auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
 
     // Perform the original store, only redirected to the stack slot.
     SDValue Store = DAG.getTruncStore(
         Chain, dl, Val, StackPtr,
-        MachinePointerInfo::getFixedStack(MF, FrameIndex, 0), StoredVT);
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, 0), StoreMemVT);
 
     EVT StackPtrVT = StackPtr.getValueType();
 
@@ -5394,17 +5391,17 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
     // The last store may be partial.  Do a truncating store.  On big-endian
     // machines this requires an extending load from the stack slot to ensure
     // that the bits are in the right place.
-    EVT MemVT = EVT::getIntegerVT(*DAG.getContext(),
-                                  8 * (StoredBytes - Offset));
+    EVT LoadMemVT =
+        EVT::getIntegerVT(*DAG.getContext(), 8 * (StoredBytes - Offset));
 
     // Load from the stack slot.
     SDValue Load = DAG.getExtLoad(
         ISD::EXTLOAD, dl, RegVT, Store, StackPtr,
-        MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset), MemVT);
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset), LoadMemVT);
 
     Stores.push_back(
         DAG.getTruncStore(Load.getValue(1), dl, Load, Ptr,
-                          ST->getPointerInfo().getWithOffset(Offset), MemVT,
+                          ST->getPointerInfo().getWithOffset(Offset), LoadMemVT,
                           MinAlign(ST->getAlignment(), Offset),
                           ST->getMemOperand()->getFlags(), ST->getAAInfo()));
     // The order of the stores doesn't matter - say it with a TokenFactor.
@@ -5412,18 +5409,16 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
     return Result;
   }
 
-  assert(ST->getMemoryVT().isInteger() &&
-         !ST->getMemoryVT().isVector() &&
+  assert(StoreMemVT.isInteger() && !StoreMemVT.isVector() &&
          "Unaligned store of unknown type.");
   // Get the half-size VT
-  EVT NewStoredVT = ST->getMemoryVT().getHalfSizedIntegerVT(*DAG.getContext());
+  EVT NewStoredVT = StoreMemVT.getHalfSizedIntegerVT(*DAG.getContext());
   int NumBits = NewStoredVT.getSizeInBits();
   int IncrementSize = NumBits / 8;
 
   // Divide the stored value in two parts.
-  SDValue ShiftAmount =
-      DAG.getConstant(NumBits, dl, getShiftAmountTy(Val.getValueType(),
-                                                    DAG.getDataLayout()));
+  SDValue ShiftAmount = DAG.getConstant(
+      NumBits, dl, getShiftAmountTy(Val.getValueType(), DAG.getDataLayout()));
   SDValue Lo = Val;
   SDValue Hi = DAG.getNode(ISD::SRL, dl, VT, Val, ShiftAmount);
 
@@ -5442,7 +5437,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
       ST->getMemOperand()->getFlags(), ST->getAAInfo());
 
   SDValue Result =
-    DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
+      DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
   return Result;
 }
 
