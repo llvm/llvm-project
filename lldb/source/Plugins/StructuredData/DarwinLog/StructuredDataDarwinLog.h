@@ -65,7 +65,7 @@ public:
 
   void ModulesDidLoad(Process &process, ModuleList &module_list) override;
 
-  ~StructuredDataDarwinLog();
+  ~StructuredDataDarwinLog() override;
 
 private:
   // Private constructors

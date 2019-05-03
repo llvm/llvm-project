@@ -73,7 +73,7 @@ class ScriptedStackFrameRecognizer : public StackFrameRecognizer {
 public:
   ScriptedStackFrameRecognizer(lldb_private::ScriptInterpreter *interpreter,
                                const char *pclass);
-  ~ScriptedStackFrameRecognizer() {}
+  ~ScriptedStackFrameRecognizer() override {}
 
   std::string GetName() override {
     return GetPythonClassName();
