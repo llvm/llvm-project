@@ -216,52 +216,54 @@ static bool updateOperand(FoldCandidate &Fold,
         break;
       }
     }
+  }
 
-    if (Fold.needsShrink()) {
-      MachineBasicBlock *MBB = MI->getParent();
-      auto Liveness = MBB->computeRegisterLiveness(&TRI, AMDGPU::VCC, MI);
-      if (Liveness != MachineBasicBlock::LQR_Dead)
-        return false;
+  if ((Fold.isImm() || Fold.isFI()) && Fold.needsShrink()) {
+    MachineBasicBlock *MBB = MI->getParent();
+    auto Liveness = MBB->computeRegisterLiveness(&TRI, AMDGPU::VCC, MI);
+    if (Liveness != MachineBasicBlock::LQR_Dead)
+      return false;
 
-      MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
-      int Op32 = Fold.getShrinkOpcode();
-      MachineOperand &Dst0 = MI->getOperand(0);
-      MachineOperand &Dst1 = MI->getOperand(1);
-      assert(Dst0.isDef() && Dst1.isDef());
+    MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+    int Op32 = Fold.getShrinkOpcode();
+    MachineOperand &Dst0 = MI->getOperand(0);
+    MachineOperand &Dst1 = MI->getOperand(1);
+    assert(Dst0.isDef() && Dst1.isDef());
 
-      bool HaveNonDbgCarryUse = !MRI.use_nodbg_empty(Dst1.getReg());
+    bool HaveNonDbgCarryUse = !MRI.use_nodbg_empty(Dst1.getReg());
 
-      const TargetRegisterClass *Dst0RC = MRI.getRegClass(Dst0.getReg());
-      unsigned NewReg0 = MRI.createVirtualRegister(Dst0RC);
+    const TargetRegisterClass *Dst0RC = MRI.getRegClass(Dst0.getReg());
+    unsigned NewReg0 = MRI.createVirtualRegister(Dst0RC);
 
-      MachineInstr *Inst32 = TII.buildShrunkInst(*MI, Op32);
+    MachineInstr *Inst32 = TII.buildShrunkInst(*MI, Op32);
 
-      if (HaveNonDbgCarryUse) {
-        BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), Dst1.getReg())
-          .addReg(AMDGPU::VCC, RegState::Kill);
-      }
-
-      // Keep the old instruction around to avoid breaking iterators, but
-      // replace it with a dummy instruction to remove uses.
-      //
-      // FIXME: We should not invert how this pass looks at operands to avoid
-      // this. Should track set of foldable movs instead of looking for uses
-      // when looking at a use.
-      Dst0.setReg(NewReg0);
-      for (unsigned I = MI->getNumOperands() - 1; I > 0; --I)
-        MI->RemoveOperand(I);
-      MI->setDesc(TII.get(AMDGPU::IMPLICIT_DEF));
-
-      if (Fold.isCommuted())
-        TII.commuteInstruction(*Inst32, false);
-      return true;
+    if (HaveNonDbgCarryUse) {
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), Dst1.getReg())
+        .addReg(AMDGPU::VCC, RegState::Kill);
     }
 
-    Old.ChangeToImmediate(Fold.ImmToFold);
+    // Keep the old instruction around to avoid breaking iterators, but
+    // replace it with a dummy instruction to remove uses.
+    //
+    // FIXME: We should not invert how this pass looks at operands to avoid
+    // this. Should track set of foldable movs instead of looking for uses
+    // when looking at a use.
+    Dst0.setReg(NewReg0);
+    for (unsigned I = MI->getNumOperands() - 1; I > 0; --I)
+      MI->RemoveOperand(I);
+    MI->setDesc(TII.get(AMDGPU::IMPLICIT_DEF));
+
+    if (Fold.isCommuted())
+      TII.commuteInstruction(*Inst32, false);
     return true;
   }
 
   assert(!Fold.needsShrink() && "not handled");
+
+  if (Fold.isImm()) {
+    Old.ChangeToImmediate(Fold.ImmToFold);
+    return true;
+  }
 
   if (Fold.isFI()) {
     Old.ChangeToFrameIndex(Fold.FrameIndexToFold);
@@ -363,7 +365,7 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       if ((Opc == AMDGPU::V_ADD_I32_e64 ||
            Opc == AMDGPU::V_SUB_I32_e64 ||
            Opc == AMDGPU::V_SUBREV_I32_e64) && // FIXME
-          OpToFold->isImm()) {
+          (OpToFold->isImm() || OpToFold->isFI())) {
         MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
 
         // Verify the other operand is a VGPR, otherwise we would violate the
