@@ -8269,17 +8269,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
   case Builtin::BI__builtin_constant_p: {
     const Expr *Arg = E->getArg(0);
-    if (EvaluateBuiltinConstantP(Info, Arg)) {
+    if (EvaluateBuiltinConstantP(Info, Arg))
       return Success(true, E);
-    } else if (Info.InConstantContext || Arg->HasSideEffects(Info.Ctx)) {
+    if (Info.InConstantContext || Arg->HasSideEffects(Info.Ctx)) {
       // Outside a constant context, eagerly evaluate to false in the presence
       // of side-effects in order to avoid -Wunsequenced false-positives in
       // a branch on __builtin_constant_p(expr).
       return Success(false, E);
-    } else {
-      Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-      return false;
     }
+    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
   }
 
   case Builtin::BI__builtin_is_constant_evaluated:
