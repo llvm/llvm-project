@@ -11577,7 +11577,7 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
                          DAG.getBitcast(MVT::v4i32, InputV),
                          getV4X86ShuffleImm8ForMask(PSHUFDMask, DL, DAG));
     int PSHUFWMask[4] = {1, -1, -1, -1};
-    unsigned OddEvenOp = (Offset & 1 ? X86ISD::PSHUFLW : X86ISD::PSHUFHW);
+    unsigned OddEvenOp = (Offset & 1) ? X86ISD::PSHUFLW : X86ISD::PSHUFHW;
     return DAG.getBitcast(
         VT, DAG.getNode(OddEvenOp, DL, MVT::v8i16,
                         DAG.getBitcast(MVT::v8i16, InputV),
