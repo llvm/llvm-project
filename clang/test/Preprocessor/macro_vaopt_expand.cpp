@@ -129,8 +129,8 @@
 #define G(a,...)  __VA_OPT__(B a) ## 1
 26: F(,1)
 26_1: G(,1)
-// CHECK: 26: B1
-// CHECK: 26_1: B1
+// CHECK: 26: B 1
+// CHECK: 26_1: B 1
 #undef F
 #undef G
 
@@ -140,9 +140,9 @@
 27: F(,1)
 27_1: F(A0,1)
 28: G(,1)
-// CHECK: 27: B11
+// CHECK: 27: B 11
 // CHECK: 27_1: BexpandedA0 11
-// CHECK: 28: B11
+// CHECK: 28: B 11
 
 #undef F
 #undef G

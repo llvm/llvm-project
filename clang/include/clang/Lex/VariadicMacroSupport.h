@@ -113,6 +113,8 @@ namespace clang {
       UnmatchedOpeningParens.push_back(LParenLoc);
     }
 
+    /// Are we at the top level within the __VA_OPT__?
+    bool isAtTopLevel() const { return UnmatchedOpeningParens.size() == 1; }
   };
 
   /// A class for tracking whether we're inside a VA_OPT during a
@@ -135,7 +137,8 @@ namespace clang {
 
     unsigned StringifyBefore : 1;
     unsigned CharifyBefore : 1;
-
+    unsigned BeginsWithPlaceholder : 1;
+    unsigned EndsWithPlaceholder : 1;
 
     bool hasStringifyBefore() const {
       assert(!isReset() &&
@@ -151,7 +154,8 @@ namespace clang {
   public:
     VAOptExpansionContext(Preprocessor &PP)
         : VAOptDefinitionContext(PP), LeadingSpaceForStringifiedToken(false),
-          StringifyBefore(false), CharifyBefore(false) {
+          StringifyBefore(false), CharifyBefore(false),
+          BeginsWithPlaceholder(false), EndsWithPlaceholder(false) {
       SyntheticEOFToken.startToken();
       SyntheticEOFToken.setKind(tok::eof);
     }
@@ -162,6 +166,8 @@ namespace clang {
       LeadingSpaceForStringifiedToken = false;
       StringifyBefore = false;
       CharifyBefore = false;
+      BeginsWithPlaceholder = false;
+      EndsWithPlaceholder = false;
     }
 
     const Token &getEOFTok() const { return SyntheticEOFToken; }
@@ -174,7 +180,23 @@ namespace clang {
       LeadingSpaceForStringifiedToken = HasLeadingSpace;
     }
 
+    void hasPlaceholderAfterHashhashAtStart() { BeginsWithPlaceholder = true; }
+    void hasPlaceholderBeforeRParen() {
+      if (isAtTopLevel())
+        EndsWithPlaceholder = true;
+    }
 
+
+    bool beginsWithPlaceholder() const {
+      assert(!isReset() &&
+             "Must only be called if the state has not been reset");
+      return BeginsWithPlaceholder;
+    }
+    bool endsWithPlaceholder() const {
+      assert(!isReset() &&
+             "Must only be called if the state has not been reset");
+      return EndsWithPlaceholder;
+    }
 
     bool hasCharifyBefore() const {
       assert(!isReset() &&
