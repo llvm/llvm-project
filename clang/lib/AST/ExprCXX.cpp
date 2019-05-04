@@ -1204,7 +1204,11 @@ CXXMethodDecl *LambdaExpr::getCallOperator() const {
 TemplateParameterList *LambdaExpr::getTemplateParameterList() const {
   CXXRecordDecl *Record = getLambdaClass();
   return Record->getGenericLambdaTemplateParameterList();
+}
 
+ArrayRef<NamedDecl *> LambdaExpr::getExplicitTemplateParameters() const {
+  const CXXRecordDecl *Record = getLambdaClass();
+  return Record->getLambdaExplicitTemplateParameters();
 }
 
 CompoundStmt *LambdaExpr::getBody() const {
