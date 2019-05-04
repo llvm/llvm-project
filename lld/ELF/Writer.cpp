@@ -547,6 +547,11 @@ static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
   if (Config->Discard == DiscardPolicy::None)
     return true;
 
+  // If -emit-reloc is given, all symbols including local ones need to be
+  // copied because they may be referenced by relocations.
+  if (Config->EmitRelocs)
+    return true;
+
   // In ELF assembly .L symbols are normally discarded by the assembler.
   // If the assembler fails to do so, the linker discards them if
   // * --discard-locals is used.
