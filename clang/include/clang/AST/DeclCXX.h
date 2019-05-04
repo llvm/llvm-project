@@ -1990,6 +1990,50 @@ public:
   }
 };
 
+/// Store information needed for an explicit specifier.
+/// used by CXXDeductionGuideDecl, CXXConstructorDecl and CXXConversionDecl.
+class ExplicitSpecifier {
+  llvm::PointerIntPair<Expr *, 2, ExplicitSpecKind> ExplicitSpec{
+      nullptr, ExplicitSpecKind::ResolvedFalse};
+
+public:
+  ExplicitSpecifier() = default;
+  ExplicitSpecifier(Expr *Expression, ExplicitSpecKind Kind)
+      : ExplicitSpec(Expression, Kind) {}
+  ExplicitSpecKind getKind() const { return ExplicitSpec.getInt(); }
+  const Expr *getExpr() const { return ExplicitSpec.getPointer(); }
+  Expr *getExpr() { return ExplicitSpec.getPointer(); }
+
+  /// Return true if the ExplicitSpecifier isn't defaulted.
+  bool isSpecified() const {
+    return ExplicitSpec.getInt() != ExplicitSpecKind::ResolvedFalse ||
+           ExplicitSpec.getPointer();
+  }
+
+  /// Check for Equivalence of explicit specifiers.
+  /// Return True if the explicit specifier are equivalent false otherwise.
+  bool isEquivalent(const ExplicitSpecifier Other) const;
+  /// Return true if the explicit specifier is already resolved to be explicit.
+  bool isExplicit() const {
+    return ExplicitSpec.getInt() == ExplicitSpecKind::ResolvedTrue;
+  }
+  /// Return true if the ExplicitSpecifier isn't valid.
+  /// This state occurs after a substitution failures.
+  bool isInvalid() const {
+    return ExplicitSpec.getInt() == ExplicitSpecKind::Unresolved &&
+           !ExplicitSpec.getPointer();
+  }
+  void setKind(ExplicitSpecKind Kind) { ExplicitSpec.setInt(Kind); }
+  void setExpr(Expr *E) { ExplicitSpec.setPointer(E); }
+  // getFromDecl - retrieve the explicit specifier in the given declaration.
+  // if the given declaration has no explicit. the returned explicit specifier
+  // is defaulted. .isSpecified() will be false.
+  static ExplicitSpecifier getFromDecl(FunctionDecl *Function);
+  static ExplicitSpecifier Invalid() {
+    return ExplicitSpecifier(nullptr, ExplicitSpecKind::Unresolved);
+  }
+};
+
 /// Represents a C++ deduction guide declaration.
 ///
 /// \code
@@ -2005,31 +2049,36 @@ class CXXDeductionGuideDecl : public FunctionDecl {
 
 private:
   CXXDeductionGuideDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-                        bool IsExplicit, const DeclarationNameInfo &NameInfo,
-                        QualType T, TypeSourceInfo *TInfo,
-                        SourceLocation EndLocation)
+                        ExplicitSpecifier ES,
+                        const DeclarationNameInfo &NameInfo, QualType T,
+                        TypeSourceInfo *TInfo, SourceLocation EndLocation)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
-                     SC_None, false, false) {
+                     SC_None, false, false),
+        ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
-    setExplicitSpecified(IsExplicit);
     setIsCopyDeductionCandidate(false);
   }
+
+  ExplicitSpecifier ExplicitSpec;
+  void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static CXXDeductionGuideDecl *Create(ASTContext &C, DeclContext *DC,
-                                       SourceLocation StartLoc, bool IsExplicit,
-                                       const DeclarationNameInfo &NameInfo,
-                                       QualType T, TypeSourceInfo *TInfo,
-                                       SourceLocation EndLocation);
+  static CXXDeductionGuideDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+         ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
+         TypeSourceInfo *TInfo, SourceLocation EndLocation);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
-  /// Whether this deduction guide is explicit.
-  bool isExplicit() const { return isExplicitSpecified(); }
+  ExplicitSpecifier getExplicitSpecifier() { return ExplicitSpec; }
+  const ExplicitSpecifier getExplicitSpecifier() const { return ExplicitSpec; }
+
+  /// Return true if the declartion is already resolved to be explicit.
+  bool isExplicit() const { return ExplicitSpec.isExplicit(); }
 
   /// Get the template for which this guide performs deduction.
   TemplateDecl *getDeducedTemplate() const {
@@ -2498,7 +2547,8 @@ public:
 /// \endcode
 class CXXConstructorDecl final
     : public CXXMethodDecl,
-      private llvm::TrailingObjects<CXXConstructorDecl, InheritedConstructor> {
+      private llvm::TrailingObjects<CXXConstructorDecl, InheritedConstructor,
+                                    ExplicitSpecifier> {
   // This class stores some data in DeclContext::CXXConstructorDeclBits
   // to save some space. Use the provided accessors to access it.
 
@@ -2508,13 +2558,49 @@ class CXXConstructorDecl final
   LazyCXXCtorInitializersPtr CtorInitializers;
 
   CXXConstructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
-                     const DeclarationNameInfo &NameInfo,
-                     QualType T, TypeSourceInfo *TInfo,
-                     bool isExplicitSpecified, bool isInline,
+                     const DeclarationNameInfo &NameInfo, QualType T,
+                     TypeSourceInfo *TInfo, ExplicitSpecifier ES, bool isInline,
                      bool isImplicitlyDeclared, bool isConstexpr,
                      InheritedConstructor Inherited);
 
   void anchor() override;
+
+  size_t numTrailingObjects(OverloadToken<InheritedConstructor>) const {
+    return CXXConstructorDeclBits.IsInheritingConstructor;
+  }
+  size_t numTrailingObjects(OverloadToken<ExplicitSpecifier>) const {
+    return CXXConstructorDeclBits.HasTrailingExplicitSpecifier;
+  }
+
+  ExplicitSpecifier getExplicitSpecifierInternal() const {
+    if (CXXConstructorDeclBits.HasTrailingExplicitSpecifier)
+      return *getCanonicalDecl()->getTrailingObjects<ExplicitSpecifier>();
+    return ExplicitSpecifier(
+        nullptr, getCanonicalDecl()->CXXConstructorDeclBits.IsSimpleExplicit
+                     ? ExplicitSpecKind::ResolvedTrue
+                     : ExplicitSpecKind::ResolvedFalse);
+  }
+
+  void setExplicitSpecifier(ExplicitSpecifier ES) {
+    assert((!ES.getExpr() ||
+            CXXConstructorDeclBits.HasTrailingExplicitSpecifier) &&
+           "cannot set this explicit specifier. no trail-allocated space for "
+           "explicit");
+    if (ES.getExpr())
+      *getCanonicalDecl()->getTrailingObjects<ExplicitSpecifier>() = ES;
+    else
+      CXXConstructorDeclBits.IsSimpleExplicit = ES.isExplicit();
+  }
+
+  enum TraillingAllocKind {
+    TAKInheritsConstructor = 1,
+    TAKHasTailExplicit = 1 << 1,
+  };
+
+  uint64_t getTraillingAllocKind() const {
+    return numTrailingObjects(OverloadToken<InheritedConstructor>()) |
+           (numTrailingObjects(OverloadToken<ExplicitSpecifier>()) << 1);
+  }
 
 public:
   friend class ASTDeclReader;
@@ -2522,13 +2608,23 @@ public:
   friend TrailingObjects;
 
   static CXXConstructorDecl *CreateDeserialized(ASTContext &C, unsigned ID,
-                                                bool InheritsConstructor);
+                                                uint64_t AllocKind);
   static CXXConstructorDecl *
   Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
-         bool isExplicit, bool isInline, bool isImplicitlyDeclared,
+         ExplicitSpecifier ES, bool isInline, bool isImplicitlyDeclared,
          bool isConstexpr,
          InheritedConstructor Inherited = InheritedConstructor());
+
+  ExplicitSpecifier getExplicitSpecifier() {
+    return getExplicitSpecifierInternal();
+  }
+  const ExplicitSpecifier getExplicitSpecifier() const {
+    return getExplicitSpecifierInternal();
+  }
+
+  /// Return true if the declartion is already resolved to be explicit.
+  bool isExplicit() const { return getExplicitSpecifier().isExplicit(); }
 
   /// Iterates through the member/base initializer list.
   using init_iterator = CXXCtorInitializer **;
@@ -2598,11 +2694,6 @@ public:
 
   void setCtorInitializers(CXXCtorInitializer **Initializers) {
     CtorInitializers = Initializers;
-  }
-
-  /// Whether this function is explicit.
-  bool isExplicit() const {
-    return getCanonicalDecl()->isExplicitSpecified();
   }
 
   /// Determine whether this constructor is a delegating constructor.
@@ -2783,33 +2874,38 @@ public:
 class CXXConversionDecl : public CXXMethodDecl {
   CXXConversionDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                     const DeclarationNameInfo &NameInfo, QualType T,
-                    TypeSourceInfo *TInfo, bool isInline,
-                    bool isExplicitSpecified, bool isConstexpr,
-                    SourceLocation EndLocation)
+                    TypeSourceInfo *TInfo, bool isInline, ExplicitSpecifier ES,
+                    bool isConstexpr, SourceLocation EndLocation)
       : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
-                      SC_None, isInline, isConstexpr, EndLocation) {
-    setExplicitSpecified(isExplicitSpecified);
-  }
-
+                      SC_None, isInline, isConstexpr, EndLocation),
+        ExplicitSpec(ES) {}
   void anchor() override;
+
+  ExplicitSpecifier ExplicitSpec;
+
+  void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static CXXConversionDecl *Create(ASTContext &C, CXXRecordDecl *RD,
-                                   SourceLocation StartLoc,
-                                   const DeclarationNameInfo &NameInfo,
-                                   QualType T, TypeSourceInfo *TInfo,
-                                   bool isInline, bool isExplicit,
-                                   bool isConstexpr,
-                                   SourceLocation EndLocation);
+  static CXXConversionDecl *
+  Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
+         const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
+         bool isInline, ExplicitSpecifier ES, bool isConstexpr,
+         SourceLocation EndLocation);
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
-  /// Whether this function is explicit.
-  bool isExplicit() const {
-    return getCanonicalDecl()->isExplicitSpecified();
+  ExplicitSpecifier getExplicitSpecifier() {
+    return getCanonicalDecl()->ExplicitSpec;
   }
+
+  const ExplicitSpecifier getExplicitSpecifier() const {
+    return getCanonicalDecl()->ExplicitSpec;
+  }
+
+  /// Return true if the declartion is already resolved to be explicit.
+  bool isExplicit() const { return getExplicitSpecifier().isExplicit(); }
 
   /// Returns the type that this conversion function is converting to.
   QualType getConversionType() const {

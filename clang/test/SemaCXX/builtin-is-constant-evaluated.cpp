@@ -115,7 +115,7 @@ static_assert(&r == &x);
 
 #if defined(__cpp_conditional_explicit)
 struct TestConditionalExplicit {
-  explicit(__builtin_is_constant_evaluated()) TestConditionalExplicit(int) {}
+  explicit(!__builtin_is_constant_evaluated()) TestConditionalExplicit(int) {}
 };
 TestConditionalExplicit e = 42;
 #endif

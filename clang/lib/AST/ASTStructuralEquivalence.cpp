@@ -955,13 +955,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   if (auto *Constructor1 = dyn_cast<CXXConstructorDecl>(Method1)) {
     auto *Constructor2 = cast<CXXConstructorDecl>(Method2);
-    if (Constructor1->isExplicit() != Constructor2->isExplicit())
+    if (!Constructor1->getExplicitSpecifier().isEquivalent(
+            Constructor2->getExplicitSpecifier()))
       return false;
   }
 
   if (auto *Conversion1 = dyn_cast<CXXConversionDecl>(Method1)) {
     auto *Conversion2 = cast<CXXConversionDecl>(Method2);
-    if (Conversion1->isExplicit() != Conversion2->isExplicit())
+    if (!Conversion1->getExplicitSpecifier().isEquivalent(
+            Conversion2->getExplicitSpecifier()))
       return false;
     if (!IsStructurallyEquivalent(Context, Conversion1->getConversionType(),
                                   Conversion2->getConversionType()))

@@ -1,0 +1,124 @@
+// RUN: %clang_cc1 -std=c++2a -emit-pch %s -o %t-cxx2a
+// RUN: %clang_cc1 -std=c++2a -DUSE_PCH -include-pch %t-cxx2a %s -ast-print -verify | FileCheck %s
+
+#ifndef USE_PCH
+namespace inheriting_constructor {
+  struct S {};
+
+  template<typename X, typename Y> struct T {
+    template<typename A>
+    explicit((Y{}, true)) T(A &&a) {}
+  };
+
+  template<typename X, typename Y> struct U : T<X, Y> {
+    using T<X, Y>::T;
+  };
+
+  U<S, char> foo(char ch) {
+    return U<S, char>(ch);
+  }
+}
+#else
+namespace inheriting_constructor {
+U<S, char> a = foo('0');
+}
+
+//CHECK: explicit((char{} , true))
+
+#endif
+
+namespace basic {
+#ifndef USE_PCH
+
+struct B {};
+
+struct A {
+  explicit A(int);
+  explicit(false) operator bool();
+  explicit(true) operator B();
+};
+#else
+//expected-note@-6+ {{candidate constructor}}
+//expected-note@-9+ {{candidate constructor}}
+//expected-note@-6+ {{candidate function}}
+
+//CHECK: explicit{{ +}}A(
+//CHECK-NEXT: explicit(false){{ +}}operator
+//CHECK-NEXT: explicit(true){{ +}}operator
+A a = 0; //expected-error {{no viable conversion}}
+A a1(0);
+
+bool b = a1;
+B b1 = a1; //expected-error {{no viable conversion}}
+
+#endif
+}
+
+
+namespace templ {
+#ifndef USE_PCH
+
+template<bool b>
+struct B {
+  static constexpr bool value = b;
+};
+
+template<bool b>
+struct A {
+  explicit(b) A(B<b>) {}
+  template<typename T>
+  explicit(b ^ T::value) operator T();
+};
+B<true> b_true;
+B<false> b_false;
+#else
+//expected-note@-8 {{candidate template ignored}}
+//expected-note@-8+ {{explicit constructor}}
+//expected-note@-15+ {{candidate constructor}}
+//expected-note@-8+ {{candidate conversion operator ignored}}
+//expected-note@-9+ {{explicit(bool) specifier resolved to true}}
+//expected-note@-12 {{explicit(bool) specifier resolved to true}}
+//expected-note@-13+ {{candidate deductiong guide ignored}}
+
+//CHECK: explicit(b){{ +}}A
+//CHECK: explicit(b{{ +}}^{{ +}}T::value){{ +}}operator
+
+A a = { b_true }; //expected-error {{class template argument deduction}}
+A a0 = b_true; //expected-error {{no viable constructor or deduction guide}}
+A a_true(b_true);
+A a_false = b_false;
+
+B<true> b = a_true;
+B<true> b1 = a_false; //expected-error {{no viable conversion}}
+B<false> b2(a_true);
+
+#endif
+
+}
+
+namespace guide {
+
+#ifndef USE_PCH
+
+template<typename T>
+struct A {
+  A(T);
+};
+
+template<typename T>
+explicit(true) A(T) -> A<T>;
+
+explicit(false) A(int) -> A<int>;
+
+#else
+//expected-note@-5 {{explicit deduction guide}}
+
+//CHECK: explicit(true){{ +}}A(
+//CHECK: explicit(false){{ +}}A(
+
+A a = { 0.0 }; //expected-error {{explicit deduction guide}}
+A a1 = { 0 };
+
+#endif
+
+}
