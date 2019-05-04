@@ -1899,6 +1899,10 @@ public:
   /// parameter list associated with it, or else return null.
   TemplateParameterList *getTemplateParameterList() const;
 
+  /// Get the template parameters were explicitly specified (as opposed to being
+  /// invented by use of an auto parameter).
+  ArrayRef<NamedDecl *> getExplicitTemplateParameters() const;
+
   /// Whether this is a generic lambda.
   bool isGenericLambda() const { return getTemplateParameterList(); }
 

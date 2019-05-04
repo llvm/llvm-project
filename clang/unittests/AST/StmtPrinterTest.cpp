@@ -157,6 +157,43 @@ TEST(StmtPrinter, TestCXXConversionDeclExplicit) {
     // WRONG; Should be: (a & b).operator void *()
 }
 
+TEST(StmtPrinter, TestCXXLamda) {
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
+    "void A() {"
+    "  auto l = [] { };"
+    "}",
+    lambdaExpr(anything()).bind("id"),
+    "[] {\n"
+    "}"));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
+    "void A() {"
+    "  int a = 0, b = 1;"
+    "  auto l = [a,b](int c, float d) { };"
+    "}",
+    lambdaExpr(anything()).bind("id"),
+    "[a, b](int c, float d) {\n"
+    "}"));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX14,
+    "void A() {"
+    "  auto l = [](auto a, int b, auto c, int, auto) { };"
+    "}",
+    lambdaExpr(anything()).bind("id"),
+    "[](auto a, int b, auto c, int, auto) {\n"
+    "}"));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX2a,
+    "void A() {"
+    "  auto l = []<typename T1, class T2, int I,"
+    "              template<class, typename> class T3>"
+    "           (int a, auto, int, auto d) { };"
+    "}",
+    lambdaExpr(anything()).bind("id"),
+    "[]<typename T1, class T2, int I, template <class, typename> class T3>(int a, auto, int, auto d) {\n"
+    "}"));
+}
+
 TEST(StmtPrinter, TestNoImplicitBases) {
   const char *CPPSource = R"(
 class A {

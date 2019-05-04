@@ -1217,8 +1217,18 @@ void TypePrinter::printTemplateTypeParmBefore(const TemplateTypeParmType *T,
                                               raw_ostream &OS) {
   if (IdentifierInfo *Id = T->getIdentifier())
     OS << Id->getName();
-  else
-    OS << "type-parameter-" << T->getDepth() << '-' << T->getIndex();
+  else {
+    bool IsLambdaAutoParam = false;
+    if (auto D = T->getDecl()) {
+      if (auto M = dyn_cast_or_null<CXXMethodDecl>(D->getDeclContext()))
+        IsLambdaAutoParam = D->isImplicit() && M->getParent()->isLambda();
+    }
+
+    if (IsLambdaAutoParam)
+      OS << "auto";
+    else
+      OS << "type-parameter-" << T->getDepth() << '-' << T->getIndex();
+  }
   spaceBeforePlaceHolder(OS);
 }
 

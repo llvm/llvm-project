@@ -54,7 +54,7 @@ int add(int x, int y) {
 }
 
 // CHECK-PRINT: inline int add_int_slowly_twice 
-// CHECK-PRINT: lambda = [&] (int z)
+// CHECK-PRINT: lambda = [&](int z)
 
 // CHECK-PRINT: init_capture
 // CHECK-PRINT: [&, x(t)]
