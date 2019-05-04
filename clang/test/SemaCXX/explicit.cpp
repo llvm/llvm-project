@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
+
 namespace Constructor {
 struct A {
   A(int);
@@ -183,7 +185,8 @@ namespace Conversion {
     const int &copyList7 = {b};
     const int &copyList8 = {n}; // expected-error {{no viable conversion}}
   }
-  
+
+#if __cplusplus < 201707L
   void testNew()
   {
     // 5.3.4p6:
@@ -200,7 +203,8 @@ namespace Conversion {
     new int[i];
     new int[ni]; // expected-error {{array size expression of type 'NotInt' requires explicit conversion to type 'int'}}
   }
-  
+#endif
+
   void testDelete()
   {
     // 5.3.5pp2:

@@ -3817,7 +3817,6 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   // fold (mulhu x, (1 << c)) -> x >> (bitwidth - c)
   if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
       DAG.isKnownToBeAPowerOfTwo(N1) && hasOperation(ISD::SRL, VT)) {
-    SDLoc DL(N);
     unsigned NumEltBits = VT.getScalarSizeInBits();
     SDValue LogBase2 = BuildLogBase2(N1, DL);
     SDValue SRLAmt = DAG.getNode(
@@ -8293,11 +8292,10 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     // This is OK if we don't care about what happens if either operand is a
     // NaN.
     //
-    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(
-                              DAG, N0.getOperand(0), N0.getOperand(1), TLI)) {
-      ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N0.getOperand(0),
+                                                       N0.getOperand(1), TLI)) {
       if (SDValue FMinMax = combineMinNumMaxNum(
-            DL, VT, N0.getOperand(0), N0.getOperand(1), N1, N2, CC, TLI, DAG))
+              DL, VT, N0.getOperand(0), N0.getOperand(1), N1, N2, CC, TLI, DAG))
         return FMinMax;
     }
 
@@ -10078,7 +10076,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // trunc (select c, a, b) -> select c, (trunc a), (trunc b)
   if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse()) {
-    EVT SrcVT = N0.getValueType();
     if ((!LegalOperations || TLI.isOperationLegal(ISD::SELECT, SrcVT)) &&
         TLI.isTruncateFree(SrcVT, VT)) {
       SDLoc SL(N0);
@@ -19485,7 +19482,6 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags) {
     AddToWorklist(Est.getNode());
 
     if (Iterations) {
-      EVT VT = Op.getValueType();
       SDLoc DL(Op);
       SDValue FPOne = DAG.getConstantFP(1.0, DL, VT);
 
@@ -19641,7 +19637,6 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
       if (!Reciprocal) {
         // The estimate is now completely wrong if the input was exactly 0.0 or
         // possibly a denormal. Force the answer to 0.0 for those cases.
-        EVT VT = Op.getValueType();
         SDLoc DL(Op);
         EVT CCVT = getSetCCResultType(VT);
         ISD::NodeType SelOpcode = VT.isVector() ? ISD::VSELECT : ISD::SELECT;

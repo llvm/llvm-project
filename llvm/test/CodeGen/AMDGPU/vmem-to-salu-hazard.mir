@@ -1,0 +1,210 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: vmem_write_sgpr
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_sgpr
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_smem_write_sgpr
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_LOAD_DWORD_IMM
+---
+name:            vmem_smem_write_sgpr
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+...
+# GCN-LABEL: name: vmem_snop_write_sgpr
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_NOP
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_snop_write_sgpr
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_NOP 0
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_valu_write_sgpr
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: V_ADD_F32
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_valu_write_sgpr
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_swait0_write_sgpr
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_WAITCNT
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_swait0_write_sgpr
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_WAITCNT 0
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_swait_any_write_sgpr
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_WAITCNT
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_swait_any_write_sgpr
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_WAITCNT 1
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_write_exec_impread
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_MOV_B64
+---
+name:            vmem_write_exec_impread
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $exec = S_MOV_B64 7
+...
+# GCN-LABEL: name: vmem_write_exec_expread
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B64
+---
+name:            vmem_write_exec_expread
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $exec_lo, 0, 0, 0, 0, 0, implicit $exec
+    $exec = S_MOV_B64 7
+...
+# GCN-LABEL: name: ds_write_m0
+# GCN:      DS_READ_B32
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            ds_write_m0
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $m0 = S_MOV_B32 7
+...
+# GCN-LABEL: name: vmem_write_sgpr_fall_through
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN:      V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_sgpr_fall_through
+body:             |
+  bb.0:
+    successors: %bb.1
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+
+  bb.1:
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_write_sgpr_branch
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_BRANCH
+# GCN:      V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_sgpr_branch
+body:             |
+  bb.0:
+    successors: %bb.1
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_write_sgpr_branch_around
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_BRANCH
+# GCN:      bb.2:
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_sgpr_branch_around
+body:             |
+  bb.0:
+    successors: %bb.2
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+    S_WAITCNT 0
+
+  bb.2:
+    $sgpr0 = S_MOV_B32 0
+...
+# GCN-LABEL: name: vmem_write_sgpr_branch_backedge
+# GCN:      $vgpr0 = IMPLICIT_DEF
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_sgpr_branch_backedge
+body:             |
+  bb.0:
+    successors: %bb.1
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $sgpr0 = S_MOV_B32 0
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.0
+...
