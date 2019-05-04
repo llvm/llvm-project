@@ -156,3 +156,49 @@ define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
   ret <4 x double> %r
 }
 
+; Actual fneg instructions.
+
+define float @fneg_constant() {
+; CHECK-LABEL: @fneg_constant(
+; CHECK-NEXT:    [[R:%.*]] = fneg float -0.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fneg float -0.0
+  ret float %r
+}
+
+define float @fneg_undef() {
+; CHECK-LABEL: @fneg_undef(
+; CHECK-NEXT:    [[R:%.*]] = fneg float undef
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fneg float undef
+  ret float %r
+}
+
+define <4 x float> @fneg_constant_elts_v4f32() {
+; CHECK-LABEL: @fneg_constant_elts_v4f32(
+; CHECK-NEXT:    [[R:%.*]] = fneg <4 x float> <float -0.000000e+00, float 0.000000e+00, float -1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %r = fneg <4 x float> <float -0.0, float 0.0, float -1.0, float 1.0>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fneg_constant_undef_elts_v4f32() {
+; CHECK-LABEL: @fneg_constant_undef_elts_v4f32(
+; CHECK-NEXT:    [[R:%.*]] = fneg <4 x float> <float -0.000000e+00, float undef, float undef, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %r = fneg <4 x float> <float -0.0, float undef, float undef, float 1.0>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fneg_constant_all_undef_elts_v4f32() {
+; CHECK-LABEL: @fneg_constant_all_undef_elts_v4f32(
+; CHECK-NEXT:    [[R:%.*]] = fneg <4 x float> undef
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %r = fneg <4 x float> <float undef, float undef, float undef, float undef>
+  ret <4 x float> %r
+}
