@@ -4252,6 +4252,10 @@ public:
   /// If it is unreachable, the diagnostic will not be emitted.
   bool DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                            const PartialDiagnostic &PD);
+  /// Similar, but diagnostic is only produced if all the specified statements
+  /// are reachable.
+  bool DiagRuntimeBehavior(SourceLocation Loc, ArrayRef<const Stmt*> Stmts,
+                           const PartialDiagnostic &PD);
 
   // Primary Expressions.
   SourceRange getExprRange(Expr *E) const;
@@ -5718,6 +5722,12 @@ public:
   /// Note that we have finished the explicit captures for the
   /// given lambda.
   void finishLambdaExplicitCaptures(sema::LambdaScopeInfo *LSI);
+
+  /// \brief This is called after parsing the explicit template parameter list
+  /// on a lambda (if it exists) in C++2a.
+  void ActOnLambdaExplicitTemplateParameterList(SourceLocation LAngleLoc,
+                                                ArrayRef<NamedDecl *> TParams,
+                                                SourceLocation RAngleLoc);
 
   /// Introduce the lambda parameters into scope.
   void addLambdaParameters(

@@ -638,6 +638,8 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 ///
 ///       lambda-expression:
 ///         lambda-introducer lambda-declarator[opt] compound-statement
+///         lambda-introducer '<' template-parameter-list '>'
+///             lambda-declarator[opt] compound-statement
 ///
 ///       lambda-introducer:
 ///         '[' lambda-capture[opt] ']'
@@ -1121,6 +1123,33 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
               << A.getName()->getName();
   };
 
+  // FIXME: Consider allowing this as an extension for GCC compatibiblity.
+  const bool HasExplicitTemplateParams = Tok.is(tok::less);
+  ParseScope TemplateParamScope(this, Scope::TemplateParamScope,
+                                /*EnteredScope=*/HasExplicitTemplateParams);
+  if (HasExplicitTemplateParams) {
+    Diag(Tok, getLangOpts().CPlusPlus2a
+                  ? diag::warn_cxx17_compat_lambda_template_parameter_list
+                  : diag::ext_lambda_template_parameter_list);
+
+    SmallVector<NamedDecl*, 4> TemplateParams;
+    SourceLocation LAngleLoc, RAngleLoc;
+    if (ParseTemplateParameters(CurTemplateDepthTracker.getDepth(),
+                                TemplateParams, LAngleLoc, RAngleLoc)) {
+      Actions.ActOnLambdaError(LambdaBeginLoc, getCurScope());
+      return ExprError();
+    }
+
+    if (TemplateParams.empty()) {
+      Diag(RAngleLoc,
+           diag::err_lambda_template_parameter_list_empty);
+    } else {
+      Actions.ActOnLambdaExplicitTemplateParameterList(
+          LAngleLoc, TemplateParams, RAngleLoc);
+      ++CurTemplateDepthTracker;
+    }
+  }
+
   TypeResult TrailingReturnType;
   if (Tok.is(tok::l_paren)) {
     ParseScope PrototypeScope(this,
@@ -1137,13 +1166,20 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     SourceLocation EllipsisLoc;
 
     if (Tok.isNot(tok::r_paren)) {
-      Actions.RecordParsingTemplateParameterDepth(TemplateParameterDepth);
+      Actions.RecordParsingTemplateParameterDepth(
+          CurTemplateDepthTracker.getOriginalDepth());
+
       ParseParameterDeclarationClause(D, Attr, ParamInfo, EllipsisLoc);
+
       // For a generic lambda, each 'auto' within the parameter declaration
       // clause creates a template type parameter, so increment the depth.
+      // If we've parsed any explicit template parameters, then the depth will
+      // have already been incremented. So we make sure that at most a single
+      // depth level is added.
       if (Actions.getCurGenericLambda())
-        ++CurTemplateDepthTracker;
+        CurTemplateDepthTracker.setAddedDepth(1);
     }
+
     T.consumeClose();
     SourceLocation RParenLoc = T.getCloseLocation();
     SourceLocation DeclEndLoc = RParenLoc;
@@ -1298,6 +1334,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   StmtResult Stmt(ParseCompoundStatementBody());
   BodyScope.Exit();
+  TemplateParamScope.Exit();
 
   if (!Stmt.isInvalid() && !TrailingReturnType.isInvalid())
     return Actions.ActOnLambdaExpr(LambdaBeginLoc, Stmt.get(), getCurScope());
