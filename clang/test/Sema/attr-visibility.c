@@ -26,9 +26,3 @@ typedef int __attribute__((visibility("default"))) bar; // expected-warning {{'v
 int x __attribute__((type_visibility("default"))); // expected-error {{'type_visibility' attribute only applies to types and namespaces}}
 
 int PR17105 __attribute__((visibility(hidden))); // expected-error {{'visibility' attribute requires a string}}
-
-static int test8 __attribute__((visibility("default"))); // expected-warning {{'visibility' attribute is ignored on a non-external symbol}}
-static int test9 __attribute__((visibility("hidden"))); // expected-warning {{'visibility' attribute is ignored on a non-external symbol}}
-static int test10 __attribute__((visibility("internal"))); // expected-warning {{'visibility' attribute is ignored on a non-external symbol}}
-
-static int test11() __attribute__((visibility("default"))); // expected-warning {{'visibility' attribute is ignored on a non-external symbol}}

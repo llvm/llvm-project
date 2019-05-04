@@ -153,7 +153,7 @@ public:
   }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const clang::Diagnostic &Info) {
+                        const clang::Diagnostic &Info) override {
     if (m_manager) {
       llvm::SmallVector<char, 32> diag_str;
       Info.FormatDiagnostic(diag_str);
@@ -719,7 +719,7 @@ public:
   }
 
   /// Deregisters and destroys this code-completion consumer.
-  virtual ~CodeComplete() {}
+  ~CodeComplete() override {}
 
   /// \name Code-completion filtering
   /// Check if the result should be filtered out.

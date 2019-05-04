@@ -346,24 +346,27 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     Index->lookup(QueryRequest, [&](const Symbol &Sym) {
       auto &R = Result[ResultIndex.lookup(Sym.ID)];
 
-      // Special case: if the AST yielded a definition, then it may not be
-      // the right *declaration*. Prefer the one from the index.
       if (R.Definition) { // from AST
+        // Special case: if the AST yielded a definition, then it may not be
+        // the right *declaration*. Prefer the one from the index.
         if (auto Loc = toLSPLocation(Sym.CanonicalDeclaration, *MainFilePath))
           R.PreferredDeclaration = *Loc;
+
+        // We might still prefer the definition from the index, e.g. for
+        // generated symbols.
+        if (auto Loc = toLSPLocation(
+                getPreferredLocation(*R.Definition, Sym.Definition, Scratch),
+                *MainFilePath))
+          R.Definition = *Loc;
       } else {
         R.Definition = toLSPLocation(Sym.Definition, *MainFilePath);
 
-        if (Sym.CanonicalDeclaration) {
-          // Use merge logic to choose AST or index declaration.
-          // We only do this for declarations as definitions from AST
-          // is generally preferred (e.g. definitions in main file).
-          if (auto Loc = toLSPLocation(
-                  getPreferredLocation(R.PreferredDeclaration,
-                                       Sym.CanonicalDeclaration, Scratch),
-                  *MainFilePath))
-            R.PreferredDeclaration = *Loc;
-        }
+        // Use merge logic to choose AST or index declaration.
+        if (auto Loc = toLSPLocation(
+                getPreferredLocation(R.PreferredDeclaration,
+                                     Sym.CanonicalDeclaration, Scratch),
+                *MainFilePath))
+          R.PreferredDeclaration = *Loc;
       }
     });
   }

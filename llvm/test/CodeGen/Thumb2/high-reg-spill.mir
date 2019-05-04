@@ -46,5 +46,5 @@ body:             |
 # CHECK-NEXT: renamable $r12 = COPY killed renamable $r0
 # CHECK-NEXT: t2STRi12 killed $r12, %stack.1, 0, 14, $noreg :: (store 4 into %stack.1)
 # CHECK-NEXT: $r8 = t2LDRi12 %stack.1, 0, 14, $noreg :: (load 4 from %stack.1)
-# CHECK-NEXT: INLINEASM &"@ $0", 1, 589833, killed renamable $r8, 12, implicit-def early-clobber $r12
+# CHECK-NEXT: INLINEASM &"@ $0", 1, 589833, renamable $r8, 12, implicit-def early-clobber $r12
 # CHECK-NEXT: tBX_RET 14, $noreg

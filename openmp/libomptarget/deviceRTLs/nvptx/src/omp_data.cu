@@ -32,7 +32,7 @@ __device__ __shared__ uint32_t usedMemIdx;
 __device__ __shared__ uint32_t usedSlotIdx;
 
 __device__ __shared__ uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-
+__device__ __shared__ uint16_t threadLimit;
 // Pointer to this team's OpenMP state object
 __device__ __shared__
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;

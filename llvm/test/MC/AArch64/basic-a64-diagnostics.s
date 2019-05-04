@@ -8,12 +8,16 @@
         // Mismatched final register and extend
         add x2, x3, x5, sxtb
         add x2, x4, w2, uxtx
+        add x2, x4, w2, lsl #3
         add w5, w7, x9, sxtx
 // CHECK-ERROR: error: expected 'sxtx' 'uxtx' or 'lsl' with optional integer in range [0, 4]
 // CHECK-ERROR:         add x2, x3, x5, sxtb
 // CHECK-ERROR:                         ^
-// CHECK-ERROR: error: expected '[su]xt[bhw]' or 'lsl' with optional integer in range [0, 4]
+// CHECK-ERROR: error: expected '[su]xt[bhw]' with optional integer in range [0, 4]
 // CHECK-ERROR:         add x2, x4, w2, uxtx
+// CHECK-ERROR:                         ^
+// CHECK-ERROR: error: expected '[su]xt[bhw]' with optional integer in range [0, 4]
+// CHECK-ERROR:         add x2, x4, w2, lsl #3
 // CHECK-ERROR:                         ^
 // CHECK-ERROR: error: expected compatible register, symbol or integer in range [0, 4095]
 // CHECK-ERROR:         add w5, w7, x9, sxtx
@@ -26,7 +30,7 @@
 // CHECK-ERROR: error: expected integer shift amount
 // CHECK-ERROR:         add x9, x10, w11, uxtb #-1
 // CHECK-ERROR:                                 ^
-// CHECK-ERROR: error: expected '[su]xt[bhw]' or 'lsl' with optional integer in range [0, 4]
+// CHECK-ERROR: error: expected '[su]xt[bhw]' with optional integer in range [0, 4]
 // CHECK-ERROR:         add x3, x5, w7, uxtb #5
 // CHECK-ERROR:                         ^
 // CHECK-ERROR: error: expected 'sxtx' 'uxtx' or 'lsl' with optional integer in range [0, 4]

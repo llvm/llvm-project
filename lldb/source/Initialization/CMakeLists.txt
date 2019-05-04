@@ -14,6 +14,9 @@ add_lldb_library(lldbInitialization
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbPluginInstructionARM
+    lldbPluginInstructionMIPS
+    lldbPluginInstructionMIPS64
     lldbPluginProcessGDBRemote
     ${EXTRA_PLUGINS}
     ${LLDB_SYSTEM_LIBS}

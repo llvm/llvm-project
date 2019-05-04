@@ -18,7 +18,7 @@ define void @atomic_fetch_add64() nounwind {
 ; I486-LABEL: atomic_fetch_add64:
 ; I486:       # %bb.0: # %entry
 ; I486-NEXT:    pushl %esi
-; I486-NEXT:    subl $56, %esp
+; I486-NEXT:    subl $48, %esp
 ; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %ecx
 ; I486-NEXT:    movl $2, 12(%ecx)
@@ -55,9 +55,7 @@ define void @atomic_fetch_add64() nounwind {
 ; I486-NEXT:    movl $sc64, (%esi)
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_fetch_add_8
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    addl $56, %esp
+; I486-NEXT:    addl $48, %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    retl
 entry:
@@ -81,7 +79,7 @@ define void @atomic_fetch_sub64() nounwind {
 ; I486-LABEL: atomic_fetch_sub64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    pushl %esi
-; I486-NEXT:    subl $56, %esp
+; I486-NEXT:    subl $48, %esp
 ; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %ecx
 ; I486-NEXT:    movl $2, 12(%ecx)
@@ -118,9 +116,7 @@ define void @atomic_fetch_sub64() nounwind {
 ; I486-NEXT:    movl $sc64, (%esi)
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_fetch_sub_8
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    addl $56, %esp
+; I486-NEXT:    addl $48, %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    retl
   %t1 = atomicrmw sub  i64* @sc64, i64 1 acquire
@@ -158,7 +154,7 @@ define void @atomic_fetch_and64() nounwind {
 ; I486-LABEL: atomic_fetch_and64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    pushl %esi
-; I486-NEXT:    subl $44, %esp
+; I486-NEXT:    subl $36, %esp
 ; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %ecx
 ; I486-NEXT:    movl $2, 12(%ecx)
@@ -185,9 +181,7 @@ define void @atomic_fetch_and64() nounwind {
 ; I486-NEXT:    movl $sc64, (%esi)
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_fetch_and_8
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    addl $44, %esp
+; I486-NEXT:    addl $36, %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    retl
   %t1 = atomicrmw and  i64* @sc64, i64 3 acquire
@@ -223,7 +217,7 @@ define void @atomic_fetch_or64() nounwind {
 ; I486-LABEL: atomic_fetch_or64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    pushl %esi
-; I486-NEXT:    subl $44, %esp
+; I486-NEXT:    subl $36, %esp
 ; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %ecx
 ; I486-NEXT:    movl $2, 12(%ecx)
@@ -250,9 +244,7 @@ define void @atomic_fetch_or64() nounwind {
 ; I486-NEXT:    movl $sc64, (%esi)
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_fetch_or_8
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    addl $44, %esp
+; I486-NEXT:    addl $36, %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    retl
   %t1 = atomicrmw or   i64* @sc64, i64 3 acquire
@@ -288,7 +280,7 @@ define void @atomic_fetch_xor64() nounwind {
 ; I486-LABEL: atomic_fetch_xor64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    pushl %esi
-; I486-NEXT:    subl $44, %esp
+; I486-NEXT:    subl $36, %esp
 ; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %ecx
 ; I486-NEXT:    movl $2, 12(%ecx)
@@ -315,9 +307,7 @@ define void @atomic_fetch_xor64() nounwind {
 ; I486-NEXT:    movl $sc64, (%esi)
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_fetch_xor_8
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    addl $44, %esp
+; I486-NEXT:    addl $36, %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    retl
   %t1 = atomicrmw xor  i64* @sc64, i64 3 acquire
@@ -351,7 +341,7 @@ define void @atomic_fetch_nand64(i64 %x) nounwind {
 ; I486-LABEL: atomic_fetch_nand64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    pushl %esi
-; I486-NEXT:    subl $28, %esp
+; I486-NEXT:    subl $20, %esp
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I486-NEXT:    leal sc64, %edx
@@ -362,9 +352,7 @@ define void @atomic_fetch_nand64(i64 %x) nounwind {
 ; I486-NEXT:    movl $sc64, (%esi)
 ; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_fetch_nand_8
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    addl $28, %esp
+; I486-NEXT:    addl $20, %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    retl
   %t1 = atomicrmw nand i64* @sc64, i64 %x acquire
@@ -402,7 +390,7 @@ define void @atomic_fetch_max64(i64 %x) nounwind {
 ; I486-NEXT:    pushl %edi
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $80, %esp
+; I486-NEXT:    subl $72, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl 8(%ebp), %ecx
 ; I486-NEXT:    movl sc64+4, %edx
@@ -426,8 +414,6 @@ define void @atomic_fetch_max64(i64 %x) nounwind {
 ; I486-NEXT:    movl %eax, %ebx
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    jge .LBB6_4
@@ -504,7 +490,7 @@ define void @atomic_fetch_min64(i64 %x) nounwind {
 ; I486-NEXT:    pushl %edi
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $80, %esp
+; I486-NEXT:    subl $72, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl 8(%ebp), %ecx
 ; I486-NEXT:    movl sc64+4, %edx
@@ -526,8 +512,6 @@ define void @atomic_fetch_min64(i64 %x) nounwind {
 ; I486-NEXT:    movl %eax, %ebx
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    jge .LBB7_4
@@ -604,7 +588,7 @@ define void @atomic_fetch_umax64(i64 %x) nounwind {
 ; I486-NEXT:    pushl %edi
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $80, %esp
+; I486-NEXT:    subl $72, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl 8(%ebp), %ecx
 ; I486-NEXT:    movl sc64+4, %edx
@@ -626,8 +610,6 @@ define void @atomic_fetch_umax64(i64 %x) nounwind {
 ; I486-NEXT:    movl %eax, %ebx
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    jb .LBB8_4
@@ -704,7 +686,7 @@ define void @atomic_fetch_umin64(i64 %x) nounwind {
 ; I486-NEXT:    pushl %edi
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $80, %esp
+; I486-NEXT:    subl $72, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl 8(%ebp), %ecx
 ; I486-NEXT:    movl sc64+4, %edx
@@ -726,8 +708,6 @@ define void @atomic_fetch_umin64(i64 %x) nounwind {
 ; I486-NEXT:    movl %eax, %ebx
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    jae .LBB9_4
@@ -780,7 +760,6 @@ define void @atomic_fetch_cmpxchg64() nounwind {
 ; X64-NEXT:    # kill: def $rax killed $eax
 ; X64-NEXT:    movl $1, %ecx
 ; X64-NEXT:    lock cmpxchgq %rcx, {{.*}}(%rip)
-; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    retq
 ;
 ; I486-LABEL: atomic_fetch_cmpxchg64:
@@ -802,7 +781,6 @@ define void @atomic_fetch_cmpxchg64() nounwind {
 ; I486-NEXT:    movl $sc64, (%edx)
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_compare_exchange_8
-; I486-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; I486-NEXT:    movl %ebp, %esp
 ; I486-NEXT:    popl %ebp
 ; I486-NEXT:    retl
@@ -841,13 +819,12 @@ define void @atomic_fetch_swap64(i64 %x) nounwind {
 ; X64-LABEL: atomic_fetch_swap64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xchgq %rdi, {{.*}}(%rip)
-; X64-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    retq
 ;
 ; I486-LABEL: atomic_fetch_swap64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    pushl %esi
-; I486-NEXT:    subl $28, %esp
+; I486-NEXT:    subl $20, %esp
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I486-NEXT:    leal sc64, %edx
@@ -858,9 +835,7 @@ define void @atomic_fetch_swap64(i64 %x) nounwind {
 ; I486-NEXT:    movl $sc64, (%esi)
 ; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_exchange_8
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    addl $28, %esp
+; I486-NEXT:    addl $20, %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    retl
   %t1 = atomicrmw xchg i64* @sc64, i64 %x acquire
@@ -872,7 +847,6 @@ define void @atomic_fetch_swapf64(double %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    xchgq %rax, {{.*}}(%rip)
-; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    retq
 ;
 ; I486-LABEL: atomic_fetch_swapf64:
@@ -881,7 +855,7 @@ define void @atomic_fetch_swapf64(double %x) nounwind {
 ; I486-NEXT:    movl %esp, %ebp
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $48, %esp
+; I486-NEXT:    subl $40, %esp
 ; I486-NEXT:    fldl 8(%ebp)
 ; I486-NEXT:    leal fsc64, %eax
 ; I486-NEXT:    fstpl {{[0-9]+}}(%esp)
@@ -894,8 +868,6 @@ define void @atomic_fetch_swapf64(double %x) nounwind {
 ; I486-NEXT:    movl $fsc64, (%esi)
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    calll __atomic_exchange_8
-; I486-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    leal -4(%ebp), %esp
 ; I486-NEXT:    popl %esi
 ; I486-NEXT:    popl %ebp

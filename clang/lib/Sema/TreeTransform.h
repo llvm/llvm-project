@@ -883,12 +883,6 @@ public:
     return SemaRef.Context.getTypeDeclType(Typedef);
   }
 
-  /// Build a new MacroDefined type.
-  QualType RebuildMacroQualifiedType(QualType T,
-                                     const IdentifierInfo *MacroII) {
-    return SemaRef.Context.getMacroQualifiedType(T, MacroII);
-  }
-
   /// Build a new class/struct/union type.
   QualType RebuildRecordType(RecordDecl *Record) {
     return SemaRef.Context.getTypeDeclType(Record);
@@ -6196,27 +6190,6 @@ TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,
   ParenTypeLoc NewTL = TLB.push<ParenTypeLoc>(Result);
   NewTL.setLParenLoc(TL.getLParenLoc());
   NewTL.setRParenLoc(TL.getRParenLoc());
-  return Result;
-}
-
-template <typename Derived>
-QualType
-TreeTransform<Derived>::TransformMacroQualifiedType(TypeLocBuilder &TLB,
-                                                    MacroQualifiedTypeLoc TL) {
-  QualType Inner = getDerived().TransformType(TLB, TL.getInnerLoc());
-  if (Inner.isNull())
-    return QualType();
-
-  QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() || Inner != TL.getInnerLoc().getType()) {
-    Result =
-        getDerived().RebuildMacroQualifiedType(Inner, TL.getMacroIdentifier());
-    if (Result.isNull())
-      return QualType();
-  }
-
-  MacroQualifiedTypeLoc NewTL = TLB.push<MacroQualifiedTypeLoc>(Result);
-  NewTL.setExpansionLoc(TL.getExpansionLoc());
   return Result;
 }
 

@@ -1173,10 +1173,7 @@ namespace serialization {
       TYPE_DEPENDENT_ADDRESS_SPACE = 47,
 
       /// A dependentSizedVectorType record.
-      TYPE_DEPENDENT_SIZED_VECTOR = 48,
-
-      /// A type defined in a macro.
-      TYPE_MACRO_QUALIFIED = 49
+      TYPE_DEPENDENT_SIZED_VECTOR = 48
     };
 
     /// The type IDs for special types constructed by semantic

@@ -1744,7 +1744,7 @@ static bool findLineTable(const SectionChunk *C, uint32_t Addr,
 
     // Build a mapping of SECREL relocations in DbgC that refer to C.
     DenseMap<uint32_t, uint32_t> Secrels;
-    for (const coff_relocation &R : DbgC->Relocs) {
+    for (const coff_relocation &R : DbgC->getRelocs()) {
       if (R.Type != SecrelReloc)
         continue;
 

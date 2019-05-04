@@ -476,6 +476,24 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
+  // Helper lambda that returns true if MI has floating point constraints.
+  auto HasFPConstraints = [&TRI, &MRI, this](MachineInstr &MI) {
+    unsigned Op = MI.getOpcode();
+
+    // Do we have an explicit floating point instruction?
+    if (isPreISelGenericFloatingPointOpcode(Op))
+      return true;
+
+    // No. Check if we have a copy-like instruction. If we do, then we could
+    // still be fed by floating point instructions.
+    if (Op != TargetOpcode::COPY && !MI.isPHI())
+      return false;
+
+    // MI is copy-like. Return true if it's using an FPR.
+    return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
+           &AArch64::FPRRegBank;
+  };
+
   switch (Opc) {
     // G_{F|S|U}REM are not listed because they are not legal.
     // Arithmetic ops.
@@ -657,29 +675,26 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     break;
+  case TargetOpcode::G_SELECT: {
+    // If the destination is FPR, preserve that.
+    if (OpRegBankIdx[0] != PMI_FirstGPR)
+      break;
+    LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
+    if (SrcTy.isVector() ||
+        any_of(MRI.use_instructions(MI.getOperand(0).getReg()),
+               [&](MachineInstr &MI) { return HasFPConstraints(MI); })) {
+      // Set the register bank of every operand to FPR.
+      for (unsigned Idx = 0, NumOperands = MI.getNumOperands();
+           Idx < NumOperands; ++Idx)
+        OpRegBankIdx[Idx] = PMI_FirstFPR;
+    }
+    break;
+  }
   case TargetOpcode::G_UNMERGE_VALUES: {
     // If the first operand belongs to a FPR register bank, then make sure that
     // we preserve that.
     if (OpRegBankIdx[0] != PMI_FirstGPR)
       break;
-
-    // Helper lambda that returns true if MI has floating point constraints.
-    auto HasFPConstraints = [&TRI, &MRI, this](MachineInstr &MI) {
-      unsigned Op = MI.getOpcode();
-
-      // Do we have an explicit floating point instruction?
-      if (isPreISelGenericFloatingPointOpcode(Op))
-        return true;
-
-      // No. Check if we have a copy-like instruction. If we do, then we could
-      // still be fed by floating point instructions.
-      if (Op != TargetOpcode::COPY && !MI.isPHI())
-        return false;
-
-      // MI is copy-like. Return true if it's using an FPR.
-      return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
-             &AArch64::FPRRegBank;
-    };
 
     LLT SrcTy = MRI.getType(MI.getOperand(MI.getNumOperands()-1).getReg());
     // UNMERGE into scalars from a vector should always use FPR.

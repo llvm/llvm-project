@@ -23,7 +23,7 @@ public:
                                "Parent for per-plugin structured data commands",
                                "plugin structured-data <plugin>") {}
 
-  ~CommandStructuredData() {}
+  ~CommandStructuredData() override {}
 };
 }
 

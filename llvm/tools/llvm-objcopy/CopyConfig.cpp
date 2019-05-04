@@ -584,6 +584,8 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   Config.DecompressDebugSections =
       InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
+  if (Config.DiscardMode == DiscardType::All)
+    Config.StripDebug = true;
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.emplace_back(Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
@@ -752,6 +754,9 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
       !Config.StripUnneeded && Config.DiscardMode == DiscardType::None &&
       !Config.StripAllGNU && Config.SymbolsToRemove.empty())
     Config.StripAll = true;
+
+  if (Config.DiscardMode == DiscardType::All)
+    Config.StripDebug = true;
 
   Config.DeterministicArchives =
       InputArgs.hasFlag(STRIP_enable_deterministic_archives,

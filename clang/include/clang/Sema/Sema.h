@@ -3516,7 +3516,7 @@ public:
   // Check if there is an explicit attribute, but only look through parens.
   // The intent is to look for an attribute on the current declarator, but not
   // one that came from a typedef.
-  bool hasExplicitCallingConv(QualType T);
+  bool hasExplicitCallingConv(QualType &T);
 
   /// Get the outermost AttributedType node that sets a calling convention.
   /// Valid types should not have multiple attributes with different CCs.

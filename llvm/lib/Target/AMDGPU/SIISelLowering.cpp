@@ -99,6 +99,11 @@ static cl::opt<unsigned> AssumeFrameIndexHighZeroBits(
   cl::init(5),
   cl::ReallyHidden);
 
+static cl::opt<bool> DisableLoopAlignment(
+  "amdgpu-disable-loop-alignment",
+  cl::desc("Do not align and prefetch loops"),
+  cl::init(false));
+
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
@@ -9964,6 +9969,77 @@ void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
   // can't use vaddr in MUBUF instructions if we don't know the address
   // calculation won't overflow, so assume the sign bit is never set.
   Known.Zero.setHighBits(AssumeFrameIndexHighZeroBits);
+}
+
+unsigned SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+  const unsigned PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
+  const unsigned CacheLineAlign = 6; // log2(64)
+
+  // Pre-GFX10 target did not benefit from loop alignment
+  if (!ML || DisableLoopAlignment ||
+      (getSubtarget()->getGeneration() < AMDGPUSubtarget::GFX10) ||
+      getSubtarget()->hasInstFwdPrefetchBug())
+    return PrefAlign;
+
+  // On GFX10 I$ is 4 x 64 bytes cache lines.
+  // By default prefetcher keeps one cache line behind and reads two ahead.
+  // We can modify it with S_INST_PREFETCH for larger loops to have two lines
+  // behind and one ahead.
+  // Therefor we can benefit from aligning loop headers if loop fits 192 bytes.
+  // If loop fits 64 bytes it always spans no more than two cache lines and
+  // does not need an alignment.
+  // Else if loop is less or equal 128 bytes we do not need to modify prefetch,
+  // Else if loop is less or equal 192 bytes we need two lines behind.
+
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  const MachineBasicBlock *Header = ML->getHeader();
+  if (Header->getAlignment() != PrefAlign)
+    return Header->getAlignment(); // Already processed.
+
+  unsigned LoopSize = 0;
+  for (const MachineBasicBlock *MBB : ML->blocks()) {
+    // If inner loop block is aligned assume in average half of the alignment
+    // size to be added as nops.
+    if (MBB != Header)
+      LoopSize += (1 << MBB->getAlignment()) / 2;
+
+    for (const MachineInstr &MI : *MBB) {
+      LoopSize += TII->getInstSizeInBytes(MI);
+      if (LoopSize > 192)
+        return PrefAlign;
+    }
+  }
+
+  if (LoopSize <= 64)
+    return PrefAlign;
+
+  if (LoopSize <= 128)
+    return CacheLineAlign;
+
+  // If any of parent loops is surrounded by prefetch instructions do not
+  // insert new for inner loop, which would reset parent's settings.
+  for (MachineLoop *P = ML->getParentLoop(); P; P = P->getParentLoop()) {
+    if (MachineBasicBlock *Exit = P->getExitBlock()) {
+      auto I = Exit->getFirstNonDebugInstr();
+      if (I != Exit->end() && I->getOpcode() == AMDGPU::S_INST_PREFETCH)
+        return CacheLineAlign;
+    }
+  }
+
+  MachineBasicBlock *Pre = ML->getLoopPreheader();
+  MachineBasicBlock *Exit = ML->getExitBlock();
+
+  if (Pre && Exit) {
+    BuildMI(*Pre, Pre->getFirstTerminator(), DebugLoc(),
+            TII->get(AMDGPU::S_INST_PREFETCH))
+      .addImm(1); // prefetch 2 lines behind PC
+
+    BuildMI(*Exit, Exit->getFirstNonDebugInstr(), DebugLoc(),
+            TII->get(AMDGPU::S_INST_PREFETCH))
+      .addImm(2); // prefetch 1 line behind PC
+  }
+
+  return CacheLineAlign;
 }
 
 LLVM_ATTRIBUTE_UNUSED

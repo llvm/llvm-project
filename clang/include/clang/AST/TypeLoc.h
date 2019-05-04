@@ -173,9 +173,6 @@ public:
 
   TypeLoc IgnoreParens() const;
 
-  /// Strips MacroDefinitionTypeLocs from a type location.
-  TypeLoc IgnoreMacroDefinitions() const;
-
   /// Find a type with the location of an explicit type qualifier.
   ///
   /// The result, if non-null, will be one of:
@@ -1080,39 +1077,6 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setNameLoc(Loc);
     setNameEndLoc(Loc);
-  }
-};
-
-struct MacroQualifiedLocInfo {
-  SourceLocation ExpansionLoc;
-};
-
-class MacroQualifiedTypeLoc
-    : public ConcreteTypeLoc<UnqualTypeLoc, MacroQualifiedTypeLoc,
-                             MacroQualifiedType, MacroQualifiedLocInfo> {
-public:
-  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
-    setExpansionLoc(Loc);
-  }
-
-  TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
-
-  const IdentifierInfo *getMacroIdentifier() const {
-    return getTypePtr()->getMacroIdentifier();
-  }
-
-  SourceLocation getExpansionLoc() const {
-    return this->getLocalData()->ExpansionLoc;
-  }
-
-  void setExpansionLoc(SourceLocation Loc) {
-    this->getLocalData()->ExpansionLoc = Loc;
-  }
-
-  QualType getInnerType() const { return getTypePtr()->getUnderlyingType(); }
-
-  SourceRange getLocalSourceRange() const {
-    return getInnerLoc().getLocalSourceRange();
   }
 };
 
@@ -2325,8 +2289,6 @@ inline T TypeLoc::getAsAdjusted() const {
       Cur = ETL.getNamedTypeLoc();
     else if (auto ATL = Cur.getAs<AdjustedTypeLoc>())
       Cur = ATL.getOriginalLoc();
-    else if (auto MQL = Cur.getAs<MacroQualifiedTypeLoc>())
-      Cur = MQL.getInnerLoc();
     else
       break;
   }

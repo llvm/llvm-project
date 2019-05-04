@@ -2659,7 +2659,8 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
 };
 
 class ObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
-  lldb::RecognizedStackFrameSP RecognizeFrame(lldb::StackFrameSP frame) {
+  lldb::RecognizedStackFrameSP
+  RecognizeFrame(lldb::StackFrameSP frame) override {
     return lldb::RecognizedStackFrameSP(
         new ObjCExceptionRecognizedStackFrame(frame));
   };
