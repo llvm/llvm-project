@@ -28,6 +28,8 @@ struct SIProgramInfo {
     uint32_t DX10Clamp = 0;
     uint32_t DebugMode = 0;
     uint32_t IEEEMode = 0;
+    uint32_t WgpMode = 0; // GFX10+
+    uint32_t MemOrdered = 0; // GFX10+
     uint64_t ScratchSize = 0;
 
     uint64_t ComputePGMRSrc1 = 0;
