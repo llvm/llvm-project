@@ -12155,10 +12155,11 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     if (OtherKind == UK_Use)
       std::swap(Mod, ModOrUse);
 
-    SemaRef.Diag(Mod->getExprLoc(),
-                 IsModMod ? diag::warn_unsequenced_mod_mod
-                          : diag::warn_unsequenced_mod_use)
-      << O << SourceRange(ModOrUse->getExprLoc());
+    SemaRef.DiagRuntimeBehavior(
+        Mod->getExprLoc(), {Mod, ModOrUse},
+        SemaRef.PDiag(IsModMod ? diag::warn_unsequenced_mod_mod
+                               : diag::warn_unsequenced_mod_use)
+            << O << SourceRange(ModOrUse->getExprLoc()));
     UI.Diagnosed = true;
   }
 
