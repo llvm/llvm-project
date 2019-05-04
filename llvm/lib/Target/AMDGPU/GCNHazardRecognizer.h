@@ -79,6 +79,12 @@ private:
   int checkInlineAsmHazards(MachineInstr *IA);
   int checkAnyInstHazards(MachineInstr *MI);
   int checkReadM0Hazards(MachineInstr *SMovRel);
+  int checkNSAtoVMEMHazard(MachineInstr *MI);
+  bool fixVMEMtoScalarWriteHazards(MachineInstr *MI);
+  bool fixSMEMtoVectorWriteHazards(MachineInstr *MI);
+  bool fixVcmpxExecWARHazard(MachineInstr *MI);
+  bool fixLdsBranchVmemWARHazard(MachineInstr *MI);
+
 public:
   GCNHazardRecognizer(const MachineFunction &MF);
   // We can only issue one instruction per cycle.

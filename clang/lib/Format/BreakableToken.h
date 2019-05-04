@@ -361,6 +361,9 @@ public:
                         bool InPPDirective, encoding::Encoding Encoding,
                         const FormatStyle &Style, bool UseCRLF);
 
+  Split getSplit(unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
+                 unsigned ContentStartColumn,
+                 llvm::Regex &CommentPragmasRegex) const override;
   unsigned getRangeLength(unsigned LineIndex, unsigned Offset,
                           StringRef::size_type Length,
                           unsigned StartColumn) const override;

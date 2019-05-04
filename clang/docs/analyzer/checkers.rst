@@ -340,7 +340,7 @@ optin
 Checkers for portability, performance or coding style specific rules.
 
 optin.cplusplus.UninitializedObject (C++)
-"""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""
 
 This checker reports uninitialized fields in objects created after a constructor
 call. It doesn't only find direct uninitialized fields, but rather makes a deep

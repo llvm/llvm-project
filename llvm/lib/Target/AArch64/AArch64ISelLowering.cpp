@@ -3208,6 +3208,26 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
   }
 
+  // On Windows, InReg pointers must be returned, so record the pointer in a
+  // virtual register at the start of the function so it can be returned in the
+  // epilogue.
+  if (IsWin64) {
+    for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
+      if (Ins[I].Flags.isInReg()) {
+        assert(!FuncInfo->getSRetReturnReg());
+
+        MVT PtrTy = getPointerTy(DAG.getDataLayout());
+        unsigned Reg =
+          MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrTy));
+        FuncInfo->setSRetReturnReg(Reg);
+
+        SDValue Copy = DAG.getCopyToReg(DAG.getEntryNode(), DL, Reg, InVals[I]);
+        Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Copy, Chain);
+        break;
+      }
+    }
+  }
+
   unsigned StackArgSize = CCInfo.getNextStackOffset();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (DoesCalleeRestoreStack(CallConv, TailCallOpt)) {
@@ -3403,9 +3423,19 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // X86) but less efficient and uglier in LowerCall.
   for (Function::const_arg_iterator i = CallerF.arg_begin(),
                                     e = CallerF.arg_end();
-       i != e; ++i)
+       i != e; ++i) {
     if (i->hasByValAttr())
       return false;
+
+    // On Windows, "inreg" attributes signify non-aggregate indirect returns.
+    // In this case, it is necessary to save/restore X0 in the callee. Tail
+    // call opt interferes with this. So we disable tail call opt when the
+    // caller has an argument with "inreg" attribute.
+
+    // FIXME: Check whether the callee also has an "inreg" argument.
+    if (i->hasInRegAttr())
+      return false;
+  }
 
   if (getTargetMachine().Options.GuaranteedTailCallOpt)
     return canGuaranteeTCO(CalleeCC) && CCMatch;
@@ -3924,6 +3954,9 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &DL, SelectionDAG &DAG) const {
+  auto &MF = DAG.getMachineFunction();
+  auto *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+
   CCAssignFn *RetCC = CallConv == CallingConv::WebKit_JS
                           ? RetCC_AArch64_WebKit_JS
                           : RetCC_AArch64_AAPCS;
@@ -3962,6 +3995,23 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
+
+  // Windows AArch64 ABIs require that for returning structs by value we copy
+  // the sret argument into X0 for the return.
+  // We saved the argument into a virtual register in the entry block,
+  // so now we copy the value out and into X0.
+  if (unsigned SRetReg = FuncInfo->getSRetReturnReg()) {
+    SDValue Val = DAG.getCopyFromReg(RetOps[0], DL, SRetReg,
+                                     getPointerTy(MF.getDataLayout()));
+
+    unsigned RetValReg = AArch64::X0;
+    Chain = DAG.getCopyToReg(Chain, DL, RetValReg, Val, Flag);
+    Flag = Chain.getValue(1);
+
+    RetOps.push_back(
+      DAG.getRegister(RetValReg, getPointerTy(DAG.getDataLayout())));
+  }
+
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   const MCPhysReg *I =
       TRI->getCalleeSavedRegsViaCopy(&DAG.getMachineFunction());

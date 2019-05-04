@@ -467,14 +467,15 @@ static bool createThunks(OutputSection *OS, int Margin) {
     // modified. If the relocations point into the object file, allocate new
     // memory. Otherwise, this must be previously allocated memory that can be
     // modified in place.
+    ArrayRef<coff_relocation> CurRelocs = SC->getRelocs();
     MutableArrayRef<coff_relocation> NewRelocs;
-    if (OriginalRelocs.data() == SC->Relocs.data()) {
+    if (OriginalRelocs.data() == CurRelocs.data()) {
       NewRelocs = makeMutableArrayRef(
           BAlloc.Allocate<coff_relocation>(OriginalRelocs.size()),
           OriginalRelocs.size());
     } else {
       NewRelocs = makeMutableArrayRef(
-          const_cast<coff_relocation *>(SC->Relocs.data()), SC->Relocs.size());
+          const_cast<coff_relocation *>(CurRelocs.data()), CurRelocs.size());
     }
 
     // Copy each relocation, but replace the symbol table indices which need
@@ -489,7 +490,7 @@ static bool createThunks(OutputSection *OS, int Margin) {
       }
     }
 
-    SC->Relocs = makeArrayRef(NewRelocs.data(), NewRelocs.size());
+    SC->setRelocs(NewRelocs);
   }
   return AddressesChanged;
 }
@@ -501,8 +502,9 @@ static bool verifyRanges(const std::vector<Chunk *> Chunks) {
     if (!SC)
       continue;
 
-    for (size_t J = 0, E = SC->Relocs.size(); J < E; ++J) {
-      const coff_relocation &Rel = SC->Relocs[J];
+    ArrayRef<coff_relocation> Relocs = SC->getRelocs();
+    for (size_t J = 0, E = Relocs.size(); J < E; ++J) {
+      const coff_relocation &Rel = Relocs[J];
       Symbol *RelocTarget = SC->File->getSymbol(Rel.SymbolTableIndex);
 
       Defined *Sym = dyn_cast_or_null<Defined>(RelocTarget);
@@ -1476,7 +1478,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
     if (!SC || !SC->Live)
       continue;
 
-    for (const coff_relocation &Reloc : SC->Relocs) {
+    for (const coff_relocation &Reloc : SC->getRelocs()) {
       if (Config->Machine == I386 && Reloc.Type == COFF::IMAGE_REL_I386_REL32)
         // Ignore relative relocations on x86. On x86_64 they can't be ignored
         // since they're also used to compute absolute addresses.

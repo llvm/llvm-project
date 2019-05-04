@@ -38,7 +38,17 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 
-#if HWASAN_WITH_INTERCEPTORS && !SANITIZER_ANDROID
+// Configurations of HWASAN_WITH_INTERCEPTORS and SANITIZER_ANDROID.
+//
+// HWASAN_WITH_INTERCEPTORS=OFF, SANITIZER_ANDROID=OFF
+//   Not currently tested.
+// HWASAN_WITH_INTERCEPTORS=OFF, SANITIZER_ANDROID=ON
+//   Integration tests downstream exist.
+// HWASAN_WITH_INTERCEPTORS=ON, SANITIZER_ANDROID=OFF
+//    Tested with check-hwasan on x86_64-linux.
+// HWASAN_WITH_INTERCEPTORS=ON, SANITIZER_ANDROID=ON
+//    Tested with check-hwasan on aarch64-linux-android.
+#if !SANITIZER_ANDROID
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL uptr __hwasan_tls;
 #endif

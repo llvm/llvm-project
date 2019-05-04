@@ -8,11 +8,11 @@
 
 # CHECK-OBJDUMP: -h  - Alias for --section-headers
 # CHECK-READOBJ: -h  - Alias for --file-headers
-# CHECK-TBLGEN:  -h  - Alias for -help
-# CHECK-OPT-RPT: -h  - Alias for -help
+# CHECK-TBLGEN:  -h  - Alias for --help
+# CHECK-OPT-RPT: -h  - Alias for --help
 # CHECK-DWARF:   -h  - Alias for -help
 
 # llvm-dwarfdump declares `-h` option and prints special help in that case,
 # which is weird, but makes for a good test, i.e., shows the default `-h`
 # wasn't used.
-# CHECK-DWARF-H-NOT: -help-list  - Display list of available options (-help-list-hidden for more)
+# CHECK-DWARF-H-NOT: --help-list  - Display list of available options (--help-list-hidden for more)
