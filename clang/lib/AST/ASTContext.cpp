@@ -112,6 +112,8 @@ Expr *ASTContext::traverseIgnored(Expr *E) const {
     return E;
   case ast_type_traits::TK_IgnoreImplicitCastsAndParentheses:
     return E->IgnoreParenImpCasts();
+  case ast_type_traits::TK_IgnoreUnlessSpelledInSource:
+    return E->IgnoreUnlessSpelledInSource();
   }
   llvm_unreachable("Invalid Traversal type!");
 }

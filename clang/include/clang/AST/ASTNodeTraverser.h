@@ -113,6 +113,9 @@ public:
         case ast_type_traits::TK_IgnoreImplicitCastsAndParentheses:
           S = E->IgnoreParenImpCasts();
           break;
+        case ast_type_traits::TK_IgnoreUnlessSpelledInSource:
+          S = E->IgnoreUnlessSpelledInSource();
+          break;
         }
       }
 
