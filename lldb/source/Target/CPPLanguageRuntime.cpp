@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/CPPLanguageRuntime.h"
+#include "lldb/Target/ObjCLanguageRuntime.h"
 
 #include <string.h>
 
@@ -16,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 
 #include "lldb/Core/PluginManager.h"
@@ -32,13 +34,29 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
+static ConstString g_this = ConstString("this");
+
 // Destructor
-//----------------------------------------------------------------------
 CPPLanguageRuntime::~CPPLanguageRuntime() {}
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
+
+bool CPPLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
+  // All runtime support values have to be marked as artificial by the
+  // compiler. But not all artificial variables should be hidden from
+  // the user.
+  if (!valobj.GetVariable())
+    return false;
+  if (!valobj.GetVariable()->IsArtificial())
+    return false;
+
+  // Whitelist "this" and since there is no ObjC++ runtime, any ObjC names.
+  ConstString name = valobj.GetName();
+  if (name == g_this)
+    return false;
+  return !ObjCLanguageRuntime::IsWhitelistedRuntimeValue(name);
+}
 
 bool CPPLanguageRuntime::GetObjectDescription(Stream &str,
                                               ValueObject &object) {
@@ -320,7 +338,7 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrameSP frame = thread.GetStackFrameAtIndex(0);
 
   if (frame) {
-    ValueObjectSP value_sp = frame->FindVariable(ConstString("this"));
+    ValueObjectSP value_sp = frame->FindVariable(g_this);
 
     CPPLanguageRuntime::LibCppStdFunctionCallableInfo callable_info =
         FindLibCppStdFunctionCallableInfo(value_sp);
