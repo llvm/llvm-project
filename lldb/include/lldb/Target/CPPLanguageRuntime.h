@@ -64,6 +64,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others);
 
+  bool IsRuntimeSupportValue(ValueObject &valobj) override;
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from CPPLanguageRuntime can see and modify these
