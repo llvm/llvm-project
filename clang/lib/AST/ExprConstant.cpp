@@ -716,6 +716,10 @@ namespace {
           EvaluatingObject(Decl, {CallIndex, Version}));
     }
 
+    /// If we're currently speculatively evaluating, the outermost call stack
+    /// depth at which we can mutate state, otherwise 0.
+    unsigned SpeculativeEvaluationDepth = 0;
+
     /// The current array initialization index, if we're performing array
     /// initialization.
     uint64_t ArrayInitIndex = -1;
@@ -727,9 +731,6 @@ namespace {
     /// Have we emitted a diagnostic explaining why we couldn't constant
     /// fold (not just why it's not strictly a constant expression)?
     bool HasFoldFailureDiagnostic;
-
-    /// Whether or not we're currently speculatively evaluating.
-    bool IsSpeculativelyEvaluating;
 
     /// Whether or not we're in a context where the front end requires a
     /// constant value.
@@ -795,7 +796,7 @@ namespace {
         BottomFrame(*this, SourceLocation(), nullptr, nullptr, nullptr),
         EvaluatingDecl((const ValueDecl *)nullptr),
         EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-        HasFoldFailureDiagnostic(false), IsSpeculativelyEvaluating(false),
+        HasFoldFailureDiagnostic(false),
         InConstantContext(false), EvalMode(Mode) {}
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value) {
@@ -823,14 +824,20 @@ namespace {
       return false;
     }
 
-    CallStackFrame *getCallFrame(unsigned CallIndex) {
-      assert(CallIndex && "no call index in getCallFrame");
+    std::pair<CallStackFrame *, unsigned>
+    getCallFrameAndDepth(unsigned CallIndex) {
+      assert(CallIndex && "no call index in getCallFrameAndDepth");
       // We will eventually hit BottomFrame, which has Index 1, so Frame can't
       // be null in this loop.
+      unsigned Depth = CallStackDepth;
       CallStackFrame *Frame = CurrentCall;
-      while (Frame->Index > CallIndex)
+      while (Frame->Index > CallIndex) {
         Frame = Frame->Caller;
-      return (Frame->Index == CallIndex) ? Frame : nullptr;
+        --Depth;
+      }
+      if (Frame->Index == CallIndex)
+        return {Frame, Depth};
+      return {nullptr, 0};
     }
 
     bool nextStep(const Stmt *S) {
@@ -1111,12 +1118,12 @@ namespace {
   class SpeculativeEvaluationRAII {
     EvalInfo *Info = nullptr;
     Expr::EvalStatus OldStatus;
-    bool OldIsSpeculativelyEvaluating;
+    unsigned OldSpeculativeEvaluationDepth;
 
     void moveFromAndCancel(SpeculativeEvaluationRAII &&Other) {
       Info = Other.Info;
       OldStatus = Other.OldStatus;
-      OldIsSpeculativelyEvaluating = Other.OldIsSpeculativelyEvaluating;
+      OldSpeculativeEvaluationDepth = Other.OldSpeculativeEvaluationDepth;
       Other.Info = nullptr;
     }
 
@@ -1125,7 +1132,7 @@ namespace {
         return;
 
       Info->EvalStatus = OldStatus;
-      Info->IsSpeculativelyEvaluating = OldIsSpeculativelyEvaluating;
+      Info->SpeculativeEvaluationDepth = OldSpeculativeEvaluationDepth;
     }
 
   public:
@@ -1134,9 +1141,9 @@ namespace {
     SpeculativeEvaluationRAII(
         EvalInfo &Info, SmallVectorImpl<PartialDiagnosticAt> *NewDiag = nullptr)
         : Info(&Info), OldStatus(Info.EvalStatus),
-          OldIsSpeculativelyEvaluating(Info.IsSpeculativelyEvaluating) {
+          OldSpeculativeEvaluationDepth(Info.SpeculativeEvaluationDepth) {
       Info.EvalStatus.Diag = NewDiag;
-      Info.IsSpeculativelyEvaluating = true;
+      Info.SpeculativeEvaluationDepth = Info.CallStackDepth + 1;
     }
 
     SpeculativeEvaluationRAII(const SpeculativeEvaluationRAII &Other) = delete;
@@ -3138,8 +3145,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   }
 
   CallStackFrame *Frame = nullptr;
+  unsigned Depth = 0;
   if (LVal.getLValueCallIndex()) {
-    Frame = Info.getCallFrame(LVal.getLValueCallIndex());
+    std::tie(Frame, Depth) =
+        Info.getCallFrameAndDepth(LVal.getLValueCallIndex());
     if (!Frame) {
       Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
         << AK << LVal.Base.is<const ValueDecl*>();
@@ -3330,7 +3339,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   // to be read here (but take care with 'mutable' fields).
   if ((Frame && Info.getLangOpts().CPlusPlus14 &&
        Info.EvalStatus.HasSideEffects) ||
-      (AK != AK_Read && Info.IsSpeculativelyEvaluating))
+      (AK != AK_Read && Depth < Info.SpeculativeEvaluationDepth))
     return CompleteObject();
 
   return CompleteObject(BaseVal, BaseType, LifetimeStartedInEvaluation);
@@ -7823,6 +7832,10 @@ static bool EvaluateBuiltinConstantPForLValue(const APValue &LV) {
 /// EvaluateBuiltinConstantP - Evaluate __builtin_constant_p as similarly to
 /// GCC as we can manage.
 static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
+  // This evaluation is not permitted to have side-effects, so evaluate it in
+  // a speculative evaluation context.
+  SpeculativeEvaluationRAII SpeculativeEval(Info);
+
   // Constant-folding is always enabled for the operand of __builtin_constant_p
   // (even when the enclosing evaluation context otherwise requires a strict
   // language-specific constant expression).
