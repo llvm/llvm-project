@@ -858,7 +858,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const MachineOperand *SDST = TII->getNamedOperand(*MI, SDSTName);
   if (!SDST) {
-    for (auto MO : MI->implicit_operands()) {
+    for (const auto &MO : MI->implicit_operands()) {
       if (MO.isDef() && TRI->isSGPRClass(TRI->getPhysRegClass(MO.getReg()))) {
         SDST = &MO;
         break;
