@@ -1,0 +1,276 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: hazard_lds_branch_buf
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            hazard_lds_branch_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_buf_branch_lds
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: DS_READ_B32
+---
+name:            hazard_buf_branch_lds
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_branch_lds
+# GCN:       bb.1:
+# GCN-NEXT:  DS_READ_B32
+---
+name:            no_hazard_lds_branch_lds
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_buf_branch_buf
+# GCN:      bb.1:
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            no_hazard_buf_branch_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_branch_buf_fallthrough
+# GCN:      bb.1:
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            no_hazard_lds_branch_buf_fallthrough
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_branch_buf_samebb
+# GCN:      DS_READ_B32
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            no_hazard_lds_branch_buf_samebb
+body:            |
+  bb.0:
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_lds_branch_buf_loop
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: DS_READ_B32
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            hazard_lds_branch_buf_loop
+body:            |
+  bb.0:
+    successors: %bb.0
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.0
+...
+
+# GCN-LABEL: name: single_hazard_lds_branch_buf
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            single_hazard_lds_branch_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_branch_lds_buf
+# GCN:      bb.1:
+# GCN-NEXT: DS_READ_B32
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            no_hazard_lds_branch_lds_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_buf_branch_buf
+# GCN:      bb.1:
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            no_hazard_lds_buf_branch_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_lds_branch_vscnt_1_buf
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            hazard_lds_branch_vscnt_1_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_WAITCNT_VSCNT undef $sgpr_null, 1
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_branch_vscnt_0_buf
+# GCN:      bb.1:
+# GCN-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            no_hazard_lds_branch_vscnt_0_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_WAITCNT_VSCNT undef $sgpr_null, 0
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_lds_branch_vscnt_s0_buf
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            hazard_lds_branch_vscnt_s0_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_WAITCNT_VSCNT undef $sgpr0, 0
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_vscnt_0_branch_buf
+# GCN:      bb.1:
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            no_hazard_lds_vscnt_0_branch_buf
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_WAITCNT_VSCNT undef $sgpr_null, 0
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_lds_branch_global
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: GLOBAL_LOAD_DWORD
+---
+name:            hazard_lds_branch_global
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_lds_branch_scratch
+# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT: SCRATCH_LOAD_DWORD
+---
+name:            hazard_lds_branch_scratch
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = SCRATCH_LOAD_DWORD undef $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_lds_branch_flat
+# GCN:      bb.1:
+# GCN-NEXT: FLAT_LOAD_DWORD
+---
+name:            no_hazard_lds_branch_flat
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = FLAT_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...
