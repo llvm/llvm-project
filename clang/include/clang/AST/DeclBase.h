@@ -1472,10 +1472,6 @@ class DeclContext {
     uint64_t IsInline : 1;
     uint64_t IsInlineSpecified : 1;
 
-    /// This is shared by CXXConstructorDecl,
-    /// CXXConversionDecl, and CXXDeductionGuideDecl.
-    uint64_t IsExplicitSpecified : 1;
-
     uint64_t IsVirtualAsWritten : 1;
     uint64_t IsPure : 1;
     uint64_t HasInheritedPrototype : 1;
@@ -1523,7 +1519,7 @@ class DeclContext {
   };
 
   /// Number of non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = 25 };
+  enum { NumFunctionDeclBits = 24 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1535,17 +1531,25 @@ class DeclContext {
     /// For the bits in FunctionDeclBitfields.
     uint64_t : NumFunctionDeclBits;
 
-    /// 25 bits to fit in the remaining availible space.
+    /// 24 bits to fit in the remaining available space.
     /// Note that this makes CXXConstructorDeclBitfields take
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    uint64_t NumCtorInitializers : 25;
+    uint64_t NumCtorInitializers : 24;
     uint64_t IsInheritingConstructor : 1;
+
+    /// Whether this constructor has a trail-allocated explicit specifier.
+    uint64_t HasTrailingExplicitSpecifier : 1;
+    /// If this constructor does't have a trail-allocated explicit specifier.
+    /// Whether this constructor is explicit specified.
+    uint64_t IsSimpleExplicit : 1;
   };
 
   /// Number of non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = 26 };
+  enum {
+    NumCXXConstructorDeclBits = 64 - NumDeclContextBits - NumFunctionDeclBits
+  };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor

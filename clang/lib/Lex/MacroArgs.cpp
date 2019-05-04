@@ -135,15 +135,12 @@ const Token *MacroArgs::getUnexpArgument(unsigned Arg) const {
   return Result;
 }
 
-// This function assumes that the variadic arguments are the tokens
-// corresponding to the last parameter (ellipsis) - and since tokens are
-// separated by the 'eof' token, if that is the only token corresponding to that
-// last parameter, we know no variadic arguments were supplied.
-bool MacroArgs::invokedWithVariadicArgument(const MacroInfo *const MI) const {
+bool MacroArgs::invokedWithVariadicArgument(const MacroInfo *const MI,
+                                            Preprocessor &PP) {
   if (!MI->isVariadic())
     return false;
   const int VariadicArgIndex = getNumMacroArguments() - 1;
-  return getUnexpArgument(VariadicArgIndex)->isNot(tok::eof);
+  return getPreExpArgument(VariadicArgIndex, PP).front().isNot(tok::eof);
 }
 
 /// ArgNeedsPreexpansion - If we can prove that the argument won't be affected

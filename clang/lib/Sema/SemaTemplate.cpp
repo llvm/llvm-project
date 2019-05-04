@@ -1109,7 +1109,7 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     if (DS.isVirtualSpecified())
       EmitDiag(DS.getVirtualSpecLoc());
 
-    if (DS.isExplicitSpecified())
+    if (DS.hasExplicitSpecifier())
       EmitDiag(DS.getExplicitSpecLoc());
 
     if (DS.isNoreturnSpecified())
@@ -1790,8 +1790,8 @@ struct ConvertConstructorToDeductionGuideTransform {
       return nullptr;
     TypeSourceInfo *NewTInfo = TLB.getTypeSourceInfo(SemaRef.Context, NewType);
 
-    return buildDeductionGuide(TemplateParams, CD->isExplicit(), NewTInfo,
-                               CD->getBeginLoc(), CD->getLocation(),
+    return buildDeductionGuide(TemplateParams, CD->getExplicitSpecifier(),
+                               NewTInfo, CD->getBeginLoc(), CD->getLocation(),
                                CD->getEndLoc());
   }
 
@@ -1820,8 +1820,8 @@ struct ConvertConstructorToDeductionGuideTransform {
       Params.push_back(NewParam);
     }
 
-    return buildDeductionGuide(Template->getTemplateParameters(), false, TSI,
-                               Loc, Loc, Loc);
+    return buildDeductionGuide(Template->getTemplateParameters(),
+                               ExplicitSpecifier(), TSI, Loc, Loc, Loc);
   }
 
 private:
@@ -1971,7 +1971,7 @@ private:
   }
 
   NamedDecl *buildDeductionGuide(TemplateParameterList *TemplateParams,
-                                 bool Explicit, TypeSourceInfo *TInfo,
+                                 ExplicitSpecifier ES, TypeSourceInfo *TInfo,
                                  SourceLocation LocStart, SourceLocation Loc,
                                  SourceLocation LocEnd) {
     DeclarationNameInfo Name(DeductionGuideName, Loc);
@@ -1980,8 +1980,8 @@ private:
 
     // Build the implicit deduction guide template.
     auto *Guide =
-        CXXDeductionGuideDecl::Create(SemaRef.Context, DC, LocStart, Explicit,
-                                      Name, TInfo->getType(), TInfo, LocEnd);
+        CXXDeductionGuideDecl::Create(SemaRef.Context, DC, LocStart, ES, Name,
+                                      TInfo->getType(), TInfo, LocEnd);
     Guide->setImplicit();
     Guide->setParams(Params);
 
@@ -3927,13 +3927,6 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
              Specialization->isOutOfLine()) {
     Specialization->setAccess(VarTemplate->getAccess());
   }
-
-  // Link instantiations of static data members back to the template from
-  // which they were instantiated.
-  if (Specialization->isStaticDataMember())
-    Specialization->setInstantiationOfStaticDataMember(
-        VarTemplate->getTemplatedDecl(),
-        Specialization->getSpecializationKind());
 
   return Specialization;
 }
@@ -9201,7 +9194,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
 
     if (!PrevTemplate) {
       if (!Prev || !Prev->isStaticDataMember()) {
-        // We expect to see a data data member here.
+        // We expect to see a static data member here.
         Diag(D.getIdentifierLoc(), diag::err_explicit_instantiation_not_known)
             << Name;
         for (LookupResult::iterator P = Previous.begin(), PEnd = Previous.end();
