@@ -121,7 +121,7 @@ define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
   ret i1 %ov
 }
 
-; Verify insertion point for multi-BB.
+; This used to verify insertion point for multi-BB, but now we just bail out.
 
 declare void @call(i1)
 
@@ -131,14 +131,17 @@ define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) nounwi
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    je .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %t
-; CHECK-NEXT:    subq %rsi, %rdi
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movq %rdi, (%rdx)
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    movq %rax, (%rdx)
 ; CHECK-NEXT:    testb $1, %cl
-; CHECK-NEXT:    jne .LBB8_3
+; CHECK-NEXT:    je .LBB8_2
+; CHECK-NEXT:  # %bb.3: # %end
+; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB8_2: # %f
 ; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:  .LBB8_3: # %end
 ; CHECK-NEXT:    retq
 entry:
   br i1 %cond, label %t, label %f
