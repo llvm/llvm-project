@@ -4587,6 +4587,43 @@ int num = bar();
 #endif
 }
 
+namespace FunctionProtoTypeDecay {
+#if defined(FIRST)
+struct S1 {
+  struct X {};
+  using Y = X(X());
+};
+#elif defined(SECOND)
+struct S1 {
+  struct X {};
+  using Y = X(X(X()));
+};
+#else
+S1 s1;
+// expected-error@first.h:* {{'FunctionProtoTypeDecay::S1::Y' from module 'FirstModule' is not present in definition of 'FunctionProtoTypeDecay::S1' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'Y' does not match}}
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  struct X {};
+  using Y =
+      X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(
+      X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(
+      X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(
+      X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(X(
+      ))))))))))))))))
+      ))))))))))))))))
+      ))))))))))))))))
+      ))))))))))))))));
+};
+#elif defined(SECOND)
+#else
+S2 s2;
+#endif
+
+}
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST
