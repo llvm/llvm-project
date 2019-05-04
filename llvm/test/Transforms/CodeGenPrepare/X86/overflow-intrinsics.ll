@@ -47,15 +47,16 @@ define i64 @uaddo3(i64 %a, i64 %b) nounwind ssp {
   ret i64 %Q
 }
 
+; TODO? CGP sinks the compare before we have a chance to form the overflow intrinsic.
+
 define i64 @uaddo4(i64 %a, i64 %b, i1 %c) nounwind ssp {
 ; CHECK-LABEL: @uaddo4(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
-; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[B]], [[ADD]]
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[TMP0]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i64 0
@@ -362,7 +363,7 @@ define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
   ret i1 %ov
 }
 
-; Verify insertion point for multi-BB.
+; This used to verify insertion point for multi-BB, but now we just bail out.
 
 declare void @call(i1)
 
@@ -371,15 +372,14 @@ define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
-; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
-; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = sub i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store i64 [[S]], i64* [[P:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[F]]
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[COND]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret i1 [[OV1]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[OV]]
 ;
 entry:
   br i1 %cond, label %t, label %f
@@ -512,6 +512,26 @@ true:
 
 exit:
   ret void
+}
+
+; This was crashing when trying to delay instruction removal/deletion.
+
+declare i64 @llvm.objectsize.i64.p0i8(i8*, i1 immarg, i1 immarg, i1 immarg) #0
+
+define hidden fastcc void @crash() {
+; CHECK-LABEL: @crash(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 undef, i64 undef)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[T2:%.*]] = select i1 undef, i1 undef, i1 [[OV]]
+; CHECK-NEXT:    unreachable
+;
+  %t0 = add i64 undef, undef
+  %t1 = icmp ult i64 %t0, undef
+  %t2 = select i1 undef, i1 undef, i1 %t1
+  %t3 = call i64 @llvm.objectsize.i64.p0i8(i8* nonnull undef, i1 false, i1 false, i1 false)
+  %t4 = icmp ugt i64 %t3, 7
+  unreachable
 }
 
 ; Check that every instruction inserted by -codegenprepare has a debug location.
