@@ -434,23 +434,22 @@ define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror
 ; CHECK-APPLE:  retq
 
 ; CHECK-O0-LABEL: conditionally_forward_swifterror:
-; CHECK-O0:  subq $24, %rsp
-; CHECK-O0:  movq %r12, [[REG1:%[a-z0-9]+]]
+; CHECK-O0: pushq [[REG1:%[a-z0-9]+]]
+; CHECK-O0:  movq %r12, [[REG1]]
 ; CHECK-O0:  cmpl $0, %edi
-; CHECK-O0-DAG:  movq [[REG1]], [[STK:[0-9]+]](%rsp)
-; CHECK-O0-DAG:  movq %r12, [[STK2:[0-9]+]](%rsp)
+; CHECK-O0-DAG:  movq %r12, (%rsp)
 ; CHECK-O0:  je
 
-; CHECK-O0:  movq [[STK2]](%rsp), [[REG:%[a-z0-9]+]]
+; CHECK-O0:  movq (%rsp), [[REG:%[a-z0-9]+]]
 ; CHECK-O0:  movq [[REG]], %r12
 ; CHECK-O0:  callq _moo
-; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  popq [[REG1]]
 ; CHECK-O0:  retq
 
-; CHECK-O0:  movq [[STK2]](%rsp), [[REG:%[a-z0-9]+]]
+; CHECK-O0:  movq (%rsp), [[REG:%[a-z0-9]+]]
 ; CHECK-O0:  xorps %xmm0, %xmm0
 ; CHECK-O0:  movq [[REG]], %r12
-; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  popq [[REG1]]
 ; CHECK-O0:  retq
 entry:
   %cond = icmp ne i32 %cc, 0

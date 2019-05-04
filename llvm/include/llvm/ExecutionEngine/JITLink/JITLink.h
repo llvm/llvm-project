@@ -296,6 +296,34 @@ raw_ostream &operator<<(raw_ostream &OS, const Atom &A);
 void printEdge(raw_ostream &OS, const Atom &FixupAtom, const Edge &E,
                StringRef EdgeKindName);
 
+/// Represents a section address range via a pair of DefinedAtom pointers to
+/// the first and last atoms in the section.
+class SectionRange {
+public:
+  SectionRange() = default;
+  SectionRange(DefinedAtom *First, DefinedAtom *Last)
+      : First(First), Last(Last) {}
+  DefinedAtom *getFirstAtom() const {
+    assert((!Last || First) && "First can not be null if end is non-null");
+    return First;
+  }
+  DefinedAtom *getLastAtom() const {
+    assert((First || !Last) && "Last can not be null if start is non-null");
+    return Last;
+  }
+  bool isEmpty() const {
+    assert((First || !Last) && "Last can not be null if start is non-null");
+    return !First;
+  }
+  JITTargetAddress getStart() const;
+  JITTargetAddress getEnd() const;
+  uint64_t getSize() const;
+
+private:
+  DefinedAtom *First = nullptr;
+  DefinedAtom *Last = nullptr;
+};
+
 /// Represents an object file section.
 class Section {
   friend class AtomGraph;
@@ -336,6 +364,17 @@ public:
 
   /// Return true if this section contains no atoms.
   bool atoms_empty() const { return DefinedAtoms.empty(); }
+
+  /// Returns the range of this section as the pair of atoms with the lowest
+  /// and highest target address. This operation is expensive, as it
+  /// must traverse all atoms in the section.
+  ///
+  /// Note: If the section is empty, both values will be null. The section
+  /// address will evaluate to null, and the size to zero. If the section
+  /// contains a single atom both values will point to it, the address will
+  /// evaluate to the address of that atom, and the size will be the size of
+  /// that atom.
+  SectionRange getRange() const;
 
 private:
   void addAtom(DefinedAtom &DA) {
@@ -457,6 +496,29 @@ private:
   unsigned Ordinal = 0;
   uint32_t Alignment = 0;
 };
+
+inline JITTargetAddress SectionRange::getStart() const {
+  return First ? First->getAddress() : 0;
+}
+
+inline JITTargetAddress SectionRange::getEnd() const {
+  return Last ? Last->getAddress() + Last->getSize() : 0;
+}
+
+inline uint64_t SectionRange::getSize() const { return getEnd() - getStart(); }
+
+inline SectionRange Section::getRange() const {
+  if (atoms_empty())
+    return SectionRange();
+  DefinedAtom *First = *DefinedAtoms.begin(), *Last = *DefinedAtoms.end();
+  for (auto *DA : atoms()) {
+    if (DA->getAddress() < First->getAddress())
+      First = DA;
+    if (DA->getAddress() > Last->getAddress())
+      Last = DA;
+  }
+  return SectionRange(First, Last);
+}
 
 class AtomGraph {
 private:
@@ -619,6 +681,15 @@ public:
   iterator_range<section_iterator> sections() {
     return make_range(section_iterator(Sections.begin()),
                       section_iterator(Sections.end()));
+  }
+
+  /// Returns the section with the given name if it exists, otherwise returns
+  /// null.
+  Section *findSectionByName(StringRef Name) {
+    for (auto &S : sections())
+      if (S.getName() == Name)
+        return &S;
+    return nullptr;
   }
 
   iterator_range<external_atom_iterator> external_atoms() {

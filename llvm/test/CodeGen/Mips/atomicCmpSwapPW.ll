@@ -11,8 +11,6 @@
 define void @foo(i32 %new, i32 %old) {
 ; O32-LABEL: foo:
 ; O32:       # %bb.0: # %entry
-; O32-NEXT:    addiu $sp, $sp, -16
-; O32-NEXT:    .cfi_def_cfa_offset 16
 ; O32-NEXT:    move $1, $5
 ; O32-NEXT:    move $2, $4
 ; O32-NEXT:    lui $3, %hi(sym)
@@ -31,17 +29,11 @@ define void @foo(i32 %new, i32 %old) {
 ; O32-NEXT:    nop
 ; O32-NEXT:  $BB0_3: # %entry
 ; O32-NEXT:    sync
-; O32-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $2, 8($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $6, 4($sp) # 4-byte Folded Spill
-; O32-NEXT:    addiu $sp, $sp, 16
 ; O32-NEXT:    jr $ra
 ; O32-NEXT:    nop
 ;
 ; N32-LABEL: foo:
 ; N32:       # %bb.0: # %entry
-; N32-NEXT:    addiu $sp, $sp, -16
-; N32-NEXT:    .cfi_def_cfa_offset 16
 ; N32-NEXT:    move $1, $5
 ; N32-NEXT:    sll $1, $1, 0
 ; N32-NEXT:    move $2, $4
@@ -62,15 +54,11 @@ define void @foo(i32 %new, i32 %old) {
 ; N32-NEXT:    nop
 ; N32-NEXT:  .LBB0_3: # %entry
 ; N32-NEXT:    sync
-; N32-NEXT:    sw $6, 12($sp) # 4-byte Folded Spill
-; N32-NEXT:    addiu $sp, $sp, 16
 ; N32-NEXT:    jr $ra
 ; N32-NEXT:    nop
 ;
 ; N64-LABEL: foo:
 ; N64:       # %bb.0: # %entry
-; N64-NEXT:    daddiu $sp, $sp, -16
-; N64-NEXT:    .cfi_def_cfa_offset 16
 ; N64-NEXT:    move $1, $5
 ; N64-NEXT:    sll $1, $1, 0
 ; N64-NEXT:    move $2, $4
@@ -95,8 +83,6 @@ define void @foo(i32 %new, i32 %old) {
 ; N64-NEXT:    nop
 ; N64-NEXT:  .LBB0_3: # %entry
 ; N64-NEXT:    sync
-; N64-NEXT:    sw $6, 12($sp) # 4-byte Folded Spill
-; N64-NEXT:    daddiu $sp, $sp, 16
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    nop
 entry:

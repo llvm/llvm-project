@@ -1,0 +1,66 @@
+# RUN: llvm-readobj --file-header %p/Inputs/xcoff-basic.o | \
+# RUN: FileCheck --check-prefix=FILEHEADER %s
+
+# RUN: llvm-readobj --file-header %p/Inputs/xcoff-basic-neg-time.o | \
+# RUN: FileCheck --check-prefix=NEGTIME %s
+
+# RUN: llvm-readobj --file-header %p/Inputs/xcoff-basic-neg-sym-count.o | \
+# RUN: FileCheck --check-prefix=NEGSYMCOUNT %s
+
+# FILEHEADER:     File: {{.*}}xcoff-basic.o
+# FILEHEADER-NEXT: Format: aixcoff-rs6000
+# FILEHEADER-NEXT: Arch: powerpc
+# FILEHEADER-NEXT: AddressSize: 32bit
+# FILEHEADER-NEXT: FileHeader {
+# FILEHEADER-NEXT:   Magic: 0x1DF
+# FILEHEADER-NEXT:   NumberOfSections: 6
+# FILEHEADER-NEXT:   TimeStamp: 2019-03-12T14:04:43Z (0x5C87BC7B)
+# FILEHEADER-NEXT:   SymbolTableOffset: 0x52E
+# FILEHEADER-NEXT:   SymbolTableEntries: 120
+# FILEHEADER-NEXT:   OptionalHeaderSize: 0x1C
+# FILEHEADER-NEXT:   Flags: 0x0
+# FILEHEADER-NEXT: }
+
+# NEGTIME:     File: {{.*}}xcoff-basic-neg-time.o
+# NEGTIME-NEXT:  Format: aixcoff-rs6000
+# NEGTIME-NEXT:  Arch: powerpc
+# NEGTIME-NEXT:  AddressSize: 32bit
+# NEGTIME-NEXT:  FileHeader {
+# NEGTIME-NEXT:    Magic: 0x1DF
+# NEGTIME-NEXT:    NumberOfSections: 6
+# NEGTIME-NEXT:    TimeStamp: Reserved Value (0xDC87BC7B)
+# NEGTIME-NEXT:    SymbolTableOffset: 0x52E
+# NEGTIME-NEXT:    SymbolTableEntries: 120
+# NEGTIME-NEXT:    OptionalHeaderSize: 0x1C
+# NEGTIME-NEXT:    Flags: 0x0
+# NEGTIME-NEXT:  }
+
+# NEGSYMCOUNT:     File: {{.*}}xcoff-basic-neg-sym-count.o
+# NEGSYMCOUNT-NEXT:  Format: aixcoff-rs6000
+# NEGSYMCOUNT-NEXT:  Arch: powerpc
+# NEGSYMCOUNT-NEXT:  AddressSize: 32bit
+# NEGSYMCOUNT-NEXT:  FileHeader {
+# NEGSYMCOUNT-NEXT:    Magic: 0x1DF
+# NEGSYMCOUNT-NEXT:    NumberOfSections: 5
+# NEGSYMCOUNT-NEXT:    TimeStamp: 2019-03-12T14:04:43Z (0x5C87BC7B)
+# NEGSYMCOUNT-NEXT:    SymbolTableOffset: 0x0
+# NEGSYMCOUNT-NEXT:    SymbolTableEntries: Reserved Value (0x80000000)
+# NEGSYMCOUNT-NEXT:    OptionalHeaderSize: 0x1C
+# NEGSYMCOUNT-NEXT:    Flags: 0xD
+# NEGSYMCOUNT-NEXT:  }
+
+# xcoff-basic.o was compiled with `xlc -qtls -O3 -g -c xcoff-basic.c`
+# from the following source:
+# int a = 55;
+# int b;
+# __thread int j = 55;
+# __thread double d;
+# int A() { return a; }
+# int B() { return b; }
+# int J() { return j; }
+# double D() { return d; }
+#
+# xcoff-basic-neg-time.o was manually edited to include a negative time stamp.
+# xcoff-basic-neg-sym-count.o was stripped using the 'strip' utility, and
+# manually edited to have a negative symbol table entry count.
+
