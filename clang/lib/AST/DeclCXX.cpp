@@ -1862,19 +1862,47 @@ bool CXXRecordDecl::mayBeAbstract() const {
 
 void CXXDeductionGuideDecl::anchor() {}
 
+bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
+  if ((getKind() != Other.getKind() ||
+       getKind() == ExplicitSpecKind::Unresolved)) {
+    if (getKind() == ExplicitSpecKind::Unresolved &&
+        Other.getKind() == ExplicitSpecKind::Unresolved) {
+      ODRHash SelfHash, OtherHash;
+      SelfHash.AddStmt(getExpr());
+      OtherHash.AddStmt(Other.getExpr());
+      return SelfHash.CalculateHash() == OtherHash.CalculateHash();
+    } else
+      return false;
+  }
+  return true;
+}
+
+ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
+  switch (Function->getDeclKind()) {
+  case Decl::Kind::CXXConstructor:
+    return cast<CXXConstructorDecl>(Function)->getExplicitSpecifier();
+  case Decl::Kind::CXXConversion:
+    return cast<CXXConversionDecl>(Function)->getExplicitSpecifier();
+  case Decl::Kind::CXXDeductionGuide:
+    return cast<CXXDeductionGuideDecl>(Function)->getExplicitSpecifier();
+  default:
+    return {};
+  }
+}
+
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
-    ASTContext &C, DeclContext *DC, SourceLocation StartLoc, bool IsExplicit,
-    const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
-    SourceLocation EndLocation) {
-  return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, IsExplicit,
-                                           NameInfo, T, TInfo, EndLocation);
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
+    TypeSourceInfo *TInfo, SourceLocation EndLocation) {
+  return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T,
+                                           TInfo, EndLocation);
 }
 
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
                                                                  unsigned ID) {
-  return new (C, ID) CXXDeductionGuideDecl(C, nullptr, SourceLocation(), false,
-                                           DeclarationNameInfo(), QualType(),
-                                           nullptr, SourceLocation());
+  return new (C, ID) CXXDeductionGuideDecl(
+      C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
+      QualType(), nullptr, SourceLocation());
 }
 
 void CXXMethodDecl::anchor() {}
@@ -2312,47 +2340,54 @@ SourceRange CXXCtorInitializer::getSourceRange() const {
 CXXConstructorDecl::CXXConstructorDecl(
     ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
-    bool isExplicitSpecified, bool isInline, bool isImplicitlyDeclared,
+    ExplicitSpecifier ES, bool isInline, bool isImplicitlyDeclared,
     bool isConstexpr, InheritedConstructor Inherited)
     : CXXMethodDecl(CXXConstructor, C, RD, StartLoc, NameInfo, T, TInfo,
                     SC_None, isInline, isConstexpr, SourceLocation()) {
   setNumCtorInitializers(0);
   setInheritingConstructor(static_cast<bool>(Inherited));
   setImplicit(isImplicitlyDeclared);
+  CXXConstructorDeclBits.HasTrailingExplicitSpecifier = ES.getExpr() ? 1 : 0;
   if (Inherited)
     *getTrailingObjects<InheritedConstructor>() = Inherited;
-  setExplicitSpecified(isExplicitSpecified);
+  setExplicitSpecifier(ES);
 }
 
 void CXXConstructorDecl::anchor() {}
 
 CXXConstructorDecl *CXXConstructorDecl::CreateDeserialized(ASTContext &C,
                                                            unsigned ID,
-                                                           bool Inherited) {
-  unsigned Extra = additionalSizeToAlloc<InheritedConstructor>(Inherited);
+                                                           uint64_t AllocKind) {
+  bool hasTraillingExplicit = static_cast<bool>(AllocKind & TAKHasTailExplicit);
+  bool isInheritingConstructor =
+      static_cast<bool>(AllocKind & TAKInheritsConstructor);
+  unsigned Extra =
+      additionalSizeToAlloc<InheritedConstructor, ExplicitSpecifier>(
+          isInheritingConstructor, hasTraillingExplicit);
   auto *Result = new (C, ID, Extra) CXXConstructorDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
-      false, false, false, false, InheritedConstructor());
-  Result->setInheritingConstructor(Inherited);
+      ExplicitSpecifier(), false, false, false, InheritedConstructor());
+  Result->setInheritingConstructor(isInheritingConstructor);
+  Result->CXXConstructorDeclBits.HasTrailingExplicitSpecifier =
+      hasTraillingExplicit;
+  Result->setExplicitSpecifier(ExplicitSpecifier());
   return Result;
 }
 
-CXXConstructorDecl *
-CXXConstructorDecl::Create(ASTContext &C, CXXRecordDecl *RD,
-                           SourceLocation StartLoc,
-                           const DeclarationNameInfo &NameInfo,
-                           QualType T, TypeSourceInfo *TInfo,
-                           bool isExplicit, bool isInline,
-                           bool isImplicitlyDeclared, bool isConstexpr,
-                           InheritedConstructor Inherited) {
+CXXConstructorDecl *CXXConstructorDecl::Create(
+    ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
+    const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
+    ExplicitSpecifier ES, bool isInline, bool isImplicitlyDeclared,
+    bool isConstexpr, InheritedConstructor Inherited) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConstructorName &&
          "Name must refer to a constructor");
   unsigned Extra =
-      additionalSizeToAlloc<InheritedConstructor>(Inherited ? 1 : 0);
-  return new (C, RD, Extra) CXXConstructorDecl(
-      C, RD, StartLoc, NameInfo, T, TInfo, isExplicit, isInline,
-      isImplicitlyDeclared, isConstexpr, Inherited);
+      additionalSizeToAlloc<InheritedConstructor, ExplicitSpecifier>(
+          Inherited ? 1 : 0, ES.getExpr() ? 1 : 0);
+  return new (C, RD, Extra)
+      CXXConstructorDecl(C, RD, StartLoc, NameInfo, T, TInfo, ES, isInline,
+                         isImplicitlyDeclared, isConstexpr, Inherited);
 }
 
 CXXConstructorDecl::init_const_iterator CXXConstructorDecl::init_begin() const {
@@ -2503,25 +2538,21 @@ void CXXConversionDecl::anchor() {}
 
 CXXConversionDecl *
 CXXConversionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) CXXConversionDecl(C, nullptr, SourceLocation(),
-                                       DeclarationNameInfo(), QualType(),
-                                       nullptr, false, false, false,
-                                       SourceLocation());
+  return new (C, ID) CXXConversionDecl(
+      C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
+      false, ExplicitSpecifier(), false, SourceLocation());
 }
 
-CXXConversionDecl *
-CXXConversionDecl::Create(ASTContext &C, CXXRecordDecl *RD,
-                          SourceLocation StartLoc,
-                          const DeclarationNameInfo &NameInfo,
-                          QualType T, TypeSourceInfo *TInfo,
-                          bool isInline, bool isExplicit,
-                          bool isConstexpr, SourceLocation EndLocation) {
+CXXConversionDecl *CXXConversionDecl::Create(
+    ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
+    const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
+    bool isInline, ExplicitSpecifier ES, bool isConstexpr,
+    SourceLocation EndLocation) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConversionFunctionName &&
          "Name must refer to a conversion function");
   return new (C, RD) CXXConversionDecl(C, RD, StartLoc, NameInfo, T, TInfo,
-                                       isInline, isExplicit, isConstexpr,
-                                       EndLocation);
+                                       isInline, ES, isConstexpr, EndLocation);
 }
 
 bool CXXConversionDecl::isLambdaToBlockPointerConversion() const {

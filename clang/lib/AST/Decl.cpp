@@ -2713,7 +2713,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.SClass = S;
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
-  FunctionDeclBits.IsExplicitSpecified = false;
   FunctionDeclBits.IsVirtualAsWritten = false;
   FunctionDeclBits.IsPure = false;
   FunctionDeclBits.HasInheritedPrototype = false;
