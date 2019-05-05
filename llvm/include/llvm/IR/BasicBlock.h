@@ -395,6 +395,10 @@ public:
   void replacePhiUsesWith(BasicBlock *Old, BasicBlock *New);
 
   /// Update all phi nodes in this basic block's successors to refer to basic
+  /// block \p New instead of basic block \p Old.
+  void replaceSuccessorsPhiUsesWith(BasicBlock *Old, BasicBlock *New);
+
+  /// Update all phi nodes in this basic block's successors to refer to basic
   /// block \p New instead of to it.
   void replaceSuccessorsPhiUsesWith(BasicBlock *New);
 
