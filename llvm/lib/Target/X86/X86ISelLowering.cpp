@@ -3431,11 +3431,11 @@ SDValue X86TargetLowering::LowerFormalArguments(
     }
 
     // Copy all forwards from physical to virtual registers.
-    for (ForwardedRegister &F : Forwards) {
+    for (ForwardedRegister &FR : Forwards) {
       // FIXME: Can we use a less constrained schedule?
-      SDValue RegVal = DAG.getCopyFromReg(Chain, dl, F.VReg, F.VT);
-      F.VReg = MF.getRegInfo().createVirtualRegister(getRegClassFor(F.VT));
-      Chain = DAG.getCopyToReg(Chain, dl, F.VReg, RegVal);
+      SDValue RegVal = DAG.getCopyFromReg(Chain, dl, FR.VReg, FR.VT);
+      FR.VReg = MF.getRegInfo().createVirtualRegister(getRegClassFor(FR.VT));
+      Chain = DAG.getCopyToReg(Chain, dl, FR.VReg, RegVal);
     }
   }
 
@@ -17874,23 +17874,23 @@ SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
   else
     Tys = DAG.getVTList(Op.getValueType(), MVT::Other);
 
-  unsigned ByteSize = SrcVT.getSizeInBits()/8;
+  unsigned ByteSize = SrcVT.getSizeInBits() / 8;
 
   FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(StackSlot);
-  MachineMemOperand *MMO;
+  MachineMemOperand *LoadMMO;
   if (FI) {
     int SSFI = FI->getIndex();
-    MMO = DAG.getMachineFunction().getMachineMemOperand(
+    LoadMMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
         MachineMemOperand::MOLoad, ByteSize, ByteSize);
   } else {
-    MMO = cast<LoadSDNode>(StackSlot)->getMemOperand();
+    LoadMMO = cast<LoadSDNode>(StackSlot)->getMemOperand();
     StackSlot = StackSlot.getOperand(1);
   }
-  SDValue Ops[] = { Chain, StackSlot };
-  SDValue Result = DAG.getMemIntrinsicNode(useSSE ? X86ISD::FILD_FLAG :
-                                           X86ISD::FILD, DL,
-                                           Tys, Ops, SrcVT, MMO);
+  SDValue FILDOps[] = {Chain, StackSlot};
+  SDValue Result =
+      DAG.getMemIntrinsicNode(useSSE ? X86ISD::FILD_FLAG : X86ISD::FILD, DL,
+                              Tys, FILDOps, SrcVT, LoadMMO);
 
   if (useSSE) {
     Chain = Result.getValue(1);
@@ -17900,18 +17900,18 @@ SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
     // shouldn't be necessary except that RFP cannot be live across
     // multiple blocks. When stackifier is fixed, they can be uncoupled.
     MachineFunction &MF = DAG.getMachineFunction();
-    unsigned SSFISize = Op.getValueSizeInBits()/8;
+    unsigned SSFISize = Op.getValueSizeInBits() / 8;
     int SSFI = MF.getFrameInfo().CreateStackObject(SSFISize, SSFISize, false);
     auto PtrVT = getPointerTy(MF.getDataLayout());
     SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
     Tys = DAG.getVTList(MVT::Other);
-    SDValue Ops[] = { Chain, Result, StackSlot, InFlag };
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+    SDValue FSTOps[] = {Chain, Result, StackSlot, InFlag};
+    MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
         MachineMemOperand::MOStore, SSFISize, SSFISize);
 
-    Chain = DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys,
-                                    Ops, Op.getValueType(), MMO);
+    Chain = DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys, FSTOps,
+                                    Op.getValueType(), StoreMMO);
     Result = DAG.getLoad(
         Op.getValueType(), DL, Chain, StackSlot,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI));
@@ -30098,10 +30098,9 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
                                          MachineBasicBlock *BB) const {
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = BB->getParent();
-  MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
-  int FI = MFI.getFunctionContextIndex();
+  int FI = MF->getFrameInfo().getFunctionContextIndex();
 
   // Get a mapping of the call site numbers to all of the landing pads they're
   // associated with.
@@ -36546,8 +36545,8 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
   // Use SplitOpsAndApply to handle AVX splitting.
   auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                            ArrayRef<SDValue> Ops) {
-    MVT VT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
-    return DAG.getNode(X86ISD::VPMADDWD, DL, VT, Ops);
+    MVT OpVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+    return DAG.getNode(X86ISD::VPMADDWD, DL, OpVT, Ops);
   };
   return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
                           { DAG.getBitcast(WVT, N0), DAG.getBitcast(WVT, N1) },
@@ -37980,8 +37979,7 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
     // Swap rhs with lhs to match or(setcc(eq, cmp, 0), or).
     if (RHS->getOpcode() == ISD::OR)
       std::swap(LHS, RHS);
-    EVT VT = OR->getValueType(0);
-    SDValue NewRHS = lowerX86CmpEqZeroToCtlzSrl(RHS, VT, DAG);
+    NewRHS = lowerX86CmpEqZeroToCtlzSrl(RHS, VT, DAG);
     if (!NewRHS)
       return SDValue();
     Ret = DAG.getNode(ISD::OR, SDLoc(OR), VT, Ret, NewRHS);
@@ -39490,7 +39488,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
                                           const SDLoc &DL) {
   assert(N->getOpcode() == ISD::TRUNCATE && "Wrong opcode");
   SDValue Src = N->getOperand(0);
-  unsigned Opcode = Src.getOpcode();
+  unsigned SrcOpcode = Src.getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   EVT VT = N->getValueType(0);
@@ -39518,7 +39516,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   auto TruncateArithmetic = [&](SDValue N0, SDValue N1) {
     SDValue Trunc0 = DAG.getNode(ISD::TRUNCATE, DL, VT, N0);
     SDValue Trunc1 = DAG.getNode(ISD::TRUNCATE, DL, VT, N1);
-    return DAG.getNode(Opcode, DL, VT, Trunc0, Trunc1);
+    return DAG.getNode(SrcOpcode, DL, VT, Trunc0, Trunc1);
   };
 
   // Don't combine if the operation has other uses.
@@ -39533,13 +39531,13 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   // In most cases its only worth pre-truncating if we're only facing the cost
   // of one truncation.
   // i.e. if one of the inputs will constant fold or the input is repeated.
-  switch (Opcode) {
+  switch (SrcOpcode) {
   case ISD::AND:
   case ISD::XOR:
   case ISD::OR: {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
-    if (TLI.isOperationLegalOrPromote(Opcode, VT) &&
+    if (TLI.isOperationLegalOrPromote(SrcOpcode, VT) &&
         (Op0 == Op1 || IsFreeTruncation(Op0) || IsFreeTruncation(Op1)))
       return TruncateArithmetic(Op0, Op1);
     break;
@@ -39548,14 +39546,15 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   case ISD::MUL:
     // X86 is rubbish at scalar and vector i64 multiplies (until AVX512DQ) - its
     // better to truncate if we have the chance.
-    if (SrcVT.getScalarType() == MVT::i64 && TLI.isOperationLegal(Opcode, VT) &&
-        !TLI.isOperationLegal(Opcode, SrcVT))
+    if (SrcVT.getScalarType() == MVT::i64 &&
+        TLI.isOperationLegal(SrcOpcode, VT) &&
+        !TLI.isOperationLegal(SrcOpcode, SrcVT))
       return TruncateArithmetic(Src.getOperand(0), Src.getOperand(1));
     LLVM_FALLTHROUGH;
   case ISD::ADD: {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
-    if (TLI.isOperationLegal(Opcode, VT) &&
+    if (TLI.isOperationLegal(SrcOpcode, VT) &&
         (Op0 == Op1 || IsFreeTruncation(Op0) || IsFreeTruncation(Op1)))
       return TruncateArithmetic(Op0, Op1);
     break;
@@ -39565,7 +39564,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
     // truncatable to avoid interfering with combineSubToSubus.
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
-    if (TLI.isOperationLegal(Opcode, VT) &&
+    if (TLI.isOperationLegal(SrcOpcode, VT) &&
         (Op0 == Op1 || (IsFreeTruncation(Op0) && IsFreeTruncation(Op1))))
       return TruncateArithmetic(Op0, Op1);
     break;
@@ -40775,13 +40774,13 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   auto ExtendVecSize = [&DAG](const SDLoc &DL, SDValue N, unsigned Size) {
-    EVT InVT = N.getValueType();
-    EVT OutVT = EVT::getVectorVT(*DAG.getContext(), InVT.getScalarType(),
-                                 Size / InVT.getScalarSizeInBits());
-    SmallVector<SDValue, 8> Opnds(Size / InVT.getSizeInBits(),
-                                  DAG.getUNDEF(InVT));
+    EVT SrcVT = N.getValueType();
+    EVT DstVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
+                                 Size / SrcVT.getScalarSizeInBits());
+    SmallVector<SDValue, 8> Opnds(Size / SrcVT.getSizeInBits(),
+                                  DAG.getUNDEF(SrcVT));
     Opnds[0] = N;
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Opnds);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Opnds);
   };
 
   // If target-size is less than 128-bits, extend to a type that would extend
@@ -41638,7 +41637,6 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
   if ((Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SHL) &&
       Op.hasOneUse() && isa<ConstantSDNode>(Op.getOperand(1)) &&
       onlyZeroFlagUsed(SDValue(N, 0))) {
-    EVT VT = Op.getValueType();
     unsigned BitWidth = VT.getSizeInBits();
     const APInt &ShAmt = Op.getConstantOperandAPInt(1);
     if (ShAmt.ult(BitWidth)) { // Avoid undefined shifts.
@@ -41989,8 +41987,8 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
   // Madd vector size is half of the original vector size
   auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                            ArrayRef<SDValue> Ops) {
-    MVT VT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
-    return DAG.getNode(X86ISD::VPMADDWD, DL, VT, Ops);
+    MVT OpVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+    return DAG.getNode(X86ISD::VPMADDWD, DL, OpVT, Ops);
   };
 
   auto BuildPMADDWD = [&](SDValue Mul) {
@@ -42338,12 +42336,12 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
                          ArrayRef<SDValue> Ops) {
     // Shrink by adding truncate nodes and let DAGCombine fold with the
     // sources.
-    EVT InVT = Ops[0].getValueType();
-    assert(InVT.getScalarType() == MVT::i16 &&
+    EVT OpVT = Ops[0].getValueType();
+    assert(OpVT.getScalarType() == MVT::i16 &&
            "Unexpected scalar element type");
-    assert(InVT == Ops[1].getValueType() && "Operands' types mismatch");
+    assert(OpVT == Ops[1].getValueType() && "Operands' types mismatch");
     EVT ResVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                 InVT.getVectorNumElements() / 2);
+                                 OpVT.getVectorNumElements() / 2);
     return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT, Ops[0], Ops[1]);
   };
   return SplitOpsAndApply(DAG, Subtarget, DL, VT, { In0, In1 },
