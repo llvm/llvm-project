@@ -536,12 +536,6 @@ class LoopConstrainer {
     Optional<const SCEV *> HighLimit;
   };
 
-  // A utility function that does a `replaceUsesOfWith' on the incoming block
-  // set of a `PHINode' -- replaces instances of `Block' in the `PHINode's
-  // incoming block list with `ReplaceBy'.
-  static void replacePHIBlock(PHINode *PN, BasicBlock *Block,
-                              BasicBlock *ReplaceBy);
-
   // Compute a safe set of limits for the main loop to run in -- effectively the
   // intersection of `Range' and the iteration space of the original loop.
   // Return None if unable to compute the set of subranges.
@@ -642,13 +636,6 @@ public:
 };
 
 } // end anonymous namespace
-
-void LoopConstrainer::replacePHIBlock(PHINode *PN, BasicBlock *Block,
-                                      BasicBlock *ReplaceBy) {
-  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-    if (PN->getIncomingBlock(i) == Block)
-      PN->setIncomingBlock(i, ReplaceBy);
-}
 
 /// Given a loop with an deccreasing induction variable, is it possible to
 /// safely calculate the bounds of a new loop using the given Predicate.
@@ -1339,7 +1326,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   // The latch exit now has a branch from `RRI.ExitSelector' instead of
   // `LS.Latch'.  The PHI nodes need to be updated to reflect that.
   for (PHINode &PN : LS.LatchExit->phis())
-    replacePHIBlock(&PN, LS.Latch, RRI.ExitSelector);
+    PN.replaceIncomingBlockWith(LS.Latch, RRI.ExitSelector);
 
   return RRI;
 }
@@ -1363,8 +1350,7 @@ BasicBlock *LoopConstrainer::createPreheader(const LoopStructure &LS,
   BranchInst::Create(LS.Header, Preheader);
 
   for (PHINode &PN : LS.Header->phis())
-    for (unsigned i = 0, e = PN.getNumIncomingValues(); i < e; ++i)
-      replacePHIBlock(&PN, OldPreheader, Preheader);
+    PN.replaceIncomingBlockWith(OldPreheader, Preheader);
 
   return Preheader;
 }

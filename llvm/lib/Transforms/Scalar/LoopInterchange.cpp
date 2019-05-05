@@ -1281,13 +1281,8 @@ static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
 
 static void updateIncomingBlock(BasicBlock *CurrBlock, BasicBlock *OldPred,
                                 BasicBlock *NewPred) {
-  for (PHINode &PHI : CurrBlock->phis()) {
-    unsigned Num = PHI.getNumIncomingValues();
-    for (unsigned i = 0; i < Num; ++i) {
-      if (PHI.getIncomingBlock(i) == OldPred)
-        PHI.setIncomingBlock(i, NewPred);
-    }
-  }
+  for (PHINode &PHI : CurrBlock->phis())
+    PHI.replaceIncomingBlockWith(OldPred, NewPred);
 }
 
 /// Update BI to jump to NewBB instead of OldBB. Records updates to

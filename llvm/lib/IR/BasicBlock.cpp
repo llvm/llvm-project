@@ -431,13 +431,8 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
     // Loop over any phi nodes in the basic block, updating the BB field of
     // incoming values...
     BasicBlock *Successor = *I;
-    for (auto &PN : Successor->phis()) {
-      int Idx = PN.getBasicBlockIndex(this);
-      while (Idx != -1) {
-        PN.setIncomingBlock((unsigned)Idx, New);
-        Idx = PN.getBasicBlockIndex(this);
-      }
-    }
+    for (auto &PN : Successor->phis())
+      PN.replaceIncomingBlockWith(this, New);
   }
   return New;
 }
@@ -455,9 +450,7 @@ void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
       PHINode *PN = dyn_cast<PHINode>(II);
       if (!PN)
         break;
-      int i;
-      while ((i = PN->getBasicBlockIndex(this)) >= 0)
-        PN->setIncomingBlock(i, New);
+      PN->replaceIncomingBlockWith(this, New);
     }
   }
 }

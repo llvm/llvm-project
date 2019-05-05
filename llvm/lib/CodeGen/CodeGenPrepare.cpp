@@ -7221,11 +7221,8 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, bool &ModifiedDT) {
       std::swap(TBB, FBB);
 
     // Replace the old BB with the new BB.
-    for (PHINode &PN : TBB->phis()) {
-      int i;
-      while ((i = PN.getBasicBlockIndex(&BB)) >= 0)
-        PN.setIncomingBlock(i, TmpBB);
-    }
+    for (PHINode &PN : TBB->phis())
+      PN.replaceIncomingBlockWith(&BB, TmpBB);
 
     // Add another incoming edge form the new BB.
     for (PHINode &PN : FBB->phis()) {
