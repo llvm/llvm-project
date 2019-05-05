@@ -1164,21 +1164,20 @@ public:
   EVT getValueType(const DataLayout &DL, Type *Ty,
                    bool AllowUnknown = false) const {
     // Lower scalar pointers to native pointer types.
-    if (PointerType *PTy = dyn_cast<PointerType>(Ty))
+    if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerTy(DL, PTy->getAddressSpace());
 
-    if (Ty->isVectorTy()) {
-      VectorType *VTy = cast<VectorType>(Ty);
-      Type *Elm = VTy->getElementType();
+    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      Type *EltTy = VTy->getElementType();
       // Lower vectors of pointers to native pointer types.
-      if (PointerType *PT = dyn_cast<PointerType>(Elm)) {
-        EVT PointerTy(getPointerTy(DL, PT->getAddressSpace()));
-        Elm = PointerTy.getTypeForEVT(Ty->getContext());
+      if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
+        EVT PointerTy(getPointerTy(DL, PTy->getAddressSpace()));
+        EltTy = PointerTy.getTypeForEVT(Ty->getContext());
       }
-
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(Elm, false),
-                       VTy->getNumElements());
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
+                              VTy->getNumElements());
     }
+
     return EVT::getEVT(Ty, AllowUnknown);
   }
 
