@@ -73,7 +73,7 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: We should provide more information about the exact location where
   // the exception is thrown, maybe the full path the exception escapes.
 
-  diag(Directive->getBeginLoc(),
+  diag(StructuredBlock->getBeginLoc(),
        "an exception thrown inside of the OpenMP '%0' region is not caught in "
        "that same region")
       << getOpenMPDirectiveName(Directive->getDirectiveKind());
