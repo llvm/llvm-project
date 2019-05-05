@@ -1856,51 +1856,31 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create an integer operation on a non-integer type!");
     break;
   case Instruction::FAdd:
   case Instruction::FSub:
   case Instruction::FMul:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
+  case Instruction::FDiv:
+  case Instruction::FRem:
     assert(C1->getType()->isFPOrFPVectorTy() &&
            "Tried to create a floating-point operation on a "
            "non-floating-point type!");
     break;
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
-    assert(C1->getType()->isIntOrIntVectorTy() &&
-           "Tried to create an arithmetic operation on a non-arithmetic type!");
-    break;
-  case Instruction::FDiv:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
-    assert(C1->getType()->isFPOrFPVectorTy() &&
-           "Tried to create an arithmetic operation on a non-arithmetic type!");
-    break;
-  case Instruction::URem:
-  case Instruction::SRem:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
-    assert(C1->getType()->isIntOrIntVectorTy() &&
-           "Tried to create an arithmetic operation on a non-arithmetic type!");
-    break;
-  case Instruction::FRem:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
-    assert(C1->getType()->isFPOrFPVectorTy() &&
-           "Tried to create an arithmetic operation on a non-arithmetic type!");
-    break;
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create a logical operation on a non-integral type!");
     break;
   case Instruction::Shl:
   case Instruction::LShr:
   case Instruction::AShr:
-    assert(C1->getType() == C2->getType() && "Op types should be identical!");
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create a shift operation on a non-integer type!");
     break;
