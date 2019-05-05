@@ -72,9 +72,7 @@ void f(int, T::type x, char) { } // expected-error{{missing 'typename'}}
 
 int *p;
 
-// FIXME: We should assume that 'undeclared' is a type, not a parameter name
-//        here, and produce an 'unknown type name' diagnostic instead.
-int f1(undeclared, int); // expected-error{{requires a type specifier}}
+int f1(undeclared, int); // expected-error{{unknown type name 'undeclared'}}
 
 int f2(undeclared, 0); // expected-error{{undeclared identifier}}
 
