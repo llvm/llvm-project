@@ -3393,12 +3393,6 @@ bool LLParser::ParseValID(ValID &ID, PerFunctionState *PFS) {
       return true;
     if (Val0->getType() != Val1->getType())
       return Error(ID.Loc, "operands of constexpr must have same type");
-    if (!Val0->getType()->isIntOrIntVectorTy()) {
-      if (NUW)
-        return Error(ModifierLoc, "nuw only applies to integer operations");
-      if (NSW)
-        return Error(ModifierLoc, "nsw only applies to integer operations");
-    }
     // Check that the type is valid for the operator.
     switch (Opc) {
     case Instruction::Add:
