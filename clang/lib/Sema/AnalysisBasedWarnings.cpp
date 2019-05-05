@@ -2089,16 +2089,16 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
 
     // Register the expressions with the CFGBuilder.
     for (const auto &D : fscope->PossiblyUnreachableDiags) {
-      for (const Stmt *S : D.Stmts)
-        AC.registerForcedBlockExpression(S);
+      if (D.stmt)
+        AC.registerForcedBlockExpression(D.stmt);
     }
 
     if (AC.getCFG()) {
       analyzed = true;
       for (const auto &D : fscope->PossiblyUnreachableDiags) {
-        bool AllReachable = true;
-        for (const Stmt *S : D.Stmts) {
-          const CFGBlock *block = AC.getBlockForRegisteredExpression(S);
+        bool processed = false;
+        if (D.stmt) {
+          const CFGBlock *block = AC.getBlockForRegisteredExpression(D.stmt);
           CFGReverseBlockReachabilityAnalysis *cra =
               AC.getCFGReachablityAnalysis();
           // FIXME: We should be able to assert that block is non-null, but
@@ -2106,17 +2106,15 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
           // edge cases; see test/Sema/vla-2.c.
           if (block && cra) {
             // Can this block be reached from the entrance?
-            if (!cra->isReachable(&AC.getCFG()->getEntry(), block)) {
-              AllReachable = false;
-              break;
-            }
+            if (cra->isReachable(&AC.getCFG()->getEntry(), block))
+              S.Diag(D.Loc, D.PD);
+            processed = true;
           }
-          // If we cannot map to a basic block, assume the statement is
-          // reachable.
         }
-
-        if (AllReachable)
+        if (!processed) {
+          // Emit the warning anyway if we cannot map to a basic block.
           S.Diag(D.Loc, D.PD);
+        }
       }
     }
 

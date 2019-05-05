@@ -84,11 +84,11 @@ class PossiblyUnreachableDiag {
 public:
   PartialDiagnostic PD;
   SourceLocation Loc;
-  llvm::TinyPtrVector<const Stmt*> Stmts;
+  const Stmt *stmt;
 
   PossiblyUnreachableDiag(const PartialDiagnostic &PD, SourceLocation Loc,
-                          ArrayRef<const Stmt *> Stmts)
-      : PD(PD), Loc(Loc), Stmts(Stmts) {}
+                          const Stmt *stmt)
+      : PD(PD), Loc(Loc), stmt(stmt) {}
 };
 
 /// Retains information about a function, method, or block that is
