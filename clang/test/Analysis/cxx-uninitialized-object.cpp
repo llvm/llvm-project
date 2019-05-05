@@ -1,11 +1,15 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
-// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
-// RUN:   -std=c++14 -verify  %s
+// RUN:   -analyzer-config \
+// RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
-// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
-// RUN:   -std=c++14 -verify  %s
+// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config \
+// RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true
 
 //===----------------------------------------------------------------------===//
 // Default constructor test.
@@ -1155,4 +1159,29 @@ void __vector_size__LongTest() {
   // TODO: Warn for v.x.
   VectorSizeLong v;
   v.x[0] = 0;
+}
+
+struct ComplexUninitTest {
+  ComplexUninitTest() {}
+  __complex__ float x;
+  __complex__ int y;
+};
+
+// FIXME: Currently this causes (unrelated to this checker) an assertion
+// failure.
+//
+//struct ComplexInitTest {
+//  ComplexInitTest() {
+//    x = {1.0f, 1.0f};
+//    y = {1, 1};
+//  }
+//  __complex__ float x;
+//  __complex__ int y;
+//};
+
+void fComplexTest() {
+//  ComplexInitTest x;
+
+  // TODO: we should emit a warning for x2.x and x2.y.
+  ComplexUninitTest x2;
 }
