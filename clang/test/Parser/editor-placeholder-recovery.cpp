@@ -64,7 +64,7 @@ void avoidPlaceholderErrors(Struct &obj) {
     }
 }
 
-void Struct::method(<#Struct &x#>, noSupressionHere) { // expected-error {{unknown type name 'noSupressionHere'}} expected-error {{C++ requires a type specifier for all declarations}}
+void Struct::method(<#Struct &x#>, noSupressionHere) { // expected-error {{unknown type name 'noSupressionHere'}}
 #ifndef SUPPRESS
   // expected-error@-2 {{editor placeholder in source file}}
 #endif

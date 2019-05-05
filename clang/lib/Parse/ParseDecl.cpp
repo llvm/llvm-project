@@ -2649,6 +2649,9 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
     case tok::semi:
       // This looks like a variable or function declaration. The type is
       // probably missing. We're done parsing decl-specifiers.
+      // But only if we are not in a function prototype scope.
+      if (getCurScope()->isFunctionPrototypeScope())
+        break;
       if (SS)
         AnnotateScopeToken(*SS, /*IsNewAnnotation*/false);
       return false;
