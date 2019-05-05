@@ -504,7 +504,7 @@ define <2 x float> @fsub_constant_op0_not_undef_lane(float %x) {
 define <2 x float> @fsub_constant_op1(float %x) {
 ; CHECK-LABEL: @fsub_constant_op1(
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x float> undef, float [[X:%.*]], i32 1
-; CHECK-NEXT:    [[BO:%.*]] = fadd <2 x float> [[INS]], <float 0x7FF8000000000000, float -4.200000e+01>
+; CHECK-NEXT:    [[BO:%.*]] = fadd <2 x float> [[INS]], <float undef, float -4.200000e+01>
 ; CHECK-NEXT:    ret <2 x float> [[BO]]
 ;
   %ins = insertelement <2 x float> undef, float %x, i32 1

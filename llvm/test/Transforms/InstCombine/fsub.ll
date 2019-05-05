@@ -64,8 +64,8 @@ define float @sub_sub_nsz(float %x, float %y, float %z) {
 
 define float @sub_add_neg_x(float %x, float %y) {
 ; CHECK-LABEL: @sub_add_neg_x(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
+; CHECK-NEXT:    ret float [[R]]
 ;
   %mul = fmul float %x, 5.000000e+00
   %add = fadd float %mul, %y
@@ -121,7 +121,7 @@ define <2 x float> @constant_op1_vec(<2 x float> %x, <2 x float> %y) {
 
 define <2 x float> @constant_op1_vec_undef(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @constant_op1_vec_undef(
-; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], <float 0x7FF8000000000000, float 4.200000e+01>
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], <float undef, float 4.200000e+01>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %r = fsub <2 x float> %x, <float undef, float -42.0>

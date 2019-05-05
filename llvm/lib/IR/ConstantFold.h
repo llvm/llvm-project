@@ -43,6 +43,7 @@ template <typename T> class ArrayRef;
                                                 ArrayRef<unsigned> Idxs);
   Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
                                                ArrayRef<unsigned> Idxs);
+  Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
   Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
                                           Constant *V2);
   Constant *ConstantFoldCompareInstruction(unsigned short predicate,

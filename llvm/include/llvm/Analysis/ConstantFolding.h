@@ -71,6 +71,12 @@ ConstantFoldCompareInstOperands(unsigned Predicate, Constant *LHS,
                                 Constant *RHS, const DataLayout &DL,
                                 const TargetLibraryInfo *TLI = nullptr);
 
+/// Attempt to constant fold a unary operation with the specified
+/// operand. If it fails, it returns a constant expression of the specified
+/// operands.
+Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
+                                     const DataLayout &DL);
+
 /// Attempt to constant fold a binary operation with the specified
 /// operands.  If it fails, it returns a constant expression of the specified
 /// operands.
