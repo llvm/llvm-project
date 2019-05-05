@@ -425,11 +425,9 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   // Now we must loop through all of the successors of the New block (which
   // _were_ the successors of the 'this' block), and update any PHI nodes in
   // successors.  If there were PHI nodes in the successors, then they need to
-  // know that incoming branches will be from New, not from Old.
+  // know that incoming branches will be from New, not from Old (this).
   //
-  llvm::for_each(successors(New), [this, New](BasicBlock *Succ) {
-    Succ->replacePhiUsesWith(this, New);
-  });
+  New->replaceSuccessorsPhiUsesWith(this, New);
   return New;
 }
 
@@ -444,15 +442,20 @@ void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
   }
 }
 
-void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
+void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *Old,
+                                              BasicBlock *New) {
   Instruction *TI = getTerminator();
   if (!TI)
     // Cope with being called on a BasicBlock that doesn't have a terminator
     // yet. Clang's CodeGenFunction::EmitReturnBlock() likes to do this.
     return;
-  llvm::for_each(successors(TI), [this, New](BasicBlock *Succ) {
-    Succ->replacePhiUsesWith(this, New);
+  llvm::for_each(successors(TI), [Old, New](BasicBlock *Succ) {
+    Succ->replacePhiUsesWith(Old, New);
   });
+}
+
+void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
+  this->replaceSuccessorsPhiUsesWith(this, New);
 }
 
 /// Return true if this basic block is a landing pad. I.e., it's
