@@ -1325,8 +1325,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
 
   // The latch exit now has a branch from `RRI.ExitSelector' instead of
   // `LS.Latch'.  The PHI nodes need to be updated to reflect that.
-  for (PHINode &PN : LS.LatchExit->phis())
-    PN.replaceIncomingBlockWith(LS.Latch, RRI.ExitSelector);
+  LS.LatchExit->replacePhiUsesWith(LS.Latch, RRI.ExitSelector);
 
   return RRI;
 }
@@ -1349,8 +1348,7 @@ BasicBlock *LoopConstrainer::createPreheader(const LoopStructure &LS,
   BasicBlock *Preheader = BasicBlock::Create(Ctx, Tag, &F, LS.Header);
   BranchInst::Create(LS.Header, Preheader);
 
-  for (PHINode &PN : LS.Header->phis())
-    PN.replaceIncomingBlockWith(OldPreheader, Preheader);
+  LS.Header->replacePhiUsesWith(OldPreheader, Preheader);
 
   return Preheader;
 }

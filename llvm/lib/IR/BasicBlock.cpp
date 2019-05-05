@@ -427,14 +427,21 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   // successors.  If there were PHI nodes in the successors, then they need to
   // know that incoming branches will be from New, not from Old.
   //
-  for (succ_iterator I = succ_begin(New), E = succ_end(New); I != E; ++I) {
-    // Loop over any phi nodes in the basic block, updating the BB field of
-    // incoming values...
-    BasicBlock *Successor = *I;
-    for (auto &PN : Successor->phis())
-      PN.replaceIncomingBlockWith(this, New);
-  }
+  llvm::for_each(successors(New), [this, New](BasicBlock *Succ) {
+    Succ->replacePhiUsesWith(this, New);
+  });
   return New;
+}
+
+void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
+  // N.B. This might not be a complete BasicBlock, so don't assume
+  // that it ends with a non-phi instruction.
+  for (iterator II = begin(), IE = end(); II != IE; ++II) {
+    PHINode *PN = dyn_cast<PHINode>(II);
+    if (!PN)
+      break;
+    PN->replaceIncomingBlockWith(Old, New);
+  }
 }
 
 void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
@@ -443,16 +450,9 @@ void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
     // Cope with being called on a BasicBlock that doesn't have a terminator
     // yet. Clang's CodeGenFunction::EmitReturnBlock() likes to do this.
     return;
-  for (BasicBlock *Succ : successors(TI)) {
-    // N.B. Succ might not be a complete BasicBlock, so don't assume
-    // that it ends with a non-phi instruction.
-    for (iterator II = Succ->begin(), IE = Succ->end(); II != IE; ++II) {
-      PHINode *PN = dyn_cast<PHINode>(II);
-      if (!PN)
-        break;
-      PN->replaceIncomingBlockWith(this, New);
-    }
-  }
+  llvm::for_each(successors(TI), [this, New](BasicBlock *Succ) {
+    Succ->replacePhiUsesWith(this, New);
+  });
 }
 
 /// Return true if this basic block is a landing pad. I.e., it's
