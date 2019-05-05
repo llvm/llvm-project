@@ -1830,7 +1830,8 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C, unsigned Flags,
   }
 #endif
 
-  // TODO: Try to constant fold operation.
+  if (Constant *FC = ConstantFoldUnaryInstruction(Opcode, C))
+    return FC;
 
   if (OnlyIfReducedTy == C->getType())
     return nullptr;
@@ -1909,7 +1910,7 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
 #endif
 
   if (Constant *FC = ConstantFoldBinaryInstruction(Opcode, C1, C2))
-    return FC;          // Fold a few common cases.
+    return FC;
 
   if (OnlyIfReducedTy == C1->getType())
     return nullptr;
@@ -2235,7 +2236,7 @@ Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
 Constant *ConstantExpr::getFNeg(Constant *C) {
   assert(C->getType()->isFPOrFPVectorTy() &&
          "Cannot FNEG a non-floating-point value!");
-  return getFSub(ConstantFP::getZeroValueForNegation(C->getType()), C);
+  return get(Instruction::FNeg, C);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {
@@ -3024,7 +3025,8 @@ Instruction *ConstantExpr::getAsInstruction() {
   case Instruction::FCmp:
     return CmpInst::Create((Instruction::OtherOps)getOpcode(),
                            (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1]);
-
+  case Instruction::FNeg:
+    return UnaryOperator::Create((Instruction::UnaryOps)getOpcode(), Ops[0]);
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     BinaryOperator *BO =
