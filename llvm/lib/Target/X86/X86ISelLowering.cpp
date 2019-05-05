@@ -20630,7 +20630,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     CC = Cond.getOperand(0);
 
     SDValue Cmp = Cond.getOperand(1);
-    unsigned Opc = Cmp.getOpcode();
     MVT VT = Op.getSimpleValueType();
 
     bool IllegalFPCMov = false;
@@ -20639,7 +20638,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       IllegalFPCMov = !hasFPCMov(cast<ConstantSDNode>(CC)->getSExtValue());
 
     if ((isX86LogicalCmp(Cmp) && !IllegalFPCMov) ||
-        Opc == X86ISD::BT) { // FIXME
+        Cmp.getOpcode() == X86ISD::BT) { // FIXME
       Cond = Cmp;
       AddTest = false;
     }
