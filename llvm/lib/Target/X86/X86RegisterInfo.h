@@ -49,7 +49,7 @@ private:
   unsigned BasePtr;
 
 public:
-  X86RegisterInfo(const Triple &TT);
+  explicit X86RegisterInfo(const Triple &TT);
 
   // FIXME: This should be tablegen'd like getDwarfRegNum is
   int getSEHRegNum(unsigned i) const;
