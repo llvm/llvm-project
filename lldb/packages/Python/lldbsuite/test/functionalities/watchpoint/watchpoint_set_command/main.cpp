@@ -9,11 +9,8 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
-#include <random>
 #include <thread>
 
-std::default_random_engine g_random_engine{std::random_device{}()};
-std::uniform_int_distribution<> g_distribution{0, 3000000};
 std::condition_variable g_condition_variable;
 std::mutex g_mutex;
 int g_count;
@@ -74,17 +71,15 @@ thread_func (uint32_t thread_index)
     uint32_t val;
     while (count++ < 15)
     {
-        // random micro second sleep from zero to 3 seconds
-        int usec = g_distribution(g_random_engine);
-        printf ("%s (thread = %u) doing a usleep (%d)...\n", __FUNCTION__, thread_index, usec);
-        std::this_thread::sleep_for(std::chrono::microseconds{usec});
+        printf ("%s (thread = %u) sleeping for 1 second...\n", __FUNCTION__, thread_index);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
 
         if (count < 7)
             val = access_pool ();
         else
             val = access_pool (true);
 
-        printf ("%s (thread = %u) after usleep access_pool returns %d (count=%d)...\n", __FUNCTION__, thread_index, val, count);
+        printf ("%s (thread = %u) after sleep access_pool returns %d (count=%d)...\n", __FUNCTION__, thread_index, val, count);
     }
     printf ("%s (thread index = %u) exiting...\n", __FUNCTION__, thread_index);
 }
