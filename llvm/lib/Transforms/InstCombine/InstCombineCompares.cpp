@@ -3822,7 +3822,6 @@ Instruction *InstCombiner::foldICmpWithCastAndCast(ICmpInst &ICmp) {
   Value *LHSCIOp        = LHSCI->getOperand(0);
   Type *SrcTy     = LHSCIOp->getType();
   Type *DestTy    = LHSCI->getType();
-  Value *RHSCIOp;
 
   // Turn icmp (ptrtoint x), (ptrtoint/c) into a compare of the input if the
   // integer type is the same size as the pointer type.
@@ -3864,7 +3863,7 @@ Instruction *InstCombiner::foldICmpWithCastAndCast(ICmpInst &ICmp) {
 
   if (auto *CI = dyn_cast<CastInst>(ICmp.getOperand(1))) {
     // Not an extension from the same type?
-    RHSCIOp = CI->getOperand(0);
+    Value *RHSCIOp = CI->getOperand(0);
     if (RHSCIOp->getType() != LHSCIOp->getType())
       return nullptr;
 

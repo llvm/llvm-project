@@ -76,6 +76,7 @@ public:
       const InstRef &IR,
       MutableArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const;
   void notifyInstructionExecuted(const InstRef &IR) const;
+  void notifyInstructionPending(const InstRef &IR) const;
   void notifyInstructionReady(const InstRef &IR) const;
   void notifyResourceAvailable(const ResourceRef &RR) const;
 
