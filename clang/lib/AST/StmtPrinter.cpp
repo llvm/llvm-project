@@ -1895,6 +1895,9 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
       llvm_unreachable("VLA type in explicit captures.");
     }
 
+    if (C->isPackExpansion())
+      OS << "...";
+
     if (Node->isInitCapture(C))
       PrintExpr(C->getCapturedVar()->getInit());
   }
