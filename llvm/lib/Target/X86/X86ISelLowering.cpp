@@ -16470,15 +16470,14 @@ static SDValue lowerVectorShuffle(SDValue Op, const X86Subtarget &Subtarget,
   // Check for non-undef masks pointing at an undef vector and make the masks
   // undef as well. This makes it easier to match the shuffle based solely on
   // the mask.
-  if (V2IsUndef)
-    for (int M : Mask)
-      if (M >= NumElements) {
-        SmallVector<int, 8> NewMask(Mask.begin(), Mask.end());
-        for (int &M : NewMask)
-          if (M >= NumElements)
-            M = -1;
-        return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
-      }
+  if (V2IsUndef &&
+      any_of(Mask, [NumElements](int M) { return M >= NumElements; })) {
+    SmallVector<int, 8> NewMask(Mask.begin(), Mask.end());
+    for (int &M : NewMask)
+      if (M >= NumElements)
+        M = -1;
+    return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
+  }
 
   // Check for illegal shuffle mask element index values.
   int MaskUpperLimit = Mask.size() * (V2IsUndef ? 1 : 2); (void)MaskUpperLimit;
