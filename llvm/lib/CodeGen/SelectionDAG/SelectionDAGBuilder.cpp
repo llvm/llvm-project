@@ -322,6 +322,14 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getNode(ISD::FP_EXTEND, DL, ValueVT, Val);
   }
 
+  // Handle MMX to a narrower integer type by bitcasting MMX to integer and
+  // then truncating.
+  if (PartEVT == MVT::x86mmx && ValueVT.isInteger() &&
+      ValueVT.bitsLT(PartEVT)) {
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Val);
+    return DAG.getNode(ISD::TRUNCATE, DL, ValueVT, Val);
+  }
+
   report_fatal_error("Unknown mismatch in getCopyFromParts!");
 }
 
