@@ -19008,6 +19008,10 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
         // locations are not in the default address space.
         LLD->getPointerInfo().getAddrSpace() != 0 ||
         RLD->getPointerInfo().getAddrSpace() != 0 ||
+        // We can't produce a CMOV of a TargetFrameIndex since we won't
+        // generate the address generation required.
+        LLD->getBasePtr().getOpcode() == ISD::TargetFrameIndex ||
+        RLD->getBasePtr().getOpcode() == ISD::TargetFrameIndex ||
         !TLI.isOperationLegalOrCustom(TheSelect->getOpcode(),
                                       LLD->getBasePtr().getValueType()))
       return false;
