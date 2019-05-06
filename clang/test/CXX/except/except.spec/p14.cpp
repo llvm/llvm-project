@@ -83,7 +83,12 @@ namespace PR14141 {
     Derived &operator=(const Derived&) noexcept(false) = default;
     Derived &operator=(Derived&&) noexcept(false) = default;
     ~Derived() noexcept(false) = default;
-  };
+  } d1;
+  static_assert(!noexcept(Derived()), "");
+  static_assert(!noexcept(Derived(static_cast<Derived&&>(d1))), "");
+  static_assert(!noexcept(Derived(d1)), "");
+  static_assert(!noexcept(d1 = static_cast<Derived&&>(d1)), "");
+  static_assert(!noexcept(d1 = d1), "");
   struct Derived2 : ThrowingBase {
     Derived2() = default;
     Derived2(const Derived2&) = default;
@@ -91,15 +96,21 @@ namespace PR14141 {
     Derived2 &operator=(const Derived2&) = default;
     Derived2 &operator=(Derived2&&) = default;
     ~Derived2() = default;
-  };
+  } d2;
+  static_assert(!noexcept(Derived2()), "");
+  static_assert(!noexcept(Derived2(static_cast<Derived2&&>(d2))), "");
+  static_assert(!noexcept(Derived2(d2)), "");
+  static_assert(!noexcept(d2 = static_cast<Derived2&&>(d2)), "");
+  static_assert(!noexcept(d2 = d2), "");
   struct Derived3 : ThrowingBase {
-    Derived3() noexcept(true) = default; // expected-error {{does not match the calculated}}
-    Derived3(const Derived3&) noexcept(true) = default; // expected-error {{does not match the calculated}}
-    Derived3(Derived3&&) noexcept(true) = default; // expected-error {{does not match the calculated}}
-    Derived3 &operator=(const Derived3&) noexcept(true) = default; // expected-error {{does not match the calculated}}
-    Derived3 &operator=(Derived3&&) noexcept(true) = default; // expected-error {{does not match the calculated}}
-    ~Derived3() noexcept(true) = default; // expected-error {{does not match the calculated}}
-  };
+    Derived3() noexcept(true) = default;
+    Derived3(const Derived3&) noexcept(true) = default;
+    Derived3(Derived3&&) noexcept(true) = default;
+    Derived3 &operator=(const Derived3&) noexcept(true) = default;
+    Derived3 &operator=(Derived3&&) noexcept(true) = default;
+    ~Derived3() noexcept(true) = default;
+  } d3;
+  static_assert(noexcept(Derived3(), Derived3(Derived3()), Derived3(d3), d3 = Derived3(), d3 = d3), "");
 }
 
 namespace rdar13017229 {

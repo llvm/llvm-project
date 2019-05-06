@@ -966,7 +966,6 @@ void Sema::ActOnEndOfTranslationUnit() {
   // incompatible declarations.
   assert(DelayedOverridingExceptionSpecChecks.empty());
   assert(DelayedEquivalentExceptionSpecChecks.empty());
-  assert(DelayedDefaultedMemberExceptionSpecs.empty());
 
   // All dllexport classes should have been processed already.
   assert(DelayedDllExportClasses.empty());
