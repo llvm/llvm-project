@@ -804,6 +804,8 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
     return udiv(Other);
   case Instruction::URem:
     return urem(Other);
+  case Instruction::SRem:
+    return srem(Other);
   case Instruction::Shl:
     return shl(Other);
   case Instruction::LShr:
@@ -1008,6 +1010,48 @@ ConstantRange ConstantRange::urem(const ConstantRange &RHS) const {
   // L % R is <= L and < R.
   APInt Upper = APIntOps::umin(getUnsignedMax(), RHS.getUnsignedMax() - 1) + 1;
   return getNonEmpty(APInt::getNullValue(getBitWidth()), std::move(Upper));
+}
+
+ConstantRange ConstantRange::srem(const ConstantRange &RHS) const {
+  if (isEmptySet() || RHS.isEmptySet())
+    return getEmpty();
+
+  ConstantRange AbsRHS = RHS.abs();
+  APInt MinAbsRHS = AbsRHS.getUnsignedMin();
+  APInt MaxAbsRHS = AbsRHS.getUnsignedMax();
+
+  // Modulus by zero is UB.
+  if (MaxAbsRHS.isNullValue())
+    return getEmpty();
+
+  if (MinAbsRHS.isNullValue())
+    ++MinAbsRHS;
+
+  APInt MinLHS = getSignedMin(), MaxLHS = getSignedMax();
+
+  if (MinLHS.isNonNegative()) {
+    // L % R for L < R is L.
+    if (MaxLHS.ult(MinAbsRHS))
+      return *this;
+
+    // L % R is <= L and < R.
+    APInt Upper = APIntOps::umin(MaxLHS, MaxAbsRHS - 1) + 1;
+    return ConstantRange(APInt::getNullValue(getBitWidth()), std::move(Upper));
+  }
+
+  // Same basic logic as above, but the result is negative.
+  if (MaxLHS.isNegative()) {
+    if (MinLHS.ugt(-MinAbsRHS))
+      return *this;
+
+    APInt Lower = APIntOps::umax(MinLHS, -MaxAbsRHS + 1);
+    return ConstantRange(std::move(Lower), APInt(getBitWidth(), 1));
+  }
+
+  // LHS range crosses zero.
+  APInt Lower = APIntOps::umax(MinLHS, -MaxAbsRHS + 1);
+  APInt Upper = APIntOps::umin(MaxLHS, MaxAbsRHS - 1) + 1;
+  return ConstantRange(std::move(Lower), std::move(Upper));
 }
 
 ConstantRange
