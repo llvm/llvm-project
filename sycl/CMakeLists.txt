@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.2)
 
 project(sycl-solution)
 # Requirements
@@ -72,10 +72,9 @@ if( NOT OpenCL_LIBRARIES )
   )
 else()
   message("OpenCL loader has been found: ${OpenCL_LIBRARIES}.")
-  add_custom_target(ocl-icd
-    ${CMAKE_COMMAND} -E copy ${OpenCL_LIBRARIES}* ${LLVM_LIBRARY_OUTPUT_INTDIR}
-    COMMENT "Copying OpenCL ICD Loader ..."
-  )
+  file(GLOB ICD_LOADER_SRC "${OpenCL_LIBRARIES}*")
+  file(COPY ${ICD_LOADER_SRC} DESTINATION ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  add_custom_target(ocl-icd DEPENDS ${OpenCL_LIBRARIES} COMMENT "Copying OpenCL ICD Loader ...")
 endif()
 
 set(SYCL_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/include/")
