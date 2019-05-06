@@ -27,23 +27,24 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using testing::_;
-using testing::ElementsAre;
-using testing::Field;
-using testing::IsEmpty;
-using testing::Pair;
-using testing::UnorderedElementsAre;
+using ::testing::_;
+using ::testing::ElementsAre;
+using ::testing::Field;
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
 
-testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher) {
+::testing::Matcher<const Diag &> WithFix(::testing::Matcher<Fix> FixMatcher) {
   return Field(&Diag::Fixes, ElementsAre(FixMatcher));
 }
 
-testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher1,
-                                       testing::Matcher<Fix> FixMatcher2) {
+::testing::Matcher<const Diag &> WithFix(::testing::Matcher<Fix> FixMatcher1,
+                                         ::testing::Matcher<Fix> FixMatcher2) {
   return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, FixMatcher2));
 }
 
-testing::Matcher<const Diag &> WithNote(testing::Matcher<Note> NoteMatcher) {
+::testing::Matcher<const Diag &>
+WithNote(::testing::Matcher<Note> NoteMatcher) {
   return Field(&Diag::Notes, ElementsAre(NoteMatcher));
 }
 
@@ -54,7 +55,7 @@ MATCHER_P2(Diag, Range, Message,
 
 MATCHER_P3(Fix, Range, Replacement, Message,
            "Fix " + llvm::to_string(Range) + " => " +
-               testing::PrintToString(Replacement) + " = [" + Message + "]") {
+               ::testing::PrintToString(Replacement) + " = [" + Message + "]") {
   return arg.Message == Message && arg.Edits.size() == 1 &&
          arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
 }
@@ -159,7 +160,7 @@ TEST(DiagnosticsTest, DiagnosticPreamble) {
 
   auto TU = TestTU::withCode(Test.code());
   EXPECT_THAT(TU.build().getDiagnostics(),
-              ElementsAre(testing::AllOf(
+              ElementsAre(::testing::AllOf(
                   Diag(Test.range(), "'not-found.h' file not found"),
                   DiagSource(Diag::Clang), DiagName("pp_file_not_found"))));
 }

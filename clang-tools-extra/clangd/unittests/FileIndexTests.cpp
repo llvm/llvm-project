@@ -23,13 +23,13 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using testing::_;
-using testing::AllOf;
-using testing::Contains;
-using testing::ElementsAre;
-using testing::IsEmpty;
-using testing::Pair;
-using testing::UnorderedElementsAre;
+using ::testing::_;
+using ::testing::AllOf;
+using ::testing::Contains;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
 
 MATCHER_P(RefRange, Range, "") {
   return std::make_tuple(arg.Location.Start.line(), arg.Location.Start.column(),
@@ -49,9 +49,9 @@ MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 namespace clang {
 namespace clangd {
 namespace {
-testing::Matcher<const RefSlab &>
-RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
-  return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
+::testing::Matcher<const RefSlab &>
+RefsAre(std::vector<::testing::Matcher<Ref>> Matchers) {
+  return ElementsAre(::testing::Pair(_, UnorderedElementsAreArray(Matchers)));
 }
 
 Symbol symbol(llvm::StringRef ID) {

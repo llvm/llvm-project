@@ -75,6 +75,8 @@ private:
   // accessors are called.
   void ParseCompileUnitHeadersIfNeeded();
 
+  uint32_t FindCompileUnitIndex(dw_offset_t offset);
+
   DISALLOW_COPY_AND_ASSIGN(DWARFDebugInfo);
 };
 

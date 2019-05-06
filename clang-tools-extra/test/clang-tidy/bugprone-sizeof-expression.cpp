@@ -231,6 +231,35 @@ int Test5() {
   return sum;
 }
 
+int Test6() {
+  int sum = 0;
+
+  struct S A = AsStruct(), B = AsStruct();
+  struct S *P = &A, *Q = &B;
+  sum += sizeof(struct S) == P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(S) != P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += sizeof(S) < P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(S) <= P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(*P) >= P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += Q - P > 3 * sizeof(*P);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += sizeof(S) + (P - Q);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(S) - (P - Q);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += (P - Q) / sizeof(S);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += (P - Q) / sizeof(*Q);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+
+  return sum;
+}
+
 int ValidExpressions() {
   int A[] = {1, 2, 3, 4};
   static const char str[] = "hello";

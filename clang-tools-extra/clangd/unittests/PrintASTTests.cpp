@@ -21,13 +21,13 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using testing::ElementsAreArray;
+using ::testing::ElementsAreArray;
 
 struct Case {
   const char *AnnotatedCode;
   std::vector<const char *> Expected;
 };
-class ASTUtils : public testing::Test,
+class ASTUtils : public ::testing::Test,
                  public ::testing::WithParamInterface<Case> {};
 
 TEST_P(ASTUtils, PrintTemplateArgs) {
@@ -55,7 +55,7 @@ TEST_P(ASTUtils, PrintTemplateArgs) {
 }
 
 INSTANTIATE_TEST_CASE_P(ASTUtilsTests, ASTUtils,
-                        testing::ValuesIn(std::vector<Case>({
+                        ::testing::ValuesIn(std::vector<Case>({
                             {
                                 R"cpp(
                                   template <class X> class Bar {};
