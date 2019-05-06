@@ -331,6 +331,7 @@ static std::error_code collectModuleHeaderIncludes(
   }
   // Note that Module->PrivateHeaders will not be a TopHeader.
 
+  SmallVector<std::pair<std::string, const FileEntry *>, 8> Headers;
   if (Module::Header UmbrellaHeader = Module->getUmbrellaHeader()) {
     Module->addTopHeader(UmbrellaHeader.Entry);
     if (Module->Parent)
@@ -374,13 +375,20 @@ static std::error_code collectModuleHeaderIncludes(
            ++It)
         llvm::sys::path::append(RelativeHeader, *It);
 
-      // Include this header as part of the umbrella directory.
-      Module->addTopHeader(Header);
-      addHeaderInclude(RelativeHeader, Includes, LangOpts, Module->IsExternC);
+      Headers.push_back(std::make_pair(RelativeHeader.c_str(), Header));
     }
 
     if (EC)
       return EC;
+
+    // Sort header paths and make the header inclusion order deterministic
+    // across different OSs and filesystems.
+    llvm::array_pod_sort(Headers.begin(), Headers.end());
+    for (auto &H : Headers) {
+      // Include this header as part of the umbrella directory.
+      Module->addTopHeader(H.second);
+      addHeaderInclude(H.first, Includes, LangOpts, Module->IsExternC);
+    }
   }
 
   // Recurse into submodules.
