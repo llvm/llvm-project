@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_glue_algorithm_defs_H
-#define __PSTL_glue_algorithm_defs_H
+#ifndef _PSTL_GLUE_ALGORITHM_DEFS_H
+#define _PSTL_GLUE_ALGORITHM_DEFS_H
 
 #include <functional>
+#include <iterator>
 
 #include "execution_defs.h"
 
@@ -548,4 +549,4 @@ lexicographical_compare(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _
                         _ForwardIterator2 __first2, _ForwardIterator2 __last2);
 
 } // namespace std
-#endif /* __PSTL_glue_algorithm_defs_H */
+#endif /* _PSTL_GLUE_ALGORITHM_DEFS_H */

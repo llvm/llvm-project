@@ -5,7 +5,7 @@
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
-// RUN: llvm-readobj -r -dynamic-table %tout | FileCheck %s
+// RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 
 // Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
 // CHECK: Relocations [
@@ -30,6 +30,7 @@
 
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:    210000: {{.*}} ret
 // DISASM:      bar:
@@ -39,7 +40,9 @@
 // DISASM-NEXT:    21000c: {{.*}} bl      #100
 // DISASM-NEXT:    210010: {{.*}} bl      #48
 // DISASM-NEXT:    210014: {{.*}} bl      #60
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:    210020: {{.*}} stp     x16, x30, [sp, #-16]!
 // DISASM-NEXT:    210024: {{.*}} adrp    x16, #131072

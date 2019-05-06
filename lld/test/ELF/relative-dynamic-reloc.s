@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: ld.lld -shared %t.o -o %t.so
-// RUN: llvm-readobj -t -r -dyn-symbols %t.so | FileCheck %s
+// RUN: llvm-readobj --symbols -r --dyn-syms %t.so | FileCheck %s
 
 // Test that we create R_X86_64_RELATIVE relocations but don't put any
 // symbols in the dynamic symbol table.

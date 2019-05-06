@@ -491,7 +491,7 @@ bool SymbolTable::getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
   // Linear search through symbol variants.  Should never be more than two
   // or three entries here.
   auto &Variants = SymVariants[CachedHashStringRef(Sym->getName())];
-  if (Variants.size() == 0)
+  if (Variants.empty())
     Variants.push_back(Sym);
 
   for (Symbol* V : Variants) {

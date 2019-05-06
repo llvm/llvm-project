@@ -7,7 +7,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o %t1.so %t2.so -o %t
-# RUN: llvm-readobj -V -sections -section-data -dyn-symbols -dynamic-table %t | FileCheck %s
+# RUN: llvm-readobj -V --sections --section-data --dyn-syms --dynamic-table %t | FileCheck %s
 
 # CHECK:        Section {
 # CHECK:          Index: 1
@@ -148,29 +148,33 @@
 # CHECK-NEXT:      Version: 1
 # CHECK-NEXT:      Count: 2
 # CHECK-NEXT:      FileName: verneed1.so.0
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1938
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 3
-# CHECK-NEXT:        Name: v2
-# CHECK-NEXT:      }
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1939
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 2
-# CHECK-NEXT:        Name: v3
-# CHECK-NEXT:      }
+# CHECK-NEXT:      Entries [
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1938
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 3
+# CHECK-NEXT:          Name: v2
+# CHECK-NEXT:        }
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1939
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 2
+# CHECK-NEXT:          Name: v3
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:    Dependency {
 # CHECK-NEXT:      Version: 1
 # CHECK-NEXT:      Count: 1
 # CHECK-NEXT:      FileName: verneed2.so.0
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1937
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 4
-# CHECK-NEXT:        Name: v1
-# CHECK-NEXT:      }
+# CHECK-NEXT:      Entries [
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1937
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 4
+# CHECK-NEXT:          Name: v1
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 

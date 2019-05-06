@@ -10,13 +10,8 @@
 // Test for unique
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-#include "pstl/execution"
-#include "pstl/algorithm"
-#else
 #include <execution>
 #include <algorithm>
-#endif // PSTL_STANDALONE_TESTS
 
 #include "support/utils.h"
 
@@ -24,8 +19,8 @@ using namespace TestUtils;
 
 struct run_unique
 {
-#if __PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
-    __PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+    _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
     template <typename ForwardIt, typename Generator>
     void
     operator()(pstl::execution::unsequenced_policy, ForwardIt first1, ForwardIt last1, ForwardIt first2,
@@ -142,7 +137,7 @@ struct test_non_const
 int32_t
 main()
 {
-#if !__PSTL_ICC_16_17_18_TEST_UNIQUE_MASK_RELEASE_BROKEN
+#if !_PSTL_ICC_16_17_18_TEST_UNIQUE_MASK_RELEASE_BROKEN
     test<int32_t>([](size_t j) { return j / 3; },
                   [](const int32_t& val1, const int32_t& val2) { return val1 * val1 == val2 * val2; });
     test<float64_t>([](size_t) { return float64_t(1); },

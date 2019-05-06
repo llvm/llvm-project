@@ -9,16 +9,9 @@
 
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-
 #include <cmath>
-
-#include "pstl/execution"
-#include "pstl/algorithm"
-#else
 #include <execution>
 #include <algorithm>
-#endif // PSTL_STANDALONE_TESTS
 
 #include "support/utils.h"
 
@@ -86,7 +79,7 @@ struct test_brick_partial_sort
             if (m1 - first > 1)
             {
                 auto complex = std::ceil(n * std::log(float32_t(m1 - first)));
-#if defined(__PSTL_PAR_BACKEND_TBB)
+#if defined(_PSTL_PAR_BACKEND_TBB)
                 auto p = tbb::this_task_arena::max_concurrency();
 #else
                 auto p = 1;

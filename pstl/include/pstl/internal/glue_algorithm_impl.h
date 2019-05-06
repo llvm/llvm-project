@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_glue_algorithm_impl_H
-#define __PSTL_glue_algorithm_impl_H
+#ifndef _PSTL_GLUE_ALGORITHM_IMPL_H
+#define _PSTL_GLUE_ALGORITHM_IMPL_H
 
 #include <functional>
 
@@ -16,6 +16,8 @@
 #include "utils.h"
 #include "algorithm_fwd.h"
 #include "numeric_fwd.h" /* count and count_if use __pattern_transform_reduce */
+
+#include "execution_impl.h"
 
 namespace std
 {
@@ -1179,4 +1181,4 @@ lexicographical_compare(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _
 
 } // namespace std
 
-#endif /* __PSTL_glue_algorithm_impl_H */
+#endif /* _PSTL_GLUE_ALGORITHM_IMPL_H */

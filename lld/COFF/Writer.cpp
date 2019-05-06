@@ -467,14 +467,15 @@ static bool createThunks(OutputSection *OS, int Margin) {
     // modified. If the relocations point into the object file, allocate new
     // memory. Otherwise, this must be previously allocated memory that can be
     // modified in place.
+    ArrayRef<coff_relocation> CurRelocs = SC->getRelocs();
     MutableArrayRef<coff_relocation> NewRelocs;
-    if (OriginalRelocs.data() == SC->Relocs.data()) {
+    if (OriginalRelocs.data() == CurRelocs.data()) {
       NewRelocs = makeMutableArrayRef(
           BAlloc.Allocate<coff_relocation>(OriginalRelocs.size()),
           OriginalRelocs.size());
     } else {
       NewRelocs = makeMutableArrayRef(
-          const_cast<coff_relocation *>(SC->Relocs.data()), SC->Relocs.size());
+          const_cast<coff_relocation *>(CurRelocs.data()), CurRelocs.size());
     }
 
     // Copy each relocation, but replace the symbol table indices which need
@@ -489,7 +490,7 @@ static bool createThunks(OutputSection *OS, int Margin) {
       }
     }
 
-    SC->Relocs = makeArrayRef(NewRelocs.data(), NewRelocs.size());
+    SC->setRelocs(NewRelocs);
   }
   return AddressesChanged;
 }
@@ -501,8 +502,9 @@ static bool verifyRanges(const std::vector<Chunk *> Chunks) {
     if (!SC)
       continue;
 
-    for (size_t J = 0, E = SC->Relocs.size(); J < E; ++J) {
-      const coff_relocation &Rel = SC->Relocs[J];
+    ArrayRef<coff_relocation> Relocs = SC->getRelocs();
+    for (size_t J = 0, E = Relocs.size(); J < E; ++J) {
+      const coff_relocation &Rel = Relocs[J];
       Symbol *RelocTarget = SC->File->getSymbol(Rel.SymbolTableIndex);
 
       Defined *Sym = dyn_cast_or_null<Defined>(RelocTarget);
@@ -642,10 +644,9 @@ static void sortBySectionOrder(std::vector<Chunk *> &Chunks) {
     return 0;
   };
 
-  std::stable_sort(Chunks.begin(), Chunks.end(),
-                   [=](const Chunk *A, const Chunk *B) {
-                     return GetPriority(A) < GetPriority(B);
-                   });
+  llvm::stable_sort(Chunks, [=](const Chunk *A, const Chunk *B) {
+    return GetPriority(A) < GetPriority(B);
+  });
 }
 
 // Sort concrete section chunks from GNU import libraries.
@@ -683,10 +684,9 @@ bool Writer::fixGnuImportChunks() {
     if (!PSec->Name.startswith(".idata"))
       continue;
 
-    std::vector<Chunk *> &Chunks = PSec->Chunks;
-    if (!Chunks.empty())
+    if (!PSec->Chunks.empty())
       HasIdata = true;
-    std::stable_sort(Chunks.begin(), Chunks.end(), [&](Chunk *S, Chunk *T) {
+    llvm::stable_sort(PSec->Chunks, [&](Chunk *S, Chunk *T) {
       SectionChunk *SC1 = dyn_cast_or_null<SectionChunk>(S);
       SectionChunk *SC2 = dyn_cast_or_null<SectionChunk>(T);
       if (!SC1 || !SC2) {
@@ -845,7 +845,7 @@ void Writer::createSections() {
   }
 
   // Finally, move some output sections to the end.
-  auto SectionOrder = [&](OutputSection *S) {
+  auto SectionOrder = [&](const OutputSection *S) {
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
     // the loader cannot handle holes. Stripping can remove other discardable ones
     // than .reloc, which is first of them (created early).
@@ -858,10 +858,10 @@ void Writer::createSections() {
       return 1;
     return 0;
   };
-  std::stable_sort(OutputSections.begin(), OutputSections.end(),
-                   [&](OutputSection *S, OutputSection *T) {
-                     return SectionOrder(S) < SectionOrder(T);
-                   });
+  llvm::stable_sort(OutputSections,
+                    [&](const OutputSection *S, const OutputSection *T) {
+                      return SectionOrder(S) < SectionOrder(T);
+                    });
 }
 
 void Writer::createMiscChunks() {
@@ -1219,6 +1219,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     COFF->Characteristics |= IMAGE_FILE_DLL;
   if (!Config->Relocatable)
     COFF->Characteristics |= IMAGE_FILE_RELOCS_STRIPPED;
+  if (Config->SwaprunCD)
+    COFF->Characteristics |= IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP;
+  if (Config->SwaprunNet)
+    COFF->Characteristics |= IMAGE_FILE_NET_RUN_FROM_SWAP;
   COFF->SizeOfOptionalHeader =
       sizeof(PEHeaderTy) + sizeof(data_directory) * NumberOfDataDirectory;
 
@@ -1474,7 +1478,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
     if (!SC || !SC->Live)
       continue;
 
-    for (const coff_relocation &Reloc : SC->Relocs) {
+    for (const coff_relocation &Reloc : SC->getRelocs()) {
       if (Config->Machine == I386 && Reloc.Type == COFF::IMAGE_REL_I386_REL32)
         // Ignore relative relocations on x86. On x86_64 they can't be ignored
         // since they're also used to compute absolute addresses.
@@ -1779,7 +1783,7 @@ void Writer::sortCRTSectionChunks(std::vector<Chunk *> &Chunks) {
 
     return SAObj == SBObj && SA->getSectionNumber() < SB->getSectionNumber();
   };
-  std::stable_sort(Chunks.begin(), Chunks.end(), SectionChunkOrder);
+  llvm::stable_sort(Chunks, SectionChunkOrder);
 
   if (Config->Verbose) {
     for (auto &C : Chunks) {

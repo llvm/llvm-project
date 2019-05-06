@@ -150,7 +150,7 @@ _ValueType __libcpp_atomic_add(_ValueType* __val, _AddType __a,
 template <class _ValueType>
 inline _LIBCPP_INLINE_VISIBILITY
 _ValueType __libcpp_atomic_exchange(_ValueType* __target,
-                                    _ValueType __value, int __order = _AO_Seq)
+                                    _ValueType __value, int  = _AO_Seq)
 {
     _ValueType old = *__target;
     *__target = __value;
@@ -176,5 +176,35 @@ bool __libcpp_atomic_compare_exchange(_ValueType* __val,
 } // end namespace
 
 _LIBCPP_END_NAMESPACE_STD
+
+namespace {
+
+template <class IntType>
+class AtomicInt {
+public:
+  using MemoryOrder = std::__libcpp_atomic_order;
+
+  explicit AtomicInt(IntType *b) : b(b) {}
+  AtomicInt(AtomicInt const&) = delete;
+  AtomicInt& operator=(AtomicInt const&) = delete;
+
+  IntType load(MemoryOrder ord) {
+    return std::__libcpp_atomic_load(b, ord);
+  }
+  void store(IntType val, MemoryOrder ord) {
+    std::__libcpp_atomic_store(b, val, ord);
+  }
+  IntType exchange(IntType new_val, MemoryOrder ord) {
+    return std::__libcpp_atomic_exchange(b, new_val, ord);
+  }
+  bool compare_exchange(IntType *expected, IntType desired, MemoryOrder ord_success, MemoryOrder ord_failure) {
+    return std::__libcpp_atomic_compare_exchange(b, expected, desired, ord_success, ord_failure);
+  }
+
+private:
+  IntType *b;
+};
+
+} // end namespace
 
 #endif // ATOMIC_SUPPORT_H

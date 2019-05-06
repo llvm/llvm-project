@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: ld.lld %t.o -o %t.so -shared
-// RUN: llvm-readobj -s -section-data %t.so | FileCheck %s
+// RUN: llvm-readobj -S --section-data %t.so | FileCheck %s
 
         call foo@plt
 

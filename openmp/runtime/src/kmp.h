@@ -325,7 +325,8 @@ typedef enum kmp_sched {
   kmp_sched_static_steal = 102, // mapped to kmp_sch_static_steal (44)
 #endif
   kmp_sched_upper,
-  kmp_sched_default = kmp_sched_static // default scheduling
+  kmp_sched_default = kmp_sched_static, // default scheduling
+  kmp_sched_monotonic = 0x80000000
 } kmp_sched_t;
 #endif
 
@@ -438,6 +439,11 @@ enum sched_type : kmp_int32 {
 #define SCHEDULE_HAS_NONMONOTONIC(s) (((s)&kmp_sch_modifier_nonmonotonic) != 0)
 #define SCHEDULE_HAS_NO_MODIFIERS(s)                                           \
   (((s) & (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic)) == 0)
+#define SCHEDULE_GET_MODIFIERS(s)                                              \
+  ((enum sched_type)(                                                          \
+      (s) & (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic)))
+#define SCHEDULE_SET_MODIFIERS(s, m)                                           \
+  (s = (enum sched_type)((kmp_int32)s | (kmp_int32)m))
 #else
 /* By doing this we hope to avoid multiple tests on OMP_45_ENABLED. Compilers
    can now eliminate tests on compile time constants and dead code that results
@@ -446,10 +452,46 @@ enum sched_type : kmp_int32 {
 #define SCHEDULE_HAS_MONOTONIC(s) false
 #define SCHEDULE_HAS_NONMONOTONIC(s) false
 #define SCHEDULE_HAS_NO_MODIFIERS(s) true
+#define SCHEDULE_GET_MODIFIERS(s) ((enum sched_type)0)
+#define SCHEDULE_SET_MODIFIERS(s, m) /* Nothing */
 #endif
+#define SCHEDULE_NONMONOTONIC 0
+#define SCHEDULE_MONOTONIC 1
 
   kmp_sch_default = kmp_sch_static /**< default scheduling algorithm */
 };
+
+// Apply modifiers on internal kind to standard kind
+static inline void
+__kmp_sched_apply_mods_stdkind(kmp_sched_t *kind,
+                               enum sched_type internal_kind) {
+#if OMP_50_ENABLED
+  if (SCHEDULE_HAS_MONOTONIC(internal_kind)) {
+    *kind = (kmp_sched_t)((int)*kind | (int)kmp_sched_monotonic);
+  }
+#endif
+}
+
+// Apply modifiers on standard kind to internal kind
+static inline void
+__kmp_sched_apply_mods_intkind(kmp_sched_t kind,
+                               enum sched_type *internal_kind) {
+#if OMP_50_ENABLED
+  if ((int)kind & (int)kmp_sched_monotonic) {
+    *internal_kind = (enum sched_type)((int)*internal_kind |
+                                       (int)kmp_sch_modifier_monotonic);
+  }
+#endif
+}
+
+// Get standard schedule without modifiers
+static inline kmp_sched_t __kmp_sched_without_mods(kmp_sched_t kind) {
+#if OMP_50_ENABLED
+  return (kmp_sched_t)((int)kind & ~((int)kmp_sched_monotonic));
+#else
+  return kind;
+#endif
+}
 
 /* Type to keep runtime schedule set via OMP_SCHEDULE or omp_set_schedule() */
 typedef union kmp_r_sched {
@@ -1144,7 +1186,76 @@ typedef struct kmp_cpuid {
   kmp_uint32 ecx;
   kmp_uint32 edx;
 } kmp_cpuid_t;
+
+typedef struct kmp_cpuinfo {
+  int initialized; // If 0, other fields are not initialized.
+  int signature; // CPUID(1).EAX
+  int family; // CPUID(1).EAX[27:20]+CPUID(1).EAX[11:8] (Extended Family+Family)
+  int model; // ( CPUID(1).EAX[19:16] << 4 ) + CPUID(1).EAX[7:4] ( ( Extended
+  // Model << 4 ) + Model)
+  int stepping; // CPUID(1).EAX[3:0] ( Stepping )
+  int sse2; // 0 if SSE2 instructions are not supported, 1 otherwise.
+  int rtm; // 0 if RTM instructions are not supported, 1 otherwise.
+  int cpu_stackoffset;
+  int apic_id;
+  int physical_id;
+  int logical_id;
+  kmp_uint64 frequency; // Nominal CPU frequency in Hz.
+  char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
+} kmp_cpuinfo_t;
+
+extern void __kmp_query_cpuid(kmp_cpuinfo_t *p);
+
+#if KMP_OS_UNIX
+// subleaf is only needed for cache and topology discovery and can be set to
+// zero in most cases
+static inline void __kmp_x86_cpuid(int leaf, int subleaf, struct kmp_cpuid *p) {
+  __asm__ __volatile__("cpuid"
+                       : "=a"(p->eax), "=b"(p->ebx), "=c"(p->ecx), "=d"(p->edx)
+                       : "a"(leaf), "c"(subleaf));
+}
+// Load p into FPU control word
+static inline void __kmp_load_x87_fpu_control_word(const kmp_int16 *p) {
+  __asm__ __volatile__("fldcw %0" : : "m"(*p));
+}
+// Store FPU control word into p
+static inline void __kmp_store_x87_fpu_control_word(kmp_int16 *p) {
+  __asm__ __volatile__("fstcw %0" : "=m"(*p));
+}
+static inline void __kmp_clear_x87_fpu_status_word() {
+#if KMP_MIC
+  // 32-bit protected mode x87 FPU state
+  struct x87_fpu_state {
+    unsigned cw;
+    unsigned sw;
+    unsigned tw;
+    unsigned fip;
+    unsigned fips;
+    unsigned fdp;
+    unsigned fds;
+  };
+  struct x87_fpu_state fpu_state = {0, 0, 0, 0, 0, 0, 0};
+  __asm__ __volatile__("fstenv %0\n\t" // store FP env
+                       "andw $0x7f00, %1\n\t" // clear 0-7,15 bits of FP SW
+                       "fldenv %0\n\t" // load FP env back
+                       : "+m"(fpu_state), "+m"(fpu_state.sw));
+#else
+  __asm__ __volatile__("fnclex");
+#endif // KMP_MIC
+}
+#else
+// Windows still has these as external functions in assembly file
 extern void __kmp_x86_cpuid(int mode, int mode2, struct kmp_cpuid *p);
+extern void __kmp_load_x87_fpu_control_word(const kmp_int16 *p);
+extern void __kmp_store_x87_fpu_control_word(kmp_int16 *p);
+extern void __kmp_clear_x87_fpu_status_word();
+#endif // KMP_OS_UNIX
+
+#define __kmp_load_mxcsr(p) _mm_setcsr(*(p))
+static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = _mm_getcsr(); }
+
+#define KMP_X86_MXCSR_MASK 0xffffffc0 /* ignore status flags (6 lsb) */
+
 #if KMP_ARCH_X86
 extern void __kmp_x86_pause(void);
 #elif KMP_MIC
@@ -1291,25 +1402,6 @@ typedef struct kmp_sys_info {
   long nvcsw; /* the number of times a context switch was voluntarily      */
   long nivcsw; /* the number of times a context switch was forced           */
 } kmp_sys_info_t;
-
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
-typedef struct kmp_cpuinfo {
-  int initialized; // If 0, other fields are not initialized.
-  int signature; // CPUID(1).EAX
-  int family; // CPUID(1).EAX[27:20]+CPUID(1).EAX[11:8] (Extended Family+Family)
-  int model; // ( CPUID(1).EAX[19:16] << 4 ) + CPUID(1).EAX[7:4] ( ( Extended
-  // Model << 4 ) + Model)
-  int stepping; // CPUID(1).EAX[3:0] ( Stepping )
-  int sse2; // 0 if SSE2 instructions are not supported, 1 otherwise.
-  int rtm; // 0 if RTM instructions are not supported, 1 otherwise.
-  int cpu_stackoffset;
-  int apic_id;
-  int physical_id;
-  int logical_id;
-  kmp_uint64 frequency; // Nominal CPU frequency in Hz.
-  char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
-} kmp_cpuinfo_t;
-#endif
 
 #if USE_ITT_BUILD
 // We cannot include "kmp_itt.h" due to circular dependency. Declare the only
@@ -2590,6 +2682,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   std::atomic<int> t_construct; // count of single directive encountered by team
   char pad[sizeof(kmp_lock_t)]; // padding to maintain performance on big iron
 
+  // [0] - parallel / [1] - worksharing task reduction data shared by taskgroups
+  std::atomic<void *> t_tg_reduce_data[2]; // to support task modifier
+  std::atomic<int> t_tg_fini_counter[2]; // sync end of task reductions
+
   // Master only
   // ---------------------------------------------------------------------------
   KMP_ALIGN_CACHE int t_master_tid; // tid of master in parent team
@@ -3584,20 +3680,6 @@ extern int __kmp_read_from_file(char const *path, char const *format, ...);
 // Assembly routines that have no compiler intrinsic replacement
 //
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
-
-extern void __kmp_query_cpuid(kmp_cpuinfo_t *p);
-
-#define __kmp_load_mxcsr(p) _mm_setcsr(*(p))
-static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = _mm_getcsr(); }
-
-extern void __kmp_load_x87_fpu_control_word(kmp_int16 *p);
-extern void __kmp_store_x87_fpu_control_word(kmp_int16 *p);
-extern void __kmp_clear_x87_fpu_status_word();
-#define KMP_X86_MXCSR_MASK 0xffffffc0 /* ignore status flags (6 lsb) */
-
-#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
-
 extern int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int npr, int argc,
                                   void *argv[]
 #if OMPT_SUPPORT
@@ -3740,7 +3822,15 @@ KMP_EXPORT void __kmpc_taskloop(ident_t *loc, kmp_int32 gtid, kmp_task_t *task,
 #endif
 #if OMP_50_ENABLED
 KMP_EXPORT void *__kmpc_task_reduction_init(int gtid, int num_data, void *data);
+KMP_EXPORT void *__kmpc_taskred_init(int gtid, int num_data, void *data);
 KMP_EXPORT void *__kmpc_task_reduction_get_th_data(int gtid, void *tg, void *d);
+KMP_EXPORT void *__kmpc_task_reduction_modifier_init(ident_t *loc, int gtid,
+                                                     int is_ws, int num,
+                                                     void *data);
+KMP_EXPORT void *__kmpc_taskred_modifier_init(ident_t *loc, int gtid, int is_ws,
+                                              int num, void *data);
+KMP_EXPORT void __kmpc_task_reduction_modifier_fini(ident_t *loc, int gtid,
+                                                    int is_ws);
 KMP_EXPORT kmp_int32 __kmpc_omp_reg_task_with_affinity(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 naffins,
     kmp_task_affinity_info_t *affin_list);

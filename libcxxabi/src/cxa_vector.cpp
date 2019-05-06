@@ -6,16 +6,21 @@
 //
 //  
 //  This file implements the "Array Construction and Destruction APIs"
-//  http://mentorembedded.github.io/cxx-abi/abi.html#array-ctor
+//  https://itanium-cxx-abi.github.io/cxx-abi/abi.html#array-ctor
 //  
 //===----------------------------------------------------------------------===//
 
 #include "cxxabi.h"
+#include "__cxxabi_config.h"
 
 #include <exception>        // for std::terminate
 #include <new>              // for std::bad_alloc
 
 #include "abort_message.h"
+
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
 
 namespace __cxxabiv1 {
 
@@ -120,15 +125,35 @@ void throw_bad_array_new_length() {
 #endif
 }
 
+bool mul_overflow(size_t x, size_t y, size_t *res) {
+#if (defined(_LIBCXXABI_COMPILER_CLANG) && __has_builtin(__builtin_mul_overflow)) \
+    || defined(_LIBCXXABI_COMPILER_GCC)
+    return __builtin_mul_overflow(x, y, res);
+#else
+    *res = x * y;
+    return x && ((*res / x) != y);
+#endif
+}
+
+bool add_overflow(size_t x, size_t y, size_t *res) {
+#if (defined(_LIBCXXABI_COMPILER_CLANG) && __has_builtin(__builtin_add_overflow)) \
+    || defined(_LIBCXXABI_COMPILER_GCC)
+  return __builtin_add_overflow(x, y, res);
+#else
+  *res = x + y;
+  return *res < y;
+#endif
+}
+
 size_t calculate_allocation_size_or_throw(size_t element_count,
                                           size_t element_size,
                                           size_t padding_size) {
-  const size_t element_heap_size = element_count * element_size;
-  if (element_heap_size / element_count != element_size)
+  size_t element_heap_size;
+  if (mul_overflow(element_count, element_size, &element_heap_size))
     throw_bad_array_new_length();
 
-  const size_t allocation_size = element_heap_size + padding_size;
-  if (allocation_size < element_heap_size)
+  size_t allocation_size;
+  if (add_overflow(element_heap_size, padding_size, &allocation_size))
     throw_bad_array_new_length();
 
   return allocation_size;

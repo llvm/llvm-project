@@ -32,12 +32,29 @@ COFF Improvements
 * lld-link now correctly reports duplicate symbol errors for obj files
   that were compiled with /Gy.
 
+* lld-link now correctly reports duplicate symbol errors when several res
+  input files define resources with the same type, name, and language.
+  This can be demoted to a warning using ``/force:multipleres``.
+
+* Having more than two ``/natvis:`` now works correctly; it used to not
+  work for larger binaries before.
+
+* Undefined symbols are now printed only in demangled form. Pass
+  ``/demangle:no`` to see raw symbol names instead.
+
+* The following flags have been added: ``/functionpadmin``, ``/swaprun:``,
+  ``/threads:no``
+
+* Several speed and memory usage improvements.
+
 * ...
 
 MinGW Improvements
 ------------------
 
-* ...
+* lld now correctly links crtend.o as the last object file, handling
+  terminators for the sections such as .eh_frame properly, fixing
+  DWARF exception handling with libgcc and gcc's crtend.o.
 
 MachO Improvements
 ------------------

@@ -315,6 +315,27 @@ void parseManifestUAC(StringRef Arg) {
   }
 }
 
+// Parses a string in the form of "cd|net[,(cd|net)]*"
+// Results are directly written to Config.
+void parseSwaprun(StringRef Arg) {
+  do {
+    StringRef Swaprun, NewArg;
+    std::tie(Swaprun, NewArg) = Arg.split(',');
+    if (Swaprun.equals_lower("cd"))
+      Config->SwaprunCD = true;
+    else if (Swaprun.equals_lower("net"))
+      Config->SwaprunNet = true;
+    else if (Swaprun.empty())
+      error("/swaprun: missing argument");
+    else
+      error("/swaprun: invalid argument: " + Swaprun);
+    // To catch trailing commas, e.g. `/spawrun:cd,`
+    if (NewArg.empty() && Arg.endswith(","))
+      error("/swaprun: missing argument");
+    Arg = NewArg;
+  } while (!Arg.empty());
+}
+
 // An RAII temporary file class that automatically removes a temporary file.
 namespace {
 class TemporaryFile {
@@ -724,8 +745,16 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
     object::WindowsResource *RF = dyn_cast<object::WindowsResource>(Bin.get());
     if (!RF)
       fatal("cannot compile non-resource file as resource");
-    if (auto EC = Parser.parse(RF))
-      fatal("failed to parse .res file: " + toString(std::move(EC)));
+
+    std::vector<std::string> Duplicates;
+    if (auto EC = Parser.parse(RF, Duplicates))
+      fatal(toString(std::move(EC)));
+
+    for (const auto &DupeDiag : Duplicates)
+      if (Config->ForceMultipleRes)
+        warn(DupeDiag);
+      else
+        error(DupeDiag);
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =

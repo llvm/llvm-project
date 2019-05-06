@@ -279,7 +279,7 @@ ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
 template <class ELFT>
 uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
   return CHECK(
-      this->getObj().getSectionIndex(&Sym, getELFSyms<ELFT>(), SymtabSHNDX),
+      this->getObj().getSectionIndex(&Sym, getELFSyms<ELFT>(), ShndxTable),
       this);
 }
 
@@ -479,7 +479,7 @@ void ObjFile<ELFT>::initializeSections(
       this->initSymtab<ELFT>(ObjSections, &Sec);
       break;
     case SHT_SYMTAB_SHNDX:
-      SymtabSHNDX = CHECK(Obj.getSHNDXTable(Sec, ObjSections), this);
+      ShndxTable = CHECK(Obj.getSHNDXTable(Sec, ObjSections), this);
       break;
     case SHT_STRTAB:
     case SHT_NULL:

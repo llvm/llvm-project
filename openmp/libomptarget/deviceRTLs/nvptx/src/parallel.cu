@@ -249,9 +249,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   uint16_t &NumThreadsClause =
       omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
 
-  uint16_t NumThreads =
-      determineNumberOfThreads(NumThreadsClause, currTaskDescr->NThreads(),
-                               currTaskDescr->ThreadLimit());
+  uint16_t NumThreads = determineNumberOfThreads(
+      NumThreadsClause, currTaskDescr->NThreads(), threadLimit);
 
   if (NumThreadsClause != 0) {
     // Reset request to avoid propagating to successive #parallel
@@ -311,6 +310,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
           (int)newTaskDescr->ThreadId(), (int)newTaskDescr->NThreads());
 
     isActive = true;
+    IncParallelLevel(workDescr.WorkTaskDescr()->ThreadsInTeam() != 1);
   }
 
   return isActive;
@@ -327,6 +327,8 @@ EXTERN void __kmpc_kernel_end_parallel() {
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
+
+  DecParallelLevel(currTaskDescr->ThreadsInTeam() != 1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -336,14 +338,11 @@ EXTERN void __kmpc_kernel_end_parallel() {
 EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_serialized_parallel\n");
 
+  IncParallelLevel(/*ActiveParallel=*/false);
+
   if (checkRuntimeUninitialized(loc)) {
     ASSERT0(LT_FUSSY, checkSPMDMode(loc),
             "Expected SPMD mode with uninitialized runtime.");
-    __SYNCTHREADS();
-    if (GetThreadIdInBlock() == 0)
-      ++parallelLevel;
-    __SYNCTHREADS();
-
     return;
   }
 
@@ -379,13 +378,11 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
                                            uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_end_serialized_parallel\n");
 
+  DecParallelLevel(/*ActiveParallel=*/false);
+
   if (checkRuntimeUninitialized(loc)) {
     ASSERT0(LT_FUSSY, checkSPMDMode(loc),
             "Expected SPMD mode with uninitialized runtime.");
-    __SYNCTHREADS();
-    if (GetThreadIdInBlock() == 0)
-      --parallelLevel;
-    __SYNCTHREADS();
     return;
   }
 
@@ -404,21 +401,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
 EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_parallel_level\n");
 
-  if (checkRuntimeUninitialized(loc)) {
-    ASSERT0(LT_FUSSY, checkSPMDMode(loc),
-            "Expected SPMD mode with uninitialized runtime.");
-    return parallelLevel;
-  }
-
-  int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
-  omptarget_nvptx_TaskDescr *currTaskDescr =
-      omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
-  if (currTaskDescr->InL2OrHigherParallelRegion())
-    return 2;
-  else if (currTaskDescr->InParallelRegion())
-    return 1;
-  else
-    return 0;
+  return parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
 }
 
 // This kmpc call returns the thread id across all teams. It's value is
@@ -427,8 +410,7 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
 // of this call.
 EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
   int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
-  return GetOmpThreadId(tid, checkSPMDMode(loc),
-                        checkRuntimeUninitialized(loc));
+  return GetOmpThreadId(tid, checkSPMDMode(loc));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -154,9 +154,6 @@ public:
   void writeBuildId(llvm::ArrayRef<uint8_t> Buf);
 
 private:
-  void computeHash(llvm::ArrayRef<uint8_t> Buf,
-                   std::function<void(uint8_t *, ArrayRef<uint8_t>)> Hash);
-
   size_t HashSize;
   uint8_t *HashBuf;
 };
@@ -862,7 +859,8 @@ private:
   // If we use lower bits, it significantly increases the probability of
   // hash collisons.
   size_t getShardId(uint32_t Hash) {
-    return Hash >> (32 - llvm::countTrailingZeros(NumShards));
+    assert((Hash >> 31) == 0);
+    return Hash >> (31 - llvm::countTrailingZeros(NumShards));
   }
 
   // Section size

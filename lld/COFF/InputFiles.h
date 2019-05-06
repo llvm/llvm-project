@@ -295,7 +295,8 @@ public:
 // Used for LTO.
 class BitcodeFile : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
+  BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
+              uint64_t OffsetInArchive);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
   MachineTypes getMachineType() override;

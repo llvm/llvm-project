@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/shared.s -o %t2
 // RUN: ld.lld %t2 -soname fixed-length-string.so -o %t2.so -shared
 // RUN: ld.lld --hash-style=sysv %t %t2.so -o %t3
-// RUN: llvm-readobj -s  %t3 | FileCheck --check-prefix=SEC %s
+// RUN: llvm-readobj -S  %t3 | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -s -d %t3 | FileCheck %s
 
 // SEC:      Name: .plt
@@ -58,6 +58,7 @@ lulz:
   nop
 
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: _start:
 // CHECK-NEXT:   201000:  e8 04 00 00 00   callq 4
 // CHECK-NEXT:   201005:
@@ -74,6 +75,7 @@ R_X86_64_32:
 // FIXME: this would be far more self evident if llvm-objdump printed
 // constants in hex.
 // CHECK: Disassembly of section .text2:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_X86_64_32:
 // CHECK-NEXT:  20100a: {{.*}} movl $2101258, %edx
 
@@ -83,6 +85,7 @@ R_X86_64_32S:
   movq lulz - 0x100000, %rdx
 
 // CHECK: Disassembly of section .R_X86_64_32S:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_X86_64_32S:
 // CHECK-NEXT:  {{.*}}: {{.*}} movq 1052681, %rdx
 
@@ -94,6 +97,7 @@ R_X86_64_PC32:
 //16 is a size of PLT[0]
 // 0x201030 + 16 - (0x201017 + 5) = 20
 // CHECK:      Disassembly of section .R_X86_64_PC32:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_X86_64_PC32:
 // CHECK-NEXT:  201017:   {{.*}}  callq  36
 // CHECK-NEXT:  20101c:   {{.*}}  movl $2101312, %eax
@@ -104,6 +108,7 @@ R_X86_64_32S_2:
   mov bar2, %eax
 // plt is  at 0x201030. The second plt entry is at 0x201050 == 69712
 // CHECK:      Disassembly of section .R_X86_64_32S_2:
+// CHECK-EMPTY:
 // CHECK-NEXT: R_X86_64_32S_2:
 // CHECK-NEXT: 201021: {{.*}}  movl    2101328, %eax
 

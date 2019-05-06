@@ -97,6 +97,7 @@ struct Configuration {
   bool TailMerge;
   bool Relocatable = true;
   bool ForceMultiple = false;
+  bool ForceMultipleRes = false;
   bool ForceUnresolved = false;
   bool Debug = false;
   bool DebugDwarf = false;
@@ -205,6 +206,8 @@ struct Configuration {
   bool IntegrityCheck = false;
   bool KillAt = false;
   bool Repro = false;
+  bool SwaprunCD = false;
+  bool SwaprunNet = false;
 };
 
 extern Configuration *Config;

@@ -8,6 +8,7 @@
 # immediate. We use this property to overwrite instructions with a branch.
 
 # CHECK: Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: foo:
 # CHECK-NEXT:    210000:        01 00 00 14     b       #4
 # CHECK: bar:

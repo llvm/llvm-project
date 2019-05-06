@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 
 // RUN: ld.lld -o %t2 %t -wrap foo -shared
-// RUN: llvm-readobj -s -r %t2 | FileCheck %s
+// RUN: llvm-readobj -S -r %t2 | FileCheck %s
 // RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Name: .plt

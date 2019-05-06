@@ -10,13 +10,8 @@
 // Tests for copy_if and remove_copy_if
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-#include "pstl/execution"
-#include "pstl/algorithm"
-#else
 #include <execution>
 #include <algorithm>
-#endif // PSTL_STANDALONE_TESTS
 
 #include "support/utils.h"
 
@@ -24,7 +19,7 @@ using namespace TestUtils;
 
 struct run_copy_if
 {
-#if __PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN // dummy specializations to skip testing in case of broken configuration
+#if _PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN // dummy specializations to skip testing in case of broken configuration
     template <typename InputIterator, typename OutputIterator, typename OutputIterator2, typename Size,
               typename Predicate, typename T>
     void
@@ -135,11 +130,11 @@ main()
     test<int32_t>(-666, [](const int32_t& x) { return x != 42; },
                   [](size_t j) { return ((j + 1) % 5 & 2) != 0 ? int32_t(j + 1) : 42; });
 
-#if !__PSTL_ICC_17_TEST_MAC_RELEASE_32_BROKEN
+#if !_PSTL_ICC_17_TEST_MAC_RELEASE_32_BROKEN
     test<Number>(Number(42, OddTag()), IsMultiple(3, OddTag()), [](int32_t j) { return Number(j, OddTag()); });
 #endif
 
-#if !__PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
+#if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
     test<int32_t>(-666, [](const int32_t& x) { return true; }, [](size_t j) { return j; }, false);
 #endif
 

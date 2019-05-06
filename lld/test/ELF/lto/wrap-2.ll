@@ -4,14 +4,14 @@
 ; RUN: llvm-as %S/Inputs/wrap-bar.ll -o %t1.o
 ; RUN: ld.lld %t.o %t1.o -shared -o %t.so -wrap=bar
 ; RUN: llvm-objdump -d %t.so | FileCheck %s
-; RUN: llvm-readobj -t %t.so | FileCheck -check-prefix=BIND %s
+; RUN: llvm-readobj --symbols %t.so | FileCheck -check-prefix=BIND %s
 
 ; ThinLTO
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %S/Inputs/wrap-bar.ll -o %t1.o
 ; RUN: ld.lld %t.o %t1.o -shared -o %t.so -wrap=bar
 ; RUN: llvm-objdump -d %t.so | FileCheck %s
-; RUN: llvm-readobj -t %t.so | FileCheck -check-prefix=BIND %s
+; RUN: llvm-readobj --symbols %t.so | FileCheck -check-prefix=BIND %s
 
 ; Make sure that calls in foo() are not eliminated and that bar is
 ; routed to __wrap_bar and __real_bar is routed to bar.

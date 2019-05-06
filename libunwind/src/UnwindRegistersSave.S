@@ -750,6 +750,9 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #elif defined(__arm__) && !defined(__APPLE__)
 
 #if !defined(__ARM_ARCH_ISA_ARM)
+#if (__ARM_ARCH_ISA_THUMB == 2)
+  .syntax unified
+#endif
   .thumb
 #endif
 

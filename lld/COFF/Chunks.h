@@ -153,7 +153,9 @@ public:
   void writeTo(uint8_t *Buf) const override;
   bool hasData() const override;
   uint32_t getOutputCharacteristics() const override;
-  StringRef getSectionName() const override { return SectionName; }
+  StringRef getSectionName() const override {
+    return StringRef(SectionNameData, SectionNameSize);
+  }
   void getBaserels(std::vector<Baserel> *Res) override;
   bool isCOMDAT() const;
   void applyRelX64(uint8_t *Off, uint16_t Type, OutputSection *OS, uint64_t S,
@@ -180,18 +182,29 @@ public:
   // True if this is a codeview debug info chunk. These will not be laid out in
   // the image. Instead they will end up in the PDB, if one is requested.
   bool isCodeView() const {
-    return SectionName == ".debug" || SectionName.startswith(".debug$");
+    return getSectionName() == ".debug" || getSectionName().startswith(".debug$");
   }
 
   // True if this is a DWARF debug info or exception handling chunk.
   bool isDWARF() const {
-    return SectionName.startswith(".debug_") || SectionName == ".eh_frame";
+    return getSectionName().startswith(".debug_") || getSectionName() == ".eh_frame";
   }
 
   // Allow iteration over the bodies of this chunk's relocated symbols.
   llvm::iterator_range<symbol_iterator> symbols() const {
-    return llvm::make_range(symbol_iterator(File, Relocs.begin()),
-                            symbol_iterator(File, Relocs.end()));
+    return llvm::make_range(symbol_iterator(File, RelocsData),
+                            symbol_iterator(File, RelocsData + RelocsSize));
+  }
+
+  ArrayRef<coff_relocation> getRelocs() const {
+    return llvm::makeArrayRef(RelocsData, RelocsSize);
+  }
+
+  // Reloc setter used by ARM range extension thunk insertion.
+  void setRelocs(ArrayRef<coff_relocation> NewRelocs) {
+    RelocsData = NewRelocs.data();
+    RelocsSize = NewRelocs.size();
+    assert(RelocsSize == NewRelocs.size() && "reloc size truncation");
   }
 
   // Single linked list iterator for associated comdat children.
@@ -245,9 +258,6 @@ public:
   // The COMDAT leader symbol if this is a COMDAT chunk.
   DefinedRegular *Sym = nullptr;
 
-  // Relocations for this section.
-  ArrayRef<coff_relocation> Relocs;
-
   // The CRC of the contents as described in the COFF spec 4.5.5.
   // Auxiliary Format 5: Section Definitions. Used for ICF.
   uint32_t Checksum = 0;
@@ -265,12 +275,20 @@ public:
   SectionChunk *Repl;
 
 private:
-  StringRef SectionName;
   SectionChunk *AssocChildren = nullptr;
 
   // Used for ICF (Identical COMDAT Folding)
   void replace(SectionChunk *Other);
   uint32_t Class[2] = {0, 0};
+
+  // Relocations for this section. Size is stored below.
+  const coff_relocation *RelocsData;
+
+  // Section name string. Size is stored below.
+  const char *SectionNameData;
+
+  uint32_t RelocsSize = 0;
+  uint32_t SectionNameSize = 0;
 };
 
 // This class is used to implement an lld-specific feature (not implemented in

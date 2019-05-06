@@ -70,23 +70,22 @@
 #define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
   __asm__(".globl " SYMBOL_NAME(aliasname));                                   \
   __asm__(SYMBOL_NAME(aliasname) " = " SYMBOL_NAME(name));                     \
-  _LIBUNWIND_EXPORT                                                            \
-  extern "C" __typeof(name) aliasname __attribute__((weak_import));
+  extern "C" _LIBUNWIND_EXPORT __typeof(name) aliasname                        \
+      __attribute__((weak_import));
 #elif defined(__ELF__)
 #define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
-  _LIBUNWIND_EXPORT                                                            \
-  extern "C" __typeof(name) aliasname __attribute__((weak, alias(#name)));
+  extern "C" _LIBUNWIND_EXPORT __typeof(name) aliasname                        \
+      __attribute__((weak, alias(#name)));
 #elif defined(_WIN32)
 #if defined(__MINGW32__)
 #define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
-  _LIBUNWIND_EXPORT                                                            \
-  extern "C" __typeof(name) aliasname __attribute__((alias(#name)));
+  extern "C" _LIBUNWIND_EXPORT __typeof(name) aliasname                        \
+      __attribute__((alias(#name)));
 #else
 #define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
   __pragma(comment(linker, "/alternatename:" SYMBOL_NAME(aliasname) "="        \
                                              SYMBOL_NAME(name)))               \
-  _LIBUNWIND_EXPORT \
-  extern "C" __typeof(name) aliasname;
+  extern "C" _LIBUNWIND_EXPORT __typeof(name) aliasname;
 #endif
 #else
 #error Unsupported target

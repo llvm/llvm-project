@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: ld.lld --hash-style=sysv %t.o -o %t.so -shared
-// RUN: llvm-readobj -r -s -section-data %t.so | FileCheck %s
+// RUN: llvm-readobj -r -S --section-data %t.so | FileCheck %s
 
         .byte   0x66
         leaq    foo@tlsgd(%rip), %rdi

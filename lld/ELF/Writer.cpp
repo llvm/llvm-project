@@ -24,6 +24,9 @@
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/xxhash.h"
 #include <climits>
 
 using namespace llvm;
@@ -52,7 +55,7 @@ private:
   void forEachRelSec(llvm::function_ref<void(InputSectionBase &)> Fn);
   void sortSections();
   void resolveShfLinkOrder();
-  void maybeAddThunks();
+  void finalizeAddressDependentContent();
   void sortInputSections();
   void finalizeSections();
   void checkExecuteOnly();
@@ -1047,9 +1050,8 @@ static int getRankProximityAux(OutputSection *A, OutputSection *B) {
 }
 
 static int getRankProximity(OutputSection *A, BaseCommand *B) {
-  if (auto *Sec = dyn_cast<OutputSection>(B))
-    return getRankProximityAux(A, Sec);
-  return -1;
+  auto *Sec = dyn_cast<OutputSection>(B);
+  return (Sec && Sec->Live) ? getRankProximityAux(A, Sec) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -1091,16 +1093,19 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   int Proximity = getRankProximity(Sec, *I);
   for (; I != E; ++I) {
     auto *CurSec = dyn_cast<OutputSection>(*I);
-    if (!CurSec)
+    if (!CurSec || !CurSec->Live)
       continue;
     if (getRankProximity(Sec, CurSec) != Proximity ||
         Sec->SortRank < CurSec->SortRank)
       break;
   }
 
-  auto IsOutputSec = [](BaseCommand *Cmd) { return isa<OutputSection>(Cmd); };
+  auto IsLiveOutputSec = [](BaseCommand *Cmd) {
+    auto *OS = dyn_cast<OutputSection>(Cmd);
+    return OS && OS->Live;
+  };
   auto J = std::find_if(llvm::make_reverse_iterator(I),
-                        llvm::make_reverse_iterator(B), IsOutputSec);
+                        llvm::make_reverse_iterator(B), IsLiveOutputSec);
   I = J.base();
 
   // As a special case, if the orphan section is the last section, put
@@ -1108,7 +1113,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto NextSec = std::find_if(I, E, IsOutputSec);
+  auto NextSec = std::find_if(I, E, IsLiveOutputSec);
   if (NextSec == E)
     return E;
 
@@ -1277,11 +1282,11 @@ static void sortSection(OutputSection *Sec,
       return;
     assert(Sec->SectionCommands.size() == 1);
     auto *ISD = cast<InputSectionDescription>(Sec->SectionCommands[0]);
-    std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(),
-                     [](const InputSection *A, const InputSection *B) -> bool {
-                       return A->File->PPC64SmallCodeModelTocRelocs &&
-                              !B->File->PPC64SmallCodeModelTocRelocs;
-                     });
+    llvm::stable_sort(ISD->Sections,
+                      [](const InputSection *A, const InputSection *B) -> bool {
+                        return A->File->PPC64SmallCodeModelTocRelocs &&
+                               !B->File->PPC64SmallCodeModelTocRelocs;
+                      });
     return;
   }
 
@@ -1450,26 +1455,22 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
         Sec->Type == SHT_ARM_EXIDX)
       continue;
 
-    std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
+    llvm::stable_sort(Sections, compareByFilePosition);
 
     for (int I = 0, N = Sections.size(); I < N; ++I)
       *ScriptSections[I] = Sections[I];
   }
 }
 
-// For most RISC ISAs, we need to generate content that depends on the address
-// of InputSections. For example some architectures such as AArch64 use small
-// displacements for jump instructions that is the linker's responsibility for
-// creating range extension thunks for. As the generation of the content may
-// also alter InputSection addresses we must converge to a fixed point.
-template <class ELFT> void Writer<ELFT>::maybeAddThunks() {
-  if (!Target->NeedsThunks && !Config->AndroidPackDynRelocs &&
-      !Config->RelrPackDynRelocs)
-    return;
-
+// We need to generate and finalize the content that depends on the address of
+// InputSections. As the generation of the content may also alter InputSection
+// addresses we must converge to a fixed point. We do that here. See the comment
+// in Writer<ELFT>::finalizeSections().
+template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   ThunkCreator TC;
   AArch64Err843419Patcher A64P;
 
+  // For some targets, like x86, this loop iterates only once.
   for (;;) {
     bool Changed = false;
 
@@ -1753,19 +1754,30 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // known but before addresses are allocated.
   resolveShfLinkOrder();
 
-  // Jump instructions in many ISAs have small displacements, and therefore they
-  // cannot jump to arbitrary addresses in memory. For example, RISC-V JAL
-  // instruction can target only +-1 MiB from PC. It is a linker's
-  // responsibility to create and insert small pieces of code between sections
-  // to extend the ranges if jump targets are out of range. Such code pieces are
-  // called "thunks".
+  // This is used to:
+  // 1) Create "thunks":
+  //    Jump instructions in many ISAs have small displacements, and therefore
+  //    they cannot jump to arbitrary addresses in memory. For example, RISC-V
+  //    JAL instruction can target only +-1 MiB from PC. It is a linker's
+  //    responsibility to create and insert small pieces of code between
+  //    sections to extend the ranges if jump targets are out of range. Such
+  //    code pieces are called "thunks".
   //
-  // We add thunks at this stage. We couldn't do this before this point because
-  // this is the earliest point where we know sizes of sections and their
-  // layouts (that are needed to determine if jump targets are in range).
-  maybeAddThunks();
+  //    We add thunks at this stage. We couldn't do this before this point
+  //    because this is the earliest point where we know sizes of sections and
+  //    their layouts (that are needed to determine if jump targets are in
+  //    range).
+  //
+  // 2) Update the sections. We need to generate content that depends on the
+  //    address of InputSections. For example, MIPS GOT section content or
+  //    android packed relocations sections content.
+  //
+  // 3) Assign the final values for the linker script symbols. Linker scripts
+  //    sometimes using forward symbol declarations. We want to set the correct
+  //    values. They also might change after adding the thunks.
+  finalizeAddressDependentContent();
 
-  // maybeAddThunks may have added local symbols to the static symbol table.
+  // finalizeAddressDependentContent may have added local symbols to the static symbol table.
   finalizeSynthetic(In.SymTab);
   finalizeSynthetic(In.PPC64LongBranchTarget);
 
@@ -1987,11 +1999,12 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   if (Config->ZWxneeded)
     AddHdr(PT_OPENBSD_WXNEEDED, PF_X);
 
-  // Create one PT_NOTE per a group of contiguous .note sections.
+  // Create one PT_NOTE per a group of contiguous SHT_NOTE sections with the
+  // same alignment.
   PhdrEntry *Note = nullptr;
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Type == SHT_NOTE && (Sec->Flags & SHF_ALLOC)) {
-      if (!Note || Sec->LMAExpr)
+      if (!Note || Sec->LMAExpr || Note->LastSec->Alignment != Sec->Alignment)
         Note = AddHdr(PT_NOTE, PF_R);
       Note->add(Sec);
     } else {
@@ -2495,12 +2508,82 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
       Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 }
 
+// Split one uint8 array into small pieces of uint8 arrays.
+static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,
+                                            size_t ChunkSize) {
+  std::vector<ArrayRef<uint8_t>> Ret;
+  while (Arr.size() > ChunkSize) {
+    Ret.push_back(Arr.take_front(ChunkSize));
+    Arr = Arr.drop_front(ChunkSize);
+  }
+  if (!Arr.empty())
+    Ret.push_back(Arr);
+  return Ret;
+}
+
+// Computes a hash value of Data using a given hash function.
+// In order to utilize multiple cores, we first split data into 1MB
+// chunks, compute a hash for each chunk, and then compute a hash value
+// of the hash values.
+static void
+computeHash(llvm::MutableArrayRef<uint8_t> HashBuf,
+            llvm::ArrayRef<uint8_t> Data,
+            std::function<void(uint8_t *Dest, ArrayRef<uint8_t> Arr)> HashFn) {
+  std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
+  std::vector<uint8_t> Hashes(Chunks.size() * HashBuf.size());
+
+  // Compute hash values.
+  parallelForEachN(0, Chunks.size(), [&](size_t I) {
+    HashFn(Hashes.data() + I * HashBuf.size(), Chunks[I]);
+  });
+
+  // Write to the final output buffer.
+  HashFn(HashBuf.data(), Hashes);
+}
+
+static std::vector<uint8_t> computeBuildId(llvm::ArrayRef<uint8_t> Buf) {
+  std::vector<uint8_t> BuildId;
+  switch (Config->BuildId) {
+  case BuildIdKind::Fast:
+    BuildId.resize(8);
+    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      write64le(Dest, xxHash64(Arr));
+    });
+    break;
+  case BuildIdKind::Md5:
+    BuildId.resize(16);
+    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, MD5::hash(Arr).data(), 16);
+    });
+    break;
+  case BuildIdKind::Sha1:
+    BuildId.resize(20);
+    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, SHA1::hash(Arr).data(), 20);
+    });
+    break;
+  case BuildIdKind::Uuid:
+    BuildId.resize(16);
+    if (auto EC = llvm::getRandomBytes(BuildId.data(), 16))
+      error("entropy source failure: " + EC.message());
+    break;
+  case BuildIdKind::Hexstring:
+    BuildId = Config->BuildIdVector;
+    break;
+  default:
+    llvm_unreachable("unknown BuildIdKind");
+  }
+  return BuildId;
+}
+
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
   if (!In.BuildId || !In.BuildId->getParent())
     return;
 
   // Compute a hash of all sections of the output file.
-  In.BuildId->writeBuildId({Out::BufferStart, size_t(FileSize)});
+  std::vector<uint8_t> BuildId =
+      computeBuildId({Out::BufferStart, size_t(FileSize)});
+  In.BuildId->writeBuildId(BuildId);
 }
 
 template void elf::writeResult<ELF32LE>();

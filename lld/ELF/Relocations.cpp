@@ -248,7 +248,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (Expr == R_ABS && !Config->Shared) {
+  if (Expr == R_DTPREL && !Config->Shared) {
     C.Relocations.push_back(
         {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
          Offset, Addend, &Sym});
@@ -398,13 +398,13 @@ static bool isRelExpr(RelExpr Expr) {
 static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
-  if (oneof<R_GOTPLT, R_GOT_OFF, R_HEXAGON_GOT, R_TLSLD_GOT_OFF,
+  if (oneof<R_DTPREL, R_GOTPLT, R_GOT_OFF, R_HEXAGON_GOT, R_TLSLD_GOT_OFF,
             R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
-            R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
-            R_GOTPLTONLY_PC, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT,
-            R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE,
-            R_HINT, R_TLSLD_HINT, R_TLSIE_HINT>(E))
+            R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
+            R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC_CALL_PLT,
+            R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT,
+            R_TLSIE_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -443,6 +443,11 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
   assert(AbsVal && RelE);
   if (Sym.isUndefWeak())
     return true;
+
+  // We set the final symbols values for linker script defined symbols later.
+  // They always can be computed as a link time constant.
+  if (Sym.ScriptDefined)
+      return true;
 
   error("relocation " + toString(Type) + " cannot refer to absolute symbol: " +
         toString(Sym) + getLocation(S, Sym, RelOff));
@@ -1237,10 +1242,10 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
   // Sort relocations by offset to binary search for R_RISCV_PCREL_HI20
   if (Config->EMachine == EM_RISCV)
-    std::stable_sort(Sec.Relocations.begin(), Sec.Relocations.end(),
-                     [](const Relocation &LHS, const Relocation &RHS) {
-                       return LHS.Offset < RHS.Offset;
-                     });
+    llvm::stable_sort(Sec.Relocations,
+                      [](const Relocation &LHS, const Relocation &RHS) {
+                        return LHS.Offset < RHS.Offset;
+                      });
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
@@ -1412,10 +1417,10 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> OutputSections) {
         for (const std::pair<ThunkSection *, uint32_t> TS : ISD->ThunkSections)
           if (TS.second == Pass)
             NewThunks.push_back(TS.first);
-        std::stable_sort(NewThunks.begin(), NewThunks.end(),
-                         [](const ThunkSection *A, const ThunkSection *B) {
-                           return A->OutSecOff < B->OutSecOff;
-                         });
+        llvm::stable_sort(NewThunks,
+                          [](const ThunkSection *A, const ThunkSection *B) {
+                            return A->OutSecOff < B->OutSecOff;
+                          });
 
         // Merge sorted vectors of Thunks and InputSections by OutSecOff
         std::vector<InputSection *> Tmp;

@@ -56,6 +56,8 @@ private:
   std::unique_ptr<llvm::raw_fd_ostream> IndexFile;
   llvm::DenseSet<StringRef> ThinIndices;
 };
+
+void thinLTOCreateEmptyIndexFiles();
 } // namespace elf
 } // namespace lld
 

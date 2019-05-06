@@ -10,18 +10,12 @@
 // Tests for stable_partition and partition_copy
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-#include "pstl/execution"
-#include "pstl/algorithm"
-#else
 #include <execution>
 #include <algorithm>
-#endif // PSTL_STANDALONE_TESTS
-
-#include "support/utils.h"
-
 #include <cstdlib>
 #include <iterator>
+
+#include "support/utils.h"
 
 using namespace TestUtils;
 
@@ -44,7 +38,7 @@ struct test_partition_copy
     }
 
     //dummy specialization by iterator type and policy type, in case of broken configuration
-#if __PSTL_ICC_1800_TEST_MONOTONIC_RELEASE_64_BROKEN
+#if _PSTL_ICC_1800_TEST_MONOTONIC_RELEASE_64_BROKEN
     template <typename InputIterator, typename OutputIterator, typename OutputIterator2, typename UnaryOp>
     void
     operator()(pstl::execution::unsequenced_policy, std::reverse_iterator<InputIterator> first,
@@ -106,7 +100,7 @@ main()
 {
     test<int32_t>([](const int32_t value) { return value % 2; });
 
-#if !__PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
+#if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
     test<int32_t>([](const int32_t value) { return true; });
 #endif
 

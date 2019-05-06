@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_parallel_backend_utils_H
-#define __PSTL_parallel_backend_utils_H
+#ifndef _PSTL_PARALLEL_BACKEND_UTILS_H
+#define _PSTL_PARALLEL_BACKEND_UTILS_H
 
 #include <iterator>
 #include <utility>
@@ -193,4 +193,4 @@ class __stack
 } // namespace __par_backend
 } // namespace __pstl
 
-#endif /* __PSTL_parallel_backend_utils_H */
+#endif /* _PSTL_PARALLEL_BACKEND_UTILS_H */

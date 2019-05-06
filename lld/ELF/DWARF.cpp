@@ -81,9 +81,8 @@ template <class RelTy>
 Optional<RelocAddrEntry>
 LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
                            ArrayRef<RelTy> Rels) const {
-  auto It = std::lower_bound(
-      Rels.begin(), Rels.end(), Pos,
-      [](const RelTy &A, uint64_t B) { return A.r_offset < B; });
+  auto It =
+      llvm::bsearch(Rels, [=](const RelTy &A) { return Pos <= A.r_offset; });
   if (It == Rels.end() || It->r_offset != Pos)
     return None;
   const RelTy &Rel = *It;

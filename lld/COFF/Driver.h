@@ -118,7 +118,7 @@ private:
 
   void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
-                        StringRef ParentName);
+                        StringRef ParentName, uint64_t OffsetInArchive);
 
   void enqueuePath(StringRef Path, bool WholeArchive);
 
@@ -166,6 +166,9 @@ void parseManifest(StringRef Arg);
 
 // Parses a string in the form of "level=<string>|uiAccess=<string>"
 void parseManifestUAC(StringRef Arg);
+
+// Parses a string in the form of "cd|net[,(cd|net)]*"
+void parseSwaprun(StringRef Arg);
 
 // Create a resource file containing a manifest XML.
 std::unique_ptr<MemoryBuffer> createManifestRes();

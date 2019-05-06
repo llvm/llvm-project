@@ -103,8 +103,12 @@ def noentry : F<"noentry">,
 def profile : F<"profile">;
 def repro : F<"Brepro">,
     HelpText<"Use a hash of the executable as the PE header timestamp">;
-def swaprun_cd : F<"swaprun:cd">;
-def swaprun_net : F<"swaprun:net">;
+def swaprun : P<"swaprun",
+  "Comma-separated list of 'cd' or 'net'">;
+def swaprun_cd : F<"swaprun:cd">, Alias<swaprun>, AliasArgs<["cd"]>,
+  HelpText<"Make loader run output binary from swap instead of from CD">;
+def swaprun_net : F<"swaprun:net">, Alias<swaprun>, AliasArgs<["net"]>,
+  HelpText<"Make loader run output binary from swap instead of from network">;
 def verbose : F<"verbose">;
 def wholearchive_flag : F<"wholearchive">;
 
@@ -114,6 +118,8 @@ def force_unresolved : F<"force:unresolved">,
     HelpText<"Allow undefined symbols when creating executables">;
 def force_multiple : F<"force:multiple">,
     HelpText<"Allow multiply defined symbols when creating executables">;
+def force_multipleres : F<"force:multipleres">,
+    HelpText<"Allow multiply defined resources when creating executables">;
 defm WX : B<"WX", "Treat warnings as errors", "Don't treat warnings as errors">;
 
 defm allowbind : B<"allowbind", "Enable DLL binding (default)",

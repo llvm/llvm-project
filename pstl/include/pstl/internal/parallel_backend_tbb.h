@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_parallel_backend_tbb_H
-#define __PSTL_parallel_backend_tbb_H
+#ifndef _PSTL_PARALLEL_BACKEND_TBB_H
+#define _PSTL_PARALLEL_BACKEND_TBB_H
 
 #include <cassert>
 #include <algorithm>
@@ -432,7 +432,7 @@ class __merge_task : public tbb::task
     }
 };
 
-#define __PSTL_MERGE_CUT_OFF 2000
+#define _PSTL_MERGE_CUT_OFF 2000
 
 template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _RandomAccessIterator3,
           typename __M_Compare, typename _Cleanup, typename _LeafMerge>
@@ -444,7 +444,7 @@ __merge_task<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterat
     typedef typename std::iterator_traits<_RandomAccessIterator2>::difference_type _DifferenceType2;
     typedef typename std::common_type<_DifferenceType1, _DifferenceType2>::type _SizeType;
     const _SizeType __n = (_M_xe - _M_xs) + (_M_ye - _M_ys);
-    const _SizeType __merge_cut_off = __PSTL_MERGE_CUT_OFF;
+    const _SizeType __merge_cut_off = _PSTL_MERGE_CUT_OFF;
     if (__n <= __merge_cut_off)
     {
         _M_leaf_merge(_M_xs, _M_xe, _M_ys, _M_ye, _M_zs, _M_comp);
@@ -515,7 +515,7 @@ struct __binary_no_op
     }
 };
 
-#define __PSTL_STABLE_SORT_CUT_OFF 500
+#define _PSTL_STABLE_SORT_CUT_OFF 500
 
 template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _Compare, typename _LeafSort>
 tbb::task*
@@ -523,7 +523,7 @@ __stable_sort_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _Le
 {
     const _SizeType __n = _M_xe - _M_xs;
     const _SizeType __nmerge = _M_nsort > 0 ? _M_nsort : __n;
-    const _SizeType __sort_cut_off = __PSTL_STABLE_SORT_CUT_OFF;
+    const _SizeType __sort_cut_off = _PSTL_STABLE_SORT_CUT_OFF;
     if (__n <= __sort_cut_off)
     {
         _M_leaf_sort(_M_xs, _M_xe, _M_comp);
@@ -595,7 +595,7 @@ __parallel_stable_sort(_ExecutionPolicy&&, _RandomAccessIterator __xs, _RandomAc
         if (__nsort == 0)
             __nsort = __n;
 
-        const _DifferenceType __sort_cut_off = __PSTL_STABLE_SORT_CUT_OFF;
+        const _DifferenceType __sort_cut_off = _PSTL_STABLE_SORT_CUT_OFF;
         if (__n > __sort_cut_off)
         {
             assert(__nsort > 0 && __nsort <= __n);
@@ -626,7 +626,7 @@ __parallel_merge(_ExecutionPolicy&&, _RandomAccessIterator1 __xs, _RandomAccessI
     typedef typename std::iterator_traits<_RandomAccessIterator2>::difference_type _DifferenceType2;
     typedef typename std::common_type<_DifferenceType1, _DifferenceType2>::type _SizeType;
     const _SizeType __n = (__xe - __xs) + (__ye - __ys);
-    const _SizeType __merge_cut_off = __PSTL_MERGE_CUT_OFF;
+    const _SizeType __merge_cut_off = _PSTL_MERGE_CUT_OFF;
     if (__n <= __merge_cut_off)
     {
         // Fall back on serial merge
@@ -658,4 +658,4 @@ __parallel_invoke(_ExecutionPolicy&&, _F1&& __f1, _F2&& __f2)
 } // namespace __par_backend
 } // namespace __pstl
 
-#endif /* __PSTL_parallel_backend_tbb_H */
+#endif /* _PSTL_PARALLEL_BACKEND_TBB_H */

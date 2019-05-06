@@ -610,6 +610,9 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_arm646jumptoEv)
 #elif defined(__arm__) && !defined(__APPLE__)
 
 #if !defined(__ARM_ARCH_ISA_ARM)
+#if (__ARM_ARCH_ISA_THUMB == 2)
+  .syntax unified
+#endif
   .thumb
 #endif
 

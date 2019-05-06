@@ -9,16 +9,9 @@
 
 #include "support/pstl_test_config.h"
 
-#ifdef PSTL_STANDALONE_TESTS
-#include <algorithm>
-#include <functional>
-#include "pstl/execution"
-#include "pstl/algorithm"
-
-#else
 #include <execution>
 #include <algorithm>
-#endif // PSTL_STANDALONE_TESTS
+#include <functional>
 
 #include "support/utils.h"
 
@@ -107,7 +100,7 @@ main()
     test_merge_by_type<int32_t>([](size_t v) { return (v % 2 == 0 ? v : -v) * 3; }, [](size_t v) { return v * 2; });
     test_merge_by_type<float64_t>([](size_t v) { return float64_t(v); }, [](size_t v) { return float64_t(v - 100); });
 
-#if !__PSTL_ICC_16_17_TEST_64_TIMEOUT
+#if !_PSTL_ICC_16_17_TEST_64_TIMEOUT
     test_merge_by_type<Wrapper<int16_t>>([](size_t v) { return Wrapper<int16_t>(v % 100); },
                                          [](size_t v) { return Wrapper<int16_t>(v % 10); });
 #endif
