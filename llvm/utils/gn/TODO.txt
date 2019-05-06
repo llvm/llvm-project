@@ -13,7 +13,6 @@ Ideas for things to do:
   - or use opt toolchain and build tablegen twice in debug builds, like cmake
 
 - cross builds using GN's toolchain feature
-- one-build-dir bootstrap builds using GN's toolchain feature
 
 - move clang_tablegen into lib/ for private files
 - add dead code stripping
