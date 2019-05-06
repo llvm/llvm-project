@@ -322,7 +322,7 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getNode(ISD::FP_EXTEND, DL, ValueVT, Val);
   }
 
-  llvm_unreachable("Unknown mismatch!");
+  report_fatal_error("Unknown mismatch in getCopyFromParts!");
 }
 
 static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
