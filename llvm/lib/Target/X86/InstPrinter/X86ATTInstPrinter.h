@@ -21,7 +21,7 @@ class X86ATTInstPrinter final : public X86InstPrinterCommon {
 public:
   X86ATTInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                     const MCRegisterInfo &MRI)
-      : X86InstPrinterCommon(MAI, MII, MRI) {}
+      : X86InstPrinterCommon(MAI, MII, MRI), HasCustomInstComment(false) {}
 
   void printRegName(raw_ostream &OS, unsigned RegNo) const override;
   void printInst(const MCInst *MI, raw_ostream &OS, StringRef Annot,

@@ -147,8 +147,9 @@ define float @maxnum_f32_val_nan(float %x) {
 
 define float @maxnum_f32_1_maxnum_val_p0(float %x) {
 ; CHECK-LABEL: @maxnum_f32_1_maxnum_val_p0(
-; CHECK-NEXT: [[RES:%.*]] = call float @llvm.maxnum.f32(float %x, float 1.000000e+00)
-; CHECK-NEXT: ret float [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[TMP1]]
+;
   %y = call float @llvm.maxnum.f32(float %x, float 0.0)
   %z = call float @llvm.maxnum.f32(float %y, float 1.0)
   ret float %z
@@ -156,8 +157,9 @@ define float @maxnum_f32_1_maxnum_val_p0(float %x) {
 
 define float @maxnum_f32_1_maxnum_p0_val_fast(float %x) {
 ; CHECK-LABEL: @maxnum_f32_1_maxnum_p0_val_fast(
-; CHECK-NEXT: [[RES:%.*]] = call fast float @llvm.maxnum.f32(float %x, float 1.000000e+00)
-; CHECK-NEXT: ret float [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[TMP1]]
+;
   %y = call float @llvm.maxnum.f32(float 0.0, float %x)
   %z = call fast float @llvm.maxnum.f32(float %y, float 1.0)
   ret float %z
@@ -165,8 +167,9 @@ define float @maxnum_f32_1_maxnum_p0_val_fast(float %x) {
 
 define float @maxnum_f32_1_maxnum_p0_val_nnan_ninf(float %x) {
 ; CHECK-LABEL: @maxnum_f32_1_maxnum_p0_val_nnan_ninf(
-; CHECK-NEXT: [[RES:%.*]] = call nnan ninf float @llvm.maxnum.f32(float %x, float 1.000000e+00)
-; CHECK-NEXT: ret float [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[TMP1]]
+;
   %y = call float @llvm.maxnum.f32(float 0.0, float %x)
   %z = call nnan ninf float @llvm.maxnum.f32(float %y, float 1.0)
   ret float %z
@@ -174,8 +177,9 @@ define float @maxnum_f32_1_maxnum_p0_val_nnan_ninf(float %x) {
 
 define float @maxnum_f32_p0_maxnum_val_n0(float %x) {
 ; CHECK-LABEL: @maxnum_f32_p0_maxnum_val_n0(
-; CHECK-NEXT: [[RES:%.*]] = call float @llvm.maxnum.f32(float %x, float 0.000000e+00)
-; CHECK-NEXT: ret float [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[TMP1]]
+;
   %y = call float @llvm.maxnum.f32(float %x, float -0.0)
   %z = call float @llvm.maxnum.f32(float %y, float 0.0)
   ret float %z
@@ -183,8 +187,9 @@ define float @maxnum_f32_p0_maxnum_val_n0(float %x) {
 
 define float @maxnum_f32_1_maxnum_p0_val(float %x) {
 ; CHECK-LABEL: @maxnum_f32_1_maxnum_p0_val(
-; CHECK-NEXT: [[RES:%.*]] = call float @llvm.maxnum.f32(float %x, float 1.000000e+00)
-; CHECK-NEXT: ret float [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[TMP1]]
+;
   %y = call float @llvm.maxnum.f32(float 0.0, float %x)
   %z = call float @llvm.maxnum.f32(float %y, float 1.0)
   ret float %z
@@ -192,8 +197,9 @@ define float @maxnum_f32_1_maxnum_p0_val(float %x) {
 
 define <2 x float> @maxnum_f32_1_maxnum_val_p0_val_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @maxnum_f32_1_maxnum_val_p0_val_v2f32(
-; CHECK-NEXT: [[RES:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 1.000000e+00, float 1.000000e+00>)
-; CHECK-NEXT: ret <2 x float> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[X:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>)
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+;
   %y = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
   %z = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %y, <2 x float><float 1.0, float 1.0>)
   ret <2 x float> %z

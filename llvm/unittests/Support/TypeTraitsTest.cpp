@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/type_traits.h"
+#include "gtest/gtest.h"
 
 namespace {
 
@@ -70,6 +71,26 @@ template void TrivialityTester<B &, true, true>();
 template void TrivialityTester<Z &&, false, true>();
 template void TrivialityTester<A &&, false, true>();
 template void TrivialityTester<B &&, false, true>();
+
+TEST(Triviality, Tester) {
+  TrivialityTester<int, true, true>();
+  TrivialityTester<void *, true, true>();
+  TrivialityTester<int &, true, true>();
+  TrivialityTester<int &&, false, true>();
+
+  TrivialityTester<X, true, true>();
+  TrivialityTester<Y, false, false>();
+  TrivialityTester<Z, false, false>();
+  TrivialityTester<A, true, false>();
+  TrivialityTester<B, false, true>();
+
+  TrivialityTester<Z &, true, true>();
+  TrivialityTester<A &, true, true>();
+  TrivialityTester<B &, true, true>();
+  TrivialityTester<Z &&, false, true>();
+  TrivialityTester<A &&, false, true>();
+  TrivialityTester<B &&, false, true>();
+}
 
 } // namespace triviality
 
