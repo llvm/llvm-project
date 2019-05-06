@@ -18670,6 +18670,7 @@ SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
 SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
+  unsigned Opcode = N->getOpcode();
 
   // VECREDUCE over 1-element vector is just an extract.
   if (VT.getVectorNumElements() == 1) {
@@ -18680,6 +18681,17 @@ SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
     if (Res.getValueType() != N->getValueType(0))
       Res = DAG.getNode(ISD::ANY_EXTEND, dl, N->getValueType(0), Res);
     return Res;
+  }
+
+  // On an boolean vector an and/or reduction is the same as a umin/umax
+  // reduction. Convert them if the latter is legal while the former isn't.
+  if (Opcode == ISD::VECREDUCE_AND || Opcode == ISD::VECREDUCE_OR) {
+    unsigned NewOpcode = Opcode == ISD::VECREDUCE_AND
+        ? ISD::VECREDUCE_UMIN : ISD::VECREDUCE_UMAX;
+    if (!TLI.isOperationLegalOrCustom(Opcode, VT) &&
+        TLI.isOperationLegalOrCustom(NewOpcode, VT) &&
+        DAG.ComputeNumSignBits(N0) == VT.getScalarSizeInBits())
+      return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), N0);
   }
 
   return SDValue();
