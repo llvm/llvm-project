@@ -4339,8 +4339,8 @@ CFGBlock *CFGBuilder::VisitCXXNewExpr(CXXNewExpr *NE,
   if (BuildOpts.AddCXXNewAllocator)
     appendNewAllocator(Block, NE);
 
-  if (NE->isArray())
-    Block = Visit(NE->getArraySize());
+  if (NE->isArray() && *NE->getArraySize())
+    Block = Visit(*NE->getArraySize());
 
   for (CXXNewExpr::arg_iterator I = NE->placement_arg_begin(),
        E = NE->placement_arg_end(); I != E; ++I)

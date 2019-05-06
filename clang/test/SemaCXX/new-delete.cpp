@@ -65,6 +65,12 @@ void good_news()
   typedef foo x[2];
   typedef foo y[2][2];
   x* f3 = new y;
+
+#if __cplusplus >= 201103L
+  (void)new int[]{};
+  (void)new int[]{1, 2, 3};
+  (void)new char[]{"hello"};
+#endif
 }
 
 struct abstract {
@@ -126,9 +132,14 @@ void bad_news(int *ip)
   (void)::new ((S*)0) U; // expected-error {{no matching function for call to 'operator new'}}
   // This must fail, because any member version hides all global versions.
   (void)new U; // expected-error {{no matching function for call to 'operator new'}}
-  (void)new (int[]); // expected-error {{array size must be specified in new expressions}}
+  (void)new (int[]); // expected-error {{array size must be specified in new expression with no initializer}}
   (void)new int&; // expected-error {{cannot allocate reference type 'int &' with new}}
-  // Some lacking cases due to lack of sema support.
+  (void)new int[]; // expected-error {{array size must be specified in new expression with no initializer}}
+  (void)new int[](); // expected-error {{cannot determine allocated array size from initializer}}
+  // FIXME: This is a terrible diagnostic.
+#if __cplusplus < 201103L
+  (void)new int[]{}; // expected-error {{array size must be specified in new expression with no initializer}}
+#endif
 }
 
 void good_deletes()
@@ -601,3 +612,12 @@ struct A {
   void g() { this->::delete; } // expected-error {{expected unqualified-id}}
 };
 }
+
+#if __cplusplus >= 201103L
+template<typename ...T> int *dependent_array_size(T ...v) {
+  return new int[]{v...}; // expected-error {{cannot initialize}}
+}
+int *p0 = dependent_array_size();
+int *p3 = dependent_array_size(1, 2, 3);
+int *fail = dependent_array_size("hello"); // expected-note {{instantiation of}}
+#endif

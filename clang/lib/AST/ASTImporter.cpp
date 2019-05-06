@@ -175,6 +175,14 @@ namespace clang {
       return Importer.Import_New(From);
     }
 
+    // Import an Optional<T> by importing the contained T, if any.
+    template<typename T>
+    Expected<Optional<T>> import(Optional<T> From) {
+      if (!From)
+        return Optional<T>();
+      return import(*From);
+    }
+
     template <class T>
     Expected<std::tuple<T>>
     importSeq(const T &From) {
@@ -6896,7 +6904,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXNewExpr(CXXNewExpr *E) {
 
   FunctionDecl *ToOperatorNew, *ToOperatorDelete;
   SourceRange ToTypeIdParens, ToSourceRange, ToDirectInitRange;
-  Expr *ToArraySize, *ToInitializer;
+  Optional<Expr *> ToArraySize;
+  Expr *ToInitializer;
   QualType ToType;
   TypeSourceInfo *ToAllocatedTypeSourceInfo;
   std::tie(

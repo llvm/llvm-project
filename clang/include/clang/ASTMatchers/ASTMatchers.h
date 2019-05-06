@@ -6413,8 +6413,8 @@ AST_MATCHER(CXXNewExpr, isArray) {
 /// cxxNewExpr(hasArraySize(intgerLiteral(equals(10))))
 ///   matches the expression 'new MyClass[10]'.
 AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
-  return Node.isArray() &&
-    InnerMatcher.matches(*Node.getArraySize(), Finder, Builder);
+  return Node.isArray() && *Node.getArraySize() &&
+         InnerMatcher.matches(**Node.getArraySize(), Finder, Builder);
 }
 
 /// Matches a class declaration that is defined.
