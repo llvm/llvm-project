@@ -200,8 +200,8 @@ int main(int argc, char **argv) {
 // CHECK: int clen = 5;
   static float g;
 #pragma omp threadprivate(g)
-#pragma omp target parallel for simd schedule(guided, argc) default(none) linear(a)
-  // CHECK: #pragma omp target parallel for simd schedule(guided, argc) default(none) linear(a)
+#pragma omp target parallel for simd schedule(guided, argc) default(none) linear(a) shared(argc)
+  // CHECK: #pragma omp target parallel for simd schedule(guided, argc) default(none) linear(a) shared(argc)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

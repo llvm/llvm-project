@@ -122,8 +122,8 @@ void foo(int argc, char **argv) {
   [&]() {
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
-    // CHECK: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
+#pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
+    // CHECK: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
     for (int i = 0; i < 2; ++i)
 // CHECK: for (int i = 0; i < 2; ++i)
       [&]() {
@@ -156,8 +156,8 @@ int main(int argc, char **argv) {
 #pragma omp threadprivate(g)
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
-  // CHECK: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
+#pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
+  // CHECK: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
