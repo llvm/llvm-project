@@ -2206,76 +2206,73 @@ static std::string GetSwiftFriendlyTriple(StringRef triple) {
   return triple.str();
 }
 
-bool SwiftASTContext::SetTriple(const char *triple_cstr, Module *module) {
-  if (triple_cstr && triple_cstr[0]) {
-    // We can change our triple up until we create the
-    // swift::irgen::IRGenModule.
-    if (m_ir_gen_module_ap.get() == NULL) {
-      std::string raw_triple(triple_cstr);
-      std::string triple = GetSwiftFriendlyTriple(raw_triple);
+bool SwiftASTContext::SetTriple(std::string raw_triple, Module *module) {
+  if (raw_triple.empty())
+    return false;
+  // We can change our triple up until we create the
+  // swift::irgen::IRGenModule.
+  if (m_ir_gen_module_ap.get()) {
+    LOG_PRINTF(LIBLLDB_LOG_TYPES,
+               "('%s') ignoring triple "
+               "since the IRGenModule has already been created",
+               raw_triple.c_str());
+    return false;
+  }
 
-      llvm::Triple llvm_triple(triple);
-      const unsigned unspecified = 0;
-      // If the OS version is unspecified, do fancy things.
-      if (llvm_triple.getOSMajorVersion() == unspecified) {
-        // If a triple is "<arch>-apple-darwin" change it to be
-        // "<arch>-apple-macosx" otherwise the major and minor OS
-        // version we append below would be wrong.
-        if (llvm_triple.getVendor() == llvm::Triple::VendorType::Apple &&
-            llvm_triple.getOS() == llvm::Triple::OSType::Darwin) {
-          llvm_triple.setOS(llvm::Triple::OSType::MacOSX);
+  std::string triple = GetSwiftFriendlyTriple(raw_triple);
+  llvm::Triple llvm_triple(triple);
+  const unsigned unspecified = 0;
+  // If the OS version is unspecified, do fancy things.
+  if (llvm_triple.getOSMajorVersion() == unspecified) {
+    // If a triple is "<arch>-apple-darwin" change it to be
+    // "<arch>-apple-macosx" otherwise the major and minor OS
+    // version we append below would be wrong.
+    if (llvm_triple.getVendor() == llvm::Triple::VendorType::Apple &&
+        llvm_triple.getOS() == llvm::Triple::OSType::Darwin) {
+      llvm_triple.setOS(llvm::Triple::OSType::MacOSX);
+      triple = llvm_triple.str();
+    }
+
+    // Append the min OS to the triple if we have a target
+    ModuleSP module_sp;
+    if (!module) {
+      TargetSP target_sp(m_target_wp.lock());
+      if (target_sp) {
+        module_sp = target_sp->GetExecutableModule();
+        if (module_sp)
+          module = module_sp.get();
+      }
+    }
+
+    if (module) {
+      ObjectFile *objfile = module->GetObjectFile();
+      if (objfile) {
+        StreamString strm;
+        if (llvm::VersionTuple version = objfile->GetMinimumOSVersion()) {
+          strm.PutCString(llvm_triple.getOSName().str());
+          strm.PutCString(version.getAsString());
+          llvm_triple.setOSName(strm.GetString());
           triple = llvm_triple.str();
         }
-
-        // Append the min OS to the triple if we have a target
-        ModuleSP module_sp;
-        if (module == NULL) {
-          TargetSP target_sp(m_target_wp.lock());
-          if (target_sp) {
-            module_sp = target_sp->GetExecutableModule();
-            if (module_sp)
-              module = module_sp.get();
-          }
-        }
-
-        if (module) {
-          ObjectFile *objfile = module->GetObjectFile();
-          if (objfile) {
-            StreamString strm;
-            if (llvm::VersionTuple version = objfile->GetMinimumOSVersion()) {
-              strm.PutCString(llvm_triple.getOSName().str());
-              strm.PutCString(version.getAsString());
-              llvm_triple.setOSName(strm.GetString());
-              triple = llvm_triple.str();
-            }
-          }
-        }
       }
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "('%s') setting to '%s'%s", triple_cstr,
-                 triple.c_str(), m_target_wp.lock() ? " (target)" : "");
-
-      if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
-        // This case triggers an llvm_unreachable() in the Swift compiler.
-        LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                   "Cannot initialize Swift with an unknown OS");
-        return false;
-      }
-      m_compiler_invocation_ap->setTargetTriple(triple);
-
-      // Every time the triple is changed the LangOpts must be updated
-      // too, because Swift default-initializes the EnableObjCInterop
-      // flag based on the triple.
-      GetLanguageOptions().EnableObjCInterop = llvm_triple.isOSDarwin();
-
-      return true;
-    } else {
-      LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                 "('%s') ignoring triple "
-                 "since the IRGenModule has already been created",
-                 triple_cstr);
     }
   }
-  return false;
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "('%s') setting to '%s'%s", raw_triple.c_str(),
+             triple.c_str(), m_target_wp.lock() ? " (target)" : "");
+
+  if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
+    // This case triggers an llvm_unreachable() in the Swift compiler.
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "Cannot initialize Swift with an unknown OS");
+    return false;
+  }
+  m_compiler_invocation_ap->setTargetTriple(triple);
+
+  // Every time the triple is changed the LangOpts must be updated
+  // too, because Swift default-initializes the EnableObjCInterop
+  // flag based on the triple.
+  GetLanguageOptions().EnableObjCInterop = llvm_triple.isOSDarwin();
+
+  return true;
 }
 
 namespace {
