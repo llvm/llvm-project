@@ -169,8 +169,8 @@ namespace {
 
   public:
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
-        : SelectionDAGISel(tm, OptLevel), OptForSize(false),
-          OptForMinSize(false) {}
+        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr), OptForSize(false),
+          OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     StringRef getPassName() const override {
       return "X86 DAG->DAG Instruction Selection";
