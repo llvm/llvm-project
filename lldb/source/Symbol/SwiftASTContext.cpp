@@ -2200,17 +2200,10 @@ std::string SwiftASTContext::GetTriple() const {
 /// now this just strips the Haswell marker off the CPU name.
 ///
 /// TODO: Make Swift more robust.
-static std::string GetSwiftFriendlyTriple(const std::string &triple) {
-  static std::string s_x86_64h("x86_64h");
-  static std::string::size_type s_x86_64h_size = s_x86_64h.size();
-
-  if (0 == triple.compare(0, s_x86_64h_size, s_x86_64h)) {
-    std::string fixed_triple("x86_64");
-    fixed_triple.append(
-        triple.substr(s_x86_64h_size, triple.size() - s_x86_64h_size));
-    return fixed_triple;
-  }
-  return triple;
+static std::string GetSwiftFriendlyTriple(StringRef triple) {
+  if (triple.consume_front("x86_64h"))
+    return std::string("x86_64") + triple.str();
+  return triple.str();
 }
 
 bool SwiftASTContext::SetTriple(const char *triple_cstr, Module *module) {
