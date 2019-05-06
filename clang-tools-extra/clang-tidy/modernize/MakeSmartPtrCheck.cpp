@@ -278,7 +278,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     return false;
 
   std::string ArraySizeExpr;
-  if (const auto* ArraySize = New->getArraySize()) {
+  if (const auto* ArraySize = New->getArraySize().getValueOr(nullptr)) {
     ArraySizeExpr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                              ArraySize->getSourceRange()),
                                          SM, getLangOpts())
