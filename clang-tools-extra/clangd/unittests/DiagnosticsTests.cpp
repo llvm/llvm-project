@@ -171,6 +171,8 @@ TEST(DiagnosticsTest, ClangTidy) {
     #define $macrodef[[SQUARE]](X) (X)*(X)
     int main() {
       return $doubled[[sizeof]](sizeof(int));
+    }
+    int square() {
       int y = 4;
       return SQUARE($macroarg[[++]]y);
     }
