@@ -21,7 +21,7 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: float
   // CHECK-CC1-NEXT: COMPLETION: foo : [#void#]foo()
   // CHECK-CC1-NEXT: COMPLETION: Pattern : for(<#init-statement#>;<#condition#>;<#inc-expression#>){
-  // CHECK-CC1: COMPLETION: Pattern : goto <#label#>
+  // CHECK-CC1: COMPLETION: Pattern : goto <#label#>;
   // CHECK-CC1-NEXT: COMPLETION: Pattern : if(<#condition#>){<#statements#>
   // CHECK-CC1: COMPLETION: int
   // CHECK-CC1-NEXT: COMPLETION: long
@@ -29,7 +29,7 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: Pattern : new <#type#>[<#size#>](<#expressions#>)
   // CHECK-CC1-NEXT: COMPLETION: operator
   // CHECK-CC1-NEXT: COMPLETION: Pattern : reinterpret_cast<<#type#>>(<#expression#>)
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : return
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : return;
   // CHECK-CC1-NEXT: COMPLETION: short
   // CHECK-CC1-NEXT: COMPLETION: signed
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#size_t#]sizeof(<#expression-or-type#>)
@@ -49,7 +49,7 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC1-NEXT: COMPLETION: union
   // CHECK-CC1-NEXT: COMPLETION: unsigned
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : using namespace <#identifier#>
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-CC1-NEXT: COMPLETION: void
   // CHECK-CC1-NEXT: COMPLETION: volatile
   // CHECK-CC1-NEXT: COMPLETION: wchar_t
@@ -72,7 +72,7 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: int
   // CHECK-CC2-NEXT: COMPLETION: long
   // CHECK-CC2-NEXT: COMPLETION: Pattern : namespace <#identifier#>{<#declarations#>
-  // CHECK-CC2: COMPLETION: Pattern : namespace <#name#> = <#namespace#>
+  // CHECK-CC2: COMPLETION: Pattern : namespace <#name#> = <#namespace#>;
   // CHECK-CC2-NEXT: COMPLETION: operator
   // CHECK-CC2-NEXT: COMPLETION: short
   // CHECK-CC2-NEXT: COMPLETION: signed
@@ -88,8 +88,8 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC2-NEXT: COMPLETION: union
   // CHECK-CC2-NEXT: COMPLETION: unsigned
-  // CHECK-CC2-NEXT: COMPLETION: Pattern : using namespace <#identifier#>
-  // CHECK-CC2-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>;
   // CHECK-CC2-NEXT: COMPLETION: void
   // CHECK-CC2-NEXT: COMPLETION: volatile
   // CHECK-CC2-NEXT: COMPLETION: wchar_t
@@ -125,7 +125,7 @@ void foo() {
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC3-NEXT: COMPLETION: union
   // CHECK-CC3-NEXT: COMPLETION: unsigned
-  // CHECK-CC3-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>
+  // CHECK-CC3-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>;
   // CHECK-CC3-NEXT: COMPLETION: virtual
   // CHECK-CC3-NEXT: COMPLETION: void
   // CHECK-CC3-NEXT: COMPLETION: volatile
@@ -190,7 +190,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: float
   // CHECK-NO-RTTI-NEXT: COMPLETION: foo : [#void#]foo()
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : for(<#init-statement#>;<#condition#>;<#inc-expression#>){
-  // CHECK-NO-RTTI: COMPLETION: Pattern : goto <#label#>
+  // CHECK-NO-RTTI: COMPLETION: Pattern : goto <#label#>;
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : if(<#condition#>){<#statements#>
   // CHECK-NO-RTTI: COMPLETION: int
   // CHECK-NO-RTTI-NEXT: COMPLETION: long
@@ -198,7 +198,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : new <#type#>[<#size#>](<#expressions#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: operator
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : reinterpret_cast<<#type#>>(<#expression#>)
-  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : return
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : return;
   // CHECK-NO-RTTI-NEXT: COMPLETION: short
   // CHECK-NO-RTTI-NEXT: COMPLETION: signed
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : [#size_t#]sizeof(<#expression-or-type#>)
@@ -218,7 +218,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: union
   // CHECK-NO-RTTI-NEXT: COMPLETION: unsigned
-  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : using namespace <#identifier#>
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-NO-RTTI-NEXT: COMPLETION: void
   // CHECK-NO-RTTI-NEXT: COMPLETION: volatile
   // CHECK-NO-RTTI-NEXT: COMPLETION: wchar_t

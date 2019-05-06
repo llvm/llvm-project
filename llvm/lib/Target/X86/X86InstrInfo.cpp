@@ -1769,7 +1769,6 @@ X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
   // regardless of the FMA opcode. The FMA opcode is adjusted later.
   if (SrcOpIdx1 == CommuteAnyOperandIndex ||
       SrcOpIdx2 == CommuteAnyOperandIndex) {
-    unsigned CommutableOpIdx1 = SrcOpIdx1;
     unsigned CommutableOpIdx2 = SrcOpIdx2;
 
     // At least one of operands to be commuted is not specified and
@@ -1785,6 +1784,8 @@ X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
     // CommutableOpIdx2 is well defined now. Let's choose another commutable
     // operand and assign its index to CommutableOpIdx1.
     unsigned Op2Reg = MI.getOperand(CommutableOpIdx2).getReg();
+
+    unsigned CommutableOpIdx1;
     for (CommutableOpIdx1 = LastCommutableVecOp;
          CommutableOpIdx1 >= FirstCommutableVecOp; CommutableOpIdx1--) {
       // Just ignore and skip the k-mask operand.
