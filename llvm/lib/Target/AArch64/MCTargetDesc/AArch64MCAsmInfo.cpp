@@ -130,8 +130,6 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
   CodePointerSize = 8;
 
   CommentString = "//";
-  ExceptionsType = ExceptionHandling::DwarfCFI;
-  // The default is dwarf, but WinEH can be enabled optionally, which requires
-  // WinEHEncodingType to be set.
+  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 }
