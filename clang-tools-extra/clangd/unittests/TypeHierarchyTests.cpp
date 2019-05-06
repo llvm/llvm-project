@@ -27,21 +27,21 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using testing::AllOf;
-using testing::ElementsAre;
-using testing::Eq;
-using testing::Field;
-using testing::IsEmpty;
-using testing::Matcher;
-using testing::Pointee;
-using testing::UnorderedElementsAreArray;
+using ::testing::AllOf;
+using ::testing::ElementsAre;
+using ::testing::Eq;
+using ::testing::Field;
+using ::testing::IsEmpty;
+using ::testing::Matcher;
+using ::testing::Pointee;
+using ::testing::UnorderedElementsAreArray;
 
 // GMock helpers for matching TypeHierarchyItem.
 MATCHER_P(WithName, N, "") { return arg.name == N; }
 MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
 MATCHER_P(SelectionRangeIs, R, "") { return arg.selectionRange == R; }
 template <class... ParentMatchers>
-testing::Matcher<TypeHierarchyItem> Parents(ParentMatchers... ParentsM) {
+::testing::Matcher<TypeHierarchyItem> Parents(ParentMatchers... ParentsM) {
   return Field(&TypeHierarchyItem::parents, HasValue(ElementsAre(ParentsM...)));
 }
 

@@ -24,7 +24,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using testing::ElementsAreArray;
+using ::testing::ElementsAreArray;
 
 auto CreateExpectedSymbolDetails = [](const std::string &name,
                                       const std::string &container,

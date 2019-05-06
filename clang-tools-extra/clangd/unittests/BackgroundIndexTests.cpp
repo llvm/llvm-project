@@ -7,12 +7,12 @@
 #include "gtest/gtest.h"
 #include <thread>
 
-using testing::_;
-using testing::AllOf;
-using testing::Contains;
-using testing::ElementsAre;
-using testing::Not;
-using testing::UnorderedElementsAre;
+using ::testing::_;
+using ::testing::AllOf;
+using ::testing::Contains;
+using ::testing::ElementsAre;
+using ::testing::Not;
+using ::testing::UnorderedElementsAre;
 
 namespace clang {
 namespace clangd {
@@ -23,9 +23,9 @@ MATCHER(Declared, "") {
 }
 MATCHER(Defined, "") { return !StringRef(arg.Definition.FileURI).empty(); }
 MATCHER_P(FileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
-testing::Matcher<const RefSlab &>
-RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
-  return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
+::testing::Matcher<const RefSlab &>
+RefsAre(std::vector<::testing::Matcher<Ref>> Matchers) {
+  return ElementsAre(::testing::Pair(_, UnorderedElementsAreArray(Matchers)));
 }
 // URI cannot be empty since it references keys in the IncludeGraph.
 MATCHER(EmptyIncludeNode, "") {

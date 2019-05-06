@@ -13,11 +13,11 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using testing::_;
-using testing::AllOf;
-using testing::Pair;
-using testing::UnorderedElementsAre;
-using testing::UnorderedElementsAreArray;
+using ::testing::_;
+using ::testing::AllOf;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
+using ::testing::UnorderedElementsAreArray;
 
 namespace clang {
 namespace clangd {
@@ -135,7 +135,7 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_THAT(
       *ParsedYAML->Refs,
       UnorderedElementsAre(Pair(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")),
-                                testing::SizeIs(1))));
+                                ::testing::SizeIs(1))));
   auto Ref1 = ParsedYAML->Refs->begin()->second.front();
   EXPECT_EQ(Ref1.Kind, RefKind::Reference);
   EXPECT_EQ(StringRef(Ref1.Location.FileURI), "file:///path/foo.cc");

@@ -44,7 +44,7 @@ MATCHER_P(SymRange, Range, "") { return arg.location.range == Range; }
 // GMock helpers for matching DocumentSymbol.
 MATCHER_P(SymNameRange, Range, "") { return arg.selectionRange == Range; }
 template <class... ChildMatchers>
-testing::Matcher<DocumentSymbol> Children(ChildMatchers... ChildrenM) {
+::testing::Matcher<DocumentSymbol> Children(ChildMatchers... ChildrenM) {
   return Field(&DocumentSymbol::children, ElementsAre(ChildrenM...));
 }
 
@@ -573,7 +573,7 @@ TEST_F(DocumentSymbolsTest, Namespaces) {
       )cpp");
   EXPECT_THAT(
       getSymbols(FilePath),
-      ElementsAreArray<testing::Matcher<DocumentSymbol>>(
+      ElementsAreArray<::testing::Matcher<DocumentSymbol>>(
           {AllOf(WithName("ans1"),
                  Children(AllOf(WithName("ai1"), Children()),
                           AllOf(WithName("ans2"), Children(WithName("ai2"))))),

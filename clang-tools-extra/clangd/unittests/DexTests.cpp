@@ -352,16 +352,16 @@ TEST(DexIterators, Optimizations) {
 // Search token tests.
 //===----------------------------------------------------------------------===//
 
-testing::Matcher<std::vector<Token>>
+::testing::Matcher<std::vector<Token>>
 tokensAre(std::initializer_list<std::string> Strings, Token::Kind Kind) {
   std::vector<Token> Tokens;
   for (const auto &TokenData : Strings) {
     Tokens.push_back(Token(Kind, TokenData));
   }
-  return testing::UnorderedElementsAreArray(Tokens);
+  return ::testing::UnorderedElementsAreArray(Tokens);
 }
 
-testing::Matcher<std::vector<Token>>
+::testing::Matcher<std::vector<Token>>
 trigramsAre(std::initializer_list<std::string> Trigrams) {
   return tokensAre(Trigrams, Token::Kind::Trigram);
 }

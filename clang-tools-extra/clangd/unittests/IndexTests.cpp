@@ -18,14 +18,14 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using testing::_;
-using testing::AllOf;
-using testing::AnyOf;
-using testing::ElementsAre;
-using testing::IsEmpty;
-using testing::Pair;
-using testing::Pointee;
-using testing::UnorderedElementsAre;
+using ::testing::_;
+using ::testing::AllOf;
+using ::testing::AnyOf;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::Pointee;
+using ::testing::UnorderedElementsAre;
 
 namespace clang {
 namespace clangd {
