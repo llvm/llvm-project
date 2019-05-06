@@ -14,9 +14,6 @@ add_lldb_library(lldbInitialization
   LINK_LIBS
     lldbCore
     lldbHost
-    lldbPluginInstructionARM
-    lldbPluginInstructionMIPS
-    lldbPluginInstructionMIPS64
     lldbPluginProcessGDBRemote
     lldbPluginExpressionParserSwift
     ${EXTRA_PLUGINS}
