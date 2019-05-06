@@ -184,6 +184,9 @@
 #define bit_PCONFIG       0x00040000
 #define bit_IBT           0x00100000
 
+/* Features in %eax for leaf 7 sub-leaf 1 */
+#define bit_AVX512BF16    0x00000020
+
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
 #define bit_XSAVEC      0x00000002

@@ -178,3 +178,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-invpcid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-INVPCID %s
 // INVPCID: "-target-feature" "+invpcid"
 // NO-INVPCID: "-target-feature" "-invpcid"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mavx512bf16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX512BF16 %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-avx512bf16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVX512BF16 %s
+// AVX512BF16: "-target-feature" "+avx512bf16"
+// NO-AVX512BF16: "-target-feature" "-avx512bf16"

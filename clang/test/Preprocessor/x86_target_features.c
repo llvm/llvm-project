@@ -443,3 +443,18 @@
 // RUN: %clang -target i386-unknown-unknown -march=atom -mrdpid -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDPID %s
 
 // RDPID: #define __RDPID__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16 %s
+
+// AVX512BF16: #define __AVX512BF16__ 1
+// AVX512BF16: #define __AVX512BW__ 1
+// AVX512BF16: #define __AVX512VL__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16_NOAVX512BW %s
+
+// AVX512BF16_NOAVX512BW-NOT: #define __AVX512BF16__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -mno-avx512vl -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16_NOAVX512VL %s
+
+// AVX512BF16_NOAVX512VL-NOT: #define __AVX512BF16__ 1
+
