@@ -10,15 +10,21 @@
 #ifndef __CLANG_CUDA_DEVICE_FUNCTIONS_H__
 #define __CLANG_CUDA_DEVICE_FUNCTIONS_H__
 
+#ifndef _OPENMP
 #if CUDA_VERSION < 9000
 #error This file is intended to be used with CUDA-9+ only.
+#endif
 #endif
 
 // __DEVICE__ is a helper macro with common set of attributes for the wrappers
 // we implement in this file. We need static in order to avoid emitting unused
 // functions and __forceinline__ helps inlining these wrappers at -O1.
 #pragma push_macro("__DEVICE__")
+#ifdef _OPENMP
+#define __DEVICE__ static __attribute__((always_inline))
+#else
 #define __DEVICE__ static __device__ __forceinline__
+#endif
 
 // libdevice provides fast low precision and slow full-recision implementations
 // for some functions. Which one gets selected depends on
@@ -38,8 +44,13 @@ __DEVICE__ unsigned int __brev(unsigned int __a) { return __nv_brev(__a); }
 __DEVICE__ unsigned long long __brevll(unsigned long long __a) {
   return __nv_brevll(__a);
 }
+#if defined(__cplusplus)
 __DEVICE__ void __brkpt() { asm volatile("brkpt;"); }
 __DEVICE__ void __brkpt(int __a) { __brkpt(); }
+#else
+__DEVICE__ void __attribute__((overloadable)) __brkpt(void) { asm volatile("brkpt;"); }
+__DEVICE__ void __attribute__((overloadable)) __brkpt(int __a) { __brkpt(); }
+#endif
 __DEVICE__ unsigned int __byte_perm(unsigned int __a, unsigned int __b,
                                     unsigned int __c) {
   return __nv_byte_perm(__a, __b, __c);
@@ -1559,7 +1570,7 @@ __DEVICE__ float j1f(float __a) { return __nv_j1f(__a); }
 __DEVICE__ double jn(int __n, double __a) { return __nv_jn(__n, __a); }
 __DEVICE__ float jnf(int __n, float __a) { return __nv_jnf(__n, __a); }
 #if defined(__LP64__) || defined(_WIN64)
-__DEVICE__ long labs(long __a) { return llabs(__a); };
+__DEVICE__ long labs(long __a) { return __nv_llabs(__a); };
 #else
 __DEVICE__ long labs(long __a) { return __nv_abs(__a); };
 #endif
@@ -1693,6 +1704,8 @@ __DEVICE__ double rsqrt(double __a) { return __nv_rsqrt(__a); }
 __DEVICE__ float rsqrtf(float __a) { return __nv_rsqrtf(__a); }
 __DEVICE__ double scalbn(double __a, int __b) { return __nv_scalbn(__a, __b); }
 __DEVICE__ float scalbnf(float __a, int __b) { return __nv_scalbnf(__a, __b); }
+// TODO: remove once variant is supported
+#ifndef _OPENMP
 __DEVICE__ double scalbln(double __a, long __b) {
   if (__b > INT_MAX)
     return __a > 0 ? HUGE_VAL : -HUGE_VAL;
@@ -1707,6 +1720,7 @@ __DEVICE__ float scalblnf(float __a, long __b) {
     return __a > 0 ? 0.f : -0.f;
   return scalbnf(__a, (int)__b);
 }
+#endif
 __DEVICE__ double sin(double __a) { return __nv_sin(__a); }
 __DEVICE__ void sincos(double __a, double *__s, double *__c) {
   return __nv_sincos(__a, __s, __c);

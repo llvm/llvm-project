@@ -33,6 +33,9 @@ set(files
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
+  openmp_wrappers/math.h
+  openmp_wrappers/cmath
+  openmp_wrappers/__clang_openmp_math.h
   __clang_cuda_builtin_vars.h
   __clang_cuda_cmath.h
   __clang_cuda_complex_builtins.h

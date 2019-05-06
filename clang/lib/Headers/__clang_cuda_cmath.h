@@ -30,7 +30,11 @@
 // implementation.  Declaring in the global namespace and pulling into namespace
 // std covers all of the known knowns.
 
+#ifdef _OPENMP
+#define __DEVICE__ static __attribute__((always_inline))
+#else
 #define __DEVICE__ static __device__ __inline__ __attribute__((always_inline))
+#endif
 
 __DEVICE__ long long abs(long long __n) { return ::llabs(__n); }
 __DEVICE__ long abs(long __n) { return ::labs(__n); }
@@ -47,6 +51,8 @@ __DEVICE__ float exp(float __x) { return ::expf(__x); }
 __DEVICE__ float fabs(float __x) { return ::fabsf(__x); }
 __DEVICE__ float floor(float __x) { return ::floorf(__x); }
 __DEVICE__ float fmod(float __x, float __y) { return ::fmodf(__x, __y); }
+// TODO: remove when variant is supported
+#ifndef _OPENMP
 __DEVICE__ int fpclassify(float __x) {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL,
                               FP_ZERO, __x);
@@ -55,6 +61,7 @@ __DEVICE__ int fpclassify(double __x) {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL,
                               FP_ZERO, __x);
 }
+#endif
 __DEVICE__ float frexp(float __arg, int *__exp) {
   return ::frexpf(__arg, __exp);
 }
@@ -434,7 +441,10 @@ using ::remainderf;
 using ::remquof;
 using ::rintf;
 using ::roundf;
+// TODO: remove once variant is supported
+#ifndef _OPENMP
 using ::scalblnf;
+#endif
 using ::scalbnf;
 using ::sinf;
 using ::sinhf;
