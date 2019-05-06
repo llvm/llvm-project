@@ -419,7 +419,8 @@ def main():
         'GetPluginVersion',
         'HasFatalErrors',
         'GetFatalErrors',
-        'PrintDiagnostics'
+        'PrintDiagnostics',
+        'GetASTContext'
     ]
 
     for method in methods:
