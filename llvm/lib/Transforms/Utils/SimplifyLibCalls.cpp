@@ -1075,7 +1075,8 @@ static Value *valueHasFloatPrecision(Value *Val) {
 /// Shrink double -> float functions.
 static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
                                bool isBinary, bool isPrecise = false) {
-  if (!CI->getType()->isDoubleTy() || !CI->getCalledFunction())
+  Function *CalleeFn = CI->getCalledFunction();
+  if (!CI->getType()->isDoubleTy() || !CalleeFn)
     return nullptr;
 
   // If not all the uses of the function are converted to float, then bail out.
@@ -1095,7 +1096,6 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
   if (!V[0] || (isBinary && !V[1]))
     return nullptr;
 
-  Function *CalleeFn = CI->getCalledFunction();
   StringRef CalleeNm = CalleeFn->getName();
   AttributeList CalleeAt = CalleeFn->getAttributes();
   bool CalleeIn = CalleeFn->isIntrinsic();
