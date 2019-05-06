@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     }
   }
   #pragma omp target
-  #pragma omp teams default(none)
+  #pragma omp teams default(none) // expected-note {{explicit data sharing attribute requested here}}
   ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
   goto L2; // expected-error {{use of undeclared label 'L2'}}

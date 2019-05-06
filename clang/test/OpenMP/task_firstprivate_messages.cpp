@@ -23,7 +23,7 @@ template <typename T>
 struct S {
   T b;
   S(T a, T c) {
-#pragma omp task default(none) firstprivate(a, b)
+#pragma omp task default(none) firstprivate(a, b) // expected-note {{explicit data sharing attribute requested here}}
     a = b = c; // expected-error {{variable 'c' must have explicitly specified data sharing attributes}}
   }
 };
