@@ -459,6 +459,7 @@ void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 InResultFn) {
           }
         }
 
+        (void)HaveInterrupt3;
         assert(!HaveInterrupt3 && "Should have at most three ranges");
 
         ConstantRange SmallestCR = OpFn(CR1, CR2, ConstantRange::Smallest);
