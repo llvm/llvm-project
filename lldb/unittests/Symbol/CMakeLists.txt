@@ -11,7 +11,6 @@ add_lldb_unittest(SymbolTests
     lldbUtilityHelpers
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
-    lldbPluginSymbolVendorMacOSX
     lldbPluginSymbolFileDWARF
     LLVMTestingSupport
   )
