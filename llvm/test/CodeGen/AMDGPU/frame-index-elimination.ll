@@ -60,7 +60,7 @@ define void @func_add_constant_to_fi_i32() #0 {
 ; GFX9-NEXT: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s6
 ; GFX9-NEXT: v_add_u32_e32 v0, 4, [[SCALED]]
 
-; GCN-NEXT: v_mul_lo_i32 v0, v0, 9
+; GCN-NEXT: v_mul_lo_u32 v0, v0, 9
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_other_fi_user_i32() #0 {
@@ -172,7 +172,7 @@ ret:
 ; GFX9-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s6
 ; GFX9: v_add_u32_e32 [[VZ:v[0-9]+]], s6, [[SCALED]]
 
-; GCN: v_mul_lo_i32 [[VZ]], [[VZ]], 9
+; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
@@ -196,7 +196,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 ; GFX9-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, [[DIFF]]
 ; GFX9: v_add_u32_e32 [[VZ:v[0-9]+]], [[OFFSET]], [[SCALED]]
 
-; GCN: v_mul_lo_i32 [[VZ]], [[VZ]], 9
+; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)

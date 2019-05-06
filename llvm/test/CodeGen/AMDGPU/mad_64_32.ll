@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}mad_i64_i32_sextops:
 ; CI: v_mad_i64_i32 v[0:1], s[6:7], v0, v1, v[2:3]
 
-; SI: v_mul_lo_i32
+; SI: v_mul_lo_u32
 ; SI: v_mul_hi_i32
 ; SI: v_add_i32
 ; SI: v_addc_u32
@@ -19,7 +19,7 @@ define i64 @mad_i64_i32_sextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GCN-LABEL: {{^}}mad_i64_i32_sextops_commute:
 ; CI: v_mad_i64_i32 v[0:1], s[6:7], v0, v1, v[2:3]
 
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_mul_hi_i32
 ; SI: v_add_i32
 ; SI: v_addc_u32
@@ -34,7 +34,7 @@ define i64 @mad_i64_i32_sextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GCN-LABEL: {{^}}mad_u64_u32_zextops:
 ; CI: v_mad_u64_u32 v[0:1], s[6:7], v0, v1, v[2:3]
 
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_mul_hi_u32
 ; SI: v_add_i32
 ; SI: v_addc_u32
@@ -49,7 +49,7 @@ define i64 @mad_u64_u32_zextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GCN-LABEL: {{^}}mad_u64_u32_zextops_commute:
 ; CI: v_mad_u64_u32 v[0:1], s[6:7], v0, v1, v[2:3]
 
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_mul_hi_u32
 ; SI: v_add_i32
 ; SI: v_addc_u32

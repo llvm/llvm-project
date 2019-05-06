@@ -41,7 +41,7 @@ define amdgpu_kernel void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; SIVI: v_sub_{{i|u}}32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
 ; GFX9: v_sub_u32_e32 [[NEG:v[0-9]+]], 0, [[SRC:v[0-9]+]]
 ; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[SRC]], [[NEG]]
-; GCN: v_mul_lo_i32 v{{[0-9]+}}, [[MAX]], [[MAX]]
+; GCN: v_mul_lo_u32 v{{[0-9]+}}, [[MAX]], [[MAX]]
 define amdgpu_kernel void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
   %val = load i32, i32 addrspace(1)* %src, align 4
   %neg = sub i32 0, %val

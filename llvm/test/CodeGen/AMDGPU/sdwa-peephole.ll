@@ -1,6 +1,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -amdgpu-sdwa-peephole=0 -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=NOSDWA,GCN %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI,SDWA,GCN %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,SDWA,GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI,GFX89,SDWA,GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9_10,SDWA,GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1010 -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX9_10,SDWA,GCN %s
 
 ; GCN-LABEL: {{^}}add_shr_i32:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST:[0-9]+]], 16, v{{[0-9]+}}
@@ -9,6 +10,7 @@
 
 ; VI: v_add_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9: v_add_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10: v_add_nc_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 define amdgpu_kernel void @add_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %a = load i32, i32 addrspace(1)* %in, align 4
@@ -25,6 +27,7 @@ define amdgpu_kernel void @add_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)*
 
 ; VI: v_subrev_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9: v_sub_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10: v_sub_nc_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 define amdgpu_kernel void @sub_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %a = load i32, i32 addrspace(1)* %in, align 4
   %shr = lshr i32 %a, 16
@@ -52,9 +55,10 @@ define amdgpu_kernel void @mul_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}mul_i16:
-; NOSDWA: v_mul_lo_i32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA: v_mul_lo_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
-; SDWA: v_mul_lo_i32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX89: v_mul_lo_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX10: v_mul_lo_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; SDWA-NOT: v_mul_u32_u24_sdwa
 
 define amdgpu_kernel void @mul_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %ina, i16 addrspace(1)* %inb) {
@@ -78,7 +82,7 @@ entry:
 ; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL_HI:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL_LO]], v[[DST_MUL_HI]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
-; GFX9: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %ina, <2 x i16> addrspace(1)* %inb) {
 entry:
@@ -104,8 +108,8 @@ entry:
 ; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL2]], v[[DST_MUL3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL0]], v[[DST_MUL1]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
-; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %ina, <4 x i16> addrspace(1)* %inb) {
 entry:
@@ -137,10 +141,10 @@ entry:
 ; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL2]], v[[DST_MUL3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL0]], v[[DST_MUL1]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
-; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v8i16(<8 x i16> addrspace(1)* %out, <8 x i16> addrspace(1)* %ina, <8 x i16> addrspace(1)* %inb) {
 entry:
@@ -178,7 +182,7 @@ entry:
 ; VI-DAG: v_mul_f16_e32 v[[DST_MUL_LO:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_or_b32_e32 v{{[0-9]+}}, v[[DST_MUL_LO]], v[[DST_MUL_HI]]
 
-; GFX9: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v2half(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %ina, <2 x half> addrspace(1)* %inb) {
 entry:
@@ -202,8 +206,8 @@ entry:
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
-; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v4half(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %ina, <4 x half> addrspace(1)* %inb) {
 entry:
@@ -231,10 +235,10 @@ entry:
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
-; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v8half(<8 x half> addrspace(1)* %out, <8 x half> addrspace(1)* %ina, <8 x half> addrspace(1)* %inb) {
 entry:
@@ -246,9 +250,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}mul_i8:
-; NOSDWA: v_mul_lo_i32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA: v_mul_lo_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
-; SDWA: v_mul_lo_i32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX89: v_mul_lo_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX10: v_mul_lo_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; SDWA-NOT: v_mul_u32_u24_sdwa
 
 define amdgpu_kernel void @mul_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %ina, i8 addrspace(1)* %inb) {
@@ -272,7 +277,16 @@ entry:
 
 ; GFX9-DAG: v_mul_lo_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
 ; GFX9-DAG: v_mul_lo_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+
 ; GFX9: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+
+; GFX10-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX10-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+
 
 define amdgpu_kernel void @mul_v2i8(<2 x i8> addrspace(1)* %out, <2 x i8> addrspace(1)* %ina, <2 x i8> addrspace(1)* %inb) {
 entry:
@@ -298,6 +312,11 @@ entry:
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 ; GFX9-DAG: v_mul_lo_u16_sdwa
+
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
 
 define amdgpu_kernel void @mul_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> addrspace(1)* %ina, <4 x i8> addrspace(1)* %inb) {
 entry:
@@ -329,6 +348,15 @@ entry:
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 ; GFX9-DAG: v_mul_lo_u16_sdwa
+
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16_e64
 
 define amdgpu_kernel void @mul_v8i8(<8 x i8> addrspace(1)* %out, <8 x i8> addrspace(1)* %ina, <8 x i8> addrspace(1)* %inb) {
 entry:
@@ -371,8 +399,8 @@ entry:
 ; VI: v_mac_f16_sdwa v[[DST_MAC:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MAC]]
 
-; GFX9: v_pk_mul_f16 v[[DST_MUL:[0-9]+]], v{{[0-9]+}}, v[[SRC:[0-9]+]]
-; GFX9: v_pk_add_f16 v{{[0-9]+}}, v[[DST_MUL]], v[[SRC]]
+; GFX9_10: v_pk_mul_f16 v[[DST_MUL:[0-9]+]], v{{[0-9]+}}, v[[SRC:[0-9]+]]
+; GFX9_10: v_pk_add_f16 v{{[0-9]+}}, v[[DST_MUL]], v[[SRC]]
 
 define amdgpu_kernel void @mac_v2half(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %ina, <2 x half> addrspace(1)* %inb) {
 entry:
@@ -394,6 +422,8 @@ entry:
 ; GFX9: s_mov_b32 s[[IMM:[0-9]+]], 0x141007b
 ; GFX9: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, s[[IMM]]
 
+; GFX10: v_pk_mul_lo_u16 v{{[0-9]+}}, 0x141007b, v{{[0-9]+}}
+
 define amdgpu_kernel void @immediate_mul_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
 entry:
   %a = load <2 x i16>, <2 x i16> addrspace(1)* %in, align 4
@@ -413,8 +443,8 @@ entry:
 
 ; VI: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 
-; GFX9: v_pk_mul_lo_u16 v[[DST1:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; GFX9: v_pk_mul_lo_u16 v{{[0-9]+}}, v[[DST1]], v{{[0-9]+}}
+; GFX9_10: v_pk_mul_lo_u16 v[[DST1:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10: v_pk_mul_lo_u16 v{{[0-9]+}}, v[[DST1]], v{{[0-9]+}}
 
 define amdgpu_kernel void @mulmul_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %ina, <2 x i16> addrspace(1)* %inb) {
 entry:
@@ -431,7 +461,7 @@ entry:
 
 ; VI: v_add_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 
-; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9_10: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @add_bb_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %ina, <2 x i16> addrspace(1)* %inb) {
 entry:
@@ -458,12 +488,23 @@ store_label:
 ; NOSDWA-NOT: v_or_b32_sdwa
 
 ; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; SDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; GFX9_10-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX89-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+;
+; GFX10-DAG: v_lshrrev_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+;
 ; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; SDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
-; SDWA: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9_10-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX89-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+;
+; GFX10-DAG: v_lshrrev_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+;
+; GFX89: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+;
+; GFX10: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX10: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
 define amdgpu_kernel void @pulled_out_test(<8 x i8> addrspace(1)* %sourceA, <8 x i8> addrspace(1)* %destValues) {
 entry:
