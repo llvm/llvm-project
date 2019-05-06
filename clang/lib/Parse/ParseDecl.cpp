@@ -2442,12 +2442,12 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
       Diag(DS.getInlineSpecLoc(), diag::err_typename_invalid_functionspec);
     if (DS.isVirtualSpecified())
       Diag(DS.getVirtualSpecLoc(), diag::err_typename_invalid_functionspec);
-    if (DS.hasExplicitSpecifier())
+    if (DS.isExplicitSpecified())
       Diag(DS.getExplicitSpecLoc(), diag::err_typename_invalid_functionspec);
     DS.ClearFunctionSpecs();
   }
 
-  // Issue diagnostic and remove constexpr specifier if present.
+  // Issue diagnostic and remove constexpr specfier if present.
   if (DS.isConstexprSpecified() && DSC != DeclSpecContext::DSC_condition) {
     Diag(DS.getConstexprSpecLoc(), diag::err_typename_invalid_constexpr);
     DS.ClearConstexprSpec();
@@ -2965,12 +2965,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
   while (1) {
     bool isInvalid = false;
     bool isStorageClass = false;
-    bool isAlreadyConsumed = false;
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
-
-    // This value need to be set when isAlreadyConsumed is set to true.
-    SourceLocation RangeEnd;
 
     // HACK: MSVC doesn't consider _Atomic to be a keyword and its STL
     // implementation for VS2013 uses _Atomic as an identifier for one of the
@@ -3522,34 +3518,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         isInvalid = DS.setFunctionSpecVirtual(Loc, PrevSpec, DiagID);
       }
       break;
-    case tok::kw_explicit: {
-      SourceLocation ExplicitLoc = Loc;
-      SourceLocation CloseParenLoc;
-      ExplicitSpecifier ExplicitSpec(nullptr, ExplicitSpecKind::ResolvedTrue);
-      isAlreadyConsumed = true;
-      RangeEnd = ExplicitLoc;
-      ConsumeToken(); // kw_explicit
-      if (Tok.is(tok::l_paren)) {
-        if (getLangOpts().CPlusPlus2a) {
-          ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
-          BalancedDelimiterTracker Tracker(*this, tok::l_paren);
-          Tracker.consumeOpen();
-          ExplicitExpr = ParseConstantExpression();
-          RangeEnd = Tok.getLocation();
-          if (ExplicitExpr.isUsable()) {
-            CloseParenLoc = Tok.getLocation();
-            Tracker.consumeClose();
-            ExplicitSpec =
-                Actions.ActOnExplicitBoolSpecifier(ExplicitExpr.get());
-          } else
-            Tracker.skipToEnd();
-        } else
-          Diag(Tok.getLocation(), diag::warn_cxx2a_compat_explicit_bool);
-      }
-      isInvalid = DS.setFunctionSpecExplicit(ExplicitLoc, PrevSpec, DiagID,
-                                             ExplicitSpec, CloseParenLoc);
+    case tok::kw_explicit:
+      isInvalid = DS.setFunctionSpecExplicit(Loc, PrevSpec, DiagID);
       break;
-    }
     case tok::kw__Noreturn:
       if (!getLangOpts().C11)
         Diag(Loc, diag::ext_c11_noreturn);
@@ -3893,32 +3864,25 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // If a type specifier follows, it will be diagnosed elsewhere.
       continue;
     }
-
-    assert((!isAlreadyConsumed || RangeEnd != SourceLocation()) &&
-                                     "both or neither of isAlreadyConsumed and "
-                                     "RangeEnd needs to be set");
-    DS.SetRangeEnd(isAlreadyConsumed ? RangeEnd : Tok.getLocation());
-
     // If the specifier wasn't legal, issue a diagnostic.
     if (isInvalid) {
       assert(PrevSpec && "Method did not return previous specifier!");
       assert(DiagID);
 
       if (DiagID == diag::ext_duplicate_declspec ||
-          DiagID == diag::ext_warn_duplicate_declspec ||
-          DiagID == diag::err_duplicate_declspec)
-        Diag(Loc, DiagID) << PrevSpec
-                          << FixItHint::CreateRemoval(
-                                 SourceRange(Loc, DS.getEndLoc()));
+          DiagID == diag::ext_warn_duplicate_declspec)
+        Diag(Tok, DiagID)
+          << PrevSpec << FixItHint::CreateRemoval(Tok.getLocation());
       else if (DiagID == diag::err_opencl_unknown_type_specifier) {
-        Diag(Loc, DiagID) << getLangOpts().OpenCLCPlusPlus
-                          << getLangOpts().getOpenCLVersionTuple().getAsString()
-                          << PrevSpec << isStorageClass;
+        Diag(Tok, DiagID) << getLangOpts().OpenCLCPlusPlus
+            << getLangOpts().getOpenCLVersionTuple().getAsString()
+            << PrevSpec << isStorageClass;
       } else
-        Diag(Loc, DiagID) << PrevSpec;
+        Diag(Tok, DiagID) << PrevSpec;
     }
 
-    if (DiagID != diag::err_bool_redeclaration && !isAlreadyConsumed)
+    DS.SetRangeEnd(Tok.getLocation());
+    if (DiagID != diag::err_bool_redeclaration)
       // After an error the next token can be an annotation token.
       ConsumeAnyToken();
 

@@ -20,14 +20,6 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
-
-  /// Define the meaning of possible values of the kind in ExplicitSpecifier.
-  enum class ExplicitSpecKind : unsigned {
-    ResolvedFalse,
-    ResolvedTrue,
-    Unresolved,
-  };
-
   /// Specifies the width of a type, e.g., short, long, or long long.
   enum TypeSpecifierWidth {
     TSW_unspecified,

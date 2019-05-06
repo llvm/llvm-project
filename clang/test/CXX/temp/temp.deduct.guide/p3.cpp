@@ -3,14 +3,14 @@
 // The same restrictions apply to the parameter-declaration-clause of a
 // deduction guide as in a function declaration.
 template<typename T> struct A {};
-A(void) -> A<int>; // expected-note {{previous}}
+A(void) -> A<int>; // ok
 A(void, int) -> A<int>; // expected-error {{'void' must be the first and only parameter if specified}}
 
-A() -> A<int>; // expected-error {{redeclaration of deduction guide}}
-// expected-note@-1 {{previous}}
+// We interpret this as also extending to the validity of redeclarations. It's
+// a bit of a stretch (OK, a lot of a stretch) but it gives desirable answers.
+A() -> A<int>; // ok, redeclaration
 
 A() -> A<int>; // expected-note {{previous}}
-// expected-error@-1 {{redeclaration of deduction guide}}
 A() -> A<float>; // FIXME: "functions" is a poor term. expected-error {{functions that differ only in their return type cannot be overloaded}}
 
 template<typename T> A(T) -> A<typename T::foo>;

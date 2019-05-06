@@ -806,26 +806,6 @@ TEST_F(StructuralEquivalenceTest, CompareSameDeclWithMultiple) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
-TEST_F(StructuralEquivalenceTest, ExplicitBoolDifferent) {
-  auto Decls = makeNamedDecls("struct foo {explicit(false) foo(int);};",
-                              "struct foo {explicit(true) foo(int);};", Lang_CXX2a);
-  CXXConstructorDecl *First = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<0>(Decls), cxxConstructorDecl(hasName("foo")));
-  CXXConstructorDecl *Second = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<1>(Decls), cxxConstructorDecl(hasName("foo")));
-  EXPECT_FALSE(testStructuralMatch(First, Second));
-}
-
-TEST_F(StructuralEquivalenceTest, ExplicitBoolSame) {
-  auto Decls = makeNamedDecls("struct foo {explicit(true) foo(int);};",
-                              "struct foo {explicit(true) foo(int);};", Lang_CXX2a);
-  CXXConstructorDecl *First = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<0>(Decls), cxxConstructorDecl(hasName("foo")));
-  CXXConstructorDecl *Second = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<1>(Decls), cxxConstructorDecl(hasName("foo")));
-  EXPECT_TRUE(testStructuralMatch(First, Second));
-}
-
 struct StructuralEquivalenceEnumTest : StructuralEquivalenceTest {};
 
 TEST_F(StructuralEquivalenceEnumTest, FwdDeclEnumShouldBeEqualWithFwdDeclEnum) {
@@ -871,26 +851,6 @@ TEST_F(StructuralEquivalenceTemplateTest, DifferentTemplateArgKind) {
   auto t = makeNamedDecls("template <class T> struct foo;",
                           "template <int T> struct foo;", Lang_CXX);
   EXPECT_FALSE(testStructuralMatch(t));
-}
-
-TEST_F(StructuralEquivalenceTemplateTest, ExplicitBoolSame) {
-  auto Decls = makeNamedDecls("template <bool b> struct foo {explicit(b) foo(int);};",
-                              "template <bool b> struct foo {explicit(b) foo(int);};", Lang_CXX2a);
-  CXXConstructorDecl *First = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<0>(Decls), cxxConstructorDecl(hasName("foo<b>")));
-  CXXConstructorDecl *Second = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<1>(Decls), cxxConstructorDecl(hasName("foo<b>")));
-  EXPECT_TRUE(testStructuralMatch(First, Second));
-}
-
-TEST_F(StructuralEquivalenceTemplateTest, ExplicitBoolDifference) {
-  auto Decls = makeNamedDecls("template <bool b> struct foo {explicit(b) foo(int);};",
-                              "template <bool b> struct foo {explicit(!b) foo(int);};", Lang_CXX2a);
-  CXXConstructorDecl *First = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<0>(Decls), cxxConstructorDecl(hasName("foo<b>")));
-  CXXConstructorDecl *Second = FirstDeclMatcher<CXXConstructorDecl>().match(
-      get<1>(Decls), cxxConstructorDecl(hasName("foo<b>")));
-  EXPECT_FALSE(testStructuralMatch(First, Second));
 }
 
 } // end namespace ast_matchers

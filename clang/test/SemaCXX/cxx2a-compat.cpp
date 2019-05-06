@@ -37,23 +37,3 @@ string u8str = u8"test" u8"test";
 // expected-error@-8 {{cannot initialize a variable of type 'const char *' with an lvalue of type 'const char8_t [6]'}}
 // expected-error@-8 {{no viable conversion from 'const char8_t [9]' to 'string'}}
 #endif
-
-template<bool b>
-struct C {
-  explicit(C)(int);
-};
-#if __cplusplus <= 201703L
-// expected-warning@-3 {{this expression will be parsed as explicit(bool) in C++2a}}
-#if defined(__cpp_conditional_explicit)
-#error "the feature test macro __cpp_conditional_explicit isn't correct"
-#endif
-#else
-// expected-error@-8 {{does not refer to a value}}
-// expected-error@-9 {{expected member name or ';'}}
-// expected-error@-10 {{expected ')'}}
-// expected-note@-12 {{declared here}}
-// expected-note@-12 {{to match this '('}}
-#if !defined(__cpp_conditional_explicit) || __cpp_conditional_explicit != 201806L
-#error "the feature test macro __cpp_conditional_explicit isn't correct"
-#endif
-#endif

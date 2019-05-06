@@ -705,11 +705,6 @@ class Sema;
     /// attribute disabled it.
     ovl_fail_enable_if,
 
-    /// This candidate constructor or conversion fonction
-    /// is used implicitly but the explicit(bool) specifier
-    /// was resolved to true
-    ovl_fail_explicit_resolved,
-
     /// This candidate was not viable because its address could not be taken.
     ovl_fail_addr_not_available,
 

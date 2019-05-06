@@ -4961,15 +4961,13 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
       AddOverloadCandidate(FD, DeclAccessPair::make(FD, C->getAccess()), Args,
                            CandidateSet,
                            /*SuppressUsedConversions=*/false,
-                           /*PartialOverloading=*/true,
-                           /*AllowExplicit*/ true);
+                           /*PartialOverloading=*/true);
     } else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(C)) {
       AddTemplateOverloadCandidate(
           FTD, DeclAccessPair::make(FTD, C->getAccess()),
           /*ExplicitTemplateArgs=*/nullptr, Args, CandidateSet,
           /*SuppressUsedConversions=*/false,
-          /*PartialOverloading=*/true,
-          /*AllowExplicit*/ true);
+          /*PartialOverloading=*/true);
     }
   }
 
