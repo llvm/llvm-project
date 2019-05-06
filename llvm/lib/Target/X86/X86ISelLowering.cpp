@@ -16470,15 +16470,14 @@ static SDValue lowerVectorShuffle(SDValue Op, const X86Subtarget &Subtarget,
   // Check for non-undef masks pointing at an undef vector and make the masks
   // undef as well. This makes it easier to match the shuffle based solely on
   // the mask.
-  if (V2IsUndef)
-    for (int M : Mask)
-      if (M >= NumElements) {
-        SmallVector<int, 8> NewMask(Mask.begin(), Mask.end());
-        for (int &M : NewMask)
-          if (M >= NumElements)
-            M = -1;
-        return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
-      }
+  if (V2IsUndef &&
+      any_of(Mask, [NumElements](int M) { return M >= NumElements; })) {
+    SmallVector<int, 8> NewMask(Mask.begin(), Mask.end());
+    for (int &M : NewMask)
+      if (M >= NumElements)
+        M = -1;
+    return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
+  }
 
   // Check for illegal shuffle mask element index values.
   int MaskUpperLimit = Mask.size() * (V2IsUndef ? 1 : 2); (void)MaskUpperLimit;
@@ -20630,7 +20629,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     CC = Cond.getOperand(0);
 
     SDValue Cmp = Cond.getOperand(1);
-    unsigned Opc = Cmp.getOpcode();
     MVT VT = Op.getSimpleValueType();
 
     bool IllegalFPCMov = false;
@@ -20639,7 +20637,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       IllegalFPCMov = !hasFPCMov(cast<ConstantSDNode>(CC)->getSExtValue());
 
     if ((isX86LogicalCmp(Cmp) && !IllegalFPCMov) ||
-        Opc == X86ISD::BT) { // FIXME
+        Cmp.getOpcode() == X86ISD::BT) { // FIXME
       Cond = Cmp;
       AddTest = false;
     }
@@ -22624,6 +22622,21 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(), Src, Rnd,
                          PassThru, Mask);
 
+    }
+    case CVTNEPS2BF16_MASK: {
+      SDValue Src = Op.getOperand(1);
+      SDValue PassThru = Op.getOperand(2);
+      SDValue Mask = Op.getOperand(3);
+
+      if (ISD::isBuildVectorAllOnes(Mask.getNode()))
+        return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Src);
+
+      // Break false dependency.
+      if (PassThru.isUndef())
+        PassThru = DAG.getConstant(0, dl, PassThru.getValueType());
+
+      return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(), Src, PassThru,
+                         Mask);
     }
     default:
       break;
@@ -28074,6 +28087,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTS2UI:            return "X86ISD::CVTS2UI";
   case X86ISD::CVTS2SI_RND:        return "X86ISD::CVTS2SI_RND";
   case X86ISD::CVTS2UI_RND:        return "X86ISD::CVTS2UI_RND";
+  case X86ISD::CVTNE2PS2BF16:      return "X86ISD::CVTNE2PS2BF16";
+  case X86ISD::CVTNEPS2BF16:       return "X86ISD::CVTNEPS2BF16";
+  case X86ISD::MCVTNEPS2BF16:      return "X86ISD::MCVTNEPS2BF16";
+  case X86ISD::DPBF16PS:           return "X86ISD::DPBF16PS";
   case X86ISD::LWPINS:             return "X86ISD::LWPINS";
   case X86ISD::MGATHER:            return "X86ISD::MGATHER";
   case X86ISD::MSCATTER:           return "X86ISD::MSCATTER";

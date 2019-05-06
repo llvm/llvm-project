@@ -584,10 +584,14 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
   // dbg.value truncates the range of any dbg.value before the loop where the
   // loop used to be. This is particularly important for constant values.
   DIBuilder DIB(*ExitBlock->getModule());
+  Instruction *InsertDbgValueBefore = ExitBlock->getFirstNonPHI();
+  assert(InsertDbgValueBefore &&
+         "There should be a non-PHI instruction in exit block, else these "
+         "instructions will have no parent.");
   for (auto *DVI : DeadDebugInst)
-    DIB.insertDbgValueIntrinsic(
-        UndefValue::get(Builder.getInt32Ty()), DVI->getVariable(),
-        DVI->getExpression(), DVI->getDebugLoc(), ExitBlock->getFirstNonPHI());
+    DIB.insertDbgValueIntrinsic(UndefValue::get(Builder.getInt32Ty()),
+                                DVI->getVariable(), DVI->getExpression(),
+                                DVI->getDebugLoc(), InsertDbgValueBefore);
 
   // Remove the block from the reference counting scheme, so that we can
   // delete it freely later.

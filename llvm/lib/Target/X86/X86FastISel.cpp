@@ -2478,13 +2478,14 @@ bool X86FastISel::X86SelectFPExtOrFPTrunc(const Instruction *I,
   assert((I->getOpcode() == Instruction::FPExt ||
           I->getOpcode() == Instruction::FPTrunc) &&
          "Instruction must be an FPExt or FPTrunc!");
+  bool HasAVX = Subtarget->hasAVX();
 
   unsigned OpReg = getRegForValue(I->getOperand(0));
   if (OpReg == 0)
     return false;
 
   unsigned ImplicitDefReg;
-  if (Subtarget->hasAVX()) {
+  if (HasAVX) {
     ImplicitDefReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::IMPLICIT_DEF), ImplicitDefReg);
@@ -2496,7 +2497,7 @@ bool X86FastISel::X86SelectFPExtOrFPTrunc(const Instruction *I,
   MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(TargetOpc),
                 ResultReg);
 
-  if (Subtarget->hasAVX())
+  if (HasAVX)
     MIB.addReg(ImplicitDefReg);
 
   MIB.addReg(OpReg);
@@ -3750,29 +3751,27 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   // Get opcode and regclass of the output for the given load instruction.
   unsigned Opc = 0;
+  bool HasAVX = Subtarget->hasAVX();
+  bool HasAVX512 = Subtarget->hasAVX512();
   const TargetRegisterClass *RC = nullptr;
   switch (VT.SimpleTy) {
   default: return 0;
   case MVT::f32:
     if (X86ScalarSSEf32) {
-      Opc = Subtarget->hasAVX512()
-                ? X86::VMOVSSZrm
-                : Subtarget->hasAVX() ? X86::VMOVSSrm : X86::MOVSSrm;
-      RC  = Subtarget->hasAVX512() ? &X86::FR32XRegClass : &X86::FR32RegClass;
+      Opc = HasAVX512 ? X86::VMOVSSZrm : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
+      RC = HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass;
     } else {
       Opc = X86::LD_Fp32m;
-      RC  = &X86::RFP32RegClass;
+      RC = &X86::RFP32RegClass;
     }
     break;
   case MVT::f64:
     if (X86ScalarSSEf64) {
-      Opc = Subtarget->hasAVX512()
-                ? X86::VMOVSDZrm
-                : Subtarget->hasAVX() ? X86::VMOVSDrm : X86::MOVSDrm;
-      RC  = Subtarget->hasAVX512() ? &X86::FR64XRegClass : &X86::FR64RegClass;
+      Opc = HasAVX512 ? X86::VMOVSDZrm : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
+      RC = HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass;
     } else {
       Opc = X86::LD_Fp64m;
-      RC  = &X86::RFP64RegClass;
+      RC = &X86::RFP64RegClass;
     }
     break;
   case MVT::f80:

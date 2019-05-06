@@ -665,6 +665,10 @@ public:
   /// instruction must be a terminator.
   void setSuccessor(unsigned Idx, BasicBlock *BB);
 
+  /// Replace specified successor OldBB to point at the provided block.
+  /// This instruction must be a terminator.
+  void replaceSuccessorWith(BasicBlock *OldBB, BasicBlock *NewBB);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() >= Value::InstructionVal;

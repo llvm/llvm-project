@@ -15,7 +15,7 @@
 namespace clang {
 namespace clangd {
 namespace {
-using testing::Not;
+using ::testing::Not;
 
 struct ExpectedMatch {
   // Annotations are optional, and will not be asserted if absent.
@@ -43,7 +43,7 @@ private:
   llvm::Optional<llvm::StringRef> Annotated;
 };
 
-struct MatchesMatcher : public testing::MatcherInterface<llvm::StringRef> {
+struct MatchesMatcher : public ::testing::MatcherInterface<llvm::StringRef> {
   ExpectedMatch Candidate;
   llvm::Optional<float> Score;
   MatchesMatcher(ExpectedMatch Candidate, llvm::Optional<float> Score)
@@ -56,7 +56,7 @@ struct MatchesMatcher : public testing::MatcherInterface<llvm::StringRef> {
   }
 
   bool MatchAndExplain(llvm::StringRef Pattern,
-                       testing::MatchResultListener *L) const override {
+                       ::testing::MatchResultListener *L) const override {
     std::unique_ptr<llvm::raw_ostream> OS(
         L->stream()
             ? (llvm::raw_ostream *)(new llvm::raw_os_ostream(*L->stream()))
@@ -65,15 +65,15 @@ struct MatchesMatcher : public testing::MatcherInterface<llvm::StringRef> {
     auto Result = Matcher.match(Candidate.Word);
     auto AnnotatedMatch = Matcher.dumpLast(*OS << "\n");
     return Result && Candidate.accepts(AnnotatedMatch) &&
-           (!Score || testing::Value(*Result, testing::FloatEq(*Score)));
+           (!Score || ::testing::Value(*Result, ::testing::FloatEq(*Score)));
   }
 };
 
 // Accepts patterns that match a given word, optionally requiring a score.
 // Dumps the debug tables on match failure.
-testing::Matcher<llvm::StringRef> matches(llvm::StringRef M,
-                                          llvm::Optional<float> Score = {}) {
-  return testing::MakeMatcher<llvm::StringRef>(new MatchesMatcher(M, Score));
+::testing::Matcher<llvm::StringRef> matches(llvm::StringRef M,
+                                            llvm::Optional<float> Score = {}) {
+  return ::testing::MakeMatcher<llvm::StringRef>(new MatchesMatcher(M, Score));
 }
 
 TEST(FuzzyMatch, Matches) {
@@ -179,7 +179,7 @@ TEST(FuzzyMatch, Matches) {
   EXPECT_THAT("std", Not(matches("pthread_condattr_setpshared")));
 }
 
-struct RankMatcher : public testing::MatcherInterface<llvm::StringRef> {
+struct RankMatcher : public ::testing::MatcherInterface<llvm::StringRef> {
   std::vector<ExpectedMatch> RankedStrings;
   RankMatcher(std::initializer_list<ExpectedMatch> RankedStrings)
       : RankedStrings(RankedStrings) {}
@@ -193,7 +193,7 @@ struct RankMatcher : public testing::MatcherInterface<llvm::StringRef> {
   }
 
   bool MatchAndExplain(llvm::StringRef Pattern,
-                       testing::MatchResultListener *L) const override {
+                       ::testing::MatchResultListener *L) const override {
     std::unique_ptr<llvm::raw_ostream> OS(
         L->stream()
             ? (llvm::raw_ostream *)(new llvm::raw_os_ostream(*L->stream()))
@@ -236,8 +236,8 @@ struct RankMatcher : public testing::MatcherInterface<llvm::StringRef> {
 // Accepts patterns that match all the strings and rank them in the given order.
 // Dumps the debug tables on match failure.
 template <typename... T>
-testing::Matcher<llvm::StringRef> ranks(T... RankedStrings) {
-  return testing::MakeMatcher<llvm::StringRef>(
+::testing::Matcher<llvm::StringRef> ranks(T... RankedStrings) {
+  return ::testing::MakeMatcher<llvm::StringRef>(
       new RankMatcher{ExpectedMatch(RankedStrings)...});
 }
 

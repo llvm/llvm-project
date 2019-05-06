@@ -32,13 +32,14 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include <algorithm>
 #include <functional>
 #include <vector>
 
 namespace llvm {
 class raw_ostream;
-}
+} // namespace llvm
 
 namespace clang {
 class CodeCompletionResult;
@@ -84,8 +85,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 
 /// Attributes of a symbol-query pair that affect how much we like it.
 struct SymbolRelevanceSignals {
+  /// The name of the symbol (for ContextWords). Must be explicitly assigned.
+  llvm::StringRef Name;
   /// 0-1+ fuzzy-match score for unqualified name. Must be explicitly assigned.
   float NameMatch = 1;
+  /// Lowercase words relevant to the context (e.g. near the completion point).
+  llvm::StringSet<>* ContextWords = nullptr;
   bool Forbidden = false; // Unavailable (e.g const) or inaccessible (private).
   /// Whether fixits needs to be applied for that completion or not.
   bool NeedsFixIts = false;

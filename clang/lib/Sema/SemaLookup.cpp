@@ -3041,15 +3041,10 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
                            llvm::makeArrayRef(&Arg, NumArgs), OCS, true);
       else if (CtorInfo)
         AddOverloadCandidate(CtorInfo.Constructor, CtorInfo.FoundDecl,
-                             llvm::makeArrayRef(&Arg, NumArgs), OCS,
-                             /*SuppressUserConversions*/ true,
-                             /*PartialOverloading*/ false,
-                             /*AllowExplcit*/ true);
+                             llvm::makeArrayRef(&Arg, NumArgs), OCS, true);
       else
         AddOverloadCandidate(M, Cand, llvm::makeArrayRef(&Arg, NumArgs), OCS,
-                             /*SuppressUserConversions*/ true,
-                             /*PartialOverloading*/ false,
-                             /*AllowExplcit*/ true);
+                             true);
     } else if (FunctionTemplateDecl *Tmpl =
                  dyn_cast<FunctionTemplateDecl>(Cand->getUnderlyingDecl())) {
       if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)

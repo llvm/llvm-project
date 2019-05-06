@@ -60,7 +60,7 @@ void LLVMDisposeErrorMessage(char *ErrMsg);
 /**
  * Returns the type id for llvm StringError.
  */
-LLVMErrorTypeId LLVMGetStringErrorTypeId();
+LLVMErrorTypeId LLVMGetStringErrorTypeId(void);
 
 #ifdef __cplusplus
 }

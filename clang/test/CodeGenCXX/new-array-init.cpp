@@ -123,3 +123,25 @@ void constexpr_test() {
   // SIO: call i8* @_Zna{{.}}(i32 4)
   new int[0+1]{0};
 }
+
+// CHECK-LABEL: define void @_Z13unknown_boundv
+void unknown_bound() {
+  struct Aggr { int x, y, z; };
+  new Aggr[]{1, 2, 3, 4};
+  // CHECK: call {{.*}}_Znaj(i32 24)
+  // CHECK: store i32 1
+  // CHECK: store i32 2
+  // CHECK: store i32 3
+  // CHECK: store i32 4
+  // CHECK: store i32 0
+  // CHECK: store i32 0
+  // CHECK-NOT: store
+  // CHECK: }
+}
+
+// CHECK-LABEL: define void @_Z20unknown_bound_stringv
+void unknown_bound_string() {
+  new char[]{"hello"};
+  // CHECK: call {{.*}}_Znaj(i32 6)
+  // CHECK: memcpy{{.*}} i32 6,
+}
