@@ -302,7 +302,6 @@ long double    truncl(long double x);
 
 #include <__config>
 #include <math.h>
-#include <algorithm>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
