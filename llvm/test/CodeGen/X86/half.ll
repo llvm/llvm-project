@@ -230,7 +230,7 @@ define void @test_sitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-LIBCALL:       # %bb.0:
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
 ; CHECK-LIBCALL-NEXT:    movq %rsi, %rbx
-; CHECK-LIBCALL-NEXT:    cvtsi2ssq %rdi, %xmm0
+; CHECK-LIBCALL-NEXT:    cvtsi2ss %rdi, %xmm0
 ; CHECK-LIBCALL-NEXT:    callq __gnu_f2h_ieee
 ; CHECK-LIBCALL-NEXT:    movw %ax, (%rbx)
 ; CHECK-LIBCALL-NEXT:    popq %rbx
@@ -238,7 +238,7 @@ define void @test_sitofp_i64(i64 %a, half* %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_sitofp_i64:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vmovd %xmm0, %eax
 ; BWON-F16C-NEXT:    movw %ax, (%rsi)
@@ -322,14 +322,14 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-LIBCALL-NEXT:    testq %rdi, %rdi
 ; CHECK-LIBCALL-NEXT:    js .LBB10_1
 ; CHECK-LIBCALL-NEXT:  # %bb.2:
-; CHECK-LIBCALL-NEXT:    cvtsi2ssq %rdi, %xmm0
+; CHECK-LIBCALL-NEXT:    cvtsi2ss %rdi, %xmm0
 ; CHECK-LIBCALL-NEXT:    jmp .LBB10_3
 ; CHECK-LIBCALL-NEXT:  .LBB10_1:
 ; CHECK-LIBCALL-NEXT:    movq %rdi, %rax
 ; CHECK-LIBCALL-NEXT:    shrq %rax
 ; CHECK-LIBCALL-NEXT:    andl $1, %edi
 ; CHECK-LIBCALL-NEXT:    orq %rax, %rdi
-; CHECK-LIBCALL-NEXT:    cvtsi2ssq %rdi, %xmm0
+; CHECK-LIBCALL-NEXT:    cvtsi2ss %rdi, %xmm0
 ; CHECK-LIBCALL-NEXT:    addss %xmm0, %xmm0
 ; CHECK-LIBCALL-NEXT:  .LBB10_3:
 ; CHECK-LIBCALL-NEXT:    callq __gnu_f2h_ieee
@@ -342,14 +342,14 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; BWON-F16C-NEXT:    testq %rdi, %rdi
 ; BWON-F16C-NEXT:    js .LBB10_1
 ; BWON-F16C-NEXT:  # %bb.2:
-; BWON-F16C-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    jmp .LBB10_3
 ; BWON-F16C-NEXT:  .LBB10_1:
 ; BWON-F16C-NEXT:    movq %rdi, %rax
 ; BWON-F16C-NEXT:    shrq %rax
 ; BWON-F16C-NEXT:    andl $1, %edi
 ; BWON-F16C-NEXT:    orq %rax, %rdi
-; BWON-F16C-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; BWON-F16C-NEXT:  .LBB10_3:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -886,7 +886,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; CHECK-LIBCALL-NEXT:    movzwl (%rsi), %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
 ; CHECK-LIBCALL-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-LIBCALL-NEXT:    cvtsi2ssl %ebx, %xmm0
+; CHECK-LIBCALL-NEXT:    cvtsi2ss %ebx, %xmm0
 ; CHECK-LIBCALL-NEXT:    callq __gnu_f2h_ieee
 ; CHECK-LIBCALL-NEXT:    movzwl %ax, %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
@@ -900,7 +900,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; BWON-F16C-NEXT:    movswl (%rsi), %eax
 ; BWON-F16C-NEXT:    vmovd %eax, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtsi2ssl %edi, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vcvtsi2ss %edi, %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0

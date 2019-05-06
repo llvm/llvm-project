@@ -5552,7 +5552,7 @@
 // CHECK:  encoding: [0x0f,0x2d,0xdd]
         	cvtps2pi	%xmm5,%mm3
 
-// CHECK: cvtsi2ssl	%ecx, %xmm5
+// CHECK: cvtsi2ss	%ecx, %xmm5
 // CHECK:  encoding: [0xf3,0x0f,0x2a,0xe9]
         	cvtsi2ssl	%ecx,%xmm5
 
@@ -7056,7 +7056,7 @@
 // CHECK:  encoding: [0x66,0x0f,0x2a,0xeb]
         	cvtpi2pd	%mm3,%xmm5
 
-// CHECK: cvtsi2sdl	%ecx, %xmm5
+// CHECK: cvtsi2sd	%ecx, %xmm5
 // CHECK:  encoding: [0xf2,0x0f,0x2a,0xe9]
         	cvtsi2sdl	%ecx,%xmm5
 
