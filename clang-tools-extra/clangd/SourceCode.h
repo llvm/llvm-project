@@ -147,6 +147,11 @@ llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
 
 bool isRangeConsecutive(const Range &Left, const Range &Right);
 
+/// Choose the clang-format style we should apply to a certain file.
+/// This will usually use FS to look for .clang-format directories.
+/// FIXME: should we be caching the .clang-format file search?
+/// This uses format::DefaultFormatStyle and format::DefaultFallbackStyle,
+/// though the latter may have been overridden in main()!
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
                                           llvm::vfs::FileSystem *FS);

@@ -496,20 +496,16 @@ llvm::Expected<tooling::Replacements>
 ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
                          llvm::ArrayRef<tooling::Range> Ranges) {
   // Call clang-format.
-  auto FS = FSProvider.getFileSystem();
-  auto Style = format::getStyle(format::DefaultFormatStyle, File,
-                                format::DefaultFallbackStyle, Code, FS.get());
-  if (!Style)
-    return Style.takeError();
-
+  format::FormatStyle Style =
+      getFormatStyleForFile(File, Code, FSProvider.getFileSystem().get());
   tooling::Replacements IncludeReplaces =
-      format::sortIncludes(*Style, Code, Ranges, File);
+      format::sortIncludes(Style, Code, Ranges, File);
   auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
   if (!Changed)
     return Changed.takeError();
 
   return IncludeReplaces.merge(format::reformat(
-      Style.get(), *Changed,
+      Style, *Changed,
       tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
       File));
 }
