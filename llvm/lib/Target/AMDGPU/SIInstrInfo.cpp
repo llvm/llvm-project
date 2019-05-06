@@ -3192,16 +3192,24 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSOPK(MI)) {
-    int64_t Imm = getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
-    if (sopkIsZext(MI)) {
-      if (!isUInt<16>(Imm)) {
-        ErrInfo = "invalid immediate for SOPK instruction";
+    auto Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
+    if (Desc.isBranch()) {
+      if (!Op->isMBB()) {
+        ErrInfo = "invalid branch target for SOPK instruction";
         return false;
       }
     } else {
-      if (!isInt<16>(Imm)) {
-        ErrInfo = "invalid immediate for SOPK instruction";
-        return false;
+      uint64_t Imm = Op->getImm();
+      if (sopkIsZext(MI)) {
+        if (!isUInt<16>(Imm)) {
+          ErrInfo = "invalid immediate for SOPK instruction";
+          return false;
+        }
+      } else {
+        if (!isInt<16>(Imm)) {
+          ErrInfo = "invalid immediate for SOPK instruction";
+          return false;
+        }
       }
     }
   }
