@@ -163,6 +163,20 @@ public:
   ///     range, \b false otherwise.
   bool ContainsLoadAddress(lldb::addr_t load_addr, Target *target) const;
 
+  //------------------------------------------------------------------
+  /// Extends this range with \b rhs_range if it overlaps this range on the
+  /// right side. The range overlaps on the right side if the base address
+  /// of \b rhs_range lies within this range or if it's contiguous on its
+  /// right side.
+  ///
+  /// @param[in] rhs_range
+  ///     The range to extend at the right side.
+  ///
+  /// @return
+  ///     Returns \b true if this range was extended, \b false otherwise.
+  //------------------------------------------------------------------
+  bool Extend(const AddressRange &rhs_range);
+
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of this object to the supplied stream
