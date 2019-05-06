@@ -22624,6 +22624,21 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          PassThru, Mask);
 
     }
+    case CVTNEPS2BF16_MASK: {
+      SDValue Src = Op.getOperand(1);
+      SDValue PassThru = Op.getOperand(2);
+      SDValue Mask = Op.getOperand(3);
+
+      if (ISD::isBuildVectorAllOnes(Mask.getNode()))
+        return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Src);
+
+      // Break false dependency.
+      if (PassThru.isUndef())
+        PassThru = DAG.getConstant(0, dl, PassThru.getValueType());
+
+      return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(), Src, PassThru,
+                         Mask);
+    }
     default:
       break;
     }
@@ -28073,6 +28088,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTS2UI:            return "X86ISD::CVTS2UI";
   case X86ISD::CVTS2SI_RND:        return "X86ISD::CVTS2SI_RND";
   case X86ISD::CVTS2UI_RND:        return "X86ISD::CVTS2UI_RND";
+  case X86ISD::CVTNE2PS2BF16:      return "X86ISD::CVTNE2PS2BF16";
+  case X86ISD::CVTNEPS2BF16:       return "X86ISD::CVTNEPS2BF16";
+  case X86ISD::MCVTNEPS2BF16:      return "X86ISD::MCVTNEPS2BF16";
+  case X86ISD::DPBF16PS:           return "X86ISD::DPBF16PS";
   case X86ISD::LWPINS:             return "X86ISD::LWPINS";
   case X86ISD::MGATHER:            return "X86ISD::MGATHER";
   case X86ISD::MSCATTER:           return "X86ISD::MSCATTER";

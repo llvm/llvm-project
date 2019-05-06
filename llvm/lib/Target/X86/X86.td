@@ -167,6 +167,9 @@ def FeaturePKU   : SubtargetFeature<"pku", "HasPKU", "true",
 def FeatureVNNI    : SubtargetFeature<"avx512vnni", "HasVNNI", "true",
                           "Enable AVX-512 Vector Neural Network Instructions",
                                       [FeatureAVX512]>;
+def FeatureBF16    : SubtargetFeature<"avx512bf16", "HasBF16", "true",
+                           "Support bfloat16 floating point",
+                                      [FeatureBWI]>;
 def FeatureBITALG  : SubtargetFeature<"avx512bitalg", "HasBITALG", "true",
                        "Enable AVX-512 Bit Algorithms",
                         [FeatureBWI]>;
