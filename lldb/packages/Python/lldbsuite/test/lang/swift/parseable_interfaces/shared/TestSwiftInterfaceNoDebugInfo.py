@@ -48,6 +48,31 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
             open(self.getBuildArtifact(module), 'w').close()
         self.do_test()
 
+    @swiftTest
+    @skipUnlessPlatform(["macosx"])
+    def test_prebuilt_cache_location(self):
+        """Verify the prebuilt cache path is correct"""
+        self.build()
+        log = self.getBuildArtifact("types.log")
+        self.runCmd('log enable lldb types -f "%s"' % log)
+
+        # Set a breakpoint in and launch the main executable so we load the
+        # ASTContext and log the prebuilt cache path
+        lldbutil.run_to_source_breakpoint(
+           self, "break here", lldb.SBFileSpec("main.swift"),
+           exe_name=self.getBuildArtifact("main"))
+
+        # Check the prebuilt cache path in the log output
+        found = False
+        prefix = 'Using prebuilt module cache path: '
+        logfile = open(log, "r")
+        for line in logfile:
+            if prefix in line:
+                self.assertTrue(line.endswith('/macosx/prebuilt-modules\n'), 'unexpected prebuilt cache path: ' + line)
+                found = True
+        self.assertTrue(found, 'prebuilt cache path log entry not found')
+
+
     def setUp(self):
         TestBase.setUp(self)
 
