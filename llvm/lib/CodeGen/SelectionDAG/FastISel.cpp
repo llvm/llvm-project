@@ -1719,7 +1719,7 @@ bool FastISel::selectFNeg(const User *I) {
   unsigned OpReg = getRegForValue(X);
   if (!OpReg)
     return false;
-  bool OpRegIsKill = hasTrivialKill(I);
+  bool OpRegIsKill = hasTrivialKill(X);
 
   // If the target has ISD::FNEG, use it.
   EVT VT = TLI.getValueType(DL, I->getType());
