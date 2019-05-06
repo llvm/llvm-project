@@ -3730,7 +3730,7 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   bool FoldedBCast = false;
   if (!FoldedLoad && CanFoldLoads &&
       (CmpSVT == MVT::i32 || CmpSVT == MVT::i64)) {
-    SDNode *ParentNode;
+    SDNode *ParentNode = nullptr;
     if ((Load = findBroadcastedOp(Src1, CmpSVT, ParentNode))) {
       FoldedBCast = tryFoldLoad(Root, ParentNode, Load, Tmp0,
                                 Tmp1, Tmp2, Tmp3, Tmp4);
