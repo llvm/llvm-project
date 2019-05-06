@@ -161,9 +161,8 @@ define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
 
 define <2 x double> @fneg_fneg_sel(<2 x double> %x, <2 x double> %y, i1 %cond) {
 ; CHECK-LABEL: @fneg_fneg_sel(
-; CHECK-NEXT:    [[N1:%.*]] = fneg <2 x double> [[X:%.*]]
-; CHECK-NEXT:    [[N2:%.*]] = fneg <2 x double> [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x double> [[N1]], <2 x double> [[N2]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], <2 x double> [[X:%.*]], <2 x double> [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg <2 x double> [[SEL_V]]
 ; CHECK-NEXT:    ret <2 x double> [[SEL]]
 ;
   %n1 = fneg <2 x double> %x
@@ -178,8 +177,8 @@ define float @fneg_fneg_sel_extra_use1(float %x, float %y, i1 %cond) {
 ; CHECK-LABEL: @fneg_fneg_sel_extra_use1(
 ; CHECK-NEXT:    [[N1:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[N1]])
-; CHECK-NEXT:    [[N2:%.*]] = fneg float [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[N1]], float [[N2]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], float [[X]], float [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg float [[SEL_V]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %n1 = fneg float %x
@@ -191,10 +190,10 @@ define float @fneg_fneg_sel_extra_use1(float %x, float %y, i1 %cond) {
 
 define float @fneg_fneg_sel_extra_use2(float %x, float %y, i1 %cond) {
 ; CHECK-LABEL: @fneg_fneg_sel_extra_use2(
-; CHECK-NEXT:    [[N1:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    [[N2:%.*]] = fneg float [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[N2]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[N1]], float [[N2]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg float [[SEL_V]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %n1 = fneg float %x
@@ -210,8 +209,8 @@ define float @fsub_fsub_sel_extra_use1(float %x, float %y, i1 %cond) {
 ; CHECK-LABEL: @fsub_fsub_sel_extra_use1(
 ; CHECK-NEXT:    [[N1:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[N1]])
-; CHECK-NEXT:    [[N2:%.*]] = fsub float -0.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[N1]], float [[N2]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], float [[X]], float [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = fsub float -0.000000e+00, [[SEL_V]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %n1 = fsub float -0.0, %x

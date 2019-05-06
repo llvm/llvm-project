@@ -333,6 +333,18 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                             TI->getType());
   }
 
+  // Cond ? -X : -Y --> -(Cond ? X : Y)
+  Value *X, *Y;
+  if (match(TI, m_FNeg(m_Value(X))) && match(FI, m_FNeg(m_Value(Y))) &&
+      (TI->hasOneUse() || FI->hasOneUse())) {
+    Value *NewSel = Builder.CreateSelect(Cond, X, Y, SI.getName() + ".v", &SI);
+    // TODO: Remove the hack for the binop form when the unary op is optimized
+    //       properly with all IR passes.
+    if (TI->getOpcode() != Instruction::FNeg)
+      return BinaryOperator::CreateFNegFMF(NewSel, cast<BinaryOperator>(TI));
+    return UnaryOperator::CreateFNeg(NewSel);
+  }
+
   // Only handle binary operators (including two-operand getelementptr) with
   // one-use here. As with the cast case above, it may be possible to relax the
   // one-use constraint, but that needs be examined carefully since it may not
