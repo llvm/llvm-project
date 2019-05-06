@@ -292,6 +292,8 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     return nullptr;
 
   // If this is a cast from the same type, merge.
+  Value *Cond = SI.getCondition();
+  Type *CondTy = Cond->getType();
   if (TI->getNumOperands() == 1 && TI->isCast()) {
     Type *FIOpndTy = FI->getOperand(0)->getType();
     if (TI->getOperand(0)->getType() != FIOpndTy)
@@ -299,7 +301,6 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
 
     // The select condition may be a vector. We may only change the operand
     // type if the vector width remains the same (and matches the condition).
-    Type *CondTy = SI.getCondition()->getType();
     if (CondTy->isVectorTy()) {
       if (!FIOpndTy->isVectorTy())
         return nullptr;
@@ -326,8 +327,8 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
 
     // Fold this by inserting a select from the input values.
     Value *NewSI =
-        Builder.CreateSelect(SI.getCondition(), TI->getOperand(0),
-                             FI->getOperand(0), SI.getName() + ".v", &SI);
+        Builder.CreateSelect(Cond, TI->getOperand(0), FI->getOperand(0),
+                             SI.getName() + ".v", &SI);
     return CastInst::Create(Instruction::CastOps(TI->getOpcode()), NewSI,
                             TI->getType());
   }
@@ -373,13 +374,12 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   // If the select condition is a vector, the operands of the original select's
   // operands also must be vectors. This may not be the case for getelementptr
   // for example.
-  if (SI.getCondition()->getType()->isVectorTy() &&
-      (!OtherOpT->getType()->isVectorTy() ||
-       !OtherOpF->getType()->isVectorTy()))
+  if (CondTy->isVectorTy() && (!OtherOpT->getType()->isVectorTy() ||
+                               !OtherOpF->getType()->isVectorTy()))
     return nullptr;
 
   // If we reach here, they do have operations in common.
-  Value *NewSI = Builder.CreateSelect(SI.getCondition(), OtherOpT, OtherOpF,
+  Value *NewSI = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
                                       SI.getName() + ".v", &SI);
   Value *Op0 = MatchIsOpZero ? MatchOp : NewSI;
   Value *Op1 = MatchIsOpZero ? NewSI : MatchOp;
