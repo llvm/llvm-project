@@ -206,7 +206,12 @@ if (LIBCXXABI_ENABLE_STATIC)
 
   if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
     append_flags_if_supported(CXXABI_STATIC_LIBRARY_FLAGS -fvisibility=hidden)
-    append_flags_if_supported(CXXABI_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+    # If the hermetic library doesn't define the operator new/delete functions
+    # then its code shouldn't declare them with hidden visibility.  They might
+    # actually be provided by a shared library at link time.
+    if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+      append_flags_if_supported(CXXABI_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+    endif()
     target_compile_options(cxxabi_static PRIVATE ${CXXABI_STATIC_LIBRARY_FLAGS})
     target_compile_definitions(cxxabi_static
       PRIVATE
