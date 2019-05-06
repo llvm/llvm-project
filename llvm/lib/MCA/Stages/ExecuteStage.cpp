@@ -52,8 +52,10 @@ bool ExecuteStage::isAvailable(const InstRef &IR) const {
 
 Error ExecuteStage::issueInstruction(InstRef &IR) {
   SmallVector<std::pair<ResourceRef, ResourceCycles>, 4> Used;
+  SmallVector<InstRef, 4> Pending;
   SmallVector<InstRef, 4> Ready;
-  HWS.issueInstruction(IR, Used, Ready);
+
+  HWS.issueInstruction(IR, Used, Pending, Ready);
   NumIssuedOpcodes += IR.getInstruction()->getDesc().NumMicroOps;
 
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ false);
@@ -65,6 +67,9 @@ Error ExecuteStage::issueInstruction(InstRef &IR) {
     if (Error S = moveToTheNextStage(IR))
       return S;
   }
+
+  for (const InstRef &I : Pending)
+    notifyInstructionPending(I);
 
   for (const InstRef &I : Ready)
     notifyInstructionReady(I);
@@ -87,9 +92,10 @@ Error ExecuteStage::issueReadyInstructions() {
 Error ExecuteStage::cycleStart() {
   SmallVector<ResourceRef, 8> Freed;
   SmallVector<InstRef, 4> Executed;
+  SmallVector<InstRef, 4> Pending;
   SmallVector<InstRef, 4> Ready;
 
-  HWS.cycleEvent(Freed, Executed, Ready);
+  HWS.cycleEvent(Freed, Executed, Pending, Ready);
   NumDispatchedOpcodes = 0;
   NumIssuedOpcodes = 0;
 
@@ -102,6 +108,9 @@ Error ExecuteStage::cycleStart() {
     if (Error S = moveToTheNextStage(IR))
       return S;
   }
+
+  for (const InstRef &IR : Pending)
+    notifyInstructionPending(IR);
 
   for (const InstRef &IR : Ready)
     notifyInstructionReady(IR);
@@ -126,7 +135,6 @@ Error ExecuteStage::cycleEnd() {
                       << format_hex(Mask, 16) << '\n');
     HWPressureEvent Ev(HWPressureEvent::RESOURCES, Insts, Mask);
     notifyEvent(Ev);
-    return ErrorSuccess();
   }
 
   SmallVector<InstRef, 8> RegDeps;
@@ -165,6 +173,7 @@ Error ExecuteStage::handleInstructionEliminated(InstRef &IR) {
 #ifndef NDEBUG
   verifyInstructionEliminated(IR);
 #endif
+  notifyInstructionPending(IR);
   notifyInstructionReady(IR);
   notifyInstructionIssued(IR, {});
   IR.getInstruction()->forceExecuted();
@@ -189,10 +198,17 @@ Error ExecuteStage::execute(InstRef &IR) {
   // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
   bool IsReadyInstruction = HWS.dispatch(IR);
-  NumDispatchedOpcodes += IR.getInstruction()->getDesc().NumMicroOps;
+  const Instruction &Inst = *IR.getInstruction();
+  NumDispatchedOpcodes += Inst.getDesc().NumMicroOps;
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ true);
-  if (!IsReadyInstruction)
+ 
+  if (!IsReadyInstruction) {
+    if (Inst.isPending())
+      notifyInstructionPending(IR);
     return ErrorSuccess();
+  }
+
+  notifyInstructionPending(IR);
 
   // If we did not return early, then the scheduler is ready for execution.
   notifyInstructionReady(IR);
@@ -210,6 +226,12 @@ void ExecuteStage::notifyInstructionExecuted(const InstRef &IR) const {
   LLVM_DEBUG(dbgs() << "[E] Instruction Executed: #" << IR << '\n');
   notifyEvent<HWInstructionEvent>(
       HWInstructionEvent(HWInstructionEvent::Executed, IR));
+}
+
+void ExecuteStage::notifyInstructionPending(const InstRef &IR) const {
+  LLVM_DEBUG(dbgs() << "[E] Instruction Pending: #" << IR << '\n');
+  notifyEvent<HWInstructionEvent>(
+      HWInstructionEvent(HWInstructionEvent::Pending, IR));
 }
 
 void ExecuteStage::notifyInstructionReady(const InstRef &IR) const {

@@ -524,7 +524,7 @@ public:
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
-  int getSpillCost();
+  int getSpillCost() const;
 
   /// \returns the vectorization cost of the subtree that starts at \p VL.
   /// A negative number means that this is profitable.
@@ -1299,6 +1299,13 @@ private:
 #endif
 
   TreeEntry *getTreeEntry(Value *V) {
+    auto I = ScalarToTreeEntry.find(V);
+    if (I != ScalarToTreeEntry.end())
+      return &VectorizableTree[I->second];
+    return nullptr;
+  }
+
+  const TreeEntry *getTreeEntry(Value *V) const {
     auto I = ScalarToTreeEntry.find(V);
     if (I != ScalarToTreeEntry.end())
       return &VectorizableTree[I->second];
@@ -3066,7 +3073,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable() const {
   return true;
 }
 
-int BoUpSLP::getSpillCost() {
+int BoUpSLP::getSpillCost() const {
   // Walk from the bottom of the tree to the top, tracking which values are
   // live. When we see a call instruction that is not part of our tree,
   // query TTI to see if there is a cost to keeping values live over it
@@ -4343,7 +4350,7 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
                           << "\n");
         return true;
       }
-      UpIter++;
+      ++UpIter;
     }
     if (DownIter != LowerEnd) {
       if (&*DownIter == I) {
@@ -4357,7 +4364,7 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
                           << "\n");
         return true;
       }
-      DownIter++;
+      ++DownIter;
     }
     assert((UpIter != UpperEnd || DownIter != LowerEnd) &&
            "instruction not found in block");
@@ -6643,7 +6650,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   SmallVector<WeakVH, 8> PostProcessInstructions;
   SmallDenseSet<Instruction *, 4> KeyNodes;
-  for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; it++) {
+  for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*it).second) {
       if (it->use_empty() && KeyNodes.count(&*it) > 0 &&

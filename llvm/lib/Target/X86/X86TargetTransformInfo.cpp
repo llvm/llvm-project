@@ -2401,7 +2401,7 @@ int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
   // extra micro-ops can significantly decrease throughput.
-  unsigned NumVectorInstToHideOverhead = 10;
+  const unsigned NumVectorInstToHideOverhead = 10;
 
   // Cost modeling of Strided Access Computation is hidden by the indexing
   // modes of X86 regardless of the stride value. We dont believe that there
