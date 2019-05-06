@@ -8,12 +8,12 @@
 define <4 x float> @test_mm_cvtsi64_ss(<4 x float> %a0, i64 %a1) nounwind {
 ; SSE-LABEL: test_mm_cvtsi64_ss:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cvtsi2ssq %rdi, %xmm0
+; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_mm_cvtsi64_ss:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cvtsi642ss(<4 x float> %a0, i64 %a1)
   ret <4 x float> %res

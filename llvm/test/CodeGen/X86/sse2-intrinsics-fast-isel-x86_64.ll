@@ -37,12 +37,12 @@ define i64 @test_mm_cvtsi128_si64(<2 x i64> %a0) nounwind {
 define <2 x double> @test_mm_cvtsi64_sd(<2 x double> %a0, i64 %a1) nounwind {
 ; SSE-LABEL: test_mm_cvtsi64_sd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cvtsi2sdq %rdi, %xmm0
+; SSE-NEXT:    cvtsi2sd %rdi, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_mm_cvtsi64_sd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %res = call <2 x double> @llvm.x86.sse2.cvtsi642sd(<2 x double> %a0, i64 %a1)
   ret <2 x double> %res

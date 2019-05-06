@@ -17,13 +17,13 @@ define float @float_to_int_to_float_mem_f32_i32(<4 x float>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f32_i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si (%rdi), %eax
-; SSE-NEXT:    cvtsi2ssl %eax, %xmm0
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_mem_f32_i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttss2si (%rdi), %eax
-; AVX-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %p, align 16
   %fptosi = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> %x)
@@ -36,13 +36,13 @@ define float @float_to_int_to_float_reg_f32_i32(<4 x float> %x) #0 {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si %xmm0, %eax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    cvtsi2ssl %eax, %xmm0
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_reg_f32_i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
-; AVX-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %fptosi = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> %x)
   %sitofp = sitofp i32 %fptosi to float
@@ -53,13 +53,13 @@ define float @float_to_int_to_float_mem_f32_i64(<4 x float>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f32_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si (%rdi), %rax
-; SSE-NEXT:    cvtsi2ssq %rax, %xmm0
+; SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_mem_f32_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttss2si (%rdi), %rax
-; AVX-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %p, align 16
   %fptosi = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %x)
@@ -72,13 +72,13 @@ define float @float_to_int_to_float_reg_f32_i64(<4 x float> %x) #0 {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    cvtsi2ssq %rax, %xmm0
+; SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_reg_f32_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttss2si %xmm0, %rax
-; AVX-NEXT:    vcvtsi2ssq %rax, %xmm1, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %fptosi = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %x)
   %sitofp = sitofp i64 %fptosi to float
@@ -89,13 +89,13 @@ define double @float_to_int_to_float_mem_f64_i32(<2 x double>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f64_i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si (%rdi), %eax
-; SSE-NEXT:    cvtsi2sdl %eax, %xmm0
+; SSE-NEXT:    cvtsi2sd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_mem_f64_i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttsd2si (%rdi), %eax
-; AVX-NEXT:    vcvtsi2sdl %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %p, align 16
   %fptosi = tail call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> %x)
@@ -108,13 +108,13 @@ define double @float_to_int_to_float_reg_f64_i32(<2 x double> %x) #0 {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %eax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    cvtsi2sdl %eax, %xmm0
+; SSE-NEXT:    cvtsi2sd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_reg_f64_i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX-NEXT:    vcvtsi2sdl %eax, %xmm1, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %fptosi = tail call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> %x)
   %sitofp = sitofp i32 %fptosi to double
@@ -125,13 +125,13 @@ define double @float_to_int_to_float_mem_f64_i64(<2 x double>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f64_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si (%rdi), %rax
-; SSE-NEXT:    cvtsi2sdq %rax, %xmm0
+; SSE-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_mem_f64_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttsd2si (%rdi), %rax
-; AVX-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %p, align 16
   %fptosi = tail call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> %x)
@@ -144,13 +144,13 @@ define double @float_to_int_to_float_reg_f64_i64(<2 x double> %x) #0 {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    cvtsi2sdq %rax, %xmm0
+; SSE-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_reg_f64_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttsd2si %xmm0, %rax
-; AVX-NEXT:    vcvtsi2sdq %rax, %xmm1, %xmm0
+; AVX-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %fptosi = tail call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> %x)
   %sitofp = sitofp i64 %fptosi to double

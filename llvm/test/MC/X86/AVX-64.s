@@ -2928,11 +2928,11 @@ vcvtsi2sdl 64(%rdx), %xmm15, %xmm15
 // CHECK: encoding: [0xc5,0xcb,0x2a,0x72,0x40]      
 vcvtsi2sdl 64(%rdx), %xmm6, %xmm6 
 
-// CHECK: vcvtsi2sdl %r13d, %xmm15, %xmm15 
+// CHECK: vcvtsi2sd %r13d, %xmm15, %xmm15 
 // CHECK: encoding: [0xc4,0x41,0x03,0x2a,0xfd]      
 vcvtsi2sdl %r13d, %xmm15, %xmm15 
 
-// CHECK: vcvtsi2sdl %r13d, %xmm6, %xmm6 
+// CHECK: vcvtsi2sd %r13d, %xmm6, %xmm6 
 // CHECK: encoding: [0xc4,0xc1,0x4b,0x2a,0xf5]      
 vcvtsi2sdl %r13d, %xmm6, %xmm6 
 
@@ -2984,11 +2984,11 @@ vcvtsi2sdq 64(%rdx), %xmm15, %xmm15
 // CHECK: encoding: [0xc4,0xe1,0xcb,0x2a,0x72,0x40]      
 vcvtsi2sdq 64(%rdx), %xmm6, %xmm6 
 
-// CHECK: vcvtsi2sdq %r15, %xmm15, %xmm15 
+// CHECK: vcvtsi2sd %r15, %xmm15, %xmm15 
 // CHECK: encoding: [0xc4,0x41,0x83,0x2a,0xff]      
 vcvtsi2sdq %r15, %xmm15, %xmm15 
 
-// CHECK: vcvtsi2sdq %r15, %xmm6, %xmm6 
+// CHECK: vcvtsi2sd %r15, %xmm6, %xmm6 
 // CHECK: encoding: [0xc4,0xc1,0xcb,0x2a,0xf7]      
 vcvtsi2sdq %r15, %xmm6, %xmm6 
 
@@ -3040,11 +3040,11 @@ vcvtsi2ssl 64(%rdx), %xmm15, %xmm15
 // CHECK: encoding: [0xc5,0xca,0x2a,0x72,0x40]      
 vcvtsi2ssl 64(%rdx), %xmm6, %xmm6 
 
-// CHECK: vcvtsi2ssl %r13d, %xmm15, %xmm15 
+// CHECK: vcvtsi2ss %r13d, %xmm15, %xmm15 
 // CHECK: encoding: [0xc4,0x41,0x02,0x2a,0xfd]      
 vcvtsi2ssl %r13d, %xmm15, %xmm15 
 
-// CHECK: vcvtsi2ssl %r13d, %xmm6, %xmm6 
+// CHECK: vcvtsi2ss %r13d, %xmm6, %xmm6 
 // CHECK: encoding: [0xc4,0xc1,0x4a,0x2a,0xf5]      
 vcvtsi2ssl %r13d, %xmm6, %xmm6 
 
@@ -3096,11 +3096,11 @@ vcvtsi2ssq 64(%rdx), %xmm15, %xmm15
 // CHECK: encoding: [0xc4,0xe1,0xca,0x2a,0x72,0x40]      
 vcvtsi2ssq 64(%rdx), %xmm6, %xmm6 
 
-// CHECK: vcvtsi2ssq %r15, %xmm15, %xmm15 
+// CHECK: vcvtsi2ss %r15, %xmm15, %xmm15 
 // CHECK: encoding: [0xc4,0x41,0x82,0x2a,0xff]      
 vcvtsi2ssq %r15, %xmm15, %xmm15 
 
-// CHECK: vcvtsi2ssq %r15, %xmm6, %xmm6 
+// CHECK: vcvtsi2ss %r15, %xmm6, %xmm6 
 // CHECK: encoding: [0xc4,0xc1,0xca,0x2a,0xf7]      
 vcvtsi2ssq %r15, %xmm6, %xmm6 
 

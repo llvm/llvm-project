@@ -9,14 +9,14 @@ define void @test(i32 %x, float* %y) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    shrl $23, %ecx
-; X32-NEXT:    cvtsi2ssl %ecx, %xmm0
+; X32-NEXT:    cvtsi2ss %ecx, %xmm0
 ; X32-NEXT:    movss %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    shrl $23, %edi
-; X64-NEXT:    cvtsi2ssl %edi, %xmm0
+; X64-NEXT:    cvtsi2ss %edi, %xmm0
 ; X64-NEXT:    movss %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:

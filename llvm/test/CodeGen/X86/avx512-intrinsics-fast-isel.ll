@@ -1826,7 +1826,7 @@ define <2 x double> @test_mm_cvtu32_sd(<2 x double> %__A, i32 %__B) {
 ;
 ; X64-LABEL: test_mm_cvtu32_sd:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvtusi2sdl %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:
   %conv.i = uitofp i32 %__B to double
@@ -1847,7 +1847,7 @@ define <2 x double> @test_mm_cvtu64_sd(<2 x double> %__A, i64 %__B) {
 ;
 ; X64-LABEL: test_mm_cvtu64_sd:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvtusi2sdq %rdi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:
   %conv.i = uitofp i64 %__B to double
@@ -1863,7 +1863,7 @@ define <4 x float> @test_mm_cvtu32_ss(<4 x float> %__A, i32 %__B) {
 ;
 ; X64-LABEL: test_mm_cvtu32_ss:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvtusi2ssl %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:
   %conv.i = uitofp i32 %__B to float
@@ -1900,7 +1900,7 @@ define <4 x float> @test_mm_cvtu64_ss(<4 x float> %__A, i64 %__B) {
 ;
 ; X64-LABEL: test_mm_cvtu64_ss:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vcvtusi2ssq %rdi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:
   %conv.i = uitofp i64 %__B to float

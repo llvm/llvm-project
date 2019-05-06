@@ -5,7 +5,7 @@
 define double @long_to_double_rr(i64 %a) {
 ; ALL-LABEL: long_to_double_rr:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    vcvtusi2sdq %rdi, %xmm0, %xmm0
+; ALL-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
   %0 = uitofp i64 %a to double
@@ -37,7 +37,7 @@ entry:
 define float @long_to_float_rr(i64 %a) {
 ; ALL-LABEL: long_to_float_rr:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    vcvtusi2ssq %rdi, %xmm0, %xmm0
+; ALL-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
   %0 = uitofp i64 %a to float

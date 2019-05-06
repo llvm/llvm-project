@@ -39,13 +39,13 @@ define %struct.__vv* @t(%struct.Key* %desc, i64 %p) nounwind ssp {
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl 0, %eax
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cvtsi2ssq %rax, %xmm0
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
 ; CHECK-NEXT:    movl 4, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    cvtsi2ssq %rax, %xmm1
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
 ; CHECK-NEXT:    movl 8, %eax
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
-; CHECK-NEXT:    cvtsi2ssq %rax, %xmm2
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm2
 ; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    movaps %xmm0, 0

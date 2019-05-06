@@ -15,7 +15,7 @@ declare i64 @llvm.x86.sse2.cvtsd2si64(<2 x double>) nounwind readnone
 define <2 x double> @test_x86_sse2_cvtsi642sd(<2 x double> %a0, i64 %a1) {
 ; CHECK-LABEL: test_x86_sse2_cvtsi642sd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.sse2.cvtsi642sd(<2 x double> %a0, i64 %a1) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
@@ -64,7 +64,7 @@ declare i64 @llvm.x86.sse.cvtss2si64(<4 x float>) nounwind readnone
 define <4 x float> @test_x86_sse_cvtsi642ss(<4 x float> %a0, i64 %a1) {
 ; CHECK-LABEL: test_x86_sse_cvtsi642ss:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cvtsi642ss(<4 x float> %a0, i64 %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -193,7 +193,7 @@ declare i64 @llvm.x86.avx512.vcvtss2si64(<4 x float>, i32) nounwind readnone
 define <2 x double> @test_x86_avx512_cvtsi2sd64(<2 x double> %a, i64 %b) {
 ; CHECK-LABEL: test_x86_avx512_cvtsi2sd64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtsi2sdq %rdi, {rz-sae}, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtsi2sd %rdi, {rz-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.cvtsi2sd64(<2 x double> %a, i64 %b, i32 11) ; <<<2 x double>> [#uses=1]
   ret <2 x double> %res
@@ -203,7 +203,7 @@ declare <2 x double> @llvm.x86.avx512.cvtsi2sd64(<2 x double>, i64, i32) nounwin
 define <4 x float> @test_x86_avx512_cvtsi2ss64(<4 x float> %a, i64 %b) {
 ; CHECK-LABEL: test_x86_avx512_cvtsi2ss64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtsi2ssq %rdi, {rz-sae}, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %rdi, {rz-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.cvtsi2ss64(<4 x float> %a, i64 %b, i32 11) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -213,7 +213,7 @@ declare <4 x float> @llvm.x86.avx512.cvtsi2ss64(<4 x float>, i64, i32) nounwind 
 define <4 x float> @_mm_cvt_roundu64_ss (<4 x float> %a, i64 %b) {
 ; CHECK-LABEL: _mm_cvt_roundu64_ss:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtusi2ssq %rdi, {rd-sae}, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtusi2ss %rdi, {rd-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.cvtusi642ss(<4 x float> %a, i64 %b, i32 9) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -222,7 +222,7 @@ define <4 x float> @_mm_cvt_roundu64_ss (<4 x float> %a, i64 %b) {
 define <4 x float> @_mm_cvtu64_ss(<4 x float> %a, i64 %b) {
 ; CHECK-LABEL: _mm_cvtu64_ss:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtusi2ssq %rdi, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.cvtusi642ss(<4 x float> %a, i64 %b, i32 4) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -232,7 +232,7 @@ declare <4 x float> @llvm.x86.avx512.cvtusi642ss(<4 x float>, i64, i32) nounwind
 define <2 x double> @test_x86_avx512_mm_cvtu64_sd(<2 x double> %a, i64 %b) {
 ; CHECK-LABEL: test_x86_avx512_mm_cvtu64_sd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtusi2sdq %rdi, {rd-sae}, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtusi2sd %rdi, {rd-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.cvtusi642sd(<2 x double> %a, i64 %b, i32 9) ; <<<2 x double>> [#uses=1]
   ret <2 x double> %res
@@ -241,7 +241,7 @@ define <2 x double> @test_x86_avx512_mm_cvtu64_sd(<2 x double> %a, i64 %b) {
 define <2 x double> @test_x86_avx512__mm_cvt_roundu64_sd(<2 x double> %a, i64 %b) {
 ; CHECK-LABEL: test_x86_avx512__mm_cvt_roundu64_sd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtusi2sdq %rdi, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.cvtusi642sd(<2 x double> %a, i64 %b, i32 4) ; <<<2 x double>> [#uses=1]
   ret <2 x double> %res

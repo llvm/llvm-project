@@ -33,14 +33,14 @@ define float @test(i64 %a) nounwind {
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    js .LBB0_1
 ; X64-NEXT:  # %bb.2: # %entry
-; X64-NEXT:    cvtsi2ssq %rdi, %xmm0
+; X64-NEXT:    cvtsi2ss %rdi, %xmm0
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB0_1:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shrq %rax
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    orq %rax, %rdi
-; X64-NEXT:    cvtsi2ssq %rdi, %xmm0
+; X64-NEXT:    cvtsi2ss %rdi, %xmm0
 ; X64-NEXT:    addss %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:

@@ -75,11 +75,11 @@ declare double @llvm.sqrt.f64(double)
 ; instructions, they are still dependent on themselves.
 ; SSE: xorps [[XMM1:%xmm[0-9]+]]
 ; SSE: , [[XMM1]]
-; SSE: cvtsi2ssl %{{.*}}, [[XMM1]]
+; SSE: cvtsi2ss %{{.*}}, [[XMM1]]
 ; SSE: xorps [[XMM2:%xmm[0-9]+]]
 ; SSE: , [[XMM2]]
-; SSE: cvtsi2ssl %{{.*}}, [[XMM2]]
-;
+; SSE: cvtsi2ss %{{.*}}, [[XMM2]]
+
 define float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 entry:
   %tobool3 = icmp eq i32 %m, 0
@@ -107,18 +107,18 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; rdar:15221834 False AVX register dependencies cause 5x slowdown on
-; flops-6. Make sure the unused register read by vcvtsi2sdq is zeroed
+; flops-6. Make sure the unused register read by vcvtsi2sd is zeroed
 ; to avoid cyclic dependence on a write to the same register in a
 ; previous iteration.
 
 ; AVX-LABEL: loopdep2:
 ; AVX-LABEL: %loop
 ; AVX: vxorps %[[REG:xmm.]], %{{xmm.}}, %{{xmm.}}
-; AVX: vcvtsi2sdq %{{r[0-9a-x]+}}, %[[REG]], %{{xmm.}}
+; AVX: vcvtsi2sd %{{r[0-9a-x]+}}, %[[REG]], %{{xmm.}}
 ; SSE-LABEL: loopdep2:
 ; SSE-LABEL: %loop
 ; SSE: xorps %[[REG:xmm.]], %[[REG]]
-; SSE: cvtsi2sdq %{{r[0-9a-x]+}}, %[[REG]]
+; SSE: cvtsi2sd %{{r[0-9a-x]+}}, %[[REG]]
 define i64 @loopdep2(i64* nocapture %x, double* nocapture %y) nounwind {
 entry:
   %vx = load i64, i64* %x
@@ -217,7 +217,7 @@ top:
   ret double %tmp1
 ;AVX-LABEL:@inlineasmdep
 ;AVX: vxorps  [[XMM0:%xmm[0-9]+]], [[XMM0]], [[XMM0]]
-;AVX-NEXT: vcvtsi2sdq {{.*}}, [[XMM0]], {{%xmm[0-9]+}}
+;AVX-NEXT: vcvtsi2sd {{.*}}, [[XMM0]], {{%xmm[0-9]+}}
 }
 
 ; Make sure we are making a smart choice regarding undef registers and
@@ -257,7 +257,7 @@ top:
   ret double %tmp1
 ;AVX-LABEL:@clearence
 ;AVX: vxorps  [[XMM6:%xmm6]], [[XMM6]], [[XMM6]]
-;AVX-NEXT: vcvtsi2sdq {{.*}}, [[XMM6]], {{%xmm[0-9]+}}
+;AVX-NEXT: vcvtsi2sd {{.*}}, [[XMM6]], {{%xmm[0-9]+}}
 }
 
 ; Make sure we are making a smart choice regarding undef registers in order to
@@ -291,7 +291,7 @@ ret:
 ;AVX-LABEL:@loopclearence
 ;Registers 4-7 are not used and therefore one of them should be chosen
 ;AVX-NOT: {{%xmm[4-7]}}
-;AVX: vcvtsi2sdq {{.*}}, [[XMM4_7:%xmm[4-7]]], {{%xmm[0-9]+}}
+;AVX: vcvtsi2sd {{.*}}, [[XMM4_7:%xmm[4-7]]], {{%xmm[0-9]+}}
 ;AVX-NOT: [[XMM4_7]]
 }
 
@@ -335,12 +335,12 @@ loop_end:
   ; the only reasonable choice. The primary thing we care about is that it's
   ; not one of the registers used in the loop (e.g. not the output reg here)
 ;AVX-NOT: %xmm6
-;AVX: vcvtsi2sdq {{.*}}, %xmm6, {{%xmm[0-9]+}}
+;AVX: vcvtsi2sd {{.*}}, %xmm6, {{%xmm[0-9]+}}
 ;AVX-NOT: %xmm6
   %nexti_f = sitofp i64 %nexti to double
   %sub = fsub double %c1, %nexti_f
   %mul = fmul double %sub, %c2
-;AVX: vcvtsi2sdq {{.*}}, %xmm6, {{%xmm[0-9]+}}
+;AVX: vcvtsi2sd {{.*}}, %xmm6, {{%xmm[0-9]+}}
 ;AVX-NOT: %xmm6
   %phi_f = sitofp i64 %phi to double
   %mul2 = fmul double %phi_f, %c3

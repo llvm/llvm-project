@@ -444,8 +444,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      12    1.00    *                   cvtsd2si	(%rax), %rcx
 # CHECK-NEXT:  1      4     1.00                        cvtsd2ss	%xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *                   cvtsd2ss	(%rax), %xmm2
-# CHECK-NEXT:  1      5     1.00                        cvtsi2sdl	%ecx, %xmm2
-# CHECK-NEXT:  1      5     1.00                        cvtsi2sdq	%rcx, %xmm2
+# CHECK-NEXT:  1      5     1.00                        cvtsi2sd	%ecx, %xmm2
+# CHECK-NEXT:  1      5     1.00                        cvtsi2sd	%rcx, %xmm2
 # CHECK-NEXT:  1      12    1.00    *                   cvtsi2sdl	(%rax), %xmm2
 # CHECK-NEXT:  1      12    1.00    *                   cvtsi2sdl	(%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        cvtss2sd	%xmm0, %xmm2
@@ -732,8 +732,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00   1.00    -     cvtsd2si	(%rax), %rcx
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -     cvtsd2ss	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -     1.00    -     cvtsd2ss	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     cvtsi2sdl	%ecx, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     cvtsi2sdq	%rcx, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     cvtsi2sd	%ecx, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     cvtsi2sd	%rcx, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     cvtsi2sdl	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     cvtsi2sdl	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -     cvtss2sd	%xmm0, %xmm2

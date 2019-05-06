@@ -6,7 +6,7 @@
 define double @int_to_double_rr(i32 %a) {
 ; AVX-LABEL: int_to_double_rr:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtusi2sdl %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX_X86-LABEL: int_to_double_rr:
@@ -91,7 +91,7 @@ entry:
 define float @int_to_float_rr(i32 %a) {
 ; AVX-LABEL: int_to_float_rr:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtusi2ssl %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX_X86-LABEL: int_to_float_rr:

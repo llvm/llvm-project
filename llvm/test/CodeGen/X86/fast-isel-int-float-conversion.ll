@@ -10,12 +10,12 @@
 define double @int_to_double_rr(i32 %a) {
 ; SSE2-LABEL: int_to_double_rr:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    cvtsi2sdl %edi, %xmm0
+; SSE2-NEXT:    cvtsi2sd %edi, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_double_rr:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_double_rr:
@@ -163,12 +163,12 @@ entry:
 define float @int_to_float_rr(i32 %a) {
 ; SSE2-LABEL: int_to_float_rr:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    cvtsi2ssl %edi, %xmm0
+; SSE2-NEXT:    cvtsi2ss %edi, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_float_rr:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_float_rr:

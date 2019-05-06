@@ -14,7 +14,7 @@ target triple = "x86_64-pc-win32-elf"
 ; required, which would have hidden the bug.
 ; CHECK: vmovapd	%xmm0, [[TMP:%xmm[0-9]+]]
 ; CHECK-NOT: vxorps  %xmm0, %xmm0, %xmm0
-; CHECK-NEXT: vcvtsi2sdq      %rsi, %xmm0, %xmm6
+; CHECK-NEXT: vcvtsi2sd      %rsi, %xmm0, %xmm6
 ; CHECK: movl	$339772768, %e[[INDIRECT_CALL2:[a-z]+]]
 ; CHECK-NOT: vmovapd %xmm7, %xmm0
 ; CHECK-NEXT: vmovapd %xmm6, %xmm1
