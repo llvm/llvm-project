@@ -353,6 +353,9 @@ protected:
   /// Processor has AVX-512 Vector Neural Network Instructions
   bool HasVNNI = false;
 
+  /// Processor has AVX-512 bfloat16 floating-point extensions
+  bool HasBF16 = false;
+
   /// Processor has AVX-512 Bit Algorithms instructions
   bool HasBITALG = false;
 
@@ -668,6 +671,7 @@ public:
   bool hasVLX() const { return HasVLX; }
   bool hasPKU() const { return HasPKU; }
   bool hasVNNI() const { return HasVNNI; }
+  bool hasBF16() const { return HasBF16; }
   bool hasBITALG() const { return HasBITALG; }
   bool hasMPX() const { return HasMPX; }
   bool hasSHSTK() const { return HasSHSTK; }
