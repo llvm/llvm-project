@@ -29,8 +29,8 @@ using namespace std;
 
 extern int g_verbose;
 
-DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf)
-    : m_dwarf(dwarf), m_cancel_scopes(false) {}
+DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf, user_id_t uid)
+    : UserID(uid), m_dwarf(dwarf), m_cancel_scopes(false) {}
 
 DWARFUnit::~DWARFUnit() {}
 
@@ -364,15 +364,6 @@ size_t DWARFUnit::AppendDIEsWithTag(const dw_tag_t tag,
 
   // Return the number of DIEs added to the collection
   return dies.size() - old_size;
-}
-
-lldb::user_id_t DWARFUnit::GetID() const {
-  dw_offset_t local_id =
-      m_base_obj_offset != DW_INVALID_OFFSET ? m_base_obj_offset : m_offset;
-  if (m_dwarf)
-    return DIERef(local_id, local_id).GetUID(m_dwarf);
-  else
-    return local_id;
 }
 
 dw_offset_t DWARFUnit::GetNextCompileUnitOffset() const {

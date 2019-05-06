@@ -87,8 +87,8 @@ void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
   const auto &debug_info_data = m_dwarf2Data->get_debug_info_data();
 
   while (debug_info_data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> cu_sp =
-        DWARFCompileUnit::extract(m_dwarf2Data, debug_info_data, &offset);
+    llvm::Expected<DWARFUnitSP> cu_sp = DWARFCompileUnit::extract(
+        m_dwarf2Data, m_compile_units.size(), debug_info_data, &offset);
 
     if (!cu_sp) {
       // FIXME: Propagate this error up.
@@ -111,7 +111,7 @@ size_t DWARFDebugInfo::GetNumCompileUnits() {
   return m_compile_units.size();
 }
 
-DWARFUnit *DWARFDebugInfo::GetCompileUnitAtIndex(uint32_t idx) {
+DWARFUnit *DWARFDebugInfo::GetCompileUnitAtIndex(user_id_t idx) {
   DWARFUnit *cu = NULL;
   if (idx < GetNumCompileUnits())
     cu = m_compile_units[idx].get();
@@ -123,8 +123,8 @@ bool DWARFDebugInfo::OffsetLessThanCompileUnitOffset(
   return offset < cu_sp->GetOffset();
 }
 
-DWARFUnit *DWARFDebugInfo::GetCompileUnit(dw_offset_t cu_offset,
-                                                 uint32_t *idx_ptr) {
+DWARFUnit *DWARFDebugInfo::GetCompileUnitAtOffset(dw_offset_t cu_offset,
+                                                  uint32_t *idx_ptr) {
   DWARFUnitSP cu_sp;
   uint32_t cu_idx = DW_INVALID_INDEX;
   if (cu_offset != DW_INVALID_OFFSET) {
@@ -160,7 +160,7 @@ DWARFUnit *DWARFDebugInfo::GetCompileUnit(const DIERef &die_ref) {
   if (die_ref.cu_offset == DW_INVALID_OFFSET)
     return GetCompileUnitContainingDIEOffset(die_ref.die_offset);
   else
-    return GetCompileUnit(die_ref.cu_offset);
+    return GetCompileUnitAtOffset(die_ref.cu_offset);
 }
 
 DWARFUnit *

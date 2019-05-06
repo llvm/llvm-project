@@ -15,7 +15,7 @@
 class DWARFCompileUnit : public DWARFUnit {
 public:
   static llvm::Expected<DWARFUnitSP>
-  extract(SymbolFileDWARF *dwarf2Data,
+  extract(SymbolFileDWARF *dwarf2Data, lldb::user_id_t uid,
           const lldb_private::DWARFDataExtractor &debug_info,
           lldb::offset_t *offset_ptr);
   void Dump(lldb_private::Stream *s) const override;
@@ -35,7 +35,7 @@ public:
   uint32_t GetHeaderByteSize() const override;
 
 private:
-  DWARFCompileUnit(SymbolFileDWARF *dwarf2Data);
+  DWARFCompileUnit(SymbolFileDWARF *dwarf2Data, lldb::user_id_t uid);
   DISALLOW_COPY_AND_ASSIGN(DWARFCompileUnit);
 };
 

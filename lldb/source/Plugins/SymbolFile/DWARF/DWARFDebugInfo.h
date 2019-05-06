@@ -40,8 +40,9 @@ public:
   void SetDwarfData(SymbolFileDWARF *dwarf2Data);
 
   size_t GetNumCompileUnits();
-  DWARFUnit *GetCompileUnitAtIndex(uint32_t idx);
-  DWARFUnit *GetCompileUnit(dw_offset_t cu_offset, uint32_t *idx_ptr = NULL);
+  DWARFUnit *GetCompileUnitAtIndex(lldb::user_id_t idx);
+  DWARFUnit *GetCompileUnitAtOffset(dw_offset_t cu_offset,
+                                    uint32_t *idx_ptr = NULL);
   DWARFUnit *GetCompileUnitContainingDIEOffset(dw_offset_t die_offset);
   DWARFUnit *GetCompileUnit(const DIERef &die_ref);
   DWARFDIE GetDIEForDIEOffset(dw_offset_t die_offset);

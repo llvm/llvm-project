@@ -15,17 +15,19 @@
 using namespace lldb;
 using namespace lldb_private;
 
-DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
-    : DWARFUnit(dwarf2Data) {}
+DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data,
+                                   lldb::user_id_t uid)
+    : DWARFUnit(dwarf2Data, uid) {}
 
-llvm::Expected<DWARFUnitSP>
-DWARFCompileUnit::extract(SymbolFileDWARF *dwarf2Data,
-                          const DWARFDataExtractor &debug_info,
-                          lldb::offset_t *offset_ptr) {
+
+llvm::Expected<DWARFUnitSP> DWARFCompileUnit::extract(
+    SymbolFileDWARF *dwarf2Data, user_id_t uid,
+    const DWARFDataExtractor &debug_info, lldb::offset_t *offset_ptr) {
   assert(debug_info.ValidOffset(*offset_ptr));
 
   // std::make_shared would require the ctor to be public.
-  std::shared_ptr<DWARFCompileUnit> cu_sp(new DWARFCompileUnit(dwarf2Data));
+  std::shared_ptr<DWARFCompileUnit> cu_sp(
+      new DWARFCompileUnit(dwarf2Data, uid));
 
   cu_sp->m_offset = *offset_ptr;
 
