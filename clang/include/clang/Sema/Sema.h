@@ -2848,8 +2848,7 @@ public:
     CCEK_Enumerator,  ///< Enumerator value with fixed underlying type.
     CCEK_TemplateArg, ///< Value of a non-type template parameter.
     CCEK_NewExpr,     ///< Constant expression in a noptr-new-declarator.
-    CCEK_ConstexprIf, ///< Condition in a constexpr if statement.
-    CCEK_ExplicitBool ///< Condition in an explicit(bool) specifier.
+    CCEK_ConstexprIf  ///< Condition in a constexpr if statement.
   };
   ExprResult CheckConvertedConstantExpression(Expr *From, QualType T,
                                               llvm::APSInt &Value, CCEKind CCE);
@@ -2972,7 +2971,6 @@ public:
                             bool SuppressUserConversions = false,
                             bool PartialOverloading = false,
                             bool AllowExplicit = false,
-                            bool AllowExplicitConversion = false,
                             ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
                             ConversionSequenceList EarlyConversions = None);
   void AddFunctionCandidates(const UnresolvedSetImpl &Functions,
@@ -3011,7 +3009,7 @@ public:
       FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
       TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
       OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
-      bool PartialOverloading = false, bool AllowExplicit = false,
+      bool PartialOverloading = false,
       ADLCallKind IsADLCandidate = ADLCallKind::NotADL);
   bool CheckNonDependentConversions(FunctionTemplateDecl *FunctionTemplate,
                                     ArrayRef<QualType> ParamTypes,
@@ -3023,16 +3021,20 @@ public:
                                     QualType ObjectType = QualType(),
                                     Expr::Classification
                                         ObjectClassification = {});
-  void AddConversionCandidate(
-      CXXConversionDecl *Conversion, DeclAccessPair FoundDecl,
-      CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
-      OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-      bool AllowExplicit, bool AllowResultConversion = true);
-  void AddTemplateConversionCandidate(
-      FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
-      CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
-      OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-      bool AllowExplicit, bool AllowResultConversion = true);
+  void AddConversionCandidate(CXXConversionDecl *Conversion,
+                              DeclAccessPair FoundDecl,
+                              CXXRecordDecl *ActingContext,
+                              Expr *From, QualType ToType,
+                              OverloadCandidateSet& CandidateSet,
+                              bool AllowObjCConversionOnExplicit,
+                              bool AllowResultConversion = true);
+  void AddTemplateConversionCandidate(FunctionTemplateDecl *FunctionTemplate,
+                                      DeclAccessPair FoundDecl,
+                                      CXXRecordDecl *ActingContext,
+                                      Expr *From, QualType ToType,
+                                      OverloadCandidateSet &CandidateSet,
+                                      bool AllowObjCConversionOnExplicit,
+                                      bool AllowResultConversion = true);
   void AddSurrogateCandidate(CXXConversionDecl *Conversion,
                              DeclAccessPair FoundDecl,
                              CXXRecordDecl *ActingContext,
@@ -10239,14 +10241,6 @@ public:
   /// \return true iff there were any errors
   ExprResult CheckBooleanCondition(SourceLocation Loc, Expr *E,
                                    bool IsConstexpr = false);
-
-  /// ActOnExplicitBoolSpecifier - Build an ExplicitSpecifier from an expression
-  /// found in an explicit(bool) specifier.
-  ExplicitSpecifier ActOnExplicitBoolSpecifier(Expr *E);
-
-  /// tryResolveExplicitSpecifier - Attempt to resolve the explict specifier.
-  /// Returns true if the explicit specifier is now resolved.
-  bool tryResolveExplicitSpecifier(ExplicitSpecifier &ExplicitSpec);
 
   /// DiagnoseAssignmentAsCondition - Given that an expression is
   /// being used as a boolean condition, warn if it's an assignment.
