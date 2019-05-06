@@ -1847,7 +1847,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
       for (unsigned I = 0,
                     NumTemplateParams = FD->getNumTemplateParameterLists();
            I < NumTemplateParams; ++I) {
-        FD->getTemplateParameterList(I)->print(OS, PP, Context);
+        FD->getTemplateParameterList(I)->print(OS, Context, PP);
         OS << "\n";
       }
     }
