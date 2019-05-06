@@ -25,10 +25,10 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using testing::ElementsAre;
-using testing::IsEmpty;
-using testing::Matcher;
-using testing::UnorderedElementsAreArray;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::Matcher;
+using ::testing::UnorderedElementsAreArray;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
   void onDiagnosticsReady(PathRef File,
@@ -120,7 +120,7 @@ MATCHER_P3(Sym, Name, Decl, DefOrNone, "") {
   }
   return true;
 }
-testing::Matcher<LocatedSymbol> Sym(std::string Name, Range Decl) {
+::testing::Matcher<LocatedSymbol> Sym(std::string Name, Range Decl) {
   return Sym(Name, Decl, llvm::None);
 }
 MATCHER_P(Sym, Name, "") { return arg.Name == Name; }
