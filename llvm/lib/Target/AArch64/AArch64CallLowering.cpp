@@ -286,20 +286,40 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
           LLT OldLLT(MVT::getVT(CurArgInfo.Ty));
           CurArgInfo.Ty = EVT(NewVT).getTypeForEVT(Ctx);
           // Instead of an extend, we might have a vector type which needs
-          // padding with more elements, e.g. <2 x half> -> <4 x half>
-          if (NewVT.isVector() &&
-              NewLLT.getNumElements() > OldLLT.getNumElements()) {
-            // We don't handle VA types which are not exactly twice the size,
-            // but can easily be done in future.
-            if (NewLLT.getNumElements() != OldLLT.getNumElements() * 2) {
-              LLVM_DEBUG(dbgs() << "Outgoing vector ret has too many elts");
+          // padding with more elements, e.g. <2 x half> -> <4 x half>.
+          if (NewVT.isVector()) {
+            if (OldLLT.isVector()) {
+              if (NewLLT.getNumElements() > OldLLT.getNumElements()) {
+                // We don't handle VA types which are not exactly twice the
+                // size, but can easily be done in future.
+                if (NewLLT.getNumElements() != OldLLT.getNumElements() * 2) {
+                  LLVM_DEBUG(dbgs() << "Outgoing vector ret has too many elts");
+                  return false;
+                }
+                auto Undef = MIRBuilder.buildUndef({OldLLT});
+                CurVReg =
+                    MIRBuilder.buildMerge({NewLLT}, {CurVReg, Undef.getReg(0)})
+                        .getReg(0);
+              } else {
+                // Just do a vector extend.
+                CurVReg = MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg})
+                              .getReg(0);
+              }
+            } else if (NewLLT.getNumElements() == 2) {
+              // We need to pad a <1 x S> type to <2 x S>. Since we don't have
+              // <1 x S> vector types in GISel we use a build_vector instead
+              // of a vector merge/concat.
+              auto Undef = MIRBuilder.buildUndef({OldLLT});
+              CurVReg =
+                  MIRBuilder
+                      .buildBuildVector({NewLLT}, {CurVReg, Undef.getReg(0)})
+                      .getReg(0);
+            } else {
+              LLVM_DEBUG(dbgs() << "Could not handle ret ty");
               return false;
             }
-            auto Undef = MIRBuilder.buildUndef({OldLLT});
-            CurVReg =
-                MIRBuilder.buildMerge({NewLLT}, {CurVReg, Undef.getReg(0)})
-                    .getReg(0);
           } else {
+            // A scalar extend.
             CurVReg =
                 MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg}).getReg(0);
           }
