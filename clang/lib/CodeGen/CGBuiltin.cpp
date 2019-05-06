@@ -7233,6 +7233,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F);
   }
 
+  if (BuiltinID == AArch64::BI__builtin_sponentry) {
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::sponentry);
+    return Builder.CreateCall(F);
+  }
+
   // Find out if any arguments are required to be integer constant
   // expressions.
   unsigned ICEArguments = 0;

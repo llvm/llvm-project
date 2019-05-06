@@ -86,6 +86,9 @@ LANGBUILTIN(__wfi,   "v", "",   ALL_MS_LANGUAGES)
 LANGBUILTIN(__sev,   "v", "",   ALL_MS_LANGUAGES)
 LANGBUILTIN(__sevl,  "v", "",   ALL_MS_LANGUAGES)
 
+// Misc
+BUILTIN(__builtin_sponentry, "v*", "c")
+
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
