@@ -32,12 +32,12 @@ MATCHER_P(HasDigest, Digest, "") { return arg.Digest == Digest; }
 MATCHER_P(HasName, Name, "") { return arg.Name == Name; }
 
 MATCHER(HasSameURI, "") {
-  llvm::StringRef URI = testing::get<0>(arg);
-  const std::string &Path = testing::get<1>(arg);
+  llvm::StringRef URI = ::testing::get<0>(arg);
+  const std::string &Path = ::testing::get<1>(arg);
   return toUri(Path) == URI;
 }
 
-testing::Matcher<const IncludeGraphNode &>
+::testing::Matcher<const IncludeGraphNode &>
 IncludesAre(const std::vector<std::string> &Includes) {
   return ::testing::Field(&IncludeGraphNode::DirectIncludes,
                           UnorderedPointwise(HasSameURI(), Includes));

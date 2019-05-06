@@ -138,6 +138,8 @@ private:
   Value *optimizeStrStr(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemChr(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemCmp(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeBCmp(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeMemCmpBCmpCommon(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemCpy(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemMove(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemSet(CallInst *CI, IRBuilder<> &B);

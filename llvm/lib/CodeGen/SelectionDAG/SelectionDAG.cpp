@@ -262,12 +262,7 @@ bool ISD::allOperandsUndef(const SDNode *N) {
   // is probably the desired behavior.
   if (N->getNumOperands() == 0)
     return false;
-
-  for (const SDValue &Op : N->op_values())
-    if (!Op.isUndef())
-      return false;
-
-  return true;
+  return all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); });
 }
 
 bool ISD::matchUnaryPredicate(SDValue Op,
@@ -8761,17 +8756,12 @@ bool SDNode::areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N) {
 
 /// isOperand - Return true if this node is an operand of N.
 bool SDValue::isOperandOf(const SDNode *N) const {
-  for (const SDValue &Op : N->op_values())
-    if (*this == Op)
-      return true;
-  return false;
+  return any_of(N->op_values(), [this](SDValue Op) { return *this == Op; });
 }
 
 bool SDNode::isOperandOf(const SDNode *N) const {
-  for (const SDValue &Op : N->op_values())
-    if (this == Op.getNode())
-      return true;
-  return false;
+  return any_of(N->op_values(),
+                [this](SDValue Op) { return this == Op.getNode(); });
 }
 
 /// reachesChainWithoutSideEffects - Return true if this operand (which must

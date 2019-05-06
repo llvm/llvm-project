@@ -46,7 +46,7 @@ define float @fmul_fneg_extra_use(float %x) {
 
 define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fmul_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0x7F80000000000000, double 0xFFF0000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0x7F80000000000000, double 0xFFF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %m = fmul <4 x double> %x, <double 42.0, double 0x7FF80000000000000, double 0x7FF0000000000000, double undef>
@@ -97,7 +97,7 @@ define float @fdiv_op1_constant_fneg_extra_use(float %x) {
 
 define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op1_constant_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[X:%.*]], <double 4.200000e+01, double 0x7FF800000ABCD000, double 0x7FF0000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[X:%.*]], <double 4.200000e+01, double 0x7FF800000ABCD000, double 0x7FF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double undef>
@@ -148,11 +148,10 @@ define float @fdiv_op0_constant_fneg_extra_use(float %x) {
 
 define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0x7F80000000000000, double 0x7FF0000000000000, double 0x7FF8000000000000>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0x7F80000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %d = fdiv <4 x double> <double -42.0, double 0x7FF80000000000000, double 0xFFF0000000000000, double undef>, %x
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %d
   ret <4 x double> %r
 }
-

@@ -470,7 +470,7 @@ public:
 
   public:
     LocRange() {}
-    LocRange(DebugLoc Start) : Start(std::move(Start)), End(std::move(Start)) {}
+    LocRange(DebugLoc Start) : Start(Start), End(Start) {}
     LocRange(DebugLoc Start, DebugLoc End)
         : Start(std::move(Start)), End(std::move(End)) {}
 

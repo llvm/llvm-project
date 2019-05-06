@@ -4263,6 +4263,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_dir);
     if (CCGenDiagnostics && A) {
       SmallString<128> CrashDirectory(A->getValue());
+      if (!getVFS().exists(CrashDirectory))
+        llvm::sys::fs::create_directories(CrashDirectory);
       llvm::sys::path::append(CrashDirectory, Split.first);
       const char *Middle = Suffix ? "-%%%%%%." : "-%%%%%%";
       std::error_code EC = llvm::sys::fs::createUniqueFile(

@@ -59,3 +59,74 @@ static_assert(bcp_fold(int_to_ptr(0)));
 static_assert(bcp(int_to_ptr(123)));      // GCC rejects these due to not recognizing
 static_assert(bcp_fold(int_to_ptr(123))); // the bcp conditional in 'int_to_ptr' ...
 static_assert(__builtin_constant_p((int*)123)); // ... but GCC accepts this
+
+// State mutations in the operand are not permitted.
+//
+// The rule GCC uses for this is not entirely understood, but seems to depend
+// in some way on what local state is mentioned in the operand of
+// __builtin_constant_p and where.
+//
+// We approximate GCC's rule by evaluating the operand in a speculative
+// evaluation context; only state created within the evaluation can be
+// modified.
+constexpr int mutate1() {
+  int n = 1;
+  int m = __builtin_constant_p(++n);
+  return n * 10 + m;
+}
+static_assert(mutate1() == 10);
+
+// FIXME: GCC treats this as being non-constant because of the "n = 2", even
+// though evaluation in the context of the enclosing constant expression
+// succeeds without mutating any state.
+constexpr int mutate2() {
+  int n = 1;
+  int m = __builtin_constant_p(n ? n + 1 : n = 2);
+  return n * 10 + m;
+}
+static_assert(mutate2() == 11);
+
+constexpr int internal_mutation(int unused) {
+  int x = 1;
+  ++x;
+  return x;
+}
+
+constexpr int mutate3() {
+  int n = 1;
+  int m = __builtin_constant_p(internal_mutation(0));
+  return n * 10 + m;
+}
+static_assert(mutate3() == 11);
+
+constexpr int mutate4() {
+  int n = 1;
+  int m = __builtin_constant_p(n ? internal_mutation(0) : 0);
+  return n * 10 + m;
+}
+static_assert(mutate4() == 11);
+
+// FIXME: GCC treats this as being non-constant because of something to do with
+// the 'n' in the argument to internal_mutation.
+constexpr int mutate5() {
+  int n = 1;
+  int m = __builtin_constant_p(n ? internal_mutation(n) : 0);
+  return n * 10 + m;
+}
+static_assert(mutate5() == 11);
+
+constexpr int mutate_param(bool mutate, int &param) {
+  mutate = mutate; // Mutation of internal state is OK
+  if (mutate)
+    ++param;
+  return param;
+}
+constexpr int mutate6(bool mutate) {
+  int n = 1;
+  int m = __builtin_constant_p(mutate_param(mutate, n));
+  return n * 10 + m;
+}
+// No mutation of state outside __builtin_constant_p: evaluates to true.
+static_assert(mutate6(false) == 11);
+// Mutation of state outside __builtin_constant_p: evaluates to false.
+static_assert(mutate6(true) == 10);

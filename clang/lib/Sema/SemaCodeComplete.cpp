@@ -1923,6 +1923,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Builder.AddPlaceholderChunk("name");
       Builder.AddChunk(CodeCompletionString::CK_Equal);
       Builder.AddPlaceholderChunk("namespace");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
       Results.AddResult(Result(Builder.TakeString()));
 
       // Using directives
@@ -1931,6 +1932,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Builder.AddTextChunk("namespace");
       Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
       Builder.AddPlaceholderChunk("identifier");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
       Results.AddResult(Result(Builder.TakeString()));
 
       // asm(string-literal)
@@ -1965,6 +1967,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Builder.AddPlaceholderChunk("qualifier");
       Builder.AddTextChunk("::");
       Builder.AddPlaceholderChunk("name");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
       Results.AddResult(Result(Builder.TakeString()));
 
       // using typename qualifier::name (only in a dependent context)
@@ -1976,6 +1979,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
         Builder.AddPlaceholderChunk("qualifier");
         Builder.AddTextChunk("::");
         Builder.AddPlaceholderChunk("name");
+        Builder.AddChunk(CodeCompletionString::CK_SemiColon);
         Results.AddResult(Result(Builder.TakeString()));
       }
 
@@ -2165,12 +2169,14 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
     if (S->getContinueParent()) {
       // continue ;
       Builder.AddTypedTextChunk("continue");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
       Results.AddResult(Result(Builder.TakeString()));
     }
 
     if (S->getBreakParent()) {
       // break ;
       Builder.AddTypedTextChunk("break");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
       Results.AddResult(Result(Builder.TakeString()));
     }
 
@@ -2189,12 +2195,14 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
       Builder.AddPlaceholderChunk("expression");
     }
+    Builder.AddChunk(CodeCompletionString::CK_SemiColon);
     Results.AddResult(Result(Builder.TakeString()));
 
     // goto identifier ;
     Builder.AddTypedTextChunk("goto");
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
     Builder.AddPlaceholderChunk("label");
+    Builder.AddChunk(CodeCompletionString::CK_SemiColon);
     Results.AddResult(Result(Builder.TakeString()));
 
     // Using directives
@@ -2203,6 +2211,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
     Builder.AddTextChunk("namespace");
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
     Builder.AddPlaceholderChunk("identifier");
+    Builder.AddChunk(CodeCompletionString::CK_SemiColon);
     Results.AddResult(Result(Builder.TakeString()));
 
     AddStaticAssertResult(Builder, Results, SemaRef.getLangOpts());
