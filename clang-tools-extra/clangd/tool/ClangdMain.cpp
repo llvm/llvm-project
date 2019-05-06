@@ -16,6 +16,7 @@
 #include "index/Background.h"
 #include "index/Serialization.h"
 #include "clang/Basic/Version.h"
+#include "clang/Format/Format.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -231,6 +232,12 @@ static llvm::cl::opt<bool> EnableClangTidy(
     llvm::cl::desc("Enable clang-tidy diagnostics."),
     llvm::cl::init(true));
 
+static llvm::cl::opt<std::string>
+    FallbackStyle("fallback-style",
+                  llvm::cl::desc("clang-format style to apply by default when "
+                                 "no .clang-format file is found"),
+                  llvm::cl::init(clang::format::DefaultFallbackStyle));
+
 static llvm::cl::opt<bool> SuggestMissingIncludes(
     "suggest-missing-includes",
     llvm::cl::desc("Attempts to fix diagnostic errors caused by missing "
@@ -352,6 +359,8 @@ int main(int argc, char *argv[]) {
       llvm::errs() << "Ignoring -j because -run-synchronously is set.\n";
     WorkerThreadsCount = 0;
   }
+  if (FallbackStyle.getNumOccurrences())
+    clang::format::DefaultFallbackStyle = FallbackStyle.c_str();
 
   // Validate command line arguments.
   llvm::Optional<llvm::raw_fd_ostream> InputMirrorStream;
