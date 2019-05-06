@@ -1899,6 +1899,10 @@ public:
   /// parameter list associated with it, or else return null.
   TemplateParameterList *getTemplateParameterList() const;
 
+  /// Get the template parameters were explicitly specified (as opposed to being
+  /// invented by use of an auto parameter).
+  ArrayRef<NamedDecl *> getExplicitTemplateParameters() const;
+
   /// Whether this is a generic lambda.
   bool isGenericLambda() const { return getTemplateParameterList(); }
 
@@ -2054,7 +2058,7 @@ private:
   CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
              FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
              bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
-             SourceRange TypeIdParens, Expr *ArraySize,
+             SourceRange TypeIdParens, Optional<Expr *> ArraySize,
              InitializationStyle InitializationStyle, Expr *Initializer,
              QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
              SourceRange DirectInitRange);
@@ -2069,7 +2073,7 @@ public:
   Create(const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
          FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
          bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
-         SourceRange TypeIdParens, Expr *ArraySize,
+         SourceRange TypeIdParens, Optional<Expr *> ArraySize,
          InitializationStyle InitializationStyle, Expr *Initializer,
          QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
          SourceRange DirectInitRange);
@@ -2112,15 +2116,15 @@ public:
 
   bool isArray() const { return CXXNewExprBits.IsArray; }
 
-  Expr *getArraySize() {
-    return isArray()
-               ? cast<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()])
-               : nullptr;
+  Optional<Expr *> getArraySize() {
+    if (!isArray())
+      return None;
+    return cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]);
   }
-  const Expr *getArraySize() const {
-    return isArray()
-               ? cast<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()])
-               : nullptr;
+  Optional<const Expr *> getArraySize() const {
+    if (!isArray())
+      return None;
+    return cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]);
   }
 
   unsigned getNumPlacementArgs() const {

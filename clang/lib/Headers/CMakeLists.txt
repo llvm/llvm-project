@@ -6,6 +6,7 @@ set(files
   armintr.h
   arm64intr.h
   avx2intrin.h
+  avx512bf16intrin.h
   avx512bwintrin.h
   avx512bitalgintrin.h
   avx512vlbitalgintrin.h
@@ -21,6 +22,7 @@ set(files
   avx512vbmivlintrin.h
   avx512vbmi2intrin.h
   avx512vlvbmi2intrin.h
+  avx512vlbf16intrin.h
   avx512vlbwintrin.h
   avx512vlcdintrin.h
   avx512vldqintrin.h
@@ -31,6 +33,9 @@ set(files
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
+  openmp_wrappers/math.h
+  openmp_wrappers/cmath
+  openmp_wrappers/__clang_openmp_math.h
   __clang_cuda_builtin_vars.h
   __clang_cuda_cmath.h
   __clang_cuda_complex_builtins.h

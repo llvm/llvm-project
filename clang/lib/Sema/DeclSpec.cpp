@@ -445,7 +445,7 @@ unsigned DeclSpec::getParsedSpecifiers() const {
   if (hasTypeSpecifier())
     Res |= PQ_TypeSpecifier;
 
-  if (FS_inline_specified || FS_virtual_specified || hasExplicitSpecifier() ||
+  if (FS_inline_specified || FS_virtual_specified || FS_explicit_specified ||
       FS_noreturn_specified || FS_forceinline_specified)
     Res |= PQ_FunctionSpecifier;
   return Res;
@@ -944,24 +944,17 @@ bool DeclSpec::setFunctionSpecVirtual(SourceLocation Loc,
 }
 
 bool DeclSpec::setFunctionSpecExplicit(SourceLocation Loc,
-                                       const char *&PrevSpec, unsigned &DiagID,
-                                       ExplicitSpecifier ExplicitSpec,
-                                       SourceLocation CloseParenLoc) {
-  assert((ExplicitSpec.getKind() == ExplicitSpecKind::ResolvedTrue ||
-          ExplicitSpec.getExpr()) &&
-         "invalid ExplicitSpecifier");
+                                       const char *&PrevSpec,
+                                       unsigned &DiagID) {
   // 'explicit explicit' is ok, but warn as this is likely not what the user
   // intended.
-  if (hasExplicitSpecifier()) {
-    DiagID = (ExplicitSpec.getExpr() || FS_explicit_specifier.getExpr())
-                 ? diag::err_duplicate_declspec
-                 : diag::ext_warn_duplicate_declspec;
+  if (FS_explicit_specified) {
+    DiagID = diag::warn_duplicate_declspec;
     PrevSpec = "explicit";
     return true;
   }
-  FS_explicit_specifier = ExplicitSpec;
+  FS_explicit_specified = true;
   FS_explicitLoc = Loc;
-  FS_explicitCloseParenLoc = CloseParenLoc;
   return false;
 }
 
@@ -1300,26 +1293,23 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   //   The explicit specifier shall be used only in the declaration of
   //   a constructor or conversion function within its class
   //   definition;
-  if (isFriendSpecified() && (isVirtualSpecified() || hasExplicitSpecifier())) {
+  if (isFriendSpecified() && (isVirtualSpecified() || isExplicitSpecified())) {
     StringRef Keyword;
-    FixItHint Hint;
     SourceLocation SCLoc;
 
     if (isVirtualSpecified()) {
       Keyword = "virtual";
       SCLoc = getVirtualSpecLoc();
-      Hint = FixItHint::CreateRemoval(SCLoc);
     } else {
       Keyword = "explicit";
       SCLoc = getExplicitSpecLoc();
-      Hint = FixItHint::CreateRemoval(getExplicitSpecRange());
     }
 
+    FixItHint Hint = FixItHint::CreateRemoval(SCLoc);
     S.Diag(SCLoc, diag::err_friend_decl_spec)
       << Keyword << Hint;
 
-    FS_virtual_specified = false;
-    FS_explicit_specifier = ExplicitSpecifier();
+    FS_virtual_specified = FS_explicit_specified = false;
     FS_virtualLoc = FS_explicitLoc = SourceLocation();
   }
 

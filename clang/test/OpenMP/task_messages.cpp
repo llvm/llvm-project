@@ -38,10 +38,10 @@ int foo() {
 #pragma omp task
 // expected-note@+1 2 {{predetermined as a firstprivate in a task construct here}}
   ++s1;
-#pragma omp task default(none)
+#pragma omp task default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
 #pragma omp task default(shared)
   ++a; // expected-error 2 {{variable 'a' must have explicitly specified data sharing attributes}}
-#pragma omp task default(none)
+#pragma omp task default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
 #pragma omp task
   // expected-error@+1 {{calling a private constructor of class 'S'}}
   ++a; // expected-error 2 {{variable 'a' must have explicitly specified data sharing attributes}}
@@ -167,7 +167,7 @@ L1:
       break;
     }
   }
-#pragma omp task default(none)
+#pragma omp task default(none) // expected-note {{explicit data sharing attribute requested here}}
   ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
   goto L2; // expected-error {{use of undeclared label 'L2'}}
@@ -184,10 +184,10 @@ L2:
       for (int n = 0; n < 100; ++n) {
   }
 
-#pragma omp task default(none)
+#pragma omp task default(none) // expected-note {{explicit data sharing attribute requested here}}
 #pragma omp task default(shared)
   ++a; // expected-error {{variable 'a' must have explicitly specified data sharing attributes}}
-#pragma omp task default(none)
+#pragma omp task default(none) // expected-note {{explicit data sharing attribute requested here}}
 #pragma omp task
   ++a; // expected-error {{variable 'a' must have explicitly specified data sharing attributes}}
 #pragma omp task default(shared)
@@ -201,10 +201,10 @@ L2:
 #pragma omp task
 #pragma omp parallel shared(a, b)
   ++a, ++b;
-#pragma omp task default(none)
+#pragma omp task default(none) // expected-note {{explicit data sharing attribute requested here}}
 #pragma omp task default(shared)
   ++sa; // expected-error {{variable 'sa' must have explicitly specified data sharing attributes}}
-#pragma omp task default(none)
+#pragma omp task default(none) // expected-note {{explicit data sharing attribute requested here}}
 #pragma omp task
   // expected-error@+1 {{calling a private constructor of class 'S'}}
   ++sa; // expected-error {{variable 'sa' must have explicitly specified data sharing attributes}}

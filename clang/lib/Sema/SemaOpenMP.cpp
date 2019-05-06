@@ -1777,10 +1777,15 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
         DSAStack->getTopDSA(D, DSAStack->isClauseParsingMode());
     if (DVarPrivate.CKind != OMPC_unknown && isOpenMPPrivate(DVarPrivate.CKind))
       return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
+    if (VD && DSAStack->getDefaultDSA() == DSA_none)
+      return VD;
     DVarPrivate = DSAStack->hasDSA(D, isOpenMPPrivate,
                                    [](OpenMPDirectiveKind) { return true; },
                                    DSAStack->isClauseParsingMode());
-    if (DVarPrivate.CKind != OMPC_unknown)
+    // The variable is not private or it is the variable in the directive with
+    // default(none) clause and not used in any clause.
+    if (DVarPrivate.CKind != OMPC_unknown ||
+        (VD && DSAStack->getDefaultDSA() == DSA_none))
       return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
   }
   return nullptr;
@@ -4184,6 +4189,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   for (const auto &P : VarsWithInheritedDSA) {
     Diag(P.second->getExprLoc(), diag::err_omp_no_dsa_for_variable)
         << P.first << P.second->getSourceRange();
+    Diag(DSAStack->getDefaultDSALocation(), diag::note_omp_default_dsa_none);
   }
   ErrorFound = !VarsWithInheritedDSA.empty() || ErrorFound;
 
