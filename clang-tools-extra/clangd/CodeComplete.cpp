@@ -1380,6 +1380,7 @@ public:
 
     CodeCompleteResult Output = toCodeCompleteResult(mergeResults(
         /*SemaResults=*/{}, IndexResults, IdentifierResults));
+    Output.RanParser = false;
     logResults(Output, Tracer);
     return Output;
   }
