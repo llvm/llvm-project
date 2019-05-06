@@ -2497,11 +2497,7 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
     return getTypeIndex(Ty);
   }
 
-  // Check if we've already translated the complete record type.
   const auto *CTy = cast<DICompositeType>(Ty);
-  auto InsertResult = CompleteTypeIndices.insert({CTy, TypeIndex()});
-  if (!InsertResult.second)
-    return InsertResult.first->second;
 
   TypeLoweringScope S(*this);
 
@@ -2518,6 +2514,13 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
     if (CTy->isForwardDecl())
       return FwdDeclTI;
   }
+
+  // Check if we've already translated the complete record type.
+  // Insert the type with a null TypeIndex to signify that the type is currently
+  // being lowered.
+  auto InsertResult = CompleteTypeIndices.insert({CTy, TypeIndex()});
+  if (!InsertResult.second)
+    return InsertResult.first->second;
 
   TypeIndex TI;
   switch (CTy->getTag()) {
