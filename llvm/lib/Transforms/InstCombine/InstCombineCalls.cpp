@@ -1963,7 +1963,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     return SimplifyDemandedVectorElts(Op, DemandedElts, UndefElts);
   };
 
-  switch (II->getIntrinsicID()) {
+  Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
   default: break;
   case Intrinsic::objectsize:
     if (Value *V = lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/false))
@@ -2046,14 +2047,14 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       // Canonicalize funnel shift right by constant to funnel shift left. This
       // is not entirely arbitrary. For historical reasons, the backend may
       // recognize rotate left patterns but miss rotate right patterns.
-      if (II->getIntrinsicID() == Intrinsic::fshr) {
+      if (IID == Intrinsic::fshr) {
         // fshr X, Y, C --> fshl X, Y, (BitWidth - C)
         Constant *LeftShiftC = ConstantExpr::getSub(WidthC, ShAmtC);
         Module *Mod = II->getModule();
         Function *Fshl = Intrinsic::getDeclaration(Mod, Intrinsic::fshl, Ty);
         return CallInst::Create(Fshl, { Op0, Op1, LeftShiftC });
       }
-      assert(II->getIntrinsicID() == Intrinsic::fshl &&
+      assert(IID == Intrinsic::fshl &&
              "All funnel shifts by simple constants should go left");
 
       // fshl(X, 0, C) --> shl X, C
@@ -2097,7 +2098,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     const APInt *C0, *C1;
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    bool IsSigned = II->getIntrinsicID() == Intrinsic::sadd_with_overflow;
+    bool IsSigned = IID == Intrinsic::sadd_with_overflow;
     bool HasNWAdd = IsSigned ? match(Arg0, m_NSWAdd(m_Value(X), m_APInt(C0)))
                              : match(Arg0, m_NUWAdd(m_Value(X), m_APInt(C0)));
     if (HasNWAdd && match(Arg1, m_APInt(C1))) {
@@ -2107,8 +2108,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       if (!Overflow)
         return replaceInstUsesWith(
             *II, Builder.CreateBinaryIntrinsic(
-                     II->getIntrinsicID(), X,
-                     ConstantInt::get(Arg1->getType(), NewC)));
+                     IID, X, ConstantInt::get(Arg1->getType(), NewC)));
     }
     break;
   }
@@ -2156,7 +2156,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ssub_sat: {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    Intrinsic::ID IID = II->getIntrinsicID();
 
     // Make use of known overflow information.
     OverflowResult OR;
@@ -2208,7 +2207,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       APInt NewVal;
       bool IsUnsigned =
           IID == Intrinsic::uadd_sat || IID == Intrinsic::usub_sat;
-      if (Other->getIntrinsicID() == II->getIntrinsicID() &&
+      if (Other->getIntrinsicID() == IID &&
           match(Arg1, m_APInt(Val)) &&
           match(Other->getArgOperand(0), m_Value(X)) &&
           match(Other->getArgOperand(1), m_APInt(Val2))) {
@@ -2243,7 +2242,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return I;
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    Intrinsic::ID IID = II->getIntrinsicID();
     Value *X, *Y;
     if (match(Arg0, m_FNeg(m_Value(X))) && match(Arg1, m_FNeg(m_Value(Y))) &&
         (Arg0->hasOneUse() || Arg1->hasOneUse())) {
@@ -2373,8 +2371,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *ExtSrc;
     if (match(II->getArgOperand(0), m_OneUse(m_FPExt(m_Value(ExtSrc))))) {
       // Narrow the call: intrinsic (fpext x) -> fpext (intrinsic x)
-      Value *NarrowII =
-          Builder.CreateUnaryIntrinsic(II->getIntrinsicID(), ExtSrc, II);
+      Value *NarrowII = Builder.CreateUnaryIntrinsic(IID, ExtSrc, II);
       return new FPExtInst(NarrowII, II->getType());
     }
     break;
@@ -2727,7 +2724,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         Value *Arg1 = II->getArgOperand(1);
 
         Value *V;
-        switch (II->getIntrinsicID()) {
+        switch (IID) {
         default: llvm_unreachable("Case stmts out of sync!");
         case Intrinsic::x86_avx512_add_ps_512:
         case Intrinsic::x86_avx512_add_pd_512:
@@ -2771,7 +2768,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         Value *RHS = Builder.CreateExtractElement(Arg1, (uint64_t)0);
 
         Value *V;
-        switch (II->getIntrinsicID()) {
+        switch (IID) {
         default: llvm_unreachable("Case stmts out of sync!");
         case Intrinsic::x86_avx512_mask_add_ss_round:
         case Intrinsic::x86_avx512_mask_add_sd_round:
@@ -3363,8 +3360,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
 
     // Check for constant LHS & RHS - in this case we just simplify.
-    bool Zext = (II->getIntrinsicID() == Intrinsic::arm_neon_vmullu ||
-                 II->getIntrinsicID() == Intrinsic::aarch64_neon_umull);
+    bool Zext = (IID == Intrinsic::arm_neon_vmullu ||
+                 IID == Intrinsic::aarch64_neon_umull);
     VectorType *NewVT = cast<VectorType>(II->getType());
     if (Constant *CV0 = dyn_cast<Constant>(Arg0)) {
       if (Constant *CV1 = dyn_cast<Constant>(Arg1)) {
@@ -3441,7 +3438,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       APFloat Significand = frexp(C->getValueAPF(), Exp,
                                   APFloat::rmNearestTiesToEven);
 
-      if (II->getIntrinsicID() == Intrinsic::amdgcn_frexp_mant) {
+      if (IID == Intrinsic::amdgcn_frexp_mant) {
         return replaceInstUsesWith(CI, ConstantFP::get(II->getContext(),
                                                        Significand));
       }
@@ -3626,7 +3623,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       }
     }
 
-    bool Signed = II->getIntrinsicID() == Intrinsic::amdgcn_sbfe;
+    bool Signed = IID == Intrinsic::amdgcn_sbfe;
 
     if (!CWidth || !COffset)
       break;
@@ -3659,7 +3656,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (EnBits == 0xf)
       break; // All inputs enabled.
 
-    bool IsCompr = II->getIntrinsicID() == Intrinsic::amdgcn_exp_compr;
+    bool IsCompr = IID == Intrinsic::amdgcn_exp_compr;
     bool Changed = false;
     for (int I = 0; I < (IsCompr ? 2 : 4); ++I) {
       if ((!IsCompr && (EnBits & (1 << I)) == 0) ||
@@ -3747,7 +3744,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     const ConstantInt *CC = cast<ConstantInt>(II->getArgOperand(2));
     // Guard against invalid arguments.
     int64_t CCVal = CC->getZExtValue();
-    bool IsInteger = II->getIntrinsicID() == Intrinsic::amdgcn_icmp;
+    bool IsInteger = IID == Intrinsic::amdgcn_icmp;
     if ((IsInteger && (CCVal < CmpInst::FIRST_ICMP_PREDICATE ||
                        CCVal > CmpInst::LAST_ICMP_PREDICATE)) ||
         (!IsInteger && (CCVal < CmpInst::FIRST_FCMP_PREDICATE ||
@@ -3930,14 +3927,14 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         break;
       }
       if (CallInst *BCI = dyn_cast<CallInst>(BI)) {
-        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(BCI)) {
+        if (auto *II2 = dyn_cast<IntrinsicInst>(BCI)) {
           // If there is a stackrestore below this one, remove this one.
-          if (II->getIntrinsicID() == Intrinsic::stackrestore)
+          if (II2->getIntrinsicID() == Intrinsic::stackrestore)
             return eraseInstFromFunction(CI);
 
           // Bail if we cross over an intrinsic with side effects, such as
           // llvm.stacksave, llvm.read_register, or llvm.setjmp.
-          if (II->mayHaveSideEffects()) {
+          if (II2->mayHaveSideEffects()) {
             CannotRemove = true;
             break;
           }
