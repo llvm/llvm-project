@@ -1927,13 +1927,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     // Always run using the Host OS triple...
     bool set_triple = false;
     PlatformSP platform_sp(target.GetPlatform());
-    if (platform_sp && !target.GetArchitecture().GetTriple().hasEnvironment()) {
+    llvm::Triple target_triple = target.GetArchitecture().GetTriple();
+    if (platform_sp && !target_triple.hasEnvironment()) {
       llvm::VersionTuple version =
           platform_sp->GetOSVersion(target.GetProcessSP().get());
-      StreamString full_triple_name;
-      full_triple_name.PutCString(target.GetArchitecture().GetTriple().str());
-      full_triple_name.PutCString(version.getAsString());
-      swift_ast_sp->SetTriple(full_triple_name.GetString().data());
+      std::string buffer;
+      llvm::raw_string_ostream(buffer)
+          << target_triple.getArchName() << '-'
+          << target_triple.getVendorName() << '-'
+          << llvm::Triple::getOSTypeName(target_triple.getOS())
+          << version.getAsString();
+      swift_ast_sp->SetTriple(buffer.c_str());
       set_triple = true;
     }
 
