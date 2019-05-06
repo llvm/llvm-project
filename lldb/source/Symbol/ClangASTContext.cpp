@@ -8167,10 +8167,6 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
   if (is_artificial)
     return nullptr; // skip everything artificial
 
-  const clang::ExplicitSpecifier explicit_spec(
-      nullptr /*expr*/, is_explicit
-                            ? clang::ExplicitSpecKind::ResolvedTrue
-                            : clang::ExplicitSpecKind::ResolvedFalse);
   if (name[0] == '~') {
     cxx_dtor_decl = clang::CXXDestructorDecl::Create(
         *getASTContext(), cxx_record_decl, clang::SourceLocation(),
@@ -8189,7 +8185,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
             clang::SourceLocation()),
         method_qual_type,
         nullptr, // TypeSourceInfo *
-        explicit_spec, is_inline, is_artificial, false /*is_constexpr*/);
+        is_explicit, is_inline, is_artificial, false /*is_constexpr*/);
     cxx_method_decl = cxx_ctor_decl;
   } else {
     clang::StorageClass SC = is_static ? clang::SC_Static : clang::SC_None;
@@ -8224,7 +8220,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
                 clang::SourceLocation()),
             method_qual_type,
             nullptr, // TypeSourceInfo *
-            is_inline, explicit_spec, false /*is_constexpr*/,
+            is_inline, is_explicit, false /*is_constexpr*/,
             clang::SourceLocation());
       }
     }

@@ -13,7 +13,7 @@ class bad_alloc {};
 void parallel() {
 #pragma omp parallel
   thrower();
-  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: an exception thrown inside of the OpenMP 'parallel' region is not caught in that same region
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception thrown inside of the OpenMP 'parallel' region is not caught in that same region
 }
 
 void ignore() {
@@ -57,7 +57,7 @@ void forloop(const int a) {
 #pragma omp for
   for (int i = 0; i < a; i++)
     thrower();
-  // CHECK-MESSAGES: :[[@LINE-3]]:9: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
 }
 
 void parallel_forloop(const int a) {
@@ -67,8 +67,8 @@ void parallel_forloop(const int a) {
     for (int i = 0; i < a; i++)
       thrower();
     thrower();
-    // CHECK-MESSAGES: :[[@LINE-6]]:9: warning: an exception thrown inside of the OpenMP 'parallel' region is not caught in that same region
-    // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
+    // CHECK-MESSAGES: :[[@LINE-5]]:3: warning: an exception thrown inside of the OpenMP 'parallel' region is not caught in that same region
+    // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
   }
 }
 
@@ -83,7 +83,7 @@ void parallel_forloop_caught(const int a) {
       }
     }
     thrower();
-    // CHECK-MESSAGES: :[[@LINE-10]]:9: warning: an exception thrown inside of the OpenMP 'parallel' region is not caught in that same region
+    // CHECK-MESSAGES: :[[@LINE-9]]:3: warning: an exception thrown inside of the OpenMP 'parallel' region is not caught in that same region
   }
 }
 
@@ -97,7 +97,7 @@ void parallel_caught_forloop(const int a) {
       thrower();
     } catch (...) {
     }
-    // CHECK-MESSAGES: :[[@LINE-7]]:9: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
+    // CHECK-MESSAGES: :[[@LINE-5]]:7: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
   }
 }
 
@@ -111,7 +111,7 @@ void parallel_outercaught_forloop(const int a) {
       thrower();
     } catch (...) {
     }
-    // CHECK-MESSAGES: :[[@LINE-6]]:9: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
+    // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: an exception thrown inside of the OpenMP 'for' region is not caught in that same region
   }
 }
 

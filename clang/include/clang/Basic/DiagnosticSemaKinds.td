@@ -83,11 +83,11 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|constexpr if condition|explicit specifier argument}0 "
+  "array size|constexpr if condition}0 "
   "is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|constexpr if condition|explicit specifier argument}0 "
+  "array size|constexpr if condition}0 "
   "%select{cannot be narrowed from type %2 to %3|"
   "evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
@@ -2115,8 +2115,9 @@ def err_deduction_guide_wrong_scope : Error<
   "deduction guide must be declared in the same scope as template %q0">;
 def err_deduction_guide_defines_function : Error<
   "deduction guide cannot have a function definition">;
-def err_deduction_guide_redeclared : Error<
-  "redeclaration of deduction guide">;
+def err_deduction_guide_explicit_mismatch : Error<
+  "deduction guide is %select{not |}0declared 'explicit' but "
+  "previous declaration was%select{ not|}0">;
 def err_deduction_guide_specialized : Error<"deduction guide cannot be "
   "%select{explicitly instantiated|explicitly specialized}0">;
 def err_deduction_guide_template_not_deducible : Error<
@@ -3639,10 +3640,6 @@ def note_ovl_candidate : Note<
     "| has different qualifiers (expected %5 but found %6)"
     "| has different exception specification}4">;
 
-def note_ovl_candidate_explicit_forbidden : Note<
-    "candidate %0 ignored: cannot be explicit">;
-def note_explicit_bool_resolved_to_true : Note<
-    "explicit(bool) specifier resolved to true">;
 def note_ovl_candidate_inherited_constructor : Note<
     "constructor from base class %0 inherited here">;
 def note_ovl_candidate_inherited_constructor_slice : Note<
@@ -6373,13 +6370,15 @@ def err_variably_modified_typeid : Error<"'typeid' of variably modified type %0"
 def err_static_illegal_in_new : Error<
   "the 'static' modifier for the array size is not legal in new expressions">;
 def err_array_new_needs_size : Error<
-  "array size must be specified in new expressions">;
+  "array size must be specified in new expression with no initializer">;
 def err_bad_new_type : Error<
   "cannot allocate %select{function|reference}1 type %0 with new">;
 def err_new_incomplete_type : Error<
   "allocation of incomplete type %0">;
 def err_new_array_nonconst : Error<
   "only the first dimension of an allocated array may have dynamic size">;
+def err_new_array_size_unknown_from_init : Error<
+  "cannot determine allocated array size from initializer">;
 def err_new_array_init_args : Error<
   "array 'new' cannot have initialization arguments">;
 def ext_new_paren_array_nonconst : ExtWarn<
@@ -7785,9 +7784,6 @@ def err_defaulted_special_member_copy_const_param : Error<
 def err_defaulted_copy_assign_not_ref : Error<
   "the parameter for an explicitly-defaulted copy assignment operator must be an "
   "lvalue reference type">;
-def err_incorrect_defaulted_exception_spec : Error<
-  "exception specification of explicitly defaulted "
-  "%sub{select_special_member_kind}0 does not match the calculated one">;
 def err_incorrect_defaulted_constexpr : Error<
   "defaulted definition of %sub{select_special_member_kind}0 "
   "is not constexpr">;

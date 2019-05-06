@@ -2,7 +2,7 @@
 
 ;CHECK: @foo = internal unnamed_addr global i1 false, align 4, !dbg ![[VAR:.*]]
 ;CHECK: ![[VAR]] = !DIGlobalVariableExpression(var: !1, expr:
-;CHECK-SAME: !DIExpression(DW_OP_deref, DW_OP_constu, 111, DW_OP_mul,
+;CHECK-SAME: !DIExpression(DW_OP_deref_size, 1, DW_OP_constu, 111, DW_OP_mul,
 ;CHECK-SAME:               DW_OP_constu, 0, DW_OP_plus, DW_OP_stack_value,
 ;CHECK-SAME:               DW_OP_LLVM_fragment, 0, 1)) 
 

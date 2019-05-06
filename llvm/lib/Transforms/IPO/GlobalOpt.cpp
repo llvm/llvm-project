@@ -1654,6 +1654,9 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       for(auto *GVe : GVs){
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
+        const DataLayout &DL = GV->getParent()->getDataLayout();
+        unsigned SizeInOctets =
+          DL.getTypeAllocSizeInBits(NewGV->getType()->getElementType()) / 8;
 
         // It is expected that the address of global optimized variable is on
         // top of the stack. After optimization, value of that variable will
@@ -1664,8 +1667,9 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         // DW_OP_deref DW_OP_constu <ValMinus>
         // DW_OP_mul DW_OP_constu <ValInit> DW_OP_plus DW_OP_stack_value
         SmallVector<uint64_t, 12> Ops = {
-            dwarf::DW_OP_deref, dwarf::DW_OP_constu, ValMinus,
-            dwarf::DW_OP_mul,   dwarf::DW_OP_constu, ValInit,
+            dwarf::DW_OP_deref_size, SizeInOctets,
+            dwarf::DW_OP_constu, ValMinus,
+            dwarf::DW_OP_mul, dwarf::DW_OP_constu, ValInit,
             dwarf::DW_OP_plus};
         E = DIExpression::prependOpcodes(E, Ops, DIExpression::WithStackValue);
         DIGlobalVariableExpression *DGVE =

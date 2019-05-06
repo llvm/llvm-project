@@ -443,9 +443,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
     if (!LoopMD)
       LoopMD = TI->getMetadata(LoopMDKind);
     TI->setMetadata(LoopMDKind, nullptr);
-    for (unsigned Op = 0, e = TI->getNumSuccessors(); Op != e; ++Op)
-      if (TI->getSuccessor(Op) == Header)
-        TI->setSuccessor(Op, BEBlock);
+    TI->replaceSuccessorWith(Header, BEBlock);
   }
   BEBlock->getTerminator()->setMetadata(LoopMDKind, LoopMD);
 

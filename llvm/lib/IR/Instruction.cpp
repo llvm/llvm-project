@@ -675,6 +675,13 @@ void Instruction::setSuccessor(unsigned idx, BasicBlock *B) {
   llvm_unreachable("not a terminator");
 }
 
+void Instruction::replaceSuccessorWith(BasicBlock *OldBB, BasicBlock *NewBB) {
+  for (unsigned Idx = 0, NumSuccessors = Instruction::getNumSuccessors();
+       Idx != NumSuccessors; ++Idx)
+    if (getSuccessor(Idx) == OldBB)
+      setSuccessor(Idx, NewBB);
+}
+
 Instruction *Instruction::cloneImpl() const {
   llvm_unreachable("Subclass of Instruction failed to implement cloneImpl");
 }

@@ -1714,6 +1714,12 @@ static SDValue CompactSwizzlableVector(
 
     if (NewBldVec[i].isUndef())
       continue;
+    // Fix spurious warning with gcc 7.3 -O3
+    //    warning: array subscript is above array bounds [-Warray-bounds]
+    //    if (NewBldVec[i] == NewBldVec[j]) {
+    //        ~~~~~~~~~~~^
+    if (i >= 4)
+      continue;
     for (unsigned j = 0; j < i; j++) {
       if (NewBldVec[i] == NewBldVec[j]) {
         NewBldVec[i] = DAG.getUNDEF(NewBldVec[i].getValueType());
