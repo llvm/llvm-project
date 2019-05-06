@@ -301,7 +301,7 @@ public:
 
   std::string GetTriple() const;
 
-  bool SetTriple(const char *triple, lldb_private::Module *module = NULL);
+  bool SetTriple(std::string triple, lldb_private::Module *module = nullptr);
 
   uint32_t GetPointerBitAlignment();
 
