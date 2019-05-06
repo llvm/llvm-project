@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt %s -o - | FileCheck %s
+--- |
+  define void @func() { ret void }
+...
+---
+# Check that instructions with MI.isBitcast() are only replaced by COPY if there
+# are no SUBREG_TO_REG users.
+# CHECK-LABEL: name: func
+name: func
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: fr32 }
+  - { id: 2, class: gr32 }
+
+  - { id: 3, class: gr32 }
+  - { id: 4, class: fr32 }
+  - { id: 5, class: gr32 }
+  - { id: 6, class: gr64 }
+
+body: |
+  bb.0:
+    ; CHECK: %1:fr32 = VMOVDI2SSrr %0
+    ; CHECK: %7:gr32 = COPY %0
+    ; CHECK: NOOP implicit %7
+    %0 = MOV32ri 42
+    %1 = VMOVDI2SSrr %0
+    %2 = MOVSS2DIrr %1
+    NOOP implicit %2
+
+    ; CHECK: %4:fr32 = VMOVDI2SSrr %3
+    ; CHECK-NOT: COPY
+    ; CHECK: %5:gr32 = MOVSS2DIrr %4
+    ; CHECK: %6:gr64 = SUBREG_TO_REG %5, 0
+    ; CHECK: NOOP implicit %6
+    %3 = MOV32ri 42
+    %4 = VMOVDI2SSrr %3
+    %5 = MOVSS2DIrr %4
+    %6 = SUBREG_TO_REG %5, 0, %subreg.sub_32bit
+    NOOP implicit %6
+...
