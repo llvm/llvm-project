@@ -58,8 +58,6 @@ template <typename T> void COFFDumper::dumpOptionalHeader(T OptionalHeader) {
   YAMLObj.OptionalHeader = COFFYAML::PEHeader();
   YAMLObj.OptionalHeader->Header.AddressOfEntryPoint =
       OptionalHeader->AddressOfEntryPoint;
-  YAMLObj.OptionalHeader->Header.AddressOfEntryPoint =
-      OptionalHeader->AddressOfEntryPoint;
   YAMLObj.OptionalHeader->Header.ImageBase = OptionalHeader->ImageBase;
   YAMLObj.OptionalHeader->Header.SectionAlignment =
       OptionalHeader->SectionAlignment;

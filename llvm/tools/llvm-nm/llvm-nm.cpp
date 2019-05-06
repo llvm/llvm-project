@@ -1478,7 +1478,6 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
           B.NType = MachO::N_EXT | MachO::N_UNDF;
           B.NSect = 0;
           B.NDesc = 0;
-          B.NDesc = 0;
           MachO::SET_LIBRARY_ORDINAL(B.NDesc, Entry.ordinal());
           B.IndirectName = StringRef();
           B.Name = Entry.symbolName();
