@@ -17,17 +17,6 @@ define float @fneg_undef() {
   ret float %r
 }
 
-define float @fneg_fneg_var(float %a) {
-; CHECK-LABEL: @fneg_fneg_var(
-; CHECK-NEXT:    [[R:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = fneg float [[R]]
-; CHECK-NEXT:    ret float [[R1]]
-;
-  %r  = fneg float %a
-  %r1 = fneg float %r
-  ret float %r1
-}
-
 define <4 x float> @fneg_constant_elts_v4f32() {
 ; CHECK-LABEL: @fneg_constant_elts_v4f32(
 ; CHECK-NEXT:    ret <4 x float> <float 0.000000e+00, float -0.000000e+00, float 1.000000e+00, float -1.000000e+00>

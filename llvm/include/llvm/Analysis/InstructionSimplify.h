@@ -117,6 +117,10 @@ struct SimplifyQuery {
 // deprecated.
 // Please use the SimplifyQuery versions in new code.
 
+/// Given operand for an FNeg, fold the result or return null.
+Value *SimplifyFNegInst(Value *Op, FastMathFlags FMF,
+                        const SimplifyQuery &Q);
+
 /// Given operands for an Add, fold the result or return null.
 Value *SimplifyAddInst(Value *LHS, Value *RHS, bool isNSW, bool isNUW,
                        const SimplifyQuery &Q);
@@ -226,6 +230,15 @@ Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
 /// Given operands for a CmpInst, fold the result or return null.
 Value *SimplifyCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
                        const SimplifyQuery &Q);
+
+/// Given operand for a UnaryOperator, fold the result or return null.
+Value *SimplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q);
+
+/// Given operand for an FP UnaryOperator, fold the result or return null.
+/// In contrast to SimplifyUnOp, try to use FastMathFlag when folding the
+/// result. In case we don't need FastMathFlags, simply fall to SimplifyUnOp.
+Value *SimplifyFPUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
+                      const SimplifyQuery &Q);
 
 /// Given operands for a BinaryOperator, fold the result or return null.
 Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,

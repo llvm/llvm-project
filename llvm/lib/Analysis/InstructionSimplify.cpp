@@ -51,6 +51,9 @@ STATISTIC(NumExpand,  "Number of expansions");
 STATISTIC(NumReassoc, "Number of reassociations");
 
 static Value *SimplifyAndInst(Value *, Value *, const SimplifyQuery &, unsigned);
+static Value *simplifyUnOp(unsigned, Value *, const SimplifyQuery &, unsigned);
+static Value *simplifyFPUnOp(unsigned, Value *, const FastMathFlags &,
+                             const SimplifyQuery &, unsigned);
 static Value *SimplifyBinOp(unsigned, Value *, Value *, const SimplifyQuery &,
                             unsigned);
 static Value *SimplifyFPBinOp(unsigned, Value *, Value *, const FastMathFlags &,
@@ -4245,6 +4248,33 @@ Value *llvm::SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   return ::SimplifyShuffleVectorInst(Op0, Op1, Mask, RetTy, Q, RecursionLimit);
 }
 
+static Constant *foldConstant(Instruction::UnaryOps Opcode,
+                              Value *&Op, const SimplifyQuery &Q) {
+  if (auto *C = dyn_cast<Constant>(Op))
+    return ConstantFoldUnaryOpOperand(Opcode, C, Q.DL);
+  return nullptr;
+}
+
+/// Given the operand for an FNeg, see if we can fold the result.  If not, this
+/// returns null.
+static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Constant *C = foldConstant(Instruction::FNeg, Op, Q))
+    return C;
+
+  Value *X;
+  // fneg (fneg X) ==> X
+  if (match(Op, m_FNeg(m_Value(X))))
+    return X;
+
+  return nullptr;
+}
+
+Value *llvm::SimplifyFNegInst(Value *Op, FastMathFlags FMF,
+                              const SimplifyQuery &Q) {
+  return ::simplifyFNegInst(Op, FMF, Q, RecursionLimit);
+}
+
 static Constant *propagateNaN(Constant *In) {
   // If the input is a vector with undef elements, just return a default NaN.
   if (!In->isNaN())
@@ -4471,6 +4501,38 @@ Value *llvm::SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 }
 
 //=== Helper functions for higher up the class hierarchy.
+
+/// Given the operand for a UnaryOperator, see if we can fold the result.
+/// If not, this returns null.
+static Value *simplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q,
+                           unsigned MaxRecurse) {
+  switch (Opcode) {
+  case Instruction::FNeg:
+    return simplifyFNegInst(Op, FastMathFlags(), Q, MaxRecurse);
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+}
+
+/// Given the operand for a UnaryOperator, see if we can fold the result.
+/// If not, this returns null.
+/// In contrast to SimplifyUnOp, try to use FastMathFlag when folding the
+/// result. In case we don't need FastMathFlags, simply fall to SimplifyUnOp.
+static Value *simplifyFPUnOp(unsigned Opcode, Value *Op,
+                             const FastMathFlags &FMF,
+                             const SimplifyQuery &Q, unsigned MaxRecurse) {
+  switch (Opcode) {
+  case Instruction::FNeg:
+    return simplifyFNegInst(Op, FMF, Q, MaxRecurse);
+  default:
+    return simplifyUnOp(Opcode, Op, Q, MaxRecurse);
+  }
+}
+
+Value *llvm::SimplifyFPUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
+                            const SimplifyQuery &Q) {
+  return ::simplifyFPUnOp(Opcode, Op, FMF, Q, RecursionLimit);
+}
 
 /// Given operands for a BinaryOperator, see if we can fold the result.
 /// If not, this returns null.
@@ -4958,6 +5020,9 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
   switch (I->getOpcode()) {
   default:
     Result = ConstantFoldInstruction(I, Q.DL, Q.TLI);
+    break;
+  case Instruction::FNeg:
+    Result = SimplifyFNegInst(I->getOperand(0), I->getFastMathFlags(), Q);
     break;
   case Instruction::FAdd:
     Result = SimplifyFAddInst(I->getOperand(0), I->getOperand(1),
