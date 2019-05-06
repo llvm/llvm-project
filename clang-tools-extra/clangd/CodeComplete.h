@@ -207,6 +207,9 @@ struct CodeCompleteResult {
   std::vector<CodeCompletion> Completions;
   bool HasMore = false;
   CodeCompletionContext::Kind Context = CodeCompletionContext::CCC_Other;
+  // Usually the source will be parsed with a real C++ parser.
+  // But heuristics may be used instead if e.g. the preamble is not ready.
+  bool RanParser = true;
 };
 raw_ostream &operator<<(raw_ostream &, const CodeCompleteResult &);
 

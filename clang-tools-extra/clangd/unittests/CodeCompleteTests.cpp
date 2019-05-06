@@ -235,6 +235,7 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
       )cpp",
       {cls("IndexClass"), var("index_var"), func("index_func")}, Opts);
 
+  EXPECT_TRUE(Results.RanParser);
   // Class members. The only items that must be present in after-dot
   // completion.
   EXPECT_THAT(Results.Completions,
@@ -284,6 +285,7 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
       )cpp",
       {cls("IndexClass"), var("index_var"), func("index_func")}, Opts);
 
+  EXPECT_TRUE(Results.RanParser);
   // Class members. Should never be present in global completions.
   EXPECT_THAT(Results.Completions,
               Not(AnyOf(Has("method"), Has("method()"), Has("field"))));
@@ -2459,6 +2461,7 @@ TEST(NoCompileCompletionTest, Basic) {
       ^
     }
   )cpp");
+  EXPECT_FALSE(Results.RanParser);
   EXPECT_THAT(Results.Completions,
               UnorderedElementsAre(Named("void"), Named("func"), Named("int"),
                                    Named("xyz"), Named("abc")));
