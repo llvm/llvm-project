@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -verify %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -Wno-implicit-function-declaration -verify %s
 // RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 // function declaration with unspecified params
@@ -71,3 +71,9 @@ void __attribute__((cdecl)) foo12(d) // expected-warning {{this old-style functi
 // rdar://problem/33251668
 void foo13(...) __attribute__((overloadable));
 void foo13(...) __attribute__((overloadable)) {}
+
+// We should not generate a strict-prototype warning for an implicit
+// declaration.  Leave that up to the implicit-function-declaration warning.
+void foo14(void) {
+  foo14_call(); // no-warning
+}
