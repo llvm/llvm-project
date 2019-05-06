@@ -1,5 +1,6 @@
 ; RUN: not llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s 2>&1 | FileCheck %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: <unknown>:0:0: in function invalid_fence void (): Unsupported atomic synchronization scope
 define amdgpu_kernel void @invalid_fence() {
