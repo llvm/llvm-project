@@ -174,6 +174,7 @@ struct ClassWithMembers {
   int BBB();
   int CCC();
 };
+
 int main() { ClassWithMembers().^ }
       )cpp",
                              /*IndexSymbols=*/{}, Opts);
@@ -324,7 +325,7 @@ TEST(CompletionTest, CompletionOptions) {
   }
 }
 
-TEST(CompletionTest, Priorities) {
+TEST(CompletionTest, Accessible) {
   auto Internal = completions(R"cpp(
       class Foo {
         public: void pub();
@@ -334,7 +335,7 @@ TEST(CompletionTest, Priorities) {
       void Foo::pub() { this->^ }
   )cpp");
   EXPECT_THAT(Internal.Completions,
-              HasSubsequence(Named("priv"), Named("prot"), Named("pub")));
+              AllOf(Has("priv"), Has("prot"), Has("pub")));
 
   auto External = completions(R"cpp(
       class Foo {
@@ -500,6 +501,21 @@ TEST(CompletionTest, ReferencesAffectRanking) {
                         {withReferences(10000, ns("absl")), func("absb")});
   EXPECT_THAT(Results.Completions,
               HasSubsequence(Named("absl"), Named("absb")));
+}
+
+TEST(CompletionTest, ContextWords) {
+  auto Results = completions(R"cpp(
+  enum class Color { RED, YELLOW, BLUE };
+
+  // (blank lines so the definition above isn't "context")
+
+  // "It was a yellow car," he said. "Big yellow car, new."
+  auto Finish = Color::^
+  )cpp");
+  // Yellow would normally sort last (alphabetic).
+  // But the recent mention shuold bump it up.
+  ASSERT_THAT(Results.Completions,
+              HasSubsequence(Named("YELLOW"), Named("BLUE")));
 }
 
 TEST(CompletionTest, GlobalQualified) {

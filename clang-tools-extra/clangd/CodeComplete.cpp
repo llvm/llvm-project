@@ -54,7 +54,9 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1215,6 +1217,7 @@ class CodeCompleteFlow {
   llvm::Optional<OpaqueType> PreferredType; // Initialized once Sema runs.
   // Whether to query symbols from any scope. Initialized once Sema runs.
   bool AllScopes = false;
+  llvm::StringSet<> ContextWords;
   // Include-insertion and proximity scoring rely on the include structure.
   // This is available after Sema has run.
   llvm::Optional<IncludeInserter> Inserter;  // Available during runWithSema.
@@ -1237,6 +1240,7 @@ public:
     trace::Span Tracer("CodeCompleteFlow");
     HeuristicPrefix =
         guessCompletionPrefix(SemaCCInput.Contents, SemaCCInput.Offset);
+    populateContextWords(SemaCCInput.Contents);
     if (Opts.Index && SpecFuzzyFind && SpecFuzzyFind->CachedReq.hasValue()) {
       assert(!SpecFuzzyFind->Result.valid());
       SpecReq = speculativeFuzzyFindRequestForCompletion(
@@ -1323,6 +1327,7 @@ public:
     trace::Span Tracer("CodeCompleteWithoutSema");
     // Fill in fields normally set by runWithSema()
     HeuristicPrefix = guessCompletionPrefix(Content, Offset);
+    populateContextWords(Content);
     CCContextKind = CodeCompletionContext::CCC_Recovery;
     Filter = FuzzyMatcher(HeuristicPrefix.Name);
     auto Pos = offsetToPosition(Content, Offset);
@@ -1380,6 +1385,24 @@ public:
   }
 
 private:
+  void populateContextWords(llvm::StringRef Content) {
+    // Take last 3 lines before the completion point.
+    unsigned RangeEnd = HeuristicPrefix.Qualifier.begin() - Content.data(),
+             RangeBegin = RangeEnd;
+    for (size_t I = 0; I < 3 && RangeBegin > 0; ++I) {
+      auto PrevNL = Content.rfind('\n', RangeBegin - 1);
+      if (PrevNL == StringRef::npos) {
+        RangeBegin = 0;
+        break;
+      }
+      RangeBegin = PrevNL + 1;
+    }
+
+    ContextWords = collectWords(Content.slice(RangeBegin, RangeEnd));
+    dlog("Completion context words: {0}",
+         llvm::join(ContextWords.keys(), ", "));
+  }
+
   // This is called by run() once Sema code completion is done, but before the
   // Sema data structures are torn down. It does all the real work.
   CodeCompleteResult runWithSema() {
@@ -1563,12 +1586,14 @@ private:
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Context = CCContextKind;
+    Relevance.Name = Bundle.front().Name;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
     Relevance.FileProximityMatch = FileProximity.getPointer();
     if (ScopeProximity)
       Relevance.ScopeProximityMatch = ScopeProximity.getPointer();
     if (PreferredType)
       Relevance.HadContextType = true;
+    Relevance.ContextWords = &ContextWords;
 
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))
