@@ -2095,16 +2095,14 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
                                         CommandReturnObject &result) {
   FileSpec init_file;
   if (in_cwd) {
-    ExecutionContext exe_ctx(GetExecutionContext());
-    Target *target = exe_ctx.GetTargetPtr();
-    if (target) {
+    lldb::TargetPropertiesSP properties = Target::GetGlobalProperties();
+    if (properties) {
       // In the current working directory we don't load any program specific
       // .lldbinit files, we only look for a ".lldbinit" file.
       if (m_skip_lldbinit_files)
         return;
 
-      LoadCWDlldbinitFile should_load =
-          target->TargetProperties::GetLoadCWDlldbinitFile();
+      LoadCWDlldbinitFile should_load = properties->GetLoadCWDlldbinitFile();
       if (should_load == eLoadCWDlldbinitWarn) {
         FileSpec dot_lldb(".lldbinit");
         FileSystem::Instance().Resolve(dot_lldb);

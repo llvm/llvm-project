@@ -190,40 +190,62 @@ int LineEntry::Compare(const LineEntry &a, const LineEntry &b) {
   return FileSpec::Compare(a.file, b.file, true);
 }
 
-AddressRange LineEntry::GetSameLineContiguousAddressRange() const {
+AddressRange LineEntry::GetSameLineContiguousAddressRange(
+    bool include_inlined_functions) const {
   // Add each LineEntry's range to complete_line_range until we find a
   // different file / line number.
   AddressRange complete_line_range = range;
+  auto symbol_context_scope = lldb::eSymbolContextLineEntry;
+  Declaration start_call_site(original_file, line);
+  if (include_inlined_functions)
+    symbol_context_scope |= lldb::eSymbolContextBlock;
 
   while (true) {
     SymbolContext next_line_sc;
     Address range_end(complete_line_range.GetBaseAddress());
     range_end.Slide(complete_line_range.GetByteSize());
-    range_end.CalculateSymbolContext(&next_line_sc,
-                                     lldb::eSymbolContextLineEntry);
+    range_end.CalculateSymbolContext(&next_line_sc, symbol_context_scope);
 
-    if (next_line_sc.line_entry.IsValid() &&
-        next_line_sc.line_entry.range.GetByteSize() > 0 &&
-        original_file == next_line_sc.line_entry.original_file) {
+    if (!next_line_sc.line_entry.IsValid() ||
+        next_line_sc.line_entry.range.GetByteSize() == 0)
+      break;
+
+    if (original_file == next_line_sc.line_entry.original_file &&
+        (next_line_sc.line_entry.line == 0 ||
+         line == next_line_sc.line_entry.line)) {
       // Include any line 0 entries - they indicate that this is compiler-
       // generated code that does not correspond to user source code.
-      if (next_line_sc.line_entry.line == 0) {
-        complete_line_range.SetByteSize(
-            complete_line_range.GetByteSize() +
-            next_line_sc.line_entry.range.GetByteSize());
-        continue;
-      }
-
-      if (line == next_line_sc.line_entry.line) {
-        // next_line_sc is the same file & line as this LineEntry, so extend
-        // our AddressRange by its size and continue to see if there are more
-        // LineEntries that we can combine.
-        complete_line_range.SetByteSize(
-            complete_line_range.GetByteSize() +
-            next_line_sc.line_entry.range.GetByteSize());
-        continue;
-      }
+      // next_line_sc is the same file & line as this LineEntry, so extend
+      // our AddressRange by its size and continue to see if there are more
+      // LineEntries that we can combine. However, if there was nothing to
+      // extend we're done.
+      if (!complete_line_range.Extend(next_line_sc.line_entry.range))
+        break;
+      continue;
     }
+
+    if (include_inlined_functions && next_line_sc.block &&
+        next_line_sc.block->GetContainingInlinedBlock() != nullptr) {
+      // The next_line_sc might be in a different file if it's an inlined
+      // function. If this is the case then we still want to expand our line
+      // range to include them if the inlined function is at the same call site
+      // as this line entry. The current block could represent a nested inline
+      // function call so we need to need to check up the block tree to see if
+      // we find one.
+      auto inlined_parent_block =
+          next_line_sc.block->GetContainingInlinedBlockWithCallSite(
+              start_call_site);
+      if (!inlined_parent_block)
+        // We didn't find any parent inlined block with a call site at this line
+        // entry so this inlined function is probably at another line.
+        break;
+      // Extend our AddressRange by the size of the inlined block, but if there
+      // was nothing to add then we're done.
+      if (!complete_line_range.Extend(next_line_sc.line_entry.range))
+        break;
+      continue;
+    }
+
     break;
   }
   return complete_line_range;
