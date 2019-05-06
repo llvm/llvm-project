@@ -2929,12 +2929,12 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
 /// passed to ParseDeclaratorInternal.
 ///
 ///        direct-new-declarator:
-///                   '[' expression ']'
+///                   '[' expression[opt] ']'
 ///                   direct-new-declarator '[' constant-expression ']'
 ///
 void Parser::ParseDirectNewDeclarator(Declarator &D) {
   // Parse the array dimensions.
-  bool first = true;
+  bool First = true;
   while (Tok.is(tok::l_square)) {
     // An array-size expression can't start with a lambda.
     if (CheckProhibitedCXX11Attribute())
@@ -2943,14 +2943,15 @@ void Parser::ParseDirectNewDeclarator(Declarator &D) {
     BalancedDelimiterTracker T(*this, tok::l_square);
     T.consumeOpen();
 
-    ExprResult Size(first ? ParseExpression()
-                                : ParseConstantExpression());
+    ExprResult Size =
+        First ? (Tok.is(tok::r_square) ? ExprResult() : ParseExpression())
+              : ParseConstantExpression();
     if (Size.isInvalid()) {
       // Recover
       SkipUntil(tok::r_square, StopAtSemi);
       return;
     }
-    first = false;
+    First = false;
 
     T.consumeClose();
 

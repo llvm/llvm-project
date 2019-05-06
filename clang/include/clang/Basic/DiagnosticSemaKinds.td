@@ -6373,13 +6373,15 @@ def err_variably_modified_typeid : Error<"'typeid' of variably modified type %0"
 def err_static_illegal_in_new : Error<
   "the 'static' modifier for the array size is not legal in new expressions">;
 def err_array_new_needs_size : Error<
-  "array size must be specified in new expressions">;
+  "array size must be specified in new expression with no initializer">;
 def err_bad_new_type : Error<
   "cannot allocate %select{function|reference}1 type %0 with new">;
 def err_new_incomplete_type : Error<
   "allocation of incomplete type %0">;
 def err_new_array_nonconst : Error<
   "only the first dimension of an allocated array may have dynamic size">;
+def err_new_array_size_unknown_from_init : Error<
+  "cannot determine allocated array size from initializer">;
 def err_new_array_init_args : Error<
   "array 'new' cannot have initialization arguments">;
 def ext_new_paren_array_nonconst : ExtWarn<

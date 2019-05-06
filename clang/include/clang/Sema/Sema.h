@@ -5308,7 +5308,7 @@ public:
                          SourceRange TypeIdParens,
                          QualType AllocType,
                          TypeSourceInfo *AllocTypeInfo,
-                         Expr *ArraySize,
+                         Optional<Expr *> ArraySize,
                          SourceRange DirectInitRange,
                          Expr *Initializer);
 
