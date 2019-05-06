@@ -3832,6 +3832,14 @@ def VMOV64toPQIZrm : AVX512BI<0x6E, MRMSrcMem, (outs VR128X:$dst),
                       "vmovq\t{$src, $dst|$dst, $src}", []>,
                       EVEX, VEX_W, EVEX_CD8<64, CD8VT1>, Sched<[WriteVecLoad]>;
 let isCodeGenOnly = 1 in {
+def VMOV64toSDZrr : AVX512BI<0x6E, MRMSrcReg, (outs FR64X:$dst), (ins GR64:$src),
+                       "vmovq\t{$src, $dst|$dst, $src}",
+                       [(set FR64X:$dst, (bitconvert GR64:$src))]>,
+                       EVEX, VEX_W, Sched<[WriteVecMoveFromGpr]>;
+def VMOV64toSDZrm : AVX512XSI<0x7E, MRMSrcMem, (outs FR64X:$dst), (ins i64mem:$src),
+                      "vmovq\t{$src, $dst|$dst, $src}",
+                      [(set FR64X:$dst, (bitconvert (loadi64 addr:$src)))]>,
+                      EVEX, VEX_W, EVEX_CD8<8, CD8VT8>, Sched<[WriteVecLoad]>;
 def VMOVSDto64Zrr : AVX512BI<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64X:$src),
                          "vmovq\t{$src, $dst|$dst, $src}",
                          [(set GR64:$dst, (bitconvert FR64X:$src))]>,
@@ -3843,6 +3851,20 @@ def VMOVSDto64Zmr : AVX512BI<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, FR64X:$
                          EVEX_CD8<64, CD8VT1>;
 }
 } // ExeDomain = SSEPackedInt
+
+// Move Int Doubleword to Single Scalar
+//
+let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
+def VMOVDI2SSZrr  : AVX512BI<0x6E, MRMSrcReg, (outs FR32X:$dst), (ins GR32:$src),
+                      "vmovd\t{$src, $dst|$dst, $src}",
+                      [(set FR32X:$dst, (bitconvert GR32:$src))]>,
+                      EVEX, Sched<[WriteVecMoveFromGpr]>;
+
+def VMOVDI2SSZrm  : AVX512BI<0x6E, MRMSrcMem, (outs FR32X:$dst), (ins i32mem:$src),
+                      "vmovd\t{$src, $dst|$dst, $src}",
+                      [(set FR32X:$dst, (bitconvert (loadi32 addr:$src)))]>,
+                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecLoad]>;
+} // ExeDomain = SSEPackedInt, isCodeGenOnly = 1
 
 // Move doubleword from xmm register to r/m32
 //
@@ -3859,13 +3881,6 @@ def VMOVPDI2DIZmr  : AVX512BI<0x7E, MRMDestMem, (outs),
                                      (iPTR 0))), addr:$dst)]>,
                        EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt
-
-let Predicates = [HasAVX512] in {
-  def : Pat<(f64 (bitconvert GR64:$src)),
-            (COPY_TO_REGCLASS (VMOV64toPQIZrr GR64:$src), FR64X)>;
-  def : Pat<(f32 (bitconvert GR32:$src)),
-            (COPY_TO_REGCLASS (VMOVDI2PDIZrr GR32:$src), FR32X)>;
-}
 
 // Move quadword from xmm1 register to r/m64
 //
