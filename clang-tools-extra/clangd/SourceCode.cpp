@@ -8,6 +8,7 @@
 #include "SourceCode.h"
 
 #include "Context.h"
+#include "FuzzyMatch.h"
 #include "Logger.h"
 #include "Protocol.h"
 #include "clang/AST/ASTContext.h"
@@ -18,6 +19,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -600,6 +602,44 @@ std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
   });
   Found.erase(std::unique(Found.begin(), Found.end()), Found.end());
   return Found;
+}
+
+llvm::StringSet<> collectWords(llvm::StringRef Content) {
+  // We assume short words are not significant.
+  // We may want to consider other stopwords, e.g. language keywords.
+  // (A very naive implementation showed no benefit, but lexing might do better)
+  static constexpr int MinWordLength = 4;
+
+  std::vector<CharRole> Roles(Content.size());
+  calculateRoles(Content, Roles);
+
+  llvm::StringSet<> Result;
+  llvm::SmallString<256> Word;
+  auto Flush = [&] {
+    if (Word.size() >= MinWordLength) {
+      for (char &C : Word)
+        C = llvm::toLower(C);
+      Result.insert(Word);
+    }
+    Word.clear();
+  };
+  for (unsigned I = 0; I < Content.size(); ++I) {
+    switch (Roles[I]) {
+    case Head:
+      Flush();
+      LLVM_FALLTHROUGH;
+    case Tail:
+      Word.push_back(Content[I]);
+      break;
+    case Unknown:
+    case Separator:
+      Flush();
+      break;
+    }
+  }
+  Flush();
+
+  return Result;
 }
 
 } // namespace clangd

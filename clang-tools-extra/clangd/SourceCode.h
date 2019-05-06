@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SHA1.h"
 
@@ -164,6 +165,13 @@ cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
 /// Collects identifiers with counts in the source code.
 llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
                                              const format::FormatStyle &Style);
+
+/// Collects words from the source code.
+/// Unlike collectIdentifiers:
+/// - also finds text in comments:
+/// - splits text into words
+/// - drops stopwords like "get" and "for"
+llvm::StringSet<> collectWords(llvm::StringRef Content);
 
 /// Heuristically determine namespaces visible at a point, without parsing Code.
 /// This considers using-directives and enclosing namespace-declarations that

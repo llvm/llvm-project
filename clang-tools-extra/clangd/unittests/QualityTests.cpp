@@ -292,6 +292,16 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   SymbolRelevanceSignals InBaseClass;
   InBaseClass.InBaseClass = true;
   EXPECT_LT(InBaseClass.evaluate(), Default.evaluate());
+
+  llvm::StringSet<> Words = {"one", "two", "three"};
+  SymbolRelevanceSignals WithoutMatchingWord;
+  WithoutMatchingWord.ContextWords = &Words;
+  WithoutMatchingWord.Name = "four";
+  EXPECT_EQ(WithoutMatchingWord.evaluate(), Default.evaluate());
+  SymbolRelevanceSignals WithMatchingWord;
+  WithMatchingWord.ContextWords = &Words;
+  WithMatchingWord.Name = "TheTwoTowers";
+  EXPECT_GT(WithMatchingWord.evaluate(), Default.evaluate());
 }
 
 TEST(QualityTests, ScopeProximity) {

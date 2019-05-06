@@ -23,7 +23,7 @@
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 5,
 # CHECK-NEXT:        "label": " size",
-# CHECK-NEXT:        "sortText": "3eacccccsize",
+# CHECK-NEXT:        "sortText": "{{.*}}size",
 # CHECK-NEXT:        "textEdit": {
 # CHECK-NEXT:          "newText": "size",
 # CHECK-NEXT:          "range": {
@@ -45,7 +45,7 @@
 # CHECK-NEXT:         "insertTextFormat": 1,
 # CHECK-NEXT:         "kind": 10,
 # CHECK-NEXT:         "label": " default_capacity",
-# CHECK-NEXT:         "sortText": "3fd70a3ddefault_capacity",
+# CHECK-NEXT:         "sortText": "{{.*}}default_capacity",
 # CHECK-NEXT:         "textEdit": {
 # CHECK-NEXT:           "newText": "default_capacity",
 # CHECK-NEXT:           "range": {
@@ -84,7 +84,7 @@
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 6,
 # CHECK-NEXT:        "label": " ns_member",
-# CHECK-NEXT:        "sortText": "3f2cccccns_member",
+# CHECK-NEXT:        "sortText": "{{.*}}ns_member",
 # CHECK-NEXT:        "textEdit": {
 # CHECK-NEXT:          "newText": "ns_member",
 # CHECK-NEXT:          "range": {

@@ -22,6 +22,7 @@ namespace {
 
 using llvm::Failed;
 using llvm::HasValue;
+using ::testing::UnorderedElementsAreArray;
 
 MATCHER_P2(Pos, Line, Col, "") {
   return arg.line == int(Line) && arg.character == int(Col);
@@ -320,6 +321,19 @@ TEST(SourceCodeTests, CollectIdentifiers) {
   EXPECT_EQ(IDs["abc"], 1u);
   EXPECT_EQ(IDs["return"], 1u);
   EXPECT_EQ(IDs["foo"], 2u);
+}
+
+TEST(SourceCodeTests, CollectWords) {
+  auto Words = collectWords(R"cpp(
+  #define FIZZ_BUZZ
+  // this is a comment
+  std::string getSomeText() { return "magic word"; }
+  )cpp");
+  std::set<std::string> ActualWords(Words.keys().begin(), Words.keys().end());
+  std::set<std::string> ExpectedWords = {"define",  "fizz",    "buzz",  "this",
+                                         "comment", "string", "some", "text",
+                                         "return",  "magic",  "word"};
+  EXPECT_EQ(ActualWords, ExpectedWords);
 }
 
 TEST(SourceCodeTests, VisibleNamespaces) {
