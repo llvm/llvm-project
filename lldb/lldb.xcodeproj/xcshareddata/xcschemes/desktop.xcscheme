@@ -42,10 +42,10 @@
       </AdditionalOptions>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "DebugClang"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      launchStyle = "0"
+      launchStyle = "1"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
@@ -61,20 +61,6 @@
             ReferencedContainer = "container:lldb.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-         <CommandLineArgument
-            argument = "-o &apos;command script import /Users/gclayton/fbsource/fbandroid/scripts/lldb/commands/fbsymbols.py&apos;"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o &apos;log enable lldb unwind&apos; -o &apos;command script import /Users/gclayton/fbsource/fbandroid/scripts/lldb/commands/fbsymbols.py&apos; -o &apos;fbsymbols --minidump GLWubgKtZo80qCYDAAAAAADejTIHbggUAAAA&apos; -o &apos;command script import ~/Dropbox/bin/sbt.py&apos;"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o &apos;fbsymbols --minidump GLWubgKtZo80qCYDAAAAAADejTIHbggUAAAA&apos;"
-            isEnabled = "NO">
-         </CommandLineArgument>
-      </CommandLineArguments>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>
