@@ -155,3 +155,87 @@ define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %d
   ret <4 x double> %r
 }
+
+; Sink FP negation through a select:
+; c ? -x : -y --> -(c ? x : y)
+
+define <2 x double> @fneg_fneg_sel(<2 x double> %x, <2 x double> %y, i1 %cond) {
+; CHECK-LABEL: @fneg_fneg_sel(
+; CHECK-NEXT:    [[N1:%.*]] = fneg <2 x double> [[X:%.*]]
+; CHECK-NEXT:    [[N2:%.*]] = fneg <2 x double> [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x double> [[N1]], <2 x double> [[N2]]
+; CHECK-NEXT:    ret <2 x double> [[SEL]]
+;
+  %n1 = fneg <2 x double> %x
+  %n2 = fneg <2 x double> %y
+  %sel = select i1 %cond, <2 x double> %n1, <2 x double> %n2
+  ret <2 x double> %sel
+}
+
+; An extra use is allowed.
+
+define float @fneg_fneg_sel_extra_use1(float %x, float %y, i1 %cond) {
+; CHECK-LABEL: @fneg_fneg_sel_extra_use1(
+; CHECK-NEXT:    [[N1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[N1]])
+; CHECK-NEXT:    [[N2:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[N1]], float [[N2]]
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %n1 = fneg float %x
+  call void @use(float %n1)
+  %n2 = fneg float %y
+  %sel = select i1 %cond, float %n1, float %n2
+  ret float %sel
+}
+
+define float @fneg_fneg_sel_extra_use2(float %x, float %y, i1 %cond) {
+; CHECK-LABEL: @fneg_fneg_sel_extra_use2(
+; CHECK-NEXT:    [[N1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[N2:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    call void @use(float [[N2]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[N1]], float [[N2]]
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %n1 = fneg float %x
+  %n2 = fneg float %y
+  call void @use(float %n2)
+  %sel = select i1 %cond, float %n1, float %n2
+  ret float %sel
+}
+
+; Legacy form of fneg should work too.
+
+define float @fsub_fsub_sel_extra_use1(float %x, float %y, i1 %cond) {
+; CHECK-LABEL: @fsub_fsub_sel_extra_use1(
+; CHECK-NEXT:    [[N1:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[N1]])
+; CHECK-NEXT:    [[N2:%.*]] = fsub float -0.000000e+00, [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[N1]], float [[N2]]
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %n1 = fsub float -0.0, %x
+  call void @use(float %n1)
+  %n2 = fsub float -0.0, %y
+  %sel = select i1 %cond, float %n1, float %n2
+  ret float %sel
+}
+
+; Negative test: but 2 extra uses would require an extra instruction.
+
+define float @fneg_fneg_sel_extra_use3(float %x, float %y, i1 %cond) {
+; CHECK-LABEL: @fneg_fneg_sel_extra_use3(
+; CHECK-NEXT:    [[N1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[N1]])
+; CHECK-NEXT:    [[N2:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    call void @use(float [[N2]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[N1]], float [[N2]]
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %n1 = fneg float %x
+  call void @use(float %n1)
+  %n2 = fneg float %y
+  call void @use(float %n2)
+  %sel = select i1 %cond, float %n1, float %n2
+  ret float %sel
+}
