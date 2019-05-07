@@ -38,6 +38,7 @@ add_unittest(ClangdUnitTests ClangdTests
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
+  FormattedStringTests.cpp
   FSTests.cpp
   FunctionTests.cpp
   FuzzyMatchTests.cpp
