@@ -1,0 +1,943 @@
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      1160
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         1032
+    segname:         ''
+    vmaddr:          0
+    vmsize:          2022
+    fileoff:         1192
+    filesize:        2022
+    maxprot:         7
+    initprot:        7
+    nsects:          6
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            224
+        offset:          0x000004A8
+        align:           4
+        reloff:          0x00000C90
+        nreloc:          1
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x00000000000000E0
+        size:            223
+        offset:          0x00000588
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x00000000000001BF
+        size:            190
+        offset:          0x00000667
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x000000000000027D
+        size:            583
+        offset:          0x00000725
+        align:           0
+        reloff:          0x00000C98
+        nreloc:          8
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0x0000000000000670
+        size:            64
+        offset:          0x00000B18
+        align:           3
+        reloff:          0x00000CD8
+        nreloc:          2
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x0000000000000718
+        size:            206
+        offset:          0x00000BC0
+        align:           0
+        reloff:          0x00000CE8
+        nreloc:          1
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           658944
+    sdk:             658944
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          3312
+    nsyms:           2
+    stroff:          3344
+    strsize:         20
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:    
+  NameList:        
+    - n_strx:          7
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         32
+  StringTable:     
+    - ''
+    - _main
+    - __Z4sum3iii
+    - ''
+DWARF:           
+  debug_str:       
+    - 'Apple LLVM version 10.0.1 (clang-1001.0.46.3)'
+    - inlined-functions.cpp
+    - '/Users/aadsm/Projects/llvm-project/lldb/unittests/Symbol/Inputs'
+    - sum3
+    - _Z4sum3iii
+    - _Z4sum2ii
+    - sum2
+    - int
+    - a
+    - b
+    - result
+    - _Z4sum4iiii
+    - sum4
+    - c
+    - d
+    - main
+    - argc
+    - argv
+    - char
+    - sum
+  debug_abbrev:    
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:      
+        - Attribute:       DW_AT_producer
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_stmt_list
+          Form:            DW_FORM_sec_offset
+        - Attribute:       DW_AT_comp_dir
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_yes
+      Attributes:      
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_frame_base
+          Form:            DW_FORM_exprloc
+        - Attribute:       DW_AT_linkage_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+        - Attribute:       DW_AT_external
+          Form:            DW_FORM_flag_present
+    - Code:            0x00000003
+      Tag:             DW_TAG_formal_parameter
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_location
+          Form:            DW_FORM_exprloc
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+    - Code:            0x00000004
+      Tag:             DW_TAG_variable
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_location
+          Form:            DW_FORM_exprloc
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+    - Code:            0x00000005
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_yes
+      Attributes:      
+        - Attribute:       DW_AT_linkage_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+        - Attribute:       DW_AT_external
+          Form:            DW_FORM_flag_present
+        - Attribute:       DW_AT_inline
+          Form:            DW_FORM_data1
+    - Code:            0x00000006
+      Tag:             DW_TAG_formal_parameter
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+    - Code:            0x00000007
+      Tag:             DW_TAG_variable
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+    - Code:            0x00000008
+      Tag:             DW_TAG_base_type
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_encoding
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_byte_size
+          Form:            DW_FORM_data1
+    - Code:            0x00000009
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_yes
+      Attributes:      
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_frame_base
+          Form:            DW_FORM_exprloc
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+        - Attribute:       DW_AT_external
+          Form:            DW_FORM_flag_present
+    - Code:            0x0000000A
+      Tag:             DW_TAG_inlined_subroutine
+      Children:        DW_CHILDREN_yes
+      Attributes:      
+        - Attribute:       DW_AT_abstract_origin
+          Form:            DW_FORM_ref4
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_call_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_call_line
+          Form:            DW_FORM_data1
+    - Code:            0x0000000B
+      Tag:             DW_TAG_formal_parameter
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_location
+          Form:            DW_FORM_exprloc
+        - Attribute:       DW_AT_abstract_origin
+          Form:            DW_FORM_ref4
+    - Code:            0x0000000C
+      Tag:             DW_TAG_variable
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_location
+          Form:            DW_FORM_exprloc
+        - Attribute:       DW_AT_abstract_origin
+          Form:            DW_FORM_ref4
+    - Code:            0x0000000D
+      Tag:             DW_TAG_pointer_type
+      Children:        DW_CHILDREN_no
+      Attributes:      
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+  debug_info:      
+    - Length:          
+        TotalLength:     579
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:         
+        - AbbrCode:        0x00000001
+          Values:          
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000004
+            - Value:           0x000000000000002E
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000044
+            - Value:           0x0000000000000000
+            - Value:           0x00000000000000E0
+        - AbbrCode:        0x00000002
+          Values:          
+            - Value:           0x0000000000000000
+            - Value:           0x000000000000001E
+            - Value:           0x0000000000000001
+              BlockData:       
+                - 0x56
+            - Value:           0x0000000000000089
+            - Value:           0x0000000000000084
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000006
+            - Value:           0x00000000000000B2
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000003
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x7C
+            - Value:           0x00000000000000A7
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000006
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000003
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x78
+            - Value:           0x00000000000000A9
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000006
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000003
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x74
+            - Value:           0x00000000000000C3
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000006
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000004
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x70
+            - Value:           0x00000000000000AB
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000007
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000005
+          Values:          
+            - Value:           0x0000000000000094
+            - Value:           0x000000000000009E
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000001
+            - Value:           0x00000000000000B2
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000006
+          Values:          
+            - Value:           0x00000000000000A7
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000001
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000006
+          Values:          
+            - Value:           0x00000000000000A9
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000001
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000007
+          Values:          
+            - Value:           0x00000000000000AB
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000002
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000008
+          Values:          
+            - Value:           0x00000000000000A3
+            - Value:           0x0000000000000005
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000005
+          Values:          
+            - Value:           0x00000000000000B2
+            - Value:           0x00000000000000BE
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000B
+            - Value:           0x00000000000000B2
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000006
+          Values:          
+            - Value:           0x00000000000000A7
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000B
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000006
+          Values:          
+            - Value:           0x00000000000000A9
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000B
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000006
+          Values:          
+            - Value:           0x00000000000000C3
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000B
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000006
+          Values:          
+            - Value:           0x00000000000000C5
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000B
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000007
+          Values:          
+            - Value:           0x00000000000000AB
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000C
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000009
+          Values:          
+            - Value:           0x0000000000000020
+            - Value:           0x00000000000000C0
+            - Value:           0x0000000000000001
+              BlockData:       
+                - 0x56
+            - Value:           0x00000000000000C7
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000011
+            - Value:           0x00000000000000B2
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000003
+          Values:          
+            - Value:           0x0000000000000003
+              BlockData:       
+                - 0x91
+                - 0xB4
+                - 0x7F
+            - Value:           0x00000000000000CC
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000011
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x00000003
+          Values:          
+            - Value:           0x0000000000000003
+              BlockData:       
+                - 0x91
+                - 0xA8
+                - 0x7F
+            - Value:           0x00000000000000D1
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000011
+            - Value:           0x0000000000000235
+        - AbbrCode:        0x00000004
+          Values:          
+            - Value:           0x0000000000000003
+              BlockData:       
+                - 0x91
+                - 0xA4
+                - 0x7F
+            - Value:           0x00000000000000DB
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000013
+            - Value:           0x00000000000000B2
+        - AbbrCode:        0x0000000A
+          Values:          
+            - Value:           0x0000000000000080
+            - Value:           0x000000000000005A
+            - Value:           0x0000000000000025
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000012
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x44
+            - Value:           0x0000000000000090
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x40
+            - Value:           0x000000000000009B
+        - AbbrCode:        0x0000000C
+          Values:          
+            - Value:           0x0000000000000003
+              BlockData:       
+                - 0x91
+                - 0xBC
+                - 0x7F
+            - Value:           0x00000000000000A6
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x0000000A
+          Values:          
+            - Value:           0x00000000000000B9
+            - Value:           0x000000000000007F
+            - Value:           0x000000000000003C
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000013
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x64
+            - Value:           0x00000000000000C9
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x60
+            - Value:           0x00000000000000D4
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x5C
+            - Value:           0x00000000000000DF
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x58
+            - Value:           0x00000000000000EA
+        - AbbrCode:        0x0000000C
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x54
+            - Value:           0x00000000000000F5
+        - AbbrCode:        0x0000000A
+          Values:          
+            - Value:           0x0000000000000080
+            - Value:           0x000000000000008B
+            - Value:           0x000000000000000C
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000C
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x70
+            - Value:           0x0000000000000090
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x6C
+            - Value:           0x000000000000009B
+        - AbbrCode:        0x0000000C
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x68
+            - Value:           0x00000000000000A6
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x0000000A
+          Values:          
+            - Value:           0x0000000000000080
+            - Value:           0x00000000000000A3
+            - Value:           0x0000000000000009
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000C
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x7C
+            - Value:           0x0000000000000090
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x78
+            - Value:           0x000000000000009B
+        - AbbrCode:        0x0000000C
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x74
+            - Value:           0x00000000000000A6
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x0000000A
+          Values:          
+            - Value:           0x0000000000000080
+            - Value:           0x00000000000000CC
+            - Value:           0x0000000000000009
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000014
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x50
+            - Value:           0x0000000000000090
+        - AbbrCode:        0x0000000B
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x4C
+            - Value:           0x000000000000009B
+        - AbbrCode:        0x0000000C
+          Values:          
+            - Value:           0x0000000000000002
+              BlockData:       
+                - 0x91
+                - 0x48
+            - Value:           0x00000000000000A6
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x0000000D
+          Values:          
+            - Value:           0x000000000000023A
+        - AbbrCode:        0x0000000D
+          Values:          
+            - Value:           0x000000000000023F
+        - AbbrCode:        0x00000008
+          Values:          
+            - Value:           0x00000000000000D6
+            - Value:           0x0000000000000006
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000000
+          Values:          []
+  debug_line:      
+    - Length:          
+        TotalLength:     202
+      Version:         4
+      PrologueLength:  45
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:     []
+      Files:           
+        - Name:            inlined-functions.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:         
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            0
+        - Opcode:          0x17
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            18
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            18
+        - Opcode:          0xC9
+          Data:            18
+        - Opcode:          DW_LNS_set_column
+          Data:            20
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            20
+        - Opcode:          0x3C
+          Data:            20
+        - Opcode:          DW_LNS_set_column
+          Data:            24
+        - Opcode:          0x3C
+          Data:            24
+        - Opcode:          DW_LNS_set_column
+          Data:            9
+        - Opcode:          0x3C
+          Data:            9
+        - Opcode:          DW_LNS_set_column
+          Data:            12
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            12
+        - Opcode:          0x3D
+          Data:            12
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            5
+        - Opcode:          0x3C
+          Data:            5
+        - Opcode:          DW_LNS_set_column
+          Data:            0
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          0x4A
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            5
+        - Opcode:          DW_LNS_const_add_pc
+          Data:            5
+        - Opcode:          0x59
+          Data:            5
+        - Opcode:          DW_LNS_set_column
+          Data:            18
+        - Opcode:          DW_LNS_advance_line
+          SData:           -16
+          Data:            18
+        - Opcode:          DW_LNS_advance_pc
+          Data:            36
+        - Opcode:          DW_LNS_copy
+          Data:            36
+        - Opcode:          DW_LNS_set_column
+          Data:            20
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            20
+        - Opcode:          0x3C
+          Data:            20
+        - Opcode:          DW_LNS_set_column
+          Data:            9
+        - Opcode:          0x3C
+          Data:            9
+        - Opcode:          DW_LNS_set_column
+          Data:            23
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            23
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            23
+        - Opcode:          DW_LNS_const_add_pc
+          Data:            23
+        - Opcode:          0xD6
+          Data:            23
+        - Opcode:          DW_LNS_set_column
+          Data:            26
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            26
+        - Opcode:          0x3C
+          Data:            26
+        - Opcode:          DW_LNS_set_column
+          Data:            18
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            18
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            18
+        - Opcode:          0x90
+          Data:            18
+        - Opcode:          DW_LNS_set_column
+          Data:            20
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            20
+        - Opcode:          0x3C
+          Data:            20
+        - Opcode:          DW_LNS_set_column
+          Data:            9
+        - Opcode:          0x3C
+          Data:            9
+        - Opcode:          DW_LNS_set_column
+          Data:            12
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            12
+        - Opcode:          0x3D
+          Data:            12
+        - Opcode:          DW_LNS_set_column
+          Data:            36
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            36
+        - Opcode:          0x3C
+          Data:            36
+        - Opcode:          DW_LNS_set_column
+          Data:            39
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            39
+        - Opcode:          0x3C
+          Data:            39
+        - Opcode:          DW_LNS_set_column
+          Data:            18
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            18
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            18
+        - Opcode:          0x90
+          Data:            18
+        - Opcode:          DW_LNS_set_column
+          Data:            20
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            20
+        - Opcode:          0x3C
+          Data:            20
+        - Opcode:          DW_LNS_set_column
+          Data:            9
+        - Opcode:          0x3C
+          Data:            9
+        - Opcode:          DW_LNS_set_column
+          Data:            29
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            29
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            29
+        - Opcode:          0x3C
+          Data:            29
+        - Opcode:          DW_LNS_set_column
+          Data:            9
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            9
+        - Opcode:          0x3C
+          Data:            9
+        - Opcode:          DW_LNS_set_column
+          Data:            12
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            12
+        - Opcode:          0x3D
+          Data:            12
+        - Opcode:          0x67
+          Data:            12
+        - Opcode:          DW_LNS_set_column
+          Data:            9
+        - Opcode:          0x41
+          Data:            9
+        - Opcode:          DW_LNS_set_column
+          Data:            18
+        - Opcode:          DW_LNS_advance_line
+          SData:           -17
+          Data:            18
+        - Opcode:          DW_LNS_const_add_pc
+          Data:            18
+        - Opcode:          0x12
+          Data:            18
+        - Opcode:          DW_LNS_set_column
+          Data:            20
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            20
+        - Opcode:          0x3C
+          Data:            20
+        - Opcode:          DW_LNS_set_column
+          Data:            9
+        - Opcode:          0x3C
+          Data:            9
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            5
+        - Opcode:          DW_LNS_advance_line
+          SData:           19
+          Data:            5
+        - Opcode:          0x3C
+          Data:            5
+        - Opcode:          DW_LNS_advance_pc
+          Data:            11
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            11
+...
