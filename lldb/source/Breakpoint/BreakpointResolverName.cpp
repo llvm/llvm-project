@@ -8,7 +8,6 @@
 
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Architecture.h"
