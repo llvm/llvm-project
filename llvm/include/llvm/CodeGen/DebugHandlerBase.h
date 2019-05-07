@@ -129,7 +129,7 @@ public:
   const MCExpr *getFunctionLocalOffsetAfterInsn(const MachineInstr *MI);
 
   /// If this type is derived from a base type then return base type size.
-  static uint64_t getBaseTypeSize(const DITypeRef TyRef);
+  static uint64_t getBaseTypeSize(const DIType *Ty);
 };
 
 }

@@ -81,7 +81,7 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
       continue;
     auto *GV = DIG->getVariable();
     processScope(GV->getScope());
-    processType(GV->getType().resolve());
+    processType(GV->getType());
   }
   for (auto *ET : CU->getEnumTypes())
     processType(ET);
@@ -91,7 +91,7 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
     else
       processSubprogram(cast<DISubprogram>(RT));
   for (auto *Import : CU->getImportedEntities()) {
-    auto *Entity = Import->getEntity().resolve();
+    auto *Entity = Import->getEntity();
     if (auto *T = dyn_cast<DIType>(Entity))
       processType(T);
     else if (auto *SP = dyn_cast<DISubprogram>(Entity))
@@ -124,14 +124,14 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
 void DebugInfoFinder::processType(DIType *DT) {
   if (!addType(DT))
     return;
-  processScope(DT->getScope().resolve());
+  processScope(DT->getScope());
   if (auto *ST = dyn_cast<DISubroutineType>(DT)) {
-    for (DITypeRef Ref : ST->getTypeArray())
-      processType(Ref.resolve());
+    for (DIType *Ref : ST->getTypeArray())
+      processType(Ref);
     return;
   }
   if (auto *DCT = dyn_cast<DICompositeType>(DT)) {
-    processType(DCT->getBaseType().resolve());
+    processType(DCT->getBaseType());
     for (Metadata *D : DCT->getElements()) {
       if (auto *T = dyn_cast<DIType>(D))
         processType(T);
@@ -141,7 +141,7 @@ void DebugInfoFinder::processType(DIType *DT) {
     return;
   }
   if (auto *DDT = dyn_cast<DIDerivedType>(DT)) {
-    processType(DDT->getBaseType().resolve());
+    processType(DDT->getBaseType());
   }
 }
 
@@ -174,7 +174,7 @@ void DebugInfoFinder::processScope(DIScope *Scope) {
 void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   if (!addSubprogram(SP))
     return;
-  processScope(SP->getScope().resolve());
+  processScope(SP->getScope());
   // Some of the users, e.g. CloneFunctionInto / CloneModule, need to set up a
   // ValueMap containing identity mappings for all of the DICompileUnit's, not
   // just DISubprogram's, referenced from anywhere within the Function being
@@ -187,9 +187,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   processType(SP->getType());
   for (auto *Element : SP->getTemplateParams()) {
     if (auto *TType = dyn_cast<DITemplateTypeParameter>(Element)) {
-      processType(TType->getType().resolve());
+      processType(TType->getType());
     } else if (auto *TVal = dyn_cast<DITemplateValueParameter>(Element)) {
-      processType(TVal->getType().resolve());
+      processType(TVal->getType());
     }
   }
 }
@@ -207,7 +207,7 @@ void DebugInfoFinder::processDeclare(const Module &M,
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
-  processType(DV->getType().resolve());
+  processType(DV->getType());
 }
 
 void DebugInfoFinder::processValue(const Module &M, const DbgValueInst *DVI) {
@@ -222,7 +222,7 @@ void DebugInfoFinder::processValue(const Module &M, const DbgValueInst *DVI) {
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
-  processType(DV->getType().resolve());
+  processType(DV->getType());
 }
 
 bool DebugInfoFinder::addType(DIType *DT) {
@@ -428,7 +428,8 @@ private:
     StringRef LinkageName = MDS->getName().empty() ? MDS->getLinkageName() : "";
     DISubprogram *Declaration = nullptr;
     auto *Type = cast_or_null<DISubroutineType>(map(MDS->getType()));
-    DITypeRef ContainingType(map(MDS->getContainingType()));
+    DIType *ContainingType =
+        cast_or_null<DIType>(map(MDS->getContainingType()));
     auto *Unit = cast_or_null<DICompileUnit>(map(MDS->getUnit()));
     auto Variables = nullptr;
     auto TemplateParams = nullptr;

@@ -196,11 +196,11 @@ bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
 
 bool DbgVariable::isBlockByrefVariable() const {
   assert(getVariable() && "Invalid complex DbgVariable!");
-  return getVariable()->getType().resolve()->isBlockByrefStruct();
+  return getVariable()->getType()->isBlockByrefStruct();
 }
 
 const DIType *DbgVariable::getType() const {
-  DIType *Ty = getVariable()->getType().resolve();
+  DIType *Ty = getVariable()->getType();
   // FIXME: isBlockByrefVariable should be reformulated in terms of complex
   // addresses instead.
   if (Ty->isBlockByrefStruct()) {
@@ -232,13 +232,13 @@ const DIType *DbgVariable::getType() const {
     uint16_t tag = Ty->getTag();
 
     if (tag == dwarf::DW_TAG_pointer_type)
-      subType = resolve(cast<DIDerivedType>(Ty)->getBaseType());
+      subType = cast<DIDerivedType>(Ty)->getBaseType();
 
     auto Elements = cast<DICompositeType>(subType)->getElements();
     for (unsigned i = 0, N = Elements.size(); i < N; ++i) {
       auto *DT = cast<DIDerivedType>(Elements[i]);
       if (getName() == DT->getName())
-        return resolve(DT->getBaseType());
+        return DT->getBaseType();
     }
   }
   return Ty;

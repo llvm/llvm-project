@@ -119,7 +119,7 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
   assert(GV);
 
   auto *GVContext = GV->getScope();
-  auto *GTy = DD->resolve(GV->getType());
+  const DIType *GTy = GV->getType();
 
   // Construct the context before querying for the existence of the DIE in
   // case such construction creates the DIE.
@@ -131,7 +131,7 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
   DIE *VariableDIE = &createAndAddDIE(GV->getTag(), *ContextDIE, GV);
   DIScope *DeclContext;
   if (auto *SDMDecl = GV->getStaticDataMemberDeclaration()) {
-    DeclContext = resolve(SDMDecl->getScope());
+    DeclContext = SDMDecl->getScope();
     assert(SDMDecl->isStaticMember() && "Expected static member decl");
     assert(GV->isDefinition());
     // We need the declaration DIE that is in the static member's class.
@@ -139,7 +139,7 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addDIEEntry(*VariableDIE, dwarf::DW_AT_specification, *VariableSpecDIE);
     // If the global variable's type is different from the one in the class
     // member type, assume that it's more specific and also emit it.
-    if (GTy != DD->resolve(SDMDecl->getBaseType()))
+    if (GTy != SDMDecl->getBaseType())
       addType(*VariableDIE, GTy);
   } else {
     DeclContext = GV->getScope();
@@ -878,7 +878,7 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     ContextDIE = &getUnitDie();
     getOrCreateSubprogramDIE(SPDecl);
   } else {
-    ContextDIE = getOrCreateContextDIE(resolve(SP->getScope()));
+    ContextDIE = getOrCreateContextDIE(SP->getScope());
     // The scope may be shared with a subprogram that has already been
     // constructed in another CU, in which case we need to construct this
     // subprogram in the same CU.
@@ -927,7 +927,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   DIE *IMDie = DIE::get(DIEValueAllocator, (dwarf::Tag)Module->getTag());
   insertDIE(Module, IMDie);
   DIE *EntityDie;
-  auto *Entity = resolve(Module->getEntity());
+  auto *Entity = Module->getEntity();
   if (auto *NS = dyn_cast<DINamespace>(Entity))
     EntityDie = getOrCreateNameSpace(NS);
   else if (auto *M = dyn_cast<DIModule>(Entity))
@@ -1192,7 +1192,7 @@ void DwarfCompileUnit::addAddressExpr(DIE &Die, dwarf::Attribute Attribute,
 void DwarfCompileUnit::applySubprogramAttributesToDefinition(
     const DISubprogram *SP, DIE &SPDie) {
   auto *SPDecl = SP->getDeclaration();
-  auto *Context = resolve(SPDecl ? SPDecl->getScope() : SP->getScope());
+  auto *Context = SPDecl ? SPDecl->getScope() : SP->getScope();
   applySubprogramAttributes(SP, SPDie, includeMinimalInlineScopes());
   addGlobalName(SP->getName(), SPDie, Context);
 }

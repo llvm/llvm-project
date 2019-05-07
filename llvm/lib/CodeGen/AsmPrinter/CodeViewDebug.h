@@ -373,14 +373,14 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   /// Translates the DIType to codeview if necessary and returns a type index
   /// for it.
-  codeview::TypeIndex getTypeIndex(DITypeRef TypeRef,
-                                   DITypeRef ClassTyRef = DITypeRef());
+  codeview::TypeIndex getTypeIndex(const DIType *Ty,
+                                   const DIType *ClassTy = nullptr);
 
   codeview::TypeIndex
   getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
                          const DISubroutineType *SubroutineTy);
 
-  codeview::TypeIndex getTypeIndexForReferenceTo(DITypeRef TypeRef);
+  codeview::TypeIndex getTypeIndexForReferenceTo(const DIType *Ty);
 
   codeview::TypeIndex getMemberFunctionType(const DISubprogram *SP,
                                             const DICompositeType *Class);
@@ -419,7 +419,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// use this entry point when generating symbol records. The complete and
   /// incomplete type indices only differ for record types. All other types use
   /// the same index.
-  codeview::TypeIndex getCompleteTypeIndex(DITypeRef TypeRef);
+  codeview::TypeIndex getCompleteTypeIndex(const DIType *Ty);
 
   codeview::TypeIndex lowerCompleteTypeClass(const DICompositeType *Ty);
   codeview::TypeIndex lowerCompleteTypeUnion(const DICompositeType *Ty);
