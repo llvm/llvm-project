@@ -8858,8 +8858,11 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
-    SmallVector<EVT, 4> OldRetTys = std::move(RetTys);
-    SmallVector<uint64_t, 4> OldOffsets = std::move(Offsets);
+    SmallVector<EVT, 4> OldRetTys;
+    SmallVector<uint64_t, 4> OldOffsets;
+    RetTys.swap(OldRetTys);
+    Offsets.swap(OldOffsets);
+
     for (size_t i = 0, e = OldRetTys.size(); i != e; ++i) {
       EVT RetVT = OldRetTys[i];
       uint64_t Offset = OldOffsets[i];
