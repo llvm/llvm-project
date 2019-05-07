@@ -14,7 +14,6 @@
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Symbol/ClangASTContext.h"
 
@@ -38,7 +37,6 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFileMachO::Initialize();
-    SymbolVendorMacOSX::Initialize();
     SymbolFileDWARF::Initialize();
     ClangASTContext::Initialize();
   }
@@ -46,7 +44,6 @@ public:
   void TearDown() override {
     ClangASTContext::Terminate();
     SymbolFileDWARF::Terminate();
-    SymbolVendorMacOSX::Terminate();
     ObjectFileMachO::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
