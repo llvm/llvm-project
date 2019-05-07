@@ -129,8 +129,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       .legalForCartesianProduct({s1}, {s32, p0})
       .minScalar(1, s32);
 
-  getActionDefinitionsBuilder(G_SELECT).legalForCartesianProduct({s32, p0},
-                                                                 {s1});
+  getActionDefinitionsBuilder(G_SELECT)
+      .legalForCartesianProduct({s32, p0}, {s1})
+      .minScalar(0, s32);
 
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.
