@@ -2913,13 +2913,13 @@ define <2 x double> @test_maskz_max_sd_memfold(<2 x double> %a0, double* %a1, i8
 define <4 x float> @test_x86_avx512_cvtsi2ss32(<4 x float> %a, i32 %b) {
 ; X64-LABEL: test_x86_avx512_cvtsi2ss32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtsi2ssl %edi, {rz-sae}, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2ss %edi, {rz-sae}, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512_cvtsi2ss32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2ssl %eax, {rz-sae}, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2ss %eax, {rz-sae}, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %res = call <4 x float> @llvm.x86.avx512.cvtsi2ss32(<4 x float> %a, i32 %b, i32 11) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -2929,13 +2929,13 @@ declare <4 x float> @llvm.x86.avx512.cvtsi2ss32(<4 x float>, i32, i32) nounwind 
 define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss (<4 x float> %a, i32 %b) {
 ; X64-LABEL: test_x86_avx512__mm_cvt_roundu32_ss:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtusi2ssl %edi, {rd-sae}, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2ss %edi, {rd-sae}, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512__mm_cvt_roundu32_ss:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtusi2ssl %eax, {rd-sae}, %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2ss %eax, {rd-sae}, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 9) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -2945,14 +2945,14 @@ define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss_mem(<4 x float> %a, i32*
 ; X64-LABEL: test_x86_avx512__mm_cvt_roundu32_ss_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    vcvtusi2ssl %eax, {rd-sae}, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2ss %eax, {rd-sae}, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512__mm_cvt_roundu32_ss_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    vcvtusi2ssl %eax, {rd-sae}, %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2ss %eax, {rd-sae}, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %b = load i32, i32* %ptr
   %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 9) ; <<<4 x float>> [#uses=1]
@@ -2962,7 +2962,7 @@ define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss_mem(<4 x float> %a, i32*
 define <4 x float> @test_x86_avx512__mm_cvtu32_ss(<4 x float> %a, i32 %b) {
 ; X64-LABEL: test_x86_avx512__mm_cvtu32_ss:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtusi2ssl %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512__mm_cvtu32_ss:

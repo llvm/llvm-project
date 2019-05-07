@@ -212,8 +212,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtpi2ps	(%rax), %xmm2
 # CHECK-NEXT:  2      5     1.00                        cvtps2pi	%xmm0, %mm2
 # CHECK-NEXT:  2      9     0.50    *                   cvtps2pi	(%rax), %mm2
-# CHECK-NEXT:  2      5     1.00                        cvtsi2ssl	%ecx, %xmm2
-# CHECK-NEXT:  3      6     2.00                        cvtsi2ssq	%rcx, %xmm2
+# CHECK-NEXT:  2      5     1.00                        cvtsi2ss	%ecx, %xmm2
+# CHECK-NEXT:  3      6     2.00                        cvtsi2ss	%rcx, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtsi2ssl	(%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtsi2ssl	(%rax), %xmm2
 # CHECK-NEXT:  2      6     1.00                        cvtss2si	%xmm0, %ecx
@@ -355,8 +355,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     cvtpi2ps	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtps2pi	%xmm0, %mm2
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     cvtps2pi	(%rax), %mm2
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtsi2ssl	%ecx, %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     2.33    -      -     cvtsi2ssq	%rcx, %xmm2
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtsi2ss	%ecx, %xmm2
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     2.33    -      -     cvtsi2ss	%rcx, %xmm2
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     cvtsi2ssl	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     cvtsi2ssl	(%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -      -      -     cvtss2si	%xmm0, %ecx

@@ -44203,13 +44203,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 
     // TODO: Handle f128 and i128 in FR128RegClass after it is tested well.
     if (VT == MVT::f32 || VT == MVT::i32)
-      Res.second = &X86::FR32RegClass;
+      Res.second = &X86::FR32XRegClass;
     else if (VT == MVT::f64 || VT == MVT::i64)
-      Res.second = &X86::FR64RegClass;
-    else if (TRI->isTypeLegalForClass(X86::VR128RegClass, VT))
-      Res.second = &X86::VR128RegClass;
-    else if (TRI->isTypeLegalForClass(X86::VR256RegClass, VT))
-      Res.second = &X86::VR256RegClass;
+      Res.second = &X86::FR64XRegClass;
+    else if (TRI->isTypeLegalForClass(X86::VR128XRegClass, VT))
+      Res.second = &X86::VR128XRegClass;
+    else if (TRI->isTypeLegalForClass(X86::VR256XRegClass, VT))
+      Res.second = &X86::VR256XRegClass;
     else if (TRI->isTypeLegalForClass(X86::VR512RegClass, VT))
       Res.second = &X86::VR512RegClass;
     else {

@@ -1617,17 +1617,17 @@ define <2 x double> @test_mm_cvtsi32_sd(<2 x double> %a0, i32 %a1) nounwind {
 ;
 ; X64-SSE-LABEL: test_mm_cvtsi32_sd:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    cvtsi2sdl %edi, %xmm0 # encoding: [0xf2,0x0f,0x2a,0xc7]
+; X64-SSE-NEXT:    cvtsi2sd %edi, %xmm0 # encoding: [0xf2,0x0f,0x2a,0xc7]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_mm_cvtsi32_sd:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x2a,0xc7]
+; X64-AVX1-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x2a,0xc7]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_cvtsi32_sd:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x2a,0xc7]
+; X64-AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x2a,0xc7]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
   %cvt = sitofp i32 %a1 to double
   %res = insertelement <2 x double> %a0, double %cvt, i32 0

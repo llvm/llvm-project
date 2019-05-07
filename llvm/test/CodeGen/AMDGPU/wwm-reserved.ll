@@ -82,7 +82,7 @@ merge:
 define i32 @called(i32 %a) noinline {
 ; GFX9: v_add_u32_e32 v1, v0, v0
   %add = add i32 %a, %a
-; GFX9: v_mul_lo_i32 v0, v1, v0
+; GFX9: v_mul_lo_u32 v0, v1, v0
   %mul = mul i32 %add, %a
 ; GFX9: v_sub_u32_e32 v0, v0, v1
   %sub = sub i32 %mul, %add
