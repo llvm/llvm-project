@@ -15,3 +15,5 @@ void f() {
 auto (*p)() -> int(nullptr);
 auto (*q)() -> int(*)(unknown); // expected-error {{unknown type name 'unknown'}}
 auto (*r)() -> int(*)(unknown + 1); // expected-error {{undeclared identifier 'unknown'}}
+
+int f(unknown const x); // expected-error {{unknown type name 'unknown'}}

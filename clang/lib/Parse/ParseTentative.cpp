@@ -1884,31 +1884,31 @@ Parser::TryParseParameterDeclarationClause(bool *InvalidAsDeclaration,
     // decl-specifier-seq '{' is not a parameter in C++11.
     TPResult TPR = isCXXDeclarationSpecifier(TPResult::False,
                                              InvalidAsDeclaration);
+    // A declaration-specifier (not followed by '(' or '{') means this can't be
+    // an expression, but it could still be a template argument.
+    if (TPR != TPResult::Ambiguous &&
+        !(VersusTemplateArgument && TPR == TPResult::True))
+      return TPR;
 
-    if (VersusTemplateArgument && TPR == TPResult::True) {
-      // Consume the decl-specifier-seq. We have to look past it, since a
-      // type-id might appear here in a template argument.
-      bool SeenType = false;
-      do {
-        SeenType |= isCXXDeclarationSpecifierAType();
-        if (TryConsumeDeclarationSpecifier() == TPResult::Error)
-          return TPResult::Error;
-
-        // If we see a parameter name, this can't be a template argument.
-        if (SeenType && Tok.is(tok::identifier))
-          return TPResult::True;
-
-        TPR = isCXXDeclarationSpecifier(TPResult::False,
-                                        InvalidAsDeclaration);
-        if (TPR == TPResult::Error)
-          return TPR;
-      } while (TPR != TPResult::False);
-    } else if (TPR == TPResult::Ambiguous) {
-      // Disambiguate what follows the decl-specifier.
+    bool SeenType = false;
+    do {
+      SeenType |= isCXXDeclarationSpecifierAType();
       if (TryConsumeDeclarationSpecifier() == TPResult::Error)
         return TPResult::Error;
-    } else
-      return TPR;
+
+      // If we see a parameter name, this can't be a template argument.
+      if (SeenType && Tok.is(tok::identifier))
+        return TPResult::True;
+
+      TPR = isCXXDeclarationSpecifier(TPResult::False,
+                                      InvalidAsDeclaration);
+      if (TPR == TPResult::Error)
+        return TPR;
+
+      // Two declaration-specifiers means this can't be an expression.
+      if (TPR == TPResult::True && !VersusTemplateArgument)
+        return TPR;
+    } while (TPR != TPResult::False);
 
     // declarator
     // abstract-declarator[opt]

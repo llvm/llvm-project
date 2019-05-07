@@ -706,6 +706,8 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
                                const PrintingPolicy &Policy) {
   assert(isTypeRep(T) && "T does not store a type");
   assert(Rep && "no type provided!");
+  if (TypeSpecType == TST_error)
+    return false;
   if (TypeSpecType != TST_unspecified) {
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
@@ -726,6 +728,8 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
                                const PrintingPolicy &Policy) {
   assert(isExprRep(T) && "T does not store an expr");
   assert(Rep && "no expression provided!");
+  if (TypeSpecType == TST_error)
+    return false;
   if (TypeSpecType != TST_unspecified) {
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
@@ -756,6 +760,8 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   assert(isDeclRep(T) && "T does not store a decl");
   // Unlike the other cases, we don't assert that we actually get a decl.
 
+  if (TypeSpecType == TST_error)
+    return false;
   if (TypeSpecType != TST_unspecified) {
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
@@ -775,6 +781,8 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
                                const PrintingPolicy &Policy) {
   assert(!isDeclRep(T) && !isTypeRep(T) && !isExprRep(T) &&
          "rep required for these type-spec kinds!");
+  if (TypeSpecType == TST_error)
+    return false;
   if (TypeSpecType != TST_unspecified) {
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
@@ -807,6 +815,8 @@ bool DeclSpec::SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
 bool DeclSpec::SetTypeAltiVecVector(bool isAltiVecVector, SourceLocation Loc,
                           const char *&PrevSpec, unsigned &DiagID,
                           const PrintingPolicy &Policy) {
+  if (TypeSpecType == TST_error)
+    return false;
   if (TypeSpecType != TST_unspecified) {
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_vector_decl_spec_combination;
@@ -820,7 +830,8 @@ bool DeclSpec::SetTypeAltiVecVector(bool isAltiVecVector, SourceLocation Loc,
 bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
                            const char *&PrevSpec, unsigned &DiagID,
                            const PrintingPolicy &Policy) {
-
+  if (TypeSpecType == TST_error)
+    return false;
   if (TypeSpecType != TST_unspecified) {
     PrevSpec = DeclSpec::getSpecifierName((TST)TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
@@ -836,6 +847,8 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
 bool DeclSpec::SetTypeAltiVecPixel(bool isAltiVecPixel, SourceLocation Loc,
                           const char *&PrevSpec, unsigned &DiagID,
                           const PrintingPolicy &Policy) {
+  if (TypeSpecType == TST_error)
+    return false;
   if (!TypeAltiVecVector || TypeAltiVecPixel ||
       (TypeSpecType != TST_unspecified)) {
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
@@ -851,6 +864,8 @@ bool DeclSpec::SetTypeAltiVecPixel(bool isAltiVecPixel, SourceLocation Loc,
 bool DeclSpec::SetTypeAltiVecBool(bool isAltiVecBool, SourceLocation Loc,
                                   const char *&PrevSpec, unsigned &DiagID,
                                   const PrintingPolicy &Policy) {
+  if (TypeSpecType == TST_error)
+    return false;
   if (!TypeAltiVecVector || TypeAltiVecBool ||
       (TypeSpecType != TST_unspecified)) {
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
@@ -1033,7 +1048,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // Before possibly changing their values, save specs as written.
   SaveWrittenBuiltinSpecs();
 
-  // Check the type specifier components first.
+  // Check the type specifier components first. No checking for an invalid
+  // type.
+  if (TypeSpecType == TST_error)
+    return;
 
   // If decltype(auto) is used, no other type specifiers are permitted.
   if (TypeSpecType == TST_decltype_auto &&
