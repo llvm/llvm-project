@@ -36,7 +36,9 @@ else()
 endif()
 
 if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN))
-  list(APPEND LIBCXXABI_SOURCES cxa_thread_atexit.cpp)
+  list(APPEND LIBCXXABI_SOURCES
+    cxa_thread_atexit.cpp
+  )
 endif()
 
 set(LIBCXXABI_HEADERS
