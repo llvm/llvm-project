@@ -146,7 +146,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
           .legalFor({s32, p0})
           .minScalar(0, s32);
 
-  getActionDefinitionsBuilder(G_GEP).legalFor({{p0, s32}});
+  getActionDefinitionsBuilder(G_GEP)
+      .legalFor({{p0, s32}})
+      .minScalar(1, s32);
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
