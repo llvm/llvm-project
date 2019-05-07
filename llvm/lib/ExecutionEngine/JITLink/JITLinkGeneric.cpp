@@ -170,31 +170,31 @@ void JITLinkerBase::layOutAtoms() {
     auto &SL = KV.second;
     for (auto *SIList : {&SL.ContentSections, &SL.ZeroFillSections}) {
       for (auto &SI : *SIList) {
-        std::vector<DefinedAtom *> LayoutHeads;
-        LayoutHeads.reserve(SI.S->atoms_size());
+        // First build the set of layout-heads (i.e. "heads" of layout-next
+        // chains) by copying the section atoms, then eliminating any that
+        // appear as layout-next targets.
+        DenseSet<DefinedAtom *> LayoutHeads;
+        for (auto *DA : SI.S->atoms())
+          LayoutHeads.insert(DA);
 
-        // First build the list of layout-heads (i.e. "heads" of layout-next
-        // chains).
-        DenseSet<DefinedAtom *> AlreadyLayedOut;
-        for (auto *DA : SI.S->atoms()) {
-          if (AlreadyLayedOut.count(DA))
-            continue;
-          LayoutHeads.push_back(DA);
-          while (DA->hasLayoutNext()) {
-            auto &Next = DA->getLayoutNext();
-            AlreadyLayedOut.insert(&Next);
-            DA = &Next;
-          }
-        }
+        for (auto *DA : SI.S->atoms())
+          if (DA->hasLayoutNext())
+            LayoutHeads.erase(&DA->getLayoutNext());
+
+        // Next, sort the layout heads by address order.
+        std::vector<DefinedAtom *> OrderedLayoutHeads;
+        OrderedLayoutHeads.reserve(LayoutHeads.size());
+        for (auto *DA : LayoutHeads)
+          OrderedLayoutHeads.push_back(DA);
 
         // Now sort the list of layout heads by address.
-        std::sort(LayoutHeads.begin(), LayoutHeads.end(),
+        std::sort(OrderedLayoutHeads.begin(), OrderedLayoutHeads.end(),
                   [](const DefinedAtom *LHS, const DefinedAtom *RHS) {
                     return LHS->getAddress() < RHS->getAddress();
                   });
 
         // Now populate the SI.Atoms field by appending each of the chains.
-        for (auto *DA : LayoutHeads) {
+        for (auto *DA : OrderedLayoutHeads) {
           SI.Atoms.push_back(DA);
           while (DA->hasLayoutNext()) {
             auto &Next = DA->getLayoutNext();
