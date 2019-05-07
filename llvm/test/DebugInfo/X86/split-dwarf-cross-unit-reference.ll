@@ -44,7 +44,7 @@
 
 ; DWO: .debug_info.dwo contents:
 ; CHECK-NOT: .rel{{a?}}.debug_info.dwo
-; CHECK: RELOCATION RECORDS FOR [.rel{{a?}}.debug_info]:
+; CHECK: RELOCATION RECORDS FOR [.debug_info]:
 ; CHECK-NOT: RELOCATION RECORDS
 ; Expect one relocation in debug_info, from the inlined f1 in foo to its
 ; abstract origin in bar

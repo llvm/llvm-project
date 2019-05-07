@@ -892,6 +892,11 @@ Instruction *InstCombiner::foldAddWithConstant(BinaryOperator &Add) {
   if (!match(Op1, m_APInt(C)))
     return nullptr;
 
+  // (X | C2) + C --> (X | C2) ^ C2 iff (C2 == -C)
+  const APInt *C2;
+  if (match(Op0, m_Or(m_Value(), m_APInt(C2))) && *C2 == -*C)
+    return BinaryOperator::CreateXor(Op0, ConstantInt::get(Add.getType(), *C2));
+
   if (C->isSignMask()) {
     // If wrapping is not allowed, then the addition must set the sign bit:
     // X + (signmask) --> X | signmask
@@ -906,7 +911,6 @@ Instruction *InstCombiner::foldAddWithConstant(BinaryOperator &Add) {
   // Is this add the last step in a convoluted sext?
   // add(zext(xor i16 X, -32768), -32768) --> sext X
   Type *Ty = Add.getType();
-  const APInt *C2;
   if (match(Op0, m_ZExt(m_Xor(m_Value(X), m_APInt(C2)))) &&
       C2->isMinSignedValue() && C2->sext(Ty->getScalarSizeInBits()) == *C)
     return CastInst::Create(Instruction::SExt, X, Ty);
