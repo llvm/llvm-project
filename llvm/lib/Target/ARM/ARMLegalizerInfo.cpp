@@ -114,8 +114,12 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       setAction({Op, s32}, Libcall);
   }
 
-  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
-  getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
+  getActionDefinitionsBuilder(G_INTTOPTR)
+      .legalFor({{p0, s32}})
+      .minScalar(1, s32);
+  getActionDefinitionsBuilder(G_PTRTOINT)
+      .legalFor({{s32, p0}})
+      .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({s32, p0})
