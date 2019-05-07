@@ -926,7 +926,8 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
 
   if (N.getDWARFAddressSpace()) {
     AssertDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
-                 N.getTag() == dwarf::DW_TAG_reference_type,
+                 N.getTag() == dwarf::DW_TAG_reference_type ||
+                 N.getTag() == dwarf::DW_TAG_rvalue_reference_type,
              "DWARF address space only applies to pointer or reference types",
              &N);
   }
