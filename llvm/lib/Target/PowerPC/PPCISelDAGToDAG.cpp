@@ -5316,7 +5316,7 @@ SDValue PPCDAGToDAGISel::combineToCMPB(SDNode *N) {
     SDValue V = Queue.pop_back_val();
 
     for (const SDValue &O : V.getNode()->ops()) {
-      unsigned b;
+      unsigned b = 0;
       uint64_t M = 0, A = 0;
       SDValue OLHS, ORHS;
       if (O.getOpcode() == ISD::OR) {
