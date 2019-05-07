@@ -91,6 +91,11 @@ public:
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
 
+  // UPMEM
+  // Allows to fix target virtual addresses on the fly depending on the properties
+  // of the source section
+  virtual uint64_t fixupTargetVA(uint64_t targetVA) const;
+
   virtual ~TargetInfo();
 
   // This deletes a jump insn at the end of the section if it is a fall thru to
