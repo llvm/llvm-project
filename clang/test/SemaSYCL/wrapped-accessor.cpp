@@ -25,9 +25,9 @@ int main() {
 // Check parameters of the kernel
 // CHECK: ParmVarDecl {{.*}} used _arg_ 'AccWrapper<cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer, cl::sycl::access::placeholder::false_t> >':'AccWrapper<cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer, cl::sycl::access::placeholder::false_t> >'
 // CHECK: ParmVarDecl {{.*}} used _arg_accessor '__global int *'
-// CHECK: ParmVarDecl {{.*}} used _arg_AccessRange 'range<1>':'cl::sycl::range<1>'
-// CHECK: ParmVarDecl {{.*}} used _arg_MemRange 'range<1>':'cl::sycl::range<1>'
-// CHECK: ParmVarDecl {{.*}} used _arg_Offset 'id<1>':'cl::sycl::id<1>'
+// CHECK: ParmVarDecl {{.*}} used [[_arg_AccessRange:[0-9a-zA-Z_]+]] 'range<1>':'cl::sycl::range<1>'
+// CHECK: ParmVarDecl {{.*}} used [[_arg_MemRange:[0-9a-zA-Z_]+]] 'range<1>':'cl::sycl::range<1>'
+// CHECK: ParmVarDecl {{.*}} used [[_arg_Offset:[0-9a-zA-Z_]+]] 'id<1>':'cl::sycl::id<1>'
 
 // Check that wrapper object itself is initialized with corresponding kernel argument using operator=
 // CHECK: BinaryOperator {{.*}} 'AccWrapper<cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer, cl::sycl::access::placeholder::false_t> >':'AccWrapper<cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer, cl::sycl::access::placeholder::false_t> >' lvalue '='
@@ -52,8 +52,8 @@ int main() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} '__global int *' lvalue <NoOp>
 // CHECK-NEXT: DeclRefExpr {{.*}} '__global int *' lvalue ParmVar {{.*}} '_arg_accessor' '__global int *'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'range<1>':'cl::sycl::range<1>' <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'range<1>':'cl::sycl::range<1>' lvalue ParmVar {{.*}} '_arg_AccessRange' 'range<1>':'cl::sycl::range<1>'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'range<1>':'cl::sycl::range<1>' lvalue ParmVar {{.*}} '[[_arg_AccessRange]]' 'range<1>':'cl::sycl::range<1>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'range<1>':'cl::sycl::range<1>' <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'range<1>':'cl::sycl::range<1>' lvalue ParmVar {{.*}} '_arg_MemRange' 'range<1>':'cl::sycl::range<1>'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'range<1>':'cl::sycl::range<1>' lvalue ParmVar {{.*}} '[[_arg_MemRange]]' 'range<1>':'cl::sycl::range<1>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'id<1>':'cl::sycl::id<1>' <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'id<1>':'cl::sycl::id<1>' lvalue ParmVar {{.*}} '_arg_Offset' 'id<1>':'cl::sycl::id<1>'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'id<1>':'cl::sycl::id<1>' lvalue ParmVar {{.*}} '[[_arg_Offset]]' 'id<1>':'cl::sycl::id<1>'

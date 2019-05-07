@@ -412,6 +412,16 @@ static FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context,
   DC->addDecl(SYCLKernel);
   return SYCLKernel;
 }
+/// Return __init method
+static CXXMethodDecl *getInitMethod(const CXXRecordDecl *CRD) {
+  CXXMethodDecl *InitMethod;
+  auto It = std::find_if(CRD->methods().begin(), CRD->methods().end(),
+                         [](const CXXMethodDecl *Method) {
+                           return Method->getNameAsString() == "__init";
+                         });
+  InitMethod = (It != CRD->methods().end()) ? *It : nullptr;
+  return InitMethod;
+}
 
 static CompoundStmt *
 CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
@@ -479,13 +489,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
             DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
             nullptr, Field->getType(), VK_LValue, OK_Ordinary);
 
-        CXXMethodDecl *InitMethod = nullptr;
-        for (auto Method : CRD->methods()) {
-          if (Method->getNameInfo().getName().getAsString() == "__init") {
-            InitMethod = Method;
-            break;
-          }
-        }
+        CXXMethodDecl *InitMethod = getInitMethod(CRD);
         assert(InitMethod && "The accessor must have the __init method");
 
         // [kenrel_obj or wrapper object].accessor.__init
@@ -581,13 +585,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
             DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
             nullptr, Field->getType(), VK_LValue, OK_Ordinary);
 
-        CXXMethodDecl *InitMethod = nullptr;
-        for (auto Method : CRD->methods()) {
-          if (Method->getNameInfo().getName().getAsString() == "__init") {
-            InitMethod = Method;
-            break;
-          }
-        }
+        CXXMethodDecl *InitMethod = getInitMethod(CRD);
         assert(InitMethod && "The sampler must have the __init method");
 
         // kernel_obj.sampler.__init
@@ -755,20 +753,27 @@ static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
 
     CreateAndAddPrmDsc(Fld, PointerType);
 
-    FieldDecl *AccessRangeFld =
-        getFieldDeclByName(RecordDecl, {"impl", "AccessRange"});
+    CXXMethodDecl *InitMethod = getInitMethod(RecordDecl);
+    assert(InitMethod && "accessor must have __init method");
+
+    // Expected accessor __init method has four parameters
+    // void __init(_ValueType *Ptr, range<dimensions> AccessRange,
+    //               range<dimensions> MemRange, id<dimensions> Offset)
+    auto *FuncDecl = cast<FunctionDecl>(InitMethod);
+    ParmVarDecl *AccessRangeFld = FuncDecl->getParamDecl(1);
+    ParmVarDecl *MemRangeFld = FuncDecl->getParamDecl(2);
+    ParmVarDecl *OffsetFld = FuncDecl->getParamDecl(3);
+
     assert(AccessRangeFld &&
-           "The accessor.impl must contain the AccessRange field");
-    CreateAndAddPrmDsc(AccessRangeFld, AccessRangeFld->getType());
+            "The accessor __init method must contain the AccessRange parameter");
+    assert(MemRangeFld &&
+            "The accessor __init method must contain the MemRange parameter");
+    assert(OffsetFld &&
+            "The accessor __init method must contain the Offset parameter");
 
-    FieldDecl *MemRangeFld =
-        getFieldDeclByName(RecordDecl, {"impl", "MemRange"});
-    assert(MemRangeFld && "The accessor.impl must contain the MemRange field");
-    CreateAndAddPrmDsc(MemRangeFld, MemRangeFld->getType());
-
-    FieldDecl *OffsetFld = getFieldDeclByName(RecordDecl, {"impl", "Offset"});
-    assert(OffsetFld && "The accessor.impl must contain the Offset field");
-    CreateAndAddPrmDsc(OffsetFld, OffsetFld->getType());
+    CreateAndAddPrmDsc(Fld, AccessRangeFld->getType());
+    CreateAndAddPrmDsc(Fld, MemRangeFld->getType());
+    CreateAndAddPrmDsc(Fld, OffsetFld->getType());
   };
 
   std::function<void(const FieldDecl *, const QualType &ArgTy)>
@@ -799,10 +804,16 @@ static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
       const auto *RecordDecl = ArgTy->getAsCXXRecordDecl();
       assert(RecordDecl && "sampler must be of a record type");
 
-      FieldDecl *ImplFld =
-          getFieldDeclByName(RecordDecl, {"impl", "m_Sampler"});
-      assert(ImplFld && "The sampler must contain impl field");
-      CreateAndAddPrmDsc(ImplFld, ImplFld->getType());
+      CXXMethodDecl *InitMethod = getInitMethod(RecordDecl);
+      assert(InitMethod && "sampler must have __init method");
+
+      // sampler __init method has only one parameter
+      // void __init(__spirv::OpTypeSampler *Sampler)
+      auto *FuncDecl = cast<FunctionDecl>(InitMethod);
+      ParmVarDecl *SamplerArg = FuncDecl->getParamDecl(0);
+      assert(SamplerArg && "sampler __init method must have sampler parameter");
+
+      CreateAndAddPrmDsc(Fld, SamplerArg->getType());
     } else if (Util::isSyclStreamType(ArgTy)) {
       // the parameter is a SYCL stream object
       llvm_unreachable("streams not supported yet");
@@ -893,13 +904,18 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
       populateHeaderForAccessor(ArgTy, Offset);
     } else if (Util::isSyclSamplerType(ArgTy)) {
       // The parameter is a SYCL sampler object
-      // It has only one descriptor, "m_Sampler"
       const auto *SamplerTy = ArgTy->getAsCXXRecordDecl();
       assert(SamplerTy && "sampler must be of a record type");
-      FieldDecl *ImplFld =
-          getFieldDeclByName(SamplerTy, {"impl", "m_Sampler"}, &Offset);
-      uint64_t Sz =
-          Ctx.getTypeSizeInChars(ImplFld->getType()).getQuantity();
+
+      CXXMethodDecl *InitMethod = getInitMethod(SamplerTy);
+      assert(InitMethod && "sampler must have __init method");
+
+      // sampler __init method has only one argument
+      // void __init(__spirv::OpTypeSampler *Sampler)
+      auto *FuncDecl = cast<FunctionDecl>(InitMethod);
+      ParmVarDecl *SamplerArg = FuncDecl->getParamDecl(0);
+      assert(SamplerArg && "sampler __init method must have sampler parameter");
+      uint64_t Sz = Ctx.getTypeSizeInChars(SamplerArg->getType()).getQuantity();
       H.addParamDesc(SYCLIntegrationHeader::kind_sampler,
                      static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
     } else if (Util::isSyclStreamType(ArgTy)) {

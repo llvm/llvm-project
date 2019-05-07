@@ -19,7 +19,7 @@ int main() {
 // CHECK: FunctionDecl {{.*}}use_kernel_for_test 'void (__spirv::OpTypeSampler *)'
 //
 // Check parameters of the test kernel
-// CHECK: ParmVarDecl {{.*}} used _arg_m_Sampler '__spirv::OpTypeSampler *'
+// CHECK: ParmVarDecl {{.*}} used [[_arg_sampler:[0-9a-zA-Z_]+]] '__spirv::OpTypeSampler *'
 //
 // Check that sampler field of the test kernel object is initialized using __init method
 // CHECK: CXXMemberCallExpr {{.*}} 'void'
@@ -30,4 +30,4 @@ int main() {
 // Check the parameters of __init method
 // CHECK-NEXT: ImplicitCastExpr {{.*}} '__spirv::OpTypeSampler *' <LValueToRValue>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} '__spirv::OpTypeSampler *' lvalue <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} '__spirv::OpTypeSampler *' lvalue ParmVar {{.*}} '_arg_m_Sampler' '__spirv::OpTypeSampler
+// CHECK-NEXT: DeclRefExpr {{.*}} '__spirv::OpTypeSampler *' lvalue ParmVar {{.*}} '[[_arg_sampler]]' '__spirv::OpTypeSampler
