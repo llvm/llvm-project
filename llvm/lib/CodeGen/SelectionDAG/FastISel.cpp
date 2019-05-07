@@ -1712,14 +1712,11 @@ void FastISel::finishCondBranch(const BasicBlock *BranchBB,
 }
 
 /// Emit an FNeg operation.
-bool FastISel::selectFNeg(const User *I) {
-  Value *X;
-  if (!match(I, m_FNeg(m_Value(X))))
-    return false;
-  unsigned OpReg = getRegForValue(X);
+bool FastISel::selectFNeg(const User *I, const Value *In) {
+  unsigned OpReg = getRegForValue(In);
   if (!OpReg)
     return false;
-  bool OpRegIsKill = hasTrivialKill(X);
+  bool OpRegIsKill = hasTrivialKill(In);
 
   // If the target has ISD::FNEG, use it.
   EVT VT = TLI.getValueType(DL, I->getType());
@@ -1806,9 +1803,13 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return selectBinaryOp(I, ISD::FADD);
   case Instruction::Sub:
     return selectBinaryOp(I, ISD::SUB);
-  case Instruction::FSub: 
+  case Instruction::FSub: {
     // FNeg is currently represented in LLVM IR as a special case of FSub.
-    return selectFNeg(I) || selectBinaryOp(I, ISD::FSUB);
+    Value *X;
+    if (match(I, m_FNeg(m_Value(X))))
+       return selectFNeg(I, X);
+    return selectBinaryOp(I, ISD::FSUB);
+  }
   case Instruction::Mul:
     return selectBinaryOp(I, ISD::MUL);
   case Instruction::FMul:
