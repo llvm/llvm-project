@@ -67,7 +67,7 @@ Node *postfix::Parse(llvm::StringRef expr, llvm::BumpPtrAllocator &alloc) {
       continue;
     }
 
-    uint32_t value;
+    int64_t value;
     if (to_integer(token, value, 10)) {
       // token is integer literal
       stack.push_back(MakeNode<IntegerNode>(alloc, value));
@@ -129,8 +129,8 @@ private:
   void Visit(InitialValueNode &val, Node *&) override;
 
   void Visit(IntegerNode &integer, Node *&) override {
-    m_out_stream.PutHex8(DW_OP_constu);
-    m_out_stream.PutULEB128(integer.GetValue());
+    m_out_stream.PutHex8(DW_OP_consts);
+    m_out_stream.PutSLEB128(integer.GetValue());
     ++m_stack_depth;
   }
 
