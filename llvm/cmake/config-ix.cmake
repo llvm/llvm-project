@@ -606,16 +606,19 @@ function(find_python_module module)
   string(REPLACE "." "_" module_name ${module})
   string(TOUPPER ${module_name} module_upper)
   set(FOUND_VAR PY_${module_upper}_FOUND)
+  if (DEFINED ${FOUND_VAR})
+    return()
+  endif()
 
   execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import ${module}"
     RESULT_VARIABLE status
     ERROR_QUIET)
 
   if(status)
-    set(${FOUND_VAR} 0 PARENT_SCOPE)
+    set(${FOUND_VAR} OFF CACHE BOOL "Failed to find python module '${module}'")
     message(STATUS "Could NOT find Python module ${module}")
   else()
-    set(${FOUND_VAR} 1 PARENT_SCOPE)
+  set(${FOUND_VAR} ON CACHE BOOL "Found python module '${module}'")
     message(STATUS "Found Python module ${module}")
   endif()
 endfunction()
