@@ -5094,11 +5094,11 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParameterLists) {
   Decl *FromTU = getTuDecl(Code, Lang_CXX);
   auto *FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU,
       functionDecl(hasName("f"), isExplicitTemplateSpecialization()));
-  ASSERT_EQ(FromD->getNumTemplateParameterLists(), 1);
+  ASSERT_EQ(FromD->getNumTemplateParameterLists(), 1u);
 
   auto *ToD = Import(FromD, Lang_CXX);
   // The template parameter list should exist.
-  EXPECT_EQ(ToD->getNumTemplateParameterLists(), 1);
+  EXPECT_EQ(ToD->getNumTemplateParameterLists(), 1u);
 }
 
 struct ASTImporterLookupTableTest : ASTImporterOptionSpecificTestBase {};
