@@ -1,7 +1,6 @@
 Ideas for things to do:
 
-- more projects (compiler-rt libcxx libcxxabi libunwind clang-tools-extra lldb)
-  - phosek expressed interest in compiler-rt libcxx libcxxabi libunwind
+- more projects (compiler-rt's asan/ubsan/msan/tsan, lldb)
   - once there are more projects, have an llvm_enable_projects arg, modeled
     after llvm_targets_to_build in the GN build
   - a check-all build target that runs test of all projects
@@ -14,7 +13,6 @@ Ideas for things to do:
   - or use opt toolchain and build tablegen twice in debug builds, like cmake
 
 - cross builds using GN's toolchain feature
-- one-build-dir bootstrap builds using GN's toolchain feature
 
 - move clang_tablegen into lib/ for private files
 - add dead code stripping

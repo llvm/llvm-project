@@ -96,20 +96,19 @@ static void TestUnsignedBinOpExhaustive(
 }
 
 template<typename Fn1, typename Fn2>
-static void TestSignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn) {
+static void TestSignedBinOpExhaustive(
+    Fn1 RangeFn, Fn2 IntFn,
+    bool SkipZeroRHS = false, bool CorrectnessOnly = false) {
   unsigned Bits = 4;
   EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
                                        const ConstantRange &CR2) {
-    ConstantRange CR = RangeFn(CR1, CR2);
-    if (CR1.isEmptySet() || CR2.isEmptySet()) {
-      EXPECT_TRUE(CR.isEmptySet());
-      return;
-    }
-
     APInt Min = APInt::getSignedMaxValue(Bits);
     APInt Max = APInt::getSignedMinValue(Bits);
     ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
       ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+        if (SkipZeroRHS && N2 == 0)
+          return;
+
         APInt N = IntFn(N1, N2);
         if (N.slt(Min))
           Min = N;
@@ -118,7 +117,18 @@ static void TestSignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn) {
       });
     });
 
-    EXPECT_EQ(ConstantRange::getNonEmpty(Min, Max + 1), CR);
+    ConstantRange CR = RangeFn(CR1, CR2);
+    if (Min.sgt(Max)) {
+      EXPECT_TRUE(CR.isEmptySet());
+      return;
+    }
+
+    ConstantRange Exact = ConstantRange::getNonEmpty(Min, Max + 1);
+    if (CorrectnessOnly) {
+      EXPECT_TRUE(CR.contains(Exact));
+    } else {
+      EXPECT_EQ(Exact, CR);
+    }
   });
 }
 
@@ -866,6 +876,79 @@ TEST_F(ConstantRangeTest, URem) {
       },
       [](const APInt &N1, const APInt &N2) {
         return N1.urem(N2);
+      },
+      /* SkipZeroRHS */ true, /* CorrectnessOnly */ true);
+}
+
+TEST_F(ConstantRangeTest, SRem) {
+  EXPECT_EQ(Full.srem(Empty), Empty);
+  EXPECT_EQ(Empty.srem(Full), Empty);
+  // srem by zero is UB.
+  EXPECT_EQ(Full.srem(ConstantRange(APInt(16, 0))), Empty);
+  // srem by full range doesn't contain SignedMinValue.
+  EXPECT_EQ(Full.srem(Full), ConstantRange(APInt::getSignedMinValue(16) + 1,
+                                           APInt::getSignedMinValue(16)));
+
+  ConstantRange PosMod(APInt(16, 10), APInt(16, 21));  // [10, 20]
+  ConstantRange NegMod(APInt(16, -20), APInt(16, -9)); // [-20, -10]
+  ConstantRange IntMinMod(APInt::getSignedMinValue(16));
+
+  ConstantRange Expected(16, true);
+
+  // srem is bounded by abs(RHS) minus one.
+  ConstantRange PosLargeLHS(APInt(16, 0), APInt(16, 41));
+  Expected = ConstantRange(APInt(16, 0), APInt(16, 20));
+  EXPECT_EQ(PosLargeLHS.srem(PosMod), Expected);
+  EXPECT_EQ(PosLargeLHS.srem(NegMod), Expected);
+  ConstantRange NegLargeLHS(APInt(16, -40), APInt(16, 1));
+  Expected = ConstantRange(APInt(16, -19), APInt(16, 1));
+  EXPECT_EQ(NegLargeLHS.srem(PosMod), Expected);
+  EXPECT_EQ(NegLargeLHS.srem(NegMod), Expected);
+  ConstantRange PosNegLargeLHS(APInt(16, -32), APInt(16, 38));
+  Expected = ConstantRange(APInt(16, -19), APInt(16, 20));
+  EXPECT_EQ(PosNegLargeLHS.srem(PosMod), Expected);
+  EXPECT_EQ(PosNegLargeLHS.srem(NegMod), Expected);
+
+  // srem is bounded by LHS.
+  ConstantRange PosLHS(APInt(16, 0), APInt(16, 16));
+  EXPECT_EQ(PosLHS.srem(PosMod), PosLHS);
+  EXPECT_EQ(PosLHS.srem(NegMod), PosLHS);
+  EXPECT_EQ(PosLHS.srem(IntMinMod), PosLHS);
+  ConstantRange NegLHS(APInt(16, -15), APInt(16, 1));
+  EXPECT_EQ(NegLHS.srem(PosMod), NegLHS);
+  EXPECT_EQ(NegLHS.srem(NegMod), NegLHS);
+  EXPECT_EQ(NegLHS.srem(IntMinMod), NegLHS);
+  ConstantRange PosNegLHS(APInt(16, -12), APInt(16, 18));
+  EXPECT_EQ(PosNegLHS.srem(PosMod), PosNegLHS);
+  EXPECT_EQ(PosNegLHS.srem(NegMod), PosNegLHS);
+  EXPECT_EQ(PosNegLHS.srem(IntMinMod), PosNegLHS);
+
+  // srem is LHS if it is smaller than RHS.
+  ConstantRange PosSmallLHS(APInt(16, 3), APInt(16, 8));
+  EXPECT_EQ(PosSmallLHS.srem(PosMod), PosSmallLHS);
+  EXPECT_EQ(PosSmallLHS.srem(NegMod), PosSmallLHS);
+  EXPECT_EQ(PosSmallLHS.srem(IntMinMod), PosSmallLHS);
+  ConstantRange NegSmallLHS(APInt(16, -7), APInt(16, -2));
+  EXPECT_EQ(NegSmallLHS.srem(PosMod), NegSmallLHS);
+  EXPECT_EQ(NegSmallLHS.srem(NegMod), NegSmallLHS);
+  EXPECT_EQ(NegSmallLHS.srem(IntMinMod), NegSmallLHS);
+  ConstantRange PosNegSmallLHS(APInt(16, -3), APInt(16, 8));
+  EXPECT_EQ(PosNegSmallLHS.srem(PosMod), PosNegSmallLHS);
+  EXPECT_EQ(PosNegSmallLHS.srem(NegMod), PosNegSmallLHS);
+  EXPECT_EQ(PosNegSmallLHS.srem(IntMinMod), PosNegSmallLHS);
+
+  // Example of a suboptimal result:
+  // [12, 14] srem 10 is [2, 4], but we conservatively compute [0, 9].
+  EXPECT_EQ(ConstantRange(APInt(16, 12), APInt(16, 15))
+                .srem(ConstantRange(APInt(16, 10))),
+            ConstantRange(APInt(16, 0), APInt(16, 10)));
+
+  TestSignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.srem(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1.srem(N2);
       },
       /* SkipZeroRHS */ true, /* CorrectnessOnly */ true);
 }

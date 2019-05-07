@@ -272,7 +272,7 @@ cvtsi2ssl 64(%rdx,%rax), %xmm6
 // CHECK: encoding: [0xf3,0x0f,0x2a,0x72,0x40]
 cvtsi2ssl 64(%rdx), %xmm6
 
-// CHECK: cvtsi2ssl %r13d, %xmm6
+// CHECK: cvtsi2ss %r13d, %xmm6
 // CHECK: encoding: [0xf3,0x41,0x0f,0x2a,0xf5]
 cvtsi2ssl %r13d, %xmm6
 
@@ -300,7 +300,7 @@ cvtsi2ssq 64(%rdx,%rax), %xmm6
 // CHECK: encoding: [0xf3,0x48,0x0f,0x2a,0x72,0x40]
 cvtsi2ssq 64(%rdx), %xmm6
 
-// CHECK: cvtsi2ssq %r15, %xmm6
+// CHECK: cvtsi2ss %r15, %xmm6
 // CHECK: encoding: [0xf3,0x49,0x0f,0x2a,0xf7]
 cvtsi2ssq %r15, %xmm6
 

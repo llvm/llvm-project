@@ -65,7 +65,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
   BTFType.NameOff = BDebug.addString(DTy->getName());
 
   // The base type for PTR/CONST/VOLATILE could be void.
-  const DIType *ResolvedType = DTy->getBaseType().resolve();
+  const DIType *ResolvedType = DTy->getBaseType();
   if (!ResolvedType) {
     assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
             Kind == BTF::BTF_KIND_VOLATILE) &&
@@ -209,7 +209,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     } else {
       BTFMember.Offset = DDTy->getOffsetInBits();
     }
-    BTFMember.Type = BDebug.getTypeId(DDTy->getBaseType().resolve());
+    BTFMember.Type = BDebug.getTypeId(DDTy->getBaseType());
     Members.push_back(BTFMember);
   }
 }
@@ -239,7 +239,7 @@ BTFTypeFuncProto::BTFTypeFuncProto(
 
 void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   DITypeRefArray Elements = STy->getTypeArray();
-  auto RetType = Elements[0].resolve();
+  auto RetType = Elements[0];
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
 
@@ -247,7 +247,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   // to represent the vararg, encode the NameOff/Type to be 0.
   for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
     struct BTF::BTFParam Param;
-    auto Element = Elements[I].resolve();
+    auto Element = Elements[I];
     if (Element) {
       Param.NameOff = BDebug.addString(FuncArgNames[I]);
       Param.Type = BDebug.getTypeId(Element);
@@ -393,7 +393,7 @@ void BTFDebug::visitSubroutineType(
 
   // Visit return type and func arg types.
   for (const auto Element : Elements) {
-    visitTypeEntry(Element.resolve());
+    visitTypeEntry(Element);
   }
 }
 
@@ -427,7 +427,7 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array element type.
   uint32_t ElemTypeId;
-  visitTypeEntry(CTy->getBaseType().resolve(), ElemTypeId);
+  visitTypeEntry(CTy->getBaseType(), ElemTypeId);
 
   if (!CTy->getSizeInBits()) {
     auto TypeEntry = llvm::make_unique<BTFTypeArray>(ElemTypeId, 0);
@@ -513,7 +513,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId) {
   // Visit base type of pointer, typedef, const, volatile, restrict or
   // struct/union member.
   uint32_t TempTypeId = 0;
-  visitTypeEntry(DTy->getBaseType().resolve(), TempTypeId);
+  visitTypeEntry(DTy->getBaseType(), TempTypeId);
 }
 
 void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId) {
@@ -713,7 +713,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
       // Collect function arguments for subprogram func type.
       uint32_t Arg = DV->getArg();
       if (Arg) {
-        visitTypeEntry(DV->getType().resolve());
+        visitTypeEntry(DV->getType());
         FuncArgNames[Arg] = DV->getName();
       }
     }
@@ -810,7 +810,7 @@ void BTFDebug::processGlobals() {
     Global.getDebugInfo(GVs);
     uint32_t GVTypeId = 0;
     for (auto *GVE : GVs) {
-      visitTypeEntry(GVE->getVariable()->getType().resolve(), GVTypeId);
+      visitTypeEntry(GVE->getVariable()->getType(), GVTypeId);
       break;
     }
 
