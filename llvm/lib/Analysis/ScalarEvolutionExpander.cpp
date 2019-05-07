@@ -1633,7 +1633,8 @@ Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
     // In the case of mixed integer and pointer types, do the
     // rest of the comparisons as integer.
-    if (S->getOperand(i)->getType() != Ty) {
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
       Ty = SE.getEffectiveSCEVType(Ty);
       LHS = InsertNoopCastOfTo(LHS, Ty);
     }
@@ -1657,7 +1658,8 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
     // In the case of mixed integer and pointer types, do the
     // rest of the comparisons as integer.
-    if (S->getOperand(i)->getType() != Ty) {
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
       Ty = SE.getEffectiveSCEVType(Ty);
       LHS = InsertNoopCastOfTo(LHS, Ty);
     }
@@ -1665,6 +1667,56 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
     Value *ICmp = Builder.CreateICmpUGT(LHS, RHS);
     rememberInstruction(ICmp);
     Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "umax");
+    rememberInstruction(Sel);
+    LHS = Sel;
+  }
+  // In the case of mixed integer and pointer types, cast the
+  // final result back to the pointer type.
+  if (LHS->getType() != S->getType())
+    LHS = InsertNoopCastOfTo(LHS, S->getType());
+  return LHS;
+}
+
+Value *SCEVExpander::visitSMinExpr(const SCEVSMinExpr *S) {
+  Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
+  Type *Ty = LHS->getType();
+  for (int i = S->getNumOperands() - 2; i >= 0; --i) {
+    // In the case of mixed integer and pointer types, do the
+    // rest of the comparisons as integer.
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
+      Ty = SE.getEffectiveSCEVType(Ty);
+      LHS = InsertNoopCastOfTo(LHS, Ty);
+    }
+    Value *RHS = expandCodeFor(S->getOperand(i), Ty);
+    Value *ICmp = Builder.CreateICmpSLT(LHS, RHS);
+    rememberInstruction(ICmp);
+    Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "smin");
+    rememberInstruction(Sel);
+    LHS = Sel;
+  }
+  // In the case of mixed integer and pointer types, cast the
+  // final result back to the pointer type.
+  if (LHS->getType() != S->getType())
+    LHS = InsertNoopCastOfTo(LHS, S->getType());
+  return LHS;
+}
+
+Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
+  Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
+  Type *Ty = LHS->getType();
+  for (int i = S->getNumOperands() - 2; i >= 0; --i) {
+    // In the case of mixed integer and pointer types, do the
+    // rest of the comparisons as integer.
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
+      Ty = SE.getEffectiveSCEVType(Ty);
+      LHS = InsertNoopCastOfTo(LHS, Ty);
+    }
+    Value *RHS = expandCodeFor(S->getOperand(i), Ty);
+    Value *ICmp = Builder.CreateICmpULT(LHS, RHS);
+    rememberInstruction(ICmp);
+    Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "umin");
     rememberInstruction(Sel);
     LHS = Sel;
   }
@@ -1778,7 +1830,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
 
   // IndVarSimplify sometimes sets the insertion point at the block start, even
   // when there are PHIs at that point.  We must correct for this.
-  if (isa<PHINode>(*InsertPt)) 
+  if (isa<PHINode>(*InsertPt))
     InsertPt = &*InsertPt->getParent()->getFirstInsertionPt();
 
   // Check to see if we already expanded this here.
@@ -2110,7 +2162,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
   // HowManyLessThans uses a Max expression whenever the loop is not guarded by
   // the exit condition.
-  if (isa<SCEVSMaxExpr>(S) || isa<SCEVUMaxExpr>(S))
+  if (isa<SCEVMinMaxExpr>(S))
     return true;
 
   // Recurse past nary expressions, which commonly occur in the

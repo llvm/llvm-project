@@ -598,6 +598,8 @@ public:
   /// \p IndexExprs The expressions for the indices.
   const SCEV *getGEPExpr(GEPOperator *GEP,
                          const SmallVectorImpl<const SCEV *> &IndexExprs);
+  const SCEV *getMinMaxExpr(unsigned Kind,
+                            SmallVectorImpl<const SCEV *> &Operands);
   const SCEV *getSMaxExpr(const SCEV *LHS, const SCEV *RHS);
   const SCEV *getSMaxExpr(SmallVectorImpl<const SCEV *> &Operands);
   const SCEV *getUMaxExpr(const SCEV *LHS, const SCEV *RHS);

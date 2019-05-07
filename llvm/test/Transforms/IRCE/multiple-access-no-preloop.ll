@@ -38,14 +38,10 @@ define void @multiple_access_no_preloop(
 ; CHECK-LABEL: @multiple_access_no_preloop(
 
 ; CHECK: loop.preheader:
-; CHECK: [[not_len_b:[^ ]+]] = sub i32 -1, %len.b
-; CHECK: [[not_len_a:[^ ]+]] = sub i32 -1, %len.a
-; CHECK: [[smax_not_len_cond:[^ ]+]] = icmp sgt i32 [[not_len_b]], [[not_len_a]]
-; CHECK: [[smax_not_len:[^ ]+]] = select i1 [[smax_not_len_cond]], i32 [[not_len_b]], i32 [[not_len_a]]
-; CHECK: [[not_n:[^ ]+]] = sub i32 -1, %n
-; CHECK: [[not_upper_limit_cond_loclamp:[^ ]+]] = icmp sgt i32 [[smax_not_len]], [[not_n]]
-; CHECK: [[not_upper_limit_loclamp:[^ ]+]] = select i1 [[not_upper_limit_cond_loclamp]], i32 [[smax_not_len]], i32 [[not_n]]
-; CHECK: [[upper_limit_loclamp:[^ ]+]] = sub i32 -1, [[not_upper_limit_loclamp]]
+; CHECK: [[smax_len_cond:[^ ]+]] = icmp slt i32 %len.b, %len.a
+; CHECK: [[smax_len:[^ ]+]] = select i1 [[smax_len_cond]], i32 %len.b, i32 %len.a
+; CHECK: [[upper_limit_cond_loclamp:[^ ]+]] = icmp slt i32 [[smax_len]], %n
+; CHECK: [[upper_limit_loclamp:[^ ]+]] = select i1 [[upper_limit_cond_loclamp]], i32 [[smax_len]], i32 %n
 ; CHECK: [[upper_limit_cmp:[^ ]+]] = icmp sgt i32 [[upper_limit_loclamp]], 0
 ; CHECK: [[upper_limit:[^ ]+]] = select i1 [[upper_limit_cmp]], i32 [[upper_limit_loclamp]], i32 0
 

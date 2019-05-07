@@ -277,7 +277,9 @@ void SCEV::print(raw_ostream &OS) const {
   case scAddExpr:
   case scMulExpr:
   case scUMaxExpr:
-  case scSMaxExpr: {
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr: {
     const SCEVNAryExpr *NAry = cast<SCEVNAryExpr>(this);
     const char *OpStr = nullptr;
     switch (NAry->getSCEVType()) {
@@ -285,6 +287,12 @@ void SCEV::print(raw_ostream &OS) const {
     case scMulExpr: OpStr = " * "; break;
     case scUMaxExpr: OpStr = " umax "; break;
     case scSMaxExpr: OpStr = " smax "; break;
+    case scUMinExpr:
+      OpStr = " umin ";
+      break;
+    case scSMinExpr:
+      OpStr = " smin ";
+      break;
     }
     OS << "(";
     for (SCEVNAryExpr::op_iterator I = NAry->op_begin(), E = NAry->op_end();
@@ -353,6 +361,8 @@ Type *SCEV::getType() const {
   case scMulExpr:
   case scUMaxExpr:
   case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
     return cast<SCEVNAryExpr>(this)->getType();
   case scAddExpr:
     return cast<SCEVAddExpr>(this)->getType();
@@ -717,7 +727,9 @@ static int CompareSCEVComplexity(
   case scAddExpr:
   case scMulExpr:
   case scSMaxExpr:
-  case scUMaxExpr: {
+  case scUMaxExpr:
+  case scSMinExpr:
+  case scUMinExpr: {
     const SCEVNAryExpr *LC = cast<SCEVNAryExpr>(LHS);
     const SCEVNAryExpr *RC = cast<SCEVNAryExpr>(RHS);
 
@@ -927,6 +939,8 @@ public:
   void visitUDivExpr(const SCEVUDivExpr *Numerator) {}
   void visitSMaxExpr(const SCEVSMaxExpr *Numerator) {}
   void visitUMaxExpr(const SCEVUMaxExpr *Numerator) {}
+  void visitSMinExpr(const SCEVSMinExpr *Numerator) {}
+  void visitUMinExpr(const SCEVUMinExpr *Numerator) {}
   void visitUnknown(const SCEVUnknown *Numerator) {}
   void visitCouldNotCompute(const SCEVCouldNotCompute *Numerator) {}
 
@@ -3516,12 +3530,6 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   return getAddExpr(BaseExpr, TotalOffset, Wrap);
 }
 
-const SCEV *ScalarEvolution::getSMaxExpr(const SCEV *LHS,
-                                         const SCEV *RHS) {
-  SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
-  return getSMaxExpr(Ops);
-}
-
 std::tuple<const SCEV *, FoldingSetNodeID, void *>
 ScalarEvolution::findExistingSCEVInCache(int SCEVType,
                                          ArrayRef<const SCEV *> Ops) {
@@ -3534,22 +3542,25 @@ ScalarEvolution::findExistingSCEVInCache(int SCEVType,
       UniqueSCEVs.FindNodeOrInsertPos(ID, IP), std::move(ID), IP);
 }
 
-const SCEV *
-ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
-  assert(!Ops.empty() && "Cannot get empty smax!");
+const SCEV *ScalarEvolution::getMinMaxExpr(unsigned Kind,
+                                           SmallVectorImpl<const SCEV *> &Ops) {
+  assert(!Ops.empty() && "Cannot get empty (u|s)(min|max)!");
   if (Ops.size() == 1) return Ops[0];
 #ifndef NDEBUG
   Type *ETy = getEffectiveSCEVType(Ops[0]->getType());
   for (unsigned i = 1, e = Ops.size(); i != e; ++i)
     assert(getEffectiveSCEVType(Ops[i]->getType()) == ETy &&
-           "SCEVSMaxExpr operand types don't match!");
+           "Operand types don't match!");
 #endif
+
+  bool IsSigned = Kind == scSMaxExpr || Kind == scSMinExpr;
+  bool IsMax = Kind == scSMaxExpr || Kind == scUMaxExpr;
 
   // Sort by complexity, this groups all similar expression types together.
   GroupByComplexity(Ops, &LI, DT);
 
-  // Check if we have created the same SMax expression before.
-  if (const SCEV *S = std::get<0>(findExistingSCEVInCache(scSMaxExpr, Ops))) {
+  // Check if we have created the same expression before.
+  if (const SCEV *S = std::get<0>(findExistingSCEVInCache(Kind, Ops))) {
     return S;
   }
 
@@ -3558,190 +3569,127 @@ ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
     ++Idx;
     assert(Idx < Ops.size());
+    auto FoldOp = [&](const APInt &LHS, const APInt &RHS) {
+      if (Kind == scSMaxExpr)
+        return APIntOps::smax(LHS, RHS);
+      else if (Kind == scSMinExpr)
+        return APIntOps::smin(LHS, RHS);
+      else if (Kind == scUMaxExpr)
+        return APIntOps::umax(LHS, RHS);
+      else if (Kind == scUMinExpr)
+        return APIntOps::umin(LHS, RHS);
+      llvm_unreachable("Unknown SCEV min/max opcode");
+    };
+
     while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
       // We found two constants, fold them together!
       ConstantInt *Fold = ConstantInt::get(
-          getContext(), APIntOps::smax(LHSC->getAPInt(), RHSC->getAPInt()));
+          getContext(), FoldOp(LHSC->getAPInt(), RHSC->getAPInt()));
       Ops[0] = getConstant(Fold);
       Ops.erase(Ops.begin()+1);  // Erase the folded element
       if (Ops.size() == 1) return Ops[0];
       LHSC = cast<SCEVConstant>(Ops[0]);
     }
 
-    // If we are left with a constant minimum-int, strip it off.
-    if (cast<SCEVConstant>(Ops[0])->getValue()->isMinValue(true)) {
+    bool IsMinV = LHSC->getValue()->isMinValue(IsSigned);
+    bool IsMaxV = LHSC->getValue()->isMaxValue(IsSigned);
+
+    if (IsMax ? IsMinV : IsMaxV) {
+      // If we are left with a constant minimum(/maximum)-int, strip it off.
       Ops.erase(Ops.begin());
       --Idx;
-    } else if (cast<SCEVConstant>(Ops[0])->getValue()->isMaxValue(true)) {
-      // If we have an smax with a constant maximum-int, it will always be
-      // maximum-int.
-      return Ops[0];
+    } else if (IsMax ? IsMaxV : IsMinV) {
+      // If we have a max(/min) with a constant maximum(/minimum)-int,
+      // it will always be the extremum.
+      return LHSC;
     }
 
     if (Ops.size() == 1) return Ops[0];
   }
 
-  // Find the first SMax
-  while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < scSMaxExpr)
+  // Find the first operation of the same kind
+  while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < Kind)
     ++Idx;
 
-  // Check to see if one of the operands is an SMax. If so, expand its operands
-  // onto our operand list, and recurse to simplify.
+  // Check to see if one of the operands is of the same kind. If so, expand its
+  // operands onto our operand list, and recurse to simplify.
   if (Idx < Ops.size()) {
-    bool DeletedSMax = false;
-    while (const SCEVSMaxExpr *SMax = dyn_cast<SCEVSMaxExpr>(Ops[Idx])) {
+    bool DeletedAny = false;
+    while (Ops[Idx]->getSCEVType() == Kind) {
+      const SCEVMinMaxExpr *SMME = cast<SCEVMinMaxExpr>(Ops[Idx]);
       Ops.erase(Ops.begin()+Idx);
-      Ops.append(SMax->op_begin(), SMax->op_end());
-      DeletedSMax = true;
+      Ops.append(SMME->op_begin(), SMME->op_end());
+      DeletedAny = true;
     }
 
-    if (DeletedSMax)
-      return getSMaxExpr(Ops);
+    if (DeletedAny)
+      return getMinMaxExpr(Kind, Ops);
   }
 
   // Okay, check to see if the same value occurs in the operand list twice.  If
   // so, delete one.  Since we sorted the list, these values are required to
   // be adjacent.
-  for (unsigned i = 0, e = Ops.size()-1; i != e; ++i)
-    //  X smax Y smax Y  -->  X smax Y
-    //  X smax Y         -->  X, if X is always greater than Y
-    if (Ops[i] == Ops[i + 1] || isKnownViaNonRecursiveReasoning(
-                                    ICmpInst::ICMP_SGE, Ops[i], Ops[i + 1])) {
-      Ops.erase(Ops.begin()+i+1, Ops.begin()+i+2);
-      --i; --e;
-    } else if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SLE, Ops[i],
+  llvm::CmpInst::Predicate GEPred =
+      IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+  llvm::CmpInst::Predicate LEPred =
+      IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+  llvm::CmpInst::Predicate FirstPred = IsMax ? GEPred : LEPred;
+  llvm::CmpInst::Predicate SecondPred = IsMax ? LEPred : GEPred;
+  for (unsigned i = 0, e = Ops.size() - 1; i != e; ++i) {
+    if (Ops[i] == Ops[i + 1] ||
+        isKnownViaNonRecursiveReasoning(FirstPred, Ops[i], Ops[i + 1])) {
+      //  X op Y op Y  -->  X op Y
+      //  X op Y       -->  X, if we know X, Y are ordered appropriately
+      Ops.erase(Ops.begin() + i + 1, Ops.begin() + i + 2);
+      --i;
+      --e;
+    } else if (isKnownViaNonRecursiveReasoning(SecondPred, Ops[i],
                                                Ops[i + 1])) {
-      Ops.erase(Ops.begin()+i, Ops.begin()+i+1);
-      --i; --e;
+      //  X op Y       -->  Y, if we know X, Y are ordered appropriately
+      Ops.erase(Ops.begin() + i, Ops.begin() + i + 1);
+      --i;
+      --e;
     }
+  }
 
   if (Ops.size() == 1) return Ops[0];
 
   assert(!Ops.empty() && "Reduced smax down to nothing!");
 
-  // Okay, it looks like we really DO need an smax expr.  Check to see if we
+  // Okay, it looks like we really DO need an expr.  Check to see if we
   // already have one, otherwise create a new one.
   const SCEV *ExistingSCEV;
   FoldingSetNodeID ID;
   void *IP;
-  std::tie(ExistingSCEV, ID, IP) = findExistingSCEVInCache(scSMaxExpr, Ops);
+  std::tie(ExistingSCEV, ID, IP) = findExistingSCEVInCache(Kind, Ops);
   if (ExistingSCEV)
     return ExistingSCEV;
   const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
   std::uninitialized_copy(Ops.begin(), Ops.end(), O);
-  SCEV *S =
-      new (SCEVAllocator) SCEVSMaxExpr(ID.Intern(SCEVAllocator), O, Ops.size());
+  SCEV *S = new (SCEVAllocator) SCEVMinMaxExpr(
+      ID.Intern(SCEVAllocator), static_cast<SCEVTypes>(Kind), O, Ops.size());
+
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
   return S;
 }
 
-const SCEV *ScalarEvolution::getUMaxExpr(const SCEV *LHS,
-                                         const SCEV *RHS) {
+const SCEV *ScalarEvolution::getSMaxExpr(const SCEV *LHS, const SCEV *RHS) {
+  SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
+  return getSMaxExpr(Ops);
+}
+
+const SCEV *ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
+  return getMinMaxExpr(scSMaxExpr, Ops);
+}
+
+const SCEV *ScalarEvolution::getUMaxExpr(const SCEV *LHS, const SCEV *RHS) {
   SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
   return getUMaxExpr(Ops);
 }
 
-const SCEV *
-ScalarEvolution::getUMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
-  assert(!Ops.empty() && "Cannot get empty umax!");
-  if (Ops.size() == 1) return Ops[0];
-#ifndef NDEBUG
-  Type *ETy = getEffectiveSCEVType(Ops[0]->getType());
-  for (unsigned i = 1, e = Ops.size(); i != e; ++i)
-    assert(getEffectiveSCEVType(Ops[i]->getType()) == ETy &&
-           "SCEVUMaxExpr operand types don't match!");
-#endif
-
-  // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI, DT);
-
-  // Check if we have created the same UMax expression before.
-  if (const SCEV *S = std::get<0>(findExistingSCEVInCache(scUMaxExpr, Ops))) {
-    return S;
-  }
-
-  // If there are any constants, fold them together.
-  unsigned Idx = 0;
-  if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
-    ++Idx;
-    assert(Idx < Ops.size());
-    while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
-      // We found two constants, fold them together!
-      ConstantInt *Fold = ConstantInt::get(
-          getContext(), APIntOps::umax(LHSC->getAPInt(), RHSC->getAPInt()));
-      Ops[0] = getConstant(Fold);
-      Ops.erase(Ops.begin()+1);  // Erase the folded element
-      if (Ops.size() == 1) return Ops[0];
-      LHSC = cast<SCEVConstant>(Ops[0]);
-    }
-
-    // If we are left with a constant minimum-int, strip it off.
-    if (cast<SCEVConstant>(Ops[0])->getValue()->isMinValue(false)) {
-      Ops.erase(Ops.begin());
-      --Idx;
-    } else if (cast<SCEVConstant>(Ops[0])->getValue()->isMaxValue(false)) {
-      // If we have an umax with a constant maximum-int, it will always be
-      // maximum-int.
-      return Ops[0];
-    }
-
-    if (Ops.size() == 1) return Ops[0];
-  }
-
-  // Find the first UMax
-  while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < scUMaxExpr)
-    ++Idx;
-
-  // Check to see if one of the operands is a UMax. If so, expand its operands
-  // onto our operand list, and recurse to simplify.
-  if (Idx < Ops.size()) {
-    bool DeletedUMax = false;
-    while (const SCEVUMaxExpr *UMax = dyn_cast<SCEVUMaxExpr>(Ops[Idx])) {
-      Ops.erase(Ops.begin()+Idx);
-      Ops.append(UMax->op_begin(), UMax->op_end());
-      DeletedUMax = true;
-    }
-
-    if (DeletedUMax)
-      return getUMaxExpr(Ops);
-  }
-
-  // Okay, check to see if the same value occurs in the operand list twice.  If
-  // so, delete one.  Since we sorted the list, these values are required to
-  // be adjacent.
-  for (unsigned i = 0, e = Ops.size()-1; i != e; ++i)
-    //  X umax Y umax Y  -->  X umax Y
-    //  X umax Y         -->  X, if X is always greater than Y
-    if (Ops[i] == Ops[i + 1] || isKnownViaNonRecursiveReasoning(
-                                    ICmpInst::ICMP_UGE, Ops[i], Ops[i + 1])) {
-      Ops.erase(Ops.begin() + i + 1, Ops.begin() + i + 2);
-      --i; --e;
-    } else if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, Ops[i],
-                                               Ops[i + 1])) {
-      Ops.erase(Ops.begin() + i, Ops.begin() + i + 1);
-      --i; --e;
-    }
-
-  if (Ops.size() == 1) return Ops[0];
-
-  assert(!Ops.empty() && "Reduced umax down to nothing!");
-
-  // Okay, it looks like we really DO need a umax expr.  Check to see if we
-  // already have one, otherwise create a new one.
-  const SCEV *ExistingSCEV;
-  FoldingSetNodeID ID;
-  void *IP;
-  std::tie(ExistingSCEV, ID, IP) = findExistingSCEVInCache(scUMaxExpr, Ops);
-  if (ExistingSCEV)
-    return ExistingSCEV;
-  const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
-  std::uninitialized_copy(Ops.begin(), Ops.end(), O);
-  SCEV *S = new (SCEVAllocator) SCEVUMaxExpr(ID.Intern(SCEVAllocator),
-                                             O, Ops.size());
-  UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
-  return S;
+const SCEV *ScalarEvolution::getUMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
+  return getMinMaxExpr(scUMaxExpr, Ops);
 }
 
 const SCEV *ScalarEvolution::getSMinExpr(const SCEV *LHS,
@@ -3751,11 +3699,7 @@ const SCEV *ScalarEvolution::getSMinExpr(const SCEV *LHS,
 }
 
 const SCEV *ScalarEvolution::getSMinExpr(SmallVectorImpl<const SCEV *> &Ops) {
-  // ~smax(~x, ~y, ~z) == smin(x, y, z).
-  SmallVector<const SCEV *, 2> NotOps;
-  for (auto *S : Ops)
-    NotOps.push_back(getNotSCEV(S));
-  return getNotSCEV(getSMaxExpr(NotOps));
+  return getMinMaxExpr(scSMinExpr, Ops);
 }
 
 const SCEV *ScalarEvolution::getUMinExpr(const SCEV *LHS,
@@ -3765,16 +3709,7 @@ const SCEV *ScalarEvolution::getUMinExpr(const SCEV *LHS,
 }
 
 const SCEV *ScalarEvolution::getUMinExpr(SmallVectorImpl<const SCEV *> &Ops) {
-  assert(!Ops.empty() && "At least one operand must be!");
-  // Trivial case.
-  if (Ops.size() == 1)
-    return Ops[0];
-
-  // ~umax(~x, ~y, ~z) == umin(x, y, z).
-  SmallVector<const SCEV *, 2> NotOps;
-  for (auto *S : Ops)
-    NotOps.push_back(getNotSCEV(S));
-  return getNotSCEV(getUMaxExpr(NotOps));
+  return getMinMaxExpr(scUMinExpr, Ops);
 }
 
 const SCEV *ScalarEvolution::getSizeOfExpr(Type *IntTy, Type *AllocTy) {
@@ -4016,11 +3951,44 @@ const SCEV *ScalarEvolution::getNegativeSCEV(const SCEV *V,
       V, getConstant(cast<ConstantInt>(Constant::getAllOnesValue(Ty))), Flags);
 }
 
+/// If Expr computes ~A, return A else return nullptr
+static const SCEV *MatchNotExpr(const SCEV *Expr) {
+  const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Expr);
+  if (!Add || Add->getNumOperands() != 2 ||
+      !Add->getOperand(0)->isAllOnesValue())
+    return nullptr;
+
+  const SCEVMulExpr *AddRHS = dyn_cast<SCEVMulExpr>(Add->getOperand(1));
+  if (!AddRHS || AddRHS->getNumOperands() != 2 ||
+      !AddRHS->getOperand(0)->isAllOnesValue())
+    return nullptr;
+
+  return AddRHS->getOperand(1);
+}
+
 /// Return a SCEV corresponding to ~V = -1-V
 const SCEV *ScalarEvolution::getNotSCEV(const SCEV *V) {
   if (const SCEVConstant *VC = dyn_cast<SCEVConstant>(V))
     return getConstant(
                 cast<ConstantInt>(ConstantExpr::getNot(VC->getValue())));
+
+  // Fold ~(u|s)(min|max)(~x, ~y) to (u|s)(max|min)(x, y)
+  if (const SCEVMinMaxExpr *MME = dyn_cast<SCEVMinMaxExpr>(V)) {
+    auto MatchMinMaxNegation = [&](const SCEVMinMaxExpr *MME) {
+      SmallVector<const SCEV *, 2> MatchedOperands;
+      for (const SCEV *Operand : MME->operands()) {
+        const SCEV *Matched = MatchNotExpr(Operand);
+        if (!Matched)
+          return (const SCEV *)nullptr;
+        MatchedOperands.push_back(Matched);
+      }
+      return getMinMaxExpr(
+          SCEVMinMaxExpr::negate(static_cast<SCEVTypes>(MME->getSCEVType())),
+          MatchedOperands);
+    };
+    if (const SCEV *Replaced = MatchMinMaxNegation(MME))
+      return Replaced;
+  }
 
   Type *Ty = V->getType();
   Ty = getEffectiveSCEVType(Ty);
@@ -5210,6 +5178,8 @@ static bool IsAvailableOnEntry(const Loop *L, DominatorTree &DT, const SCEV *S,
       switch (S->getSCEVType()) {
       case scConstant: case scTruncate: case scZeroExtend: case scSignExtend:
       case scAddExpr: case scMulExpr: case scUMaxExpr: case scSMaxExpr:
+      case scUMinExpr:
+      case scSMinExpr:
         // These expressions are available if their operand(s) is/are.
         return true;
 
@@ -8115,7 +8085,9 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
     }
     case scSMaxExpr:
     case scUMaxExpr:
-      break; // TODO: smax, umax.
+    case scSMinExpr:
+    case scUMinExpr:
+      break; // TODO: smax, umax, smin, umax.
   }
   return nullptr;
 }
@@ -8243,10 +8215,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           return getAddExpr(NewOps);
         if (isa<SCEVMulExpr>(Comm))
           return getMulExpr(NewOps);
-        if (isa<SCEVSMaxExpr>(Comm))
-          return getSMaxExpr(NewOps);
-        if (isa<SCEVUMaxExpr>(Comm))
-          return getUMaxExpr(NewOps);
+        if (isa<SCEVMinMaxExpr>(Comm))
+          return getMinMaxExpr(Comm->getSCEVType(), NewOps);
         llvm_unreachable("Unknown commutative SCEV type!");
       }
     }
@@ -10087,41 +10057,15 @@ bool ScalarEvolution::isImpliedCondOperands(ICmpInst::Predicate Pred,
                                      getNotSCEV(FoundLHS));
 }
 
-/// If Expr computes ~A, return A else return nullptr
-static const SCEV *MatchNotExpr(const SCEV *Expr) {
-  const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Expr);
-  if (!Add || Add->getNumOperands() != 2 ||
-      !Add->getOperand(0)->isAllOnesValue())
-    return nullptr;
-
-  const SCEVMulExpr *AddRHS = dyn_cast<SCEVMulExpr>(Add->getOperand(1));
-  if (!AddRHS || AddRHS->getNumOperands() != 2 ||
-      !AddRHS->getOperand(0)->isAllOnesValue())
-    return nullptr;
-
-  return AddRHS->getOperand(1);
-}
-
-/// Is MaybeMaxExpr an SMax or UMax of Candidate and some other values?
-template<typename MaxExprType>
-static bool IsMaxConsistingOf(const SCEV *MaybeMaxExpr,
-                              const SCEV *Candidate) {
-  const MaxExprType *MaxExpr = dyn_cast<MaxExprType>(MaybeMaxExpr);
-  if (!MaxExpr) return false;
-
-  return find(MaxExpr->operands(), Candidate) != MaxExpr->op_end();
-}
-
-/// Is MaybeMinExpr an SMin or UMin of Candidate and some other values?
-template<typename MaxExprType>
-static bool IsMinConsistingOf(ScalarEvolution &SE,
-                              const SCEV *MaybeMinExpr,
-                              const SCEV *Candidate) {
-  const SCEV *MaybeMaxExpr = MatchNotExpr(MaybeMinExpr);
-  if (!MaybeMaxExpr)
+/// Is MaybeMinMaxExpr an (U|S)(Min|Max) of Candidate and some other values?
+template <typename MinMaxExprType>
+static bool IsMinMaxConsistingOf(const SCEV *MaybeMinMaxExpr,
+                                 const SCEV *Candidate) {
+  const MinMaxExprType *MinMaxExpr = dyn_cast<MinMaxExprType>(MaybeMinMaxExpr);
+  if (!MinMaxExpr)
     return false;
 
-  return IsMaxConsistingOf<MaxExprType>(MaybeMaxExpr, SE.getNotSCEV(Candidate));
+  return find(MinMaxExpr->operands(), Candidate) != MinMaxExpr->op_end();
 }
 
 static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
@@ -10170,20 +10114,20 @@ static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE,
     LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_SLE:
     return
-      // min(A, ...) <= A
-      IsMinConsistingOf<SCEVSMaxExpr>(SE, LHS, RHS) ||
-      // A <= max(A, ...)
-      IsMaxConsistingOf<SCEVSMaxExpr>(RHS, LHS);
+        // min(A, ...) <= A
+        IsMinMaxConsistingOf<SCEVSMinExpr>(LHS, RHS) ||
+        // A <= max(A, ...)
+        IsMinMaxConsistingOf<SCEVSMaxExpr>(RHS, LHS);
 
   case ICmpInst::ICMP_UGE:
     std::swap(LHS, RHS);
     LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_ULE:
     return
-      // min(A, ...) <= A
-      IsMinConsistingOf<SCEVUMaxExpr>(SE, LHS, RHS) ||
-      // A <= max(A, ...)
-      IsMaxConsistingOf<SCEVUMaxExpr>(RHS, LHS);
+        // min(A, ...) <= A
+        IsMinMaxConsistingOf<SCEVUMinExpr>(LHS, RHS) ||
+        // A <= max(A, ...)
+        IsMinMaxConsistingOf<SCEVUMaxExpr>(RHS, LHS);
   }
 
   llvm_unreachable("covered switch fell through?!");
@@ -11651,7 +11595,9 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
   case scAddExpr:
   case scMulExpr:
   case scUMaxExpr:
-  case scSMaxExpr: {
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr: {
     bool HasVarying = false;
     for (auto *Op : cast<SCEVNAryExpr>(S)->operands()) {
       LoopDisposition D = getLoopDisposition(Op, L);
@@ -11738,7 +11684,9 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
   case scAddExpr:
   case scMulExpr:
   case scUMaxExpr:
-  case scSMaxExpr: {
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr: {
     const SCEVNAryExpr *NAry = cast<SCEVNAryExpr>(S);
     bool Proper = true;
     for (const SCEV *NAryOp : NAry->operands()) {
