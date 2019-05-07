@@ -19,27 +19,72 @@ namespace clangd {
 namespace {
 
 TEST(RenameTest, SingleFile) {
-  Annotations Code(R"cpp(
-    void foo() {
-      fo^o();
-    }
-  )cpp");
-  auto TU = TestTU::withCode(Code.code());
-  TU.HeaderCode = "void foo();"; // outside main file, will not be touched.
+  struct Test {
+    const char* Before;
+    const char* After;
+  } Tests[] = {
+      // Rename function.
+      {
+          R"cpp(
+            void foo() {
+              fo^o();
+            }
+          )cpp",
+          R"cpp(
+            void abcde() {
+              abcde();
+            }
+          )cpp",
+      },
+      // Rename type.
+      {
+          R"cpp(
+            struct foo{};
+            foo test() {
+               f^oo x;
+               return x;
+            }
+          )cpp",
+          R"cpp(
+            struct abcde{};
+            abcde test() {
+               abcde x;
+               return x;
+            }
+          )cpp",
+      },
+      // Rename variable.
+      {
+          R"cpp(
+            void bar() {
+              if (auto ^foo = 5) {
+                foo = 3;
+              }
+            }
+          )cpp",
+          R"cpp(
+            void bar() {
+              if (auto abcde = 5) {
+                abcde = 3;
+              }
+            }
+          )cpp",
+      },
+  };
+  for (const Test &T : Tests) {
+    Annotations Code(T.Before);
+    auto TU = TestTU::withCode(Code.code());
+    TU.HeaderCode = "void foo();"; // outside main file, will not be touched.
+    auto AST = TU.build();
+    auto RenameResult =
+        renameWithinFile(AST, testPath(TU.Filename), Code.point(), "abcde");
+    ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
+    auto ApplyResult =
+        tooling::applyAllReplacements(Code.code(), *RenameResult);
+    ASSERT_TRUE(bool(ApplyResult)) << ApplyResult.takeError();
 
-  auto AST = TU.build();
-  auto RenameResult =
-      renameWithinFile(AST, testPath(TU.Filename), Code.point(), "abcde");
-  ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
-  auto ApplyResult = tooling::applyAllReplacements(Code.code(), *RenameResult);
-  ASSERT_TRUE(bool(ApplyResult)) << ApplyResult.takeError();
-
-  const char *Want = R"cpp(
-    void abcde() {
-      abcde();
-    }
-  )cpp";
-  EXPECT_EQ(Want, *ApplyResult);
+    EXPECT_EQ(T.After, *ApplyResult) << T.Before;
+  }
 }
 
 } // namespace

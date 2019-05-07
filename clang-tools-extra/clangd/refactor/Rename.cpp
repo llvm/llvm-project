@@ -66,6 +66,8 @@ renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
   // Right now we only support renaming the main file, so we
   // drop replacements not for the main file. In the future, we might
   // also support rename with wider scope.
+  // Rename sometimes returns duplicate edits (which is a bug). A side-effect of 
+  // adding them to a single Replacements object is these are deduplicated.
   for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
     for (const auto &Rep : Change.getReplacements()) {
       if (Rep.getFilePath() == File)
