@@ -4135,10 +4135,9 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
       }
     }
 
-    if (IntfDecl->hasAttr<ObjCClassStubAttr>()) {
-      if (!IntfDecl->hasAttr<ObjCSubclassingRestrictedAttr>())
-        Diag(IntfDecl->getLocation(), diag::err_class_stub_subclassing_mismatch);
-    }
+    if (IntfDecl->hasAttr<ObjCClassStubAttr>() &&
+        !IntfDecl->hasAttr<ObjCSubclassingRestrictedAttr>())
+      Diag(IntfDecl->getLocation(), diag::err_class_stub_subclassing_mismatch);
   }
   DiagnoseVariableSizedIvars(*this, OCD);
   if (isInterfaceDeclKind) {
