@@ -129,12 +129,18 @@ Lanon_minuend_quad:
 Lanon_minuend_long:
         .long Lanon_minuend_long - named_data + 2
 
-
 # Named quad storage target (first named atom in __data).
         .globl named_data
         .p2align  3
 named_data:
         .quad   0x2222222222222222
+
+# An alt-entry point for named_data
+        .globl named_data_alt_entry
+        .p2align  3
+        .alt_entry named_data_alt_entry
+named_data_alt_entry:
+        .quad   0
 
 # Check X86_64_RELOC_UNSIGNED / extern handling by putting the address of a
 # local named function in a pointer variable.
@@ -200,5 +206,61 @@ minuend_quad3:
         .p2align  2
 minuend_long3:
         .long minuend_long3 - named_data + 2
+
+# Check X86_64_RELOC_SUBTRACTOR handling for exprs of the form
+# "A: .quad/long B - C + D", where 'B' or 'C' is at a fixed offset from 'A'
+# (i.e. is part of an alt_entry chain that includes 'A').
+#
+# Check "A: .long B - C + D" where 'B' is an alt_entry for 'A'.
+# jitlink-check: *{4}subtractor_with_alt_entry_minuend_long = (subtractor_with_alt_entry_minuend_long_B - named_data + 2)[31:0]
+        .globl  subtractor_with_alt_entry_minuend_long
+        .p2align  2
+subtractor_with_alt_entry_minuend_long:
+        .long subtractor_with_alt_entry_minuend_long_B - named_data + 2
+
+        .globl  subtractor_with_alt_entry_minuend_long_B
+        .p2align  2
+        .alt_entry subtractor_with_alt_entry_minuend_long_B
+subtractor_with_alt_entry_minuend_long_B:
+        .long 0
+
+# Check "A: .quad B - C + D" where 'B' is an alt_entry for 'A'.
+# jitlink-check: *{8}subtractor_with_alt_entry_minuend_quad = (subtractor_with_alt_entry_minuend_quad_B - named_data + 2)
+        .globl  subtractor_with_alt_entry_minuend_quad
+        .p2align  3
+subtractor_with_alt_entry_minuend_quad:
+        .quad subtractor_with_alt_entry_minuend_quad_B - named_data + 2
+
+        .globl  subtractor_with_alt_entry_minuend_quad_B
+        .p2align  3
+        .alt_entry subtractor_with_alt_entry_minuend_quad_B
+subtractor_with_alt_entry_minuend_quad_B:
+        .quad 0
+
+# Check "A: .long B - C + D" where 'C' is an alt_entry for 'A'.
+# jitlink-check: *{4}subtractor_with_alt_entry_subtrahend_long = (named_data - subtractor_with_alt_entry_subtrahend_long_B + 2)[31:0]
+        .globl  subtractor_with_alt_entry_subtrahend_long
+        .p2align  2
+subtractor_with_alt_entry_subtrahend_long:
+        .long named_data - subtractor_with_alt_entry_subtrahend_long_B + 2
+
+        .globl  subtractor_with_alt_entry_subtrahend_long_B
+        .p2align  2
+        .alt_entry subtractor_with_alt_entry_subtrahend_long_B
+subtractor_with_alt_entry_subtrahend_long_B:
+        .long 0
+
+# Check "A: .quad B - C + D" where 'B' is an alt_entry for 'A'.
+# jitlink-check: *{8}subtractor_with_alt_entry_subtrahend_quad = (named_data - subtractor_with_alt_entry_subtrahend_quad_B + 2)
+        .globl  subtractor_with_alt_entry_subtrahend_quad
+        .p2align  3
+subtractor_with_alt_entry_subtrahend_quad:
+        .quad named_data - subtractor_with_alt_entry_subtrahend_quad_B + 2
+
+        .globl  subtractor_with_alt_entry_subtrahend_quad_B
+        .p2align  3
+        .alt_entry subtractor_with_alt_entry_subtrahend_quad_B
+subtractor_with_alt_entry_subtrahend_quad_B:
+        .quad 0
 
 .subsections_via_symbols
