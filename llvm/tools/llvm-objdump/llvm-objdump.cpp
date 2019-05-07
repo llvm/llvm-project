@@ -1797,7 +1797,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
     llvm::sort(MappingSymbols);
 
-    if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
+    if (Obj->isELF() && (Obj->getArch() == Triple::amdgcn || Obj->getArch() == Triple::dpu)) {
       // AMDGPU disassembler uses symbolizer for printing labels
       std::unique_ptr<MCRelocationInfo> RelInfo(
         TheTarget->createMCRelocationInfo(TripleName, Ctx));
