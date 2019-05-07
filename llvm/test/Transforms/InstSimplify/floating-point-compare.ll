@@ -485,6 +485,28 @@ define i1 @orderedLessZeroMaximum(float, float) {
   ret i1 %uge
 }
 
+define i1 @minnum_non_nan(float %x) {
+; CHECK-LABEL: @minnum_non_nan(
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float 5.000000e-01, float [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[MIN]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call float @llvm.minnum.f32(float 0.5, float %x)
+  %cmp = fcmp ord float %min, 1.0
+  ret i1 %cmp
+}
+
+define i1 @maxnum_non_nan(float %x) {
+; CHECK-LABEL: @maxnum_non_nan(
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 4.200000e+01)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[MIN]], 1.200000e+01
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call float @llvm.maxnum.f32(float %x, float 42.0)
+  %cmp = fcmp uno float %min, 12.0
+  ret i1 %cmp
+}
+
 define i1 @known_positive_olt_with_negative_constant(double %a) {
 ; CHECK-LABEL: @known_positive_olt_with_negative_constant(
 ; CHECK-NEXT:    ret i1 false
