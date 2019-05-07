@@ -45,12 +45,13 @@ write_lit_config("lit_unit_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
   input = "//clang-tools-extra/clangd/unittests/lit.site.cfg.py.in"
   output = clangd_lit_unit_site_cfg_file
-  extra_values =
-      [ "CMAKE_CURRENT_BINARY_DIR=" +
+  extra_values = [
+    "CMAKE_CURRENT_BINARY_DIR=" +
         rebase_path(get_label_info("//clang-tools-extra/clangd/unittests",
                                    "target_out_dir")),
-        "CMAKE_CURRENT_SOURCE_DIR=" +
-            rebase_path("//clang-tools-extra/clangd/unittest")]
+    "CMAKE_CURRENT_SOURCE_DIR=" +
+        rebase_path("//clang-tools-extra/clangd/unittest"),
+  ]
   if (host_os == "win") {
     # See comment for Windows solink in llvm/utils/gn/build/toolchain/BUILD.gn
     extra_values += [ "SHLIBDIR=" + rebase_path("$root_out_dir/bin") ]

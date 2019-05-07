@@ -1,5 +1,5 @@
-import("//clang-tools-extra/test/clang_tools_extra_lit_site_cfg_files.gni")
 import("//clang-tools-extra/clangd/test/clangd_lit_site_cfg_files.gni")
+import("//clang-tools-extra/test/clang_tools_extra_lit_site_cfg_files.gni")
 import("//clang/test/clang_lit_site_cfg_files.gni")
 import("//lld/test/lld_lit_site_cfg_files.gni")
 import("//llvm/test/llvm_lit_site_cfg_files.gni")
@@ -43,12 +43,12 @@ write_cmake_config("llvm-lit") {
   config_map +=
       "map_config('" + rebase_path("//clang-tools-extra/test/Unit/lit.cfg.py") +
       "', '" + rebase_path(clang_tools_extra_lit_unit_site_cfg_file) + "')\n"
-  config_map +=
-      "map_config('" + rebase_path("//clang-tools-extra/clangd/test/lit.cfg.py") +
-      "', '" + rebase_path(clangd_lit_site_cfg_file) + "')\n"
-  config_map +=
-      "map_config('" + rebase_path("//clang-tools-extra/clang/unittests/lit.cfg.py") +
-      "', '" + rebase_path(clangd_lit_unit_site_cfg_file) + "')\n"
+  config_map += "map_config('" +
+                rebase_path("//clang-tools-extra/clangd/test/lit.cfg.py") +
+                "', '" + rebase_path(clangd_lit_site_cfg_file) + "')\n"
+  config_map += "map_config('" +
+                rebase_path("//clang-tools-extra/clang/unittests/lit.cfg.py") +
+                "', '" + rebase_path(clangd_lit_unit_site_cfg_file) + "')\n"
   config_map += "map_config('" + rebase_path("//clang/test/lit.cfg.py") +
                 "', '" + rebase_path(clang_lit_site_cfg_file) + "')\n"
   config_map += "map_config('" + rebase_path("//clang/test/Unit/lit.cfg.py") +
