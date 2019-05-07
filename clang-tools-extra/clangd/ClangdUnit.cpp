@@ -613,8 +613,8 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
                           std::move(VFS), Inputs.Index, Inputs.Opts);
 }
 
-SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
-                                        const FileID FID) {
+SourceLocation getBeginningOfIdentifier(const ParsedAST &Unit,
+                                        const Position &Pos, const FileID FID) {
   const ASTContext &AST = Unit.getASTContext();
   const SourceManager &SourceMgr = AST.getSourceManager();
   auto Offset = positionToOffset(SourceMgr.getBufferData(FID), Pos);

@@ -89,6 +89,7 @@ add_clang_library(clangDaemon
   index/dex/PostingList.cpp
   index/dex/Trigram.cpp
 
+  refactor/Rename.cpp
   refactor/Tweak.cpp
 
   LINK_LIBS
