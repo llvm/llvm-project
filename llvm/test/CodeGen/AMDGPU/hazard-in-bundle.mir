@@ -1,0 +1,66 @@
+# RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK,GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX10 %s
+
+# GCN-LABEL: name: break_smem_clause_max_look_ahead_in_bundle
+# GCN:          S_LOAD_DWORDX2_IMM
+# XNACK-NEXT:   S_NOP
+# NOXNACK-NOT:  S_NOP
+# GCN:          S_LOAD_DWORDX2
+# XNACK-NEXT:   S_NOP
+# NOXNACK-NOT:  S_NOP
+# GCN:          }
+---
+name: break_smem_clause_max_look_ahead_in_bundle
+body: |
+  bb.0:
+    BUNDLE implicit-def $sgpr6_sgpr7 {
+      $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0, 0
+      S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 0, 0, 0
+      S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 4, 0, 0
+      S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 8, 0, 0
+      S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 12, 0, 0
+      S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 16, 0, 0
+      $sgpr14_sgpr15 = S_LOAD_DWORDX2_IMM $sgpr12_sgpr13, 0, 0, 0
+      $sgpr16_sgpr17 = S_LOAD_DWORDX2_IMM $sgpr14_sgpr15, 0, 0, 0
+    }
+    S_ENDPGM 0
+...
+
+# GFX10-LABEL: name: hazard_smem_war_in_bundle
+# GFX10:      S_LOAD_DWORD_IMM
+# GFX10-NEXT: $sgpr_null = S_MOV_B32 0
+# GFX10:      V_CMP_EQ_F32
+---
+name: hazard_smem_war_in_bundle
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    BUNDLE implicit-def $sgpr0_sgpr1 {
+      $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+      $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    }
+    S_ENDPGM 0
+...
+
+# GFX9-LABEL: name: hazard_ignore_dbg_label_in_bundle
+# GFX9:      DBG_LABEL 6
+# GFX9-NEXT: S_NOP 0
+# GFX9:      S_SENDMSG 3, implicit $exec, implicit $m0
+---
+name: hazard_ignore_dbg_label_in_bundle
+body: |
+  bb.0:
+    BUNDLE {
+      $m0 = S_MOV_B32 killed $sgpr12
+      DBG_LABEL 0
+      DBG_LABEL 1
+      DBG_LABEL 2
+      DBG_LABEL 3
+      DBG_LABEL 4
+      DBG_LABEL 5
+      DBG_LABEL 6
+      S_SENDMSG 3, implicit $exec, implicit $m0
+    }
+    S_ENDPGM 0
+...

@@ -60,6 +60,10 @@ private:
 
   void addClauseInst(const MachineInstr &MI);
 
+  // Advance over a MachineInstr bundle. Look for hazards in the bundled
+  // instructions.
+  void processBundle();
+
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
@@ -80,6 +84,8 @@ private:
   int checkAnyInstHazards(MachineInstr *MI);
   int checkReadM0Hazards(MachineInstr *SMovRel);
   int checkNSAtoVMEMHazard(MachineInstr *MI);
+
+  void fixHazards(MachineInstr *MI);
   bool fixVMEMtoScalarWriteHazards(MachineInstr *MI);
   bool fixSMEMtoVectorWriteHazards(MachineInstr *MI);
   bool fixVcmpxExecWARHazard(MachineInstr *MI);
