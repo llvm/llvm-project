@@ -41,15 +41,15 @@ a:
 // DWARF-NOT: .debug_pubnames contents:
 
 
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_info]:
+// RELOC: RELOCATION RECORDS FOR [.debug_info]:
 // RELOC-NEXT: 00000006 R_ARM_ABS32 .debug_abbrev
 // RELOC-NEXT: 0000000c R_ARM_ABS32 .debug_line
 // RELOC-NEXT: R_ARM_ABS32 .text
 // RELOC-NEXT: R_ARM_ABS32 .text
 // RELOC-NEXT: R_ARM_ABS32 .text
 
-// RELOC-NOT: RELOCATION RECORDS FOR [.rel.debug_ranges]:
+// RELOC-NOT: RELOCATION RECORDS FOR [.debug_ranges]:
 
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_aranges]:
+// RELOC: RELOCATION RECORDS FOR [.debug_aranges]:
 // RELOC-NEXT: 00000006 R_ARM_ABS32 .debug_info
 // RELOC-NEXT: 00000010 R_ARM_ABS32 .text

@@ -1447,22 +1447,34 @@ void printRelocations(const ObjectFile *Obj) {
   if (!Obj->isRelocatableObject())
     return;
 
+  // Build a mapping from relocation target to a vector of relocation
+  // sections. Usually, there is an only one relocation section for
+  // each relocated section.
+  MapVector<SectionRef, std::vector<SectionRef>> SecToRelSec;
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     if (Section.relocation_begin() == Section.relocation_end())
       continue;
+    const SectionRef TargetSec = *Section.getRelocatedSection();
+    SecToRelSec[TargetSec].push_back(Section);
+  }
+
+  for (std::pair<SectionRef, std::vector<SectionRef>> &P : SecToRelSec) {
     StringRef SecName;
-    error(Section.getName(SecName));
+    error(P.first.getName(SecName));
     outs() << "RELOCATION RECORDS FOR [" << SecName << "]:\n";
-    for (const RelocationRef &Reloc : Section.relocations()) {
-      uint64_t Address = Reloc.getOffset();
-      SmallString<32> RelocName;
-      SmallString<32> ValueStr;
-      if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
-        continue;
-      Reloc.getTypeName(RelocName);
-      error(getRelocationValueString(Reloc, ValueStr));
-      outs() << format(Fmt.data(), Address) << " " << RelocName << " "
-             << ValueStr << "\n";
+
+    for (SectionRef Section : P.second) {
+      for (const RelocationRef &Reloc : Section.relocations()) {
+        uint64_t Address = Reloc.getOffset();
+        SmallString<32> RelocName;
+        SmallString<32> ValueStr;
+        if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
+          continue;
+        Reloc.getTypeName(RelocName);
+        error(getRelocationValueString(Reloc, ValueStr));
+        outs() << format(Fmt.data(), Address) << " " << RelocName << " "
+               << ValueStr << "\n";
+      }
     }
     outs() << "\n";
   }

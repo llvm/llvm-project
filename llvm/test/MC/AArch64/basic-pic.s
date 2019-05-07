@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj %s -o -| llvm-objdump -r - | FileCheck %s
 
-// CHECK: RELOCATION RECORDS FOR [.rela.text]
+// CHECK: RELOCATION RECORDS FOR [.text]
 
 	.file	"/home/espindola/llvm/llvm/test/CodeGen/AArch64/basic-pic.ll"
 	.text

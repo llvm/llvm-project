@@ -33,7 +33,7 @@ define i32 @bpf_prog1(%struct.bpf_context* nocapture %ctx) #0 section "events/ne
   ret i32 0
 
 ; CHECK-RELOC: file format ELF64-BPF
-; CHECK-RELOC: RELOCATION RECORDS FOR [.rel.eh_frame]:
+; CHECK-RELOC: RELOCATION RECORDS FOR [.eh_frame]:
 ; CHECK-RELOC: R_BPF_64_64 events/net/netif_receive_skb
 }
 

@@ -1,20 +1,18 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj --docnum=1 %s > %t
 # RUN: llvm-objdump --reloc %t > %t1
 # RUN: llvm-objdump -r      %t > %t2
 # RUN: cmp %t1 %t2
 # RUN: FileCheck %s --input-file=%t1
 
-# CHECK: RELOCATION RECORDS FOR [.rel.text]:
-# CHECK: 0000000000000001 R_X86_64_32 glob1
-# CHECK: 0000000000000001 R_X86_64_32S glob2
-# CHECK: 0000000000000002 R_X86_64_64 loc1
+# CHECK:      RELOCATION RECORDS FOR [.text]:
+# CHECK-NEXT: 0000000000000001 R_X86_64_32 glob1
+# CHECK-NEXT: 0000000000000001 R_X86_64_32S glob2
+# CHECK-NEXT: 0000000000000002 R_X86_64_64 loc1
+# CHECK-NEXT: 0000000000000001 R_X86_64_32 glob1+1
+# CHECK-NEXT: 0000000000000001 R_X86_64_32S glob2+2
+# CHECK-NEXT: 0000000000000002 R_X86_64_64 loc1+3
 
-# CHECK: RELOCATION RECORDS FOR [.rela.text]:
-# CHECK: 0000000000000001 R_X86_64_32 glob1+1
-# CHECK: 0000000000000001 R_X86_64_32S glob2+2
-# CHECK: 0000000000000002 R_X86_64_64 loc1+3
-
-!ELF
+--- !ELF
 FileHeader: !FileHeader
   Class: ELFCLASS64
   Data: ELFDATA2LSB
@@ -72,3 +70,24 @@ Symbols:
     Binding: STB_GLOBAL
   - Name:    glob2
     Binding: STB_GLOBAL
+
+## Check we report an error if the relocated section identified by the
+## sh_info field of a relocation section is invalid.
+# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: not llvm-objdump --reloc %t2 2>&1 | FileCheck %s --check-prefix=ERR
+# ERR: LLVM ERROR: Invalid data was encountered while parsing the file
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name: .rela.foo
+  Type: SHT_RELA
+  Link: .symtab
+  Info: 0x255
+  Relocations:
+    - Offset: 0x1
+      Type: R_X86_64_NONE

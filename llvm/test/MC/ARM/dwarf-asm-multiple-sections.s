@@ -77,7 +77,7 @@ b:
 
 
 // Offsets are different in DWARF v5 due to different header layout.
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_info]:
+// RELOC: RELOCATION RECORDS FOR [.debug_info]:
 // RELOC4-NEXT: 00000006 R_ARM_ABS32 .debug_abbrev
 // RELOC4-NEXT: 0000000c R_ARM_ABS32 .debug_line
 // RELOC4-NEXT: 00000010 R_ARM_ABS32 .debug_ranges
@@ -87,11 +87,11 @@ b:
 // RELOC-NEXT: R_ARM_ABS32 .text
 // RELOC-NEXT: R_ARM_ABS32 foo
 
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_ranges]:
+// RELOC: RELOCATION RECORDS FOR [.debug_ranges]:
 // RELOC-NEXT: 00000004 R_ARM_ABS32 .text
 // RELOC-NEXT: 00000014 R_ARM_ABS32 foo
 
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_aranges]:
+// RELOC: RELOCATION RECORDS FOR [.debug_aranges]:
 // RELOC-NEXT: 00000006 R_ARM_ABS32 .debug_info
 // RELOC-NEXT: 00000010 R_ARM_ABS32 .text
 // RELOC-NEXT: 00000018 R_ARM_ABS32 foo

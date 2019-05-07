@@ -47,7 +47,7 @@
 ; DARWIN-NOT: X86_64_RELOC{{.*}} __debug_loc
 
 ; Check we have a relocation for the debug_loc entry in Linux output.
-; LINUX: RELOCATION RECORDS FOR [.rela.debug_info]
+; LINUX: RELOCATION RECORDS FOR [.debug_info]
 ; LINUX-NOT: RELOCATION RECORDS
 ; LINUX: R_X86_64{{.*}} .debug_loc
 
