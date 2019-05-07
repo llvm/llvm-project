@@ -28,7 +28,6 @@ add_lldb_library(lldbExpression
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginExpressionParserClang
     lldbPluginObjectFileJIT
 
   LINK_COMPONENTS
