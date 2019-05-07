@@ -1792,8 +1792,9 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   TFs.push_back(N);
 
   // Iterate through token factors.  The TFs grows when new token factors are
-  // encountered.
-  for (unsigned i = 0; i < TFs.size(); ++i) {
+  // encountered. Limit number of nodes to inline, to avoid quadratic compile
+  // times.
+  for (unsigned i = 0; i < TFs.size() && Ops.size() <= 2048; ++i) {
     SDNode *TF = TFs[i];
 
     // Check each of the operands.
