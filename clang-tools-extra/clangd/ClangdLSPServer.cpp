@@ -825,9 +825,9 @@ void ClangdLSPServer::onGoToDeclaration(
 
 void ClangdLSPServer::onSwitchSourceHeader(
     const TextDocumentIdentifier &Params,
-    Callback<llvm::Optional<std::string>> Reply) {
+    Callback<llvm::Optional<URIForFile>> Reply) {
   if (auto Result = Server->switchSourceHeader(Params.uri.file()))
-    Reply(URI::resolvePath(*Result, Params.uri.file()));
+    Reply(URIForFile::canonicalize(*Result, Params.uri.file()));
   else
     Reply(llvm::None);
 }
