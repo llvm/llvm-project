@@ -118,6 +118,7 @@ static_library("clangd") {
     "index/dex/Iterator.cpp",
     "index/dex/PostingList.cpp",
     "index/dex/Trigram.cpp",
+    "refactor/Rename.cpp",
     "refactor/Tweak.cpp",
   ]
 }
