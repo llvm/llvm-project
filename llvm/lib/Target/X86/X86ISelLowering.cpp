@@ -42611,6 +42611,30 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
   }
 
+  // Repeated opcode.
+  if (llvm::all_of(Ops, [Op0](SDValue Op) {
+        return Op.getOpcode() == Op0.getOpcode();
+      })) {
+    unsigned NumOps = Ops.size();
+    switch (Op0.getOpcode()) {
+    case X86ISD::PACKUS:
+      if (NumOps == 2 && VT.is256BitVector() && Subtarget.hasInt256()) {
+        SmallVector<SDValue, 2> LHS, RHS;
+        for (unsigned i = 0; i != NumOps; ++i) {
+          LHS.push_back(Ops[i].getOperand(0));
+          RHS.push_back(Ops[i].getOperand(1));
+        }
+        MVT SrcVT = Op0.getOperand(0).getSimpleValueType();
+        SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
+                                 NumOps * SrcVT.getVectorNumElements());
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcVT, LHS),
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcVT, RHS));
+      }
+      break;
+    }
+  }
+
   // If we're inserting all zeros into the upper half, change this to
   // an insert into an all zeros vector. We will match this to a move
   // with implicit upper bit zeroing during isel.
