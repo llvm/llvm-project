@@ -60,8 +60,8 @@ const char *expected_log = \
 "\taction_options: -file-headers -invalid-option\n"
 "\taction_path: \n"
 "\tlanguage: AMD_COMGR_LANGUAGE_NONE\n"
-": Unknown command line argument '-invalid-option'.  Try: ' -help'\n"
-": Did you mean '-print-all-options'?\n";
+": Unknown command line argument '-invalid-option'.  Try: ' --help'\n"
+": Did you mean '  --print-all-options'?\n";
 
 void print_chars(const char *bytes, size_t count) {
   for (size_t i = 0; i < count; i++)
