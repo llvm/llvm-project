@@ -48,6 +48,7 @@ add_unittest(ClangdUnitTests ClangdTests
   JSONTransportTests.cpp
   PrintASTTests.cpp
   QualityTests.cpp
+  RenameTests.cpp
   RIFFTests.cpp
   SelectionTests.cpp
   SerializationTests.cpp
