@@ -1940,6 +1940,34 @@ bool PragmaClangAttributeSupport::isAttributedSupported(
   return true;
 }
 
+static std::string GenerateTestExpression(ArrayRef<Record *> LangOpts) {
+  std::string Test;
+
+  for (auto *E : LangOpts) {
+    if (!Test.empty())
+      Test += " || ";
+
+    if (E->getValueAsBit("Negated")) {
+      Test += "!";
+    }
+
+    const StringRef Code = E->getValueAsString("CustomCode");
+    if (!Code.empty()) {
+      Test += "(";
+      Test += Code;
+      Test += ")";
+    } else {
+      Test += "LangOpts.";
+      Test += E->getValueAsString("Name");
+    }
+  }
+
+  if (Test.empty())
+    return "true";
+
+  return Test;
+}
+
 std::string
 PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
                                                       raw_ostream &OS) {
@@ -1966,24 +1994,8 @@ PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
       // rules if the specific language options are specified.
       std::vector<Record *> LangOpts = Rule.getLangOpts();
       OS << "  MatchRules.push_back(std::make_pair(" << Rule.getEnumValue()
-         << ", /*IsSupported=*/";
-      if (!LangOpts.empty()) {
-        for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
-          if ((*I)->getValueAsBit("Negated"))
-            OS << "!";
-          const StringRef Code = (*I)->getValueAsString("CustomCode");
-          if (!Code.empty()) {
-            OS << Code;
-          } else {
-            const StringRef Name = (*I)->getValueAsString("Name");
-            OS << "LangOpts." << Name;
-          }
-          if (I + 1 != E)
-            OS << " || ";
-        }
-      } else
-        OS << "true";
-      OS << "));\n";
+         << ", /*IsSupported=*/" << GenerateTestExpression(LangOpts)
+         << "));\n";
     }
   }
   OS << "}\n\n";
@@ -3425,28 +3437,14 @@ static std::string GenerateLangOptRequirements(const Record &R,
   if (LangOpts.empty())
     return "defaultDiagnoseLangOpts";
 
-  // Generate the test condition, as well as a unique function name for the
-  // diagnostic test. The list of options should usually be short (one or two
-  // options), and the uniqueness isn't strictly necessary (it is just for
-  // codegen efficiency).
-  std::string FnName = "check", Test;
+  // Generate a unique function name for the diagnostic test. The list of
+  // options should usually be short (one or two options), and the
+  // uniqueness isn't strictly necessary (it is just for codegen efficiency).
+  std::string FnName = "check";
   for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
-    if ((*I)->getValueAsBit("Negated")) {
+    if ((*I)->getValueAsBit("Negated"))
       FnName += "Not";
-      Test += "!";
-    }
-    const StringRef Name = (*I)->getValueAsString("Name");
-    FnName += Name;
-    const StringRef Code = (*I)->getValueAsString("CustomCode");
-    if (!Code.empty()) {
-      Test += "S.";
-      Test += Code;
-    } else {
-      Test += "S.LangOpts.";
-      Test += Name;
-    }
-    if (I + 1 != E)
-      Test += " || ";
+    FnName += (*I)->getValueAsString("Name");
   }
   FnName += "LangOpts";
 
@@ -3458,7 +3456,8 @@ static std::string GenerateLangOptRequirements(const Record &R,
     return *I;
 
   OS << "static bool " << FnName << "(Sema &S, const ParsedAttr &Attr) {\n";
-  OS << "  if (" << Test << ")\n";
+  OS << "  auto &LangOpts = S.LangOpts;\n";
+  OS << "  if (" << GenerateTestExpression(LangOpts) << ")\n";
   OS << "    return true;\n\n";
   OS << "  S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) ";
   OS << "<< Attr.getName();\n";
