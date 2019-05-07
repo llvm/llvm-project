@@ -2058,18 +2058,19 @@ unsigned X86TargetLowering::getByValTypeAlignment(Type *Ty,
 /// source is constant so it does not need to be loaded.
 /// It returns EVT::Other if the type should be determined using generic
 /// target-independent logic.
-EVT
-X86TargetLowering::getOptimalMemOpType(
+/// For vector ops we check that the overall size isn't larger than our
+/// preferred vector width.
+EVT X86TargetLowering::getOptimalMemOpType(
     uint64_t Size, unsigned DstAlign, unsigned SrcAlign, bool IsMemset,
     bool ZeroMemset, bool MemcpyStrSrc,
     const AttributeList &FuncAttributes) const {
   if (!FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
-    if (Size >= 16 &&
-        (!Subtarget.isUnalignedMem16Slow() ||
-         ((DstAlign == 0 || DstAlign >= 16) &&
-          (SrcAlign == 0 || SrcAlign >= 16)))) {
+    if (Size >= 16 && (!Subtarget.isUnalignedMem16Slow() ||
+                       ((DstAlign == 0 || DstAlign >= 16) &&
+                        (SrcAlign == 0 || SrcAlign >= 16)))) {
       // FIXME: Check if unaligned 32-byte accesses are slow.
-      if (Size >= 32 && Subtarget.hasAVX()) {
+      if (Size >= 32 && Subtarget.hasAVX() &&
+          (Subtarget.getPreferVectorWidth() >= 256)) {
         // Although this isn't a well-supported type for AVX1, we'll let
         // legalization and shuffle lowering produce the optimal codegen. If we
         // choose an optimal type with a vector element larger than a byte,
@@ -2077,11 +2078,12 @@ X86TargetLowering::getOptimalMemOpType(
         // multiply) before we splat as a vector.
         return MVT::v32i8;
       }
-      if (Subtarget.hasSSE2())
+      if (Subtarget.hasSSE2() && (Subtarget.getPreferVectorWidth() >= 128))
         return MVT::v16i8;
       // TODO: Can SSE1 handle a byte vector?
       // If we have SSE1 registers we should be able to use them.
-      if (Subtarget.hasSSE1() && (Subtarget.is64Bit() || Subtarget.hasX87()))
+      if (Subtarget.hasSSE1() && (Subtarget.is64Bit() || Subtarget.hasX87()) &&
+          (Subtarget.getPreferVectorWidth() >= 128))
         return MVT::v4f32;
     } else if ((!IsMemset || ZeroMemset) && !MemcpyStrSrc && Size >= 8 &&
                !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
@@ -4963,6 +4965,10 @@ bool X86TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
     unsigned MaxIntSize = Subtarget.is64Bit() ? 64 : 32;
     return (MemVT.getSizeInBits() <= MaxIntSize);
   }
+  // Make sure we don't merge greater than our preferred vector
+  // width.
+  if (MemVT.getSizeInBits() > Subtarget.getPreferVectorWidth())
+    return false;
   return true;
 }
 
