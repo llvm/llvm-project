@@ -425,6 +425,17 @@ void Option::setArgStr(StringRef S) {
     setMiscFlag(Grouping);
 }
 
+void Option::addCategory(OptionCategory &C) {
+  assert(!Categories.empty() && "Categories cannot be empty.");
+  // Maintain backward compatibility by replacing the default GeneralCategory
+  // if it's still set.  Otherwise, just add the new one.  The GeneralCategory
+  // must be explicitly added if you want multiple categories that include it.
+  if (&C != &GeneralCategory && Categories[0] == &GeneralCategory)
+    Categories[0] = &C;
+  else
+    Categories.push_back(&C);
+}
+
 void Option::reset() {
   NumOccurrences = 0;
   setDefault();
@@ -2132,9 +2143,11 @@ protected:
     // options within categories will also be alphabetically sorted.
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
-      assert(CategorizedOptions.count(Opt->Category) > 0 &&
-             "Option has an unregistered category");
-      CategorizedOptions[Opt->Category].push_back(Opt);
+      for (auto &Cat : Opt->Categories) {
+        assert(CategorizedOptions.count(Cat) > 0 &&
+               "Option has an unregistered category");
+        CategorizedOptions[Cat].push_back(Opt);
+      }
     }
 
     // Now do printing.
@@ -2391,21 +2404,21 @@ cl::getRegisteredSubcommands() {
 
 void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
   for (auto &I : Sub.OptionsMap) {
-    if (I.second->Category != &Category &&
-        I.second->Category != &GenericCategory)
-      I.second->setHiddenFlag(cl::ReallyHidden);
+    for (auto &Cat : I.second->Categories) {
+      if (Cat != &Category &&
+          Cat != &GenericCategory)
+        I.second->setHiddenFlag(cl::ReallyHidden);
+    }
   }
 }
 
 void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
                               SubCommand &Sub) {
-  auto CategoriesBegin = Categories.begin();
-  auto CategoriesEnd = Categories.end();
   for (auto &I : Sub.OptionsMap) {
-    if (std::find(CategoriesBegin, CategoriesEnd, I.second->Category) ==
-            CategoriesEnd &&
-        I.second->Category != &GenericCategory)
-      I.second->setHiddenFlag(cl::ReallyHidden);
+    for (auto &Cat : I.second->Categories) {
+      if (find(Categories, Cat) == Categories.end() && Cat != &GenericCategory)
+        I.second->setHiddenFlag(cl::ReallyHidden);
+    }
   }
 }
 

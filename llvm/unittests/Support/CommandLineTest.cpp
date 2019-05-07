@@ -95,12 +95,20 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   cl::Option *Retrieved = Map["test-option"];
   ASSERT_EQ(&TestOption, Retrieved) << "Retrieved wrong option.";
 
-  ASSERT_EQ(&cl::GeneralCategory,Retrieved->Category) <<
-    "Incorrect default option category.";
+  ASSERT_NE(Retrieved->Categories.end(),
+            find_if(Retrieved->Categories,
+                    [&](const llvm::cl::OptionCategory *Cat) {
+                      return Cat == &cl::GeneralCategory;
+                    }))
+      << "Incorrect default option category.";
 
-  Retrieved->setCategory(TestCategory);
-  ASSERT_EQ(&TestCategory,Retrieved->Category) <<
-    "Failed to modify option's option category.";
+  Retrieved->addCategory(TestCategory);
+  ASSERT_NE(Retrieved->Categories.end(),
+            find_if(Retrieved->Categories,
+                    [&](const llvm::cl::OptionCategory *Cat) {
+                      return Cat == &TestCategory;
+                    }))
+      << "Failed to modify option's option category.";
 
   Retrieved->setDescription(Description);
   ASSERT_STREQ(Retrieved->HelpStr.data(), Description)
@@ -152,8 +160,52 @@ TEST(CommandLineTest, ParseEnvironmentToLocalVar) {
 TEST(CommandLineTest, UseOptionCategory) {
   StackOption<int> TestOption2("test-option", cl::cat(TestCategory));
 
-  ASSERT_EQ(&TestCategory,TestOption2.Category) << "Failed to assign Option "
-                                                  "Category.";
+  ASSERT_NE(TestOption2.Categories.end(),
+            find_if(TestOption2.Categories,
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &TestCategory;
+                         }))
+      << "Failed to assign Option Category.";
+}
+
+TEST(CommandLineTest, UseMultipleCategories) {
+  StackOption<int> TestOption2("test-option2", cl::cat(TestCategory),
+                               cl::cat(cl::GeneralCategory));
+
+  ASSERT_NE(TestOption2.Categories.end(),
+            find_if(TestOption2.Categories,
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &TestCategory;
+                         }))
+      << "Failed to assign Option Category.";
+  ASSERT_NE(TestOption2.Categories.end(),
+            find_if(TestOption2.Categories,
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &cl::GeneralCategory;
+                         }))
+      << "Failed to assign General Category.";
+
+  cl::OptionCategory AnotherCategory("Additional test Options", "Description");
+  StackOption<int> TestOption("test-option", cl::cat(TestCategory),
+                              cl::cat(AnotherCategory));
+  ASSERT_EQ(TestOption.Categories.end(),
+            find_if(TestOption.Categories,
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &cl::GeneralCategory;
+                         }))
+      << "Failed to remove General Category.";
+  ASSERT_NE(TestOption.Categories.end(),
+            find_if(TestOption.Categories,
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &TestCategory;
+                         }))
+      << "Failed to assign Option Category.";
+  ASSERT_NE(TestOption.Categories.end(),
+            find_if(TestOption.Categories,
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &AnotherCategory;
+                         }))
+      << "Failed to assign Another Category.";
 }
 
 typedef void ParserFunction(StringRef Source, StringSaver &Saver,
