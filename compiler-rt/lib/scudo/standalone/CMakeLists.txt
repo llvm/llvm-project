@@ -69,6 +69,7 @@ set(SCUDO_HEADERS
   list.h
   mutex.h
   platform.h
+  quarantine.h
   release.h
   report.h
   secondary.h
