@@ -823,10 +823,13 @@ void ClangdLSPServer::onGoToDeclaration(
           std::move(Reply)));
 }
 
-void ClangdLSPServer::onSwitchSourceHeader(const TextDocumentIdentifier &Params,
-                                           Callback<std::string> Reply) {
-  llvm::Optional<Path> Result = Server->switchSourceHeader(Params.uri.file());
-  Reply(Result ? URI::createFile(*Result).toString() : "");
+void ClangdLSPServer::onSwitchSourceHeader(
+    const TextDocumentIdentifier &Params,
+    Callback<llvm::Optional<std::string>> Reply) {
+  if (auto Result = Server->switchSourceHeader(Params.uri.file()))
+    Reply(URI::resolvePath(*Result, Params.uri.file()));
+  else
+    Reply(llvm::None);
 }
 
 void ClangdLSPServer::onDocumentHighlight(
