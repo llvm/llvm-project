@@ -112,9 +112,10 @@ signed4anon:
 Lanon_data:
         .quad   0x1111111111111111
 
-# Check X86_64_RELOC_SUBTRACTOR Quad/Long in anonymous storage with anonymous minuend
-# Only the form "LA: .quad LA - B + C" is tested. The form "LA: .quad B - LA + C" is
-# invalid because the minuend can not be local.
+# Check X86_64_RELOC_SUBTRACTOR Quad/Long in anonymous storage with anonymous
+# minuend: "LA: .quad LA - B + C". The anonymous subtrahend form
+# "LA: .quad B - LA + C" is not tested as subtrahends are not permitted to be
+# anonymous.
 #
 # Note: +8 offset in expression below to accounts for sizeof(Lanon_data).
 # jitlink-check: *{8}(section_addr(macho_reloc.o, __data) + 8) = (section_addr(macho_reloc.o, __data) + 8) - named_data + 2
@@ -155,36 +156,36 @@ anon_func_addr:
 
 # X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with anonymous minuend
 #
-# jitlink-check: *{8}minuend_quad1 = section_addr(macho_reloc.o, __data) - minuend_quad1 + 2
+# jitlink-check: *{8}anon_minuend_quad1 = section_addr(macho_reloc.o, __data) - anon_minuend_quad1 + 2
 # Only the form "B: .quad LA - B + C" is tested. The form "B: .quad B - LA + C" is
-# invalid because the minuend can not be local.
-        .globl  minuend_quad1
+# invalid because the subtrahend can not be local.
+        .globl  anon_minuend_quad1
         .p2align  3
-minuend_quad1:
-        .quad Lanon_data - minuend_quad1 + 2
+anon_minuend_quad1:
+        .quad Lanon_data - anon_minuend_quad1 + 2
 
-# jitlink-check: *{4}minuend_long1 = (section_addr(macho_reloc.o, __data) - minuend_long1 + 2)[31:0]
-        .globl  minuend_long1
+# jitlink-check: *{4}anon_minuend_long1 = (section_addr(macho_reloc.o, __data) - anon_minuend_long1 + 2)[31:0]
+        .globl  anon_minuend_long1
         .p2align  2
-minuend_long1:
-        .long Lanon_data - minuend_long1 + 2
+anon_minuend_long1:
+        .long Lanon_data - anon_minuend_long1 + 2
 
 # Check X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with minuend and subtrahend.
 # Both forms "A: .quad A - B + C" and "A: .quad B - A + C" are tested.
 #
 # Check "A: .quad B - A + C".
-# jitlink-check: *{8}minuend_quad2 = (named_data - minuend_quad2 + 2)
-        .globl  minuend_quad2
+# jitlink-check: *{8}subtrahend_quad2 = (named_data - subtrahend_quad2 + 2)
+        .globl  subtrahend_quad2
         .p2align  3
-minuend_quad2:
-        .quad named_data - minuend_quad2 + 2
+subtrahend_quad2:
+        .quad named_data - subtrahend_quad2 + 2
 
 # Check "A: .long B - A + C".
-# jitlink-check: *{4}minuend_long2 = (named_data - minuend_long2 + 2)[31:0]
-        .globl  minuend_long2
+# jitlink-check: *{4}subtrahend_long2 = (named_data - subtrahend_long2 + 2)[31:0]
+        .globl  subtrahend_long2
         .p2align  2
-minuend_long2:
-        .long named_data - minuend_long2 + 2
+subtrahend_long2:
+        .long named_data - subtrahend_long2 + 2
 
 # Check "A: .quad A - B + C".
 # jitlink-check: *{8}minuend_quad3 = (minuend_quad3 - named_data + 2)
