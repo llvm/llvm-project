@@ -595,6 +595,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::MacroQualified:
+    if (!IsStructurallyEquivalent(
+            Context, cast<MacroQualifiedType>(T1)->getUnderlyingType(),
+            cast<MacroQualifiedType>(T2)->getUnderlyingType()))
+      return false;
+    break;
+
   case Type::Typedef:
     if (!IsStructurallyEquivalent(Context, cast<TypedefType>(T1)->getDecl(),
                                   cast<TypedefType>(T2)->getDecl()))

@@ -2844,6 +2844,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::Paren:
       T = cast<ParenType>(T)->getInnerType();
       break;
+    case Type::MacroQualified:
+      T = cast<MacroQualifiedType>(T)->getUnderlyingType();
+      break;
     case Type::SubstTemplateTypeParm:
       T = cast<SubstTemplateTypeParmType>(T)->getReplacementType();
       break;
@@ -3023,6 +3026,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::DeducedTemplateSpecialization:
   case Type::Elaborated:
   case Type::Paren:
+  case Type::MacroQualified:
   case Type::SubstTemplateTypeParm:
   case Type::TypeOfExpr:
   case Type::TypeOf:

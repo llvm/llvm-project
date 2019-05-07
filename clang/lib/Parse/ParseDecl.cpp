@@ -85,6 +85,23 @@ static bool isAttributeLateParsed(const IdentifierInfo &II) {
 #undef CLANG_ATTR_LATE_PARSED_LIST
 }
 
+/// Check if the a start and end source location expand to the same macro.
+bool FindLocsWithCommonFileID(Preprocessor &PP, SourceLocation StartLoc,
+                              SourceLocation EndLoc) {
+  if (!StartLoc.isMacroID() || !EndLoc.isMacroID())
+    return false;
+
+  SourceManager &SM = PP.getSourceManager();
+  if (SM.getFileID(StartLoc) != SM.getFileID(EndLoc))
+    return false;
+
+  bool AttrStartIsInMacro =
+      Lexer::isAtStartOfMacroExpansion(StartLoc, SM, PP.getLangOpts());
+  bool AttrEndIsInMacro =
+      Lexer::isAtEndOfMacroExpansion(EndLoc, SM, PP.getLangOpts());
+  return AttrStartIsInMacro && AttrEndIsInMacro;
+}
+
 /// ParseGNUAttributes - Parse a non-empty attributes list.
 ///
 /// [GNU] attributes:
@@ -133,7 +150,10 @@ void Parser::ParseGNUAttributes(ParsedAttributes &attrs,
   assert(Tok.is(tok::kw___attribute) && "Not a GNU attribute list!");
 
   while (Tok.is(tok::kw___attribute)) {
-    ConsumeToken();
+    SourceLocation AttrTokLoc = ConsumeToken();
+    unsigned OldNumAttrs = attrs.size();
+    unsigned OldNumLateAttrs = LateAttrs ? LateAttrs->size() : 0;
+
     if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after,
                          "attribute")) {
       SkipUntil(tok::r_paren, StopAtSemi); // skip until ) or ;
@@ -201,6 +221,24 @@ void Parser::ParseGNUAttributes(ParsedAttributes &attrs,
       SkipUntil(tok::r_paren, StopAtSemi);
     if (endLoc)
       *endLoc = Loc;
+
+    // If this was declared in a macro, attach the macro IdentifierInfo to the
+    // parsed attribute.
+    if (FindLocsWithCommonFileID(PP, AttrTokLoc, Loc)) {
+      auto &SM = PP.getSourceManager();
+      CharSourceRange ExpansionRange = SM.getExpansionRange(AttrTokLoc);
+      StringRef FoundName =
+          Lexer::getSourceText(ExpansionRange, SM, PP.getLangOpts());
+      IdentifierInfo *MacroII = PP.getIdentifierInfo(FoundName);
+
+      for (unsigned i = OldNumAttrs; i < attrs.size(); ++i)
+        attrs[i].setMacroIdentifier(MacroII, ExpansionRange.getBegin());
+
+      if (LateAttrs) {
+        for (unsigned i = OldNumLateAttrs; i < LateAttrs->size(); ++i)
+          (*LateAttrs)[i]->MacroII = MacroII;
+      }
+    }
   }
 }
 

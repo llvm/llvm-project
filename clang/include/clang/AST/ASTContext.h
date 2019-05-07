@@ -1441,6 +1441,9 @@ public:
 
   QualType getParenType(QualType NamedType) const;
 
+  QualType getMacroQualifiedType(QualType UnderlyingTy,
+                                 const IdentifierInfo *MacroII) const;
+
   QualType getElaboratedType(ElaboratedTypeKeyword Keyword,
                              NestedNameSpecifier *NNS, QualType NamedType,
                              TagDecl *OwnedTagDecl = nullptr) const;
