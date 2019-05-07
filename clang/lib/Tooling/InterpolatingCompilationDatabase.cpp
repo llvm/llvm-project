@@ -205,10 +205,13 @@ struct TransferableCommand {
     bool TypeCertain;
     auto TargetType = guessType(Filename, &TypeCertain);
     // If the filename doesn't determine the language (.h), transfer with -x.
-    if (TargetType != types::TY_INVALID && !TypeCertain && Type) {
-      TargetType = types::onlyPrecompileType(TargetType) // header?
-                       ? types::lookupHeaderTypeForSourceType(*Type)
-                       : *Type;
+    if ((!TargetType || !TypeCertain) && Type) {
+      // Use *Type, or its header variant if the file is a header.
+      // Treat no/invalid extension as header (e.g. C++ standard library).
+      TargetType =
+          (!TargetType || types::onlyPrecompileType(TargetType)) // header?
+              ? types::lookupHeaderTypeForSourceType(*Type)
+              : *Type;
       if (ClangCLMode) {
         const StringRef Flag = toCLFlag(TargetType);
         if (!Flag.empty())
