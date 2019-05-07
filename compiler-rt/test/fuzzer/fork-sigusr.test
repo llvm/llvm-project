@@ -8,7 +8,7 @@ RUN: %cpp_compiler %S/ShallowOOMDeepCrash.cpp -o %t/ForkSIGUSR
 RUN: %run %t/ForkSIGUSR -fork=3 -rss_limit_mb=128 -ignore_crashes=1 2>  %t/log & export PID=$!
 RUN: sleep 3
 RUN: pkill -SIGUSR2 -f %t/ForkSIGUSR
-RUN: sleep 3
-RUN: cat %t/log | FileCheck %s --dump-input-on-failure
+RUN: sleep 6
+RUN: cat %t/log | FileCheck %s
 
 CHECK: libFuzzer: {{.*}}exiting
