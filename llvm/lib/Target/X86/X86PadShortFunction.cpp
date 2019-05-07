@@ -112,14 +112,11 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
 
   bool MadeChange = false;
 
-  MachineBasicBlock *MBB;
-  unsigned int Cycles = 0;
-
   // Pad the identified basic blocks with NOOPs
   for (DenseMap<MachineBasicBlock*, unsigned int>::iterator I = ReturnBBs.begin();
        I != ReturnBBs.end(); ++I) {
-    MBB = I->first;
-    Cycles = I->second;
+    MachineBasicBlock *MBB = I->first;
+    unsigned Cycles = I->second;
 
     if (Cycles < Threshold) {
       // BB ends in a return. Skip over any DBG_VALUE instructions
