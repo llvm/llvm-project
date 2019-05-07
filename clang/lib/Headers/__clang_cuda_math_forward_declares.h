@@ -20,12 +20,8 @@
 // would preclude the use of our own __device__ overloads for these functions.
 
 #pragma push_macro("__DEVICE__")
-#ifdef _OPENMP
-#define __DEVICE__ static __inline__ __attribute__((always_inline))
-#else
 #define __DEVICE__                                                             \
   static __inline__ __attribute__((always_inline)) __attribute__((device))
-#endif
 
 __DEVICE__ double abs(double);
 __DEVICE__ float abs(float);
