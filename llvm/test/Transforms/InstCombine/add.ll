@@ -982,9 +982,8 @@ define i32 @add_to_sub2(i32 %A, i32 %M) {
 ; (X | C1) + C2 --> (X | C1) ^ C1 iff (C1 == -C2)
 define i32 @test44(i32 %A) {
 ; CHECK-LABEL: @test44(
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 123
-; CHECK-NEXT:    [[C:%.*]] = add nsw i32 [[B]], -123
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -124
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %B = or i32 %A, 123
   %C = add i32 %B, -123
@@ -994,8 +993,8 @@ define i32 @test44(i32 %A) {
 define i32 @test44_extra_use(i32 %A) {
 ; CHECK-LABEL: @test44_extra_use(
 ; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 123
-; CHECK-NEXT:    [[C:%.*]] = add nsw i32 [[B]], -123
-; CHECK-NEXT:    [[D:%.*]] = mul i32 [[B]], [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A]], -124
+; CHECK-NEXT:    [[D:%.*]] = mul i32 [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %B = or i32 %A, 123
@@ -1017,9 +1016,8 @@ define i32 @test44_non_matching(i32 %A) {
 
 define <2 x i32> @test44_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test44_vec(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 123>
-; CHECK-NEXT:    [[C:%.*]] = add nsw <2 x i32> [[B]], <i32 -123, i32 -123>
-; CHECK-NEXT:    ret <2 x i32> [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -124, i32 -124>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %B = or <2 x i32> %A, <i32 123, i32 123>
   %C = add <2 x i32> %B, <i32 -123, i32 -123>
