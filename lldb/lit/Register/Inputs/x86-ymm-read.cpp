@@ -43,23 +43,23 @@ int main() {
   };
 
   asm volatile(
-    "vmovaps  0x000(%%rbx), %%ymm0\n\t"
-    "vmovaps  0x020(%%rbx), %%ymm1\n\t"
-    "vmovaps  0x040(%%rbx), %%ymm2\n\t"
-    "vmovaps  0x060(%%rbx), %%ymm3\n\t"
-    "vmovaps  0x080(%%rbx), %%ymm4\n\t"
-    "vmovaps  0x0A0(%%rbx), %%ymm5\n\t"
-    "vmovaps  0x0C0(%%rbx), %%ymm6\n\t"
-    "vmovaps  0x0E0(%%rbx), %%ymm7\n\t"
+    "vmovaps  0x000(%0), %%ymm0\n\t"
+    "vmovaps  0x020(%0), %%ymm1\n\t"
+    "vmovaps  0x040(%0), %%ymm2\n\t"
+    "vmovaps  0x060(%0), %%ymm3\n\t"
+    "vmovaps  0x080(%0), %%ymm4\n\t"
+    "vmovaps  0x0A0(%0), %%ymm5\n\t"
+    "vmovaps  0x0C0(%0), %%ymm6\n\t"
+    "vmovaps  0x0E0(%0), %%ymm7\n\t"
 #if defined(__x86_64__) || defined(_M_X64)
-    "vmovaps  0x100(%%rbx), %%ymm8\n\t"
-    "vmovaps  0x120(%%rbx), %%ymm9\n\t"
-    "vmovaps  0x140(%%rbx), %%ymm10\n\t"
-    "vmovaps  0x160(%%rbx), %%ymm11\n\t"
-    "vmovaps  0x180(%%rbx), %%ymm12\n\t"
-    "vmovaps  0x1A0(%%rbx), %%ymm13\n\t"
-    "vmovaps  0x1C0(%%rbx), %%ymm14\n\t"
-    "vmovaps  0x1E0(%%rbx), %%ymm15\n\t"
+    "vmovaps  0x100(%0), %%ymm8\n\t"
+    "vmovaps  0x120(%0), %%ymm9\n\t"
+    "vmovaps  0x140(%0), %%ymm10\n\t"
+    "vmovaps  0x160(%0), %%ymm11\n\t"
+    "vmovaps  0x180(%0), %%ymm12\n\t"
+    "vmovaps  0x1A0(%0), %%ymm13\n\t"
+    "vmovaps  0x1C0(%0), %%ymm14\n\t"
+    "vmovaps  0x1E0(%0), %%ymm15\n\t"
 #endif
     "\n\t"
     "int3\n\t"
@@ -67,8 +67,7 @@ int main() {
     : "b"(ymm)
     : "%ymm0", "%ymm1", "%ymm2", "%ymm3", "%ymm4", "%ymm5", "%ymm6", "%ymm7"
 #if defined(__x86_64__) || defined(_M_X64)
-      ,
-      "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14",
+    , "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14",
       "%ymm15"
 #endif
   );
