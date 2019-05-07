@@ -5390,6 +5390,11 @@ namespace {
       Visit(TL.getModifiedLoc());
       fillAttributedTypeLoc(TL, State);
     }
+    void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+      Visit(TL.getInnerLoc());
+      TL.setExpansionLoc(
+          State.getExpansionLocForMacroQualifiedType(TL.getTypePtr()));
+    }
     void VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
       Visit(TL.getUnqualifiedLoc());
     }
