@@ -1,0 +1,28 @@
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+// No relocation
+ELF_RELOC(R_DPU_NONE            ,   0)
+ELF_RELOC(R_DPU_32              ,   1)
+ELF_RELOC(R_DPU_8               ,   2)
+ELF_RELOC(R_DPU_16              ,   3)
+ELF_RELOC(R_DPU_64              ,   4)
+ELF_RELOC(R_DPU_PC              , 128)
+ELF_RELOC(R_DPU_IMM5            , 129)
+ELF_RELOC(R_DPU_IMM8_DMA        , 130)
+ELF_RELOC(R_DPU_IMM24_PC        , 131)
+ELF_RELOC(R_DPU_IMM27_PC        , 132)
+ELF_RELOC(R_DPU_IMM28_PC_OPC8   , 133)
+ELF_RELOC(R_DPU_IMM8_STR        , 134)
+ELF_RELOC(R_DPU_IMM12_STR       , 135)
+ELF_RELOC(R_DPU_IMM16_STR       , 136)
+ELF_RELOC(R_DPU_IMM16_ATM       , 137)
+ELF_RELOC(R_DPU_IMM24           , 138)
+ELF_RELOC(R_DPU_IMM24_RB        , 139)
+ELF_RELOC(R_DPU_IMM27           , 140)
+ELF_RELOC(R_DPU_IMM28           , 141)
+ELF_RELOC(R_DPU_IMM32           , 142)
+ELF_RELOC(R_DPU_IMM32_ZERO_RB   , 143)
+ELF_RELOC(R_DPU_IMM17_24        , 144)
+ELF_RELOC(R_DPU_IMM32_DUS_RB    , 145)

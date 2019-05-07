@@ -1,0 +1,35 @@
+;===- ./lib/Target/DPU/LLVMBuild.txt --------------------------*- Conf -*--===;
+;
+;                     The LLVM Compiler Infrastructure
+;
+; This file is distributed under the University of Illinois Open Source
+; License. See LICENSE.TXT for details.
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[common]
+subdirectories = AsmParser TargetInfo MCTargetDesc InstPrinter
+
+[component_0]
+type = TargetGroup
+name = DPU
+parent = Target
+has_asmparser = 1
+has_asmprinter = 1
+has_disassembler = 0
+has_jit = 0
+
+[component_1]
+type = Library
+name = DPUCodeGen
+parent = DPU
+required_libraries = AsmPrinter CodeGen Core MC SelectionDAG Support Target DPUAsmPrinter DPUDesc DPUInfo DPUAsmParser
+add_to_library_groups = DPU
