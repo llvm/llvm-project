@@ -2961,6 +2961,8 @@ bool FunctionDecl::isExternC() const {
 }
 
 bool FunctionDecl::isInExternCContext() const {
+  if (hasAttr<OpenCLKernelAttr>())
+    return true;
   return getLexicalDeclContext()->isExternCContext();
 }
 

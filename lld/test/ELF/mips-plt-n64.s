@@ -11,7 +11,6 @@
 # RUN: ld.lld %t.o %t.so -o %t.exe -z hazardplt
 # RUN: llvm-objdump -d %t.exe | FileCheck %s --check-prefixes=CHECK,HAZARDPLT
 
-
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
@@ -31,10 +30,10 @@
 # HAZARDPLT:     20028:       03 20 fc 09     jalr.hb $25
 # CHECK-NEXT:    2002c:       27 18 ff fe     addiu   $24, $24, -2
 # CHECK-NEXT:    20030:       3c 0f 00 03     lui     $15, 3
-# CHECK-NEXT:    20034:       8d f9 00 18     lw      $25, 24($15)
+# CHECK-NEXT:    20034:       dd f9 00 18     ld      $25, 24($15)
 # DEFAULT:       20038:       03 20 00 08     jr      $25
 # HAZARDPLT:     20038:       03 20 04 08     jr.hb   $25
-# CHECK-NEXT:    2003c:       25 f8 00 18     addiu   $24, $15, 24
+# CHECK-NEXT:    2003c:       65 f8 00 18     daddiu  $24, $15, 24
 
   .text
   .option pic0
