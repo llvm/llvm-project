@@ -2743,7 +2743,7 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
   // TODO: Could inject an invalid typedef decl in an enclosing scope to
   // avoid rippling error messages on subsequent uses of the same type,
   // could be useful if #include was forgotten.
-  return false;
+  return true;
 }
 
 /// Determine the declaration specifier context from the declarator

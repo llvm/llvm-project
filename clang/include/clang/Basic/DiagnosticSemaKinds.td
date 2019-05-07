@@ -8582,6 +8582,10 @@ def err_invalid_astype_of_different_size : Error<
   "invalid reinterpretation: sizes of %0 and %1 must match">;
 def err_static_kernel : Error<
   "kernel functions cannot be declared static">;
+def err_method_kernel : Error<
+  "kernel functions cannot be class members">;
+def err_template_kernel : Error<
+  "kernel functions cannot be used in a template declaration, instantiation or specialization">;
 def err_opencl_ptrptr_kernel_param : Error<
   "kernel parameter cannot be declared as a pointer to a pointer">;
 def err_kernel_arg_address_space : Error<

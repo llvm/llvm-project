@@ -1,0 +1,37 @@
+## Check we are able to use integers as both
+## symbol name indices (st_name values) and symbol names.
+# RUN: yaml2obj --docnum=1 %s > %t
+# RUN: llvm-readobj --symbols %t | FileCheck %s
+
+# CHECK: Name: test (1)
+# CHECK: Name: test (1)
+# CHECK: Name: est (2)
+# CHECK: Name: 1 (8)
+# CHECK: Name: 2 (6)
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+Symbols:
+  - Name:      test
+  - NameIndex: 1
+  - NameIndex: 2
+  - Name:      1
+  - Name:      2
+
+## Check we do not allow specifying both Name and NameIndex at once.
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=ERR
+# ERR: error: Name and NameIndex cannot both be specified for Symbol
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+Symbols:
+  - Name:      foo
+    NameIndex: 0

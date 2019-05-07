@@ -20554,10 +20554,10 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isNullConstant(Y) &&
           (isAllOnesConstant(Op1) == (CondCode == X86::COND_NE))) {
         SDValue Zero = DAG.getConstant(0, DL, CmpOp0.getValueType());
-        SDValue Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Zero, CmpOp0);
+        SDValue CmpZero = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Zero, CmpOp0);
         SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
         Zero = DAG.getConstant(0, DL, Op.getValueType());
-        return DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Cmp);
+        return DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, CmpZero);
       }
 
       Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32,
@@ -42609,6 +42609,30 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
          (VT.getScalarSizeInBits() >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
+  }
+
+  // Repeated opcode.
+  if (llvm::all_of(Ops, [Op0](SDValue Op) {
+        return Op.getOpcode() == Op0.getOpcode();
+      })) {
+    unsigned NumOps = Ops.size();
+    switch (Op0.getOpcode()) {
+    case X86ISD::PACKUS:
+      if (NumOps == 2 && VT.is256BitVector() && Subtarget.hasInt256()) {
+        SmallVector<SDValue, 2> LHS, RHS;
+        for (unsigned i = 0; i != NumOps; ++i) {
+          LHS.push_back(Ops[i].getOperand(0));
+          RHS.push_back(Ops[i].getOperand(1));
+        }
+        MVT SrcVT = Op0.getOperand(0).getSimpleValueType();
+        SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
+                                 NumOps * SrcVT.getVectorNumElements());
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcVT, LHS),
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcVT, RHS));
+      }
+      break;
+    }
   }
 
   // If we're inserting all zeros into the upper half, change this to

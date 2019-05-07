@@ -749,7 +749,8 @@ void ValueEnumerator::organizeMetadata() {
 
   // Rebuild MDs, index the metadata ranges for each function in FunctionMDs,
   // and fix up MetadataMap.
-  std::vector<const Metadata *> OldMDs = std::move(MDs);
+  std::vector<const Metadata *> OldMDs;
+  MDs.swap(OldMDs);
   MDs.reserve(OldMDs.size());
   for (unsigned I = 0, E = Order.size(); I != E && !Order[I].F; ++I) {
     auto *MD = Order[I].get(OldMDs);
