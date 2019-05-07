@@ -468,8 +468,15 @@ void ELFState<ELFT>::addSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
   for (const auto &Sym : Symbols) {
     Elf_Sym Symbol;
     zero(Symbol);
-    if (!Sym.Name.empty())
+
+    // If NameIndex, which contains the name offset, is explicitly specified, we
+    // use it. This is useful for preparing broken objects. Otherwise, we add
+    // the specified Name to the string table builder to get its offset.
+    if (Sym.NameIndex)
+      Symbol.st_name = *Sym.NameIndex;
+    else if (!Sym.Name.empty())
       Symbol.st_name = Strtab.getOffset(Sym.Name);
+
     Symbol.setBindingAndType(Sym.Binding, Sym.Type);
     if (!Sym.Section.empty()) {
       unsigned Index;

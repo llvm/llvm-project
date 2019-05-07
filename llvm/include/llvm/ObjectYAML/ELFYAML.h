@@ -95,6 +95,7 @@ struct ProgramHeader {
 
 struct Symbol {
   StringRef Name;
+  Optional<uint32_t> NameIndex;
   ELF_STT Type;
   StringRef Section;
   Optional<ELF_SHN> Index;
