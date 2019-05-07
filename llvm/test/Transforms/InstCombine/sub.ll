@@ -1267,6 +1267,56 @@ define <2 x i32> @test69(<2 x i32> %x) {
   ret <2 x i32> %res
 }
 
+; Check (X | Y) - Y --> X & ~Y when Y is a constant
+define i32 @test70(i32 %A) {
+; CHECK-LABEL: @test70(
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 123
+; CHECK-NEXT:    [[C:%.*]] = add nsw i32 [[B]], -123
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %B = or i32 %A, 123
+  %C = sub i32 %B, 123
+  ret i32 %C
+}
+
+; Check (X | Y) - Y --> (X | Y) ^ Y doesn't happen where (X | Y) has multiple uses
+define i32 @test71(i32 %A, i32 %B) {
+; CHECK-LABEL: @test71(
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[C]], [[B]]
+; CHECK-NEXT:    [[E:%.*]] = mul i32 [[C]], [[D]]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %C = or i32 %A, %B
+  %D = sub i32 %C, %B
+  %E = mul i32 %C, %D
+  ret i32 %E
+}
+
+; Check (X | Y) - Y --> X & ~Y where X and Y are vectors
+define <2 x i32> @test72(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @test72(
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor <2 x i32> [[B:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i32> [[B_NOT]], [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %C = or <2 x i32> %A, %B
+  %D = sub <2 x i32> %C, %B
+  ret <2 x i32> %D
+}
+
+; Check reversing sub operands won't trigger (X | Y) - Y --> X & ~Y
+define i32 @test73(i32 %A, i32 %B) {
+; CHECK-LABEL: @test73(
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[C]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %C = or i32 %A, %B
+  %D = sub i32 %B, %C
+  ret i32 %D
+}
+
 define i32 @nsw_inference1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @nsw_inference1(
 ; CHECK-NEXT:    [[X2:%.*]] = or i32 [[X:%.*]], 1024
