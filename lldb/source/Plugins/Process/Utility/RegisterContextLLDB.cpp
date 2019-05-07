@@ -1513,9 +1513,11 @@ RegisterContextLLDB::SavedLocationForRegister(
     DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, nullptr, 0,
                               unwindplan_regloc.GetDWARFExpressionLength());
     dwarfexpr.SetRegisterKind(unwindplan_registerkind);
+    Value cfa_val = Scalar(m_cfa);
+    cfa_val.SetValueType(Value::eValueTypeLoadAddress);
     Value result;
     Status error;
-    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr, result,
+    if (dwarfexpr.Evaluate(&exe_ctx, this, 0, &cfa_val, nullptr, result,
                            &error)) {
       addr_t val;
       val = result.GetScalar().ULongLong();
