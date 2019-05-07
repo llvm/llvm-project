@@ -9214,18 +9214,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   MarkUnusedFileScopedDecl(NewFD);
 
-  if (getLangOpts().CPlusPlus) {
-    if (FunctionTemplate) {
-      if (NewFD->isInvalidDecl())
-        FunctionTemplate->setInvalidDecl();
-      return FunctionTemplate;
-    }
 
-    if (isMemberSpecialization && !NewFD->isInvalidDecl())
-      CompleteMemberSpecialization(NewFD, Previous);
-  }
 
-  if (NewFD->hasAttr<OpenCLKernelAttr>()) {
+  if (getLangOpts().OpenCL && NewFD->hasAttr<OpenCLKernelAttr>()) {
     // OpenCL v1.2 s6.8 static is invalid for kernel functions.
     if ((getLangOpts().OpenCLVersion >= 120)
         && (SC == SC_Static)) {
@@ -9245,7 +9236,30 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     llvm::SmallPtrSet<const Type *, 16> ValidTypes;
     for (auto Param : NewFD->parameters())
       checkIsValidOpenCLKernelParameter(*this, D, Param, ValidTypes);
+
+    if (getLangOpts().OpenCLCPlusPlus) {
+      if (DC->isRecord()) {
+        Diag(D.getIdentifierLoc(), diag::err_method_kernel);
+        D.setInvalidType();
+      }
+      if (FunctionTemplate) {
+        Diag(D.getIdentifierLoc(), diag::err_template_kernel);
+        D.setInvalidType();
+      }
+    }
   }
+
+  if (getLangOpts().CPlusPlus) {
+    if (FunctionTemplate) {
+      if (NewFD->isInvalidDecl())
+        FunctionTemplate->setInvalidDecl();
+      return FunctionTemplate;
+    }
+
+    if (isMemberSpecialization && !NewFD->isInvalidDecl())
+      CompleteMemberSpecialization(NewFD, Previous);
+  }
+
   for (const ParmVarDecl *Param : NewFD->parameters()) {
     QualType PT = Param->getType();
 
