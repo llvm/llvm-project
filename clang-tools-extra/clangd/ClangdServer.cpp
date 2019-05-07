@@ -18,6 +18,7 @@
 #include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
+#include "refactor/Rename.h"
 #include "refactor/Tweak.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -25,8 +26,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
-#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -43,38 +42,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-
-// Expand a DiagnosticError to make it print-friendly (print the detailed
-// message, rather than "clang diagnostic").
-llvm::Error expandDiagnostics(llvm::Error Err, DiagnosticsEngine &DE) {
-  if (auto Diag = DiagnosticError::take(Err)) {
-    llvm::cantFail(std::move(Err));
-    SmallVector<char, 128> DiagMessage;
-    Diag->second.EmitToString(DE, DiagMessage);
-    return llvm::make_error<llvm::StringError>(DiagMessage,
-                                               llvm::inconvertibleErrorCode());
-  }
-  return Err;
-}
-
-class RefactoringResultCollector final
-    : public tooling::RefactoringResultConsumer {
-public:
-  void handleError(llvm::Error Err) override {
-    assert(!Result.hasValue());
-    Result = std::move(Err);
-  }
-
-  // Using the handle(SymbolOccurrences) from parent class.
-  using tooling::RefactoringResultConsumer::handle;
-
-  void handle(tooling::AtomicChanges SourceReplacements) override {
-    assert(!Result.hasValue());
-    Result = std::move(SourceReplacements);
-  }
-
-  llvm::Optional<llvm::Expected<tooling::AtomicChanges>> Result;
-};
 
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {
@@ -299,47 +266,13 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
                       llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto &AST = InpAST->AST;
-
-    RefactoringResultCollector ResultCollector;
-    const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-    SourceLocation SourceLocationBeg =
-        clangd::getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
-    tooling::RefactoringRuleContext Context(
-        AST.getASTContext().getSourceManager());
-    Context.setASTContext(AST.getASTContext());
-    auto Rename = clang::tooling::RenameOccurrences::initiate(
-        Context, SourceRange(SourceLocationBeg), NewName);
-    if (!Rename)
-      return CB(expandDiagnostics(Rename.takeError(),
-                                  AST.getASTContext().getDiagnostics()));
-
-    Rename->invoke(ResultCollector, Context);
-
-    assert(ResultCollector.Result.hasValue());
-    if (!ResultCollector.Result.getValue())
-      return CB(expandDiagnostics(ResultCollector.Result->takeError(),
-                                  AST.getASTContext().getDiagnostics()));
-
-    std::vector<TextEdit> Replacements;
-    for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
-      tooling::Replacements ChangeReps = Change.getReplacements();
-      for (const auto &Rep : ChangeReps) {
-        // FIXME: Right now we only support renaming the main file, so we
-        // drop replacements not for the main file. In the future, we might
-        // consider to support:
-        //   * rename in any included header
-        //   * rename only in the "main" header
-        //   * provide an error if there are symbols we won't rename (e.g.
-        //     std::vector)
-        //   * rename globally in project
-        //   * rename in open files
-        if (Rep.getFilePath() == File)
-          Replacements.push_back(
-              replacementToEdit(InpAST->Inputs.Contents, Rep));
-      }
-    }
-    return CB(std::move(Replacements));
+    auto Changes = renameWithinFile(InpAST->AST, File, Pos, NewName);
+    if (!Changes)
+      return CB(Changes.takeError());
+    std::vector<TextEdit> Edits;
+    for (const auto &Rep : *Changes)
+      Edits.push_back(replacementToEdit(InpAST->Inputs.Contents, Rep));
+    return CB(std::move(Edits));
   };
 
   WorkScheduler.runWithAST(

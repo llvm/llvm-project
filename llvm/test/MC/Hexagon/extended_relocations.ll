@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj -march=hexagon %s -o - | llvm-objdump -r - | FileCheck %s
 
-; CHECK: RELOCATION RECORDS FOR [.rela.text]:
+; CHECK: RELOCATION RECORDS FOR [.text]:
 ; CHECK: 00000000 R_HEX_B22_PCREL printf
 ; CHECK: 00000004 R_HEX_32_6_X .rodata.str1.1
 ; CHECK: 00000008 R_HEX_6_X .rodata.str1.1
