@@ -284,16 +284,16 @@ define float @sqrt_afn(float %x) {
 ; FMF-NEXT:    fcmpu 0, 1, 0
 ; FMF-NEXT:    beq 0, .LBB10_2
 ; FMF-NEXT:  # %bb.1:
+; FMF-NEXT:    xsrsqrtesp 0, 1
 ; FMF-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
-; FMF-NEXT:    xsrsqrtesp 3, 1
-; FMF-NEXT:    lfs 0, .LCPI10_0@toc@l(3)
-; FMF-NEXT:    xsmulsp 2, 1, 0
-; FMF-NEXT:    xsmulsp 4, 3, 3
-; FMF-NEXT:    xssubsp 2, 2, 1
-; FMF-NEXT:    xsmulsp 2, 2, 4
-; FMF-NEXT:    xssubsp 0, 0, 2
-; FMF-NEXT:    xsmulsp 0, 3, 0
-; FMF-NEXT:    xsmulsp 0, 0, 1
+; FMF-NEXT:    addis 4, 2, .LCPI10_1@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI10_0@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI10_1@toc@l(4)
+; FMF-NEXT:    xsmulsp 1, 1, 0
+; FMF-NEXT:    xsmulsp 0, 1, 0
+; FMF-NEXT:    xsmulsp 1, 1, 2
+; FMF-NEXT:    xsaddsp 0, 0, 3
+; FMF-NEXT:    xsmulsp 0, 1, 0
 ; FMF-NEXT:  .LBB10_2:
 ; FMF-NEXT:    fmr 1, 0
 ; FMF-NEXT:    blr
@@ -304,16 +304,15 @@ define float @sqrt_afn(float %x) {
 ; GLOBAL-NEXT:    fcmpu 0, 1, 0
 ; GLOBAL-NEXT:    beq 0, .LBB10_2
 ; GLOBAL-NEXT:  # %bb.1:
-; GLOBAL-NEXT:    xsrsqrtesp 2, 1
-; GLOBAL-NEXT:    fneg 0, 1
+; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
-; GLOBAL-NEXT:    fmr 4, 1
-; GLOBAL-NEXT:    lfs 3, .LCPI10_0@toc@l(3)
-; GLOBAL-NEXT:    xsmaddasp 4, 0, 3
-; GLOBAL-NEXT:    xsmulsp 0, 2, 2
-; GLOBAL-NEXT:    xsmaddasp 3, 4, 0
-; GLOBAL-NEXT:    xsmulsp 0, 2, 3
-; GLOBAL-NEXT:    xsmulsp 0, 0, 1
+; GLOBAL-NEXT:    addis 4, 2, .LCPI10_1@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI10_0@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI10_1@toc@l(4)
+; GLOBAL-NEXT:    xsmulsp 1, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 1, 3
+; GLOBAL-NEXT:    xsmulsp 0, 0, 2
 ; GLOBAL-NEXT:  .LBB10_2:
 ; GLOBAL-NEXT:    fmr 1, 0
 ; GLOBAL-NEXT:    blr
@@ -338,16 +337,15 @@ define float @sqrt_fast(float %x) {
 ; FMF-NEXT:    fcmpu 0, 1, 0
 ; FMF-NEXT:    beq 0, .LBB11_2
 ; FMF-NEXT:  # %bb.1:
-; FMF-NEXT:    xsrsqrtesp 2, 1
-; FMF-NEXT:    fneg 0, 1
+; FMF-NEXT:    xsrsqrtesp 0, 1
 ; FMF-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; FMF-NEXT:    fmr 4, 1
-; FMF-NEXT:    lfs 3, .LCPI11_0@toc@l(3)
-; FMF-NEXT:    xsmaddasp 4, 0, 3
-; FMF-NEXT:    xsmulsp 0, 2, 2
-; FMF-NEXT:    xsmaddasp 3, 4, 0
-; FMF-NEXT:    xsmulsp 0, 2, 3
-; FMF-NEXT:    xsmulsp 0, 0, 1
+; FMF-NEXT:    addis 4, 2, .LCPI11_1@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI11_0@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI11_1@toc@l(4)
+; FMF-NEXT:    xsmulsp 1, 1, 0
+; FMF-NEXT:    xsmaddasp 2, 1, 0
+; FMF-NEXT:    xsmulsp 0, 1, 3
+; FMF-NEXT:    xsmulsp 0, 0, 2
 ; FMF-NEXT:  .LBB11_2:
 ; FMF-NEXT:    fmr 1, 0
 ; FMF-NEXT:    blr
@@ -358,16 +356,15 @@ define float @sqrt_fast(float %x) {
 ; GLOBAL-NEXT:    fcmpu 0, 1, 0
 ; GLOBAL-NEXT:    beq 0, .LBB11_2
 ; GLOBAL-NEXT:  # %bb.1:
-; GLOBAL-NEXT:    xsrsqrtesp 2, 1
-; GLOBAL-NEXT:    fneg 0, 1
+; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; GLOBAL-NEXT:    fmr 4, 1
-; GLOBAL-NEXT:    lfs 3, .LCPI11_0@toc@l(3)
-; GLOBAL-NEXT:    xsmaddasp 4, 0, 3
-; GLOBAL-NEXT:    xsmulsp 0, 2, 2
-; GLOBAL-NEXT:    xsmaddasp 3, 4, 0
-; GLOBAL-NEXT:    xsmulsp 0, 2, 3
-; GLOBAL-NEXT:    xsmulsp 0, 0, 1
+; GLOBAL-NEXT:    addis 4, 2, .LCPI11_1@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI11_0@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI11_1@toc@l(4)
+; GLOBAL-NEXT:    xsmulsp 1, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 1, 3
+; GLOBAL-NEXT:    xsmulsp 0, 0, 2
 ; GLOBAL-NEXT:  .LBB11_2:
 ; GLOBAL-NEXT:    fmr 1, 0
 ; GLOBAL-NEXT:    blr

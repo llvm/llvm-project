@@ -11145,7 +11145,9 @@ SDValue PPCTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
 
-    UseOneConstNR = true;
+    // The Newton-Raphson computation with a single constant does not provide
+    // enough accuracy on some CPUs.
+    UseOneConstNR = !Subtarget.needsTwoConstNR();
     return DAG.getNode(PPCISD::FRSQRTE, SDLoc(Operand), VT, Operand);
   }
   return SDValue();

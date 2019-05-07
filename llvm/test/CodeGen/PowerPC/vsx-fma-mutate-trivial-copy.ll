@@ -8,7 +8,7 @@ entry:
   br i1 undef, label %for.body.lr.ph, label %for.end
 
 ; CHECK-LABEL: @LSH_recall_init
-; CHECK: xsnmsubadp
+; CHECK: xsmaddadp
 
 for.body.lr.ph:                                   ; preds = %entry
   %conv3 = fpext float %W to double

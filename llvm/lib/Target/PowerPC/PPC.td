@@ -135,6 +135,9 @@ def FeatureQPX       : SubtargetFeature<"qpx","HasQPX", "true",
 def FeatureVSX       : SubtargetFeature<"vsx","HasVSX", "true",
                                         "Enable VSX instructions",
                                         [FeatureAltivec]>;
+def FeatureTwoConstNR :
+  SubtargetFeature<"two-const-nr", "NeedsTwoConstNR", "true",
+                   "Requires two constant Newton-Raphson computation">;
 def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8Altivec", "true",
                                         "Enable POWER8 Altivec instructions",
                                         [FeatureAltivec]>;
@@ -227,7 +230,7 @@ def ProcessorFeatures {
        FeaturePOPCNTD, FeatureCMPB, FeatureLDBRX,
        Feature64Bit /*, Feature64BitRegs */,
        FeatureBPERMD, FeatureExtDiv,
-       FeatureMFTB, DeprecatedDST];
+       FeatureMFTB, DeprecatedDST, FeatureTwoConstNR];
   list<SubtargetFeature> Power8SpecificFeatures =
       [DirectivePwr8, FeatureP8Altivec, FeatureP8Vector, FeatureP8Crypto,
        FeatureHTM, FeatureDirectMove, FeatureICBT, FeaturePartwordAtomic,

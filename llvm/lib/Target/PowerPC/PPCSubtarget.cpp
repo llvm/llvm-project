@@ -67,6 +67,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasFPU = false;
   HasQPX = false;
   HasVSX = false;
+  NeedsTwoConstNR = false;
   HasP8Vector = false;
   HasP8Altivec = false;
   HasP8Crypto = false;
