@@ -3136,6 +3136,11 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
     case Intrinsic::sqrt:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) &&
              CannotBeOrderedLessThanZero(II->getArgOperand(0), TLI);
+    case Intrinsic::minnum:
+    case Intrinsic::maxnum:
+      // If either operand is not NaN, the result is not NaN.
+      return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) ||
+             isKnownNeverNaN(II->getArgOperand(1), TLI, Depth + 1);
     default:
       return false;
     }
