@@ -222,6 +222,11 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
     m_debugger.SkipAppInitFiles(true);
   }
 
+  if (args.hasArg(OPT_local_lldbinit)) {
+    lldb::SBDebugger::SetInternalVariable("target.load-cwd-lldbinit", "true",
+                                          m_debugger.GetInstanceName());
+  }
+
   if (args.hasArg(OPT_no_use_colors)) {
     m_debugger.SetUseColor(false);
   }
