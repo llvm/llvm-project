@@ -367,6 +367,10 @@ namespace llvm {
 
     Value *visitUMaxExpr(const SCEVUMaxExpr *S);
 
+    Value *visitSMinExpr(const SCEVSMinExpr *S);
+
+    Value *visitUMinExpr(const SCEVUMinExpr *S);
+
     Value *visitUnknown(const SCEVUnknown *S) {
       return S->getValue();
     }

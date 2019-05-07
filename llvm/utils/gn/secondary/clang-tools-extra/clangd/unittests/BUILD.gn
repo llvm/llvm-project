@@ -55,6 +55,7 @@ unittest("ClangdTests") {
     "PrintASTTests.cpp",
     "QualityTests.cpp",
     "RIFFTests.cpp",
+    "RenameTests.cpp",
     "SelectionTests.cpp",
     "SerializationTests.cpp",
     "SourceCodeTests.cpp",

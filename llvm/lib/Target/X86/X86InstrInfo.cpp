@@ -3342,7 +3342,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
                                         int CmpValue,
                                         const MachineRegisterInfo *MRI) const {
   // Check whether we can replace SUB with CMP.
-  unsigned NewOpcode = 0;
   switch (CmpInstr.getOpcode()) {
   default: break;
   case X86::SUB64ri32:
@@ -3363,6 +3362,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
     if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
       return false;
     // There is no use of the destination register, we can replace SUB with CMP.
+    unsigned NewOpcode = 0;
     switch (CmpInstr.getOpcode()) {
     default: llvm_unreachable("Unreachable!");
     case X86::SUB64rm:   NewOpcode = X86::CMP64rm;   break;

@@ -13,6 +13,7 @@
 #ifndef LLVM_OBJECT_OBJECTFILE_H
 #define LLVM_OBJECT_OBJECTFILE_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
@@ -421,14 +422,16 @@ inline SectionRef::SectionRef(DataRefImpl SectionP,
   , OwningObject(Owner) {}
 
 inline bool SectionRef::operator==(const SectionRef &Other) const {
-  return SectionPimpl == Other.SectionPimpl;
+  return OwningObject == Other.OwningObject &&
+         SectionPimpl == Other.SectionPimpl;
 }
 
 inline bool SectionRef::operator!=(const SectionRef &Other) const {
-  return SectionPimpl != Other.SectionPimpl;
+  return !(*this == Other);
 }
 
 inline bool SectionRef::operator<(const SectionRef &Other) const {
+  assert(OwningObject == Other.OwningObject);
   return SectionPimpl < Other.SectionPimpl;
 }
 
@@ -559,6 +562,25 @@ inline const ObjectFile *RelocationRef::getObject() const {
 }
 
 } // end namespace object
+
+template <> struct DenseMapInfo<object::SectionRef> {
+  static bool isEqual(const object::SectionRef &A,
+                      const object::SectionRef &B) {
+    return A == B;
+  }
+  static object::SectionRef getEmptyKey() {
+    return object::SectionRef({}, nullptr);
+  }
+  static object::SectionRef getTombstoneKey() {
+    object::DataRefImpl TS;
+    TS.p = (uintptr_t)-1;
+    return object::SectionRef(TS, nullptr);
+  }
+  static unsigned getHashValue(const object::SectionRef &Sec) {
+    object::DataRefImpl Raw = Sec.getRawDataRefImpl();
+    return hash_combine(Raw.p, Raw.d.a, Raw.d.b);
+  }
+};
 
 } // end namespace llvm
 
