@@ -541,6 +541,7 @@ public:
   ///
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
+  Module *findOrInferSubmodule(StringRef Name);
 
   /// Determine whether the specified module would be visible to
   /// a lookup at the end of this module.
