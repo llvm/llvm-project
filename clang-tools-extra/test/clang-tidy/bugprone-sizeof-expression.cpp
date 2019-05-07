@@ -193,11 +193,15 @@ int Test5() {
     Array10* ptr;
   };
   typedef const MyStruct TMyStruct;
+  typedef const MyStruct *PMyStruct;
+  typedef TMyStruct *PMyStruct2;
 
   static TMyStruct kGlocalMyStruct = {};
   static TMyStruct volatile * kGlocalMyStructPtr = &kGlocalMyStruct;
 
   MyStruct S;
+  PMyStruct PS;
+  PMyStruct2 PS2;
   Array10 A10;
 
   int sum = 0;
@@ -224,6 +228,14 @@ int Test5() {
   sum += sizeof(&kGlocalMyStruct);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&S);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(MyStruct*);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PMyStruct);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PS);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PS2);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&A10);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
