@@ -527,7 +527,7 @@ protected:
   /// Select and emit code for a binary operator instruction, which has
   /// an opcode which directly corresponds to the given ISD opcode.
   bool selectBinaryOp(const User *I, unsigned ISDOpcode);
-  bool selectFNeg(const User *I);
+  bool selectFNeg(const User *I, const Value *In);
   bool selectGetElementPtr(const User *I);
   bool selectStackmap(const CallInst *I);
   bool selectPatchpoint(const CallInst *I);
