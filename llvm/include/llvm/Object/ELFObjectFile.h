@@ -1251,6 +1251,8 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_S390:
     return Triple::systemz;
 
+  case ELF::EM_DPU:
+    return Triple::dpu;
   case ELF::EM_SPARC:
   case ELF::EM_SPARC32PLUS:
     return IsLittleEndian ? Triple::sparcel : Triple::sparc;

@@ -155,6 +155,14 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
   case ELF::EM_CSKY:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
+    default: 
+      break;
+    }
+    break;
+  // UPMEM
+  case ELF::EM_DPU:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/DPU.def"
     default:
       break;
     }
