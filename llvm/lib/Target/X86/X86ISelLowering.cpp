@@ -20554,10 +20554,10 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isNullConstant(Y) &&
           (isAllOnesConstant(Op1) == (CondCode == X86::COND_NE))) {
         SDValue Zero = DAG.getConstant(0, DL, CmpOp0.getValueType());
-        SDValue Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Zero, CmpOp0);
+        SDValue CmpZero = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Zero, CmpOp0);
         SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
         Zero = DAG.getConstant(0, DL, Op.getValueType());
-        return DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Cmp);
+        return DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, CmpZero);
       }
 
       Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32,
