@@ -83,7 +83,7 @@ __kernel void test__global() {
 // EXPL-LABEL: @__cxx_global_var_init()
 // EXPL: call void @_ZNU3AS41CC1Ev(%class.C addrspace(4)* addrspacecast (%class.C addrspace(1)* @c to %class.C addrspace(4)*))
 
-// COMMON-LABEL: @_Z12test__globalv()
+// COMMON-LABEL: @test__global()
 
 // Test the address space of 'this' when invoking a method.
 // COMMON: call i32 @_ZNU3AS41C3getEv(%class.C addrspace(4)* addrspacecast (%class.C addrspace(1)* @c to %class.C addrspace(4)*))
@@ -152,19 +152,19 @@ __kernel void test__global() {
 
 TEST(__local)
 
-// COMMON-LABEL: _Z11test__localv
+// COMMON-LABEL: @test__local
 
 // Test that we don't initialize an object in local address space.
-// EXPL-NOT: call void @_ZNU3AS41CC1Ev(%class.C addrspace(4)* addrspacecast (%class.C addrspace(3)* @_ZZ11test__localvE1c to %class.C addrspace(4)*))
+// EXPL-NOT: call void @_ZNU3AS41CC1Ev(%class.C addrspace(4)* addrspacecast (%class.C addrspace(3)* @_ZZ11test__localE1c to %class.C addrspace(4)*))
 
 // Test the address space of 'this' when invoking a method.
-// COMMON: call i32 @_ZNU3AS41C3getEv(%class.C addrspace(4)* addrspacecast (%class.C addrspace(3)* @_ZZ11test__localvE1c to %class.C addrspace(4)*))
+// COMMON: call i32 @_ZNU3AS41C3getEv(%class.C addrspace(4)* addrspacecast (%class.C addrspace(3)* @_ZZ11test__localE1c to %class.C addrspace(4)*))
 
 // Test the address space of 'this' when invoking copy-constructor.
 // COMMON: [[C1GEN:%[0-9]+]] = addrspacecast %class.C* %c1 to %class.C addrspace(4)*
-// EXPL: call void @_ZNU3AS41CC1ERU3AS4KS_(%class.C addrspace(4)* [[C1GEN]], %class.C addrspace(4)* dereferenceable(4) addrspacecast (%class.C addrspace(3)* @_ZZ11test__localvE1c to %class.C addrspace(4)*))
+// EXPL: call void @_ZNU3AS41CC1ERU3AS4KS_(%class.C addrspace(4)* [[C1GEN]], %class.C addrspace(4)* dereferenceable(4) addrspacecast (%class.C addrspace(3)* @_ZZ11test__localE1c to %class.C addrspace(4)*))
 // IMPL:  [[C1VOID:%[0-9]+]] = bitcast %class.C* %c1 to i8*
-// IMPL:  call void @llvm.memcpy.p0i8.p4i8.i32(i8* {{.*}}[[C1VOID]], i8 addrspace(4)* {{.*}}addrspacecast (i8 addrspace(3)* bitcast (%class.C addrspace(3)* @_ZZ11test__localvE1c to i8 addrspace(3)*) to i8 addrspace(4)*), i32 4, i1 false)
+// IMPL:  call void @llvm.memcpy.p0i8.p4i8.i32(i8* {{.*}}[[C1VOID]], i8 addrspace(4)* {{.*}}addrspacecast (i8 addrspace(3)* bitcast (%class.C addrspace(3)* @_ZZ11test__localE1c to i8 addrspace(3)*) to i8 addrspace(4)*), i32 4, i1 false)
 
 // Test the address space of 'this' when invoking a constructor.
 // EXPL: [[C2GEN:%[0-9]+]] = addrspacecast %class.C* %c2 to %class.C addrspace(4)*
@@ -180,7 +180,7 @@ TEST(__local)
 
 TEST(__private)
 
-// CHECK-LABEL: @_Z13test__privatev
+// CHECK-LABEL: @test__private
 
 // Test the address space of 'this' when invoking a constructor for an object in non-default address space
 // EXPL: [[CGEN:%[0-9]+]] = addrspacecast %class.C* %c to %class.C addrspace(4)*

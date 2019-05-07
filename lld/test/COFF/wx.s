@@ -8,8 +8,8 @@
 # RUN: lld-link /out:%t.exe /entry:main -notarealoption /WX /WX:NO %t.obj 2>&1 | \
 # RUN:   FileCheck -check-prefix=WARNING %s
 
-# ERROR: error: ignoring unknown argument: -notarealoption
-# WARNING: warning: ignoring unknown argument: -notarealoption
+# ERROR: error: ignoring unknown argument '-notarealoption'
+# WARNING: warning: ignoring unknown argument '-notarealoption'
 
 .text
 .global main

@@ -723,14 +723,17 @@ TEST_F(InterpolateTest, Language) {
   // .h is ambiguous, so we add explicit language flags
   EXPECT_EQ(getCommand("foo.h"),
             "clang -D dir/foo.cpp -x c++-header -std=c++17");
+  // Same thing if we have no extension. (again, we treat as header).
+  EXPECT_EQ(getCommand("foo"), "clang -D dir/foo.cpp -x c++-header -std=c++17");
+  // and invalid extensions.
+  EXPECT_EQ(getCommand("foo.cce"),
+            "clang -D dir/foo.cpp -x c++-header -std=c++17");
   // and don't add -x if the inferred language is correct.
   EXPECT_EQ(getCommand("foo.hpp"), "clang -D dir/foo.cpp -std=c++17");
   // respect -x if it's already there.
   EXPECT_EQ(getCommand("baz.h"), "clang -D dir/baz.cee -x c-header");
   // prefer a worse match with the right extension.
   EXPECT_EQ(getCommand("foo.c"), "clang -D dir/bar.c");
-  // make sure we don't crash on queries with invalid extensions.
-  EXPECT_EQ(getCommand("foo.cce"), "clang -D dir/foo.cpp");
   Entries.erase(path(StringRef("dir/bar.c")));
   // Now we transfer across languages, so drop -std too.
   EXPECT_EQ(getCommand("foo.c"), "clang -D dir/foo.cpp");
