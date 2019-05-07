@@ -598,7 +598,7 @@ private:
 
 public:
   // Offloading unbundling doesn't change the type of output.
-  OffloadUnbundlingJobAction(Action *Input);
+  OffloadUnbundlingJobAction(ActionList &Inputs);
 
   /// Register information about a dependent action.
   void registerDependentActionInfo(const ToolChain *TC, StringRef BoundArch,

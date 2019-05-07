@@ -307,7 +307,62 @@
 // RUN: touch %t.o
 // RUN: %clang -fsycl -foffload-static-lib=%t.a -### %t.o 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=FOFFLOAD_STATIC_LIB
-// FOFFLOAD_STATIC_LIB: ld{{(.exe)?}}" "-r" "-o" {{.*}} "[[INPUT:.+\.o]]"
+// FOFFLOAD_STATIC_LIB: ld{{(.exe)?}}" "-r" "-o" {{.*}} "[[INPUT:.+\.o]]" "[[INPUT:.+\.a]]"
 // FOFFLOAD_STATIC_LIB: clang-offload-bundler{{.*}} "-type=oo"
 // FOFFLOAD_STATIC_LIB: llvm-link{{.*}} "@{{.*}}"
 
+/// ###########################################################################
+
+/// test behaviors of -foffload-static-lib=<lib> with multiple objects
+// RUN: touch %t.a
+// RUN: touch %t-1.o
+// RUN: touch %t-2.o
+// RUN: touch %t-3.o
+// RUN: %clang -fsycl -foffload-static-lib=%t.a -### %t-1.o %t-2.o %t-3.o 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=FOFFLOAD_STATIC_LIB_MULTI_O
+// FOFFLOAD_STATIC_LIB_MULTI_O: ld{{(.exe)?}}" "-r" "-o" {{.*}} "[[INPUT:.+\-1.o]]" "[[INPUT:.+\-2.o]]" "[[INPUT:.+\-3.o]]" "[[INPUT:.+\.a]]"
+// FOFFLOAD_STATIC_LIB_MULTI_O: clang-offload-bundler{{.*}} "-type=oo"
+// FOFFLOAD_STATIC_LIB_MULTI_O: llvm-link{{.*}} "@{{.*}}"
+
+/// ###########################################################################
+
+/// test behaviors of -foffload-static-lib=<lib> from source
+// RUN: touch %t.a
+// RUN: %clang -fsycl -foffload-static-lib=%t.a -ccc-print-phases %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=FOFFLOAD_STATIC_LIB_SRC
+// FOFFLOAD_STATIC_LIB_SRC: 0: input, "[[INPUT:.+\.c]]", c, (host-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 1: preprocessor, {0}, cpp-output, (host-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 2: input, "[[INPUT]]", c, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 3: preprocessor, {2}, cpp-output, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 4: compiler, {3}, sycl-header, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 5: offload, "host-sycl (x86_64-unknown-linux-gnu)" {1}, "device-sycl (spir64-unknown-linux-sycldevice)" {4}, cpp-output
+// FOFFLOAD_STATIC_LIB_SRC: 6: compiler, {5}, ir, (host-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 7: backend, {6}, assembler, (host-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 8: assembler, {7}, object, (host-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 9: clang-offload-unbundler, {8}, object, (host-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 10: linker, {9}, image, (host-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 11: compiler, {3}, ir, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 12: backend, {11}, assembler, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 13: assembler, {12}, object, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 14: linker, {13, 9}, image, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 15: clang-offload-wrapper, {14}, object, (device-sycl)
+// FOFFLOAD_STATIC_LIB_SRC: 16: offload, "host-sycl (x86_64-unknown-linux-gnu)" {10}, "device-sycl (spir64-unknown-linux-sycldevice)" {15}, image
+
+/// ###########################################################################
+
+// RUN: touch %t.a
+// RUN: %clang -fsycl -foffload-static-lib=%t.a -### %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=FOFFLOAD_STATIC_LIB_SRC2
+// FOFFLOAD_STATIC_LIB_SRC2: ld{{(.exe)?}}" "-r" "-o" {{.*}} "[[INPUT:.+\.a]]"
+// FOFFLOAD_STATIC_LIB_SRC2: clang-offload-bundler{{.*}} "-type=oo"
+// FOFFLOAD_STATIC_LIB_SRC2: llvm-link{{.*}} "@{{.*}}"
+
+/// ###########################################################################
+
+// RUN: touch %t.a
+// RUN: %clang -fsycl -foffload-static-lib=%t.a -o output_name -lOpenCL -### %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=FOFFLOAD_STATIC_LIB_SRC3
+// FOFFLOAD_STATIC_LIB_SRC3: ld{{(.exe)?}}" "-r" "-o" {{.*}} "[[INPUT:.+\.a]]"
+// FOFFLOAD_STATIC_LIB_SRC3: clang-offload-bundler{{.*}} "-type=oo"
+// FOFFLOAD_STATIC_LIB_SRC3: llvm-link{{.*}} "@{{.*}}"
+// FOFFLOAD_STATIC_LIB_SRC3: ld{{(.exe)?}}" {{.*}} "-o" "output_name" {{.*}} "-lOpenCL"

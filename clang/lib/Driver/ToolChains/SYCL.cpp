@@ -55,28 +55,30 @@ const char *SYCL::Linker::constructLLVMSpirvCommand(Compilation &C,
 const char *SYCL::Linker::constructLLVMLinkCommand(
     Compilation &C, const JobAction &JA, const ArgList &Args,
     StringRef SubArchName, StringRef OutputFilePrefix,
-    const llvm::opt::ArgStringList &InputFiles) const {
+    const InputInfoList &InputFiles) const {
   ArgStringList CmdArgs;
   // Add the input bc's created by compile step.
   // When offloading, the input file(s) could be from unbundled partially
   // linked archives.  The unbundled information is a list of files and not
   // an actual object/archive.  Take that list and pass those to the linker
   // instead of the original object.
-  if (JA.isDeviceOffloading(Action::OFK_SYCL) &&
-      Args.hasArg(options::OPT_foffload_static_lib_EQ)) {
-    // Go through the Inputs to the link.  When an object is encountered, we
+  if (JA.isDeviceOffloading(Action::OFK_SYCL)) {
+    // Go through the Inputs to the link.  When a listfile is encountered, we
     // know it is an unbundled generated list.
     // FIXME - properly add objects from list to be removed when compilation is
     // complete.
     for (const auto &II : InputFiles) {
-      // Read each line of the generated unbundle file and add them to the link.
-      std::string FileName(II);
-      CmdArgs.push_back(C.getArgs().MakeArgString("@" + FileName));
+      if (II.getType() == types::TY_Tempfilelist) {
+        // Pass the unbundled list with '@' to be processed.
+        std::string FileName(II.getFilename());
+        CmdArgs.push_back(C.getArgs().MakeArgString("@" + FileName));
+      } else
+        CmdArgs.push_back(II.getFilename());
     }
   }
   else
     for (const auto &II : InputFiles)
-      CmdArgs.push_back(II);
+      CmdArgs.push_back(II.getFilename());
 
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
@@ -125,19 +127,20 @@ void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // We want to use llvm-spirv linker to link spirv binaries before putting
   // them into the fat object.
   // Each command outputs different files.
-  ArgStringList SpirvInputs;
+  InputInfoList SpirvInputs;
   for (const auto &II : Inputs) {
     if (!II.isFilename())
       continue;
     if (Args.hasFlag(options::OPT_fsycl_use_bitcode,
                      options::OPT_fno_sycl_use_bitcode, true) ||
         Args.hasArg(options::OPT_foffload_static_lib_EQ))
-      SpirvInputs.push_back(II.getFilename());
+      SpirvInputs.push_back(II);
     else {
       const char *LLVMSpirvOutputFile =
         constructLLVMSpirvCommand(C, JA, Output, Prefix, true,
                                   II.getFilename());
-      SpirvInputs.push_back(LLVMSpirvOutputFile);
+      SpirvInputs.push_back(InputInfo(types::TY_LLVM_BC, LLVMSpirvOutputFile,
+                                      LLVMSpirvOutputFile));
     }
   }
   const char *LLVMLinkOutputFile =
@@ -161,8 +164,6 @@ void SYCLToolChain::addClangTargetOptions(
 
   assert(DeviceOffloadingKind == Action::OFK_SYCL &&
          "Only SYCL offloading kinds are supported");
-
-  CC1Args.push_back("-fsycl-is-device");
 }
 
 llvm::opt::DerivedArgList *

@@ -3508,6 +3508,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsIAMCU = RawTriple.isOSIAMCU();
   bool IsSYCLDevice = (RawTriple.getEnvironment() == llvm::Triple::SYCLDevice);
+  // Using just the sycldevice environment is not enough to determine usage
+  // of the device triple when considering fat static archives.  The
+  // compilation path requires the host object to be fed into the partial link
+  // step, and being part of the SYCL tool chain causes the incorrect target.
+  // FIXME - Is it possible to retain host environment when on a target
+  // device toolchain.
+  bool UseSYCLTriple = IsSYCLDevice && (!IsSYCL || IsSYCLOffloadDevice);
 
   // Adjust IsWindowsXYZ for CUDA/HIP compilations.  Even when compiling in
   // device mode (i.e., getToolchain().getTriple() is NVPTX/AMDGCN, not
@@ -3529,7 +3536,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add the "effective" target triple.
   CmdArgs.push_back("-triple");
-  CmdArgs.push_back(Args.MakeArgString(TripleStr));
+  if (!UseSYCLTriple && IsSYCLDevice) {
+    // Do not use device triple when we know the device is not SYCL
+    // FIXME: We override the toolchain triple in this instance to address a
+    // disconnect with fat static archives.  We should have a cleaner way of
+    // using the Host environment when on a device toolchain.
+    std::string NormalizedTriple =
+        llvm::Triple(llvm::sys::getProcessTriple()).normalize();
+    CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+  } else
+    CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (const Arg *MJ = Args.getLastArg(options::OPT_MJ)) {
     DumpCompilationDatabase(C, MJ->getValue(), TripleStr, Output, Input, Args);
@@ -3568,7 +3584,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
   }
 
-  if (IsSYCLDevice) {
+  if (UseSYCLTriple) {
     // We want to compile sycl kernels.
     if (types::isCXX(Input.getType()))
       CmdArgs.push_back("-std=c++11");
@@ -6365,8 +6381,6 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   //   -unbundle
 
   ArgStringList CmdArgs;
-
-  assert(Inputs.size() == 1 && "Expecting to unbundle a single file!");
   InputInfo Input = Inputs.front();
   const char *TypeArg = types::getTypeTempSuffix(Input.getType());
   const char *InputFileName = Input.getFilename();
@@ -6386,9 +6400,10 @@ void OffloadBundler::ConstructJobMultipleOutputs(
           llvm::sys::path::stem(Input.getFilename()).str() + "-prelink", "o");
     InputFileName = C.addTempFile(C.getArgs().MakeArgString(TmpName));
     LinkArgs.push_back(InputFileName);
-    // Input files consist of fat libraries and the object to be unbundled.
-    LinkArgs.push_back(Input.getFilename());
-    for (const auto& A :
+    // Input files consist of fat libraries and the object(s) to be unbundled.
+    for (const auto &I : Inputs)
+      LinkArgs.push_back(I.getFilename());
+    for (const auto &A :
             TCArgs.getAllArgValues(options::OPT_foffload_static_lib_EQ))
       LinkArgs.push_back(TCArgs.MakeArgString(A));
     const char *Exec = TCArgs.MakeArgString(getToolChain().GetLinkerPath());

@@ -42,7 +42,7 @@ private:
                              const llvm::opt::ArgList &Args,
                              llvm::StringRef SubArchName,
                              llvm::StringRef OutputFilePrefix,
-                             const llvm::opt::ArgStringList &InputFiles) const;
+                             const InputInfoList &InputFiles) const;
   void constructLlcCommand(Compilation &C, const JobAction &JA,
                            const InputInfo &Output,
                            const char *InputFile) const;

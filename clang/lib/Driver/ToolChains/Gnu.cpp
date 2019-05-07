@@ -531,9 +531,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // FIXME - properly add objects from list to be removed when compilation is
     // complete.
     for (const auto &II : Inputs) {
-      if (II.getType() == types::TY_Object) {
-        // Read each line of the generated unbundle file and add them to the
-        // link.
+      if (II.getType() == types::TY_Tempfilelist) {
+        // Take the unbundled list file and pass it in with '@'.
         std::string FileName(II.getFilename());
         const char * ArgFile = C.getArgs().MakeArgString("@" + FileName);
         auto CurInput = InputInfo(types::TY_Object, ArgFile, ArgFile);
@@ -542,8 +541,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         UpdatedInputs.push_back(II);
     }
     AddLinkerInputs(ToolChain, UpdatedInputs, Args, CmdArgs, JA);
-  }
-  else
+  } else
     AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   // The profile runtime also needs access to system libraries.
