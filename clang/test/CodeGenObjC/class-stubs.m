@@ -47,7 +47,7 @@ int main() {
 // CHECK-NEXT:   call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* [[RECEIVER]], i8* [[SELECTOR]])
 // CHECK-NEXT:   ret i32 0
 
-// CHECK-LABEL: declare %struct._class_t* @objc_loadClassref(i8**)
+// CHECK-LABEL: declare extern_weak %struct._class_t* @objc_loadClassref(i8**)
 // CHECK-SAME: [[ATTRLIST:#.*]]
 
 @implementation Derived (MyCategory)
