@@ -2,6 +2,9 @@
 ; RUN: llc < %s -mtriple=i686-unknown-linux | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=core2 | FileCheck %s --check-prefix=CORE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=nehalem | FileCheck %s --check-prefix=NEHALEM
+; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=sandybridge | FileCheck %s --check-prefix=SANDYBRIDGE
+; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=skylake | FileCheck %s --check-prefix=SKYLAKE
+
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
@@ -17,6 +20,14 @@ define void @memset_0(i8* %a) nounwind  {
 ; NEHALEM-LABEL: memset_0:
 ; NEHALEM:       # %bb.0: # %entry
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_0:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_0:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 0, i1 false)
 	ret void
@@ -38,6 +49,16 @@ define void @memset_4(i8* %a) nounwind  {
 ; NEHALEM:       # %bb.0: # %entry
 ; NEHALEM-NEXT:    movl $0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_4:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movl $0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_4:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    movl $0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 4, i1 false)
 	ret void
@@ -62,6 +83,18 @@ define void @memset_5(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movb $0, 4(%rdi)
 ; NEHALEM-NEXT:    movl $0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_5:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movb $0, 4(%rdi)
+; SANDYBRIDGE-NEXT:    movl $0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_5:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    movb $0, 4(%rdi)
+; SKYLAKE-NEXT:    movl $0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 5, i1 false)
 	ret void
@@ -86,6 +119,18 @@ define void @memset_7(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movl $0, 3(%rdi)
 ; NEHALEM-NEXT:    movl $0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_7:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movl $0, 3(%rdi)
+; SANDYBRIDGE-NEXT:    movl $0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_7:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    movl $0, 3(%rdi)
+; SKYLAKE-NEXT:    movl $0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 7, i1 false)
 	ret void
@@ -108,6 +153,16 @@ define void @memset_8(i8* %a) nounwind  {
 ; NEHALEM:       # %bb.0: # %entry
 ; NEHALEM-NEXT:    movq $0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_8:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movq $0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_8:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    movq $0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 8, i1 false)
 	ret void
@@ -133,6 +188,18 @@ define void @memset_11(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movl $0, 7(%rdi)
 ; NEHALEM-NEXT:    movq $0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_11:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movl $0, 7(%rdi)
+; SANDYBRIDGE-NEXT:    movq $0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_11:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    movl $0, 7(%rdi)
+; SKYLAKE-NEXT:    movq $0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 11, i1 false)
 	ret void
@@ -159,6 +226,18 @@ define void @memset_13(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movq $0, 5(%rdi)
 ; NEHALEM-NEXT:    movq $0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_13:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movq $0, 5(%rdi)
+; SANDYBRIDGE-NEXT:    movq $0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_13:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    movq $0, 5(%rdi)
+; SKYLAKE-NEXT:    movq $0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 13, i1 false)
 	ret void
@@ -185,6 +264,18 @@ define void @memset_15(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movq $0, 7(%rdi)
 ; NEHALEM-NEXT:    movq $0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_15:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movq $0, 7(%rdi)
+; SANDYBRIDGE-NEXT:    movq $0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_15:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    movq $0, 7(%rdi)
+; SKYLAKE-NEXT:    movq $0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 15, i1 false)
 	ret void
@@ -211,6 +302,18 @@ define void @memset_16(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    xorps %xmm0, %xmm0
 ; NEHALEM-NEXT:    movups %xmm0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_16:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_16:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 16, i1 false)
 	ret void
@@ -240,6 +343,20 @@ define void @memset_17(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movups %xmm0, (%rdi)
 ; NEHALEM-NEXT:    movb $0, 16(%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_17:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
+; SANDYBRIDGE-NEXT:    movb $0, 16(%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_17:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
+; SKYLAKE-NEXT:    movb $0, 16(%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 17, i1 false)
 	ret void
@@ -269,6 +386,20 @@ define void @memset_19(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movups %xmm0, (%rdi)
 ; NEHALEM-NEXT:    movl $0, 15(%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_19:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
+; SANDYBRIDGE-NEXT:    movl $0, 15(%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_19:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
+; SKYLAKE-NEXT:    movl $0, 15(%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 19, i1 false)
 	ret void
@@ -302,10 +433,118 @@ define void @memset_31(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movups %xmm0, 15(%rdi)
 ; NEHALEM-NEXT:    movups %xmm0, (%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_31:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, 15(%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_31:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovups %xmm0, 15(%rdi)
+; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 31, i1 false)
 	ret void
 }
+
+define void @memset_32(i8* %a) nounwind  {
+; X86-LABEL: memset_32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, 28(%eax)
+; X86-NEXT:    movl $0, 24(%eax)
+; X86-NEXT:    movl $0, 20(%eax)
+; X86-NEXT:    movl $0, 16(%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    movl $0, (%eax)
+; X86-NEXT:    retl
+;
+; CORE2-LABEL: memset_32:
+; CORE2:       # %bb.0: # %entry
+; CORE2-NEXT:    movq $0, 24(%rdi)
+; CORE2-NEXT:    movq $0, 16(%rdi)
+; CORE2-NEXT:    movq $0, 8(%rdi)
+; CORE2-NEXT:    movq $0, (%rdi)
+; CORE2-NEXT:    retq
+;
+; NEHALEM-LABEL: memset_32:
+; NEHALEM:       # %bb.0: # %entry
+; NEHALEM-NEXT:    xorps %xmm0, %xmm0
+; NEHALEM-NEXT:    movups %xmm0, 16(%rdi)
+; NEHALEM-NEXT:    movups %xmm0, (%rdi)
+; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_32:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, 16(%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_32:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovups %ymm0, (%rdi)
+; SKYLAKE-NEXT:    vzeroupper
+; SKYLAKE-NEXT:    retq
+entry:
+	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 32, i1 false)
+	ret void
+}
+
+define void @memset_32_align32(i8* %a) nounwind  {
+; X86-LABEL: memset_32_align32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, 28(%eax)
+; X86-NEXT:    movl $0, 24(%eax)
+; X86-NEXT:    movl $0, 20(%eax)
+; X86-NEXT:    movl $0, 16(%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    movl $0, (%eax)
+; X86-NEXT:    retl
+;
+; CORE2-LABEL: memset_32_align32:
+; CORE2:       # %bb.0: # %entry
+; CORE2-NEXT:    xorps %xmm0, %xmm0
+; CORE2-NEXT:    movaps %xmm0, 16(%rdi)
+; CORE2-NEXT:    movaps %xmm0, (%rdi)
+; CORE2-NEXT:    retq
+;
+; NEHALEM-LABEL: memset_32_align32:
+; NEHALEM:       # %bb.0: # %entry
+; NEHALEM-NEXT:    xorps %xmm0, %xmm0
+; NEHALEM-NEXT:    movaps %xmm0, 16(%rdi)
+; NEHALEM-NEXT:    movaps %xmm0, (%rdi)
+; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_32_align32:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovaps %ymm0, (%rdi)
+; SANDYBRIDGE-NEXT:    vzeroupper
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_32_align32:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovaps %ymm0, (%rdi)
+; SKYLAKE-NEXT:    vzeroupper
+; SKYLAKE-NEXT:    retq
+entry:
+	call void @llvm.memset.p0i8.i64(i8* align 32 %a, i8 0, i64 32, i1 false)
+	ret void
+}
+
 
 define void @memset_35(i8* %a) nounwind  {
 ; X86-LABEL: memset_35:
@@ -338,6 +577,22 @@ define void @memset_35(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    movups %xmm0, (%rdi)
 ; NEHALEM-NEXT:    movl $0, 31(%rdi)
 ; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_35:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, 16(%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
+; SANDYBRIDGE-NEXT:    movl $0, 31(%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_35:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovups %ymm0, (%rdi)
+; SKYLAKE-NEXT:    movl $0, 31(%rdi)
+; SKYLAKE-NEXT:    vzeroupper
+; SKYLAKE-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 35, i1 false)
 	ret void
