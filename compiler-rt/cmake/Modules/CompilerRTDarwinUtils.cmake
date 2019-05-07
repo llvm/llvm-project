@@ -1,4 +1,5 @@
 include(CMakeParseArguments)
+include(CompilerRTUtils)
 
 # On OS X SDKs can be installed anywhere on the base system and xcode-select can
 # set the default Xcode to use. This function finds the SDKs that are present in
@@ -249,10 +250,18 @@ function(darwin_lipo_libs name)
       )
     add_custom_target(${name}
       DEPENDS ${LIB_OUTPUT_DIR}/lib${name}.a)
-    add_dependencies(${LIB_PARENT_TARGET} ${name})
-    install(FILES ${LIB_OUTPUT_DIR}/lib${name}.a
-      DESTINATION ${LIB_INSTALL_DIR})
     set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT Misc")
+    add_dependencies(${LIB_PARENT_TARGET} ${name})
+
+    if(CMAKE_CONFIGURATION_TYPES)
+      set(install_component ${LIB_PARENT_TARGET})
+    else()
+      set(install_component ${name})
+    endif()
+    install(FILES ${LIB_OUTPUT_DIR}/lib${name}.a
+      DESTINATION ${LIB_INSTALL_DIR}
+      COMPONENT ${install_component})
+    add_compiler_rt_install_targets(${name} PARENT_TARGET ${LIB_PARENT_TARGET})
   else()
     message(WARNING "Not generating lipo target for ${name} because no input libraries exist.")
   endif()
