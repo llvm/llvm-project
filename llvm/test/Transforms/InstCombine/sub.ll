@@ -1270,9 +1270,8 @@ define <2 x i32> @test69(<2 x i32> %x) {
 ; Check (X | Y) - Y --> X & ~Y when Y is a constant
 define i32 @test70(i32 %A) {
 ; CHECK-LABEL: @test70(
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 123
-; CHECK-NEXT:    [[C:%.*]] = add nsw i32 [[B]], -123
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -124
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %B = or i32 %A, 123
   %C = sub i32 %B, 123
