@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-print-type-size %s | FileCheck %s
+// RUN: c-index-test -test-print-type-size %s -target x86_64-pc-linux-gnu | FileCheck %s
 
 struct Foo {
   int size;
