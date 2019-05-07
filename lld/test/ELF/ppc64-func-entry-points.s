@@ -75,6 +75,6 @@ glob:
 // CHECK: foo_external_diff:
 // CHECK-NEXT: 10010080:       {{.*}}     addis 2, 12, 1
 // CHECK-NEXT: 10010084:       {{.*}}     addi 2, 2, 32640
-// CHECK-NEXT: 10010088:       {{.*}}     nop
+// CHECK-NEXT: 10010088:       {{.*}}     addis 5, 2, 1
 // CHECK: foo_external_same:
 // CHECK-NEXT: 100100b0:       {{.*}}     add 3, 4, 3

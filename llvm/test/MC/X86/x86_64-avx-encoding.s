@@ -3880,7 +3880,7 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc4,0x61,0xfa,0x2d,0x01]
           vcvtss2si  (%rcx), %r8
 
-// CHECK: vcvtsi2sdl  %r8d, %xmm8, %xmm15
+// CHECK: vcvtsi2sd  %r8d, %xmm8, %xmm15
 // CHECK: encoding: [0xc4,0x41,0x3b,0x2a,0xf8]
           vcvtsi2sdl  %r8d, %xmm8, %xmm15
 
@@ -3888,7 +3888,7 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc5,0x3b,0x2a,0x7d,0x00]
           vcvtsi2sdl  (%rbp), %xmm8, %xmm15
 
-// CHECK: vcvtsi2sdq  %rcx, %xmm4, %xmm6
+// CHECK: vcvtsi2sd  %rcx, %xmm4, %xmm6
 // CHECK: encoding: [0xc4,0xe1,0xdb,0x2a,0xf1]
           vcvtsi2sdq  %rcx, %xmm4, %xmm6
 
@@ -3896,7 +3896,7 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc4,0xe1,0xdb,0x2a,0x31]
           vcvtsi2sdq  (%rcx), %xmm4, %xmm6
 
-// CHECK: vcvtsi2ssq  %rcx, %xmm4, %xmm6
+// CHECK: vcvtsi2ss  %rcx, %xmm4, %xmm6
 // CHECK: encoding: [0xc4,0xe1,0xda,0x2a,0xf1]
           vcvtsi2ssq  %rcx, %xmm4, %xmm6
 

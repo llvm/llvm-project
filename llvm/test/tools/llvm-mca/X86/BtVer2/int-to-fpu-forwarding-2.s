@@ -46,7 +46,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      10    1.00                        vcvtsi2ssl	%ecx, %xmm0, %xmm0
+# CHECK-NEXT:  2      10    1.00                        vcvtsi2ss	%ecx, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -70,7 +70,7 @@ movq %rcx, %xmm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     vcvtsi2ssl	%ecx, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     vcvtsi2ss	%ecx, %xmm0, %xmm0
 
 # CHECK:      [1] Code Region
 
@@ -93,7 +93,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      10    1.00                        vcvtsi2sdl	%ecx, %xmm0, %xmm0
+# CHECK-NEXT:  2      10    1.00                        vcvtsi2sd	%ecx, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -117,7 +117,7 @@ movq %rcx, %xmm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     vcvtsi2sdl	%ecx, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     vcvtsi2sd	%ecx, %xmm0, %xmm0
 
 # CHECK:      [2] Code Region
 
@@ -140,7 +140,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      10    1.00                        cvtsi2ssl	%ecx, %xmm0
+# CHECK-NEXT:  2      10    1.00                        cvtsi2ss	%ecx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -164,7 +164,7 @@ movq %rcx, %xmm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     cvtsi2ssl	%ecx, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     cvtsi2ss	%ecx, %xmm0
 
 # CHECK:      [3] Code Region
 
@@ -187,7 +187,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      10    1.00                        cvtsi2sdl	%ecx, %xmm0
+# CHECK-NEXT:  2      10    1.00                        cvtsi2sd	%ecx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -211,7 +211,7 @@ movq %rcx, %xmm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     cvtsi2sdl	%ecx, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     cvtsi2sd	%ecx, %xmm0
 
 # CHECK:      [4] Code Region
 

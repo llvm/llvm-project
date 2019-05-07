@@ -760,17 +760,17 @@ define <4 x float> @test_mm_cvtsi32_ss(<4 x float> %a0, i32 %a1) nounwind {
 ;
 ; X64-SSE-LABEL: test_mm_cvtsi32_ss:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    cvtsi2ssl %edi, %xmm0 # encoding: [0xf3,0x0f,0x2a,0xc7]
+; X64-SSE-NEXT:    cvtsi2ss %edi, %xmm0 # encoding: [0xf3,0x0f,0x2a,0xc7]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_mm_cvtsi32_ss:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x2a,0xc7]
+; X64-AVX1-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x2a,0xc7]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_cvtsi32_ss:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x2a,0xc7]
+; X64-AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x2a,0xc7]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float> %a0, i32 %a1)
   ret <4 x float> %res

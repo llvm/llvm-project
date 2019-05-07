@@ -131,13 +131,13 @@ define amdgpu_ps <2 x float> @add3_multiuse_outer(i32 %a, i32 %b, i32 %c, i32 %x
 ; VI:       ; %bb.0:
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; VI-NEXT:    v_mul_lo_i32 v1, v0, v3
+; VI-NEXT:    v_mul_lo_u32 v1, v0, v3
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: add3_multiuse_outer:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_add3_u32 v0, v0, v1, v2
-; GFX9-NEXT:    v_mul_lo_i32 v1, v0, v3
+; GFX9-NEXT:    v_mul_lo_u32 v1, v0, v3
 ; GFX9-NEXT:    ; return to shader part epilog
   %inner = add i32 %a, %b
   %outer = add i32 %inner, %c
