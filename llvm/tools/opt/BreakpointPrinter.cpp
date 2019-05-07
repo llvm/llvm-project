@@ -35,7 +35,7 @@ struct BreakpointPrinter : public ModulePass {
       }
     } else if (auto *TY = dyn_cast<DIType>(Context)) {
       if (!TY->getName().empty()) {
-        getContextName(TY->getScope().resolve(), N);
+        getContextName(TY->getScope(), N);
         N = N + TY->getName().str() + "::";
       }
     }
@@ -49,7 +49,7 @@ struct BreakpointPrinter : public ModulePass {
         auto *SP = cast_or_null<DISubprogram>(NMD->getOperand(i));
         if (!SP)
           continue;
-        getContextName(SP->getScope().resolve(), Name);
+        getContextName(SP->getScope(), Name);
         Name = Name + SP->getName().str();
         if (!Name.empty() && Processed.insert(Name).second) {
           Out << Name << "\n";

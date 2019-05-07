@@ -532,11 +532,6 @@ int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
     break;
   case wasm::WASM_SEC_CUSTOM: {
     auto CustomSection = dyn_cast<WasmYAML::CustomSection>(&Sec);
-    if (!CustomSection->Name.startswith(".debug_")) {
-      llvm_unreachable("not yet implemented (only for debug sections)");
-      return 1;
-    }
-
     writeStringRef(("reloc." + CustomSection->Name).str(), OS);
     break;
   }

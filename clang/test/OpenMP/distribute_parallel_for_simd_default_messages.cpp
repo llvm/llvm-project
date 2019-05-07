@@ -24,7 +24,7 @@ T tmain(T argc) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd default(none // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp distribute parallel for simd default(none // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-note 2 {{explicit data sharing attribute requested here}}
   for (i = 0; i < argc; ++i) // expected-error 2 {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 #pragma omp target
@@ -39,7 +39,7 @@ T tmain(T argc) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd default(none)
+#pragma omp distribute parallel for simd default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
   for (i = 0; i < argc; ++i)  // expected-error 2 {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd default(none // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp distribute parallel for simd default(none // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-note {{explicit data sharing attribute requested here}}
   for (i = 0; i < argc; ++i) // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 #pragma omp target
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd default(none)
+#pragma omp distribute parallel for simd default(none) // expected-note {{explicit data sharing attribute requested here}}
   for (i = 0; i < argc; ++i)  // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 

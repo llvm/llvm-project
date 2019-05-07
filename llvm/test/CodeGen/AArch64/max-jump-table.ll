@@ -4,7 +4,7 @@
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m1        -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM1 < %t
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m3        -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM3 < %t
 
-declare void @ext(i32, i32)
+declare void @ext(i32)
 
 define i32 @jt1(i32 %a, i32 %b) {
 entry:
@@ -45,23 +45,23 @@ entry:
 ; CHECKM3-NEXT: %jump-table.0:
 ; CHECKM3-NOT: %jump-table.1:
 
-bb1: tail call void  @ext(i32 1, i32 0) br label %return
-bb2: tail call void  @ext(i32 2, i32 2) br label %return
-bb3: tail call void  @ext(i32 3, i32 4) br label %return
-bb4: tail call void  @ext(i32 4, i32 6) br label %return
-bb5: tail call void  @ext(i32 5, i32 8) br label %return
-bb6: tail call void  @ext(i32 6, i32 10) br label %return
-bb7: tail call void  @ext(i32 7, i32 12) br label %return
-bb8: tail call void  @ext(i32 8, i32 14) br label %return
-bb9: tail call void  @ext(i32 9, i32 16) br label %return
-bb10: tail call void @ext(i32 1, i32 18) br label %return
-bb11: tail call void @ext(i32 2, i32 20) br label %return
-bb12: tail call void @ext(i32 3, i32 22) br label %return
-bb13: tail call void @ext(i32 4, i32 24) br label %return
-bb14: tail call void @ext(i32 5, i32 26) br label %return
-bb15: tail call void @ext(i32 6, i32 28) br label %return
-bb16: tail call void @ext(i32 7, i32 30) br label %return
-bb17: tail call void @ext(i32 8, i32 32) br label %return
+bb1: tail call void @ext(i32 0) br label %return
+bb2: tail call void @ext(i32 2) br label %return
+bb3: tail call void @ext(i32 4) br label %return
+bb4: tail call void @ext(i32 6) br label %return
+bb5: tail call void @ext(i32 8) br label %return
+bb6: tail call void @ext(i32 10) br label %return
+bb7: tail call void @ext(i32 12) br label %return
+bb8: tail call void @ext(i32 14) br label %return
+bb9: tail call void @ext(i32 16) br label %return
+bb10: tail call void @ext(i32 18) br label %return
+bb11: tail call void @ext(i32 20) br label %return
+bb12: tail call void @ext(i32 22) br label %return
+bb13: tail call void @ext(i32 24) br label %return
+bb14: tail call void @ext(i32 26) br label %return
+bb15: tail call void @ext(i32 28) br label %return
+bb16: tail call void @ext(i32 30) br label %return
+bb17: tail call void @ext(i32 32) br label %return
 
 return: ret i32 %b
 }
@@ -91,11 +91,11 @@ entry:
 ; CHECKM3-NOT: %jump-table.1
 ; CHECK-DAG: End machine code for function jt2.
 
-bb1: tail call void @ext(i32 6, i32 1) br label %return
-bb2: tail call void @ext(i32 5, i32 2) br label %return
-bb3: tail call void @ext(i32 4, i32 3) br label %return
-bb4: tail call void @ext(i32 3, i32 4) br label %return
-bb5: tail call void @ext(i32 2, i32 5) br label %return
-bb6: tail call void @ext(i32 1, i32 6) br label %return
+bb1: tail call void @ext(i32 1) br label %return
+bb2: tail call void @ext(i32 2) br label %return
+bb3: tail call void @ext(i32 3) br label %return
+bb4: tail call void @ext(i32 4) br label %return
+bb5: tail call void @ext(i32 5) br label %return
+bb6: tail call void @ext(i32 6) br label %return
 return: ret void
 }

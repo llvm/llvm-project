@@ -3,8 +3,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 -dwarf-version=5 %s -o %t.o
 # RUN: llvm-symbolizer --obj=%t.o --functions=none 0 1 | FileCheck %s
 
-# CHECK: /home{{/|\\\\}}0.cc:1:0
-# CHECK: /tmp{{/|\\\\}}1.cc:2:1
+# CHECK: /home{{/|\\|\\\\}}0.cc:1:0
+# CHECK: /tmp{{/|\\|\\\\}}1.cc:2:1
 
 .Lfunc_begin0:
   .file 0 "/home" "0.cc"

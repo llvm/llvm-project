@@ -3192,16 +3192,24 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSOPK(MI)) {
-    int64_t Imm = getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
-    if (sopkIsZext(MI)) {
-      if (!isUInt<16>(Imm)) {
-        ErrInfo = "invalid immediate for SOPK instruction";
+    auto Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
+    if (Desc.isBranch()) {
+      if (!Op->isMBB()) {
+        ErrInfo = "invalid branch target for SOPK instruction";
         return false;
       }
     } else {
-      if (!isInt<16>(Imm)) {
-        ErrInfo = "invalid immediate for SOPK instruction";
-        return false;
+      uint64_t Imm = Op->getImm();
+      if (sopkIsZext(MI)) {
+        if (!isUInt<16>(Imm)) {
+          ErrInfo = "invalid immediate for SOPK instruction";
+          return false;
+        }
+      } else {
+        if (!isInt<16>(Imm)) {
+          ErrInfo = "invalid immediate for SOPK instruction";
+          return false;
+        }
       }
     }
   }
@@ -3370,7 +3378,7 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_SUB_U32:
     return AMDGPU::V_SUB_I32_e32;
   case AMDGPU::S_SUBB_U32: return AMDGPU::V_SUBB_U32_e32;
-  case AMDGPU::S_MUL_I32: return AMDGPU::V_MUL_LO_I32;
+  case AMDGPU::S_MUL_I32: return AMDGPU::V_MUL_LO_U32;
   case AMDGPU::S_MUL_HI_U32: return AMDGPU::V_MUL_HI_U32;
   case AMDGPU::S_MUL_HI_I32: return AMDGPU::V_MUL_HI_I32;
   case AMDGPU::S_AND_B32: return AMDGPU::V_AND_B32_e64;
