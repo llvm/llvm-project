@@ -107,9 +107,11 @@ private:
       // Contains all allocation commands for the memory object.
       std::vector<AllocaCommand *> MAllocaCommands;
 
-      // Contains all commands access the buffer that has no users -
-      // commands that depend on them(except release command);
-      std::vector<Command *> MLeafs;
+      // Contains latest read only commands working with memory object.
+      std::vector<Command *> MReadLeafs;
+
+      // Contains latest write commands working with memory object.
+      std::vector<Command *> MWriteLeafs;
 
       // The flag indicates that the content of the memory object was/will be
       // modified. Used while deciding if copy back needed.
@@ -124,6 +126,13 @@ private:
 
     // Removes MemObjRecord for memory object passed.
     void removeRecordForMemObj(SYCLMemObjT *MemObject);
+
+    // Add new command to leafs if needed.
+    void AddNodeToLeafs(MemObjRecord *Record, Command *Cmd, Requirement *Req);
+
+    // Removes commands from leafs.
+    void UpdateLeafs(const std::set<Command *> &Cmds, MemObjRecord *Record,
+                     Requirement *Req);
 
     std::vector<MemObjRecord> MMemObjRecords;
 

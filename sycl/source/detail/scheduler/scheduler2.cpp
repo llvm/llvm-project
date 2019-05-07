@@ -21,10 +21,17 @@ namespace sycl {
 namespace detail {
 
 void Scheduler::waitForRecordToFinish(GraphBuilder::MemObjRecord *Record) {
-  for (Command *Cmd : Record->MLeafs) {
+  for (Command *Cmd : Record->MReadLeafs) {
     Command *FailedCommand = GraphProcessor::enqueueCommand(Cmd);
     if (FailedCommand) {
-      // TODO: What is the best way to handle failed command in Scheduler d'tor?
+      assert(!FailedCommand && "Command failed to enqueue");
+      throw runtime_error("Enqueue process failed.");
+    }
+    GraphProcessor::waitForEvent(Cmd->getEvent());
+  }
+  for (Command *Cmd : Record->MWriteLeafs) {
+    Command *FailedCommand = GraphProcessor::enqueueCommand(Cmd);
+    if (FailedCommand) {
       assert(!FailedCommand && "Command failed to enqueue");
       throw runtime_error("Enqueue process failed.");
     }
@@ -34,7 +41,6 @@ void Scheduler::waitForRecordToFinish(GraphBuilder::MemObjRecord *Record) {
     Command *ReleaseCmd = AllocaCmd->getReleaseCmd();
     Command *FailedCommand = GraphProcessor::enqueueCommand(ReleaseCmd);
     if (FailedCommand) {
-      // TODO: What is the best way to handle failed command in d'tor?
       assert(!FailedCommand && "Command failed to enqueue");
       throw runtime_error("Enqueue process failed.");
     }
