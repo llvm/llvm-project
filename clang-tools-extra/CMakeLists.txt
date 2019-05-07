@@ -1,3 +1,5 @@
+include(CMakeDependentOption)
+
 add_subdirectory(clang-apply-replacements)
 add_subdirectory(clang-reorder-fields)
 add_subdirectory(modularize)
@@ -9,7 +11,6 @@ add_subdirectory(clang-doc)
 add_subdirectory(clang-include-fixer)
 add_subdirectory(clang-move)
 add_subdirectory(clang-query)
-add_subdirectory(clangd)
 add_subdirectory(pp-trace)
 add_subdirectory(tool-template)
 
@@ -25,3 +26,9 @@ if( CLANG_TOOLS_EXTRA_INCLUDE_DOCS )
   add_subdirectory(docs)
 endif()
 
+# clangd has its own CMake tree. It requires threads.
+CMAKE_DEPENDENT_OPTION(CLANG_ENABLE_CLANGD "Build clangd language server" ON
+                       "LLVM_ENABLE_THREADS" OFF)
+if (CLANG_ENABLE_CLANGD)
+  add_subdirectory(clangd)
+endif()
