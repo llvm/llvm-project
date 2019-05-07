@@ -95,6 +95,9 @@ def: Flag<["-"], "x">,
   Alias<no_lldbinit>,
   HelpText<"Alias for --no-lldbinit">,
   Group<grp_command>;
+def local_lldbinit: F<"local-lldbinit">,
+  HelpText<"Allow the debugger to parse the .lldbinit files in the current working directory, unless --no-lldbinit is passed.">,
+  Group<grp_command>;
 
 def batch: F<"batch">,
   HelpText<"Tells the debugger to run the commands from -s, -S, -o & -O, and then quit.">,

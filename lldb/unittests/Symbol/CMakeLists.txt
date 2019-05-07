@@ -5,6 +5,7 @@ add_lldb_unittest(SymbolTests
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
   TestSwiftASTContext.cpp
+  TestLineEntry.cpp
 
   LINK_LIBS
     lldbHost
@@ -18,5 +19,6 @@ add_lldb_unittest(SymbolTests
 
 set(test_inputs
   basic-call-frame-info.yaml
+  inlined-functions.yaml
   )
 add_unittest_inputs(SymbolTests "${test_inputs}")

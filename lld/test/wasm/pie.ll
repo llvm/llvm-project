@@ -38,7 +38,7 @@ define void @_start() {
 ; CHECK-NEXT:         Table:
 ; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x00000001
+; CHECK-NEXT:             Initial:         0x00000000
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __memory_base
 ; CHECK-NEXT:         Kind:            GLOBAL
