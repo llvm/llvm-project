@@ -3969,10 +3969,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Callee = DAG.getTargetGlobalAddress(
           GV, dl, getPointerTy(DAG.getDataLayout()), G->getOffset(), OpFlags);
 
-      if (OpFlags == X86II::MO_GOTPCREL) {
+      if (isGlobalStubReference(OpFlags)) {
         // Add a wrapper.
-        Callee = DAG.getNode(X86ISD::WrapperRIP, dl,
-          getPointerTy(DAG.getDataLayout()), Callee);
+        Callee = DAG.getNode(getGlobalWrapperKind(GV, OpFlags), dl,
+                             getPointerTy(DAG.getDataLayout()), Callee);
         // Add extra indirection
         Callee = DAG.getLoad(
             getPointerTy(DAG.getDataLayout()), dl, DAG.getEntryNode(), Callee,
@@ -3987,9 +3987,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getTargetExternalSymbol(
         S->getSymbol(), getPointerTy(DAG.getDataLayout()), OpFlags);
 
-    if (OpFlags == X86II::MO_GOTPCREL) {
-      Callee = DAG.getNode(X86ISD::WrapperRIP, dl,
-          getPointerTy(DAG.getDataLayout()), Callee);
+    if (isGlobalStubReference(OpFlags)) {
+      Callee = DAG.getNode(getGlobalWrapperKind(nullptr, OpFlags), dl,
+                           getPointerTy(DAG.getDataLayout()), Callee);
       Callee = DAG.getLoad(
           getPointerTy(DAG.getDataLayout()), dl, DAG.getEntryNode(), Callee,
           MachinePointerInfo::getGOT(DAG.getMachineFunction()));
