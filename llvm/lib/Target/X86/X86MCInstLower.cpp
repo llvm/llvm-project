@@ -767,7 +767,7 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
 
   unsigned NopSize;
   unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
-  Opc = IndexReg = Displacement = SegmentReg = 0;
+  IndexReg = Displacement = SegmentReg = 0;
   BaseReg = X86::RAX;
   ScaleVal = 1;
   switch (NumBytes) {
