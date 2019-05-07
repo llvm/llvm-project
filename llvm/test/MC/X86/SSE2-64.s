@@ -524,7 +524,7 @@ cvtsi2sdl 64(%rdx,%rax), %xmm6
 // CHECK: encoding: [0xf2,0x0f,0x2a,0x72,0x40]
 cvtsi2sdl 64(%rdx), %xmm6
 
-// CHECK: cvtsi2sdl %r13d, %xmm6
+// CHECK: cvtsi2sd %r13d, %xmm6
 // CHECK: encoding: [0xf2,0x41,0x0f,0x2a,0xf5]
 cvtsi2sdl %r13d, %xmm6
 
@@ -552,7 +552,7 @@ cvtsi2sdq 64(%rdx,%rax), %xmm6
 // CHECK: encoding: [0xf2,0x48,0x0f,0x2a,0x72,0x40]
 cvtsi2sdq 64(%rdx), %xmm6
 
-// CHECK: cvtsi2sdq %r15, %xmm6
+// CHECK: cvtsi2sd %r15, %xmm6
 // CHECK: encoding: [0xf2,0x49,0x0f,0x2a,0xf7]
 cvtsi2sdq %r15, %xmm6
 

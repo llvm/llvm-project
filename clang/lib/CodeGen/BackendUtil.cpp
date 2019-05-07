@@ -965,13 +965,15 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   TimeRegion Region(FrontendTimesIsEnabled ? &CodeGenerationTime : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
-  // The new pass manager always makes a target machine available to passes
-  // during construction.
-  CreateTargetMachine(/*MustCreateTM*/ true);
-  if (!TM)
-    // This will already be diagnosed, just bail.
+  bool RequiresCodeGen = (Action != Backend_EmitNothing &&
+                          Action != Backend_EmitBC &&
+                          Action != Backend_EmitLL);
+  CreateTargetMachine(RequiresCodeGen);
+
+  if (RequiresCodeGen && !TM)
     return;
-  TheModule->setDataLayout(TM->createDataLayout());
+  if (TM)
+    TheModule->setDataLayout(TM->createDataLayout());
 
   Optional<PGOOptions> PGOOpt;
 

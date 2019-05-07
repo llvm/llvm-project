@@ -2216,6 +2216,12 @@ body: |
   $edi = VCVTTSS2SIZrr                         $xmm0                                                   
   ; CHECK: $edi = VCVTTSS2SIrr_Int             $xmm0                                               
   $edi = VCVTTSS2SIZrr_Int                     $xmm0                                                   
+  ; CHECK: $xmm0 = VMOV64toSDrr                $rdi    
+  $xmm0 = VMOV64toSDZrr                        $rdi                                                    
+  ; CHECK: $xmm0 = VMOVDI2SSrm                 $rip, $noreg, $noreg, $noreg, $noreg 
+  $xmm0 = VMOVDI2SSZrm                         $rip, $noreg, $noreg, $noreg, $noreg                                        
+  ; CHECK: $xmm0 = VMOVDI2SSrr                 $eax
+  $xmm0 = VMOVDI2SSZrr                         $eax                                                    
   ; CHECK: VMOVSDmr                            $rdi, $xmm0, $noreg, $noreg, $noreg, $noreg
   VMOVSDZmr                                    $rdi, $xmm0, $noreg, $noreg, $noreg, $noreg                                 
   ; CHECK: $xmm0 = VMOVSDrm                    $rip, $noreg, $noreg, $noreg, $noreg
@@ -2244,6 +2250,8 @@ body: |
   $xmm0 = VMOV64toPQIZrr                       $rdi                                                    
   ; CHECK: $xmm0 = VMOV64toPQIrm               $rdi, $noreg, $noreg, $noreg, $noreg
   $xmm0 = VMOV64toPQIZrm                       $rdi, $noreg, $noreg, $noreg, $noreg
+  ; CHECK: $xmm0 = VMOV64toSDrr                $rdi 
+  $xmm0 = VMOV64toSDZrr                        $rdi                                                    
   ; CHECK: $xmm0 = VMOVDI2PDIrm                $rip, $noreg, $noreg, $noreg, $noreg
   $xmm0 = VMOVDI2PDIZrm                        $rip, $noreg, $noreg, $noreg, $noreg                                        
   ; CHECK: $xmm0 = VMOVDI2PDIrr                $edi
@@ -4528,6 +4536,12 @@ body: |
   $edi = VCVTTSS2SIZrr                         $xmm16                                                     
   ; CHECK: $edi = VCVTTSS2SIZrr_Int            $xmm16  
   $edi = VCVTTSS2SIZrr_Int                     $xmm16                                                     
+  ; CHECK: $xmm16 = VMOV64toSDZrr              $rdi    
+  $xmm16 = VMOV64toSDZrr                       $rdi                                                       
+  ; CHECK: $xmm16 = VMOVDI2SSZrm               $rip, $noreg, $noreg, $noreg, $noreg 
+  $xmm16 = VMOVDI2SSZrm                        $rip, $noreg, $noreg, $noreg, $noreg                                           
+  ; CHECK: $xmm16 = VMOVDI2SSZrr               $eax
+  $xmm16 = VMOVDI2SSZrr                        $eax                                                       
   ; CHECK: VMOVSDZmr                           $rdi, $xmm16, $noreg, $noreg, $noreg, $noreg
   VMOVSDZmr                                    $rdi, $xmm16, $noreg, $noreg, $noreg, $noreg                                   
   ; CHECK: $xmm16 = VMOVSDZrm                  $rip, $noreg, $noreg, $noreg, $noreg
@@ -4556,6 +4570,8 @@ body: |
   $xmm16 = VMOV64toPQIZrr                      $rdi                                                       
   ; CHECK: $xmm16 = VMOV64toPQIZrm             $rdi, $noreg, $noreg, $noreg, $noreg
   $xmm16 = VMOV64toPQIZrm                      $rdi, $noreg, $noreg, $noreg, $noreg
+  ; CHECK: $xmm16 = VMOV64toSDZrr              $rdi 
+  $xmm16 = VMOV64toSDZrr                       $rdi                                                       
   ; CHECK: $xmm16 = VMOVDI2PDIZrm              $rip, $noreg, $noreg, $noreg, $noreg
   $xmm16 = VMOVDI2PDIZrm                       $rip, $noreg, $noreg, $noreg, $noreg                                           
   ; CHECK: $xmm16 = VMOVDI2PDIZrr              $edi

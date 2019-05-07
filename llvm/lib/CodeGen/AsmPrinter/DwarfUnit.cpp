@@ -471,9 +471,8 @@ static bool isUnsignedDIType(DwarfDebug *DD, const DIType *Ty) {
     assert(T == dwarf::DW_TAG_typedef || T == dwarf::DW_TAG_const_type ||
            T == dwarf::DW_TAG_volatile_type ||
            T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type);
-    DITypeRef Deriv = DTy->getBaseType();
-    assert(Deriv && "Expected valid base type");
-    return isUnsignedDIType(DD, DD->resolve(Deriv));
+    assert(DTy->getBaseType() && "Expected valid base type");
+    return isUnsignedDIType(DD, DTy->getBaseType());
   }
 
   auto *BTy = cast<DIBasicType>(Ty);
@@ -613,7 +612,7 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
 }
 
 DIE *DwarfUnit::createTypeDIE(const DICompositeType *Ty) {
-  auto *Context = resolve(Ty->getScope());
+  auto *Context = Ty->getScope();
   DIE *ContextDIE = getOrCreateContextDIE(Context);
 
   if (DIE *TyDIE = getDIE(Ty))
@@ -666,15 +665,15 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
 
   // DW_TAG_restrict_type is not supported in DWARF2
   if (Ty->getTag() == dwarf::DW_TAG_restrict_type && DD->getDwarfVersion() <= 2)
-    return getOrCreateTypeDIE(resolve(cast<DIDerivedType>(Ty)->getBaseType()));
+    return getOrCreateTypeDIE(cast<DIDerivedType>(Ty)->getBaseType());
 
   // DW_TAG_atomic_type is not supported in DWARF < 5
   if (Ty->getTag() == dwarf::DW_TAG_atomic_type && DD->getDwarfVersion() < 5)
-    return getOrCreateTypeDIE(resolve(cast<DIDerivedType>(Ty)->getBaseType()));
+    return getOrCreateTypeDIE(cast<DIDerivedType>(Ty)->getBaseType());
 
   // Construct the context before querying for the existence of the DIE in case
   // such construction creates the DIE.
-  auto *Context = resolve(Ty->getScope());
+  auto *Context = Ty->getScope();
   DIE *ContextDIE = getOrCreateContextDIE(Context);
   assert(ContextDIE);
 
@@ -721,8 +720,8 @@ std::string DwarfUnit::getParentContextString(const DIScope *Context) const {
   SmallVector<const DIScope *, 1> Parents;
   while (!isa<DICompileUnit>(Context)) {
     Parents.push_back(Context);
-    if (Context->getScope())
-      Context = resolve(Context->getScope());
+    if (const DIScope *S = Context->getScope())
+      Context = S;
     else
       // Structure, etc types will have a NULL context if they're at the top
       // level.
@@ -773,7 +772,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   uint16_t Tag = Buffer.getTag();
 
   // Map to main type, void will not have a type.
-  const DIType *FromTy = resolve(DTy->getBaseType());
+  const DIType *FromTy = DTy->getBaseType();
   if (FromTy)
     addType(Buffer, FromTy);
 
@@ -789,9 +788,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
     addUInt(Buffer, dwarf::DW_AT_byte_size, None, Size);
 
   if (Tag == dwarf::DW_TAG_ptr_to_member_type)
-    addDIEEntry(
-        Buffer, dwarf::DW_AT_containing_type,
-        *getOrCreateTypeDIE(resolve(cast<DIDerivedType>(DTy)->getClassType())));
+    addDIEEntry(Buffer, dwarf::DW_AT_containing_type,
+                *getOrCreateTypeDIE(cast<DIDerivedType>(DTy)->getClassType()));
   // Add source line info if available and TyDesc is not a forward declaration.
   if (!DTy->isForwardDecl())
     addSourceLine(Buffer, DTy);
@@ -806,7 +804,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
 
 void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
-    const DIType *Ty = resolve(Args[i]);
+    const DIType *Ty = Args[i];
     if (!Ty) {
       assert(i == N-1 && "Unspecified parameter must be the last argument");
       createAndAddDIE(dwarf::DW_TAG_unspecified_parameters, Buffer);
@@ -823,7 +821,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
   // Add return type.  A void return won't have a type.
   auto Elements = cast<DISubroutineType>(CTy)->getTypeArray();
   if (Elements.size())
-    if (auto RTy = resolve(Elements[0]))
+    if (auto RTy = Elements[0])
       addType(Buffer, RTy);
 
   bool isPrototyped = true;
@@ -894,7 +892,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       else if (auto *DDTy = dyn_cast<DIDerivedType>(Element)) {
         if (DDTy->getTag() == dwarf::DW_TAG_friend) {
           DIE &ElemDie = createAndAddDIE(dwarf::DW_TAG_friend, Buffer);
-          addType(ElemDie, resolve(DDTy->getBaseType()), dwarf::DW_AT_friend);
+          addType(ElemDie, DDTy->getBaseType(), dwarf::DW_AT_friend);
         } else if (DDTy->isStaticMember()) {
           getOrCreateStaticMemberDIE(DDTy);
         } else if (Tag == dwarf::DW_TAG_variant_part) {
@@ -903,7 +901,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
           if (const ConstantInt *CI =
               dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
-            if (isUnsignedDIType(DD, resolve(Discriminator->getBaseType())))
+            if (isUnsignedDIType(DD, Discriminator->getBaseType()))
               addUInt(Variant, dwarf::DW_AT_discr_value, None, CI->getZExtValue());
             else
               addSInt(Variant, dwarf::DW_AT_discr_value, None, CI->getSExtValue());
@@ -917,7 +915,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         StringRef PropertyName = Property->getName();
         addString(ElemDie, dwarf::DW_AT_APPLE_property_name, PropertyName);
         if (Property->getType())
-          addType(ElemDie, resolve(Property->getType()));
+          addType(ElemDie, Property->getType());
         addSourceLine(ElemDie, Property);
         StringRef GetterName = Property->getGetterName();
         if (!GetterName.empty())
@@ -943,7 +941,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     // inside C++ composite types to point to the base class with the vtable.
     // Rust uses DW_AT_containing_type to link a vtable to the type
     // for which it was created.
-    if (auto *ContainingType = resolve(CTy->getVTableHolder()))
+    if (auto *ContainingType = CTy->getVTableHolder())
       addDIEEntry(Buffer, dwarf::DW_AT_containing_type,
                   *getOrCreateTypeDIE(ContainingType));
 
@@ -1013,7 +1011,7 @@ void DwarfUnit::constructTemplateTypeParameterDIE(
       createAndAddDIE(dwarf::DW_TAG_template_type_parameter, Buffer);
   // Add the type if it exists, it could be void and therefore no type.
   if (TP->getType())
-    addType(ParamDIE, resolve(TP->getType()));
+    addType(ParamDIE, TP->getType());
   if (!TP->getName().empty())
     addString(ParamDIE, dwarf::DW_AT_name, TP->getName());
 }
@@ -1025,12 +1023,12 @@ void DwarfUnit::constructTemplateValueParameterDIE(
   // Add the type if there is one, template template and template parameter
   // packs will not have a type.
   if (VP->getTag() == dwarf::DW_TAG_template_value_parameter)
-    addType(ParamDIE, resolve(VP->getType()));
+    addType(ParamDIE, VP->getType());
   if (!VP->getName().empty())
     addString(ParamDIE, dwarf::DW_AT_name, VP->getName());
   if (Metadata *Val = VP->getValue()) {
     if (ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Val))
-      addConstantValue(ParamDIE, CI, resolve(VP->getType()));
+      addConstantValue(ParamDIE, CI, VP->getType());
     else if (GlobalValue *GV = mdconst::dyn_extract<GlobalValue>(Val)) {
       // We cannot describe the location of dllimport'd entities: the
       // computation of their address requires loads from the IAT.
@@ -1104,7 +1102,7 @@ DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
   // such construction creates the DIE (as is the case for member function
   // declarations).
   DIE *ContextDIE =
-      Minimal ? &getUnitDie() : getOrCreateContextDIE(resolve(SP->getScope()));
+      Minimal ? &getUnitDie() : getOrCreateContextDIE(SP->getScope());
 
   if (DIE *SPDie = getDIE(SP))
     return SPDie;
@@ -1217,7 +1215,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   // Add a return type. If this is a type like a C/C++ void type we don't add a
   // return type.
   if (Args.size())
-    if (auto Ty = resolve(Args[0]))
+    if (auto Ty = Args[0])
       addType(SPDie, Ty);
 
   unsigned VK = SP->getVirtuality();
@@ -1229,8 +1227,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
       addUInt(*Block, dwarf::DW_FORM_udata, SP->getVirtualIndex());
       addBlock(SPDie, dwarf::DW_AT_vtable_elem_location, Block);
     }
-    ContainingTypeMap.insert(
-        std::make_pair(&SPDie, resolve(SP->getContainingType())));
+    ContainingTypeMap.insert(std::make_pair(&SPDie, SP->getContainingType()));
   }
 
   if (!SP->isDefinition()) {
@@ -1336,7 +1333,7 @@ static bool hasVectorBeenPadded(const DICompositeType *CTy) {
   const uint64_t ActualSize = CTy->getSizeInBits();
 
   // Obtain the size of each element in the vector.
-  DIType *BaseTy = CTy->getBaseType().resolve();
+  DIType *BaseTy = CTy->getBaseType();
   assert(BaseTy && "Unknown vector element type.");
   const uint64_t ElementSize = BaseTy->getSizeInBits();
 
@@ -1364,7 +1361,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   }
 
   // Emit the element type.
-  addType(Buffer, resolve(CTy->getBaseType()));
+  addType(Buffer, CTy->getBaseType());
 
   // Get an anonymous type for index type.
   // FIXME: This type should be passed down from the front end
@@ -1382,7 +1379,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 }
 
 void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
-  const DIType *DTy = resolve(CTy->getBaseType());
+  const DIType *DTy = CTy->getBaseType();
   bool IsUnsigned = DTy && isUnsignedDIType(DD, DTy);
   if (DTy) {
     if (DD->getDwarfVersion() >= 3)
@@ -1426,7 +1423,7 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   if (!Name.empty())
     addString(MemberDie, dwarf::DW_AT_name, Name);
 
-  if (DIType *Resolved = resolve(DT->getBaseType()))
+  if (DIType *Resolved = DT->getBaseType())
     addType(MemberDie, Resolved);
 
   addSourceLine(MemberDie, DT);
@@ -1535,7 +1532,7 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
   // Construct the context before querying for the existence of the DIE in case
   // such construction creates the DIE.
-  DIE *ContextDIE = getOrCreateContextDIE(resolve(DT->getScope()));
+  DIE *ContextDIE = getOrCreateContextDIE(DT->getScope());
   assert(dwarf::isType(ContextDIE->getTag()) &&
          "Static member should belong to a type.");
 
@@ -1544,7 +1541,7 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
   DIE &StaticMemberDIE = createAndAddDIE(DT->getTag(), *ContextDIE, DT);
 
-  const DIType *Ty = resolve(DT->getBaseType());
+  const DIType *Ty = DT->getBaseType();
 
   addString(StaticMemberDIE, dwarf::DW_AT_name, DT->getName());
   addType(StaticMemberDIE, Ty);

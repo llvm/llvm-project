@@ -27,7 +27,7 @@ define amdgpu_kernel void @s_mul_i16(i16 %a, i16 %b) {
 ; FIXME: Should emit u16 mul here. Instead it's worse than SI
 ; GCN-LABEL: {{^}}v_mul_i16_uniform_load:
 ; SI: v_mul_u32_u24
-; GFX89: v_mul_lo_i32
+; GFX89: v_mul_lo_u32
 define amdgpu_kernel void @v_mul_i16_uniform_load(
     i16 addrspace(1)* %r,
     i16 addrspace(1)* %a,
@@ -41,8 +41,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}v_mul_v2i16:
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
+; SI: v_mul_lo_u32
+; SI: v_mul_lo_u32
 
 ; VI: v_mul_lo_u16_sdwa
 ; VI: v_mul_lo_u16_e32
@@ -59,9 +59,9 @@ define <2 x i16> @v_mul_v2i16(<2 x i16> %a, <2 x i16> %b) {
 
 ; FIXME: Unpack garbage on gfx9
 ; GCN-LABEL: {{^}}v_mul_v3i16:
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
+; SI: v_mul_lo_u32
+; SI: v_mul_lo_u32
+; SI: v_mul_lo_u32
 
 ; VI: v_mul_lo_u16
 ; VI: v_mul_lo_u16
@@ -77,10 +77,10 @@ define <3 x i16> @v_mul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 ; GCN-LABEL: {{^}}v_mul_v4i16:
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
+; SI: v_mul_lo_u32
+; SI: v_mul_lo_u32
+; SI: v_mul_lo_u32
+; SI: v_mul_lo_u32
 
 ; VI: v_mul_lo_u16_sdwa
 ; VI: v_mul_lo_u16_e32

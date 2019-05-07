@@ -7,6 +7,7 @@ void foo() {
 
 #pragma omp parallel // expected-error {{unexpected OpenMP directive '#pragma omp parallel'}}
 
+int a;
 struct S;
 S& bar();
 int main(int argc, char **argv) {
@@ -54,8 +55,11 @@ int main(int argc, char **argv) {
        break;
     }
   }
-  #pragma omp parallel default(none)
-  ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
+#pragma omp parallel default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
+  {
+    ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
+    ++a;    // expected-error {{variable 'a' must have explicitly specified data sharing attributes}}
+  }
 
   goto L2; // expected-error {{use of undeclared label 'L2'}}
   #pragma omp parallel

@@ -10,10 +10,11 @@ add_lldb_unittest(SymbolTests
     lldbSymbol
     lldbUtilityHelpers
     lldbPluginObjectFileELF
+    lldbPluginObjectFileMachO
+    lldbPluginSymbolFileDWARF
+    LLVMTestingSupport
   )
 
-add_dependencies(SymbolTests yaml2obj)
-add_definitions(-DYAML2OBJ="$<TARGET_FILE:yaml2obj>")
 set(test_inputs
   basic-call-frame-info.yaml
   )

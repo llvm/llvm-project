@@ -38,7 +38,7 @@ define x86_64_sysvcc float @foo(i32 %a0, i32 %a1, float %b0) {
 ; CHECK-NEXT:  addl  %edx, %eax
 ; CHECK-NEXT:  addl  %ecx, %eax
 ; CHECK-NEXT:  xorps %xmm0, %xmm0
-; CHECK-NEXT:  cvtsi2ssl %eax, %xmm0
+; CHECK-NEXT:  cvtsi2ss %eax, %xmm0
 ; CHECK-NEXT:  addss %xmm0, %xmm1
 ; CHECK:       retq
 	%call = call i32 @bar(i32 %a0, i32 %a1, float %b0) #0

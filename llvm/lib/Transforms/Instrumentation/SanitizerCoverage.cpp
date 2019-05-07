@@ -61,7 +61,10 @@ static const char *const SanCovTraceDiv4 = "__sanitizer_cov_trace_div4";
 static const char *const SanCovTraceDiv8 = "__sanitizer_cov_trace_div8";
 static const char *const SanCovTraceGep = "__sanitizer_cov_trace_gep";
 static const char *const SanCovTraceSwitchName = "__sanitizer_cov_trace_switch";
-static const char *const SanCovModuleCtorName = "sancov.module_ctor";
+static const char *const SanCovModuleCtorTracePcGuardName =
+    "sancov.module_ctor_trace_pc_guard";
+static const char *const SanCovModuleCtor8bitCountersName =
+    "sancov.module_ctor_8bit_counters";
 static const uint64_t SanCtorAndDtorPriority = 2;
 
 static const char *const SanCovTracePCGuardName =
@@ -209,8 +212,9 @@ private:
   void CreateFunctionLocalArrays(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, size_t Idx,
                              bool IsLeafFunc = true);
-  Function *CreateInitCallsForSections(Module &M, const char *InitFunctionName,
-                                       Type *Ty, const char *Section);
+  Function *CreateInitCallsForSections(Module &M, const char *CtorName,
+                                       const char *InitFunctionName, Type *Ty,
+                                       const char *Section);
   std::pair<Value *, Value *> CreateSecStartEnd(Module &M, const char *Section,
                                                 Type *Ty);
 
@@ -275,18 +279,19 @@ SanitizerCoverageModule::CreateSecStartEnd(Module &M, const char *Section,
 }
 
 Function *SanitizerCoverageModule::CreateInitCallsForSections(
-    Module &M, const char *InitFunctionName, Type *Ty,
+    Module &M, const char *CtorName, const char *InitFunctionName, Type *Ty,
     const char *Section) {
   auto SecStartEnd = CreateSecStartEnd(M, Section, Ty);
   auto SecStart = SecStartEnd.first;
   auto SecEnd = SecStartEnd.second;
   Function *CtorFunc;
   std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
-      M, SanCovModuleCtorName, InitFunctionName, {Ty, Ty}, {SecStart, SecEnd});
+      M, CtorName, InitFunctionName, {Ty, Ty}, {SecStart, SecEnd});
+  assert(CtorFunc->getName() == CtorName);
 
   if (TargetTriple.supportsCOMDAT()) {
     // Use comdat to dedup CtorFunc.
-    CtorFunc->setComdat(M.getOrInsertComdat(SanCovModuleCtorName));
+    CtorFunc->setComdat(M.getOrInsertComdat(CtorName));
     appendToGlobalCtors(M, CtorFunc, SanCtorAndDtorPriority, CtorFunc);
   } else {
     appendToGlobalCtors(M, CtorFunc, SanCtorAndDtorPriority);
@@ -403,10 +408,12 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   Function *Ctor = nullptr;
 
   if (FunctionGuardArray)
-    Ctor = CreateInitCallsForSections(M, SanCovTracePCGuardInitName, Int32PtrTy,
+    Ctor = CreateInitCallsForSections(M, SanCovModuleCtorTracePcGuardName,
+                                      SanCovTracePCGuardInitName, Int32PtrTy,
                                       SanCovGuardsSectionName);
   if (Function8bitCounterArray)
-    Ctor = CreateInitCallsForSections(M, SanCov8bitCountersInitName, Int8PtrTy,
+    Ctor = CreateInitCallsForSections(M, SanCovModuleCtor8bitCountersName,
+                                      SanCov8bitCountersInitName, Int8PtrTy,
                                       SanCovCountersSectionName);
   if (Ctor && Options.PCTable) {
     auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, IntptrPtrTy);

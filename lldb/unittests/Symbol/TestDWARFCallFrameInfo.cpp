@@ -20,6 +20,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
@@ -46,17 +47,6 @@ public:
 protected:
   void TestBasic(DWARFCallFrameInfo::Type type, llvm::StringRef symbol);
 };
-
-#define ASSERT_NO_ERROR(x)                                                     \
-  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
-    llvm::SmallString<128> MessageStorage;                                     \
-    llvm::raw_svector_ostream Message(MessageStorage);                         \
-    Message << #x ": did not return errc::success.\n"                          \
-            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
-            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
-    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
-  } else {                                                                     \
-  }
 
 namespace lldb_private {
 static std::ostream &operator<<(std::ostream &OS, const UnwindPlan::Row &row) {
@@ -94,23 +84,12 @@ static UnwindPlan::Row GetExpectedRow2() {
 
 void DWARFCallFrameInfoTest::TestBasic(DWARFCallFrameInfo::Type type,
                                        llvm::StringRef symbol) {
-  std::string yaml = GetInputFilePath("basic-call-frame-info.yaml");
   llvm::SmallString<128> obj;
-
   ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
       "basic-call-frame-info-%%%%%%", "obj", obj));
   llvm::FileRemover obj_remover(obj);
-
-  llvm::StringRef args[] = {YAML2OBJ, yaml};
-  llvm::StringRef obj_ref = obj;
-  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
-                                                       llvm::None};
-  ASSERT_EQ(0,
-            llvm::sys::ExecuteAndWait(YAML2OBJ, args, llvm::None, redirects));
-
-  uint64_t size;
-  ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));
-  ASSERT_GT(size, 0u);
+  ASSERT_THAT_ERROR(ReadYAMLObjectFile("basic-call-frame-info.yaml", obj),
+                    llvm::Succeeded());
 
   auto module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(obj)));
   SectionList *list = module_sp->GetSectionList();

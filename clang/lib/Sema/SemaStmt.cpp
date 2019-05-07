@@ -3390,10 +3390,10 @@ bool LocalTypedefNameReferencer::VisitRecordType(const RecordType *RT) {
 }
 
 TypeLoc Sema::getReturnTypeLoc(FunctionDecl *FD) const {
-  TypeLoc TL = FD->getTypeSourceInfo()->getTypeLoc().IgnoreParens();
-  while (auto ATL = TL.getAs<AttributedTypeLoc>())
-    TL = ATL.getModifiedLoc().IgnoreParens();
-  return TL.castAs<FunctionProtoTypeLoc>().getReturnLoc();
+  return FD->getTypeSourceInfo()
+      ->getTypeLoc()
+      .getAsAdjusted<FunctionProtoTypeLoc>()
+      .getReturnLoc();
 }
 
 /// Deduce the return type for a function from a returned expression, per
