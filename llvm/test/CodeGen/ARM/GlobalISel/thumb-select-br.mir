@@ -21,7 +21,7 @@ body:             |
     %0(s32) = COPY $r0
     ; CHECK: [[COND32:%[0-9]+]]:gpr = COPY $r0
     %1(s1) = G_TRUNC %0(s32)
-    ; CHECK: [[COND:%[0-9]+]]:gprnopc = COPY [[COND32]]
+    ; CHECK: [[COND:%[0-9]+]]:rgpr = COPY [[COND32]]
 
     G_BRCOND %1(s1), %bb.1
     ; CHECK: t2TSTri [[COND]], 1, 14, $noreg, implicit-def $cpsr
