@@ -322,6 +322,7 @@ protected:
         options.SetSilent(true);
       } else {
         options.SetPrintResults(true);
+        options.SetPrintErrors(true);
         options.SetEchoCommands(m_interpreter.GetEchoCommands());
         options.SetEchoCommentCommands(m_interpreter.GetEchoCommentCommands());
       }
