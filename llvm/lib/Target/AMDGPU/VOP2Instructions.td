@@ -524,12 +524,12 @@ def : DivergentBinOp<sra, V_ASHRREV_I32_e64>;
 def : DivergentBinOp<shl, V_LSHLREV_B32_e64>;
 
 let SubtargetPredicate = HasAddNoCarryInsts in {
-  def : DivergentBinOp<add, V_ADD_U32_e32>;
+  def : DivergentClampingBinOp<add, V_ADD_U32_e64>;
   def : DivergentClampingBinOp<sub, V_SUB_U32_e64>;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9, Predicates = [isGFX6GFX7GFX8GFX9] in {
-def : DivergentBinOp<add, V_ADD_I32_e32>;
+def : DivergentClampingBinOp<add, V_ADD_I32_e64>;
 def : DivergentClampingBinOp<sub, V_SUB_I32_e64>;
 }
 

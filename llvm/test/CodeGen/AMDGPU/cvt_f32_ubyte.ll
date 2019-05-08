@@ -280,6 +280,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; SI-NEXT:    s_mov_b32 s10, s2
 ; SI-NEXT:    s_mov_b32 s11, s3
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SI-NEXT:    s_movk_i32 s13, 0x900
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; SI-NEXT:    v_add_i32_e32 v7, vcc, 9, v1
@@ -297,7 +298,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; SI-NEXT:    v_or_b32_e32 v0, v6, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
 ; SI-NEXT:    v_and_b32_e32 v1, s12, v4
-; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x900, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, s13, v0
 ; SI-NEXT:    v_or_b32_e32 v1, v5, v1
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
