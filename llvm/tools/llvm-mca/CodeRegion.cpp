@@ -16,7 +16,12 @@
 namespace llvm {
 namespace mca {
 
-bool CodeRegion::isLocInRange(llvm::SMLoc Loc) const {
+CodeRegions::CodeRegions(llvm::SourceMgr &S) : SM(S) {
+  // Create a default region for the input code sequence.
+  Regions.emplace_back(make_unique<CodeRegion>("Default", SMLoc()));
+}
+
+bool CodeRegion::isLocInRange(SMLoc Loc) const {
   if (RangeEnd.isValid() && Loc.getPointer() > RangeEnd.getPointer())
     return false;
   if (RangeStart.isValid() && Loc.getPointer() < RangeStart.getPointer())
@@ -24,11 +29,11 @@ bool CodeRegion::isLocInRange(llvm::SMLoc Loc) const {
   return true;
 }
 
-void CodeRegions::beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) {
+void CodeRegions::beginRegion(StringRef Description, SMLoc Loc) {
   assert(!Regions.empty() && "Missing Default region");
   const CodeRegion &CurrentRegion = *Regions.back();
   if (CurrentRegion.startLoc().isValid() && !CurrentRegion.endLoc().isValid()) {
-    SM.PrintMessage(Loc, llvm::SourceMgr::DK_Warning,
+    SM.PrintMessage(Loc, SourceMgr::DK_Warning,
                     "Ignoring invalid region start");
     return;
   }
@@ -36,14 +41,14 @@ void CodeRegions::beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) {
   // Remove the default region if there are user defined regions.
   if (!CurrentRegion.startLoc().isValid())
     Regions.erase(Regions.begin());
-  addRegion(Description, Loc);
+  Regions.emplace_back(make_unique<CodeRegion>(Description, Loc));
 }
 
-void CodeRegions::endRegion(llvm::SMLoc Loc) {
+void CodeRegions::endRegion(SMLoc Loc) {
   assert(!Regions.empty() && "Missing Default region");
   CodeRegion &CurrentRegion = *Regions.back();
   if (CurrentRegion.endLoc().isValid()) {
-    SM.PrintMessage(Loc, llvm::SourceMgr::DK_Warning,
+    SM.PrintMessage(Loc, SourceMgr::DK_Warning,
                     "Ignoring invalid region end");
     return;
   }
@@ -51,11 +56,11 @@ void CodeRegions::endRegion(llvm::SMLoc Loc) {
   CurrentRegion.setEndLocation(Loc);
 }
 
-void CodeRegions::addInstruction(const llvm::MCInst &Instruction) {
-  const llvm::SMLoc &Loc = Instruction.getLoc();
+void CodeRegions::addInstruction(const MCInst &Instruction) {
+  const SMLoc &Loc = Instruction.getLoc();
   const auto It =
       std::find_if(Regions.rbegin(), Regions.rend(),
-                   [Loc](const std::unique_ptr<CodeRegion> &Region) {
+                   [Loc](const UniqueCodeRegion &Region) {
                      return Region->isLocInRange(Loc);
                    });
   if (It != Regions.rend())
