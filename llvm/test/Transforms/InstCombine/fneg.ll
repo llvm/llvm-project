@@ -5,8 +5,8 @@ declare void @use(float)
 
 ; -(X * C) --> X * (-C)
 
-define float @fmul_fneg(float %x) {
-; CHECK-LABEL: @fmul_fneg(
+define float @fmul_fsub(float %x) {
+; CHECK-LABEL: @fmul_fsub(
 ; CHECK-NEXT:    [[R:%.*]] = fmul float [[X:%.*]], -4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -15,10 +15,21 @@ define float @fmul_fneg(float %x) {
   ret float %r
 }
 
+define float @fmul_fneg(float %x) {
+; CHECK-LABEL: @fmul_fneg(
+; CHECK-NEXT:    [[M:%.*]] = fmul float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[M]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul float %x, 42.0
+  %r = fneg float %m
+  ret float %r
+}
+
 ; Fast math is not required, but it should be propagated.
 
-define float @fmul_fneg_fmf(float %x) {
-; CHECK-LABEL: @fmul_fneg_fmf(
+define float @fmul_fsub_fmf(float %x) {
+; CHECK-LABEL: @fmul_fsub_fmf(
 ; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -27,10 +38,21 @@ define float @fmul_fneg_fmf(float %x) {
   ret float %r
 }
 
+define float @fmul_fneg_fmf(float %x) {
+; CHECK-LABEL: @fmul_fneg_fmf(
+; CHECK-NEXT:    [[M:%.*]] = fmul float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fneg reassoc nsz float [[M]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul float %x, 42.0
+  %r = fneg reassoc nsz float %m
+  ret float %r
+}
+
 ; Extra use prevents the fold. We don't want to replace the fneg with an fmul.
 
-define float @fmul_fneg_extra_use(float %x) {
-; CHECK-LABEL: @fmul_fneg_extra_use(
+define float @fmul_fsub_extra_use(float %x) {
+; CHECK-LABEL: @fmul_fsub_extra_use(
 ; CHECK-NEXT:    [[M:%.*]] = fmul float [[X:%.*]], 4.200000e+01
 ; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[M]]
 ; CHECK-NEXT:    call void @use(float [[M]])
@@ -42,10 +64,23 @@ define float @fmul_fneg_extra_use(float %x) {
   ret float %r
 }
 
+define float @fmul_fneg_extra_use(float %x) {
+; CHECK-LABEL: @fmul_fneg_extra_use(
+; CHECK-NEXT:    [[M:%.*]] = fmul float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[M]]
+; CHECK-NEXT:    call void @use(float [[M]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul float %x, 42.0
+  %r = fneg float %m
+  call void @use(float %m)
+  ret float %r
+}
+
 ; Try a vector. Use special constants (NaN, INF, undef) because they don't change anything.
 
-define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
-; CHECK-LABEL: @fmul_fneg_vec(
+define <4 x double> @fmul_fsub_vec(<4 x double> %x) {
+; CHECK-LABEL: @fmul_fsub_vec(
 ; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0x7F80000000000000, double 0xFFF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
@@ -54,10 +89,21 @@ define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
   ret <4 x double> %r
 }
 
+define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
+; CHECK-LABEL: @fmul_fneg_vec(
+; CHECK-NEXT:    [[M:%.*]] = fmul <4 x double> [[X:%.*]], <double 4.200000e+01, double 0xFF80000000000000, double 0x7FF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fneg <4 x double> [[M]]
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF80000000000000, double 0x7FF0000000000000, double undef>
+  %r = fneg <4 x double> %m
+  ret <4 x double> %r
+}
+
 ; -(X / C) --> X / (-C)
 
-define float @fdiv_op1_constant_fneg(float %x) {
-; CHECK-LABEL: @fdiv_op1_constant_fneg(
+define float @fdiv_op1_constant_fsub(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fsub(
 ; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -66,10 +112,21 @@ define float @fdiv_op1_constant_fneg(float %x) {
   ret float %r
 }
 
+define float @fdiv_op1_constant_fneg(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg(
+; CHECK-NEXT:    [[D:%.*]] = fdiv float [[X:%.*]], -4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, -42.0
+  %r = fneg float %d
+  ret float %r
+}
+
 ; Fast math is not required, but it should be propagated.
 
-define float @fdiv_op1_constant_fneg_fmf(float %x) {
-; CHECK-LABEL: @fdiv_op1_constant_fneg_fmf(
+define float @fdiv_op1_constant_fsub_fmf(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fsub_fmf(
 ; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[X:%.*]], 4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -78,10 +135,21 @@ define float @fdiv_op1_constant_fneg_fmf(float %x) {
   ret float %r
 }
 
+define float @fdiv_op1_constant_fneg_fmf(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_fmf(
+; CHECK-NEXT:    [[D:%.*]] = fdiv float [[X:%.*]], -4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fneg nnan float [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, -42.0
+  %r = fneg nnan float %d
+  ret float %r
+}
+
 ; Extra use prevents the fold. We don't want to replace the fneg with an fdiv.
 
-define float @fdiv_op1_constant_fneg_extra_use(float %x) {
-; CHECK-LABEL: @fdiv_op1_constant_fneg_extra_use(
+define float @fdiv_op1_constant_fsub_extra_use(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fsub_extra_use(
 ; CHECK-NEXT:    [[D:%.*]] = fdiv float [[X:%.*]], 4.200000e+01
 ; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[D]]
 ; CHECK-NEXT:    call void @use(float [[D]])
@@ -93,10 +161,23 @@ define float @fdiv_op1_constant_fneg_extra_use(float %x) {
   ret float %r
 }
 
+define float @fdiv_op1_constant_fneg_extra_use(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_extra_use(
+; CHECK-NEXT:    [[D:%.*]] = fdiv float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[D]]
+; CHECK-NEXT:    call void @use(float [[D]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, 42.0
+  %r = fneg float %d
+  call void @use(float %d)
+  ret float %r
+}
+
 ; Try a vector. Use special constants (NaN, INF, undef) because they don't change anything.
 
-define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
-; CHECK-LABEL: @fdiv_op1_constant_fneg_vec(
+define <4 x double> @fdiv_op1_constant_fsub_vec(<4 x double> %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fsub_vec(
 ; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[X:%.*]], <double 4.200000e+01, double 0x7FF800000ABCD000, double 0x7FF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
@@ -105,10 +186,21 @@ define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
   ret <4 x double> %r
 }
 
+define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_vec(
+; CHECK-NEXT:    [[D:%.*]] = fdiv <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fneg <4 x double> [[D]]
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double undef>
+  %r = fneg <4 x double> %d
+  ret <4 x double> %r
+}
+
 ; -(C / X) --> (-C) / X
 
-define float @fdiv_op0_constant_fneg(float %x) {
-; CHECK-LABEL: @fdiv_op0_constant_fneg(
+define float @fdiv_op0_constant_fsub(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fsub(
 ; CHECK-NEXT:    [[R:%.*]] = fdiv float -4.200000e+01, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -117,10 +209,21 @@ define float @fdiv_op0_constant_fneg(float %x) {
   ret float %r
 }
 
+define float @fdiv_op0_constant_fneg(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fneg(
+; CHECK-NEXT:    [[D:%.*]] = fdiv float 4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float 42.0, %x
+  %r = fneg float %d
+  ret float %r
+}
+
 ; Fast math is not required, but it should be propagated.
 
-define float @fdiv_op0_constant_fneg_fmf(float %x) {
-; CHECK-LABEL: @fdiv_op0_constant_fneg_fmf(
+define float @fdiv_op0_constant_fsub_fmf(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fsub_fmf(
 ; CHECK-NEXT:    [[R:%.*]] = fdiv fast float -4.200000e+01, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -129,10 +232,21 @@ define float @fdiv_op0_constant_fneg_fmf(float %x) {
   ret float %r
 }
 
+define float @fdiv_op0_constant_fneg_fmf(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fneg_fmf(
+; CHECK-NEXT:    [[D:%.*]] = fdiv float 4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float 42.0, %x
+  %r = fneg fast float %d
+  ret float %r
+}
+
 ; Extra use prevents the fold. We don't want to replace the fneg with an fdiv.
 
-define float @fdiv_op0_constant_fneg_extra_use(float %x) {
-; CHECK-LABEL: @fdiv_op0_constant_fneg_extra_use(
+define float @fdiv_op0_constant_fsub_extra_use(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fsub_extra_use(
 ; CHECK-NEXT:    [[D:%.*]] = fdiv float -4.200000e+01, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[D]]
 ; CHECK-NEXT:    call void @use(float [[D]])
@@ -144,15 +258,39 @@ define float @fdiv_op0_constant_fneg_extra_use(float %x) {
   ret float %r
 }
 
+define float @fdiv_op0_constant_fneg_extra_use(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fneg_extra_use(
+; CHECK-NEXT:    [[D:%.*]] = fdiv float -4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[D]]
+; CHECK-NEXT:    call void @use(float [[D]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float -42.0, %x
+  %r = fneg float %d
+  call void @use(float %d)
+  ret float %r
+}
+
 ; Try a vector. Use special constants (NaN, INF, undef) because they don't change anything.
 
-define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
-; CHECK-LABEL: @fdiv_op0_constant_fneg_vec(
+define <4 x double> @fdiv_op0_constant_fsub_vec(<4 x double> %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fsub_vec(
 ; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0x7F80000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %d = fdiv <4 x double> <double -42.0, double 0x7FF80000000000000, double 0xFFF0000000000000, double undef>, %x
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %d
+  ret <4 x double> %r
+}
+
+define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fneg_vec(
+; CHECK-NEXT:    [[D:%.*]] = fdiv <4 x double> <double -4.200000e+01, double 0xFF80000000000000, double 0xFFF0000000000000, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg <4 x double> [[D]]
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %d = fdiv <4 x double> <double -42.0, double 0x7FF80000000000000, double 0xFFF0000000000000, double undef>, %x
+  %r = fneg <4 x double> %d
   ret <4 x double> %r
 }
 
