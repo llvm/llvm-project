@@ -90,6 +90,8 @@ class CodeRegions {
   CodeRegions &operator=(const CodeRegions &) = delete;
 
 public:
+  CodeRegions(llvm::SourceMgr &S);
+
   typedef std::vector<UniqueCodeRegion>::iterator iterator;
   typedef std::vector<UniqueCodeRegion>::const_iterator const_iterator;
 
@@ -102,8 +104,6 @@ public:
   void endRegion(llvm::SMLoc Loc);
   void addInstruction(const llvm::MCInst &Instruction);
   llvm::SourceMgr &getSourceMgr() const { return SM; }
-
-  CodeRegions(llvm::SourceMgr &S);
 
   llvm::ArrayRef<llvm::MCInst> getInstructionSequence(unsigned Idx) const {
     return Regions[Idx]->getInstructions();
