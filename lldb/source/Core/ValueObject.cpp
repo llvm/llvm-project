@@ -1731,17 +1731,6 @@ LanguageType ValueObject::GetObjectRuntimeLanguage() {
   return lldb::eLanguageTypeUnknown;
 }
 
-SwiftASTContext *ValueObject::GetSwiftASTContext() {
-  if (GetObjectRuntimeLanguage() != lldb::eLanguageTypeSwift)
-    return nullptr;
-  lldb::ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    auto ts = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-    return llvm::dyn_cast_or_null<SwiftASTContext>(ts);
-  }
-  return GetScratchSwiftASTContext().get();
-}
-
 SwiftASTContextReader ValueObject::GetScratchSwiftASTContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
