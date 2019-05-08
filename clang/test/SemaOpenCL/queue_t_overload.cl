@@ -7,6 +7,6 @@ void kernel ker(__local char *src1, __local float *src2, __global int *src3) {
   queue_t q;
   foo(q, src1);
   foo(0, src2);
-  foo(q, src3); // expected-error {{call to 'foo' is ambiguous}}
+  foo(q, src3); // expected-error {{no matching function for call to 'foo'}}
   foo(1, src3); // expected-error {{no matching function for call to 'foo'}}
 }

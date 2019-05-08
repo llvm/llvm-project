@@ -11,12 +11,6 @@ void test_numbered_as_to_generic(__attribute__((address_space(42))) int *arbitar
   *generic_ptr = 4;
 }
 
-// CHECK-LABEL: @test_numbered_as_to_builtin(
-// CHECK: addrspacecast i32 addrspace(42)* %0 to float addrspace(3)*
-void test_numbered_as_to_builtin(__attribute__((address_space(42))) int *arbitary_numbered_ptr, float src) {
-  volatile float result = __builtin_amdgcn_ds_fmaxf(arbitary_numbered_ptr, src, 0, 0, false);
-}
-
 // CHECK-LABEL: @test_generic_as_to_builtin_parameter_explicit_cast(
 // CHECK: addrspacecast i32 addrspace(3)* %0 to i32*
 void test_generic_as_to_builtin_parameter_explicit_cast(__local int *local_ptr, float src) {
@@ -25,10 +19,7 @@ void test_generic_as_to_builtin_parameter_explicit_cast(__local int *local_ptr, 
 }
 
 // CHECK-LABEL: @test_generic_as_to_builtin_parameter_implicit_cast(
-// CHECK: addrspacecast i32* %2 to float addrspace(3)*
+// CHECK: bitcast i32 addrspace(3)* %0 to float addrspace(3)*
 void test_generic_as_to_builtin_parameter_implicit_cast(__local int *local_ptr, float src) {
-  generic int* generic_ptr = local_ptr;
-
-  volatile float result = __builtin_amdgcn_ds_fmaxf(generic_ptr, src, 0, 0, false);
+  volatile float result = __builtin_amdgcn_ds_fmaxf(local_ptr, src, 0, 0, false);
 }
-

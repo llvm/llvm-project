@@ -26,6 +26,6 @@ void test_generic_as_to_builtin_parameter_explicit_cast_numeric(__attribute__((a
 
 void test_generic_as_to_builtin_parameterimplicit_cast_numeric(__attribute__((address_space(3))) int *as3_ptr, float src) {
   generic int* generic_ptr = as3_ptr;
-  volatile float result = __builtin_amdgcn_ds_fmaxf(generic_ptr, src, 0, 0, false); // expected-warning {{incompatible pointer types passing '__generic int *' to parameter of type '__local float *'}}
+  volatile float result = __builtin_amdgcn_ds_fmaxf(generic_ptr, src, 0, 0, false); // expected-error {{passing '__generic int *' to parameter of type '__local float *' changes address space of pointer}}
 }
 
