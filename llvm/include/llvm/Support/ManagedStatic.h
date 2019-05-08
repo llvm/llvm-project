@@ -32,18 +32,41 @@ template <typename T, size_t N> struct object_deleter<T[N]> {
   static void call(void *Ptr) { delete[](T *)Ptr; }
 };
 
+// ManagedStatic must be initialized to zero, and it must *not* have a dynamic
+// initializer because managed statics are often created while running other
+// dynamic initializers. In standard C++11, the best way to accomplish this is
+// with a constexpr default constructor. However, different versions of the
+// Visual C++ compiler have had bugs where, even though the constructor may be
+// constexpr, a dynamic initializer may be emitted depending on optimization
+// settings. For the affected versions of MSVC, use the old linker
+// initialization pattern of not providing a constructor and leaving the fields
+// uninitialized.
+#if !defined(_MSC_VER) || defined(__clang__)
+#define LLVM_USE_CONSTEXPR_CTOR
+#endif
+
 /// ManagedStaticBase - Common base class for ManagedStatic instances.
 class ManagedStaticBase {
 protected:
+#ifdef LLVM_USE_CONSTEXPR_CTOR
+  mutable std::atomic<void *> Ptr{};
+  mutable void (*DeleterFn)(void *) = nullptr;
+  mutable const ManagedStaticBase *Next = nullptr;
+#else
   // This should only be used as a static variable, which guarantees that this
   // will be zero initialized.
   mutable std::atomic<void *> Ptr;
-  mutable void (*DeleterFn)(void*);
+  mutable void (*DeleterFn)(void *);
   mutable const ManagedStaticBase *Next;
+#endif
 
   void RegisterManagedStatic(void *(*creator)(), void (*deleter)(void*)) const;
 
 public:
+#ifdef LLVM_USE_CONSTEXPR_CTOR
+  constexpr ManagedStaticBase() = default;
+#endif
+
   /// isConstructed - Return true if this object has not been created yet.
   bool isConstructed() const { return Ptr != nullptr; }
 

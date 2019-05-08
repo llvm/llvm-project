@@ -715,7 +715,7 @@ public:
   bool disablePostRAScheduler() const { return DisablePostRAScheduler; }
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
-  bool optForMinSize() const { return OptMinSize; }
+  bool hasMinSize() const { return OptMinSize; }
   bool isThumb1Only() const { return InThumbMode && !HasThumb2; }
   bool isThumb2() const { return InThumbMode && HasThumb2; }
   bool hasThumb2() const { return HasThumb2; }

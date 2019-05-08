@@ -25,21 +25,13 @@ class TestPaths(TestBase):
                           lldb.ePathTypePythonDir,
                           lldb.ePathTypeLLDBSystemPlugins,
                           lldb.ePathTypeLLDBUserPlugins,
-                          lldb.ePathTypeLLDBTempSystemDir]
+                          lldb.ePathTypeLLDBTempSystemDir,
+                          lldb.ePathTypeClangDir]
 
         for path_type in dir_path_types:
             f = lldb.SBHostOS.GetLLDBPath(path_type)
             # No directory path types should have the filename set
             self.assertTrue(f.GetFilename() is None)
-
-    # TODO: Merge into test_path when GetClangResourceDir is implemented on
-    # windows
-    @expectedFailureAll(oslist=["windows"])
-    @no_debug_info_test
-    def test_clang_dir_path(self):
-      '''Test to make sure clang dir is set correctly'''
-      clang_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeClangDir)
-      self.assertFalse(clang_dir.GetDirectory() is None)
 
     @no_debug_info_test
     def test_directory_doesnt_end_with_slash(self):

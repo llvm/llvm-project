@@ -228,9 +228,9 @@ void FunctionDumper::dump(const PDBSymbolTypeFunctionArg &Symbol) {
   uint32_t TypeId = Symbol.getTypeId();
   auto Type = Symbol.getSession().getSymbolById(TypeId);
   if (Type)
-    Printer << "<unknown-type>";
-  else
     Type->dump(*this);
+  else
+    Printer << "<unknown-type>";
 }
 
 void FunctionDumper::dump(const PDBSymbolTypeTypedef &Symbol) {

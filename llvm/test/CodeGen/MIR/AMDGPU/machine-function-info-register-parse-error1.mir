@@ -1,0 +1,12 @@
+# RUN: not llc -march=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# CHECK: :7:27: incorrect register class for field
+# CHECK: scratchRSrcReg:  '$noreg'
+---
+name: noreg_rsrc_reg
+machineFunctionInfo:
+  scratchRSrcReg:  '$noreg'
+body:             |
+  bb.0:
+
+    S_ENDPGM
+...

@@ -6,13 +6,8 @@
 // RUN: %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
 // UNSUPPORTED: arm,powerpc64
 
+#include "sanitizer_common/sanitizer_ucontext.h"
 #include <stdio.h>
-#if defined(__APPLE__)
-// Note: ucontext.h is deprecated on OSX, so this test may stop working
-// someday. We define _XOPEN_SOURCE to keep using ucontext.h for now.
-#define _XOPEN_SOURCE 1
-#endif
-#include <ucontext.h>
 #include <unistd.h>
 
 const int kStackSize = 1 << 20;

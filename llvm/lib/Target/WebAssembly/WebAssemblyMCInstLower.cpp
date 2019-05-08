@@ -73,16 +73,18 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   auto *WasmSym = cast<MCSymbolWasm>(Printer.GetExternalSymbolSymbol(Name));
   const WebAssemblySubtarget &Subtarget = Printer.getSubtarget();
 
-  // Except for the two exceptions (__stack_pointer and __cpp_exception), all
-  // other external symbols used by CodeGen are functions. It's OK to hardcode
-  // knowledge of specific symbols here; this method is precisely there for
-  // fetching the signatures of known Clang-provided symbols.
-  if (strcmp(Name, "__stack_pointer") == 0) {
+  // Except for certain known symbols, all symbols used by CodeGen are
+  // functions. It's OK to hardcode knowledge of specific symbols here; this
+  // method is precisely there for fetching the signatures of known
+  // Clang-provided symbols.
+  if (strcmp(Name, "__stack_pointer") == 0 ||
+      strcmp(Name, "__memory_base") == 0 || strcmp(Name, "__table_base") == 0) {
+    bool Mutable = strcmp(Name, "__stack_pointer") == 0;
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
     WasmSym->setGlobalType(wasm::WasmGlobalType{
         uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
                                       : wasm::WASM_TYPE_I32),
-        true});
+        Mutable});
     return WasmSym;
   }
 
@@ -118,22 +120,42 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   return WasmSym;
 }
 
-MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(MCSymbol *Sym,
-                                                     int64_t Offset,
-                                                     bool IsFunc, bool IsGlob,
-                                                     bool IsEvent) const {
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
+                                                     MCSymbol *Sym) const {
+  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  unsigned TargetFlags = MO.getTargetFlags();
 
-  if (Offset != 0) {
-    if (IsFunc)
+  switch (TargetFlags) {
+    case WebAssemblyII::MO_NO_FLAG:
+      break;
+    case WebAssemblyII::MO_GOT:
+      Kind = MCSymbolRefExpr::VK_GOT;
+      break;
+    case WebAssemblyII::MO_MEMORY_BASE_REL:
+      Kind = MCSymbolRefExpr::VK_WASM_MBREL;
+      break;
+    case WebAssemblyII::MO_TABLE_BASE_REL:
+      Kind = MCSymbolRefExpr::VK_WASM_TBREL;
+      break;
+    default:
+      llvm_unreachable("Unknown target flag on GV operand");
+  }
+
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Kind, Ctx);
+
+  if (MO.getOffset() != 0) {
+    const auto *WasmSym = cast<MCSymbolWasm>(Sym);
+    if (TargetFlags == WebAssemblyII::MO_GOT)
+      report_fatal_error("GOT symbol references do not support offsets");
+    if (WasmSym->isFunction())
       report_fatal_error("Function addresses with offsets not supported");
-    if (IsGlob)
+    if (WasmSym->isGlobal())
       report_fatal_error("Global indexes with offsets not supported");
-    if (IsEvent)
+    if (WasmSym->isEvent())
       report_fatal_error("Event indexes with offsets not supported");
-    Expr =
-        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
   }
 
   return MCOperand::createExpr(Expr);
@@ -210,7 +232,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
           WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 
           const MCExpr *Expr = MCSymbolRefExpr::create(
-              WasmSym, MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX, Ctx);
+              WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
           MCOp = MCOperand::createExpr(Expr);
           break;
         }
@@ -230,30 +252,21 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_GlobalAddress:
-      assert(MO.getTargetFlags() == WebAssemblyII::MO_NO_FLAG &&
-             "WebAssembly does not use target flags on GlobalAddresses");
-      MCOp = lowerSymbolOperand(GetGlobalAddressSymbol(MO), MO.getOffset(),
-                                MO.getGlobal()->getValueType()->isFunctionTy(),
-                                false, false);
+      MCOp = lowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
       break;
     case MachineOperand::MO_ExternalSymbol:
       // The target flag indicates whether this is a symbol for a
       // variable or a function.
-      assert((MO.getTargetFlags() & ~WebAssemblyII::MO_SYMBOL_MASK) == 0 &&
+      assert(MO.getTargetFlags() == 0 &&
              "WebAssembly uses only symbol flags on ExternalSymbols");
-      MCOp = lowerSymbolOperand(
-          GetExternalSymbolSymbol(MO), /*Offset=*/0,
-          (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_FUNCTION) != 0,
-          (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_GLOBAL) != 0,
-          (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_EVENT) != 0);
+      MCOp = lowerSymbolOperand(MO, GetExternalSymbolSymbol(MO));
       break;
     case MachineOperand::MO_MCSymbol:
       // This is currently used only for LSDA symbols (GCC_except_table),
       // because global addresses or other external symbols are handled above.
       assert(MO.getTargetFlags() == 0 &&
              "WebAssembly does not use target flags on MCSymbol");
-      MCOp = lowerSymbolOperand(MO.getMCSymbol(), /*Offset=*/0, false, false,
-                                false);
+      MCOp = lowerSymbolOperand(MO, MO.getMCSymbol());
       break;
     }
 

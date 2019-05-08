@@ -29,6 +29,7 @@ int main(int, char**)
     S s1;
     S s2;
     bool b = s1.begin() < s2.begin();
+    (void) b;
     assert(false);
     }
 #if TEST_STD_VER >= 11
@@ -37,6 +38,7 @@ int main(int, char**)
     S s1;
     S s2;
     bool b = s1.begin() < s2.begin();
+    (void) b;
     assert(false);
     }
 #endif

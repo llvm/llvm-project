@@ -34,5 +34,5 @@ class C : public A<float> { };
 
 // CHECK-KEEP-GOING-ONLY: VarDecl=global_var:1:12 [type=int] [typekind=Int] [isPOD=1]
 
-// CHECK-DIAG: keep-going.cpp:1:10: fatal error: 'missing1.h' file not found
-// CHECK-DIAG: keep-going.cpp:8:10: fatal error: 'missing2.h' file not found
+// CHECK-DIAG: keep-going.cpp:1:10: error: 'missing1.h' file not found
+// CHECK-DIAG: keep-going.cpp:8:10: error: 'missing2.h' file not found

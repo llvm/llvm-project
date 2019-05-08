@@ -418,17 +418,7 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
         Draw(SummaryIt.first, R.getGUID(), R.isReadOnly() ? -1 : -2);
 
       if (auto *AS = dyn_cast_or_null<AliasSummary>(SummaryIt.second)) {
-        GlobalValue::GUID AliaseeId;
-        if (AS->hasAliaseeGUID())
-          AliaseeId = AS->getAliaseeGUID();
-        else {
-          auto AliaseeOrigId = AS->getAliasee().getOriginalName();
-          AliaseeId = getGUIDFromOriginalID(AliaseeOrigId);
-          if (!AliaseeId)
-            AliaseeId = AliaseeOrigId;
-        }
-
-        Draw(SummaryIt.first, AliaseeId, -3);
+        Draw(SummaryIt.first, AS->getAliaseeGUID(), -3);
         continue;
       }
 

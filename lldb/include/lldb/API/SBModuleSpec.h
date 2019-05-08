@@ -24,25 +24,24 @@ public:
 
   const SBModuleSpec &operator=(const SBModuleSpec &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   void Clear();
 
-  //------------------------------------------------------------------
   /// Get const accessor for the module file.
   ///
   /// This function returns the file for the module on the host system
   /// that is running LLDB. This can differ from the path on the
   /// platform since we might be doing remote debugging.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the file specification object.
-  //------------------------------------------------------------------
   lldb::SBFileSpec GetFileSpec();
 
   void SetFileSpec(const lldb::SBFileSpec &fspec);
 
-  //------------------------------------------------------------------
   /// Get accessor for the module platform file.
   ///
   /// Platform file refers to the path of the module as it is known on
@@ -54,9 +53,8 @@ public:
   /// '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'
   /// The file could also be cached in a local developer kit directory.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the file specification object.
-  //------------------------------------------------------------------
   lldb::SBFileSpec GetPlatformFileSpec();
 
   void SetPlatformFileSpec(const lldb::SBFileSpec &fspec);

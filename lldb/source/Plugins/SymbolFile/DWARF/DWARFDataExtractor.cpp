@@ -12,11 +12,7 @@ namespace lldb_private {
 
 uint64_t
 DWARFDataExtractor::GetDWARFInitialLength(lldb::offset_t *offset_ptr) const {
-  uint64_t length = GetU32(offset_ptr);
-  m_is_dwarf64 = (length == UINT32_MAX);
-  if (m_is_dwarf64)
-    length = GetU64(offset_ptr);
-  return length;
+  return GetU32(offset_ptr);
 }
 
 dw_offset_t

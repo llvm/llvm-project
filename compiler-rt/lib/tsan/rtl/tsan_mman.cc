@@ -201,6 +201,16 @@ void *user_calloc(ThreadState *thr, uptr pc, uptr size, uptr n) {
   return SetErrnoOnNull(p);
 }
 
+void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr size, uptr n) {
+  if (UNLIKELY(CheckForCallocOverflow(size, n))) {
+    if (AllocatorMayReturnNull())
+      return SetErrnoOnNull(nullptr);
+    GET_STACK_TRACE_FATAL(thr, pc);
+    ReportReallocArrayOverflow(size, n, &stack);
+  }
+  return user_realloc(thr, pc, p, size * n);
+}
+
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
   DPrintf("#%d: alloc(%zu) = %p\n", thr->tid, sz, p);
   ctx->metamap.AllocBlock(thr, pc, p, sz);

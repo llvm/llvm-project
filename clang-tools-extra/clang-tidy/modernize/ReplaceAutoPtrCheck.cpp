@@ -132,15 +132,17 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void ReplaceAutoPtrCheck::registerPPCallbacks(CompilerInstance &Compiler) {
+void ReplaceAutoPtrCheck::registerPPCallbacks(const SourceManager &SM,
+                                              Preprocessor *PP,
+                                              Preprocessor *ModuleExpanderPP) {
   // Only register the preprocessor callbacks for C++; the functionality
   // currently does not provide any benefit to other languages, despite being
   // benign.
   if (!getLangOpts().CPlusPlus)
     return;
-  Inserter.reset(new utils::IncludeInserter(
-      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
-  Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+  Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+                                                       IncludeStyle);
+  PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
 void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {

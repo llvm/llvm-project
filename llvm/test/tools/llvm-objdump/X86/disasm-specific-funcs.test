@@ -2,6 +2,7 @@
 // RUN: llvm-objdump -d %t.out -disassemble-functions=main | FileCheck %s
 
 // CHECK:              Disassembly of section .anothertext:
+// CHECK-EMPTY:
 // CHECK-NEXT:         main:
 // CHECK-NEXT:         10:       55      pushq   %rbp
 // CHECK-NEXT:         11:       48 89 e5        movq    %rsp, %rbp

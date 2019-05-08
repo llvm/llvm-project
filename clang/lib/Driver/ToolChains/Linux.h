@@ -38,6 +38,7 @@ public:
                            llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
   bool isPIEDefault() const override;
+  bool isNoExecStackDefault() const override;
   bool IsMathErrnoDefault() const override;
   SanitizerMask getSupportedSanitizers() const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,

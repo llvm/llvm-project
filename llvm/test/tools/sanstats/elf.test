@@ -85,46 +85,34 @@ Sections:
     Info:            .debug_info
     Relocations:     
       - Offset:          0x0000000000000006
-        Symbol:          ''
         Type:            R_X86_64_32
       - Offset:          0x000000000000000C
-        Symbol:          ''
         Type:            R_X86_64_32
       - Offset:          0x0000000000000012
-        Symbol:          ''
         Type:            R_X86_64_32
         Addend:          55
       - Offset:          0x0000000000000016
-        Symbol:          ''
         Type:            R_X86_64_32
       - Offset:          0x000000000000001A
-        Symbol:          ''
         Type:            R_X86_64_32
         Addend:          59
       - Offset:          0x000000000000001E
-        Symbol:          ''
         Type:            R_X86_64_64
       - Offset:          0x000000000000002B
-        Symbol:          ''
         Type:            R_X86_64_64
       - Offset:          0x0000000000000039
-        Symbol:          ''
         Type:            R_X86_64_32
         Addend:          64
       - Offset:          0x0000000000000040
-        Symbol:          ''
         Type:            R_X86_64_64
         Addend:          16
       - Offset:          0x000000000000004E
-        Symbol:          ''
         Type:            R_X86_64_32
         Addend:          67
       - Offset:          0x0000000000000055
-        Symbol:          ''
         Type:            R_X86_64_64
         Addend:          32
       - Offset:          0x0000000000000063
-        Symbol:          ''
         Type:            R_X86_64_32
         Addend:          70
   - Name:            .debug_ranges
@@ -142,7 +130,6 @@ Sections:
     Info:            .debug_pubnames
     Relocations:     
       - Offset:          0x0000000000000006
-        Symbol:          ''
         Type:            R_X86_64_32
   - Name:            .comment
     Type:            SHT_PROGBITS
@@ -165,14 +152,11 @@ Sections:
     Info:            .eh_frame
     Relocations:     
       - Offset:          0x0000000000000020
-        Symbol:          ''
         Type:            R_X86_64_PC32
       - Offset:          0x000000000000003C
-        Symbol:          ''
         Type:            R_X86_64_PC32
         Addend:          16
       - Offset:          0x0000000000000058
-        Symbol:          ''
         Type:            R_X86_64_PC32
         Addend:          32
   - Name:            .debug_line
@@ -186,35 +170,35 @@ Sections:
     Info:            .debug_line
     Relocations:     
       - Offset:          0x0000000000000027
-        Symbol:          ''
         Type:            R_X86_64_64
-Symbols:         
-  Local:           
-    - Name:            f.c
-      Type:            STT_FILE
-    - Type:            STT_SECTION
-      Section:         .text
-    - Type:            STT_SECTION
-      Section:         .debug_str
-    - Type:            STT_SECTION
-      Section:         .debug_abbrev
-    - Type:            STT_SECTION
-      Section:         .debug_info
-    - Type:            STT_SECTION
-      Section:         .debug_line
-  Global:          
-    - Name:            f1
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x0000000000000006
-    - Name:            f2
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000010
-      Size:            0x0000000000000006
-    - Name:            f3
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000020
-      Size:            0x0000000000000006
+Symbols:
+  - Name:            f.c
+    Type:            STT_FILE
+  - Type:            STT_SECTION
+    Section:         .text
+  - Type:            STT_SECTION
+    Section:         .debug_str
+  - Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Type:            STT_SECTION
+    Section:         .debug_info
+  - Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            f1
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x0000000000000006
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000010
+    Size:            0x0000000000000006
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000020
+    Size:            0x0000000000000006
+    Binding:         STB_GLOBAL
 ...

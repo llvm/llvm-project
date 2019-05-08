@@ -46,6 +46,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -329,36 +330,15 @@ GVN::Expression GVN::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
   e.type = EI->getType();
   e.opcode = 0;
 
-  IntrinsicInst *I = dyn_cast<IntrinsicInst>(EI->getAggregateOperand());
-  if (I != nullptr && EI->getNumIndices() == 1 && *EI->idx_begin() == 0 ) {
-    // EI might be an extract from one of our recognised intrinsics. If it
-    // is we'll synthesize a semantically equivalent expression instead on
-    // an extract value expression.
-    switch (I->getIntrinsicID()) {
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-        e.opcode = Instruction::Add;
-        break;
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::usub_with_overflow:
-        e.opcode = Instruction::Sub;
-        break;
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::umul_with_overflow:
-        e.opcode = Instruction::Mul;
-        break;
-      default:
-        break;
-    }
-
-    if (e.opcode != 0) {
-      // Intrinsic recognized. Grab its args to finish building the expression.
-      assert(I->getNumArgOperands() == 2 &&
-             "Expect two args for recognised intrinsics.");
-      e.varargs.push_back(lookupOrAdd(I->getArgOperand(0)));
-      e.varargs.push_back(lookupOrAdd(I->getArgOperand(1)));
-      return e;
-    }
+  WithOverflowInst *WO = dyn_cast<WithOverflowInst>(EI->getAggregateOperand());
+  if (WO != nullptr && EI->getNumIndices() == 1 && *EI->idx_begin() == 0) {
+    // EI is an extract from one of our with.overflow intrinsics. Synthesize
+    // a semantically equivalent expression instead of an extract value
+    // expression.
+    e.opcode = WO->getBinaryOp();
+    e.varargs.push_back(lookupOrAdd(WO->getLHS()));
+    e.varargs.push_back(lookupOrAdd(WO->getRHS()));
+    return e;
   }
 
   // Not a recognised intrinsic. Fall back to producing an extract value
@@ -1227,9 +1207,8 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     // Instructions that have been inserted in predecessor(s) to materialize
     // the load address do not retain their original debug locations. Doing
     // so could lead to confusing (but correct) source attributions.
-    // FIXME: How do we retain source locations without causing poor debugging
-    // behavior?
-    I->setDebugLoc(DebugLoc());
+    if (const DebugLoc &DL = I->getDebugLoc())
+      I->setDebugLoc(DebugLoc::get(0, 0, DL.getScope(), DL.getInlinedAt()));
 
     // FIXME: We really _ought_ to insert these value numbers into their
     // parent's availability map.  However, in doing so, we risk getting into

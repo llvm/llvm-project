@@ -110,8 +110,22 @@ protected:
   SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
+  /// Split a vector type into two parts. The first part is a power of two
+  /// vector. The second part is whatever is left over, and is a scalar if it
+  /// would otherwise be a 1-vector.
+  std::pair<EVT, EVT> getSplitDestVTs(const EVT &VT, SelectionDAG &DAG) const;
+
+  /// Split a vector value into two parts of types LoVT and HiVT. HiVT could be
+  /// scalar.
+  std::pair<SDValue, SDValue> splitVector(const SDValue &N, const SDLoc &DL,
+                                          const EVT &LoVT, const EVT &HighVT,
+                                          SelectionDAG &DAG) const;
+
   /// Split a vector load into 2 loads of half the vector.
   SDValue SplitVectorLoad(SDValue Op, SelectionDAG &DAG) const;
+
+  /// Widen a vector load from vec3 to vec4.
+  SDValue WidenVectorLoad(SDValue Op, SelectionDAG &DAG) const;
 
   /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;
@@ -161,7 +175,8 @@ public:
   MVT getVectorIdxTy(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
   bool shouldReduceLoadWidth(SDNode *Load,
                              ISD::LoadExtType ExtType,
@@ -308,6 +323,10 @@ public:
   }
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+
+  bool SelectFlatOffset(bool IsSigned, SelectionDAG &DAG, SDNode *N,
+                        SDValue Addr, SDValue &VAddr, SDValue &Offset,
+                        SDValue &SLC) const;
 };
 
 namespace AMDGPUISD {
@@ -469,10 +488,16 @@ enum NodeType : unsigned {
   KILL,
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  LOAD_D16_HI,
+  LOAD_D16_LO,
+  LOAD_D16_HI_I8,
+  LOAD_D16_HI_U8,
+  LOAD_D16_LO_I8,
+  LOAD_D16_LO_U8,
+
   STORE_MSKOR,
   LOAD_CONSTANT,
   TBUFFER_STORE_FORMAT,
-  TBUFFER_STORE_FORMAT_X3,
   TBUFFER_STORE_FORMAT_D16,
   TBUFFER_LOAD_FORMAT,
   TBUFFER_LOAD_FORMAT_D16,
@@ -483,10 +508,16 @@ enum NodeType : unsigned {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,
+  BUFFER_LOAD_UBYTE,
+  BUFFER_LOAD_USHORT,
+  BUFFER_LOAD_BYTE,
+  BUFFER_LOAD_SHORT,
   BUFFER_LOAD_FORMAT,
   BUFFER_LOAD_FORMAT_D16,
   SBUFFER_LOAD,
   BUFFER_STORE,
+  BUFFER_STORE_BYTE,
+  BUFFER_STORE_SHORT,
   BUFFER_STORE_FORMAT,
   BUFFER_STORE_FORMAT_D16,
   BUFFER_ATOMIC_SWAP,

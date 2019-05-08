@@ -149,7 +149,7 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
   unsigned N = DefList.size();
   if (N == 0)
     return;
-  if (N > MAX_SUBTARGET_FEATURES)
+  if (N + 1 > MAX_SUBTARGET_FEATURES)
     PrintFatalError("Too many subtarget features! Bump MAX_SUBTARGET_FEATURES.");
 
   OS << "namespace " << Target << " {\n";
@@ -168,6 +168,9 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
     // Save the index for this feature.
     FeatureMap[Def] = i;
   }
+
+  OS << "  "
+     << "NumSubtargetFeatures = " << N << "\n";
 
   // Close enumeration and namespace
   OS << "};\n";

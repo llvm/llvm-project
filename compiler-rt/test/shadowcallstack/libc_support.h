@@ -33,9 +33,5 @@ __attribute__((noinline)) void scs_fputs_stdout(const char *p) {
 }
 
 #else
-
-__attribute__((noinline)) void scs_fputs_stdout(const char *p) {
-  fputs(p, stdout);
-}
-
+#error Unsupported platform
 #endif

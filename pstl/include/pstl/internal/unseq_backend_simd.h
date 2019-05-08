@@ -7,19 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_unseq_backend_simd_H
-#define __PSTL_unseq_backend_simd_H
+#ifndef _PSTL_UNSEQ_BACKEND_SIMD_H
+#define _PSTL_UNSEQ_BACKEND_SIMD_H
 
 #include <type_traits>
 
-#include "pstl_config.h"
 #include "utils.h"
 
 // This header defines the minimum set of vector routines required
 // to support parallel STL.
 namespace __pstl
 {
-namespace unseq_backend
+namespace __unseq_backend
 {
 
 // Expect vector width up to 64 (or 512 bit)
@@ -27,9 +26,9 @@ const std::size_t __lane_size = 64;
 
 template <class _Iterator, class _DifferenceType, class _Function>
 _Iterator
-simd_walk_1(_Iterator __first, _DifferenceType __n, _Function __f) noexcept
+__simd_walk_1(_Iterator __first, _DifferenceType __n, _Function __f) noexcept
 {
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
         __f(__first[__i]);
 
@@ -38,9 +37,9 @@ simd_walk_1(_Iterator __first, _DifferenceType __n, _Function __f) noexcept
 
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Function>
 _Iterator2
-simd_walk_2(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Function __f) noexcept
+__simd_walk_2(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Function __f) noexcept
 {
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
         __f(__first1[__i], __first2[__i]);
     return __first2 + __n;
@@ -48,23 +47,24 @@ simd_walk_2(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Func
 
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Iterator3, class _Function>
 _Iterator3
-simd_walk_3(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Iterator3 __first3, _Function __f) noexcept
+__simd_walk_3(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Iterator3 __first3,
+              _Function __f) noexcept
 {
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
         __f(__first1[__i], __first2[__i], __first3[__i]);
     return __first3 + __n;
 }
 
-// TODO: check whether simd_first() can be used here
+// TODO: check whether __simd_first() can be used here
 template <class _Index, class _DifferenceType, class _Pred>
 bool
-simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept
+__simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept
 {
-#if __PSTL_EARLYEXIT_PRESENT
+#if _PSTL_EARLYEXIT_PRESENT
     _DifferenceType __i;
-    __PSTL_PRAGMA_VECTOR_UNALIGNED
-    __PSTL_PRAGMA_SIMD_EARLYEXIT
+    _PSTL_PRAGMA_VECTOR_UNALIGNED
+    _PSTL_PRAGMA_SIMD_EARLYEXIT
     for (__i = 0; __i < __n; ++__i)
         if (__pred(__first[__i]))
             break;
@@ -75,7 +75,7 @@ simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept
     while (__last != __first)
     {
         int32_t __flag = 1;
-        __PSTL_PRAGMA_SIMD_REDUCTION(& : __flag)
+        _PSTL_PRAGMA_SIMD_REDUCTION(& : __flag)
         for (_DifferenceType __i = 0; __i < __block_size; ++__i)
             if (__pred(*(__first + __i)))
                 __flag = 0;
@@ -99,12 +99,12 @@ simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept
 
 template <class _Index, class _DifferenceType, class _Compare>
 _Index
-simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept
+__simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept
 {
-#if __PSTL_EARLYEXIT_PRESENT
+#if _PSTL_EARLYEXIT_PRESENT
     _DifferenceType __i = __begin;
-    __PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
-        __PSTL_PRAGMA_SIMD_EARLYEXIT for (; __i < __end; ++__i)
+    _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
+        _PSTL_PRAGMA_SIMD_EARLYEXIT for (; __i < __end; ++__i)
     {
         if (__comp(__first, __i))
         {
@@ -119,10 +119,10 @@ simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Comp
     while (__end - __begin >= __block_size)
     {
         _DifferenceType __found = 0;
-        __PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
-            __PSTL_PRAGMA_SIMD_REDUCTION(|
-                                         : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size;
-                                                         ++__i)
+        _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
+            _PSTL_PRAGMA_SIMD_REDUCTION(|
+                                        : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size;
+                                                        ++__i)
         {
             const _DifferenceType __t = __comp(__first, __i);
             __lane[__i - __begin] = __t;
@@ -154,17 +154,17 @@ simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Comp
         ++__begin;
     }
     return __first + __end;
-#endif //__PSTL_EARLYEXIT_PRESENT
+#endif //_PSTL_EARLYEXIT_PRESENT
 }
 
 template <class _Index1, class _DifferenceType, class _Index2, class _Pred>
 std::pair<_Index1, _Index2>
-simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pred) noexcept
+__simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pred) noexcept
 {
-#if __PSTL_EARLYEXIT_PRESENT
+#if _PSTL_EARLYEXIT_PRESENT
     _DifferenceType __i = 0;
-    __PSTL_PRAGMA_VECTOR_UNALIGNED
-    __PSTL_PRAGMA_SIMD_EARLYEXIT
+    _PSTL_PRAGMA_VECTOR_UNALIGNED
+    _PSTL_PRAGMA_SIMD_EARLYEXIT
     for (; __i < __n; ++__i)
         if (__pred(__first1[__i], __first2[__i]))
             break;
@@ -179,9 +179,9 @@ simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pred
     {
         _DifferenceType __found = 0;
         _DifferenceType __i;
-        __PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
-            __PSTL_PRAGMA_SIMD_REDUCTION(|
-                                         : __found) for (__i = 0; __i < __block_size; ++__i)
+        _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
+            _PSTL_PRAGMA_SIMD_REDUCTION(|
+                                        : __found) for (__i = 0; __i < __block_size; ++__i)
         {
             const _DifferenceType __t = __pred(__first1[__i], __first2[__i]);
             __lane[__i] = __t;
@@ -208,15 +208,15 @@ simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pred
             return std::make_pair(__first1, __first2);
 
     return std::make_pair(__last1, __last2);
-#endif //__PSTL_EARLYEXIT_PRESENT
+#endif //_PSTL_EARLYEXIT_PRESENT
 }
 
 template <class _Index, class _DifferenceType, class _Pred>
 _DifferenceType
-simd_count(_Index __index, _DifferenceType __n, _Pred __pred) noexcept
+__simd_count(_Index __index, _DifferenceType __n, _Pred __pred) noexcept
 {
     _DifferenceType __count = 0;
-    __PSTL_PRAGMA_SIMD_REDUCTION(+ : __count)
+    _PSTL_PRAGMA_SIMD_REDUCTION(+ : __count)
     for (_DifferenceType __i = 0; __i < __n; ++__i)
         if (__pred(*(__index + __i)))
             ++__count;
@@ -226,8 +226,8 @@ simd_count(_Index __index, _DifferenceType __n, _Pred __pred) noexcept
 
 template <class _InputIterator, class _DifferenceType, class _OutputIterator, class _BinaryPredicate>
 _OutputIterator
-simd_unique_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator __result,
-                 _BinaryPredicate __pred) noexcept
+__simd_unique_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator __result,
+                   _BinaryPredicate __pred) noexcept
 {
     if (__n == 0)
         return __result;
@@ -235,10 +235,10 @@ simd_unique_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator __
     _DifferenceType __cnt = 1;
     __result[0] = __first[0];
 
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 1; __i < __n; ++__i)
     {
-        __PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
+        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
         if (!__pred(__first[__i], __first[__i - 1]))
         {
             __result[__cnt] = __first[__i];
@@ -250,10 +250,10 @@ simd_unique_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator __
 
 template <class _InputIterator, class _DifferenceType, class _OutputIterator, class _Assigner>
 _OutputIterator
-simd_assign(_InputIterator __first, _DifferenceType __n, _OutputIterator __result, _Assigner __assigner) noexcept
+__simd_assign(_InputIterator __first, _DifferenceType __n, _OutputIterator __result, _Assigner __assigner) noexcept
 {
-    __PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-    __PSTL_PRAGMA_SIMD
+    _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
         __assigner(__first + __i, __result + __i);
     return __result + __n;
@@ -261,14 +261,14 @@ simd_assign(_InputIterator __first, _DifferenceType __n, _OutputIterator __resul
 
 template <class _InputIterator, class _DifferenceType, class _OutputIterator, class _UnaryPredicate>
 _OutputIterator
-simd_copy_if(_InputIterator __first, _DifferenceType __n, _OutputIterator __result, _UnaryPredicate __pred) noexcept
+__simd_copy_if(_InputIterator __first, _DifferenceType __n, _OutputIterator __result, _UnaryPredicate __pred) noexcept
 {
     _DifferenceType __cnt = 0;
 
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
-        __PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
+        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
         if (__pred(__first[__i]))
         {
             __result[__cnt] = __first[__i];
@@ -280,11 +280,11 @@ simd_copy_if(_InputIterator __first, _DifferenceType __n, _OutputIterator __resu
 
 template <class _InputIterator, class _DifferenceType, class _BinaryPredicate>
 _DifferenceType
-simd_calc_mask_2(_InputIterator __first, _DifferenceType __n, bool* __mask, _BinaryPredicate __pred) noexcept
+__simd_calc_mask_2(_InputIterator __first, _DifferenceType __n, bool* __mask, _BinaryPredicate __pred) noexcept
 {
     _DifferenceType __count = 0;
 
-    __PSTL_PRAGMA_SIMD_REDUCTION(+ : __count)
+    _PSTL_PRAGMA_SIMD_REDUCTION(+ : __count)
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
         __mask[__i] = !__pred(__first[__i], __first[__i - 1]);
@@ -295,11 +295,11 @@ simd_calc_mask_2(_InputIterator __first, _DifferenceType __n, bool* __mask, _Bin
 
 template <class _InputIterator, class _DifferenceType, class _UnaryPredicate>
 _DifferenceType
-simd_calc_mask_1(_InputIterator __first, _DifferenceType __n, bool* __mask, _UnaryPredicate __pred) noexcept
+__simd_calc_mask_1(_InputIterator __first, _DifferenceType __n, bool* __mask, _UnaryPredicate __pred) noexcept
 {
     _DifferenceType __count = 0;
 
-    __PSTL_PRAGMA_SIMD_REDUCTION(+ : __count)
+    _PSTL_PRAGMA_SIMD_REDUCTION(+ : __count)
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
         __mask[__i] = __pred(__first[__i]);
@@ -310,16 +310,16 @@ simd_calc_mask_1(_InputIterator __first, _DifferenceType __n, bool* __mask, _Una
 
 template <class _InputIterator, class _DifferenceType, class _OutputIterator, class _Assigner>
 void
-simd_copy_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIterator __result, bool* __mask,
-                  _Assigner __assigner) noexcept
+__simd_copy_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIterator __result, bool* __mask,
+                    _Assigner __assigner) noexcept
 {
     _DifferenceType __cnt = 0;
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
         if (__mask[__i])
         {
-            __PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
+            _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
             {
                 __assigner(__first + __i, __result + __cnt);
                 ++__cnt;
@@ -330,14 +330,14 @@ simd_copy_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIterator _
 
 template <class _InputIterator, class _DifferenceType, class _OutputIterator1, class _OutputIterator2>
 void
-simd_partition_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIterator1 __out_true,
-                       _OutputIterator2 __out_false, bool* __mask) noexcept
+__simd_partition_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIterator1 __out_true,
+                         _OutputIterator2 __out_false, bool* __mask) noexcept
 {
     _DifferenceType __cnt_true = 0, __cnt_false = 0;
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
-        __PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(__cnt_true : 1, __cnt_false : 1)
+        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(__cnt_true : 1, __cnt_false : 1)
         if (__mask[__i])
         {
             __out_true[__cnt_true] = __first[__i];
@@ -353,10 +353,10 @@ simd_partition_by_mask(_InputIterator __first, _DifferenceType __n, _OutputItera
 
 template <class _Index, class _DifferenceType, class _Tp>
 _Index
-simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept
+__simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept
 {
-    __PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-    __PSTL_PRAGMA_SIMD
+    _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
         __first[__i] = __value;
     return __first + __n;
@@ -364,10 +364,10 @@ simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept
 
 template <class _Index, class _DifferenceType, class _Generator>
 _Index
-simd_generate_n(_Index __first, _DifferenceType __size, _Generator __g) noexcept
+__simd_generate_n(_Index __first, _DifferenceType __size, _Generator __g) noexcept
 {
-    __PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-    __PSTL_PRAGMA_SIMD
+    _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __size; ++__i)
         __first[__i] = __g();
     return __first + __size;
@@ -375,7 +375,7 @@ simd_generate_n(_Index __first, _DifferenceType __size, _Generator __g) noexcept
 
 template <class _Index, class _BinaryPredicate>
 _Index
-simd_adjacent_find(_Index __first, _Index __last, _BinaryPredicate __pred, bool __or_semantic) noexcept
+__simd_adjacent_find(_Index __first, _Index __last, _BinaryPredicate __pred, bool __or_semantic) noexcept
 {
     if (__last - __first < 2)
         return __last;
@@ -383,11 +383,11 @@ simd_adjacent_find(_Index __first, _Index __last, _BinaryPredicate __pred, bool 
     typedef typename std::iterator_traits<_Index>::difference_type _DifferenceType;
     _DifferenceType __i = 0;
 
-#if __PSTL_EARLYEXIT_PRESENT
+#if _PSTL_EARLYEXIT_PRESENT
     //Some compiler versions fail to compile the following loop when iterators are used. Indices are used instead
     const _DifferenceType __n = __last - __first - 1;
-    __PSTL_PRAGMA_VECTOR_UNALIGNED
-    __PSTL_PRAGMA_SIMD_EARLYEXIT
+    _PSTL_PRAGMA_VECTOR_UNALIGNED
+    _PSTL_PRAGMA_SIMD_EARLYEXIT
     for (; __i < __n; ++__i)
         if (__pred(__first[__i], __first[__i + 1]))
             break;
@@ -401,9 +401,9 @@ simd_adjacent_find(_Index __first, _Index __last, _BinaryPredicate __pred, bool 
     while (__last - __first >= __block_size)
     {
         _DifferenceType __found = 0;
-        __PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
-            __PSTL_PRAGMA_SIMD_REDUCTION(|
-                                         : __found) for (__i = 0; __i < __block_size - 1; ++__i)
+        _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
+            _PSTL_PRAGMA_SIMD_REDUCTION(|
+                                        : __found) for (__i = 0; __i < __block_size - 1; ++__i)
         {
             //TODO: to improve SIMD vectorization
             const _DifferenceType __t = __pred(*(__first + __i), *(__first + __i + 1));
@@ -444,9 +444,9 @@ using is_arithmetic_plus = std::integral_constant<bool, std::is_arithmetic<_Tp>:
 
 template <typename _DifferenceType, typename _Tp, typename _BinaryOperation, typename _UnaryOperation>
 typename std::enable_if<is_arithmetic_plus<_Tp, _BinaryOperation>::value, _Tp>::type
-simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _UnaryOperation __f) noexcept
+__simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _UnaryOperation __f) noexcept
 {
-    __PSTL_PRAGMA_SIMD_REDUCTION(+ : __init)
+    _PSTL_PRAGMA_SIMD_REDUCTION(+ : __init)
     for (_DifferenceType __i = 0; __i < __n; ++__i)
         __init += __f(__i);
     return __init;
@@ -454,16 +454,16 @@ simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _UnaryO
 
 template <typename _Size, typename _Tp, typename _BinaryOperation, typename _UnaryOperation>
 typename std::enable_if<!is_arithmetic_plus<_Tp, _BinaryOperation>::value, _Tp>::type
-simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept
+__simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept
 {
-    const std::size_t __block_size = __lane_size / sizeof(_Tp);
+    const _Size __block_size = __lane_size / sizeof(_Tp);
     if (__n > 2 * __block_size && __block_size > 1)
     {
         alignas(__lane_size) char __lane_[__lane_size];
         _Tp* __lane = reinterpret_cast<_Tp*>(__lane_);
 
         // initializer
-        __PSTL_PRAGMA_SIMD
+        _PSTL_PRAGMA_SIMD
         for (_Size __i = 0; __i < __block_size; ++__i)
         {
             ::new (__lane + __i) _Tp(__binary_op(__f(__i), __f(__block_size + __i)));
@@ -473,14 +473,14 @@ simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Unar
         const _Size last_iteration = __block_size * (__n / __block_size);
         for (; __i < last_iteration; __i += __block_size)
         {
-            __PSTL_PRAGMA_SIMD
+            _PSTL_PRAGMA_SIMD
             for (_Size __j = 0; __j < __block_size; ++__j)
             {
                 __lane[__j] = __binary_op(__lane[__j], __f(__i + __j));
             }
         }
         // remainder
-        __PSTL_PRAGMA_SIMD
+        _PSTL_PRAGMA_SIMD
         for (_Size __j = 0; __j < __n - last_iteration; ++__j)
         {
             __lane[__j] = __binary_op(__lane[__j], __f(last_iteration + __j));
@@ -491,7 +491,7 @@ simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Unar
             __init = __binary_op(__init, __lane[__i]);
         }
         // destroyer
-        __PSTL_PRAGMA_SIMD
+        _PSTL_PRAGMA_SIMD
         for (_Size __i = 0; __i < __block_size; ++__i)
         {
             __lane[__i].~_Tp();
@@ -511,14 +511,14 @@ simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Unar
 template <class _InputIterator, class _Size, class _OutputIterator, class _UnaryOperation, class _Tp,
           class _BinaryOperation>
 typename std::enable_if<is_arithmetic_plus<_Tp, _BinaryOperation>::value, std::pair<_OutputIterator, _Tp>>::type
-simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
-          _BinaryOperation, /*Inclusive*/ std::false_type)
+__simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
+            _BinaryOperation, /*Inclusive*/ std::false_type)
 {
-    __PSTL_PRAGMA_SIMD_SCAN(+ : __init)
+    _PSTL_PRAGMA_SIMD_SCAN(+ : __init)
     for (_Size __i = 0; __i < __n; ++__i)
     {
         __result[__i] = __init;
-        __PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__init)
+        _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__init)
         __init += __unary_op(__first[__i]);
     }
     return std::make_pair(__result + __n, __init);
@@ -546,20 +546,20 @@ struct _Combiner
 template <class _InputIterator, class _Size, class _OutputIterator, class _UnaryOperation, class _Tp,
           class _BinaryOperation>
 typename std::enable_if<!is_arithmetic_plus<_Tp, _BinaryOperation>::value, std::pair<_OutputIterator, _Tp>>::type
-simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
-          _BinaryOperation __binary_op, /*Inclusive*/ std::false_type)
+__simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
+            _BinaryOperation __binary_op, /*Inclusive*/ std::false_type)
 {
     typedef _Combiner<_Tp, _BinaryOperation> _CombinerType;
     _CombinerType __init_{__init, &__binary_op};
 
-    __PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
+    _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
 
-    __PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
+    _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
     for (_Size __i = 0; __i < __n; ++__i)
     {
         __result[__i] = __init_.__value;
-        __PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__init_)
-        __PSTL_PRAGMA_FORCEINLINE
+        _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__init_)
+        _PSTL_PRAGMA_FORCEINLINE
         __init_.__value = __binary_op(__init_.__value, __unary_op(__first[__i]));
     }
     return std::make_pair(__result + __n, __init_.__value);
@@ -569,14 +569,14 @@ simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOpe
 template <class _InputIterator, class _Size, class _OutputIterator, class _UnaryOperation, class _Tp,
           class _BinaryOperation>
 typename std::enable_if<is_arithmetic_plus<_Tp, _BinaryOperation>::value, std::pair<_OutputIterator, _Tp>>::type
-simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
-          _BinaryOperation, /*Inclusive*/ std::true_type)
+__simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
+            _BinaryOperation, /*Inclusive*/ std::true_type)
 {
-    __PSTL_PRAGMA_SIMD_SCAN(+ : __init)
+    _PSTL_PRAGMA_SIMD_SCAN(+ : __init)
     for (_Size __i = 0; __i < __n; ++__i)
     {
         __init += __unary_op(__first[__i]);
-        __PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__init)
+        _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__init)
         __result[__i] = __init;
     }
     return std::make_pair(__result + __n, __init);
@@ -586,20 +586,20 @@ simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOpe
 template <class _InputIterator, class _Size, class _OutputIterator, class _UnaryOperation, class _Tp,
           class _BinaryOperation>
 typename std::enable_if<!is_arithmetic_plus<_Tp, _BinaryOperation>::value, std::pair<_OutputIterator, _Tp>>::type
-simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
-          _BinaryOperation __binary_op, std::true_type)
+__simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOperation __unary_op, _Tp __init,
+            _BinaryOperation __binary_op, std::true_type)
 {
     typedef _Combiner<_Tp, _BinaryOperation> _CombinerType;
     _CombinerType __init_{__init, &__binary_op};
 
-    __PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
+    _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
 
-    __PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
+    _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
     for (_Size __i = 0; __i < __n; ++__i)
     {
-        __PSTL_PRAGMA_FORCEINLINE
+        _PSTL_PRAGMA_FORCEINLINE
         __init_.__value = __binary_op(__init_.__value, __unary_op(__first[__i]));
-        __PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__init_)
+        _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__init_)
         __result[__i] = __init_.__value;
     }
     return std::make_pair(__result + __n, __init_.__value);
@@ -609,7 +609,7 @@ simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryOpe
 // complexity [violation] - We will have at most (__n-1 + number_of_lanes) comparisons instead of at most __n-1.
 template <typename _ForwardIterator, typename _Size, typename _Compare>
 _ForwardIterator
-simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcept
+__simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcept
 {
     if (__n == 0)
     {
@@ -633,7 +633,7 @@ simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcept
         {
         }
 
-        __PSTL_PRAGMA_DECLARE_SIMD
+        _PSTL_PRAGMA_DECLARE_SIMD
         void
         operator()(const _ComplexType& __obj)
         {
@@ -648,9 +648,9 @@ simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcept
 
     _ComplexType __init{*__first, &__comp};
 
-    __PSTL_PRAGMA_DECLARE_REDUCTION(__min_func, _ComplexType)
+    _PSTL_PRAGMA_DECLARE_REDUCTION(__min_func, _ComplexType)
 
-    __PSTL_PRAGMA_SIMD_REDUCTION(__min_func : __init)
+    _PSTL_PRAGMA_SIMD_REDUCTION(__min_func : __init)
     for (_Size __i = 1; __i < __n; ++__i)
     {
         const _ValueType __min_val = __init.__min_val;
@@ -668,7 +668,7 @@ simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcept
 // complexity [violation] - We will have at most (2*(__n-1) + 4*number_of_lanes) comparisons instead of at most [1.5*(__n-1)].
 template <typename _ForwardIterator, typename _Size, typename _Compare>
 std::pair<_ForwardIterator, _ForwardIterator>
-simd_minmax_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcept
+__simd_minmax_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcept
 {
     if (__n == 0)
     {
@@ -727,9 +727,9 @@ simd_minmax_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexce
 
     _ComplexType __init{*__first, *__first, &__comp};
 
-    __PSTL_PRAGMA_DECLARE_REDUCTION(__min_func, _ComplexType);
+    _PSTL_PRAGMA_DECLARE_REDUCTION(__min_func, _ComplexType);
 
-    __PSTL_PRAGMA_SIMD_REDUCTION(__min_func : __init)
+    _PSTL_PRAGMA_SIMD_REDUCTION(__min_func : __init)
     for (_Size __i = 1; __i < __n; ++__i)
     {
         auto __min_val = __init.__min_val;
@@ -752,15 +752,15 @@ simd_minmax_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexce
 template <class _InputIterator, class _DifferenceType, class _OutputIterator1, class _OutputIterator2,
           class _UnaryPredicate>
 std::pair<_OutputIterator1, _OutputIterator2>
-simd_partition_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator1 __out_true,
-                    _OutputIterator2 __out_false, _UnaryPredicate __pred) noexcept
+__simd_partition_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator1 __out_true,
+                      _OutputIterator2 __out_false, _UnaryPredicate __pred) noexcept
 {
     _DifferenceType __cnt_true = 0, __cnt_false = 0;
 
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
-        __PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(__cnt_true : 1, __cnt_false : 1)
+        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(__cnt_true : 1, __cnt_false : 1)
         if (__pred(__first[__i]))
         {
             __out_true[__cnt_true] = __first[__i];
@@ -777,8 +777,8 @@ simd_partition_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator
 
 template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
 _ForwardIterator1
-simd_find_first_of(_ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __s_first,
-                   _ForwardIterator2 __s_last, _BinaryPredicate __pred) noexcept
+__simd_find_first_of(_ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __s_first,
+                     _ForwardIterator2 __s_last, _BinaryPredicate __pred) noexcept
 {
     typedef typename std::iterator_traits<_ForwardIterator1>::difference_type _DifferencType;
 
@@ -796,8 +796,9 @@ simd_find_first_of(_ForwardIterator1 __first, _ForwardIterator1 __last, _Forward
     {
         for (; __first != __last; ++__first)
         {
-            if (simd_or(__s_first, __n2,
-                        internal::equal_value_by_pred<decltype(*__first), _BinaryPredicate>(*__first, __pred)))
+            if (__unseq_backend::__simd_or(
+                    __s_first, __n2,
+                    __internal::__equal_value_by_pred<decltype(*__first), _BinaryPredicate>(*__first, __pred)))
             {
                 return __first;
             }
@@ -807,7 +808,7 @@ simd_find_first_of(_ForwardIterator1 __first, _ForwardIterator1 __last, _Forward
     {
         for (; __s_first != __s_last; ++__s_first)
         {
-            const auto __result = unseq_backend::simd_first(
+            const auto __result = __unseq_backend::__simd_first(
                 __first, _DifferencType(0), __n1, [__s_first, &__pred](_ForwardIterator1 __it, _DifferencType __i) {
                     return __pred(__it[__i], *__s_first);
                 });
@@ -822,10 +823,10 @@ simd_find_first_of(_ForwardIterator1 __first, _ForwardIterator1 __last, _Forward
 
 template <class _RandomAccessIterator, class _DifferenceType, class _UnaryPredicate>
 _RandomAccessIterator
-simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredicate __pred) noexcept
+__simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredicate __pred) noexcept
 {
     // find first element we need to remove
-    auto __current = unseq_backend::simd_first(
+    auto __current = __unseq_backend::__simd_first(
         __first, _DifferenceType(0), __n,
         [&__pred](_RandomAccessIterator __it, _DifferenceType __i) { return __pred(__it[__i]); });
     __n -= __current - __first;
@@ -837,10 +838,10 @@ simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredica
     }
 
     _DifferenceType __cnt = 0;
-    __PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 1; __i < __n; ++__i)
     {
-        __PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
+        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
         if (!__pred(__current[__i]))
         {
             __current[__cnt] = std::move(__current[__i]);
@@ -849,7 +850,7 @@ simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredica
     }
     return __current + __cnt;
 }
-} // namespace unseq_backend
+} // namespace __unseq_backend
 } // namespace __pstl
 
-#endif /* __PSTL_unseq_backend_simd_H */
+#endif /* _PSTL_UNSEQ_BACKEND_SIMD_H */

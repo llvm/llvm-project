@@ -10,7 +10,6 @@
 #include "MICmnMIValueTuple.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueTuple constructor.
 // Type:    Method.
 // Args:    None.
@@ -22,7 +21,6 @@ CMICmnMIValueTuple::CMICmnMIValueTuple() : m_bSpaceAfterComma(false) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueTuple constructor.
 // Type:    Method.
 // Args:    vResult - (R) MI result object.
@@ -37,7 +35,6 @@ CMICmnMIValueTuple::CMICmnMIValueTuple(const CMICmnMIValueResult &vResult)
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueTuple constructor.
 // Type:    Method.
 // Args:    vResult         - (R) MI result object.
@@ -55,7 +52,6 @@ CMICmnMIValueTuple::CMICmnMIValueTuple(const CMICmnMIValueResult &vResult,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueTuple destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -65,7 +61,6 @@ CMICmnMIValueTuple::CMICmnMIValueTuple(const CMICmnMIValueResult &vResult,
 CMICmnMIValueTuple::~CMICmnMIValueTuple() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Build the result value's mandatory data part, one tuple
 // Type:    Method.
 // Args:    None.
@@ -78,7 +73,6 @@ void CMICmnMIValueTuple::BuildTuple() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI result object to the value's list of tuples.
 // Type:    Method.
 // Args:    vResult - (R) The MI result object.
@@ -107,7 +101,6 @@ void CMICmnMIValueTuple::BuildTuple(const CMICmnMIValueResult &vResult) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add string value to the value's list of tuples.
 // Type:    Method.
 // Args:    vValue  - (R) The string object.
@@ -129,7 +122,6 @@ void CMICmnMIValueTuple::BuildTuple(const CMIUtilString &vValue) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI value object to  the value list's of list is values.
 //          Only values objects can be added to a list of values otherwise this
 //          function
@@ -144,7 +136,6 @@ void CMICmnMIValueTuple::Add(const CMICmnMIValueResult &vResult) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI value object to  the value list's of list is values.
 //          Only values objects can be added to a list of values otherwise this
 //          function
@@ -163,7 +154,6 @@ void CMICmnMIValueTuple::Add(const CMICmnMIValueResult &vResult,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI value object to  the value list's of list is values.
 //          Only values objects can be added to a list of values otherwise this
 //          function
@@ -182,7 +172,6 @@ void CMICmnMIValueTuple::Add(const CMICmnMIValueConst &vValue,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the contents of *this value object but without the outer
 // most
 //          brackets.

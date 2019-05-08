@@ -150,15 +150,75 @@ entry:
 ; CHECK-NEXT: .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK-NEXT: .b8 8                                // Address Size (in bytes)
 ; CHECK-NEXT: .b8 1                                // Abbrev [1] 0xb:0xb0 DW_TAG_compile_unit
-; CHECK-NEXT: .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,116,114,117,110,107,32,50,48,52,49,54,52,41,32,40,108,108,118,109 // DW_AT_producer
-; CHECK-NEXT: .b8 47,116,114,117,110,107,32,50,48,52,49,56,51,41
+; CHECK-NEXT: .b8 99                               // DW_AT_producer
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 105
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 53
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 40
+; CHECK-NEXT: .b8 116
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 117
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 107
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 50
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 52
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 54
+; CHECK-NEXT: .b8 52
+; CHECK-NEXT: .b8 41
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 40
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 109
+; CHECK-NEXT: .b8 47
+; CHECK-NEXT: .b8 116
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 117
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 107
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 50
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 52
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 56
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 41
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 12                               // DW_AT_language
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 98,46,99                         // DW_AT_name
+; CHECK-NEXT: .b8 98                               // DW_AT_name
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK-NEXT: .b8 47,115,111,117,114,99,101        // DW_AT_comp_dir
+; CHECK-NEXT: .b8 47                               // DW_AT_comp_dir
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 117
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 101
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK-NEXT: .b64 Lfunc_end2                      // DW_AT_high_pc
@@ -201,7 +261,9 @@ entry:
 ; CHECK-NEXT: .b32 179                             // DW_AT_type
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: .b8 4                                // Abbrev [4] 0xb3:0x7 DW_TAG_base_type
-; CHECK-NEXT: .b8 105,110,116                      // DW_AT_name
+; CHECK-NEXT: .b8 105                              // DW_AT_name
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 5                                // DW_AT_encoding
 ; CHECK-NEXT: .b8 4                                // DW_AT_byte_size

@@ -1,0 +1,17 @@
+// UNSUPPORTED: windows
+// REQUIRES: darwin
+// RUN: rm -rf %t.dir && mkdir -p %t.dir
+// RUN: cd %t.dir
+//
+// RUN: %clang -forder-file-instrumentation -O1 -o %t.2 %S/Inputs/instrprof-order-file-2.c %S/Inputs/instrprof-order-file.c -mllvm -orderfile-write-mapping="mapping.txt"
+// RUN: %run %t.2 ANY
+// RUN: od -h default.profraw.order | FileCheck %s
+// RUN: cat mapping.txt | FileCheck %s --check-prefix=MAPPING
+
+// Make sure we have MD5 for main, then f, then g.
+// CHECK: 0000000      d5fa    e78d    6436    db95    a18f    dd4c    4f75    cc91
+// CHECK: 0000020      f5b2    47ff    6643    b671    0000    0000    0000    0000
+
+// MAPPING: MD5 cc914f75dd4ca18f f
+// MAPPING: MD5 b671664347fff5b2 g
+// MAPPING: MD5 db956436e78dd5fa main

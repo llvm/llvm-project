@@ -253,7 +253,8 @@ unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
 unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+      AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
     return 512;
   }
 
@@ -610,7 +611,7 @@ unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
 }
 
 bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
-                                        const Function *Callee) const {
+                                     const Function *Callee) const {
   const TargetMachine &TM = getTLI()->getTargetMachine();
   const FeatureBitset &CallerBits =
     TM.getSubtargetImpl(*Caller)->getFeatureBits();
@@ -619,7 +620,14 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
 
   FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
   FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
-  return ((RealCallerBits & RealCalleeBits) == RealCalleeBits);
+  if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
+    return false;
+
+  // FIXME: dx10_clamp can just take the caller setting, but there seems to be
+  // no way to support merge for backend defined attributes.
+  AMDGPU::SIModeRegisterDefaults CallerMode(*Caller);
+  AMDGPU::SIModeRegisterDefaults CalleeMode(*Callee);
+  return CallerMode.isInlineCompatible(CalleeMode);
 }
 
 void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

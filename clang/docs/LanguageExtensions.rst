@@ -1791,7 +1791,7 @@ the arguments. Both arguments and the result have the bitwidth specified
 by the name of the builtin.
 
 ``__builtin_rotateright``
-_------------------------
+-------------------------
 
 * ``__builtin_rotateright8``
 * ``__builtin_rotateright16``
@@ -2375,6 +2375,103 @@ Which compiles to (on X86-32):
           movl    4(%esp), %eax
           movl    %gs:(%eax), %eax
           ret
+
+PowerPC Language Extensions
+------------------------------
+
+Set the Floating Point Rounding Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PowerPC64/PowerPC64le supports the builtin function ``__builtin_setrnd`` to set
+the floating point rounding mode. This function will use the least significant
+two bits of integer argument to set the floating point rounding mode.
+
+.. code-block:: c++
+
+  double __builtin_setrnd(int mode);
+
+The effective values for mode are:
+
+    - 0 - round to nearest
+    - 1 - round to zero
+    - 2 - round to +infinity
+    - 3 - round to -infinity
+
+Note that the mode argument will modulo 4, so if the int argument is greater 
+than 3, it will only use the least significant two bits of the mode. 
+Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
+
+PowerPC Language Extensions
+------------------------------
+
+Set the Floating Point Rounding Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PowerPC64/PowerPC64le supports the builtin function ``__builtin_setrnd`` to set
+the floating point rounding mode. This function will use the least significant
+two bits of integer argument to set the floating point rounding mode.
+
+.. code-block:: c++
+
+  double __builtin_setrnd(int mode);
+
+The effective values for mode are:
+
+    - 0 - round to nearest
+    - 1 - round to zero
+    - 2 - round to +infinity
+    - 3 - round to -infinity
+
+Note that the mode argument will modulo 4, so if the integer argument is greater
+than 3, it will only use the least significant two bits of the mode. 
+Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
+
+PowerPC Language Extensions
+------------------------------
+
+Set the Floating Point Rounding Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PowerPC64/PowerPC64le supports the builtin function ``__builtin_setrnd`` to set
+the floating point rounding mode. This function will use the least significant
+two bits of integer argument to set the floating point rounding mode.
+
+.. code-block:: c++
+
+  double __builtin_setrnd(int mode);
+
+The effective values for mode are:
+
+    - 0 - round to nearest
+    - 1 - round to zero
+    - 2 - round to +infinity
+    - 3 - round to -infinity
+
+Note that the mode argument will modulo 4, so if the integer argument is greater
+than 3, it will only use the least significant two bits of the mode. 
+Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
+
+PowerPC cache builtins
+^^^^^^^^^^^^^^^^^^^^^^
+
+The PowerPC architecture specifies instructions implementing cache operations.
+Clang provides builtins that give direct programmer access to these cache
+instructions.
+
+Currently the following builtins are implemented in clang:
+
+``__builtin_dcbf`` copies the contents of a modified block from the data cache
+to main memory and flushes the copy from the data cache.
+
+**Syntax**:
+
+.. code-block:: c
+
+  void __dcbf(const void* addr); /* Data Cache Block Flush */
+
+**Example of Use**:
+
+.. code-block:: c
+
+  int a = 1;
+  __builtin_dcbf (&a);
 
 Extensions for Static Analysis
 ==============================

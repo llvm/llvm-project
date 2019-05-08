@@ -1641,7 +1641,7 @@ ObjCIvarDecl *ObjCInterfaceDecl::all_declared_ivar_begin() {
 
       if (!layout.empty()) {
         // Order synthesized ivars by their size.
-        std::stable_sort(layout.begin(), layout.end());
+        llvm::stable_sort(layout);
         unsigned Ix = 0, EIx = layout.size();
         if (!data().IvarList) {
           data().IvarList = layout[0].Ivar; Ix++;

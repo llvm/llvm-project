@@ -168,7 +168,8 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: .b8 1                                // DW_FORM_addr
 ; CHECK-NEXT: .b8 64                               // DW_AT_frame_base
 ; CHECK-NEXT: .b8 10                               // DW_FORM_block1
-; CHECK-NEXT: .b8 135,64                           // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 135                              // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 64
 ; CHECK-NEXT: .b8 8                                // DW_FORM_string
 ; CHECK-NEXT: .b8 3                                // DW_AT_name
 ; CHECK-NEXT: .b8 8                                // DW_FORM_string
@@ -202,7 +203,8 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: .b8 1                                // DW_FORM_addr
 ; CHECK-NEXT: .b8 64                               // DW_AT_frame_base
 ; CHECK-NEXT: .b8 10                               // DW_FORM_block1
-; CHECK-NEXT: .b8 135,64                           // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 135                              // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 64
 ; CHECK-NEXT: .b8 8                                // DW_FORM_string
 ; CHECK-NEXT: .b8 3                                // DW_AT_name
 ; CHECK-NEXT: .b8 8                                // DW_FORM_string
@@ -250,14 +252,74 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK-NEXT: .b8 8                                // Address Size (in bytes)
 ; CHECK-NEXT: .b8 1                                // Abbrev [1] 0xb:0x8f DW_TAG_compile_unit
-; CHECK-NEXT: .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,50,49,48,52,55,57,41 // DW_AT_producer
+; CHECK-NEXT: .b8 99                               // DW_AT_producer
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 105
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 53
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 40
+; CHECK-NEXT: .b8 50
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 52
+; CHECK-NEXT: .b8 55
+; CHECK-NEXT: .b8 57
+; CHECK-NEXT: .b8 41
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 4                                // DW_AT_language
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 100,101,98,117,103,45,108,111,99,45,111,102,102,115,101,116,50,46,99,99 // DW_AT_name
+; CHECK-NEXT: .b8 100                              // DW_AT_name
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 98
+; CHECK-NEXT: .b8 117
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 45
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 45
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 102
+; CHECK-NEXT: .b8 102
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 116
+; CHECK-NEXT: .b8 50
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK-NEXT: .b8 47,108,108,118,109,95,99,109,97,107,101,95,103,99,99 // DW_AT_comp_dir
+; CHECK-NEXT: .b8 47                               // DW_AT_comp_dir
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 109
+; CHECK-NEXT: .b8 95
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 109
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 107
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 95
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b64 Lfunc_begin1                    // DW_AT_low_pc
 ; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
@@ -270,9 +332,18 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
-; CHECK-NEXT: .b8 95,90,51,98,97,122,49,65         // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 95                               // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 90
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 98
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 122
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 65
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 98,97,122                        // DW_AT_name
+; CHECK-NEXT: .b8 98                               // DW_AT_name
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 122
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 2                                // DW_AT_decl_file
 ; CHECK-NEXT: .b8 6                                // DW_AT_decl_line
@@ -291,14 +362,74 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK-NEXT: .b8 8                                // Address Size (in bytes)
 ; CHECK-NEXT: .b8 1                                // Abbrev [1] 0xb:0x91 DW_TAG_compile_unit
-; CHECK-NEXT: .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,50,49,48,52,55,57,41 // DW_AT_producer
+; CHECK-NEXT: .b8 99                               // DW_AT_producer
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 105
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 53
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 40
+; CHECK-NEXT: .b8 50
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 52
+; CHECK-NEXT: .b8 55
+; CHECK-NEXT: .b8 57
+; CHECK-NEXT: .b8 41
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 4                                // DW_AT_language
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 100,101,98,117,103,45,108,111,99,45,111,102,102,115,101,116,49,46,99,99 // DW_AT_name
+; CHECK-NEXT: .b8 100                              // DW_AT_name
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 98
+; CHECK-NEXT: .b8 117
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 45
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 45
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 102
+; CHECK-NEXT: .b8 102
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 116
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK-NEXT: .b8 47,108,108,118,109,95,99,109,97,107,101,95,103,99,99 // DW_AT_comp_dir
+; CHECK-NEXT: .b8 47                               // DW_AT_comp_dir
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 109
+; CHECK-NEXT: .b8 95
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 109
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 107
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 95
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
@@ -307,9 +438,17 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
-; CHECK-NEXT: .b8 95,90,51,98,97,114,105           // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 95                               // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 90
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 98
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 105
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 98,97,114                        // DW_AT_name
+; CHECK-NEXT: .b8 98                               // DW_AT_name
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 114
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 1                                // DW_AT_decl_file
 ; CHECK-NEXT: .b8 1                                // DW_AT_decl_line
@@ -323,7 +462,9 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: .b32 148                             // DW_AT_type
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: .b8 7                                // Abbrev [7] 0x94:0x7 DW_TAG_base_type
-; CHECK-NEXT: .b8 105,110,116                      // DW_AT_name
+; CHECK-NEXT: .b8 105                              // DW_AT_name
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 5                                // DW_AT_encoding
 ; CHECK-NEXT: .b8 4                                // DW_AT_byte_size

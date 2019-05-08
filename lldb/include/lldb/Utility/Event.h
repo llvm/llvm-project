@@ -34,9 +34,7 @@ class Stream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // lldb::EventData
-//----------------------------------------------------------------------
 class EventData {
   friend class Event;
 
@@ -45,7 +43,7 @@ public:
 
   virtual ~EventData();
 
-  virtual const ConstString &GetFlavor() const = 0;
+  virtual ConstString GetFlavor() const = 0;
 
   virtual void Dump(Stream *s) const;
 
@@ -55,14 +53,10 @@ private:
   DISALLOW_COPY_AND_ASSIGN(EventData);
 };
 
-//----------------------------------------------------------------------
 // lldb::EventDataBytes
-//----------------------------------------------------------------------
 class EventDataBytes : public EventData {
 public:
-  //------------------------------------------------------------------
   // Constructors
-  //------------------------------------------------------------------
   EventDataBytes();
 
   EventDataBytes(const char *cstr);
@@ -73,10 +67,8 @@ public:
 
   ~EventDataBytes() override;
 
-  //------------------------------------------------------------------
   // Member functions
-  //------------------------------------------------------------------
-  const ConstString &GetFlavor() const override;
+  ConstString GetFlavor() const override;
 
   void Dump(Stream *s) const override;
 
@@ -90,16 +82,14 @@ public:
 
   void SetBytesFromCString(const char *cstr);
 
-  //------------------------------------------------------------------
   // Static functions
-  //------------------------------------------------------------------
   static const EventDataBytes *GetEventDataFromEvent(const Event *event_ptr);
 
   static const void *GetBytesFromEvent(const Event *event_ptr);
 
   static size_t GetByteSizeFromEvent(const Event *event_ptr);
 
-  static const ConstString &GetFlavorString();
+  static ConstString GetFlavorString();
 
 private:
   std::string m_bytes;
@@ -113,12 +103,12 @@ public:
 
   ~EventDataReceipt() override {}
 
-  static const ConstString &GetFlavorString() {
+  static ConstString GetFlavorString() {
     static ConstString g_flavor("Process::ProcessEventData");
     return g_flavor;
   }
 
-  const ConstString &GetFlavor() const override { return GetFlavorString(); }
+  ConstString GetFlavor() const override { return GetFlavorString(); }
 
   bool WaitForEventReceived(const Timeout<std::micro> &timeout = llvm::None) {
     return m_predicate.WaitForValueEqualTo(true, timeout);
@@ -132,16 +122,12 @@ private:
   }
 };
 
-//----------------------------------------------------------------------
 /// This class handles one or more StructuredData::Dictionary entries
 /// that are raised for structured data events.
-//----------------------------------------------------------------------
 
 class EventDataStructuredData : public EventData {
 public:
-  //------------------------------------------------------------------
   // Constructors
-  //------------------------------------------------------------------
   EventDataStructuredData();
 
   EventDataStructuredData(const lldb::ProcessSP &process_sp,
@@ -150,10 +136,8 @@ public:
 
   ~EventDataStructuredData() override;
 
-  //------------------------------------------------------------------
   // Member functions
-  //------------------------------------------------------------------
-  const ConstString &GetFlavor() const override;
+  ConstString GetFlavor() const override;
 
   void Dump(Stream *s) const override;
 
@@ -169,9 +153,7 @@ public:
 
   void SetStructuredDataPlugin(const lldb::StructuredDataPluginSP &plugin_sp);
 
-  //------------------------------------------------------------------
   // Static functions
-  //------------------------------------------------------------------
   static const EventDataStructuredData *
   GetEventDataFromEvent(const Event *event_ptr);
 
@@ -182,7 +164,7 @@ public:
   static lldb::StructuredDataPluginSP
   GetPluginFromEvent(const Event *event_ptr);
 
-  static const ConstString &GetFlavorString();
+  static ConstString GetFlavorString();
 
 private:
   lldb::ProcessSP m_process_sp;
@@ -192,9 +174,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(EventDataStructuredData);
 };
 
-//----------------------------------------------------------------------
 // lldb::Event
-//----------------------------------------------------------------------
 class Event {
   friend class Listener;
   friend class EventData;

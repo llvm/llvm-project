@@ -173,24 +173,27 @@ void IncludeInserter::addExisting(const Inclusion &Inc) {
 /// FIXME(ioeric): we might not want to insert an absolute include path if the
 /// path is not shortened.
 bool IncludeInserter::shouldInsertInclude(
-    const HeaderFile &DeclaringHeader, const HeaderFile &InsertedHeader) const {
-  assert(DeclaringHeader.valid() && InsertedHeader.valid());
-  if (FileName == DeclaringHeader.File || FileName == InsertedHeader.File)
+    PathRef DeclaringHeader, const HeaderFile &InsertedHeader) const {
+  assert(InsertedHeader.valid());
+  if (!HeaderSearchInfo && !InsertedHeader.Verbatim)
+    return false;
+  if (FileName == DeclaringHeader || FileName == InsertedHeader.File)
     return false;
   auto Included = [&](llvm::StringRef Header) {
     return IncludedHeaders.find(Header) != IncludedHeaders.end();
   };
-  return !Included(DeclaringHeader.File) && !Included(InsertedHeader.File);
+  return !Included(DeclaringHeader) && !Included(InsertedHeader.File);
 }
 
 std::string
-IncludeInserter::calculateIncludePath(const HeaderFile &DeclaringHeader,
-                                      const HeaderFile &InsertedHeader) const {
-  assert(DeclaringHeader.valid() && InsertedHeader.valid());
+IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader) const {
+  assert(InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
   bool IsSystem = false;
-  std::string Suggested = HeaderSearchInfo.suggestPathToFileForDiagnostics(
+  if (!HeaderSearchInfo)
+    return "\"" + InsertedHeader.File + "\"";
+  std::string Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
       InsertedHeader.File, BuildDir, &IsSystem);
   if (IsSystem)
     Suggested = "<" + Suggested + ">";

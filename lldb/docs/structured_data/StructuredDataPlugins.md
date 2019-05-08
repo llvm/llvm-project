@@ -35,7 +35,7 @@ StructuredDataPlugin instances have the following characteristics:
 
   ```C++
   virtual Error
-  ConfigureStructuredData(const ConstString &type_name,
+  ConfigureStructuredData(ConstString type_name,
                           const StructuredData::ObjectSP &config_sp)
   ```
 
@@ -110,7 +110,7 @@ StructuredDataPlugin instances have the following characteristics:
 
     ```C++
     virtual Error
-    ConfigureStructuredData(const ConstString &type_name,
+    ConfigureStructuredData(ConstString type_name,
                             const StructuredData::ObjectSP &config_sp)
     ```
 

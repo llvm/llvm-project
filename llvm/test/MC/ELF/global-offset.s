@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -o - | llvm-readobj -s -sd | FileCheck  %s
+// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck  %s
 
 // We test that _GLOBAL_OFFSET_TABLE_ will account for the two bytes at the
 // start of the addl/leal.

@@ -81,12 +81,10 @@ void CompileUnit::ForeachFunction(
       return;
 }
 
-//----------------------------------------------------------------------
 // Dump the current contents of this object. No functions that cause on demand
 // parsing of functions, globals, statics are called, so this is a good
 // function to call to get an idea of the current contents of the CompileUnit
 // object.
-//----------------------------------------------------------------------
 void CompileUnit::Dump(Stream *s, bool show_context) const {
   const char *language = Language::GetNameForLanguageType(m_language);
 
@@ -116,14 +114,11 @@ void CompileUnit::Dump(Stream *s, bool show_context) const {
   }
 }
 
-//----------------------------------------------------------------------
 // Add a function to this compile unit
-//----------------------------------------------------------------------
 void CompileUnit::AddFunction(FunctionSP &funcSP) {
   m_functions_by_uid[funcSP->GetID()] = funcSP;
 }
 
-//----------------------------------------------------------------------
 // Find functions using the Mangled::Tokens token list. This function currently
 // implements an interactive approach designed to find all instances of certain
 // functions. It isn't designed to the quickest way to lookup functions as it
@@ -145,7 +140,6 @@ void CompileUnit::AddFunction(FunctionSP &funcSP) {
 // method should be able to take advantage of any accelerator tables available
 // in the debug information (which is parsed by the SymbolFile parser plug-ins
 // and registered with each Module).
-//----------------------------------------------------------------------
 // void
 // CompileUnit::FindFunctions(const Mangled::Tokens& tokens)
 //{

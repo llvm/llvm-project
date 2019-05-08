@@ -17,6 +17,10 @@ if(COMPILER_RT_BUILD_BUILTINS)
   add_subdirectory(builtins)
 endif()
 
+if(COMPILER_RT_BUILD_CRT AND COMPILER_RT_HAS_CRT)
+  add_subdirectory(crt)
+endif()
+
 function(compiler_rt_build_runtime runtime)
   string(TOUPPER ${runtime} runtime_uppercase)
   if(COMPILER_RT_HAS_${runtime_uppercase})

@@ -266,6 +266,8 @@ module Opcode : sig
   | CatchPad
   | CleanupPad
   | CatchSwitch
+  | FNeg
+  | CallBr
 end
 
 (** The type of a clause of a [landingpad] instruction.

@@ -31,6 +31,7 @@
 // CHECK-BASIC-V8: "target-features"="+armv8-a,+crc,+crypto,+dsp,+fp-armv8,+hwdiv,+hwdiv-arm,+neon,+thumb-mode"
 
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V82
+// RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m5 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V82
 // CHECK-BASIC-V82: "target-features"="+armv8.2-a,+crc,+crypto,+dotprod,+dsp,+fp-armv8,+hwdiv,+hwdiv-arm,+neon,+ras,+thumb-mode"
 
 // RUN: %clang_cc1 -triple armv8-linux-gnueabi -target-cpu cortex-a53 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8-ARM

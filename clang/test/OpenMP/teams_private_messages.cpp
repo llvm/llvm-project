@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -89,7 +90,7 @@ int main(int argc, char **argv) {
   #pragma omp teams private (argv[1]) // expected-error {{expected variable name}}
   foo();
   #pragma omp target
-  #pragma omp teams private(ba)
+  #pragma omp teams private(ba) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   foo();
   #pragma omp target
   #pragma omp teams private(ca) // expected-error {{const-qualified variable without mutable fields cannot be private}}

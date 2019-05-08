@@ -942,8 +942,13 @@ struct fat_arch_64 {
 // Structs from <mach-o/reloc.h>
 struct relocation_info {
   int32_t r_address;
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && (BYTE_ORDER == BIG_ENDIAN)
+  uint32_t r_type : 4,  r_extern : 1, r_length : 2, r_pcrel : 1,
+      r_symbolnum : 24;
+#else
   uint32_t r_symbolnum : 24, r_pcrel : 1, r_length : 2, r_extern : 1,
       r_type : 4;
+#endif
 };
 
 struct scattered_relocation_info {
@@ -1477,7 +1482,10 @@ enum CPUSubTypeARM {
   CPU_SUBTYPE_ARM_V7EM = 16
 };
 
-enum CPUSubTypeARM64 { CPU_SUBTYPE_ARM64_ALL = 0 };
+enum CPUSubTypeARM64 {
+  CPU_SUBTYPE_ARM64_ALL = 0,
+  CPU_SUBTYPE_ARM64E = 2,
+};
 
 enum CPUSubTypeSPARC { CPU_SUBTYPE_SPARC_ALL = 0 };
 

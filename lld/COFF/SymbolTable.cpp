@@ -50,12 +50,7 @@ void SymbolTable::addFile(InputFile *File) {
     ImportFile::Instances.push_back(F);
   }
 
-  StringRef S = File->getDirectives();
-  if (S.empty())
-    return;
-
-  log("Directives: " + toString(File) + ": " + S);
-  Driver->parseDirectives(S);
+  Driver->parseDirectives(File);
 }
 
 static void errorOrWarn(const Twine &S) {

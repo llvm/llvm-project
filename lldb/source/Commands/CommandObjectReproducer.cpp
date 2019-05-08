@@ -49,6 +49,9 @@ protected:
 
     result.GetOutputStream()
         << "Reproducer written to '" << r.GetReproducerPath() << "'\n";
+    result.GetOutputStream()
+        << "Please have a look at the directory to assess if you're willing to "
+           "share the contained information.\n";
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return result.Succeeded();

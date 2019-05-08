@@ -150,10 +150,14 @@ class Parser : public CodeCompletionHandler {
   IdentifierInfo *Ident_language, *Ident_defined_in,
       *Ident_generated_declaration;
 
-  /// C++0x contextual keywords.
+  /// C++11 contextual keywords.
   mutable IdentifierInfo *Ident_final;
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
+
+  // C++2a contextual keywords.
+  mutable IdentifierInfo *Ident_import;
+  mutable IdentifierInfo *Ident_module;
 
   // C++ type trait keywords that can be reverted to identifiers and still be
   // used as type traits.
@@ -424,7 +428,7 @@ public:
 
   /// ParseTopLevelDecl - Parse one top-level declaration. Returns true if
   /// the EOF was encountered.
-  bool ParseTopLevelDecl(DeclGroupPtrTy &Result);
+  bool ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl = false);
   bool ParseTopLevelDecl() {
     DeclGroupPtrTy Result;
     return ParseTopLevelDecl(Result);
@@ -789,9 +793,8 @@ private:
     /// Annotation was successful.
     ANK_Success
   };
-  AnnotatedNameKind
-  TryAnnotateName(bool IsAddressOfOperand,
-                  std::unique_ptr<CorrectionCandidateCallback> CCC = nullptr);
+  AnnotatedNameKind TryAnnotateName(bool IsAddressOfOperand,
+                                    CorrectionCandidateCallback *CCC = nullptr);
 
   /// Push a tok::annot_cxxscope token onto the token stream.
   void AnnotateScopeToken(CXXScopeSpec &SS, bool IsNewAnnotation);
@@ -1149,6 +1152,7 @@ private:
     Parser *Self;
     CachedTokens Toks;
     IdentifierInfo &AttrName;
+    IdentifierInfo *MacroII = nullptr;
     SourceLocation AttrNameLoc;
     SmallVector<Decl*, 2> Decls;
 
@@ -1574,7 +1578,8 @@ private:
   ObjCImplParsingDataRAII *CurParsedObjCImpl;
   void StashAwayMethodOrFunctionBodyTokens(Decl *MDecl);
 
-  DeclGroupPtrTy ParseObjCAtImplementationDeclaration(SourceLocation AtLoc);
+  DeclGroupPtrTy ParseObjCAtImplementationDeclaration(SourceLocation AtLoc,
+                                                      ParsedAttributes &Attrs);
   DeclGroupPtrTy ParseObjCAtEndDeclaration(SourceRange atEnd);
   Decl *ParseObjCAtAliasDeclaration(SourceLocation atLoc);
   Decl *ParseObjCPropertySynthesize(SourceLocation atLoc);
@@ -3004,7 +3009,7 @@ private:
 
   //===--------------------------------------------------------------------===//
   // Modules
-  DeclGroupPtrTy ParseModuleDecl();
+  DeclGroupPtrTy ParseModuleDecl(bool IsFirstDecl);
   Decl *ParseModuleImport(SourceLocation AtLoc);
   bool parseMisplacedModuleImport();
   bool tryParseMisplacedModuleImport() {

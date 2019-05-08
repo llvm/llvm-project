@@ -51,17 +51,16 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    shlb $4, %al
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shlb $4, %cl
-; X86-NEXT:    addb %al, %cl
-; X86-NEXT:    movb $-1, %al
-; X86-NEXT:    jb .LBB2_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:  .LBB2_2:
+; X86-NEXT:    shlb $4, %al
+; X86-NEXT:    addb %cl, %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movl $255, %eax
+; X86-NEXT:    cmovael %ecx, %eax
 ; X86-NEXT:    shrb $4, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func3:
@@ -69,12 +68,11 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X64-NEXT:    shlb $4, %sil
 ; X64-NEXT:    shlb $4, %dil
 ; X64-NEXT:    addb %sil, %dil
-; X64-NEXT:    movb $-1, %al
-; X64-NEXT:    jb .LBB2_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:  .LBB2_2:
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    movl $255, %eax
+; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    shrb $4, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %tmp = call i4 @llvm.uadd.sat.i4(i4 %x, i4 %y);
   ret i4 %tmp;
@@ -112,17 +110,11 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-LABEL: vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    pxor %xmm0, %xmm2
-; X64-NEXT:    movdqa {{.*#+}} xmm3 = [2147483647,2147483647,2147483647,2147483647]
-; X64-NEXT:    pxor %xmm1, %xmm3
-; X64-NEXT:    pcmpgtd %xmm2, %xmm3
-; X64-NEXT:    pand %xmm3, %xmm0
-; X64-NEXT:    pcmpeqd %xmm2, %xmm2
-; X64-NEXT:    pxor %xmm3, %xmm2
-; X64-NEXT:    movdqa %xmm1, %xmm3
-; X64-NEXT:    pandn %xmm2, %xmm3
-; X64-NEXT:    por %xmm3, %xmm0
-; X64-NEXT:    paddd %xmm1, %xmm0
+; X64-NEXT:    paddd %xmm0, %xmm1
+; X64-NEXT:    pxor %xmm2, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm2
+; X64-NEXT:    pcmpgtd %xmm2, %xmm0
+; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    retq
   %tmp = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %x, <4 x i32> %y);
   ret <4 x i32> %tmp;

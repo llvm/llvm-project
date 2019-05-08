@@ -1914,12 +1914,19 @@ APInt APInt::smul_ov(const APInt &RHS, bool &Overflow) const {
 }
 
 APInt APInt::umul_ov(const APInt &RHS, bool &Overflow) const {
-  APInt Res = *this * RHS;
+  if (countLeadingZeros() + RHS.countLeadingZeros() + 2 <= BitWidth) {
+    Overflow = true;
+    return *this * RHS;
+  }
 
-  if (*this != 0 && RHS != 0)
-    Overflow = Res.udiv(RHS) != *this || Res.udiv(*this) != RHS;
-  else
-    Overflow = false;
+  APInt Res = lshr(1) * RHS;
+  Overflow = Res.isNegative();
+  Res <<= 1;
+  if ((*this)[0]) {
+    Res += RHS;
+    if (Res.ult(RHS))
+      Overflow = true;
+  }
   return Res;
 }
 

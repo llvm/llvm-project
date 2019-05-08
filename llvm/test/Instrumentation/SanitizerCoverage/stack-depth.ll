@@ -29,7 +29,7 @@ entry:
 ; CHECK: [[lowest:%[^ \t]+]] = load [[intType]], [[intType]]* @__sancov_lowest_stack
 ; CHECK: [[cmp:%[^ \t]+]] = icmp ult [[intType]] [[frameInt]], [[lowest]]
 ; CHECK: br i1 [[cmp]], label %[[ifLabel:[^ \t]+]], label
-; CHECK: <label>:[[ifLabel]]:
+; CHECK: [[ifLabel]]:
 ; CHECK: store [[intType]] [[frameInt]], [[intType]]* @__sancov_lowest_stack
 ; CHECK: %call = call i32 @foo()
 ; CHECK: ret i32 %call

@@ -33,6 +33,7 @@ class InputFile {
 public:
   enum Kind {
     ObjectKind,
+    SharedKind,
     ArchiveKind,
     BitcodeKind,
   };
@@ -81,7 +82,10 @@ private:
 // .o file (wasm object file)
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef M) : InputFile(ObjectKind, M) {}
+  explicit ObjFile(MemoryBufferRef M, StringRef ArchiveName)
+      : InputFile(ObjectKind, M) {
+    this->ArchiveName = ArchiveName;
+  }
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
 
   void parse() override;
@@ -95,10 +99,12 @@ public:
   uint32_t calcNewValue(const WasmRelocation &Reloc) const;
   uint32_t calcNewAddend(const WasmRelocation &Reloc) const;
   uint32_t calcExpectedValue(const WasmRelocation &Reloc) const;
+  Symbol *getSymbol(const WasmRelocation &Reloc) const {
+    return Symbols[Reloc.Index];
+  };
 
   const WasmSection *CodeSection = nullptr;
   const WasmSection *DataSection = nullptr;
-  const WasmSection *ProducersSection = nullptr;
 
   // Maps input type indices to output type indices
   std::vector<uint32_t> TypeMap;
@@ -129,9 +135,22 @@ private:
   std::unique_ptr<WasmObjectFile> WasmObj;
 };
 
+// .so file.
+class SharedFile : public InputFile {
+public:
+  explicit SharedFile(MemoryBufferRef M) : InputFile(SharedKind, M) {}
+  static bool classof(const InputFile *F) { return F->kind() == SharedKind; }
+
+  void parse() override {}
+};
+
+// .bc file
 class BitcodeFile : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
+  explicit BitcodeFile(MemoryBufferRef M, StringRef ArchiveName)
+      : InputFile(BitcodeKind, M) {
+    this->ArchiveName = ArchiveName;
+  }
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
 
   void parse() override;
@@ -140,7 +159,7 @@ public:
 
 // Will report a fatal() error if the input buffer is not a valid bitcode
 // or wasm object file.
-InputFile *createObjectFile(MemoryBufferRef MB);
+InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "");
 
 // Opens a given file.
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);

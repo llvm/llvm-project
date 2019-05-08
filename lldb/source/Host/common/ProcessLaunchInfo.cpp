@@ -26,9 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------------
 // ProcessLaunchInfo member functions
-//----------------------------------------------------------------------------
 
 ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),

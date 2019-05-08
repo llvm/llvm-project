@@ -1,5 +1,5 @@
 ; RUN: llc -enable-shrink-wrap=true < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -enable-shrink-wrap=true -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc -enable-shrink-wrap=true -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s --check-prefix=OBJ
 
 ; C source:
 ; int doSomething(int*);

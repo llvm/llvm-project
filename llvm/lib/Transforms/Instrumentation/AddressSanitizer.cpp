@@ -275,6 +275,16 @@ static cl::opt<bool> ClInvalidPointerPairs(
     cl::desc("Instrument <, <=, >, >=, - with pointer operands"), cl::Hidden,
     cl::init(false));
 
+static cl::opt<bool> ClInvalidPointerCmp(
+    "asan-detect-invalid-pointer-cmp",
+    cl::desc("Instrument <, <=, >, >= with pointer operands"), cl::Hidden,
+    cl::init(false));
+
+static cl::opt<bool> ClInvalidPointerSub(
+    "asan-detect-invalid-pointer-sub",
+    cl::desc("Instrument - operations with pointer operands"), cl::Hidden,
+    cl::init(false));
+
 static cl::opt<unsigned> ClRealignStack(
     "asan-realign-stack",
     cl::desc("Realign stack to the value of this flag (power of two)"),
@@ -311,10 +321,10 @@ static cl::opt<int> ClMappingScale("asan-mapping-scale",
                                    cl::desc("scale of asan shadow mapping"),
                                    cl::Hidden, cl::init(0));
 
-static cl::opt<unsigned long long> ClMappingOffset(
-    "asan-mapping-offset",
-    cl::desc("offset of asan shadow mapping [EXPERIMENTAL]"), cl::Hidden,
-    cl::init(0));
+static cl::opt<uint64_t>
+    ClMappingOffset("asan-mapping-offset",
+                    cl::desc("offset of asan shadow mapping [EXPERIMENTAL]"),
+                    cl::Hidden, cl::init(0));
 
 // Optimization flags. Not user visible, used mostly for testing
 // and benchmarking the tool.
@@ -874,6 +884,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   };
   SmallVector<AllocaPoisonCall, 8> DynamicAllocaPoisonCallVec;
   SmallVector<AllocaPoisonCall, 8> StaticAllocaPoisonCallVec;
+  bool HasUntracedLifetimeIntrinsic = false;
 
   SmallVector<AllocaInst *, 1> DynamicAllocaVec;
   SmallVector<IntrinsicInst *, 1> StackRestoreVec;
@@ -907,6 +918,14 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     if (AllocaVec.empty() && DynamicAllocaVec.empty()) return false;
 
     initializeCallbacks(*F.getParent());
+
+    if (HasUntracedLifetimeIntrinsic) {
+      // If there are lifetime intrinsics which couldn't be traced back to an
+      // alloca, we may not know exactly when a variable enters scope, and
+      // therefore should "fail safe" by not poisoning them.
+      StaticAllocaPoisonCallVec.clear();
+      DynamicAllocaPoisonCallVec.clear();
+    }
 
     processDynamicAllocas();
     processStaticAllocas();
@@ -1028,8 +1047,14 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
         !ConstantInt::isValueValidForType(IntptrTy, SizeValue))
       return;
     // Find alloca instruction that corresponds to llvm.lifetime argument.
-    AllocaInst *AI = findAllocaForValue(II.getArgOperand(1));
-    if (!AI || !ASan.isInterestingAlloca(*AI))
+    AllocaInst *AI =
+        llvm::findAllocaForValue(II.getArgOperand(1), AllocaForValue);
+    if (!AI) {
+      HasUntracedLifetimeIntrinsic = true;
+      return;
+    }
+    // We're interested only in allocas we can handle.
+    if (!ASan.isInterestingAlloca(*AI))
       return;
     bool DoPoison = (ID == Intrinsic::lifetime_end);
     AllocaPoisonCall APC = {&II, AI, SizeValue, DoPoison};
@@ -1051,9 +1076,6 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
   // ---------------------- Helpers.
   void initializeCallbacks(Module &M);
-
-  /// Finds alloca where the value comes from.
-  AllocaInst *findAllocaForValue(Value *V);
 
   // Copies bytes from ShadowBytes into shadow memory for indexes where
   // ShadowMask is not zero. If ShadowMask[i] is zero, we assume that
@@ -1408,11 +1430,24 @@ static bool isPointerOperand(Value *V) {
 // This is a rough heuristic; it may cause both false positives and
 // false negatives. The proper implementation requires cooperation with
 // the frontend.
-static bool isInterestingPointerComparisonOrSubtraction(Instruction *I) {
+static bool isInterestingPointerComparison(Instruction *I) {
   if (ICmpInst *Cmp = dyn_cast<ICmpInst>(I)) {
-    if (!Cmp->isRelational()) return false;
-  } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I)) {
-    if (BO->getOpcode() != Instruction::Sub) return false;
+    if (!Cmp->isRelational())
+      return false;
+  } else {
+    return false;
+  }
+  return isPointerOperand(I->getOperand(0)) &&
+         isPointerOperand(I->getOperand(1));
+}
+
+// This is a rough heuristic; it may cause both false positives and
+// false negatives. The proper implementation requires cooperation with
+// the frontend.
+static bool isInterestingPointerSubtraction(Instruction *I) {
+  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I)) {
+    if (BO->getOpcode() != Instruction::Sub)
+      return false;
   } else {
     return false;
   }
@@ -2619,8 +2654,10 @@ bool AddressSanitizer::instrumentFunction(Function &F,
               continue; // We've seen this temp in the current BB.
           }
         }
-      } else if (ClInvalidPointerPairs &&
-                 isInterestingPointerComparisonOrSubtraction(&Inst)) {
+      } else if (((ClInvalidPointerPairs || ClInvalidPointerCmp) &&
+                  isInterestingPointerComparison(&Inst)) ||
+                 ((ClInvalidPointerPairs || ClInvalidPointerSub) &&
+                  isInterestingPointerSubtraction(&Inst))) {
         PointerComparisonsOrSubtracts.push_back(&Inst);
         continue;
       } else if (isa<MemIntrinsic>(Inst)) {
@@ -3203,41 +3240,6 @@ void FunctionStackPoisoner::poisonAlloca(Value *V, uint64_t Size,
 //     variable may go in and out of scope several times, e.g. in loops).
 // (3) if we poisoned at least one %alloca in a function,
 //     unpoison the whole stack frame at function exit.
-
-AllocaInst *FunctionStackPoisoner::findAllocaForValue(Value *V) {
-  if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
-    // We're interested only in allocas we can handle.
-    return ASan.isInterestingAlloca(*AI) ? AI : nullptr;
-  // See if we've already calculated (or started to calculate) alloca for a
-  // given value.
-  AllocaForValueMapTy::iterator I = AllocaForValue.find(V);
-  if (I != AllocaForValue.end()) return I->second;
-  // Store 0 while we're calculating alloca for value V to avoid
-  // infinite recursion if the value references itself.
-  AllocaForValue[V] = nullptr;
-  AllocaInst *Res = nullptr;
-  if (CastInst *CI = dyn_cast<CastInst>(V))
-    Res = findAllocaForValue(CI->getOperand(0));
-  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
-    for (Value *IncValue : PN->incoming_values()) {
-      // Allow self-referencing phi-nodes.
-      if (IncValue == PN) continue;
-      AllocaInst *IncValueAI = findAllocaForValue(IncValue);
-      // AI for incoming values should exist and should all be equal.
-      if (IncValueAI == nullptr || (Res != nullptr && IncValueAI != Res))
-        return nullptr;
-      Res = IncValueAI;
-    }
-  } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
-    Res = findAllocaForValue(EP->getPointerOperand());
-  } else {
-    LLVM_DEBUG(dbgs() << "Alloca search canceled on unknown instruction: " << *V
-                      << "\n");
-  }
-  if (Res) AllocaForValue[V] = Res;
-  return Res;
-}
-
 void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   IRBuilder<> IRB(AI);
 

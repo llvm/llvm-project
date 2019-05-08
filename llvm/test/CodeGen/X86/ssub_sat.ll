@@ -96,32 +96,30 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    shlb $4, %dl
 ; X86-NEXT:    shlb $4, %al
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    subb %dl, %cl
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    movb %al, %ah
+; X86-NEXT:    subb %dl, %ah
 ; X86-NEXT:    setns %cl
+; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    subb %dl, %al
-; X86-NEXT:    jno .LBB2_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addb $127, %cl
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:  .LBB2_2:
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    cmovol %ecx, %eax
 ; X86-NEXT:    sarb $4, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb $4, %sil
-; X64-NEXT:    shlb $4, %al
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    subb %sil, %cl
-; X64-NEXT:    setns %cl
+; X64-NEXT:    shlb $4, %dil
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    subb %sil, %al
-; X64-NEXT:    jno .LBB2_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    addb $127, %cl
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:  .LBB2_2:
+; X64-NEXT:    setns %cl
+; X64-NEXT:    addl $127, %ecx
+; X64-NEXT:    subb %sil, %dil
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    cmovol %ecx, %eax
 ; X64-NEXT:    sarb $4, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

@@ -2,9 +2,9 @@
 # corresponding options (-mabi=64 -> -mattr=+n64 for example).
 
 # RUN: llvm-mc -filetype=obj -triple=mips64el-linux -target-abi n64 %s -o - \
-# RUN: | llvm-readobj -s | FileCheck --check-prefix=CHECK_64 %s
+# RUN: | llvm-readobj -S | FileCheck --check-prefix=CHECK_64 %s
 # RUN: llvm-mc -filetype=obj -triple=mipsel %s -target-abi n32 -o - \
-# RUN: | llvm-readobj -s | FileCheck --check-prefix=CHECK_32 %s
+# RUN: | llvm-readobj -S | FileCheck --check-prefix=CHECK_32 %s
 
 # Check for register information sections.
 #

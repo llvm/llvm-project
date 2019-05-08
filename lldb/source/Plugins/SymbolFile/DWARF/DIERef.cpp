@@ -51,14 +51,12 @@ DIERef::DIERef(const DWARFFormValue &form_value)
 }
 
 lldb::user_id_t DIERef::GetUID(SymbolFileDWARF *dwarf) const {
-  //----------------------------------------------------------------------
   // Each SymbolFileDWARF will set its ID to what is expected.
   //
   // SymbolFileDWARF, when used for DWARF with .o files on MacOSX, has the
   // ID set to the compile unit index.
   //
   // SymbolFileDWARFDwo sets the ID to the compile unit offset.
-  //----------------------------------------------------------------------
   if (dwarf && die_offset != DW_INVALID_OFFSET)
     return dwarf->GetID() | die_offset;
   else

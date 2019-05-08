@@ -1,0 +1,85 @@
+# Show that yaml2obj properly emits program headers with explicit file size,
+# memory size and offset parameters.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj %t --program-headers | FileCheck %s
+
+# CHECK: ProgramHeaders [
+# CHECK:    Offset: 0x1234
+# CHECK:    FileSize: 1111
+# CHECK:    MemSize: 9999
+
+# CHECK:    Offset: 0x2000
+# CHECK:    FileSize: 6
+# CHECK:    MemSize: 6
+
+# CHECK:    Offset: 0x2000
+# CHECK:    FileSize: 4
+# CHECK:    MemSize: 6
+
+# CHECK:    Offset: 0x1FFF
+# CHECK:    FileSize: 5
+# CHECK:    MemSize: 5
+
+# CHECK:    Offset: 0xFFE
+# CHECK:    FileSize: 7
+# CHECK:    MemSize: 9
+
+# CHECK:    Offset: 0x3000
+# CHECK:    FileSize: 3
+# CHECK:    MemSize: 2
+# CHECK: ]
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 4
+    AddressAlign: 0x1000
+  - Name: .rodata
+    Type: SHT_PROGBITS
+    Size: 4
+    AddressAlign: 0x1000
+  - Name: .data
+    Type: SHT_PROGBITS
+    Size: 4
+ProgramHeaders:
+  # Program header with no sections.
+  - Type:     0x6abcdef0 # arbitrary type
+    Offset:   0x1234
+    FileSize: 1111
+    MemSize:  9999
+  # Program header with only file size set.
+  - Type:     0x6abcdef0
+    FileSize: 6
+    Sections:
+      - Section: .rodata
+  # Program header with only mem size set.
+  - Type:     0x6abcdef0
+    MemSize: 6
+    Sections:
+      - Section: .rodata
+  # Program header with only offset set.
+  - Type:     0x6abcdef0
+    Offset:   0x1fff
+    Sections:
+      - Section: .rodata
+  # Program header with sections, valid properties.
+  - Type:     0x6abcdef0
+    Offset:   0xffe
+    FileSize: 7
+    MemSize:  9
+    Sections:
+      - Section: .text
+  # Program header with sections, invalid properties.
+  - Type:     0x6abcdef0
+    Offset:   0x3000
+    FileSize: 3
+    MemSize:  2
+    Sections:
+      - Section: .data

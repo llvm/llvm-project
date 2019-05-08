@@ -19,6 +19,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Regex.h"
 #include <functional>
 
 namespace clang {
@@ -113,8 +114,14 @@ public:
   void finish() override;
 
 private:
-  const Symbol *addDeclaration(const NamedDecl &, SymbolID, bool IsMainFileSymbol);
+  const Symbol *addDeclaration(const NamedDecl &, SymbolID,
+                               bool IsMainFileSymbol);
   void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
+
+  llvm::Optional<std::string> getIncludeHeader(llvm::StringRef QName, FileID);
+  bool isSelfContainedHeader(FileID);
+  // Heuristically headers that only want to be included via an umbrella.
+  static bool isDontIncludeMeHeader(llvm::StringRef);
 
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
@@ -140,6 +147,7 @@ private:
   llvm::DenseMap<const Decl *, const Decl *> CanonicalDecls;
   // Cache whether to index a file or not.
   llvm::DenseMap<FileID, bool> FilesToIndexCache;
+  llvm::DenseMap<FileID, bool> HeaderIsSelfContainedCache;
 };
 
 } // namespace clangd

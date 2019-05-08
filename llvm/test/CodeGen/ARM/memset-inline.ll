@@ -25,12 +25,12 @@ entry:
 ; CHECK-7A: vst1.16 {d{{[0-9]+}}, d{{[0-9]+}}}, [r2]
 ; CHECK-6M-LABEL: t2:
 ; CHECK-6M: movs [[REG:r[0-9]+]], #0
-; CHECK-6M: str  [[REG]], [sp, #20]
-; CHECK-6M: str  [[REG]], [sp, #16]
-; CHECK-6M: str  [[REG]], [sp, #12]
-; CHECK-6M: str  [[REG]], [sp, #8]
-; CHECK-6M: str  [[REG]], [sp, #4]
-; CHECK-6M: str  [[REG]], [sp]
+; CHECK-6M-DAG: str  [[REG]], [sp, #20]
+; CHECK-6M-DAG: str  [[REG]], [sp, #16]
+; CHECK-6M-DAG: str  [[REG]], [sp, #12]
+; CHECK-6M-DAG: str  [[REG]], [sp, #8]
+; CHECK-6M-DAG: str  [[REG]], [sp, #4]
+; CHECK-6M-DAG: str  [[REG]], [sp]
   %buf = alloca [26 x i8], align 1
   %0 = getelementptr inbounds [26 x i8], [26 x i8]* %buf, i32 0, i32 0
   call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 26, i1 false)

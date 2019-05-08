@@ -48,10 +48,6 @@ STATISTIC(NumNotSplitChainCopies,
 STATISTIC(NumNotSplitWrongOpcode,
           "Number of blocks not split due to the wrong opcode.");
 
-namespace llvm {
-  void initializePPCReduceCRLogicalsPass(PassRegistry&);
-}
-
 /// Given a basic block \p Successor that potentially contains PHIs, this
 /// function will look for any incoming values in the PHIs that are supposed to
 /// be coming from \p OrigMBB but whose definition is actually in \p NewMBB.

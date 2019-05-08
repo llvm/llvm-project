@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s | llvm-readobj -t \
+@ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s | llvm-readobj --symbols \
 @ RUN:   | FileCheck %s
 
 @ RUN: llvm-mc -triple armv7-eabi -filetype asm -o - %s \

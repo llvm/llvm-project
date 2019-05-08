@@ -38,6 +38,29 @@ char const *traits_t<long>::spec = "ld";
 //-------------------------------------------------------------------------
 #endif
 
+#if KMP_STATS_ENABLED
+#define KMP_STATS_LOOP_END(stat)                                               \
+  {                                                                            \
+    kmp_int64 t;                                                               \
+    kmp_int64 u = (kmp_int64)(*pupper);                                        \
+    kmp_int64 l = (kmp_int64)(*plower);                                        \
+    kmp_int64 i = (kmp_int64)incr;                                             \
+    if (i == 1) {                                                              \
+      t = u - l + 1;                                                           \
+    } else if (i == -1) {                                                      \
+      t = l - u + 1;                                                           \
+    } else if (i > 0) {                                                        \
+      t = (u - l) / i + 1;                                                     \
+    } else {                                                                   \
+      t = (l - u) / (-i) + 1;                                                  \
+    }                                                                          \
+    KMP_COUNT_VALUE(stat, t);                                                  \
+    KMP_POP_PARTITIONED_TIMER();                                               \
+  }
+#else
+#define KMP_STATS_LOOP_END(stat) /* Nothing */
+#endif
+
 template <typename T>
 static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
                                   kmp_int32 schedtype, kmp_int32 *plastiter,
@@ -151,6 +174,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
           &(task_info->task_data), 0, codeptr);
     }
 #endif
+    KMP_STATS_LOOP_END(OMP_loop_static_iterations);
     return;
   }
 
@@ -202,6 +226,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
           &(task_info->task_data), *pstride, codeptr);
     }
 #endif
+    KMP_STATS_LOOP_END(OMP_loop_static_iterations);
     return;
   }
   nth = team->t.t_nproc;
@@ -231,6 +256,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
           &(task_info->task_data), *pstride, codeptr);
     }
 #endif
+    KMP_STATS_LOOP_END(OMP_loop_static_iterations);
     return;
   }
 
@@ -245,6 +271,12 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   } else {
     trip_count = (UT)(*plower - *pupper) / (-incr) + 1;
   }
+
+#if KMP_STATS_ENABLED
+  if (KMP_MASTER_GTID(gtid)) {
+    KMP_COUNT_VALUE(OMP_loop_static_total_iterations, trip_count);
+  }
+#endif
 
   if (__kmp_env_consistency_check) {
     /* tripcount overflow? */
@@ -388,26 +420,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
 #endif
 
-#if KMP_STATS_ENABLED
-  {
-    kmp_int64 t;
-    kmp_int64 u = (kmp_int64)(*pupper);
-    kmp_int64 l = (kmp_int64)(*plower);
-    kmp_int64 i = (kmp_int64)incr;
-    /* compute trip count */
-    if (i == 1) {
-      t = u - l + 1;
-    } else if (i == -1) {
-      t = l - u + 1;
-    } else if (i > 0) {
-      t = (u - l) / i + 1;
-    } else {
-      t = (l - u) / (-i) + 1;
-    }
-    KMP_COUNT_VALUE(OMP_loop_static_iterations, t);
-    KMP_POP_PARTITIONED_TIMER();
-  }
-#endif
+  KMP_STATS_LOOP_END(OMP_loop_static_iterations);
   return;
 }
 
@@ -419,6 +432,8 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
                                        typename traits_t<T>::signed_t incr,
                                        typename traits_t<T>::signed_t chunk) {
   KMP_COUNT_BLOCK(OMP_DISTRIBUTE);
+  KMP_PUSH_PARTITIONED_TIMER(OMP_distribute);
+  KMP_PUSH_PARTITIONED_TIMER(OMP_distribute_scheduling);
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
   kmp_uint32 tid;
@@ -648,6 +663,7 @@ end:;
   }
 #endif
   KE_TRACE(10, ("__kmpc_dist_for_static_init: T#%d return\n", gtid));
+  KMP_STATS_LOOP_END(OMP_distribute_iterations);
   return;
 }
 

@@ -3,14 +3,14 @@ RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 | FileCheck %s
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-zero-size.elf 2>&1 | FileCheck %s
 CHECK: Invalid data was encountered while parsing the file
 
-RUN: not llvm-dwarfdump %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck --check-prefix=RELA %s
+RUN: not llvm-dwarfdump -debug-line %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck --check-prefix=RELA %s
 RELA: Section is not SHT_RELA
 
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-non-null.elf 2>&1 | FileCheck --check-prefix=NON-NULL %s
 NON-NULL: Invalid data was encountered while parsing the file
 
 Test the sh_entsize are invalid
-RUN: llvm-readobj -s %p/Inputs/invalid-sh_entsize.elf | FileCheck --check-prefix=SECTION %s
+RUN: llvm-readobj -S %p/Inputs/invalid-sh_entsize.elf | FileCheck --check-prefix=SECTION %s
 
 SECTION:         Name: .dynsym
 SECTION-NEXT:    Type: SHT_DYNSYM
@@ -37,30 +37,30 @@ SECTION-NEXT:    Info:
 SECTION-NEXT:    AddressAlignment:
 SECTION-NEXT:    EntrySize: 32
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
 INVALID-SYM-SIZE: invalid sh_entsize
 
 RUN: not llvm-readobj --dyn-symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-DYNSYM-SIZE %s
 INVALID-DYNSYM-SIZE: Invalid entity size
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-INDEX %s
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 INVALID-SECTION-INDEX: invalid section index
 
-RUN: not llvm-readobj -s %p/Inputs/invalid-section-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-SIZE %s
+RUN: not llvm-readobj -S %p/Inputs/invalid-section-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-SIZE %s
 INVALID-SECTION-SIZE: invalid section header entry size (e_shentsize) in ELF header
 
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-symbol-table-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-symbol-table-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s
 INVALID-SYMTAB-SIZE: size is not a multiple of sh_entsize
 
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 INVALID-XINDEX-SIZE: invalid section contents size
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
 INVALID-SH-NUM: invalid e_phentsize
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
 INVALID-EXT-SYMTAB-INDEX: index past the end of the symbol table
 
@@ -70,11 +70,11 @@ RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-x86-64 2
 RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 INVALID-RELOC-SH-OFFSET: invalid section offset
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-section-size2.elf 2>&1 | \
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-section-size2.elf 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
 INVALID-SECTION-SIZE2: invalid section offset
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-sections-num.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
+RUN: not llvm-readobj --symbols %p/Inputs/invalid-sections-num.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
 INVALID-SECTION-NUM: section table goes past the end of file
 
 RUN: not llvm-readobj -r %p/Inputs/invalid-rel-sym.elf 2>&1 | FileCheck --check-prefix=INVALID-REL-SYM %s

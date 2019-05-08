@@ -14,9 +14,9 @@
 namespace llvm {
 namespace WebAssembly {
 enum Fixups {
-  fixup_code_sleb128_i32 = FirstTargetFixupKind, // 32-bit signed
-  fixup_code_sleb128_i64,                        // 64-bit signed
-  fixup_code_uleb128_i32,                        // 32-bit unsigned
+  fixup_sleb128_i32 = FirstTargetFixupKind, // 32-bit signed
+  fixup_sleb128_i64,                        // 64-bit signed
+  fixup_uleb128_i32,                        // 32-bit unsigned
 
   // Marker
   LastTargetFixupKind,

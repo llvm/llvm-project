@@ -51,7 +51,7 @@ public:
 #else
     mutex() _NOEXCEPT {__m_ = (__libcpp_mutex_t)_LIBCPP_MUTEX_INITIALIZER;}
 #endif
-    ~mutex();
+    ~mutex() _NOEXCEPT;
 
 private:
     mutex(const mutex&);// = delete;

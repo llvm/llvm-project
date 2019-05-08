@@ -28,7 +28,7 @@ test(const Allocator& a)
 
     m1 = std::move(m0);
     assert(m1.size()          == 0);
-    assert(m1.str()           == std::basic_string<CharT>());
+    assert(!m1.ready());
     if (std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value)
         assert(m1.get_allocator() == a);
     else

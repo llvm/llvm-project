@@ -303,27 +303,27 @@
 // CHECK: encoding: [0xc5,0xe9,0x14,0x6c,0xcb,0xfc]
           vunpcklpd  -4(%ebx,%ecx,8), %xmm2, %xmm5
 
-// CHECK: vcmpps  $0, %xmm0, %xmm6, %xmm1
+// CHECK: vcmpeqps  %xmm0, %xmm6, %xmm1
 // CHECK: encoding: [0xc5,0xc8,0xc2,0xc8,0x00]
           vcmpps  $0, %xmm0, %xmm6, %xmm1
 
-// CHECK: vcmpps  $0, (%eax), %xmm6, %xmm1
+// CHECK: vcmpeqps  (%eax), %xmm6, %xmm1
 // CHECK: encoding: [0xc5,0xc8,0xc2,0x08,0x00]
           vcmpps  $0, (%eax), %xmm6, %xmm1
 
-// CHECK: vcmpps  $7, %xmm0, %xmm6, %xmm1
+// CHECK: vcmpordps  %xmm0, %xmm6, %xmm1
 // CHECK: encoding: [0xc5,0xc8,0xc2,0xc8,0x07]
           vcmpps  $7, %xmm0, %xmm6, %xmm1
 
-// CHECK: vcmppd  $0, %xmm0, %xmm6, %xmm1
+// CHECK: vcmpeqpd  %xmm0, %xmm6, %xmm1
 // CHECK: encoding: [0xc5,0xc9,0xc2,0xc8,0x00]
           vcmppd  $0, %xmm0, %xmm6, %xmm1
 
-// CHECK: vcmppd  $0, (%eax), %xmm6, %xmm1
+// CHECK: vcmpeqpd  (%eax), %xmm6, %xmm1
 // CHECK: encoding: [0xc5,0xc9,0xc2,0x08,0x00]
           vcmppd  $0, (%eax), %xmm6, %xmm1
 
-// CHECK: vcmppd  $7, %xmm0, %xmm6, %xmm1
+// CHECK: vcmpordpd  %xmm0, %xmm6, %xmm1
 // CHECK: encoding: [0xc5,0xc9,0xc2,0xc8,0x07]
           vcmppd  $7, %xmm0, %xmm6, %xmm1
 

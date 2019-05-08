@@ -34,20 +34,22 @@ static cl::OptionCategory ClangExtDefMapGenCategory("clang-extdefmapgen options"
 class MapExtDefNamesConsumer : public ASTConsumer {
 public:
   MapExtDefNamesConsumer(ASTContext &Context)
-      : SM(Context.getSourceManager()) {}
+      : Ctx(Context), SM(Context.getSourceManager()) {}
 
   ~MapExtDefNamesConsumer() {
     // Flush results to standard output.
     llvm::outs() << createCrossTUIndexString(Index);
   }
 
-  void HandleTranslationUnit(ASTContext &Ctx) override {
-    handleDecl(Ctx.getTranslationUnitDecl());
+  void HandleTranslationUnit(ASTContext &Context) override {
+    handleDecl(Context.getTranslationUnitDecl());
   }
 
 private:
   void handleDecl(const Decl *D);
+  void addIfInMain(const DeclaratorDecl *DD, SourceLocation defStart);
 
+  ASTContext &Ctx;
   SourceManager &SM;
   llvm::StringMap<std::string> Index;
   std::string CurrentFileName;
@@ -58,35 +60,40 @@ void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
     return;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (FD->isThisDeclarationADefinition()) {
-      if (const Stmt *Body = FD->getBody()) {
-        if (CurrentFileName.empty()) {
-          CurrentFileName =
-              SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
-          if (CurrentFileName.empty())
-            CurrentFileName = "invalid_file";
-        }
-
-        switch (FD->getLinkageInternal()) {
-        case ExternalLinkage:
-        case VisibleNoLinkage:
-        case UniqueExternalLinkage:
-          if (SM.isInMainFile(Body->getBeginLoc())) {
-            std::string LookupName =
-                CrossTranslationUnitContext::getLookupName(FD);
-            Index[LookupName] = CurrentFileName;
-          }
-          break;
-        default:
-          break;
-        }
-      }
-    }
+    if (FD->isThisDeclarationADefinition())
+      if (const Stmt *Body = FD->getBody())
+        addIfInMain(FD, Body->getBeginLoc());
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (cross_tu::containsConst(VD, Ctx) && VD->hasInit())
+      if (const Expr *Init = VD->getInit())
+        addIfInMain(VD, Init->getBeginLoc());
   }
 
   if (const auto *DC = dyn_cast<DeclContext>(D))
     for (const Decl *D : DC->decls())
       handleDecl(D);
+}
+
+void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
+                                         SourceLocation defStart) {
+  std::string LookupName = CrossTranslationUnitContext::getLookupName(DD);
+  if (CurrentFileName.empty()) {
+    CurrentFileName =
+        SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
+    if (CurrentFileName.empty())
+      CurrentFileName = "invalid_file";
+  }
+
+  switch (DD->getLinkageInternal()) {
+  case ExternalLinkage:
+  case VisibleNoLinkage:
+  case UniqueExternalLinkage:
+    if (SM.isInMainFile(defStart))
+      Index[LookupName] = CurrentFileName;
+    break;
+  default:
+    break;
+  }
 }
 
 class MapExtDefNamesAction : public ASTFrontendAction {

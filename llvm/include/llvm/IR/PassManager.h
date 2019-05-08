@@ -286,6 +286,13 @@ public:
                               PA.PreservedIDs.count(ID));
     }
 
+    /// Return true if the checker's analysis was not abandoned, i.e. it was not
+    /// explicitly invalidated. Even if the analysis is not explicitly
+    /// preserved, if the analysis is known stateless, then it is preserved.
+    bool preservedWhenStateless() {
+      return !IsAbandoned;
+    }
+
     /// Returns true if the checker's analysis was not abandoned and either
     ///  - \p AnalysisSetT is explicitly preserved or
     ///  - all analyses are preserved.

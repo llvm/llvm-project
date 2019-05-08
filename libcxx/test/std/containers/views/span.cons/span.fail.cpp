@@ -10,7 +10,7 @@
 
 // <span>
 
-// template<class OtherElementType, ptrdiff_t OtherExtent>
+// template<class OtherElementType, size_t OtherExtent>
 //    constexpr span(const span<OtherElementType, OtherExtent>& s) noexcept;
 //
 //  Remarks: This constructor shall not participate in overload resolution unless:

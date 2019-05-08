@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfExpression.h"
+#include "DwarfCompileUnit.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -318,6 +319,8 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
   if (SubRegisterSizeInBits && N && (N->getOp() != dwarf::DW_OP_LLVM_fragment))
     maskSubRegister();
 
+  Optional<DIExpression::ExprOperand> PrevConvertOp = None;
+
   while (ExprCursor) {
     auto Op = ExprCursor.take();
     switch (Op->getOp()) {
@@ -384,6 +387,42 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       assert(LocationKind != Register);
       emitConstu(Op->getArg(0));
       break;
+    case dwarf::DW_OP_LLVM_convert: {
+      unsigned BitSize = Op->getArg(0);
+      dwarf::TypeKind Encoding = static_cast<dwarf::TypeKind>(Op->getArg(1));
+      if (DwarfVersion >= 5) {
+        emitOp(dwarf::DW_OP_convert);
+        // Reuse the base_type if we already have one in this CU otherwise we
+        // create a new one.
+        unsigned I = 0, E = CU.ExprRefedBaseTypes.size();
+        for (; I != E; ++I)
+          if (CU.ExprRefedBaseTypes[I].BitSize == BitSize &&
+              CU.ExprRefedBaseTypes[I].Encoding == Encoding)
+            break;
+
+        if (I == E)
+          CU.ExprRefedBaseTypes.emplace_back(BitSize, Encoding);
+
+        // If targeting a location-list; simply emit the index into the raw
+        // byte stream as ULEB128, DwarfDebug::emitDebugLocEntry has been
+        // fitted with means to extract it later.
+        // If targeting a inlined DW_AT_location; insert a DIEBaseTypeRef
+        // (containing the index and a resolve mechanism during emit) into the
+        // DIE value list.
+        emitBaseTypeRef(I);
+      } else {
+        if (PrevConvertOp && PrevConvertOp->getArg(0) < BitSize) {
+          if (Encoding == dwarf::DW_ATE_signed)
+            emitLegacySExt(PrevConvertOp->getArg(0));
+          else if (Encoding == dwarf::DW_ATE_unsigned)
+            emitLegacyZExt(PrevConvertOp->getArg(0));
+          PrevConvertOp = None;
+        } else {
+          PrevConvertOp = Op;
+        }
+      }
+      break;
+    }
     case dwarf::DW_OP_stack_value:
       LocationKind = Implicit;
       break;
@@ -394,6 +433,10 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_xderef:
       assert(LocationKind != Register);
       emitOp(dwarf::DW_OP_xderef);
+      break;
+    case dwarf::DW_OP_deref_size:
+      emitOp(dwarf::DW_OP_deref_size);
+      emitData1(Op->getArg(0));
       break;
     default:
       llvm_unreachable("unhandled opcode found in expression");
@@ -435,4 +478,26 @@ void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
   if (FragmentOffset > OffsetInBits)
     addOpPiece(FragmentOffset - OffsetInBits);
   OffsetInBits = FragmentOffset;
+}
+
+void DwarfExpression::emitLegacySExt(unsigned FromBits) {
+  // (((X >> (FromBits - 1)) * (~0)) << FromBits) | X
+  emitOp(dwarf::DW_OP_dup);
+  emitOp(dwarf::DW_OP_constu);
+  emitUnsigned(FromBits - 1);
+  emitOp(dwarf::DW_OP_shr);
+  emitOp(dwarf::DW_OP_lit0);
+  emitOp(dwarf::DW_OP_not);
+  emitOp(dwarf::DW_OP_mul);
+  emitOp(dwarf::DW_OP_constu);
+  emitUnsigned(FromBits);
+  emitOp(dwarf::DW_OP_shl);
+  emitOp(dwarf::DW_OP_or);
+}
+
+void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
+  // (X & (1 << FromBits - 1))
+  emitOp(dwarf::DW_OP_constu);
+  emitUnsigned((1ULL << FromBits) - 1);
+  emitOp(dwarf::DW_OP_and);
 }

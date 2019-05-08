@@ -23,6 +23,9 @@
 /* Default runtime library to use. */
 #define CLANG_DEFAULT_RTLIB "${CLANG_DEFAULT_RTLIB}"
 
+/* Default unwind library to use. */
+#define CLANG_DEFAULT_UNWINDLIB "${CLANG_DEFAULT_UNWINDLIB}"
+
 /* Default objcopy to use */
 #define CLANG_DEFAULT_OBJCOPY "${CLANG_DEFAULT_OBJCOPY}"
 
@@ -53,9 +56,6 @@
 
 /* Define if we have libxml2 */
 #cmakedefine CLANG_HAVE_LIBXML ${CLANG_HAVE_LIBXML}
-
-/* Define if we have z3 and want to build it */
-#cmakedefine CLANG_ANALYZER_WITH_Z3 ${CLANG_ANALYZER_WITH_Z3}
 
 /* Define if we have sys/resource.h (rlimits) */
 #cmakedefine CLANG_HAVE_RLIMITS ${CLANG_HAVE_RLIMITS}

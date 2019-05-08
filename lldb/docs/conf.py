@@ -129,6 +129,7 @@ html_context = {
         ],
     }
 
+html_extra_path = ['.htaccess']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

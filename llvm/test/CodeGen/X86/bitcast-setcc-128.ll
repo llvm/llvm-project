@@ -765,17 +765,13 @@ define void @bitcast_16i8_store(i16* %p, <16 x i8> %a0) {
 define void @bitcast_8i16_store(i8* %p, <8 x i16> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_8i16_store:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
-; SSE2-SSSE3-NEXT:    pcmpgtw %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movb %al, (%rdi)
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_8i16_store:
 ; AVX12:       # %bb.0:
-; AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX12-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
 ; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX12-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX12-NEXT:    movb %al, (%rdi)

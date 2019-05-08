@@ -283,17 +283,17 @@ body:             |
     $edx = XOR32rr undef $edx, undef $edx, implicit-def dead $eflags, implicit-def $rdx
     TEST64rr $rcx, $rcx, implicit-def $eflags
     $esi = MOV32ri @o, implicit-def $rsi
-    $rsi = CMOVNE64rr killed $rsi, $rdx, implicit killed $eflags
+    $rsi = CMOV64rr killed $rsi, $rdx, 5, implicit killed $eflags
     $rsi = OR64rr killed $rsi, killed $rcx, implicit-def $eflags
     $rcx = LEA64r $rbp, 1, $noreg, -20, $noreg
     DBG_VALUE $rcx, $noreg, !46, !17, debug-location !48
     DBG_VALUE $rcx, $noreg, !39, !17, debug-location !44
     DBG_VALUE $rbp, -20, !29, !17, debug-location !36
-    $rcx = CMOVNE64rr killed $rcx, killed $rdx, implicit killed $eflags
+    $rcx = CMOV64rr killed $rcx, killed $rdx, 5, implicit killed $eflags
     $rcx = OR64rr killed $rcx, killed $rsi, implicit-def dead $eflags
     $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load 4, align 8)
     TEST32mr killed $rcx, 4, killed $rdx, 0, $noreg, killed $eax, implicit-def $eflags :: (load 4)
-    JNE_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
     JMP_1 %bb.3
 
   bb.1:
@@ -313,7 +313,7 @@ body:             |
     $eax = LEA64_32r killed $rax, 1, killed $rcx, -1, $noreg
     $eax = SAR32r1 killed $eax, implicit-def dead $eflags
     CMP32mr $rbx, 1, $noreg, 0, $noreg, killed $eax, implicit-def $eflags :: (load 4, align 8), (load 4, align 8)
-    JG_1 %bb.1, implicit killed $eflags
+    JCC_1 %bb.1, 15, implicit killed $eflags
 
   bb.3:
     liveins: $rbp

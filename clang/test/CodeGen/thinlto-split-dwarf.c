@@ -12,8 +12,8 @@
 // RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
 // RUN:   -o %t.native.o -split-dwarf-file %t.native.dwo -x ir %t.o
 
-// RUN: llvm-readobj -sections %t.native.o | FileCheck --check-prefix=O %s
-// RUN: llvm-readobj -sections %t.native.dwo | FileCheck --check-prefix=DWO %s
+// RUN: llvm-readobj -S %t.native.o | FileCheck --check-prefix=O %s
+// RUN: llvm-readobj -S %t.native.dwo | FileCheck --check-prefix=DWO %s
 
 // O-NOT: .dwo
 // DWO: .dwo

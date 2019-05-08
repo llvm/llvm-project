@@ -54,6 +54,9 @@
   define void @fdiv_s32_fpr() { ret void }
   define void @fdiv_s64_fpr() { ret void }
 
+  define void @add_v8i16() { ret void }
+  define void @add_v16i8() { ret void }
+
 ...
 
 ---
@@ -911,4 +914,62 @@ body:             |
     %1(s64) = COPY $d1
     %2(s64) = G_FDIV %0, %1
     $d0 = COPY %2(s64)
+...
+---
+name:            add_v8i16
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: add_v8i16
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: [[ADDv8i16_:%[0-9]+]]:fpr128 = ADDv8i16 [[COPY]], [[COPY1]]
+    ; CHECK: $q0 = COPY [[ADDv8i16_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:fpr(<8 x s16>) = COPY $q1
+    %2:fpr(<8 x s16>) = G_ADD %0, %1
+    $q0 = COPY %2(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            add_v16i8
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: add_v16i8
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: [[ADDv16i8_:%[0-9]+]]:fpr128 = ADDv16i8 [[COPY]], [[COPY1]]
+    ; CHECK: $q0 = COPY [[ADDv16i8_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<16 x s8>) = COPY $q0
+    %1:fpr(<16 x s8>) = COPY $q1
+    %2:fpr(<16 x s8>) = G_ADD %0, %1
+    $q0 = COPY %2(<16 x s8>)
+    RET_ReallyLR implicit $q0
+
 ...

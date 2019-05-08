@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_RESTRICTINCLUDESSCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_RESTRICTINCLUDESSCHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include "../ClangTidyDiagnosticConsumer.h"
 #include "../utils/OptionsUtils.h"
 
@@ -29,7 +29,8 @@ public:
         AllowedIncludes(Options.get("Includes", "*")),
         AllowedIncludesGlobList(AllowedIncludes) {}
 
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool contains(StringRef FileName) {
     return AllowedIncludesGlobList.contains(FileName);

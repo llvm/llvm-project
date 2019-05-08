@@ -3,7 +3,7 @@
 // Test that we produce a declaration for the protocol. It must be matched
 // by a definition in another TU, so external is the correct linkage
 // (not extern_weak).
-// CHECK: @"\01l_OBJC_PROTOCOL_$_p1" = external global
+// CHECK: @"_OBJC_PROTOCOL_$_p1" = external global
 
 @interface NSObject
 @end

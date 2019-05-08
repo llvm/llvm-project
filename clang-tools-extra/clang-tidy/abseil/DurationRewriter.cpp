@@ -302,9 +302,9 @@ std::string rewriteExprFromNumberToTime(
       .str();
 }
 
-bool isNotInMacro(const MatchFinder::MatchResult &Result, const Expr *E) {
+bool isInMacro(const MatchFinder::MatchResult &Result, const Expr *E) {
   if (!E->getBeginLoc().isMacroID())
-    return true;
+    return false;
 
   SourceLocation Loc = E->getBeginLoc();
   // We want to get closer towards the initial macro typed into the source only
@@ -316,7 +316,7 @@ bool isNotInMacro(const MatchFinder::MatchResult &Result, const Expr *E) {
     // because Clang comment says it "should not generally be used by clients."
     Loc = Result.SourceManager->getImmediateMacroCallerLoc(Loc);
   }
-  return !Loc.isMacroID();
+  return Loc.isMacroID();
 }
 
 } // namespace abseil

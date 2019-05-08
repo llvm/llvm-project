@@ -7,7 +7,7 @@
 
 define <2 x i64> @test_extrq_call(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_call(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> %y) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> [[X:%.*]], <16 x i8> [[Y:%.*]]) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> %y) nounwind
@@ -24,7 +24,7 @@ define <2 x i64> @test_extrq_zero_arg0(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_zero_arg1(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_zero_arg1(
-; CHECK-NEXT:    ret <2 x i64> %x
+; CHECK-NEXT:    ret <2 x i64> [[X:%.*]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> zeroinitializer) nounwind
   ret <2 x i64> %1
@@ -32,7 +32,7 @@ define <2 x i64> @test_extrq_zero_arg1(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_to_extqi(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_to_extqi(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %x, i8 8, i8 15)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> [[X:%.*]], i8 8, i8 15)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> <i8 8, i8 15, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>) nounwind
@@ -57,7 +57,7 @@ define <2 x i64> @test_extrq_constant_undef(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_call_constexpr(<2 x i64> %x) {
 ; CHECK-LABEL: @test_extrq_call_constexpr(
-; CHECK-NEXT:    ret <2 x i64> %x
+; CHECK-NEXT:    ret <2 x i64> [[X:%.*]]
 ;
   %1 = call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> bitcast (<2 x i64> <i64 0, i64 undef> to <16 x i8>))
   ret <2 x i64> %1
@@ -69,7 +69,7 @@ define <2 x i64> @test_extrq_call_constexpr(<2 x i64> %x) {
 
 define <2 x i64> @test_extrqi_call(<2 x i64> %x) {
 ; CHECK-LABEL: @test_extrqi_call(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %x, i8 8, i8 23)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> [[X:%.*]], i8 8, i8 23)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %x, i8 8, i8 23)
@@ -78,7 +78,7 @@ define <2 x i64> @test_extrqi_call(<2 x i64> %x) {
 
 define <2 x i64> @test_extrqi_shuffle_1zuu(<2 x i64> %x) {
 ; CHECK-LABEL: @test_extrqi_shuffle_1zuu(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %x to <16 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[X:%.*]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
@@ -89,7 +89,7 @@ define <2 x i64> @test_extrqi_shuffle_1zuu(<2 x i64> %x) {
 
 define <2 x i64> @test_extrqi_shuffle_2zzzzzzzuuuuuuuu(<2 x i64> %x) {
 ; CHECK-LABEL: @test_extrqi_shuffle_2zzzzzzzuuuuuuuu(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %x to <16 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[X:%.*]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> <i8 undef, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i32> <i32 2, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
@@ -144,7 +144,7 @@ define <2 x i64> @test_extrqi_call_constexpr() {
 
 define <2 x i64> @test_insertq_call(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertq_call(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> %y) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> %y) nounwind
@@ -153,7 +153,7 @@ define <2 x i64> @test_insertq_call(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @test_insertq_to_insertqi(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertq_to_insertqi(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> <i64 8, i64 undef>, i8 18, i8 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> <i64 8, i64 undef>, i8 18, i8 2)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> <i64 8, i64 658>) nounwind
@@ -178,7 +178,7 @@ define <2 x i64> @test_insertq_constant_undef(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @test_insertq_call_constexpr(<2 x i64> %x) {
 ; CHECK-LABEL: @test_insertq_call_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> <i64 0, i64 undef>, i8 2, i8 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> <i64 0, i64 undef>, i8 2, i8 0)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 undef, i64 2, i64 undef> to <16 x i16>) to <16 x i8>) to <2 x i64>))
@@ -191,7 +191,7 @@ define <2 x i64> @test_insertq_call_constexpr(<2 x i64> %x) {
 
 define <16 x i8> @test_insertqi_shuffle_04uu(<16 x i8> %v, <16 x i8> %i) {
 ; CHECK-LABEL: @test_insertqi_shuffle_04uu(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> %v, <16 x i8> %i, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V:%.*]], <16 x i8> [[I:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %1 = bitcast <16 x i8> %v to <2 x i64>
@@ -203,7 +203,7 @@ define <16 x i8> @test_insertqi_shuffle_04uu(<16 x i8> %v, <16 x i8> %i) {
 
 define <16 x i8> @test_insertqi_shuffle_8123uuuu(<16 x i8> %v, <16 x i8> %i) {
 ; CHECK-LABEL: @test_insertqi_shuffle_8123uuuu(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> %v, <16 x i8> %i, <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[I:%.*]], <16 x i8> [[V:%.*]], <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %1 = bitcast <16 x i8> %v to <2 x i64>
@@ -223,7 +223,7 @@ define <2 x i64> @test_insertqi_constant(<2 x i64> %v, <2 x i64> %i) {
 
 define <2 x i64> @test_insertqi_call_constexpr(<2 x i64> %x) {
 ; CHECK-LABEL: @test_insertqi_call_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> <i64 0, i64 undef>, i8 48, i8 3)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> <i64 0, i64 undef>, i8 48, i8 3)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 undef, i64 2, i64 undef> to <16 x i16>) to <16 x i8>) to <2 x i64>), i8 48, i8 3)
@@ -235,7 +235,7 @@ define <2 x i64> @test_insertqi_call_constexpr(<2 x i64> %x) {
 ; second arg
 define <2 x i64> @testInsert64Bits(<2 x i64> %v, <2 x i64> %i) {
 ; CHECK-LABEL: @testInsert64Bits(
-; CHECK-NEXT:    ret <2 x i64> %i
+; CHECK-NEXT:    ret <2 x i64> [[I:%.*]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %v, <2 x i64> %i, i8 64, i8 0)
   ret <2 x i64> %1
@@ -243,7 +243,7 @@ define <2 x i64> @testInsert64Bits(<2 x i64> %v, <2 x i64> %i) {
 
 define <2 x i64> @testZeroLength(<2 x i64> %v, <2 x i64> %i) {
 ; CHECK-LABEL: @testZeroLength(
-; CHECK-NEXT:    ret <2 x i64> %i
+; CHECK-NEXT:    ret <2 x i64> [[I:%.*]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %v, <2 x i64> %i, i8 0, i8 0)
   ret <2 x i64> %1
@@ -279,7 +279,7 @@ define <2 x i64> @testUndefinedInsertq_3(<2 x i64> %v, <2 x i64> %i) {
 
 define <2 x i64> @test_extrq_arg0(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_arg0(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> %y) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> [[X:%.*]], <16 x i8> [[Y:%.*]]) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <2 x i64> %x, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
@@ -289,7 +289,7 @@ define <2 x i64> @test_extrq_arg0(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_arg1(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_arg1(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> %y) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> [[X:%.*]], <16 x i8> [[Y:%.*]]) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <16 x i8> %y, <16 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
@@ -299,7 +299,7 @@ define <2 x i64> @test_extrq_arg1(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_args01(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_args01(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> %y) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> [[X:%.*]], <16 x i8> [[Y:%.*]]) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <2 x i64> %x, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
@@ -319,7 +319,7 @@ define <2 x i64> @test_extrq_ret(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrqi_arg0(<2 x i64> %x) {
 ; CHECK-LABEL: @test_extrqi_arg0(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %x, i8 3, i8 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> [[X:%.*]], i8 3, i8 2)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <2 x i64> %x, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
@@ -338,7 +338,7 @@ define <2 x i64> @test_extrqi_ret(<2 x i64> %x) {
 
 define <2 x i64> @test_insertq_arg0(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertq_arg0(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> %y) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <2 x i64> %x, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
@@ -357,7 +357,7 @@ define <2 x i64> @test_insertq_ret(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @test_insertqi_arg0(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertqi_arg0(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> %y, i8 3, i8 2) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], i8 3, i8 2) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <2 x i64> %x, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
@@ -367,7 +367,7 @@ define <2 x i64> @test_insertqi_arg0(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @test_insertqi_arg1(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertqi_arg1(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> %y, i8 3, i8 2) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], i8 3, i8 2) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <2 x i64> %y, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
@@ -377,7 +377,7 @@ define <2 x i64> @test_insertqi_arg1(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @test_insertqi_args01(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertqi_args01(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> %y, i8 3, i8 2) #1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], i8 3, i8 2) #1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = shufflevector <2 x i64> %x, <2 x i64> undef, <2 x i32> <i32 0, i32 0>

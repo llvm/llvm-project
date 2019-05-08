@@ -16,6 +16,17 @@ extern int n;
 int a[10], b[10], c[10], d[10];
 void foo();
 
+// CHECK-LABEL:bar
+void bar() {
+  int i,j;
+// CHECK: call void @__kmpc_doacross_init(
+// CHECK: call void @__kmpc_doacross_fini(
+#pragma omp parallel for ordered(2)
+  for (i = 0; i < n; ++i)
+  for (j = 0; j < n; ++j)
+    a[i] = b[i] + 1;
+}
+
 // CHECK-LABEL: @main()
 int main() {
   int i;
@@ -33,9 +44,9 @@ int main() {
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [1 x [[KMP_DIM]]], [1 x [[KMP_DIM]]]* [[DIMS]], i64 0, i64 0
 // CHECK: [[CAST:%.+]] = bitcast [[KMP_DIM]]* [[DIM]] to i8*
 // CHECK: call void @__kmpc_doacross_init([[IDENT]], i32 [[GTID]], i32 1, i8* [[CAST]])
-// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK: call void @__kmpc_for_static_init_4(%struct.ident_t* @{{.+}}, i32 [[GTID]], i32 33, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
 #pragma omp for ordered(1)
-  for (i = 0; i < n; ++i) {
+  for (int i = 0; i < n; ++i) {
     a[i] = b[i] + 1;
     foo();
 // CHECK: invoke void [[FOO:.+]](
@@ -102,7 +113,7 @@ struct TestStruct {
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [2 x [[KMP_DIM]]], [2 x [[KMP_DIM]]]* [[DIMS]], i64 0, i64 0
 // CHECK: [[CAST:%.+]] = bitcast [[KMP_DIM]]* [[DIM]] to i8*
 // CHECK: call void @__kmpc_doacross_init([[IDENT]], i32 [[GTID]], i32 2, i8* [[CAST]])
-// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK: call void @__kmpc_for_static_init_4(%struct.ident_t* @{{.+}}, i32 [[GTID]], i32 33, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
 #pragma omp for ordered(2)
     for (T j = 0; j < M; j++)
       for (i = 0; i < n; i += 2) {

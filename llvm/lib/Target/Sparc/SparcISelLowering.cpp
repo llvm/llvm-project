@@ -17,6 +17,7 @@
 #include "SparcRegisterInfo.h"
 #include "SparcTargetMachine.h"
 #include "SparcTargetObjectFile.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -3257,6 +3258,8 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':
       if (VT == MVT::v2i32)
         return std::make_pair(0U, &SP::IntPairRegClass);
+      else if (Subtarget->is64Bit())
+        return std::make_pair(0U, &SP::I64RegsRegClass);
       else
         return std::make_pair(0U, &SP::IntRegsRegClass);
     case 'f':

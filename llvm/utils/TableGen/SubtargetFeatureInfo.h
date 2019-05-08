@@ -55,13 +55,6 @@ struct SubtargetFeatureInfo {
 
   /// Emit the subtarget feature flag definitions.
   ///
-  /// This version emits the bit value for the feature and is therefore limited
-  /// to 64 feature bits.
-  static void emitSubtargetFeatureFlagEnumeration(
-      SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS);
-
-  /// Emit the subtarget feature flag definitions.
-  ///
   /// This version emits the bit index for the feature and can therefore support
   /// more than 64 feature bits.
   static void

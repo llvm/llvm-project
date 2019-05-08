@@ -77,15 +77,6 @@ namespace llvm {
       /// Same as call except it adds the NoTrack prefix.
       NT_CALL,
 
-      /// This operation implements the lowering for readcyclecounter.
-      RDTSC_DAG,
-
-      /// X86 Read Time-Stamp Counter and Processor ID.
-      RDTSCP_DAG,
-
-      /// X86 Read Performance Monitoring Counters.
-      RDPMC_DAG,
-
       /// X86 compare and logical compare instructions.
       CMP, COMI, UCOMI,
 
@@ -109,8 +100,8 @@ namespace llvm {
       FSETCC,
 
       /// X86 FP SETCC, similar to above, but with output as an i1 mask and
-      /// with optional rounding mode.
-      FSETCCM, FSETCCM_RND,
+      /// and a version with SAE.
+      FSETCCM, FSETCCM_SAE,
 
       /// X86 conditional moves. Operand 0 and operand 1 are the two values
       /// to select from. Operand 2 is the condition code, and operand 3 is the
@@ -211,21 +202,21 @@ namespace llvm {
       ADDSUB,
 
       //  FP vector ops with rounding mode.
-      FADD_RND, FADDS_RND,
-      FSUB_RND, FSUBS_RND,
-      FMUL_RND, FMULS_RND,
-      FDIV_RND, FDIVS_RND,
-      FMAX_RND, FMAXS_RND,
-      FMIN_RND, FMINS_RND,
-      FSQRT_RND, FSQRTS_RND,
+      FADD_RND, FADDS, FADDS_RND,
+      FSUB_RND, FSUBS, FSUBS_RND,
+      FMUL_RND, FMULS, FMULS_RND,
+      FDIV_RND, FDIVS, FDIVS_RND,
+      FMAX_SAE, FMAXS_SAE,
+      FMIN_SAE, FMINS_SAE,
+      FSQRT_RND, FSQRTS, FSQRTS_RND,
 
       // FP vector get exponent.
-      FGETEXP_RND, FGETEXPS_RND,
+      FGETEXP, FGETEXP_SAE, FGETEXPS, FGETEXPS_SAE,
       // Extract Normalized Mantissas.
-      VGETMANT, VGETMANT_RND, VGETMANTS, VGETMANTS_RND,
+      VGETMANT, VGETMANT_SAE, VGETMANTS, VGETMANTS_SAE,
       // FP Scale.
-      SCALEF,
-      SCALEFS,
+      SCALEF, SCALEF_RND,
+      SCALEFS, SCALEFS_RND,
 
       // Unsigned Integer average.
       AVG,
@@ -300,10 +291,10 @@ namespace llvm {
       VMTRUNC, VMTRUNCUS, VMTRUNCS,
 
       // Vector FP extend.
-      VFPEXT, VFPEXT_RND, VFPEXTS_RND,
+      VFPEXT, VFPEXT_SAE, VFPEXTS, VFPEXTS_SAE,
 
       // Vector FP round.
-      VFPROUND, VFPROUND_RND, VFPROUNDS_RND,
+      VFPROUND, VFPROUND_RND, VFPROUNDS, VFPROUNDS_RND,
 
       // Masked version of above. Used for v2f64->v4f32.
       // SRC, PASSTHRU, MASK
@@ -341,8 +332,8 @@ namespace llvm {
       /// Vector comparison generating mask bits for fp and
       /// integer signed and unsigned data types.
       CMPM,
-      // Vector comparison with rounding mode for FP values
-      CMPM_RND,
+      // Vector comparison with SAE for FP values
+      CMPM_SAE,
 
       // Arithmetic operations with FLAGS results.
       ADD, SUB, ADC, SBB, SMUL, UMUL,
@@ -417,16 +408,16 @@ namespace llvm {
       // Bitwise ternary logic.
       VPTERNLOG,
       // Fix Up Special Packed Float32/64 values.
-      VFIXUPIMM,
-      VFIXUPIMMS,
+      VFIXUPIMM, VFIXUPIMM_SAE,
+      VFIXUPIMMS, VFIXUPIMMS_SAE,
       // Range Restriction Calculation For Packed Pairs of Float32/64 values.
-      VRANGE, VRANGE_RND, VRANGES, VRANGES_RND,
+      VRANGE, VRANGE_SAE, VRANGES, VRANGES_SAE,
       // Reduce - Perform Reduction Transformation on scalar\packed FP.
-      VREDUCE, VREDUCE_RND, VREDUCES, VREDUCES_RND,
+      VREDUCE, VREDUCE_SAE, VREDUCES, VREDUCES_SAE,
       // RndScale - Round FP Values To Include A Given Number Of Fraction Bits.
       // Also used by the legacy (V)ROUND intrinsics where we mask out the
       // scaling part of the immediate.
-      VRNDSCALE, VRNDSCALE_RND, VRNDSCALES, VRNDSCALES_RND,
+      VRNDSCALE, VRNDSCALE_SAE, VRNDSCALES, VRNDSCALES_SAE,
       // Tests Types Of a FP Values for packed types.
       VFPCLASS,
       // Tests Types Of a FP Values for scalar types.
@@ -497,6 +488,7 @@ namespace llvm {
 
       // Convert Unsigned/Integer to Floating-Point Value with rounding mode.
       SINT_TO_FP_RND, UINT_TO_FP_RND,
+      SCALAR_SINT_TO_FP, SCALAR_UINT_TO_FP,
       SCALAR_SINT_TO_FP_RND, SCALAR_UINT_TO_FP_RND,
 
       // Vector float/double to signed/unsigned integer.
@@ -505,9 +497,9 @@ namespace llvm {
       CVTS2SI, CVTS2UI, CVTS2SI_RND, CVTS2UI_RND,
 
       // Vector float/double to signed/unsigned integer with truncation.
-      CVTTP2SI, CVTTP2UI, CVTTP2SI_RND, CVTTP2UI_RND,
+      CVTTP2SI, CVTTP2UI, CVTTP2SI_SAE, CVTTP2UI_SAE,
       // Scalar float/double to signed/unsigned integer with truncation.
-      CVTTS2SI, CVTTS2UI, CVTTS2SI_RND, CVTTS2UI_RND,
+      CVTTS2SI, CVTTS2UI, CVTTS2SI_SAE, CVTTS2UI_SAE,
 
       // Vector signed/unsigned integer to float/double.
       CVTSI2P, CVTUI2P,
@@ -546,6 +538,12 @@ namespace llvm {
       // indicate whether it is valid in CF.
       RDSEED,
 
+      // Protection keys
+      // RDPKRU - Operand 0 is chain. Operand 1 is value for ECX.
+      // WRPKRU - Operand 0 is chain. Operand 1 is value for EDX. Operand 2 is
+      // value for ECX.
+      RDPKRU, WRPKRU,
+
       // SSE42 string comparisons.
       // These nodes produce 3 results, index, mask, and flags. X86ISelDAGToDAG
       // will emit one or two instructions based on which results are used. If
@@ -559,10 +557,11 @@ namespace llvm {
       XTEST,
 
       // ERI instructions.
-      RSQRT28, RSQRT28S, RCP28, RCP28S, EXP2,
+      RSQRT28, RSQRT28_SAE, RSQRT28S, RSQRT28S_SAE,
+      RCP28, RCP28_SAE, RCP28S, RCP28S_SAE, EXP2, EXP2_SAE,
 
       // Conversions between float and half-float.
-      CVTPS2PH, CVTPH2PS, CVTPH2PS_RND,
+      CVTPS2PH, CVTPH2PS, CVTPH2PS_SAE,
 
       // Masked version of above.
       // SRC, RND, PASSTHRU, MASK
@@ -591,6 +590,9 @@ namespace llvm {
       // Load, scalar_to_vector, and zero extend.
       VZEXT_LOAD,
 
+      // extract_vector_elt, store.
+      VEXTRACT_STORE,
+
       // Store FP control world into i16 memory.
       FNSTCW16m,
 
@@ -609,16 +611,22 @@ namespace llvm {
       FILD,
       FILD_FLAG,
 
+      /// This instruction implements a fp->int store from FP stack
+      /// slots. This corresponds to the fist instruction. It takes a
+      /// chain operand, value to store, address, and glue. The memory VT
+      /// specifies the type to store as.
+      FIST,
+
       /// This instruction implements an extending load to FP stack slots.
       /// This corresponds to the X86::FLD32m / X86::FLD64m. It takes a chain
       /// operand, and ptr to load from. The memory VT specifies the type to
       /// load from.
       FLD,
 
-      /// This instruction implements a truncating store to FP stack
+      /// This instruction implements a truncating store from FP stack
       /// slots. This corresponds to the X86::FST32m / X86::FST64m. It takes a
-      /// chain operand, value to store, and address. The memory VT specifies
-      /// the type to store as.
+      /// chain operand, value to store, address, and glue. The memory VT
+      /// specifies the type to store as.
       FST,
 
       /// This instruction grabs the address of the next argument
@@ -705,7 +713,7 @@ namespace llvm {
     /// target-independent logic.
     EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
                             bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-                            MachineFunction &MF) const override;
+                            const AttributeList &FuncAttributes) const override;
 
     /// Returns true if it's safe to use load / store of the
     /// specified type to expand memcpy / memset inline. This is mostly true
@@ -809,7 +817,10 @@ namespace llvm {
 
     bool hasAndNot(SDValue Y) const override;
 
-    bool preferShiftsToClearExtremeBits(SDValue Y) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
+                                           CombineLevel Level) const override;
+
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
     bool
     shouldTransformSignedTruncationCheck(EVT XVT,
@@ -830,7 +841,7 @@ namespace llvm {
     }
 
     bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
-      if (DAG.getMachineFunction().getFunction().optForMinSize())
+      if (DAG.getMachineFunction().getFunction().hasMinSize())
         return false;
       return true;
     }
@@ -964,6 +975,9 @@ namespace llvm {
 
     bool isVectorShiftByScalarCheap(Type *Ty) const override;
 
+    /// Returns true if the opcode is a commutative binary operation.
+    bool isCommutativeBinOp(unsigned Opcode) const override;
+
     /// Return true if it's free to truncate a value of
     /// type Ty1 to type Ty2. e.g. On x86 it's free to truncate a i32 value in
     /// register EAX to i16 by referencing its sub-register AX.
@@ -1009,7 +1023,8 @@ namespace llvm {
     /// Returns true if the target can instruction select the
     /// specified FP immediate natively. If false, the legalizer will
     /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+    bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                      bool ForCodeSize) const override;
 
     /// Targets can use this to indicate that they only support *some*
     /// VECTOR_SHUFFLE operations, those with specific masks. By default, if a
@@ -1070,6 +1085,12 @@ namespace llvm {
     /// the vector equivalent, so this always makes sense if the scalar op is
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
+
+    /// Extract of a scalar FP value from index 0 of a vector is free.
+    bool isExtractVecEltCheap(EVT VT, unsigned Index) const override {
+      EVT EltVT = VT.getScalarType();
+      return (EltVT == MVT::f32 || EltVT == MVT::f64) && Index == 0;
+    }
 
     /// Overflow nodes should get combined/lowered to optimal instructions
     /// (they should allow eliminating explicit compares by getting flags from
@@ -1579,10 +1600,10 @@ namespace llvm {
   void scaleShuffleMask(int Scale, ArrayRef<T> Mask,
                         SmallVectorImpl<T> &ScaledMask) {
     assert(0 < Scale && "Unexpected scaling factor");
-    int NumElts = Mask.size();
-    ScaledMask.assign(static_cast<size_t>(NumElts * Scale), -1);
+    size_t NumElts = Mask.size();
+    ScaledMask.assign(NumElts * Scale, -1);
 
-    for (int i = 0; i != NumElts; ++i) {
+    for (int i = 0; i != (int)NumElts; ++i) {
       int M = Mask[i];
 
       // Repeat sentinel values in every mask element.

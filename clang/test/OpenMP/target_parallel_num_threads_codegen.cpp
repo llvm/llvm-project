@@ -263,7 +263,7 @@ int bar(int n){
 // CHECK:       store i16 [[CEV]], i16* [[CONV]], align
 // CHECK:       [[ARG:%.+]] = load i[[SZ]], i[[SZ]]* [[CAPEC_ADDR]], align
 // CHECK:       [[T:%.+]] = load i16, i16* [[CAPE_ADDR]], align
-// CHECK:       [[THREADS:%.+]] = sext i16 [[T]] to i32
+// CHECK:       [[THREADS:%.+]] = zext i16 [[T]] to i32
 //
 // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, {{.*}}, i32 1, i32 [[THREADS]])
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0

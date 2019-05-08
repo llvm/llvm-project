@@ -30,11 +30,11 @@ class TestInterruptThreadNames(TestBase):
 
         launch_info = lldb.SBLaunchInfo(None)
         error = lldb.SBError()
-        lldb.debugger.SetAsync(True)
+        self.dbg.SetAsync(True)
         process = target.Launch(launch_info, error)
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        listener = lldb.debugger.GetListener()
+        listener = self.dbg.GetListener()
         broadcaster = process.GetBroadcaster()
         rc = broadcaster.AddListener(listener, lldb.SBProcess.eBroadcastBitStateChanged)
         self.assertTrue(rc != 0, "Unable to add listener to process")

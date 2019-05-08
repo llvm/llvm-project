@@ -110,9 +110,9 @@ template <class Item> struct IntrusiveList {
       CHECK_EQ(Last, 0);
     } else {
       uptr count = 0;
-      for (Item *i = First;; i = i->Next) {
+      for (Item *I = First;; I = I->Next) {
         count++;
-        if (i == Last)
+        if (I == Last)
           break;
       }
       CHECK_EQ(size(), count);

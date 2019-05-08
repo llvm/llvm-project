@@ -50,9 +50,9 @@ public:
                         llvm::StringRef CanonicalPath);
 
   /// Returns the canonical include for symbol with \p QualifiedName.
-  /// \p Headers is the include stack: Headers.front() is the file declaring the
-  /// symbol, and Headers.back() is the main file.
-  llvm::StringRef mapHeader(llvm::ArrayRef<std::string> Headers,
+  /// \p Header is the file the declaration was reachable from.
+  /// Header itself will be returned if there is no relevant mapping.
+  llvm::StringRef mapHeader(llvm::StringRef Header,
                             llvm::StringRef QualifiedName) const;
 
 private:

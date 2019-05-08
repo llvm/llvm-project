@@ -15,6 +15,7 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
@@ -53,7 +54,8 @@ public:
                              unsigned &DstReg, unsigned &SubIdx) const override;
 
   bool
-  areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+  areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                  const MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
@@ -83,6 +85,14 @@ public:
     return isUnscaledLdSt(MI.getOpcode());
   }
 
+  /// Returns the unscaled load/store for the scaled load/store opcode,
+  /// if there is a corresponding unscaled variant available.
+  static Optional<unsigned> getUnscaledLdSt(unsigned Opc);
+
+
+  /// Returns the index for the immediate for a given instruction.
+  static unsigned getLoadStoreImmIdx(unsigned Opc);
+
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
 
@@ -91,16 +101,18 @@ public:
   static unsigned convertToFlagSettingOpc(unsigned Opc, bool &Is64Bit);
 
   /// Return true if this is a load/store that can be potentially paired/merged.
-  bool isCandidateToMergeOrPair(MachineInstr &MI) const;
+  bool isCandidateToMergeOrPair(const MachineInstr &MI) const;
 
   /// Hint that pairing the given load or store is unprofitable.
   static void suppressLdStPair(MachineInstr &MI);
 
-  bool getMemOperandWithOffset(MachineInstr &MI, MachineOperand *&BaseOp,
+  bool getMemOperandWithOffset(const MachineInstr &MI,
+                               const MachineOperand *&BaseOp,
                                int64_t &Offset,
                                const TargetRegisterInfo *TRI) const override;
 
-  bool getMemOperandWithOffsetWidth(MachineInstr &MI, MachineOperand *&BaseOp,
+  bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
+                                    const MachineOperand *&BaseOp,
                                     int64_t &Offset, unsigned &Width,
                                     const TargetRegisterInfo *TRI) const;
 
@@ -111,10 +123,11 @@ public:
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
   /// For unscaled instructions, \p Scale is set to 1.
-  bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
-                    int64_t &MinOffset, int64_t &MaxOffset) const;
+  static bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
+                           int64_t &MinOffset, int64_t &MaxOffset);
 
-  bool shouldClusterMemOps(MachineOperand &BaseOp1, MachineOperand &BaseOp2,
+  bool shouldClusterMemOps(const MachineOperand &BaseOp1,
+                           const MachineOperand &BaseOp2,
                            unsigned NumLoads) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,

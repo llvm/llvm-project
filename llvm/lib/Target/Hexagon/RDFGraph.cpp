@@ -54,7 +54,6 @@ raw_ostream &operator<< (raw_ostream &OS, const PrintLaneMaskOpt &P) {
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<RegisterRef> &P) {
   auto &TRI = P.G.getTRI();
   if (P.Obj.Reg > 0 && P.Obj.Reg < TRI.getNumRegs())
@@ -65,7 +64,6 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<RegisterRef> &P) {
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeId> &P) {
   auto NA = P.G.addr<NodeBase*>(P.Obj);
   uint16_t Attrs = NA.Addr->getAttrs();
@@ -115,7 +113,6 @@ static void printRefHeader(raw_ostream &OS, const NodeAddr<RefNode*> RA,
     OS << '!';
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<DefNode*>> &P) {
   printRefHeader(OS, P.Obj, P.G);
   OS << '(';
@@ -133,7 +130,6 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<DefNode*>> &P) {
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<UseNode*>> &P) {
   printRefHeader(OS, P.Obj, P.G);
   OS << '(';
@@ -145,7 +141,6 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<UseNode*>> &P) {
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS,
       const Print<NodeAddr<PhiUseNode*>> &P) {
   printRefHeader(OS, P.Obj, P.G);
@@ -161,7 +156,6 @@ raw_ostream &operator<< (raw_ostream &OS,
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<RefNode*>> &P) {
   switch (P.Obj.Addr->getKind()) {
     case NodeAttrs::Def:
@@ -177,7 +171,6 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<RefNode*>> &P) {
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeList> &P) {
   unsigned N = P.Obj.size();
   for (auto I : P.Obj) {
@@ -188,7 +181,6 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeList> &P) {
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeSet> &P) {
   unsigned N = P.Obj.size();
   for (auto I : P.Obj) {
@@ -223,16 +215,13 @@ namespace {
 
 } // end anonymous namespace
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<PhiNode*>> &P) {
   OS << Print<NodeId>(P.Obj.Id, P.G) << ": phi ["
      << PrintListV<RefNode*>(P.Obj.Addr->members(P.G), P.G) << ']';
   return OS;
 }
 
-template<>
-raw_ostream &operator<< (raw_ostream &OS,
-      const Print<NodeAddr<StmtNode*>> &P) {
+raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<StmtNode *>> &P) {
   const MachineInstr &MI = *P.Obj.Addr->getCode();
   unsigned Opc = MI.getOpcode();
   OS << Print<NodeId>(P.Obj.Id, P.G) << ": " << P.G.getTII().getName(Opc);
@@ -257,7 +246,6 @@ raw_ostream &operator<< (raw_ostream &OS,
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS,
       const Print<NodeAddr<InstrNode*>> &P) {
   switch (P.Obj.Addr->getKind()) {
@@ -274,7 +262,6 @@ raw_ostream &operator<< (raw_ostream &OS,
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS,
       const Print<NodeAddr<BlockNode*>> &P) {
   MachineBasicBlock *BB = P.Obj.Addr->getCode();
@@ -308,9 +295,7 @@ raw_ostream &operator<< (raw_ostream &OS,
   return OS;
 }
 
-template<>
-raw_ostream &operator<< (raw_ostream &OS,
-      const Print<NodeAddr<FuncNode*>> &P) {
+raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<FuncNode *>> &P) {
   OS << "DFG dump:[\n" << Print<NodeId>(P.Obj.Id, P.G) << ": Function: "
      << P.Obj.Addr->getCode()->getName() << '\n';
   for (auto I : P.Obj.Addr->members(P.G))
@@ -319,7 +304,6 @@ raw_ostream &operator<< (raw_ostream &OS,
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<RegisterSet> &P) {
   OS << '{';
   for (auto I : P.Obj)
@@ -328,13 +312,11 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<RegisterSet> &P) {
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<RegisterAggr> &P) {
   P.Obj.print(OS);
   return OS;
 }
 
-template<>
 raw_ostream &operator<< (raw_ostream &OS,
       const Print<DataFlowGraph::DefStack> &P) {
   for (auto I = P.Obj.top(), E = P.Obj.bottom(); I != E; ) {

@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=asm < %s -triple i686-windows-msvc | FileCheck %s --check-prefix=ASM
-# RUN: llvm-mc -filetype=obj < %s -triple i686-windows-msvc | llvm-readobj -codeview | FileCheck %s --check-prefix=OBJ
+# RUN: llvm-mc -filetype=obj < %s -triple i686-windows-msvc | llvm-readobj --codeview | FileCheck %s --check-prefix=OBJ
 
 .globl _foo
 _foo:

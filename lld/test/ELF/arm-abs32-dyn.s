@@ -15,11 +15,11 @@ bar:
  .word bar
 
 // RUN: ld.lld -shared -o %t.so %t.o
-// RUN: llvm-readobj -symbols -dyn-relocations %t.so | FileCheck %s
+// RUN: llvm-readobj --symbols --dyn-relocations %t.so | FileCheck %s
 
 // CHECK:      Dynamic Relocations {
-// CHECK-NEXT:   0x1004 R_ARM_RELATIVE
-// CHECK-NEXT:   0x1000 R_ARM_ABS32 foo 0x0
+// CHECK-NEXT:   0x2004 R_ARM_RELATIVE
+// CHECK-NEXT:   0x2000 R_ARM_ABS32 foo 0x0
 // CHECK-NEXT: }
 
 // CHECK:      Symbols [

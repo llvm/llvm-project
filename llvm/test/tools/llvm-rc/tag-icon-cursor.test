@@ -320,12 +320,12 @@
 ; CHECK-NEXT: )
 
 
-; RUN: not llvm-rc /FO %t/1 %p/Inputs/tag-icon-cursor-nonexistent.rc 2>&1 | FileCheck %s --check-prefix NOFILE
+; RUN: not llvm-rc /FO %t/1 -- %p/Inputs/tag-icon-cursor-nonexistent.rc 2>&1 | FileCheck %s --check-prefix NOFILE
 ; NOFILE: llvm-rc: Error in CURSOR statement (ID 500):
 ; NOFILE-NEXT: file not found : this-file-does-not-exist.cur
 
 
-; RUN: not llvm-rc /FO %t/1 %p/Inputs/tag-icon-cursor-nonsense.rc 2>&1 | FileCheck %s --check-prefix NONSENSE
+; RUN: not llvm-rc /FO %t/1 -- %p/Inputs/tag-icon-cursor-nonsense.rc 2>&1 | FileCheck %s --check-prefix NONSENSE
 
 ; NONSENSE: llvm-rc: Error in ICON statement (ID 1):
 ; NONSENSE-NEXT: Incorrect icon/cursor Reserved field; should be 0.

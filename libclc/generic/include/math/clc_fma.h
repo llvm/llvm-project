@@ -1,6 +1,6 @@
 #define __CLC_FUNCTION __clc_fma
 #define __CLC_INTRINSIC "llvm.fma"
-#include <clc/math/ternary_intrin.inc>
+#include "math/ternary_intrin.inc"
 
 #define __FLOAT_ONLY
 #define __CLC_FUNCTION __clc_sw_fma

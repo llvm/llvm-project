@@ -1,0 +1,336 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass greedy,amdgpu-regbanks-reassign,virtregrewriter -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: v1_vs_v5{{$}}
+# GCN: V_AND_B32_e32 killed $vgpr3, killed $vgpr1,
+---
+name:            v1_vs_v5
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr1' }
+  - { id: 1, class: vgpr_32, preferred-register: '$vgpr5' }
+  - { id: 2, class: vgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = V_AND_B32_e32 %1, %0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: v0_1_vs_v4{{$}}
+# GCN: GLOBAL_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr3,
+---
+name:            v0_1_vs_v4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr4' }
+  - { id: 1, class: vreg_64, preferred-register: '$vgpr0_vgpr1' }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORD %1, %0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: v1_2_vs_v4_5{{$}}
+# GCN: GLOBAL_STORE_DWORDX2 killed renamable $vgpr2_vgpr3, killed renamable $vgpr4_vgpr5,
+---
+name:            v1_2_vs_v4_5
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64, preferred-register: '$vgpr4_vgpr5' }
+  - { id: 1, class: vreg_64, preferred-register: '$vgpr1_vgpr2' }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX2 %1, %0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: s0_vs_s16{{$}}
+# GCN: S_AND_B32 killed renamable $sgpr14, $sgpr0,
+---
+name:            s0_vs_s16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '$sgpr16' }
+  - { id: 1, class: sgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    $sgpr0 = IMPLICIT_DEF
+    %1 = S_AND_B32 %0, $sgpr0, implicit-def $scc
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: s1_vs_s16{{$}}
+# GCN: S_AND_B32 killed renamable $sgpr14, $sgpr1,
+---
+name:            s1_vs_s16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '$sgpr16' }
+  - { id: 1, class: sgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    $sgpr1 = IMPLICIT_DEF
+    %1 = S_AND_B32 %0, $sgpr1, implicit-def $scc
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: s12_vs_null{{$}}
+# GCN: S_AND_B32 $sgpr_null, killed renamable $sgpr14,
+---
+name:            s12_vs_null
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '$sgpr12' }
+  - { id: 1, class: sgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = S_AND_B32 $sgpr_null, %0, implicit-def $scc
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: s13_vs_m0{{$}}
+# GCN: S_AND_B32 $m0, killed renamable $sgpr14,
+---
+name:            s13_vs_m0
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '$sgpr13' }
+  - { id: 1, class: sgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = S_AND_B32 $m0, %0, implicit-def $scc
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: s12_13_vs_s28_s29{{$}}
+# GCN: S_AND_B64 $sgpr28_sgpr29, killed renamable $sgpr14_sgpr15,
+---
+name:            s12_13_vs_s28_s29
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64, preferred-register: '$sgpr12_sgpr13' }
+  - { id: 1, class: sreg_64 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    $sgpr28_sgpr29 = IMPLICIT_DEF
+    %1 = S_AND_B64 $sgpr28_sgpr29, %0, implicit-def $scc
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: livein{{$}}
+# GCN: V_AND_B32_e32 killed $vgpr4, killed $vgpr0,
+---
+name:            livein
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+  - { id: 1, class: vgpr_32, preferred-register: '$vgpr4' }
+  - { id: 2, class: vgpr_32 }
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '' }
+  - { reg: '$vgpr4', virtual-reg: '' }
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr4
+
+    %0 = COPY $vgpr0
+    %1 = COPY $vgpr4
+    %2 = V_AND_B32_e32 %1, %0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: liveout{{$}}
+# GCN: V_AND_B32_e32 $vgpr4, $vgpr0,
+---
+name:            liveout
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+  - { id: 1, class: vgpr_32, preferred-register: '$vgpr4' }
+  - { id: 2, class: vgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = V_AND_B32_e32 %1, %0, implicit $exec
+    $vgpr0 = COPY %0
+    $vgpr4 = COPY %1
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: implicit{{$}}
+# GCN: V_MOV_B32_indirect undef $vgpr4, undef $vgpr0, implicit $exec, implicit-def dead renamable $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr4_vgpr5_vgpr6_vgpr7, implicit $m0
+---
+name:            implicit
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128, preferred-register: '$vgpr4_vgpr5_vgpr6_vgpr7' }
+body: |
+  bb.0:
+    %1 = IMPLICIT_DEF
+    V_MOV_B32_indirect undef %1.sub0:vreg_128, undef $vgpr0, implicit $exec, implicit-def %0:vreg_128, implicit %1:vreg_128, implicit $m0
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: occupancy_limit{{$}}
+# GCN: V_AND_B32_e32 $vgpr4, $vgpr0,
+---
+name:            occupancy_limit
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+  - { id: 1, class: vgpr_32, preferred-register: '$vgpr4' }
+  - { id: 2, class: vgpr_32, preferred-register: '$vgpr1' }
+  - { id: 3, class: vreg_64, preferred-register: '$vgpr2_vgpr3' }
+  - { id: 4, class: vgpr_32, preferred-register: '$vgpr5' }
+  - { id: 5, class: vreg_64, preferred-register: '$vgpr6_vgpr7' }
+  - { id: 6, class: vreg_128, preferred-register: '$vgpr8_vgpr9_vgpr10_vgpr11' }
+  - { id: 7, class: vreg_128, preferred-register: '$vgpr12_vgpr13_vgpr14_vgpr15' }
+  - { id: 8, class: vreg_128, preferred-register: '$vgpr16_vgpr17_vgpr18_vgpr19' }
+  - { id: 9, class: vreg_128, preferred-register: '$vgpr20_vgpr21_vgpr22_vgpr23' }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %3 = IMPLICIT_DEF
+    %4 = IMPLICIT_DEF
+    %5 = IMPLICIT_DEF
+    %6 = IMPLICIT_DEF
+    %7 = IMPLICIT_DEF
+    %8 = IMPLICIT_DEF
+    %9 = IMPLICIT_DEF
+    %2 = V_AND_B32_e32 %1, %0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %1, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %2, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %4, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %3, %5, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %6, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %7, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %8, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %9, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: csr{{$}}
+# GCN: V_AND_B32_e32 $vgpr4, $vgpr0,
+---
+name:            csr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+  - { id: 1, class: vgpr_32, preferred-register: '$vgpr4' }
+  - { id: 2, class: vgpr_32, preferred-register: '$vgpr1' }
+  - { id: 3, class: vreg_64, preferred-register: '$vgpr2_vgpr3' }
+  - { id: 4, class: vgpr_32, preferred-register: '$vgpr5' }
+  - { id: 5, class: vreg_64, preferred-register: '$vgpr6_vgpr7' }
+  - { id: 6, class: vreg_128, preferred-register: '$vgpr8_vgpr9_vgpr10_vgpr11' }
+  - { id: 7, class: vreg_128, preferred-register: '$vgpr12_vgpr13_vgpr14_vgpr15' }
+  - { id: 8, class: vreg_128, preferred-register: '$vgpr16_vgpr17_vgpr18_vgpr19' }
+  - { id: 9, class: vreg_128, preferred-register: '$vgpr20_vgpr21_vgpr22_vgpr23' }
+  - { id: 10, class: vreg_128, preferred-register: '$vgpr24_vgpr25_vgpr26_vgpr27' }
+  - { id: 11, class: vreg_128, preferred-register: '$vgpr28_vgpr29_vgpr30_vgpr31' }
+  - { id: 12, class: vgpr_32, preferred-register: '$vgpr33' }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %3 = IMPLICIT_DEF
+    %4 = IMPLICIT_DEF
+    %5 = IMPLICIT_DEF
+    %6 = IMPLICIT_DEF
+    %7 = IMPLICIT_DEF
+    %8 = IMPLICIT_DEF
+    %9 = IMPLICIT_DEF
+    %10 = IMPLICIT_DEF
+    %11 = IMPLICIT_DEF
+    %12 = IMPLICIT_DEF
+    %2 = V_AND_B32_e32 %1, %0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %1, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %2, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %4, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %3, %5, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %6, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %7, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %8, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %9, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %10, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %11, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %12, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# Do not touch undefs
+# GCN-LABEL: s0_vs_s16_undef{{$}}
+# GCN: S_AND_B32 killed renamable $sgpr16, undef $sgpr0,
+---
+name:            s0_vs_s16_undef
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '$sgpr16' }
+  - { id: 1, class: sgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = S_AND_B32 %0, undef $sgpr0, implicit-def $scc
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: smem_bundle{{$}}
+# GCN: S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr0_sgpr1_sgpr2_sgpr3, renamable $sgpr15, 0, 0
+# GCN: S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr0_sgpr1_sgpr2_sgpr3, renamable $sgpr14, 0, 0
+---
+name:          smem_bundle
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_128, preferred-register: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+  - { id: 1, class: sreg_32_xm0_xexec, preferred-register: '$sgpr16' }
+  - { id: 2, class: sreg_32_xm0_xexec, preferred-register: '$sgpr17' }
+  - { id: 3, class: sreg_32_xm0_xexec, preferred-register: '$sgpr4' }
+  - { id: 4, class: sreg_32_xm0_xexec, preferred-register: '$sgpr5' }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    early-clobber %3, early-clobber %4 = BUNDLE %0, %1, %2 {
+      %3 = S_BUFFER_LOAD_DWORD_SGPR %0, %1, 0, 0
+      %4 = S_BUFFER_LOAD_DWORD_SGPR %0, %2, 0, 0
+    }
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: vreg_512_subs{{$}}
+# don't care about the assignment: this used to trigger an infinite loop
+---
+name:            vreg_512_subs
+tracksRegLiveness: true
+registers:
+  - { id: 1, class: vreg_512, preferred-register: '$vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15' }
+  - { id: 2, class: vgpr_32, preferred-register: '$vgpr28' }
+body:             |
+  bb.0:
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    DS_WRITE2_B32_gfx9 %2, %1.sub0, %1.sub1, 0, 1, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %1.sub2, %1.sub3, 2, 3, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %1.sub4, %1.sub5, 4, 5, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %1.sub6, %1.sub7, 6, 7, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %1.sub8, %1.sub9, 8, 9, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %1.sub10, %1.sub11, 10, 11, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %1.sub12, %1.sub13, 12, 13, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %1.sub14, %1.sub15, 14, 15, 0, implicit $exec
+    S_ENDPGM 0
+...

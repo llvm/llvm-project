@@ -221,8 +221,12 @@ public:
       Visit(TP);
   }
 
-  void dumpTemplateArgumentListInfo(const TemplateArgumentListInfo &TALI) {
-    for (const auto &TA : TALI.arguments())
+  void
+  dumpASTTemplateArgumentListInfo(const ASTTemplateArgumentListInfo *TALI) {
+    if (!TALI)
+      return;
+
+    for (const auto &TA : TALI->arguments())
       dumpTemplateArgumentLoc(TA);
   }
 
@@ -393,6 +397,13 @@ public:
     Visit(D->getInit());
   }
 
+  void VisitOMPAllocateDecl(const OMPAllocateDecl *D) {
+    for (const auto *E : D->varlists())
+      Visit(E);
+    for (const auto *C : D->clauselists())
+      Visit(C);
+  }
+
   template <typename SpecializationDecl>
   void dumpTemplateDeclSpecialization(const SpecializationDecl *D) {
     for (const auto *RedeclWithBadType : D->redecls()) {
@@ -458,8 +469,7 @@ public:
   void VisitClassScopeFunctionSpecializationDecl(
       const ClassScopeFunctionSpecializationDecl *D) {
     Visit(D->getSpecialization());
-    if (D->hasExplicitTemplateArgs())
-      dumpTemplateArgumentListInfo(D->templateArgs());
+    dumpASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
   }
   void VisitVarTemplateDecl(const VarTemplateDecl *D) { dumpTemplateDecl(D); }
 

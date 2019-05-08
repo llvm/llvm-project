@@ -17,7 +17,7 @@ entry:
   store i8* %overflow_arg_area.next, i8** %overflow_arg_area_p, align 8
 ; X32: leal    68(%esp), [[REG:%.*]]
 ; X32: movl    [[REG]], 16(%esp)
-; X64: leaq    232(%rsp), [[REG:%.*]]
+; X64: leaq    256(%rsp), [[REG:%.*]]
 ; X64: movq    [[REG]], 184(%rsp)
 ; X64: leaq    176(%rsp), %rdi
   call void @qux(%struct.__va_list_tag* %arraydecay)

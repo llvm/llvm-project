@@ -11,7 +11,6 @@
 #include "MICmdArgContext.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionShort constructor.
 // Type:    Method.
 // Args:    None.
@@ -21,7 +20,6 @@
 CMICmdArgValOptionShort::CMICmdArgValOptionShort() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionShort constructor.
 // Type:    Method.
 // Args:    vrArgName       - (R) Argument's name to search by.
@@ -38,7 +36,6 @@ CMICmdArgValOptionShort::CMICmdArgValOptionShort(const CMIUtilString &vrArgName,
     : CMICmdArgValOptionLong(vrArgName, vbMandatory, vbHandleByCmd) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionLong constructor.
 // Type:    Method.
 // Args:    vrArgName           - (R) Argument's name to search by.
@@ -61,7 +58,6 @@ CMICmdArgValOptionShort::CMICmdArgValOptionShort(
                              vnExpectingNOptions) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionShort destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -71,7 +67,6 @@ CMICmdArgValOptionShort::CMICmdArgValOptionShort(
 CMICmdArgValOptionShort::~CMICmdArgValOptionShort() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Examine the string and determine if it is a valid short type option
 // argument.
 // Type:    Method.
@@ -98,7 +93,6 @@ bool CMICmdArgValOptionShort::IsArgShortOption(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Examine the string and determine if it is a valid short type option
 // argument.
 //          Long type argument looks like -f some short option.
@@ -113,7 +107,6 @@ bool CMICmdArgValOptionShort::IsArgOptionCorrect(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Does the argument name of the argument being parsed ATM match the
 // name of
 //          *this argument object.

@@ -315,16 +315,16 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900
 #   ifndef __cpp_lib_is_constant_evaluated
 #     error "__cpp_lib_is_constant_evaluated should be defined in c++2a"
 #   endif
 #   if __cpp_lib_is_constant_evaluated != 201811L
 #     error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++2a"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_is_constant_evaluated should not be defined when TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900 is not defined!"
 #   endif
 # endif
 

@@ -18,15 +18,6 @@
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
-static cl::opt<MCTargetOptions::AsmInstrumentation> AsmInstrumentation(
-    "asm-instrumentation", cl::desc("Instrumentation of inline assembly and "
-                                    "assembly source files"),
-    cl::init(MCTargetOptions::AsmInstrumentationNone),
-    cl::values(clEnumValN(MCTargetOptions::AsmInstrumentationNone, "none",
-                          "no instrumentation at all"),
-               clEnumValN(MCTargetOptions::AsmInstrumentationAddress, "address",
-                          "instrument instructions with memory arguments")));
-
 static cl::opt<bool> RelaxAll("mc-relax-all",
                        cl::desc("When used with filetype=obj, "
                                 "relax all fixups in the emitted object file"));
@@ -62,8 +53,6 @@ ABIName("target-abi", cl::Hidden,
 
 static MCTargetOptions InitMCTargetOptionsFromFlags() {
   MCTargetOptions Options;
-  Options.SanitizeAddress =
-      (AsmInstrumentation == MCTargetOptions::AsmInstrumentationAddress);
   Options.MCRelaxAll = RelaxAll;
   Options.MCIncrementalLinkerCompatible = IncrementalLinkerCompatible;
   Options.MCPIECopyRelocations = PIECopyRelocations;

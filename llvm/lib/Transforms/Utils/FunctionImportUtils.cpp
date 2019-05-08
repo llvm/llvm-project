@@ -129,7 +129,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // definitions upon import, so that they are available for inlining
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
-    if (doImportAsDefinition(SGV) && !dyn_cast<GlobalAlias>(SGV))
+    if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
       return GlobalValue::AvailableExternallyLinkage;
     // An imported external declaration stays external.
     return SGV->getLinkage();
@@ -158,7 +158,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // equivalent, so the issue described above for weak_any does not exist,
     // and the definition can be imported. It can be treated similarly
     // to an imported externally visible global value.
-    if (doImportAsDefinition(SGV) && !dyn_cast<GlobalAlias>(SGV))
+    if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
       return GlobalValue::AvailableExternallyLinkage;
     else
       return GlobalValue::ExternalLinkage;
@@ -176,7 +176,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // If we are promoting the local to global scope, it is handled
     // similarly to a normal externally visible global.
     if (DoPromote) {
-      if (doImportAsDefinition(SGV) && !dyn_cast<GlobalAlias>(SGV))
+      if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
         return GlobalValue::AvailableExternallyLinkage;
       else
         return GlobalValue::ExternalLinkage;

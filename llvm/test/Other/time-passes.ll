@@ -4,6 +4,16 @@
 ; RUN: opt < %s -disable-output -passes='instcombine,loop(licm),instcombine,loop(licm)' -time-passes 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-NEW -check-prefix=TIME-DOUBLE-LICM-NEW
 ; RUN: opt < %s -disable-output -passes='default<O2>' -time-passes 2>&1 | FileCheck %s --check-prefix=TIME
 ;
+; The following 4 test runs verify -info-output-file interaction (default goes to stderr, '-' goes to stdout).
+; RUN: opt < %s -disable-output -O2 -time-passes -info-output-file='-' 2>/dev/null | FileCheck %s --check-prefix=TIME
+; RUN: opt < %s -disable-output -passes='default<O2>' -time-passes -info-output-file='-' 2>/dev/null | FileCheck %s --check-prefix=TIME
+;
+; RUN: rm -f %t; opt < %s -disable-output -O2 -time-passes -info-output-file=%t
+; RUN:   cat %t | FileCheck %s --check-prefix=TIME
+;
+; RUN: rm -f %t; opt < %s -disable-output -passes='default<O2>' -time-passes -info-output-file=%t
+; RUN:   cat %t | FileCheck %s --check-prefix=TIME
+;
 ; TIME: Pass execution timing report
 ; TIME: Total Execution Time:
 ; TIME: Name

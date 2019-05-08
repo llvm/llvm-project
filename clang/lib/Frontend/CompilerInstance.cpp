@@ -13,7 +13,6 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
@@ -35,6 +34,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -46,6 +46,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sys/stat.h>
@@ -57,15 +58,12 @@ using namespace clang;
 
 CompilerInstance::CompilerInstance(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    MemoryBufferCache *SharedPCMCache)
-    : ModuleLoader(/* BuildingModule = */ SharedPCMCache),
+    InMemoryModuleCache *SharedModuleCache)
+    : ModuleLoader(/* BuildingModule = */ SharedModuleCache),
       Invocation(new CompilerInvocation()),
-      PCMCache(SharedPCMCache ? SharedPCMCache : new MemoryBufferCache),
-      ThePCHContainerOperations(std::move(PCHContainerOps)) {
-  // Don't allow this to invalidate buffers in use by others.
-  if (SharedPCMCache)
-    getPCMCache().finalizeCurrentBuffers();
-}
+      ModuleCache(SharedModuleCache ? SharedModuleCache
+                                    : new InMemoryModuleCache),
+      ThePCHContainerOperations(std::move(PCHContainerOps)) {}
 
 CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");
@@ -92,10 +90,6 @@ void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
 void CompilerInstance::setFileManager(FileManager *Value) {
   FileMgr = Value;
-  if (Value)
-    VirtualFileSystem = Value->getVirtualFileSystem();
-  else
-    VirtualFileSystem.reset();
 }
 
 void CompilerInstance::setSourceManager(SourceManager *Value) {
@@ -136,7 +130,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::getModuleManager() const {
   return ModuleManager;
 }
 void CompilerInstance::setModuleManager(IntrusiveRefCntPtr<ASTReader> Reader) {
-  assert(PCMCache.get() == &Reader->getModuleManager().getPCMCache() &&
+  assert(ModuleCache.get() == &Reader->getModuleManager().getModuleCache() &&
          "Expected ASTReader to use the same PCM cache");
   ModuleManager = std::move(Reader);
 }
@@ -176,7 +170,7 @@ static void collectIncludePCH(CompilerInstance &CI,
   std::error_code EC;
   SmallString<128> DirNative;
   llvm::sys::path::native(PCHDir->getName(), DirNative);
-  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   SimpleASTReaderListener Validator(CI.getPreprocessor());
   for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
@@ -300,13 +294,14 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
 
 // File Manager
 
-FileManager *CompilerInstance::createFileManager() {
-  if (!hasVirtualFileSystem()) {
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        createVFSFromCompilerInvocation(getInvocation(), getDiagnostics());
-    setVirtualFileSystem(VFS);
-  }
-  FileMgr = new FileManager(getFileSystemOpts(), VirtualFileSystem);
+FileManager *CompilerInstance::createFileManager(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+  if (!VFS)
+    VFS = FileMgr ? &FileMgr->getVirtualFileSystem()
+                  : createVFSFromCompilerInvocation(getInvocation(),
+                                                    getDiagnostics());
+  assert(VFS && "FileManager has no VFS?");
+  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
   return FileMgr.get();
 }
 
@@ -378,11 +373,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   HeaderSearch *HeaderInfo =
       new HeaderSearch(getHeaderSearchOptsPtr(), getSourceManager(),
                        getDiagnostics(), getLangOpts(), &getTarget());
-  PP = std::make_shared<Preprocessor>(
-      Invocation->getPreprocessorOptsPtr(), getDiagnostics(), getLangOpts(),
-      getSourceManager(), getPCMCache(), *HeaderInfo, *this,
-      /*IdentifierInfoLookup=*/nullptr,
-      /*OwnsHeaderSearch=*/true, TUKind);
+  PP = std::make_shared<Preprocessor>(Invocation->getPreprocessorOptsPtr(),
+                                      getDiagnostics(), getLangOpts(),
+                                      getSourceManager(), *HeaderInfo, *this,
+                                      /*IdentifierInfoLookup=*/nullptr,
+                                      /*OwnsHeaderSearch=*/true, TUKind);
   getTarget().adjust(getLangOpts());
   PP->Initialize(getTarget(), getAuxTarget());
 
@@ -489,19 +484,17 @@ void CompilerInstance::createPCHExternalASTSource(
   bool Preamble = getPreprocessorOpts().PrecompiledPreambleBytes.first != 0;
   ModuleManager = createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisablePCHValidation,
-      AllowPCHWithCompilerErrors, getPreprocessor(), getASTContext(),
-      getPCHContainerReader(),
-      getFrontendOpts().ModuleFileExtensions,
-      TheDependencyFileGenerator.get(),
-      DependencyCollectors,
-      DeserializationListener,
-      OwnDeserializationListener, Preamble,
-      getFrontendOpts().UseGlobalModuleIndex);
+      AllowPCHWithCompilerErrors, getPreprocessor(), getModuleCache(),
+      getASTContext(), getPCHContainerReader(),
+      getFrontendOpts().ModuleFileExtensions, TheDependencyFileGenerator.get(),
+      DependencyCollectors, DeserializationListener, OwnDeserializationListener,
+      Preamble, getFrontendOpts().UseGlobalModuleIndex);
 }
 
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
-    bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
+    bool AllowPCHWithCompilerErrors, Preprocessor &PP,
+    InMemoryModuleCache &ModuleCache, ASTContext &Context,
     const PCHContainerReader &PCHContainerRdr,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     DependencyFileGenerator *DependencyFile,
@@ -511,7 +504,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
-      PP, &Context, PCHContainerRdr, Extensions,
+      PP, ModuleCache, &Context, PCHContainerRdr, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisablePCHValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
       HSOpts.ModulesValidateSystemHeaders, UseGlobalModuleIndex));
@@ -591,12 +584,6 @@ void CompilerInstance::createCodeCompletionConsumer() {
                                   Loc.Line, Loc.Column)) {
     setCodeCompletionConsumer(nullptr);
     return;
-  }
-
-  if (CompletionConsumer->isOutputBinary() &&
-      llvm::sys::ChangeStdoutToBinary()) {
-    getPreprocessor().getDiagnostics().Report(diag::err_fe_stdout_binary);
-    setCodeCompletionConsumer(nullptr);
   }
 }
 
@@ -1034,6 +1021,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                       [](CompilerInstance &) {},
                   llvm::function_ref<void(CompilerInstance &)> PostBuildStep =
                       [](CompilerInstance &) {}) {
+  llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
+
   // Construct a compiler invocation for creating this module.
   auto Invocation =
       std::make_shared<CompilerInvocation>(ImportingInstance.getInvocation());
@@ -1095,19 +1084,17 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
          Invocation->getModuleHash() && "Module hash mismatch!");
 
   // Construct a compiler instance that will be used to actually create the
-  // module.  Since we're sharing a PCMCache,
+  // module.  Since we're sharing an in-memory module cache,
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   CompilerInstance Instance(ImportingInstance.getPCHContainerOperations(),
-                            &ImportingInstance.getPreprocessor().getPCMCache());
+                            &ImportingInstance.getModuleCache());
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
   Instance.createDiagnostics(new ForwardingDiagnosticConsumer(
                                    ImportingInstance.getDiagnosticClient()),
                              /*ShouldOwnClient=*/true);
-
-  Instance.setVirtualFileSystem(&ImportingInstance.getVirtualFileSystem());
 
   // Note that this module is part of the module build stack, so that we
   // can detect cycles in the module graph.
@@ -1256,7 +1243,7 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
     llvm::LockFileManager Locked(ModuleFileName);
     switch (Locked) {
     case llvm::LockFileManager::LFS_Error:
-      // PCMCache takes care of correctness and locks are only necessary for
+      // ModuleCache takes care of correctness and locks are only necessary for
       // performance. Fallback to building the module in case of any lock
       // related errors.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
@@ -1283,9 +1270,9 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
       case llvm::LockFileManager::Res_OwnerDied:
         continue; // try again to get the lock.
       case llvm::LockFileManager::Res_Timeout:
-        // Since PCMCache takes care of correctness, we try waiting for another
-        // process to complete the build so clang does not do it done twice. If
-        // case of timeout, build it ourselves.
+        // Since ModuleCache takes care of correctness, we try waiting for
+        // another process to complete the build so clang does not do it done
+        // twice. If case of timeout, build it ourselves.
         Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
             << Module->Name;
         // Clear the lock file so that future invocations can make progress.
@@ -1483,14 +1470,13 @@ void CompilerInstance::createModuleManager() {
                                                  "Reading modules",
                                                  *FrontendTimerGroup);
     ModuleManager = new ASTReader(
-        getPreprocessor(), &getASTContext(), getPCHContainerReader(),
-        getFrontendOpts().ModuleFileExtensions,
+        getPreprocessor(), getModuleCache(), &getASTContext(),
+        getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
         Sysroot.empty() ? "" : Sysroot.c_str(), PPOpts.DisablePCHValidation,
         /*AllowASTWithCompilerErrors=*/false,
         /*AllowConfigurationMismatch=*/false,
         HSOpts.ModulesValidateSystemHeaders,
-        getFrontendOpts().UseGlobalModuleIndex,
-        std::move(ReadTimer));
+        getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
     if (hasASTConsumer()) {
       ModuleManager->setDeserializationListener(
         getASTConsumer().GetASTDeserializationListener());
@@ -1713,6 +1699,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       Timer.init("loading." + ModuleFileName, "Loading " + ModuleFileName,
                  *FrontendTimerGroup);
     llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
+    llvm::TimeTraceScope TimeScope("Module Load", ModuleName);
 
     // Try to load the module file. If we are not trying to load from the
     // module cache, we don't know how to rebuild modules.

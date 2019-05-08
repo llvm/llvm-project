@@ -74,7 +74,6 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; AVX1-NEXT:    vpackssdw %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -99,7 +98,6 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; AVX2-NEXT:    vpackssdw %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
@@ -191,7 +189,6 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double>
 ; AVX12-NEXT:    vpackssdw %xmm1, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX12-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX12-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax

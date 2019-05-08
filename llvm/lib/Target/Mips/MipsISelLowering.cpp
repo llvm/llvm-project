@@ -1190,8 +1190,8 @@ bool MipsTargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasMips32();
 }
 
-bool MipsTargetLowering::shouldFoldShiftPairToMask(const SDNode *N,
-                                                   CombineLevel Level) const {
+bool MipsTargetLowering::shouldFoldConstantShiftPairToMask(
+    const SDNode *N, CombineLevel Level) const {
   if (N->getOperand(0).getValueType().isVector())
     return false;
   return true;
@@ -1203,8 +1203,9 @@ MipsTargetLowering::LowerOperationWrapper(SDNode *N,
                                           SelectionDAG &DAG) const {
   SDValue Res = LowerOperation(SDValue(N, 0), DAG);
 
-  for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
-    Results.push_back(Res.getValue(I));
+  if (Res)
+    for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
+      Results.push_back(Res.getValue(I));
 }
 
 void
@@ -1724,7 +1725,7 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
 
   assert((MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I32 ||
           MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I64) &&
-         "Unsupported atomic psseudo for EmitAtomicCmpSwap.");
+         "Unsupported atomic pseudo for EmitAtomicCmpSwap.");
 
   const unsigned Size = MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I32 ? 4 : 8;
 
@@ -1750,12 +1751,10 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
   // after fast register allocation, the spills will end up outside of the
   // blocks that their values are defined in, causing livein errors.
 
-  unsigned DestCopy = MRI.createVirtualRegister(MRI.getRegClass(Dest));
   unsigned PtrCopy = MRI.createVirtualRegister(MRI.getRegClass(Ptr));
   unsigned OldValCopy = MRI.createVirtualRegister(MRI.getRegClass(OldVal));
   unsigned NewValCopy = MRI.createVirtualRegister(MRI.getRegClass(NewVal));
 
-  BuildMI(*BB, II, DL, TII->get(Mips::COPY), DestCopy).addReg(Dest);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), PtrCopy).addReg(Ptr);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), OldValCopy).addReg(OldVal);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), NewValCopy).addReg(NewVal);
@@ -2376,8 +2375,11 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
 SDValue MipsTargetLowering::
 lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   // check the depth
-  assert((cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0) &&
-         "Frame address can only be determined for current frame.");
+  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+    DAG.getContext()->emitError(
+        "return address can be determined only for current frame");
+    return SDValue();
+  }
 
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setFrameAddressIsTaken(true);
@@ -2394,8 +2396,11 @@ SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
     return SDValue();
 
   // check the depth
-  assert((cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0) &&
-         "Return address can be determined only for current frame.");
+  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+    DAG.getContext()->emitError(
+        "return address can be determined only for current frame");
+    return SDValue();
+  }
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -4135,18 +4140,18 @@ MipsTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   return false;
 }
 
-EVT MipsTargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
-                                            unsigned SrcAlign,
-                                            bool IsMemset, bool ZeroMemset,
-                                            bool MemcpyStrSrc,
-                                            MachineFunction &MF) const {
+EVT MipsTargetLowering::getOptimalMemOpType(
+    uint64_t Size, unsigned DstAlign, unsigned SrcAlign, bool IsMemset,
+    bool ZeroMemset, bool MemcpyStrSrc,
+    const AttributeList &FuncAttributes) const {
   if (Subtarget.hasMips64())
     return MVT::i64;
 
   return MVT::i32;
 }
 
-bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
+bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                      bool ForCodeSize) const {
   if (VT != MVT::f32 && VT != MVT::f64)
     return false;
   if (Imm.isNegZero())

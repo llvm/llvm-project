@@ -123,7 +123,6 @@ def HasOnlySwappingMemOps : Predicate<"!PPCSubTarget->hasP9Vector()">;
 
 let Predicates = [HasVSX] in {
 let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
-let UseVSXReg = 1 in {
 let hasSideEffects = 0 in { // VSX instructions don't have side effects.
 let Uses = [RM] in {
 
@@ -840,12 +839,12 @@ let Uses = [RM] in {
                        "xxlxor $XT, $XA, $XB", IIC_VecGeneral,
                        [(set v4i32:$XT, (xor v4i32:$XA, v4i32:$XB))]>;
   } // isCommutable
-  let isCodeGenOnly = 1 in
-  def XXLXORz : XX3Form_Zero<60, 154, (outs vsrc:$XT), (ins),
+
+  let isCodeGenOnly = 1, isMoveImm = 1, isAsCheapAsAMove = 1,
+      isReMaterializable = 1 in {
+    def XXLXORz : XX3Form_Zero<60, 154, (outs vsrc:$XT), (ins),
                        "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
                        [(set v4i32:$XT, (v4i32 immAllZerosV))]>;
-
-  let isCodeGenOnly = 1 in {
     def XXLXORdpz : XX3Form_SetZero<60, 154,
                          (outs vsfrc:$XT), (ins),
                          "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
@@ -894,11 +893,10 @@ let Uses = [RM] in {
                              (PPCxxsplt v4i32:$XB, imm32SExt16:$UIM))]>;
   let isCodeGenOnly = 1 in
   def XXSPLTWs : XX2Form_2<60, 164,
-                       (outs vsrc:$XT), (ins vfrc:$XB, u2imm:$UIM),
+                       (outs vsrc:$XT), (ins vsfrc:$XB, u2imm:$UIM),
                        "xxspltw $XT, $XB, $UIM", IIC_VecPerm, []>;
 
 } // hasSideEffects
-} // UseVSXReg = 1
 
 // SELECT_CC_* - Used to implement the SELECT_CC DAG operation.  Expanded after
 // instruction selection into a branch sequence.
@@ -1247,7 +1245,7 @@ def HasDirectMove : Predicate<"PPCSubTarget->hasDirectMove()">;
 def NoP9Vector : Predicate<"!PPCSubTarget->hasP9Vector()">;
 let Predicates = [HasP8Vector] in {
 let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
-  let isCommutable = 1, UseVSXReg = 1 in {
+  let isCommutable = 1 in {
     def XXLEQV : XX3Form<60, 186,
                          (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                          "xxleqv $XT, $XA, $XB", IIC_VecGeneral,
@@ -1257,12 +1255,11 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                           "xxlnand $XT, $XA, $XB", IIC_VecGeneral,
                           [(set v4i32:$XT, (vnot_ppc (and v4i32:$XA,
                                                     v4i32:$XB)))]>;
-  } // isCommutable, UseVSXReg
+  } // isCommutable
 
   def : Pat<(int_ppc_vsx_xxleqv v4i32:$A, v4i32:$B),
             (XXLEQV $A, $B)>;
 
-  let UseVSXReg = 1 in {
   def XXLORC : XX3Form<60, 170,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                        "xxlorc $XT, $XA, $XB", IIC_VecGeneral,
@@ -1311,7 +1308,6 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                        "#STIWX",
                       [(PPCstfiwx f64:$XT, xoaddr:$dst)]>;
   } // mayStore
-  } // UseVSXReg = 1
 
   def : Pat<(f64 (extloadf32 xoaddr:$src)),
             (COPY_TO_REGCLASS (XFLOADf32 xoaddr:$src), VSFRC)>;
@@ -1341,7 +1337,6 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETNE)),
             (SELECT_VSSRC (CRXOR $lhs, $rhs), $tval, $fval)>;
 
-  let UseVSXReg = 1 in {
   // VSX Elementary Scalar FP arithmetic (SP)
   let isCommutable = 1 in {
     def XSADDSP : XX3Form<60, 0,
@@ -1469,7 +1464,6 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                           "xscvdpspn $XT, $XB", IIC_VecFP, []>;
   def XSCVSPDPN : XX2Form<60, 331, (outs vssrc:$XT), (ins vsrc:$XB),
                           "xscvspdpn $XT, $XB", IIC_VecFP, []>;
-  } // UseVSXReg = 1
 
   let Predicates = [IsLittleEndian] in {
   def : Pat<DWToSPExtractConv.El0SS1,
@@ -1516,7 +1510,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
 } // AddedComplexity = 400
 } // HasP8Vector
 
-let UseVSXReg = 1, AddedComplexity = 400 in {
+let AddedComplexity = 400 in {
 let Predicates = [HasDirectMove] in {
   // VSX direct move instructions
   def MFVSRD : XX1_RS6_RD5_XO<31, 51, (outs g8rc:$rA), (ins vsfrc:$XT),
@@ -1524,7 +1518,7 @@ let Predicates = [HasDirectMove] in {
                               [(set i64:$rA, (PPCmfvsr f64:$XT))]>,
       Requires<[In64BitMode]>;
   let isCodeGenOnly = 1 in
-  def MFVRD : XX1_RS6_RD5_XO<31, 51, (outs g8rc:$rA), (ins vrrc:$XT),
+  def MFVRD : XX1_RS6_RD5_XO<31, 51, (outs g8rc:$rA), (ins vsrc:$XT),
                              "mfvsrd $rA, $XT", IIC_VecGeneral,
                              []>,
       Requires<[In64BitMode]>;
@@ -1556,7 +1550,7 @@ let Predicates = [IsISA3_0, HasDirectMove] in {
                               []>, Requires<[In64BitMode]>;
 
 } // IsISA3_0, HasDirectMove
-} // UseVSXReg = 1
+} // AddedComplexity = 400
 
 // We want to parse this from asm, but we don't want to emit this as it would
 // be emitted with a VSX reg. So leave Emit = 0 here.
@@ -2414,7 +2408,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                          list<dag> pattern>
     : X_VT5_XO5_VB5_VSFR<opcode, xo2, xo, opc, pattern>, isDOT;
 
-  let UseVSXReg = 1 in {
   // [PO T XO B XO BX /]
   class XX2_RT5_XO5_XB6<bits<6> opcode, bits<5> xo2, bits<9> xo, string opc,
                         list<dag> pattern>
@@ -2433,7 +2426,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                   InstrItinClass itin, list<dag> pattern>
     : XX3Form<opcode, xo, (outs xty:$XT), (ins aty:$XA, bty:$XB),
               !strconcat(opc, " $XT, $XA, $XB"), itin, pattern>;
-  } // UseVSXReg = 1
 
   // [PO VRT VRA VRB XO /]
   class X_VT5_VA5_VB5<bits<6> opcode, bits<10> xo, string opc,
@@ -2571,8 +2563,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // DP/QP Compare Exponents
   def XSCMPEXPDP : XX3Form_1<60, 59,
                              (outs crrc:$crD), (ins vsfrc:$XA, vsfrc:$XB),
-                             "xscmpexpdp $crD, $XA, $XB", IIC_FPCompare, []>,
-                   UseVSXReg;
+                             "xscmpexpdp $crD, $XA, $XB", IIC_FPCompare, []>;
   def XSCMPEXPQP : X_BF3_VA5_VB5<63, 164, "xscmpexpqp", []>;
 
   // DP Compare ==, >=, >, !=
@@ -2630,7 +2621,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(f128 (uint_to_fp (i32 (load xoaddr:$src)))),
             (f128 (XSCVUDQP (LIWZX xoaddr:$src)))>;
 
-  let UseVSXReg = 1 in {
   //===--------------------------------------------------------------------===//
   // Round to Floating-Point Integer Instructions
 
@@ -2646,8 +2636,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XVCVSPHP : XX2_XT6_XO5_XB6<60, 25, 475, "xvcvsphp", vsrc,
                                  [(set v4f32:$XT,
                                      (int_ppc_vsx_xvcvsphp v4f32:$XB))]>;
-
-  } // UseVSXReg = 1
 
   // Pattern for matching Vector HP -> Vector SP intrinsic. Defined as a
   // separate pattern so that it can convert the input register class from
@@ -2690,7 +2678,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // Insert Exponent DP/QP
   // XT NOTE: XT.dword[1] = 0xUUUU_UUUU_UUUU_UUUU
   def XSIEXPDP : XX1Form <60, 918, (outs vsrc:$XT), (ins g8rc:$rA, g8rc:$rB),
-                          "xsiexpdp $XT, $rA, $rB", IIC_VecFP, []>, UseVSXReg;
+                          "xsiexpdp $XT, $rA, $rB", IIC_VecFP, []>;
   // vB NOTE: only vB.dword[0] is used, that's why we don't use
   //          X_VT5_VA5_VB5 form
   def XSIEXPQP : XForm_18<63, 868, (outs vrrc:$vT), (ins vrrc:$vA, vsfrc:$vB),
@@ -2711,7 +2699,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                            (v2i64 (XSXEXPQP $vA)), sub_64)))>;
 
   // Vector Insert Word
-  let UseVSXReg = 1 in {
   // XB NOTE: Only XB.dword[1] is used, but we use vsrc on XB.
   def XXINSERTW   :
     XX2_RD6_UIM5_RS6<60, 181, (outs vsrc:$XT),
@@ -2725,7 +2712,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XXEXTRACTUW : XX2_RD6_UIM5_RS6<60, 165,
                                   (outs vsfrc:$XT), (ins vsrc:$XB, u4imm:$UIMM),
                                   "xxextractuw $XT, $XB, $UIMM", IIC_VecFP, []>;
-  } // UseVSXReg = 1
 
   // Vector Insert Exponent DP/SP
   def XVIEXPDP : XX3_XT5_XA5_XB5<60, 248, "xviexpdp", vsrc, vsrc, vsrc,
@@ -2758,20 +2744,17 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   //===--------------------------------------------------------------------===//
 
   // Test Data Class SP/DP/QP
-  let UseVSXReg = 1 in {
   def XSTSTDCSP : XX2_BF3_DCMX7_RS6<60, 298,
                               (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),
                               "xststdcsp $BF, $XB, $DCMX", IIC_VecFP, []>;
   def XSTSTDCDP : XX2_BF3_DCMX7_RS6<60, 362,
                               (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),
                               "xststdcdp $BF, $XB, $DCMX", IIC_VecFP, []>;
-  } // UseVSXReg = 1
   def XSTSTDCQP : X_BF3_DCMX7_RS5  <63, 708,
                               (outs crrc:$BF), (ins u7imm:$DCMX, vrrc:$vB),
                               "xststdcqp $BF, $vB, $DCMX", IIC_VecFP, []>;
 
   // Vector Test Data Class SP/DP
-  let UseVSXReg = 1 in {
   def XVTSTDCSP : XX2_RD6_DCMX7_RS6<60, 13, 5,
                               (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
                               "xvtstdcsp $XT, $XB, $DCMX", IIC_VecFP,
@@ -2782,7 +2765,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                               "xvtstdcdp $XT, $XB, $DCMX", IIC_VecFP,
                               [(set v2i64: $XT,
                                (int_ppc_vsx_xvtstdcdp v2f64:$XB, imm:$DCMX))]>;
-  } // UseVSXReg = 1
 
   //===--------------------------------------------------------------------===//
 
@@ -2823,7 +2805,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Vector Splat Immediate Byte
   def XXSPLTIB : X_RD6_IMM8<60, 360, (outs vsrc:$XT), (ins u8imm:$IMM8),
-                            "xxspltib $XT, $IMM8", IIC_VecPerm, []>, UseVSXReg;
+                            "xxspltib $XT, $IMM8", IIC_VecPerm, []>;
 
   //===--------------------------------------------------------------------===//
   // Vector/Scalar Load/Store Instructions
@@ -2833,7 +2815,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   let mayLoad = 1, mayStore = 0 in {
   // Load Vector
   def LXV : DQ_RD6_RS5_DQ12<61, 1, (outs vsrc:$XT), (ins memrix16:$src),
-                            "lxv $XT, $src", IIC_LdStLFD, []>, UseVSXReg;
+                            "lxv $XT, $src", IIC_LdStLFD, []>;
   // Load DWord
   def LXSD  : DSForm_1<57, 2, (outs vfrc:$vD), (ins memrix:$src),
                        "lxsd $vD, $src", IIC_LdStLFD, []>;
@@ -2846,7 +2828,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   class X_XT6_RA5_RB5<bits<6> opcode, bits<10> xo, string opc,
                       RegisterOperand vtype, list<dag> pattern>
     : XX1Form_memOp<opcode, xo, (outs vtype:$XT), (ins memrr:$src),
-              !strconcat(opc, " $XT, $src"), IIC_LdStLFD, pattern>, UseVSXReg;
+              !strconcat(opc, " $XT, $src"), IIC_LdStLFD, pattern>;
 
   // Load as Integer Byte/Halfword & Zero Indexed
   def LXSIBZX : X_XT6_RA5_RB5<31, 781, "lxsibzx", vsfrc,
@@ -2864,12 +2846,10 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // Load Vector (Left-justified) with Length
   def LXVL : XX1Form_memOp<31, 269, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
                    "lxvl $XT, $src, $rB", IIC_LdStLoad,
-                   [(set v4i32:$XT, (int_ppc_vsx_lxvl addr:$src, i64:$rB))]>,
-                    UseVSXReg;
+                   [(set v4i32:$XT, (int_ppc_vsx_lxvl addr:$src, i64:$rB))]>;
   def LXVLL : XX1Form_memOp<31,301, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
                    "lxvll $XT, $src, $rB", IIC_LdStLoad,
-                   [(set v4i32:$XT, (int_ppc_vsx_lxvll addr:$src, i64:$rB))]>,
-                    UseVSXReg;
+                   [(set v4i32:$XT, (int_ppc_vsx_lxvll addr:$src, i64:$rB))]>;
 
   // Load Vector Word & Splat Indexed
   def LXVWSX  : X_XT6_RA5_RB5<31, 364, "lxvwsx" , vsrc, []>;
@@ -2880,7 +2860,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   let mayStore = 1, mayLoad = 0 in {
   // Store Vector
   def STXV : DQ_RD6_RS5_DQ12<61, 5, (outs), (ins vsrc:$XT, memrix16:$dst),
-                             "stxv $XT, $dst", IIC_LdStSTFD, []>, UseVSXReg;
+                             "stxv $XT, $dst", IIC_LdStSTFD, []>;
   // Store DWord
   def STXSD  : DSForm_1<61, 2, (outs), (ins vfrc:$vS, memrix:$dst),
                         "stxsd $vS, $dst", IIC_LdStSTFD, []>;
@@ -2892,7 +2872,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   class X_XS6_RA5_RB5<bits<6> opcode, bits<10> xo, string opc,
                       RegisterOperand vtype, list<dag> pattern>
     : XX1Form_memOp<opcode, xo, (outs), (ins vtype:$XT, memrr:$dst),
-              !strconcat(opc, " $XT, $dst"), IIC_LdStSTFD, pattern>, UseVSXReg;
+              !strconcat(opc, " $XT, $dst"), IIC_LdStSTFD, pattern>;
 
   // Store as Integer Byte/Halfword Indexed
   def STXSIBX  : X_XS6_RA5_RB5<31,  909, "stxsibx" , vsfrc,
@@ -2900,8 +2880,8 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def STXSIHX  : X_XS6_RA5_RB5<31,  941, "stxsihx" , vsfrc,
                                [(PPCstxsix f64:$XT, xoaddr:$dst, 2)]>;
   let isCodeGenOnly = 1 in {
-    def STXSIBXv  : X_XS6_RA5_RB5<31,  909, "stxsibx" , vrrc, []>;
-    def STXSIHXv  : X_XS6_RA5_RB5<31,  941, "stxsihx" , vrrc, []>;
+    def STXSIBXv  : X_XS6_RA5_RB5<31,  909, "stxsibx" , vsrc, []>;
+    def STXSIHXv  : X_XS6_RA5_RB5<31,  941, "stxsihx" , vsrc, []>;
   }
 
   // Store Vector Halfword*8/Byte*16 Indexed
@@ -2917,14 +2897,12 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                             (ins vsrc:$XT, memr:$dst, g8rc:$rB),
                             "stxvl $XT, $dst, $rB", IIC_LdStLoad,
                             [(int_ppc_vsx_stxvl v4i32:$XT, addr:$dst,
-                              i64:$rB)]>,
-                            UseVSXReg;
+                              i64:$rB)]>;
   def STXVLL : XX1Form_memOp<31, 429, (outs),
                             (ins vsrc:$XT, memr:$dst, g8rc:$rB),
                             "stxvll $XT, $dst, $rB", IIC_LdStLoad,
                             [(int_ppc_vsx_stxvll v4i32:$XT, addr:$dst,
-                              i64:$rB)]>,
-                            UseVSXReg;
+                              i64:$rB)]>;
   } // mayStore
 
   let Predicates = [IsLittleEndian] in {
@@ -3158,109 +3136,109 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   let Predicates = [IsBigEndian, HasP9Vector] in {
   // Scalar stores of i8
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 0)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 9)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 9)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 1)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 10)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 10)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 2)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 11)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 11)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 3)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 12)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 12)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 4)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 13)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 13)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 5)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 14)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 14)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 6)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 15)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 15)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 7)), xoaddr:$dst),
-            (STXSIBXv $S, xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS $S, VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 8)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 1)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 1)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 9)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 2)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 2)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 10)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 3)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 3)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 11)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 4)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 4)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 12)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 5)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 5)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 13)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 6)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 6)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 14)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 7)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 7)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 15)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 8)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 8)), VSRC), xoaddr:$dst)>;
 
   // Scalar stores of i16
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 0)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 10)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 10)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 1)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 12)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 12)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 2)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 14)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 14)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 3)), xoaddr:$dst),
-            (STXSIHXv $S, xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS $S, VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 4)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 2)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 2)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 5)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 4)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 4)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 6)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 6)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 6)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 7)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 8)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 8)), VSRC), xoaddr:$dst)>;
   } // IsBigEndian, HasP9Vector
 
   let Predicates = [IsLittleEndian, HasP9Vector] in {
   // Scalar stores of i8
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 0)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 8)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 8)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 1)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 7)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 7)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 2)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 6)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 6)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 3)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 5)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 5)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 4)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 4)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 4)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 5)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 3)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 3)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 6)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 2)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 2)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 7)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 1)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 1)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 8)), xoaddr:$dst),
-            (STXSIBXv $S, xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS $S, VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 9)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 15)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 15)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 10)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 14)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 14)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 11)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 13)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 13)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 12)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 12)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 12)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 13)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 11)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 11)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 14)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 10)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 10)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 15)), xoaddr:$dst),
-            (STXSIBXv (v16i8 (VSLDOI $S, $S, 9)), xoaddr:$dst)>;
+            (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 9)), VSRC), xoaddr:$dst)>;
 
   // Scalar stores of i16
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 0)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 8)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 8)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 1)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 6)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 6)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 2)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 4)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 4)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 3)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 2)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 2)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 4)), xoaddr:$dst),
-            (STXSIHXv $S, xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS $S, VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 5)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 14)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 14)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 6)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 12)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 12)), VSRC), xoaddr:$dst)>;
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 7)), xoaddr:$dst),
-            (STXSIHXv (v16i8 (VSLDOI $S, $S, 10)), xoaddr:$dst)>;
+            (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 10)), VSRC), xoaddr:$dst)>;
   } // IsLittleEndian, HasP9Vector
 
 

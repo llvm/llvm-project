@@ -55,6 +55,7 @@ class DominatorTree;
 class Function;
 class GlobalVariable;
 class Instruction;
+class ProfileSummaryInfo;
 class TargetTransformInfo;
 
 /// A private "module" namespace for types and utilities used by
@@ -124,7 +125,8 @@ public:
 
   // Glue for old PM.
   bool runImpl(Function &F, TargetTransformInfo &TTI, DominatorTree &DT,
-               BlockFrequencyInfo *BFI, BasicBlock &Entry);
+               BlockFrequencyInfo *BFI, BasicBlock &Entry,
+               ProfileSummaryInfo *PSI);
 
   void cleanup() {
     ClonedCastMap.clear();
@@ -148,6 +150,7 @@ private:
   LLVMContext *Ctx;
   const DataLayout *DL;
   BasicBlock *Entry;
+  ProfileSummaryInfo *PSI;
 
   /// Keeps track of constant candidates found in the function.
   using ConstCandVecType = std::vector<consthoist::ConstantCandidate>;

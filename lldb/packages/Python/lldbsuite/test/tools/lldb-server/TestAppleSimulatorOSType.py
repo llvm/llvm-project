@@ -29,7 +29,9 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             if not platform in runtime.lower():
                 continue
             for device in devices:
-                if device['availability'] != '(available)':
+                if 'availability' in device and device['availability'] != '(available)':
+                    continue
+                if 'isAvailable' in device and device['isAvailable'] != True:
                     continue
                 deviceUDID = device['udid']
                 break

@@ -5,6 +5,7 @@
 
 bar:
 // CHECK:      Disassembly of section imul:
+// CHECK-EMPTY:
 // CHECK-NEXT: imul:
 // CHECK-NEXT:   0: 66 69 db 00 00                       imulw $0, %bx, %bx
 // CHECK-NEXT:   5: 66 69 1c 25 00 00 00 00 00 00        imulw $0, 0, %bx
@@ -21,6 +22,7 @@ bar:
         imul $foo, bar,  %rbx
 
 // CHECK:      Disassembly of section and:
+// CHECK-EMPTY:
 // CHECK-NEXT: and:
 // CHECK-NEXT:   0: 66 81 e3 00 00                       andw $0, %bx
 // CHECK-NEXT:   5: 66 81 24 25 00 00 00 00 00 00        andw $0, 0
@@ -37,6 +39,7 @@ bar:
         andq $foo, bar
 
 // CHECK:      Disassembly of section or:
+// CHECK-EMPTY:
 // CHECK-NEXT: or:
 // CHECK-NEXT:   0: 66 81 cb 00 00                       orw $0, %bx
 // CHECK-NEXT:   5: 66 81 0c 25 00 00 00 00 00 00        orw $0, 0
@@ -53,6 +56,7 @@ bar:
         orq $foo, bar
 
 // CHECK:      Disassembly of section xor:
+// CHECK-EMPTY:
 // CHECK-NEXT: xor:
 // CHECK-NEXT:   0: 66 81 f3 00 00                       xorw $0, %bx
 // CHECK-NEXT:   5: 66 81 34 25 00 00 00 00 00 00        xorw $0, 0
@@ -69,6 +73,7 @@ bar:
         xorq $foo, bar
 
 // CHECK:      Disassembly of section add:
+// CHECK-EMPTY:
 // CHECK-NEXT: add:
 // CHECK-NEXT:   0: 66 81 c3 00 00                       addw $0, %bx
 // CHECK-NEXT:   5: 66 81 04 25 00 00 00 00 00 00        addw $0, 0
@@ -85,6 +90,7 @@ bar:
         addq $foo, bar
 
 // CHECK:      Disassembly of section sub:
+// CHECK-EMPTY:
 // CHECK-NEXT: sub:
 // CHECK-NEXT:   0: 66 81 eb 00 00                       subw $0, %bx
 // CHECK-NEXT:   5: 66 81 2c 25 00 00 00 00 00 00        subw $0, 0
@@ -101,6 +107,7 @@ bar:
         subq $foo, bar
 
 // CHECK:      Disassembly of section cmp:
+// CHECK-EMPTY:
 // CHECK-NEXT: cmp:
 // CHECK-NEXT:   0: 66 81 fb 00 00                       cmpw $0, %bx
 // CHECK-NEXT:   5: 66 81 3c 25 00 00 00 00 00 00        cmpw $0, 0
@@ -117,6 +124,7 @@ bar:
         cmpq $foo, bar
 
 // CHECK:      Disassembly of section push:
+// CHECK-EMPTY:
 // CHECK-NEXT: push:
 // CHECK-NEXT:   0: 66 68 00 00                          pushw $0
 // CHECK-NEXT:   4: 68 00 00 00 00                       pushq $0
@@ -125,6 +133,7 @@ bar:
         push  $foo
 
 // CHECK:      Disassembly of section adc:
+// CHECK-EMPTY:
 // CHECK-NEXT: adc:
 // CHECK-NEXT:   0: 66 81 d3 00 00                       adcw $0, %bx
 // CHECK-NEXT:   5: 66 81 14 25 00 00 00 00 00 00        adcw $0, 0
@@ -141,6 +150,7 @@ bar:
         adcq $foo, bar
 
 // CHECK:      Disassembly of section sbb:
+// CHECK-EMPTY:
 // CHECK-NEXT: sbb:
 // CHECK-NEXT:   0: 66 81 db 00 00                       sbbw $0, %bx
 // CHECK-NEXT:   5: 66 81 1c 25 00 00 00 00 00 00        sbbw $0, 0

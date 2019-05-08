@@ -18,7 +18,7 @@ function(get_ext_project_build_command out_var target)
     set(${out_var} "$(MAKE)" "${target}" PARENT_SCOPE)
   else()
     set(${out_var} ${CMAKE_COMMAND} --build . --target ${target}
-                                    --config $<CONFIGURATION> PARENT_SCOPE)
+                                    --config $<CONFIG> PARENT_SCOPE)
   endif()
 endfunction()
 

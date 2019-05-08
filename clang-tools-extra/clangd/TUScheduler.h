@@ -11,9 +11,12 @@
 
 #include "ClangdUnit.h"
 #include "Function.h"
+#include "GlobalCompilationDatabase.h"
 #include "Threading.h"
 #include "index/CanonicalIncludes.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <future>
 
 namespace clang {
@@ -32,6 +35,7 @@ struct InputsAndAST {
 struct InputsAndPreamble {
   llvm::StringRef Contents;
   const tooling::CompileCommand &Command;
+  // This can be nullptr if no preamble is availble.
   const PreambleData *Preamble;
 };
 
@@ -122,7 +126,8 @@ public:
 /// FIXME(sammccall): pull out a scheduler options struct.
 class TUScheduler {
 public:
-  TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
+  TUScheduler(const GlobalCompilationDatabase &CDB, unsigned AsyncThreadsCount,
+              bool StorePreamblesInMemory,
               std::unique_ptr<ParsingCallbacks> ASTCallbacks,
               std::chrono::steady_clock::duration UpdateDebounce,
               ASTRetentionPolicy RetentionPolicy);
@@ -138,10 +143,11 @@ public:
   std::vector<Path> getFilesWithCachedAST() const;
 
   /// Schedule an update for \p File. Adds \p File to a list of tracked files if
-  /// \p File was not part of it before.
-  /// If diagnostics are requested (Yes), and the context is cancelled before
-  /// they are prepared, they may be skipped if eventual-consistency permits it
-  /// (i.e. WantDiagnostics is downgraded to Auto).
+  /// \p File was not part of it before. The compile command in \p Inputs is
+  /// ignored; worker queries CDB to get the actual compile command.
+  /// If diagnostics are requested (Yes), and the context is cancelled
+  /// before they are prepared, they may be skipped if eventual-consistency
+  /// permits it (i.e. WantDiagnostics is downgraded to Auto).
   void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
@@ -178,10 +184,14 @@ public:
     ///   reading source code from headers.
     /// This is the fastest option, usually a preamble is available immediately.
     Stale,
+    /// Besides accepting stale preamble, this also allow preamble to be absent
+    /// (not ready or failed to build).
+    StaleOrAbsent,
   };
+
   /// Schedule an async read of the preamble.
-  /// If there's no preamble yet (because the file was just opened), we'll wait
-  /// for it to build. The result may be null if it fails to build or is empty.
+  /// If there's no up-to-date preamble, we follow the PreambleConsistency
+  /// policy.
   /// If an error occurs, it is forwarded to the \p Action callback.
   /// Context cancellation is ignored and should be handled by the Action.
   /// (In practice, the Action is almost always executed immediately).
@@ -210,8 +220,8 @@ public:
   static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
 
 private:
+  const GlobalCompilationDatabase &CDB;
   const bool StorePreamblesInMemory;
-  const std::shared_ptr<PCHContainerOperations> PCHOps;
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;

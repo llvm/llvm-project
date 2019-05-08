@@ -15,13 +15,15 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseBitVector.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -78,9 +80,58 @@ public:
   }
 };
 
+namespace yaml {
+
+struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
+  uint64_t ExplicitKernArgSize = 0;
+  unsigned MaxKernArgAlign = 0;
+  unsigned LDSSize = 0;
+  bool IsEntryFunction = false;
+  bool NoSignedZerosFPMath = false;
+  bool MemoryBound = false;
+  bool WaveLimiter = false;
+
+  StringValue ScratchRSrcReg = "$private_rsrc_reg";
+  StringValue ScratchWaveOffsetReg = "$scratch_wave_offset_reg";
+  StringValue FrameOffsetReg = "$fp_reg";
+  StringValue StackPtrOffsetReg = "$sp_reg";
+
+  SIMachineFunctionInfo() = default;
+  SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
+                        const TargetRegisterInfo &TRI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~SIMachineFunctionInfo() = default;
+};
+
+template <> struct MappingTraits<SIMachineFunctionInfo> {
+  static void mapping(IO &YamlIO, SIMachineFunctionInfo &MFI) {
+    YamlIO.mapOptional("explicitKernArgSize", MFI.ExplicitKernArgSize,
+                       UINT64_C(0));
+    YamlIO.mapOptional("maxKernArgAlign", MFI.MaxKernArgAlign, 0u);
+    YamlIO.mapOptional("ldsSize", MFI.LDSSize, 0u);
+    YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
+    YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
+    YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
+    YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
+    YamlIO.mapOptional("scratchRSrcReg", MFI.ScratchRSrcReg,
+                       StringValue("$private_rsrc_reg"));
+    YamlIO.mapOptional("scratchWaveOffsetReg", MFI.ScratchWaveOffsetReg,
+                       StringValue("$scratch_wave_offset_reg"));
+    YamlIO.mapOptional("frameOffsetReg", MFI.FrameOffsetReg,
+                       StringValue("$fp_reg"));
+    YamlIO.mapOptional("stackPtrOffsetReg", MFI.StackPtrOffsetReg,
+                       StringValue("$sp_reg"));
+  }
+};
+
+} // end namespace yaml
+
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
+  friend class GCNTargetMachine;
+
   unsigned TIDReg = AMDGPU::NoRegister;
 
   // Registers that may be reserved for spilling purposes. These may be the same
@@ -97,6 +148,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   unsigned StackPtrOffsetReg = AMDGPU::SP_REG;
 
   AMDGPUFunctionArgInfo ArgInfo;
+
+  // State of MODE register, assumed FP mode.
+  AMDGPU::SIModeRegisterDefaults Mode;
 
   // Graphics info.
   unsigned PSInputAddr = 0;
@@ -206,6 +260,10 @@ public:
     SGPRSpillVGPRCSR(unsigned V, Optional<int> F) : VGPR(V), FI(F) {}
   };
 
+  SparseBitVector<> WWMReservedRegs;
+
+  void ReserveWWMRegister(unsigned reg) { WWMReservedRegs.set(reg); }
+
 private:
   // SGPR->VGPR spilling support.
   using SpillRegMask = std::pair<unsigned, unsigned>;
@@ -219,6 +277,8 @@ private:
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
 
+  bool initializeBaseYamlFields(const yaml::SIMachineFunctionInfo &YamlMFI);
+
   ArrayRef<SpilledReg> getSGPRToVGPRSpills(int FrameIndex) const {
     auto I = SGPRToVGPRSpills.find(FrameIndex);
     return (I == SGPRToVGPRSpills.end()) ?
@@ -227,6 +287,10 @@ public:
 
   ArrayRef<SGPRSpillVGPRCSR> getSGPRSpillVGPRs() const {
     return SpillVGPRs;
+  }
+
+  AMDGPU::SIModeRegisterDefaults getMode() const {
+    return Mode;
   }
 
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);

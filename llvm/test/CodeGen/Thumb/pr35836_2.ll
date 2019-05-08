@@ -45,13 +45,12 @@ entry:
 ; CHECK: adcs	r3, r4
 ; CHECK: adds	r4, r2, r7
 ; CHECK: adcs	r1, r6
-; CHECK: mov	r2, sp
-; CHECK: str	r4, [r2]
-; CHECK: str	r1, [r2, #4]
-; CHECK: ldr	r6, [r0, #16]
-; CHECK: ldr	r7, [r0, #24]
-; CHECK: adcs	r7, r6
-; CHECK: str	r7, [r2, #8]
-; CHECK: ldr	r6, [r0, #20]
+; CHECK: str	r4, [sp]
+; CHECK: str	r1, [sp, #4]
+; CHECK: ldr	r2, [r0, #16]
+; CHECK: ldr	r6, [r0, #24]
+; CHECK: adcs	r6, r2
+; CHECK: str	r6, [sp, #8]
+; CHECK: ldr	r2, [r0, #20]
 ; CHECK: ldr	r0, [r0, #28]
-; CHECK: adcs	r0, r6
+; CHECK: adcs	r0, r2

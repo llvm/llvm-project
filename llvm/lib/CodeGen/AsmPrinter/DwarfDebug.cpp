@@ -41,6 +41,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -161,6 +163,7 @@ static const char *const DWARFGroupName = "dwarf";
 static const char *const DWARFGroupDescription = "DWARF Emission";
 static const char *const DbgTimerName = "writer";
 static const char *const DbgTimerDescription = "DWARF Debug Writer";
+static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
   BS.EmitInt8(
@@ -174,6 +177,15 @@ void DebugLocDwarfExpression::emitSigned(int64_t Value) {
 
 void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
   BS.EmitULEB128(Value, Twine(Value));
+}
+
+void DebugLocDwarfExpression::emitData1(uint8_t Value) {
+  BS.EmitInt8(Value, Twine(Value));
+}
+
+void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
+  assert(Idx < (1ULL << (ULEB128PadSize * 7)) && "Idx wont fit");
+  BS.EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
@@ -940,6 +952,11 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
+  for (const auto &P : CUMap) {
+    auto &CU = *P.second;
+    CU.createBaseTypeDIEs();
+  }
+
   // If we aren't actually generating debug info (check beginModule -
   // conditionalized on !DisableDebugInfoPrinting and the presence of the
   // llvm.dbg.cu metadata node)
@@ -1081,138 +1098,104 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   llvm_unreachable("Unexpected 4-operand DBG_VALUE instruction!");
 }
 
-/// If this and Next are describing different fragments of the same
-/// variable, merge them by appending Next's values to the current
-/// list of values.
-/// Return true if the merge was successful.
-bool DebugLocEntry::MergeValues(const DebugLocEntry &Next) {
-  if (Begin == Next.Begin) {
-    auto *FirstExpr = cast<DIExpression>(Values[0].Expression);
-    auto *FirstNextExpr = cast<DIExpression>(Next.Values[0].Expression);
-    if (!FirstExpr->isFragment() || !FirstNextExpr->isFragment())
-      return false;
-
-    // We can only merge entries if none of the fragments overlap any others.
-    // In doing so, we can take advantage of the fact that both lists are
-    // sorted.
-    for (unsigned i = 0, j = 0; i < Values.size(); ++i) {
-      for (; j < Next.Values.size(); ++j) {
-        int res = cast<DIExpression>(Values[i].Expression)->fragmentCmp(
-            cast<DIExpression>(Next.Values[j].Expression));
-        if (res == 0) // The two expressions overlap, we can't merge.
-          return false;
-        // Values[i] is entirely before Next.Values[j],
-        // so go back to the next entry of Values.
-        else if (res == -1)
-          break;
-        // Next.Values[j] is entirely before Values[i], so go on to the
-        // next entry of Next.Values.
-      }
-    }
-
-    addValues(Next.Values);
-    End = Next.End;
-    return true;
-  }
-  return false;
-}
-
 /// Build the location list for all DBG_VALUEs in the function that
-/// describe the same variable.  If the ranges of several independent
-/// fragments of the same variable overlap partially, split them up and
-/// combine the ranges. The resulting DebugLocEntries are will have
+/// describe the same variable. The resulting DebugLocEntries will have
 /// strict monotonically increasing begin addresses and will never
 /// overlap.
 //
+// See the definition of DbgValueHistoryMap::Entry for an explanation of the
+// different kinds of history map entries. One thing to be aware of is that if
+// a debug value is ended by another entry (rather than being valid until the
+// end of the function), that entry's instruction may or may not be included in
+// the range, depending on if the entry is a clobbering entry (it has an
+// instruction that clobbers one or more preceding locations), or if it is an
+// (overlapping) debug value entry. This distinction can be seen in the example
+// below. The first debug value is ended by the clobbering entry 2, and the
+// second and third debug values are ended by the overlapping debug value entry
+// 4.
+//
 // Input:
 //
-//   Ranges History [var, loc, fragment ofs size]
-// 0 |      [x, (reg0, fragment 0, 32)]
-// 1 | |    [x, (reg1, fragment 32, 32)] <- IsFragmentOfPrevEntry
-// 2 | |    ...
-// 3   |    [clobber reg0]
-// 4        [x, (mem, fragment 0, 64)] <- overlapping with both previous fragments of
-//                                     x.
+//   History map entries [type, end index, mi]
 //
-// Output:
+// 0 |      [DbgValue, 2, DBG_VALUE $reg0, [...] (fragment 0, 32)]
+// 1 | |    [DbgValue, 4, DBG_VALUE $reg1, [...] (fragment 32, 32)]
+// 2 | |    [Clobber, $reg0 = [...], -, -]
+// 3   | |  [DbgValue, 4, DBG_VALUE 123, [...] (fragment 64, 32)]
+// 4        [DbgValue, ~0, DBG_VALUE @g, [...] (fragment 0, 96)]
 //
-// [0-1]    [x, (reg0, fragment  0, 32)]
-// [1-3]    [x, (reg0, fragment  0, 32), (reg1, fragment 32, 32)]
-// [3-4]    [x, (reg1, fragment 32, 32)]
-// [4- ]    [x, (mem,  fragment  0, 64)]
-void
-DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
-                              const DbgValueHistoryMap::InstrRanges &Ranges) {
-  SmallVector<DebugLocEntry::Value, 4> OpenRanges;
+// Output [start, end) [Value...]:
+//
+// [0-1)    [(reg0, fragment 0, 32)]
+// [1-3)    [(reg0, fragment 0, 32), (reg1, fragment 32, 32)]
+// [3-4)    [(reg1, fragment 32, 32), (123, fragment 64, 32)]
+// [4-)     [(@g, fragment 0, 96)]
+void DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
+                                   const DbgValueHistoryMap::Entries &Entries) {
+  using OpenRange =
+      std::pair<DbgValueHistoryMap::EntryIndex, DebugLocEntry::Value>;
+  SmallVector<OpenRange, 4> OpenRanges;
 
-  for (auto I = Ranges.begin(), E = Ranges.end(); I != E; ++I) {
-    const MachineInstr *Begin = I->first;
-    const MachineInstr *End = I->second;
-    assert(Begin->isDebugValue() && "Invalid History entry");
+  for (auto EB = Entries.begin(), EI = EB, EE = Entries.end(); EI != EE; ++EI) {
+    const MachineInstr *Instr = EI->getInstr();
 
-    // Check if a variable is inaccessible in this range.
-    if (Begin->getNumOperands() > 1 &&
-        Begin->getOperand(0).isReg() && !Begin->getOperand(0).getReg()) {
-      OpenRanges.clear();
-      continue;
+    if (EI->isDbgValue()) {
+      // Check if a variable is inaccessible in this range.
+      // TODO: This should only truncate open ranges that are overlapping.
+      if (Instr->getNumOperands() > 1 &&
+          Instr->getOperand(0).isReg() && !Instr->getOperand(0).getReg()) {
+        OpenRanges.clear();
+        continue;
+      }
     }
 
-    // If this fragment overlaps with any open ranges, truncate them.
-    const DIExpression *DIExpr = Begin->getDebugExpression();
-    auto Last = remove_if(OpenRanges, [&](DebugLocEntry::Value R) {
-      return DIExpr->fragmentsOverlap(R.getExpression());
-    });
+    // Remove all values that are no longer live.
+    size_t Index = std::distance(EB, EI);
+    auto Last =
+        remove_if(OpenRanges, [&](OpenRange &R) { return R.first <= Index; });
     OpenRanges.erase(Last, OpenRanges.end());
 
-    const MCSymbol *StartLabel = getLabelBeforeInsn(Begin);
-    assert(StartLabel && "Forgot label before DBG_VALUE starting a range!");
+    // If we are dealing with a clobbering entry, this iteration will result in
+    // a location list entry starting after the clobbering instruction.
+    const MCSymbol *StartLabel =
+        EI->isClobber() ? getLabelAfterInsn(Instr) : getLabelBeforeInsn(Instr);
+    assert(StartLabel &&
+           "Forgot label before/after instruction starting a range!");
 
     const MCSymbol *EndLabel;
-    if (End != nullptr)
-      EndLabel = getLabelAfterInsn(End);
-    else if (std::next(I) == Ranges.end())
+    if (std::next(EI) == Entries.end())
       EndLabel = Asm->getFunctionEnd();
+    else if (std::next(EI)->isClobber())
+      EndLabel = getLabelAfterInsn(std::next(EI)->getInstr());
     else
-      EndLabel = getLabelBeforeInsn(std::next(I)->first);
+      EndLabel = getLabelBeforeInsn(std::next(EI)->getInstr());
     assert(EndLabel && "Forgot label after instruction ending a range!");
 
-    LLVM_DEBUG(dbgs() << "DotDebugLoc: " << *Begin << "\n");
+    if (EI->isDbgValue())
+      LLVM_DEBUG(dbgs() << "DotDebugLoc: " << *Instr << "\n");
 
-    auto Value = getDebugLocValue(Begin);
+    // If this history map entry has a debug value, add that to the list of
+    // open ranges.
+    if (EI->isDbgValue()) {
+      auto Value = getDebugLocValue(Instr);
+      OpenRanges.emplace_back(EI->getEndIndex(), Value);
+    }
+
+    // Location list entries with empty location descriptions are redundant
+    // information in DWARF, so do not emit those.
+    if (OpenRanges.empty())
+      continue;
 
     // Omit entries with empty ranges as they do not have any effect in DWARF.
     if (StartLabel == EndLabel) {
-      // If this is a fragment, we must still add the value to the list of
-      // open ranges, since it may describe non-overlapping parts of the
-      // variable.
-      if (DIExpr->isFragment())
-        OpenRanges.push_back(Value);
       LLVM_DEBUG(dbgs() << "Omitting location list entry with empty range.\n");
       continue;
     }
 
-    DebugLocEntry Loc(StartLabel, EndLabel, Value);
-    bool couldMerge = false;
-
-    // If this is a fragment, it may belong to the current DebugLocEntry.
-    if (DIExpr->isFragment()) {
-      // Add this value to the list of open ranges.
-      OpenRanges.push_back(Value);
-
-      // Attempt to add the fragment to the last entry.
-      if (!DebugLoc.empty())
-        if (DebugLoc.back().MergeValues(Loc))
-          couldMerge = true;
-    }
-
-    if (!couldMerge) {
-      // Need to add a new DebugLocEntry. Add all values from still
-      // valid non-overlapping fragments.
-      if (OpenRanges.size())
-        Loc.addValues(OpenRanges);
-
-      DebugLoc.push_back(std::move(Loc));
-    }
+    SmallVector<DebugLocEntry::Value, 4> Values;
+    for (auto &R : OpenRanges)
+      Values.push_back(R.second);
+    DebugLoc.emplace_back(StartLabel, EndLabel, Values);
 
     // Attempt to coalesce the ranges of two otherwise identical
     // DebugLocEntries.
@@ -1323,8 +1306,8 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       continue;
 
     // Instruction ranges, specifying where IV is accessible.
-    const auto &Ranges = I.second;
-    if (Ranges.empty())
+    const auto &HistoryMapEntries = I.second;
+    if (HistoryMapEntries.empty())
       continue;
 
     LexicalScope *Scope = nullptr;
@@ -1341,15 +1324,23 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     DbgVariable *RegVar = cast<DbgVariable>(createConcreteEntity(TheCU,
                                             *Scope, LocalVar, IV.second));
 
-    const MachineInstr *MInsn = Ranges.front().first;
+    const MachineInstr *MInsn = HistoryMapEntries.front().getInstr();
     assert(MInsn->isDebugValue() && "History must begin with debug value");
 
     // Check if there is a single DBG_VALUE, valid throughout the var's scope.
-    if (Ranges.size() == 1 &&
-        validThroughout(LScopes, MInsn, Ranges.front().second)) {
-      RegVar->initializeDbgValue(MInsn);
-      continue;
+    // If the history map contains a single debug value, there may be an
+    // additional entry which clobbers the debug value.
+    bool SingleValueWithClobber =
+        HistoryMapEntries.size() == 2 && HistoryMapEntries[1].isClobber();
+    if (HistoryMapEntries.size() == 1 || SingleValueWithClobber) {
+      const auto *End =
+          SingleValueWithClobber ? HistoryMapEntries[1].getInstr() : nullptr;
+      if (validThroughout(LScopes, MInsn, End)) {
+        RegVar->initializeDbgValue(MInsn);
+        continue;
+      }
     }
+
     // Do not emit location lists if .debug_loc secton is disabled.
     if (!useLocSection())
       continue;
@@ -1359,7 +1350,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     // Build the location list for this variable.
     SmallVector<DebugLocEntry, 8> Entries;
-    buildLocationList(Entries, Ranges);
+    buildLocationList(Entries, HistoryMapEntries);
 
     // If the variable has a DIBasicType, extract it.  Basic types cannot have
     // unique identifiers, so don't bother resolving the type with the
@@ -1369,7 +1360,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     // Finalize the entry by lowering it into a DWARF bytestream.
     for (auto &Entry : Entries)
-      Entry.finalize(*Asm, List, BT);
+      Entry.finalize(*Asm, List, BT, TheCU);
   }
 
   // For each InlinedEntity collected from DBG_LABEL instructions, convert to
@@ -1911,13 +1902,55 @@ void DwarfDebug::emitDebugStr() {
                      StringOffsetsSection, /* UseRelativeOffsets = */ true);
 }
 
-void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
-                                   const DebugLocStream::Entry &Entry) {
+void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer, const
+                                   DebugLocStream::Entry &Entry,
+                                   const DwarfCompileUnit *CU) {
   auto &&Comments = DebugLocs.getComments(Entry);
   auto Comment = Comments.begin();
   auto End = Comments.end();
-  for (uint8_t Byte : DebugLocs.getBytes(Entry))
-    Streamer.EmitInt8(Byte, Comment != End ? *(Comment++) : "");
+
+  // The expressions are inserted into a byte stream rather early (see
+  // DwarfExpression::addExpression) so for those ops (e.g. DW_OP_convert) that
+  // need to reference a base_type DIE the offset of that DIE is not yet known.
+  // To deal with this we instead insert a placeholder early and then extract
+  // it here and replace it with the real reference.
+  unsigned PtrSize = Asm->MAI->getCodePointerSize();
+  DWARFDataExtractor Data(StringRef(DebugLocs.getBytes(Entry).data(),
+                                    DebugLocs.getBytes(Entry).size()),
+                          Asm->getDataLayout().isLittleEndian(), PtrSize);
+  DWARFExpression Expr(Data, getDwarfVersion(), PtrSize);
+
+  using Encoding = DWARFExpression::Operation::Encoding;
+  uint32_t Offset = 0;
+  for (auto &Op : Expr) {
+    assert(Op.getCode() != dwarf::DW_OP_const_type &&
+           "3 operand ops not yet supported");
+    Streamer.EmitInt8(Op.getCode(), Comment != End ? *(Comment++) : "");
+    Offset++;
+    for (unsigned I = 0; I < 2; ++I) {
+      if (Op.getDescription().Op[I] == Encoding::SizeNA)
+        continue;
+      if (Op.getDescription().Op[I] == Encoding::BaseTypeRef) {
+          if (CU) {
+            uint64_t Offset = CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die->getOffset();
+            assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
+            Asm->EmitULEB128(Offset, nullptr, ULEB128PadSize);
+          } else {
+            // Emit a reference to the 'generic type'.
+            Asm->EmitULEB128(0, nullptr, ULEB128PadSize);
+          }
+          // Make sure comments stay aligned.
+          for (unsigned J = 0; J < ULEB128PadSize; ++J)
+            if (Comment != End)
+              Comment++;
+      } else {
+        for (uint32_t J = Offset; J < Op.getOperandEndOffset(I); ++J)
+          Streamer.EmitInt8(Data.getData()[J], Comment != End ? *(Comment++) : "");
+      }
+      Offset = Op.getOperandEndOffset(I);
+    }
+    assert(Offset == Op.getEndOffset());
+  }
 }
 
 static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
@@ -1951,11 +1984,14 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,
                              DebugLocStream::ListBuilder &List,
-                             const DIBasicType *BT) {
+                             const DIBasicType *BT,
+                             DwarfCompileUnit &TheCU) {
+  assert(!Values.empty() &&
+         "location list entries without values are redundant");
   assert(Begin != End && "unexpected location list entry with empty range");
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();
-  DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer);
+  DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer, TheCU);
   const DebugLocEntry::Value &Value = Values[0];
   if (Value.isFragment()) {
     // Emit all fragments that belong to the same variable and range.
@@ -1975,16 +2011,23 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
   DwarfExpr.finalize();
 }
 
-void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry) {
+void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
+                                           const DwarfCompileUnit *CU) {
   // Emit the size.
   Asm->OutStreamer->AddComment("Loc expr size");
   if (getDwarfVersion() >= 5)
     Asm->EmitULEB128(DebugLocs.getBytes(Entry).size());
-  else
+  else if (DebugLocs.getBytes(Entry).size() <= std::numeric_limits<uint16_t>::max())
     Asm->emitInt16(DebugLocs.getBytes(Entry).size());
+  else {
+    // The entry is too big to fit into 16 bit, drop it as there is nothing we
+    // can do.
+    Asm->emitInt16(0);
+    return;
+  }
   // Emit the entry.
   APByteStreamer Streamer(*Asm);
-  emitDebugLocEntry(Streamer, Entry);
+  emitDebugLocEntry(Streamer, Entry, CU);
 }
 
 // Emit the common part of the DWARF 5 range/locations list tables header.
@@ -2084,7 +2127,7 @@ void DwarfDebug::emitDebugLoc() {
           Asm->EmitLabelDifference(Entry.EndSym, Base, Size);
         }
 
-        emitDebugLocEntryLocation(Entry);
+        emitDebugLocEntryLocation(Entry, CU);
         continue;
       }
 
@@ -2105,7 +2148,7 @@ void DwarfDebug::emitDebugLoc() {
         Asm->OutStreamer->EmitSymbolValue(Entry.EndSym, Size);
       }
 
-      emitDebugLocEntryLocation(Entry);
+      emitDebugLocEntryLocation(Entry, CU);
     }
 
     if (IsLocLists) {
@@ -2141,7 +2184,7 @@ void DwarfDebug::emitDebugLocDWO() {
       Asm->EmitULEB128(idx);
       Asm->EmitLabelDifference(Entry.EndSym, Entry.BeginSym, 4);
 
-      emitDebugLocEntryLocation(Entry);
+      emitDebugLocEntryLocation(Entry, List.CU);
     }
     Asm->emitInt8(dwarf::DW_LLE_end_of_list);
   }
@@ -2194,19 +2237,18 @@ void DwarfDebug::emitDebugARanges() {
     }
 
     // Sort the symbols by offset within the section.
-    std::stable_sort(
-        List.begin(), List.end(), [&](const SymbolCU &A, const SymbolCU &B) {
-          unsigned IA = A.Sym ? Asm->OutStreamer->GetSymbolOrder(A.Sym) : 0;
-          unsigned IB = B.Sym ? Asm->OutStreamer->GetSymbolOrder(B.Sym) : 0;
+    llvm::stable_sort(List, [&](const SymbolCU &A, const SymbolCU &B) {
+      unsigned IA = A.Sym ? Asm->OutStreamer->GetSymbolOrder(A.Sym) : 0;
+      unsigned IB = B.Sym ? Asm->OutStreamer->GetSymbolOrder(B.Sym) : 0;
 
-          // Symbols with no order assigned should be placed at the end.
-          // (e.g. section end labels)
-          if (IA == 0)
-            return false;
-          if (IB == 0)
-            return true;
-          return IA < IB;
-        });
+      // Symbols with no order assigned should be placed at the end.
+      // (e.g. section end labels)
+      if (IA == 0)
+        return false;
+      if (IB == 0)
+        return true;
+      return IA < IB;
+    });
 
     // Insert a final terminator.
     List.push_back(SymbolCU(nullptr, Asm->OutStreamer->endSection(Section)));
@@ -2711,6 +2753,22 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   CU.addDIETypeSignature(RefDie, Signature);
 }
 
+DwarfDebug::NonTypeUnitContext::NonTypeUnitContext(DwarfDebug *DD)
+    : DD(DD),
+      TypeUnitsUnderConstruction(std::move(DD->TypeUnitsUnderConstruction)) {
+  DD->TypeUnitsUnderConstruction.clear();
+  assert(TypeUnitsUnderConstruction.empty() || !DD->AddrPool.hasBeenUsed());
+}
+
+DwarfDebug::NonTypeUnitContext::~NonTypeUnitContext() {
+  DD->TypeUnitsUnderConstruction = std::move(TypeUnitsUnderConstruction);
+  DD->AddrPool.resetUsedFlag();
+}
+
+DwarfDebug::NonTypeUnitContext DwarfDebug::enterNonTypeUnitContext() {
+  return NonTypeUnitContext(this);
+}
+
 // Add the Name along with its companion DIE to the appropriate accelerator
 // table (for AccelTableKind::Dwarf it's always AccelDebugNames, for
 // AccelTableKind::Apple, we use the table we got as an argument). If
@@ -2723,7 +2781,7 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&
-      CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::None)
+      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Default)
     return;
 
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;

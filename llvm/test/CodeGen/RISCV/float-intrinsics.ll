@@ -107,19 +107,19 @@ define float @sincos_f32(float %a) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp)
-; RV32IF-NEXT:    sw s1, 8(sp)
-; RV32IF-NEXT:    sw s2, 4(sp)
-; RV32IF-NEXT:    mv s1, a0
+; RV32IF-NEXT:    sw s0, 8(sp)
+; RV32IF-NEXT:    sw s1, 4(sp)
+; RV32IF-NEXT:    mv s0, a0
 ; RV32IF-NEXT:    call sinf
-; RV32IF-NEXT:    mv s2, a0
-; RV32IF-NEXT:    mv a0, s1
+; RV32IF-NEXT:    mv s1, a0
+; RV32IF-NEXT:    mv a0, s0
 ; RV32IF-NEXT:    call cosf
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
-; RV32IF-NEXT:    fmv.w.x ft1, s2
+; RV32IF-NEXT:    fmv.w.x ft1, s1
 ; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
-; RV32IF-NEXT:    lw s2, 4(sp)
-; RV32IF-NEXT:    lw s1, 8(sp)
+; RV32IF-NEXT:    lw s1, 4(sp)
+; RV32IF-NEXT:    lw s0, 8(sp)
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
@@ -128,19 +128,19 @@ define float @sincos_f32(float %a) nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -32
 ; RV64IF-NEXT:    sd ra, 24(sp)
-; RV64IF-NEXT:    sd s1, 16(sp)
-; RV64IF-NEXT:    sd s2, 8(sp)
-; RV64IF-NEXT:    mv s1, a0
+; RV64IF-NEXT:    sd s0, 16(sp)
+; RV64IF-NEXT:    sd s1, 8(sp)
+; RV64IF-NEXT:    mv s0, a0
 ; RV64IF-NEXT:    call sinf
-; RV64IF-NEXT:    mv s2, a0
-; RV64IF-NEXT:    mv a0, s1
+; RV64IF-NEXT:    mv s1, a0
+; RV64IF-NEXT:    mv a0, s0
 ; RV64IF-NEXT:    call cosf
 ; RV64IF-NEXT:    fmv.w.x ft0, a0
-; RV64IF-NEXT:    fmv.w.x ft1, s2
+; RV64IF-NEXT:    fmv.w.x ft1, s1
 ; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
-; RV64IF-NEXT:    ld s2, 8(sp)
-; RV64IF-NEXT:    ld s1, 16(sp)
+; RV64IF-NEXT:    ld s1, 8(sp)
+; RV64IF-NEXT:    ld s0, 16(sp)
 ; RV64IF-NEXT:    ld ra, 24(sp)
 ; RV64IF-NEXT:    addi sp, sp, 32
 ; RV64IF-NEXT:    ret

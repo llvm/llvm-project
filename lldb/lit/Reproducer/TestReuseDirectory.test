@@ -1,0 +1,10 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# Test that we can capture twice to the same directory without breaking the
+# reproducer functionality.
+
+# RUN: rm -rf %t.repro
+# RUN: %clang %S/Inputs/simple.c -g -o %t.out
+# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture --capture-path %t.repro %t.out | FileCheck %S/TestGDBRemoteRepro.test --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture --capture-path %t.repro %t.out | FileCheck %S/TestGDBRemoteRepro.test --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb --replay %t.repro | FileCheck %S/TestGDBRemoteRepro.test --check-prefix CHECK --check-prefix REPLAY

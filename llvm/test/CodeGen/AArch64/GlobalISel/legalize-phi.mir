@@ -296,18 +296,17 @@ body:             |
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C1]](s32)
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI [[TRUNC]](s16), %bb.0, [[TRUNC3:%[0-9]+]](s16), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI [[TRUNC]](s16), %bb.0, [[TRUNC2:%[0-9]+]](s16), %bb.1
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT]], [[COPY1]]
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ADD]](s32)
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
   ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C2]]
   ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[AND]](s32), [[COPY]]
-  ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-  ; CHECK:   [[TRUNC3]]:_(s16) = G_TRUNC [[ADD]](s32)
-  ; CHECK:   G_BRCOND [[TRUNC2]](s1), %bb.1
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   [[TRUNC2]]:_(s16) = G_TRUNC [[ADD]](s32)
+  ; CHECK:   G_BRCOND [[TRUNC1]](s1), %bb.1
   ; CHECK: bb.2:
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
@@ -364,14 +363,13 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI [[TRUNC]](s16), %bb.0, [[COPY1:%[0-9]+]](s16), %bb.1
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[PHI]](s16)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
   ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C1]]
   ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[AND]](s32), [[COPY]]
-  ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   [[COPY1]]:_(s16) = COPY [[PHI]](s16)
-  ; CHECK:   G_BRCOND [[TRUNC2]](s1), %bb.1
+  ; CHECK:   G_BRCOND [[TRUNC1]](s1), %bb.1
   ; CHECK: bb.2:
   ; CHECK:   $w0 = COPY [[AND]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
@@ -453,9 +451,8 @@ body:             |
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
   ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C4]]
-  ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
-  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C5]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C4]]
   ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[AND]], [[AND1]]
   ; CHECK:   $w0 = COPY [[ADD2]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
@@ -547,17 +544,16 @@ body:             |
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI [[TRUNC2]](s16), %bb.0, [[TRUNC5:%[0-9]+]](s16), %bb.1
-  ; CHECK:   [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[PHI]](s16)
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI [[TRUNC2]](s16), %bb.0, [[TRUNC4:%[0-9]+]](s16), %bb.1
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
   ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C5]]
   ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[AND]], [[C2]]
   ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ADD1]](s32), [[C3]]
-  ; CHECK:   [[TRUNC4:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP1]](s32)
+  ; CHECK:   [[TRUNC3:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s16) = COPY [[PHI]](s16)
-  ; CHECK:   [[TRUNC5]]:_(s16) = G_TRUNC [[C4]](s32)
-  ; CHECK:   G_BRCOND [[TRUNC4]](s1), %bb.2
+  ; CHECK:   [[TRUNC4]]:_(s16) = G_TRUNC [[C4]](s32)
+  ; CHECK:   G_BRCOND [[TRUNC3]](s1), %bb.2
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.2:
   ; CHECK:   [[PHI1:%[0-9]+]]:_(s16) = G_PHI [[COPY2]](s16), %bb.1, [[TRUNC1]](s16), %bb.0

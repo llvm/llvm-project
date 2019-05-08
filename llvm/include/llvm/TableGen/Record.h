@@ -801,7 +801,8 @@ public:
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
   enum BinaryOp : uint8_t { ADD, MUL, AND, OR, SHL, SRA, SRL, LISTCONCAT,
-                            STRCONCAT, CONCAT, EQ, NE, LE, LT, GE, GT };
+                            LISTSPLAT, STRCONCAT, CONCAT, EQ, NE, LE, LT, GE,
+                            GT };
 
 private:
   Init *LHS, *RHS;
@@ -821,6 +822,7 @@ public:
                         RecTy *Type);
   static Init *getStrConcat(Init *lhs, Init *rhs);
   static Init *getListConcat(TypedInit *lhs, Init *rhs);
+  static Init *getListSplat(TypedInit *lhs, Init *rhs);
 
   void Profile(FoldingSetNodeID &ID) const;
 

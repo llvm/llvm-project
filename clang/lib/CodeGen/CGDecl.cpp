@@ -19,6 +19,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
@@ -103,6 +104,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Label:        // __label__ x;
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPAllocate:
   case Decl::OMPCapturedExpr:
   case Decl::OMPRequires:
   case Decl::Empty:
@@ -969,12 +971,12 @@ static llvm::Value *shouldUseMemSetToInitialize(llvm::Constant *Init,
   return llvm::isBytewiseValue(Init);
 }
 
-/// Decide whether we want to split a constant structure store into a sequence
-/// of its fields' stores. This may cost us code size and compilation speed,
-/// but plays better with store optimizations.
-static bool shouldSplitStructStore(CodeGenModule &CGM,
-                                   uint64_t GlobalByteSize) {
-  // Don't break structures that occupy more than one cacheline.
+/// Decide whether we want to split a constant structure or array store into a
+/// sequence of its fields' stores. This may cost us code size and compilation
+/// speed, but plays better with store optimizations.
+static bool shouldSplitConstantStore(CodeGenModule &CGM,
+                                     uint64_t GlobalByteSize) {
+  // Don't break things that occupy more than one cacheline.
   uint64_t ByteSizeLimit = 64;
   if (CGM.getCodeGenOpts().OptimizationLevel == 0)
     return false;
@@ -983,92 +985,13 @@ static bool shouldSplitStructStore(CodeGenModule &CGM,
   return false;
 }
 
-static llvm::Constant *patternFor(CodeGenModule &CGM, llvm::Type *Ty) {
-  // The following value is a guaranteed unmappable pointer value and has a
-  // repeated byte-pattern which makes it easier to synthesize. We use it for
-  // pointers as well as integers so that aggregates are likely to be
-  // initialized with this repeated value.
-  constexpr uint64_t LargeValue = 0xAAAAAAAAAAAAAAAAull;
-  // For 32-bit platforms it's a bit trickier because, across systems, only the
-  // zero page can reasonably be expected to be unmapped, and even then we need
-  // a very low address. We use a smaller value, and that value sadly doesn't
-  // have a repeated byte-pattern. We don't use it for integers.
-  constexpr uint32_t SmallValue = 0x000000AA;
-  // Floating-point values are initialized as NaNs because they propagate. Using
-  // a repeated byte pattern means that it will be easier to initialize
-  // all-floating-point aggregates and arrays with memset. Further, aggregates
-  // which mix integral and a few floats might also initialize with memset
-  // followed by a handful of stores for the floats. Using fairly unique NaNs
-  // also means they'll be easier to distinguish in a crash.
-  constexpr bool NegativeNaN = true;
-  constexpr uint64_t NaNPayload = 0xFFFFFFFFFFFFFFFFull;
-  if (Ty->isIntOrIntVectorTy()) {
-    unsigned BitWidth = cast<llvm::IntegerType>(
-                            Ty->isVectorTy() ? Ty->getVectorElementType() : Ty)
-                            ->getBitWidth();
-    if (BitWidth <= 64)
-      return llvm::ConstantInt::get(Ty, LargeValue);
-    return llvm::ConstantInt::get(
-        Ty, llvm::APInt::getSplat(BitWidth, llvm::APInt(64, LargeValue)));
-  }
-  if (Ty->isPtrOrPtrVectorTy()) {
-    auto *PtrTy = cast<llvm::PointerType>(
-        Ty->isVectorTy() ? Ty->getVectorElementType() : Ty);
-    unsigned PtrWidth = CGM.getContext().getTargetInfo().getPointerWidth(
-        PtrTy->getAddressSpace());
-    llvm::Type *IntTy = llvm::IntegerType::get(CGM.getLLVMContext(), PtrWidth);
-    uint64_t IntValue;
-    switch (PtrWidth) {
-    default:
-      llvm_unreachable("pattern initialization of unsupported pointer width");
-    case 64:
-      IntValue = LargeValue;
-      break;
-    case 32:
-      IntValue = SmallValue;
-      break;
-    }
-    auto *Int = llvm::ConstantInt::get(IntTy, IntValue);
-    return llvm::ConstantExpr::getIntToPtr(Int, PtrTy);
-  }
-  if (Ty->isFPOrFPVectorTy()) {
-    unsigned BitWidth = llvm::APFloat::semanticsSizeInBits(
-        (Ty->isVectorTy() ? Ty->getVectorElementType() : Ty)
-            ->getFltSemantics());
-    llvm::APInt Payload(64, NaNPayload);
-    if (BitWidth >= 64)
-      Payload = llvm::APInt::getSplat(BitWidth, Payload);
-    return llvm::ConstantFP::getQNaN(Ty, NegativeNaN, &Payload);
-  }
-  if (Ty->isArrayTy()) {
-    // Note: this doesn't touch tail padding (at the end of an object, before
-    // the next array object). It is instead handled by replaceUndef.
-    auto *ArrTy = cast<llvm::ArrayType>(Ty);
-    llvm::SmallVector<llvm::Constant *, 8> Element(
-        ArrTy->getNumElements(), patternFor(CGM, ArrTy->getElementType()));
-    return llvm::ConstantArray::get(ArrTy, Element);
-  }
-
-  // Note: this doesn't touch struct padding. It will initialize as much union
-  // padding as is required for the largest type in the union. Padding is
-  // instead handled by replaceUndef. Stores to structs with volatile members
-  // don't have a volatile qualifier when initialized according to C++. This is
-  // fine because stack-based volatiles don't really have volatile semantics
-  // anyways, and the initialization shouldn't be observable.
-  auto *StructTy = cast<llvm::StructType>(Ty);
-  llvm::SmallVector<llvm::Constant *, 8> Struct(StructTy->getNumElements());
-  for (unsigned El = 0; El != Struct.size(); ++El)
-    Struct[El] = patternFor(CGM, StructTy->getElementType(El));
-  return llvm::ConstantStruct::get(StructTy, Struct);
-}
-
 enum class IsPattern { No, Yes };
 
 /// Generate a constant filled with either a pattern or zeroes.
 static llvm::Constant *patternOrZeroFor(CodeGenModule &CGM, IsPattern isPattern,
                                         llvm::Type *Ty) {
   if (isPattern == IsPattern::Yes)
-    return patternFor(CGM, Ty);
+    return initializationPatternFor(CGM, Ty);
   else
     return llvm::Constant::getNullValue(Ty);
 }
@@ -1112,7 +1035,7 @@ static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
   }
   if (NestedIntact && Values.size() == STy->getNumElements())
     return constant;
-  return llvm::ConstantStruct::getAnon(Values);
+  return llvm::ConstantStruct::getAnon(Values, STy->isPacked());
 }
 
 /// Replace all padding bytes in a given constant with either a pattern byte or
@@ -1202,9 +1125,9 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
                                   CGBuilderTy &Builder,
                                   llvm::Constant *constant) {
   auto *Ty = constant->getType();
-  bool isScalar = Ty->isIntOrIntVectorTy() || Ty->isPtrOrPtrVectorTy() ||
-                  Ty->isFPOrFPVectorTy();
-  if (isScalar) {
+  bool canDoSingleStore = Ty->isIntOrIntVectorTy() ||
+                          Ty->isPtrOrPtrVectorTy() || Ty->isFPOrFPVectorTy();
+  if (canDoSingleStore) {
     Builder.CreateStore(constant, Loc, isVolatile);
     return;
   }
@@ -1212,12 +1135,13 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   auto *Int8Ty = llvm::IntegerType::getInt8Ty(CGM.getLLVMContext());
   auto *IntPtrTy = CGM.getDataLayout().getIntPtrType(CGM.getLLVMContext());
 
-  // If the initializer is all or mostly the same, codegen with bzero / memset
-  // then do a few stores afterward.
   uint64_t ConstantSize = CGM.getDataLayout().getTypeAllocSize(Ty);
   if (!ConstantSize)
     return;
   auto *SizeVal = llvm::ConstantInt::get(IntPtrTy, ConstantSize);
+
+  // If the initializer is all or mostly the same, codegen with bzero / memset
+  // then do a few stores afterward.
   if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, 0), SizeVal,
                          isVolatile);
@@ -1231,6 +1155,7 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     return;
   }
 
+  // If the initializer is a repeated byte pattern, use memset.
   llvm::Value *Pattern = shouldUseMemSetToInitialize(constant, ConstantSize);
   if (Pattern) {
     uint64_t Value = 0x00;
@@ -1244,20 +1169,34 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     return;
   }
 
-  llvm::StructType *STy = dyn_cast<llvm::StructType>(Ty);
-  // FIXME: handle the case when STy != Loc.getElementType().
-  // FIXME: handle non-struct aggregate types.
-  if (STy && (STy == Loc.getElementType()) &&
-      shouldSplitStructStore(CGM, ConstantSize)) {
-    for (unsigned i = 0; i != constant->getNumOperands(); i++) {
-      Address EltPtr = Builder.CreateStructGEP(Loc, i);
-      emitStoresForConstant(
-          CGM, D, EltPtr, isVolatile, Builder,
-          cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
+  // If the initializer is small, use a handful of stores.
+  if (shouldSplitConstantStore(CGM, ConstantSize)) {
+    if (auto *STy = dyn_cast<llvm::StructType>(Ty)) {
+      // FIXME: handle the case when STy != Loc.getElementType().
+      if (STy == Loc.getElementType()) {
+        for (unsigned i = 0; i != constant->getNumOperands(); i++) {
+          Address EltPtr = Builder.CreateStructGEP(Loc, i);
+          emitStoresForConstant(
+              CGM, D, EltPtr, isVolatile, Builder,
+              cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
+        }
+        return;
+      }
+    } else if (auto *ATy = dyn_cast<llvm::ArrayType>(Ty)) {
+      // FIXME: handle the case when ATy != Loc.getElementType().
+      if (ATy == Loc.getElementType()) {
+        for (unsigned i = 0; i != ATy->getNumElements(); i++) {
+          Address EltPtr = Builder.CreateConstArrayGEP(Loc, i);
+          emitStoresForConstant(
+              CGM, D, EltPtr, isVolatile, Builder,
+              cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
+        }
+        return;
+      }
     }
-    return;
   }
 
+  // Copy from a global.
   Builder.CreateMemCpy(
       Loc,
       createUnnamedGlobalFrom(CGM, D, Builder, constant, Loc.getAlignment()),
@@ -1277,8 +1216,8 @@ static void emitStoresForPatternInit(CodeGenModule &CGM, const VarDecl &D,
                                      Address Loc, bool isVolatile,
                                      CGBuilderTy &Builder) {
   llvm::Type *ElTy = Loc.getElementType();
-  llvm::Constant *constant =
-      constWithPadding(CGM, IsPattern::Yes, patternFor(CGM, ElTy));
+  llvm::Constant *constant = constWithPadding(
+      CGM, IsPattern::Yes, initializationPatternFor(CGM, ElTy));
   assert(!isa<llvm::UndefValue>(constant));
   emitStoresForConstant(CGM, D, Loc, isVolatile, Builder, constant);
 }
@@ -1440,7 +1379,13 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   Address address = Address::invalid();
   Address AllocaAddr = Address::invalid();
-  if (Ty->isConstantSizeType()) {
+  Address OpenMPLocalAddr =
+      getLangOpts().OpenMP
+          ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
+          : Address::invalid();
+  if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
+    address = OpenMPLocalAddr;
+  } else if (Ty->isConstantSizeType()) {
     bool NRVO = getLangOpts().ElideConstructors &&
       D.isNRVOVariable();
 
@@ -1483,14 +1428,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     // unless:
     // - it's an NRVO variable.
     // - we are compiling OpenMP and it's an OpenMP local variable.
-
-    Address OpenMPLocalAddr =
-        getLangOpts().OpenMP
-            ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
-            : Address::invalid();
-    if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
-      address = OpenMPLocalAddr;
-    } else if (NRVO) {
+    if (NRVO) {
       // The named return value optimization: allocate this variable in the
       // return slot, so that we can elide the copy when returning this
       // variable (C++0x [class.copy]p34).
@@ -1814,8 +1752,8 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 
     case LangOptions::TrivialAutoVarInitKind::Pattern: {
       llvm::Type *ElTy = Loc.getElementType();
-      llvm::Constant *Constant =
-          constWithPadding(CGM, IsPattern::Yes, patternFor(CGM, ElTy));
+      llvm::Constant *Constant = constWithPadding(
+          CGM, IsPattern::Yes, initializationPatternFor(CGM, ElTy));
       CharUnits ConstantAlign = getContext().getTypeAlignInChars(VlaSize.Type);
       llvm::BasicBlock *SetupBB = createBasicBlock("vla-setup.loop");
       llvm::BasicBlock *LoopBB = createBasicBlock("vla-init.loop");
@@ -1857,16 +1795,24 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   }
 
   llvm::Constant *constant = nullptr;
-  if (emission.IsConstantAggregate || D.isConstexpr()) {
+  if (emission.IsConstantAggregate || D.isConstexpr() ||
+      D.isUsableInConstantExpressions(getContext())) {
     assert(!capturedByInit && "constant init contains a capturing block?");
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
-    if (constant && trivialAutoVarInit !=
-                        LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+    if (constant && !constant->isZeroValue() &&
+        (trivialAutoVarInit !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
       IsPattern isPattern =
           (trivialAutoVarInit == LangOptions::TrivialAutoVarInitKind::Pattern)
               ? IsPattern::Yes
               : IsPattern::No;
-      constant = constWithPadding(CGM, isPattern,
+      // C guarantees that brace-init with fewer initializers than members in
+      // the aggregate will initialize the rest of the aggregate as-if it were
+      // static initialization. In turn static initialization guarantees that
+      // padding is initialized to zero bits. We could instead pattern-init if D
+      // has any ImplicitValueInitExpr, but that seems to be unintuitive
+      // behavior.
+      constant = constWithPadding(CGM, IsPattern::No,
                                   replaceUndef(CGM, isPattern, constant));
     }
   }
@@ -2569,5 +2515,5 @@ void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
 }
 
 void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
-  getOpenMPRuntime().checkArchForUnifiedAddressing(*this, D);
+  getOpenMPRuntime().checkArchForUnifiedAddressing(D);
 }

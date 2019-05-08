@@ -13,9 +13,8 @@
 #ifndef POLLY_REGISTER_PASSES_H
 #define POLLY_REGISTER_PASSES_H
 
-#include "llvm/IR/LegacyPassManager.h"
-
 namespace llvm {
+class PassRegistry;
 namespace legacy {
 class PassManagerBase;
 } // namespace legacy

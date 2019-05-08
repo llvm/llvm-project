@@ -161,7 +161,7 @@ size_t Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const char *plugin_name, const char *flavor,
                                const ExecutionContext &exe_ctx,
-                               const ConstString &name, Module *module,
+                               ConstString name, Module *module,
                                uint32_t num_instructions,
                                bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
@@ -1237,9 +1237,7 @@ size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
   return m_instruction_list.GetSize();
 }
 
-//----------------------------------------------------------------------
 // Disassembler copy constructor
-//----------------------------------------------------------------------
 Disassembler::Disassembler(const ArchSpec &arch, const char *flavor)
     : m_arch(arch), m_instruction_list(), m_base_addr(LLDB_INVALID_ADDRESS),
       m_flavor() {
@@ -1271,9 +1269,7 @@ const InstructionList &Disassembler::GetInstructionList() const {
   return m_instruction_list;
 }
 
-//----------------------------------------------------------------------
 // Class PseudoInstruction
-//----------------------------------------------------------------------
 
 PseudoInstruction::PseudoInstruction()
     : Instruction(Address(), AddressClass::eUnknown), m_description() {}

@@ -272,7 +272,7 @@ namespace dr1359 { // dr1359: 3.5
   union A { constexpr A() = default; };
   union B { constexpr B() = default; int a; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
   union C { constexpr C() = default; int a, b; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
-  struct X { constexpr X() = default; union {}; };
+  struct X { constexpr X() = default; union {}; }; // expected-error {{does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
 
   constexpr A a = A();

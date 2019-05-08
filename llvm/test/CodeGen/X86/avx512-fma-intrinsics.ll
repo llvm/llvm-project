@@ -405,7 +405,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rne(<16 x float> %a0, <16 
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132ps {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0x6d,0x19,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 0) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 8) nounwind
   %bc = bitcast i16 %mask to <16 x i1>
   %sel = select <16 x i1> %bc, <16 x float> %res, <16 x float> %a0
   ret <16 x float> %sel
@@ -423,7 +423,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rtn(<16 x float> %a0, <16 
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132ps {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0x6d,0x39,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 1) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 9) nounwind
   %bc = bitcast i16 %mask to <16 x i1>
   %sel = select <16 x i1> %bc, <16 x float> %res, <16 x float> %a0
   ret <16 x float> %sel
@@ -441,7 +441,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rtp(<16 x float> %a0, <16 
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132ps {ru-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0x6d,0x59,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 2) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 10) nounwind
   %bc = bitcast i16 %mask to <16 x i1>
   %sel = select <16 x i1> %bc, <16 x float> %res, <16 x float> %a0
   ret <16 x float> %sel
@@ -459,7 +459,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rtz(<16 x float> %a0, <16 
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132ps {rz-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0x6d,0x79,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 3) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 11) nounwind
   %bc = bitcast i16 %mask to <16 x i1>
   %sel = select <16 x i1> %bc, <16 x float> %res, <16 x float> %a0
   ret <16 x float> %sel
@@ -490,7 +490,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rne(<16 x float> %a0, <16
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x18,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 0) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 8) nounwind
   ret <16 x float> %res
 }
 
@@ -499,7 +499,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rtn(<16 x float> %a0, <16
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {rd-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x38,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 1) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 9) nounwind
   ret <16 x float> %res
 }
 
@@ -508,7 +508,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rtp(<16 x float> %a0, <16
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x58,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 2) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 10) nounwind
   ret <16 x float> %res
 }
 
@@ -517,7 +517,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rtz(<16 x float> %a0, <16
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {rz-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x78,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 3) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i32 11) nounwind
   ret <16 x float> %res
 }
 
@@ -591,7 +591,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rne(<8 x double> %a0, <8 x
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0xed,0x19,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 0) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 8) nounwind
   %bc = bitcast i8 %mask to <8 x i1>
   %sel = select <8 x i1> %bc, <8 x double> %res, <8 x double> %a0
   ret <8 x double> %sel
@@ -610,7 +610,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rtn(<8 x double> %a0, <8 x
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132pd {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0xed,0x39,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 1) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 9) nounwind
   %bc = bitcast i8 %mask to <8 x i1>
   %sel = select <8 x i1> %bc, <8 x double> %res, <8 x double> %a0
   ret <8 x double> %sel
@@ -629,7 +629,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rtp(<8 x double> %a0, <8 x
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132pd {ru-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0xed,0x59,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 2) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 10) nounwind
   %bc = bitcast i8 %mask to <8 x i1>
   %sel = select <8 x i1> %bc, <8 x double> %res, <8 x double> %a0
   ret <8 x double> %sel
@@ -648,7 +648,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rtz(<8 x double> %a0, <8 x
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vfmadd132pd {rz-sae}, %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf2,0xed,0x79,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 3) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 11) nounwind
   %bc = bitcast i8 %mask to <8 x i1>
   %sel = select <8 x i1> %bc, <8 x double> %res, <8 x double> %a0
   ret <8 x double> %sel
@@ -680,7 +680,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rne(<8 x double> %a0, <8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0xf5,0x18,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 0) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 8) nounwind
   ret <8 x double> %res
 }
 
@@ -689,7 +689,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rtn(<8 x double> %a0, <8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {rd-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0xf5,0x38,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 1) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 9) nounwind
   ret <8 x double> %res
 }
 
@@ -698,7 +698,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rtp(<8 x double> %a0, <8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {ru-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0xf5,0x58,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 2) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 10) nounwind
   ret <8 x double> %res
 }
 
@@ -707,7 +707,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rtz(<8 x double> %a0, <8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {rz-sae}, %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0xf5,0x78,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 3) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i32 11) nounwind
   ret <8 x double> %res
 }
 
@@ -863,7 +863,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rne(<8 x double> %a0, <8 
 ; X64-NEXT:    retq # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 0)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 8)
   %4 = bitcast i8 %mask to <8 x i1>
   %5 = select <8 x i1> %4, <8 x double> %3, <8 x double> %a0
   ret <8 x double> %5
@@ -884,7 +884,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rtn(<8 x double> %a0, <8 
 ; X64-NEXT:    retq # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 1)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 9)
   %4 = bitcast i8 %mask to <8 x i1>
   %5 = select <8 x i1> %4, <8 x double> %3, <8 x double> %a0
   ret <8 x double> %5
@@ -905,7 +905,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rtp(<8 x double> %a0, <8 
 ; X64-NEXT:    retq # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 2)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 10)
   %4 = bitcast i8 %mask to <8 x i1>
   %5 = select <8 x i1> %4, <8 x double> %3, <8 x double> %a0
   ret <8 x double> %5
@@ -926,7 +926,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rtz(<8 x double> %a0, <8 
 ; X64-NEXT:    retq # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 3)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 11)
   %4 = bitcast i8 %mask to <8 x i1>
   %5 = select <8 x i1> %4, <8 x double> %3, <8 x double> %a0
   ret <8 x double> %5
@@ -962,7 +962,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rne(<8 x double> %a0, <8
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 0)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 8)
   ret <8 x double> %3
 }
 
@@ -973,7 +973,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rtn(<8 x double> %a0, <8
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 1)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 9)
   ret <8 x double> %3
 }
 
@@ -984,7 +984,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rtp(<8 x double> %a0, <8
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 2)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 10)
   ret <8 x double> %3
 }
 
@@ -995,7 +995,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rtz(<8 x double> %a0, <8
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a1
   %2 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %a2
-  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 3)
+  %3 = call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a0, <8 x double> %1, <8 x double> %2, i32 11)
   ret <8 x double> %3
 }
 
@@ -1154,14 +1154,14 @@ define <4 x float> @foo() {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vmovss (%eax), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x00]
 ; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vfmsub213ss %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x38,0xab,0xc0]
+; X86-NEXT:    vfmsub213ss {rd-sae}, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x38,0xab,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vmovss (%rax), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x00]
 ; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    vfmsub213ss %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x38,0xab,0xc0]
+; X64-NEXT:    vfmsub213ss {rd-sae}, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x38,0xab,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x float>, <4 x float>* undef, align 16

@@ -25,7 +25,7 @@
 # M4-NEXT:  IPC:               0.50
 # M4-NEXT:  Block RThroughput: 0.2
 
-# ALL:      Schedulers - number of cycles where we saw N instructions issued:
+# ALL:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # ALL-NEXT: [# issued], [# cycles]
 # ALL-NEXT:  0,          1  (50.0%)
 # ALL-NEXT:  1,          1  (50.0%)

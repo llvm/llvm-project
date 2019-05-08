@@ -869,18 +869,17 @@ namespace dr68 { // dr68: yes
 }
 
 namespace dr69 { // dr69: yes
-  template<typename T> static void f() {}
+  template<typename T> static void f() {} // #dr69-f
   // FIXME: Should we warn here?
   inline void g() { f<int>(); }
-  // FIXME: This should be rejected, per [temp.explicit]p11.
-  extern template void f<char>();
+  extern template void f<char>(); // expected-error {{explicit instantiation declaration of 'f' with internal linkage}}
 #if __cplusplus < 201103L
   // expected-error@-2 {{C++11 extension}}
 #endif
   template<void(*)()> struct Q {};
   Q<&f<int> > q;
 #if __cplusplus < 201103L
-  // expected-error@-2 {{internal linkage}} expected-note@-11 {{here}}
+  // expected-error@-2 {{internal linkage}} expected-note@#dr69-f {{here}}
 #endif
 }
 

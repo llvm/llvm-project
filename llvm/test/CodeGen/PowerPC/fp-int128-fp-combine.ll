@@ -31,7 +31,8 @@ entry:
 define float @f_i128_fi_nsz(float %v) #0 {
 ; CHECK-LABEL: f_i128_fi_nsz:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    friz 1, 1
+; CHECK-NEXT:    friz 0, 1
+; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
 entry:
   %a = fptosi float %v to i128

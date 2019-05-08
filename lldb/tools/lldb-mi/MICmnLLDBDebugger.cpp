@@ -29,7 +29,6 @@
 #include "MIUtilSingletonHelper.h"
 
 //++
-//------------------------------------------------------------------------------------
 // MI private summary providers
 static inline bool MI_char_summary_provider(lldb::SBValue value,
                                             lldb::SBTypeSummaryOptions options,
@@ -55,7 +54,6 @@ static inline bool MI_char_summary_provider(lldb::SBValue value,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // MI summary helper routines
 static inline bool MI_add_summary(lldb::SBTypeCategory category,
                                   const char *typeName,
@@ -74,7 +72,6 @@ static inline bool MI_add_summary(lldb::SBTypeCategory category,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLLDBDebugger constructor.
 // Type:    Method.
 // Args:    None.
@@ -85,7 +82,6 @@ CMICmnLLDBDebugger::CMICmnLLDBDebugger()
     : m_constStrThisThreadId("MI debugger event") {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLLDBDebugger destructor.
 // Type:    Overridable.
 // Args:    None.
@@ -95,7 +91,6 @@ CMICmnLLDBDebugger::CMICmnLLDBDebugger()
 CMICmnLLDBDebugger::~CMICmnLLDBDebugger() { Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize resources for *this debugger object.
 // Type:    Method.
 // Args:    None.
@@ -157,7 +152,6 @@ bool CMICmnLLDBDebugger::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources for *this debugger object.
 // Type:    Method.
 // Args:    None.
@@ -217,7 +211,6 @@ bool CMICmnLLDBDebugger::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Return the LLDB debugger instance created for this debug session.
 // Type:    Method.
 // Args:    None.
@@ -229,7 +222,6 @@ lldb::SBDebugger &CMICmnLLDBDebugger::GetTheDebugger() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Return the LLDB listener instance created for this debug session.
 // Type:    Method.
 // Args:    None.
@@ -241,7 +233,6 @@ lldb::SBListener &CMICmnLLDBDebugger::GetTheListener() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the client driver that wants to use *this LLDB debugger. Call
 // this function
 //          prior to Initialize().
@@ -258,7 +249,6 @@ bool CMICmnLLDBDebugger::SetDriver(const CMIDriverBase &vClientDriver) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the client driver that is use *this LLDB debugger.
 // Type:    Method.
 // Args:    vClientDriver   - (R) A driver.
@@ -270,7 +260,6 @@ CMIDriverBase &CMICmnLLDBDebugger::GetDriver() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Wait until all events have been handled.
 //          This function works in pair with
 //          CMICmnLLDBDebugger::MonitorSBListenerEvents
@@ -294,7 +283,6 @@ void CMICmnLLDBDebugger::WaitForHandleEvent() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Check if need to rebroadcast stop event. This function will return
 // true if
 //          debugger is in synchronouse mode. In such case the
@@ -321,7 +309,6 @@ bool CMICmnLLDBDebugger::CheckIfNeedToRebroadcastStopEvent() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Rebroadcast stop event if needed. This function should be called
 // only if the
 //          CMICmnLLDBDebugger::CheckIfNeedToRebroadcastStopEvent() returned
@@ -342,7 +329,6 @@ void CMICmnLLDBDebugger::RebroadcastStopEvent() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize the LLDB Debugger object.
 // Type:    Method.
 // Args:    None.
@@ -363,7 +349,6 @@ bool CMICmnLLDBDebugger::InitSBDebugger() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the LLDB Debugger's std in, err and out streams. (Not
 // implemented left
 //          here for reference. Was called in the
@@ -388,7 +373,6 @@ bool CMICmnLLDBDebugger::InitStdStreams() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set up the events from the SBDebugger's we would like to listen to.
 // Type:    Method.
 // Args:    None.
@@ -443,7 +427,6 @@ bool CMICmnLLDBDebugger::InitSBListener() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Register with the debugger, the SBListener, the type of events you
 // are interested
 //          in. Others, like commands, may have already set the mask.
@@ -481,7 +464,6 @@ bool CMICmnLLDBDebugger::RegisterForEvent(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Register with the debugger, the SBListener, the type of events you
 // are interested
 //          in. Others, like commands, may have already set the mask.
@@ -532,7 +514,6 @@ bool CMICmnLLDBDebugger::RegisterForEvent(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unregister with the debugger, the SBListener, the type of events you
 // are no
 //          longer interested in. Others, like commands, may still remain
@@ -579,7 +560,6 @@ bool CMICmnLLDBDebugger::UnregisterForEvent(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given the SBBroadcaster class name retrieve it's current event mask.
 // Type:    Method.
 // Args:    vBroadcasterClass   - (R) The SBBroadcaster's class name.
@@ -609,7 +589,6 @@ bool CMICmnLLDBDebugger::BroadcasterGetMask(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Remove the event mask for the specified SBBroadcaster class name.
 // Type:    Method.
 // Args:    vBroadcasterClass - (R) The SBBroadcaster's class name.
@@ -629,7 +608,6 @@ bool CMICmnLLDBDebugger::BroadcasterRemoveMask(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given the SBBroadcaster class name save it's current event mask.
 // Type:    Method.
 // Args:    vBroadcasterClass - (R) The SBBroadcaster's class name.
@@ -655,7 +633,6 @@ bool CMICmnLLDBDebugger::BroadcasterSaveMask(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Iterate all the clients who have registered event masks against
 // particular
 //          SBBroadcasters and build up the mask that is for all of them.
@@ -683,7 +660,6 @@ MIuint CMICmnLLDBDebugger::ClientGetMaskForAllClients(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given the client save its particular event requirements.
 // Type:    Method.
 // Args:    vClientName       - (R) The Client's unique ID.
@@ -714,7 +690,6 @@ bool CMICmnLLDBDebugger::ClientSaveMask(const CMIUtilString &vClientName,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given the client remove it's particular event requirements.
 // Type:    Method.
 // Args:    vClientName       - (R) The Client's unique ID.
@@ -743,7 +718,6 @@ bool CMICmnLLDBDebugger::ClientRemoveTheirMask(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the client's event mask used for on a particular
 // SBBroadcaster.
 // Type:    Method.
@@ -778,7 +752,6 @@ bool CMICmnLLDBDebugger::ClientGetTheirMask(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Momentarily wait for an events being broadcast and inspect those
 // that do
 //          come this way. Check if the target should exit event if so start
@@ -848,7 +821,6 @@ bool CMICmnLLDBDebugger::MonitorSBListenerEvents(bool &vrbIsAlive) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The main worker method for this thread.
 // Type:    Method.
 // Args:    vrbIsAlive  - (W) True = *this thread is working, false = thread has
@@ -862,7 +834,6 @@ bool CMICmnLLDBDebugger::ThreadRun(bool &vrbIsAlive) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Let this thread clean up after itself.
 // Type:    Method.
 // Args:
@@ -873,7 +844,6 @@ bool CMICmnLLDBDebugger::ThreadRun(bool &vrbIsAlive) {
 bool CMICmnLLDBDebugger::ThreadFinish() { return MIstatus::success; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve *this thread object's name.
 // Type:    Overridden.
 // Args:    None.
@@ -885,7 +855,6 @@ const CMIUtilString &CMICmnLLDBDebugger::ThreadGetName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Loads lldb-mi formatters
 // Type:    Method.
 // Args:    None.
@@ -913,7 +882,6 @@ bool CMICmnLLDBDebugger::LoadMIFormatters(lldb::SBTypeCategory miCategory) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Registers lldb-mi custom summary providers
 // Type:    Method.
 // Args:    None.

@@ -32,7 +32,7 @@ StructuredDataPlugin::StructuredDataPlugin(const ProcessWP &process_wp)
 
 StructuredDataPlugin::~StructuredDataPlugin() {}
 
-bool StructuredDataPlugin::GetEnabled(const ConstString &type_name) const {
+bool StructuredDataPlugin::GetEnabled(ConstString type_name) const {
   // By default, plugins are always enabled.  Plugin authors should override
   // this if there is an enabled/disabled state for their plugin.
   return true;

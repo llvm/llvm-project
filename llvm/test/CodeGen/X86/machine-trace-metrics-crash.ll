@@ -6,11 +6,15 @@
 ; machine-combiner pass has run, reassociated the add operands, and therefore
 ; used machine trace metrics.
 
-define void @PR24199() {
+define void @PR24199(i32 %a0) {
 ; CHECK-LABEL: PR24199:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_2
@@ -30,7 +34,7 @@ define void @PR24199() {
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    addss %xmm2, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%rax)
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %if.end
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
@@ -39,13 +43,15 @@ define void @PR24199() {
 ; CHECK-NEXT:    addss %xmm0, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    callq bar
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 
 entry:
   %i = alloca %struct.A, align 8
-  %tobool = icmp ne i32 undef, 0
+  %tobool = icmp ne i32 %a0, 0
   br i1 undef, label %if.end, label %if.then
 
 if.then:

@@ -40,6 +40,8 @@ INLINE int GetThreadIdInBlock();
 INLINE int GetBlockIdInKernel();
 INLINE int GetNumberOfBlocksInKernel();
 INLINE int GetNumberOfThreadsInBlock();
+INLINE unsigned GetWarpId();
+INLINE unsigned GetLaneId();
 
 // get global ids to locate tread/team info (constant regardless of OMP)
 INLINE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode);
@@ -47,15 +49,14 @@ INLINE int GetMasterThreadID();
 INLINE int GetNumberOfWorkersInTeam();
 
 // get OpenMP thread and team ids
-INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode,
-                          bool isRuntimeUninitialized); // omp_thread_num
+INLINE int GetOmpThreadId(int threadId,
+                          bool isSPMDExecutionMode);    // omp_thread_num
 INLINE int GetOmpTeamId();                              // omp_team_num
 
 // get OpenMP number of threads and team
-INLINE int
-GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode,
-                      bool isRuntimeUninitialized); // omp_num_threads
-INLINE int GetNumberOfOmpTeams();                   // omp_num_teams
+INLINE int GetNumberOfOmpThreads(int threadId,
+                                 bool isSPMDExecutionMode); // omp_num_threads
+INLINE int GetNumberOfOmpTeams();                           // omp_num_teams
 
 // get OpenMP number of procs
 INLINE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode);
@@ -63,6 +64,10 @@ INLINE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode);
 
 // masters
 INLINE int IsTeamMaster(int ompThreadId);
+
+// Parallel level
+INLINE void IncParallelLevel(bool ActiveParallel);
+INLINE void DecParallelLevel(bool ActiveParallel);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Memory

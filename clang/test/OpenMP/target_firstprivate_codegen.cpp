@@ -53,8 +53,8 @@ struct TT {
 // TCHECK-DAG:  [[S1:%.+]] = type { double }
 
 // CHECK-DAG:  [[FP_E:@__omp_offloading_firstprivate_.+_e_l76]] = internal global [[TTII]] zeroinitializer
-// CHECK-DAG:  [[SIZET:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] [i[[SZ:32|64]] 4]
-// CHECK-DAG:  [[MAPT:@.+]] = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG:  [[SIZET:@.+]] = private unnamed_addr constant [2 x i{{32|64}}] [i[[SZ:32|64]] 4, i{{64|32}} {{8|4}}]
+// CHECK-DAG:  [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 561]
 // CHECK-DAG:  [[MAPT2:@.+]] = private unnamed_addr constant [9 x i64] [i64 800, i64 673, i64 288, i64 673, i64 673, i64 288, i64 288, i64 673, i64 673]
 // CHECK-DAG:  [[SIZET3:@.+]] = private unnamed_addr constant [2 x i{{32|64}}] [i{{32|64}} 0, i{{32|64}} 8]
 // CHECK-DAG:  [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 544, i64 549]
@@ -74,8 +74,9 @@ int foo(int n, double *ptr) {
   double cn[5][n];
   TT<long long, char> d;
   const TT<int, int> e = {n, n};
+  int *p __attribute__ ((aligned (64))) = &a;
 
-#pragma omp target firstprivate(a)
+#pragma omp target firstprivate(a, p)
   {
   }
 
@@ -88,9 +89,10 @@ int foo(int n, double *ptr) {
   // CHECK:  [[SSTACK:%.+]] = alloca i8*,
   // CHECK:  [[C:%.+]] = alloca [5 x [10 x double]],
   // CHECK:  [[D:%.+]] = alloca [[TT]],
+  // CHECK:  [[P:%.+]] = alloca i32*, align 64
   // CHECK:  [[ACAST:%.+]] = alloca i{{[0-9]+}},
-  // CHECK:  [[BASE_PTR_ARR:%.+]] = alloca [1 x i8*],
-  // CHECK:  [[PTR_ARR:%.+]] = alloca [1 x i8*],
+  // CHECK:  [[BASE_PTR_ARR:%.+]] = alloca [2 x i8*],
+  // CHECK:  [[PTR_ARR:%.+]] = alloca [2 x i8*],
   // CHECK:  [[A2CAST:%.+]] = alloca i{{[0-9]+}},
   // CHECK:  [[BASE_PTR_ARR2:%.+]] = alloca [9 x i8*],
   // CHECK:  [[PTR_ARR2:%.+]] = alloca [9 x i8*],
@@ -113,20 +115,30 @@ int foo(int n, double *ptr) {
   // CHECK-64:  store i{{[0-9]+}} [[AVAL]], i{{[0-9]+}}* [[CONV]],
   // CHECK-32:  store i{{[0-9]+}} [[AVAL]], i{{[0-9]+}}* [[ACAST]],
   // CHECK:  [[ACAST_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[ACAST]],
-  // CHECK:  [[BASE_PTR_GEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // CHECK:  [[P_PTR:%.+]] = load i32*, i32** [[P]], align 64
+  // CHECK:  [[BASE_PTR_GEP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[ACAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP]] to i{{[0-9]+}}*
   // CHECK:  store i{{[0-9]+}} [[ACAST_VAL]], i{{[0-9]+}}* [[ACAST_TOPTR]],
-  // CHECK:  [[PTR_GEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // CHECK:  [[PTR_GEP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[ACAST_TOPTR2:%.+]] = bitcast i8** [[PTR_GEP]] to i{{[0-9]+}}*
   // CHECK:  store i{{[0-9]+}} [[ACAST_VAL]], i{{[0-9]+}}* [[ACAST_TOPTR2]],
-  // CHECK:  [[BASE_PTR_GEP_ARG:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  [[PTR_GEP_ARG:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 1, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([1 x i[[SZ]]], [1 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT]], i32 0, i32 0))
+  // CHECK:  [[BASE_PTR_GEP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+  // CHECK:  [[PCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP]] to i32***
+  // CHECK:  store i32** [[P]], i32*** [[PCAST_TOPTR]],
+  // CHECK:  [[PTR_GEP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+  // CHECK:  [[PCAST_TOPTR2:%.+]] = bitcast i8** [[PTR_GEP]] to i32**
+  // CHECK:  store i32* [[P_PTR]], i32** [[PCAST_TOPTR2]],
+  // CHECK:  [[BASE_PTR_GEP_ARG:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // CHECK:  [[PTR_GEP_ARG:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // CHECK:  {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0))
 
-  // TCHECK:  define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]])
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], i32** dereferenceable{{.+}} [[P_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK-NOT: alloca i{{[0-9]+}},
+  // TCHECK:  [[P_ADDR:%.+]] = alloca i32**,
+  // TCHECK:  [[P_PRIV:%.+]] = alloca i32*,
+  // TCHECK-NOT: alloca i{{[0-9]+}}
   // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
+  // TCHECK:  store i32** [[P_IN]], i32*** [[P_ADDR]],
   // TCHECK-NOT: store i{{[0-9]+}} %
   // TCHECK:  ret void
 

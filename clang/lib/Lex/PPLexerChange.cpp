@@ -270,7 +270,7 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
 
   ModuleMap &ModMap = getHeaderSearchInfo().getModuleMap();
   const DirectoryEntry *Dir = Mod.getUmbrellaDir().Entry;
-  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   std::error_code EC;
   for (llvm::vfs::recursive_directory_iterator Entry(FS, Dir->getName(), EC),
        End;

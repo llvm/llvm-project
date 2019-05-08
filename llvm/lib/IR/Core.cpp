@@ -1036,6 +1036,16 @@ LLVMValueRef LLVMConstPointerNull(LLVMTypeRef Ty) {
 
 /*--.. Operations on metadata nodes ........................................--*/
 
+LLVMMetadataRef LLVMMDStringInContext2(LLVMContextRef C, const char *Str,
+                                       size_t SLen) {
+  return wrap(MDString::get(*unwrap(C), StringRef(Str, SLen)));
+}
+
+LLVMMetadataRef LLVMMDNodeInContext2(LLVMContextRef C, LLVMMetadataRef *MDs,
+                                     size_t Count) {
+  return wrap(MDNode::get(*unwrap(C), ArrayRef<Metadata*>(unwrap(MDs), Count)));
+}
+
 LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
                                    unsigned SLen) {
   LLVMContext &Context = *unwrap(C);
@@ -1199,15 +1209,17 @@ void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char *Name,
 const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    S = I->getDebugLoc()->getDirectory();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      S = DL->getDirectory();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         S = DGV->getDirectory();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       S = DSP->getDirectory();
   } else {
@@ -1221,15 +1233,17 @@ const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
 const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    S = I->getDebugLoc()->getFilename();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      S = DL->getFilename();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         S = DGV->getFilename();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       S = DSP->getFilename();
   } else {
@@ -1242,15 +1256,17 @@ const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
 
 unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
   unsigned L = 0;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    L = I->getDebugLoc()->getLine();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      L = DL->getLine();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         L = DGV->getLine();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       L = DSP->getLine();
   } else {
@@ -1262,9 +1278,9 @@ unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
 
 unsigned LLVMGetDebugLocColumn(LLVMValueRef Val) {
   unsigned C = 0;
-  if (const auto *I = unwrap<Instruction>(Val))
-    if (const auto &L = I->getDebugLoc())
-      C = L->getColumn();
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val)))
+    if (const auto &DL = I->getDebugLoc())
+      C = DL->getColumn();
   return C;
 }
 
@@ -2329,6 +2345,10 @@ const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
   return strdup(Str.c_str());
 }
 
+unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen) {
+  return Function::lookupIntrinsicID({Name, NameLen});
+}
+
 LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {
   auto IID = llvm_map_to_intrinsic_id(ID);
   return llvm::Intrinsic::isOverloaded(IID);
@@ -2603,6 +2623,20 @@ LLVMBasicBlockRef LLVMGetPreviousBasicBlock(LLVMBasicBlockRef BB) {
 LLVMBasicBlockRef LLVMCreateBasicBlockInContext(LLVMContextRef C,
                                                 const char *Name) {
   return wrap(llvm::BasicBlock::Create(*unwrap(C), Name));
+}
+
+void LLVMInsertExistingBasicBlockAfterInsertBlock(LLVMBuilderRef Builder,
+                                                  LLVMBasicBlockRef BB) {
+  BasicBlock *ToInsert = unwrap(BB);
+  BasicBlock *CurBB = unwrap(Builder)->GetInsertBlock();
+  assert(CurBB && "current insertion point is invalid!");
+  CurBB->getParent()->getBasicBlockList().insertAfter(CurBB->getIterator(),
+                                                      ToInsert);
+}
+
+void LLVMAppendExistingBasicBlock(LLVMValueRef Fn,
+                                  LLVMBasicBlockRef BB) {
+  unwrap<Function>(Fn)->getBasicBlockList().push_back(unwrap(BB));
 }
 
 LLVMBasicBlockRef LLVMAppendBasicBlockInContext(LLVMContextRef C,
@@ -2988,6 +3022,17 @@ void LLVMDisposeBuilder(LLVMBuilderRef Builder) {
 
 /*--.. Metadata builders ...................................................--*/
 
+LLVMMetadataRef LLVMGetCurrentDebugLocation2(LLVMBuilderRef Builder) {
+  return wrap(unwrap(Builder)->getCurrentDebugLocation().getAsMDNode());
+}
+
+void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc) {
+  if (Loc)
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<MDNode>(Loc)));
+  else
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc());
+}
+
 void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L) {
   MDNode *Loc =
       L ? cast<MDNode>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
@@ -3004,6 +3049,17 @@ void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {
   unwrap(Builder)->SetInstDebugLocation(unwrap<Instruction>(Inst));
 }
 
+void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
+                                    LLVMMetadataRef FPMathTag) {
+
+  unwrap(Builder)->setDefaultFPMathTag(FPMathTag
+                                       ? unwrap<MDNode>(FPMathTag)
+                                       : nullptr);
+}
+
+LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder) {
+  return wrap(unwrap(Builder)->getDefaultFPMathTag());
+}
 
 /*--.. Instruction builders ................................................--*/
 

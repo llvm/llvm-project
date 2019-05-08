@@ -145,7 +145,7 @@ entry:
 ; CHECK-LABEL: test4
 ; CHECK: str [[REG_1:d[0-9]+]], [sp, #8]
 ; CHECK: str [[REG_2:w[0-9]+]], [sp]
-; CHECK: orr w0, wzr, #0x3
+; CHECK: mov w0, #3
   %0 = load double, double* %in, align 8
   %call = tail call double @args_f64(double 3.000000e+00, double %0, double %0,
           double %0, double %0, double %0, double %0, double %0,

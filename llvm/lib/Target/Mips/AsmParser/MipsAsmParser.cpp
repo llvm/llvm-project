@@ -28,6 +28,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
+#include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -891,14 +892,6 @@ private:
         .getRegister(RegIdx.Index);
   }
 
-  /// Coerce the register to FGRH32 and return the real register for the current
-  /// target.
-  unsigned getFGRH32Reg() const {
-    assert(isRegIdx() && (RegIdx.Kind & RegKind_FGR) && "Invalid access!");
-    return RegIdx.RegInfo->getRegClass(Mips::FGRH32RegClassID)
-        .getRegister(RegIdx.Index);
-  }
-
   /// Coerce the register to FCC and return the real register for the current
   /// target.
   unsigned getFCCReg() const {
@@ -1094,11 +1087,6 @@ public:
     if (!AsmParser.useOddSPReg() && RegIdx.Index & 1)
       AsmParser.Error(StartLoc, "-mno-odd-spreg prohibits the use of odd FPU "
                                 "registers");
-  }
-
-  void addFGRH32AsmRegOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(getFGRH32Reg()));
   }
 
   void addFCCAsmRegOperands(MCInst &Inst, unsigned N) const {
@@ -6321,7 +6309,7 @@ bool MipsAsmParser::parseBracketSuffix(StringRef Name,
   return false;
 }
 
-static std::string MipsMnemonicSpellCheck(StringRef S, uint64_t FBS,
+static std::string MipsMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                           unsigned VariantID = 0);
 
 bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -6334,7 +6322,7 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Check if we have valid mnemonic
   if (!mnemonicIsValid(Name, 0)) {
-    uint64_t FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
+    FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
     std::string Suggestion = MipsMnemonicSpellCheck(Name, FBS);
     return Error(NameLoc, "unknown instruction" + Suggestion);
   }
@@ -6803,7 +6791,6 @@ bool MipsAsmParser::parseSetHardFloatDirective() {
 
 bool MipsAsmParser::parseSetAssignment() {
   StringRef Name;
-  const MCExpr *Value;
   MCAsmParser &Parser = getParser();
 
   if (Parser.parseIdentifier(Name))
@@ -6821,16 +6808,15 @@ bool MipsAsmParser::parseSetAssignment() {
     RegisterSets[Name] = Parser.getTok();
     Parser.Lex(); // Eat identifier.
     getContext().getOrCreateSymbol(Name);
-  } else if (!Parser.parseExpression(Value)) {
-    // Parse assignment of an expression including
-    // symbolic registers:
-    //   .set  $tmp, $BB0-$BB1
-    //   .set  r2, $f2
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-    Sym->setVariableValue(Value);
-  } else {
-    return reportParseError("expected valid expression after comma");
+    return false;
   }
+
+  MCSymbol *Sym;
+  const MCExpr *Value;
+  if (MCParserUtils::parseAssignmentExpression(Name, /* allow_redef */ true,
+                                               Parser, Sym, Value))
+    return true;
+  Sym->setVariableValue(Value);
 
   return false;
 }

@@ -71,10 +71,11 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
 
   NumRelocations = 0;
   AreRelocsRela = false;
+  Debug = Name.startswith(".debug") || Name.startswith(".zdebug");
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  uint32_t V = std::max<uint64_t>(Alignment, 1);
+  uint32_t V = std::max<uint32_t>(Alignment, 1);
   if (!isPowerOf2_64(V))
     fatal(toString(this) + ": sh_addralign is not a power of 2");
   this->Alignment = V;
@@ -144,13 +145,18 @@ size_t InputSectionBase::getSize() const {
 
 void InputSectionBase::uncompress() const {
   size_t Size = UncompressedSize;
-  UncompressedBuf.reset(new char[Size]);
+  char *UncompressedBuf;
+  {
+    static std::mutex Mu;
+    std::lock_guard<std::mutex> Lock(Mu);
+    UncompressedBuf = BAlloc.Allocate<char>(Size);
+  }
 
-  if (Error E =
-          zlib::uncompress(toStringRef(RawData), UncompressedBuf.get(), Size))
+  if (Error E = zlib::uncompress(toStringRef(RawData), UncompressedBuf, Size))
     fatal(toString(this) +
           ": uncompress failed: " + llvm::toString(std::move(E)));
-  RawData = makeArrayRef((uint8_t *)UncompressedBuf.get(), Size);
+  RawData = makeArrayRef((uint8_t *)UncompressedBuf, Size);
+  UncompressedSize = -1;
 }
 
 uint64_t InputSectionBase::getOffsetInFile() const {
@@ -205,8 +211,8 @@ OutputSection *SectionBase::getOutputSection() {
 // by zlib-compressed data. This function parses a header to initialize
 // `UncompressedSize` member and remove the header from `RawData`.
 void InputSectionBase::parseCompressedHeader() {
-  typedef typename ELF64LE::Chdr Chdr64;
-  typedef typename ELF32LE::Chdr Chdr32;
+  using Chdr64 = typename ELF64LE::Chdr;
+  using Chdr32 = typename ELF32LE::Chdr;
 
   // Old-style header
   if (Name.startswith(".zdebug")) {
@@ -247,6 +253,7 @@ void InputSectionBase::parseCompressedHeader() {
     }
 
     UncompressedSize = Hdr->ch_size;
+    Alignment = std::max<uint32_t>(Hdr->ch_addralign, 1);
     RawData = RawData.slice(sizeof(*Hdr));
     return;
   }
@@ -264,6 +271,7 @@ void InputSectionBase::parseCompressedHeader() {
   }
 
   UncompressedSize = Hdr->ch_size;
+  Alignment = std::max<uint32_t>(Hdr->ch_addralign, 1);
   RawData = RawData.slice(sizeof(*Hdr));
 }
 
@@ -375,7 +383,7 @@ OutputSection *InputSection::getParent() const {
 // Copy SHT_GROUP section contents. Used only for the -r option.
 template <class ELFT> void InputSection::copyShtGroup(uint8_t *Buf) {
   // ELFT::Word is the 32-bit integral type in the target endianness.
-  typedef typename ELFT::Word u32;
+  using u32 = typename ELFT::Word;
   ArrayRef<u32> From = getDataAs<u32>();
   auto *To = reinterpret_cast<u32 *>(Buf);
 
@@ -607,6 +615,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
   case R_ABS:
+  case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Sym.getVA(A);
@@ -619,15 +628,15 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return Sym.getGotVA() + A;
   case R_GOTONLY_PC:
     return In.Got->getVA() + A - P;
-  case R_GOTONLY_PC_FROM_END:
-    return In.Got->getVA() + A - P + In.Got->getSize();
+  case R_GOTPLTONLY_PC:
+    return In.GotPlt->getVA() + A - P;
   case R_GOTREL:
     return Sym.getVA(A) - In.Got->getVA();
-  case R_GOTREL_FROM_END:
-    return Sym.getVA(A) - In.Got->getVA() - In.Got->getSize();
-  case R_GOT_FROM_END:
-  case R_RELAX_TLS_GD_TO_IE_END:
-    return Sym.getGotOffset() + A - In.Got->getSize();
+  case R_GOTPLTREL:
+    return Sym.getVA(A) - In.GotPlt->getVA();
+  case R_GOTPLT:
+  case R_RELAX_TLS_GD_TO_IE_GOTPLT:
+    return Sym.getGotVA() + A - In.GotPlt->getVA();
   case R_TLSLD_GOT_OFF:
   case R_GOT_OFF:
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
@@ -753,12 +762,12 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
            getAArch64Page(P);
   case R_TLSGD_GOT:
     return In.Got->getGlobalDynOffset(Sym) + A;
-  case R_TLSGD_GOT_FROM_END:
-    return In.Got->getGlobalDynOffset(Sym) + A - In.Got->getSize();
+  case R_TLSGD_GOTPLT:
+    return In.Got->getVA() + In.Got->getGlobalDynOffset(Sym) + A - In.GotPlt->getVA();
   case R_TLSGD_PC:
     return In.Got->getGlobalDynAddr(Sym) + A - P;
-  case R_TLSLD_GOT_FROM_END:
-    return In.Got->getTlsIndexOff() + A - In.Got->getSize();
+  case R_TLSLD_GOTPLT:
+    return In.Got->getVA() + In.Got->getTlsIndexOff() + A - In.GotPlt->getVA();
   case R_TLSLD_GOT:
     return In.Got->getTlsIndexOff() + A;
   case R_TLSLD_PC:
@@ -800,7 +809,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Expr == R_NONE)
       continue;
 
-    if (Expr != R_ABS) {
+    if (Expr != R_ABS && Expr != R_DTPREL) {
       std::string Msg = getLocation<ELFT>(Offset) +
                         ": has non-ABS relocation " + toString(Type) +
                         " against symbol '" + toString(Sym) + "'";
@@ -902,7 +911,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
     case R_RELAX_TLS_GD_TO_IE:
     case R_RELAX_TLS_GD_TO_IE_ABS:
     case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
-    case R_RELAX_TLS_GD_TO_IE_END:
+    case R_RELAX_TLS_GD_TO_IE_GOTPLT:
       Target->relaxTlsGdToIe(BufLoc, Type, TargetVA);
       break;
     case R_PPC_CALL:
@@ -1062,7 +1071,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
 
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
-  if (UncompressedSize >= 0 && !UncompressedBuf) {
+  if (UncompressedSize >= 0) {
     size_t Size = UncompressedSize;
     if (Error E = zlib::uncompress(toStringRef(RawData),
                                    (char *)(Buf + OutSecOff), Size))
@@ -1218,11 +1227,9 @@ SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to  do a binary search of the original section piece vector.
-  auto It2 =
-      llvm::upper_bound(Pieces, Offset, [](uint64_t Offset, SectionPiece P) {
-        return Offset < P.InputOff;
-      });
-  return &It2[-1];
+  auto It = llvm::bsearch(Pieces,
+                          [=](SectionPiece P) { return Offset < P.InputOff; });
+  return &It[-1];
 }
 
 // Returns the offset in an output section for a given input offset.

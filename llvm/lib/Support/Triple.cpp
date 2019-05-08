@@ -208,6 +208,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case HermitCore: return "hermit";
   case Hurd: return "hurd";
   case WASI: return "wasi";
+  case Emscripten: return "emscripten";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -507,6 +508,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("hermit", Triple::HermitCore)
     .StartsWith("hurd", Triple::Hurd)
     .StartsWith("wasi", Triple::WASI)
+    .StartsWith("emscripten", Triple::Emscripten)
     .Default(Triple::UnknownOS);
 }
 
@@ -536,6 +538,9 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
 
 static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {
   return StringSwitch<Triple::ObjectFormatType>(EnvironmentName)
+    // "xcoff" must come before "coff" because of the order-dependendent
+    // pattern matching.
+    .EndsWith("xcoff", Triple::XCOFF)
     .EndsWith("coff", Triple::COFF)
     .EndsWith("elf", Triple::ELF)
     .EndsWith("macho", Triple::MachO)
@@ -624,6 +629,7 @@ static StringRef getObjectFormatTypeName(Triple::ObjectFormatType Kind) {
   case Triple::ELF: return "elf";
   case Triple::MachO: return "macho";
   case Triple::Wasm: return "wasm";
+  case Triple::XCOFF: return "xcoff";
   }
   llvm_unreachable("unknown object format type");
 }
@@ -688,6 +694,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ppc64:
     if (T.isOSDarwin())
       return Triple::MachO;
+    else if (T.isOSAIX())
+      return Triple::XCOFF;
     return Triple::ELF;
 
   case Triple::wasm32:

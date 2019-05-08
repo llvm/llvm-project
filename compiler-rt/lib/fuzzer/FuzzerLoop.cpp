@@ -266,6 +266,7 @@ void Fuzzer::MaybeExitGracefully() {
 void Fuzzer::InterruptCallback() {
   Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
+  ScopedDisableMsanInterceptorChecks S; // RmDirRecursive may call opendir().
   RmDirRecursive(TempPath(".dir"));
   // Stop right now, don't perform any at-exit actions.
   _Exit(Options.InterruptExitCode);
@@ -445,6 +446,23 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   }
 }
 
+static void WriteFeatureSetToFile(const std::string &FeaturesDir,
+                                  const std::string &FileName,
+                                  const Vector<uint32_t> &FeatureSet) {
+  if (FeaturesDir.empty() || FeatureSet.empty()) return;
+  WriteToFile(reinterpret_cast<const uint8_t *>(FeatureSet.data()),
+              FeatureSet.size() * sizeof(FeatureSet[0]),
+              DirPlusFile(FeaturesDir, FileName));
+}
+
+static void RenameFeatureSetFile(const std::string &FeaturesDir,
+                                 const std::string &OldFile,
+                                 const std::string &NewFile) {
+  if (FeaturesDir.empty()) return;
+  RenameFile(DirPlusFile(FeaturesDir, OldFile),
+             DirPlusFile(FeaturesDir, NewFile));
+}
+
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                     InputInfo *II, bool *FoundUniqFeatures) {
   if (!Size)
@@ -469,15 +487,21 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures) {
     TPC.UpdateObservedPCs();
-    Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
-                       TPC.ObservedFocusFunction(), UniqFeatureSetTmp, DFT, II);
+    auto NewII = Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures,
+                                    MayDeleteFile, TPC.ObservedFocusFunction(),
+                                    UniqFeatureSetTmp, DFT, II);
+    WriteFeatureSetToFile(Options.FeaturesDir, Sha1ToString(NewII->Sha1),
+                          NewII->UniqFeatureSet);
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
       II->DataFlowTraceForFocusFunction.empty() &&
       FoundUniqFeaturesOfII == II->UniqFeatureSet.size() &&
       II->U.size() > Size) {
+    auto OldFeaturesFile = Sha1ToString(II->Sha1);
     Corpus.Replace(II, {Data, Data + Size});
+    RenameFeatureSetFile(Options.FeaturesDir, OldFeaturesFile,
+                         Sha1ToString(II->Sha1));
     return true;
   }
   return false;
@@ -658,7 +682,9 @@ void Fuzzer::MutateAndTestOne() {
         Size <= CurrentMaxMutationLen)
       NewSize = MD.MutateWithMask(CurrentUnitData, Size, Size,
                                   II.DataFlowTraceForFocusFunction);
-    else
+
+    // If MutateWithMask either failed or wasn't called, call default Mutate.
+    if (!NewSize)
       NewSize = MD.Mutate(CurrentUnitData, Size, CurrentMaxMutationLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
     assert(NewSize <= CurrentMaxMutationLen && "Mutator return oversized unit");

@@ -35,9 +35,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObject
-//-------------------------------------------------------------------------
 
 CommandObject::CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
   llvm::StringRef help, llvm::StringRef syntax, uint32_t flags)
@@ -50,6 +48,8 @@ CommandObject::CommandObject(CommandInterpreter &interpreter, llvm::StringRef na
 }
 
 CommandObject::~CommandObject() {}
+
+Debugger &CommandObject::GetDebugger() { return m_interpreter.GetDebugger(); }
 
 llvm::StringRef CommandObject::GetHelp() { return m_cmd_help_short; }
 

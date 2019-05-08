@@ -48,6 +48,7 @@ static_library("Sema") {
     "SemaInit.cpp",
     "SemaLambda.cpp",
     "SemaLookup.cpp",
+    "SemaModule.cpp",
     "SemaObjCProperty.cpp",
     "SemaOpenMP.cpp",
     "SemaOverload.cpp",

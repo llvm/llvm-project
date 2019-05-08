@@ -767,8 +767,7 @@ void MachOLinkingContext::registerDylib(MachODylibFile *dylib,
                                         bool upward) const {
   std::lock_guard<std::mutex> lock(_dylibsMutex);
 
-  if (std::find(_allDylibs.begin(),
-                _allDylibs.end(), dylib) == _allDylibs.end())
+  if (!llvm::count(_allDylibs, dylib))
     _allDylibs.push_back(dylib);
   _pathToDylibMap[dylib->installName()] = dylib;
   // If path is different than install name, register path too.
@@ -1015,11 +1014,10 @@ static bool isLibrary(const std::unique_ptr<Node> &elem) {
 // new undefines from libraries.
 void MachOLinkingContext::finalizeInputFiles() {
   std::vector<std::unique_ptr<Node>> &elements = getNodes();
-  std::stable_sort(elements.begin(), elements.end(),
-                   [](const std::unique_ptr<Node> &a,
-                      const std::unique_ptr<Node> &b) {
-                     return !isLibrary(a) && isLibrary(b);
-                   });
+  llvm::stable_sort(elements, [](const std::unique_ptr<Node> &a,
+                                 const std::unique_ptr<Node> &b) {
+    return !isLibrary(a) && isLibrary(b);
+  });
   size_t numLibs = std::count_if(elements.begin(), elements.end(), isLibrary);
   elements.push_back(llvm::make_unique<GroupEnd>(numLibs));
 }

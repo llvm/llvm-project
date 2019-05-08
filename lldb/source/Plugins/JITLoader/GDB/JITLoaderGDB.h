@@ -20,9 +20,7 @@ public:
 
   ~JITLoaderGDB() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -36,16 +34,12 @@ public:
 
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
 
-  //------------------------------------------------------------------
   // JITLoader interface
-  //------------------------------------------------------------------
   void DidAttach() override;
 
   void DidLaunch() override;
@@ -54,7 +48,7 @@ public:
 
 private:
   lldb::addr_t GetSymbolAddress(lldb_private::ModuleList &module_list,
-                                const lldb_private::ConstString &name,
+                                lldb_private::ConstString name,
                                 lldb::SymbolType symbol_type) const;
 
   void SetJITBreakpoint(lldb_private::ModuleList &module_list);

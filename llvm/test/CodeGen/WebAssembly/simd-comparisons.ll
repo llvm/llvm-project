@@ -647,6 +647,16 @@ define <4 x i1> @compare_oeq_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_oeq_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_oeq_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_oeq_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan oeq <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_oeq_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_oeq_v4f32 (v128, v128) -> (v128){{$}}
@@ -654,6 +664,17 @@ define <4 x i1> @compare_oeq_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_oeq_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp oeq <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_oeq_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_oeq_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_oeq_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan oeq <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -668,6 +689,16 @@ define <4 x i1> @compare_ogt_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_ogt_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_ogt_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_ogt_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan ogt <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ogt_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_ogt_v4f32 (v128, v128) -> (v128){{$}}
@@ -675,6 +706,17 @@ define <4 x i1> @compare_ogt_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_ogt_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp ogt <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_ogt_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_ogt_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_ogt_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan ogt <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -689,6 +731,16 @@ define <4 x i1> @compare_oge_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_oge_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_oge_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_oge_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan oge <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_oge_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_oge_v4f32 (v128, v128) -> (v128){{$}}
@@ -696,6 +748,17 @@ define <4 x i1> @compare_oge_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_oge_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp oge <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_oge_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_oge_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_oge_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan oge <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -710,6 +773,16 @@ define <4 x i1> @compare_olt_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_olt_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_olt_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_olt_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan olt <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_olt_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_olt_v4f32 (v128, v128) -> (v128){{$}}
@@ -717,6 +790,17 @@ define <4 x i1> @compare_olt_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_olt_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp olt <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_olt_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_olt_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_olt_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan olt <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -731,6 +815,16 @@ define <4 x i1> @compare_ole_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_ole_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_ole_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_ole_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan ole <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ole_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_ole_v4f32 (v128, v128) -> (v128){{$}}
@@ -738,6 +832,17 @@ define <4 x i1> @compare_ole_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_ole_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp ole <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_ole_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_ole_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_ole_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan ole <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -756,6 +861,16 @@ define <4 x i1> @compare_one_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_one_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_one_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_one_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan one <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_one_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_one_v4f32 (v128, v128) -> (v128){{$}}
@@ -767,6 +882,17 @@ define <4 x i1> @compare_one_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_one_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp one <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_one_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_one_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_one_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan one <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -783,6 +909,18 @@ define <4 x i1> @compare_ord_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_ord_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_ord_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.eq $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f32x4.eq $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.and $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return   $pop[[R]]{{$}}
+define <4 x i1> @compare_ord_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan ord <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ord_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_ord_v4f32 (v128, v128) -> (v128){{$}}
@@ -792,6 +930,19 @@ define <4 x i1> @compare_ord_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return   $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_ord_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp ord <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_ord_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_ord_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.eq $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f32x4.eq $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.and $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return   $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_ord_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan ord <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -810,6 +961,16 @@ define <4 x i1> @compare_ueq_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_ueq_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_ueq_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_ueq_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan ueq <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ueq_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_ueq_v4f32 (v128, v128) -> (v128){{$}}
@@ -825,6 +986,17 @@ define <4 x i32> @compare_sext_ueq_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i32> %res
 }
 
+; CHECK-LABEL: compare_sext_ueq_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_ueq_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]
+define <4 x i32> @compare_sext_ueq_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan ueq <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
 ; CHECK-LABEL: compare_ugt_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_ugt_v4f32 (v128, v128) -> (v128){{$}}
@@ -833,6 +1005,16 @@ define <4 x i32> @compare_sext_ueq_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i1> @compare_ugt_v4f32 (<4 x float> %x, <4 x float> %y) {
   %res = fcmp ugt <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
+; CHECK-LABEL: compare_ugt_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_ugt_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_ugt_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan ugt <4 x float> %x, %y
   ret <4 x i1> %res
 }
 
@@ -848,6 +1030,17 @@ define <4 x i32> @compare_sext_ugt_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i32> %res
 }
 
+; CHECK-LABEL: compare_sext_ugt_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_ugt_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_ugt_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan ugt <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
 ; CHECK-LABEL: compare_uge_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_uge_v4f32 (v128, v128) -> (v128){{$}}
@@ -856,6 +1049,16 @@ define <4 x i32> @compare_sext_ugt_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i1> @compare_uge_v4f32 (<4 x float> %x, <4 x float> %y) {
   %res = fcmp uge <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
+; CHECK-LABEL: compare_uge_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_uge_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_uge_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan uge <4 x float> %x, %y
   ret <4 x i1> %res
 }
 
@@ -871,6 +1074,17 @@ define <4 x i32> @compare_sext_uge_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i32> %res
 }
 
+; CHECK-LABEL: compare_sext_uge_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_uge_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_uge_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan uge <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
 ; CHECK-LABEL: compare_ult_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_ult_v4f32 (v128, v128) -> (v128){{$}}
@@ -879,6 +1093,16 @@ define <4 x i32> @compare_sext_uge_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i1> @compare_ult_v4f32 (<4 x float> %x, <4 x float> %y) {
   %res = fcmp ult <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
+; CHECK-LABEL: compare_ult_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_ult_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_ult_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan ult <4 x float> %x, %y
   ret <4 x i1> %res
 }
 
@@ -894,6 +1118,17 @@ define <4 x i32> @compare_sext_ult_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i32> %res
 }
 
+; CHECK-LABEL: compare_sext_ult_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_ult_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_ult_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan ult <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
 ; CHECK-LABEL: compare_ule_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_ule_v4f32 (v128, v128) -> (v128){{$}}
@@ -902,6 +1137,16 @@ define <4 x i32> @compare_sext_ult_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i1> @compare_ule_v4f32 (<4 x float> %x, <4 x float> %y) {
   %res = fcmp ule <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
+; CHECK-LABEL: compare_ule_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_ule_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_ule_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan ule <4 x float> %x, %y
   ret <4 x i1> %res
 }
 
@@ -917,6 +1162,17 @@ define <4 x i32> @compare_sext_ule_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i32> %res
 }
 
+; CHECK-LABEL: compare_sext_ule_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_ule_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_ule_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan ule <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
 ; CHECK-LABEL: compare_une_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_une_v4f32 (v128, v128) -> (v128){{$}}
@@ -927,6 +1183,16 @@ define <4 x i1> @compare_une_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_une_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_une_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ne $push[[R:[0-9]+]]=, $0, $1{{$}}{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_une_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan une <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_une_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_une_v4f32 (v128, v128) -> (v128){{$}}
@@ -934,6 +1200,17 @@ define <4 x i1> @compare_une_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_une_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp une <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_une_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_une_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_une_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan une <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -950,6 +1227,18 @@ define <4 x i1> @compare_uno_v4f32 (<4 x float> %x, <4 x float> %y) {
   ret <4 x i1> %res
 }
 
+; CHECK-LABEL: compare_uno_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_uno_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ne $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f32x4.ne $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.or $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i1> @compare_uno_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %res = fcmp nnan uno <4 x float> %x, %y
+  ret <4 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_uno_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype compare_sext_uno_v4f32 (v128, v128) -> (v128){{$}}
@@ -959,6 +1248,19 @@ define <4 x i1> @compare_uno_v4f32 (<4 x float> %x, <4 x float> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @compare_sext_uno_v4f32 (<4 x float> %x, <4 x float> %y) {
   %cmp = fcmp uno <4 x float> %x, %y
+  %res = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: compare_sext_uno_nnan_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype compare_sext_uno_nnan_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.ne $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f32x4.ne $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.or $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @compare_sext_uno_nnan_v4f32 (<4 x float> %x, <4 x float> %y) {
+  %cmp = fcmp nnan uno <4 x float> %x, %y
   %res = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %res
 }
@@ -974,6 +1276,17 @@ define <2 x i1> @compare_oeq_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_oeq_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_oeq_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_oeq_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan oeq <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_oeq_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -982,6 +1295,18 @@ define <2 x i1> @compare_oeq_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_oeq_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp oeq <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_oeq_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_oeq_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_oeq_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan oeq <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -997,6 +1322,17 @@ define <2 x i1> @compare_ogt_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_ogt_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_ogt_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_ogt_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan ogt <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ogt_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1005,6 +1341,18 @@ define <2 x i1> @compare_ogt_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_ogt_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp ogt <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_ogt_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_ogt_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_ogt_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan ogt <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -1020,6 +1368,17 @@ define <2 x i1> @compare_oge_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_oge_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_oge_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_oge_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan oge <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_oge_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1028,6 +1387,18 @@ define <2 x i1> @compare_oge_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_oge_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp oge <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_oge_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_oge_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_oge_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan oge <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -1043,6 +1414,17 @@ define <2 x i1> @compare_olt_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_olt_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_olt_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_olt_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan olt <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_olt_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1051,6 +1433,18 @@ define <2 x i1> @compare_olt_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_olt_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp olt <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_olt_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_olt_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_olt_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan olt <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -1066,6 +1460,17 @@ define <2 x i1> @compare_ole_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_ole_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_ole_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_ole_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan ole <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ole_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1074,6 +1479,18 @@ define <2 x i1> @compare_ole_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_ole_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp ole <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_ole_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_ole_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_ole_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan ole <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -1093,6 +1510,17 @@ define <2 x i1> @compare_one_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_one_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_one_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_one_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan one <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_one_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1105,6 +1533,18 @@ define <2 x i1> @compare_one_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_one_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp one <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_one_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_one_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_one_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan one <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -1122,6 +1562,19 @@ define <2 x i1> @compare_ord_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_ord_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_ord_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.eq $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f64x2.eq $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.and $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return   $pop[[R]]{{$}}
+define <2 x i1> @compare_ord_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan ord <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ord_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1132,6 +1585,20 @@ define <2 x i1> @compare_ord_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return   $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_ord_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp ord <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_ord_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_ord_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.eq $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f64x2.eq $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.and $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return   $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_ord_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan ord <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -1151,6 +1618,17 @@ define <2 x i1> @compare_ueq_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_ueq_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_ueq_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_ueq_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan ueq <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_ueq_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1167,6 +1645,18 @@ define <2 x i64> @compare_sext_ueq_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i64> %res
 }
 
+; CHECK-LABEL: compare_sext_ueq_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_ueq_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_ueq_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan ueq <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
 ; CHECK-LABEL: compare_ugt_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1176,6 +1666,17 @@ define <2 x i64> @compare_sext_ueq_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i1> @compare_ugt_v2f64 (<2 x double> %x, <2 x double> %y) {
   %res = fcmp ugt <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
+; CHECK-LABEL: compare_ugt_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_ugt_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_ugt_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan ugt <2 x double> %x, %y
   ret <2 x i1> %res
 }
 
@@ -1192,6 +1693,18 @@ define <2 x i64> @compare_sext_ugt_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i64> %res
 }
 
+; CHECK-LABEL: compare_sext_ugt_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_ugt_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_ugt_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan ugt <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
 ; CHECK-LABEL: compare_uge_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1201,6 +1714,17 @@ define <2 x i64> @compare_sext_ugt_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i1> @compare_uge_v2f64 (<2 x double> %x, <2 x double> %y) {
   %res = fcmp uge <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
+; CHECK-LABEL: compare_uge_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_uge_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_uge_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan uge <2 x double> %x, %y
   ret <2 x i1> %res
 }
 
@@ -1217,6 +1741,18 @@ define <2 x i64> @compare_sext_uge_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i64> %res
 }
 
+; CHECK-LABEL: compare_sext_uge_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_uge_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_uge_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan uge <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
 ; CHECK-LABEL: compare_ult_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1226,6 +1762,17 @@ define <2 x i64> @compare_sext_uge_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i1> @compare_ult_v2f64 (<2 x double> %x, <2 x double> %y) {
   %res = fcmp ult <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
+; CHECK-LABEL: compare_ult_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_ult_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_ult_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan ult <2 x double> %x, %y
   ret <2 x i1> %res
 }
 
@@ -1242,6 +1789,18 @@ define <2 x i64> @compare_sext_ult_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i64> %res
 }
 
+; CHECK-LABEL: compare_sext_ult_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_ult_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_ult_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan ult <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
 ; CHECK-LABEL: compare_ule_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1251,6 +1810,17 @@ define <2 x i64> @compare_sext_ult_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i1> @compare_ule_v2f64 (<2 x double> %x, <2 x double> %y) {
   %res = fcmp ule <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
+; CHECK-LABEL: compare_ule_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_ule_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_ule_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan ule <2 x double> %x, %y
   ret <2 x i1> %res
 }
 
@@ -1267,6 +1837,18 @@ define <2 x i64> @compare_sext_ule_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i64> %res
 }
 
+; CHECK-LABEL: compare_sext_ule_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_ule_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_ule_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan ule <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
 ; CHECK-LABEL: compare_une_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1278,6 +1860,17 @@ define <2 x i1> @compare_une_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_une_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_une_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_une_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan une <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_une_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1286,6 +1879,18 @@ define <2 x i1> @compare_une_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_une_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp une <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_une_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_une_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_une_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan une <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
@@ -1303,6 +1908,19 @@ define <2 x i1> @compare_uno_v2f64 (<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %res
 }
 
+; CHECK-LABEL: compare_uno_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_uno_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ne $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f64x2.ne $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.or $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i1> @compare_uno_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %res = fcmp nnan uno <2 x double> %x, %y
+  ret <2 x i1> %res
+}
+
 ; CHECK-LABEL: compare_sext_uno_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -1313,6 +1931,20 @@ define <2 x i1> @compare_uno_v2f64 (<2 x double> %x, <2 x double> %y) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @compare_sext_uno_v2f64 (<2 x double> %x, <2 x double> %y) {
   %cmp = fcmp uno <2 x double> %x, %y
+  %res = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: compare_sext_uno_nnan_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .functype compare_sext_uno_nnan_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.ne $push[[T0:[0-9]+]]=, $0, $0{{$}}
+; SIMD128-NEXT: f64x2.ne $push[[T1:[0-9]+]]=, $1, $1{{$}}
+; SIMD128-NEXT: v128.or $push[[R:[0-9]+]]=, $pop[[T0]], $pop[[T1]]{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @compare_sext_uno_nnan_v2f64 (<2 x double> %x, <2 x double> %y) {
+  %cmp = fcmp nnan uno <2 x double> %x, %y
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }

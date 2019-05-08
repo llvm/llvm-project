@@ -18,6 +18,8 @@
 #ifndef LLVM_IR_SAFEPOINT_IR_VERIFIER
 #define LLVM_IR_SAFEPOINT_IR_VERIFIER
 
+#include "llvm/IR/PassManager.h"
+
 namespace llvm {
 
 class Function;
@@ -29,6 +31,16 @@ void verifySafepointIR(Function &F);
 /// Create an instance of the safepoint verifier pass which can be added to
 /// a pass pipeline to check for relocation bugs.
 FunctionPass *createSafepointIRVerifierPass();
+
+/// Create an instance of the safepoint verifier pass which can be added to
+/// a pass pipeline to check for relocation bugs.
+class SafepointIRVerifierPass : public PassInfoMixin<SafepointIRVerifierPass> {
+
+public:
+  explicit SafepointIRVerifierPass() {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 }
 
 #endif // LLVM_IR_SAFEPOINT_IR_VERIFIER

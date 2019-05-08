@@ -247,8 +247,10 @@ DataRecorder *CommandProvider::GetNewDataRecorder() {
 
 void CommandProvider::Keep() {
   std::vector<std::string> files;
-  for (auto &recorder : m_data_recorders)
+  for (auto &recorder : m_data_recorders) {
+    recorder->Stop();
     files.push_back(recorder->GetFilename().GetPath());
+  }
 
   FileSpec file = GetRoot().CopyByAppendingPathComponent(info::file);
   std::error_code ec;
@@ -257,8 +259,6 @@ void CommandProvider::Keep() {
     return;
   yaml::Output yout(os);
   yout << files;
-
-  m_data_recorders.clear();
 }
 
 void CommandProvider::Discard() { m_data_recorders.clear(); }

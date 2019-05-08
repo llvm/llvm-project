@@ -790,7 +790,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpsubd %xmm9, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubd %xmm11, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm6, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [3.57331108E-43,3.57331108E-43,3.57331108E-43,3.57331108E-43]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm0, %xmm2, %xmm0
@@ -1950,16 +1950,10 @@ define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
 ; AVX2-NEXT:    vpminud %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
-; AVX2-NEXT:    vpackusdw %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpsubusw %xmm1, %xmm3, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; AVX2-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpsubusw %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: psubus_16i32_max:

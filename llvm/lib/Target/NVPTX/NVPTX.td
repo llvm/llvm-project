@@ -75,6 +75,8 @@ def PTX61 : SubtargetFeature<"ptx61", "PTXVersion", "61",
                              "Use PTX version 6.1">;
 def PTX63 : SubtargetFeature<"ptx63", "PTXVersion", "63",
                              "Use PTX version 6.3">;
+def PTX64 : SubtargetFeature<"ptx64", "PTXVersion", "64",
+                             "Use PTX version 6.4">;
 
 //===----------------------------------------------------------------------===//
 // NVPTX supported processors.

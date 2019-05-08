@@ -63,6 +63,9 @@ private:
                             uint64_t OpdAddress = 0);
   std::error_code addCoffExportSymbols(const object::COFFObjectFile *CoffObj);
 
+  /// Search for the first occurence of specified Address in ObjectFile.
+  uint64_t getModuleSectionIndexForAddress(uint64_t Address) const;
+
   object::ObjectFile *Module;
   std::unique_ptr<DIContext> DebugInfoContext;
 
@@ -72,12 +75,12 @@ private:
     // the following symbol.
     uint64_t Size;
 
-    friend bool operator<(const SymbolDesc &s1, const SymbolDesc &s2) {
-      return s1.Addr < s2.Addr;
+    bool operator<(const SymbolDesc &RHS) const {
+      return Addr != RHS.Addr ? Addr < RHS.Addr : Size < RHS.Size;
     }
   };
-  std::map<SymbolDesc, StringRef> Functions;
-  std::map<SymbolDesc, StringRef> Objects;
+  std::vector<std::pair<SymbolDesc, StringRef>> Functions;
+  std::vector<std::pair<SymbolDesc, StringRef>> Objects;
 
   SymbolizableObjectFile(object::ObjectFile *Obj,
                          std::unique_ptr<DIContext> DICtx);

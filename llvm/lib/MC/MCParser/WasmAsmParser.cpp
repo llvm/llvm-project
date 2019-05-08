@@ -135,9 +135,10 @@ public:
       SectionKind Kind;
     };
     static SectionType SectionTypes[] = {
-        { ".text", SectionKind::getText() },
-        { ".rodata", SectionKind::getReadOnly() },
-        { ".data", SectionKind::getData() },
+        {".text", SectionKind::getText()},
+        {".rodata", SectionKind::getReadOnly()},
+        {".data", SectionKind::getData()},
+        {".custom_section", SectionKind::getMetadata()},
         // TODO: add more types.
     };
     for (size_t I = 0; I < sizeof(SectionTypes) / sizeof(SectionType); I++) {

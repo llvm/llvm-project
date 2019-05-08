@@ -41,6 +41,9 @@
 namespace llvm {
 namespace object {
 
+constexpr int NumElfSymbolTypes = 8;
+extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
+
 class elf_symbol_iterator;
 
 class ELFObjectFileBase : public ObjectFile {
@@ -148,6 +151,16 @@ public:
   uint8_t getELFType() const {
     return getObject()->getSymbolELFType(getRawDataRefImpl());
   }
+
+  StringRef getELFTypeName() const {
+    uint8_t Type = getELFType();
+    for (auto &EE : ElfSymbolTypes) {
+      if (EE.Value == Type) {
+        return EE.AltName;
+      }
+    }
+    return "";
+  }
 };
 
 class elf_symbol_iterator : public symbol_iterator {
@@ -246,8 +259,7 @@ protected:
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
 
   void moveSectionNext(DataRefImpl &Sec) const override;
-  std::error_code getSectionName(DataRefImpl Sec,
-                                 StringRef &Res) const override;
+  Expected<StringRef> getSectionName(DataRefImpl Sec) const override;
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
@@ -662,13 +674,8 @@ void ELFObjectFile<ELFT>::moveSectionNext(DataRefImpl &Sec) const {
 }
 
 template <class ELFT>
-std::error_code ELFObjectFile<ELFT>::getSectionName(DataRefImpl Sec,
-                                                    StringRef &Result) const {
-  auto Name = EF.getSectionName(&*getSection(Sec));
-  if (!Name)
-    return errorToErrorCode(Name.takeError());
-  Result = *Name;
-  return std::error_code();
+Expected<StringRef> ELFObjectFile<ELFT>::getSectionName(DataRefImpl Sec) const {
+  return EF.getSectionName(&*getSection(Sec));
 }
 
 template <class ELFT>

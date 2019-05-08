@@ -39,12 +39,12 @@
 ; CHECK-DIS: ^2 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi"))))) ; guid = 7004155349499253778
 
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
+; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 \
 ; RUN:   -emit-llvm -o - -x ir %t.o | FileCheck %s --check-prefixes=CHECK-IR
 
 ; Check that backend does not fail generating native code.
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
+; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 \
 ; RUN:   -o %t.native.o -x ir %t.o
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

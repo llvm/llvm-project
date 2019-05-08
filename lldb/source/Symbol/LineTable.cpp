@@ -17,15 +17,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // LineTable constructor
-//----------------------------------------------------------------------
 LineTable::LineTable(CompileUnit *comp_unit)
     : m_comp_unit(comp_unit), m_entries() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 LineTable::~LineTable() {}
 
 void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
@@ -125,7 +121,7 @@ void LineTable::InsertSequence(LineSequence *sequence) {
       pos++;
   }
 
-#ifdef LLDB_CONFIGURATION_DEBUG
+#ifndef NDEBUG
   // If we aren't inserting at the beginning, the previous entry should
   // terminate a sequence.
   if (pos != begin_pos) {
@@ -136,7 +132,6 @@ void LineTable::InsertSequence(LineSequence *sequence) {
   m_entries.insert(pos, seq->m_entries.begin(), seq->m_entries.end());
 }
 
-//----------------------------------------------------------------------
 LineTable::Entry::LessThanBinaryPredicate::LessThanBinaryPredicate(
     LineTable *line_table)
     : m_line_table(line_table) {}

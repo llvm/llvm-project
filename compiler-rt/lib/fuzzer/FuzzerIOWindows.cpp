@@ -219,6 +219,10 @@ void RemoveFile(const std::string &Path) {
   _unlink(Path.c_str());
 }
 
+void RenameFile(const std::string &OldPath, const std::string &NewPath) {
+  rename(OldPath.c_str(), NewPath.c_str());
+}
+
 void DiscardOutput(int Fd) {
   FILE* Temp = fopen("nul", "w");
   if (!Temp)

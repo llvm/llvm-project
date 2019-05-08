@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectHelp
-//-------------------------------------------------------------------------
 
 void CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
     Stream *s, llvm::StringRef command, llvm::StringRef prefix,

@@ -37,6 +37,10 @@ protected:
 class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   const SIRegisterInfo *TRI;
 
+  void executeInWaterfallLoop(MachineInstr &MI,
+                              MachineRegisterInfo &MRI,
+                              ArrayRef<unsigned> OpIndices) const;
+
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 

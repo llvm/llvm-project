@@ -32,8 +32,7 @@ body:             |
     ; MIPS32: $a2 = COPY [[COPY2]]
     ; MIPS32: $a3 = COPY [[COPY3]]
     ; MIPS32: [[COPY4:%[0-9]+]]:gpr32 = COPY $sp
-    ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi 0
-    ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi [[LUi]], 16
+    ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
     ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu [[COPY4]], [[ORi]]
     ; MIPS32: SW [[LW]], [[ADDu]], 0 :: (store 4 into stack + 16)
     ; MIPS32: JAL @f, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0

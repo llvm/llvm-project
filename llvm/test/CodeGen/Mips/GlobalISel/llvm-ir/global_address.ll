@@ -14,8 +14,7 @@ define i32 @main() {
 ; MIPS32-NEXT:    addiu $4, $1, %lo($.str)
 ; MIPS32-NEXT:    lui $1, 18838
 ; MIPS32-NEXT:    ori $5, $1, 722
-; MIPS32-NEXT:    lui $1, 0
-; MIPS32-NEXT:    ori $2, $1, 0
+; MIPS32-NEXT:    ori $2, $zero, 0
 ; MIPS32-NEXT:    sw $2, 16($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    jal printf
 ; MIPS32-NEXT:    nop

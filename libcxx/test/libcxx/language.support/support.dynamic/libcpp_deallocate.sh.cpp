@@ -13,10 +13,9 @@
 // definitions, which does not yet provide aligned allocation
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// The dylibs shipped before macosx10.14 do not contain the aligned allocation
+// The dylibs shipped before macosx10.13 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results
 // in a link error.
-// XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12
 // XFAIL: with_system_cxx_lib=macosx10.11
 // XFAIL: with_system_cxx_lib=macosx10.10

@@ -28,6 +28,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     const char *
     GetOutput ();
 
@@ -42,13 +44,13 @@ public:
 
     const char *
     GetOutput (bool only_if_no_immediate);
-    
+
     const char *
     GetError (bool if_no_immediate);
-    
+
     size_t
     PutOutput (FILE *fh);
-    
+
     size_t
     PutError (FILE *fh);
 
@@ -57,11 +59,11 @@ public:
 
     void
     SetStatus (lldb::ReturnStatus status);
-    
+
     void
     SetError (lldb::SBError &error,
               const char *fallback_error_cstr = NULL);
-    
+
     void
     SetError (const char *error_cstr);
 
@@ -82,9 +84,9 @@ public:
 
     bool
     GetDescription (lldb::SBStream &description);
-    
 
-    // wrapping here so that lldb takes ownership of the 
+
+    // wrapping here so that lldb takes ownership of the
     // new FILE* created inside of the swig interface
     %extend {
         void SetImmediateOutputFile(FILE *fh) {

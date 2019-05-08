@@ -28,6 +28,8 @@ class TargetLibraryInfo;
 class BasicBlock;
 class Function;
 class OptimizationRemarkEmitter;
+class BlockFrequencyInfo;
+class ProfileSummaryInfo;
 
 /// This class implements simplifications for calls to fortified library
 /// functions (__st*cpy_chk, __memcpy_chk, __memmove_chk, __memset_chk), to,
@@ -74,6 +76,8 @@ private:
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
   OptimizationRemarkEmitter &ORE;
+  BlockFrequencyInfo *BFI;
+  ProfileSummaryInfo *PSI;
   bool UnsafeFPShrink;
   function_ref<void(Instruction *, Value *)> Replacer;
   function_ref<void(Instruction *)> Eraser;
@@ -101,6 +105,7 @@ public:
   LibCallSimplifier(
       const DataLayout &DL, const TargetLibraryInfo *TLI,
       OptimizationRemarkEmitter &ORE,
+      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
       function_ref<void(Instruction *, Value *)> Replacer =
           &replaceAllUsesWithDefault,
       function_ref<void(Instruction *)> Eraser = &eraseFromParentDefault);

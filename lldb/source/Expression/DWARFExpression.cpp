@@ -50,9 +50,7 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
       &offset, index_size);
 }
 
-//----------------------------------------------------------------------
 // DWARFExpression constructor
-//----------------------------------------------------------------------
 DWARFExpression::DWARFExpression(DWARFUnit *dwarf_cu)
     : m_module_wp(), m_data(), m_dwarf_cu(dwarf_cu),
       m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {}
@@ -74,9 +72,7 @@ DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
     m_module_wp = module_sp;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 DWARFExpression::~DWARFExpression() {}
 
 bool DWARFExpression::IsValid() const { return m_data.GetByteSize() > 0; }
@@ -514,6 +510,10 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
       s->Printf("DW_OP_GNU_addr_index(0x%" PRIx64 ")",
                 m_data.GetULEB128(&offset));
       break;
+    case DW_OP_addrx:
+      s->Printf("DW_OP_addrx(0x%" PRIx64 ")",
+                m_data.GetULEB128(&offset));
+      break;
     case DW_OP_GNU_const_index: // 0xfc
       s->Printf("DW_OP_GNU_const_index(0x%" PRIx64 ")",
                 m_data.GetULEB128(&offset));
@@ -877,6 +877,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     return 8;
 
   // All opcodes that have a single ULEB (signed or unsigned) argument
+  case DW_OP_addrx:           // 0xa1 1 ULEB128 index
   case DW_OP_constu:          // 0x10 1 ULEB128 constant
   case DW_OP_consts:          // 0x11 1 SLEB128 constant
   case DW_OP_plus_uconst:     // 0x23 1 ULEB128 addend
@@ -957,7 +958,7 @@ lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(uint32_t op_addr_idx,
         return op_file_addr;
       else
         ++curr_op_addr_idx;
-    } else if (op == DW_OP_GNU_addr_index) {
+    } else if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
       uint64_t index = m_data.GetULEB128(&offset);
       if (curr_op_addr_idx == op_addr_idx) {
         if (!m_dwarf_cu) {
@@ -1374,10 +1375,8 @@ bool DWARFExpression::Evaluate(
     }
 
     switch (op) {
-    //----------------------------------------------------------------------
     // The DW_OP_addr operation has a single operand that encodes a machine
     // address and whose size is the size of an address on the target machine.
-    //----------------------------------------------------------------------
     case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
       stack.back().SetValueType(Value::eValueTypeFileAddress);
@@ -1388,7 +1387,6 @@ bool DWARFExpression::Evaluate(
                                           frame->CalculateTarget().get());
       break;
 
-    //----------------------------------------------------------------------
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
     // shared libraries that have a location like:
     //  DW_OP_addr(0x1000)
@@ -1397,7 +1395,6 @@ bool DWARFExpression::Evaluate(
     // process where shared libraries have been slid. To account for this, this
     // new address type where we can store the section pointer and a 4 byte
     // offset.
-    //----------------------------------------------------------------------
     //      case DW_OP_addr_sect_offset4:
     //          {
     //              result_type = eResultTypeFileAddress;
@@ -1427,14 +1424,12 @@ bool DWARFExpression::Evaluate(
     //          }
     //          break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_deref
     // OPERANDS: none
     // DESCRIPTION: Pops the top stack entry and treats it as an address.
     // The value retrieved from that address is pushed. The size of the data
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
-    //----------------------------------------------------------------------
     case DW_OP_deref: {
       if (stack.empty()) {
         if (error_ptr)
@@ -1516,7 +1511,6 @@ bool DWARFExpression::Evaluate(
 
     } break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_deref_size
     // OPERANDS: 1
     //  1 - uint8_t that specifies the size of the data to dereference.
@@ -1529,7 +1523,6 @@ bool DWARFExpression::Evaluate(
     // address on the target machine. The data retrieved is zero extended to
     // the size of an address on the target machine before being pushed on the
     // expression stack.
-    //----------------------------------------------------------------------
     case DW_OP_deref_size: {
       if (stack.empty()) {
         if (error_ptr)
@@ -1638,7 +1631,6 @@ bool DWARFExpression::Evaluate(
 
     } break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_xderef_size
     // OPERANDS: 1
     //  1 - uint8_t that specifies the size of the data to dereference.
@@ -1654,12 +1646,10 @@ bool DWARFExpression::Evaluate(
     // the size of an address on the target machine. The data retrieved is zero
     // extended to the size of an address on the target machine before being
     // pushed on the expression stack.
-    //----------------------------------------------------------------------
     case DW_OP_xderef_size:
       if (error_ptr)
         error_ptr->SetErrorString("Unimplemented opcode: DW_OP_xderef_size.");
       return false;
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_xderef
     // OPERANDS: none
     // DESCRIPTION: Provides an extended dereference mechanism. The entry at
@@ -1670,17 +1660,14 @@ bool DWARFExpression::Evaluate(
     // calculation and pushed as the new stack top. The size of the data
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
-    //----------------------------------------------------------------------
     case DW_OP_xderef:
       if (error_ptr)
         error_ptr->SetErrorString("Unimplemented opcode: DW_OP_xderef.");
       return false;
 
-    //----------------------------------------------------------------------
     // All DW_OP_constXXX opcodes have a single operand as noted below:
     //
     // Opcode           Operand 1
-    // ---------------  ----------------------------------------------------
     // DW_OP_const1u    1-byte unsigned integer constant DW_OP_const1s
     // 1-byte signed integer constant DW_OP_const2u    2-byte unsigned integer
     // constant DW_OP_const2s    2-byte signed integer constant DW_OP_const4u
@@ -1688,7 +1675,6 @@ bool DWARFExpression::Evaluate(
     // constant DW_OP_const8u    8-byte unsigned integer constant DW_OP_const8s
     // 8-byte signed integer constant DW_OP_constu     unsigned LEB128 integer
     // constant DW_OP_consts     signed LEB128 integer constant
-    //----------------------------------------------------------------------
     case DW_OP_const1u:
       stack.push_back(Scalar((uint8_t)opcodes.GetU8(&offset)));
       break;
@@ -1720,11 +1706,9 @@ bool DWARFExpression::Evaluate(
       stack.push_back(Scalar(opcodes.GetSLEB128(&offset)));
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_dup
     // OPERANDS: none
     // DESCRIPTION: duplicates the value at the top of the stack
-    //----------------------------------------------------------------------
     case DW_OP_dup:
       if (stack.empty()) {
         if (error_ptr)
@@ -1734,11 +1718,9 @@ bool DWARFExpression::Evaluate(
         stack.push_back(stack.back());
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_drop
     // OPERANDS: none
     // DESCRIPTION: pops the value at the top of the stack
-    //----------------------------------------------------------------------
     case DW_OP_drop:
       if (stack.empty()) {
         if (error_ptr)
@@ -1748,12 +1730,10 @@ bool DWARFExpression::Evaluate(
         stack.pop_back();
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_over
     // OPERANDS: none
     // DESCRIPTION: Duplicates the entry currently second in the stack at
     // the top of the stack.
-    //----------------------------------------------------------------------
     case DW_OP_over:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -1764,16 +1744,14 @@ bool DWARFExpression::Evaluate(
         stack.push_back(stack[stack.size() - 2]);
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_pick
     // OPERANDS: uint8_t index into the current stack
     // DESCRIPTION: The stack entry with the specified index (0 through 255,
     // inclusive) is pushed on the stack
-    //----------------------------------------------------------------------
     case DW_OP_pick: {
       uint8_t pick_idx = opcodes.GetU8(&offset);
       if (pick_idx < stack.size())
-        stack.push_back(stack[pick_idx]);
+        stack.push_back(stack[stack.size() - 1 - pick_idx]);
       else {
         if (error_ptr)
           error_ptr->SetErrorStringWithFormat(
@@ -1782,13 +1760,11 @@ bool DWARFExpression::Evaluate(
       }
     } break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_swap
     // OPERANDS: none
     // DESCRIPTION: swaps the top two stack entries. The entry at the top
     // of the stack becomes the second stack entry, and the second entry
     // becomes the top of the stack
-    //----------------------------------------------------------------------
     case DW_OP_swap:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -1802,14 +1778,12 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_rot
     // OPERANDS: none
     // DESCRIPTION: Rotates the first three stack entries. The entry at
     // the top of the stack becomes the third stack entry, the second entry
     // becomes the top of the stack, and the third entry becomes the second
     // entry.
-    //----------------------------------------------------------------------
     case DW_OP_rot:
       if (stack.size() < 3) {
         if (error_ptr)
@@ -1825,13 +1799,11 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_abs
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, interprets it as a signed
     // value and pushes its absolute value. If the absolute value can not be
     // represented, the result is undefined.
-    //----------------------------------------------------------------------
     case DW_OP_abs:
       if (stack.empty()) {
         if (error_ptr)
@@ -1846,12 +1818,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_and
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, performs a bitwise and
     // operation on the two, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_and:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -1866,13 +1836,11 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_div
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, divides the former second
     // entry by the former top of the stack using signed division, and pushes
     // the result.
-    //----------------------------------------------------------------------
     case DW_OP_div:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -1898,12 +1866,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_minus
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, subtracts the former top
     // of the stack from the former second entry, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_minus:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -1918,13 +1884,11 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_mod
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values and pushes the result of
     // the calculation: former second stack entry modulo the former top of the
     // stack.
-    //----------------------------------------------------------------------
     case DW_OP_mod:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -1939,12 +1903,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_mul
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack entries, multiplies them
     // together, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_mul:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -1959,11 +1921,9 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_neg
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, and pushes its negation.
-    //----------------------------------------------------------------------
     case DW_OP_neg:
       if (stack.empty()) {
         if (error_ptr)
@@ -1979,12 +1939,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_not
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, and pushes its bitwise
     // complement
-    //----------------------------------------------------------------------
     case DW_OP_not:
       if (stack.empty()) {
         if (error_ptr)
@@ -2000,12 +1958,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_or
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack entries, performs a bitwise or
     // operation on the two, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_or:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2020,12 +1976,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_plus
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack entries, adds them together, and
     // pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_plus:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2039,12 +1993,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_plus_uconst
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, adds it to the unsigned LEB128
     // constant operand and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_plus_uconst:
       if (stack.empty()) {
         if (error_ptr)
@@ -2063,13 +2015,11 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_shl
     // OPERANDS: none
     // DESCRIPTION:  pops the top two stack entries, shifts the former
     // second entry left by the number of bits specified by the former top of
     // the stack, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_shl:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2083,13 +2033,11 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_shr
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack entries, shifts the former second
     // entry right logically (filling with zero bits) by the number of bits
     // specified by the former top of the stack, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_shr:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2108,14 +2056,12 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_shra
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack entries, shifts the former second
     // entry right arithmetically (divide the magnitude by 2, keep the same
     // sign for the result) by the number of bits specified by the former top
     // of the stack, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_shra:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2129,12 +2075,10 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_xor
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack entries, performs the bitwise
     // exclusive-or operation on the two, and pushes the result.
-    //----------------------------------------------------------------------
     case DW_OP_xor:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2149,14 +2093,12 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_skip
     // OPERANDS: int16_t
     // DESCRIPTION:  An unconditional branch. Its single operand is a 2-byte
     // signed integer constant. The 2-byte constant is the number of bytes of
     // the DWARF expression to skip forward or backward from the current
     // operation, beginning after the 2-byte constant.
-    //----------------------------------------------------------------------
     case DW_OP_skip: {
       int16_t skip_offset = (int16_t)opcodes.GetU16(&offset);
       lldb::offset_t new_offset = offset + skip_offset;
@@ -2169,7 +2111,6 @@ bool DWARFExpression::Evaluate(
       }
     } break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_bra
     // OPERANDS: int16_t
     // DESCRIPTION: A conditional branch. Its single operand is a 2-byte
@@ -2177,7 +2118,6 @@ bool DWARFExpression::Evaluate(
     // value popped is not the constant 0, the 2-byte constant operand is the
     // number of bytes of the DWARF expression to skip forward or backward from
     // the current operation, beginning after the 2-byte constant.
-    //----------------------------------------------------------------------
     case DW_OP_bra:
       if (stack.empty()) {
         if (error_ptr)
@@ -2202,7 +2142,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_eq
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, compares using the
@@ -2210,7 +2149,6 @@ bool DWARFExpression::Evaluate(
     // STACK RESULT: push the constant value 1 onto the stack if the result
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
-    //----------------------------------------------------------------------
     case DW_OP_eq:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2225,7 +2163,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_ge
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, compares using the
@@ -2233,7 +2170,6 @@ bool DWARFExpression::Evaluate(
     // STACK RESULT: push the constant value 1 onto the stack if the result
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
-    //----------------------------------------------------------------------
     case DW_OP_ge:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2248,7 +2184,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_gt
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, compares using the
@@ -2256,7 +2191,6 @@ bool DWARFExpression::Evaluate(
     // STACK RESULT: push the constant value 1 onto the stack if the result
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
-    //----------------------------------------------------------------------
     case DW_OP_gt:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2271,7 +2205,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_le
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, compares using the
@@ -2279,7 +2212,6 @@ bool DWARFExpression::Evaluate(
     // STACK RESULT: push the constant value 1 onto the stack if the result
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
-    //----------------------------------------------------------------------
     case DW_OP_le:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2294,7 +2226,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_lt
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, compares using the
@@ -2302,7 +2233,6 @@ bool DWARFExpression::Evaluate(
     // STACK RESULT: push the constant value 1 onto the stack if the result
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
-    //----------------------------------------------------------------------
     case DW_OP_lt:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2317,7 +2247,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_ne
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, compares using the
@@ -2325,7 +2254,6 @@ bool DWARFExpression::Evaluate(
     // STACK RESULT: push the constant value 1 onto the stack if the result
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
-    //----------------------------------------------------------------------
     case DW_OP_ne:
       if (stack.size() < 2) {
         if (error_ptr)
@@ -2340,13 +2268,11 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_litn
     // OPERANDS: none
     // DESCRIPTION: encode the unsigned literal values from 0 through 31.
     // STACK RESULT: push the unsigned literal constant value onto the top
     // of the stack.
-    //----------------------------------------------------------------------
     case DW_OP_lit0:
     case DW_OP_lit1:
     case DW_OP_lit2:
@@ -2382,11 +2308,9 @@ bool DWARFExpression::Evaluate(
       stack.push_back(Scalar((uint64_t)(op - DW_OP_lit0)));
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_regN
     // OPERANDS: none
     // DESCRIPTION: Push the value in register n on the top of the stack.
-    //----------------------------------------------------------------------
     case DW_OP_reg0:
     case DW_OP_reg1:
     case DW_OP_reg2:
@@ -2426,12 +2350,10 @@ bool DWARFExpression::Evaluate(
       else
         return false;
     } break;
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_regx
     // OPERANDS:
     //      ULEB128 literal operand that encodes the register.
     // DESCRIPTION: Push the value in register on the top of the stack.
-    //----------------------------------------------------------------------
     case DW_OP_regx: {
       reg_num = opcodes.GetULEB128(&offset);
       if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr, tmp))
@@ -2440,13 +2362,11 @@ bool DWARFExpression::Evaluate(
         return false;
     } break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_bregN
     // OPERANDS:
     //      SLEB128 offset from register N
     // DESCRIPTION: Value is in memory at the address specified by register
     // N plus an offset.
-    //----------------------------------------------------------------------
     case DW_OP_breg0:
     case DW_OP_breg1:
     case DW_OP_breg2:
@@ -2491,14 +2411,12 @@ bool DWARFExpression::Evaluate(
       } else
         return false;
     } break;
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_bregx
     // OPERANDS: 2
     //      ULEB128 literal operand that encodes the register.
     //      SLEB128 offset from register N
     // DESCRIPTION: Value is in memory at the address specified by register
     // N plus an offset.
-    //----------------------------------------------------------------------
     case DW_OP_bregx: {
       reg_num = opcodes.GetULEB128(&offset);
 
@@ -2539,16 +2457,13 @@ bool DWARFExpression::Evaluate(
 
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_nop
     // OPERANDS: none
     // DESCRIPTION: A place holder. It has no effect on the location stack
     // or any of its values.
-    //----------------------------------------------------------------------
     case DW_OP_nop:
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_piece
     // OPERANDS: 1
     //      ULEB128: byte size of the piece
@@ -2562,7 +2477,6 @@ bool DWARFExpression::Evaluate(
     // variable partially in memory and partially in registers. DW_OP_piece
     // provides a way of describing how large a part of a variable a particular
     // DWARF expression refers to.
-    //----------------------------------------------------------------------
     case DW_OP_piece: {
       const uint64_t piece_byte_size = opcodes.GetULEB128(&offset);
 
@@ -2739,7 +2653,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_push_object_address
     // OPERANDS: none
     // DESCRIPTION: Pushes the address of the object currently being
@@ -2748,7 +2661,6 @@ bool DWARFExpression::Evaluate(
     // DIE or it may be a component of an array, structure, or class whose
     // address has been dynamically determined by an earlier step during user
     // expression evaluation.
-    //----------------------------------------------------------------------
     case DW_OP_push_object_address:
       if (object_address_ptr)
         stack.push_back(*object_address_ptr);
@@ -2760,7 +2672,6 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_call2
     // OPERANDS:
     //      uint16_t compile unit relative offset of a DIE
@@ -2779,12 +2690,10 @@ bool DWARFExpression::Evaluate(
     // may be used as parameters by the called expression and values left on
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
-    //----------------------------------------------------------------------
     case DW_OP_call2:
       if (error_ptr)
         error_ptr->SetErrorString("Unimplemented opcode DW_OP_call2.");
       return false;
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_call4
     // OPERANDS: 1
     //      uint32_t compile unit relative offset of a DIE
@@ -2804,30 +2713,25 @@ bool DWARFExpression::Evaluate(
     // may be used as parameters by the called expression and values left on
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
-    //----------------------------------------------------------------------
     case DW_OP_call4:
       if (error_ptr)
         error_ptr->SetErrorString("Unimplemented opcode DW_OP_call4.");
       return false;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_stack_value
     // OPERANDS: None
     // DESCRIPTION: Specifies that the object does not exist in memory but
     // rather is a constant value.  The value from the top of the stack is the
     // value to be used.  This is the actual object value and not the location.
-    //----------------------------------------------------------------------
     case DW_OP_stack_value:
       stack.back().SetValueType(Value::eValueTypeScalar);
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_call_frame_cfa
     // OPERANDS: None
     // DESCRIPTION: Specifies a DWARF expression that pushes the value of
     // the canonical frame address consistent with the call frame information
     // located in .debug_frame (or in the FDEs of the eh_frame section).
-    //----------------------------------------------------------------------
     case DW_OP_call_frame_cfa:
       if (frame) {
         // Note that we don't have to parse FDEs because this DWARF expression
@@ -2849,14 +2753,12 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_form_tls_address (or the old pre-DWARFv3 vendor extension
     // opcode, DW_OP_GNU_push_tls_address)
     // OPERANDS: none
     // DESCRIPTION: Pops a TLS offset from the stack, converts it to
     // an address in the current thread's thread-local storage block, and
     // pushes it on the stack.
-    //----------------------------------------------------------------------
     case DW_OP_form_tls_address:
     case DW_OP_GNU_push_tls_address: {
       if (stack.size() < 1) {
@@ -2901,14 +2803,13 @@ bool DWARFExpression::Evaluate(
       stack.back().SetValueType(Value::eValueTypeLoadAddress);
     } break;
 
-    //----------------------------------------------------------------------
-    // OPCODE: DW_OP_GNU_addr_index
+    // OPCODE: DW_OP_addrx (DW_OP_GNU_addr_index is the legacy name.)
     // OPERANDS: 1
     //      ULEB128: index to the .debug_addr section
     // DESCRIPTION: Pushes an address to the stack from the .debug_addr
     // section with the base address specified by the DW_AT_addr_base attribute
     // and the 0 based index is the ULEB128 encoded index.
-    //----------------------------------------------------------------------
+    case DW_OP_addrx:
     case DW_OP_GNU_addr_index: {
       if (!dwarf_cu) {
         if (error_ptr)
@@ -2927,7 +2828,6 @@ bool DWARFExpression::Evaluate(
       stack.back().SetValueType(Value::eValueTypeFileAddress);
     } break;
 
-    //----------------------------------------------------------------------
     // OPCODE: DW_OP_GNU_const_index
     // OPERANDS: 1
     //      ULEB128: index to the .debug_addr section
@@ -2935,7 +2835,6 @@ bool DWARFExpression::Evaluate(
     // the stack from the .debug_addr section with the base address specified
     // by the DW_AT_addr_base attribute and the 0 based index is the ULEB128
     // encoded index.
-    //----------------------------------------------------------------------
     case DW_OP_GNU_const_index: {
       if (!dwarf_cu) {
         if (error_ptr)
@@ -3194,6 +3093,7 @@ static bool print_dwarf_exp_op(Stream &s, const DataExtractor &data,
   case DW_OP_call_ref:
     size = dwarf_ref_size;
     break;
+  case DW_OP_addrx:
   case DW_OP_piece:
   case DW_OP_plus_uconst:
   case DW_OP_regx:

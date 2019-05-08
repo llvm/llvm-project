@@ -186,7 +186,7 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
 }
 
 lldb::ValueObjectSP
-ValueObjectRegisterSet::GetChildMemberWithName(const ConstString &name,
+ValueObjectRegisterSet::GetChildMemberWithName(ConstString name,
                                                bool can_create) {
   ValueObject *valobj = NULL;
   if (m_reg_ctx_sp && m_reg_set) {
@@ -203,7 +203,7 @@ ValueObjectRegisterSet::GetChildMemberWithName(const ConstString &name,
 }
 
 size_t
-ValueObjectRegisterSet::GetIndexOfChildWithName(const ConstString &name) {
+ValueObjectRegisterSet::GetIndexOfChildWithName(ConstString name) {
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info =
         m_reg_ctx_sp->GetRegisterInfoByName(name.AsCString());

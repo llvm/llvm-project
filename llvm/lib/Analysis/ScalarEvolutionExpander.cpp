@@ -694,7 +694,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
 
   // Sort by loop. Use a stable sort so that constants follow non-constants and
   // pointer operands precede non-pointer operands.
-  std::stable_sort(OpsAndLoops.begin(), OpsAndLoops.end(), LoopCompare(SE.DT));
+  llvm::stable_sort(OpsAndLoops, LoopCompare(SE.DT));
 
   // Emit instructions to add all the operands. Hoist as much as possible
   // out of loops, and form meaningful getelementptrs where possible.
@@ -761,7 +761,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
     OpsAndLoops.push_back(std::make_pair(getRelevantLoop(*I), *I));
 
   // Sort by loop. Use a stable sort so that constants follow non-constants.
-  std::stable_sort(OpsAndLoops.begin(), OpsAndLoops.end(), LoopCompare(SE.DT));
+  llvm::stable_sort(OpsAndLoops, LoopCompare(SE.DT));
 
   // Emit instructions to mul all the operands. Hoist as much as possible
   // out of loops.
@@ -1731,49 +1731,55 @@ Value *SCEVExpander::expand(const SCEV *S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
   Instruction *InsertPt = &*Builder.GetInsertPoint();
-  for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
-       L = L->getParentLoop())
-    if (SE.isLoopInvariant(S, L)) {
-      if (!L) break;
-      if (BasicBlock *Preheader = L->getLoopPreheader())
-        InsertPt = Preheader->getTerminator();
-      else {
-        // LSR sets the insertion point for AddRec start/step values to the
-        // block start to simplify value reuse, even though it's an invalid
-        // position. SCEVExpander must correct for this in all cases.
-        InsertPt = &*L->getHeader()->getFirstInsertionPt();
+
+  // We can move insertion point only if there is no div or rem operations
+  // otherwise we are risky to move it over the check for zero denominator.
+  auto SafeToHoist = [](const SCEV *S) {
+    return !SCEVExprContains(S, [](const SCEV *S) {
+              if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
+                if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
+                  // Division by non-zero constants can be hoisted.
+                  return SC->getValue()->isZero();
+                // All other divisions should not be moved as they may be
+                // divisions by zero and should be kept within the
+                // conditions of the surrounding loops that guard their
+                // execution (see PR35406).
+                return true;
+              }
+              return false;
+            });
+  };
+  if (SafeToHoist(S)) {
+    for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
+         L = L->getParentLoop()) {
+      if (SE.isLoopInvariant(S, L)) {
+        if (!L) break;
+        if (BasicBlock *Preheader = L->getLoopPreheader())
+          InsertPt = Preheader->getTerminator();
+        else
+          // LSR sets the insertion point for AddRec start/step values to the
+          // block start to simplify value reuse, even though it's an invalid
+          // position. SCEVExpander must correct for this in all cases.
+          InsertPt = &*L->getHeader()->getFirstInsertionPt();
+      } else {
+        // If the SCEV is computable at this level, insert it into the header
+        // after the PHIs (and after any other instructions that we've inserted
+        // there) so that it is guaranteed to dominate any user inside the loop.
+        if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
+          InsertPt = &*L->getHeader()->getFirstInsertionPt();
+        while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
+               (isInsertedInstruction(InsertPt) ||
+                isa<DbgInfoIntrinsic>(InsertPt)))
+          InsertPt = &*std::next(InsertPt->getIterator());
+        break;
       }
-    } else {
-      // We can move insertion point only if there is no div or rem operations
-      // otherwise we are risky to move it over the check for zero denominator.
-      auto SafeToHoist = [](const SCEV *S) {
-        return !SCEVExprContains(S, [](const SCEV *S) {
-                  if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
-                    if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
-                      // Division by non-zero constants can be hoisted.
-                      return SC->getValue()->isZero();
-                    // All other divisions should not be moved as they may be
-                    // divisions by zero and should be kept within the
-                    // conditions of the surrounding loops that guard their
-                    // execution (see PR35406).
-                    return true;
-                  }
-                  return false;
-                });
-      };
-      // If the SCEV is computable at this level, insert it into the header
-      // after the PHIs (and after any other instructions that we've inserted
-      // there) so that it is guaranteed to dominate any user inside the loop.
-      if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L) &&
-          SafeToHoist(S))
-        InsertPt = &*L->getHeader()->getFirstInsertionPt();
-      while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
-             (isInsertedInstruction(InsertPt) ||
-              isa<DbgInfoIntrinsic>(InsertPt))) {
-        InsertPt = &*std::next(InsertPt->getIterator());
-      }
-      break;
     }
+  }
+
+  // IndVarSimplify sometimes sets the insertion point at the block start, even
+  // when there are PHIs at that point.  We must correct for this.
+  if (isa<PHINode>(*InsertPt)) 
+    InsertPt = &*InsertPt->getParent()->getFirstInsertionPt();
 
   // Check to see if we already expanded this here.
   auto I = InsertedExpressions.find(std::make_pair(S, InsertPt));
@@ -2341,6 +2347,24 @@ bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE) {
 
 bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
                       ScalarEvolution &SE) {
-  return isSafeToExpand(S, SE) && SE.dominates(S, InsertionPoint->getParent());
+  if (!isSafeToExpand(S, SE))
+    return false;
+  // We have to prove that the expanded site of S dominates InsertionPoint.
+  // This is easy when not in the same block, but hard when S is an instruction
+  // to be expanded somewhere inside the same block as our insertion point.
+  // What we really need here is something analogous to an OrderedBasicBlock,
+  // but for the moment, we paper over the problem by handling two common and
+  // cheap to check cases.
+  if (SE.properlyDominates(S, InsertionPoint->getParent()))
+    return true;
+  if (SE.dominates(S, InsertionPoint->getParent())) {
+    if (InsertionPoint->getParent()->getTerminator() == InsertionPoint)
+      return true;
+    if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S))
+      for (const Value *V : InsertionPoint->operand_values())
+        if (V == U->getValue())
+          return true;
+  }
+  return false;
 }
 }

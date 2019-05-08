@@ -39,10 +39,8 @@ class Stream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A ValueObject that contains a root variable that may or may not
 // have children.
-//----------------------------------------------------------------------
 class ValueObjectRegisterContext : public ValueObject {
 public:
   ~ValueObjectRegisterContext() override;
@@ -74,9 +72,7 @@ protected:
 private:
   ValueObjectRegisterContext(ValueObject &parent,
                              lldb::RegisterContextSP &reg_ctx_sp);
-  //------------------------------------------------------------------
   // For ValueObject only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ValueObjectRegisterContext);
 };
 
@@ -103,10 +99,10 @@ public:
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(const ConstString &name,
+  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
                                              bool can_create) override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 protected:
   bool UpdateValue() override;
@@ -123,9 +119,7 @@ private:
   ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
                          lldb::RegisterContextSP &reg_ctx_sp, uint32_t set_idx);
 
-  //------------------------------------------------------------------
   // For ValueObject only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ValueObjectRegisterSet);
 };
 
@@ -179,9 +173,7 @@ private:
   ValueObjectRegister(ExecutionContextScope *exe_scope,
                       lldb::RegisterContextSP &reg_ctx_sp, uint32_t reg_num);
 
-  //------------------------------------------------------------------
   // For ValueObject only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ValueObjectRegister);
 };
 

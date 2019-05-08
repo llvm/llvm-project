@@ -552,17 +552,6 @@ def VR128 : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, f128
 def VR256 : RegisterClass<"X86", [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
                           256, (sequence "YMM%u", 0, 15)>;
 
-// Special classes that help the assembly parser choose some alternate
-// instructions to favor 2-byte VEX encodings.
-def VR128L : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, f128],
-                           128, (sequence "XMM%u", 0, 7)>;
-def VR128H : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, f128],
-                           128, (sequence "XMM%u", 8, 15)>;
-def VR256L : RegisterClass<"X86", [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
-                           256, (sequence "YMM%u", 0, 7)>;
-def VR256H : RegisterClass<"X86", [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
-                           256, (sequence "YMM%u", 8, 15)>;
-
 // Status flags registers.
 def CCR : RegisterClass<"X86", [i32], 32, (add EFLAGS)> {
   let CopyCost = -1;  // Don't allow copying of status registers.
@@ -580,6 +569,10 @@ def DFCCR : RegisterClass<"X86", [i32], 32, (add DF)> {
 // AVX-512 vector/mask registers.
 def VR512 : RegisterClass<"X86", [v16f32, v8f64, v64i8, v32i16, v16i32, v8i64],
                           512, (sequence "ZMM%u", 0, 31)>;
+
+// Represents the lower 16 registers that have VEX/legacy encodable subregs.
+def VR512_0_15 : RegisterClass<"X86", [v16f32, v8f64, v64i8, v32i16, v16i32, v8i64],
+                               512, (sequence "ZMM%u", 0, 15)>;
 
 // Scalar AVX-512 floating point registers.
 def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)>;

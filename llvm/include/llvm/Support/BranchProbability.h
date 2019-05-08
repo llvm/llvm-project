@@ -128,27 +128,32 @@ public:
 
   BranchProbability operator+(BranchProbability RHS) const {
     BranchProbability Prob(*this);
-    return Prob += RHS;
+    Prob += RHS;
+    return Prob;
   }
 
   BranchProbability operator-(BranchProbability RHS) const {
     BranchProbability Prob(*this);
-    return Prob -= RHS;
+    Prob -= RHS;
+    return Prob;
   }
 
   BranchProbability operator*(BranchProbability RHS) const {
     BranchProbability Prob(*this);
-    return Prob *= RHS;
+    Prob *= RHS;
+    return Prob;
   }
 
   BranchProbability operator*(uint32_t RHS) const {
     BranchProbability Prob(*this);
-    return Prob *= RHS;
+    Prob *= RHS;
+    return Prob;
   }
 
   BranchProbability operator/(uint32_t RHS) const {
     BranchProbability Prob(*this);
-    return Prob /= RHS;
+    Prob /= RHS;
+    return Prob;
   }
 
   bool operator==(BranchProbability RHS) const { return N == RHS.N; }

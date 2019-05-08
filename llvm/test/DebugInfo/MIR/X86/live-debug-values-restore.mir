@@ -140,7 +140,7 @@ body:             |
     DBG_VALUE $rdi, $noreg, !13, !DIExpression(), debug-location !14
     DBG_VALUE $rdi, $noreg, !13, !DIExpression(), debug-location !14
     TEST64rr renamable $rdi, renamable $rdi, implicit-def $eflags, debug-location !15
-    JE_1 %bb.2, implicit $eflags, debug-location !17
+    JCC_1 %bb.2, 4, implicit $eflags, debug-location !17
   
   bb.1.if.then:
     successors: %bb.2(0x80000000)

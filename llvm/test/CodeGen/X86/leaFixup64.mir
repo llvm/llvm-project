@@ -952,7 +952,7 @@ body:             |
    
     CMP64rr   $rax, killed $rbx, implicit-def $eflags
     $rbx = LEA64r killed $rax, 4, killed $rax, 5, $noreg
-    JE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
     RETQ $ebx
   bb.1:
     liveins: $rax, $rbp, $rbx
@@ -1028,7 +1028,7 @@ body:             |
    
     CMP64rr   $rax, killed $rbx, implicit-def $eflags
     $ebx = LEA64_32r killed $rax, 4, killed $rax, 5, $noreg
-    JE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
     RETQ $ebx
   bb.1:
     liveins: $rax, $rbp, $rbx

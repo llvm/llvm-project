@@ -7,6 +7,8 @@
 // RUN: %env_hwasan_opts=allocator_may_return_null=1     %run %t malloc max 2>&1
 // RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t calloc 2>&1          | FileCheck %s --check-prefix=CHECK-calloc
 // RUN: %env_hwasan_opts=allocator_may_return_null=1     %run %t calloc 2>&1
+// RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t reallocarray 2>&1    | FileCheck %s --check-prefix=CHECK-reallocarray
+// RUN: %env_hwasan_opts=allocator_may_return_null=1     %run %t reallocarray 2>&1
 // RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t new 2>&1             | FileCheck %s --check-prefix=CHECK-max
 // RUN: %env_hwasan_opts=allocator_may_return_null=1 not %run %t new 2>&1             | FileCheck %s --check-prefix=CHECK-oom
 // RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t new max 2>&1         | FileCheck %s --check-prefix=CHECK-max
@@ -30,6 +32,7 @@
 #include <new>
 
 #include <sanitizer/allocator_interface.h>
+#include <sanitizer/hwasan_interface.h>
 
 int main(int argc, char **argv) {
   assert(argc <= 3);
@@ -50,6 +53,11 @@ int main(int argc, char **argv) {
     // Trigger an overflow in calloc.
     size_t size = std::numeric_limits<size_t>::max();
     void *p = calloc((size / 0x1000) + 1, 0x1000);
+    assert(!p);
+  } else if (!strcmp(argv[1], "reallocarray")) {
+    // Trigger an overflow in reallocarray.
+    size_t size = std::numeric_limits<size_t>::max();
+    void *p = __sanitizer_reallocarray(nullptr, (size / 0x1000) + 1, 0x1000);
     assert(!p);
   } else if (!strcmp(argv[1], "new")) {
     void *p = operator new(MallocSize);
@@ -80,3 +88,4 @@ int main(int argc, char **argv) {
 // CHECK-max: {{ERROR: HWAddressSanitizer: requested allocation size .* exceeds maximum supported size}}
 // CHECK-oom: ERROR: HWAddressSanitizer: allocator is out of memory
 // CHECK-calloc: ERROR: HWAddressSanitizer: calloc parameters overflow
+// CHECK-reallocarray: ERROR: HWAddressSanitizer: reallocarray parameters overflow

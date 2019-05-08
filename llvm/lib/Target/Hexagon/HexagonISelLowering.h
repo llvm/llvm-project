@@ -284,7 +284,8 @@ namespace HexagonISD {
     /// is legal.  It is frequently not legal in PIC relocation models.
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+    bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                      bool ForCodeSize) const override;
 
     /// isLegalICmpImmediate - Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can
@@ -294,7 +295,7 @@ namespace HexagonISD {
 
     EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
         unsigned SrcAlign, bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-        MachineFunction &MF) const override;
+        const AttributeList &FuncAttributes) const override;
 
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
         unsigned Align, bool *Fast) const override;

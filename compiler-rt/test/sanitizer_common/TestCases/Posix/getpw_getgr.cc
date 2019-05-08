@@ -8,9 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
 
-std::string any_group;
+std::unique_ptr<char []> any_group;
 const int N = 123456;
 
 void Check(const char *str) {
@@ -48,8 +47,11 @@ void Check(const group *result) {
   assert(result->gr_gid != N);
   for (char **mem = result->gr_mem; *mem; ++mem)
     Check(*mem);
-  if (any_group.empty())
-    any_group = result->gr_name;
+  if (!any_group) {
+    auto length = strlen(result->gr_name);
+    any_group.reset(new char[length + 1]);
+    memcpy(any_group.get(), result->gr_name, length + 1);
+  }
 }
 
 template <class T, class Fn, class... Args>
@@ -72,7 +74,7 @@ int main(int argc, const char *argv[]) {
   test<passwd>(&getpwuid, 0);
   test<passwd>(&getpwnam, "root");
   test<group>(&getgrgid, 0);
-  test<group>(&getgrnam, any_group.c_str());
+  test<group>(&getgrnam, any_group.get());
 
 #if !defined(__ANDROID__)
   setpwent();
@@ -91,7 +93,7 @@ int main(int argc, const char *argv[]) {
   test_r<passwd>(&getpwnam_r, "root");
 
   test_r<group>(&getgrgid_r, 0);
-  test_r<group>(&getgrnam_r, any_group.c_str());
+  test_r<group>(&getgrnam_r, any_group.get());
 
 #if defined(__linux__)
   auto pwd_file = [] {

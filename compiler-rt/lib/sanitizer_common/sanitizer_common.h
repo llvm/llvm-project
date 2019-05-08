@@ -238,7 +238,6 @@ char **GetArgv();
 char **GetEnviron();
 void PrintCmdline();
 bool StackSizeIsUnlimited();
-uptr GetStackSizeLimitInBytes();
 void SetStackSizeLimitInBytes(uptr limit);
 bool AddressSpaceIsUnlimited();
 void SetAddressSpaceUnlimited();

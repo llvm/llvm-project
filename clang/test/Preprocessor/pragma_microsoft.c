@@ -198,3 +198,21 @@ void g() {}
 #pragma optimize("g",     // expected-warning{{missing argument to '#pragma optimize'; expected 'on' or 'off'}}
 #pragma optimize("g",xyz  // expected-warning{{unexpected argument 'xyz' to '#pragma optimize'; expected 'on' or 'off'}}
 #pragma optimize("g",on)  // expected-warning{{#pragma optimize' is not supported}}
+
+#pragma execution_character_set                 // expected-warning {{expected '('}}
+#pragma execution_character_set(                // expected-warning {{expected 'push' or 'pop'}}
+#pragma execution_character_set()               // expected-warning {{expected 'push' or 'pop'}}
+#pragma execution_character_set(asdf            // expected-warning {{expected 'push' or 'pop'}}
+#pragma execution_character_set(asdf)           // expected-warning {{expected 'push' or 'pop'}}
+#pragma execution_character_set(push            // expected-warning {{expected ')'}}
+#pragma execution_character_set(pop,)           // expected-warning {{expected ')'}}
+#pragma execution_character_set(pop,"asdf")     // expected-warning {{expected ')'}}
+#pragma execution_character_set(push,           // expected-error {{expected string literal}}
+#pragma execution_character_set(push,)          // expected-error {{expected string literal}}
+#pragma execution_character_set(push,asdf)      // expected-error {{expected string literal}}
+#pragma execution_character_set(push, "asdf")   // expected-warning {{only 'UTF-8' is supported}}
+
+#pragma execution_character_set(push)
+#pragma execution_character_set(push, "utf-8")
+#pragma execution_character_set(push, "UTF-8")
+#pragma execution_character_set(pop)

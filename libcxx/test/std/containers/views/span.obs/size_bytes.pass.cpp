@@ -23,7 +23,7 @@
 
 
 template <typename Span>
-constexpr bool testConstexprSpan(Span sp, ptrdiff_t sz)
+constexpr bool testConstexprSpan(Span sp, size_t sz)
 {
     ASSERT_NOEXCEPT(sp.size_bytes());
     return (size_t) sp.size_bytes() == sz * sizeof(typename Span::element_type);
@@ -31,7 +31,7 @@ constexpr bool testConstexprSpan(Span sp, ptrdiff_t sz)
 
 
 template <typename Span>
-void testRuntimeSpan(Span sp, ptrdiff_t sz)
+void testRuntimeSpan(Span sp, size_t sz)
 {
     ASSERT_NOEXCEPT(sp.size_bytes());
     assert((size_t) sp.size_bytes() == sz * sizeof(typename Span::element_type));

@@ -14,8 +14,8 @@ define i32 @rollable(i32* noalias nocapture %in, i32* noalias nocapture %out, i6
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[IN:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> <i32 7, i32 7, i32 7, i32 7>, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> <i32 7, i32 14, i32 21, i32 28>, [[TMP6]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP5]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], <i32 7, i32 14, i32 21, i32 28>
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP9]], align 4

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc %s -triple=armv7-unknown-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -s -sd | FileCheck %s
+@ RUN:   | llvm-readobj -S --sd | FileCheck %s
 
 @ Check for different stack pointer offsets.
 

@@ -189,8 +189,6 @@ public:
   void replaceBy(Function *G) const {
     F = G;
   }
-
-  void release() { F = nullptr; }
 };
 
 /// MergeFunctions finds functions which will generate identical machine code,
@@ -403,12 +401,7 @@ bool MergeFunctions::runOnModule(Module &M) {
     }
   }
 
-  std::stable_sort(
-      HashedFuncs.begin(), HashedFuncs.end(),
-      [](const std::pair<FunctionComparator::FunctionHash, Function *> &a,
-         const std::pair<FunctionComparator::FunctionHash, Function *> &b) {
-        return a.first < b.first;
-      });
+  llvm::stable_sort(HashedFuncs, less_first());
 
   auto S = HashedFuncs.begin();
   for (auto I = HashedFuncs.begin(), IE = HashedFuncs.end(); I != IE; ++I) {
@@ -703,6 +696,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   } else {
     NewG = Function::Create(G->getFunctionType(), G->getLinkage(),
                             G->getAddressSpace(), "", G->getParent());
+    NewG->setComdat(G->getComdat());
     BB = BasicBlock::Create(F->getContext(), "", NewG);
   }
 
@@ -952,25 +946,7 @@ void MergeFunctions::remove(Function *F) {
 // For each instruction used by the value, remove() the function that contains
 // the instruction. This should happen right before a call to RAUW.
 void MergeFunctions::removeUsers(Value *V) {
-  std::vector<Value *> Worklist;
-  Worklist.push_back(V);
-  SmallPtrSet<Value*, 8> Visited;
-  Visited.insert(V);
-  while (!Worklist.empty()) {
-    Value *V = Worklist.back();
-    Worklist.pop_back();
-
-    for (User *U : V->users()) {
-      if (Instruction *I = dyn_cast<Instruction>(U)) {
-        remove(I->getFunction());
-      } else if (isa<GlobalValue>(U)) {
-        // do nothing
-      } else if (Constant *C = dyn_cast<Constant>(U)) {
-        for (User *UU : C->users()) {
-          if (!Visited.insert(UU).second)
-            Worklist.push_back(UU);
-        }
-      }
-    }
-  }
+  for (User *U : V->users())
+    if (auto *I = dyn_cast<Instruction>(U))
+      remove(I->getFunction());
 }

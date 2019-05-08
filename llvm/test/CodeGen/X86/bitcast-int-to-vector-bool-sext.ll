@@ -13,8 +13,7 @@
 define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ; SSE2-SSSE3-LABEL: ext_i2_2i64:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE2-SSSE3-NEXT:    movq %rdi, %xmm0
+; SSE2-SSSE3-NEXT:    movd %edi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm1
@@ -25,8 +24,7 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ;
 ; AVX1-LABEL: ext_i2_2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -35,8 +33,7 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ;
 ; AVX2-LABEL: ext_i2_2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX2-NEXT:    vmovq %rdi, %xmm0
+; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -190,8 +187,7 @@ define <16 x i8> @ext_i16_16i8(i16 %a0) {
 define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ; SSE2-SSSE3-LABEL: ext_i4_4i64:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE2-SSSE3-NEXT:    movq %rdi, %xmm0
+; SSE2-SSSE3-NEXT:    movd %edi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
 ; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
 ; SSE2-SSSE3-NEXT:    movdqa %xmm2, %xmm1
@@ -208,8 +204,7 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ;
 ; AVX1-LABEL: ext_i4_4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
@@ -408,8 +403,7 @@ define <32 x i8> @ext_i32_32i8(i32 %a0) {
 define <8 x i64> @ext_i8_8i64(i8 %a0) {
 ; SSE2-SSSE3-LABEL: ext_i8_8i64:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE2-SSSE3-NEXT:    movq %rdi, %xmm0
+; SSE2-SSSE3-NEXT:    movd %edi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,1,0,1]
 ; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
 ; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm1
@@ -438,8 +432,7 @@ define <8 x i64> @ext_i8_8i64(i8 %a0) {
 ;
 ; AVX1-LABEL: ext_i8_8i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm0

@@ -14,7 +14,6 @@
 #include "MICmnMIValueConst.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdTraceStatus constructor.
 // Type:    Method.
 // Args:    None.
@@ -30,7 +29,6 @@ CMICmdCmdTraceStatus::CMICmdCmdTraceStatus() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdTraceStatus destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -40,7 +38,6 @@ CMICmdCmdTraceStatus::CMICmdCmdTraceStatus() {
 CMICmdCmdTraceStatus::~CMICmdCmdTraceStatus() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -57,7 +54,6 @@ bool CMICmdCmdTraceStatus::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -79,7 +75,6 @@ bool CMICmdCmdTraceStatus::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.

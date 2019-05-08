@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3,-flat-for-global | FileCheck --check-prefix=HSA-CI %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-code-object-v3 | FileCheck --check-prefix=HSA %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-code-object-v3,-flat-for-global | FileCheck --check-prefix=HSA-VI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj -mattr=-code-object-v3 | llvm-readobj -symbols -s -sd | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 | llvm-readobj -symbols -s -sd | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj -mattr=-code-object-v3 | llvm-readobj --symbols -S --sd | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 | llvm-readobj --symbols -S --sd | FileCheck %s --check-prefix=ELF
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.

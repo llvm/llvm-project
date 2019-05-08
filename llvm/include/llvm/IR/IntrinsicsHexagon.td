@@ -51,19 +51,19 @@ class Hexagon_mem_memmemsisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_ptr_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrArgMemOnly]>;
+                          [IntrArgMemOnly, ImmArg<3>]>;
 
 class Hexagon_mem_memsisisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrWriteMem]>;
+                          [IntrWriteMem, ImmArg<3>]>;
 
 class Hexagon_mem_memdisisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrWriteMem]>;
+                          [IntrWriteMem, ImmArg<3>]>;
 
 //
 // BUILTIN_INFO_NONCONST(circ_ldd,PTR_ftype_PTRPTRSISI,4)
@@ -553,16 +553,18 @@ class Hexagon_v32i32_v32i32v32i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : V6_vaslw_acc
-class Hexagon_v16i32_v16i32v16i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v16i32_v16i32v16i32i32_Intrinsic<string GCCIntSuffix,
+                                               list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vaslw_acc
-class Hexagon_v32i32_v32i32v32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v32i32_v32i32v32i32i32_Intrinsic<string GCCIntSuffix,
+                                               list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vmux
 class Hexagon_v16i32_v512i1v16i32v16i32_Intrinsic<string GCCIntSuffix>
@@ -580,7 +582,7 @@ class Hexagon_v32i32_v1024i1v32i32v32i32_Intrinsic<string GCCIntSuffix>
 class Hexagon_i32_i32i32i32i32_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_i32_ty,llvm_i32_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       [IntrNoMem, ImmArg<2>, ImmArg<3>]>;
 
 // tag : V6_vandnqrt_acc
 class Hexagon_v16i32_v16i32v512i1i32_Intrinsic<string GCCIntSuffix>
@@ -595,58 +597,62 @@ class Hexagon_v32i32_v32i32v1024i1i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : V6_vrmpybusi
-class Hexagon_v32i32_v32i32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v32i32_v32i32i32i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vrmpybusi
-class Hexagon_v64i32_v64i32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v64i32_v64i32i32i32_Intrinsic<string GCCIntSuffix,
+                                            list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vsubb_dv
-class Hexagon_v64i32_v64i32v64i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v64i32_v64i32v64i32_Intrinsic<string GCCIntSuffix, list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v64i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : M2_mpysu_up
-class Hexagon_i32_i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i32_i32i32_Intrinsic<string GCCIntSuffix,
+                                   list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : M2_mpyud_acc_ll_s0
-class Hexagon_i64_i64i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i64_i64i32i32_Intrinsic<string GCCIntSuffix, list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i64_ty], [llvm_i64_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : S2_lsr_i_r_nac
-class Hexagon_i32_i32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i32_i32i32i32_Intrinsic<string GCCIntSuffix,
+                                             list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_i32_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : M2_cmpysc_s0
-class Hexagon_i64_i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i64_i32i32_Intrinsic<string GCCIntSuffix, list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i64_ty], [llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_lo
-class Hexagon_v16i32_v32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v16i32_v32i32_Intrinsic<string GCCIntSuffix, list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v16i32_ty], [llvm_v32i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_lo
-class Hexagon_v32i32_v64i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v32i32_v64i32_Intrinsic<string GCCIntSuffix, list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v32i32_ty], [llvm_v64i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : S2_shuffoh
 class Hexagon_i64_i64i64_Intrinsic<string GCCIntSuffix>
@@ -697,10 +703,10 @@ class Hexagon_v32i32_v32i32i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : A4_vcmphgti
-class Hexagon_i32_i64i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i32_i64i32_Intrinsic<string GCCIntSuffix, list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_i64_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag :
 class Hexagon_v32i32_v16i32i32_Intrinsic<string GCCIntSuffix>
@@ -709,10 +715,11 @@ class Hexagon_v32i32_v16i32i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : S6_rol_i_p_or
-class Hexagon_i64_i64i64i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i64_i64i64i32_Intrinsic<string GCCIntSuffix,
+                                      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i64_ty], [llvm_i64_ty,llvm_i64_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vgtuh_and
 class Hexagon_v512i1_v512i1v16i32v16i32_Intrinsic<string GCCIntSuffix>
@@ -727,16 +734,18 @@ class Hexagon_v1024i1_v1024i1v32i32v32i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : A2_abssat
-class Hexagon_i32_i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i32_i32_Intrinsic<string GCCIntSuffix,
+                                list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : A2_vcmpwgtu
-class Hexagon_i32_i64i64_Intrinsic<string GCCIntSuffix>
+class Hexagon_i32_i64i64_Intrinsic<string GCCIntSuffix,
+                                  list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_i64_ty,llvm_i64_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vtmpybus_acc
 class Hexagon_v64i32_v64i32v64i32i32_Intrinsic<string GCCIntSuffix>
@@ -763,16 +772,18 @@ class Hexagon_v1024i1_v1024i1v1024i1_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : S2_asr_i_p_rnd_goodsyntax
-class Hexagon_i64_i64i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i64_i64i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i64_ty], [llvm_i64_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : F2_conv_w2df
-class Hexagon_double_i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_double_i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_double_ty], [llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vunpackuh
 class Hexagon_v32i32_v16i32_Intrinsic<string GCCIntSuffix>
@@ -865,16 +876,18 @@ class Hexagon_i32_v32i32i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : V6_vlutvwhi
-class Hexagon_v32i32_v16i32v16i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v32i32_v16i32v16i32i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v32i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vlutvwhi
-class Hexagon_v64i32_v32i32v32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v64i32_v32i32v32i32i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v64i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vgtuh
 class Hexagon_v512i1_v16i32v16i32_Intrinsic<string GCCIntSuffix>
@@ -901,10 +914,11 @@ class Hexagon_double_i64_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : S2_vzxthw
-class Hexagon_i64_i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i64_i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i64_ty], [llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vtmpyhb
 class Hexagon_v64i32_v64i32i32_Intrinsic<string GCCIntSuffix>
@@ -943,10 +957,11 @@ class Hexagon_v16i32_v16i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : F2_conv_uw2sf
-class Hexagon_float_i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_float_i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_float_ty], [llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vswap
 class Hexagon_v32i32_v512i1v16i32v16i32_Intrinsic<string GCCIntSuffix>
@@ -1021,16 +1036,17 @@ class Hexagon_v32i32_v32i32v32i32v1024i1_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : V6_vlutvvb_oracc
-class Hexagon_v16i32_v16i32v16i32v16i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v16i32_v16i32v16i32v16i32i32_Intrinsic<string GCCIntSuffix,
+                                                     list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vlutvvb_oracc
-class Hexagon_v32i32_v32i32v32i32v32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v32i32_v32i32v32i32v32i32i32_Intrinsic<string GCCIntSuffix, list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vrmpybub_rtt
 class Hexagon_v32i32_v16i32i64_Intrinsic<string GCCIntSuffix>
@@ -1051,16 +1067,18 @@ class Hexagon_i64i32_i64i64i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : V6_vrsadubi_acc
-class Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<string GCCIntSuffix,
+                                                  list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vrsadubi_acc
-class Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v64i32_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : F2_conv_df2sf
 class Hexagon_float_double_Intrinsic<string GCCIntSuffix>
@@ -1165,10 +1183,11 @@ class Hexagon_v32i32_v32i32v32i32v32i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : S2_insertp
-class Hexagon_i64_i64i64i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i64_i64i64i32i32_Intrinsic<string GCCIntSuffix,
+                                         list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i64_ty], [llvm_i64_ty,llvm_i64_ty,llvm_i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : F2_sfinvsqrta
 class Hexagon_floati32_float_Intrinsic<string GCCIntSuffix>
@@ -1189,16 +1208,18 @@ class Hexagon_v32i32v32i32_v32i32v32i32i32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem]>;
 
 // tag : V6_vlutvwh_oracc
-class Hexagon_v32i32_v32i32v16i32v16i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v32i32_v32i32v16i32v16i32i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : V6_vlutvwh_oracc
-class Hexagon_v64i32_v64i32v32i32v32i32i32_Intrinsic<string GCCIntSuffix>
+class Hexagon_v64i32_v64i32v32i32v32i32i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
-       [IntrNoMem]>;
+       !listconcat([IntrNoMem], intr_properties)>;
 
 // tag : F2_dfcmpge
 class Hexagon_i32_doubledouble_Intrinsic<string GCCIntSuffix>
@@ -1222,7 +1243,7 @@ class Hexagon_i32_float_Intrinsic<string GCCIntSuffix>
 class Hexagon_i32_floati32_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_float_ty,llvm_i32_ty],
-       [IntrNoMem, Throws]>;
+       [IntrNoMem, Throws, ImmArg<1>]>;
 
 // tag : F2_conv_sf2ud_chop
 class Hexagon_i64_float_Intrinsic<string GCCIntSuffix>
@@ -1291,10 +1312,11 @@ class Hexagon_float_floatfloatfloati32_Intrinsic<string GCCIntSuffix>
        [IntrNoMem, Throws]>;
 
 // tag : F2_dfclass
-class Hexagon_i32_doublei32_Intrinsic<string GCCIntSuffix>
+class Hexagon_i32_doublei32_Intrinsic<string GCCIntSuffix,
+                                      list<IntrinsicProperty> intr_properties = []>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [llvm_double_ty,llvm_i32_ty],
-       [IntrNoMem, Throws]>;
+       !listconcat([IntrNoMem, Throws], intr_properties)>;
 
 // tag : V6_vd0
 class Hexagon_v16i32__Intrinsic<string GCCIntSuffix>
@@ -1392,13 +1414,13 @@ def int_hexagon_A2_vabswsat :
 Hexagon_i64_i64_Intrinsic<"HEXAGON_A2_vabswsat">;
 
 def int_hexagon_S2_asr_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r", [ImmArg<1>]>;
 
 def int_hexagon_S2_asr_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p", [ImmArg<1>]>;
 
 def int_hexagon_A4_combineri :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineri">;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineri", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpy_nac_sat_hl_s1 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpy_nac_sat_hl_s1">;
@@ -1449,7 +1471,7 @@ def int_hexagon_A2_maxup :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_maxup">;
 
 def int_hexagon_A4_vcmphgti :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgti">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgti", [ImmArg<1>]>;
 
 def int_hexagon_S2_interleave :
 Hexagon_i64_i64_Intrinsic<"HEXAGON_S2_interleave">;
@@ -1470,10 +1492,10 @@ def int_hexagon_C2_cmpgtp :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_C2_cmpgtp">;
 
 def int_hexagon_A4_cmphgtui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgtui">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgtui", [ImmArg<1>]>;
 
 def int_hexagon_C2_cmpgti :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgti">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgti", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpyi :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpyi">;
@@ -1491,16 +1513,16 @@ def int_hexagon_M2_mpy_lh_s0 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpy_lh_s0">;
 
 def int_hexagon_S2_lsr_i_r_xacc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_xacc">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_xacc", [ImmArg<2>]>;
 
 def int_hexagon_S2_vrcnegh :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_vrcnegh">;
 
 def int_hexagon_S2_extractup :
-Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S2_extractup">;
+Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S2_extractup", [ImmArg<1>, ImmArg<2>]>;
 
 def int_hexagon_S2_asr_i_p_rnd_goodsyntax :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd_goodsyntax">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd_goodsyntax", [ImmArg<1>]>;
 
 def int_hexagon_S4_ntstbit_r :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_ntstbit_r">;
@@ -1527,10 +1549,10 @@ def int_hexagon_S2_asr_r_r_and :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_r_r_and">;
 
 def int_hexagon_A4_rcmpneqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpneqi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpneqi", [ImmArg<1>]>;
 
 def int_hexagon_S2_asl_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_nac">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_nac", [ImmArg<2>]>;
 
 def int_hexagon_M2_subacc :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_subacc">;
@@ -1545,10 +1567,10 @@ def int_hexagon_M2_mpy_acc_sat_lh_s1 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpy_acc_sat_lh_s1">;
 
 def int_hexagon_S2_asr_i_vh :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vh">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vh", [ImmArg<1>]>;
 
 def int_hexagon_S2_asr_i_vw :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vw">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vw", [ImmArg<1>]>;
 
 def int_hexagon_A4_cmpbgtu :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgtu">;
@@ -1557,7 +1579,7 @@ def int_hexagon_A4_vcmpbeq_any :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A4_vcmpbeq_any">;
 
 def int_hexagon_A4_cmpbgti :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgti">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgti", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpyd_lh_s1 :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_M2_mpyd_lh_s1">;
@@ -1566,7 +1588,7 @@ def int_hexagon_S2_asl_r_p_nac :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_r_p_nac">;
 
 def int_hexagon_S2_lsr_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_nac">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_nac", [ImmArg<2>]>;
 
 def int_hexagon_A2_addsp :
 Hexagon_i64_i32i64_Intrinsic<"HEXAGON_A2_addsp">;
@@ -1575,7 +1597,7 @@ def int_hexagon_S4_vxsubaddw :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_S4_vxsubaddw">;
 
 def int_hexagon_A4_vcmpheqi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpheqi">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpheqi", [ImmArg<1>]>;
 
 def int_hexagon_S4_vxsubaddh :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_S4_vxsubaddh">;
@@ -1602,16 +1624,16 @@ def int_hexagon_A2_pxorf :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_A2_pxorf">;
 
 def int_hexagon_C2_cmpgei :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgei">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgei", [ImmArg<1>]>;
 
 def int_hexagon_A2_vsubub :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vsubub">;
 
 def int_hexagon_S2_asl_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_p">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_p", [ImmArg<1>]>;
 
 def int_hexagon_S2_asl_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r", [ImmArg<1>]>;
 
 def int_hexagon_A4_vrminuw :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_A4_vrminuw">;
@@ -1641,10 +1663,10 @@ def int_hexagon_C2_bitsset :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_bitsset">;
 
 def int_hexagon_M2_mpysip :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysip">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysip", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpysin :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysin">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysin", [ImmArg<1>]>;
 
 def int_hexagon_A4_boundscheck :
 Hexagon_i32_i32i64_Intrinsic<"HEXAGON_A4_boundscheck">;
@@ -1683,10 +1705,10 @@ def int_hexagon_A2_vnavgw :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vnavgw">;
 
 def int_hexagon_S2_asl_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_acc">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_acc", [ImmArg<2>]>;
 
 def int_hexagon_S4_subi_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_lsr_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_lsr_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_S2_vzxthw :
 Hexagon_i64_i32_Intrinsic<"HEXAGON_S2_vzxthw">;
@@ -1713,7 +1735,7 @@ def int_hexagon_S2_packhl :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_S2_packhl">;
 
 def int_hexagon_A4_vcmpwgti :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgti">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgti", [ImmArg<1>]>;
 
 def int_hexagon_A2_vavguwr :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vavguwr">;
@@ -1734,7 +1756,7 @@ def int_hexagon_F2_conv_d2df :
 Hexagon_double_i64_Intrinsic<"HEXAGON_F2_conv_d2df">;
 
 def int_hexagon_C2_cmpgtui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgtui">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgtui", [ImmArg<1>]>;
 
 def int_hexagon_A2_vconj :
 Hexagon_i64_i64_Intrinsic<"HEXAGON_A2_vconj">;
@@ -1764,7 +1786,7 @@ def int_hexagon_S2_togglebit_r :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_togglebit_r">;
 
 def int_hexagon_S2_togglebit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_togglebit_i">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_togglebit_i", [ImmArg<1>]>;
 
 def int_hexagon_F2_conv_uw2sf :
 Hexagon_float_i32_Intrinsic<"HEXAGON_F2_conv_uw2sf">;
@@ -1800,10 +1822,10 @@ def int_hexagon_S2_asl_r_r_nac :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_r_r_nac">;
 
 def int_hexagon_S2_asl_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_acc">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_acc", [ImmArg<2>]>;
 
 def int_hexagon_A4_vcmpwgtui :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgtui">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgtui", [ImmArg<1>]>;
 
 def int_hexagon_M4_vrmpyoh_acc_s0 :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M4_vrmpyoh_acc_s0">;
@@ -1830,7 +1852,7 @@ def int_hexagon_A2_vavgwcr :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vavgwcr">;
 
 def int_hexagon_S2_asl_i_p_xacc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_xacc">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_xacc", [ImmArg<2>]>;
 
 def int_hexagon_A4_vrmaxw :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_A4_vrmaxw">;
@@ -1842,22 +1864,22 @@ def int_hexagon_M4_cmpyi_wh :
 Hexagon_i32_i64i32_Intrinsic<"HEXAGON_M4_cmpyi_wh">;
 
 def int_hexagon_A2_tfrsi :
-Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_tfrsi">;
+Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_tfrsi", [ImmArg<0>]>;
 
 def int_hexagon_S2_asr_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_acc">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_acc", [ImmArg<2>]>;
 
 def int_hexagon_A2_svnavgh :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_svnavgh">;
 
 def int_hexagon_S2_lsr_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r", [ImmArg<1>]>;
 
 def int_hexagon_M2_vmac2 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_vmac2">;
 
 def int_hexagon_A4_vcmphgtui :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgtui">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgtui", [ImmArg<1>]>;
 
 def int_hexagon_A2_svavgh :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_svavgh">;
@@ -1869,7 +1891,7 @@ def int_hexagon_M4_vrmpyeh_acc_s1 :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M4_vrmpyeh_acc_s1">;
 
 def int_hexagon_S2_lsr_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p", [ImmArg<1>]>;
 
 def int_hexagon_A2_combine_hl :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_combine_hl">;
@@ -1908,7 +1930,7 @@ def int_hexagon_M2_mmpyul_rs0 :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_mmpyul_rs0">;
 
 def int_hexagon_S2_asr_i_r_rnd_goodsyntax :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd_goodsyntax">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd_goodsyntax", [ImmArg<1>]>;
 
 def int_hexagon_S2_lsr_r_p_nac :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_r_p_nac">;
@@ -1923,10 +1945,10 @@ def int_hexagon_M4_or_and :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_or_and">;
 
 def int_hexagon_M4_mpyrr_addi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyrr_addi">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyrr_addi", [ImmArg<0>]>;
 
 def int_hexagon_S4_or_andi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andi">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andi", [ImmArg<2>]>;
 
 def int_hexagon_M2_mpy_sat_hl_s0 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpy_sat_hl_s0">;
@@ -2031,7 +2053,7 @@ def int_hexagon_F2_sffms_lib :
 Hexagon_float_floatfloatfloat_Intrinsic<"HEXAGON_F2_sffms_lib">;
 
 def int_hexagon_C4_cmpneqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpneqi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpneqi", [ImmArg<1>]>;
 
 def int_hexagon_M4_and_xor :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_and_xor">;
@@ -2055,7 +2077,7 @@ def int_hexagon_A2_vrsadub_acc :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_A2_vrsadub_acc">;
 
 def int_hexagon_C2_bitsclri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_bitsclri">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_bitsclri", [ImmArg<1>]>;
 
 def int_hexagon_A2_subh_h16_sat_hh :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subh_h16_sat_hh">;
@@ -2157,10 +2179,10 @@ def int_hexagon_S2_parityp :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_S2_parityp">;
 
 def int_hexagon_S2_lsr_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_and">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_and", [ImmArg<2>]>;
 
 def int_hexagon_S2_asr_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_or">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_or", [ImmArg<2>]>;
 
 def int_hexagon_M2_mpyu_nac_ll_s0 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpyu_nac_ll_s0">;
@@ -2190,7 +2212,7 @@ def int_hexagon_M2_cnacsc_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_cnacsc_s0">;
 
 def int_hexagon_S4_subaddi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subaddi">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subaddi", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpyud_nac_hl_s1 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyud_nac_hl_s1">;
@@ -2199,13 +2221,13 @@ def int_hexagon_M2_mpyud_nac_hl_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyud_nac_hl_s0">;
 
 def int_hexagon_S5_vasrhrnd_goodsyntax :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S5_vasrhrnd_goodsyntax">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S5_vasrhrnd_goodsyntax", [ImmArg<1>]>;
 
 def int_hexagon_S2_tstbit_r :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_tstbit_r">;
 
 def int_hexagon_S4_vrcrotate :
-Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate">;
+Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate", [ImmArg<2>]>;
 
 def int_hexagon_M2_mmachs_s1 :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M2_mmachs_s1">;
@@ -2214,7 +2236,7 @@ def int_hexagon_M2_mmachs_s0 :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M2_mmachs_s0">;
 
 def int_hexagon_S2_tstbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_tstbit_i">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_tstbit_i", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpy_up_s1 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpy_up_s1">;
@@ -2226,7 +2248,7 @@ def int_hexagon_M2_mmpyuh_rs0 :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_mmpyuh_rs0">;
 
 def int_hexagon_S2_lsr_i_vw :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vw">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vw", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpy_rnd_ll_s0 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpy_rnd_ll_s0">;
@@ -2265,16 +2287,16 @@ def int_hexagon_A2_subh_l16_sat_hl :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subh_l16_sat_hl">;
 
 def int_hexagon_C2_cmpeqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpeqi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpeqi", [ImmArg<1>]>;
 
 def int_hexagon_S2_asl_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_and">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_and", [ImmArg<2>]>;
 
 def int_hexagon_S2_vcnegh :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_vcnegh">;
 
 def int_hexagon_A4_vcmpweqi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpweqi">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpweqi", [ImmArg<1>]>;
 
 def int_hexagon_M2_vdmpyrs_s0 :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M2_vdmpyrs_s0">;
@@ -2307,7 +2329,7 @@ def int_hexagon_S2_cl0p :
 Hexagon_i32_i64_Intrinsic<"HEXAGON_S2_cl0p">;
 
 def int_hexagon_S2_valignib :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_valignib">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_valignib", [ImmArg<2>]>;
 
 def int_hexagon_F2_sffixupd :
 Hexagon_float_floatfloat_Intrinsic<"HEXAGON_F2_sffixupd">;
@@ -2337,7 +2359,7 @@ def int_hexagon_M2_mmpyul_rs1 :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_mmpyul_rs1">;
 
 def int_hexagon_S4_ntstbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_ntstbit_i">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_ntstbit_i", [ImmArg<1>]>   ;
 
 def int_hexagon_F2_sffixupr :
 Hexagon_float_float_Intrinsic<"HEXAGON_F2_sffixupr">;
@@ -2361,7 +2383,7 @@ def int_hexagon_M2_vmpy2s_s0pack :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_vmpy2s_s0pack">;
 
 def int_hexagon_S4_addaddi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addaddi">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addaddi", [ImmArg<2>]>;
 
 def int_hexagon_M2_mpyd_acc_ll_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyd_acc_ll_s0">;
@@ -2370,13 +2392,13 @@ def int_hexagon_M2_mpy_acc_sat_hl_s1 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpy_acc_sat_hl_s1">;
 
 def int_hexagon_A4_rcmpeqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpeqi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpeqi", [ImmArg<1>]>;
 
 def int_hexagon_M4_xor_and :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_xor_and">;
 
 def int_hexagon_S2_asl_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_and">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_and", [ImmArg<2>]>;
 
 def int_hexagon_M2_mmpyuh_rs1 :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_mmpyuh_rs1">;
@@ -2385,7 +2407,7 @@ def int_hexagon_S2_asr_r_r_or :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_r_r_or">;
 
 def int_hexagon_A4_round_ri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri", [ImmArg<1>]>;
 
 def int_hexagon_A2_max :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_max">;
@@ -2394,10 +2416,10 @@ def int_hexagon_A4_round_rr :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_rr">;
 
 def int_hexagon_A4_combineii :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineii">;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineii", [ImmArg<0>, ImmArg<1>]>;
 
 def int_hexagon_A4_combineir :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineir">;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineir", [ImmArg<0>]>;
 
 def int_hexagon_C4_and_orn :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C4_and_orn">;
@@ -2412,7 +2434,7 @@ def int_hexagon_M4_cmpyr_whc :
 Hexagon_i32_i64i32_Intrinsic<"HEXAGON_M4_cmpyr_whc">;
 
 def int_hexagon_S2_lsr_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_acc">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_acc", [ImmArg<2>]>;
 
 def int_hexagon_S2_vzxtbh :
 Hexagon_i64_i32_Intrinsic<"HEXAGON_S2_vzxtbh">;
@@ -2439,7 +2461,7 @@ def int_hexagon_S2_asl_r_p_or :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_r_p_or">;
 
 def int_hexagon_S4_ori_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_asl_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_asl_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_C4_nbitsset :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_nbitsset">;
@@ -2475,10 +2497,10 @@ def int_hexagon_M2_mpyd_acc_hh_s1 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyd_acc_hh_s1">;
 
 def int_hexagon_F2_sfimm_p :
-Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_p">;
+Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_p", [ImmArg<0>]>;
 
 def int_hexagon_F2_sfimm_n :
-Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_n">;
+Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_n", [ImmArg<0>]>;
 
 def int_hexagon_M4_cmpyr_wh :
 Hexagon_i32_i64i32_Intrinsic<"HEXAGON_M4_cmpyr_wh">;
@@ -2496,7 +2518,7 @@ def int_hexagon_A2_vavguh :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vavguh">;
 
 def int_hexagon_A4_cmpbeqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbeqi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbeqi", [ImmArg<1>]>;
 
 def int_hexagon_F2_sfcmpuo :
 Hexagon_i32_floatfloat_Intrinsic<"HEXAGON_F2_sfcmpuo">;
@@ -2505,7 +2527,7 @@ def int_hexagon_A2_vavguw :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vavguw">;
 
 def int_hexagon_S2_asr_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_nac">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_nac", [ImmArg<2>]>;
 
 def int_hexagon_S2_vsatwh_nopack :
 Hexagon_i64_i64_Intrinsic<"HEXAGON_S2_vsatwh_nopack">;
@@ -2532,7 +2554,7 @@ def int_hexagon_A2_minp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_minp">;
 
 def int_hexagon_S4_or_andix :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andix">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andix", [ImmArg<2>]>;
 
 def int_hexagon_M2_mpy_rnd_lh_s0 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpy_rnd_lh_s0">;
@@ -2583,19 +2605,19 @@ def int_hexagon_S2_lsl_r_r_or :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsl_r_r_or">;
 
 def int_hexagon_C4_cmplteui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmplteui">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmplteui", [ImmArg<1>]>;
 
 def int_hexagon_S4_addi_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_lsr_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_lsr_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_A4_tfrcpp :
 Hexagon_i64_i64_Intrinsic<"HEXAGON_A4_tfrcpp">;
 
 def int_hexagon_S2_asr_i_svw_trun :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S2_asr_i_svw_trun">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S2_asr_i_svw_trun", [ImmArg<1>]>;
 
 def int_hexagon_A4_cmphgti :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgti">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgti", [ImmArg<1>]>;
 
 def int_hexagon_A4_vrminh :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_A4_vrminh">;
@@ -2613,7 +2635,7 @@ def int_hexagon_A2_vnavghcr :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vnavghcr">;
 
 def int_hexagon_S4_subi_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_asl_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_asl_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_S2_lsl_r_vh :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsl_r_vh">;
@@ -2637,7 +2659,7 @@ def int_hexagon_C2_cmpltu :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpltu">;
 
 def int_hexagon_S2_insertp :
-Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S2_insertp">;
+Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S2_insertp", [ImmArg<2>, ImmArg<3>]>;
 
 def int_hexagon_M2_mpyd_rnd_ll_s1 :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_M2_mpyd_rnd_ll_s1">;
@@ -2646,7 +2668,7 @@ def int_hexagon_M2_mpyd_rnd_ll_s0 :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_M2_mpyd_rnd_ll_s0">;
 
 def int_hexagon_S2_lsr_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_nac">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_nac", [ImmArg<2>]>;
 
 def int_hexagon_S2_extractup_rp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_S2_extractup_rp">;
@@ -2748,7 +2770,7 @@ def int_hexagon_M2_dpmpyss_rnd_s0 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_dpmpyss_rnd_s0">;
 
 def int_hexagon_C2_muxri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxri", [ImmArg<1>]>;
 
 def int_hexagon_M2_vmac2es_s0 :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M2_vmac2es_s0">;
@@ -2766,7 +2788,7 @@ def int_hexagon_M2_mpyu_lh_s0 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpyu_lh_s0">;
 
 def int_hexagon_S2_asl_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_or">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_or", [ImmArg<2>]>;
 
 def int_hexagon_M2_mpyd_acc_hl_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyd_acc_hl_s0">;
@@ -2781,7 +2803,7 @@ def int_hexagon_A2_vaddw :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vaddw">;
 
 def int_hexagon_S2_asr_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_and">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_and", [ImmArg<2>]>;
 
 def int_hexagon_A2_vaddh :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vaddh">;
@@ -2796,22 +2818,22 @@ def int_hexagon_C2_cmpeqp :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_C2_cmpeqp">;
 
 def int_hexagon_M4_mpyri_addi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addi">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addi", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_A2_not :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_not">;
 
 def int_hexagon_S4_andi_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_lsr_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_lsr_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_M2_macsip :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsip">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsip", [ImmArg<2>]>;
 
 def int_hexagon_A2_tfrcrr :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_tfrcrr">;
 
 def int_hexagon_M2_macsin :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsin">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsin", [ImmArg<2>]>;
 
 def int_hexagon_C2_orn :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_orn">;
@@ -2874,7 +2896,7 @@ def int_hexagon_F2_dfcmpge :
 Hexagon_i32_doubledouble_Intrinsic<"HEXAGON_F2_dfcmpge">;
 
 def int_hexagon_M2_accii :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_accii">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_accii", [ImmArg<2>]>;
 
 def int_hexagon_A5_vaddhubs :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A5_vaddhubs">;
@@ -2892,10 +2914,10 @@ def int_hexagon_S2_vsxthw :
 Hexagon_i64_i32_Intrinsic<"HEXAGON_S2_vsxthw">;
 
 def int_hexagon_S4_andi_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_asl_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_asl_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_S2_asl_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_nac">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_nac", [ImmArg<2>]>;
 
 def int_hexagon_S2_lsl_r_p_xor :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsl_r_p_xor">;
@@ -2928,7 +2950,7 @@ def int_hexagon_M4_xor_andn :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_xor_andn">;
 
 def int_hexagon_S2_addasl_rrri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_addasl_rrri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_addasl_rrri", [ImmArg<2>]>;
 
 def int_hexagon_M5_vdmpybsu :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M5_vdmpybsu">;
@@ -2940,7 +2962,7 @@ def int_hexagon_M2_mpyu_nac_hh_s1 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpyu_nac_hh_s1">;
 
 def int_hexagon_A2_addi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_addi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_addi", [ImmArg<1>]>;
 
 def int_hexagon_A2_addp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_addp">;
@@ -2961,7 +2983,7 @@ def int_hexagon_S2_shuffeh :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_S2_shuffeh">;
 
 def int_hexagon_S2_lsr_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_and">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_and", [ImmArg<2>]>;
 
 def int_hexagon_M2_mpy_sat_rnd_hh_s1 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpy_sat_rnd_hh_s1">;
@@ -3063,13 +3085,13 @@ def int_hexagon_S5_popcountp :
 Hexagon_i32_i64_Intrinsic<"HEXAGON_S5_popcountp">;
 
 def int_hexagon_S4_extractp :
-Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_extractp">;
+Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_extractp", [ImmArg<1>, ImmArg<2>]>;
 
 def int_hexagon_S2_cl0 :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_S2_cl0">;
 
 def int_hexagon_A4_vcmpbgti :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgti">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgti", [ImmArg<1>]>;
 
 def int_hexagon_M2_mmacls_s1 :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M2_mmacls_s1">;
@@ -3117,7 +3139,7 @@ def int_hexagon_A2_vmaxuh :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vmaxuh">;
 
 def int_hexagon_A4_bitspliti :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_bitspliti">;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_bitspliti", [ImmArg<1>]>;
 
 def int_hexagon_A2_vmaxub :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vmaxub">;
@@ -3144,13 +3166,13 @@ def int_hexagon_S2_asr_r_r_nac :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_r_r_nac">;
 
 def int_hexagon_F2_dfimm_n :
-Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_n">;
+Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_n", [ImmArg<0>]>;
 
 def int_hexagon_A4_cmphgt :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgt">;
 
 def int_hexagon_F2_dfimm_p :
-Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_p">;
+Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_p", [ImmArg<0>]>;
 
 def int_hexagon_M2_mpyud_acc_lh_s1 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyud_acc_lh_s1">;
@@ -3159,7 +3181,7 @@ def int_hexagon_M2_vcmpy_s1_sat_r :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_vcmpy_s1_sat_r">;
 
 def int_hexagon_M4_mpyri_addr_u2 :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr_u2">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr_u2", [ImmArg<1>]>;
 
 def int_hexagon_M2_vcmpy_s1_sat_i :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_vcmpy_s1_sat_i">;
@@ -3171,10 +3193,10 @@ def int_hexagon_M5_vrmacbuu :
 Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M5_vrmacbuu">;
 
 def int_hexagon_S5_asrhub_rnd_sat_goodsyntax :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_rnd_sat_goodsyntax">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_rnd_sat_goodsyntax", [ImmArg<1>]>;
 
 def int_hexagon_S2_vspliceib :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_vspliceib">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_vspliceib", [ImmArg<2>]>;
 
 def int_hexagon_M2_dpmpyss_acc_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_dpmpyss_acc_s0">;
@@ -3192,25 +3214,25 @@ def int_hexagon_A2_maxp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_maxp">;
 
 def int_hexagon_A2_andir :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_andir">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_andir", [ImmArg<1>]>;
 
 def int_hexagon_F2_sfrecipa :
 Hexagon_floati32_floatfloat_Intrinsic<"HEXAGON_F2_sfrecipa">;
 
 def int_hexagon_A2_combineii :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A2_combineii">;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A2_combineii", [ImmArg<0>, ImmArg<1>]>;
 
 def int_hexagon_A4_orn :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_orn">;
 
 def int_hexagon_A4_cmpbgtui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgtui">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgtui", [ImmArg<1>]>;
 
 def int_hexagon_S2_lsr_r_r_or :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_r_r_or">;
 
 def int_hexagon_A4_vcmpbeqi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbeqi">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbeqi", [ImmArg<1>]>;
 
 def int_hexagon_S2_lsl_r_r :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_lsl_r_r">;
@@ -3246,19 +3268,19 @@ def int_hexagon_M2_vrcmpys_s1 :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_M2_vrcmpys_s1">;
 
 def int_hexagon_S4_or_ori :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_ori">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_ori", [ImmArg<2>]>;
 
 def int_hexagon_C4_fastcorner9_not :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_fastcorner9_not">;
 
 def int_hexagon_A2_tfrih :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfrih">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfrih", [ImmArg<1>]>;
 
 def int_hexagon_A2_tfril :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfril">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfril", [ImmArg<1>]>;
 
 def int_hexagon_M4_mpyri_addr :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr", [ImmArg<2>]>;
 
 def int_hexagon_S2_vtrunehb :
 Hexagon_i32_i64_Intrinsic<"HEXAGON_S2_vtrunehb">;
@@ -3273,16 +3295,16 @@ def int_hexagon_F2_sfsub :
 Hexagon_float_floatfloat_Intrinsic<"HEXAGON_F2_sfsub">;
 
 def int_hexagon_C2_muxii :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxii">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxii", [ImmArg<1>, ImmArg<2>]>;
 
 def int_hexagon_C2_muxir :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxir">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxir", [ImmArg<2>]>;
 
 def int_hexagon_A2_swiz :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_swiz">;
 
 def int_hexagon_S2_asr_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_and">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_and", [ImmArg<2>]>;
 
 def int_hexagon_M2_cmpyrsc_s0 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_cmpyrsc_s0">;
@@ -3312,7 +3334,7 @@ def int_hexagon_M2_mpy_nac_sat_ll_s0 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpy_nac_sat_ll_s0">;
 
 def int_hexagon_S4_extract :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_extract">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_extract", [ImmArg<1>, ImmArg<2>]>;
 
 def int_hexagon_A2_vcmpweq :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A2_vcmpweq">;
@@ -3321,10 +3343,10 @@ def int_hexagon_M2_acci :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_acci">;
 
 def int_hexagon_S2_lsr_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_acc">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_acc", [ImmArg<2>]>;
 
 def int_hexagon_S2_lsr_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_or">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_or", [ImmArg<2>]>;
 
 def int_hexagon_F2_conv_ud2sf :
 Hexagon_float_i64_Intrinsic<"HEXAGON_F2_conv_ud2sf">;
@@ -3333,10 +3355,10 @@ def int_hexagon_A2_tfr :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_tfr">;
 
 def int_hexagon_S2_asr_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_or">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_or", [ImmArg<2>]>;
 
 def int_hexagon_A2_subri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subri">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subri", [ImmArg<0>]>;
 
 def int_hexagon_A4_vrmaxuw :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_A4_vrmaxuw">;
@@ -3348,7 +3370,7 @@ def int_hexagon_A4_vrmaxuh :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_A4_vrmaxuh">;
 
 def int_hexagon_S2_asl_i_vw :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vw">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vw", [ImmArg<1>]>;
 
 def int_hexagon_A2_vavgw :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vavgw">;
@@ -3360,13 +3382,13 @@ def int_hexagon_A2_vavgh :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vavgh">;
 
 def int_hexagon_S2_clrbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_clrbit_i">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_clrbit_i", [ImmArg<1>]>;
 
 def int_hexagon_S2_asl_i_vh :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vh">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vh", [ImmArg<1>]>;
 
 def int_hexagon_S2_lsr_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_or">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_or", [ImmArg<2>]>;
 
 def int_hexagon_S2_lsl_r_r_nac :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsl_r_r_nac">;
@@ -3384,7 +3406,7 @@ def int_hexagon_M2_mmpyl_s1 :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_mmpyl_s1">;
 
 def int_hexagon_M2_naccii :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_naccii">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_naccii", [ImmArg<2>]>;
 
 def int_hexagon_S2_vrndpackwhs :
 Hexagon_i32_i64_Intrinsic<"HEXAGON_S2_vrndpackwhs">;
@@ -3405,7 +3427,7 @@ def int_hexagon_M4_mac_up_s1_sat :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mac_up_s1_sat">;
 
 def int_hexagon_S4_vrcrotate_acc :
-Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate_acc">;
+Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate_acc", [ImmArg<3>]>;
 
 def int_hexagon_F2_conv_uw2df :
 Hexagon_double_i32_Intrinsic<"HEXAGON_F2_conv_uw2df">;
@@ -3417,7 +3439,7 @@ def int_hexagon_S2_asr_r_r_acc :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_r_r_acc">;
 
 def int_hexagon_A2_orir :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_orir">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_orir", [ImmArg<1>]>;
 
 def int_hexagon_A2_andp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_andp">;
@@ -3429,7 +3451,7 @@ def int_hexagon_A2_min :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_min">;
 
 def int_hexagon_M2_mpysmi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysmi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysmi", [ImmArg<1>]>;
 
 def int_hexagon_M2_vcmpy_s0_sat_r :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_vcmpy_s0_sat_r">;
@@ -3465,10 +3487,10 @@ def int_hexagon_F2_conv_df2w :
 Hexagon_i32_double_Intrinsic<"HEXAGON_F2_conv_df2w">;
 
 def int_hexagon_S5_asrhub_sat :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_sat">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_sat", [ImmArg<1>]>;
 
 def int_hexagon_S2_asl_i_r_xacc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_xacc">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_xacc", [ImmArg<2>]>;
 
 def int_hexagon_F2_conv_df2d :
 Hexagon_i64_double_Intrinsic<"HEXAGON_F2_conv_df2d">;
@@ -3504,7 +3526,7 @@ def int_hexagon_F2_sffma_sc :
 Hexagon_float_floatfloatfloati32_Intrinsic<"HEXAGON_F2_sffma_sc">;
 
 def int_hexagon_F2_dfclass :
-Hexagon_i32_doublei32_Intrinsic<"HEXAGON_F2_dfclass">;
+Hexagon_i32_doublei32_Intrinsic<"HEXAGON_F2_dfclass", [ImmArg<1>]>;
 
 def int_hexagon_F2_conv_df2ud :
 Hexagon_i64_double_Intrinsic<"HEXAGON_F2_conv_df2ud">;
@@ -3519,7 +3541,7 @@ def int_hexagon_M2_cmpyrs_s1 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_cmpyrs_s1">;
 
 def int_hexagon_C4_cmpltei :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpltei">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpltei", [ImmArg<1>]>;
 
 def int_hexagon_C4_cmplteu :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmplteu">;
@@ -3531,7 +3553,7 @@ def int_hexagon_A2_subh_l16_ll :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subh_l16_ll">;
 
 def int_hexagon_S2_asr_i_r_rnd :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd", [ImmArg<1>]>;
 
 def int_hexagon_M2_vrmpy_s0 :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_vrmpy_s0">;
@@ -3576,7 +3598,7 @@ def int_hexagon_M2_vrcmpyi_s0c :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M2_vrcmpyi_s0c">;
 
 def int_hexagon_S2_asr_i_p_rnd :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd", [ImmArg<1>]>;
 
 def int_hexagon_A2_addpsat :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_addpsat">;
@@ -3585,7 +3607,7 @@ def int_hexagon_A2_svaddhs :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_svaddhs">;
 
 def int_hexagon_S4_ori_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_lsr_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_lsr_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_M2_mpy_sat_rnd_ll_s1 :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpy_sat_rnd_ll_s1">;
@@ -3618,7 +3640,7 @@ def int_hexagon_S2_asl_r_r_or :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_r_r_or">;
 
 def int_hexagon_S4_lsli :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_lsli">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_lsli", [ImmArg<0>]>;
 
 def int_hexagon_S2_lsl_r_vw :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsl_r_vw">;
@@ -3663,7 +3685,7 @@ def int_hexagon_A2_negp :
 Hexagon_i64_i64_Intrinsic<"HEXAGON_A2_negp">;
 
 def int_hexagon_S2_asl_i_r_sat :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_sat">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_sat", [ImmArg<1>]>;
 
 def int_hexagon_A2_addh_l16_sat_hl :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_addh_l16_sat_hl">;
@@ -3681,10 +3703,10 @@ def int_hexagon_C2_cmpgtup :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_C2_cmpgtup">;
 
 def int_hexagon_A4_cround_ri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cround_ri">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cround_ri", [ImmArg<1>]>;
 
 def int_hexagon_S4_clbpaddi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S4_clbpaddi">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S4_clbpaddi", [ImmArg<1>]>;
 
 def int_hexagon_A4_cround_rr :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cround_rr">;
@@ -3714,13 +3736,13 @@ def int_hexagon_A2_vminub :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vminub">;
 
 def int_hexagon_S2_extractu :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_extractu">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_extractu", [ImmArg<1>, ImmArg<2>]>;
 
 def int_hexagon_A2_svsubh :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_svsubh">;
 
 def int_hexagon_S4_clbaddi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_clbaddi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_clbaddi", [ImmArg<1>]>;
 
 def int_hexagon_F2_sffms :
 Hexagon_float_floatfloatfloat_Intrinsic<"HEXAGON_F2_sffms">;
@@ -3753,7 +3775,7 @@ def int_hexagon_M2_mpy_acc_hh_s0 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpy_acc_hh_s0">;
 
 def int_hexagon_S4_addi_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_asl_ri">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_asl_ri", [ImmArg<0>, ImmArg<2>]>;
 
 def int_hexagon_M2_mpyd_nac_hh_s1 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyd_nac_hh_s1">;
@@ -3762,10 +3784,10 @@ def int_hexagon_M2_mpyd_nac_hh_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyd_nac_hh_s0">;
 
 def int_hexagon_S2_asr_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_nac">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_nac", [ImmArg<2>]>;
 
 def int_hexagon_A4_cmpheqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpheqi">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpheqi", [ImmArg<1>]>;
 
 def int_hexagon_S2_lsr_r_p_xor :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_r_p_xor">;
@@ -3780,7 +3802,7 @@ def int_hexagon_F2_conv_sf2ud_chop :
 Hexagon_i64_float_Intrinsic<"HEXAGON_F2_conv_sf2ud_chop">;
 
 def int_hexagon_C2_cmpgeui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgeui">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgeui", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpy_acc_sat_hh_s0 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpy_acc_sat_hh_s0">;
@@ -3807,7 +3829,7 @@ def int_hexagon_M2_mpyud_nac_lh_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_mpyud_nac_lh_s0">;
 
 def int_hexagon_A4_round_ri_sat :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri_sat">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri_sat", [ImmArg<1>]>;
 
 def int_hexagon_M2_mpy_nac_hl_s0 :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mpy_nac_hl_s0">;
@@ -3828,10 +3850,10 @@ def int_hexagon_M2_cmaci_s0 :
 Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_M2_cmaci_s0">;
 
 def int_hexagon_S2_setbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_setbit_i">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_setbit_i", [ImmArg<1>]>;
 
 def int_hexagon_S2_asl_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_or">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_or", [ImmArg<2>]>;
 
 def int_hexagon_A4_andn :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_andn">;
@@ -3855,13 +3877,13 @@ def int_hexagon_M2_xor_xacc :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_xor_xacc">;
 
 def int_hexagon_A4_vcmpbgtui :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgtui">;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgtui", [ImmArg<1>]>;
 
 def int_hexagon_A4_ornp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A4_ornp">;
 
 def int_hexagon_A2_tfrpi :
-Hexagon_i64_i32_Intrinsic<"HEXAGON_A2_tfrpi">;
+Hexagon_i64_i32_Intrinsic<"HEXAGON_A2_tfrpi", [ImmArg<0>]>;
 
 def int_hexagon_C4_and_or :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C4_and_or">;
@@ -3885,16 +3907,16 @@ def int_hexagon_M2_vmpy2su_s0 :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_M2_vmpy2su_s0">;
 
 def int_hexagon_S2_asr_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_acc">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_acc", [ImmArg<2>]>;
 
 def int_hexagon_C4_nbitsclri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_nbitsclri">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_nbitsclri", [ImmArg<1>]>;
 
 def int_hexagon_S2_lsr_i_vh :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vh">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vh", [ImmArg<1>]>;
 
 def int_hexagon_S2_lsr_i_p_xacc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_xacc">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_xacc", [ImmArg<2>]>;
 
 // V55 Scalar Instructions.
 
@@ -3904,40 +3926,40 @@ Hexagon_i64i32_i64i64i64_Intrinsic<"HEXAGON_A5_ACS">;
 // V60 Scalar Instructions.
 
 def int_hexagon_S6_rol_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_and">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_and", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_r_xacc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_xacc">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_xacc", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_and">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_and", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_acc">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_acc", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_p_xacc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_xacc">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_xacc", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S6_rol_i_p">;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S6_rol_i_p", [ImmArg<1>]>;
 
 def int_hexagon_S6_rol_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_nac">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_nac", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_acc">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_acc", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_or">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_or", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S6_rol_i_r">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S6_rol_i_r", [ImmArg<1>]>;
 
 def int_hexagon_S6_rol_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_nac">;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_nac", [ImmArg<2>]>;
 
 def int_hexagon_S6_rol_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_or">;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_or", [ImmArg<2>]>;
 
 // V62 Scalar Instructions.
 
@@ -3979,7 +4001,7 @@ def int_hexagon_M2_mnaci :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mnaci">;
 
 def int_hexagon_S2_mask :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_mask">;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_mask", [ImmArg<0>, ImmArg<1>]>;
 
 // V60 HVX Instructions.
 
@@ -4020,10 +4042,10 @@ def int_hexagon_V6_vaddh_dv_128B :
 Hexagon_v64i32_v64i32v64i32_Intrinsic<"HEXAGON_V6_vaddh_dv_128B">;
 
 def int_hexagon_V6_vrmpybusi :
-Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi">;
+Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi", [ImmArg<2>]>;
 
 def int_hexagon_V6_vrmpybusi_128B :
-Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_128B">;
+Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_128B", [ImmArg<2>]>;
 
 def int_hexagon_V6_vshufoh :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vshufoh">;
@@ -4044,10 +4066,10 @@ def int_hexagon_V6_vdmpyhsuisat_128B :
 Hexagon_v32i32_v64i32i32_Intrinsic<"HEXAGON_V6_vdmpyhsuisat_128B">;
 
 def int_hexagon_V6_vrsadubi_acc :
-Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc">;
+Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc", [ImmArg<3>]>;
 
 def int_hexagon_V6_vrsadubi_acc_128B :
-Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc_128B">;
+Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc_128B", [ImmArg<3>]>;
 
 def int_hexagon_V6_vnavgw :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vnavgw">;
@@ -4914,10 +4936,10 @@ def int_hexagon_V6_vsubhsat_128B :
 Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsubhsat_128B">;
 
 def int_hexagon_V6_vrmpyubi_acc :
-Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc">;
+Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc", [ImmArg<3>]>;
 
 def int_hexagon_V6_vrmpyubi_acc_128B :
-Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc_128B">;
+Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc_128B", [ImmArg<3>]>;
 
 def int_hexagon_V6_vabsw :
 Hexagon_v16i32_v16i32_Intrinsic<"HEXAGON_V6_vabsw">;
@@ -5094,10 +5116,10 @@ def int_hexagon_V6_vmpybv_acc_128B :
 Hexagon_v64i32_v64i32v32i32v32i32_Intrinsic<"HEXAGON_V6_vmpybv_acc_128B">;
 
 def int_hexagon_V6_vrsadubi :
-Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi">;
+Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi", [ImmArg<2>]>;
 
 def int_hexagon_V6_vrsadubi_128B :
-Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_128B">;
+Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_128B", [ImmArg<2>]>;
 
 def int_hexagon_V6_vdmpyhb_dv_acc :
 Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vdmpyhb_dv_acc">;
@@ -5376,10 +5398,10 @@ def int_hexagon_V6_vaddbnq_128B :
 Hexagon_v32i32_v1024i1v32i32v32i32_Intrinsic<"HEXAGON_V6_vaddbnq_128B">;
 
 def int_hexagon_V6_vlalignbi :
-Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlalignbi">;
+Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlalignbi", [ImmArg<2>]>;
 
 def int_hexagon_V6_vlalignbi_128B :
-Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlalignbi_128B">;
+Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlalignbi_128B", [ImmArg<2>]>;
 
 def int_hexagon_V6_vsatwh :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vsatwh">;
@@ -5442,10 +5464,10 @@ def int_hexagon_V6_veqh_and_128B :
 Hexagon_v1024i1_v1024i1v32i32v32i32_Intrinsic<"HEXAGON_V6_veqh_and_128B">;
 
 def int_hexagon_V6_valignbi :
-Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_valignbi">;
+Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_valignbi", [ImmArg<2>]>;
 
 def int_hexagon_V6_valignbi_128B :
-Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_valignbi_128B">;
+Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_valignbi_128B", [ImmArg<2>]>;
 
 def int_hexagon_V6_vaddwsat :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vaddwsat">;
@@ -5688,10 +5710,10 @@ def int_hexagon_V6_vsubh_128B :
 Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsubh_128B">;
 
 def int_hexagon_V6_vrmpyubi :
-Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi">;
+Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi", [ImmArg<2>]>;
 
 def int_hexagon_V6_vrmpyubi_128B :
-Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_128B">;
+Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_128B", [ImmArg<2>]>;
 
 def int_hexagon_V6_vminw :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vminw">;
@@ -5754,10 +5776,10 @@ def int_hexagon_V6_vsubuhw_128B :
 Hexagon_v64i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsubuhw_128B">;
 
 def int_hexagon_V6_vrmpybusi_acc :
-Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc">;
+Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc", [ImmArg<3>]>;
 
 def int_hexagon_V6_vrmpybusi_acc_128B :
-Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc_128B">;
+Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc_128B", [ImmArg<3>]>;
 
 def int_hexagon_V6_vasrw :
 Hexagon_v16i32_v16i32i32_Intrinsic<"HEXAGON_V6_vasrw">;
@@ -5882,10 +5904,10 @@ def int_hexagon_V6_vlsrb_128B :
 Hexagon_v32i32_v32i32i32_Intrinsic<"HEXAGON_V6_vlsrb_128B">;
 
 def int_hexagon_V6_vlutvwhi :
-Hexagon_v32i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi">;
+Hexagon_v32i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi", [ImmArg<2>]>;
 
 def int_hexagon_V6_vlutvwhi_128B :
-Hexagon_v64i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi_128B">;
+Hexagon_v64i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi_128B", [ImmArg<2>]>;
 
 def int_hexagon_V6_vaddububb_sat :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vaddububb_sat">;
@@ -5906,10 +5928,10 @@ def int_hexagon_V6_ldtp0_128B :
 Hexagon_v32i32_i32i32_Intrinsic<"HEXAGON_V6_ldtp0_128B">;
 
 def int_hexagon_V6_vlutvvb_oracci :
-Hexagon_v16i32_v16i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci">;
+Hexagon_v16i32_v16i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci", [ImmArg<3>]>;
 
 def int_hexagon_V6_vlutvvb_oracci_128B :
-Hexagon_v32i32_v32i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci_128B">;
+Hexagon_v32i32_v32i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci_128B", [ImmArg<3>]>;
 
 def int_hexagon_V6_vsubuwsat_dv :
 Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsubuwsat_dv">;
@@ -6044,10 +6066,10 @@ def int_hexagon_V6_vasrwuhrndsat_128B :
 Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vasrwuhrndsat_128B">;
 
 def int_hexagon_V6_vlutvvbi :
-Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi">;
+Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi", [ImmArg<2>]>;
 
 def int_hexagon_V6_vlutvvbi_128B :
-Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi_128B">;
+Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi_128B", [ImmArg<2>]>;
 
 def int_hexagon_V6_vsubuwsat :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vsubuwsat">;
@@ -6140,10 +6162,10 @@ def int_hexagon_V6_ldcnp0_128B :
 Hexagon_v32i32_i32i32_Intrinsic<"HEXAGON_V6_ldcnp0_128B">;
 
 def int_hexagon_V6_vlutvwh_oracci :
-Hexagon_v32i32_v32i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci">;
+Hexagon_v32i32_v32i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci", [ImmArg<3>]>;
 
 def int_hexagon_V6_vlutvwh_oracci_128B :
-Hexagon_v64i32_v64i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci_128B">;
+Hexagon_v64i32_v64i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci_128B", [ImmArg<3>]>;
 
 def int_hexagon_V6_vsubbsat :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vsubbsat">;

@@ -193,6 +193,8 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("Origin", NSymbolOrigin->Origin);
     IO.mapOptional("Flags", NSymbolFlag->Flag);
     IO.mapOptional("Signature", Sym.Signature);
+    IO.mapOptional("TemplateSpecializationArgs",
+                   Sym.TemplateSpecializationArgs);
     IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);
     IO.mapOptional("Documentation", Sym.Documentation);
     IO.mapOptional("ReturnType", Sym.ReturnType);

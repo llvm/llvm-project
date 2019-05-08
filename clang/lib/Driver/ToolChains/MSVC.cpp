@@ -488,15 +488,25 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // their own link.exe which may come first.
     linkPath = FindVisualStudioExecutable(TC, "link.exe");
 
-    if (!TC.FoundMSVCInstall() && !llvm::sys::fs::can_execute(linkPath))
-      C.getDriver().Diag(clang::diag::warn_drv_msvc_not_found);
+    if (!TC.FoundMSVCInstall() && !llvm::sys::fs::can_execute(linkPath)) {
+      llvm::SmallString<128> ClPath;
+      ClPath = TC.GetProgramPath("cl.exe");
+      if (llvm::sys::fs::can_execute(ClPath)) {
+        linkPath = llvm::sys::path::parent_path(ClPath);
+        llvm::sys::path::append(linkPath, "link.exe");
+        if (!llvm::sys::fs::can_execute(linkPath))
+          C.getDriver().Diag(clang::diag::warn_drv_msvc_not_found);
+      } else {
+        C.getDriver().Diag(clang::diag::warn_drv_msvc_not_found);
+      }
+    }
 
 #ifdef _WIN32
     // When cross-compiling with VS2017 or newer, link.exe expects to have
     // its containing bin directory at the top of PATH, followed by the
     // native target bin directory.
     // e.g. when compiling for x86 on an x64 host, PATH should start with:
-    // /bin/HostX64/x86;/bin/HostX64/x64
+    // /bin/Hostx64/x86;/bin/Hostx64/x64
     // This doesn't attempt to handle ToolsetLayout::DevDivInternal.
     if (TC.getIsVS2017OrNewer() &&
         llvm::Triple(llvm::sys::getProcessTriple()).getArch() != TC.getArch()) {
@@ -838,7 +848,7 @@ MSVCToolChain::getSubDirectoryPath(SubDirectoryType Type,
     if (VSLayout == ToolsetLayout::VS2017OrNewer) {
       const bool HostIsX64 =
           llvm::Triple(llvm::sys::getProcessTriple()).isArch64Bit();
-      const char *const HostName = HostIsX64 ? "HostX64" : "HostX86";
+      const char *const HostName = HostIsX64 ? "Hostx64" : "Hostx86";
       llvm::sys::path::append(Path, "bin", HostName, SubdirName);
     } else { // OlderVS or DevDivInternal
       llvm::sys::path::append(Path, "bin", SubdirName);
@@ -1317,6 +1327,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
 SanitizerMask MSVCToolChain::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res &= ~SanitizerKind::CFIMFCall;

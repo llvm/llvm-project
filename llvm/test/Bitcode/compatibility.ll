@@ -1681,6 +1681,10 @@ define i8** @constexpr() {
   ret i8** getelementptr inbounds ({ [4 x i8*], [4 x i8*] }, { [4 x i8*], [4 x i8*] }* null, i32 0, inrange i32 1, i32 2)
 }
 
+; immarg attribute
+declare void @llvm.test.immarg.intrinsic(i32 immarg)
+; CHECK: declare void @llvm.test.immarg.intrinsic(i32 immarg)
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }

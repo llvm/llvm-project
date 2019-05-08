@@ -41,16 +41,15 @@ void test_struct(struct X x, struct Y y) {
 
 double *f(int) __attribute__((overloadable)); // expected-error{{conflicting types for 'f'}}
 
-double promote(float) __attribute__((__overloadable__)); // expected-note {{candidate}}
-double promote(double) __attribute__((__overloadable__)); // expected-note {{candidate}}
-long double promote(long double) __attribute__((__overloadable__)); // expected-note {{candidate}}
+double promote(float) __attribute__((__overloadable__));
+double promote(double) __attribute__((__overloadable__));
+long double promote(long double) __attribute__((__overloadable__));
 
-void promote(...) __attribute__((__overloadable__, __unavailable__)); // \
-    // expected-note{{candidate function}}
+void promote(...) __attribute__((__overloadable__, __unavailable__)); // expected-note {{marked unavailable here}}
 
 void test_promote(short* sp) {
   promote(1.0);
-  promote(sp); // expected-error{{call to unavailable function 'promote'}}
+  promote(sp); // expected-error{{'promote' is unavailable}}
 }
 
 // PR6600

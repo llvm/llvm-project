@@ -1,0 +1,11 @@
+# RUN: obj2yaml %S/Inputs/aix_xcoff.o | FileCheck %s
+# Test that we can parse the XCOFF object file correctly.
+# CHECK: --- !XCOFF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT: MagicNumber:     0x01DF
+# CHECK-NEXT: NumberOfSections: 2
+# CHECK-NEXT: CreationTime:    1548692020
+# CHECK-NEXT: OffsetToSymbolTable: 0x00000108
+# CHECK-NEXT: EntriesInSymbolTable: 18
+# CHECK-NEXT: AuxiliaryHeaderSize: 0
+# CHECK-NEXT: Flags:           0x0000

@@ -11,13 +11,6 @@
 
 #include "polly/CodeGen/IRBuilder.h"
 
-namespace llvm {
-class Function;
-class Module;
-class Value;
-class Instruction;
-} // namespace llvm
-
 namespace polly {
 
 class PerfMonitor {

@@ -684,6 +684,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(uwtable);
   KEYWORD(writeonly);
   KEYWORD(zeroext);
+  KEYWORD(immarg);
 
   KEYWORD(type);
   KEYWORD(opaque);
@@ -1047,7 +1048,17 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
   for (; isdigit(static_cast<unsigned char>(CurPtr[0])); ++CurPtr)
     /*empty*/;
 
-  // Check to see if this really is a label afterall, e.g. "-1:".
+  // Check if this is a fully-numeric label:
+  if (isdigit(TokStart[0]) && CurPtr[0] == ':') {
+    uint64_t Val = atoull(TokStart, CurPtr);
+    ++CurPtr; // Skip the colon.
+    if ((unsigned)Val != Val)
+      Error("invalid value number (too large)!");
+    UIntVal = unsigned(Val);
+    return lltok::LabelID;
+  }
+
+  // Check to see if this really is a string label, e.g. "-1:".
   if (isLabelChar(CurPtr[0]) || CurPtr[0] == ':') {
     if (const char *End = isLabelTail(CurPtr)) {
       StrVal.assign(TokStart, End-1);

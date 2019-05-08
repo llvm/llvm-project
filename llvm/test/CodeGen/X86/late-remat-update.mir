@@ -79,21 +79,21 @@ body:             |
   
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !3
     CMP32ri8 %0, 2, implicit-def $eflags
-    JE_1 %bb.6, implicit killed $eflags
+    JCC_1 %bb.6, 4, implicit killed $eflags
     JMP_1 %bb.2
   
   bb.2.do.body:
     successors: %bb.5(0x19999999), %bb.3(0x66666667)
   
     CMP32ri8 %0, 1, implicit-def $eflags
-    JE_1 %bb.5, implicit killed $eflags
+    JCC_1 %bb.5, 4, implicit killed $eflags
     JMP_1 %bb.3
   
   bb.3.do.body:
     successors: %bb.4(0x20000000), %bb.1(0x60000000)
   
     TEST32rr %0, %0, implicit-def $eflags
-    JNE_1 %bb.1, implicit killed $eflags
+    JCC_1 %bb.1, 5, implicit killed $eflags
     JMP_1 %bb.4
   
   bb.4.sw.bb:

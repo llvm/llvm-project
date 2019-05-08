@@ -16,15 +16,13 @@
 #include <utility>
 #include <vector>
 
-//----------------------------------------------------------------------
-/// @class JSONGenerator JSONGenerator.h
+/// \class JSONGenerator JSONGenerator.h
 /// A class which can construct structured data for the sole purpose
 /// of printing it in JSON format.
 ///
 /// A stripped down version of lldb's StructuredData objects which are much
 /// general purpose.  This variant is intended only for assembling information
 /// and printing it as a JSON string.
-//----------------------------------------------------------------------
 
 class JSONGenerator {
 public:

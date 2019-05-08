@@ -25,16 +25,12 @@ bool WatchpointOptions::NullCallback(void *baton,
   return true;
 }
 
-//----------------------------------------------------------------------
 // WatchpointOptions constructor
-//----------------------------------------------------------------------
 WatchpointOptions::WatchpointOptions()
     : m_callback(WatchpointOptions::NullCallback), m_callback_baton_sp(),
       m_callback_is_synchronous(false), m_thread_spec_up() {}
 
-//----------------------------------------------------------------------
 // WatchpointOptions copy constructor
-//----------------------------------------------------------------------
 WatchpointOptions::WatchpointOptions(const WatchpointOptions &rhs)
     : m_callback(rhs.m_callback), m_callback_baton_sp(rhs.m_callback_baton_sp),
       m_callback_is_synchronous(rhs.m_callback_is_synchronous),
@@ -43,9 +39,7 @@ WatchpointOptions::WatchpointOptions(const WatchpointOptions &rhs)
     m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
 }
 
-//----------------------------------------------------------------------
 // WatchpointOptions assignment operator
-//----------------------------------------------------------------------
 const WatchpointOptions &WatchpointOptions::
 operator=(const WatchpointOptions &rhs) {
   m_callback = rhs.m_callback;
@@ -70,14 +64,10 @@ WatchpointOptions::CopyOptionsNoCallback(WatchpointOptions &orig) {
   return ret_val;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 WatchpointOptions::~WatchpointOptions() = default;
 
-//------------------------------------------------------------------
 // Callbacks
-//------------------------------------------------------------------
 void WatchpointOptions::SetCallback(WatchpointHitCallback callback,
                                     const BatonSP &callback_baton_sp,
                                     bool callback_is_synchronous) {

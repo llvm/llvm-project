@@ -58,7 +58,6 @@ public:
   MCSymbol *getSym() const { return RangeSym; }
   const DwarfCompileUnit &getCU() const { return *CU; }
   const SmallVectorImpl<RangeSpan> &getRanges() const { return Ranges; }
-  void addRange(RangeSpan Range) { Ranges.push_back(Range); }
 };
 
 class DwarfFile {
@@ -147,7 +146,7 @@ public:
   void emitUnits(bool UseOffsets);
 
   /// Emit the given unit to its section.
-  void emitUnit(DwarfUnit *U, bool UseOffsets);
+  void emitUnit(DwarfUnit *TheU, bool UseOffsets);
 
   /// Emit a set of abbreviations to the specific section.
   void emitAbbrevs(MCSection *);

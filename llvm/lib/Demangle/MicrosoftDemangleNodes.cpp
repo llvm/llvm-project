@@ -337,8 +337,9 @@ void IntrinsicFunctionIdentifierNode::output(OutputStream &OS,
                             "`vector vbase copy constructor iterator'");
     OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, ManVectorVbaseCopyCtorIter,
                             "`managed vector vbase copy constructor iterator'");
-    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, CoAwait, "co_await");
-    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, Spaceship, "operator <=>");
+    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, CoAwait,
+                            "operator co_await");
+    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, Spaceship, "operator<=>");
   case IntrinsicFunctionKind::MaxIntrinsic:
   case IntrinsicFunctionKind::None:
     break;

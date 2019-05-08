@@ -35,6 +35,9 @@ class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
 class PassManagerBuilder;
+struct PerFunctionMIParsingState;
+class SMDiagnostic;
+class SMRange;
 class Target;
 class TargetIntrinsicInfo;
 class TargetIRAnalysis;
@@ -48,6 +51,10 @@ namespace legacy {
 class PassManagerBase;
 }
 using legacy::PassManagerBase;
+
+namespace yaml {
+struct MachineFunctionInfo;
+}
 
 //===----------------------------------------------------------------------===//
 ///
@@ -112,6 +119,27 @@ public:
   }
   virtual TargetLoweringObjectFile *getObjFileLowering() const {
     return nullptr;
+  }
+
+  /// Allocate and return a default initialized instance of the YAML
+  /// representation for the MachineFunctionInfo.
+  virtual yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const {
+    return nullptr;
+  }
+
+  /// Allocate and initialize an instance of the YAML representation of the
+  /// MachineFunctionInfo.
+  virtual yaml::MachineFunctionInfo *
+  convertFuncInfoToYAML(const MachineFunction &MF) const {
+    return nullptr;
+  }
+
+  /// Parse out the target's MachineFunctionInfo from the YAML reprsentation.
+  virtual bool parseMachineFunctionInfo(const yaml::MachineFunctionInfo &,
+                                        PerFunctionMIParsingState &PFS,
+                                        SMDiagnostic &Error,
+                                        SMRange &SourceRange) const {
+    return false;
   }
 
   /// This method returns a pointer to the specified type of

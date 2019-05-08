@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple -x86_64-unknown-unknown -filetype obj -o - %s | llvm-readobj -s -sd \
+# RUN: llvm-mc -triple -x86_64-unknown-unknown -filetype obj -o - %s | llvm-readobj -S --sd \
 # RUN:   | FileCheck %s
 
 	.text

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-readobj -mips-abi-flags %t | FileCheck -check-prefix=OBJ %s
+# RUN: llvm-readobj --mips-abi-flags %t | FileCheck -check-prefix=OBJ %s
 # RUN: obj2yaml %t | FileCheck -check-prefix=YAML %s
 
 # OBJ:      MIPS ABI Flags {
@@ -59,7 +59,6 @@ Sections:
   Flags2:       0x0
 
 Symbols:
-  Local:
-    - Name:    .MIPS.abiflags
-      Type:    STT_SECTION
-      Section: .MIPS.abiflags
+  - Name:    .MIPS.abiflags
+    Type:    STT_SECTION
+    Section: .MIPS.abiflags

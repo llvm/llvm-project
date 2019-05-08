@@ -1,0 +1,26 @@
+# UNSUPPORTED: system-darwin
+# REQUIRES: native && target-x86_64
+# RUN: %clangxx -fomit-frame-pointer %p/Inputs/x86-64-gp-write.cpp -o %t
+# RUN: %lldb -b -s %s %t | FileCheck %s
+process launch
+
+register write rax 0x0102030405060708
+register write rbx 0x1112131415161718
+register write rcx 0x2122232425262728
+register write rdx 0x3132333435363738
+register write rsp 0x4142434445464748
+register write rbp 0x5152535455565758
+register write rsi 0x6162636465666768
+register write rdi 0x7172737475767778
+
+process continue
+# CHECK-DAG: rax = 0x0102030405060708
+# CHECK-DAG: rbx = 0x1112131415161718
+# CHECK-DAG: rcx = 0x2122232425262728
+# CHECK-DAG: rdx = 0x3132333435363738
+# CHECK-DAG: rsp = 0x4142434445464748
+# CHECK-DAG: rbp = 0x5152535455565758
+# CHECK-DAG: rsi = 0x6162636465666768
+# CHECK-DAG: rdi = 0x7172737475767778
+
+# CHECK: Process {{[0-9]+}} exited with status = 0

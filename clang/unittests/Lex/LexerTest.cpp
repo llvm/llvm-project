@@ -11,7 +11,6 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -48,12 +47,11 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    MemoryBufferCache PCMCache;
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, LangOpts, Target.get());
     std::unique_ptr<Preprocessor> PP = llvm::make_unique<Preprocessor>(
         std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
-        PCMCache, HeaderInfo, ModLoader,
+        HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
     PP->Initialize(*Target);
@@ -513,6 +511,25 @@ TEST_F(LexerTest, StringizingRasString) {
   EXPECT_EQ(String4, R"(\\\n    \\n\n    \\\\n\n    \\\\)");
   EXPECT_EQ(String5, R"(a\\\n\n\n    \\\\b)");
   EXPECT_EQ(String6, R"(a\\\n\n\n    \\\\b)");
+}
+
+TEST_F(LexerTest, CharRangeOffByOne) {
+  std::vector<Token> toks = Lex(R"(#define MOO 1
+    void foo() { MOO; })");
+  const Token &moo = toks[5];
+
+  EXPECT_EQ(getSourceText(moo, moo), "MOO");
+
+  SourceRange R{moo.getLocation(), moo.getLocation()};
+
+  EXPECT_TRUE(
+      Lexer::isAtStartOfMacroExpansion(R.getBegin(), SourceMgr, LangOpts));
+  EXPECT_TRUE(
+      Lexer::isAtEndOfMacroExpansion(R.getEnd(), SourceMgr, LangOpts));
+
+  CharSourceRange CR = Lexer::getAsCharRange(R, SourceMgr, LangOpts);
+
+  EXPECT_EQ(Lexer::getSourceText(CR, SourceMgr, LangOpts), "MOO"); // Was "MO".
 }
 
 } // anonymous namespace

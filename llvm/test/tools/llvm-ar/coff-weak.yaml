@@ -2,7 +2,7 @@
 #
 # RUN: rm -f %t.ar
 # RUN: llvm-ar crs %t.a %t.obj
-# RUN: llvm-nm -print-armap %t.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s
 
 # CHECK: Archive map
 # CHECK-NEXT: WeakSearchAlias in coff-weak.yaml.tmp.obj

@@ -2,7 +2,7 @@
 
 # GCN-LABEL: name: kill_all
 # GCN:      bb.0:
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 name: kill_all
 tracksRegLiveness: true
 registers:
@@ -17,16 +17,16 @@ body:             |
     %0 = IMPLICIT_DEF
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
     %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: load_without_memoperand
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: S_ENDPGM 0
 name: load_without_memoperand
 tracksRegLiveness: true
 registers:
@@ -41,16 +41,16 @@ body:             |
     %0 = IMPLICIT_DEF
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: load_volatile
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4)
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4)
+# GCN-NEXT: S_ENDPGM 0
 name: load_volatile
 tracksRegLiveness: true
 registers:
@@ -65,16 +65,16 @@ body:             |
     %0 = IMPLICIT_DEF
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4)
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4)
     %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: store
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-# GCN-NEXT: FLAT_STORE_DWORD %0, %1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: FLAT_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+# GCN-NEXT: S_ENDPGM 0
 name: store
 tracksRegLiveness: true
 registers:
@@ -86,14 +86,14 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    FLAT_STORE_DWORD %0, %1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
-    S_ENDPGM
+    FLAT_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: barrier
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
 # GCN-NEXT: S_BARRIER
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 name: barrier
 tracksRegLiveness: true
 body:             |
@@ -101,27 +101,28 @@ body:             |
     $vcc = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     S_BARRIER
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: call
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
 # GCN-NEXT: $sgpr4_sgpr5 = S_SWAPPC_B64 $sgpr2_sgpr3
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 name: call
 tracksRegLiveness: true
 body:             |
   bb.0:
+    liveins: $sgpr2_sgpr3
     $vcc = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     $sgpr4_sgpr5 = S_SWAPPC_B64 $sgpr2_sgpr3
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: exp
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
 # GCN-NEXT: EXP 32, undef %0:vgpr_32, undef %1:vgpr_32, %2, undef %3:vgpr_32, 0, 0, 15, implicit $exec
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 name: exp
 tracksRegLiveness: true
 registers:
@@ -135,7 +136,7 @@ body:             |
     %2 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     EXP 32, undef %0, undef %1, killed %2, undef %3, 0, 0, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: return_to_epilog
@@ -156,7 +157,7 @@ body:             |
 # GCN-NEXT:   successors: %bb.1
 # GCN-NOT:  S_OR_B64
 # GCN:      bb.1:
-# GCN-NEXT:   S_ENDPGM
+# GCN-NEXT:   S_ENDPGM 0
 name: split_block
 tracksRegLiveness: true
 registers:
@@ -174,7 +175,7 @@ body:             |
     %2 = IMPLICIT_DEF
     %1 = V_ADD_F32_e64 0, killed %0, 0, 1, 0, 0, implicit $exec
     %3 = S_ADD_U32 %2, 1, implicit-def $scc
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: split_block_empty_block
@@ -183,7 +184,7 @@ body:             |
 # GCN-NOT:  S_OR_B64
 # GCN:      bb.1:
 # GCN:      bb.2:
-# GCN-NEXT:   S_ENDPGM
+# GCN-NEXT:   S_ENDPGM 0
 name: split_block_empty_block
 tracksRegLiveness: true
 body:             |
@@ -194,7 +195,7 @@ body:             |
   bb.1:
 
   bb.2:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: split_block_uncond_branch
@@ -203,7 +204,7 @@ body:             |
 # GCN:        S_BRANCH %bb.1
 # GCN-NOT:  S_OR_B64
 # GCN:      bb.1:
-# GCN-NEXT:   S_ENDPGM
+# GCN-NEXT:   S_ENDPGM 0
 name: split_block_uncond_branch
 tracksRegLiveness: true
 body:             |
@@ -213,7 +214,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: split_block_cond_branch
@@ -223,7 +224,7 @@ body:             |
 # GCN:        S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
 # GCN:      bb.1:
 # GCN:      bb.2:
-# GCN-NEXT:   S_ENDPGM
+# GCN-NEXT:   S_ENDPGM 0
 name: split_block_cond_branch
 tracksRegLiveness: true
 body:             |
@@ -235,7 +236,7 @@ body:             |
   bb.1:
 
   bb.2:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: two_preds_both_dead
@@ -248,7 +249,7 @@ body:             |
 # GCN-NOT:    S_AND
 # GCN:        S_BRANCH %bb.2
 # GCN:      bb.2:
-# GCN-NEXT:   S_ENDPGM
+# GCN-NEXT:   S_ENDPGM 0
 name: two_preds_both_dead
 tracksRegLiveness: true
 body:             |
@@ -263,7 +264,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: two_preds_one_dead
@@ -277,7 +278,7 @@ body:             |
 # GCN-NOT:    S_AND
 # GCN:        S_BRANCH %bb.2
 # GCN:      bb.2:
-# GCN-NEXT:   S_ENDPGM
+# GCN-NEXT:   S_ENDPGM 0
 name: two_preds_one_dead
 tracksRegLiveness: true
 body:             |
@@ -293,22 +294,22 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
-# GCN-LABEL: name: implicit_use_on_s_endpgm
+# GCN-LABEL: name: implicit_use_on_S_ENDPGM 0
 # GCN: V_ADD_I32
 # GCN: COPY
 # GCN: V_ADDC_U32
-# GCN: S_ENDPGM implicit %3
-name: implicit_use_on_s_endpgm
+# GCN: S_ENDPGM 0, implicit %3
+name: implicit_use_on_S_ENDPGM 0
 tracksRegLiveness: true
 
 body:             |
   bb.0:
     dead %0:vgpr_32 = V_ADD_I32_e32 12345, undef %1:vgpr_32, implicit-def $vcc, implicit $exec
     %2:sreg_64_xexec = COPY $vcc
-    %3:vgpr_32, dead %4:sreg_64_xexec = V_ADDC_U32_e64 undef %5:vgpr_32, undef %6:vgpr_32, %2, implicit $exec
-    S_ENDPGM implicit %3
+    %3:vgpr_32, dead %4:sreg_64_xexec = V_ADDC_U32_e64 undef %5:vgpr_32, undef %6:vgpr_32, %2, 0, implicit $exec
+    S_ENDPGM 0, implicit %3
 
 ...

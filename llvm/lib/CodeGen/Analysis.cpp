@@ -82,6 +82,7 @@ unsigned llvm::ComputeLinearIndex(Type *Ty,
 ///
 void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
+                           SmallVectorImpl<EVT> *MemVTs,
                            SmallVectorImpl<uint64_t> *Offsets,
                            uint64_t StartingOffset) {
   // Given a struct type, recursively traverse the elements.
@@ -91,7 +92,7 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                       EI = EB,
                                       EE = STy->element_end();
          EI != EE; ++EI)
-      ComputeValueVTs(TLI, DL, *EI, ValueVTs, Offsets,
+      ComputeValueVTs(TLI, DL, *EI, ValueVTs, MemVTs, Offsets,
                       StartingOffset + SL->getElementOffset(EI - EB));
     return;
   }
@@ -100,7 +101,7 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     Type *EltTy = ATy->getElementType();
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
-      ComputeValueVTs(TLI, DL, EltTy, ValueVTs, Offsets,
+      ComputeValueVTs(TLI, DL, EltTy, ValueVTs, MemVTs, Offsets,
                       StartingOffset + i * EltSize);
     return;
   }
@@ -109,8 +110,48 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     return;
   // Base case: we can get an EVT for this LLVM IR type.
   ValueVTs.push_back(TLI.getValueType(DL, Ty));
+  if (MemVTs)
+    MemVTs->push_back(TLI.getMemValueType(DL, Ty));
   if (Offsets)
     Offsets->push_back(StartingOffset);
+}
+
+void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
+                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
+                           SmallVectorImpl<uint64_t> *Offsets,
+                           uint64_t StartingOffset) {
+  return ComputeValueVTs(TLI, DL, Ty, ValueVTs, /*MemVTs=*/nullptr, Offsets,
+                         StartingOffset);
+}
+
+void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
+                            SmallVectorImpl<LLT> &ValueTys,
+                            SmallVectorImpl<uint64_t> *Offsets,
+                            uint64_t StartingOffset) {
+  // Given a struct type, recursively traverse the elements.
+  if (StructType *STy = dyn_cast<StructType>(&Ty)) {
+    const StructLayout *SL = DL.getStructLayout(STy);
+    for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I)
+      computeValueLLTs(DL, *STy->getElementType(I), ValueTys, Offsets,
+                       StartingOffset + SL->getElementOffset(I));
+    return;
+  }
+  // Given an array type, recursively traverse the elements.
+  if (ArrayType *ATy = dyn_cast<ArrayType>(&Ty)) {
+    Type *EltTy = ATy->getElementType();
+    uint64_t EltSize = DL.getTypeAllocSize(EltTy);
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
+      computeValueLLTs(DL, *EltTy, ValueTys, Offsets,
+                       StartingOffset + i * EltSize);
+    return;
+  }
+  // Interpret void as zero return values.
+  if (Ty.isVoidTy())
+    return;
+  // Base case: we can get an LLT for this LLVM IR type.
+  ValueTys.push_back(getLLTForType(Ty, DL));
+  if (Offsets != nullptr)
+    Offsets->push_back(StartingOffset * 8);
 }
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.

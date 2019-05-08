@@ -10,7 +10,30 @@
 ; CHECK:  DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]	({{.*}}
 ; CHECK-NEXT:  [0x{{.*}}, 0x{{.*}}): DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4
-; CHECK-NEXT:  [0x{{.*}}, 0x{{.*}}): DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4, DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4
+; CHECK-NEXT:  [0x{{.*}}, 0x{{.*}}): DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4
+
+; FIXME: The second location list entry should not be emitted.
+;
+; The input to LiveDebugValues is:
+;
+; bb.0.entry:
+;   [...]
+;   Bcc %bb.2, 1, killed $cpsr, debug-location !10; simd.swift:5900:12
+; bb.1:
+;   [...]
+;   DBG_VALUE $q8, $noreg, !"self", !DIExpression(DW_OP_LLVM_fragment, 0, 96)
+;   B %bb.3
+; bb.2.select.false:
+;   [...]
+;   DBG_VALUE $q8, $noreg, !"self", !DIExpression(DW_OP_LLVM_fragment, 0, 96)
+; bb.3.select.end:
+;   [...]
+;
+; The two DBG_VALUEs in the blocks describe different fragments of the
+; variable. However, LiveDebugValues is not aware of fragments, so it will
+; incorrectly insert a copy of the first DBG_VALUE in bb.3.select.end, since
+; the debug values in its predecessor blocks are described by the same
+; register.
 
 source_filename = "simd.ll"
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"

@@ -1665,47 +1665,28 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 define <4 x float> @floor_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x float> %w) nounwind {
 ; SSE41-LABEL: floor_mask_ss_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps %xmm0, %xmm3
-; SSE41-NEXT:    cmpeqps %xmm1, %xmm3
-; SSE41-NEXT:    pextrb $0, %xmm3, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    je LBB60_2
-; SSE41-NEXT:  ## %bb.1:
-; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
-; SSE41-NEXT:  LBB60_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
-; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    roundss $9, %xmm0, %xmm3
+; SSE41-NEXT:    cmpeqss %xmm1, %xmm0
+; SSE41-NEXT:    andps %xmm0, %xmm3
+; SSE41-NEXT:    andnps %xmm2, %xmm0
+; SSE41-NEXT:    orps %xmm3, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_mask_ss_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm3
-; AVX-NEXT:    vpextrb $0, %xmm3, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    je LBB60_2
-; AVX-NEXT:  ## %bb.1:
-; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm2
-; AVX-NEXT:  LBB60_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm3
+; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm3, %xmm2, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: floor_mask_ss_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: floor_mask_ss_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: floor_mask_ss_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
   %mask = extractelement <4 x i1> %mask1, i64 0
   %s = extractelement <4 x float> %x, i64 0
@@ -1719,50 +1700,25 @@ define <4 x float> @floor_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x flo
 define <4 x float> @floor_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: floor_maskz_ss_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps %xmm0, %xmm2
-; SSE41-NEXT:    cmpeqps %xmm1, %xmm2
-; SSE41-NEXT:    pextrb $0, %xmm2, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    jne LBB61_1
-; SSE41-NEXT:  ## %bb.2:
-; SSE41-NEXT:    xorps %xmm0, %xmm0
-; SSE41-NEXT:    jmp LBB61_3
-; SSE41-NEXT:  LBB61_1:
-; SSE41-NEXT:    roundss $9, %xmm0, %xmm0
-; SSE41-NEXT:  LBB61_3:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
-; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
+; SSE41-NEXT:    cmpeqss %xmm1, %xmm0
+; SSE41-NEXT:    andps %xmm2, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_maskz_ss_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpextrb $0, %xmm2, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    jne LBB61_1
-; AVX-NEXT:  ## %bb.2:
-; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    retq
-; AVX-NEXT:  LBB61_1:
-; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: floor_maskz_ss_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: floor_maskz_ss_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: floor_maskz_ss_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
   %mask = extractelement <4 x i1> %mask1, i64 0
   %s = extractelement <4 x float> %x, i64 0
@@ -1775,47 +1731,28 @@ define <4 x float> @floor_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwin
 define <2 x double> @floor_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x double> %w) nounwind {
 ; SSE41-LABEL: floor_mask_sd_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movapd %xmm0, %xmm3
-; SSE41-NEXT:    cmpeqpd %xmm1, %xmm3
-; SSE41-NEXT:    pextrb $0, %xmm3, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    je LBB62_2
-; SSE41-NEXT:  ## %bb.1:
-; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
-; SSE41-NEXT:  LBB62_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
-; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    roundsd $9, %xmm0, %xmm3
+; SSE41-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE41-NEXT:    andpd %xmm0, %xmm3
+; SSE41-NEXT:    andnpd %xmm2, %xmm0
+; SSE41-NEXT:    orpd %xmm3, %xmm0
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_mask_sd_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm3
-; AVX-NEXT:    vpextrb $0, %xmm3, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    je LBB62_2
-; AVX-NEXT:  ## %bb.1:
-; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm2
-; AVX-NEXT:  LBB62_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm3
+; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, %xmm3, %xmm2, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: floor_mask_sd_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovapd %xmm2, %xmm0
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: floor_mask_sd_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512VL-NEXT:    vmovapd %xmm2, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: floor_mask_sd_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vmovapd %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
   %mask = extractelement <2 x i1> %mask1, i64 0
   %s = extractelement <2 x double> %x, i64 0
@@ -1829,50 +1766,25 @@ define <2 x double> @floor_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x 
 define <2 x double> @floor_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: floor_maskz_sd_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movapd %xmm0, %xmm2
-; SSE41-NEXT:    cmpeqpd %xmm1, %xmm2
-; SSE41-NEXT:    pextrb $0, %xmm2, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    jne LBB63_1
-; SSE41-NEXT:  ## %bb.2:
-; SSE41-NEXT:    xorpd %xmm0, %xmm0
-; SSE41-NEXT:    jmp LBB63_3
-; SSE41-NEXT:  LBB63_1:
-; SSE41-NEXT:    roundsd $9, %xmm0, %xmm0
-; SSE41-NEXT:  LBB63_3:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
+; SSE41-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE41-NEXT:    andpd %xmm2, %xmm0
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_maskz_sd_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpextrb $0, %xmm2, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    jne LBB63_1
-; AVX-NEXT:  ## %bb.2:
-; AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX-NEXT:    retq
-; AVX-NEXT:  LBB63_1:
-; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: floor_maskz_sd_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: floor_maskz_sd_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: floor_maskz_sd_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
   %mask = extractelement <2 x i1> %mask1, i64 0
   %s = extractelement <2 x double> %x, i64 0
@@ -2729,47 +2641,28 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 define <4 x float> @ceil_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x float> %w) nounwind {
 ; SSE41-LABEL: ceil_mask_ss_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps %xmm0, %xmm3
-; SSE41-NEXT:    cmpeqps %xmm1, %xmm3
-; SSE41-NEXT:    pextrb $0, %xmm3, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    je LBB86_2
-; SSE41-NEXT:  ## %bb.1:
-; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
-; SSE41-NEXT:  LBB86_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
-; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    roundss $10, %xmm0, %xmm3
+; SSE41-NEXT:    cmpeqss %xmm1, %xmm0
+; SSE41-NEXT:    andps %xmm0, %xmm3
+; SSE41-NEXT:    andnps %xmm2, %xmm0
+; SSE41-NEXT:    orps %xmm3, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_mask_ss_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm3
-; AVX-NEXT:    vpextrb $0, %xmm3, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    je LBB86_2
-; AVX-NEXT:  ## %bb.1:
-; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm2
-; AVX-NEXT:  LBB86_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm3
+; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm3, %xmm2, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: ceil_mask_ss_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: ceil_mask_ss_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: ceil_mask_ss_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
   %mask = extractelement <4 x i1> %mask1, i64 0
   %s = extractelement <4 x float> %x, i64 0
@@ -2783,50 +2676,25 @@ define <4 x float> @ceil_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x floa
 define <4 x float> @ceil_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: ceil_maskz_ss_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps %xmm0, %xmm2
-; SSE41-NEXT:    cmpeqps %xmm1, %xmm2
-; SSE41-NEXT:    pextrb $0, %xmm2, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    jne LBB87_1
-; SSE41-NEXT:  ## %bb.2:
-; SSE41-NEXT:    xorps %xmm0, %xmm0
-; SSE41-NEXT:    jmp LBB87_3
-; SSE41-NEXT:  LBB87_1:
-; SSE41-NEXT:    roundss $10, %xmm0, %xmm0
-; SSE41-NEXT:  LBB87_3:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
-; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
+; SSE41-NEXT:    cmpeqss %xmm1, %xmm0
+; SSE41-NEXT:    andps %xmm2, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_maskz_ss_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpextrb $0, %xmm2, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    jne LBB87_1
-; AVX-NEXT:  ## %bb.2:
-; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    retq
-; AVX-NEXT:  LBB87_1:
-; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: ceil_maskz_ss_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: ceil_maskz_ss_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: ceil_maskz_ss_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
   %mask = extractelement <4 x i1> %mask1, i64 0
   %s = extractelement <4 x float> %x, i64 0
@@ -2839,47 +2707,28 @@ define <4 x float> @ceil_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwind
 define <2 x double> @ceil_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x double> %w) nounwind {
 ; SSE41-LABEL: ceil_mask_sd_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movapd %xmm0, %xmm3
-; SSE41-NEXT:    cmpeqpd %xmm1, %xmm3
-; SSE41-NEXT:    pextrb $0, %xmm3, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    je LBB88_2
-; SSE41-NEXT:  ## %bb.1:
-; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
-; SSE41-NEXT:  LBB88_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
-; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    roundsd $10, %xmm0, %xmm3
+; SSE41-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE41-NEXT:    andpd %xmm0, %xmm3
+; SSE41-NEXT:    andnpd %xmm2, %xmm0
+; SSE41-NEXT:    orpd %xmm3, %xmm0
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_mask_sd_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm3
-; AVX-NEXT:    vpextrb $0, %xmm3, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    je LBB88_2
-; AVX-NEXT:  ## %bb.1:
-; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm2
-; AVX-NEXT:  LBB88_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm3
+; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, %xmm3, %xmm2, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: ceil_mask_sd_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovapd %xmm2, %xmm0
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: ceil_mask_sd_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512VL-NEXT:    vmovapd %xmm2, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: ceil_mask_sd_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vmovapd %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
   %mask = extractelement <2 x i1> %mask1, i64 0
   %s = extractelement <2 x double> %x, i64 0
@@ -2893,50 +2742,25 @@ define <2 x double> @ceil_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x d
 define <2 x double> @ceil_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: ceil_maskz_sd_mask8:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movapd %xmm0, %xmm2
-; SSE41-NEXT:    cmpeqpd %xmm1, %xmm2
-; SSE41-NEXT:    pextrb $0, %xmm2, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    jne LBB89_1
-; SSE41-NEXT:  ## %bb.2:
-; SSE41-NEXT:    xorpd %xmm0, %xmm0
-; SSE41-NEXT:    jmp LBB89_3
-; SSE41-NEXT:  LBB89_1:
-; SSE41-NEXT:    roundsd $10, %xmm0, %xmm0
-; SSE41-NEXT:  LBB89_3:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
+; SSE41-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE41-NEXT:    andpd %xmm2, %xmm0
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_maskz_sd_mask8:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpextrb $0, %xmm2, %eax
-; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    jne LBB89_1
-; AVX-NEXT:  ## %bb.2:
-; AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX-NEXT:    retq
-; AVX-NEXT:  LBB89_1:
-; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: ceil_maskz_sd_mask8:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: ceil_maskz_sd_mask8:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: ceil_maskz_sd_mask8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
   %mask = extractelement <2 x i1> %mask1, i64 0
   %s = extractelement <2 x double> %x, i64 0

@@ -72,6 +72,10 @@ public:
   // Iterators
   child_range children() { return child_range(&String, &String+1); }
 
+  const_child_range children() const {
+    return const_child_range(&String, &String + 1);
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ObjCStringLiteralClass;
   }
@@ -102,6 +106,10 @@ public:
   // Iterators
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const Stmt *T) {
@@ -138,6 +146,12 @@ public:
     return BoxingMethod;
   }
 
+  // Indicates whether this boxed expression can be emitted as a compile-time
+  // constant.
+  bool isExpressibleAsConstantInitializer() const {
+    return !BoxingMethod && SubExpr;
+  }
+
   SourceLocation getAtLoc() const { return Range.getBegin(); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
@@ -149,6 +163,10 @@ public:
 
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
+
+  const_child_range children() const {
+    return const_child_range(&SubExpr, &SubExpr + 1);
+  }
 
   using const_arg_iterator = ConstExprIterator;
 
@@ -226,6 +244,11 @@ public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(getElements()),
                        reinterpret_cast<Stmt **>(getElements()) + NumElements);
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<ObjCArrayLiteral *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const Stmt *T) {
@@ -368,6 +391,11 @@ public:
             NumElements * 2);
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<ObjCDictionaryLiteral *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ObjCDictionaryLiteralClass;
   }
@@ -413,6 +441,10 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ObjCEncodeExprClass;
   }
@@ -449,6 +481,10 @@ public:
   // Iterators
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const Stmt *T) {
@@ -495,6 +531,10 @@ public:
   // Iterators
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const Stmt *T) {
@@ -559,6 +599,10 @@ public:
 
   // Iterators
   child_range children() { return child_range(&Base, &Base+1); }
+
+  const_child_range children() const {
+    return const_child_range(&Base, &Base + 1);
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ObjCIvarRefExprClass;
@@ -751,6 +795,11 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
+  const_child_range children() const {
+    auto Children = const_cast<ObjCPropertyRefExpr *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ObjCPropertyRefExprClass;
   }
@@ -858,6 +907,10 @@ public:
 
   child_range children() {
     return child_range(SubExprs, SubExprs+END_EXPR);
+  }
+
+  const_child_range children() const {
+    return const_child_range(SubExprs, SubExprs + END_EXPR);
   }
 
   static bool classof(const Stmt *T) {
@@ -1402,6 +1455,8 @@ public:
   // Iterators
   child_range children();
 
+  const_child_range children() const;
+
   using arg_iterator = ExprIterator;
   using const_arg_iterator = ConstExprIterator;
 
@@ -1488,6 +1543,10 @@ public:
   // Iterators
   child_range children() { return child_range(&Base, &Base+1); }
 
+  const_child_range children() const {
+    return const_child_range(&Base, &Base + 1);
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ObjCIsaExprClass;
   }
@@ -1548,6 +1607,10 @@ public:
   bool shouldCopy() const { return ObjCIndirectCopyRestoreExprBits.ShouldCopy; }
 
   child_range children() { return child_range(&Operand, &Operand+1); }
+
+  const_child_range children() const {
+    return const_child_range(&Operand, &Operand + 1);
+  }
 
   // Source locations are determined by the subexpression.
   SourceLocation getBeginLoc() const LLVM_READONLY {
@@ -1659,6 +1722,10 @@ public:
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const Stmt *T) {

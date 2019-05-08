@@ -15,6 +15,7 @@
 #include "polly/Canonicalization.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"

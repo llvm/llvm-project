@@ -20,11 +20,13 @@ using namespace clang::tooling;
 using clang::tooling::Diagnostic;
 
 static DiagnosticMessage makeMessage(const std::string &Message, int FileOffset,
-                                     const std::string &FilePath) {
+                                     const std::string &FilePath,
+                                     const StringMap<Replacements> &Fix) {
   DiagnosticMessage DiagMessage;
   DiagMessage.Message = Message;
   DiagMessage.FileOffset = FileOffset;
   DiagMessage.FilePath = FilePath;
+  DiagMessage.Fix = Fix;
   return DiagMessage;
 }
 
@@ -32,9 +34,51 @@ static Diagnostic makeDiagnostic(StringRef DiagnosticName,
                                  const std::string &Message, int FileOffset,
                                  const std::string &FilePath,
                                  const StringMap<Replacements> &Fix) {
-  return Diagnostic(DiagnosticName, makeMessage(Message, FileOffset, FilePath),
-                    Fix, {}, Diagnostic::Warning, "path/to/build/directory");
+  return Diagnostic(DiagnosticName,
+                    makeMessage(Message, FileOffset, FilePath, Fix), {},
+                    Diagnostic::Warning, "path/to/build/directory");
 }
+
+static const char *YAMLContent =
+    "---\n"
+    "MainSourceFile:  'path/to/source.cpp'\n"
+    "Diagnostics:     \n"
+    "  - DiagnosticName:  'diagnostic#1\'\n"
+    "    DiagnosticMessage: \n"
+    "      Message:         'message #1'\n"
+    "      FilePath:        'path/to/source.cpp'\n"
+    "      FileOffset:      55\n"
+    "      Replacements:    \n"
+    "        - FilePath:        'path/to/source.cpp'\n"
+    "          Offset:          100\n"
+    "          Length:          12\n"
+    "          ReplacementText: 'replacement #1'\n"
+    "  - DiagnosticName:  'diagnostic#2'\n"
+    "    DiagnosticMessage: \n"
+    "      Message:         'message #2'\n"
+    "      FilePath:        'path/to/header.h'\n"
+    "      FileOffset:      60\n"
+    "      Replacements:    \n"
+    "        - FilePath:        'path/to/header.h'\n"
+    "          Offset:          62\n"
+    "          Length:          2\n"
+    "          ReplacementText: 'replacement #2'\n"
+    "  - DiagnosticName:  'diagnostic#3'\n"
+    "    DiagnosticMessage: \n"
+    "      Message:         'message #3'\n"
+    "      FilePath:        'path/to/source2.cpp'\n"
+    "      FileOffset:      72\n"
+    "      Replacements:    []\n"
+    "    Notes:           \n"
+    "      - Message:         Note1\n"
+    "        FilePath:        'path/to/note1.cpp'\n"
+    "        FileOffset:      88\n"
+    "        Replacements:    []\n"
+    "      - Message:         Note2\n"
+    "        FilePath:        'path/to/note2.cpp'\n"
+    "        FileOffset:      99\n"
+    "        Replacements:    []\n"
+    "...\n";
 
 TEST(DiagnosticsYamlTest, serializesDiagnostics) {
   TranslationUnitDiagnostics TUD;
@@ -55,9 +99,9 @@ TEST(DiagnosticsYamlTest, serializesDiagnostics) {
   TUD.Diagnostics.push_back(makeDiagnostic("diagnostic#3", "message #3", 72,
                                            "path/to/source2.cpp", {}));
   TUD.Diagnostics.back().Notes.push_back(
-      makeMessage("Note1", 88, "path/to/note1.cpp"));
+      makeMessage("Note1", 88, "path/to/note1.cpp", {}));
   TUD.Diagnostics.back().Notes.push_back(
-      makeMessage("Note2", 99, "path/to/note2.cpp"));
+      makeMessage("Note2", 99, "path/to/note2.cpp", {}));
 
   std::string YamlContent;
   raw_string_ostream YamlContentStream(YamlContent);
@@ -65,80 +109,12 @@ TEST(DiagnosticsYamlTest, serializesDiagnostics) {
   yaml::Output YAML(YamlContentStream);
   YAML << TUD;
 
-  EXPECT_EQ("---\n"
-            "MainSourceFile:  'path/to/source.cpp'\n"
-            "Diagnostics:     \n"
-            "  - DiagnosticName:  'diagnostic#1\'\n"
-            "    Message:         'message #1'\n"
-            "    FileOffset:      55\n"
-            "    FilePath:        'path/to/source.cpp'\n"
-            "    Replacements:    \n"
-            "      - FilePath:        'path/to/source.cpp'\n"
-            "        Offset:          100\n"
-            "        Length:          12\n"
-            "        ReplacementText: 'replacement #1'\n"
-            "  - DiagnosticName:  'diagnostic#2'\n"
-            "    Message:         'message #2'\n"
-            "    FileOffset:      60\n"
-            "    FilePath:        'path/to/header.h'\n"
-            "    Replacements:    \n"
-            "      - FilePath:        'path/to/header.h'\n"
-            "        Offset:          62\n"
-            "        Length:          2\n"
-            "        ReplacementText: 'replacement #2'\n"
-            "  - DiagnosticName:  'diagnostic#3'\n"
-            "    Message:         'message #3'\n"
-            "    FileOffset:      72\n"
-            "    FilePath:        'path/to/source2.cpp'\n"
-            "    Notes:           \n"
-            "      - Message:         Note1\n"
-            "        FilePath:        'path/to/note1.cpp'\n"
-            "        FileOffset:      88\n"
-            "      - Message:         Note2\n"
-            "        FilePath:        'path/to/note2.cpp'\n"
-            "        FileOffset:      99\n"
-            "    Replacements:    []\n"
-            "...\n",
-            YamlContentStream.str());
+  EXPECT_EQ(YAMLContent, YamlContentStream.str());
 }
 
 TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
-  std::string YamlContent = "---\n"
-                            "MainSourceFile:  path/to/source.cpp\n"
-                            "Diagnostics:     \n"
-                            "  - DiagnosticName:  'diagnostic#1'\n"
-                            "    Message:         'message #1'\n"
-                            "    FileOffset:      55\n"
-                            "    FilePath:        path/to/source.cpp\n"
-                            "    Replacements:    \n"
-                            "      - FilePath:        path/to/source.cpp\n"
-                            "        Offset:          100\n"
-                            "        Length:          12\n"
-                            "        ReplacementText: 'replacement #1'\n"
-                            "  - DiagnosticName:  'diagnostic#2'\n"
-                            "    Message:         'message #2'\n"
-                            "    FileOffset:      60\n"
-                            "    FilePath:        path/to/header.h\n"
-                            "    Replacements:    \n"
-                            "      - FilePath:        path/to/header.h\n"
-                            "        Offset:          62\n"
-                            "        Length:          2\n"
-                            "        ReplacementText: 'replacement #2'\n"
-                            "  - DiagnosticName:  'diagnostic#3'\n"
-                            "    Message:         'message #3'\n"
-                            "    FileOffset:      98\n"
-                            "    FilePath:        path/to/source.cpp\n"
-                            "    Notes:\n"
-                            "      - Message:         Note1\n"
-                            "        FilePath:        'path/to/note1.cpp'\n"
-                            "        FileOffset:      66\n"
-                            "      - Message:         Note2\n"
-                            "        FilePath:        'path/to/note2.cpp'\n"
-                            "        FileOffset:      77\n"
-                            "    Replacements:    []\n"
-                            "...\n";
   TranslationUnitDiagnostics TUDActual;
-  yaml::Input YAML(YamlContent);
+  yaml::Input YAML(YAMLContent);
   YAML >> TUDActual;
 
   ASSERT_FALSE(YAML.error());
@@ -160,7 +136,7 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
   EXPECT_EQ("message #1", D1.Message.Message);
   EXPECT_EQ(55u, D1.Message.FileOffset);
   EXPECT_EQ("path/to/source.cpp", D1.Message.FilePath);
-  std::vector<Replacement> Fixes1 = getFixes(D1.Fix);
+  std::vector<Replacement> Fixes1 = getFixes(D1.Message.Fix);
   ASSERT_EQ(1u, Fixes1.size());
   EXPECT_EQ("path/to/source.cpp", Fixes1[0].getFilePath());
   EXPECT_EQ(100u, Fixes1[0].getOffset());
@@ -172,7 +148,7 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
   EXPECT_EQ("message #2", D2.Message.Message);
   EXPECT_EQ(60u, D2.Message.FileOffset);
   EXPECT_EQ("path/to/header.h", D2.Message.FilePath);
-  std::vector<Replacement> Fixes2 = getFixes(D2.Fix);
+  std::vector<Replacement> Fixes2 = getFixes(D2.Message.Fix);
   ASSERT_EQ(1u, Fixes2.size());
   EXPECT_EQ("path/to/header.h", Fixes2[0].getFilePath());
   EXPECT_EQ(62u, Fixes2[0].getOffset());
@@ -182,15 +158,15 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
   Diagnostic D3 = TUDActual.Diagnostics[2];
   EXPECT_EQ("diagnostic#3", D3.DiagnosticName);
   EXPECT_EQ("message #3", D3.Message.Message);
-  EXPECT_EQ(98u, D3.Message.FileOffset);
-  EXPECT_EQ("path/to/source.cpp", D3.Message.FilePath);
+  EXPECT_EQ(72u, D3.Message.FileOffset);
+  EXPECT_EQ("path/to/source2.cpp", D3.Message.FilePath);
   EXPECT_EQ(2u, D3.Notes.size());
   EXPECT_EQ("Note1", D3.Notes[0].Message);
-  EXPECT_EQ(66u, D3.Notes[0].FileOffset);
+  EXPECT_EQ(88u, D3.Notes[0].FileOffset);
   EXPECT_EQ("path/to/note1.cpp", D3.Notes[0].FilePath);
   EXPECT_EQ("Note2", D3.Notes[1].Message);
-  EXPECT_EQ(77u, D3.Notes[1].FileOffset);
+  EXPECT_EQ(99u, D3.Notes[1].FileOffset);
   EXPECT_EQ("path/to/note2.cpp", D3.Notes[1].FilePath);
-  std::vector<Replacement> Fixes3 = getFixes(D3.Fix);
+  std::vector<Replacement> Fixes3 = getFixes(D3.Message.Fix);
   EXPECT_TRUE(Fixes3.empty());
 }

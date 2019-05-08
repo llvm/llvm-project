@@ -146,7 +146,7 @@ define <8 x i16> @zext_and_v8i16(<8 x i8> %x, <8 x i8> %y) {
 ;
 ; AVX2-LABEL: zext_and_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %xz = zext <8 x i8> %x to <8 x i16>

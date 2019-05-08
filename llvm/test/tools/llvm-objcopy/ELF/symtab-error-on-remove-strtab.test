@@ -1,5 +1,7 @@
 # RUN: yaml2obj %s > %t
-# RUN: not llvm-objcopy -R .strtab %t %t2 2>&1 >/dev/null | FileCheck %s
+# RUN: not llvm-objcopy -R .strtab %t %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
+# RUN: cp %t %t3
+# RUN: not llvm-strip --no-strip-all -R .strtab %t3 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR
 
 !ELF
 FileHeader:
@@ -8,4 +10,12 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 
-# CHECK: String table .strtab cannot be removed because it is referenced by the symbol table .symtab
+# ERR: String table .strtab cannot be removed because it is referenced by the symbol table .symtab
+
+# RUN: llvm-objcopy --allow-broken-links -R .strtab %t %t4
+# RUN: llvm-objdump --section-headers %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
+# RUN: cp %t %t5
+# RUN: llvm-strip --no-strip-all --allow-broken-links -R .strtab %t %t5
+# RUN: llvm-objdump --section-headers %t5 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
+
+# SECTIONS: .symtab

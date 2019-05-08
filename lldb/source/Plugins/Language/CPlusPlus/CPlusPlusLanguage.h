@@ -31,7 +31,7 @@ public:
         : m_full(), m_basename(), m_context(), m_arguments(), m_qualifiers(),
           m_parsed(false), m_parse_error(false) {}
 
-    MethodName(const ConstString &s)
+    MethodName(ConstString s)
         : m_full(s), m_basename(), m_context(), m_arguments(), m_qualifiers(),
           m_parsed(false), m_parse_error(false) {}
 
@@ -45,7 +45,7 @@ public:
       return (bool)m_full;
     }
 
-    const ConstString &GetFullName() const { return m_full; }
+    ConstString GetFullName() const { return m_full; }
 
     std::string GetScopeQualifiedName();
 
@@ -92,9 +92,7 @@ public:
 
   const Highlighter *GetHighlighter() const override { return &m_highlighter; }
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -127,9 +125,7 @@ public:
   FindAlternateFunctionManglings(const ConstString mangled,
                                  std::set<ConstString> &candidates);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

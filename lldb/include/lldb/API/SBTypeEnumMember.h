@@ -24,6 +24,8 @@ public:
 
   SBTypeEnumMember &operator=(const SBTypeEnumMember &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   int64_t GetValueAsSigned();
@@ -61,6 +63,8 @@ public:
   ~SBTypeEnumMemberList();
 
   SBTypeEnumMemberList &operator=(const SBTypeEnumMemberList &rhs);
+
+  explicit operator bool() const;
 
   bool IsValid();
 

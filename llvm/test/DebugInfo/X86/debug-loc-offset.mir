@@ -243,7 +243,7 @@ body:             |
     CMP32mi8 renamable $eax, 1, $noreg, 4, $noreg, 2, implicit-def $eflags, debug-location !24 :: (load 4 from %ir.var)
     MOV32mr $ebp, 1, $noreg, -8, $noreg, killed $eax :: (store 4 into %stack.1)
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
-    JLE_1 %bb.2, implicit $eflags, debug-location !24
+    JCC_1 %bb.2, 14, implicit $eflags, debug-location !24
   
   bb.1.if.then:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
@@ -258,7 +258,7 @@ body:             |
     CALLpcrel32 @_ZN1A3fooEv, csr_32, implicit $esp, implicit $ssp, implicit-def $al, debug-location !27
     renamable $ecx = MOVSX32rr8 killed renamable $al, debug-location !27
     CMP32ri8 killed renamable $ecx, 97, implicit-def $eflags, debug-location !27
-    JNE_1 %bb.4, implicit $eflags, debug-location !27
+    JCC_1 %bb.4, 5, implicit $eflags, debug-location !27
   
   bb.3.if.then2:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21

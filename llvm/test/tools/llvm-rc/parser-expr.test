@@ -17,36 +17,36 @@
 ; CHECK-NEXT:  Language: 5, Sublanguage: 7
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-binary-1.rc 2>&1 | FileCheck %s --check-prefix BINARY1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-expr-bad-binary-1.rc 2>&1 | FileCheck %s --check-prefix BINARY1
 
 ; BINARY1: llvm-rc: Error parsing file: expected '-', '~', integer or '(', got &
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-binary-2.rc 2>&1 | FileCheck %s --check-prefix BINARY2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-expr-bad-binary-2.rc 2>&1 | FileCheck %s --check-prefix BINARY2
 
 ; BINARY2: llvm-rc: Error parsing file: expected '-', '~', integer or '(', got |
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-binary-3.rc 2>&1 | FileCheck %s --check-prefix BINARY3
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-expr-bad-binary-3.rc 2>&1 | FileCheck %s --check-prefix BINARY3
 
 ; BINARY3: llvm-rc: Error parsing file: expected '-', '~', integer or '(', got +
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-unary.rc 2>&1 | FileCheck %s --check-prefix UNARY
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-expr-bad-unary.rc 2>&1 | FileCheck %s --check-prefix UNARY
 
 ; UNARY: llvm-rc: Error parsing file: expected ',', got ~
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-unbalanced-1.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED1
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-expr-unbalanced-1.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED1
 
 ; UNBALANCED1: llvm-rc: Error parsing file: expected ')', got ,
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-unbalanced-2.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED2
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-expr-unbalanced-2.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED2
 
 ; UNBALANCED2: llvm-rc: Error parsing file: expected ',', got )
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-unbalanced-3.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED3
+; RUN: not llvm-rc /dry-run /V -- %p/Inputs/parser-expr-unbalanced-3.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED3
 
 ; UNBALANCED3: llvm-rc: Error parsing file: expected ',', got )

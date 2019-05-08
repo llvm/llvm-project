@@ -43,9 +43,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Construct a Thread object with given data
-//----------------------------------------------------------------------
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
       m_signo(td.signo), m_gpregset_data(td.gpregset), m_notes(td.notes) {}
@@ -112,6 +110,9 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     case llvm::Triple::NetBSD: {
       switch (arch.GetMachine()) {
+      case llvm::Triple::aarch64:
+        reg_interface = new RegisterInfoPOSIX_arm64(arch);
+        break;
       case llvm::Triple::x86_64:
         reg_interface = new RegisterContextNetBSD_x86_64(arch);
         break;
@@ -245,9 +246,7 @@ bool ThreadElfCore::CalculateStopInfo() {
   return false;
 }
 
-//----------------------------------------------------------------
 // Parse PRSTATUS from NOTE entry
-//----------------------------------------------------------------
 ELFLinuxPrStatus::ELFLinuxPrStatus() {
   memset(this, 0, sizeof(ELFLinuxPrStatus));
 }
@@ -255,6 +254,7 @@ ELFLinuxPrStatus::ELFLinuxPrStatus() {
 size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
   constexpr size_t mips_linux_pr_status_size_o32 = 96;
   constexpr size_t mips_linux_pr_status_size_n32 = 72;
+  constexpr size_t num_ptr_size_members = 10;
   if (arch.IsMIPS()) {
     std::string abi = arch.GetTargetABI();
     assert(!abi.empty() && "ABI is not set");
@@ -266,15 +266,14 @@ size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
     return mips_linux_pr_status_size_n32;
   }
   switch (arch.GetCore()) {
-  case lldb_private::ArchSpec::eCore_s390x_generic:
-  case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-  case lldb_private::ArchSpec::eCore_ppc64le_generic:
-    return sizeof(ELFLinuxPrStatus);
   case lldb_private::ArchSpec::eCore_x86_32_i386:
   case lldb_private::ArchSpec::eCore_x86_32_i486:
     return 72;
   default:
-    return 0;
+    if (arch.GetAddressByteSize() == 8)
+      return sizeof(ELFLinuxPrStatus);
+    else
+      return sizeof(ELFLinuxPrStatus) - num_ptr_size_members * 4;
   }
 }
 
@@ -321,9 +320,7 @@ Status ELFLinuxPrStatus::Parse(const DataExtractor &data,
   return error;
 }
 
-//----------------------------------------------------------------
 // Parse PRPSINFO from NOTE entry
-//----------------------------------------------------------------
 ELFLinuxPrPsInfo::ELFLinuxPrPsInfo() {
   memset(this, 0, sizeof(ELFLinuxPrPsInfo));
 }
@@ -399,9 +396,7 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
   return error;
 }
 
-//----------------------------------------------------------------
 // Parse SIGINFO from NOTE entry
-//----------------------------------------------------------------
 ELFLinuxSigInfo::ELFLinuxSigInfo() { memset(this, 0, sizeof(ELFLinuxSigInfo)); }
 
 size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {

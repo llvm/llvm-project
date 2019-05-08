@@ -17,9 +17,7 @@
 
 class CFBundle : public CFReleaser<CFBundleRef> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CFBundle(const char *path = NULL);
   CFBundle(const CFBundle &rhs);
   CFBundle &operator=(const CFBundle &rhs);

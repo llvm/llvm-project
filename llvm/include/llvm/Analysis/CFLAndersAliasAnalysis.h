@@ -60,7 +60,8 @@ public:
   const cflaa::AliasSummary *getAliasSummary(const Function &);
 
   AliasResult query(const MemoryLocation &, const MemoryLocation &);
-  AliasResult alias(const MemoryLocation &, const MemoryLocation &);
+  AliasResult alias(const MemoryLocation &, const MemoryLocation &,
+                    AAQueryInfo &);
 
 private:
   /// Ensures that the given function is available in the cache.

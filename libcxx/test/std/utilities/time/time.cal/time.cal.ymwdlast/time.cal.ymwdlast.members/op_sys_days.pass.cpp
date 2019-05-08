@@ -11,7 +11,7 @@
 // class year_month_weekday_last;
 
 // constexpr operator sys_days() const noexcept;
-//  Returns: If ok() == true, returns a sys_days that represents the last weekday() 
+//  Returns: If ok() == true, returns a sys_days that represents the last weekday()
 //             of year()/month(). Otherwise the returned value is unspecified.
 
 #include <chrono>
@@ -20,7 +20,6 @@
 
 #include "test_macros.h"
 
-#include <iostream>
 
 int main(int, char**)
 {
@@ -41,21 +40,21 @@ int main(int, char**)
     { // Last Tuesday in Jan 1970 was the 27th
     constexpr year_month_weekday_last ymwdl{year{1970}, January, weekday_last{Tuesday}};
     constexpr sys_days sd{ymwdl};
-    
+
     static_assert(sd.time_since_epoch() == days{26}, "");
     }
 
     { // Last Tuesday in Jan 2000 was the 25th
     constexpr year_month_weekday_last ymwdl{year{2000}, January, weekday_last{Tuesday}};
     constexpr sys_days sd{ymwdl};
-    
+
     static_assert(sd.time_since_epoch() == days{10957+24}, "");
     }
 
     { // Last Tuesday in Jan 1940 was the 30th
     constexpr year_month_weekday_last ymwdl{year{1940}, January, weekday_last{Tuesday}};
     constexpr sys_days sd{ymwdl};
-    
+
     static_assert(sd.time_since_epoch() == days{-10958+29}, "");
     }
 

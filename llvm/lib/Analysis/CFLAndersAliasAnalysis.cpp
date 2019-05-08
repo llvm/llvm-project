@@ -612,7 +612,7 @@ static void initializeWorkList(std::vector<WorkListItem> &WorkList,
     for (unsigned I = 0, E = ValueInfo.getNumLevels(); I < E; ++I) {
       auto Src = InstantiatedValue{Val, I};
       // If there's an assignment edge from X to Y, it means Y is reachable from
-      // X at S2 and X is reachable from Y at S1
+      // X at S3 and X is reachable from Y at S1
       for (auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges) {
         propagate(Edge.Other, Src, MatchState::FlowFromReadOnly, ReachSet,
                   WorkList);
@@ -875,7 +875,8 @@ AliasResult CFLAndersAAResult::query(const MemoryLocation &LocA,
 }
 
 AliasResult CFLAndersAAResult::alias(const MemoryLocation &LocA,
-                                     const MemoryLocation &LocB) {
+                                     const MemoryLocation &LocB,
+                                     AAQueryInfo &AAQI) {
   if (LocA.Ptr == LocB.Ptr)
     return MustAlias;
 
@@ -885,11 +886,11 @@ AliasResult CFLAndersAAResult::alias(const MemoryLocation &LocA,
   // ConstantExpr, but every query needs to have at least one Value tied to a
   // Function, and neither GlobalValues nor ConstantExprs are.
   if (isa<Constant>(LocA.Ptr) && isa<Constant>(LocB.Ptr))
-    return AAResultBase::alias(LocA, LocB);
+    return AAResultBase::alias(LocA, LocB, AAQI);
 
   AliasResult QueryResult = query(LocA, LocB);
   if (QueryResult == MayAlias)
-    return AAResultBase::alias(LocA, LocB);
+    return AAResultBase::alias(LocA, LocB, AAQI);
 
   return QueryResult;
 }

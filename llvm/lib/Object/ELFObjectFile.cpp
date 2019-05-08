@@ -35,6 +35,16 @@
 using namespace llvm;
 using namespace object;
 
+const EnumEntry<unsigned> llvm::object::ElfSymbolTypes[NumElfSymbolTypes] = {
+    {"None", "NOTYPE", ELF::STT_NOTYPE},
+    {"Object", "OBJECT", ELF::STT_OBJECT},
+    {"Function", "FUNC", ELF::STT_FUNC},
+    {"Section", "SECTION", ELF::STT_SECTION},
+    {"File", "FILE", ELF::STT_FILE},
+    {"Common", "COMMON", ELF::STT_COMMON},
+    {"TLS", "TLS", ELF::STT_TLS},
+    {"GNU_IFunc", "IFUNC", ELF::STT_GNU_IFUNC}};
+
 ELFObjectFileBase::ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source)
     : ObjectFile(Type, Source) {}
 

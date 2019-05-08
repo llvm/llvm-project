@@ -21,35 +21,32 @@ public:
 
   SBAttachInfo(lldb::pid_t pid);
 
-  //------------------------------------------------------------------
   /// Attach to a process by name.
   ///
   /// This function implies that a future call to SBTarget::Attach(...)
   /// will be synchronous.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     A full or partial name for the process to attach to.
   ///
-  /// @param[in] wait_for
+  /// \param[in] wait_for
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
-  //------------------------------------------------------------------
   SBAttachInfo(const char *path, bool wait_for);
 
-  //------------------------------------------------------------------
   /// Attach to a process by name.
   ///
   /// Future calls to SBTarget::Attach(...) will be synchronous or
   /// asynchronous depending on the \a async argument.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     A full or partial name for the process to attach to.
   ///
-  /// @param[in] wait_for
+  /// \param[in] wait_for
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
   ///
-  /// @param[in] async
+  /// \param[in] async
   ///     If \b false, then the SBTarget::Attach(...) call will be a
   ///     synchronous call with no way to cancel the attach in
   ///     progress.
@@ -59,7 +56,6 @@ public:
   ///     eventually found. If the client wants to cancel the event,
   ///     SBProcess::Stop() can be called and an eStateExited process
   ///     event will be delivered.
-  //------------------------------------------------------------------
   SBAttachInfo(const char *path, bool wait_for, bool async);
 
   SBAttachInfo(const SBAttachInfo &rhs);
@@ -78,31 +74,28 @@ public:
 
   bool GetWaitForLaunch();
 
-  //------------------------------------------------------------------
   /// Set attach by process name settings.
   ///
   /// Designed to be used after a call to SBAttachInfo::SetExecutable().
   /// This function implies that a call to SBTarget::Attach(...) will
   /// be synchronous.
   ///
-  /// @param[in] b
+  /// \param[in] b
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
-  //------------------------------------------------------------------
   void SetWaitForLaunch(bool b);
 
-  //------------------------------------------------------------------
   /// Set attach by process name settings.
   ///
   /// Designed to be used after a call to SBAttachInfo::SetExecutable().
   /// Future calls to SBTarget::Attach(...) will be synchronous or
   /// asynchronous depending on the \a async argument.
   ///
-  /// @param[in] b
+  /// \param[in] b
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
   ///
-  /// @param[in] async
+  /// \param[in] async
   ///     If \b false, then the SBTarget::Attach(...) call will be a
   ///     synchronous call with no way to cancel the attach in
   ///     progress.
@@ -112,7 +105,6 @@ public:
   ///     eventually found. If the client wants to cancel the event,
   ///     SBProcess::Stop() can be called and an eStateExited process
   ///     event will be delivered.
-  //------------------------------------------------------------------
   void SetWaitForLaunch(bool b, bool async);
 
   bool GetIgnoreExisting();
@@ -157,23 +149,19 @@ public:
 
   bool ParentProcessIDIsValid();
 
-  //----------------------------------------------------------------------
   /// Get the listener that will be used to receive process events.
   ///
   /// If no listener has been set via a call to
   /// SBAttachInfo::SetListener(), then an invalid SBListener will be
   /// returned (SBListener::IsValid() will return false). If a listener
   /// has been set, then the valid listener object will be returned.
-  //----------------------------------------------------------------------
   SBListener GetListener();
 
-  //----------------------------------------------------------------------
   /// Set the listener that will be used to receive process events.
   ///
   /// By default the SBDebugger, which has a listener, that the SBTarget
   /// belongs to will listen for the process events. Calling this function
   /// allows a different listener to be used to listen for process events.
-  //----------------------------------------------------------------------
   void SetListener(SBListener &listener);
 
 protected:

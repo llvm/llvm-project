@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepInstruction: Step over the current instruction
-//----------------------------------------------------------------------
 
 ThreadPlanStepInstruction::ThreadPlanStepInstruction(Thread &thread,
                                                      bool step_over,

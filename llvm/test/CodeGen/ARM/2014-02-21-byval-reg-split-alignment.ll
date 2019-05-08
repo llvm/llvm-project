@@ -35,8 +35,8 @@ define void @foo2(i32 %a, %struct8bytes8align* byval %b) {
 ; CHECK: sub  sp, sp, #8
 ; CHECK: push  {r11, lr}
 ; CHECK: add  r0, sp, #8
-; CHECK: str  r3, [sp, #12]
-; CHECK: str  r2, [sp, #8]
+; CHECK-DAG: str  r3, [sp, #12]
+; CHECK-DAG: str  r2, [sp, #8]
 ; CHECK: bl   usePtr
 ; CHECK: pop  {r11, lr}
 ; CHECK: add  sp, sp, #8
@@ -70,8 +70,8 @@ define void @foo4(%struct4bytes* byval %a, %struct8bytes8align* byval %b) {
 ; CHECK: push    {r11, lr}
 ; CHECK: str     r0, [sp, #8]
 ; CHECK: add     r0, sp, #16
-; CHECK: str     r3, [sp, #20]
-; CHECK: str     r2, [sp, #16]
+; CHECK-DAG: str     r3, [sp, #20]
+; CHECK-DAG: str     r2, [sp, #16]
 ; CHECK: bl      usePtr
 ; CHECK: pop     {r11, lr}
 ; CHECK: add     sp, sp, #16

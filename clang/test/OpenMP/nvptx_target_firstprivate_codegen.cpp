@@ -17,8 +17,7 @@ struct TT {
 // TCHECK-DAG:  [[TTII:%.+]] = type { i32, i32 }
 // TCHECK-DAG:  [[S1:%.+]] = type { double }
 
-// TCHECK: @__omp_offloading_firstprivate__{{.+}}_e_l28 = internal addrspace(4) global [[TTII]] zeroinitializer
-// TCHECK: @{{.*}}_$_{{.*}} = common global i32 0, !dbg !{{[0-9]+}}
+// TCHECK: @__omp_offloading_firstprivate__{{.+}}_e_l27 = internal addrspace(4) global [[TTII]] zeroinitializer
 int foo(int n, double *ptr) {
   int a = 0;
   short aa = 0;

@@ -20,7 +20,7 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
     return m_container_sp ? m_container_sp->GetIndexOfChildWithName(name)
                           : UINT32_MAX;
   }

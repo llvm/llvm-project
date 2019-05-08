@@ -194,7 +194,7 @@ public:
   void enqueueStmtNode(ExplodedNode *N, const CFGBlock *Block, unsigned Idx);
 };
 
-// TODO: Turn into a calss.
+// TODO: Turn into a class.
 struct NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;

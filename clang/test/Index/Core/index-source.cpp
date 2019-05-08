@@ -5,17 +5,17 @@
 class Cls { public:
   // CHECK: [[@LINE+3]]:3 | constructor/C++ | Cls | c:@S@Cls@F@Cls#I# | __ZN3ClsC1Ei | Decl,RelChild | rel: 1
   // CHECK-NEXT: RelChild | Cls | c:@S@Cls
-  // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+  // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont,NameReference | rel: 1
   Cls(int x);
   // CHECK: [[@LINE+2]]:3 | constructor/cxx-copy-ctor/C++ | Cls | c:@S@Cls@F@Cls#&1$@S@Cls# | __ZN3ClsC1ERKS_ | Decl,RelChild | rel: 1
-  // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+  // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont,NameReference | rel: 1
   Cls(const Cls &);
   // CHECK: [[@LINE+2]]:3 | constructor/cxx-move-ctor/C++ | Cls | c:@S@Cls@F@Cls#&&$@S@Cls# | __ZN3ClsC1EOS_ | Decl,RelChild | rel: 1
-  // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+  // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont,NameReference | rel: 1
   Cls(Cls &&);
 
   // CHECK: [[@LINE+2]]:3 | destructor/C++ | ~Cls | c:@S@Cls@F@~Cls# | __ZN3ClsD1Ev | Decl,RelChild | rel: 1
-  // CHECK: [[@LINE+1]]:4 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+  // CHECK: [[@LINE+1]]:4 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont,NameReference | rel: 1
   ~Cls();
 };
 
@@ -35,12 +35,12 @@ class SubCls2 : public ClsAlias {};
 Cls::Cls(int x) {}
 // CHECK: [[@LINE-1]]:6 | constructor/C++ | Cls | c:@S@Cls@F@Cls#I# | __ZN3ClsC1Ei | Def,RelChild | rel: 1
 // CHECK: [[@LINE-2]]:1 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
-// CHECK: [[@LINE-3]]:6 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-3]]:6 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont,NameReference | rel: 1
 
 Cls::~/*a comment*/Cls() {}
 // CHECK: [[@LINE-1]]:6 | destructor/C++ | ~Cls | c:@S@Cls@F@~Cls# | __ZN3ClsD1Ev | Def,RelChild | rel: 1
 // CHECK: [[@LINE-2]]:1 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
-// CHECK: [[@LINE-3]]:20 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-3]]:20 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont,NameReference | rel: 1
 
 template <typename TemplArg>
 class TemplCls {
@@ -394,7 +394,7 @@ struct DeletedMethods {
 // CHECK: [[@LINE-1]]:3 | constructor/cxx-copy-ctor/C++ | DeletedMethods | c:@S@DeletedMethods@F@DeletedMethods#&1$@S@DeletedMethods# | __ZN14DeletedMethodsC1ERKS_ | Def,RelChild | rel: 1
 // CHECK: RelChild | DeletedMethods | c:@S@DeletedMethods
 // CHECK: [[@LINE-3]]:24 | struct/C++ | DeletedMethods | c:@S@DeletedMethods | <no-cgname> | Ref,RelCont | rel: 1
-// CHECK: [[@LINE-4]]:3 | struct/C++ | DeletedMethods | c:@S@DeletedMethods | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-4]]:3 | struct/C++ | DeletedMethods | c:@S@DeletedMethods | <no-cgname> | Ref,RelCont,NameReference | rel: 1
 };
 
 namespace ns2 {
@@ -494,7 +494,7 @@ void localStructuredBindingAndRef() {
 // CHECK: [[@LINE-1]]:69 | variable/C++ | structuredBinding2 | c:@N@cpp17structuredBinding@structuredBinding2 | <no-cgname> | Ref,Read,RelCont | rel: 1
 // CHECK-NEXT: RelCont | localStructuredBindingAndRef | c:@N@cpp17structuredBinding@F@localStructuredBindingAndRef#
 // CHECK-NOT: localBinding
-// LOCAL: [[@LINE-4]]:9 | variable(local)/C++ | localBinding1 | c:index-source.cpp@25408@N@cpp17structuredBinding@F@localStructuredBindingAndRef#@localBinding1
+// LOCAL: [[@LINE-4]]:9 | variable(local)/C++ | localBinding1 | c:index-source.cpp@{{.*}}@N@cpp17structuredBinding@F@localStructuredBindingAndRef#@localBinding1
 }
 
 }

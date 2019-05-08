@@ -37,6 +37,8 @@ void SymbolTable::addFile(InputFile *File) {
     BitcodeFiles.push_back(F);
   else if (auto *F = dyn_cast<ObjFile>(File))
     ObjectFiles.push_back(F);
+  else if (auto *F = dyn_cast<SharedFile>(File))
+    SharedFiles.push_back(F);
 }
 
 // This function is where all the optimizations of link-time
@@ -56,7 +58,7 @@ void SymbolTable::addCombinedLTOObject() {
     LTO->add(*F);
 
   for (StringRef Filename : LTO->compile()) {
-    auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"));
+    auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"), "");
     Obj->parse();
     ObjectFiles.push_back(Obj);
   }
@@ -130,7 +132,8 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
 // Check the type of new symbol matches that of the symbol is replacing.
 // Returns true if the function types match, false is there is a singature
 // mismatch.
-bool signatureMatches(FunctionSymbol *Existing, const WasmSignature *NewSig) {
+static bool signatureMatches(FunctionSymbol *Existing,
+                             const WasmSignature *NewSig) {
   if (!NewSig)
     return true;
 
@@ -191,7 +194,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
   LLVM_DEBUG(dbgs() << "addSyntheticFunction: " << Name << "\n");
   assert(!find(Name));
   SyntheticFunctions.emplace_back(Function);
-  return replaceSymbol<DefinedFunction>(insert(Name, nullptr).first, Name,
+  return replaceSymbol<DefinedFunction>(insertName(Name).first, Name,
                                         Flags, nullptr, Function);
 }
 
@@ -199,7 +202,7 @@ DefinedData *SymbolTable::addSyntheticDataSymbol(StringRef Name,
                                                  uint32_t Flags) {
   LLVM_DEBUG(dbgs() << "addSyntheticDataSymbol: " << Name << "\n");
   assert(!find(Name));
-  return replaceSymbol<DefinedData>(insert(Name, nullptr).first, Name, Flags);
+  return replaceSymbol<DefinedData>(insertName(Name).first, Name, Flags);
 }
 
 DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef Name, uint32_t Flags,
@@ -208,7 +211,7 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef Name, uint32_t Flags,
                     << "\n");
   assert(!find(Name));
   SyntheticGlobals.emplace_back(Global);
-  return replaceSymbol<DefinedGlobal>(insert(Name, nullptr).first, Name, Flags,
+  return replaceSymbol<DefinedGlobal>(insertName(Name).first, Name, Flags,
                                       nullptr, Global);
 }
 
@@ -442,7 +445,7 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
 
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, nullptr);
+  std::tie(S, WasInserted) = insertName(Name);
 
   if (WasInserted) {
     replaceSymbol<LazySymbol>(S, Name, 0, File, *Sym);
@@ -488,7 +491,7 @@ bool SymbolTable::getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
   // Linear search through symbol variants.  Should never be more than two
   // or three entries here.
   auto &Variants = SymVariants[CachedHashStringRef(Sym->getName())];
-  if (Variants.size() == 0)
+  if (Variants.empty())
     Variants.push_back(Sym);
 
   for (Symbol* V : Variants) {

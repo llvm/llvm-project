@@ -82,8 +82,6 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   Instance.getDiagnostics().setSourceManager(&SM);
 
-  Instance.setVirtualFileSystem(&CI.getVirtualFileSystem());
-
   // The instance wants to take ownership, however DisableFree frontend option
   // is set to true to avoid double free issues
   Instance.setFileManager(&CI.getFileManager());

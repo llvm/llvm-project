@@ -28,6 +28,6 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
 Symbols:
-  Global:
-    - Name: foobar
-      Section: .text
+  - Name:    foobar
+    Section: .text
+    Binding: STB_GLOBAL

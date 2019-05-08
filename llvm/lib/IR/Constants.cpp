@@ -260,6 +260,16 @@ bool Constant::containsUndefElement() const {
   return false;
 }
 
+bool Constant::containsConstantExpression() const {
+  if (!getType()->isVectorTy())
+    return false;
+  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i)
+    if (isa<ConstantExpr>(getAggregateElement(i)))
+      return true;
+
+  return false;
+}
+
 /// Constructor to create a '0' constant of arbitrary type.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {
@@ -2566,7 +2576,7 @@ Constant *ConstantDataArray::getFP(LLVMContext &Context,
 Constant *ConstantDataArray::getString(LLVMContext &Context,
                                        StringRef Str, bool AddNull) {
   if (!AddNull) {
-    const uint8_t *Data = reinterpret_cast<const uint8_t *>(Str.data());
+    const uint8_t *Data = Str.bytes_begin();
     return get(Context, makeArrayRef(Data, Str.size()));
   }
 

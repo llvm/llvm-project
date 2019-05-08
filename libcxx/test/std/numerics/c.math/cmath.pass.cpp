@@ -100,14 +100,53 @@ Ambiguous scalbn(Ambiguous, Ambiguous){ return Ambiguous(); }
 Ambiguous tgamma(Ambiguous){ return Ambiguous(); }
 Ambiguous trunc(Ambiguous){ return Ambiguous(); }
 
-void test_abs()
-{
-    static_assert((std::is_same<decltype(std::abs((float)0)), float>::value), "");
-    static_assert((std::is_same<decltype(std::abs((double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::abs((long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(abs(Ambiguous())), Ambiguous>::value), "");
-    assert(std::abs(-1.) == 1);
+template <class T, class = decltype(std::abs(std::declval<T>()))>
+std::true_type has_abs_imp(int);
+template <class T>
+std::false_type has_abs_imp(...);
+
+template <class T>
+struct has_abs : decltype(has_abs_imp<T>(0)) {};
+
+void test_abs() {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wabsolute-value"
+#endif
+  static_assert((std::is_same<decltype(std::abs((float)0)), float>::value), "");
+  static_assert((std::is_same<decltype(std::abs((double)0)), double>::value), "");
+  static_assert(
+      (std::is_same<decltype(std::abs((long double)0)), long double>::value), "");
+  static_assert((std::is_same<decltype(std::abs((int)0)), int>::value), "");
+  static_assert((std::is_same<decltype(std::abs((long)0)), long>::value), "");
+  static_assert((std::is_same<decltype(std::abs((long long)0)), long long>::value),
+                "");
+  static_assert((std::is_same<decltype(std::abs((unsigned char)0)), int>::value),
+                "");
+  static_assert((std::is_same<decltype(std::abs((unsigned short)0)), int>::value),
+                "");
+  static_assert((std::is_same<decltype(std::abs((signed char)0)), int>::value),
+                "");
+  static_assert((std::is_same<decltype(std::abs((short)0)), int>::value),
+                "");
+  static_assert((std::is_same<decltype(std::abs((unsigned char)0)), int>::value),
+                "");
+  static_assert((std::is_same<decltype(std::abs((char)0)), int>::value),
+                "");
+  static_assert((std::is_same<decltype(abs(Ambiguous())), Ambiguous>::value), "");
+
+  static_assert(!has_abs<unsigned>::value, "");
+  static_assert(!has_abs<unsigned long>::value, "");
+  static_assert(!has_abs<unsigned long long>::value, "");
+  static_assert(!has_abs<size_t>::value, "");
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+  assert(std::abs(-1.) == 1);
 }
+
 
 void test_acos()
 {

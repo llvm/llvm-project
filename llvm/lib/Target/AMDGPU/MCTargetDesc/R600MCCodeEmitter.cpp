@@ -64,9 +64,10 @@ private:
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
-  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
-  void verifyInstructionPredicates(const MCInst &MI,
-                                   uint64_t AvailableFeatures) const;
+  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
+  void
+  verifyInstructionPredicates(const MCInst &MI,
+                              const FeatureBitset &AvailableFeatures) const;
 
 };
 

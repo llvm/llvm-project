@@ -27,7 +27,7 @@ public:
     // =========================================================================
     /// Process asynchronously-received structured data.
     ///
-    /// @param[in] data
+    /// \param[in] data
     ///   The complete data packet, expected to start with JSON-async.
     // =========================================================================
     virtual void HandleAsyncStructuredDataPacket(llvm::StringRef data) = 0;

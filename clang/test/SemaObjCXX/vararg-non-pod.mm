@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-error=non-pod-varargs -std=c++98
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-error=non-pod-varargs -std=c++11
 
+#if __cplusplus > 199711L
+// expected-no-diagnostics
+#endif
+
 extern char version[];
 
 @protocol P;
@@ -22,8 +26,6 @@ void t1(D *d)
   [d g:10, c]; 
 #if __cplusplus <= 199711L // C++03 or earlier modes
   // expected-warning@-2{{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
-#else
-  // expected-no-diagnostics@-4
 #endif
   [d g:10, version];
 }

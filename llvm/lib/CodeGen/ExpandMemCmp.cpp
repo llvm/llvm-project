@@ -36,6 +36,14 @@ static cl::opt<unsigned> MemCmpEqZeroNumLoadsPerBlock(
     cl::desc("The number of loads per basic block for inline expansion of "
              "memcmp that is only being compared against zero."));
 
+static cl::opt<unsigned> MaxLoadsPerMemcmp(
+    "max-loads-per-memcmp", cl::Hidden,
+    cl::desc("Set maximum number of loads used in expanded memcmp"));
+
+static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
+    "max-loads-per-memcmp-opt-size", cl::Hidden,
+    cl::desc("Set maximum number of loads used in expanded memcmp for -Os/Oz"));
+
 namespace {
 
 
@@ -721,7 +729,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
-  if (CI->getFunction()->optForMinSize())
+  if (CI->getFunction()->hasMinSize())
     return false;
 
   // Early exit from expansion if size is not a constant.
@@ -741,8 +749,13 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   const auto *const Options = TTI->enableMemCmpExpansion(IsUsedForZeroCmp);
   if (!Options) return false;
 
-  const unsigned MaxNumLoads =
-      TLI->getMaxExpandSizeMemcmp(CI->getFunction()->optForSize());
+  const unsigned MaxNumLoads = CI->getFunction()->hasOptSize()
+      ? (MaxLoadsPerMemcmpOptSize.getNumOccurrences()
+         ? MaxLoadsPerMemcmpOptSize
+         : TLI->getMaxExpandSizeMemcmp(true))
+      : (MaxLoadsPerMemcmp.getNumOccurrences()
+         ? MaxLoadsPerMemcmp
+         : TLI->getMaxExpandSizeMemcmp(false));
 
   unsigned NumLoadsPerBlock = MemCmpEqZeroNumLoadsPerBlock.getNumOccurrences()
                                   ? MemCmpEqZeroNumLoadsPerBlock
@@ -823,7 +836,8 @@ bool ExpandMemCmpPass::runOnBlock(
     }
     LibFunc Func;
     if (TLI->getLibFunc(ImmutableCallSite(CI), Func) &&
-        Func == LibFunc_memcmp && expandMemCmp(CI, TTI, TL, &DL)) {
+        (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
+        expandMemCmp(CI, TTI, TL, &DL)) {
       return true;
     }
   }

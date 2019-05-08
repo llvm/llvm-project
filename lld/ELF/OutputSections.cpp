@@ -69,9 +69,7 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
 OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
     : BaseCommand(OutputSectionKind),
       SectionBase(Output, Name, Flags, /*Entsize*/ 0, /*Alignment*/ 1, Type,
-                  /*Info*/ 0, /*Link*/ 0) {
-  Live = false;
-}
+                  /*Info*/ 0, /*Link*/ 0) {}
 
 // We allow sections of types listed below to merged into a
 // single progbits section. This is typically done by linker
@@ -140,13 +138,10 @@ void OutputSection::addSection(InputSection *IS) {
 
 static void sortByOrder(MutableArrayRef<InputSection *> In,
                         llvm::function_ref<int(InputSectionBase *S)> Order) {
-  typedef std::pair<int, InputSection *> Pair;
-  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
-
-  std::vector<Pair> V;
+  std::vector<std::pair<int, InputSection *>> V;
   for (InputSection *S : In)
     V.push_back({Order(S), S});
-  std::stable_sort(V.begin(), V.end(), Comp);
+  llvm::stable_sort(V, less_first());
 
   for (size_t I = 0; I < V.size(); ++I)
     In[I] = V[I].second;
@@ -181,7 +176,7 @@ static void fill(uint8_t *Buf, size_t Size,
 
 // Compress section contents if this section contains debug info.
 template <class ELFT> void OutputSection::maybeCompress() {
-  typedef typename ELFT::Chdr Elf_Chdr;
+  using Elf_Chdr = typename ELFT::Chdr;
 
   // Compress only DWARF debug sections.
   if (!Config->CompressDebugSections || (Flags & SHF_ALLOC) ||
@@ -291,7 +286,9 @@ void OutputSection::finalize() {
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
-    if (auto *D = First->getLinkOrderDep())
+    if (auto *EX = dyn_cast<ARMExidxSyntheticSection>(First))
+      Link = EX->getLinkOrderDep()->getParent()->SectionIndex;
+    else if (auto *D = First->getLinkOrderDep())
       Link = D->getParent()->SectionIndex;
   }
 
@@ -369,7 +366,7 @@ static bool compCtors(const InputSection *A, const InputSection *B) {
 void OutputSection::sortCtorsDtors() {
   assert(SectionCommands.size() == 1);
   auto *ISD = cast<InputSectionDescription>(SectionCommands[0]);
-  std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(), compCtors);
+  llvm::stable_sort(ISD->Sections, compCtors);
 }
 
 // If an input string is in the form of "foo.N" where N is a number,

@@ -86,14 +86,12 @@ protected:
   virtual lldb::ValueObjectSP
   GetReturnValueObjectImpl(Thread &thread, llvm::Type &ir_type) const;
 
-  //------------------------------------------------------------------
   /// Request to get a Process shared pointer.
   ///
   /// This ABI object may not have been created with a Process object,
   /// or the Process object may no longer be alive.  Be sure to handle
   /// the case where the shared pointer returned does not have an
   /// object inside it.
-  //------------------------------------------------------------------
   lldb::ProcessSP GetProcessSP() const { return m_process_wp.lock(); }
 
 public:
@@ -128,7 +126,7 @@ public:
 
   virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 
-  bool GetRegisterInfoByName(const ConstString &name, RegisterInfo &info);
+  bool GetRegisterInfoByName(ConstString name, RegisterInfo &info);
 
   bool GetRegisterInfoByKind(lldb::RegisterKind reg_kind, uint32_t reg_num,
                              RegisterInfo &info);
@@ -138,9 +136,7 @@ public:
   static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from ABI can see and modify these
-  //------------------------------------------------------------------
   ABI(lldb::ProcessSP process_sp) {
     if (process_sp.get())
         m_process_wp = process_sp;

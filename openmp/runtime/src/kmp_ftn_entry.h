@@ -368,35 +368,36 @@ int FTN_STDCALL FTN_CONTROL_TOOL(int command, int modifier, void *arg) {
 }
 
 /* OpenMP 5.0 Memory Management support */
-void FTN_STDCALL FTN_SET_DEFAULT_ALLOCATOR(const omp_allocator_t *allocator) {
-#ifndef KMP_STUB
-  __kmpc_set_default_allocator(__kmp_entry_gtid(), allocator);
+omp_allocator_handle_t FTN_STDCALL
+FTN_INIT_ALLOCATOR(omp_memspace_handle_t KMP_DEREF m, int KMP_DEREF ntraits,
+                   omp_alloctrait_t tr[]) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmpc_init_allocator(__kmp_entry_gtid(), KMP_DEREF m,
+                               KMP_DEREF ntraits, tr);
 #endif
 }
-const omp_allocator_t *FTN_STDCALL FTN_GET_DEFAULT_ALLOCATOR(void) {
+
+void FTN_STDCALL FTN_DESTROY_ALLOCATOR(omp_allocator_handle_t al) {
+#ifndef KMP_STUB
+  __kmpc_destroy_allocator(__kmp_entry_gtid(), al);
+#endif
+}
+void FTN_STDCALL FTN_SET_DEFAULT_ALLOCATOR(omp_allocator_handle_t al) {
+#ifndef KMP_STUB
+  __kmpc_set_default_allocator(__kmp_entry_gtid(), al);
+#endif
+}
+omp_allocator_handle_t FTN_STDCALL FTN_GET_DEFAULT_ALLOCATOR(void) {
 #ifdef KMP_STUB
   return NULL;
 #else
   return __kmpc_get_default_allocator(__kmp_entry_gtid());
 #endif
 }
-void *FTN_STDCALL FTN_ALLOC(size_t size, const omp_allocator_t *allocator) {
-#ifdef KMP_STUB
-  return malloc(size);
-#else
-  return __kmpc_alloc(__kmp_entry_gtid(), size, allocator);
-#endif
-}
-void FTN_STDCALL FTN_FREE(void *ptr, const omp_allocator_t *allocator) {
-#ifdef KMP_STUB
-  free(ptr);
-#else
-  __kmpc_free(__kmp_entry_gtid(), ptr, allocator);
-#endif
-}
 
 /* OpenMP 5.0 affinity format support */
-
 #ifndef KMP_STUB
 static void __kmp_fortran_strncpy_truncate(char *buffer, size_t buf_size,
                                            char const *csrc, size_t csrc_size) {

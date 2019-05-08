@@ -28,27 +28,23 @@
 # RUN: cmp %t2 %t6
 
 # RUN: cp %t %t7
-# RUN: llvm-strip -strip-all %t7
+# RUN: llvm-strip --strip-all %t7
 # RUN: cmp %t2 %t7
 
 # RUN: cp %t %t8
-# RUN: llvm-strip --strip-all %t8
+# RUN: llvm-objcopy -S %t8 %t8
 # RUN: cmp %t2 %t8
 
 # RUN: cp %t %t9
-# RUN: llvm-objcopy -S %t9 %t9
+# RUN: llvm-strip -s %t9
 # RUN: cmp %t2 %t9
-
-# RUN: cp %t %t10
-# RUN: llvm-strip -s %t10
-# RUN: cmp %t2 %t10
 
 # Verify that a non-existent symbol table (after first call to llvm-strip)
 # can be handled correctly.
-# RUN: cp %t %t11
-# RUN: llvm-strip --strip-all --keep-symbol=unavailable_symbol %t11
-# RUN: llvm-strip --strip-all --keep-symbol=unavailable_symbol %t11
-# RUN: cmp %t2 %t11
+# RUN: cp %t %t10
+# RUN: llvm-strip --strip-all --keep-symbol=unavailable_symbol %t10
+# RUN: llvm-strip --strip-all --keep-symbol=unavailable_symbol %t10
+# RUN: cmp %t2 %t10
 
 !ELF
 FileHeader:
@@ -57,6 +53,10 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 Sections:
+  - Name:            non_alloc_in_segment
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Size:            4
   - Name:            .bss
     Type:            SHT_NOBITS
     Flags:           [ SHF_ALLOC ]
@@ -68,9 +68,15 @@ Sections:
     Flags:           [ ]
   - Name:            .gnu.warning.foo
     Type:            SHT_PROGBITS
+ProgramHeaders:
+  # Use an arbitrary segment type to show that the segment type is unimportant.
+  - Type: 0x61234567
+    Sections:
+      - Section: non_alloc_in_segment
 
-# CHECK: SectionHeaderCount: 5
+# CHECK: SectionHeaderCount: 6
 
+# CHECK: Name: non_alloc_in_segment
 # CHECK: Name: .bss
 # CHECK: Name: .text
 # CHECK: Name: .gnu.warning.foo

@@ -17,6 +17,7 @@ static_library("Common") {
   sources = [
     "Args.cpp",
     "ErrorHandler.cpp",
+    "Filesystem.cpp",
     "Memory.cpp",
     "Reproduce.cpp",
     "Strings.cpp",

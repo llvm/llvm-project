@@ -91,17 +91,17 @@ define void @dog() #0 {
 ; ODR: [[OUTLINED]]:
 ; CHECK: .p2align 2
 ; CHECK-NEXT: [[OUTLINED]]:
-; CHECK: orr     w8, wzr, #0x1
+; CHECK: mov     w8, #1
 ; CHECK-NEXT: str     w8, [sp, #28]
-; CHECK-NEXT: orr     w8, wzr, #0x2
+; CHECK-NEXT: mov     w8, #2
 ; CHECK-NEXT: str     w8, [sp, #24]
-; CHECK-NEXT: orr     w8, wzr, #0x3
+; CHECK-NEXT: mov     w8, #3
 ; CHECK-NEXT: str     w8, [sp, #20]
-; CHECK-NEXT: orr     w8, wzr, #0x4
+; CHECK-NEXT: mov     w8, #4
 ; CHECK-NEXT: str     w8, [sp, #16]
 ; CHECK-NEXT: mov     w8, #5
 ; CHECK-NEXT: str     w8, [sp, #12]
-; CHECK-NEXT: orr     w8, wzr, #0x6
+; CHECK-NEXT: mov     w8, #6
 ; CHECK-NEXT: str     w8, [sp, #8]
 ; CHECK-NEXT: add     sp, sp, #32
 ; CHECK-NEXT: ret

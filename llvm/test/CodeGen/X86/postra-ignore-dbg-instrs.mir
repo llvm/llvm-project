@@ -75,7 +75,7 @@ body: |
     renamable $eax = COPY $edi
     DBG_VALUE $eax, $noreg, !14, !DIExpression(), debug-location !16
     CMP32mi8 $rip, 1, $noreg, @x0, $noreg, 0, implicit-def $eflags, debug-location !16
-    JE_1 %bb.2, implicit killed $eflags, debug-location !16
+    JCC_1 %bb.2, 4, implicit killed $eflags, debug-location !16
     JMP_1 %bb.1, debug-location !16
 
   bb.1:

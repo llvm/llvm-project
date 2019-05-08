@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-- %s -o %t1.o
 # RUN: ld.lld -r %t1.o -o %t2.o
-# RUN: llvm-readobj -t %t2.o | FileCheck %s
+# RUN: llvm-readobj --symbols %t2.o | FileCheck %s
 
 // CHECK:      Symbols [
 // CHECK-NEXT:   Symbol {

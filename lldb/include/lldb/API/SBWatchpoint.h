@@ -25,6 +25,12 @@ public:
 
   const lldb::SBWatchpoint &operator=(const lldb::SBWatchpoint &rhs);
 
+  explicit operator bool() const;
+
+  bool operator==(const SBWatchpoint &rhs) const;
+
+  bool operator!=(const SBWatchpoint &rhs) const;
+
   bool IsValid() const;
 
   SBError GetError();

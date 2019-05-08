@@ -14,9 +14,7 @@
 
 class SymbolVendorMacOSX : public lldb_private::SymbolVendor {
 public:
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -29,16 +27,12 @@ public:
   CreateInstance(const lldb::ModuleSP &module_sp,
                  lldb_private::Stream *feedback_strm);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolVendorMacOSX(const lldb::ModuleSP &module_sp);
 
   virtual ~SymbolVendorMacOSX();
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   virtual lldb_private::ConstString GetPluginName();
 
   virtual uint32_t GetPluginVersion();

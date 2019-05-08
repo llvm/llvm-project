@@ -169,7 +169,7 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
 
 ObjectContainerBSDArchive::Object *
 ObjectContainerBSDArchive::Archive::FindObject(
-    const ConstString &object_name,
+    ConstString object_name,
     const llvm::sys::TimePoint<> &object_mod_time) {
   const ObjectNameToIndexMap::Entry *match =
       m_object_name_to_index_map.FindFirstValueForName(object_name);
@@ -436,9 +436,7 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjectContainerBSDArchive::GetPluginName() {
   return GetPluginNameStatic();
 }

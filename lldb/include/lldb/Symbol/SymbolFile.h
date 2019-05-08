@@ -32,14 +32,12 @@ namespace lldb_private {
 
 class SymbolFile : public PluginInterface {
 public:
-  //------------------------------------------------------------------
   // Symbol file ability bits.
   //
   // Each symbol file can claim to support one or more symbol file abilities.
   // These get returned from SymbolFile::GetAbilities(). These help us to
   // determine which plug-in will be best to load the debug information found
   // in files.
-  //------------------------------------------------------------------
   enum Abilities {
     CompileUnits = (1u << 0),
     LineTables = (1u << 1),
@@ -53,15 +51,12 @@ public:
 
   static SymbolFile *FindPlugin(ObjectFile *obj_file);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolFile(ObjectFile *obj_file)
       : m_obj_file(obj_file), m_abilities(0), m_calculated_abilities(false) {}
 
   ~SymbolFile() override {}
 
-  //------------------------------------------------------------------
   /// Get a mask of what this symbol file supports for the object file
   /// that it was constructed with.
   ///
@@ -85,11 +80,10 @@ public:
   /// for "void SymbolFile::InitializeObject()" which will get called
   /// on the SymbolFile object with the best set of abilities.
   ///
-  /// @return
+  /// \return
   ///     A uint32_t mask containing bits from the SymbolFile::Abilities
   ///     enumeration. Any bits that are set represent an ability that
   ///     this symbol plug-in can parse from the object file.
-  ///------------------------------------------------------------------
   uint32_t GetAbilities() {
     if (!m_calculated_abilities) {
       m_abilities = CalculateAbilities();
@@ -101,13 +95,10 @@ public:
 
   virtual uint32_t CalculateAbilities() = 0;
 
-  //------------------------------------------------------------------
   /// Symbols file subclasses should override this to return the Module that
   /// owns the TypeSystem that this symbol file modifies type information in.
-  //------------------------------------------------------------------
   virtual std::recursive_mutex &GetModuleMutex() const;
 
-  //------------------------------------------------------------------
   /// Initialize the SymbolFile object.
   ///
   /// The SymbolFile object with the best set of abilities (detected
@@ -115,12 +106,9 @@ public:
   /// called if it is chosen to parse an object file. More complete
   /// initialization can happen in this function which will get called
   /// prior to any other functions in the SymbolFile protocol.
-  //------------------------------------------------------------------
   virtual void InitializeObject() {}
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
   // Approach 1 - iterator
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) = 0;
@@ -144,10 +132,10 @@ public:
 
   /// The characteristics of an array type.
   struct ArrayInfo {
-    int64_t first_index;
+    int64_t first_index = 0;
     llvm::SmallVector<uint64_t, 1> element_orders;
-    uint32_t byte_stride;
-    uint32_t bit_stride;
+    uint32_t byte_stride = 0;
+    uint32_t bit_stride = 0;
   };
   /// If \c type_uid points to an array type, return its characteristics.
   /// To support variable-length array types, this function takes an
@@ -178,13 +166,13 @@ public:
 
   virtual void DumpClangAST(Stream &s) {}
   virtual uint32_t
-  FindGlobalVariables(const ConstString &name,
+  FindGlobalVariables(ConstString name,
                       const CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches, VariableList &variables);
   virtual uint32_t FindGlobalVariables(const RegularExpression &regex,
                                        uint32_t max_matches,
                                        VariableList &variables);
-  virtual uint32_t FindFunctions(const ConstString &name,
+  virtual uint32_t FindFunctions(ConstString name,
                                  const CompilerDeclContext *parent_decl_ctx,
                                  lldb::FunctionNameType name_type_mask,
                                  bool include_inlines, bool append,
@@ -193,7 +181,7 @@ public:
                                  bool include_inlines, bool append,
                                  SymbolContextList &sc_list);
   virtual uint32_t
-  FindTypes(const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+  FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
@@ -217,7 +205,7 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
   virtual CompilerDeclContext
-  FindNamespace(const ConstString &name,
+  FindNamespace(ConstString name,
                 const CompilerDeclContext *parent_decl_ctx) {
     return CompilerDeclContext();
   }
@@ -231,10 +219,8 @@ public:
 
   virtual void AddSymbols(Symtab &symtab) {}
 
-  //------------------------------------------------------------------
   /// Notify the SymbolFile that the file addresses in the Sections
   /// for this module have been changed.
-  //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged() {}
 
   virtual void Dump(Stream &s) {}

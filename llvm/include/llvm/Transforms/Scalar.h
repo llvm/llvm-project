@@ -137,6 +137,8 @@ Pass *createIndVarSimplifyPass();
 // LICM - This pass is a loop invariant code motion and memory promotion pass.
 //
 Pass *createLICMPass();
+Pass *createLICMPass(unsigned LicmMssaOptCap,
+                     unsigned LicmMssaNoAccForPromotionCap);
 
 //===----------------------------------------------------------------------===//
 //
@@ -183,11 +185,13 @@ Pass *createLoopInstSimplifyPass();
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
 Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
-                           int Threshold = -1, int Count = -1,
-                           int AllowPartial = -1, int Runtime = -1,
-                           int UpperBound = -1, int AllowPeeling = -1);
+                           bool ForgetAllSCEV = false, int Threshold = -1,
+                           int Count = -1, int AllowPartial = -1,
+                           int Runtime = -1, int UpperBound = -1,
+                           int AllowPeeling = -1);
 // Create an unrolling pass for full unrolling that uses exact trip count only.
-Pass *createSimpleLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false);
+Pass *createSimpleLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
+                                 bool ForgetAllSCEV = false);
 
 //===----------------------------------------------------------------------===//
 //
@@ -379,9 +383,10 @@ Pass *createCorrelatedValuePropagationPass();
 //
 // InferAddressSpaces - Modify users of addrspacecast instructions with values
 // in the source address space if using the destination address space is slower
-// on the target.
+// on the target. If AddressSpace is left to its default value, it will be
+// obtained from the TargetTransformInfo.
 //
-FunctionPass *createInferAddressSpacesPass();
+FunctionPass *createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
 extern char &InferAddressSpacesID;
 
 //===----------------------------------------------------------------------===//
@@ -455,6 +460,12 @@ FunctionPass *createNaryReassociatePass();
 // LoopDistribute - Distribute loops.
 //
 FunctionPass *createLoopDistributePass();
+
+//===----------------------------------------------------------------------===//
+//
+// LoopFuse - Fuse loops.
+//
+FunctionPass *createLoopFusePass();
 
 //===----------------------------------------------------------------------===//
 //

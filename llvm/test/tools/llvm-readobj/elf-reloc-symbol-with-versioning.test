@@ -1,0 +1,108 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-readobj --demangle -r %t.o | FileCheck %s --check-prefix LLVM
+# RUN: llvm-readelf --demangle -r %t.o | FileCheck %s --check-prefix GNU
+
+# GNU:      Relocation section '.rela.plt' at offset {{.*}} contains 5 entries:
+# GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# GNU-NEXT: 0000000000013018  0000000100000007 R_X86_64_JUMP_SLOT     0000000000000000 f1@v3 + 0
+# GNU-NEXT: 0000000000013020  0000000200000007 R_X86_64_JUMP_SLOT     0000000000000000 f2@v2 + 0
+# GNU-NEXT: 0000000000013028  0000000300000007 R_X86_64_JUMP_SLOT     0000000000000000 g1@v1 + 0
+# GNU-NEXT: 0000000000013040  0000000400000007 R_X86_64_JUMP_SLOT     0000000000000000 f1()@v3 + 0
+# GNU-NEXT: 0000000000013058  0000000500000007 R_X86_64_JUMP_SLOT     0000000000000000 f3 + 0
+
+# LLVM:      Relocations [
+# LLVM-NEXT:   Section (3) .rela.plt {
+# LLVM-NEXT:     0x13018 R_X86_64_JUMP_SLOT f1@v3 0x0
+# LLVM-NEXT:     0x13020 R_X86_64_JUMP_SLOT f2@v2 0x0
+# LLVM-NEXT:     0x13028 R_X86_64_JUMP_SLOT g1@v1 0x0
+# LLVM-NEXT:     0x13040 R_X86_64_JUMP_SLOT f1()@v3 0x0
+# LLVM-NEXT:     0x13058 R_X86_64_JUMP_SLOT f3 0x0
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000000000
+Sections:        
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Link:            .dynsym
+    AddressAlign:    0x0000000000000002
+    EntSize:         0x0000000000000002
+    Entries:         [ 0, 2, 3, 4, 2 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Link:            .dynstr
+    AddressAlign:    0x0000000000000004
+    Info:            0x0000000000000002
+    Dependencies:    
+      - Version:         1
+        File:            verneed1.so.0
+        Entries:         
+          - Name:            v2
+            Hash:            1938
+            Flags:           0
+            Other:           3
+          - Name:            v3
+            Hash:            1939
+            Flags:           0
+            Other:           2
+      - Version:         1
+        File:            verneed2.so.0
+        Entries:         
+          - Name:            v1
+            Hash:            1937
+            Flags:           0
+            Other:           4
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Info:            0
+    Link:            7
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000018
+    Relocations:     
+      - Offset:          0x0000000000013018
+        Symbol:          f1
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x0000000000013020
+        Symbol:          f2
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x0000000000013028
+        Symbol:          g1
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x0000000000013040
+        Symbol:          _Z2f1v
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x0000000000013058
+        Symbol:          f3
+        Type:            R_X86_64_JUMP_SLOT
+Symbols:
+  - Name:            f1
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Binding:         STB_GLOBAL
+  - Name:            g1
+    Binding:         STB_GLOBAL
+  - Name:            _Z2f1v
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Binding:         STB_GLOBAL
+DynamicSymbols:  
+  - Name:            f1
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Binding:         STB_GLOBAL
+  - Name:            g1
+    Binding:         STB_GLOBAL
+  - Name:            _Z2f1v
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Binding:         STB_GLOBAL
+...

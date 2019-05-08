@@ -1870,6 +1870,11 @@ public:
     return child_range(getTrailingObjects<Stmt *>(),
                        getTrailingObjects<Stmt *>() + hasFunctionName());
   }
+
+  const_child_range children() const {
+    return const_child_range(getTrailingObjects<Stmt *>(),
+                             getTrailingObjects<Stmt *>() + hasFunctionName());
+  }
 };
 
 /// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This
@@ -3402,6 +3407,9 @@ public:
 
   static bool isComparisonOp(Opcode Opc) { return Opc >= BO_Cmp && Opc<=BO_NE; }
   bool isComparisonOp() const { return isComparisonOp(getOpcode()); }
+
+  static bool isCommaOp(Opcode Opc) { return Opc == BO_Comma; }
+  bool isCommaOp() const { return isCommaOp(getOpcode()); }
 
   static Opcode negateComparisonOp(Opcode Opc) {
     switch (Opc) {

@@ -16,6 +16,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class PluginPythonOSPlugin(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def test_python_os_plugin(self):
         """Test that the Python operating system plugin works correctly"""

@@ -78,6 +78,26 @@ SymbolizableObjectFile::create(object::ObjectFile *Obj,
       if (auto EC = res->addCoffExportSymbols(CoffObj))
         return EC;
   }
+
+  std::vector<std::pair<SymbolDesc, StringRef>> &Fs = res->Functions,
+                                                &Os = res->Objects;
+  auto Uniquify = [](std::vector<std::pair<SymbolDesc, StringRef>> &S) {
+    // Sort by (Addr,Size,Name). If several SymbolDescs share the same Addr,
+    // pick the one with the largest Size. This helps us avoid symbols with no
+    // size information (Size=0).
+    llvm::sort(S);
+    auto I = S.begin(), E = S.end(), J = S.begin();
+    while (I != E) {
+      auto OI = I;
+      while (++I != E && OI->first.Addr == I->first.Addr) {
+      }
+      *J++ = I[-1];
+    }
+    S.erase(J, S.end());
+  };
+  Uniquify(Fs);
+  Uniquify(Os);
+
   return std::move(res);
 }
 
@@ -127,7 +147,7 @@ std::error_code SymbolizableObjectFile::addCoffExportSymbols(
     uint64_t SymbolStart = ImageBase + Export.Offset;
     uint64_t SymbolSize = NextOffset - Export.Offset;
     SymbolDesc SD = {SymbolStart, SymbolSize};
-    Functions.insert(std::make_pair(SD, Export.Name));
+    Functions.emplace_back(SD, Export.Name);
   }
   return std::error_code();
 }
@@ -174,7 +194,7 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
   // with same address size. Make sure we choose the correct one.
   auto &M = SymbolType == SymbolRef::ST_Function ? Functions : Objects;
   SymbolDesc SD = { SymbolAddress, SymbolSize };
-  M.insert(std::make_pair(SD, SymbolName));
+  M.emplace_back(SD, SymbolName);
   return std::error_code();
 }
 
@@ -195,12 +215,10 @@ bool SymbolizableObjectFile::getNameFromSymbolTable(SymbolRef::Type Type,
                                                     std::string &Name,
                                                     uint64_t &Addr,
                                                     uint64_t &Size) const {
-  const auto &SymbolMap = Type == SymbolRef::ST_Function ? Functions : Objects;
-  if (SymbolMap.empty())
-    return false;
-  SymbolDesc SD = { Address, Address };
-  auto SymbolIterator = SymbolMap.upper_bound(SD);
-  if (SymbolIterator == SymbolMap.begin())
+  const auto &Symbols = Type == SymbolRef::ST_Function ? Functions : Objects;
+  std::pair<SymbolDesc, StringRef> SD{{Address, UINT64_C(-1)}, StringRef()};
+  auto SymbolIterator = llvm::upper_bound(Symbols, SD);
+  if (SymbolIterator == Symbols.begin())
     return false;
   --SymbolIterator;
   if (SymbolIterator->first.Size != 0 &&
@@ -227,6 +245,11 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                       FunctionNameKind FNKind,
                                       bool UseSymbolTable) const {
   DILineInfo LineInfo;
+
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
+    ModuleOffset.SectionIndex =
+        getModuleSectionIndexForAddress(ModuleOffset.Address);
+
   if (DebugInfoContext) {
     LineInfo = DebugInfoContext->getLineInfoForAddress(
         ModuleOffset, getDILineInfoSpecifier(FNKind));
@@ -247,6 +270,10 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
     object::SectionedAddress ModuleOffset, FunctionNameKind FNKind,
     bool UseSymbolTable) const {
   DIInliningInfo InlinedContext;
+
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
+    ModuleOffset.SectionIndex =
+        getModuleSectionIndexForAddress(ModuleOffset.Address);
 
   if (DebugInfoContext)
     InlinedContext = DebugInfoContext->getInliningInfoForAddress(
@@ -275,4 +302,20 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   getNameFromSymbolTable(SymbolRef::ST_Data, ModuleOffset.Address, Res.Name,
                          Res.Start, Res.Size);
   return Res;
+}
+
+/// Search for the first occurence of specified Address in ObjectFile.
+uint64_t SymbolizableObjectFile::getModuleSectionIndexForAddress(
+    uint64_t Address) const {
+
+  for (SectionRef Sec : Module->sections()) {
+    if (!Sec.isText() || Sec.isVirtual())
+      continue;
+
+    if (Address >= Sec.getAddress() &&
+        Address < Sec.getAddress() + Sec.getSize())
+      return Sec.getIndex();
+  }
+
+  return object::SectionedAddress::UndefSection;
 }

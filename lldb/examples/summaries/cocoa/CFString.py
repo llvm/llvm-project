@@ -11,6 +11,10 @@ import lldb
 import lldb.runtime.objc.objc_runtime
 import lldb.formatters.Logger
 
+try:
+    unichr
+except NameError:
+    unichr = chr
 
 def CFString_SummaryProvider(valobj, dict):
     logger = lldb.formatters.Logger.Logger()

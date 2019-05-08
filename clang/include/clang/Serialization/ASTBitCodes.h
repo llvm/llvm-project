@@ -1173,7 +1173,10 @@ namespace serialization {
       TYPE_DEPENDENT_ADDRESS_SPACE = 47,
 
       /// A dependentSizedVectorType record.
-      TYPE_DEPENDENT_SIZED_VECTOR = 48
+      TYPE_DEPENDENT_SIZED_VECTOR = 48,
+
+      /// A type defined in a macro.
+      TYPE_MACRO_QUALIFIED = 49
     };
 
     /// The type IDs for special types constructed by semantic
@@ -1521,7 +1524,10 @@ namespace serialization {
 
       /// An OMPRequiresDecl record.
       DECL_OMP_REQUIRES,
-	 
+
+      /// An OMPAllocateDcl record.
+      DECL_OMP_ALLOCATE,
+
       /// An EmptyDecl record.
       DECL_EMPTY,
 

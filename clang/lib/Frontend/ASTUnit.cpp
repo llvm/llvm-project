@@ -30,7 +30,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -60,6 +59,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/Module.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -217,8 +217,8 @@ struct ASTUnit::ASTWriterData {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
 
-  ASTWriterData(MemoryBufferCache &PCMCache)
-      : Stream(Buffer), Writer(Stream, Buffer, PCMCache, {}) {}
+  ASTWriterData(InMemoryModuleCache &ModuleCache)
+      : Stream(Buffer), Writer(Stream, Buffer, ModuleCache, {}) {}
 };
 
 void ASTUnit::clearFileLevelDecls() {
@@ -758,7 +758,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
                                      AST->getFileManager(),
                                      UserFilesAreVolatile);
-  AST->PCMCache = new MemoryBufferCache;
+  AST->ModuleCache = new InMemoryModuleCache;
   AST->HSOpts = std::make_shared<HeaderSearchOptions>();
   AST->HSOpts->ModuleFormat = PCHContainerRdr.getFormat();
   AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
@@ -778,7 +778,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   AST->PP = std::make_shared<Preprocessor>(
       AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
-      AST->getSourceManager(), *AST->PCMCache, HeaderInfo, AST->ModuleLoader,
+      AST->getSourceManager(), HeaderInfo, AST->ModuleLoader,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
   Preprocessor &PP = *AST->PP;
@@ -791,10 +791,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   bool disableValid = false;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = true;
-  AST->Reader = new ASTReader(PP, AST->Ctx.get(), PCHContainerRdr, {},
-                              /*isysroot=*/"",
-                              /*DisableValidation=*/disableValid,
-                              AllowPCHWithCompilerErrors);
+  AST->Reader = new ASTReader(
+      PP, *AST->ModuleCache, AST->Ctx.get(), PCHContainerRdr, {},
+      /*isysroot=*/"",
+      /*DisableValidation=*/disableValid, AllowPCHWithCompilerErrors);
 
   AST->Reader->setListener(llvm::make_unique<ASTInfoCollector>(
       *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
@@ -1078,28 +1078,29 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   if (!Invocation)
     return true;
 
+  if (VFS && FileMgr)
+    assert(VFS == &FileMgr->getVirtualFileSystem() &&
+           "VFS passed to Parse and VFS in FileMgr are different");
+
   auto CCInvocation = std::make_shared<CompilerInvocation>(*Invocation);
   if (OverrideMainBuffer) {
     assert(Preamble &&
            "No preamble was built, but OverrideMainBuffer is not null");
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OldVFS = VFS;
     Preamble->AddImplicitPreamble(*CCInvocation, VFS, OverrideMainBuffer.get());
-    if (OldVFS != VFS && FileMgr) {
-      assert(OldVFS == FileMgr->getVirtualFileSystem() &&
-             "VFS passed to Parse and VFS in FileMgr are different");
-      FileMgr = new FileManager(FileMgr->getFileSystemOpts(), VFS);
-    }
+    // VFS may have changed...
   }
 
   // Create the compiler instance to use for building the AST.
   std::unique_ptr<CompilerInstance> Clang(
       new CompilerInstance(std::move(PCHContainerOps)));
-  if (FileMgr && VFS) {
-    assert(VFS == FileMgr->getVirtualFileSystem() &&
-           "VFS passed to Parse and VFS in FileMgr are different");
-  } else if (VFS) {
-    Clang->setVirtualFileSystem(VFS);
-  }
+
+  // Ensure that Clang has a FileManager with the right VFS, which may have
+  // changed above in AddImplicitPreamble.  If VFS is nullptr, rely on
+  // createFileManager to create one.
+  if (VFS && FileMgr && &FileMgr->getVirtualFileSystem() == VFS)
+    Clang->setFileManager(&*FileMgr);
+  else
+    FileMgr = Clang->createFileManager(std::move(VFS));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
@@ -1136,10 +1137,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // Configure the various subsystems.
   LangOpts = Clang->getInvocation().LangOpts;
   FileSystemOpts = Clang->getFileSystemOpts();
-  if (!FileMgr) {
-    Clang->createFileManager();
-    FileMgr = &Clang->getFileManager();
-  }
 
   ResetForParse();
 
@@ -1477,7 +1474,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(), *AST->FileMgr,
                                      UserFilesAreVolatile);
-  AST->PCMCache = new MemoryBufferCache;
+  AST->ModuleCache = new InMemoryModuleCache;
 
   return AST;
 }
@@ -1693,7 +1690,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
 
   if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
                                       PrecompilePreambleAfterNParses,
-                                      AST->FileMgr->getVirtualFileSystem()))
+                                      &AST->FileMgr->getVirtualFileSystem()))
     return nullptr;
   return AST;
 }
@@ -1757,7 +1754,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     VFS = llvm::vfs::getRealFileSystem();
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
-  AST->PCMCache = new MemoryBufferCache;
+  AST->ModuleCache = new InMemoryModuleCache;
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
@@ -1768,7 +1765,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   AST->Invocation = CI;
   AST->SkipFunctionBodies = SkipFunctionBodies;
   if (ForSerialization)
-    AST->WriterData.reset(new ASTWriterData(*AST->PCMCache));
+    AST->WriterData.reset(new ASTWriterData(*AST->ModuleCache));
   // Zero out now to ease cleanup during crash recovery.
   CI = nullptr;
   Diags = nullptr;
@@ -1800,7 +1797,7 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   if (!VFS) {
     assert(FileMgr && "FileMgr is null on Reparse call");
-    VFS = FileMgr->getVirtualFileSystem();
+    VFS = &FileMgr->getVirtualFileSystem();
   }
 
   clearFileLevelDecls();
@@ -1880,8 +1877,7 @@ namespace {
   public:
     AugmentedCodeCompleteConsumer(ASTUnit &AST, CodeCompleteConsumer &Next,
                                   const CodeCompleteOptions &CodeCompleteOpts)
-        : CodeCompleteConsumer(CodeCompleteOpts, Next.isOutputBinary()),
-          AST(AST), Next(Next) {
+        : CodeCompleteConsumer(CodeCompleteOpts), AST(AST), Next(Next) {
       // Compute the set of contexts in which we will look when we don't have
       // any information about the specific context.
       NormalContexts
@@ -2214,18 +2210,18 @@ void ASTUnit::CodeComplete(
   if (Preamble) {
     std::string CompleteFilePath(File);
 
-    auto VFS = FileMgr.getVirtualFileSystem();
-    auto CompleteFileStatus = VFS->status(CompleteFilePath);
+    auto &VFS = FileMgr.getVirtualFileSystem();
+    auto CompleteFileStatus = VFS.status(CompleteFilePath);
     if (CompleteFileStatus) {
       llvm::sys::fs::UniqueID CompleteFileID = CompleteFileStatus->getUniqueID();
 
       std::string MainPath(OriginalSourceFile);
-      auto MainStatus = VFS->status(MainPath);
+      auto MainStatus = VFS.status(MainPath);
       if (MainStatus) {
         llvm::sys::fs::UniqueID MainID = MainStatus->getUniqueID();
         if (CompleteFileID == MainID && Line > 1)
           OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
-              PCHContainerOps, Inv, VFS, false, Line - 1);
+              PCHContainerOps, Inv, &VFS, false, Line - 1);
       }
     }
   }
@@ -2236,7 +2232,8 @@ void ASTUnit::CodeComplete(
     assert(Preamble &&
            "No preamble was built, but OverrideMainBuffer is not null");
 
-    auto VFS = FileMgr.getVirtualFileSystem();
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+        &FileMgr.getVirtualFileSystem();
     Preamble->AddImplicitPreamble(Clang->getInvocation(), VFS,
                                   OverrideMainBuffer.get());
     // FIXME: there is no way to update VFS if it was changed by
@@ -2317,8 +2314,8 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  MemoryBufferCache PCMCache;
-  ASTWriter Writer(Stream, Buffer, PCMCache, {});
+  InMemoryModuleCache ModuleCache;
+  ASTWriter Writer(Stream, Buffer, ModuleCache, {});
   return serializeUnit(Writer, Buffer, getSema(), hasErrors, OS);
 }
 

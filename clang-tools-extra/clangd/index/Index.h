@@ -103,9 +103,6 @@ public:
                     llvm::function_ref<void(const Ref &)> Callback) const = 0;
 
   /// Returns estimated size of index (in bytes).
-  // FIXME(kbobyrev): Currently, this only returns the size of index itself
-  // excluding the size of actual symbol slab index refers to. We should include
-  // both.
   virtual size_t estimateMemoryUsage() const = 0;
 };
 

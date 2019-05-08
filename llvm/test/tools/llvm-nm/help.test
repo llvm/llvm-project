@@ -1,0 +1,3 @@
+RUN: llvm-nm --help 2>&1 | FileCheck --implicit-check-not="General Options:" %s
+CHECK: Generic Options:
+CHECK: llvm-nm Options:

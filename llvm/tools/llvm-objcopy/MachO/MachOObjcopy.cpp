@@ -8,7 +8,6 @@
 
 #include "MachOObjcopy.h"
 #include "../CopyConfig.h"
-#include "../llvm-objcopy.h"
 #include "MachOReader.h"
 #include "MachOWriter.h"
 #include "llvm/Support/Error.h"

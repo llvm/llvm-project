@@ -593,8 +593,8 @@ std::error_code SampleProfileReaderCompactBinary::readFuncOffsetTable() {
 void SampleProfileReaderCompactBinary::collectFuncsToUse(const Module &M) {
   FuncsToUse.clear();
   for (auto &F : M) {
-    StringRef Fname = F.getName().split('.').first;
-    FuncsToUse.insert(Fname);
+    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+    FuncsToUse.insert(CanonName);
   }
 }
 

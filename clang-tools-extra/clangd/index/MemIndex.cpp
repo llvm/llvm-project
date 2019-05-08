@@ -11,6 +11,7 @@
 #include "Logger.h"
 #include "Quality.h"
 #include "Trace.h"
+#include "clang/Index/IndexSymbol.h"
 
 namespace clang {
 namespace clangd {

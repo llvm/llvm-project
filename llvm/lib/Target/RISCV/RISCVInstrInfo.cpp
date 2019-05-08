@@ -382,8 +382,8 @@ unsigned RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       .addMBB(&DestBB, RISCVII::MO_LO);
 
   RS->enterBasicBlockEnd(MBB);
-  unsigned Scav = RS->scavengeRegisterBackwards(
-      RISCV::GPRRegClass, MachineBasicBlock::iterator(LuiMI), false, 0);
+  unsigned Scav = RS->scavengeRegisterBackwards(RISCV::GPRRegClass,
+                                                LuiMI.getIterator(), false, 0);
   MRI.replaceRegWith(ScratchReg, Scav);
   MRI.clearVirtRegs();
   RS->setRegUsed(Scav);
@@ -438,6 +438,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 0;
   case RISCV::PseudoCALL:
   case RISCV::PseudoTAIL:
+  case RISCV::PseudoLLA:
     return 8;
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR: {

@@ -409,7 +409,7 @@ body: |
 
     $eax = MOV32rr $edi, implicit-def $rax
     CMP32ri8 killed $edi, 3, implicit-def $eflags
-    JA_1 %bb.2.def, implicit killed $eflags
+    JCC_1 %bb.2.def, 7, implicit killed $eflags
 
   bb.1.entry:
     successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4

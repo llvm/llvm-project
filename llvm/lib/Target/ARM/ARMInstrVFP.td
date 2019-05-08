@@ -52,28 +52,50 @@ def vfp_f16imm : Operand<f16>,
   let ParserMatchClass = FPImmOperand;
 }
 
-def vfp_f32imm : Operand<f32>,
-                 PatLeaf<(f32 fpimm), [{
-      return ARM_AM::getFP32Imm(N->getValueAPF()) != -1;
-    }], SDNodeXForm<fpimm, [{
+def vfp_f32imm_xform : SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = ARM_AM::getFP32Imm(InVal);
       return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
-    }]>> {
+    }]>;
+
+def gi_vfp_f32imm : GICustomOperandRenderer<"renderVFPF32Imm">,
+                    GISDNodeXFormEquiv<vfp_f32imm_xform>;
+
+def vfp_f32imm : Operand<f32>,
+                 PatLeaf<(f32 fpimm), [{
+      return ARM_AM::getFP32Imm(N->getValueAPF()) != -1;
+    }], vfp_f32imm_xform> {
   let PrintMethod = "printFPImmOperand";
   let ParserMatchClass = FPImmOperand;
+  let GISelPredicateCode = [{
+      const auto &MO = MI.getOperand(1);
+      if (!MO.isFPImm())
+        return false;
+      return ARM_AM::getFP32Imm(MO.getFPImm()->getValueAPF()) != -1;
+    }];
 }
+
+def vfp_f64imm_xform : SDNodeXForm<fpimm, [{
+      APFloat InVal = N->getValueAPF();
+      uint32_t enc = ARM_AM::getFP64Imm(InVal);
+      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+    }]>;
+
+def gi_vfp_f64imm : GICustomOperandRenderer<"renderVFPF64Imm">,
+                    GISDNodeXFormEquiv<vfp_f64imm_xform>;
 
 def vfp_f64imm : Operand<f64>,
                  PatLeaf<(f64 fpimm), [{
       return ARM_AM::getFP64Imm(N->getValueAPF()) != -1;
-    }], SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP64Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
-    }]>> {
+    }], vfp_f64imm_xform> {
   let PrintMethod = "printFPImmOperand";
   let ParserMatchClass = FPImmOperand;
+  let GISelPredicateCode = [{
+      const auto &MO = MI.getOperand(1);
+      if (!MO.isFPImm())
+        return false;
+      return ARM_AM::getFP64Imm(MO.getFPImm()->getValueAPF()) != -1;
+    }];
 }
 
 def alignedload16 : PatFrag<(ops node:$ptr), (load node:$ptr), [{

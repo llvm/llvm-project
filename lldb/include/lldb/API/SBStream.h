@@ -23,6 +23,8 @@ public:
 
   ~SBStream();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   // If this stream is not redirected to a file, it will maintain a local cache

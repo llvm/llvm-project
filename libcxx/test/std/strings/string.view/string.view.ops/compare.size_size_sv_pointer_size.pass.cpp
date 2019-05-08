@@ -1345,7 +1345,7 @@ int main(int, char**) {
     constexpr SV  sv1;
     constexpr SV  sv2 { "abcdefghijklmnopqrst", 21 };
     static_assert ( sv1.compare(0, 0, "abcde", 0) == 0, "" );
-    static_assert ( sv1.compare(0, 0, "abcde", 1) == -1, "" );
+    static_assert ( sv1.compare(0, 0, "abcde", 1) < 0, "" );
     static_assert ( sv2.compare(0, 0, "abcde", 1, 0) == 0, "" );
     }
 #endif

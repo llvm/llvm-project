@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readelf -V %t | FileCheck %s
+# RUN: llvm-readobj -V %t | FileCheck %s
 
 ## Check we are able to produce a valid SHT_GNU_versym
 ## section from its description.
@@ -31,18 +31,20 @@
 # CHECK-NEXT:     Version: 1
 # CHECK-NEXT:     Count: 2
 # CHECK-NEXT:     FileName: dso.so.0
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Hash: 1937
-# CHECK-NEXT:       Flags: 0x0
-# CHECK-NEXT:       Index: 3
-# CHECK-NEXT:       Name: v1
-# CHECK-NEXT:     }
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Hash: 1938
-# CHECK-NEXT:       Flags: 0x0
-# CHECK-NEXT:       Index: 4
-# CHECK-NEXT:       Name: v2
-# CHECK-NEXT:     }
+# CHECK-NEXT:     Entries [
+# CHECK-NEXT:       Entry {
+# CHECK-NEXT:         Hash: 1937
+# CHECK-NEXT:         Flags: 0x0
+# CHECK-NEXT:         Index: 3
+# CHECK-NEXT:         Name: v1
+# CHECK-NEXT:       }
+# CHECK-NEXT:       Entry {
+# CHECK-NEXT:         Hash: 1938
+# CHECK-NEXT:         Flags: 0x0
+# CHECK-NEXT:         Index: 4
+# CHECK-NEXT:         Name: v2
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
 
@@ -82,7 +84,8 @@ Sections:
             Flags:           0
             Other:           4
 DynamicSymbols:
-  Global:
-    - Name:            f1
-    - Name:            f2
+  - Name:    f1
+    Binding: STB_GLOBAL
+  - Name:    f2
+    Binding: STB_GLOBAL
 ...

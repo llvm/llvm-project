@@ -133,6 +133,10 @@ template <class M, class N>
 template <class M, class N>
     constexpr common_type_t<M,N> lcm(M m, N n);    // C++17
 
+integer         midpoint(integer a, integer b);                  // C++20
+pointer         midpoint(pointer a, pointer b);                  // C++20
+floating_point  midpoint(floating_point a, floating_point b);    // C++20
+
 }  // std
 
 */
@@ -141,6 +145,7 @@ template <class M, class N>
 #include <iterator>
 #include <limits> // for numeric_limits
 #include <functional>
+#include <cmath> // for isnormal
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -518,6 +523,54 @@ lcm(_Tp __m, _Up __n)
 }
 
 #endif /* _LIBCPP_STD_VER > 14 */
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<is_integral_v<_Tp> && !is_same_v<bool, _Tp>, _Tp>
+midpoint(_Tp __a, _Tp __b) noexcept
+_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+{
+    using _Up = std::make_unsigned_t<_Tp>;
+
+    int __sign = 1;
+    _Up __m = __a;
+    _Up __M = __b;
+    if (__a > __b)
+    {
+        __sign = -1;
+        __m = __b;
+        __M = __a;
+    }
+     return __a + __sign * _Tp(_Up(__M-__m) >> 1);
+}
+
+
+template <class _TPtr>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<is_pointer_v<_TPtr>, _TPtr>
+midpoint(_TPtr __a, _TPtr __b) noexcept
+{
+    return __a + _VSTD::midpoint(ptrdiff_t(0), __b - __a);
+}
+
+
+template <typename _Tp>
+int __sign(_Tp __val) {
+    return (_Tp(0) < __val) - (__val < _Tp(0));
+}
+
+template <class _Fp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<is_floating_point_v<_Fp>, _Fp>
+midpoint(_Fp __a, _Fp __b) noexcept
+{
+    return isnormal(__a) && isnormal(__b) 
+       && ((__sign(__a) != __sign(__b)) || ((numeric_limits<_Fp>::max() - abs(__a)) < abs(__b)))
+             ?  __a / 2 + __b / 2
+             : (__a + __b) / 2;
+}
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -73,11 +73,11 @@ option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." O
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
-set(ENABLE_FILESYSTEM_DEFAULT ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
+set(ENABLE_FILESYSTEM_DEFAULT ON)
 if (WIN32)
   set(ENABLE_FILESYSTEM_DEFAULT OFF)
 endif()
-option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of libc++fs.a"
+option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ library"
     ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 
@@ -117,9 +117,6 @@ option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
 cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "Install libc++experimental.a" ON
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
-cmake_dependent_option(LIBCXX_INSTALL_FILESYSTEM_LIBRARY
-        "Install libc++fs.a" ON
-        "LIBCXX_ENABLE_FILESYSTEM;LIBCXX_INSTALL_LIBRARY" OFF)
 
 set(LIBCXX_ABI_VERSION "1" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently not stable. Defaults to 1.")
 set(LIBCXX_ABI_NAMESPACE "" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
@@ -129,10 +126,8 @@ option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Mi
 option(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT "Enable per TU ABI insulation by default. To be used by vendors." OFF)
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
-
-if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
-  message(FATAL_ERROR "libc++ must be built as either a shared or static library.")
-endif()
+set(LIBCXX_LIBCPPABI_VERSION "2" CACHE STRING "Version of libc++abi's ABI to re-export from libc++ when re-exporting is enabled.
+                                               Note that this is not related to the version of libc++'s ABI itself!")
 
 # ABI Library options ---------------------------------------------------------
 set(LIBCXX_CXX_ABI "default" CACHE STRING
@@ -143,8 +138,7 @@ set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (LIBCXX_CXX_ABI STREQUAL "default")
   find_path(
-    LIBCXX_LIBCXXABI_INCLUDES_INTERNAL
-    cxxabi.h
+    LIBCXX_LIBCXXABI_INCLUDES_INTERNAL cxxabi.h
     PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi/include
           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
           ${LLVM_MAIN_SRC_DIR}/../libcxxabi/include
@@ -172,9 +166,9 @@ else()
   set(LIBCXX_CXX_ABI_LIBNAME "${LIBCXX_CXX_ABI}")
 endif()
 
-# Use a static copy of the ABI library when linking libc++. This option
-# cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT.
-option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "Statically link the ABI library" OFF)
+option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY
+  "Use a static copy of the ABI library when linking libc++.
+   This option cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT." OFF)
 
 cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
   "Statically link the ABI library to static library" ON
@@ -202,20 +196,10 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       "Use and install a linker script for the given ABI library"
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
 
-set(ENABLE_NEW_DELETE_DEFAULT ON)
-if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-# FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
-# programs due to undefined references to new/delete in libc++abi so to work
-# around this libc++abi currently defaults LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
-# to ON. Once the GCC bug has been worked around this option should be changed
-# back to OFF.
-  set(ENABLE_NEW_DELETE_DEFAULT ON)
-endif()
-
 option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
     "Build libc++ with definitions for operator new/delete. This option can
-    be used to disable the definitions when libc++abi is expected to provide
-    them" ${ENABLE_NEW_DELETE_DEFAULT})
+     be used to disable the definitions when libc++abi is expected to provide
+     them" ON)
 
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
@@ -291,11 +275,6 @@ option(LIBCXX_HERMETIC_STATIC_LIBRARY
 # Check option configurations
 #===============================================================================
 
-if (LIBCXX_ENABLE_FILESYSTEM AND NOT LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-  message(FATAL_ERROR
-    "LIBCXX_ENABLE_FILESYSTEM cannot be turned on when LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF")
-endif()
-
 # Ensure LIBCXX_ENABLE_MONOTONIC_CLOCK is set to ON only when
 # LIBCXX_ENABLE_THREADS is on.
 if(LIBCXX_ENABLE_THREADS AND NOT LIBCXX_ENABLE_MONOTONIC_CLOCK)
@@ -365,13 +344,9 @@ elseif(LIBCXX_BUILD_32_BITS)
   message(FATAL_ERROR "LIBCXX_BUILD_32_BITS=ON is not supported on this platform.")
 endif()
 
-# Check that this option is not enabled on Apple and emit a usage warning.
+# Warn users that LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
-  if (APPLE)
-    message(FATAL_ERROR "LIBCXX_ENABLE_STATIC_ABI_LIBRARY is not supported on OS X")
-  else()
-    message(WARNING "LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option")
-  endif()
+  message(WARNING "LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option")
   if (LIBCXX_ENABLE_STATIC AND NOT PYTHONINTERP_FOUND)
     message(FATAL_ERROR "LIBCXX_ENABLE_STATIC_ABI_LIBRARY requires python but it was not found.")
   endif()
@@ -784,15 +759,12 @@ endif()
 #===============================================================================
 include_directories(include)
 add_subdirectory(include)
-add_subdirectory(lib)
+add_subdirectory(src)
 
 set(LIBCXX_TEST_DEPS "")
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   list(APPEND LIBCXX_TEST_DEPS cxx_experimental)
-endif()
-if (LIBCXX_ENABLE_FILESYSTEM)
-  list(APPEND LIBCXX_TEST_DEPS cxx_filesystem)
 endif()
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)

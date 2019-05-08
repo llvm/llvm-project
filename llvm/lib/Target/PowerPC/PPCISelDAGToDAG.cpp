@@ -2372,7 +2372,7 @@ public:
 
   // Here we try to match complex bit permutations into a set of
   // rotate-and-shift/shift/and/or instructions, using a set of heuristics
-  // known to produce optimial code for common cases (like i32 byte swapping).
+  // known to produce optimal code for common cases (like i32 byte swapping).
   SDNode *Select(SDNode *N) {
     Memoizer.clear();
     auto Result =
@@ -4213,12 +4213,12 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
 
   // Without this setb optimization, the outer SELECT_CC will be manually
   // selected to SELECT_CC_I4/SELECT_CC_I8 Pseudo, then expand-isel-pseudos pass
-  // transforms pseduo instruction to isel instruction. When there are more than
+  // transforms pseudo instruction to isel instruction. When there are more than
   // one use for result like zext/sext, with current optimization we only see
   // isel is replaced by setb but can't see any significant gain. Since
   // setb has longer latency than original isel, we should avoid this. Another
   // point is that setb requires comparison always kept, it can break the
-  // oppotunity to get the comparison away if we have in future.
+  // opportunity to get the comparison away if we have in future.
   if (!SetOrSelCC.hasOneUse() || (!InnerIsSel && !FalseRes.hasOneUse()))
     return false;
 
@@ -4353,7 +4353,19 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (trySETCC(N))
       return;
     break;
-
+  // These nodes will be transformed into GETtlsADDR32 node, which
+  // later becomes BL_TLS __tls_get_addr(sym at tlsgd)@PLT
+  case PPCISD::ADDI_TLSLD_L_ADDR:
+  case PPCISD::ADDI_TLSGD_L_ADDR: {
+    const Module *Mod = MF->getFunction().getParent();
+    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
+        !PPCSubTarget->isSecurePlt() || !PPCSubTarget->isTargetELF() ||
+        Mod->getPICLevel() == PICLevel::SmallPIC)
+      break;
+    // Attach global base pointer on GETtlsADDR32 node in order to
+    // generate secure plt code for TLS symbols.
+    getGlobalBaseReg();
+  } break;
   case PPCISD::CALL: {
     const Module *M = MF->getFunction().getParent();
 

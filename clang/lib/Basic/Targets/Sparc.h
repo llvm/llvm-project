@@ -39,7 +39,7 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
     // Check if software floating point is enabled
-    auto Feature = std::find(Features.begin(), Features.end(), "+soft-float");
+    auto Feature = llvm::find(Features, "+soft-float");
     if (Feature != Features.end()) {
       SoftFloat = true;
     }

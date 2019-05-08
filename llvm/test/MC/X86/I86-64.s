@@ -684,6 +684,14 @@ callw 64
 // CHECK: encoding: [0x66,0x98]          
 cbtw 
 
+// CHECK: cwtl 
+// CHECK: encoding: [0x98]          
+cwtl 
+
+// CHECK: cltq 
+// CHECK: encoding: [0x48,0x98]          
+cltq 
+
 // CHECK: clc 
 // CHECK: encoding: [0xf8]          
 clc 
@@ -696,9 +704,17 @@ cld
 // CHECK: encoding: [0xfa]          
 cli 
 
+// CHECK: cwtd 
+// CHECK: encoding: [0x66,0x99]          
+cwtd 
+
 // CHECK: cltd 
 // CHECK: encoding: [0x99]          
 cltd 
+
+// CHECK: cqto 
+// CHECK: encoding: [0x48,0x99]          
+cqto 
 
 // CHECK: cmc 
 // CHECK: encoding: [0xf5]          

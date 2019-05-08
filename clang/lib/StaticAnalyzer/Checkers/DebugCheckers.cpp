@@ -266,3 +266,34 @@ void ento::registerExplodedGraphViewer(CheckerManager &mgr) {
 bool ento::shouldRegisterExplodedGraphViewer(const LangOptions &LO) {
   return true;
 }
+
+//===----------------------------------------------------------------------===//
+// Emits a report for every Stmt that the analyzer visits.
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class ReportStmts : public Checker<check::PreStmt<Stmt>> {
+  BuiltinBug BT_stmtLoc{this, "Statement"};
+
+public:
+  void checkPreStmt(const Stmt *S, CheckerContext &C) const {
+    ExplodedNode *Node = C.generateNonFatalErrorNode();
+    if (!Node)
+      return;
+
+    auto Report = llvm::make_unique<BugReport>(BT_stmtLoc, "Statement", Node);
+
+    C.emitReport(std::move(Report));
+  }
+};
+
+} // end of anonymous namespace
+
+void ento::registerReportStmts(CheckerManager &mgr) {
+  mgr.registerChecker<ReportStmts>();
+}
+
+bool ento::shouldRegisterReportStmts(const LangOptions &LO) {
+  return true;
+}

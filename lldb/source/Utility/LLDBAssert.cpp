@@ -27,5 +27,4 @@ void lldb_private::lldb_assert(bool expression, const char *expr_text,
   llvm::sys::PrintStackTrace(errs());
   errs() << "please file a bug report against lldb reporting this failure "
             "log, and as many details as possible\n";
-  abort();
 }

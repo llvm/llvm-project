@@ -36,57 +36,59 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
   const X86TargetLowering *getTLI() const { return TLI; }
 
   const FeatureBitset InlineFeatureIgnoreList = {
-    // This indicates the CPU is 64 bit capable not that we are in 64-bit mode.
-    X86::Feature64Bit,
+      // This indicates the CPU is 64 bit capable not that we are in 64-bit
+      // mode.
+      X86::Feature64Bit,
 
-    // These features don't have any intrinsics or ABI effect.
-    X86::FeatureNOPL,
-    X86::FeatureCMPXCHG16B,
-    X86::FeatureLAHFSAHF,
+      // These features don't have any intrinsics or ABI effect.
+      X86::FeatureNOPL,
+      X86::FeatureCMPXCHG16B,
+      X86::FeatureLAHFSAHF,
 
-    // Codegen control options.
-    X86::FeatureFast11ByteNOP,
-    X86::FeatureFast15ByteNOP,
-    X86::FeatureFastBEXTR,
-    X86::FeatureFastHorizontalOps,
-    X86::FeatureFastLZCNT,
-    X86::FeatureFastPartialYMMorZMMWrite,
-    X86::FeatureFastScalarFSQRT,
-    X86::FeatureFastSHLDRotate,
-    X86::FeatureFastVariableShuffle,
-    X86::FeatureFastVectorFSQRT,
-    X86::FeatureLEAForSP,
-    X86::FeatureLEAUsesAG,
-    X86::FeatureLZCNTFalseDeps,
-    X86::FeatureMacroFusion,
-    X86::FeatureMergeToThreeWayBranch,
-    X86::FeaturePadShortFunctions,
-    X86::FeaturePOPCNTFalseDeps,
-    X86::FeatureSSEUnalignedMem,
-    X86::FeatureSlow3OpsLEA,
-    X86::FeatureSlowDivide32,
-    X86::FeatureSlowDivide64,
-    X86::FeatureSlowIncDec,
-    X86::FeatureSlowLEA,
-    X86::FeatureSlowPMADDWD,
-    X86::FeatureSlowPMULLD,
-    X86::FeatureSlowSHLD,
-    X86::FeatureSlowTwoMemOps,
-    X86::FeatureSlowUAMem16,
+      // Codegen control options.
+      X86::FeatureFast11ByteNOP,
+      X86::FeatureFast15ByteNOP,
+      X86::FeatureFastBEXTR,
+      X86::FeatureFastHorizontalOps,
+      X86::FeatureFastLZCNT,
+      X86::FeatureFastPartialYMMorZMMWrite,
+      X86::FeatureFastScalarFSQRT,
+      X86::FeatureFastSHLDRotate,
+      X86::FeatureFastVariableShuffle,
+      X86::FeatureFastVectorFSQRT,
+      X86::FeatureLEAForSP,
+      X86::FeatureLEAUsesAG,
+      X86::FeatureLZCNTFalseDeps,
+      X86::FeatureBranchFusion,
+      X86::FeatureMacroFusion,
+      X86::FeatureMergeToThreeWayBranch,
+      X86::FeaturePadShortFunctions,
+      X86::FeaturePOPCNTFalseDeps,
+      X86::FeatureSSEUnalignedMem,
+      X86::FeatureSlow3OpsLEA,
+      X86::FeatureSlowDivide32,
+      X86::FeatureSlowDivide64,
+      X86::FeatureSlowIncDec,
+      X86::FeatureSlowLEA,
+      X86::FeatureSlowPMADDWD,
+      X86::FeatureSlowPMULLD,
+      X86::FeatureSlowSHLD,
+      X86::FeatureSlowTwoMemOps,
+      X86::FeatureSlowUAMem16,
 
-    // Perf-tuning flags.
-    X86::FeatureHasFastGather,
-    X86::FeatureSlowUAMem32,
+      // Perf-tuning flags.
+      X86::FeatureHasFastGather,
+      X86::FeatureSlowUAMem32,
 
-    // Based on whether user set the -mprefer-vector-width command line.
-    X86::FeaturePrefer256Bit,
+      // Based on whether user set the -mprefer-vector-width command line.
+      X86::FeaturePrefer256Bit,
 
-    // CPU name enums. These just follow CPU string.
-    X86::ProcIntelAtom,
-    X86::ProcIntelGLM,
-    X86::ProcIntelGLP,
-    X86::ProcIntelSLM,
-    X86::ProcIntelTRM,
+      // CPU name enums. These just follow CPU string.
+      X86::ProcIntelAtom,
+      X86::ProcIntelGLM,
+      X86::ProcIntelGLP,
+      X86::ProcIntelSLM,
+      X86::ProcIntelTRM,
   };
 
 public:
@@ -184,6 +186,8 @@ public:
   bool isLegalMaskedStore(Type *DataType);
   bool isLegalMaskedGather(Type *DataType);
   bool isLegalMaskedScatter(Type *DataType);
+  bool isLegalMaskedExpandLoad(Type *DataType);
+  bool isLegalMaskedCompressStore(Type *DataType);
   bool hasDivRemOp(Type *DataType, bool IsSigned);
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty);
   bool areInlineCompatible(const Function *Caller,

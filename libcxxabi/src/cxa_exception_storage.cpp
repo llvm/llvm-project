@@ -6,7 +6,7 @@
 //
 //  
 //  This file implements the storage for the "Caught Exception Stack"
-//  http://mentorembedded.github.io/cxx-abi/abi-eh.html (section 2.2.2)
+//  https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html#cxx-exc-stack
 //  
 //===----------------------------------------------------------------------===//
 

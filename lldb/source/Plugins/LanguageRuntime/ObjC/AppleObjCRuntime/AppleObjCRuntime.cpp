@@ -45,8 +45,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr std::chrono::seconds g_po_function_timeout(15);
-
 AppleObjCRuntime::~AppleObjCRuntime() {}
 
 AppleObjCRuntime::AppleObjCRuntime(Process *process)
@@ -171,7 +169,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   options.SetTryAllThreads(true);
   options.SetStopOthers(true);
   options.SetIgnoreBreakpoints(true);
-  options.SetTimeout(g_po_function_timeout);
+  options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetIsForUtilityExpr(true);
 
   ExpressionResults results = m_print_object_caller_up->ExecuteFunction(
@@ -345,9 +343,7 @@ ThreadPlanSP AppleObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   return thread_plan_sp;
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 ObjCLanguageRuntime::ObjCRuntimeVersions
 AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
   if (!process)
@@ -476,7 +472,8 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
   
   while (descriptor) {
     ConstString class_name(descriptor->GetClassName());
-    if (class_name == ConstString("NSException")) return cpp_exception;
+    if (class_name == "NSException")
+      return cpp_exception;
     descriptor = descriptor->GetSuperclass();
   }
 

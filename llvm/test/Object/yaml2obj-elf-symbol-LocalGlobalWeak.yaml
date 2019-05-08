@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj -symbols - | FileCheck %s
+# RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
 !ELF
 FileHeader:
   Class: ELFCLASS64
@@ -11,18 +11,17 @@ Sections:
     Flags: [ SHF_ALLOC, SHF_WRITE ]
     Content: "DEADBEEF"
 Symbols:
-  Local:
-    - Name: local_symbol
-      Type: STT_OBJECT
-      Section: .data
-  Global:
-    - Name: global_symbol
-      Type: STT_OBJECT
-      Section: .data
-  Weak:
-    - Name: weak_symbol
-      Type: STT_OBJECT
-      Section: .data
+  - Name:    local_symbol
+    Type:    STT_OBJECT
+    Section: .data
+  - Name:    global_symbol
+    Type:    STT_OBJECT
+    Section: .data
+    Binding: STB_GLOBAL
+  - Name:    weak_symbol
+    Type:    STT_OBJECT
+    Section: .data
+    Binding: STB_WEAK
 
 # CHECK: Symbol {
 # CHECK:   Name:  (0)

@@ -26,25 +26,26 @@ namespace tooling {
 namespace fixit {
 
 namespace internal {
-StringRef getText(SourceRange Range, const ASTContext &Context);
+StringRef getText(CharSourceRange Range, const ASTContext &Context);
 
-/// Returns the SourceRange of a SourceRange. This identity function is
-///        used by the following template abstractions.
-inline SourceRange getSourceRange(const SourceRange &Range) { return Range; }
-
-/// Returns the SourceRange of the token at Location \p Loc.
-inline SourceRange getSourceRange(const SourceLocation &Loc) {
-  return SourceRange(Loc);
+/// Returns the token CharSourceRange corresponding to \p Range.
+inline CharSourceRange getSourceRange(const SourceRange &Range) {
+  return CharSourceRange::getTokenRange(Range);
 }
 
-/// Returns the SourceRange of an given Node. \p Node is typically a
+/// Returns the CharSourceRange of the token at Location \p Loc.
+inline CharSourceRange getSourceRange(const SourceLocation &Loc) {
+  return CharSourceRange::getTokenRange(Loc, Loc);
+}
+
+/// Returns the CharSourceRange of an given Node. \p Node is typically a
 ///        'Stmt', 'Expr' or a 'Decl'.
-template <typename T> SourceRange getSourceRange(const T &Node) {
-  return Node.getSourceRange();
+template <typename T> CharSourceRange getSourceRange(const T &Node) {
+  return CharSourceRange::getTokenRange(Node.getSourceRange());
 }
 } // end namespace internal
 
-// Returns a textual representation of \p Node.
+/// Returns a textual representation of \p Node.
 template <typename T>
 StringRef getText(const T &Node, const ASTContext &Context) {
   return internal::getText(internal::getSourceRange(Node), Context);

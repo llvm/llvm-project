@@ -32,19 +32,6 @@ void DWARFAttributes::Append(const DWARFUnit *cu, dw_offset_t attr_die_offset,
   m_infos.push_back(attr_value);
 }
 
-bool DWARFAttributes::ContainsAttribute(dw_attr_t attr) const {
-  return FindAttributeIndex(attr) != UINT32_MAX;
-}
-
-bool DWARFAttributes::RemoveAttribute(dw_attr_t attr) {
-  uint32_t attr_index = FindAttributeIndex(attr);
-  if (attr_index != UINT32_MAX) {
-    m_infos.erase(m_infos.begin() + attr_index);
-    return true;
-  }
-  return false;
-}
-
 bool DWARFAttributes::ExtractFormValueAtIndex(
     uint32_t i, DWARFFormValue &form_value) const {
   const DWARFUnit *cu = CompileUnitAtIndex(i);

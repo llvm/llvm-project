@@ -2508,6 +2508,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
               else
                 return VersionTuple(NewMajor, Version.getMinor().getValue());
             }
+            return VersionTuple(NewMajor);
           }
 
           return VersionTuple(2, 0);
@@ -2612,6 +2613,14 @@ static void handleVisibilityAttr(Sema &S, Decl *D, const ParsedAttr &AL,
     S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type)
         << AL << ExpectedTypeOrNamespace;
     return;
+  }
+
+  // Visibility attributes have no effect on symbols with internal linkage.
+  if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+    if (!ND->isExternallyVisible())
+      S.Diag(AL.getRange().getBegin(),
+             diag::warn_attribute_ignored_on_non_external)
+          << AL;
   }
 
   // Check that the argument is a string literal.
@@ -4727,7 +4736,8 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   }
   if (A != TargetInfo::CCCR_OK) {
     if (A == TargetInfo::CCCR_Warning)
-      Diag(Attrs.getLoc(), diag::warn_cconv_ignored) << Attrs;
+      Diag(Attrs.getLoc(), diag::warn_cconv_ignored)
+          << Attrs << (int)CallingConventionIgnoredReason::ForThisTarget;
 
     // This convention is not valid for the target. Use the default function or
     // method calling convention.
@@ -6733,31 +6743,6 @@ static void handleObjCExternallyRetainedAttr(Sema &S, Decl *D,
   handleSimpleAttribute<ObjCExternallyRetainedAttr>(S, D, AL);
 }
 
-static void handleFortifyStdLib(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-  unsigned VariantID = Builtin::getFortifiedVariantFunction(FD->getBuiltinID());
-  if (VariantID == 0) {
-    S.Diag(D->getLocation(), diag::err_fortify_std_lib_bad_decl);
-    return;
-  }
-
-  uint32_t BOSType, Flag;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), BOSType, 0, true) ||
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(1), Flag, 1, true))
-    return;
-
-  if (BOSType > 3) {
-    S.Diag(AL.getArgAsExpr(0)->getBeginLoc(),
-           diag::err_attribute_argument_out_of_range)
-        << AL << 0 << 3;
-    return;
-  }
-
-  D->addAttr(::new (S.getASTContext()) FortifyStdLibAttr(
-      AL.getLoc(), S.getASTContext(), BOSType, Flag,
-      AL.getAttributeSpellingListIndex()));
-}
-
 static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Check that the return type is a `typedef int kern_return_t` or a typedef
   // around it, because otherwise MIG convention checks make no sense.
@@ -6778,6 +6763,20 @@ static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   handleSimpleAttribute<MIGServerRoutineAttr>(S, D, AL);
+}
+
+static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // Warn if the return type is not a pointer or reference type.
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    QualType RetTy = FD->getReturnType();
+    if (!RetTy->isPointerType() && !RetTy->isReferenceType()) {
+      S.Diag(AL.getLoc(), diag::warn_declspec_allocator_nonpointer)
+          << AL.getRange() << RetTy;
+      return;
+    }
+  }
+
+  handleSimpleAttribute<MSAllocatorAttr>(S, D, AL);
 }
 
 //===----------------------------------------------------------------------===//
@@ -7539,12 +7538,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleObjCExternallyRetainedAttr(S, D, AL);
     break;
 
-  case ParsedAttr::AT_FortifyStdLib:
-    handleFortifyStdLib(S, D, AL);
-    break;
-
   case ParsedAttr::AT_MIGServerRoutine:
     handleMIGServerRoutineAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_MSAllocator:
+    handleMSAllocatorAttr(S, D, AL);
     break;
   }
 }

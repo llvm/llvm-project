@@ -247,7 +247,8 @@ public:
 
     if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
       IndexCtx.handleReference(Ctor->getParent(), Ctor->getLocation(),
-                               Ctor->getParent(), Ctor->getDeclContext());
+                               Ctor->getParent(), Ctor->getDeclContext(),
+                               (unsigned)SymbolRole::NameReference);
 
       // Constructor initializers.
       for (const auto *Init : Ctor->inits()) {
@@ -263,7 +264,8 @@ public:
       if (auto TypeNameInfo = Dtor->getNameInfo().getNamedTypeInfo()) {
         IndexCtx.handleReference(Dtor->getParent(),
                                  TypeNameInfo->getTypeLoc().getBeginLoc(),
-                                 Dtor->getParent(), Dtor->getDeclContext());
+                                 Dtor->getParent(), Dtor->getDeclContext(),
+                                 (unsigned)SymbolRole::NameReference);
       }
     } else if (const auto *Guide = dyn_cast<CXXDeductionGuideDecl>(D)) {
       IndexCtx.handleReference(Guide->getDeducedTemplate()->getTemplatedDecl(),

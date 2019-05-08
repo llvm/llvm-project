@@ -2123,6 +2123,16 @@ TEST(MemorySanitizer, wcrtomb) {
   EXPECT_EQ(buff[0], 'a');
 }
 
+TEST(MemorySanitizer, wctomb) {
+  wchar_t x = L'a';
+  char buff[10];
+  wctomb(nullptr, x);
+  int res = wctomb(buff, x);
+  EXPECT_EQ(res, 1);
+  EXPECT_EQ(buff[0], 'a');
+  EXPECT_POISONED(buff[1]);
+}
+
 TEST(MemorySanitizer, wmemset) {
     wchar_t x[25];
     break_optimization(x);
@@ -4645,15 +4655,12 @@ TEST(MemorySanitizer, MallocUsableSizeTest) {
 }
 #endif  // SANITIZER_TEST_HAS_MALLOC_USABLE_SIZE
 
-static bool HaveBmi() {
 #ifdef __x86_64__
+static bool HaveBmi() {
   U4 a = 0, b = 0, c = 0, d = 0;
   asm("cpuid\n\t" : "=a"(a), "=D"(b), "=c"(c), "=d"(d) : "a"(7));
   const U4 kBmi12Mask = (1U<<3) | (1U<<8);
-  return b | kBmi12Mask;
-#else
-  return false;
-#endif
+  return (b & kBmi12Mask) == kBmi12Mask;
 }
 
 __attribute__((target("bmi,bmi2")))
@@ -4790,3 +4797,4 @@ TEST(MemorySanitizer, Bmi) {
     TestPEXT();
   }
 }
+#endif // defined(__x86_64__)

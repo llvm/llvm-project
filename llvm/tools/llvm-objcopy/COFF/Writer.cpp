@@ -8,7 +8,6 @@
 
 #include "Writer.h"
 #include "Object.h"
-#include "llvm-objcopy.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"

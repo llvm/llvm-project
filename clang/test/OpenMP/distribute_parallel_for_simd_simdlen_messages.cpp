@@ -66,11 +66,14 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #if __cplusplus >= 201103L
-  // expected-note@+4 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
+  // expected-note@+7 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5) // expected-error 2 {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'simdlen' clause}} expected-error 2 {{argument to 'simdlen' clause must be a strictly positive integer value}} expected-error 2 {{expression is not an integral constant expression}}
+// expected-error@+3 2 {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'simdlen' clause}}
+// expected-error@+2 {{argument to 'simdlen' clause must be a strictly positive integer value}}
+// expected-error@+1 2 {{expression is not an integral constant expression}}
+#pragma omp distribute parallel for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5)
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
@@ -148,11 +151,14 @@ int main(int argc, char **argv) {
 
 
 #if __cplusplus >= 201103L
-  // expected-note@+4 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
+  // expected-note@+7 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5) // expected-error {{expression is not an integral constant expression}} expected-error 2 {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'simdlen' clause}} expected-error 2 {{argument to 'simdlen' clause must be a strictly positive integer value}}
+// expected-error@+3 {{expression is not an integral constant expression}}
+// expected-error@+2 2 {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'simdlen' clause}}
+// expected-error@+1 {{argument to 'simdlen' clause must be a strictly positive integer value}}
+#pragma omp distribute parallel for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5)
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
 

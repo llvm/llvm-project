@@ -12,6 +12,8 @@
 
 // template<class Y> auto_ptr& operator=(auto_ptr<Y>& a) throw();
 
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <memory>
 #include <cassert>
 

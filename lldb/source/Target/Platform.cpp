@@ -117,7 +117,6 @@ bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
       nullptr, ePropertyModuleCacheDirectory, dir_spec);
 }
 
-//------------------------------------------------------------------
 /// Get the native host platform plug-in.
 ///
 /// There should only be one of these for each host that LLDB runs
@@ -126,7 +125,6 @@ bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
 ///
 /// This platform will be used as the default platform when launching
 /// or attaching to processes unless another platform is specified.
-//------------------------------------------------------------------
 PlatformSP Platform::GetHostPlatform() { return GetHostPlatformSP(); }
 
 static std::vector<PlatformSP> &GetPlatformList() {
@@ -180,7 +178,7 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
 }
 
 // PlatformSP
-// Platform::FindPlugin (Process *process, const ConstString &plugin_name)
+// Platform::FindPlugin (Process *process, ConstString plugin_name)
 //{
 //    PlatformCreateInstance create_callback = nullptr;
 //    if (plugin_name)
@@ -267,7 +265,7 @@ bool Platform::GetModuleSpec(const FileSpec &module_file_spec,
                                              module_spec);
 }
 
-PlatformSP Platform::Find(const ConstString &name) {
+PlatformSP Platform::Find(ConstString name) {
   if (name) {
     static ConstString g_host_platform_name("host");
     if (name == g_host_platform_name)
@@ -282,7 +280,7 @@ PlatformSP Platform::Find(const ConstString &name) {
   return PlatformSP();
 }
 
-PlatformSP Platform::Create(const ConstString &name, Status &error) {
+PlatformSP Platform::Create(ConstString name, Status &error) {
   PlatformCreateInstance create_callback = nullptr;
   lldb::PlatformSP platform_sp;
   if (name) {
@@ -377,9 +375,7 @@ ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef trip
   return HostInfo::GetAugmentedArchSpec(triple);
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 Platform::Platform(bool is_host)
     : m_is_host(is_host), m_os_version_set_while_connected(false),
       m_system_arch_set_while_connected(false), m_sdk_sysroot(), m_sdk_build(),
@@ -394,12 +390,10 @@ Platform::Platform(bool is_host)
     log->Printf("%p Platform::Platform()", static_cast<void *>(this));
 }
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 Platform::~Platform() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
@@ -1198,10 +1192,8 @@ Platform::GetPlatformForArchitecture(const ArchSpec &arch,
   return platform_sp;
 }
 
-//------------------------------------------------------------------
 /// Lets a platform answer if it is compatible with a given
 /// architecture and the target triple contained within.
-//------------------------------------------------------------------
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
                                         bool exact_arch_match,
                                         ArchSpec *compatible_arch_ptr) {
@@ -1712,9 +1704,9 @@ const UnixSignalsSP &Platform::GetRemoteUnixSignals() {
   return s_default_unix_signals_sp;
 }
 
-const UnixSignalsSP &Platform::GetUnixSignals() {
+UnixSignalsSP Platform::GetUnixSignals() {
   if (IsHost())
-    return Host::GetUnixSignals();
+    return UnixSignals::CreateForHost();
   return GetRemoteUnixSignals();
 }
 

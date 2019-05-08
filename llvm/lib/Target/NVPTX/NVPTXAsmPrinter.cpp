@@ -599,36 +599,6 @@ void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
   O << getVirtualRegisterName(vr);
 }
 
-void NVPTXAsmPrinter::printVecModifiedImmediate(
-    const MachineOperand &MO, const char *Modifier, raw_ostream &O) {
-  static const char vecelem[] = { '0', '1', '2', '3', '0', '1', '2', '3' };
-  int Imm = (int) MO.getImm();
-  if (0 == strcmp(Modifier, "vecelem"))
-    O << "_" << vecelem[Imm];
-  else if (0 == strcmp(Modifier, "vecv4comm1")) {
-    if ((Imm < 0) || (Imm > 3))
-      O << "//";
-  } else if (0 == strcmp(Modifier, "vecv4comm2")) {
-    if ((Imm < 4) || (Imm > 7))
-      O << "//";
-  } else if (0 == strcmp(Modifier, "vecv4pos")) {
-    if (Imm < 0)
-      Imm = 0;
-    O << "_" << vecelem[Imm % 4];
-  } else if (0 == strcmp(Modifier, "vecv2comm1")) {
-    if ((Imm < 0) || (Imm > 1))
-      O << "//";
-  } else if (0 == strcmp(Modifier, "vecv2comm2")) {
-    if ((Imm < 2) || (Imm > 3))
-      O << "//";
-  } else if (0 == strcmp(Modifier, "vecv2pos")) {
-    if (Imm < 0)
-      Imm = 0;
-    O << "_" << vecelem[Imm % 2];
-  } else
-    llvm_unreachable("Unknown Modifier on immediate operand");
-}
-
 void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
   emitLinkageDirective(F, O);
   if (isKernelFunction(*F))
@@ -954,9 +924,12 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
 
   delete[] gv_array;
   // Close the last emitted section
-  if (HasDebugInfo)
+  if (HasDebugInfo) {
     static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
         ->closeLastSection();
+    // Emit empty .debug_loc section for better support of the empty files.
+    OutStreamer->EmitRawText("\t.section\t.debug_loc\t{\t}");
+  }
 
   // Output last DWARF .file directives, if any.
   static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
@@ -2200,7 +2173,6 @@ void NVPTXAsmPrinter::printMCExpr(const MCExpr &Expr, raw_ostream &OS) {
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
 bool NVPTXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      unsigned AsmVariant,
                                       const char *ExtraCode, raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
@@ -2209,7 +2181,7 @@ bool NVPTXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     switch (ExtraCode[0]) {
     default:
       // See if this is a generic print operand
-      return AsmPrinter::PrintAsmOperand(MI, OpNo, AsmVariant, ExtraCode, O);
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
     case 'r':
       break;
     }
@@ -2220,9 +2192,10 @@ bool NVPTXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   return false;
 }
 
-bool NVPTXAsmPrinter::PrintAsmMemoryOperand(
-    const MachineInstr *MI, unsigned OpNo, unsigned AsmVariant,
-    const char *ExtraCode, raw_ostream &O) {
+bool NVPTXAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                            unsigned OpNo,
+                                            const char *ExtraCode,
+                                            raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
     return true; // Unknown modifier
 
@@ -2234,7 +2207,7 @@ bool NVPTXAsmPrinter::PrintAsmMemoryOperand(
 }
 
 void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
-                                   raw_ostream &O, const char *Modifier) {
+                                   raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(opNum);
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
@@ -2246,29 +2219,23 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     } else {
       emitVirtualRegister(MO.getReg(), O);
     }
-    return;
+    break;
 
   case MachineOperand::MO_Immediate:
-    if (!Modifier)
-      O << MO.getImm();
-    else if (strstr(Modifier, "vec") == Modifier)
-      printVecModifiedImmediate(MO, Modifier, O);
-    else
-      llvm_unreachable(
-          "Don't know how to handle modifier on immediate operand");
-    return;
+    O << MO.getImm();
+    break;
 
   case MachineOperand::MO_FPImmediate:
     printFPConstant(MO.getFPImm(), O);
     break;
 
   case MachineOperand::MO_GlobalAddress:
-    getSymbol(MO.getGlobal())->print(O, MAI);
+    PrintSymbolOperand(MO, O);
     break;
 
   case MachineOperand::MO_MachineBasicBlock:
     MO.getMBB()->getSymbol()->print(O, MAI);
-    return;
+    break;
 
   default:
     llvm_unreachable("Operand type not supported.");

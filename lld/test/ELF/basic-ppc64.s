@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 # # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t
 # RUN: ld.lld --hash-style=sysv -discard-all -shared %t -o %t2
-# RUN: llvm-readobj -file-headers -sections -section-data -program-headers %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections --section-data -l %t2 | FileCheck %s
 .abiversion 2
 # Exits with return code 55 on linux.
 .text
@@ -63,8 +63,8 @@
 // CHECK-NEXT:    Flags [ (0x2)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x1C8
-// CHECK-NEXT:    Offset: 0x1C8
+// CHECK-NEXT:    Address: 0x200
+// CHECK-NEXT:    Offset: 0x200
 // CHECK-NEXT:    Size: 24
 // CHECK-NEXT:    Link: 3
 // CHECK-NEXT:    Info: 1
@@ -82,8 +82,8 @@
 // CHECK-NEXT:    Flags [ (0x2)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x1E0
-// CHECK-NEXT:    Offset: 0x1E0
+// CHECK-NEXT:    Address: 0x218
+// CHECK-NEXT:    Offset: 0x218
 // CHECK-NEXT:    Size: 16
 // CHECK-NEXT:    Link: 1
 // CHECK-NEXT:    Info: 0
@@ -100,8 +100,8 @@
 // CHECK-NEXT:    Flags [ (0x2)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x1F0
-// CHECK-NEXT:    Offset: 0x1F0
+// CHECK-NEXT:    Address: 0x228
+// CHECK-NEXT:    Offset: 0x228
 // CHECK-NEXT:    Size: 1
 // CHECK-NEXT:    Link: 0
 // CHECK-NEXT:    Info: 0
@@ -146,12 +146,12 @@
 // CHECK-NEXT:    AddressAlignment: 8
 // CHECK-NEXT:    EntrySize: 16
 // CHECK-NEXT:    SectionData (
-// CHECK-NEXT:      0000: 06000000 00000000 C8010000 00000000  |................|
-// CHECK-NEXT:      0010: 0B000000 00000000 18000000 00000000  |................|
-// CHECK-NEXT:      0020: 05000000 00000000 F0010000 00000000  |................|
-// CHECK-NEXT:      0030: 0A000000 00000000 01000000 00000000  |................|
-// CHECK-NEXT:      0040: 04000000 00000000 E0010000 00000000  |................|
-// CHECK-NEXT:      0050: 00000000 00000000 00000000 00000000  |................|
+// CHECK-NEXT:      0000: 06000000 00000000 00020000 00000000  |
+// CHECK-NEXT:      0010: 0B000000 00000000 18000000 00000000  |
+// CHECK-NEXT:      0020: 05000000 00000000 28020000 00000000  |
+// CHECK-NEXT:      0030: 0A000000 00000000 01000000 00000000  |
+// CHECK-NEXT:      0040: 04000000 00000000 18020000 00000000  |
+// CHECK-NEXT:      0050: 00000000 00000000 00000000 00000000  |
 // CHECK-NEXT:    )
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Section {
@@ -254,8 +254,8 @@
 // CHECK-NEXT:    Offset: 0x40
 // CHECK-NEXT:    VirtualAddress: 0x40
 // CHECK-NEXT:    PhysicalAddress: 0x40
-// CHECK-NEXT:    FileSize: 392
-// CHECK-NEXT:    MemSize: 392
+// CHECK-NEXT:    FileSize: 448
+// CHECK-NEXT:    MemSize: 448
 // CHECK-NEXT:    Flags [ (0x4)
 // CHECK-NEXT:      PF_R (0x4)
 // CHECK-NEXT:    ]
@@ -266,8 +266,8 @@
 // CHECK-NEXT:    Offset: 0x0
 // CHECK-NEXT:    VirtualAddress: 0x0
 // CHECK-NEXT:    PhysicalAddress: 0x0
-// CHECK-NEXT:    FileSize: 497
-// CHECK-NEXT:    MemSize: 497
+// CHECK-NEXT:    FileSize: 553
+// CHECK-NEXT:    MemSize: 553
 // CHECK-NEXT:    Flags [ (0x4)
 // CHECK-NEXT:      PF_R (0x4)
 // CHECK-NEXT:    ]
@@ -292,7 +292,7 @@
 // CHECK-NEXT:    VirtualAddress: 0x20000
 // CHECK-NEXT:    PhysicalAddress: 0x20000
 // CHECK-NEXT:    FileSize: 96
-// CHECK-NEXT:    MemSize: 65536
+// CHECK-NEXT:    MemSize: 96
 // CHECK-NEXT:    Flags [ (0x6)
 // CHECK-NEXT:      PF_R (0x4)
 // CHECK-NEXT:      PF_W (0x2)

@@ -10,6 +10,7 @@
 
 #include "FormatUtil.h"
 #include "LinePrinter.h"
+#include "TypeReferenceTracker.h"
 
 #include "llvm-pdbutil.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
@@ -221,11 +222,10 @@ Error MinimalTypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
   // formatLine puts the newline at the beginning, so we use formatLine here
   // to start a new line, and then individual visit methods use format to
   // append to the existing line.
-  if (!Hashes) {
-    P.formatLine("{0} | {1} [size = {2}]",
-                 fmt_align(Index, AlignStyle::Right, Width),
-                 formatTypeLeafKind(Record.Type), Record.length());
-  } else {
+  P.formatLine("{0} | {1} [size = {2}",
+               fmt_align(Index, AlignStyle::Right, Width),
+               formatTypeLeafKind(Record.kind()), Record.length());
+  if (Hashes) {
     std::string H;
     if (Index.toArrayIndex() >= HashValues.size()) {
       H = "(not present)";
@@ -241,13 +241,19 @@ Error MinimalTypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
       else
         H = "0x" + utohexstr(Hash) + ", our hash = 0x" + utohexstr(OurHash);
     }
-    P.formatLine("{0} | {1} [size = {2}, hash = {3}]",
-                 fmt_align(Index, AlignStyle::Right, Width),
-                 formatTypeLeafKind(Record.Type), Record.length(), H);
+    P.format(", hash = {0}", H);
   }
+  if (RefTracker) {
+    if (RefTracker->isTypeReferenced(Index))
+      P.format(", referenced");
+    else
+      P.format(", unreferenced");
+  }
+  P.format("]");
   P.Indent(Width + 3);
   return Error::success();
 }
+
 Error MinimalTypeDumpVisitor::visitTypeEnd(CVType &Record) {
   P.Unindent(Width + 3);
   if (RecordBytes) {

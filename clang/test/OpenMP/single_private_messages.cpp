@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -110,7 +111,7 @@ int foomain(I argc, C **argv) {
   foo();
 #pragma omp single private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   foo();
-#pragma omp single private(argc)
+#pragma omp single private(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   foo();
 #pragma omp single private(S1) // expected-error {{'S1' does not refer to a value}}
   foo();
