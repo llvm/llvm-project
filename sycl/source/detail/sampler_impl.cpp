@@ -36,7 +36,9 @@ sampler_impl::sampler_impl(cl_sampler clSampler, const context &syclContext)
 
 sampler_impl::~sampler_impl() {
   if (m_ReleaseSampler)
-    CHECK_OCL_CODE(clReleaseSampler(m_Sampler));
+    CHECK_OCL_CODE_NO_EXC(clReleaseSampler(m_Sampler));
+  // TODO replace CHECK_OCL_CODE_NO_EXC to CHECK_OCL_CODE and
+  // TODO catch an exception and add it to the list of asynchronous exceptions
 }
 
 cl_sampler sampler_impl::getOrCreateSampler(const context &Context) {
@@ -44,10 +46,23 @@ cl_sampler sampler_impl::getOrCreateSampler(const context &Context) {
   if (m_contextToSampler[Context])
     return m_contextToSampler[Context];
 
+#ifdef CL_TARGET_OPENCL_VERSION > 120
+  const cl_sampler_properties sprops[] = {
+      CL_SAMPLER_NORMALIZED_COORDS,
+      static_cast<cl_sampler_properties>(m_CoordNormMode),
+      CL_SAMPLER_ADDRESSING_MODE,
+      static_cast<cl_sampler_properties>(m_AddrMode),
+      CL_SAMPLER_FILTER_MODE,
+      static_cast<cl_sampler_properties>(m_FiltMode),
+      0};
+  m_contextToSampler[Context] =
+      clCreateSamplerWithProperties(Context.get(), sprops, &errcode_ret);
+#else
   m_contextToSampler[Context] =
       clCreateSampler(Context.get(), static_cast<cl_bool>(m_CoordNormMode),
                       static_cast<cl_addressing_mode>(m_AddrMode),
                       static_cast<cl_filter_mode>(m_FiltMode), &errcode_ret);
+#endif
   CHECK_OCL_CODE(errcode_ret);
   m_ReleaseSampler = true;
   return m_contextToSampler[Context];
