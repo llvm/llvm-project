@@ -1,6 +1,6 @@
 import lldb
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
