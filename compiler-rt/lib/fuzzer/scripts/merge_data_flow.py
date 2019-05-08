@@ -23,6 +23,8 @@ def Merge(a, b):
 def main(argv):
   D = {}
   for line in fileinput.input():
+    if line.startswith('C'):
+      continue
     [F,BV] = line.strip().split(' ')
     if F in D:
       D[F] = Merge(D[F], BV)
