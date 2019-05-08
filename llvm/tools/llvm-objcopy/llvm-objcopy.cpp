@@ -154,17 +154,17 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
-    Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
-    if (!ChildOrErr)
-      return createFileError(Ar.getFileName(), ChildOrErr.takeError());
-    Binary *Bin = ChildOrErr->get();
-
     Expected<StringRef> ChildNameOrErr = Child.getName();
     if (!ChildNameOrErr)
       return createFileError(Ar.getFileName(), ChildNameOrErr.takeError());
 
+    Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
+    if (!ChildOrErr)
+      return createFileError(Ar.getFileName() + "(" + *ChildNameOrErr + ")",
+                             ChildOrErr.takeError());
+
     MemBuffer MB(ChildNameOrErr.get());
-    if (Error E = executeObjcopyOnBinary(Config, *Bin, MB))
+    if (Error E = executeObjcopyOnBinary(Config, *ChildOrErr->get(), MB))
       return E;
 
     Expected<NewArchiveMember> Member =
