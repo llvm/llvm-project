@@ -12,6 +12,8 @@
 ; RUN: llvm-spirv -r %t.spv -o %t.rev.bc
 ; RUN: llvm-dis < %t.rev.bc | FileCheck %s --check-prefix=CHECK-LLVM
 
+; CHECK-SPIRV: Extension "SPV_KHR_no_integer_wrap_decoration"
+
 ; CHECK-SPIRV: Decorate {{[0-9]+}} NoSignedWrap
 ; CHECK-SPIRV: Decorate {{[0-9]+}} NoUnsignedWrap
 

@@ -33,11 +33,11 @@
 /// \file
 ///
 ///  Common Usage:
-///  llvm-spirv          - Read LLVM bitcode from stdin, write SPIRV to stdout
+///  llvm-spirv          - Read LLVM bitcode from stdin, write SPIR-V to stdout
 ///  llvm-spirv x.bc     - Read LLVM bitcode from the x.bc file, write SPIR-V
 ///                        to x.bil file
-///  llvm-spirv -r       - Read SPIRV from stdin, write LLVM bitcode to stdout
-///  llvm-spirv -r x.bil - Read SPIRV from the x.bil file, write SPIR-V to
+///  llvm-spirv -r       - Read SPIR-V from stdin, write LLVM bitcode to stdout
+///  llvm-spirv -r x.bil - Read SPIR-V from the x.bil file, write SPIR-V to
 ///                        the x.bc file
 ///
 ///  Options:
@@ -139,14 +139,14 @@ static int convertLLVMToSPIRV() {
   std::string Err;
   bool Success = false;
   if (OutputFile != "-") {
-    std::ofstream OutFile(OutputFile);
+    std::ofstream OutFile(OutputFile, std::ios::binary);
     Success = writeSpirv(M.get(), OutFile, Err);
   } else {
     Success = writeSpirv(M.get(), std::cout, Err);
   }
 
   if (!Success) {
-    errs() << "Fails to save LLVM as SPIRV: " << Err << '\n';
+    errs() << "Fails to save LLVM as SPIR-V: " << Err << '\n';
     return -1;
   }
   return 0;
@@ -159,7 +159,7 @@ static int convertSPIRVToLLVM() {
   std::string Err;
 
   if (!readSpirv(Context, IFS, M, Err)) {
-    errs() << "Fails to load SPIRV as LLVM Module: " << Err << '\n';
+    errs() << "Fails to load SPIR-V as LLVM Module: " << Err << '\n';
     return -1;
   }
 
@@ -243,7 +243,7 @@ static int regularizeLLVM() {
 
   std::string Err;
   if (!regularizeLlvmForSpirv(M.get(), Err)) {
-    errs() << "Fails to save LLVM as SPIRV: " << Err << '\n';
+    errs() << "Fails to save LLVM as SPIR-V: " << Err << '\n';
     return -1;
   }
 

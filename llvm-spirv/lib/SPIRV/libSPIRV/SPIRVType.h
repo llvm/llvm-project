@@ -779,6 +779,10 @@ public:
     return getVec(CapabilitySubgroupAvcMotionEstimationINTEL);
   }
 
+  SPIRVExtSet getRequiredExtensions() const override {
+    return getSet(SPV_INTEL_device_side_avc_motion_estimation);
+  }
+
 protected:
   SPIRVTypeImage *ImgTy;
   _SPIRV_DEF_ENCDEC2(Id, ImgTy)
@@ -828,6 +832,10 @@ public:
 
   SPIRVCapVec getRequiredCapability() const override {
     return getVec(CapabilitySubgroupAvcMotionEstimationINTEL);
+  }
+
+  SPIRVExtSet getRequiredExtensions() const override {
+    return getSet(SPV_INTEL_device_side_avc_motion_estimation);
   }
 
   SPIRVValue *getOperand() { return getValue(Opn); }

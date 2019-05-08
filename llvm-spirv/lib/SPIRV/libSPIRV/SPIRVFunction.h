@@ -105,6 +105,15 @@ public:
     return getFunctionType()->getNumParameters();
   }
   SPIRVId getArgumentId(size_t I) const { return Parameters[I]->getId(); }
+  const std::vector<SPIRVId> getVariables() const {
+    std::vector<SPIRVId> Ids;
+    for (auto Variable : Variables)
+      Ids.push_back(Variable->getId());
+    return Ids;
+  }
+  void addVariable(const SPIRVValue *Variable) {
+    Variables.push_back(Variable);
+  }
   SPIRVFunctionParameter *getArgument(size_t I) const { return Parameters[I]; }
   void foreachArgument(std::function<void(SPIRVFunctionParameter *)> Func) {
     for (size_t I = 0, E = getNumArguments(); I != E; ++I)
@@ -170,6 +179,7 @@ private:
   SPIRVWord FCtrlMask;         // Function control mask
 
   std::vector<SPIRVFunctionParameter *> Parameters;
+  std::vector<const SPIRVValue *> Variables;
   typedef std::vector<SPIRVBasicBlock *> SPIRVLBasicBlockVector;
   SPIRVLBasicBlockVector BBVec;
 

@@ -393,6 +393,8 @@ enum Decoration {
     DecorationNumbanksINTEL = 5827,
     DecorationBankwidthINTEL = 5828,
     DecorationMaxconcurrencyINTEL = 5829,
+    DecorationSinglepumpINTEL = 5830,
+    DecorationDoublepumpINTEL = 5831,
     DecorationMax = 0x7fffffff,
 };
 

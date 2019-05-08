@@ -181,6 +181,7 @@ public:
   void setCurrentLine(const std::shared_ptr<const SPIRVLine> &Line) override;
   void addCapability(SPIRVCapabilityKind) override;
   void addCapabilityInternal(SPIRVCapabilityKind) override;
+  void addExtension(SPIRVExtensionKind) override;
   const SPIRVDecorateGeneric *addDecorate(SPIRVDecorateGeneric *) override;
   SPIRVDecorationGroup *addDecorationGroup() override;
   SPIRVDecorationGroup *
@@ -523,6 +524,12 @@ SPIRVValue *SPIRVModuleImpl::addPipeStorageConstant(SPIRVType *TheType,
       this, TheType, getId(), PacketSize, PacketAlign, Capacity));
 }
 
+void SPIRVModuleImpl::addExtension(SPIRVExtensionKind Ext) {
+  std::string ExtName;
+  SPIRVMap<SPIRVExtensionKind, std::string>::find(Ext, &ExtName);
+  SPIRVExt.insert(ExtName);
+}
+
 void SPIRVModuleImpl::addCapability(SPIRVCapabilityKind Cap) {
   addCapabilities(SPIRV::getCapability(Cap));
   SPIRVDBG(spvdbgs() << "addCapability: " << Cap << '\n');
@@ -624,6 +631,14 @@ SPIRVEntry *SPIRVModuleImpl::addEntry(SPIRVEntry *Entry) {
         Entry->getRequiredCapability().end(),
         [this](SPIRVCapabilityKind &val) { return !CapMap.count(val); }));
   }
+  if (AutoAddExtensions) {
+    // While we are reading existing SPIR-V we need to read it as-is and don't
+    // add required extensions for each entry automatically
+    for (auto &E : Entry->getRequiredExtensions()) {
+      addExtension(E);
+    }
+  }
+
   return Entry;
 }
 
@@ -1420,8 +1435,8 @@ spv_ostream &operator<<(spv_ostream &O, SPIRVModule &M) {
 
   for (auto &I : MI.EntryPointVec)
     for (auto &II : I.second)
-      O << SPIRVEntryPoint(&M, I.first, II,
-                           M.get<SPIRVFunction>(II)->getName());
+      O << SPIRVEntryPoint(&M, I.first, II, M.get<SPIRVFunction>(II)->getName(),
+                           M.get<SPIRVFunction>(II)->getVariables());
 
   for (auto &I : MI.EntryPointVec)
     for (auto &II : I.second)
@@ -1526,6 +1541,7 @@ std::istream &operator>>(std::istream &I, SPIRVModule &M) {
   SPIRVModuleImpl &MI = *static_cast<SPIRVModuleImpl *>(&M);
   // Disable automatic capability filling.
   MI.setAutoAddCapability(false);
+  MI.setAutoAddExtensions(false);
 
   SPIRVWord Magic;
   Decoder >> Magic;
@@ -1538,7 +1554,7 @@ std::istream &operator>>(std::istream &I, SPIRVModule &M) {
   Decoder >> MI.SPIRVVersion;
   if (!M.getErrorLog().checkError(MI.SPIRVVersion <= SPV_VERSION,
                                   SPIRVEC_InvalidModule,
-                                  "unsupported SPIRV version number")) {
+                                  "unsupported SPIR-V version number")) {
     M.setInvalid();
     return I;
   }

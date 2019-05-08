@@ -438,17 +438,18 @@ std::istream &operator>>(std::istream &I, SPIRVEntry &E) {
 
 SPIRVEntryPoint::SPIRVEntryPoint(SPIRVModule *TheModule,
                                  SPIRVExecutionModelKind TheExecModel,
-                                 SPIRVId TheId, const std::string &TheName)
+                                 SPIRVId TheId, const std::string &TheName,
+                                 std::vector<SPIRVId> Variables)
     : SPIRVAnnotation(TheModule->get<SPIRVFunction>(TheId),
-                      getSizeInWords(TheName) + 3),
-      ExecModel(TheExecModel), Name(TheName) {}
+                      getSizeInWords(TheName) + Variables.size() + 3),
+      ExecModel(TheExecModel), Name(TheName), Variables(Variables) {}
 
 void SPIRVEntryPoint::encode(spv_ostream &O) const {
-  getEncoder(O) << ExecModel << Target << Name;
+  getEncoder(O) << ExecModel << Target << Name << Variables;
 }
 
 void SPIRVEntryPoint::decode(std::istream &I) {
-  getDecoder(I) >> ExecModel >> Target >> Name;
+  getDecoder(I) >> ExecModel >> Target >> Name >> Variables;
   Module->setName(getOrCreateTarget(), Name);
   Module->addEntryPoint(ExecModel, Target);
 }

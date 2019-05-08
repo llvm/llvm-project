@@ -57,6 +57,7 @@
 #include "SPIRVUtil.h"
 #include "SPIRVValue.h"
 
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/IntrinsicInst.h"
 
 #include <memory>
@@ -128,6 +129,7 @@ private:
   SPIRVWord SrcLang;
   SPIRVWord SrcLangVer;
   std::unique_ptr<LLVMToSPIRVDbgTran> DbgTran;
+  std::unique_ptr<CallGraph> CG;
 
   SPIRVType *mapType(Type *T, SPIRVType *BT);
   SPIRVValue *mapValue(Value *V, SPIRVValue *BV);
@@ -178,6 +180,11 @@ private:
   SPIRVId addInt32(int);
   void transFunction(Function *I);
   SPIRV::SPIRVLinkageTypeKind transLinkageType(const GlobalValue *GV);
+
+  bool isAnyFunctionReachableFromFunction(
+      const Function *FS,
+      const std::unordered_set<const Function *> Funcs) const;
+  void collectInputOutputVariables(SPIRVFunction *SF, Function *F);
 };
 
 } // namespace SPIRV

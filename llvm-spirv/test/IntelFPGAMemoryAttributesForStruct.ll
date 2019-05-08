@@ -5,31 +5,37 @@
 ; RUN: llvm-spirv -r %t.spv -o %t.rev.bc
 ; RUN: llvm-dis < %t.rev.bc | FileCheck %s --check-prefix=CHECK-LLVM
 
-; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 1 RegisterINTEL 1
+; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 1 RegisterINTEL
 ; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 0 MemoryINTEL "DEFAULT"
 ; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 3 MemoryINTEL "DEFAULT"
 ; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 2 MemoryINTEL "MLAB"
 ; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 0 NumbanksINTEL 4
 ; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 3 BankwidthINTEL 8
 ; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 4 MaxconcurrencyINTEL 4
+; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 5 SinglepumpINTEL
+; CHECK-SPIRV: MemberDecorate {{[0-9]+}} 6 DoublepumpINTEL
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir64-unknown-linux"
 
 %class.anon = type { i8 }
-%struct.foo = type { i32, i32, i32, i32, i8 }
+%struct.foo = type { i32, i32, i32, i32, i8, i32, i32 }
 
 ; CHECK-LLVM: [[STR1:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{numbanks:4}
 ; CHECK-LLVM: [[STR2:@[a-zA-Z0-9_.]+]] = {{.*}}{register:1}
 ; CHECK-LLVM: [[STR3:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:MLAB}
 ; CHECK-LLVM: [[STR4:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{bankwidth:8}
 ; CHECK-LLVM: [[STR5:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{max_concurrency:4}
+; CHECK-LLVM: [[STR6:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{pump:1}
+; CHECK-LLVM: [[STR7:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{pump:2}
 @.str = private unnamed_addr constant [29 x i8] c"{memory:DEFAULT}{numbanks:4}\00", section "llvm.metadata"
 @.str.1 = private unnamed_addr constant [16 x i8] c"test_struct.cpp\00", section "llvm.metadata"
 @.str.2 = private unnamed_addr constant [13 x i8] c"{register:1}\00", section "llvm.metadata"
 @.str.3 = private unnamed_addr constant [14 x i8] c"{memory:MLAB}\00", section "llvm.metadata"
 @.str.4 = private unnamed_addr constant [30 x i8] c"{memory:DEFAULT}{bankwidth:8}\00", section "llvm.metadata"
 @.str.5 = private unnamed_addr constant [36 x i8] c"{memory:DEFAULT}{max_concurrency:4}\00", section "llvm.metadata"
+@.str.6 = private unnamed_addr constant [25 x i8] c"{memory:DEFAULT}{pump:1}\00", section "llvm.metadata"
+@.str.7 = private unnamed_addr constant [25 x i8] c"{memory:DEFAULT}{pump:2}\00", section "llvm.metadata"
 
 ; Function Attrs: nounwind
 define spir_kernel void @_ZTSZ4mainE15kernel_function() #0 !kernel_arg_addr_space !4 !kernel_arg_access_qual !4 !kernel_arg_type !4 !kernel_arg_base_type !4 !kernel_arg_type_qual !4 {
@@ -102,8 +108,24 @@ entry:
   %f5 = getelementptr inbounds %struct.foo, %struct.foo* %s1, i32 0, i32 4
   %13 = call i8* @llvm.ptr.annotation.p0i8(i8* %f5, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str.5, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @.str.1, i32 0, i32 0), i32 6)
   store i8 0, i8* %13, align 4, !tbaa !15
-  %14 = bitcast %struct.foo* %s1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 20, i8* %14) #4
+  ; CHECK-LLVM: %[[FIELD6:.*]] = getelementptr inbounds %struct.foo, %struct.foo* %{{[a-zA-Z0-9]+}}, i32 0, i32 5
+  ; CHECK-LLVM: %[[CAST6:.*]] = bitcast{{.*}}%[[FIELD6]]
+  ; CHECK-LLVM: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST6]]{{.*}}[[STR6]]
+  %f6 = getelementptr inbounds %struct.foo, %struct.foo* %s1, i32 0, i32 5
+  %14 = bitcast i32* %f6 to i8*
+  %15 = call i8* @llvm.ptr.annotation.p0i8(i8* %14, i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.6, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @.str.1, i32 0, i32 0), i32 7)
+  %16 = bitcast i8* %15 to i32*
+  store i32 0, i32* %16, align 4, !tbaa !16
+  ; CHECK-LLVM: %[[FIELD7:.*]] = getelementptr inbounds %struct.foo, %struct.foo* %{{[a-zA-Z0-9]+}}, i32 0, i32 6
+  ; CHECK-LLVM: %[[CAST7:.*]] = bitcast{{.*}}%[[FIELD7]]
+  ; CHECK-LLVM: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST7]]{{.*}}[[STR7]]
+  %f7 = getelementptr inbounds %struct.foo, %struct.foo* %s1, i32 0, i32 6
+  %17 = bitcast i32* %f7 to i8*
+  %18 = call i8* @llvm.ptr.annotation.p0i8(i8* %17, i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.7, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @.str.1, i32 0, i32 0), i32 8)
+  %19 = bitcast i8* %18 to i32*
+  store i32 0, i32* %19, align 4, !tbaa !17
+  %20 = bitcast %struct.foo* %s1 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 28, i8* %20) #4
   ret void
 }
 
@@ -131,9 +153,11 @@ attributes #4 = { nounwind }
 !7 = !{!"omnipotent char", !8, i64 0}
 !8 = !{!"Simple C++ TBAA"}
 !9 = !{!10, !11, i64 0}
-!10 = !{!"_ZTS3foo", !11, i64 0, !11, i64 4, !11, i64 8, !11, i64 12, !11, i64 16}
+!10 = !{!"_ZTS3foo", !11, i64 0, !11, i64 4, !11, i64 8, !11, i64 12, !11, i64 16, !11, i64 20, !11, i64 24}
 !11 = !{!"int", !7, i64 0}
 !12 = !{!10, !11, i64 4}
 !13 = !{!10, !11, i64 8}
 !14 = !{!10, !11, i64 12}
 !15 = !{!10, !11, i64 16}
+!16 = !{!10, !11, i64 20}
+!17 = !{!10, !11, i64 24}

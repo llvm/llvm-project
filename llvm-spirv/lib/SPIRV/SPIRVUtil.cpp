@@ -1210,7 +1210,7 @@ Type *getSPIRVTypeByChangeBaseTypeName(Module *M, Type *T, StringRef OldName,
   if (isSPIRVType(T, OldName, &Postfixes))
     return getOrCreateOpaquePtrType(M, getSPIRVTypeName(NewName, Postfixes));
   LLVM_DEBUG(dbgs() << " Invalid SPIR-V type " << *T << '\n');
-  llvm_unreachable("Invalid SPIRV-V type");
+  llvm_unreachable("Invalid SPIR-V type");
   return nullptr;
 }
 

@@ -6,11 +6,13 @@
 ; RUN: llvm-dis < %t.rev.bc | FileCheck %s --check-prefix=CHECK-LLVM
 
 ; CHECK-SPIRV: Decorate {{[0-9]+}} MemoryINTEL "DEFAULT"
-; CHECK-SPIRV: Decorate {{[0-9]+}} RegisterINTEL 1
+; CHECK-SPIRV: Decorate {{[0-9]+}} RegisterINTEL
 ; CHECK-SPIRV: Decorate {{[0-9]+}} MemoryINTEL "BLOCK_RAM"
 ; CHECK-SPIRV: Decorate {{[0-9]+}} NumbanksINTEL 4
 ; CHECK-SPIRV: Decorate {{[0-9]+}} BankwidthINTEL 8
 ; CHECK-SPIRV: Decorate {{[0-9]+}} MaxconcurrencyINTEL 4
+; CHECK-SPIRV: Decorate {{[0-9]+}} SinglepumpINTEL
+; CHECK-SPIRV: Decorate {{[0-9]+}} DoublepumpINTEL
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir64-unknown-linux"
@@ -22,12 +24,16 @@ target triple = "spir64-unknown-linux"
 ; CHECK-LLVM: [[STR3:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:BLOCK_RAM}
 ; CHECK-LLVM: [[STR4:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{bankwidth:8}
 ; CHECK-LLVM: [[STR5:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{max_concurrency:4}
+; CHECK-LLVM: [[STR6:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{pump:1}
+; CHECK-LLVM: [[STR7:@[a-zA-Z0-9_.]+]] = {{.*}}{memory:DEFAULT}{pump:2}
 @.str = private unnamed_addr constant [29 x i8] c"{memory:DEFAULT}{numbanks:4}\00", section "llvm.metadata"
 @.str.1 = private unnamed_addr constant [13 x i8] c"test_var.cpp\00", section "llvm.metadata"
 @.str.2 = private unnamed_addr constant [13 x i8] c"{register:1}\00", section "llvm.metadata"
 @.str.3 = private unnamed_addr constant [19 x i8] c"{memory:BLOCK_RAM}\00", section "llvm.metadata"
 @.str.4 = private unnamed_addr constant [30 x i8] c"{memory:DEFAULT}{bankwidth:8}\00", section "llvm.metadata"
 @.str.5 = private unnamed_addr constant [36 x i8] c"{memory:DEFAULT}{max_concurrency:4}\00", section "llvm.metadata"
+@.str.6 = private unnamed_addr constant [25 x i8] c"{memory:DEFAULT}{pump:1}\00", section "llvm.metadata"
+@.str.7 = private unnamed_addr constant [25 x i8] c"{memory:DEFAULT}{pump:2}\00", section "llvm.metadata"
 
 ; Function Attrs: nounwind
 define spir_kernel void @_ZTSZ4mainE15kernel_function() #0 !kernel_arg_addr_space !4 !kernel_arg_access_qual !4 !kernel_arg_type !4 !kernel_arg_base_type !4 !kernel_arg_type_qual !4 {
@@ -65,6 +71,8 @@ entry:
   %var_three = alloca i32, align 4
   %var_four = alloca i32, align 4
   %var_five = alloca i8, align 1
+  %var_six = alloca i32, align 4
+  %var_seven = alloca i32, align 4
   %0 = bitcast i32* %var_one to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #4
   %var_one1 = bitcast i32* %var_one to i8*
@@ -88,15 +96,29 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 1, i8* %var_five) #4
   ; CHECK-LLVM: call void @llvm.var.annotation(i8* [[VAR5:%[a-zA-Z0-9_]+]], i8* getelementptr inbounds ([36 x i8], [36 x i8]* [[STR5]], i32 0, i32 0), i8* undef, i32 undef)
   call void @llvm.var.annotation(i8* %var_five, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str.5, i32 0, i32 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.1, i32 0, i32 0), i32 6)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %var_five) #4
-  %4 = bitcast i32* %var_four to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %4) #4
-  %5 = bitcast i32* %var_three to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %5) #4
-  %6 = bitcast i32* %var_two to i8*
+  %4 = bitcast i32* %var_six to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %4) #4
+  %var_six6 = bitcast i32* %var_six to i8*
+  ; CHECK-LLVM: call void @llvm.var.annotation(i8* [[VAR6:%[a-zA-Z0-9_]+]], i8* getelementptr inbounds ([25 x i8], [25 x i8]* [[STR6]], i32 0, i32 0), i8* undef, i32 undef)
+  call void @llvm.var.annotation(i8* %var_six6, i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.6, i32 0, i32 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.1, i32 0, i32 0), i32 7)
+  %5 = bitcast i32* %var_seven to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %5) #4
+  %var_seven7 = bitcast i32* %var_seven to i8*
+  ; CHECK-LLVM: call void @llvm.var.annotation(i8* [[VAR7:%[a-zA-Z0-9_]+]], i8* getelementptr inbounds ([25 x i8], [25 x i8]* [[STR7]], i32 0, i32 0), i8* undef, i32 undef)
+  call void @llvm.var.annotation(i8* %var_seven7, i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.7, i32 0, i32 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.1, i32 0, i32 0), i32 8)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %var_five) #4
+  %6 = bitcast i32* %var_seven to i8*
   call void @llvm.lifetime.end.p0i8(i64 4, i8* %6) #4
-  %7 = bitcast i32* %var_one to i8*
+  %7 = bitcast i32* %var_six to i8*
   call void @llvm.lifetime.end.p0i8(i64 4, i8* %7) #4
+  %8 = bitcast i32* %var_four to i8*
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %8) #4
+  %9 = bitcast i32* %var_three to i8*
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %9) #4
+  %10 = bitcast i32* %var_two to i8*
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %10) #4
+  %11 = bitcast i32* %var_one to i8*
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %11) #4
   ret void
 }
 

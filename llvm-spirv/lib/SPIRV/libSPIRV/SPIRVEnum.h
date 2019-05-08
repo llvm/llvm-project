@@ -113,6 +113,19 @@ typedef spv::GroupOperation SPIRVGroupOperationKind;
 typedef spv::Dim SPIRVImageDimKind;
 typedef std::vector<SPIRVCapabilityKind> SPIRVCapVec;
 
+enum SPIRVExtensionKind {
+  SPV_INTEL_device_side_avc_motion_estimation,
+  SPV_KHR_no_integer_wrap_decoration
+};
+
+typedef std::set<SPIRVExtensionKind> SPIRVExtSet;
+
+template <> inline void SPIRVMap<SPIRVExtensionKind, std::string>::init() {
+  add(SPV_INTEL_device_side_avc_motion_estimation,
+      "SPV_INTEL_device_side_avc_motion_estimation");
+  add(SPV_KHR_no_integer_wrap_decoration, "SPV_KHR_no_integer_wrap_decoration");
+};
+
 template <> inline void SPIRVMap<SPIRVExtInstSetKind, std::string>::init() {
   add(SPIRVEIS_OpenCL, "OpenCL.std");
   add(SPIRVEIS_Debug, "SPIRV.debug");
@@ -343,6 +356,10 @@ template <> inline void SPIRVMap<Decoration, SPIRVCapVec>::init() {
   ADD_VEC_INIT(DecorationNumbanksINTEL, {CapabilityFPGAMemoryAttributesINTEL});
   ADD_VEC_INIT(DecorationBankwidthINTEL, {CapabilityFPGAMemoryAttributesINTEL});
   ADD_VEC_INIT(DecorationMaxconcurrencyINTEL,
+               {CapabilityFPGAMemoryAttributesINTEL});
+  ADD_VEC_INIT(DecorationSinglepumpINTEL,
+               {CapabilityFPGAMemoryAttributesINTEL});
+  ADD_VEC_INIT(DecorationDoublepumpINTEL,
                {CapabilityFPGAMemoryAttributesINTEL});
 }
 

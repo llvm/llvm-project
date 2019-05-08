@@ -24,6 +24,7 @@
 
 ; CHECK: Capability Groups
 ; CHECK: Capability SubgroupAvcMotionEstimationINTEL
+; CHECK: Extension "SPV_INTEL_device_side_avc_motion_estimation"
 
 ; CHECK: TypeAvcMcePayloadINTEL
 ; CHECK: TypeAvcImePayloadINTEL [[IME_PAYLOAD:[0-9]]]

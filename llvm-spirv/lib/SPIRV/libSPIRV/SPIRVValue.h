@@ -120,6 +120,13 @@ public:
     return Type->getRequiredCapability();
   }
 
+  SPIRVExtSet getRequiredExtensions() const override {
+    SPIRVExtSet EV;
+    if (!hasType())
+      return EV;
+    return Type->getRequiredExtensions();
+  }
+
 protected:
   void setHasNoType() { Attrib |= SPIRVEA_NOTYPE; }
   void setHasType() { Attrib &= ~SPIRVEA_NOTYPE; }

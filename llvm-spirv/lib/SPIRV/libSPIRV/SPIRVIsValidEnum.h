@@ -402,6 +402,8 @@ inline bool isValid(spv::Decoration V) {
   case DecorationNumbanksINTEL:
   case DecorationBankwidthINTEL:
   case DecorationMaxconcurrencyINTEL:
+  case DecorationSinglepumpINTEL:
+  case DecorationDoublepumpINTEL:
     return true;
   default:
     return false;

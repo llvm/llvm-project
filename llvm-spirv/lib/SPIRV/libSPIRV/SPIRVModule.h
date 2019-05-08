@@ -155,6 +155,7 @@ public:
   virtual void optimizeDecorates() = 0;
   virtual void setAutoAddCapability(bool E) { AutoAddCapability = E; }
   virtual void setValidateCapability(bool E) { ValidateCapability = E; }
+  virtual void setAutoAddExtensions(bool E) { AutoAddExtensions = E; }
   virtual void setGeneratorId(unsigned short) = 0;
   virtual void setGeneratorVer(unsigned short) = 0;
   virtual void resolveUnknownStructFields() = 0;
@@ -280,6 +281,7 @@ public:
     for (auto I : Caps)
       addCapability(I);
   }
+  virtual void addExtension(SPIRVExtensionKind) = 0;
   /// Used by SPIRV entries to add required capability internally.
   /// Should not be used by users directly.
   virtual void addCapabilityInternal(SPIRVCapabilityKind) = 0;
@@ -382,6 +384,7 @@ public:
 protected:
   bool AutoAddCapability;
   bool ValidateCapability;
+  bool AutoAddExtensions = true;
 
 private:
   bool IsValid;

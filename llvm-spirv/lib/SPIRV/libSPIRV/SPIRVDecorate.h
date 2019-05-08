@@ -136,6 +136,16 @@ public:
   // Incomplete constructor
   SPIRVDecorate() : SPIRVDecorateGeneric(OC) {}
 
+  SPIRVExtSet getRequiredExtensions() const override {
+    switch (Dec) {
+    case DecorationNoSignedWrap:
+    case DecorationNoUnsignedWrap:
+      return getSet(SPV_KHR_no_integer_wrap_decoration);
+    default:
+      return SPIRVExtSet();
+    }
+  }
+
   _SPIRV_DCL_ENCDEC
   void setWordCount(SPIRVWord) override;
   void validate() const override {

@@ -77,7 +77,7 @@ public:
   // appropriate calls to conversion built-ins defined by the standards.
   void visitCastInst(CastInst &CI);
 
-  /// Transform __spirv_ImageQuerySize[Lod] into vector of the same lenght
+  /// Transform __spirv_ImageQuerySize[Lod] into vector of the same length
   /// containing {[get_image_width | get_image_dim], get_image_array_size}
   /// for all images except image1d_t which is always converted into
   /// get_image_width returning scalar result.

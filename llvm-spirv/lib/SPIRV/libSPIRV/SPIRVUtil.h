@@ -362,6 +362,12 @@ inline std::vector<uint32_t> getVec(const std::string &Str) {
   return V;
 }
 
+template <typename T> inline std::set<T> getSet(T Op1) {
+  std::set<T> S;
+  S.insert(Op1);
+  return S;
+}
+
 template <typename T> inline std::vector<T> getVec(T Op1) {
   std::vector<T> V;
   V.push_back(Op1);

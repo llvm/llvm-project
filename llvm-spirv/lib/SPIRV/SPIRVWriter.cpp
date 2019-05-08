@@ -128,6 +128,7 @@ LLVMToSPIRV::LLVMToSPIRV(SPIRVModule *SMod)
 
 bool LLVMToSPIRV::runOnModule(Module &Mod) {
   M = &Mod;
+  CG = make_unique<CallGraph>(Mod);
   Ctx = &M->getContext();
   DbgTran->setModule(M);
   assert(BM && "SPIR-V module not initialized");
@@ -1127,16 +1128,25 @@ parseAnnotations(StringRef AnnotatedCode) {
     StringRef AnnotatedDecoration = AnnotatedCode.substr(From + 1, To - 1);
     std::pair<StringRef, StringRef> D = AnnotatedDecoration.split(':');
 
-    StringRef F = D.first;
-    Decoration Dec =
-        llvm::StringSwitch<Decoration>(F)
-            .Case("memory", DecorationMemoryINTEL)
-            .Case("register", DecorationRegisterINTEL)
-            .Case("numbanks", DecorationNumbanksINTEL)
-            .Case("bankwidth", DecorationBankwidthINTEL)
-            .Case("max_concurrency", DecorationMaxconcurrencyINTEL);
+    StringRef F = D.first, S = D.second;
+    StringRef Value;
+    Decoration Dec;
+    if (F == "pump") {
+      Dec = llvm::StringSwitch<Decoration>(S)
+                .Case("1", DecorationSinglepumpINTEL)
+                .Case("2", DecorationDoublepumpINTEL);
+    } else if (F == "register") {
+      Dec = DecorationRegisterINTEL;
+    } else {
+      Dec = llvm::StringSwitch<Decoration>(F)
+                .Case("memory", DecorationMemoryINTEL)
+                .Case("numbanks", DecorationNumbanksINTEL)
+                .Case("bankwidth", DecorationBankwidthINTEL)
+                .Case("max_concurrency", DecorationMaxconcurrencyINTEL);
+      Value = S;
+    }
 
-    Decorates.push_back({Dec, D.second});
+    Decorates.push_back({Dec, Value});
     AnnotatedCode = AnnotatedCode.drop_front(To + 1);
   }
   return Decorates;
@@ -1146,12 +1156,25 @@ void addIntelFPGADecorations(
     SPIRVEntry *E,
     std::vector<std::pair<Decoration, std::string>> &Decorations) {
   for (const auto &I : Decorations) {
-    if (I.first == DecorationMemoryINTEL)
+    switch (I.first) {
+    case DecorationMemoryINTEL:
       E->addDecorate(new SPIRVDecorateMemoryINTELAttr(E, I.second));
-    else {
+      break;
+    case DecorationRegisterINTEL:
+    case DecorationSinglepumpINTEL:
+    case DecorationDoublepumpINTEL:
+      assert(I.second.empty());
+      E->addDecorate(I.first);
+      break;
+    // The rest of IntelFPGA decorations:
+    // DecorationNumbanksINTEL
+    // DecorationBankwidthINTEL
+    // DecorationMaxconcurrencyINTEL
+    default:
       SPIRVWord Result = 0;
       StringRef(I.second).getAsInteger(10, Result);
       E->addDecorate(I.first, Result);
+      break;
     }
   }
 }
@@ -1160,13 +1183,26 @@ void addIntelFPGADecorationsForStructMember(
     SPIRVEntry *E, SPIRVWord MemberNumber,
     std::vector<std::pair<Decoration, std::string>> &Decorations) {
   for (const auto &I : Decorations) {
-    if (I.first == DecorationMemoryINTEL)
+    switch (I.first) {
+    case DecorationMemoryINTEL:
       E->addMemberDecorate(
           new SPIRVMemberDecorateMemoryINTELAttr(E, MemberNumber, I.second));
-    else {
+      break;
+    case DecorationRegisterINTEL:
+    case DecorationSinglepumpINTEL:
+    case DecorationDoublepumpINTEL:
+      assert(I.second.empty());
+      E->addMemberDecorate(MemberNumber, I.first);
+      break;
+    // The rest of IntelFPGA decorations:
+    // DecorationNumbanksINTEL
+    // DecorationBankwidthINTEL
+    // DecorationMaxconcurrencyINTEL
+    default:
       SPIRVWord Result = 0;
       StringRef(I.second).getAsInteger(10, Result);
       E->addMemberDecorate(MemberNumber, I.first, Result);
+      break;
     }
   }
 }
@@ -1177,6 +1213,14 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
     std::vector<SPIRVWord> MemoryAccess(1, MemoryAccessMaskNone);
     if (SPIRVWord AlignVal = MI->getDestAlignment()) {
       MemoryAccess[0] |= MemoryAccessAlignedMask;
+      if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
+        SPIRVWord SourceAlignVal = MTI->getSourceAlignment();
+        assert(SourceAlignVal && "Missed Source alignment!");
+
+        // In a case when alignment of source differs from dest one
+        // least value is guaranteed anyway.
+        AlignVal = std::min(AlignVal, SourceAlignVal);
+      }
       MemoryAccess.push_back(AlignVal);
     }
     if (MI->isVolatile())
@@ -1233,9 +1277,6 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
                                       GetMemoryAccess(MSI), BB);
   } break;
   case Intrinsic::memcpy:
-    assert(cast<MemCpyInst>(II)->getSourceAlignment() ==
-               cast<MemCpyInst>(II)->getDestAlignment() &&
-           "Alignment mismatch!");
     return BM->addCopyMemorySizedInst(
         transValue(II->getOperand(0), BB), transValue(II->getOperand(1), BB),
         transValue(II->getOperand(2), BB),
@@ -1417,6 +1458,59 @@ bool LLVMToSPIRV::transGlobalVariables() {
   return true;
 }
 
+bool LLVMToSPIRV::isAnyFunctionReachableFromFunction(
+    const Function *FS,
+    const std::unordered_set<const Function *> Funcs) const {
+  std::unordered_set<const Function *> Done;
+  std::unordered_set<const Function *> ToDo;
+  ToDo.insert(FS);
+
+  while (!ToDo.empty()) {
+    auto It = ToDo.begin();
+    const Function *F = *It;
+
+    if (Funcs.find(F) != Funcs.end())
+      return true;
+
+    ToDo.erase(It);
+    Done.insert(F);
+
+    const CallGraphNode *FN = (*CG)[F];
+    for (unsigned I = 0; I < FN->size(); ++I) {
+      const CallGraphNode *NN = (*FN)[I];
+      const Function *NNF = NN->getFunction();
+      if (!NNF)
+        continue;
+      if (Done.find(NNF) == Done.end()) {
+        ToDo.insert(NNF);
+      }
+    }
+  }
+
+  return false;
+}
+
+void LLVMToSPIRV::collectInputOutputVariables(SPIRVFunction *SF, Function *F) {
+  for (auto &GV : M->globals()) {
+    const auto AS = GV.getAddressSpace();
+    if (AS != SPIRAS_Input && AS != SPIRAS_Output)
+      continue;
+
+    std::unordered_set<const Function *> Funcs;
+
+    for (const auto &U : GV.uses()) {
+      const Instruction *Inst = dyn_cast<Instruction>(U.getUser());
+      if (!Inst)
+        continue;
+      Funcs.insert(Inst->getFunction());
+    }
+
+    if (isAnyFunctionReachableFromFunction(F, Funcs)) {
+      SF->addVariable(ValueMap[&GV]);
+    }
+  }
+}
+
 void LLVMToSPIRV::mutateFuncArgType(
     const std::map<unsigned, Type *> &ChangedType, Function *F) {
   for (auto &I : ChangedType) {
@@ -1457,6 +1551,9 @@ void LLVMToSPIRV::transFunction(Function *I) {
       BF->shouldFPContractBeDisabled()) {
     BF->addExecutionMode(BF->getModule()->add(
         new SPIRVExecutionMode(BF, spv::ExecutionModeContractionOff)));
+  }
+  if (BF->getModule()->isEntryPoint(spv::ExecutionModelKernel, BF->getId())) {
+    collectInputOutputVariables(BF, I);
   }
 }
 

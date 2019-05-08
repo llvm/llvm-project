@@ -79,7 +79,7 @@ bool isSpirvBinary(std::string &Img);
 bool convertSpirv(std::istream &IS, std::ostream &OS, std::string &ErrMsg,
                   bool FromText, bool ToText);
 
-/// \brief Convert SPIR-V between binary and internel text formats.
+/// \brief Convert SPIR-V between binary and internal text formats.
 /// This function is not thread safe and should not be used in multi-thread
 /// applications unless guarded by a critical section.
 bool convertSpirv(std::string &Input, std::string &Out, std::string &ErrMsg,
@@ -93,11 +93,11 @@ bool isSpirvText(std::string &Img);
 
 namespace llvm {
 
-/// \brief Translate LLVM module to SPIRV and write to ostream.
+/// \brief Translate LLVM module to SPIR-V and write to ostream.
 /// \returns true if succeeds.
 bool writeSpirv(Module *M, std::ostream &OS, std::string &ErrMsg);
 
-/// \brief Load SPIRV from istream and translate to LLVM module.
+/// \brief Load SPIR-V from istream and translate to LLVM module.
 /// \returns true if succeeds.
 bool readSpirv(LLVMContext &C, std::istream &IS, Module *&M,
                std::string &ErrMsg);

@@ -184,6 +184,7 @@ enum SPIRAddressSpace {
   SPIRAS_Local,
   SPIRAS_Generic,
   SPIRAS_Input,
+  SPIRAS_Output,
   SPIRAS_Count,
 };
 

@@ -2246,6 +2246,10 @@ protected:
   SPIRVCapVec getRequiredCapability() const override {
     return getVec(CapabilitySubgroupAvcMotionEstimationINTEL);
   }
+
+  SPIRVExtSet getRequiredExtensions() const override {
+    return getSet(SPV_INTEL_device_side_avc_motion_estimation);
+  }
 };
 
 // Intel Subgroup AVC Motion Estimation Instructions
