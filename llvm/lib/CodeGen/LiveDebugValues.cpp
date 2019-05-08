@@ -143,8 +143,7 @@ private:
     enum VarLocKind {
       InvalidKind = 0,
       RegisterKind,
-      SpillLocKind,
-      ImmediateKind
+      SpillLocKind
     } Kind = InvalidKind;
 
     /// The value location. Stored separately to avoid repeatedly
@@ -153,9 +152,6 @@ private:
       uint64_t RegNo;
       SpillLoc SpillLocation;
       uint64_t Hash;
-      int64_t Immediate;
-      const ConstantFP *FPImm;
-      const ConstantInt *CImm;
     } Loc;
 
     VarLoc(const MachineInstr &MI, LexicalScopes &LS)
@@ -168,15 +164,6 @@ private:
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
         Loc.RegNo = RegNo;
-      } else if (MI.getOperand(0).isImm()) {
-        Kind = ImmediateKind;
-        Loc.Immediate = MI.getOperand(0).getImm();
-      } else if (MI.getOperand(0).isFPImm()) {
-        Kind = ImmediateKind;
-        Loc.FPImm = MI.getOperand(0).getFPImm();
-      } else if (MI.getOperand(0).isCImm()) {
-        Kind = ImmediateKind;
-        Loc.CImm = MI.getOperand(0).getCImm();
       }
     }
 
@@ -190,9 +177,6 @@ private:
       Kind = SpillLocKind;
       Loc.SpillLocation = {SpillBase, SpillOffset};
     }
-
-    // Is the Loc field a constant or constant object?
-    bool isConstant() const { return Kind == ImmediateKind; }
 
     /// If this variable is described by a register, return it,
     /// otherwise return 0.
@@ -211,8 +195,7 @@ private:
 #endif
 
     bool operator==(const VarLoc &Other) const {
-      return Kind == Other.Kind && Var == Other.Var &&
-             Loc.Hash == Other.Loc.Hash;
+      return Var == Other.Var && Loc.Hash == Other.Loc.Hash;
     }
 
     /// This operator guarantees that VarLocs are sorted by Variable first.
@@ -425,23 +408,11 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
   OpenRanges.erase(V);
 
   // Add the VarLoc to OpenRanges from this DBG_VALUE.
-  unsigned ID;
-  if (isDbgValueDescribedByReg(MI) || MI.getOperand(0).isImm() ||
-      MI.getOperand(0).isFPImm() || MI.getOperand(0).isCImm()) {
-    // Use normal VarLoc constructor for registers and immediates.
+  // TODO: Currently handles DBG_VALUE which has only reg as location.
+  if (isDbgValueDescribedByReg(MI)) {
     VarLoc VL(MI, LS);
-    ID = VarLocIDs.insert(VL);
+    unsigned ID = VarLocIDs.insert(VL);
     OpenRanges.insert(ID, VL.Var);
-  } else if (MI.hasOneMemOperand()) {
-    // It's a stack spill -- fetch spill base and offset.
-    VarLoc::SpillLoc SpillLocation = extractSpillBaseRegAndOffset(MI);
-    VarLoc VL(MI, SpillLocation.SpillBase, SpillLocation.SpillOffset, LS);
-    ID = VarLocIDs.insert(VL);
-    OpenRanges.insert(ID, VL.Var);
-  } else {
-    // This must be an undefined location. We should leave OpenRanges closed.
-    assert(MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == 0 &&
-           "Unexpected non-undef DBG_VALUE encountered");
   }
 }
 
@@ -835,19 +806,12 @@ bool LiveDebugValues::join(
     // a new DBG_VALUE. process() will end this range however appropriate.
     const VarLoc &DiffIt = VarLocIDs[ID];
     const MachineInstr *DMI = &DiffIt.MI;
-    MachineInstr *MI = nullptr;
-    if (DiffIt.isConstant()) {
-      MachineOperand MO(DMI->getOperand(0));
-      MI = BuildMI(MBB, MBB.instr_begin(), DMI->getDebugLoc(), DMI->getDesc(),
-                   false, MO, DMI->getDebugVariable(),
-                   DMI->getDebugExpression());
-    } else {
-      MI = BuildMI(MBB, MBB.instr_begin(), DMI->getDebugLoc(), DMI->getDesc(),
-                   DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(),
-                   DMI->getDebugVariable(), DMI->getDebugExpression());
-      if (DMI->isIndirectDebugValue())
-        MI->getOperand(1).setImm(DMI->getOperand(1).getImm());
-    }
+    MachineInstr *MI =
+        BuildMI(MBB, MBB.instr_begin(), DMI->getDebugLoc(), DMI->getDesc(),
+                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(),
+                DMI->getDebugVariable(), DMI->getDebugExpression());
+    if (DMI->isIndirectDebugValue())
+      MI->getOperand(1).setImm(DMI->getOperand(1).getImm());
     LLVM_DEBUG(dbgs() << "Inserted: "; MI->dump(););
     ILS.set(ID);
     ++NumInserted;
