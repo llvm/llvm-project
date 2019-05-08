@@ -292,11 +292,8 @@ static StringRef getEntry(opt::InputArgList &Args) {
   return Arg->getValue();
 }
 
-// Some Config members do not directly correspond to any particular
-// command line options, but computed based on other Config values.
-// This function initialize such members. See Config.h for the details
-// of these values.
-static void setConfigs(opt::InputArgList &Args) {
+// Initializes Config members by the command line options.
+static void readConfigs(opt::InputArgList &Args) {
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->CheckFeatures =
       Args.hasFlag(OPT_check_features, OPT_no_check_features, true);
@@ -353,6 +350,26 @@ static void setConfigs(opt::InputArgList &Args) {
         llvm::Optional<std::vector<std::string>>(std::vector<std::string>());
     for (StringRef S : Arg->getValues())
       Config->Features->push_back(S);
+  }
+}
+
+// Some Config members do not directly correspond to any particular
+// command line options, but computed based on other Config values.
+// This function initialize such members. See Config.h for the details
+// of these values.
+static void setConfigs() {
+  Config->Pic = Config->Pie || Config->Shared;
+
+  if (Config->Pic) {
+    if (Config->ExportTable)
+      error("-shared/-pie is incompatible with --export-table");
+    Config->ImportTable = true;
+  }
+
+  if (Config->Shared) {
+    Config->ImportMemory = true;
+    Config->ExportDynamic = true;
+    Config->AllowUndefined = true;
   }
 }
 
@@ -514,7 +531,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
 
-  setConfigs(Args);
+  readConfigs(Args);
+  setConfigs();
   checkOptions(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
@@ -525,26 +543,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
-  Config->Pic = Config->Pie || Config->Shared;
-
-  if (Config->Pic) {
-    if (Config->ExportTable)
-      error("-shared/-pie is incompatible with --export-table");
-    Config->ImportTable = true;
-  }
-
   // Handle --trace-symbol.
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
     Symtab->trace(Arg->getValue());
 
   if (!Config->Relocatable)
     createSyntheticSymbols();
-
-  if (Config->Shared) {
-    Config->ImportMemory = true;
-    Config->ExportDynamic = true;
-    Config->AllowUndefined = true;
-  }
 
   createFiles(Args);
   if (errorCount())
