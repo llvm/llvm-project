@@ -6657,6 +6657,10 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
       DL.getTypeSizeInBits(SplitStoreType))
     return false;
 
+  // Don't split the store if it is volatile.
+  if (SI.isVolatile())
+    return false;
+
   // Match the following patterns:
   // (store (or (zext LValue to i64),
   //            (shl (zext HValue to i64), 32)), HalfValBitSize)
