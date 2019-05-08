@@ -3539,7 +3539,7 @@ void CodeGenModule::generateIntelFPGAAnnotation(
     llvm::APSInt BWAInt = BWA->getValue()->EvaluateKnownConstInt(getContext());
     Out << '{' << BWA->getSpelling() << ':' << BWAInt << '}';
   }
-  if (const auto *MCA = D->getAttr<IntelFPGAMaxConcurrencyAttr>()) {
+  if (const auto *MCA = D->getAttr<IntelFPGAMaxPrivateCopiesAttr>()) {
     llvm::APSInt MCAInt = MCA->getValue()->EvaluateKnownConstInt(getContext());
     Out << '{' << MCA->getSpelling() << ':' << MCAInt << '}';
   }

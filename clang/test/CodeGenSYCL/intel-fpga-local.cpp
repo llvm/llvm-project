@@ -4,13 +4,13 @@
 //CHECK: [[ANN2:@.str[\.]*[0-9]*]] = {{.*}}{register:1}
 //CHECK: [[ANN3:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}
 //CHECK: [[ANN4:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{bankwidth:4}
-//CHECK: [[ANN5:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{max_concurrency:8}
+//CHECK: [[ANN5:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{max_private_copies:8}
 //CHECK: [[ANN10:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{pump:1}
 //CHECK: [[ANN11:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{pump:2}
 //CHECK: [[ANN6:@.str[\.]*[0-9]*]] = {{.*}}{memory:BLOCK_RAM}
 //CHECK: [[ANN7:@.str[\.]*[0-9]*]] = {{.*}}{memory:MLAB}
 //CHECK: [[ANN8:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{bankwidth:8}
-//CHECK: [[ANN9:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{max_concurrency:4}
+//CHECK: [[ANN9:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{max_private_copies:4}
 
 void foo() {
   //CHECK: %[[VAR_ONE:[0-9]+]] = bitcast{{.*}}var_one
@@ -36,7 +36,7 @@ struct foo_two {
   int __attribute__((register)) f2;
   int __attribute__((__memory__)) f3;
   int __attribute__((__bankwidth__(4))) f4;
-  int __attribute__((max_concurrency(8))) f5;
+  int __attribute__((max_private_copies(8))) f5;
   int __attribute__((singlepump)) f6;
   int __attribute__((doublepump)) f7;
 };
@@ -101,7 +101,7 @@ void baz() {
   //CHECK: %[[V_SEVEN:[0-9]+]] = bitcast{{.*}}v_seven
   //CHECK: %[[V_SEVEN1:v_seven[0-9]+]] = bitcast{{.*}}v_seven
   //CHECK: llvm.var.annotation{{.*}}%[[V_SEVEN1]],{{.*}}[[ANN9]]
-  int v_seven [[intelfpga::max_concurrency(4)]];
+  int v_seven [[intelfpga::max_private_copies(4)]];
   //CHECK: %[[V_EIGHT:[0-9]+]] = bitcast{{.*}}v_eight
   //CHECK: %[[V_EIGHT1:v_eight[0-9]+]] = bitcast{{.*}}v_eight
   //CHECK: llvm.var.annotation{{.*}}%[[V_EIGHT1]],{{.*}}[[ANN10]]

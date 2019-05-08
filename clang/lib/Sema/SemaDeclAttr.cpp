@@ -3793,7 +3793,7 @@ void Sema::AddOneConstantValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
     E = ICE.get();
   }
 
-  if (IntelFPGAMaxConcurrencyAttr::classof(&TmpAttr)) {
+  if (IntelFPGAMaxPrivateCopiesAttr::classof(&TmpAttr)) {
     if (!D->hasAttr<IntelFPGAMemoryAttr>())
       D->addAttr(IntelFPGAMemoryAttr::CreateImplicit(
           Context, IntelFPGAMemoryAttr::Default));
@@ -5083,7 +5083,7 @@ static bool checkIntelFPGARegisterAttrCompatibility(Sema &S, Decl *D,
     InCompat = true;
   if (checkAttrMutualExclusion<IntelFPGABankWidthAttr>(S, D, Attr))
     InCompat = true;
-  if (checkAttrMutualExclusion<IntelFPGAMaxConcurrencyAttr>(S, D, Attr))
+  if (checkAttrMutualExclusion<IntelFPGAMaxPrivateCopiesAttr>(S, D, Attr))
     InCompat = true;
   if (auto *NBA = D->getAttr<IntelFPGANumBanksAttr>())
     if (!NBA->isImplicit() &&
@@ -5122,13 +5122,13 @@ static void handleOneConstantPowerTwoValueAttr(Sema &S, Decl *D,
       Attr.getAttributeSpellingListIndex());
 }
 
-static void handleIntelFPGAMaxConcurrencyAttr(Sema &S, Decl *D,
+static void handleIntelFPGAMaxPrivateCopiesAttr(Sema &S, Decl *D,
                                               const ParsedAttr &Attr) {
-  checkForDuplicateAttribute<IntelFPGAMaxConcurrencyAttr>(S, D, Attr);
+  checkForDuplicateAttribute<IntelFPGAMaxPrivateCopiesAttr>(S, D, Attr);
   if (checkAttrMutualExclusion<IntelFPGARegisterAttr>(S, D, Attr))
     return;
 
-  S.AddOneConstantValueAttr<IntelFPGAMaxConcurrencyAttr>(
+  S.AddOneConstantValueAttr<IntelFPGAMaxPrivateCopiesAttr>(
       Attr.getRange(), D, Attr.getArgAsExpr(0),
       Attr.getAttributeSpellingListIndex());
 }
@@ -7503,8 +7503,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_IntelFPGANumBanks:
     handleOneConstantPowerTwoValueAttr<IntelFPGANumBanksAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_IntelFPGAMaxConcurrency:
-    handleIntelFPGAMaxConcurrencyAttr(S, D, AL);
+  case ParsedAttr::AT_IntelFPGAMaxPrivateCopies:
+    handleIntelFPGAMaxPrivateCopiesAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:

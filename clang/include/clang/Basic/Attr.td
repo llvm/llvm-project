@@ -1498,12 +1498,12 @@ def IntelFPGANumBanks : Attr {
   }];
 }
 
-def IntelFPGAMaxConcurrency : InheritableAttr {
-  let Spellings = [GNU<"max_concurrency">, CXX11<"intelfpga","max_concurrency">];
+def IntelFPGAMaxPrivateCopies : InheritableAttr {
+  let Spellings = [GNU<"max_private_copies">, CXX11<"intelfpga","max_private_copies">];
   let Args = [ExprArgument<"Value">];
   let LangOpts = [SYCL];
   let Subjects = SubjectList<[IntelFPGALocalNonConstVar, Field], ErrorDiag>;
-  let Documentation = [IntelFPGAMaxConcurrencyAttrDocs];
+  let Documentation = [IntelFPGAMaxPrivateCopiesAttrDocs];
   let AdditionalMembers = [{
     static unsigned getMinValue() {
       return 0;
