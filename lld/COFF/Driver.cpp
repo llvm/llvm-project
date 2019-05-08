@@ -975,6 +975,13 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &Args) {
 }
 
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
+  // Needed for LTO.
+  InitializeAllTargetInfos();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmParsers();
+  InitializeAllAsmPrinters();
+
   // If the first command line argument is "/lib", link.exe acts like lib.exe.
   // We call our own implementation of lib.exe that understands bitcode files.
   if (ArgsArr.size() > 1 && StringRef(ArgsArr[1]).equals_lower("/lib")) {
@@ -982,13 +989,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       fatal("lib failed");
     return;
   }
-
-  // Needed for LTO.
-  InitializeAllTargetInfos();
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmParsers();
-  InitializeAllAsmPrinters();
 
   // Parse command line options.
   ArgParser Parser;
