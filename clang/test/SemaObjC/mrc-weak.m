@@ -62,6 +62,6 @@ void test_unsafe_unretained_cast(id *value) {
 
 void test_cast_qualifier_inference(__weak id *value) {
   __weak id *a = (id*) value;
-  __unsafe_unretained id *b = (id *)value; // expected-error {{initializing '__unsafe_unretained id *' with an expression of type '__weak id *' changes retain/release properties of pointer}}
+  __unsafe_unretained id *b = (id *)value; // expected-error {{initializing 'id *' with an expression of type '__weak id *' changes retain/release properties of pointer}}
 }
 
