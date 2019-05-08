@@ -7574,7 +7574,8 @@ bool LoopVectorizePass::runImpl(
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
   for (auto &L : *LI)
-    Changed |= simplifyLoop(L, DT, LI, SE, AC, false /* PreserveLCSSA */);
+    Changed |=
+        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops
