@@ -3130,6 +3130,11 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     auto *Recent = const_cast<FunctionDecl *>(
           FoundByLookup->getMostRecentDecl());
     ToFunction->setPreviousDecl(Recent);
+    // FIXME Probably we should merge exception specifications.  E.g. In the
+    // "To" context the existing function may have exception specification with
+    // noexcept-unevaluated, while the newly imported function may have an
+    // evaluated noexcept.  A call to adjustExceptionSpec() on the imported
+    // decl and its redeclarations may be required.
   }
 
   // Import Ctor initializers.

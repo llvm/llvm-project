@@ -322,6 +322,36 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
+/// Check the equivalence of exception specifications.
+static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
+                                      const FunctionProtoType *Proto1,
+                                      const FunctionProtoType *Proto2) {
+
+  auto Spec1 = Proto1->getExceptionSpecType();
+  auto Spec2 = Proto2->getExceptionSpecType();
+
+  if (isUnresolvedExceptionSpec(Spec1) || isUnresolvedExceptionSpec(Spec2))
+    return true;
+
+  if (Spec1 != Spec2)
+    return false;
+  if (Spec1 == EST_Dynamic) {
+    if (Proto1->getNumExceptions() != Proto2->getNumExceptions())
+      return false;
+    for (unsigned I = 0, N = Proto1->getNumExceptions(); I != N; ++I) {
+      if (!IsStructurallyEquivalent(Context, Proto1->getExceptionType(I),
+                                    Proto2->getExceptionType(I)))
+        return false;
+    }
+  } else if (isComputedNoexcept(Spec1)) {
+    if (!IsStructurallyEquivalent(Context, Proto1->getNoexceptExpr(),
+                                  Proto2->getNoexceptExpr()))
+      return false;
+  }
+
+  return true;
+}
+
 /// Determine structural equivalence of two types.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      QualType T1, QualType T2) {
@@ -536,24 +566,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         cast<FunctionProtoType>(OrigT1.getDesugaredType(Context.FromCtx));
     const auto *OrigProto2 =
         cast<FunctionProtoType>(OrigT2.getDesugaredType(Context.ToCtx));
-    auto Spec1 = OrigProto1->getExceptionSpecType();
-    auto Spec2 = OrigProto2->getExceptionSpecType();
-
-    if (Spec1 != Spec2)
+    if (!IsEquivalentExceptionSpec(Context, OrigProto1, OrigProto2))
       return false;
-    if (Spec1 == EST_Dynamic) {
-      if (OrigProto1->getNumExceptions() != OrigProto2->getNumExceptions())
-        return false;
-      for (unsigned I = 0, N = OrigProto1->getNumExceptions(); I != N; ++I) {
-        if (!IsStructurallyEquivalent(Context, OrigProto1->getExceptionType(I),
-                                      OrigProto2->getExceptionType(I)))
-          return false;
-      }
-    } else if (isComputedNoexcept(Spec1)) {
-      if (!IsStructurallyEquivalent(Context, OrigProto1->getNoexceptExpr(),
-                                    OrigProto2->getNoexceptExpr()))
-        return false;
-    }
 
     // Fall through to check the bits common with FunctionNoProtoType.
     LLVM_FALLTHROUGH;
