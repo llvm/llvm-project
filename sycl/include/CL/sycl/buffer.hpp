@@ -35,6 +35,11 @@ public:
   template <int dims>
   using EnableIfOneDimension = typename std::enable_if<1 == dims>::type;
 
+  template <typename ItA, typename ItB>
+  using EnableIfSameNonConstIterators =
+      typename std::enable_if<std::is_same<ItA, ItB>::value &&
+                              !std::is_const<ItA>::value, ItA>::type;
+
   buffer(const range<dimensions> &bufferRange,
          const property_list &propList = {})
       : Range(bufferRange), MemRange(bufferRange) {
@@ -63,14 +68,18 @@ public:
         hostData, get_count() * sizeof(T), propList, allocator);
   }
 
-  buffer(const T *hostData, const range<dimensions> &bufferRange,
+  template <typename _T = T>
+  buffer(EnableIfSameNonConstIterators<T, _T> const *hostData,
+         const range<dimensions> &bufferRange,
          const property_list &propList = {})
       : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         hostData, get_count() * sizeof(T), propList);
   }
 
-  buffer(const T *hostData, const range<dimensions> &bufferRange,
+  template <typename _T = T>
+  buffer(EnableIfSameNonConstIterators<T, _T> const *hostData,
+         const range<dimensions> &bufferRange,
          AllocatorT allocator, const property_list &propList = {})
       : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
