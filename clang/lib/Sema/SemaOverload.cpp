@@ -11995,7 +11995,7 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   // This shouldn't cause an infinite loop because we're giving it
   // an expression with viable lookup results, which should never
   // end up here.
-  return SemaRef.ActOnCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
+  return SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
                                MultiExprArg(Args.data(), Args.size()),
                                RParenLoc);
 }
@@ -13304,7 +13304,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
              "Found Decl & conversion-to-functionptr should be same, right?!");
     // We selected one of the surrogate functions that converts the
     // object parameter to a function pointer. Perform the conversion
-    // on the object argument, then let ActOnCallExpr finish the job.
+    // on the object argument, then let BuildCallExpr finish the job.
 
     // Create an implicit member expr to refer to the conversion operator.
     // and then call it.
@@ -13317,7 +13317,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
                                     CK_UserDefinedConversion, Call.get(),
                                     nullptr, VK_RValue);
 
-    return ActOnCallExpr(S, Call.get(), LParenLoc, Args, RParenLoc);
+    return BuildCallExpr(S, Call.get(), LParenLoc, Args, RParenLoc);
   }
 
   CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr, Best->FoundDecl);
@@ -13656,7 +13656,7 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;
     }
-    *CallExpr = ActOnCallExpr(S, MemberRef.get(), Loc, None, Loc, nullptr);
+    *CallExpr = BuildCallExpr(S, MemberRef.get(), Loc, None, Loc, nullptr);
     if (CallExpr->isInvalid()) {
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;

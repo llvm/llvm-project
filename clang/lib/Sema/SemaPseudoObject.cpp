@@ -1491,7 +1491,7 @@ ExprResult MSPropertyOpBuilder::buildGet() {
     return ExprError();
   }
 
-  return S.ActOnCallExpr(S.getCurScope(), GetterExpr.get(),
+  return S.BuildCallExpr(S.getCurScope(), GetterExpr.get(),
                          RefExpr->getSourceRange().getBegin(), CallArgs,
                          RefExpr->getSourceRange().getEnd());
 }
@@ -1523,7 +1523,7 @@ ExprResult MSPropertyOpBuilder::buildSet(Expr *op, SourceLocation sl,
   SmallVector<Expr*, 4> ArgExprs;
   ArgExprs.append(CallArgs.begin(), CallArgs.end());
   ArgExprs.push_back(op);
-  return S.ActOnCallExpr(S.getCurScope(), SetterExpr.get(),
+  return S.BuildCallExpr(S.getCurScope(), SetterExpr.get(),
                          RefExpr->getSourceRange().getBegin(), ArgExprs,
                          op->getSourceRange().getEnd());
 }
