@@ -933,8 +933,6 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
                                ? getLdStOffsetOp(*StoreI).getImm()
                                : getLdStOffsetOp(*StoreI).getImm() * StoreSize;
     int Width = LoadSize * 8;
-    int Immr = 8 * (UnscaledLdOffset - UnscaledStOffset);
-    int Imms = Immr + Width - 1;
     unsigned DestReg = IsStoreXReg
                            ? TRI->getMatchingSuperReg(LdRt, AArch64::sub_32,
                                                       &AArch64::GPR64RegClass)
@@ -944,8 +942,8 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
             (UnscaledLdOffset + LoadSize) <= UnscaledStOffset + StoreSize) &&
            "Invalid offset");
 
-    Immr = 8 * (UnscaledLdOffset - UnscaledStOffset);
-    Imms = Immr + Width - 1;
+    int Immr = 8 * (UnscaledLdOffset - UnscaledStOffset);
+    int Imms = Immr + Width - 1;
     if (UnscaledLdOffset == UnscaledStOffset) {
       uint32_t AndMaskEncoded = ((IsStoreXReg ? 1 : 0) << 12) // N
                                 | ((Immr) << 6)               // immr
