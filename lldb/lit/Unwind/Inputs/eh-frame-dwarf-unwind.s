@@ -1,18 +1,13 @@
         .text
         .globl  bar
-        .type   bar, @function
 bar:
-.LFB0:
         .cfi_startproc
         leal    (%edi, %edi), %eax
         ret
         .cfi_endproc
-.LFE0:
-        .size   bar, .-bar
+
         .globl  foo
-        .type   foo, @function
 foo:
-.LFB1:
         .cfi_startproc
         .cfi_escape 0x16, 0x10, 0x06, 0x38, 0x1c, 0x06, 0x08, 0x47, 0x1c
         call    bar
@@ -21,12 +16,9 @@ foo:
         subq    $0x47, %rdi
         jmp     *%rdi # Return
         .cfi_endproc
-.LFE1:
-        .size   foo, .-foo
-        .globl  main
-        .type   main, @function
-main:
-.LFB2:
+
+        .globl  asm_main
+asm_main:
         .cfi_startproc
         pushq   %rbp
         .cfi_def_cfa_offset 16
@@ -45,5 +37,3 @@ main:
         .cfi_def_cfa 7, 8
         ret
         .cfi_endproc
-.LFE2:
-        .size   main, .-main
