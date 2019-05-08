@@ -45,6 +45,7 @@ unittest("ClangdTests") {
     "FileDistanceTests.cpp",
     "FileIndexTests.cpp",
     "FindSymbolsTests.cpp",
+    "FormattedStringTests.cpp",
     "FunctionTests.cpp",
     "FuzzyMatchTests.cpp",
     "GlobalCompilationDatabaseTests.cpp",

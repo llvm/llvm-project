@@ -82,6 +82,7 @@ static_library("clangd") {
     "FSProvider.cpp",
     "FileDistance.cpp",
     "FindSymbols.cpp",
+    "FormattedString.cpp",
     "FuzzyMatch.cpp",
     "GlobalCompilationDatabase.cpp",
     "Headers.cpp",
