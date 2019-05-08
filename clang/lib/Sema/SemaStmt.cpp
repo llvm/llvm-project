@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -3503,7 +3504,12 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
 StmtResult
 Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                       Scope *CurScope) {
-  StmtResult R = BuildReturnStmt(ReturnLoc, RetValExp);
+  // Correct typos, in case the containing function returns 'auto' and
+  // RetValExp should determine the deduced type.
+  ExprResult RetVal = CorrectDelayedTyposInExpr(RetValExp);
+  if (RetVal.isInvalid())
+    return StmtError();
+  StmtResult R = BuildReturnStmt(ReturnLoc, RetVal.get());
   if (R.isInvalid() || ExprEvalContexts.back().Context ==
                            ExpressionEvaluationContext::DiscardedStatement)
     return R;
