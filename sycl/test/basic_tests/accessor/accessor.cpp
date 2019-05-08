@@ -329,4 +329,30 @@ int main() {
       }
     }
   }
+
+  // Two accessors to the same buffer.
+  {
+    try {
+      sycl::queue queue;
+      int array[3] = {1, 1, 1};
+      sycl::buffer<int, 1> buf(array, sycl::range<1>(3));
+
+      queue.submit([&](sycl::handler& cgh) {
+        auto acc1 = buf.get_access<sycl::access::mode::read>(cgh);
+        auto acc2 = buf.get_access<sycl::access::mode::read_write>(cgh);
+
+        cgh.parallel_for<class two_accessors_to_buf>(
+            sycl::range<1>{3},
+            [=](sycl::id<1> index) { acc2[index] = 41 + acc1[index]; });
+      });
+
+      auto host_acc = buf.get_access<sycl::access::mode::read>();
+      for (int i = 0; i != 3; ++i)
+        assert(host_acc[i] == 42);
+
+    } catch (cl::sycl::exception e) {
+      std::cout << "SYCL exception caught: " << e.what();
+      return 1;
+    }
+  }
 }

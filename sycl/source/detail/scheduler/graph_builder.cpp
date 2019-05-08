@@ -379,18 +379,21 @@ Scheduler::GraphBuilder::addCG(std::unique_ptr<detail::CG> CommandGroup,
         break;
       }
     AllocaCommand *AllocaCmd = findAllocaForReq(Record, Req, Queue);
-    UpdateLeafs(Deps, Record, Req);
 
     for (Command *Dep : Deps) {
       NewCmd->addDep(DepDesc{Dep, Req, AllocaCmd});
-      Dep->addUser(NewCmd.get());
     }
   }
 
-  for (Requirement *Req : Reqs) {
+  // Set new command as user for dependencies and update leafs.
+  for (DepDesc &Dep : NewCmd->MDeps) {
+    Dep.MDepCommand->addUser(NewCmd.get());
+    Requirement *Req = Dep.MReq;
     MemObjRecord *Record = getMemObjRecord(Req->MSYCLMemObj);
+    UpdateLeafs({Dep.MDepCommand}, Record, Req);
     AddNodeToLeafs(Record, NewCmd.get(), Req);
   }
+
   return NewCmd.release();
 }
 
