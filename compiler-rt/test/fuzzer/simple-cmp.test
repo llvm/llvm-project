@@ -1,3 +1,4 @@
+REQUIRES: linux, x86_64
 RUN: %cpp_compiler %S/SimpleCmpTest.cpp -o %t-SimpleCmpTest
 
 RUN: not %run %t-SimpleCmpTest -seed=1 -runs=100000000 2>&1 | FileCheck %s
