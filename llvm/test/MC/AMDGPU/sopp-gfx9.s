@@ -69,3 +69,9 @@ s_waitcnt vmcnt(62) lgkmcnt(14)
 
 s_waitcnt vmcnt(62) expcnt(6) lgkmcnt(14)
 // GFX9: s_waitcnt vmcnt(62) expcnt(6) lgkmcnt(14) ; encoding: [0x6e,0xce,0x8c,0xbf]
+
+s_sendmsg 9
+// GCN: s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) ; encoding: [0x09,0x00,0x90,0xbf]
+
+s_sendmsg sendmsg(MSG_GS_ALLOC_REQ)
+// GFX9: s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) ; encoding: [0x09,0x00,0x90,0xbf]
