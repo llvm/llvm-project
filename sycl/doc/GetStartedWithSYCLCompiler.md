@@ -12,10 +12,9 @@ OpenCL runtime for CPU and/or GPU:
 [github.com/intel/compute-runtime/releases](https://github.com/intel/compute-runtime/releases)
 to install.
 
-   b. OpenCL runtime for CPU: follow instructions under section "Intel&reg; CPU
-Runtime for OpenCL. Applications 18.1 for Linux* OS (64bit only)" on
-[https://software.intel.com/en-us/articles/opencl-drivers#cpu-section](https://software.intel.com/en-us/articles/opencl-drivers#cpu-section)
-and click on orange "Download" button to download & install.
+   b. Experimental Intel&reg; CPU Runtime for OpenCL&trade; Applications with
+SYCL support: follow the instructions under
+[https://github.com/intel/llvm/releases/tag/expoclcpu-1.0.0](https://github.com/intel/llvm/releases/tag/expoclcpu-1.0.0)
 
 # Build the SYCL compiler and runtime
 
