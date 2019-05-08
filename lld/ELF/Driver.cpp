@@ -71,6 +71,7 @@ Configuration *elf::Config;
 LinkerDriver *elf::Driver;
 
 static void setConfigs(opt::InputArgList &Args);
+static void readConfigs(opt::InputArgList &Args);
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
@@ -756,7 +757,7 @@ static void parseClangOption(StringRef Opt, const Twine &Msg) {
 }
 
 // Initializes Config members by the command line options.
-void LinkerDriver::readConfigs(opt::InputArgList &Args) {
+static void readConfigs(opt::InputArgList &Args) {
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
