@@ -1058,6 +1058,20 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
   }
 
   // Third scan.
+  // Mark all physreg defs as used before allocating virtreg defs.
+  for (unsigned I = 0; I != DefOpEnd; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isReg() || !MO.isDef() || !MO.getReg() || MO.isEarlyClobber())
+      continue;
+    unsigned Reg = MO.getReg();
+
+    if (!Reg || !TargetRegisterInfo::isPhysicalRegister(Reg) ||
+        !MRI->isAllocatable(Reg))
+      continue;
+    definePhysReg(MI, Reg, MO.isDead() ? regFree : regReserved);
+  }
+
+  // Fourth scan.
   // Allocate defs and collect dead defs.
   for (unsigned I = 0; I != DefOpEnd; ++I) {
     const MachineOperand &MO = MI.getOperand(I);
@@ -1065,11 +1079,9 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
       continue;
     unsigned Reg = MO.getReg();
 
-    if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
-      if (!MRI->isAllocatable(Reg)) continue;
-      definePhysReg(MI, Reg, MO.isDead() ? regFree : regReserved);
+    // We have already dealt with phys regs in the previous scan.
+    if (TargetRegisterInfo::isPhysicalRegister(Reg))
       continue;
-    }
     MCPhysReg PhysReg = defineVirtReg(MI, I, Reg, CopySrcReg);
     if (setPhysReg(MI, MI.getOperand(I), PhysReg)) {
       VirtDead.push_back(Reg);
