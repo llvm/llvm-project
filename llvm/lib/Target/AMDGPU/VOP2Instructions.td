@@ -531,10 +531,10 @@ let SubtargetPredicate = HasAddNoCarryInsts in {
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9, Predicates = [isGFX6GFX7GFX8GFX9] in {
 def : DivergentBinOp<add, V_ADD_I32_e32>;
 def : DivergentClampingBinOp<sub, V_SUB_I32_e64>;
+}
 
 def : DivergentBinOp<adde, V_ADDC_U32_e32>;
 def : DivergentBinOp<sube, V_SUBB_U32_e32>;
-}
 
 class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
   GCNPat<
