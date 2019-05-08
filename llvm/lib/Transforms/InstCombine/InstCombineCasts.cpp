@@ -1372,10 +1372,8 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
   // If we know that the value being extended is positive, we can use a zext
   // instead.
   KnownBits Known = computeKnownBits(Src, 0, &CI);
-  if (Known.isNonNegative()) {
-    Value *ZExt = Builder.CreateZExt(Src, DestTy);
-    return replaceInstUsesWith(CI, ZExt);
-  }
+  if (Known.isNonNegative())
+    return CastInst::Create(Instruction::ZExt, Src, DestTy);
 
   // Try to extend the entire expression tree to the wide destination type.
   if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
