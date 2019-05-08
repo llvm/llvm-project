@@ -4764,10 +4764,15 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 3)
+    if (Val > 4 || (Val == 4 && !isGFX10()))
       errorExpTgt();
 
     Val += 12;
+    return MatchOperand_Success;
+  }
+
+  if (isGFX10() && Str == "prim") {
+    Val = 20;
     return MatchOperand_Success;
   }
 

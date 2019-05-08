@@ -1159,6 +1159,14 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
         let DecoderNamespace = "GFX8";
         let DisableDecoder = DisableVIDecoder;
       }
+
+      def _gfx10 : EXP_Helper<done>,
+                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.GFX10>,
+                EXPe {
+        let AssemblerPredicates = [isGFX10Plus];
+        let DecoderNamespace = "GFX10";
+        let DisableDecoder = DisableSIDecoder;
+      }
     }
   }
 }

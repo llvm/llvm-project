@@ -923,8 +923,10 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
     O << " mrtz";
   else if (Tgt == 9)
     O << " null";
-  else if (Tgt >= 12 && Tgt <= 15)
+  else if ((Tgt >= 12 && Tgt <= 15) || (Tgt == 16 && AMDGPU::isGFX10(STI)))
     O << " pos" << Tgt - 12;
+  else if (AMDGPU::isGFX10(STI) && Tgt == 20)
+    O << " prim";
   else if (Tgt >= 32 && Tgt <= 63)
     O << " param" << Tgt - 32;
   else {
