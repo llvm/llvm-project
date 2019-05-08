@@ -19,6 +19,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
@@ -64,15 +66,16 @@ bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
   return all_of(I->operands(), [this](Value *V) { return isLoopInvariant(V); });
 }
 
-bool Loop::makeLoopInvariant(Value *V, bool &Changed,
-                             Instruction *InsertPt) const {
+bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
+                             MemorySSAUpdater *MSSAU) const {
   if (Instruction *I = dyn_cast<Instruction>(V))
-    return makeLoopInvariant(I, Changed, InsertPt);
+    return makeLoopInvariant(I, Changed, InsertPt, MSSAU);
   return true; // All non-instructions are loop-invariant.
 }
 
 bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
-                             Instruction *InsertPt) const {
+                             Instruction *InsertPt,
+                             MemorySSAUpdater *MSSAU) const {
   // Test if the value is already loop-invariant.
   if (isLoopInvariant(I))
     return true;
@@ -93,11 +96,14 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   }
   // Don't hoist instructions with loop-variant operands.
   for (Value *Operand : I->operands())
-    if (!makeLoopInvariant(Operand, Changed, InsertPt))
+    if (!makeLoopInvariant(Operand, Changed, InsertPt, MSSAU))
       return false;
 
   // Hoist.
   I->moveBefore(InsertPt);
+  if (MSSAU)
+    if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(I))
+      MSSAU->moveToPlace(MUD, InsertPt->getParent(), MemorySSA::End);
 
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this

@@ -53,9 +53,10 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -70,6 +71,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
@@ -118,7 +120,8 @@ static void placeSplitBlockCarefully(BasicBlock *NewBB,
 /// preheader insertion and analysis updating.
 ///
 BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
-                                         LoopInfo *LI, bool PreserveLCSSA) {
+                                         LoopInfo *LI, MemorySSAUpdater *MSSAU,
+                                         bool PreserveLCSSA) {
   BasicBlock *Header = L->getHeader();
 
   // Compute the set of predecessors of the loop that are not in the loop.
@@ -141,7 +144,7 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
   // Split out the loop pre-header.
   BasicBlock *PreheaderBB;
   PreheaderBB = SplitBlockPredecessors(Header, OutsideBlocks, ".preheader", DT,
-                                       LI, nullptr, PreserveLCSSA);
+                                       LI, MSSAU, PreserveLCSSA);
   if (!PreheaderBB)
     return nullptr;
 
@@ -221,7 +224,7 @@ static PHINode *findPHIToPartitionLoops(Loop *L, DominatorTree *DT,
 static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
                                 DominatorTree *DT, LoopInfo *LI,
                                 ScalarEvolution *SE, bool PreserveLCSSA,
-                                AssumptionCache *AC) {
+                                AssumptionCache *AC, MemorySSAUpdater *MSSAU) {
   // Don't try to separate loops without a preheader.
   if (!Preheader)
     return nullptr;
@@ -255,7 +258,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     SE->forgetLoop(L);
 
   BasicBlock *NewBB = SplitBlockPredecessors(Header, OuterLoopPreds, ".outer",
-                                             DT, LI, nullptr, PreserveLCSSA);
+                                             DT, LI, MSSAU, PreserveLCSSA);
 
   // Make sure that NewBB is put someplace intelligent, which doesn't mess up
   // code layout too horribly.
@@ -318,7 +321,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
 
   // Split edges to exit blocks from the inner loop, if they emerged in the
   // process of separating the outer one.
-  formDedicatedExitBlocks(L, DT, LI, nullptr, PreserveLCSSA);
+  formDedicatedExitBlocks(L, DT, LI, MSSAU, PreserveLCSSA);
 
   if (PreserveLCSSA) {
     // Fix LCSSA form for L. Some values, which previously were only used inside
@@ -343,7 +346,8 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
 /// and have that block branch to the loop header.  This ensures that loops
 /// have exactly one backedge.
 static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
-                                             DominatorTree *DT, LoopInfo *LI) {
+                                             DominatorTree *DT, LoopInfo *LI,
+                                             MemorySSAUpdater *MSSAU) {
   assert(L->getNumBackEdges() > 1 && "Must have > 1 backedge!");
 
   // Get information about the loop
@@ -456,6 +460,10 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   // Update dominator information
   DT->splitBlock(BEBlock);
 
+  if (MSSAU)
+    MSSAU->updatePhisWhenInsertingUniqueBackedgeBlock(Header, Preheader,
+                                                      BEBlock);
+
   return BEBlock;
 }
 
@@ -463,8 +471,11 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
-                            bool PreserveLCSSA) {
+                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
   bool Changed = false;
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
+
 ReprocessLoop:
 
   // Check to see that no blocks (other than the header) in this loop have
@@ -491,10 +502,14 @@ ReprocessLoop:
 
       // Zap the dead pred's terminator and replace it with unreachable.
       Instruction *TI = P->getTerminator();
-      changeToUnreachable(TI, /*UseLLVMTrap=*/false, PreserveLCSSA);
+      changeToUnreachable(TI, /*UseLLVMTrap=*/false, PreserveLCSSA,
+                          /*DTU=*/nullptr, MSSAU);
       Changed = true;
     }
   }
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 
   // If there are exiting blocks with branches on undef, resolve the undef in
   // the direction which will exit the loop. This will help simplify loop
@@ -520,7 +535,7 @@ ReprocessLoop:
   // Does the loop already have a preheader?  If so, don't insert one.
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    Preheader = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
+    Preheader = InsertPreheaderForLoop(L, DT, LI, MSSAU, PreserveLCSSA);
     if (Preheader)
       Changed = true;
   }
@@ -529,8 +544,11 @@ ReprocessLoop:
   // predecessors that are inside of the loop.  This check guarantees that the
   // loop preheader/header will dominate the exit blocks.  If the exit block has
   // predecessors from outside of the loop, split the edge now.
-  if (formDedicatedExitBlocks(L, DT, LI, nullptr, PreserveLCSSA))
+  if (formDedicatedExitBlocks(L, DT, LI, MSSAU, PreserveLCSSA))
     Changed = true;
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 
   // If the header has more than two predecessors at this point (from the
   // preheader and from multiple backedges), we must adjust the loop.
@@ -540,8 +558,8 @@ ReprocessLoop:
     // this for loops with a giant number of backedges, just factor them into a
     // common backedge instead.
     if (L->getNumBackEdges() < 8) {
-      if (Loop *OuterL =
-              separateNestedLoop(L, Preheader, DT, LI, SE, PreserveLCSSA, AC)) {
+      if (Loop *OuterL = separateNestedLoop(L, Preheader, DT, LI, SE,
+                                            PreserveLCSSA, AC, MSSAU)) {
         ++NumNested;
         // Enqueue the outer loop as it should be processed next in our
         // depth-first nest walk.
@@ -558,10 +576,13 @@ ReprocessLoop:
     // If we either couldn't, or didn't want to, identify nesting of the loops,
     // insert a new block that all backedges target, then make it jump to the
     // loop header.
-    LoopLatch = insertUniqueBackedgeBlock(L, Preheader, DT, LI);
+    LoopLatch = insertUniqueBackedgeBlock(L, Preheader, DT, LI, MSSAU);
     if (LoopLatch)
       Changed = true;
   }
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
 
@@ -620,9 +641,9 @@ ReprocessLoop:
         Instruction *Inst = &*I++;
         if (Inst == CI)
           continue;
-        if (!L->makeLoopInvariant(Inst, AnyInvariant,
-                                  Preheader ? Preheader->getTerminator()
-                                            : nullptr)) {
+        if (!L->makeLoopInvariant(
+                Inst, AnyInvariant,
+                Preheader ? Preheader->getTerminator() : nullptr, MSSAU)) {
           AllInvariant = false;
           break;
         }
@@ -639,7 +660,7 @@ ReprocessLoop:
       // The block has now been cleared of all instructions except for
       // a comparison and a conditional branch. SimplifyCFG may be able
       // to fold it now.
-      if (!FoldBranchToCommonDest(BI))
+      if (!FoldBranchToCommonDest(BI, MSSAU))
         continue;
 
       // Success. The block is now dead, so remove it from the loop,
@@ -659,6 +680,10 @@ ReprocessLoop:
         DT->changeImmediateDominator(Child, Node->getIDom());
       }
       DT->eraseNode(ExitingBlock);
+      if (MSSAU) {
+        SmallPtrSet<BasicBlock *, 1> ExitBlockSet{ExitingBlock};
+        MSSAU->removeBlocks(ExitBlockSet);
+      }
 
       BI->getSuccessor(0)->removePredecessor(
           ExitingBlock, /* KeepOneInputPHIs */ PreserveLCSSA);
@@ -674,12 +699,15 @@ ReprocessLoop:
   if (Changed && SE)
     SE->forgetTopmostLoop(L);
 
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
+
   return Changed;
 }
 
 bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                         ScalarEvolution *SE, AssumptionCache *AC,
-                        bool PreserveLCSSA) {
+                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
   bool Changed = false;
 
 #ifndef NDEBUG
@@ -707,7 +735,7 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
-                               AC, PreserveLCSSA);
+                               AC, MSSAU, PreserveLCSSA);
 
   return Changed;
 }
@@ -740,6 +768,7 @@ namespace {
       AU.addPreserved<DependenceAnalysisWrapperPass>();
       AU.addPreservedID(BreakCriticalEdgesID);  // No critical edges added.
       AU.addPreserved<BranchProbabilityInfoWrapperPass>();
+      AU.addPreserved<MemorySSAWrapperPass>();
     }
 
     /// verifyAnalysis() - Verify LoopSimplifyForm's guarantees.
@@ -771,12 +800,21 @@ bool LoopSimplify::runOnFunction(Function &F) {
   ScalarEvolution *SE = SEWP ? &SEWP->getSE() : nullptr;
   AssumptionCache *AC =
       &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  MemorySSA *MSSA = nullptr;
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (EnableMSSALoopDependency) {
+    auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+    if (MSSAAnalysis) {
+      MSSA = &MSSAAnalysis->getMSSA();
+      MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+    }
+  }
 
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   // Simplify each loop nest in the function.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
-    Changed |= simplifyLoop(*I, DT, LI, SE, AC, PreserveLCSSA);
+    Changed |= simplifyLoop(*I, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA);
 
 #ifndef NDEBUG
   if (PreserveLCSSA) {
@@ -797,9 +835,10 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
 
   // Note that we don't preserve LCSSA in the new PM, if you need it run LCSSA
-  // after simplifying the loops.
+  // after simplifying the loops. MemorySSA is not preserved either.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
-    Changed |= simplifyLoop(*I, DT, LI, SE, AC, /*PreserveLCSSA*/ false);
+    Changed |=
+        simplifyLoop(*I, DT, LI, SE, AC, nullptr, /*PreserveLCSSA*/ false);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -816,7 +855,7 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   // blocks, but it does so only by splitting existing blocks and edges. This
   // results in the interesting property that all new terminators inserted are
   // unconditional branches which do not appear in BPI. All deletions are
-  // handled via ValueHandle callbacks w/in BPI. 
+  // handled via ValueHandle callbacks w/in BPI.
   PA.preserve<BranchProbabilityAnalysis>();
   return PA;
 }

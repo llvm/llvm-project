@@ -1362,9 +1362,11 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   // preheaders do not satisfy those conditions.
   if (isa<PHINode>(OuterLoopPreHeader->begin()) ||
       !OuterLoopPreHeader->getUniquePredecessor())
-    OuterLoopPreHeader = InsertPreheaderForLoop(OuterLoop, DT, LI, true);
+    OuterLoopPreHeader =
+        InsertPreheaderForLoop(OuterLoop, DT, LI, nullptr, true);
   if (InnerLoopPreHeader == OuterLoop->getHeader())
-    InnerLoopPreHeader = InsertPreheaderForLoop(InnerLoop, DT, LI, true);
+    InnerLoopPreHeader =
+        InsertPreheaderForLoop(InnerLoop, DT, LI, nullptr, true);
 
   // Adjust the loop preheader
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();

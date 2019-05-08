@@ -631,7 +631,7 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   // the CTR register because some such uses might be reordered by the
   // selection DAG after the mtctr instruction).
   if (!Preheader || mightUseCTR(Preheader))
-    Preheader = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
+    Preheader = InsertPreheaderForLoop(L, DT, LI, nullptr, PreserveLCSSA);
   if (!Preheader)
     return MadeChange;
 

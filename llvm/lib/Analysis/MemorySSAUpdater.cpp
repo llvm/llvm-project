@@ -463,8 +463,8 @@ void MemorySSAUpdater::removeEdge(BasicBlock *From, BasicBlock *To) {
   }
 }
 
-void MemorySSAUpdater::removeDuplicatePhiEdgesBetween(BasicBlock *From,
-                                                      BasicBlock *To) {
+void MemorySSAUpdater::removeDuplicatePhiEdgesBetween(const BasicBlock *From,
+                                                      const BasicBlock *To) {
   if (MemoryPhi *MPhi = MSSA->getMemoryAccess(To)) {
     bool Found = false;
     MPhi->unorderedDeleteIncomingIf([&](const MemoryAccess *, BasicBlock *B) {
@@ -520,6 +520,46 @@ void MemorySSAUpdater::cloneUsesAndDefs(BasicBlock *BB, BasicBlock *NewBB,
       }
     }
   }
+}
+
+void MemorySSAUpdater::updatePhisWhenInsertingUniqueBackedgeBlock(
+    BasicBlock *Header, BasicBlock *Preheader, BasicBlock *BEBlock) {
+  auto *MPhi = MSSA->getMemoryAccess(Header);
+  if (!MPhi)
+    return;
+
+  // Create phi node in the backedge block and populate it with the same
+  // incoming values as MPhi. Skip incoming values coming from Preheader.
+  auto *NewMPhi = MSSA->createMemoryPhi(BEBlock);
+  bool HasUniqueIncomingValue = true;
+  MemoryAccess *UniqueValue = nullptr;
+  for (unsigned I = 0, E = MPhi->getNumIncomingValues(); I != E; ++I) {
+    BasicBlock *IBB = MPhi->getIncomingBlock(I);
+    MemoryAccess *IV = MPhi->getIncomingValue(I);
+    if (IBB != Preheader) {
+      NewMPhi->addIncoming(IV, IBB);
+      if (HasUniqueIncomingValue) {
+        if (!UniqueValue)
+          UniqueValue = IV;
+        else if (UniqueValue != IV)
+          HasUniqueIncomingValue = false;
+      }
+    }
+  }
+
+  // Update incoming edges into MPhi. Remove all but the incoming edge from
+  // Preheader. Add an edge from NewMPhi
+  auto *AccFromPreheader = MPhi->getIncomingValueForBlock(Preheader);
+  MPhi->setIncomingValue(0, AccFromPreheader);
+  MPhi->setIncomingBlock(0, Preheader);
+  for (unsigned I = MPhi->getNumIncomingValues() - 1; I >= 1; --I)
+    MPhi->unorderedDeleteIncoming(I);
+  MPhi->addIncoming(NewMPhi, BEBlock);
+
+  // If NewMPhi is a trivial phi, remove it. Its use in the header MPhi will be
+  // replaced with the unique value.
+  if (HasUniqueIncomingValue)
+    removeMemoryAccess(NewMPhi);
 }
 
 void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
@@ -1221,6 +1261,43 @@ void MemorySSAUpdater::tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs) {
       auto OperRange = MPhi->operands();
       tryRemoveTrivialPhi(MPhi, OperRange);
     }
+}
+
+void MemorySSAUpdater::changeToUnreachable(const Instruction *I) {
+  const BasicBlock *BB = I->getParent();
+  // Remove memory accesses in BB for I and all following instructions.
+  auto BBI = I->getIterator(), BBE = BB->end();
+  // FIXME: If this becomes too expensive, iterate until the first instruction
+  // with a memory access, then iterate over MemoryAccesses.
+  while (BBI != BBE)
+    removeMemoryAccess(&*(BBI++));
+  // Update phis in BB's successors to remove BB.
+  SmallVector<WeakVH, 16> UpdatedPHIs;
+  for (const BasicBlock *Successor : successors(BB)) {
+    removeDuplicatePhiEdgesBetween(BB, Successor);
+    if (MemoryPhi *MPhi = MSSA->getMemoryAccess(Successor)) {
+      MPhi->unorderedDeleteIncomingBlock(BB);
+      UpdatedPHIs.push_back(MPhi);
+    }
+  }
+  // Optimize trivial phis.
+  tryRemoveTrivialPhis(UpdatedPHIs);
+}
+
+void MemorySSAUpdater::changeCondBranchToUnconditionalTo(const BranchInst *BI,
+                                                         const BasicBlock *To) {
+  const BasicBlock *BB = BI->getParent();
+  SmallVector<WeakVH, 16> UpdatedPHIs;
+  for (const BasicBlock *Succ : successors(BB)) {
+    removeDuplicatePhiEdgesBetween(BB, Succ);
+    if (Succ != To)
+      if (auto *MPhi = MSSA->getMemoryAccess(Succ)) {
+        MPhi->unorderedDeleteIncomingBlock(BB);
+        UpdatedPHIs.push_back(MPhi);
+      }
+  }
+  // Optimize trivial phis.
+  tryRemoveTrivialPhis(UpdatedPHIs);
 }
 
 MemoryAccess *MemorySSAUpdater::createMemoryAccessInBB(
