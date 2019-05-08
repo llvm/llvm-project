@@ -215,8 +215,8 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL,
       unsigned ValueBits = ValueVT.getSizeInBits();
 
       // Assemble the power of 2 part.
-      unsigned RoundParts = NumParts & (NumParts - 1) ?
-        1 << Log2_32(NumParts) : NumParts;
+      unsigned RoundParts =
+          (NumParts & (NumParts - 1)) ? 1 << Log2_32(NumParts) : NumParts;
       unsigned RoundBits = PartBits * RoundParts;
       EVT RoundVT = RoundBits == ValueBits ?
         ValueVT : EVT::getIntegerVT(*DAG.getContext(), RoundBits);
