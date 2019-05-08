@@ -10,6 +10,11 @@
 #ifndef __STDARG_H
 #define __STDARG_H
 
+#if defined(_MSC_VER)
+/* Include otherwise unneeded header for MSVC compatibility. */
+#include <vcruntime.h>
+#endif
+
 #ifndef _VA_LIST
 typedef __builtin_va_list va_list;
 #define _VA_LIST
