@@ -1517,6 +1517,7 @@ TEST_F(FileSystemTest, is_local) {
   bool TempFileIsLocal;
   ASSERT_NO_ERROR(fs::is_local(FD, TempFileIsLocal));
   EXPECT_EQ(TempFileIsLocal, fs::is_local(FD));
+  ::close(FD);
 
   // Expect that the file and its parent directory are equally local or equally
   // remote.
