@@ -1,7 +1,9 @@
 // FIXME: The standalone module still seems to cause clang to want to test for
 // the existence of a 'foo' directory:
+// RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: cp %s %t
+// RUN: rm -rf %t/foo
 // RUN: mkdir %t/foo
 // RUN: cd %t
 // RUN: not %clang_cc1 -fmodules -fsyntax-only %s 2>&1 | FileCheck %s
