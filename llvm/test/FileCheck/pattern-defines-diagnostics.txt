@@ -1,0 +1,49 @@
+; Test incorrect syntax for -D option is correctly diagnosed.
+
+; Missing equal sign.
+RUN: not FileCheck -DVALUE10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --check-prefix ERRCLIEQ1
+
+ERRCLIEQ1: Missing equal sign in command-line definition '-DVALUE10'
+
+; Missing definition expression (variable name, equal sign and value).
+RUN: not FileCheck -D --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --check-prefix ERRCLIEQ2
+
+ERRCLIEQ2: {{F|f}}ile{{C|c}}heck{{[^:]*}}: for the -D option: requires a value!
+
+; Missing variable name.
+RUN: not FileCheck -D=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --check-prefix ERRCLIVAR1
+
+ERRCLIVAR1: Missing pattern variable name in command-line definition '-D=10'
+
+; Missing variable name.
+RUN: not FileCheck -D= --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --check-prefix ERRCLIVAR2
+
+ERRCLIVAR2: Missing pattern variable name in command-line definition '-D='
+
+; Invalid variable name: starts with a digit.
+RUN: not FileCheck -D10VALUE=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --check-prefix ERRCLIFMT
+
+ERRCLIFMT: Global defines:1:19: error: invalid name for variable definition '10VALUE'
+ERRCLIFMT-NEXT: Global define #1: 10VALUE=10
+ERRCLIFMT-NEXT: {{^                  \^$}}
+
+; Invalid definition of pseudo variable.
+RUN: not FileCheck -D@VALUE=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --check-prefix ERRCLIPSEUDO
+
+ERRCLIPSEUDO: Global defines:1:19: error: invalid name for variable definition '@VALUE'
+ERRCLIPSEUDO-NEXT: Global define #1: @VALUE=10
+ERRCLIPSEUDO-NEXT: {{^                  \^$}}
+
+; Invalid definition of an expression.
+RUN: not FileCheck -D'VALUE + 2=10' --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --check-prefix ERRCLITRAIL
+
+ERRCLITRAIL: Global defines:1:19: error: invalid name for variable definition 'VALUE + 2'
+ERRCLITRAIL-NEXT: Global define #1: VALUE + 2=10
+ERRCLITRAIL-NEXT: {{^                  \^$}}
