@@ -60,6 +60,7 @@ set(SCUDO_HEADERS
   atomic_helpers.h
   bytemap.h
   checksum.h
+  chunk.h
   flags.h
   flags_parser.h
   fuchsia.h

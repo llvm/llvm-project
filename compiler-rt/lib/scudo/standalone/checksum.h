@@ -28,8 +28,8 @@
 
 namespace scudo {
 
-enum ChecksumType : u8 {
-  BSDChecksum = 0,
+enum class Checksum : u8 {
+  BSD = 0,
   HardwareCRC32 = 1,
 };
 
