@@ -33,23 +33,33 @@ RUN: echo -n 1234567890123456 > %t/IN/1234567890123456
 RUN:%t-ThreeFunctionsTestDF 0 3 %t/IN/ABC    | FileCheck %s --check-prefix=IN_ABC
 IN_ABC: F0 0001
 IN_ABC-NOT: F
+IN_ABC-NEXT: C0
+IN_ABC-NOT: C
 
 # FUABC: First 3 bytes are checked, Func1/Func2 are not called.
 RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUABC  | FileCheck %s --check-prefix=IN_FUABC
 IN_FUABC: F0 111001
 IN_FUABC-NOT: F
+IN_FUABC-NEXT: C0
+IN_FUABC-NOT: C
 
 # FUZZR: 5 bytes are used (4 in one function, 5-th in the other), Func2 is not called.
 RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUZZR  | FileCheck %s --check-prefix=IN_FUZZR
 IN_FUZZR: F0 111101
 IN_FUZZR: F1 000010
 IN_FUZZR-NOT: F
+IN_FUZZR: C0
+IN_FUZZR: C1
+IN_FUZZR-NOT: C
 
 # FUZZM: 5 bytes are used, both Func1 and Func2 are called, Func2 depends only on size (label 6).
 RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUZZM  | FileCheck %s --check-prefix=IN_FUZZM
 IN_FUZZM: F0 111101
 IN_FUZZM: F1 000010
 IN_FUZZM: F2 000001
+IN_FUZZM: C0
+IN_FUZZM: C1
+IN_FUZZM: C2
 
 # FUZZMU: 6 bytes are used, both Func1 and Func2 are called, Func2 depends on byte 6 and size (label 7)
 RUN:%t-ThreeFunctionsTestDF 0 6 %t/IN/FUZZMU  | FileCheck %s --check-prefix=IN_FUZZMU
@@ -62,7 +72,7 @@ RUN:%t-ThreeFunctionsTestDF 4 6 %t/IN/FUZZMU > %t-merge-3
 RUN:%libfuzzer_src/scripts/merge_data_flow.py  %t-merge-* | sort | FileCheck %s --check-prefix=IN_FUZZMU
 
 # Test collect_data_flow
-RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/FUZZMU | FileCheck %s --check-prefix=IN_FUZZMU
+RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/FUZZMU | sort | FileCheck %s --check-prefix=IN_FUZZMU
 
 IN_FUZZMU: F0 1111001
 IN_FUZZMU: F1 0000100
