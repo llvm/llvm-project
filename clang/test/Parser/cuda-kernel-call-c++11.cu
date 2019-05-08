@@ -3,6 +3,10 @@
 template<typename T=int> struct S {};
 template<typename> void f();
 
+template<typename T, typename... V> struct S<T(V...)> {};
+
+template<typename ...T> struct V {};
+template<typename ...T> struct V<void(T)...> {};
 
 void foo(void) {
   // In C++11 mode, all of these are expected to parse correctly, and the CUDA
@@ -21,4 +25,11 @@ void foo(void) {
 
   (void)(&f<S<S<int>>>==0);
   (void)(&f<S<S<>>>==0);
+
+  S<S<S<void()>>> s6;
+}
+
+template<typename ...T>
+void bar(T... args) {
+  S<S<V<void(T)...>>> s7;
 }
