@@ -96,6 +96,10 @@ protected:
 
   virtual Error addRelocations() = 0;
 
+  /// Returns true if Atom A and Atom B are at a fixed offset from one another
+  /// (i.e. if they're part of the same alt-entry chain).
+  bool areLayoutLocked(const Atom &A, const Atom &B);
+
 private:
   static unsigned getPointerSize(const object::MachOObjectFile &Obj);
   static support::endianness getEndianness(const object::MachOObjectFile &Obj);
@@ -108,6 +112,7 @@ private:
 
   const object::MachOObjectFile &Obj;
   std::unique_ptr<AtomGraph> G;
+  DenseMap<const DefinedAtom *, const DefinedAtom *> AltEntryStarts;
   DenseMap<unsigned, MachOSection> Sections;
   StringMap<CustomAtomizeFunction> CustomAtomizeFunctions;
   Optional<MachOSection> CommonSymbolsSection;

@@ -281,7 +281,8 @@ public:
   StringRef ArgStr;   // The argument string itself (ex: "help", "o")
   StringRef HelpStr;  // The descriptive text message for -help
   StringRef ValueStr; // String describing what the value of this option is
-  OptionCategory *Category; // The Category this option belongs to
+  SmallVector<OptionCategory *, 2>
+      Categories;                    // The Categories this option belongs to
   SmallPtrSet<SubCommand *, 4> Subs; // The subcommands this option belongs to.
   bool FullyInitialized = false; // Has addArgument been called?
 
@@ -333,14 +334,16 @@ public:
   void setFormattingFlag(enum FormattingFlags V) { Formatting = V; }
   void setMiscFlag(enum MiscFlags M) { Misc |= M; }
   void setPosition(unsigned pos) { Position = pos; }
-  void setCategory(OptionCategory &C) { Category = &C; }
+  void addCategory(OptionCategory &C);
   void addSubCommand(SubCommand &S) { Subs.insert(&S); }
 
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
                   enum OptionHidden Hidden)
       : Occurrences(OccurrencesFlag), Value(0), HiddenFlag(Hidden),
-        Formatting(NormalFormatting), Misc(0), Category(&GeneralCategory) {}
+        Formatting(NormalFormatting), Misc(0) {
+    Categories.push_back(&GeneralCategory);
+  }
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 
@@ -451,7 +454,7 @@ struct cat {
 
   cat(OptionCategory &c) : Category(c) {}
 
-  template <class Opt> void apply(Opt &O) const { O.setCategory(Category); }
+  template <class Opt> void apply(Opt &O) const { O.addCategory(Category); }
 };
 
 // sub - Specify the subcommand that this option belongs to.
@@ -1770,7 +1773,7 @@ class alias : public Option {
     if (!Subs.empty())
       error("cl::alias must not have cl::sub(), aliased option's cl::sub() will be used!");
     Subs = AliasFor->Subs;
-    Category = AliasFor->Category;
+    Categories = AliasFor->Categories;
     addArgument();
   }
 

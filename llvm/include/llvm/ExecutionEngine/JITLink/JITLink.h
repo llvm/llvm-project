@@ -470,7 +470,7 @@ public:
   void addEdge(Edge::Kind K, Edge::OffsetT Offset, Atom &Target,
                Edge::AddendT Addend) {
     assert(K != Edge::LayoutNext &&
-           "Layout edges should be added via addLayoutNext");
+           "Layout edges should be added via setLayoutNext");
     Edges.push_back(Edge(K, Offset, Target, Addend));
   }
 

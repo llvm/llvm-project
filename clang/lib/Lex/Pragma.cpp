@@ -1584,16 +1584,15 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
 
     // Find the module we're entering. We require that a module map for it
     // be loaded or implicitly loadable.
-    // FIXME: We could create the submodule here. We'd need to know whether
-    // it's supposed to be explicit, but not much else.
-    Module *M = PP.getHeaderSearchInfo().lookupModule(Current);
+    auto &HSI = PP.getHeaderSearchInfo();
+    Module *M = HSI.lookupModule(Current);
     if (!M) {
       PP.Diag(ModuleName.front().second,
               diag::err_pp_module_begin_no_module_map) << Current;
       return;
     }
     for (unsigned I = 1; I != ModuleName.size(); ++I) {
-      auto *NewM = M->findSubmodule(ModuleName[I].first->getName());
+      auto *NewM = M->findOrInferSubmodule(ModuleName[I].first->getName());
       if (!NewM) {
         PP.Diag(ModuleName[I].second, diag::err_pp_module_begin_no_submodule)
           << M->getFullModuleName() << ModuleName[I].first;

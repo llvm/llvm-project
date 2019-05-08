@@ -40,19 +40,19 @@ define i1 @_Z43index_iteration_eq_variable_size_no_overlapPKcm(i8* nocapture %pt
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_015:%.*]] = phi i64 [ [[INC]], [[FOR_COND:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ], !dbg !28
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[I_015]], metadata !14, metadata !DIExpression()), !dbg !28
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[I_015]], !dbg !29
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[ARRAYIDX]], metadata !15, metadata !DIExpression()), !dbg !29
-; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]], !dbg !30
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8 [[V0]], metadata !16, metadata !DIExpression()), !dbg !30
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR]], i64 [[I_015]], !dbg !31
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[ARRAYIDX1]], metadata !17, metadata !DIExpression()), !dbg !31
-; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]], !dbg !32
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8 [[V1]], metadata !18, metadata !DIExpression()), !dbg !32
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]], !dbg !33
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP3]], metadata !19, metadata !DIExpression()), !dbg !33
-; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_015]], 1, !dbg !34
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[INC]], metadata !20, metadata !DIExpression()), !dbg !34
-; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP_LOOPEXIT]], !dbg !25
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[I_015]], !dbg !25
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[ARRAYIDX]], metadata !15, metadata !DIExpression()), !dbg !25
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]], !dbg !29
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8 [[V0]], metadata !16, metadata !DIExpression()), !dbg !29
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR]], i64 [[I_015]], !dbg !30
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[ARRAYIDX1]], metadata !17, metadata !DIExpression()), !dbg !30
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]], !dbg !31
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8 [[V1]], metadata !18, metadata !DIExpression()), !dbg !31
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]], !dbg !32
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP3]], metadata !19, metadata !DIExpression()), !dbg !32
+; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_015]], 1, !dbg !33
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[INC]], metadata !20, metadata !DIExpression()), !dbg !33
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP_LOOPEXIT]], !dbg !34
 ; CHECK:       cleanup.loopexit:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
 ; CHECK-NEXT:    br label [[CLEANUP]], !dbg !35
@@ -100,19 +100,19 @@ define void @_Z16loop_within_loopmPPKcS1_Pm(i64 %outer_count, i8** %ptr0, i8** %
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_012:%.*]] = phi i64 [ [[INC:%.*]], [[_ZNST3__15EQUALIPKCS2_EEBT_S3_T0__EXIT:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ], !dbg !64
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[I_012]], metadata !40, metadata !DIExpression()), !dbg !64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[PTR0:%.*]], i64 [[I_012]], !dbg !65
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8** [[ARRAYIDX]], metadata !41, metadata !DIExpression()), !dbg !65
-; CHECK-NEXT:    [[T0:%.*]] = load i8*, i8** [[ARRAYIDX]], !dbg !66
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[T0]], metadata !42, metadata !DIExpression()), !dbg !66
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[COUNT:%.*]], i64 [[I_012]], !dbg !67
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64* [[ARRAYIDX2]], metadata !43, metadata !DIExpression()), !dbg !67
-; CHECK-NEXT:    [[T1:%.*]] = load i64, i64* [[ARRAYIDX2]], !dbg !68
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[T1]], metadata !44, metadata !DIExpression()), !dbg !68
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 [[T1]], !dbg !69
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[ADD_PTR]], metadata !45, metadata !DIExpression()), !dbg !69
-; CHECK-NEXT:    [[CMP5_I_I:%.*]] = icmp eq i64 [[T1]], 0, !dbg !70
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP5_I_I]], metadata !46, metadata !DIExpression()), !dbg !70
-; CHECK-NEXT:    br i1 [[CMP5_I_I]], label [[_ZNST3__15EQUALIPKCS2_EEBT_S3_T0__EXIT]], label [[FOR_BODY_I_I_PREHEADER:%.*]], !dbg !62
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[PTR0:%.*]], i64 [[I_012]], !dbg !62
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8** [[ARRAYIDX]], metadata !41, metadata !DIExpression()), !dbg !62
+; CHECK-NEXT:    [[T0:%.*]] = load i8*, i8** [[ARRAYIDX]], !dbg !65
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[T0]], metadata !42, metadata !DIExpression()), !dbg !65
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[COUNT:%.*]], i64 [[I_012]], !dbg !66
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64* [[ARRAYIDX2]], metadata !43, metadata !DIExpression()), !dbg !66
+; CHECK-NEXT:    [[T1:%.*]] = load i64, i64* [[ARRAYIDX2]], !dbg !67
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[T1]], metadata !44, metadata !DIExpression()), !dbg !67
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 [[T1]], !dbg !68
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[ADD_PTR]], metadata !45, metadata !DIExpression()), !dbg !68
+; CHECK-NEXT:    [[CMP5_I_I:%.*]] = icmp eq i64 [[T1]], 0, !dbg !69
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP5_I_I]], metadata !46, metadata !DIExpression()), !dbg !69
+; CHECK-NEXT:    br i1 [[CMP5_I_I]], label [[_ZNST3__15EQUALIPKCS2_EEBT_S3_T0__EXIT]], label [[FOR_BODY_I_I_PREHEADER:%.*]], !dbg !70
 ; CHECK:       for.body.i.i.preheader:
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8*, i8** [[PTR1:%.*]], i64 [[I_012]], !dbg !71
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8** [[ARRAYIDX3]], metadata !47, metadata !DIExpression()), !dbg !71

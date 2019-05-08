@@ -67,9 +67,14 @@ public:
   // getSize().
   virtual void finalizeContents() {}
 
-  // The writer sets and uses the addresses.
-  uint64_t getRVA() const { return RVA; }
-  void setRVA(uint64_t V) { RVA = V; }
+  // The writer sets and uses the addresses. In practice, PE images cannot be
+  // larger than 2GB. Chunks are always laid as part of the image, so Chunk RVAs
+  // can be stored with 32 bits.
+  uint32_t getRVA() const { return RVA; }
+  void setRVA(uint64_t V) {
+    RVA = (uint32_t)V;
+    assert(RVA == V && "RVA truncated");
+  }
 
   // Returns true if this has non-zero data. BSS chunks return
   // false. If false is returned, the space occupied by this chunk
@@ -114,14 +119,15 @@ public:
 
 protected:
   // The RVA of this chunk in the output. The writer sets a value.
-  uint64_t RVA = 0;
-
-  // The output section for this chunk.
-  OutputSection *Out = nullptr;
+  uint32_t RVA = 0;
 
 public:
   // The offset from beginning of the output section. The writer sets a value.
-  uint64_t OutputSectionOff = 0;
+  uint32_t OutputSectionOff = 0;
+
+protected:
+  // The output section for this chunk.
+  OutputSection *Out = nullptr;
 };
 
 // A chunk corresponding a section of an input file.

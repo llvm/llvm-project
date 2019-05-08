@@ -156,8 +156,6 @@ copy("Headers") {
     "cuda_wrappers/algorithm",
     "cuda_wrappers/complex",
     "cuda_wrappers/new",
-    "openmp_wrappers/__clang_openmp_math.h",
-    "openmp_wrappers/math.h",
     "ppc_wrappers/mmintrin.h",
   ]
   outputs = [
