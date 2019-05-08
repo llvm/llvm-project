@@ -273,6 +273,14 @@ void initialization(int T, Base b) {
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_unique instead
   // CHECK-FIXES: std::make_unique<APair>(APair{T, 1});
 
+  // Check aggregate init with intermediate temporaries.
+  std::unique_ptr<APair> PAggrTemp = std::unique_ptr<APair>(new APair({T, 1}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<APair> PAggrTemp = std::unique_ptr<APair>(new APair({T, 1}));
+  PAggrTemp.reset(new APair({T, 1}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
+  // CHECK-FIXES: PAggrTemp.reset(new APair({T, 1}));
+
   // Test different kinds of initialization of the pointee, when the unique_ptr
   // is initialized with braces.
 

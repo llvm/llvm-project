@@ -292,12 +292,13 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
   //   Foo{1} => false
   auto HasListIntializedArgument = [](const CXXConstructExpr *CE) {
     for (const auto *Arg : CE->arguments()) {
+      Arg = Arg->IgnoreImplicit();
+
       if (isa<CXXStdInitializerListExpr>(Arg) || isa<InitListExpr>(Arg))
         return true;
       // Check whether we implicitly construct a class from a
       // std::initializer_list.
-      if (const auto *ImplicitCE =
-              dyn_cast<CXXConstructExpr>(Arg->IgnoreImplicit())) {
+      if (const auto *ImplicitCE = dyn_cast<CXXConstructExpr>(Arg)) {
         if (ImplicitCE->isStdInitListInitialization())
           return true;
       }
