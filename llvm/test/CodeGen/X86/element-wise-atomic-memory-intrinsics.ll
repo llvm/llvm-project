@@ -679,6 +679,9 @@ define i8* @test_memset2_64(i8* %P, i8 %V) {
   ret i8* %P
 }
 
+;; Use the memset4 case to explore alignment and sizing requirements in the
+;; lowering
+
 define i8* @test_memset4_64(i8* %P, i8 %V) {
 ; CHECK-LABEL: test_memset4_64:
 ; CHECK:       # %bb.0:
@@ -693,6 +696,108 @@ define i8* @test_memset4_64(i8* %P, i8 %V) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 4 %P, i8 %V, i32 64, i32 4)
+  ret i8* %P
+}
+
+define i8* @test_memset4_64_align8(i8* %P, i8 %V) {
+; CHECK-LABEL: test_memset4_64_align8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl $64, %edx
+; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_4
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 8 %P, i8 %V, i32 64, i32 4)
+  ret i8* %P
+}
+
+define i8* @test_memset4_64_align16(i8* %P, i8 %V) {
+; CHECK-LABEL: test_memset4_64_align16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl $64, %edx
+; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_4
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 16 %P, i8 %V, i32 64, i32 4)
+  ret i8* %P
+}
+
+define i8* @test_memset4_64_align64(i8* %P, i8 %V) {
+; CHECK-LABEL: test_memset4_64_align64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl $64, %edx
+; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_4
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 64 %P, i8 %V, i32 64, i32 4)
+  ret i8* %P
+}
+
+define i8* @test_memset4_4(i8* %P, i8 %V) {
+; CHECK-LABEL: test_memset4_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl $4, %edx
+; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_4
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 4 %P, i8 %V, i32 4, i32 4)
+  ret i8* %P
+}
+
+define i8* @test_memset4_8(i8* %P, i8 %V) {
+; CHECK-LABEL: test_memset4_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl $8, %edx
+; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_4
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 4 %P, i8 %V, i32 8, i32 4)
+  ret i8* %P
+}
+
+define i8* @test_memset4_8_align8(i8* %P, i8 %V) {
+; CHECK-LABEL: test_memset4_8_align8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl $8, %edx
+; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_4
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 8 %P, i8 %V, i32 8, i32 4)
   ret i8* %P
 }
 
@@ -727,6 +832,23 @@ define i8* @test_memset4_16(i8* %P, i8 %V) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 4 %P, i8 %V, i32 16, i32 4)
+  ret i8* %P
+}
+
+define i8* @test_memset4_16_align16(i8* %P, i8 %V) {
+; CHECK-LABEL: test_memset4_16_align16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl $16, %edx
+; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_4
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 16 %P, i8 %V, i32 16, i32 4)
   ret i8* %P
 }
 

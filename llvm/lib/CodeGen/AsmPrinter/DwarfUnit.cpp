@@ -794,10 +794,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (!DTy->isForwardDecl())
     addSourceLine(Buffer, DTy);
 
-  // If DWARF address space value is other than None, add it for pointer and
-  // reference types as DW_AT_address_class.
-  if (DTy->getDWARFAddressSpace() && (Tag == dwarf::DW_TAG_pointer_type ||
-                                      Tag == dwarf::DW_TAG_reference_type))
+  // If DWARF address space value is other than None, add it.  The IR
+  // verifier checks that DWARF address space only exists for pointer
+  // or reference types.
+  if (DTy->getDWARFAddressSpace())
     addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
             DTy->getDWARFAddressSpace().getValue());
 }

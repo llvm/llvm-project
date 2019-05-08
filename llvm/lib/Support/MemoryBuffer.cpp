@@ -417,7 +417,7 @@ static ErrorOr<std::unique_ptr<MB>>
 getOpenFileImpl(int FD, const Twine &Filename, uint64_t FileSize,
                 uint64_t MapSize, int64_t Offset, bool RequiresNullTerminator,
                 bool IsVolatile) {
-  static int PageSize = sys::Process::getPageSize();
+  static int PageSize = sys::Process::getPageSizeEstimate();
 
   // Default is to map the full file.
   if (MapSize == uint64_t(-1)) {

@@ -1009,7 +1009,7 @@ ScheduleHazardRecognizer *TargetInstrInfo::
 CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
                                const ScheduleDAG *DAG) const {
   return (ScheduleHazardRecognizer *)
-    new ScoreboardHazardRecognizer(II, DAG, "misched");
+    new ScoreboardHazardRecognizer(II, DAG, "machine-scheduler");
 }
 
 // Default implementation of CreateTargetPostRAHazardRecognizer.

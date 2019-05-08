@@ -172,7 +172,7 @@ bool SectionMemoryManager::finalizeMemory(std::string *ErrMsg) {
 }
 
 static sys::MemoryBlock trimBlockToPageSize(sys::MemoryBlock M) {
-  static const size_t PageSize = sys::Process::getPageSize();
+  static const size_t PageSize = sys::Process::getPageSizeEstimate();
 
   size_t StartOverlap =
       (PageSize - ((uintptr_t)M.base() % PageSize)) % PageSize;
@@ -244,7 +244,7 @@ public:
                        unsigned Flags, std::error_code &EC) override {
     // allocateMappedMemory calls mmap(2). We round up a request size
     // to page size to get extra space for free.
-    static const size_t PageSize = sys::Process::getPageSize();
+    static const size_t PageSize = sys::Process::getPageSizeEstimate();
     size_t ReqBytes = (NumBytes + PageSize - 1) & ~(PageSize - 1);
     return sys::Memory::allocateMappedMemory(ReqBytes, NearBlock, Flags, EC);
   }

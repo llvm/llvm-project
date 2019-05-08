@@ -2267,8 +2267,8 @@ public:
                                    MultiExprArg Args,
                                    SourceLocation RParenLoc,
                                    Expr *ExecConfig = nullptr) {
-    return getSema().ActOnCallExpr(/*Scope=*/nullptr, Callee, LParenLoc,
-                                   Args, RParenLoc, ExecConfig);
+    return getSema().BuildCallExpr(/*Scope=*/nullptr, Callee, LParenLoc, Args,
+                                   RParenLoc, ExecConfig);
   }
 
   /// Build a new member access expression.
