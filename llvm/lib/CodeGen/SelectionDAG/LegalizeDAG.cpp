@@ -539,7 +539,9 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
   } else if (StWidth & (StWidth - 1)) {
     // If not storing a power-of-2 number of bits, expand as two stores.
     assert(!StVT.isVector() && "Unsupported truncstore!");
-    unsigned RoundWidth = 1 << Log2_32(StWidth);
+    unsigned LogStWidth = Log2_32(StWidth);
+    assert(LogStWidth < 32);
+    unsigned RoundWidth = 1 << LogStWidth;
     assert(RoundWidth < StWidth);
     unsigned ExtraWidth = StWidth - RoundWidth;
     assert(ExtraWidth < RoundWidth);
@@ -753,7 +755,9 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   } else if (SrcWidth & (SrcWidth - 1)) {
     // If not loading a power-of-2 number of bits, expand as two loads.
     assert(!SrcVT.isVector() && "Unsupported extload!");
-    unsigned RoundWidth = 1 << Log2_32(SrcWidth);
+    unsigned LogSrcWidth = Log2_32(SrcWidth);
+    assert(LogSrcWidth < 32);
+    unsigned RoundWidth = 1 << LogSrcWidth;
     assert(RoundWidth < SrcWidth);
     unsigned ExtraWidth = SrcWidth - RoundWidth;
     assert(ExtraWidth < RoundWidth);
