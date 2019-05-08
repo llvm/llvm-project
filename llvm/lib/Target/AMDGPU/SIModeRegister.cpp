@@ -44,7 +44,7 @@ struct Status {
 
   Status() : Mask(0), Mode(0){};
 
-  Status(unsigned Mask, unsigned Mode) : Mask(Mask), Mode(Mode) {
+  Status(unsigned NewMask, unsigned NewMode) : Mask(NewMask), Mode(NewMode) {
     Mode &= Mask;
   };
 

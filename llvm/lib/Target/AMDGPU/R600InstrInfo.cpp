@@ -401,6 +401,7 @@ Swizzle(std::vector<std::pair<int, unsigned>> Src,
 }
 
 static unsigned getTransSwizzle(R600InstrInfo::BankSwizzle Swz, unsigned Op) {
+  assert(Op < 3 && "Out of range swizzle index");
   switch (Swz) {
   case R600InstrInfo::ALU_VEC_012_SCL_210: {
     unsigned Cycles[3] = { 2, 1, 0};
