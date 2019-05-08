@@ -472,6 +472,15 @@ void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
                         !ProfDataName->getString().equals("VP")))
     return;
 
+  if (T == 0) {
+    LLVM_DEBUG(dbgs() << "Attempting to update profile weights will result in "
+                         "div by 0. Ignoring. Likely the function "
+                      << getParent()->getParent()->getName()
+                      << " has 0 entry count, and contains call instructions "
+                         "with non-zero prof info.");
+    return;
+  }
+
   MDBuilder MDB(getContext());
   SmallVector<Metadata *, 3> Vals;
   Vals.push_back(ProfileData->getOperand(0));
