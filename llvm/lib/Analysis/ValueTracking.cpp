@@ -1893,10 +1893,9 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
   return false;
 }
 
-static bool isKnownNonNullFromDominatingCondition(const Value *V,
+static bool isKnownNonZeroFromDominatingCondition(const Value *V,
                                                   const Instruction *CtxI,
                                                   const DominatorTree *DT) {
-  assert(V->getType()->isPointerTy() && "V must be pointer type");
   assert(!isa<ConstantData>(V) && "Did not expect ConstantPointerNull");
 
   if (!CtxI || !DT)
@@ -1909,14 +1908,15 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
       break;
     NumUsesExplored++;
 
-    // If the value is used as an argument to a call or invoke, then argument
-    // attributes may provide an answer about null-ness.
-    if (auto CS = ImmutableCallSite(U))
-      if (auto *CalledFunc = CS.getCalledFunction())
-        for (const Argument &Arg : CalledFunc->args())
-          if (CS.getArgOperand(Arg.getArgNo()) == V &&
-              Arg.hasNonNullAttr() && DT->dominates(CS.getInstruction(), CtxI))
-            return true;
+    // If the value is a pointer and used as an argument to a call or invoke,
+    // then argument attributes may provide an answer about null-ness.
+    if (V->getType()->isPointerTy())
+      if (auto CS = ImmutableCallSite(U))
+        if (auto *CalledFunc = CS.getCalledFunction())
+          for (const Argument &Arg : CalledFunc->args())
+            if (CS.getArgOperand(Arg.getArgNo()) == V &&
+                Arg.hasNonNullAttr() && DT->dominates(CS.getInstruction(), CtxI))
+              return true;
 
     // Consider only compare instructions uniquely controlling a branch
     CmpInst::Predicate Pred;
@@ -2064,11 +2064,11 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
   }
 
 
+  if (isKnownNonZeroFromDominatingCondition(V, Q.CxtI, Q.DT))
+    return true;
+
   // Check for recursive pointer simplifications.
   if (V->getType()->isPointerTy()) {
-    if (isKnownNonNullFromDominatingCondition(V, Q.CxtI, Q.DT))
-      return true;
-
     // Look through bitcast operations, GEPs, and int2ptr instructions as they
     // do not alter the value, or at least not the nullness property of the
     // value, e.g., int2ptr is allowed to zero/sign extend the value.
@@ -3136,6 +3136,11 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
     case Intrinsic::sqrt:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) &&
              CannotBeOrderedLessThanZero(II->getArgOperand(0), TLI);
+    case Intrinsic::minnum:
+    case Intrinsic::maxnum:
+      // If either operand is not NaN, the result is not NaN.
+      return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) ||
+             isKnownNeverNaN(II->getArgOperand(1), TLI, Depth + 1);
     default:
       return false;
     }

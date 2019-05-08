@@ -1,0 +1,5 @@
+# RUN: llvm-objcopy --prefix-alloc-sections=.prefix %p/Inputs/dynrel.elf %t
+# RUN: llvm-readobj --sections %t | FileCheck %s
+
+# CHECK: Name: .prefix.rela.plt
+# CHECK: Name: .prefix.plt

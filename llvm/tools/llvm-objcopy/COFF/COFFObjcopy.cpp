@@ -177,15 +177,15 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   if (Config.AllowBrokenLinks || !Config.BuildIdLinkDir.empty() ||
       Config.BuildIdLinkInput || Config.BuildIdLinkOutput ||
       !Config.SplitDWO.empty() || !Config.SymbolsPrefix.empty() ||
-      !Config.AddSection.empty() || !Config.DumpSection.empty() ||
-      !Config.KeepSection.empty() || !Config.SymbolsToGlobalize.empty() ||
-      !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
-      !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SetSectionFlags.empty() ||
-      !Config.SymbolsToRename.empty() || Config.ExtractDWO ||
-      Config.KeepFileSymbols || Config.LocalizeHidden || Config.PreserveDates ||
-      Config.StripDWO || Config.StripNonAlloc || Config.StripSections ||
-      Config.Weaken || Config.DecompressDebugSections ||
+      !Config.AllocSectionsPrefix.empty() || !Config.AddSection.empty() ||
+      !Config.DumpSection.empty() || !Config.KeepSection.empty() ||
+      !Config.SymbolsToGlobalize.empty() || !Config.SymbolsToKeep.empty() ||
+      !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
+      !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
+      !Config.SetSectionFlags.empty() || !Config.SymbolsToRename.empty() ||
+      Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
+      Config.PreserveDates || Config.StripDWO || Config.StripNonAlloc ||
+      Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
       Config.DiscardMode == DiscardType::Locals ||
       !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
