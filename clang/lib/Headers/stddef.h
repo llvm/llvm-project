@@ -18,12 +18,6 @@
 #if !__has_feature(modules)
 #define __STDDEF_H
 #endif
-
-#if defined(_MSC_VER)
-/* Include otherwise unneeded header for MSVC compatibility. */
-#include <corecrt.h>
-#endif
-
 #define __need_ptrdiff_t
 #define __need_size_t
 #define __need_wchar_t
