@@ -51,6 +51,8 @@ Execution Commands
                <td class="content">
                   <b>(lldb)</b> process launch -- &lt;args&gt;
                   <br>
+                  <b>(lldb)</b> run &lt;args&gt;
+                  <br>
                   <b>(lldb)</b> r &lt;args&gt;
                </td>
          </tr>
