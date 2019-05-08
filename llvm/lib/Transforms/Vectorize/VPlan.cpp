@@ -373,10 +373,9 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *VectorPreHeaderBB = State->CFG.PrevBB;
   BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
   assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
-  BasicBlock *VectorLatchBB = VectorHeaderBB;
 
   // 1. Make room to generate basic-blocks inside loop body if needed.
-  VectorLatchBB = VectorHeaderBB->splitBasicBlock(
+  BasicBlock *VectorLatchBB = VectorHeaderBB->splitBasicBlock(
       VectorHeaderBB->getFirstInsertionPt(), "vector.body.latch");
   Loop *L = State->LI->getLoopFor(VectorHeaderBB);
   L->addBasicBlockToLoop(VectorLatchBB, *State->LI);
