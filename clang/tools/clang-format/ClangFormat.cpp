@@ -257,6 +257,36 @@ static bool format(StringRef FileName) {
   std::unique_ptr<llvm::MemoryBuffer> Code = std::move(CodeOrErr.get());
   if (Code->getBufferSize() == 0)
     return false; // Empty files are formatted correctly.
+
+  // Check to see if the buffer has a UTF Byte Order Mark (BOM).
+  // We only support UTF-8 with and without a BOM right now.  See
+  // https://en.wikipedia.org/wiki/Byte_order_mark#Byte_order_marks_by_encoding
+  // for more information.
+  StringRef BufStr = Code->getBuffer();
+  const char *InvalidBOM = llvm::StringSwitch<const char *>(BufStr)
+    .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
+                                                  "UTF-32 (BE)")
+    .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
+                                                  "UTF-32 (LE)")
+    .StartsWith("\xFE\xFF", "UTF-16 (BE)")
+    .StartsWith("\xFF\xFE", "UTF-16 (LE)")
+    .StartsWith("\x2B\x2F\x76", "UTF-7")
+    .StartsWith("\xF7\x64\x4C", "UTF-1")
+    .StartsWith("\xDD\x73\x66\x73", "UTF-EBCDIC")
+    .StartsWith("\x0E\xFE\xFF", "SCSU")
+    .StartsWith("\xFB\xEE\x28", "BOCU-1")
+    .StartsWith("\x84\x31\x95\x33", "GB-18030")
+    .Default(nullptr);
+
+  if (InvalidBOM) {
+    errs() << "error: encoding with unsupported byte order mark \""
+           << InvalidBOM << "\" detected";
+    if (FileName != "-")
+      errs() << " in file '" << FileName << "'";
+    errs() << ".\n";
+    return true;
+  }
+
   std::vector<tooling::Range> Ranges;
   if (fillRanges(Code.get(), Ranges))
     return true;
