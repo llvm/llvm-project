@@ -4885,7 +4885,7 @@ static bool checkBuiltinArgument(Sema &S, CallExpr *E, unsigned ArgIndex) {
 
 /// We have a call to a function like __sync_fetch_and_add, which is an
 /// overloaded function based on the pointer type of its first argument.
-/// The main ActOnCallExpr routines have already promoted the types of
+/// The main BuildCallExpr routines have already promoted the types of
 /// arguments because all of these calls are prototyped as void(...).
 ///
 /// This function goes through and does final semantic checking for these

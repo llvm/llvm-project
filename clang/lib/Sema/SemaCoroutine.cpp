@@ -312,7 +312,7 @@ static Expr *buildBuiltinCall(Sema &S, SourceLocation Loc, Builtin::ID Id,
   assert(DeclRef.isUsable() && "Builtin reference cannot fail");
 
   ExprResult Call =
-      S.ActOnCallExpr(/*Scope=*/nullptr, DeclRef.get(), Loc, CallArgs, Loc);
+      S.BuildCallExpr(/*Scope=*/nullptr, DeclRef.get(), Loc, CallArgs, Loc);
 
   assert(!Call.isInvalid() && "Call to builtin cannot fail!");
   return Call.get();
@@ -342,7 +342,7 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
   if (FromAddr.isInvalid())
     return ExprError();
 
-  return S.ActOnCallExpr(nullptr, FromAddr.get(), Loc, FramePtr, Loc);
+  return S.BuildCallExpr(nullptr, FromAddr.get(), Loc, FramePtr, Loc);
 }
 
 struct ReadySuspendResumeResult {
@@ -374,7 +374,7 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
     return ExprError();
   }
 
-  return S.ActOnCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
+  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
 }
 
 // See if return type is coroutine-handle and if so, invoke builtin coro-resume
@@ -1105,7 +1105,7 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
     return false;
 
   ExprResult ReturnObjectOnAllocationFailure =
-      S.ActOnCallExpr(nullptr, DeclNameExpr.get(), Loc, {}, Loc);
+      S.BuildCallExpr(nullptr, DeclNameExpr.get(), Loc, {}, Loc);
   if (ReturnObjectOnAllocationFailure.isInvalid())
     return false;
 
@@ -1268,7 +1268,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     NewArgs.push_back(Arg);
 
   ExprResult NewExpr =
-      S.ActOnCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);
+      S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);
   NewExpr = S.ActOnFinishFullExpr(NewExpr.get(), /*DiscardedValue*/ false);
   if (NewExpr.isInvalid())
     return false;
@@ -1294,7 +1294,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     DeleteArgs.push_back(FrameSize);
 
   ExprResult DeleteExpr =
-      S.ActOnCallExpr(S.getCurScope(), DeleteRef.get(), Loc, DeleteArgs, Loc);
+      S.BuildCallExpr(S.getCurScope(), DeleteRef.get(), Loc, DeleteArgs, Loc);
   DeleteExpr =
       S.ActOnFinishFullExpr(DeleteExpr.get(), /*DiscardedValue*/ false);
   if (DeleteExpr.isInvalid())
