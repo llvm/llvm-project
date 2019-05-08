@@ -3503,8 +3503,9 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
     // This will be a direct call, or an indirect call through memory for
     // NonLazyBind calls or dllimport calls.
-    bool NeedLoad =
-        OpFlags == X86II::MO_DLLIMPORT || OpFlags == X86II::MO_GOTPCREL;
+    bool NeedLoad = OpFlags == X86II::MO_DLLIMPORT ||
+                    OpFlags == X86II::MO_GOTPCREL ||
+                    OpFlags == X86II::MO_COFFSTUB;
     unsigned CallOpc = NeedLoad
                            ? (Is64Bit ? X86::CALL64m : X86::CALL32m)
                            : (Is64Bit ? X86::CALL64pcrel32 : X86::CALLpcrel32);

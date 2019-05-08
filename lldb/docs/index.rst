@@ -51,8 +51,8 @@ Resources
    :maxdepth: 1
 
    resources/download
-   resources/build
    resources/source
+   resources/build
    resources/test
    resources/bots
    resources/sbapi

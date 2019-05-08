@@ -181,19 +181,20 @@ private:
     MachOX86RelocationKind DeltaKind;
     Atom *TargetAtom;
     uint64_t Addend;
-    if (&AtomToFix == &*FromAtom) {
+    if (areLayoutLocked(AtomToFix, *FromAtom)) {
       TargetAtom = ToAtom;
       DeltaKind = (SubRI.r_length == 3) ? Delta64 : Delta32;
       Addend = FixupValue + (FixupAddress - FromAtom->getAddress());
       // FIXME: handle extern 'from'.
-    } else if (&AtomToFix == ToAtom) {
+    } else if (areLayoutLocked(AtomToFix, *ToAtom)) {
       TargetAtom = &*FromAtom;
       DeltaKind = (SubRI.r_length == 3) ? NegDelta64 : NegDelta32;
       Addend = FixupValue - (FixupAddress - ToAtom->getAddress());
     } else {
       // AtomToFix was neither FromAtom nor ToAtom.
       return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
-                                      "either 'A' or 'B'");
+                                      "either 'A' or 'B' (or an atom in one "
+                                      "of their alt-entry groups)");
     }
 
     return PairRelocInfo(DeltaKind, TargetAtom, Addend);
