@@ -1,5 +1,5 @@
-Checking out LLDB Sources
-=========================
+Getting the Sources
+===================
 
 Refer to the `LLVM Getting Started Guide
 <http://llvm.org/docs/GettingStarted.html#getting-started-with-llvm>`_
@@ -33,7 +33,7 @@ Clang in these locations.  Refer to the `Build Instructions
 particular platform / build system combination.
 
 Contributing to LLDB
-====================
+--------------------
 
 Please refer to the `LLVM Developer Policy
 <http://llvm.org/docs/DeveloperPolicy.html>`_ for information about
@@ -48,7 +48,7 @@ policy.
 
 
 Error handling and use of assertions in LLDB
-============================================
+--------------------------------------------
 
 Contrary to Clang, which is typically a short-lived process, LLDB
 debuggers stay up and running for a long time, often serving multiple
@@ -65,7 +65,7 @@ rules of thumb:
   used. Functions that may fail should return their result using these
   wrapper types instead of using a bool to indicate success. Returning
   a default value when an error occurred is also discouraged.
-  
+
 * Assertions.  Assertions (from `assert.h`) should be used liberally
   to assert internal consistency.  Assertions shall **never** be
   used to detect invalid user input, such as malformed DWARF.  An
@@ -75,11 +75,11 @@ rules of thumb:
   checks in an assertion may be more expensive than otherwise
   permissible. In combination with the LLDB test suite, assertions are
   what allows us to refactor and evolve the LLDB code base.
-   
+
 * Logging. LLDB provides a very rich logging API. When recoverable
   errors cannot reasonably by surfaced to the end user, the error may
   be written to a topical log channel.
-                            
+
 * Soft assertions.  LLDB provides `lldb_assert()` as a soft
   alternative to cover the middle ground of situations that indicate a
   recoverable bug in LLDB.  In a Debug configuration `lldb_assert()`
