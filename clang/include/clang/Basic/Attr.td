@@ -1387,6 +1387,42 @@ def Mode : Attr {
   let PragmaAttributeSupport = 0;
 }
 
+def IntelFPGAIVDep : Attr {
+  let Spellings = [CXX11<"intelfpga","ivdep">];
+  let Args = [IntArgument<"Safelen">];
+  let LangOpts = [SYCL];
+  let AdditionalMembers = [{
+    static const char *getName() {
+      return "ivdep";
+    }
+  }];
+  let Documentation = [IntelFPGAIVDepAttrDocs];
+}
+
+def IntelFPGAII : Attr {
+  let Spellings = [CXX11<"intelfpga","ii">];
+  let Args = [IntArgument<"Interval">];
+  let LangOpts = [SYCL];
+  let AdditionalMembers = [{
+    static const char *getName() {
+      return "ii";
+    }
+  }];
+  let Documentation = [IntelFPGAIIAttrDocs];
+}
+
+def IntelFPGAMaxConcurrency : Attr {
+  let Spellings = [CXX11<"intelfpga","max_concurrency">];
+  let Args = [IntArgument<"NThreads">];
+  let LangOpts = [SYCL];
+  let AdditionalMembers = [{
+    static const char *getName() {
+      return "max_concurrency";
+    }
+  }];
+  let Documentation = [IntelFPGAMaxConcurrencyAttrDocs];
+}
+
 def IntelFPGALocalNonConstVar : SubsetSubject<Var,
                               [{S->hasLocalStorage() &&
                                 S->getKind() != Decl::ImplicitParam &&

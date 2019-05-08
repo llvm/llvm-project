@@ -57,6 +57,18 @@ struct LoopAttributes {
   /// Value for llvm.loop.interleave.count metadata.
   unsigned InterleaveCount;
 
+  /// Value for llvm.loop.ivdep.enable metadata.
+  bool IVDepEnable;
+
+  /// Value for llvm.loop.ivdep.safelen metadata.
+  unsigned IVDepSafelen;
+
+  /// Value for llvm.loop.ii metadata.
+  unsigned IInterval;
+
+  /// Value for llvm.loop.max_concurrency metadata.
+  unsigned MaxConcurrencyNThreads;
+
   /// llvm.unroll.
   unsigned UnrollCount;
 
@@ -169,6 +181,20 @@ public:
 
   /// Set the interleave count for the next loop pushed.
   void setInterleaveCount(unsigned C) { StagedAttrs.InterleaveCount = C; }
+
+  /// Set flag of ivdep for the next loop pushed.
+  void setIVDepEnable() { StagedAttrs.IVDepEnable = true; }
+
+  /// Set value of safelen count for the next loop pushed.
+  void setIVDepSafelen(unsigned C) { StagedAttrs.IVDepSafelen = C; }
+
+  /// Set value of an initiation interval for the next loop pushed.
+  void setIInterval(unsigned C) { StagedAttrs.IInterval = C; }
+
+  /// Set value of threads for the next loop pushed.
+  void setMaxConcurrencyNThreads(unsigned C) {
+    StagedAttrs.MaxConcurrencyNThreads = C;
+  }
 
   /// Set the unroll count for the next loop pushed.
   void setUnrollCount(unsigned C) { StagedAttrs.UnrollCount = C; }

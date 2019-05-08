@@ -2519,8 +2519,16 @@ private:
   /// Parses opencl_unroll_hint attribute.
   /// \return false if error happens.
   bool ParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs);
-  void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
 
+  /// Parses intelfpga:: loop attributes if the language is SYCL
+  bool MaybeParseIntelFPGALoopAttributes(ParsedAttributes &Attrs) {
+    if (getLangOpts().SYCLIsDevice)
+      return ParseIntelFPGALoopAttributes(Attrs);
+    return true;
+  }
+  bool ParseIntelFPGALoopAttributes(ParsedAttributes &Attrs);
+
+  void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
   VersionTuple ParseVersionTuple(SourceRange &Range);
   void ParseAvailabilityAttribute(IdentifierInfo &Availability,
                                   SourceLocation AvailabilityLoc,

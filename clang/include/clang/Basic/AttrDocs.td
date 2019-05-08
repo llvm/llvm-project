@@ -1740,6 +1740,37 @@ threads or loop iterations.
   }];
 }
 
+def IntelFPGAIVDepAttrDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "ivdep";
+  let Content = [{
+This attribute applies to a loop. If no additional arguments are provided, it
+indicates that the backend may assume that the loop carries no dependences.
+If a safelen is provided then the backend may assume that all loop carried
+dependences have a dependence distance of at least that length.
+  }];
+}
+
+def IntelFPGAIIAttrDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "ii";
+  let Content = [{
+This attribute applies to a loop. Indicates that the loop should be pipelined
+with an initiation interval of N. N must be a positive integer. Cannot be
+applied multiple times to the same loop.
+  }];
+}
+
+def IntelFPGAMaxConcurrencyAttrDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "max_concurrency";
+  let Content = [{
+This attribute applies to a loop. Indicates that the loop should allow no more
+than N threads or iterations to execute it simultaneously. N must be a positive
+integer. Cannot be applied multiple times to the same loop.
+  }];
+}
+
 def RISCVInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (RISCV)";

@@ -23,7 +23,9 @@ static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
                               const llvm::DebugLoc &EndLoc, MDNode *&AccGroup) {
 
   if (!Attrs.IsParallel && Attrs.VectorizeWidth == 0 &&
-      Attrs.InterleaveCount == 0 && Attrs.UnrollCount == 0 &&
+      Attrs.InterleaveCount == 0 && Attrs.IVDepEnable == false &&
+      Attrs.IVDepSafelen == 0 && Attrs.IInterval == 0 &&
+      Attrs.MaxConcurrencyNThreads == 0 && Attrs.UnrollCount == 0 &&
       Attrs.UnrollAndJamCount == 0 && !Attrs.PipelineDisabled &&
       Attrs.PipelineInitiationInterval == 0 &&
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
@@ -60,6 +62,37 @@ static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
     Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.interleave.count"),
                         ConstantAsMetadata::get(ConstantInt::get(
                             Type::getInt32Ty(Ctx), Attrs.InterleaveCount))};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
+  // Setting ivdep attribute
+  if (Attrs.IVDepEnable) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ivdep.enable")};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
+  // Setting ivdep attribute with safelen
+  if (Attrs.IVDepSafelen > 0) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ivdep.safelen"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            llvm::Type::getInt32Ty(Ctx), Attrs.IVDepSafelen))};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
+  // Setting ii attribute with an initiation interval
+  if (Attrs.IInterval > 0) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ii"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            llvm::Type::getInt32Ty(Ctx), Attrs.IInterval))};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
+  // Setting max_concurrency attribute with number of threads
+  if (Attrs.MaxConcurrencyNThreads > 0) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.max_concurrency"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            llvm::Type::getInt32Ty(Ctx),
+                            Attrs.MaxConcurrencyNThreads))};
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
@@ -152,6 +185,8 @@ static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
 
 LoopAttributes::LoopAttributes(bool IsParallel)
     : IsParallel(IsParallel), VectorizeEnable(LoopAttributes::Unspecified),
+      IVDepEnable(false), IVDepSafelen(0), IInterval(0),
+      MaxConcurrencyNThreads(0),
       UnrollEnable(LoopAttributes::Unspecified),
       UnrollAndJamEnable(LoopAttributes::Unspecified), VectorizeWidth(0),
       InterleaveCount(0), UnrollCount(0), UnrollAndJamCount(0),
@@ -161,6 +196,10 @@ LoopAttributes::LoopAttributes(bool IsParallel)
 void LoopAttributes::clear() {
   IsParallel = false;
   VectorizeWidth = 0;
+  IVDepEnable = false;
+  IVDepSafelen = 0;
+  IInterval = 0;
+  MaxConcurrencyNThreads = 0;
   InterleaveCount = 0;
   UnrollCount = 0;
   UnrollAndJamCount = 0;
@@ -355,6 +394,49 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
         break;
       }
       break;
+    }
+  }
+
+  // Translate intelfpga loop attributes' arguments to equivalent Attr enums.
+  // It's being handled separately from LoopHintAttrs not to support
+  // legacy GNU attributes and pragma styles.
+  //
+  // For attribute ivdep:
+  // 0 - 'llvm.loop.ivdep.enable' metadata will be emitted
+  // n - 'llvm.loop.ivdep.safelen, i32 n' metadata will be emitted
+  // For attribute ii:
+  // n - 'llvm.loop.ii, i32 n' metadata will be emitted
+  // For attribute max_concurrency:
+  // n - 'llvm.loop.max_concurrency, i32 n' metadata will be emitted
+  for (const auto *Attr : Attrs) {
+    const IntelFPGAIVDepAttr *IntelFPGAIVDep =
+      dyn_cast<IntelFPGAIVDepAttr>(Attr);
+    const IntelFPGAIIAttr *IntelFPGAII =
+      dyn_cast<IntelFPGAIIAttr>(Attr);
+    const IntelFPGAMaxConcurrencyAttr *IntelFPGAMaxConcurrency =
+      dyn_cast<IntelFPGAMaxConcurrencyAttr>(Attr);
+
+    if (!IntelFPGAIVDep && !IntelFPGAII && !IntelFPGAMaxConcurrency)
+      continue;
+
+    if (IntelFPGAIVDep) {
+      unsigned ValueInt = IntelFPGAIVDep->getSafelen();
+      if (ValueInt == 0)
+        setIVDepEnable();
+      else if (ValueInt > 1)
+        setIVDepSafelen(ValueInt);
+    }
+
+    if (IntelFPGAII) {
+      unsigned ValueInt = IntelFPGAII->getInterval();
+      if (ValueInt > 1)
+        setIInterval(ValueInt);
+    }
+
+    if (IntelFPGAMaxConcurrency) {
+      unsigned ValueInt = IntelFPGAMaxConcurrency->getNThreads();
+      if (ValueInt > 1)
+        setMaxConcurrencyNThreads(ValueInt);
     }
   }
 

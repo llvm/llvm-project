@@ -75,6 +75,48 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       DiagnosticIdentifiers.size(), A.getAttributeSpellingListIndex());
 }
 
+template <typename FPGALoopAttrT>
+static Attr *handleIntelFPGALoopAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
+  unsigned NumArgs = A.getNumArgs();
+  if (NumArgs > 1) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A << 1;
+    return nullptr;
+  }
+
+  if (NumArgs == 0) {
+    if (A.getKind() == ParsedAttr::AT_IntelFPGAII ||
+        A.getKind() == ParsedAttr::AT_IntelFPGAMaxConcurrency) {
+      S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
+      return nullptr;
+    }
+  }
+
+  unsigned SafeInterval = 0;
+
+  if (NumArgs == 1) {
+    Expr *E = A.getArgAsExpr(0);
+    llvm::APSInt ArgVal(32);
+
+    if (!E->isIntegerConstantExpr(ArgVal, S.Context)) {
+      S.Diag(A.getLoc(), diag::err_attribute_argument_type)
+        << A << AANT_ArgumentIntegerConstant << E->getSourceRange();
+      return nullptr;
+    }
+
+    int Val = ArgVal.getSExtValue();
+
+    if (Val <= 0) {
+      S.Diag(A.getRange().getBegin(),
+          diag::err_attribute_requires_positive_integer)
+        << A << /* positive */ 0;
+      return nullptr;
+    }
+    SafeInterval = Val;
+  }
+
+  return FPGALoopAttrT::CreateImplicit(S.Context, SafeInterval);
+}
+
 static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange) {
   IdentifierLoc *PragmaNameLoc = A.getArgAsIdent(0);
@@ -284,6 +326,37 @@ CheckForIncompatibleAttributes(Sema &S,
   }
 }
 
+
+template <typename FPGALoopAttrT> static void
+CheckForDuplicationFPGALoopAttribute(Sema &S,
+                                     const SmallVectorImpl<const Attr *>
+                                     &Attrs, SourceRange Range) {
+  const FPGALoopAttrT *LoopFPGAAttr = nullptr;
+
+  for (const auto *I : Attrs) {
+    if (LoopFPGAAttr) {
+      if (isa<FPGALoopAttrT>(I)) {
+        SourceLocation Loc = Range.getBegin();
+        // Cannot specify same type of attribute twice.
+        S.Diag(Loc, diag::err_intel_fpga_loop_attr_duplication)
+          << LoopFPGAAttr->getName();
+      }
+    }
+    if (isa<FPGALoopAttrT>(I))
+      LoopFPGAAttr = cast<FPGALoopAttrT>(I);
+  }
+}
+
+static void
+CheckForIncompatibleFPGALoopAttributes(Sema &S,
+                                       const SmallVectorImpl<const Attr *>
+                                       &Attrs, SourceRange Range) {
+  CheckForDuplicationFPGALoopAttribute<IntelFPGAIVDepAttr>(S, Attrs, Range);
+  CheckForDuplicationFPGALoopAttribute<IntelFPGAIIAttr>(S, Attrs, Range);
+  CheckForDuplicationFPGALoopAttribute<
+    IntelFPGAMaxConcurrencyAttr>(S, Attrs, Range);
+}
+
 static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
   // Although the feature was introduced only in OpenCL C v2.0 s6.11.5, it's
@@ -338,6 +411,12 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
+  case ParsedAttr::AT_IntelFPGAIVDep:
+    return handleIntelFPGALoopAttr<IntelFPGAIVDepAttr>(S, St, A);
+  case ParsedAttr::AT_IntelFPGAII:
+    return handleIntelFPGALoopAttr<IntelFPGAIIAttr>(S, St, A);
+  case ParsedAttr::AT_IntelFPGAMaxConcurrency:
+    return handleIntelFPGALoopAttr<IntelFPGAMaxConcurrencyAttr>(S, St, A);
   case ParsedAttr::AT_OpenCLUnrollHint:
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
@@ -361,6 +440,7 @@ StmtResult Sema::ProcessStmtAttributes(Stmt *S,
   }
 
   CheckForIncompatibleAttributes(*this, Attrs);
+  CheckForIncompatibleFPGALoopAttributes(*this, Attrs, Range);
 
   if (Attrs.empty())
     return S;
