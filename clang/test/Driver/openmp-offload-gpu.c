@@ -278,3 +278,8 @@
 // RUN:   | FileCheck -check-prefix=CUDA_RED_RECS %s
 // CUDA_RED_RECS: clang{{.*}}"-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"
 // CUDA_RED_RECS-SAME: "-fopenmp-cuda-teams-reduction-recs-num=2048"
+
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=OPENMP_NVPTX_WRAPPERS %s
+// OPENMP_NVPTX_WRAPPERS: clang{{.*}}"-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"
+// OPENMP_NVPTX_WRAPPERS-SAME: "-internal-isystem" "{{.*}}openmp_wrappers"
