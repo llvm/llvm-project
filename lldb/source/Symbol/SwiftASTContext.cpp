@@ -1351,6 +1351,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                         llvm::raw_ostream &error,
                                         bool &got_serialized_options) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  std::string last_sdk_path;
   got_serialized_options = false;
   auto &invocation = swift_ast.GetCompilerInvocation();
   SymbolVendor *sym_vendor = module.GetSymbolVendor();
@@ -1371,7 +1372,6 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
     llvm::StringRef buf((const char *)ast_file_data_sp->GetBytes(),
                         ast_file_data_sp->GetByteSize());
     while (!buf.empty()) {
-      std::string last_sdk_path;
       swift::serialization::ExtendedValidationInfo extended_validation_info;
       swift::serialization::ValidationInfo info =
           swift::serialization::validateSerializedAST(
@@ -1403,21 +1403,23 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
         continue;
 
       StringRef moduleData = buf.substr(0, info.bytes);
-      if (log)
-        last_sdk_path = invocation.getSDKPath();
-
       got_serialized_options |=
           DeserializeCompilerFlags(invocation, moduleData, info.name, error);
-
-      if (log && !last_sdk_path.empty() &&
-          invocation.getSDKPath() != last_sdk_path)
-        LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                   "SDK path mismatch!\nWas \"%s\", found \"%s\" in module %s.",
-                   last_sdk_path.c_str(), invocation.getSDKPath().str().c_str(),
-                   info.name.str().c_str());
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "SDK path from module \"%s\" is \"%s\".",
+                 info.name.str().c_str(),
+                 invocation.getSDKPath().str().c_str());
+      if (!last_sdk_path.empty()) {
+        // Always let the more specific SDK path win.
+        if (invocation.getSDKPath() != last_sdk_path)
+          if (last_sdk_path.size() > invocation.getSDKPath().size())
+            invocation.setSDKPath(last_sdk_path);
+      }
+      last_sdk_path = invocation.getSDKPath();
       buf = buf.substr(info.bytes);
     }
   }
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "Picking SDK path \"%s\".",
+             invocation.getSDKPath().str().c_str());
   return false;
 }
 
