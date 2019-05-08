@@ -2473,7 +2473,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
-  const MCExpr *Expr;
+  const MCExpr *Expr = nullptr;
 
   if (Parser.getTok().is(AsmToken::Hash)) {
     Parser.Lex(); // Eat hash token.
@@ -2523,7 +2523,7 @@ AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
 OperandMatchResultTy
 AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
   SMLoc S = getLoc();
-  const MCExpr *Expr;
+  const MCExpr *Expr = nullptr;
 
   // Leave anything with a bracket to the default for SVE
   if (getParser().getTok().is(AsmToken::LBrac))
@@ -2621,7 +2621,7 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
     // Operand should start from # or should be integer, emit error otherwise.
     return MatchOperand_NoMatch;
 
-  const MCExpr *Imm;
+  const MCExpr *Imm = nullptr;
   if (parseSymbolicImmVal(Imm))
     return MatchOperand_ParseFail;
   else if (Parser.getTok().isNot(AsmToken::Comma)) {
@@ -2660,7 +2660,7 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   Parser.Lex(); // Eat the number
 
   // Just in case the optional lsl #0 is used for immediates other than zero.
-  if (ShiftAmount == 0 && Imm != 0) {
+  if (ShiftAmount == 0 && Imm != nullptr) {
     SMLoc E = Parser.getTok().getLoc();
     Operands.push_back(AArch64Operand::CreateImm(Imm, S, E, getContext()));
     return MatchOperand_Success;
