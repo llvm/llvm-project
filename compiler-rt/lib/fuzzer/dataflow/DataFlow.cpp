@@ -13,12 +13,13 @@
 // It executes the fuzz target on the given input while monitoring the
 // data flow for every instrumented comparison instruction.
 //
-// The output shows which functions depend on which bytes of the input.
+// The output shows which functions depend on which bytes of the input,
+// and also provides basic-block coverage for every input.
 //
 // Build:
 //   1. Compile this file with -fsanitize=dataflow
 //   2. Build the fuzz target with -g -fsanitize=dataflow
-//       -fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp
+//       -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp
 //   3. Link those together with -fsanitize=dataflow
 //
 //  -fsanitize-coverage=trace-cmp inserts callbacks around every comparison
@@ -26,13 +27,15 @@
 //  The callbacks update the data flow label for the current function.
 //  See e.g. __dfsw___sanitizer_cov_trace_cmp1 below.
 //
-//  -fsanitize-coverage=trace-pc-guard,pc-table,func instruments function
+//  -fsanitize-coverage=trace-pc-guard,pc-table,bb instruments function
 //  entries so that the comparison callback knows that current function.
+//  -fsanitize-coverage=...,bb also allows to collect basic block coverage.
 //
 //
 // Run:
-//   # Collect data flow for INPUT_FILE, write to OUTPUT_FILE (default: stdout)
-//   ./a.out INPUT_FILE [OUTPUT_FILE]
+//   # Collect data flow and coverage for INPUT_FILE
+//   # write to OUTPUT_FILE (default: stdout)
+//   ./a.out FIRST_LABEL LAST_LABEL INPUT_FILE [OUTPUT_FILE]
 //
 //   # Print all instrumented functions. llvm-symbolizer must be present in PATH
 //   ./a.out
@@ -41,10 +44,15 @@
 // ===============
 //  F0 11111111111111
 //  F1 10000000000000
+//  C0 1 2 3 4
+//  C1
 //  ===============
 // "FN xxxxxxxxxx": tells what bytes of the input does the function N depend on.
 //    The byte string is LEN+1 bytes. The last byte is set if the function
 //    depends on the input length.
+// "CN X Y Z": tells that a function N has basic blocks X, Y, and Z covered
+//    in addition to the function's entry block.
+//
 //===----------------------------------------------------------------------===*/
 
 #include <assert.h>
@@ -66,12 +74,18 @@ static size_t InputLen;
 static size_t InputLabelBeg;
 static size_t InputLabelEnd;
 static size_t InputSizeLabel;
-static size_t NumFuncs;
-static const uintptr_t *FuncsBeg;
+static size_t NumFuncs, NumGuards;
+static uint32_t *GuardsBeg, *GuardsEnd;
+static const uintptr_t *PCsBeg, *PCsEnd;
 static __thread size_t CurrentFunc;
 static dfsan_label *FuncLabels;  // Array of NumFuncs elements.
+static bool *BBExecuted;  // Array of NumGuards elements.
 static char *PrintableStringForLabel;  // InputLen + 2 bytes.
 static bool LabelSeen[1 << 8 * sizeof(dfsan_label)];
+
+enum {
+  PCFLAG_FUNC_ENTRY = 1,
+};
 
 // Prints all instrumented functions.
 static int PrintFunctions() {
@@ -83,8 +97,10 @@ static int PrintFunctions() {
                      "| llvm-symbolizer "
                      "| grep 'dfs\\$' "
                      "| sed 's/dfs\\$//g'", "w");
-  for (size_t I = 0; I < NumFuncs; I++) {
-    uintptr_t PC = FuncsBeg[I * 2];
+  for (size_t I = 0; I < NumGuards; I++) {
+    uintptr_t PC = PCsBeg[I * 2];
+    uintptr_t PCFlags = PCsBeg[I * 2 + 1];
+    if (!(PCFlags & PCFLAG_FUNC_ENTRY)) continue;
     void *const Buf[1] = {(void*)PC};
     backtrace_symbols_fd(Buf, 1, fileno(Pipe));
   }
@@ -121,6 +137,28 @@ static void PrintDataFlow(FILE *Out) {
   for (size_t I = 0; I < NumFuncs; I++)
     if (FuncLabels[I])
       fprintf(Out, "F%zd %s\n", I, GetPrintableStringForLabel(FuncLabels[I]));
+}
+
+static void PrintCoverage(FILE *Out) {
+  ssize_t CurrentFuncGuard = -1;
+  ssize_t CurrentFuncNum = -1;
+  int NumFuncsCovered = 0;
+  for (size_t I = 0; I < NumGuards; I++) {
+    bool IsEntry = PCsBeg[I * 2 + 1] & PCFLAG_FUNC_ENTRY;
+    if (IsEntry) {
+      CurrentFuncNum++;
+      CurrentFuncGuard = I;
+    }
+    if (!BBExecuted[I]) continue;
+    if (IsEntry) {
+      if (NumFuncsCovered) fprintf(Out, "\n");
+      fprintf(Out, "C%zd ", CurrentFuncNum);
+      NumFuncsCovered++;
+    } else {
+      fprintf(Out, "%zd ", I - CurrentFuncGuard);
+    }
+  }
+  fprintf(Out, "\n");
 }
 
 int main(int argc, char **argv) {
@@ -168,6 +206,7 @@ int main(int argc, char **argv) {
           OutIsStdout ? "<stdout>" : argv[4]);
   FILE *Out = OutIsStdout ? stdout : fopen(argv[4], "w");
   PrintDataFlow(Out);
+  PrintCoverage(Out);
   if (!OutIsStdout) fclose(Out);
 }
 
@@ -178,21 +217,36 @@ void __sanitizer_cov_trace_pc_guard_init(uint32_t *start,
   assert(NumFuncs == 0 && "This tool does not support DSOs");
   assert(start < stop && "The code is not instrumented for coverage");
   if (start == stop || *start) return;  // Initialize only once.
-  for (uint32_t *x = start; x < stop; x++)
-    *x = ++NumFuncs;  // The first index is 1.
-  FuncLabels = (dfsan_label*)calloc(NumFuncs, sizeof(dfsan_label));
-  fprintf(stderr, "INFO: %zd instrumented function(s) observed\n", NumFuncs);
+  GuardsBeg = start;
+  GuardsEnd = stop;
 }
 
 void __sanitizer_cov_pcs_init(const uintptr_t *pcs_beg,
                               const uintptr_t *pcs_end) {
-  assert(NumFuncs == (pcs_end - pcs_beg) / 2);
-  FuncsBeg = pcs_beg;
+  if (NumGuards) return;  // Initialize only once.
+  NumGuards = GuardsEnd - GuardsBeg;
+  PCsBeg = pcs_beg;
+  PCsEnd = pcs_end;
+  assert(NumGuards == (PCsEnd - PCsBeg) / 2);
+  for (size_t i = 0; i < NumGuards; i++) {
+    if (PCsBeg[i * 2 + 1] & PCFLAG_FUNC_ENTRY) {
+      NumFuncs++;
+      GuardsBeg[i] = NumFuncs;
+    }
+  }
+  FuncLabels = (dfsan_label*)calloc(NumFuncs, sizeof(dfsan_label));
+  BBExecuted = (bool*)calloc(NumGuards, sizeof(bool));
+  fprintf(stderr, "INFO: %zd instrumented function(s) observed "
+          "and %zd basic blocks\n", NumFuncs, NumGuards);
 }
 
 void __sanitizer_cov_trace_pc_indir(uint64_t x){}  // unused.
 
-void __sanitizer_cov_trace_pc_guard(uint32_t *guard){
+void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
+  size_t GuardIdx = guard - GuardsBeg;
+  assert(GuardIdx < NumGuards);
+  BBExecuted[GuardIdx] = true;
+  if (!*guard) return;  // not a function entry.
   uint32_t FuncNum = *guard - 1;  // Guards start from 1.
   assert(FuncNum < NumFuncs);
   CurrentFunc = FuncNum;
