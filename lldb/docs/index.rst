@@ -52,8 +52,8 @@ Resources
 
    resources/download
    resources/build
-   resources/source
    resources/test
+   resources/source
    resources/bots
    resources/sbapi
 
