@@ -18,7 +18,7 @@ namespace mca {
 
 CodeRegions::CodeRegions(llvm::SourceMgr &S) : SM(S) {
   // Create a default region for the input code sequence.
-  Regions.emplace_back(make_unique<CodeRegion>("Default", SMLoc()));
+  Regions.emplace_back(make_unique<CodeRegion>("", SMLoc()));
 }
 
 bool CodeRegion::isLocInRange(SMLoc Loc) const {

@@ -115,7 +115,6 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions() {
   MCACommentConsumer CC(Regions);
   Lexer.setCommentConsumer(&CC);
 
-  // Create a target-specific parser and perform the parse.
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));
   if (!TAP)
@@ -125,7 +124,7 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions() {
   Parser->setTargetParser(*TAP);
   Parser->Run(false);
 
-  // Get the assembler dialect from the input.  llvm-mca will use this as the
+  // Set the assembler dialect from the input. llvm-mca will use this as the
   // default dialect when printing reports.
   AssemblerDialect = Parser->getAssemblerDialect();
   return Regions;
