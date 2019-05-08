@@ -1,16 +1,36 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefixes=SICI,PREGFX10
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefixes=VI,PREGFX10
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=GFX10
 
 ;CHECK-LABEL: {{^}}buffer_load:
-;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0
-;CHECK: buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
-;CHECK: buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc
+;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0{{$}}
+;CHECK: buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc{{$}}
+;CHECK: buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc{{$}}
 ;CHECK: s_waitcnt
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(<4 x i32> inreg) {
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 0)
   %data_glc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 1)
   %data_slc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 2)
+  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %data, 0
+  %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %data_glc, 1
+  %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %data_slc, 2
+  ret {<4 x float>, <4 x float>, <4 x float>} %r2
+}
+
+;CHECK-LABEL: {{^}}buffer_load_dlc:
+;PREGFX10: buffer_load_dwordx4 v[0:3], off, s[0:3], 0{{$}}
+;PREGFX10: buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc{{$}}
+;PREGFX10: buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc{{$}}
+;GFX10: buffer_load_dwordx4 v[0:3], off, s[0:3], 0 dlc{{$}}
+;GFX10: buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc dlc{{$}}
+;GFX10: buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc dlc{{$}}
+;CHECK: s_waitcnt
+define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load_dlc(<4 x i32> inreg) {
+main_body:
+  %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 4)
+  %data_glc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 5)
+  %data_slc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 6)
   %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %data, 0
   %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %data_glc, 1
   %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %data_slc, 2
@@ -74,7 +94,8 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_negative_offset:
-;CHECK: v_add_{{[iu]}}32_e32 [[VOFS:v[0-9]+]], vcc, -16, v0
+;PREGFX10: v_add_{{[iu]}}32_e32 [[VOFS:v[0-9]+]], vcc, -16, v0
+;GFX10: v_add_nc_{{[iu]}}32_e32 [[VOFS:v[0-9]+]], -16, v0
 ;CHECK: buffer_load_dwordx4 v[0:3], [[VOFS]], s[0:3], 0 offen
 define amdgpu_ps <4 x float> @buffer_load_negative_offset(<4 x i32> inreg, i32 %ofs) {
 main_body:
@@ -280,7 +301,7 @@ main_body:
 ;CHECK-LABEL: {{^}}raw_buffer_load_ushort:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: buffer_load_ushort v{{[0-9]}}, off, s[0:3], 0
-;CHECK-NEXT: s_waitcnt vmcnt(0)
+;CHECK: s_waitcnt vmcnt(0)
 ;CHECK-NEXT: v_cvt_f32_u32_e32 v0, v0
 ;CHECK-NEXT: ; return to shader part epilog
 define amdgpu_ps float @raw_buffer_load_ushort(<4 x i32> inreg %rsrc) {
@@ -294,7 +315,7 @@ main_body:
 ;CHECK-LABEL: {{^}}raw_buffer_load_sbyte:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: buffer_load_sbyte v{{[0-9]}}, off, s[0:3], 0
-;CHECK-NEXT: s_waitcnt vmcnt(0)
+;CHECK: s_waitcnt vmcnt(0)
 ;CHECK-NEXT: v_cvt_f32_i32_e32 v0, v0
 ;CHECK-NEXT: ; return to shader part epilog
 define amdgpu_ps float @raw_buffer_load_sbyte(<4 x i32> inreg %rsrc) {
@@ -308,7 +329,7 @@ main_body:
 ;CHECK-LABEL: {{^}}raw_buffer_load_sshort:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: buffer_load_sshort v{{[0-9]}}, off, s[0:3], 0
-;CHECK-NEXT: s_waitcnt vmcnt(0)
+;CHECK: s_waitcnt vmcnt(0)
 ;CHECK-NEXT: v_cvt_f32_i32_e32 v0, v0
 ;CHECK-NEXT: ; return to shader part epilog
 define amdgpu_ps float @raw_buffer_load_sshort(<4 x i32> inreg %rsrc) {
