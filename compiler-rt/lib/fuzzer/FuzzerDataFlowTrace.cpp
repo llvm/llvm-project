@@ -52,6 +52,8 @@ void DataFlowTrace::Init(const std::string &DirPath,
     // Printf("=== %s\n", Name.c_str());
     std::ifstream IF(SF.File);
     while (std::getline(IF, L, '\n')) {
+      if (!L.empty() && L[0] == 'C')
+        continue; // Ignore coverage.
       size_t SpacePos = L.find(' ');
       if (SpacePos == std::string::npos)
         return ParseError("no space in the trace line");

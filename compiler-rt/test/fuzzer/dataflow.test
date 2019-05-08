@@ -94,8 +94,8 @@ RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN %
 RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
 USE_DATA_FLOW_TRACE: INFO: Focus function is set to 'Func2'
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: reading from {{.*}}/OUT
-USE_DATA_FLOW_TRACE-DAG: a8eefe2fd5d6b32028f355fafa3e739a6bf5edc => |000001|
-USE_DATA_FLOW_TRACE-DGA: d28cb407e8e1a702c72d25473f0553d3ec172262 => |0000011|
+USE_DATA_FLOW_TRACE-DAG: ca8eefe2fd5d6b32028f355fafa3e739a6bf5edc => |000001|
+USE_DATA_FLOW_TRACE-DAG: d28cb407e8e1a702c72d25473f0553d3ec172262 => |0000011|
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: 6 trace files, 3 functions, 2 traces with focus function
 
 # Test that we can run collect_data_flow on a long input (>2**16 bytes)
