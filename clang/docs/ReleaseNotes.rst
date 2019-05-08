@@ -300,6 +300,14 @@ Windows Support
   ``MSInheritanceAttr`` attributes to class template instantiations created
   for explicit template instantiation declarations.
 
+- The ``-fno-auto-import`` option was added for MinGW targets. The option both
+  affects code generation (inhibiting generating indirection via ``.refptr``
+  stubs for potentially auto imported symbols, generating smaller and more
+  efficient code) and linking (making the linker error out on such cases).
+  If the option only is used during code generation but not when linking,
+  linking may succeed but the resulting executables may expose issues at
+  runtime.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
