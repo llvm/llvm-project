@@ -50,7 +50,7 @@ class MappedMemoryTest : public ::testing::TestWithParam<unsigned> {
 public:
   MappedMemoryTest() {
     Flags = GetParam();
-    PageSize = sys::Process::getPageSize();
+    PageSize = sys::Process::getPageSizeEstimate();
   }
 
 protected:

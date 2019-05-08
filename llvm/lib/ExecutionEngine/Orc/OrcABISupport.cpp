@@ -147,7 +147,7 @@ Error OrcAArch64::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
   const unsigned StubSize = IndirectStubsInfo::StubSize;
 
   // Emit at least MinStubs, rounded up to fill the pages allocated.
-  unsigned PageSize = sys::Process::getPageSize();
+  static const unsigned PageSize = sys::Process::getPageSizeEstimate();
   unsigned NumPages = ((MinStubs * StubSize) + (PageSize - 1)) / PageSize;
   unsigned NumStubs = (NumPages * PageSize) / StubSize;
 
@@ -229,7 +229,7 @@ Error OrcX86_64_Base::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
   const unsigned StubSize = IndirectStubsInfo::StubSize;
 
   // Emit at least MinStubs, rounded up to fill the pages allocated.
-  unsigned PageSize = sys::Process::getPageSize();
+  static const unsigned PageSize = sys::Process::getPageSizeEstimate();
   unsigned NumPages = ((MinStubs * StubSize) + (PageSize - 1)) / PageSize;
   unsigned NumStubs = (NumPages * PageSize) / StubSize;
 
@@ -497,7 +497,7 @@ Error OrcI386::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
   const unsigned StubSize = IndirectStubsInfo::StubSize;
 
   // Emit at least MinStubs, rounded up to fill the pages allocated.
-  unsigned PageSize = sys::Process::getPageSize();
+  static const unsigned PageSize = sys::Process::getPageSizeEstimate();
   unsigned NumPages = ((MinStubs * StubSize) + (PageSize - 1)) / PageSize;
   unsigned NumStubs = (NumPages * PageSize) / StubSize;
 
@@ -683,7 +683,7 @@ Error OrcMips32_Base::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
   const unsigned StubSize = IndirectStubsInfo::StubSize;
 
   // Emit at least MinStubs, rounded up to fill the pages allocated.
-  unsigned PageSize = sys::Process::getPageSize();
+  static const unsigned PageSize = sys::Process::getPageSizeEstimate();
   unsigned NumPages = ((MinStubs * StubSize) + (PageSize - 1)) / PageSize;
   unsigned NumStubs = (NumPages * PageSize) / StubSize;
 
@@ -929,7 +929,7 @@ Error OrcMips64::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
   const unsigned StubSize = IndirectStubsInfo::StubSize;
 
   // Emit at least MinStubs, rounded up to fill the pages allocated.
-  unsigned PageSize = sys::Process::getPageSize();
+  static const unsigned PageSize = sys::Process::getPageSizeEstimate();
   unsigned NumPages = ((MinStubs * StubSize) + (PageSize - 1)) / PageSize;
   unsigned NumStubs = (NumPages * PageSize) / StubSize;
 

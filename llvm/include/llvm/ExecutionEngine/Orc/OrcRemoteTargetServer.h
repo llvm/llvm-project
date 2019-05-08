@@ -299,13 +299,13 @@ private:
     std::error_code EC;
     auto TrampolineBlock =
         sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
-            sys::Process::getPageSize(), nullptr,
+            sys::Process::getPageSizeEstimate(), nullptr,
             sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
     if (EC)
       return errorCodeToError(EC);
 
     uint32_t NumTrampolines =
-        (sys::Process::getPageSize() - TargetT::PointerSize) /
+        (sys::Process::getPageSizeEstimate() - TargetT::PointerSize) /
         TargetT::TrampolineSize;
 
     uint8_t *TrampolineMem = static_cast<uint8_t *>(TrampolineBlock.base());
@@ -335,7 +335,7 @@ private:
   handleGetRemoteInfo() {
     std::string ProcessTriple = sys::getProcessTriple();
     uint32_t PointerSize = TargetT::PointerSize;
-    uint32_t PageSize = sys::Process::getPageSize();
+    uint32_t PageSize = sys::Process::getPageSizeEstimate();
     uint32_t TrampolineSize = TargetT::TrampolineSize;
     uint32_t IndirectStubSize = TargetT::IndirectStubsInfo::StubSize;
     LLVM_DEBUG(dbgs() << "  Remote info:\n"

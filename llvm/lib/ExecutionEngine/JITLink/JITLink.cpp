@@ -194,12 +194,12 @@ InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
   for (auto &KV : Request) {
     auto &Seg = KV.second;
 
-    if (Seg.getContentAlignment() > sys::Process::getPageSize())
+    if (Seg.getContentAlignment() > sys::Process::getPageSizeEstimate())
       return make_error<StringError>("Cannot request higher than page "
                                      "alignment",
                                      inconvertibleErrorCode());
 
-    if (sys::Process::getPageSize() % Seg.getContentAlignment() != 0)
+    if (sys::Process::getPageSizeEstimate() % Seg.getContentAlignment() != 0)
       return make_error<StringError>("Page size is not a multiple of "
                                      "alignment",
                                      inconvertibleErrorCode());
