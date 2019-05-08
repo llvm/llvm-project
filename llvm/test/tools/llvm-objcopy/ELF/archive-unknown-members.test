@@ -11,7 +11,7 @@
 
 # RUN: not llvm-objcopy --strip-debug %t1.a 2>&1 | FileCheck %s -DARCHIVE=%t1.a
 # RUN: not llvm-strip --strip-debug %t2.a 2>&1 | FileCheck %s -DARCHIVE=%t2.a
-## Verify that the archive was not modified, if any member couldn't be recognised.
+## Verify that the archive was not modified, if any member couldn't be recognized.
 # RUN: cmp %t.a %t1.a
 # RUN: cmp %t.a %t2.a
 
@@ -28,7 +28,7 @@
 # RUN: not llvm-strip --strip-debug %t.thin2.a 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=THIN -DARCHIVE=%t.thin2.a -DMEMBER=%s
 ## Verify that the first member was not modified, if a later member could not
-## be recognised.
+## be recognized.
 # RUN: cmp %t.o %t1.o
 # RUN: cmp %t.o %t2.o
 
