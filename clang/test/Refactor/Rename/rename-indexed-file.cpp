@@ -38,7 +38,7 @@ Test notIndexed; // CHECK1-NOT: rename [[@LINE]]
 
 // RUN: not clang-refactor-test rename-indexed-file -no-textual-matches -name=Test -new-name=Foo %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR1 %s
 
-// CHECK-ERROR1: for the -indexed-file option: must be specified at least once!
+// CHECK-ERROR1: for the --indexed-file option: must be specified at least once!
 
 // It should be possible to have the filename as one of the compilation arguments
 // RUN: clang-refactor-test rename-indexed-file -no-textual-matches -ignore-filename-for-initiation-tu -name=Test -new-name=Foo -indexed-file=%s -indexed-at=4:7 -indexed-at=6:3 -indexed-at=7:4 -indexed-at=14:3 %s -c %s -Wall | FileCheck --check-prefix=CHECK1 %s
