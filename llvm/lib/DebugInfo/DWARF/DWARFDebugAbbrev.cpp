@@ -83,12 +83,12 @@ void DWARFDebugAbbrev::parse() const {
   if (!Data)
     return;
   uint32_t Offset = 0;
-  DWARFAbbreviationDeclarationSet AbbrDecls;
   auto I = AbbrDeclSets.begin();
   while (Data->isValidOffset(Offset)) {
     while (I != AbbrDeclSets.end() && I->first < Offset)
       ++I;
     uint32_t CUAbbrOffset = Offset;
+    DWARFAbbreviationDeclarationSet AbbrDecls;
     if (!AbbrDecls.extract(*Data, &Offset))
       break;
     AbbrDeclSets.insert(I, std::make_pair(CUAbbrOffset, std::move(AbbrDecls)));
