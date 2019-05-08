@@ -4482,6 +4482,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return Operand.getOperand(0);
     break;
   case ISD::FNEG:
+    // Negation of an unknown bag of bits is still completely undefined.
+    if (OpOpcode == ISD::UNDEF)
+      return getUNDEF(VT);
+
     // -(X-Y) -> (Y-X) is unsafe because when X==Y, -0.0 != +0.0
     if ((getTarget().Options.UnsafeFPMath || Flags.hasNoSignedZeros()) &&
         OpOpcode == ISD::FSUB)
