@@ -542,7 +542,9 @@ public:
     SerializeAll(tail...);
   }
 
-  void SerializeAll() {}
+  void SerializeAll() {
+    m_stream.flush();
+  }
 
 private:
   /// Serialize pointers. We need to differentiate between pointers to
