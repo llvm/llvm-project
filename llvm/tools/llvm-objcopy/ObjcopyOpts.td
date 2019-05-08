@@ -238,6 +238,10 @@ defm prefix_symbols
     : Eq<"prefix-symbols", "Add <prefix> to the start of every symbol name">,
       MetaVarName<"prefix">;
 
+defm prefix_alloc_sections
+    : Eq<"prefix-alloc-sections", "Add <prefix> to the start of every allocated section name">,
+      MetaVarName<"prefix">;
+
 def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;
 def V : Flag<["-"], "V">, Alias<version>;
