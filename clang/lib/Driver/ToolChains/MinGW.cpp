@@ -169,6 +169,10 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
+  if (!Args.hasFlag(options::OPT_fauto_import, options::OPT_fno_auto_import,
+                    true))
+    CmdArgs.push_back("--disable-auto-import");
+
   if (Arg *A = Args.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none")
