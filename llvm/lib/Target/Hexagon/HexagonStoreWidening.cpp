@@ -337,8 +337,7 @@ bool HexagonStoreWidening::selectStores(InstrGroup::iterator Begin,
     return false;
 
   OG.push_back(FirstMI);
-  MachineInstr *S1 = FirstMI, *S2 = *(Begin+1);
-  InstrGroup::iterator I = Begin+1;
+  MachineInstr *S1 = FirstMI;
 
   // Pow2Num will be the largest number of elements in OG such that the sum
   // of sizes of stores 0...Pow2Num-1 will be a power of 2.
@@ -350,8 +349,8 @@ bool HexagonStoreWidening::selectStores(InstrGroup::iterator Begin,
   // does not exceed the limit (MaxSize).
   // Keep track of when the total size covered is a power of 2, since
   // this is a size a single store can cover.
-  while (I != End) {
-    S2 = *I;
+  for (InstrGroup::iterator I = Begin + 1; I != End; ++I) {
+    MachineInstr *S2 = *I;
     // Stores are sorted, so if S1 and S2 are not adjacent, there won't be
     // any other store to fill the "hole".
     if (!storesAreAdjacent(S1, S2))
@@ -371,7 +370,6 @@ bool HexagonStoreWidening::selectStores(InstrGroup::iterator Begin,
       break;
 
     S1 = S2;
-    ++I;
   }
 
   // The stores don't add up to anything that can be widened.  Clean up.
