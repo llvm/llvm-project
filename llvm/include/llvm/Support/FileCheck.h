@@ -52,7 +52,7 @@ public:
   /// variable.
   explicit FileCheckNumExpr(uint64_t Value) : Value(Value) {}
 
-  /// Return the value being matched against.
+  /// \returns the value being matched against.
   uint64_t getValue() const { return Value; }
 };
 
@@ -95,22 +95,22 @@ public:
       : Context(Context), IsNumExpr(true), FromStr(Expr), NumExpr(NumExpr),
         InsertIdx(InsertIdx) {}
 
-  /// Return whether this is a numeric expression substitution.
+  /// \returns whether this is a numeric expression substitution.
   bool isNumExpr() const { return IsNumExpr; }
 
-  /// Return the string to be substituted.
+  /// \returns the string to be substituted.
   StringRef getFromString() const { return FromStr; }
 
-  /// Return the index where the substitution is to be performed.
+  /// \returns the index where the substitution is to be performed.
   size_t getIndex() const { return InsertIdx; }
 
-  /// Return the result of the substitution represented by this class instance
-  /// or None if substitution failed. For a numeric expression we substitute it
-  /// by its value. For a pattern variable we simply replace it by the text its
-  /// definition matched.
+  /// \returns the result of the substitution represented by this class
+  /// instance or None if substitution failed. For a numeric expression we
+  /// substitute it by its value. For a pattern variable we simply replace it
+  /// by the text its definition matched.
   llvm::Optional<std::string> getResult() const;
 
-  /// Return the name of the undefined variable used in this substitution, if
+  /// \returns the name of the undefined variable used in this substitution, if
   /// any, or an empty string otherwise.
   StringRef getUndefVarName() const;
 };
@@ -155,6 +155,7 @@ public:
   int getCount() const { return Count; }
   FileCheckType &setCount(int C);
 
+  // \returns a description of \p Prefix.
   std::string getDescription(StringRef Prefix) const;
 };
 } // namespace Check
@@ -180,22 +181,22 @@ private:
   std::vector<std::unique_ptr<FileCheckNumExpr>> NumExprs;
 
 public:
-  /// Return the value of pattern variable \p VarName or None if no such
+  /// \returns the value of pattern variable \p VarName or None if no such
   /// variable has been defined.
   llvm::Optional<StringRef> getPatternVarValue(StringRef VarName);
 
-  /// Define pattern variables from definitions given on the command line,
-  /// passed as a vector of VAR=VAL strings in \p CmdlineDefines. Report any
-  /// error to \p SM and return whether an error occured.
+  /// Defines pattern variables from definitions given on the command line,
+  /// passed as a vector of VAR=VAL strings in \p CmdlineDefines. Reports any
+  /// error to \p SM and \returns whether an error occured.
   bool defineCmdlineVariables(std::vector<std::string> &CmdlineDefines,
                               SourceMgr &SM);
 
-  /// Undefine local variables (variables whose name does not start with a '$'
-  /// sign), i.e. remove them from GlobalVariableTable.
+  /// Undefines local variables (variables whose name does not start with a '$'
+  /// sign), i.e. removes them from GlobalVariableTable.
   void clearLocalVars();
 
 private:
-  /// Make a new numeric expression instance and register it for destruction
+  /// Makes a new numeric expression instance and registers it for destruction
   /// when the context is destroyed.
   template <class... Types> FileCheckNumExpr *makeNumExpr(Types... Args);
 };
@@ -246,31 +247,50 @@ public:
                             FileCheckPatternContext *Context)
       : Context(Context), CheckTy(Ty) {}
 
-  /// Returns the location in source code.
+  /// \returns the location in source code.
   SMLoc getLoc() const { return PatternLoc; }
 
-  /// Returns the pointer to the global state for all patterns in this
+  /// \returns the pointer to the global state for all patterns in this
   /// FileCheck instance.
   FileCheckPatternContext *getContext() const { return Context; }
 
-  /// Return whether \p is a valid first character for a variable name.
+  /// \returns whether \p C is a valid first character for a variable name.
   static bool isValidVarNameStart(char C);
-  /// Verify that the string at the start of \p Str is a well formed variable.
-  /// Return false if it is and set \p IsPseudo to indicate if it is a pseudo
-  /// variable and \p TrailIdx to the position of the last character that is
-  /// part of the variable name. Otherwise, only return true.
+  /// Verifies that the string at the start of \p Str is a well formed
+  /// variable. \returns false if it is and sets \p IsPseudo to indicate if it
+  /// is a pseudo variable and \p TrailIdx to the position of the last
+  /// character that is part of the variable name. Otherwise, only
+  /// \returns true.
   static bool parseVariable(StringRef Str, bool &IsPseudo, unsigned &TrailIdx);
-  /// Parse a numeric expression involving pseudo variable \p Name with the
+  /// Parses a numeric expression involving pseudo variable \p Name with the
   /// string corresponding to the operation being performed in \p Trailer.
-  /// Return the class representing the numeric expression or nullptr if
+  /// \returns the class representing the numeric expression or nullptr if
   /// parsing fails in which case errors are reported on \p SM.
   FileCheckNumExpr *parseNumericExpression(StringRef Name, StringRef Trailer,
                                            const SourceMgr &SM) const;
+  /// Parses the pattern in \p PatternStr and initializes this FileCheckPattern
+  /// instance accordingly.
+  ///
+  /// \p Prefix provides which prefix is being matched, \p Req describes the
+  /// global options that influence the parsing such as whitespace
+  /// canonicalization, \p SM provides the SourceMgr used for error reports,
+  /// and \p LineNumber is the line number in the input file from which the
+  /// pattern string was read. \returns true in case of an error, false
+  /// otherwise.
   bool ParsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
                     unsigned LineNumber, const FileCheckRequest &Req);
+  /// Matches the pattern string against the input buffer \p Buffer
+  ///
+  /// \returns the position that is matched or npos if there is no match. If
+  /// there is a match, updates \p MatchLen with the size of the matched
+  /// string.
+  ///
+  /// The GlobalVariableTable StringMap in the FileCheckPatternContext class
+  /// instance provides the current values of FileCheck pattern variables and
+  /// is updated if this match defines new values.
   size_t match(StringRef Buffer, size_t &MatchLen) const;
-  /// Print value of successful substitutions or name of undefined pattern or
-  /// numeric variables preventing such a successful substitution.
+  /// Prints the value of successful substitutions or the name of the undefined
+  /// pattern or numeric variable preventing such a successful substitution.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                           SMRange MatchRange = None) const;
   void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
@@ -287,7 +307,16 @@ public:
 private:
   bool AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM);
   void AddBackrefToRegEx(unsigned BackrefNum);
+  /// Computes an arbitrary estimate for the quality of matching this pattern
+  /// at the start of \p Buffer; a distance of zero should correspond to a
+  /// perfect match.
   unsigned computeMatchDistance(StringRef Buffer) const;
+  /// Finds the closing sequence of a regex variable usage or definition.
+  ///
+  /// \p Str has to point in the beginning of the definition (right after the
+  /// opening sequence). \p SM holds the SourceMgr used for error repporting.
+  ///  \returns the offset of the closing sequence within Str, or npos if it
+  /// was not found.
   size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
 };
 
@@ -366,16 +395,25 @@ struct FileCheckString {
   FileCheckString(const FileCheckPattern &P, StringRef S, SMLoc L)
       : Pat(P), Prefix(S), Loc(L) {}
 
+  /// Matches check string and its "not strings" and/or "dag strings".
   size_t Check(const SourceMgr &SM, StringRef Buffer, bool IsLabelScanMode,
                size_t &MatchLen, FileCheckRequest &Req,
                std::vector<FileCheckDiag> *Diags) const;
 
+  /// Verifies that there is a single line in the given \p Buffer. Errors are
+  /// reported against \p SM.
   bool CheckNext(const SourceMgr &SM, StringRef Buffer) const;
+  /// Verifies that there is no newline in the given \p Buffer. Errors are
+  /// reported against \p SM.
   bool CheckSame(const SourceMgr &SM, StringRef Buffer) const;
+  /// Verifies that none of the strings in \p NotStrings are found in the given
+  /// \p Buffer. Errors are reported against \p SM and diagnostics recorded in
+  /// \p Diags according to the verbosity level set in \p Req.
   bool CheckNot(const SourceMgr &SM, StringRef Buffer,
                 const std::vector<const FileCheckPattern *> &NotStrings,
                 const FileCheckRequest &Req,
                 std::vector<FileCheckDiag> *Diags) const;
+  /// Matches "dag strings" and their mixed "not strings".
   size_t CheckDag(const SourceMgr &SM, StringRef Buffer,
                   std::vector<const FileCheckPattern *> &NotStrings,
                   const FileCheckRequest &Req,
@@ -398,24 +436,27 @@ public:
   // library.
   Regex buildCheckPrefixRegex();
 
-  /// Read the check file, which specifies the sequence of expected strings.
+  /// Reads the check file from \p Buffer and records the expected strings it
+  /// contains in the \p CheckStrings vector. Errors are reported against
+  /// \p SM.
   ///
-  /// The strings are added to the CheckStrings vector. Returns true in case of
-  /// an error, false otherwise.
+  /// Only expected strings whose prefix is one of those listed in \p PrefixRE
+  /// are recorded. \returns true in case of an error, false otherwise.
   bool ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
                      std::vector<FileCheckString> &CheckStrings);
 
   bool ValidateCheckPrefixes();
 
-  /// Canonicalize whitespaces in the file. Line endings are replaced with
+  /// Canonicalizes whitespaces in the file. Line endings are replaced with
   /// UNIX-style '\n'.
   StringRef CanonicalizeFile(MemoryBuffer &MB,
                              SmallVectorImpl<char> &OutputBuffer);
 
-  /// Check the input to FileCheck provided in the \p Buffer against the \p
-  /// CheckStrings read from the check file.
+  /// Checks the input to FileCheck provided in the \p Buffer against the
+  /// \p CheckStrings read from the check file and record diagnostics emitted
+  /// in \p Diags. Errors are recorded against \p SM.
   ///
-  /// Returns false if the input fails to satisfy the checks.
+  /// \returns false if the input fails to satisfy the checks.
   bool CheckInput(SourceMgr &SM, StringRef Buffer,
                   ArrayRef<FileCheckString> CheckStrings,
                   std::vector<FileCheckDiag> *Diags = nullptr);
