@@ -214,6 +214,7 @@ static cl::opt<bool>
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = EnableLoopInterleaving;
   LoopVectorization = EnableLoopVectorization;
+  SLPVectorization = RunSLPVectorization;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
 }
@@ -888,7 +889,8 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
                                      sinkCommonInsts(true)));
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
-  OptimizePM.addPass(SLPVectorizerPass());
+  if (PTO.SLPVectorization)
+    OptimizePM.addPass(SLPVectorizerPass());
 
   OptimizePM.addPass(InstCombinePass());
 
