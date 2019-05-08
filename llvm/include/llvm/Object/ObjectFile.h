@@ -257,8 +257,7 @@ protected:
   friend class SectionRef;
 
   virtual void moveSectionNext(DataRefImpl &Sec) const = 0;
-  virtual std::error_code getSectionName(DataRefImpl Sec,
-                                         StringRef &Res) const = 0;
+  virtual Expected<StringRef> getSectionName(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionAddress(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionIndex(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionSize(DataRefImpl Sec) const = 0;
@@ -364,6 +363,9 @@ public:
   createCOFFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<ObjectFile>>
+  createXCOFFObjectFile(MemoryBufferRef Object);
+
+  static Expected<std::unique_ptr<ObjectFile>>
   createELFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<MachOObjectFile>>
@@ -435,7 +437,11 @@ inline void SectionRef::moveNext() {
 }
 
 inline std::error_code SectionRef::getName(StringRef &Result) const {
-  return OwningObject->getSectionName(SectionPimpl, Result);
+  Expected<StringRef> NameOrErr = OwningObject->getSectionName(SectionPimpl);
+  if (!NameOrErr)
+    return errorToErrorCode(NameOrErr.takeError());
+  Result = *NameOrErr;
+  return std::error_code();
 }
 
 inline uint64_t SectionRef::getAddress() const {

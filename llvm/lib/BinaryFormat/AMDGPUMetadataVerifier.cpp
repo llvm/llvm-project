@@ -20,98 +20,92 @@ namespace HSAMD {
 namespace V3 {
 
 bool MetadataVerifier::verifyScalar(
-    msgpack::Node &Node, msgpack::ScalarNode::ScalarKind SKind,
-    function_ref<bool(msgpack::ScalarNode &)> verifyValue) {
-  auto ScalarPtr = dyn_cast<msgpack::ScalarNode>(&Node);
-  if (!ScalarPtr)
+    msgpack::DocNode &Node, msgpack::Type SKind,
+    function_ref<bool(msgpack::DocNode &)> verifyValue) {
+  if (!Node.isScalar())
     return false;
-  auto &Scalar = *ScalarPtr;
-  // Do not output extraneous tags for types we know from the spec.
-  Scalar.IgnoreTag = true;
-  if (Scalar.getScalarKind() != SKind) {
+  if (Node.getKind() != SKind) {
     if (Strict)
       return false;
     // If we are not strict, we interpret string values as "implicitly typed"
     // and attempt to coerce them to the expected type here.
-    if (Scalar.getScalarKind() != msgpack::ScalarNode::SK_String)
+    if (Node.getKind() != msgpack::Type::String)
       return false;
-    std::string StringValue = Scalar.getString();
-    Scalar.setScalarKind(SKind);
-    if (Scalar.inputYAML(StringValue) != StringRef())
+    StringRef StringValue = Node.getString();
+    Node.fromString(StringValue);
+    if (Node.getKind() != SKind)
       return false;
   }
   if (verifyValue)
-    return verifyValue(Scalar);
+    return verifyValue(Node);
   return true;
 }
 
-bool MetadataVerifier::verifyInteger(msgpack::Node &Node) {
-  if (!verifyScalar(Node, msgpack::ScalarNode::SK_UInt))
-    if (!verifyScalar(Node, msgpack::ScalarNode::SK_Int))
+bool MetadataVerifier::verifyInteger(msgpack::DocNode &Node) {
+  if (!verifyScalar(Node, msgpack::Type::UInt))
+    if (!verifyScalar(Node, msgpack::Type::Int))
       return false;
   return true;
 }
 
 bool MetadataVerifier::verifyArray(
-    msgpack::Node &Node, function_ref<bool(msgpack::Node &)> verifyNode,
+    msgpack::DocNode &Node, function_ref<bool(msgpack::DocNode &)> verifyNode,
     Optional<size_t> Size) {
-  auto ArrayPtr = dyn_cast<msgpack::ArrayNode>(&Node);
-  if (!ArrayPtr)
+  if (!Node.isArray())
     return false;
-  auto &Array = *ArrayPtr;
+  auto &Array = Node.getArray();
   if (Size && Array.size() != *Size)
     return false;
   for (auto &Item : Array)
-    if (!verifyNode(*Item.get()))
+    if (!verifyNode(Item))
       return false;
 
   return true;
 }
 
 bool MetadataVerifier::verifyEntry(
-    msgpack::MapNode &MapNode, StringRef Key, bool Required,
-    function_ref<bool(msgpack::Node &)> verifyNode) {
+    msgpack::MapDocNode &MapNode, StringRef Key, bool Required,
+    function_ref<bool(msgpack::DocNode &)> verifyNode) {
   auto Entry = MapNode.find(Key);
   if (Entry == MapNode.end())
     return !Required;
-  return verifyNode(*Entry->second.get());
+  return verifyNode(Entry->second);
 }
 
 bool MetadataVerifier::verifyScalarEntry(
-    msgpack::MapNode &MapNode, StringRef Key, bool Required,
-    msgpack::ScalarNode::ScalarKind SKind,
-    function_ref<bool(msgpack::ScalarNode &)> verifyValue) {
-  return verifyEntry(MapNode, Key, Required, [=](msgpack::Node &Node) {
+    msgpack::MapDocNode &MapNode, StringRef Key, bool Required,
+    msgpack::Type SKind,
+    function_ref<bool(msgpack::DocNode &)> verifyValue) {
+  return verifyEntry(MapNode, Key, Required, [=](msgpack::DocNode &Node) {
     return verifyScalar(Node, SKind, verifyValue);
   });
 }
 
-bool MetadataVerifier::verifyIntegerEntry(msgpack::MapNode &MapNode,
+bool MetadataVerifier::verifyIntegerEntry(msgpack::MapDocNode &MapNode,
                                           StringRef Key, bool Required) {
-  return verifyEntry(MapNode, Key, Required, [this](msgpack::Node &Node) {
+  return verifyEntry(MapNode, Key, Required, [this](msgpack::DocNode &Node) {
     return verifyInteger(Node);
   });
 }
 
-bool MetadataVerifier::verifyKernelArgs(msgpack::Node &Node) {
-  auto ArgsMapPtr = dyn_cast<msgpack::MapNode>(&Node);
-  if (!ArgsMapPtr)
+bool MetadataVerifier::verifyKernelArgs(msgpack::DocNode &Node) {
+  if (!Node.isMap())
     return false;
-  auto &ArgsMap = *ArgsMapPtr;
+  auto &ArgsMap = Node.getMap();
 
   if (!verifyScalarEntry(ArgsMap, ".name", false,
-                         msgpack::ScalarNode::SK_String))
+                         msgpack::Type::String))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".type_name", false,
-                         msgpack::ScalarNode::SK_String))
+                         msgpack::Type::String))
     return false;
   if (!verifyIntegerEntry(ArgsMap, ".size", true))
     return false;
   if (!verifyIntegerEntry(ArgsMap, ".offset", true))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".value_kind", true,
-                         msgpack::ScalarNode::SK_String,
-                         [](msgpack::ScalarNode &SNode) {
+                         msgpack::Type::String,
+                         [](msgpack::DocNode &SNode) {
                            return StringSwitch<bool>(SNode.getString())
                                .Case("by_value", true)
                                .Case("global_buffer", true)
@@ -131,8 +125,8 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::Node &Node) {
                          }))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".value_type", true,
-                         msgpack::ScalarNode::SK_String,
-                         [](msgpack::ScalarNode &SNode) {
+                         msgpack::Type::String,
+                         [](msgpack::DocNode &SNode) {
                            return StringSwitch<bool>(SNode.getString())
                                .Case("struct", true)
                                .Case("i8", true)
@@ -152,8 +146,8 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::Node &Node) {
   if (!verifyIntegerEntry(ArgsMap, ".pointee_align", false))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".address_space", false,
-                         msgpack::ScalarNode::SK_String,
-                         [](msgpack::ScalarNode &SNode) {
+                         msgpack::Type::String,
+                         [](msgpack::DocNode &SNode) {
                            return StringSwitch<bool>(SNode.getString())
                                .Case("private", true)
                                .Case("global", true)
@@ -165,8 +159,8 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::Node &Node) {
                          }))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".access", false,
-                         msgpack::ScalarNode::SK_String,
-                         [](msgpack::ScalarNode &SNode) {
+                         msgpack::Type::String,
+                         [](msgpack::DocNode &SNode) {
                            return StringSwitch<bool>(SNode.getString())
                                .Case("read_only", true)
                                .Case("write_only", true)
@@ -175,8 +169,8 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::Node &Node) {
                          }))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".actual_access", false,
-                         msgpack::ScalarNode::SK_String,
-                         [](msgpack::ScalarNode &SNode) {
+                         msgpack::Type::String,
+                         [](msgpack::DocNode &SNode) {
                            return StringSwitch<bool>(SNode.getString())
                                .Case("read_only", true)
                                .Case("write_only", true)
@@ -185,36 +179,35 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::Node &Node) {
                          }))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".is_const", false,
-                         msgpack::ScalarNode::SK_Boolean))
+                         msgpack::Type::Boolean))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".is_restrict", false,
-                         msgpack::ScalarNode::SK_Boolean))
+                         msgpack::Type::Boolean))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".is_volatile", false,
-                         msgpack::ScalarNode::SK_Boolean))
+                         msgpack::Type::Boolean))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".is_pipe", false,
-                         msgpack::ScalarNode::SK_Boolean))
+                         msgpack::Type::Boolean))
     return false;
 
   return true;
 }
 
-bool MetadataVerifier::verifyKernel(msgpack::Node &Node) {
-  auto KernelMapPtr = dyn_cast<msgpack::MapNode>(&Node);
-  if (!KernelMapPtr)
+bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
+  if (!Node.isMap())
     return false;
-  auto &KernelMap = *KernelMapPtr;
+  auto &KernelMap = Node.getMap();
 
   if (!verifyScalarEntry(KernelMap, ".name", true,
-                         msgpack::ScalarNode::SK_String))
+                         msgpack::Type::String))
     return false;
   if (!verifyScalarEntry(KernelMap, ".symbol", true,
-                         msgpack::ScalarNode::SK_String))
+                         msgpack::Type::String))
     return false;
   if (!verifyScalarEntry(KernelMap, ".language", false,
-                         msgpack::ScalarNode::SK_String,
-                         [](msgpack::ScalarNode &SNode) {
+                         msgpack::Type::String,
+                         [](msgpack::DocNode &SNode) {
                            return StringSwitch<bool>(SNode.getString())
                                .Case("OpenCL C", true)
                                .Case("OpenCL C++", true)
@@ -226,41 +219,41 @@ bool MetadataVerifier::verifyKernel(msgpack::Node &Node) {
                          }))
     return false;
   if (!verifyEntry(
-          KernelMap, ".language_version", false, [this](msgpack::Node &Node) {
+          KernelMap, ".language_version", false, [this](msgpack::DocNode &Node) {
             return verifyArray(
                 Node,
-                [this](msgpack::Node &Node) { return verifyInteger(Node); }, 2);
+                [this](msgpack::DocNode &Node) { return verifyInteger(Node); }, 2);
           }))
     return false;
-  if (!verifyEntry(KernelMap, ".args", false, [this](msgpack::Node &Node) {
-        return verifyArray(Node, [this](msgpack::Node &Node) {
+  if (!verifyEntry(KernelMap, ".args", false, [this](msgpack::DocNode &Node) {
+        return verifyArray(Node, [this](msgpack::DocNode &Node) {
           return verifyKernelArgs(Node);
         });
       }))
     return false;
   if (!verifyEntry(KernelMap, ".reqd_workgroup_size", false,
-                   [this](msgpack::Node &Node) {
+                   [this](msgpack::DocNode &Node) {
                      return verifyArray(Node,
-                                        [this](msgpack::Node &Node) {
+                                        [this](msgpack::DocNode &Node) {
                                           return verifyInteger(Node);
                                         },
                                         3);
                    }))
     return false;
   if (!verifyEntry(KernelMap, ".workgroup_size_hint", false,
-                   [this](msgpack::Node &Node) {
+                   [this](msgpack::DocNode &Node) {
                      return verifyArray(Node,
-                                        [this](msgpack::Node &Node) {
+                                        [this](msgpack::DocNode &Node) {
                                           return verifyInteger(Node);
                                         },
                                         3);
                    }))
     return false;
   if (!verifyScalarEntry(KernelMap, ".vec_type_hint", false,
-                         msgpack::ScalarNode::SK_String))
+                         msgpack::Type::String))
     return false;
   if (!verifyScalarEntry(KernelMap, ".device_enqueue_symbol", false,
-                         msgpack::ScalarNode::SK_String))
+                         msgpack::Type::String))
     return false;
   if (!verifyIntegerEntry(KernelMap, ".kernarg_segment_size", true))
     return false;
@@ -286,29 +279,28 @@ bool MetadataVerifier::verifyKernel(msgpack::Node &Node) {
   return true;
 }
 
-bool MetadataVerifier::verify(msgpack::Node &HSAMetadataRoot) {
-  auto RootMapPtr = dyn_cast<msgpack::MapNode>(&HSAMetadataRoot);
-  if (!RootMapPtr)
+bool MetadataVerifier::verify(msgpack::DocNode &HSAMetadataRoot) {
+  if (!HSAMetadataRoot.isMap())
     return false;
-  auto &RootMap = *RootMapPtr;
+  auto &RootMap = HSAMetadataRoot.getMap();
 
   if (!verifyEntry(
-          RootMap, "amdhsa.version", true, [this](msgpack::Node &Node) {
+          RootMap, "amdhsa.version", true, [this](msgpack::DocNode &Node) {
             return verifyArray(
                 Node,
-                [this](msgpack::Node &Node) { return verifyInteger(Node); }, 2);
+                [this](msgpack::DocNode &Node) { return verifyInteger(Node); }, 2);
           }))
     return false;
   if (!verifyEntry(
-          RootMap, "amdhsa.printf", false, [this](msgpack::Node &Node) {
-            return verifyArray(Node, [this](msgpack::Node &Node) {
-              return verifyScalar(Node, msgpack::ScalarNode::SK_String);
+          RootMap, "amdhsa.printf", false, [this](msgpack::DocNode &Node) {
+            return verifyArray(Node, [this](msgpack::DocNode &Node) {
+              return verifyScalar(Node, msgpack::Type::String);
             });
           }))
     return false;
   if (!verifyEntry(RootMap, "amdhsa.kernels", true,
-                   [this](msgpack::Node &Node) {
-                     return verifyArray(Node, [this](msgpack::Node &Node) {
+                   [this](msgpack::DocNode &Node) {
+                     return verifyArray(Node, [this](msgpack::DocNode &Node) {
                        return verifyKernel(Node);
                      });
                    }))

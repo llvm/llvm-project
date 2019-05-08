@@ -879,6 +879,17 @@ void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(instance.Calloc(nmemb, size, stack));
 }
 
+void *asan_reallocarray(void *p, uptr nmemb, uptr size,
+                        BufferedStackTrace *stack) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportReallocArrayOverflow(nmemb, size, stack);
+  }
+  return asan_realloc(p, nmemb * size, stack);
+}
+
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {
   if (!p)
     return SetErrnoOnNull(instance.Allocate(size, 8, stack, FROM_MALLOC, true));

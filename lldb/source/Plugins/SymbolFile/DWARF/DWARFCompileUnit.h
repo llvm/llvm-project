@@ -10,30 +10,28 @@
 #define SymbolFileDWARF_DWARFCompileUnit_h_
 
 #include "DWARFUnit.h"
+#include "llvm/Support/Error.h"
 
 class DWARFCompileUnit : public DWARFUnit {
 public:
-  static DWARFUnitSP Extract(SymbolFileDWARF *dwarf2Data,
-                             const lldb_private::DWARFDataExtractor &debug_info,
-                             lldb::offset_t *offset_ptr);
+  static llvm::Expected<DWARFUnitSP>
+  extract(SymbolFileDWARF *dwarf2Data,
+          const lldb_private::DWARFDataExtractor &debug_info,
+          lldb::offset_t *offset_ptr);
   void Dump(lldb_private::Stream *s) const override;
 
-  //------------------------------------------------------------------
   /// Get the data that contains the DIE information for this unit.
   ///
-  /// @return
+  /// \return
   ///   The correct data (.debug_types for DWARF 4 and earlier, and
   ///   .debug_info for DWARF 5 and later) for the DIE information in
   ///   this unit.
-  //------------------------------------------------------------------
   const lldb_private::DWARFDataExtractor &GetData() const override;
 
-  //------------------------------------------------------------------
   /// Get the size in bytes of the header.
   ///
-  /// @return
+  /// \return
   ///     Byte size of the compile unit header
-  //------------------------------------------------------------------
   uint32_t GetHeaderByteSize() const override;
 
 private:

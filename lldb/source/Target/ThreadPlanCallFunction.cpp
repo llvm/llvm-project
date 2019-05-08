@@ -29,9 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanCallFunction: Plan to call a single function
-//----------------------------------------------------------------------
 bool ThreadPlanCallFunction::ConstructorSetup(
     Thread &thread, ABI *&abi, lldb::addr_t &start_load_addr,
     lldb::addr_t &function_load_addr) {

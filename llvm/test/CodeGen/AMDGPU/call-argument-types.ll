@@ -26,7 +26,9 @@ declare hidden void @external_void_func_f32(float) #0
 declare hidden void @external_void_func_f64(double) #0
 declare hidden void @external_void_func_v2f32(<2 x float>) #0
 declare hidden void @external_void_func_v2f64(<2 x double>) #0
+declare hidden void @external_void_func_v3f32(<3 x float>) #0
 declare hidden void @external_void_func_v3f64(<3 x double>) #0
+declare hidden void @external_void_func_v5f32(<5 x float>) #0
 
 declare hidden void @external_void_func_v2i16(<2 x i16>) #0
 declare hidden void @external_void_func_v2f16(<2 x half>) #0
@@ -39,6 +41,7 @@ declare hidden void @external_void_func_v2i32(<2 x i32>) #0
 declare hidden void @external_void_func_v3i32(<3 x i32>) #0
 declare hidden void @external_void_func_v3i32_i32(<3 x i32>, i32) #0
 declare hidden void @external_void_func_v4i32(<4 x i32>) #0
+declare hidden void @external_void_func_v5i32(<5 x i32>) #0
 declare hidden void @external_void_func_v8i32(<8 x i32>) #0
 declare hidden void @external_void_func_v16i32(<16 x i32>) #0
 declare hidden void @external_void_func_v32i32(<32 x i32>) #0
@@ -341,6 +344,30 @@ define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}test_call_external_void_func_v3f32_imm:
+; GCN-DAG: v_mov_b32_e32 v0, 1.0
+; GCN-DAG: v_mov_b32_e32 v1, 2.0
+; GCN-DAG: v_mov_b32_e32 v2, 4.0
+; GCN-NOT: v3,
+; GCN: s_swappc_b64
+define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
+  call void @external_void_func_v3f32(<3 x float> <float 1.0, float 2.0, float 4.0>)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_call_external_void_func_v5f32_imm:
+; GCN-DAG: v_mov_b32_e32 v0, 1.0
+; GCN-DAG: v_mov_b32_e32 v1, 2.0
+; GCN-DAG: v_mov_b32_e32 v2, 4.0
+; GCN-DAG: v_mov_b32_e32 v3, -1.0
+; GCN-DAG: v_mov_b32_e32 v4, 0.5
+; GCN-NOT: v5,
+; GCN: s_swappc_b64
+define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
+  call void @external_void_func_v5f32(<5 x float> <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>)
+  ret void
+}
+
 ; GCN-LABEL: {{^}}test_call_external_void_func_f64_imm:
 ; GCN: v_mov_b32_e32 v0, 0{{$}}
 ; GCN: v_mov_b32_e32 v1, 0x40100000
@@ -516,6 +543,19 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
   call void @external_void_func_v4i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_call_external_void_func_v5i32_imm:
+; GCN-DAG: v_mov_b32_e32 v0, 1
+; GCN-DAG: v_mov_b32_e32 v1, 2
+; GCN-DAG: v_mov_b32_e32 v2, 3
+; GCN-DAG: v_mov_b32_e32 v3, 4
+; GCN-DAG: v_mov_b32_e32 v4, 5
+; GCN-NOT v5,
+; GCN: s_swappc_b64
+define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
+  call void @external_void_func_v5i32(<5 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5>)
   ret void
 }
 
@@ -752,8 +792,8 @@ entry:
 ; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:12 ; 4-byte Folded Spill
 ; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4
 ; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:8
-; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:8
 ; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:4
+; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:8
 ; GCN: s_getpc_b64
 ; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:12 ; 4-byte Folded Reload
 ; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:16 ; 4-byte Folded Reload
@@ -764,9 +804,140 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}stack_12xv3i32:
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; GCN: buffer_store_dword [[REG15]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; GCN: buffer_store_dword [[REG12]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 v31, 11
+; GCN: s_getpc
+define void @stack_12xv3i32() #0 {
+entry:
+  call void @external_void_func_12xv3i32(
+      <3 x i32><i32 0, i32 0, i32 0>,
+      <3 x i32><i32 1, i32 1, i32 1>,
+      <3 x i32><i32 2, i32 2, i32 2>,
+      <3 x i32><i32 3, i32 3, i32 3>,
+      <3 x i32><i32 4, i32 4, i32 4>,
+      <3 x i32><i32 5, i32 5, i32 5>,
+      <3 x i32><i32 6, i32 6, i32 6>,
+      <3 x i32><i32 7, i32 7, i32 7>,
+      <3 x i32><i32 8, i32 8, i32 8>,
+      <3 x i32><i32 9, i32 9, i32 9>,
+      <3 x i32><i32 10, i32 11, i32 12>,
+      <3 x i32><i32 13, i32 14, i32 15>)
+  ret void
+}
+
+; GCN-LABEL: {{^}}stack_12xv3f32:
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; GCN: buffer_store_dword [[REG15]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
+; GCN: buffer_store_dword [[REG12]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 v31, 0x41300000
+; GCN: s_getpc
+define void @stack_12xv3f32() #0 {
+entry:
+  call void @external_void_func_12xv3f32(
+      <3 x float><float 0.0, float 0.0, float 0.0>,
+      <3 x float><float 1.0, float 1.0, float 1.0>,
+      <3 x float><float 2.0, float 2.0, float 2.0>,
+      <3 x float><float 3.0, float 3.0, float 3.0>,
+      <3 x float><float 4.0, float 4.0, float 4.0>,
+      <3 x float><float 5.0, float 5.0, float 5.0>,
+      <3 x float><float 6.0, float 6.0, float 6.0>,
+      <3 x float><float 7.0, float 7.0, float 7.0>,
+      <3 x float><float 8.0, float 8.0, float 8.0>,
+      <3 x float><float 9.0, float 9.0, float 9.0>,
+      <3 x float><float 10.0, float 11.0, float 12.0>,
+      <3 x float><float 13.0, float 14.0, float 15.0>)
+  ret void
+}
+
+; GCN-LABEL: {{^}}stack_8xv5i32:
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; GCN: buffer_store_dword [[REG15]], {{.*}} offset:32
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:28
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:24
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; GCN: buffer_store_dword [[REG12]], {{.*}} offset:20
+; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
+; GCN: buffer_store_dword [[REG11]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
+; GCN: buffer_store_dword [[REG10]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
+; GCN: buffer_store_dword [[REG9]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
+; GCN: buffer_store_dword [[REG8]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 v31, 7
+; GCN: s_getpc
+define void @stack_8xv5i32() #0 {
+entry:
+  call void @external_void_func_8xv5i32(
+      <5 x i32><i32 0, i32 0, i32 0, i32 0, i32 0>,
+      <5 x i32><i32 1, i32 1, i32 1, i32 1, i32 1>,
+      <5 x i32><i32 2, i32 2, i32 2, i32 2, i32 2>,
+      <5 x i32><i32 3, i32 3, i32 3, i32 3, i32 3>,
+      <5 x i32><i32 4, i32 4, i32 4, i32 4, i32 4>,
+      <5 x i32><i32 5, i32 5, i32 5, i32 5, i32 5>,
+      <5 x i32><i32 6, i32 7, i32 8, i32 9, i32 10>,
+      <5 x i32><i32 11, i32 12, i32 13, i32 14, i32 15>)
+  ret void
+}
+
+; GCN-LABEL: {{^}}stack_8xv5f32:
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; GCN: buffer_store_dword [[REG15]], {{.*}} offset:32
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:28
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:24
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
+; GCN: buffer_store_dword [[REG12]], {{.*}} offset:20
+; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
+; GCN: buffer_store_dword [[REG11]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
+; GCN: buffer_store_dword [[REG10]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
+; GCN: buffer_store_dword [[REG9]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x41000000
+; GCN: buffer_store_dword [[REG8]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 v31, 0x40e00000
+; GCN: s_getpc
+define void @stack_8xv5f32() #0 {
+entry:
+  call void @external_void_func_8xv5f32(
+      <5 x float><float 0.0, float 0.0, float 0.0, float 0.0, float 0.0>,
+      <5 x float><float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>,
+      <5 x float><float 2.0, float 2.0, float 2.0, float 2.0, float 2.0>,
+      <5 x float><float 3.0, float 3.0, float 3.0, float 3.0, float 3.0>,
+      <5 x float><float 4.0, float 4.0, float 4.0, float 4.0, float 4.0>,
+      <5 x float><float 5.0, float 5.0, float 5.0, float 5.0, float 5.0>,
+      <5 x float><float 6.0, float 7.0, float 8.0, float 9.0, float 10.0>,
+      <5 x float><float 11.0, float 12.0, float 13.0, float 14.0, float 15.0>)
+  ret void
+}
+
 declare hidden void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval align 16) #0
 declare hidden void @stack_passed_f64_arg(<32 x i32>, double) #0
-
+declare hidden void @external_void_func_12xv3i32(<3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>,
+    <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) #0
+declare hidden void @external_void_func_8xv5i32(<5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>,
+    <5 x i32>, <5 x i32>, <5 x i32>, <5 x i32>) #0
+declare hidden void @external_void_func_12xv3f32(<3 x float>, <3 x float>, <3 x float>, <3 x float>,
+    <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>, <3 x float>) #0
+declare hidden void @external_void_func_8xv5f32(<5 x float>, <5 x float>, <5 x float>, <5 x float>,
+    <5 x float>, <5 x float>, <5 x float>, <5 x float>) #0
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind noinline }

@@ -637,7 +637,7 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
-  OptSize = MF.getFunction().optForSize();
+  OptSize = MF.getFunction().hasOptSize();
 
   LLVM_DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');
   if (!TII->useMachineCombiner()) {

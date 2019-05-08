@@ -28,11 +28,11 @@ DEFINE_COMPILERRT_FUNCTION(__umoddi3)
 	movl	 20(%esp),			%ebx	// Find the index i of the leading bit in b.
 	bsrl		%ebx,			%ecx	// If the high word of b is zero, jump to
 	jz			9f						// the code to handle that special case [9].
-	
-	/* High word of b is known to be non-zero on this branch */
-	
+
+	// High word of b is known to be non-zero on this branch
+
 	movl	 16(%esp),			%eax	// Construct bhi, containing bits [1+i:32+i] of b
-	
+
 	shrl		%cl,			%eax	// Practically, this means that bhi is given by:
 	shrl		%eax					//
 	notl		%ecx					//		bhi = (high word of b) << (31 - i) |
@@ -41,10 +41,10 @@ DEFINE_COMPILERRT_FUNCTION(__umoddi3)
 	movl	 12(%esp),			%edx	// Load the high and low words of a, and jump
 	movl	  8(%esp),			%eax	// to [2] if the high word is larger than bhi
 	cmpl		%ebx,			%edx	// to avoid overflowing the upcoming divide.
-	jae			2f						
-		
-	/* High word of a is greater than or equal to (b >> (1 + i)) on this branch */
-	
+	jae			2f
+
+	// High word of a is greater than or equal to (b >> (1 + i)) on this branch
+
 	divl		%ebx					// eax <-- qs, edx <-- r such that ahi:alo = bs*qs + r
 
 	pushl		%edi
@@ -60,20 +60,20 @@ DEFINE_COMPILERRT_FUNCTION(__umoddi3)
 	movl	 24(%esp),			%eax
 	imull		%edi,			%eax	// q*bhi
 	subl		%eax,			%ecx	// ECX:EBX = a - q*b
-	
+
 	jnc			1f						// if positive, this is the result.
 	addl	 20(%esp),			%ebx	// otherwise
 	adcl	 24(%esp),			%ecx	// ECX:EBX = a - (q-1)*b = result
 1:	movl		%ebx,			%eax
 	movl		%ecx,			%edx
-	
+
 	popl		%edi
 	popl		%ebx
 	retl
 
 
-2:	/* High word of a is greater than or equal to (b >> (1 + i)) on this branch */
-	 
+2:	// High word of a is greater than or equal to (b >> (1 + i)) on this branch
+
 	subl		%ebx,			%edx	// subtract bhi from ahi so that divide will not
 	divl		%ebx					// overflow, and find q and r such that
 										//
@@ -102,14 +102,14 @@ DEFINE_COMPILERRT_FUNCTION(__umoddi3)
 	adcl	 24(%esp),			%ecx	// ECX:EBX = a - (q-1)*b = result
 3:	movl		%ebx,			%eax
 	movl		%ecx,			%edx
-	
+
 	popl		%edi
 	popl		%ebx
 	retl
 
 
-	
-9:	/* High word of b is zero on this branch */
+
+9:	// High word of b is zero on this branch
 
 	movl	 12(%esp),			%eax	// Find qhi and rhi such that
 	movl	 16(%esp),			%ecx	//
@@ -121,7 +121,7 @@ DEFINE_COMPILERRT_FUNCTION(__umoddi3)
 	movl		%edx,			%eax	//		rhi:alo = qlo*b + rlo  with 0 ≤ rlo < b
 	popl		%ebx					//
 	xorl		%edx,			%edx	// and return 0:rlo
-	retl								// 
+	retl								//
 END_COMPILERRT_FUNCTION(__umoddi3)
 
 #endif // __i386__

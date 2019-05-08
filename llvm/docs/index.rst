@@ -267,6 +267,7 @@ For API clients and LLVM developers.
    Bugpoint
    CodeGenerator
    ExceptionHandling
+   AddingConstrainedIntrinsics
    LinkTimeOptimization
    SegmentedStacks
    TableGenFundamentals
@@ -344,6 +345,10 @@ For API clients and LLVM developers.
 :doc:`ExceptionHandling`
    This document describes the design and implementation of exception handling
    in LLVM.
+
+:doc:`AddingConstrainedIntrinsics`
+   Gives the steps necessary when adding a new constrained math intrinsic
+   to LLVM.
 
 :doc:`Bugpoint`
    Automatic bug finder and test-case reducer description and usage
@@ -572,6 +577,7 @@ can be better.
    CodeOfConduct
    Proposals/GitHubMove
    Proposals/TestSuite
+   Proposals/VariableNames
    Proposals/VectorizationPlan
 
 :doc:`CodeOfConduct`
@@ -583,6 +589,9 @@ can be better.
 
 :doc:`Proposals/TestSuite`
    Proposals for additional benchmarks/programs for llvm's test-suite.
+
+:doc:`Proposals/VariableNames`
+   Proposal to change the variable names coding standard.
 
 :doc:`Proposals/VectorizationPlan`
    Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.

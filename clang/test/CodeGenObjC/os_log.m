@@ -21,7 +21,7 @@ void *test_builtin_os_log(void *buf) {
 
   // CHECK: %[[CALL:.*]] = tail call %[[TY0:.*]]* (...) @GenString()
   // CHECK: %[[V0:.*]] = bitcast %[[TY0]]* %[[CALL]] to i8*
-  // CHECK: %[[V1:.*]] = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[V0]])
+  // CHECK: %[[V1:.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[V0]])
   // CHECK: %[[V2:.*]] = ptrtoint %[[TY0]]* %[[CALL]] to i64
   // CHECK: store i8 2, i8* %[[BUF]], align 1
   // CHECK: %[[NUMARGS_I:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
@@ -45,7 +45,7 @@ void *test_builtin_os_log(void *buf) {
   // CHECK-O0: %[[V0:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
   // CHECK-O0: %[[CALL:.*]] = call %[[TY0:.*]]* (...) @GenString()
   // CHECK-O0: %[[V1:.*]] = bitcast %[[TY0]]* %[[CALL]] to i8*
-  // CHECK-O0: %[[V2:.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[V1]])
+  // CHECK-O0: %[[V2:.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[V1]])
   // CHECK-O0: %[[V3:.*]] = bitcast i8* %[[V2]] to %[[TY0]]*
   // CHECK-O0: %[[V4:.*]] = ptrtoint %[[TY0]]* %[[V3]] to i64
   // CHECK-O0: call void @__os_log_helper_1_2_1_8_64(i8* %[[V0]], i64 %[[V4]])

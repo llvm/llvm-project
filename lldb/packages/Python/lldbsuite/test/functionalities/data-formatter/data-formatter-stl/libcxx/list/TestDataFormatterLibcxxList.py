@@ -162,6 +162,10 @@ class LibcxxListDataFormatterTestCase(TestBase):
                              '[2] = ', '3',
                              '[3] = ', '4'])
 
+        ListPtr = self.frame().FindVariable("list_ptr")
+        self.assertTrue(ListPtr.GetChildAtIndex(
+            0).GetValueAsUnsigned(0) == 1, "[0] = 1")
+
         # check that MightHaveChildren() gets it right
         self.assertTrue(
             self.frame().FindVariable("numbers_list").MightHaveChildren(),

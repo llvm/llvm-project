@@ -18,6 +18,10 @@
 #include <system_error>
 
 namespace llvm {
+
+// Forward declare raw_ostream: it is used for debug dumping below.
+class raw_ostream;
+
 namespace sys {
 
   /// This class encapsulates the notion of a memory block which has an address
@@ -141,7 +145,14 @@ namespace sys {
     MemoryBlock M;
   };
 
-}
-}
+#ifndef NDEBUG
+  /// Debugging output for Memory::ProtectionFlags.
+  raw_ostream &operator<<(raw_ostream &OS, const Memory::ProtectionFlags &PF);
+
+  /// Debugging output for MemoryBlock.
+  raw_ostream &operator<<(raw_ostream &OS, const MemoryBlock &MB);
+#endif // ifndef NDEBUG
+  }    // end namespace sys
+  }    // end namespace llvm
 
 #endif

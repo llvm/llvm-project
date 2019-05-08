@@ -81,9 +81,11 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
         if (LivePhysRegs.test(Reg) || MRI->isReserved(Reg))
           return false;
       } else {
-        if (!MRI->use_nodbg_empty(Reg))
-          // This def has a non-debug use. Don't delete the instruction!
-          return false;
+        for (const MachineInstr &Use : MRI->use_nodbg_instructions(Reg)) {
+          if (&Use != MI)
+            // This def has a non-debug use. Don't delete the instruction!
+            return false;
+        }
       }
     }
   }

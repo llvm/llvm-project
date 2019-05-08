@@ -1,46 +1,42 @@
-/* ===-- apple_versioning.c - Adds versioning symbols for ld ---------------===
- *
- * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
- * See https://llvm.org/LICENSE.txt for license information.
- * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
- *
- * ===----------------------------------------------------------------------===
- */
-
+//===-- apple_versioning.c - Adds versioning symbols for ld ---------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #if __APPLE__
-  #include <Availability.h>
-  
-  #if __IPHONE_OS_VERSION_MIN_REQUIRED
-    #define NOT_HERE_BEFORE_10_6(sym) 
-    #define NOT_HERE_IN_10_8_AND_EARLIER(sym) \
-        extern const char sym##_tmp61 __asm("$ld$hide$os6.1$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp61 = 0; \
-        extern const char sym##_tmp60 __asm("$ld$hide$os6.0$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp60 = 0; \
-        extern const char sym##_tmp51 __asm("$ld$hide$os5.1$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp51 = 0; \
-        extern const char sym##_tmp50 __asm("$ld$hide$os5.0$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp50 = 0; 
-  #else
-    #define NOT_HERE_BEFORE_10_6(sym) \
-         extern const char sym##_tmp4 __asm("$ld$hide$os10.4$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp4 = 0; \
-        extern const char sym##_tmp5 __asm("$ld$hide$os10.5$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp5 = 0; 
-    #define NOT_HERE_IN_10_8_AND_EARLIER(sym) \
-         extern const char sym##_tmp8 __asm("$ld$hide$os10.8$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp8 = 0; \
-        extern const char sym##_tmp7 __asm("$ld$hide$os10.7$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp7 = 0; \
-        extern const char sym##_tmp6 __asm("$ld$hide$os10.6$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp6 = 0; 
-  #endif 
+#include <Availability.h>
 
+#if __IPHONE_OS_VERSION_MIN_REQUIRED
+#define NOT_HERE_BEFORE_10_6(sym)
+#define NOT_HERE_IN_10_8_AND_EARLIER(sym)                                      \
+  extern const char sym##_tmp61 __asm("$ld$hide$os6.1$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp61 = 0;           \
+  extern const char sym##_tmp60 __asm("$ld$hide$os6.0$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp60 = 0;           \
+  extern const char sym##_tmp51 __asm("$ld$hide$os5.1$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp51 = 0;           \
+  extern const char sym##_tmp50 __asm("$ld$hide$os5.0$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp50 = 0;
+#else
+#define NOT_HERE_BEFORE_10_6(sym)                                              \
+  extern const char sym##_tmp4 __asm("$ld$hide$os10.4$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp4 = 0;            \
+  extern const char sym##_tmp5 __asm("$ld$hide$os10.5$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp5 = 0;
+#define NOT_HERE_IN_10_8_AND_EARLIER(sym)                                      \
+  extern const char sym##_tmp8 __asm("$ld$hide$os10.8$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp8 = 0;            \
+  extern const char sym##_tmp7 __asm("$ld$hide$os10.7$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp7 = 0;            \
+  extern const char sym##_tmp6 __asm("$ld$hide$os10.6$_" #sym);                \
+  __attribute__((visibility("default"))) const char sym##_tmp6 = 0;
+#endif
 
-/* Symbols in libSystem.dylib in 10.6 and later, 
- *  but are in libgcc_s.dylib in earlier versions
- */
+// Symbols in libSystem.dylib in 10.6 and later,
+//  but are in libgcc_s.dylib in earlier versions
 
 NOT_HERE_BEFORE_10_6(__absvdi2)
 NOT_HERE_BEFORE_10_6(__absvsi2)
@@ -142,14 +138,13 @@ NOT_HERE_BEFORE_10_6(__udivti3)
 NOT_HERE_BEFORE_10_6(__umoddi3)
 NOT_HERE_BEFORE_10_6(__umodti3)
 
-
 #if __ppc__
 NOT_HERE_BEFORE_10_6(__gcc_qadd)
 NOT_HERE_BEFORE_10_6(__gcc_qdiv)
 NOT_HERE_BEFORE_10_6(__gcc_qmul)
 NOT_HERE_BEFORE_10_6(__gcc_qsub)
 NOT_HERE_BEFORE_10_6(__trampoline_setup)
-#endif /* __ppc__ */
+#endif // __ppc__
 
 NOT_HERE_IN_10_8_AND_EARLIER(__atomic_compare_exchange)
 NOT_HERE_IN_10_8_AND_EARLIER(__atomic_compare_exchange_1)
@@ -200,24 +195,23 @@ NOT_HERE_IN_10_8_AND_EARLIER(__atomic_store_2)
 NOT_HERE_IN_10_8_AND_EARLIER(__atomic_store_4)
 NOT_HERE_IN_10_8_AND_EARLIER(__atomic_store_8)
 
-
 #if __arm__ && __DYNAMIC__
-   #define NOT_HERE_UNTIL_AFTER_4_3(sym) \
-        extern const char sym##_tmp1 __asm("$ld$hide$os3.0$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp1 = 0; \
-        extern const char sym##_tmp2 __asm("$ld$hide$os3.1$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp2 = 0; \
-        extern const char sym##_tmp3 __asm("$ld$hide$os3.2$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp3 = 0; \
-        extern const char sym##_tmp4 __asm("$ld$hide$os4.0$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp4 = 0; \
-        extern const char sym##_tmp5 __asm("$ld$hide$os4.1$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp5 = 0; \
-        extern const char sym##_tmp6 __asm("$ld$hide$os4.2$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp6 = 0; \
-        extern const char sym##_tmp7 __asm("$ld$hide$os4.3$_" #sym ); \
-            __attribute__((visibility("default"))) const char sym##_tmp7 = 0; 
-            
+#define NOT_HERE_UNTIL_AFTER_4_3(sym)                                          \
+  extern const char sym##_tmp1 __asm("$ld$hide$os3.0$_" #sym);                 \
+  __attribute__((visibility("default"))) const char sym##_tmp1 = 0;            \
+  extern const char sym##_tmp2 __asm("$ld$hide$os3.1$_" #sym);                 \
+  __attribute__((visibility("default"))) const char sym##_tmp2 = 0;            \
+  extern const char sym##_tmp3 __asm("$ld$hide$os3.2$_" #sym);                 \
+  __attribute__((visibility("default"))) const char sym##_tmp3 = 0;            \
+  extern const char sym##_tmp4 __asm("$ld$hide$os4.0$_" #sym);                 \
+  __attribute__((visibility("default"))) const char sym##_tmp4 = 0;            \
+  extern const char sym##_tmp5 __asm("$ld$hide$os4.1$_" #sym);                 \
+  __attribute__((visibility("default"))) const char sym##_tmp5 = 0;            \
+  extern const char sym##_tmp6 __asm("$ld$hide$os4.2$_" #sym);                 \
+  __attribute__((visibility("default"))) const char sym##_tmp6 = 0;            \
+  extern const char sym##_tmp7 __asm("$ld$hide$os4.3$_" #sym);                 \
+  __attribute__((visibility("default"))) const char sym##_tmp7 = 0;
+
 NOT_HERE_UNTIL_AFTER_4_3(__absvdi2)
 NOT_HERE_UNTIL_AFTER_4_3(__absvsi2)
 NOT_HERE_UNTIL_AFTER_4_3(__adddf3)
@@ -338,12 +332,8 @@ NOT_HERE_UNTIL_AFTER_4_3(__divmodsi4)
 NOT_HERE_UNTIL_AFTER_4_3(__udivmodsi4)
 #endif // __arm__ && __DYNAMIC__
 
-       
-       
-
-
-#else /* !__APPLE__ */
+#else // !__APPLE__
 
 extern int avoid_empty_file;
 
-#endif /* !__APPLE__*/
+#endif // !__APPLE__

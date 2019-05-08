@@ -52,6 +52,7 @@
 #endif
 
 #if SANITIZER_SOLARIS
+#include <stdlib.h>
 #include <thread.h>
 #endif
 

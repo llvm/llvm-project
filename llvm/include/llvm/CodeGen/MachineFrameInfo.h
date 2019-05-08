@@ -470,7 +470,10 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     Objects[ObjectIdx+NumFixedObjects].Alignment = Align;
-    ensureMaxAlignment(Align);
+
+    // Only ensure max alignment for the default stack.
+    if (getStackID(ObjectIdx) == 0)
+      ensureMaxAlignment(Align);
   }
 
   /// Return the underlying Alloca of the specified
@@ -697,6 +700,8 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     Objects[ObjectIdx+NumFixedObjects].StackID = ID;
+    // If ID > 0, MaxAlignment may now be overly conservative.
+    // If ID == 0, MaxAlignment will need to be updated separately.
   }
 
   /// Returns true if the specified index corresponds to a dead object.

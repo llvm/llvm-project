@@ -23,6 +23,7 @@ static_library("Serialization") {
     "ASTWriterStmt.cpp",
     "GeneratePCH.cpp",
     "GlobalModuleIndex.cpp",
+    "InMemoryModuleCache.cpp",
     "Module.cpp",
     "ModuleFileExtension.cpp",
     "ModuleManager.cpp",

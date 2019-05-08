@@ -89,3 +89,9 @@ void AnnotateRWLockReleased(const char *f, int l, void *m, long is_w);
     AnnotateRWLockAcquired(__FILE__, __LINE__, m, is_w)
 #define ANNOTATE_RWLOCK_RELEASED(m, is_w) \
     AnnotateRWLockReleased(__FILE__, __LINE__, m, is_w)
+
+#ifdef __APPLE__
+#define ASM_SYMBOL(symbol) "_" #symbol
+#else
+#define ASM_SYMBOL(symbol) #symbol
+#endif

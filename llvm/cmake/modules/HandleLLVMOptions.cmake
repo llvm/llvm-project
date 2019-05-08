@@ -18,6 +18,16 @@ else()
   set(LINKER_IS_LLD_LINK FALSE)
 endif()
 
+set(LLVM_CXX_STD_default "c++11")
+# Preserve behaviour of legacy cache variables
+if (LLVM_ENABLE_CXX1Y)
+  set(LLVM_CXX_STD_default "c++1y")
+elseif (LLVM_ENABLE_CXX1Z)
+  set(LLVM_CXX_STD_default "c++1z")
+endif()
+set(LLVM_CXX_STD ${LLVM_CXX_STD_default}
+    CACHE STRING "C++ standard to use for compilation.")
+
 set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 
@@ -135,12 +145,32 @@ if(APPLE)
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,suppress")
 endif()
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if(NOT LLVM_BUILD_32_BITS)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+      append("-q64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    else()
+      append("-maix64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    endif()
+    set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> -X64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> -X64 q  <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -X64 <TARGET>")
+    set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -X64 <TARGET>")
+  endif()
+  # -fPIC does not enable the large code model for GCC on AIX but does for XL.
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    append("-mcmodel=large" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+    # XL generates a small number of relocations not of the large model, -bbigtoc is needed.
+    append("-Wl,-bbigtoc"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+endif()
+
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
 # build might work on ELF but fail on MachO/COFF.
-if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR WIN32 OR CYGWIN OR
-        ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR
-	${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD" OR
-	${CMAKE_SYSTEM_NAME} MATCHES "DragonFly") AND
+if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin|FreeBSD|OpenBSD|DragonFly|AIX" OR
+        WIN32 OR CYGWIN) AND
    NOT LLVM_USE_SANITIZER)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
 endif()
@@ -218,10 +248,16 @@ if( LLVM_ENABLE_PIC )
   else()
     add_flag_or_print_warning("-fPIC" FPIC)
   endif()
+  # GCC for MIPS can miscompile LLVM due to PR37701.
+  if(CMAKE_COMPILER_IS_GNUCXX AND LLVM_NATIVE_ARCH STREQUAL "Mips" AND
+         NOT Uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    add_flag_or_print_warning("-fno-shrink-wrap" FNO_SHRINK_WRAP)
+  endif()
 endif()
 
-if(NOT WIN32 AND NOT CYGWIN)
+if(NOT WIN32 AND NOT CYGWIN AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
   # MinGW warns if -fvisibility-inlines-hidden is used.
+  # GCC on AIX warns if -fvisibility-inlines-hidden is used.
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
   append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
 endif()
@@ -416,25 +452,18 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   append_if(LLVM_ENABLE_WERROR "-Wno-error" CMAKE_REQUIRED_FLAGS)
   add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
   add_flag_if_supported("-Werror=unguarded-availability-new" WERROR_UNGUARDED_AVAILABILITY_NEW)
-  if (LLVM_ENABLE_CXX1Y)
-    check_cxx_compiler_flag("-std=c++1y" CXX_SUPPORTS_CXX1Y)
-    append_if(CXX_SUPPORTS_CXX1Y "-std=c++1y" CMAKE_CXX_FLAGS)
-  elseif(LLVM_ENABLE_CXX1Z)
-    check_cxx_compiler_flag("-std=c++1z" CXX_SUPPORTS_CXX1Z)
-    append_if(CXX_SUPPORTS_CXX1Z "-std=c++1z" CMAKE_CXX_FLAGS)
-  else()
-    check_cxx_compiler_flag("-std=c++11" CXX_SUPPORTS_CXX11)
-    if (CXX_SUPPORTS_CXX11)
-      if (CYGWIN OR MINGW)
-        # MinGW and Cygwin are a bit stricter and lack things like
-        # 'strdup', 'stricmp', etc in c++11 mode.
-        append("-std=gnu++11" CMAKE_CXX_FLAGS)
-      else()
-        append("-std=c++11" CMAKE_CXX_FLAGS)
-      endif()
+  check_cxx_compiler_flag("-std=${LLVM_CXX_STD}" CXX_SUPPORTS_CXX_STD)
+  if (CXX_SUPPORTS_CXX_STD)
+   if (CYGWIN OR MINGW)
+      # MinGW and Cygwin are a bit stricter and lack things like
+      # 'strdup', 'stricmp', etc in c++11 mode.
+      string(REPLACE "c++" "gnu++" gnu_LLVM_CXX_STD "${LLVM_CXX_STD}")
+      append("-std=${gnu_LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
     else()
-      message(FATAL_ERROR "LLVM requires C++11 support but the '-std=c++11' flag isn't supported.")
+      append("-std=${LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
     endif()
+  else()
+    message(FATAL_ERROR "The host compiler does not support '-std=${LLVM_CXX_STD}'.")
   endif()
   if (LLVM_ENABLE_MODULES)
     set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
@@ -809,6 +838,12 @@ if (LLVM_BUILD_INSTRUMENTED)
       CMAKE_C_FLAGS
       CMAKE_EXE_LINKER_FLAGS
       CMAKE_SHARED_LINKER_FLAGS)
+  elseif(uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "CSIR")
+    append("-fcs-profile-generate='${LLVM_CSPROFILE_DATA_DIR}'"
+      CMAKE_CXX_FLAGS
+      CMAKE_C_FLAGS
+      CMAKE_EXE_LINKER_FLAGS
+      CMAKE_SHARED_LINKER_FLAGS)
   else()
     append("-fprofile-instr-generate='${LLVM_PROFILE_FILE_PATTERN}'"
       CMAKE_CXX_FLAGS
@@ -816,6 +851,14 @@ if (LLVM_BUILD_INSTRUMENTED)
       CMAKE_EXE_LINKER_FLAGS
       CMAKE_SHARED_LINKER_FLAGS)
   endif()
+endif()
+
+# Need to pass -fprofile-instr-use to linker for context-sensitive PGO
+# compilation.
+if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
+    append("-fprofile-instr-use='${LLVM_PROFDATA_FILE}'"
+      CMAKE_EXE_LINKER_FLAGS
+      CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)

@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // BreakpointResolverFileRegex:
-//----------------------------------------------------------------------
 BreakpointResolverFileRegex::BreakpointResolverFileRegex(
     Breakpoint *bkpt, RegularExpression &regex,
     const std::unordered_set<std::string> &func_names, bool exact_match)

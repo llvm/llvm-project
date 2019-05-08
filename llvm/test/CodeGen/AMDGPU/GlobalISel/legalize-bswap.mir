@@ -91,12 +91,12 @@ body: |
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
     ; CHECK: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[ANYEXT]]
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[C]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[COPY1]](s32)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
     ; CHECK: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[ANYEXT1]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP1]], [[C1]](s32)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP1]], [[C]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
     ; CHECK: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)

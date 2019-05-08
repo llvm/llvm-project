@@ -41,7 +41,7 @@ void test_assign() {
 // DISABLED:             [[T0:%.*]] = call [[A:.*]]* @makeA()
 // DISABLED-MARKED-NEXT: call void asm sideeffect
 // DISABLED-NEXT:        [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// DISABLED-NEXT:        [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+// DISABLED-NEXT:        [[T2:%.*]] = {{.*}}call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
 
 void test_assign_assign() {
   __unsafe_unretained id x, y;
@@ -75,7 +75,7 @@ void test_strong_assign_assign() {
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+// CHECK-NEXT:           [[T2:%.*]] = {{.*}}call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           store i8* [[T4]], i8** [[Y]]
@@ -102,7 +102,7 @@ void test_assign_strong_assign() {
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+// CHECK-NEXT:           [[T2:%.*]] = {{.*}}call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           [[OLD:%.*]] = load i8*, i8** [[Y]]
@@ -165,7 +165,7 @@ void test_strong_init_assignment() {
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+// CHECK-NEXT:           [[T2:%.*]] = {{.*}}call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           store i8* [[T4]], i8** [[X]]
@@ -189,7 +189,7 @@ void test_init_strong_assignment() {
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+// CHECK-NEXT:           [[T2:%.*]] = {{.*}}call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           [[OLD:%.*]] = load i8*, i8** [[X]]
@@ -231,4 +231,5 @@ void test_cast_to_void() {
 
 // This is always at the end of the module.
 
-// CHECK-OPTIMIZED: !clang.arc.retainAutoreleasedReturnValueMarker = !{!0}
+// CHECK-OPTIMIZED: !llvm.module.flags = !{!0,
+// CHECK-OPTIMIZED: !0 = !{i32 1, !"clang.arc.retainAutoreleasedReturnValueMarker", !"mov{{.*}}marker for objc_retainAutoreleaseReturnValue"}

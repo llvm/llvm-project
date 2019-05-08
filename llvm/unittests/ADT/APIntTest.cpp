@@ -2381,6 +2381,42 @@ TEST(APIntTest, RoundingSDiv) {
   }
 }
 
+TEST(APIntTest, umul_ov) {
+  const std::pair<uint64_t, uint64_t> Overflows[] = {
+      {0x8000000000000000, 2},
+      {0x5555555555555556, 3},
+      {4294967296, 4294967296},
+      {4294967295, 4294967298},
+  };
+  const std::pair<uint64_t, uint64_t> NonOverflows[] = {
+      {0x7fffffffffffffff, 2},
+      {0x5555555555555555, 3},
+      {4294967295, 4294967297},
+  };
+
+  bool Overflow;
+  for (auto &X : Overflows) {
+    APInt A(64, X.first);
+    APInt B(64, X.second);
+    (void)A.umul_ov(B, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  for (auto &X : NonOverflows) {
+    APInt A(64, X.first);
+    APInt B(64, X.second);
+    (void)A.umul_ov(B, Overflow);
+    EXPECT_FALSE(Overflow);
+  }
+
+  for (unsigned Bits = 1; Bits <= 5; ++Bits)
+    for (unsigned A = 0; A != 1u << Bits; ++A)
+      for (unsigned B = 0; B != 1u << Bits; ++B) {
+        APInt C = APInt(Bits, A).umul_ov(APInt(Bits, B), Overflow);
+        APInt D = APInt(2 * Bits, A) * APInt(2 * Bits, B);
+        EXPECT_TRUE(D.getHiBits(Bits).isNullValue() != Overflow);
+      }
+}
+
 TEST(APIntTest, SolveQuadraticEquationWrap) {
   // Verify that "Solution" is the first non-negative integer that solves
   // Ax^2 + Bx + C = "0 or overflow", i.e. that it is a correct solution

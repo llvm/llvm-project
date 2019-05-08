@@ -44,6 +44,11 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
       InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
       TLInfo(TM, *this) {}
 
+bool WebAssemblySubtarget::enableAtomicExpand() const {
+  // If atomics are disabled, atomic ops are lowered instead of expanded
+  return hasAtomics();
+}
+
 bool WebAssemblySubtarget::enableMachineScheduler() const {
   // Disable the MachineScheduler for now. Even with ShouldTrackPressure set and
   // enableMachineSchedDefaultSched overridden, it appears to have an overall

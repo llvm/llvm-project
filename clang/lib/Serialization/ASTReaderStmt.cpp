@@ -111,7 +111,7 @@ namespace clang {
 
     /// The number of record fields required for the Stmt class
     /// itself.
-    static const unsigned NumStmtFields = 0;
+    static const unsigned NumStmtFields = 1;
 
     /// The number of record fields required for the Expr class
     /// itself.
@@ -147,6 +147,7 @@ void ASTStmtReader::ReadTemplateKWAndArgsInfo(ASTTemplateKWAndArgsInfo &Args,
 }
 
 void ASTStmtReader::VisitStmt(Stmt *S) {
+  S->setIsOMPStructuredBlock(Record.readInt());
   assert(Record.getIdx() == NumStmtFields && "Incorrect statement field count");
 }
 
@@ -1254,7 +1255,7 @@ void ASTStmtReader::VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *S) {
 }
 
 void ASTStmtReader::VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *S) {
-  VisitStmt(S);
+  VisitStmt(S); // FIXME: no test coverage.
   S->setSubStmt(Record.readSubStmt());
   S->setAtLoc(ReadSourceLocation());
 }
@@ -1274,14 +1275,14 @@ void ASTStmtReader::VisitObjCAtTryStmt(ObjCAtTryStmt *S) {
 }
 
 void ASTStmtReader::VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *S) {
-  VisitStmt(S);
+  VisitStmt(S); // FIXME: no test coverage.
   S->setSynchExpr(Record.readSubStmt());
   S->setSynchBody(Record.readSubStmt());
   S->setAtSynchronizedLoc(ReadSourceLocation());
 }
 
 void ASTStmtReader::VisitObjCAtThrowStmt(ObjCAtThrowStmt *S) {
-  VisitStmt(S);
+  VisitStmt(S); // FIXME: no test coverage.
   S->setThrowExpr(Record.readSubStmt());
   S->setThrowLoc(ReadSourceLocation());
 }

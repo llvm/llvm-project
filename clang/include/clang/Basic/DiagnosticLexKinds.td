@@ -268,12 +268,14 @@ def err_pp_hash_error : Error<"%0">;
 }
 
 def pp_include_next_in_primary : Warning<
-  "#include_next in primary source file">,
+  "#include_next in primary source file; "
+  "will search from start of include path">,
   InGroup<DiagGroup<"include-next-outside-header">>;
 def pp_include_macros_out_of_predefines : Error<
   "the #__include_macros directive is only for internal use by -imacros">;
 def pp_include_next_absolute_path : Warning<
-  "#include_next with absolute path">,
+  "#include_next in file found relative to primary source file or found by "
+  "absolute path; will search from start of include path">,
   InGroup<DiagGroup<"include-next-absolute-path">>;
 def ext_c99_whitespace_required_after_macro_name : ExtWarn<
   "ISO C99 requires whitespace after the macro name">, InGroup<C99>;
@@ -393,8 +395,8 @@ def warn_cxx98_compat_empty_fnmacro_arg : Warning<
 def note_macro_here : Note<"macro %0 defined here">;
 def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 
-def err_pp_opencl_variadic_macros :
-  Error<"variadic macros not supported in OpenCL">;
+def ext_pp_opencl_variadic_macros : Extension<
+  "variadic macros are a Clang extension in OpenCL">;
 
 def err_pp_invalid_directive : Error<"invalid preprocessing directive">;
 def err_pp_directive_required : Error<
@@ -416,7 +418,8 @@ def warn_pp_hdrstop_filename_ignored : Warning<
   "/Fp can be used to specify precompiled header filename">,
   InGroup<ClangClPch>;
 def err_pp_file_not_found_angled_include_not_fatal : Error<
-  "'%0' file not found with <angled> include; use \"quotes\" instead">;
+  "'%0' file not found with <angled> %select{include|import}1; "
+  "use \"quotes\" instead">;
 def err_pp_file_not_found_typo_not_fatal
     : Error<"'%0' file not found, did you mean '%1'?">;
 def note_pp_framework_without_header : Note<
@@ -506,6 +509,17 @@ def warn_pragma_warning_expected_number :
   ExtWarn<"#pragma warning expected a warning number">,
   InGroup<UnknownPragmas>;
 
+// - #pragma execution_character_set(...)
+def warn_pragma_exec_charset_expected :
+  ExtWarn<"#pragma execution_character_set expected '%0'">,
+  InGroup<UnknownPragmas>;
+def warn_pragma_exec_charset_spec_invalid :
+  ExtWarn<"#pragma execution_character_set expected 'push' or 'pop'">,
+  InGroup<UnknownPragmas>;
+def warn_pragma_exec_charset_push_invalid :
+   ExtWarn<"#pragma execution_character_set invalid value '%0', only 'UTF-8' is supported">,
+   InGroup<UnknownPragmas>;
+
 def err__Pragma_malformed : Error<
   "_Pragma takes a parenthesized string literal">;
 def err_pragma_message_malformed : Error<
@@ -547,6 +561,8 @@ def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_missing_argument : Warning<
   "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_unknown_module : Warning<
+  "unknown module '%0'">, InGroup<IgnoredPragmas>;
 // #pragma module
 def err_pp_expected_module_name : Error<
   "expected %select{identifier after '.' in |}0module name">;
@@ -629,7 +645,8 @@ def err_pp_double_begin_of_arc_cf_code_audited : Error<
 def err_pp_unmatched_end_of_arc_cf_code_audited : Error<
   "not currently inside '#pragma clang arc_cf_code_audited'">;
 def err_pp_include_in_arc_cf_code_audited : Error<
-  "cannot #include files inside '#pragma clang arc_cf_code_audited'">;
+  "cannot %select{#include files|import headers}0 "
+  "inside '#pragma clang arc_cf_code_audited'">;
 def err_pp_eof_in_arc_cf_code_audited : Error<
   "'#pragma clang arc_cf_code_audited' was not ended within this file">;
 
@@ -763,6 +780,14 @@ def warn_module_conflict : Warning<
   "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
 
+// C++20 modules
+def err_header_import_semi_in_macro : Error<
+  "semicolon terminating header import declaration cannot be produced "
+  "by a macro">;
+def err_header_import_not_header_unit : Error<
+  "header file %0 (aka '%1') cannot be imported because "
+  "it is not known to be a header unit">;
+
 def warn_header_guard : Warning<
   "%0 is used as a header guard here, followed by #define of a different macro">,
   InGroup<DiagGroup<"header-guard">>;
@@ -784,7 +809,8 @@ def err_pp_double_begin_of_assume_nonnull : Error<
 def err_pp_unmatched_end_of_assume_nonnull : Error<
   "not currently inside '#pragma clang assume_nonnull'">;
 def err_pp_include_in_assume_nonnull : Error<
-  "cannot #include files inside '#pragma clang assume_nonnull'">;
+  "cannot %select{#include files|import headers}0 "
+  "inside '#pragma clang assume_nonnull'">;
 def err_pp_eof_in_assume_nonnull : Error<
   "'#pragma clang assume_nonnull' was not ended within this file">;
 

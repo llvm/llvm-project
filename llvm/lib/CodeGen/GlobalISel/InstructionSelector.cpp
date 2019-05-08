@@ -41,16 +41,16 @@ bool InstructionSelector::constrainOperandRegToRegClass(
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  return
-      constrainRegToClass(MRI, TII, RBI, I, I.getOperand(OpIdx).getReg(), RC);
+  return constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, RC,
+                                  I.getOperand(OpIdx), OpIdx);
 }
 
 bool InstructionSelector::isOperandImmEqual(
     const MachineOperand &MO, int64_t Value,
     const MachineRegisterInfo &MRI) const {
   if (MO.isReg() && MO.getReg())
-    if (auto VRegVal = getConstantVRegVal(MO.getReg(), MRI))
-      return *VRegVal == Value;
+    if (auto VRegVal = getConstantVRegValWithLookThrough(MO.getReg(), MRI))
+      return VRegVal->Value == Value;
   return false;
 }
 

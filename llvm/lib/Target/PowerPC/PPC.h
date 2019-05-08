@@ -56,12 +56,26 @@ namespace llvm {
                                          MCOperand &OutMO, AsmPrinter &AP,
                                          bool isDarwin);
 
+  void initializePPCCTRLoopsPass(PassRegistry&);
+#ifndef NDEBUG
+  void initializePPCCTRLoopsVerifyPass(PassRegistry&);
+#endif
+  void initializePPCLoopPreIncPrepPass(PassRegistry&);
+  void initializePPCTOCRegDepsPass(PassRegistry&);
+  void initializePPCEarlyReturnPass(PassRegistry&);
+  void initializePPCVSXCopyPass(PassRegistry&);
   void initializePPCVSXFMAMutatePass(PassRegistry&);
+  void initializePPCVSXSwapRemovalPass(PassRegistry&);
+  void initializePPCReduceCRLogicalsPass(PassRegistry&);
+  void initializePPCBSelPass(PassRegistry&);
+  void initializePPCBranchCoalescingPass(PassRegistry&);
+  void initializePPCQPXLoadSplatPass(PassRegistry&);
   void initializePPCBoolRetToIntPass(PassRegistry&);
   void initializePPCExpandISELPass(PassRegistry &);
   void initializePPCPreEmitPeepholePass(PassRegistry &);
   void initializePPCTLSDynamicCallPass(PassRegistry &);
   void initializePPCMIPeepholePass(PassRegistry&);
+
   extern char &PPCVSXFMAMutateID;
 
   namespace PPCII {

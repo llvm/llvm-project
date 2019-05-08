@@ -20,7 +20,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
-#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Expression/Materializer.h"
@@ -49,8 +48,9 @@ UserExpression::UserExpression(ExecutionContextScope &exe_scope,
                                llvm::StringRef expr, llvm::StringRef prefix,
                                lldb::LanguageType language,
                                ResultType desired_type,
-                               const EvaluateExpressionOptions &options)
-    : Expression(exe_scope), m_expr_text(expr), m_expr_prefix(prefix),
+                               const EvaluateExpressionOptions &options,
+                               ExpressionKind kind)
+    : Expression(exe_scope, kind), m_expr_text(expr), m_expr_prefix(prefix),
       m_language(language), m_desired_type(desired_type), m_options(options) {}
 
 UserExpression::~UserExpression() {}

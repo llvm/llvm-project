@@ -65,9 +65,6 @@ enum {
   /// Shift count to bypass PPC970 flags
   NewDef_Shift = 6,
 
-  /// The VSX instruction that uses VSX register (vs0-vs63), instead of VMX
-  /// register (v0-v31).
-  UseVSXReg = 0x1 << NewDef_Shift,
   /// This instruction is an X-Form memory operation.
   XFormMemOp = 0x1 << (NewDef_Shift+1)
 };
@@ -440,11 +437,24 @@ public:
   /// operands).
   static unsigned getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
                                       unsigned OpNo) {
-    if (Desc.TSFlags & PPCII::UseVSXReg) {
-      if (isVRRegister(Reg))
-        Reg = PPC::VSX32 + (Reg - PPC::V0);
-      else if (isVFRegister(Reg))
-        Reg = PPC::VSX32 + (Reg - PPC::VF0);
+    int16_t regClass = Desc.OpInfo[OpNo].RegClass;
+    switch (regClass) {
+      // We store F0-F31, VF0-VF31 in MCOperand and it should be F0-F31,
+      // VSX32-VSX63 during encoding/disassembling
+      case PPC::VSSRCRegClassID:
+      case PPC::VSFRCRegClassID:
+        if (isVFRegister(Reg))
+          return PPC::VSX32 + (Reg - PPC::VF0);
+        break;
+      // We store VSL0-VSL31, V0-V31 in MCOperand and it should be VSL0-VSL31,
+      // VSX32-VSX63 during encoding/disassembling
+      case PPC::VSRCRegClassID:
+        if (isVRRegister(Reg))
+          return PPC::VSX32 + (Reg - PPC::V0);
+        break;
+      // Other RegClass doesn't need mapping
+      default:
+        break;
     }
     return Reg;
   }

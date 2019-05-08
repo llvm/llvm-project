@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//----------------------------------------------------------------------
 //
 //  MachTask.h
 //  debugserver
@@ -45,9 +44,7 @@ struct MachMallocEvent {
 
 class MachTask {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   MachTask(MachProcess *process);
   virtual ~MachTask();
 

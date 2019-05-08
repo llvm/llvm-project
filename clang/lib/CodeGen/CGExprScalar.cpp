@@ -2063,6 +2063,12 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       }
     }
 
+    // Update heapallocsite metadata when there is an explicit cast.
+    if (llvm::CallInst *CI = dyn_cast<llvm::CallInst>(Src))
+      if (CI->getMetadata("heapallocsite") && isa<ExplicitCastExpr>(CE))
+          CGF.getDebugInfo()->
+              addHeapAllocSiteMetadata(CI, CE->getType(), CE->getExprLoc());
+
     return Builder.CreateBitCast(Src, DstTy);
   }
   case CK_AddressSpaceConversion: {

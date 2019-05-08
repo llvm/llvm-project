@@ -37,14 +37,6 @@ class FileSystemStatCache {
 public:
   virtual ~FileSystemStatCache() = default;
 
-  enum LookupResult {
-    /// We know the file exists and its cached stat data.
-    CacheExists,
-
-    /// We know that the file doesn't exist.
-    CacheMissing
-  };
-
   /// Get the 'stat' information for the specified path, using the cache
   /// to accelerate it if possible.
   ///
@@ -55,18 +47,19 @@ public:
   /// success for directories (not files).  On a successful file lookup, the
   /// implementation can optionally fill in \p F with a valid \p File object and
   /// the client guarantees that it will close it.
-  static bool get(StringRef Path, llvm::vfs::Status &Status, bool isFile,
-                  std::unique_ptr<llvm::vfs::File> *F,
-                  FileSystemStatCache *Cache, llvm::vfs::FileSystem &FS);
+  static std::error_code
+  get(StringRef Path, llvm::vfs::Status &Status, bool isFile,
+      std::unique_ptr<llvm::vfs::File> *F,
+      FileSystemStatCache *Cache, llvm::vfs::FileSystem &FS);
 
 protected:
   // FIXME: The pointer here is a non-owning/optional reference to the
   // unique_ptr. Optional<unique_ptr<vfs::File>&> might be nicer, but
   // Optional needs some work to support references so this isn't possible yet.
-  virtual LookupResult getStat(StringRef Path, llvm::vfs::Status &Status,
-                               bool isFile,
-                               std::unique_ptr<llvm::vfs::File> *F,
-                               llvm::vfs::FileSystem &FS) = 0;
+  virtual std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
+                                  bool isFile,
+                                  std::unique_ptr<llvm::vfs::File> *F,
+                                  llvm::vfs::FileSystem &FS) = 0;
 };
 
 /// A stat "cache" that can be used by FileManager to keep
@@ -84,9 +77,10 @@ public:
   iterator begin() const { return StatCalls.begin(); }
   iterator end() const { return StatCalls.end(); }
 
-  LookupResult getStat(StringRef Path, llvm::vfs::Status &Status, bool isFile,
-                       std::unique_ptr<llvm::vfs::File> *F,
-                       llvm::vfs::FileSystem &FS) override;
+  std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
+                          bool isFile,
+                          std::unique_ptr<llvm::vfs::File> *F,
+                          llvm::vfs::FileSystem &FS) override;
 };
 
 } // namespace clang

@@ -111,7 +111,6 @@ private:
     unsigned MOVCCi;
 
     // Used for G_SELECT
-    unsigned CMPri;
     unsigned MOVCCr;
 
     unsigned TSTri;
@@ -137,6 +136,9 @@ private:
   // if it doesn't know how to select a better one.
   unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
                                  unsigned Size) const;
+
+  void renderVFPF32Imm(MachineInstrBuilder &New, const MachineInstr &Old) const;
+  void renderVFPF64Imm(MachineInstrBuilder &New, const MachineInstr &Old) const;
 
 #define GET_GLOBALISEL_PREDICATES_DECL
 #include "ARMGenGlobalISel.inc"
@@ -319,7 +321,6 @@ ARMInstructionSelector::OpcodeCache::OpcodeCache(const ARMSubtarget &STI) {
   STORE_OPCODE(MOVi, MOVi);
   STORE_OPCODE(MOVCCi, MOVCCi);
 
-  STORE_OPCODE(CMPri, CMPri);
   STORE_OPCODE(MOVCCr, MOVCCr);
 
   STORE_OPCODE(TSTri, TSTri);
@@ -767,13 +768,13 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
   auto InsertBefore = std::next(MIB->getIterator());
   auto &DbgLoc = MIB->getDebugLoc();
 
-  // Compare the condition to 0.
+  // Compare the condition to 1.
   auto CondReg = MIB->getOperand(1).getReg();
   assert(validReg(MRI, CondReg, 1, ARM::GPRRegBankID) &&
          "Unsupported types for select operation");
-  auto CmpI = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(Opcodes.CMPri))
+  auto CmpI = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(Opcodes.TSTri))
                   .addUse(CondReg)
-                  .addImm(0)
+                  .addImm(1)
                   .add(predOps(ARMCC::AL));
   if (!constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI))
     return false;
@@ -800,10 +801,35 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
 
 bool ARMInstructionSelector::selectShift(unsigned ShiftOpc,
                                          MachineInstrBuilder &MIB) const {
+  assert(!STI.isThumb() && "Unsupported subtarget");
   MIB->setDesc(TII.get(ARM::MOVsr));
   MIB.addImm(ShiftOpc);
   MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
+void ARMInstructionSelector::renderVFPF32Imm(
+    MachineInstrBuilder &NewInstBuilder, const MachineInstr &OldInst) const {
+  assert(OldInst.getOpcode() == TargetOpcode::G_FCONSTANT &&
+         "Expected G_FCONSTANT");
+
+  APFloat FPImmValue = OldInst.getOperand(1).getFPImm()->getValueAPF();
+  int FPImmEncoding = ARM_AM::getFP32Imm(FPImmValue);
+  assert(FPImmEncoding != -1 && "Invalid immediate value");
+
+  NewInstBuilder.addImm(FPImmEncoding);
+}
+
+void ARMInstructionSelector::renderVFPF64Imm(
+    MachineInstrBuilder &NewInstBuilder, const MachineInstr &OldInst) const {
+  assert(OldInst.getOpcode() == TargetOpcode::G_FCONSTANT &&
+         "Expected G_FCONSTANT");
+
+  APFloat FPImmValue = OldInst.getOperand(1).getFPImm()->getValueAPF();
+  int FPImmEncoding = ARM_AM::getFP64Imm(FPImmValue);
+  assert(FPImmEncoding != -1 && "Invalid immediate value");
+
+  NewInstBuilder.addImm(FPImmEncoding);
 }
 
 bool ARMInstructionSelector::select(MachineInstr &I,
@@ -835,12 +861,8 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     isSExt = true;
     LLVM_FALLTHROUGH;
   case G_ZEXT: {
-    LLT DstTy = MRI.getType(I.getOperand(0).getReg());
-    // FIXME: Smaller destination sizes coming soon!
-    if (DstTy.getSizeInBits() != 32) {
-      LLVM_DEBUG(dbgs() << "Unsupported destination size for extension");
-      return false;
-    }
+    assert(MRI.getType(I.getOperand(0).getReg()).getSizeInBits() <= 32 &&
+           "Unsupported destination size for extension");
 
     LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
     unsigned SrcSize = SrcTy.getSizeInBits();
@@ -956,8 +978,30 @@ bool ARMInstructionSelector::select(MachineInstr &I,
       }
     }
 
+    assert(!STI.isThumb() && "Unsupported subtarget");
     I.setDesc(TII.get(ARM::MOVi));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
+  }
+  case G_FCONSTANT: {
+    // Load from constant pool
+    unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits() / 8;
+    unsigned Alignment = Size;
+
+    assert((Size == 4 || Size == 8) && "Unsupported FP constant type");
+    auto LoadOpcode = Size == 4 ? ARM::VLDRS : ARM::VLDRD;
+
+    auto ConstPool = MF.getConstantPool();
+    auto CPIndex =
+        ConstPool->getConstantPoolIndex(I.getOperand(1).getFPImm(), Alignment);
+    MIB->setDesc(TII.get(LoadOpcode));
+    MIB->RemoveOperand(1);
+    MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
+        .addMemOperand(
+            MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                                    MachineMemOperand::MOLoad, Size, Alignment))
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
     break;
   }
   case G_INTTOPTR:
@@ -1049,6 +1093,24 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
+
+    if (ValSize == 1 && NewOpc == Opcodes.STORE8) {
+      // Before storing a 1-bit value, make sure to clear out any unneeded bits.
+      unsigned OriginalValue = I.getOperand(0).getReg();
+
+      unsigned ValueToStore = MRI.createVirtualRegister(&ARM::GPRRegClass);
+      I.getOperand(0).setReg(ValueToStore);
+
+      auto InsertBefore = I.getIterator();
+      auto AndI = BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(Opcodes.AND))
+        .addDef(ValueToStore)
+        .addUse(OriginalValue)
+        .addImm(1)
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
+      if (!constrainSelectedInstRegOperands(*AndI, TII, TRI, RBI))
+        return false;
+    }
 
     I.setDesc(TII.get(NewOpc));
 

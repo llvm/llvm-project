@@ -25,7 +25,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Log.h"
@@ -40,9 +39,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationServerPlatform constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, const char *socket_scheme)
     : GDBRemoteCommunicationServerCommon("gdb-remote.server",
@@ -86,9 +83,7 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
                         });
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerPlatform::~GDBRemoteCommunicationServerPlatform() {}
 
 Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
@@ -398,7 +393,7 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
     StringExtractorGDBRemote &packet) {
   StructuredData::Array signal_array;
 
-  const auto &signals = Host::GetUnixSignals();
+  lldb::UnixSignalsSP signals = UnixSignals::CreateForHost();
   for (auto signo = signals->GetFirstSignalNumber();
        signo != LLDB_INVALID_SIGNAL_NUMBER;
        signo = signals->GetNextSignalNumber(signo)) {

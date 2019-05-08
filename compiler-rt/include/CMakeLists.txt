@@ -5,7 +5,6 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/common_interface_defs.h
     sanitizer/coverage_interface.h
     sanitizer/dfsan_interface.h
-    sanitizer/esan_interface.h
     sanitizer/hwasan_interface.h
     sanitizer/linux_syscall_hooks.h
     sanitizer/lsan_interface.h

@@ -1821,29 +1821,30 @@ define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %m
 ;
 ; SSE41-LABEL: test_masked_v16i32:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa %xmm7, %xmm9
+; SSE41-NEXT:    movdqa %xmm6, %xmm10
+; SSE41-NEXT:    movdqa %xmm5, %xmm11
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm9, %xmm9
-; SSE41-NEXT:    pxor %xmm9, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm6
-; SSE41-NEXT:    pxor %xmm9, %xmm6
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
-; SSE41-NEXT:    pxor %xmm9, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm10
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm11
 ; SSE41-NEXT:    pcmpeqd %xmm4, %xmm0
-; SSE41-NEXT:    pxor %xmm9, %xmm0
-; SSE41-NEXT:    movntdqa 48(%rdi), %xmm9
-; SSE41-NEXT:    movntdqa 32(%rdi), %xmm10
-; SSE41-NEXT:    movntdqa 16(%rdi), %xmm11
-; SSE41-NEXT:    movntdqa (%rdi), %xmm4
-; SSE41-NEXT:    blendvps %xmm0, %xmm4, %xmm8
-; SSE41-NEXT:    movdqa %xmm5, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm11, %xmm1
-; SSE41-NEXT:    movdqa %xmm6, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm10, %xmm2
-; SSE41-NEXT:    movdqa %xmm7, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm9, %xmm3
-; SSE41-NEXT:    movaps %xmm8, %xmm0
+; SSE41-NEXT:    movntdqa 48(%rdi), %xmm4
+; SSE41-NEXT:    movntdqa 32(%rdi), %xmm7
+; SSE41-NEXT:    movntdqa 16(%rdi), %xmm6
+; SSE41-NEXT:    movntdqa (%rdi), %xmm5
+; SSE41-NEXT:    blendvps %xmm0, %xmm8, %xmm5
+; SSE41-NEXT:    movdqa %xmm11, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm6
+; SSE41-NEXT:    movdqa %xmm10, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm7
+; SSE41-NEXT:    movdqa %xmm9, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm3, %xmm4
+; SSE41-NEXT:    movaps %xmm5, %xmm0
+; SSE41-NEXT:    movaps %xmm6, %xmm1
+; SSE41-NEXT:    movaps %xmm7, %xmm2
+; SSE41-NEXT:    movaps %xmm4, %xmm3
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_masked_v16i32:
@@ -1876,14 +1877,11 @@ define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %m
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm3, %ymm3
-; AVX2-NEXT:    vpcmpeqd %ymm5, %ymm5, %ymm5
-; AVX2-NEXT:    vpxor %ymm5, %ymm3, %ymm3
 ; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm2, %ymm2
-; AVX2-NEXT:    vpxor %ymm5, %ymm2, %ymm2
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm4
-; AVX2-NEXT:    vblendvps %ymm3, %ymm4, %ymm1, %ymm1
+; AVX2-NEXT:    vblendvps %ymm3, %ymm1, %ymm4, %ymm1
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm3
-; AVX2-NEXT:    vblendvps %ymm2, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vblendvps %ymm2, %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_masked_v16i32:

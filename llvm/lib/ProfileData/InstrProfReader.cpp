@@ -813,7 +813,7 @@ Error IndexedInstrProfReader::readHeader() {
 
   Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
                     /* UseCS */ false);
-  if (Header->Version & VARIANT_MASK_CSIR_PROF)
+  if (FormatVersion & VARIANT_MASK_CSIR_PROF)
     Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
                       /* UseCS */ true);
 
@@ -899,4 +899,18 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     RecordIndex = 0;
   }
   return success();
+}
+
+void InstrProfReader::accumuateCounts(CountSumOrPercent &Sum, bool IsCS) {
+  uint64_t NumFuncs = 0;
+  for (const auto &Func : *this) {
+    if (isIRLevelProfile()) {
+      bool FuncIsCS = NamedInstrProfRecord::hasCSFlagInHash(Func.Hash);
+      if (FuncIsCS != IsCS)
+        continue;
+    }
+    Func.accumuateCounts(Sum);
+    ++NumFuncs;
+  }
+  Sum.NumEntries = NumFuncs;
 }

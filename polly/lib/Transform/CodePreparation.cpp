@@ -17,13 +17,11 @@
 
 #include "polly/CodePreparation.h"
 #include "polly/LinkAllPasses.h"
-#include "polly/ScopDetection.h"
 #include "polly/Support/ScopHelper.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace polly;

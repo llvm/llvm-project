@@ -287,6 +287,9 @@ public:
       case MachineOperand::MO_GlobalAddress:
         return addGlobalAddress(Disp.getGlobal(), Disp.getOffset() + off,
                                 TargetFlags);
+      case MachineOperand::MO_BlockAddress:
+        return addBlockAddress(Disp.getBlockAddress(), Disp.getOffset() + off,
+                               TargetFlags);
     }
   }
 

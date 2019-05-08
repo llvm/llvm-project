@@ -428,7 +428,7 @@ void SwingSchedulerDAG::schedule() {
     }
   });
 
-  std::stable_sort(NodeSets.begin(), NodeSets.end(), std::greater<NodeSet>());
+  llvm::stable_sort(NodeSets, std::greater<NodeSet>());
 
   groupRemainingNodes(NodeSets);
 
@@ -541,16 +541,16 @@ static bool isDependenceBarrier(MachineInstr &MI, AliasAnalysis *AA) {
 /// Return the underlying objects for the memory references of an instruction.
 /// This function calls the code in ValueTracking, but first checks that the
 /// instruction has a memory operand.
-static void getUnderlyingObjects(MachineInstr *MI,
-                                 SmallVectorImpl<Value *> &Objs,
+static void getUnderlyingObjects(const MachineInstr *MI,
+                                 SmallVectorImpl<const Value *> &Objs,
                                  const DataLayout &DL) {
   if (!MI->hasOneMemOperand())
     return;
   MachineMemOperand *MM = *MI->memoperands_begin();
   if (!MM->getValue())
     return;
-  GetUnderlyingObjects(const_cast<Value *>(MM->getValue()), Objs, DL);
-  for (Value *V : Objs) {
+  GetUnderlyingObjects(MM->getValue(), Objs, DL);
+  for (const Value *V : Objs) {
     if (!isIdentifiedObject(V)) {
       Objs.clear();
       return;
@@ -564,7 +564,7 @@ static void getUnderlyingObjects(MachineInstr *MI,
 /// dependence. This code is very similar to the code in ScheduleDAGInstrs
 /// but that code doesn't create loop carried dependences.
 void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
-  MapVector<Value *, SmallVector<SUnit *, 4>> PendingLoads;
+  MapVector<const Value *, SmallVector<SUnit *, 4>> PendingLoads;
   Value *UnknownValue =
     UndefValue::get(Type::getVoidTy(MF.getFunction().getContext()));
   for (auto &SU : SUnits) {
@@ -572,7 +572,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
     if (isDependenceBarrier(MI, AA))
       PendingLoads.clear();
     else if (MI.mayLoad()) {
-      SmallVector<Value *, 4> Objs;
+      SmallVector<const Value *, 4> Objs;
       getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
       if (Objs.empty())
         Objs.push_back(UnknownValue);
@@ -581,12 +581,12 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
         SUs.push_back(&SU);
       }
     } else if (MI.mayStore()) {
-      SmallVector<Value *, 4> Objs;
+      SmallVector<const Value *, 4> Objs;
       getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
       if (Objs.empty())
         Objs.push_back(UnknownValue);
       for (auto V : Objs) {
-        MapVector<Value *, SmallVector<SUnit *, 4>>::iterator I =
+        MapVector<const Value *, SmallVector<SUnit *, 4>>::iterator I =
             PendingLoads.find(V);
         if (I == PendingLoads.end())
           continue;
@@ -597,7 +597,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
           // First, perform the cheaper check that compares the base register.
           // If they are the same and the load offset is less than the store
           // offset, then mark the dependence as loop carried potentially.
-          MachineOperand *BaseOp1, *BaseOp2;
+          const MachineOperand *BaseOp1, *BaseOp2;
           int64_t Offset1, Offset2;
           if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1, TRI) &&
               TII->getMemOperandWithOffset(MI, BaseOp2, Offset2, TRI)) {
@@ -2725,7 +2725,7 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
 /// during each iteration. Set Delta to the amount of the change.
 bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  MachineOperand *BaseOp;
+  const MachineOperand *BaseOp;
   int64_t Offset;
   if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
     return false;
@@ -3139,7 +3139,7 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
   if (!computeDelta(*SI, DeltaS) || !computeDelta(*DI, DeltaD))
     return true;
 
-  MachineOperand *BaseOpS, *BaseOpD;
+  const MachineOperand *BaseOpS, *BaseOpD;
   int64_t OffsetS, OffsetD;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (!TII->getMemOperandWithOffset(*SI, BaseOpS, OffsetS, TRI) ||
@@ -3167,12 +3167,14 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
 
   // This is the main test, which checks the offset values and the loop
   // increment value to determine if the accesses may be loop carried.
-  if (OffsetS >= OffsetD)
-    return OffsetS + AccessSizeS > DeltaS;
-  else
-    return OffsetD + AccessSizeD > DeltaD;
+  if (AccessSizeS == MemoryLocation::UnknownSize ||
+      AccessSizeD == MemoryLocation::UnknownSize)
+    return true;
 
-  return true;
+  if (DeltaS != DeltaD || DeltaS < AccessSizeS || DeltaD < AccessSizeD)
+    return true;
+
+  return (OffsetS + (int64_t)AccessSizeS < OffsetD + (int64_t)AccessSizeD);
 }
 
 void SwingSchedulerDAG::postprocessDAG() {

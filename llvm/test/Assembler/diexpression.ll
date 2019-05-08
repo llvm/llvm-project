@@ -8,9 +8,10 @@
 ; CHECK-SAME: !DIExpression(DW_OP_LLVM_fragment, 3, 7),
 ; CHECK-SAME: !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 3, DW_OP_LLVM_fragment, 3, 7),
 ; CHECK-SAME: !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef),
-; CHECK-SAME: !DIExpression(DW_OP_plus_uconst, 3)}
+; CHECK-SAME: !DIExpression(DW_OP_plus_uconst, 3)
+; CHECK-SAME: !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_signed)}
 
-!named = !{!0, !1, !2, !3, !4, !5, !6}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7}
 
 !0 = !DIExpression()
 !1 = !DIExpression(DW_OP_deref)
@@ -19,3 +20,4 @@
 !4 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 3, DW_OP_LLVM_fragment, 3, 7)
 !5 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
 !6 = !DIExpression(DW_OP_plus_uconst, 3)
+!7 = !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_signed)

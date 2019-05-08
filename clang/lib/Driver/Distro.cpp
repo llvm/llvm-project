@@ -51,6 +51,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
                       .Case("bionic", Distro::UbuntuBionic)
                       .Case("cosmic", Distro::UbuntuCosmic)
                       .Case("disco", Distro::UbuntuDisco)
+                      .Case("eoan", Distro::UbuntuEoan)
                       .Default(Distro::UnknownDistro);
     if (Version != Distro::UnknownDistro)
       return Version;
@@ -93,6 +94,8 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         return Distro::DebianStretch;
       case 10:
         return Distro::DebianBuster;
+      case 11:
+        return Distro::DebianBullseye;
       default:
         return Distro::UnknownDistro;
       }
@@ -102,6 +105,8 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("wheezy/sid", Distro::DebianWheezy)
         .Case("jessie/sid", Distro::DebianJessie)
         .Case("stretch/sid", Distro::DebianStretch)
+        .Case("buster/sid", Distro::DebianBuster)
+        .Case("bullseye/sid", Distro::DebianBullseye)
         .Default(Distro::UnknownDistro);
   }
 

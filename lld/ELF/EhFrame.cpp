@@ -96,7 +96,7 @@ void EhReader::skipBytes(size_t Count) {
 
 // Read a null-terminated string.
 StringRef EhReader::readString() {
-  const uint8_t *End = std::find(D.begin(), D.end(), '\0');
+  const uint8_t *End = llvm::find(D, '\0');
   if (End == D.end())
     failOn(D.data(), "corrupted CIE (failed to read string)");
   StringRef S = toStringRef(D.slice(0, End - D.begin()));

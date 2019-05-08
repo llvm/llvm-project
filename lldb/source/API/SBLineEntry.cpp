@@ -12,7 +12,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/LineEntry.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include <limits.h>
@@ -42,7 +41,7 @@ const SBLineEntry &SBLineEntry::operator=(const SBLineEntry &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 void SBLineEntry::SetLineEntry(const lldb_private::LineEntry &lldb_object_ref) {
@@ -59,18 +58,6 @@ SBAddress SBLineEntry::GetStartAddress() const {
   if (m_opaque_up)
     sb_address.SetAddress(&m_opaque_up->range.GetBaseAddress());
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    StreamString sstr;
-    const Address *addr = sb_address.get();
-    if (addr)
-      addr->Dump(&sstr, NULL, Address::DumpStyleModuleWithFileAddress,
-                 Address::DumpStyleInvalid, 4);
-    log->Printf("SBLineEntry(%p)::GetStartAddress () => SBAddress (%p): %s",
-                static_cast<void *>(m_opaque_up.get()),
-                static_cast<void *>(sb_address.get()), sstr.GetData());
-  }
-
   return LLDB_RECORD_RESULT(sb_address);
 }
 
@@ -82,22 +69,15 @@ SBAddress SBLineEntry::GetEndAddress() const {
     sb_address.SetAddress(&m_opaque_up->range.GetBaseAddress());
     sb_address.OffsetAddress(m_opaque_up->range.GetByteSize());
   }
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    StreamString sstr;
-    const Address *addr = sb_address.get();
-    if (addr)
-      addr->Dump(&sstr, NULL, Address::DumpStyleModuleWithFileAddress,
-                 Address::DumpStyleInvalid, 4);
-    log->Printf("SBLineEntry(%p)::GetEndAddress () => SBAddress (%p): %s",
-                static_cast<void *>(m_opaque_up.get()),
-                static_cast<void *>(sb_address.get()), sstr.GetData());
-  }
   return LLDB_RECORD_RESULT(sb_address);
 }
 
 bool SBLineEntry::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBLineEntry, IsValid);
+  return this->operator bool();
+}
+SBLineEntry::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBLineEntry, operator bool);
 
   return m_opaque_up.get() && m_opaque_up->IsValid();
 }
@@ -105,19 +85,9 @@ bool SBLineEntry::IsValid() const {
 SBFileSpec SBLineEntry::GetFileSpec() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBLineEntry, GetFileSpec);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBFileSpec sb_file_spec;
   if (m_opaque_up.get() && m_opaque_up->file)
     sb_file_spec.SetFileSpec(m_opaque_up->file);
-
-  if (log) {
-    SBStream sstr;
-    sb_file_spec.GetDescription(sstr);
-    log->Printf("SBLineEntry(%p)::GetFileSpec () => SBFileSpec(%p): %s",
-                static_cast<void *>(m_opaque_up.get()),
-                static_cast<const void *>(sb_file_spec.get()), sstr.GetData());
-  }
 
   return LLDB_RECORD_RESULT(sb_file_spec);
 }
@@ -125,15 +95,9 @@ SBFileSpec SBLineEntry::GetFileSpec() const {
 uint32_t SBLineEntry::GetLine() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBLineEntry, GetLine);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   uint32_t line = 0;
   if (m_opaque_up)
     line = m_opaque_up->line;
-
-  if (log)
-    log->Printf("SBLineEntry(%p)::GetLine () => %u",
-                static_cast<void *>(m_opaque_up.get()), line);
 
   return line;
 }
@@ -224,3 +188,33 @@ bool SBLineEntry::GetDescription(SBStream &description) {
 }
 
 lldb_private::LineEntry *SBLineEntry::get() { return m_opaque_up.get(); }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBLineEntry>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBLineEntry, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBLineEntry, (const lldb::SBLineEntry &));
+  LLDB_REGISTER_METHOD(const lldb::SBLineEntry &,
+                       SBLineEntry, operator=,(const lldb::SBLineEntry &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBLineEntry, GetStartAddress,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBLineEntry, GetEndAddress, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBLineEntry, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBLineEntry, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBLineEntry, GetFileSpec, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBLineEntry, GetLine, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBLineEntry, GetColumn, ());
+  LLDB_REGISTER_METHOD(void, SBLineEntry, SetFileSpec, (lldb::SBFileSpec));
+  LLDB_REGISTER_METHOD(void, SBLineEntry, SetLine, (uint32_t));
+  LLDB_REGISTER_METHOD(void, SBLineEntry, SetColumn, (uint32_t));
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBLineEntry, operator==,(const lldb::SBLineEntry &));
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBLineEntry, operator!=,(const lldb::SBLineEntry &));
+  LLDB_REGISTER_METHOD(bool, SBLineEntry, GetDescription, (lldb::SBStream &));
+}
+
+}
+}

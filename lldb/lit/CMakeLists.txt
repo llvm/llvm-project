@@ -20,12 +20,14 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_DOTEST_ARGS "${LLDB_D
 list(APPEND LLDB_TEST_DEPS
   LLDBUnitTests
   dsymutil
+  lit-cpuid
   llc
   lldb
   lldb-test
   llvm-config
   llvm-mc
   llvm-objcopy
+  llvm-readobj
   )
 
 if(TARGET lld)
@@ -35,6 +37,8 @@ endif()
 # the value is not canonicalized within LLVM
 llvm_canonicalize_cmake_booleans(
   LLDB_DISABLE_PYTHON
+  LLDB_TOOL_LLDB_INSTR_BUILD
+  LLDB_TOOL_LLDB_VSCODE_BUILD
   LLVM_ENABLE_ZLIB
   LLDB_IS_64_BITS)
 

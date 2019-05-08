@@ -91,7 +91,7 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT:  2,              1  (0.2%)
 # CHECK-NEXT:  4,              7  (1.7%)
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          3  (0.7%)
 # CHECK-NEXT:  1,          400  (99.3%)
@@ -205,7 +205,7 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT:  2,              1  (0.2%)
 # CHECK-NEXT:  4,              7  (1.7%)
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          3  (0.7%)
 # CHECK-NEXT:  1,          400  (99.3%)
@@ -319,7 +319,7 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT:  2,              1  (0.2%)
 # CHECK-NEXT:  4,              7  (1.7%)
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          3  (0.7%)
 # CHECK-NEXT:  1,          400  (99.3%)
@@ -433,7 +433,7 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT:  2,              1  (0.2%)
 # CHECK-NEXT:  4,              7  (1.7%)
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          3  (0.7%)
 # CHECK-NEXT:  1,          400  (99.3%)
@@ -547,7 +547,7 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT:  2,              1  (0.1%)
 # CHECK-NEXT:  4,              6  (0.7%)
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          403  (50.2%)
 # CHECK-NEXT:  1,          400  (49.8%)
@@ -662,7 +662,7 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT:  2,              1  (0.2%)
 # CHECK-NEXT:  4,              7  (1.7%)
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          3  (0.7%)
 # CHECK-NEXT:  1,          400  (99.3%)
@@ -774,10 +774,10 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT:  0,              3  (0.7%)
 # CHECK-NEXT:  4,              400  (99.3%)
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          3  (0.7%)
-# CHECK-NEXT:  1,          400  (99.3%)
+# CHECK-NEXT:  4,          400  (99.3%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: [1] Resource name.

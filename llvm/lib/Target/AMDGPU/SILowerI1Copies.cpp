@@ -483,6 +483,8 @@ void SILowerI1Copies::lowerCopiesFromI1() {
       ConstrainRegs.insert(SrcReg);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstReg)
           .addImm(0)
+          .addImm(0)
+          .addImm(0)
           .addImm(-1)
           .addReg(SrcReg);
       DeadCopies.push_back(&MI);
@@ -502,6 +504,9 @@ void SILowerI1Copies::lowerPhis() {
   SmallVector<MachineBasicBlock *, 4> IncomingBlocks;
   SmallVector<unsigned, 4> IncomingRegs;
   SmallVector<unsigned, 4> IncomingUpdated;
+#ifndef NDEBUG
+  DenseSet<unsigned> PhiRegisters;
+#endif
 
   for (MachineBasicBlock &MBB : *MF) {
     LF.initialize(MBB);
@@ -529,12 +534,16 @@ void SILowerI1Copies::lowerPhis() {
         } else if (IncomingDef->getOpcode() == AMDGPU::IMPLICIT_DEF) {
           continue;
         } else {
-          assert(IncomingDef->isPHI());
+          assert(IncomingDef->isPHI() || PhiRegisters.count(IncomingReg));
         }
 
         IncomingBlocks.push_back(IncomingMBB);
         IncomingRegs.push_back(IncomingReg);
       }
+
+#ifndef NDEBUG
+      PhiRegisters.insert(DstReg);
+#endif
 
       // Phis in a loop that are observed outside the loop receive a simple but
       // conservatively correct treatment.

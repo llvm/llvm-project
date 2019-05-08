@@ -71,9 +71,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // SocketAddress constructor
-//----------------------------------------------------------------------
 SocketAddress::SocketAddress() { Clear(); }
 
 SocketAddress::SocketAddress(const struct sockaddr &s) { m_socket_addr.sa = s; }
@@ -94,15 +92,11 @@ SocketAddress::SocketAddress(const struct addrinfo *addr_info) {
   *this = addr_info;
 }
 
-//----------------------------------------------------------------------
 // SocketAddress copy constructor
-//----------------------------------------------------------------------
 SocketAddress::SocketAddress(const SocketAddress &rhs)
     : m_socket_addr(rhs.m_socket_addr) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SocketAddress::~SocketAddress() {}
 
 void SocketAddress::Clear() {
@@ -183,9 +177,7 @@ bool SocketAddress::SetPort(uint16_t port) {
   return false;
 }
 
-//----------------------------------------------------------------------
 // SocketAddress assignment operator
-//----------------------------------------------------------------------
 const SocketAddress &SocketAddress::operator=(const SocketAddress &rhs) {
   if (this != &rhs)
     m_socket_addr = rhs.m_socket_addr;

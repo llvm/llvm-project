@@ -302,7 +302,6 @@ declare <1 x i64> @llvm.arm.neon.vld1.v1i64.p0i8(i8*, i32) nounwind readonly
 ; A9: vld1.8 {d{{[0-9]+}}}, [[BASE]], [[INC]]
 ; A9: vld1.8 {d{{[0-9]+}}}, [[BASE]], [[INC]]
 ; A9: vld1.8 {d{{[0-9]+}}}, [[BASE]], [[INC]]
-; A9: vld1.8 {d{{[0-9]+}}}, [[BASE]], {{r[0-9]}}
 ; A9: vst1.8 {d{{[0-9]+}}}, [[BASE]], [[INC]]
 ; A9: vst1.8 {d{{[0-9]+}}}, [[BASE]], [[INC]]
 ; A9: vst1.8 {d{{[0-9]+}}}, [[BASE]], [[INC]]

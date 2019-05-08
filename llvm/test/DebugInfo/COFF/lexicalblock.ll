@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ;
 ; -- lexicablock.cxx begin ----------------------------------------------------
 ; int main(int argc, char *argv[]) {
@@ -70,8 +70,12 @@
 ; CHECK:   Kind: S_BLOCK32 {{.*}}
 ; CHECK:   BlockName: 
 ; CHECK: }
-; CHECK: LocalSym {
-; CHECK:   VarName: localC
+; CHECK: ScopeEndSym {
+; CHECK:   Kind: S_END {{.*}}
+; CHECK: }
+; CHECK: BlockSym {
+; CHECK:   Kind: S_BLOCK32 {{.*}}
+; CHECK:   BlockName: 
 ; CHECK: }
 ; CHECK: ScopeEndSym {
 ; CHECK:   Kind: S_END {{.*}}
@@ -80,47 +84,11 @@
 ; CHECK:   Kind: S_BLOCK32 {{.*}}
 ; CHECK:   BlockName: 
 ; CHECK: }
-; CHECK: LocalSym {
-; CHECK:   VarName: localD
-; CHECK: }
-; CHECK: ScopeEndSym {
-; CHECK:   Kind: S_END {{.*}}
-; CHECK: }
-; CHECK: BlockSym {
-; CHECK:   Kind: S_BLOCK32 {{.*}}
-; CHECK:   BlockName: 
-; CHECK: }
-; CHECK: LocalSym {
-; CHECK:   VarName: localE
-; CHECK: }
 ; CHECK: ScopeEndSym {
 ; CHECK: }
 ; CHECK: BlockSym {
 ; CHECK:   Kind: S_BLOCK32 {{.*}}
 ; CHECK:   BlockName: 
-; CHECK: }
-; CHECK: LocalSym {
-; CHECK:   VarName: localF
-; CHECK: }
-; CHECK: BlockSym {
-; CHECK:   Kind: S_BLOCK32 {{.*}}
-; CHECK:   BlockName: 
-; CHECK: }
-; CHECK: LocalSym {
-; CHECK:   VarName: localG
-; CHECK: }
-; CHECK: ScopeEndSym {
-; CHECK:   Kind: S_END {{.*}}
-; CHECK: }
-; CHECK: ScopeEndSym {
-; CHECK:   Kind: S_END {{.*}}
-; CHECK: }
-; CHECK: BlockSym {
-; CHECK:   Kind: S_BLOCK32 {{.*}}
-; CHECK:   BlockName: 
-; CHECK: }
-; CHECK: LocalSym {
-; CHECK:   VarName: localH
 ; CHECK: }
 ; CHECK: ScopeEndSym {
 ; CHECK:   Kind: S_END {{.*}}

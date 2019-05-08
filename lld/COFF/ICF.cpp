@@ -51,7 +51,6 @@ private:
   bool equalsConstant(const SectionChunk *A, const SectionChunk *B);
   bool equalsVariable(const SectionChunk *A, const SectionChunk *B);
 
-  uint32_t getHash(SectionChunk *C);
   bool isEligible(SectionChunk *C);
 
   size_t findBoundary(size_t Begin, size_t End);
@@ -130,10 +129,10 @@ void ICF::segregate(size_t Begin, size_t End, bool Constant) {
 bool ICF::assocEquals(const SectionChunk *A, const SectionChunk *B) {
   auto ChildClasses = [&](const SectionChunk *SC) {
     std::vector<uint32_t> Classes;
-    for (const SectionChunk *C : SC->children())
-      if (!C->SectionName.startswith(".debug") &&
-          C->SectionName != ".gfids$y" && C->SectionName != ".gljmp$y")
-        Classes.push_back(C->Class[Cnt % 2]);
+    for (const SectionChunk &C : SC->children())
+      if (!C.SectionName.startswith(".debug") &&
+          C.SectionName != ".gfids$y" && C.SectionName != ".gljmp$y")
+        Classes.push_back(C.Class[Cnt % 2]);
     return Classes;
   };
   return ChildClasses(A) == ChildClasses(B);
@@ -280,10 +279,9 @@ void ICF::run(ArrayRef<Chunk *> Vec) {
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
-  std::stable_sort(Chunks.begin(), Chunks.end(),
-                   [](SectionChunk *A, SectionChunk *B) {
-                     return A->Class[0] < B->Class[0];
-                   });
+  llvm::stable_sort(Chunks, [](const SectionChunk *A, const SectionChunk *B) {
+    return A->Class[0] < B->Class[0];
+  });
 
   // Compare static contents and assign unique IDs for each static content.
   forEachClass([&](size_t Begin, size_t End) { segregate(Begin, End, true); });

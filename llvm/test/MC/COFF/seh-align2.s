@@ -1,6 +1,6 @@
 // This test checks the alignment and padding of the unwind info.
 
-// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -s -sd -sr -u | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -S --sd --sr -u | FileCheck %s
 
 // CHECK:      Sections [
 // CHECK:        Section {

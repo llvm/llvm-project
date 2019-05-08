@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -s -dyn-relocations %t | FileCheck --check-prefix=SEC %s
+// RUN: llvm-readobj -S --dyn-relocations %t | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -d -triple=armv7a-linux-gnueabi %t | FileCheck %s
 
 // Test the handling of the local exec TLS model. TLS can be resolved
@@ -68,6 +68,7 @@ x:
 // SEC-NEXT: }
 
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: _start:
 // offset of x from Thread pointer = (TcbSize + 0x0 = 0x20)
 // CHECK-NEXT:   11000:         20 00 00 00

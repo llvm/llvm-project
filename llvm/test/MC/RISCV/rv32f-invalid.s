@@ -2,8 +2,8 @@
 
 # Out of range immediates
 ## simm12
-flw ft1, -2049(a0) # CHECK: :[[@LINE]]:10: error: operand must be a symbol with %lo/%pcrel_lo modifier or an integer in the range [-2048, 2047]
-fsw ft2, 2048(a1) # CHECK: :[[@LINE]]:10: error: operand must be a symbol with %lo/%pcrel_lo modifier or an integer in the range [-2048, 2047]
+flw ft1, -2049(a0) # CHECK: :[[@LINE]]:10: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+fsw ft2, 2048(a1) # CHECK: :[[@LINE]]:10: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
 
 # Memory operand not formatted correctly
 flw ft1, a0, -200 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction

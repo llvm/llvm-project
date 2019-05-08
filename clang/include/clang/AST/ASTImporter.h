@@ -142,6 +142,12 @@ class TypeSourceInfo;
 
     void AddToLookupTable(Decl *ToD);
 
+  protected:
+    /// Can be overwritten by subclasses to implement their own import logic.
+    /// The overwritten method should call this method if it didn't import the
+    /// decl on its own.
+    virtual Expected<Decl *> ImportImpl(Decl *From);
+
   public:
 
     /// \param ToContext The context we'll be importing into.
@@ -177,15 +183,10 @@ class TypeSourceInfo;
     /// \return Error information (success or error).
     template <typename ImportT>
     LLVM_NODISCARD llvm::Error importInto(ImportT &To, const ImportT &From) {
-      To = Import(From);
-      if (From && !To)
-          return llvm::make_error<ImportError>();
-      return llvm::Error::success();
-      // FIXME: this should be the final code
-      //auto ToOrErr = Import(From);
-      //if (ToOrErr)
-      //  To = *ToOrErr;
-      //return ToOrErr.takeError();
+      auto ToOrErr = Import_New(From);
+      if (ToOrErr)
+        To = *ToOrErr;
+      return ToOrErr.takeError();
     }
 
     /// Import the given type from the "from" context into the "to"
@@ -220,7 +221,7 @@ class TypeSourceInfo;
     /// \returns The equivalent declaration in the "to" context, or the import
     /// error.
     llvm::Expected<Decl *> Import_New(Decl *FromD);
-    llvm::Expected<Decl *> Import_New(const Decl *FromD) {
+    llvm::Expected<const Decl *> Import_New(const Decl *FromD) {
       return Import_New(const_cast<Decl *>(FromD));
     }
     // FIXME: Remove this version.
@@ -430,7 +431,9 @@ class TypeSourceInfo;
 
     /// Subclasses can override this function to observe all of the \c From ->
     /// \c To declaration mappings as they are imported.
-    virtual Decl *Imported(Decl *From, Decl *To) { return To; }
+    virtual void Imported(Decl *From, Decl *To) {}
+
+    void RegisterImportedDecl(Decl *FromD, Decl *ToD);
 
     /// Store and assign the imported declaration to its counterpart.
     Decl *MapImported(Decl *From, Decl *To);

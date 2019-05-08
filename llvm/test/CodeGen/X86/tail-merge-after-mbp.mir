@@ -7,25 +7,25 @@
 # CHECK-NEXT:    successors: %bb.3(0x30000000), %bb.4(0x50000000)
 # CHECK:    $rax = MOV64rm $r14, 1, $noreg, 0, $noreg
 # CHECK-NEXT:    TEST64rr $rax, $rax
-# CHECK-NEXT:    JE_1 %bb.3
+# CHECK-NEXT:    JCC_1 %bb.3, 4
 # CHECK:  bb.4:
 # CHECK-NEXT:    successors: %bb.5(0x30000000), %bb.10(0x50000000)
 # CHECK:    CMP64mi8 killed $rax, 1, $noreg, 8, $noreg, 0
-# CHECK-NEXT:    JNE_1 %bb.10
+# CHECK-NEXT:    JCC_1 %bb.10, 5
 # CHECK:  bb.5:
 # CHECK-NEXT:    successors: %bb.6(0x30000000), %bb.7(0x50000000)
 # CHECK:    $rax = MOV64rm $r14, 1, $noreg, 0, $noreg
 # CHECK-NEXT:    TEST64rr $rax, $rax
-# CHECK-NEXT:    JE_1 %bb.6
+# CHECK-NEXT:    JCC_1 %bb.6, 4
 # CHECK:  bb.7
 # CHECK-NEXT:    successors: %bb.8(0x71555555), %bb.10(0x0eaaaaab)
 # CHECK:    CMP64mi8 killed $rax, 1, $noreg, 8, $noreg, 0
-# CHECK-NEXT:    JNE_1 %bb.10
+# CHECK-NEXT:    JCC_1 %bb.10, 5
 # CHECK:  bb.8:
 # CHECK-NEXT:    successors: %bb.9(0x04000000), %bb.7(0x7c000000)
 # CHECK:    $rax = MOV64rm $r14, 1, $noreg, 0, $noreg
 # CHECK-NEXT:    TEST64rr $rax, $rax
-# CHECK-NEXT:    JNE_1 %bb.7
+# CHECK-NEXT:    JCC_1 %bb.7, 5
 
 name:            foo
 body:             |
@@ -33,7 +33,7 @@ body:             |
     successors: %bb.1(0x40000000), %bb.7(0x40000000)
 
     TEST8ri $dl, 1, implicit-def $eflags, implicit killed $edx
-    JE_1 %bb.7, implicit $eflags
+    JCC_1 %bb.7, 4, implicit $eflags
 
   bb.1:
     successors: %bb.16(0x80000000)
@@ -46,7 +46,7 @@ body:             |
 
     $rax = MOV64rm $r14, 1, $noreg, 0, $noreg :: (load 8)
     TEST64rr $rax, $rax, implicit-def $eflags
-    JNE_1 %bb.9, implicit killed $eflags
+    JCC_1 %bb.9, 5, implicit killed $eflags
 
   bb.8:
     successors: %bb.16(0x80000000)
@@ -58,14 +58,14 @@ body:             |
     successors: %bb.10(0x30000000), %bb.15(0x50000000)
 
     CMP64mi8 killed $rax, 1, $noreg, 8, $noreg, 0, implicit-def $eflags :: (load 8)
-    JNE_1 %bb.15, implicit $eflags
+    JCC_1 %bb.15, 5, implicit $eflags
 
   bb.10:
     successors: %bb.11(0x30000000), %bb.12(0x50000000)
 
     $rax = MOV64rm $r14, 1, $noreg, 0, $noreg :: (load 8)
     TEST64rr $rax, $rax, implicit-def $eflags
-    JNE_1 %bb.12, implicit $eflags
+    JCC_1 %bb.12, 5, implicit $eflags
 
   bb.11:
     successors: %bb.16(0x80000000)
@@ -77,14 +77,14 @@ body:             |
     successors: %bb.13(0x71555555), %bb.15(0x0eaaaaab)
 
     CMP64mi8 killed $rax, 1, $noreg, 8, $noreg, 0, implicit-def $eflags :: (load 8), (load 8)
-    JNE_1 %bb.15, implicit $eflags
+    JCC_1 %bb.15, 5, implicit $eflags
 
   bb.13:
     successors: %bb.14(0x04000000), %bb.12(0x7c000000)
 
     $rax = MOV64rm $r14, 1, $noreg, 0, $noreg :: (load 8)
     TEST64rr $rax, $rax, implicit-def $eflags
-    JNE_1 %bb.12, implicit $eflags
+    JCC_1 %bb.12, 5, implicit $eflags
 
   bb.14:
     successors: %bb.16(0x80000000)

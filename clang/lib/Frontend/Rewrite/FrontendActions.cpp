@@ -237,7 +237,7 @@ public:
 
     // Rewrite the contents of the module in a separate compiler instance.
     CompilerInstance Instance(CI.getPCHContainerOperations(),
-                              &CI.getPreprocessor().getPCMCache());
+                              &CI.getModuleCache());
     Instance.setInvocation(
         std::make_shared<CompilerInvocation>(CI.getInvocation()));
     Instance.createDiagnostics(

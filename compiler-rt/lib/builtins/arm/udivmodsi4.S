@@ -1,15 +1,15 @@
-/*===-- udivmodsi4.S - 32-bit unsigned integer divide and modulus ---------===//
- *
- * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
- * See https://llvm.org/LICENSE.txt for license information.
- * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
- *
- *===----------------------------------------------------------------------===//
- *
- * This file implements the __udivmodsi4 (32-bit unsigned integer divide and
- * modulus) function for the ARM 32-bit architecture.
- *
- *===----------------------------------------------------------------------===*/
+//===-- udivmodsi4.S - 32-bit unsigned integer divide and modulus ---------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the __udivmodsi4 (32-bit unsigned integer divide and
+// modulus) function for the ARM 32-bit architecture.
+//
+//===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
 
@@ -38,26 +38,25 @@ DEFINE_COMPILERRT_FUNCTION(__udivmodsi4)
 	beq	LOCAL_LABEL(divby1)
 	cmp	r0, r1
 	bcc	LOCAL_LABEL(quotient0)
-	/*
-	 * Implement division using binary long division algorithm.
-	 *
-	 * r0 is the numerator, r1 the denominator.
-	 *
-	 * The code before JMP computes the correct shift I, so that
-	 * r0 and (r1 << I) have the highest bit set in the same position.
-	 * At the time of JMP, ip := .Ldiv0block - 12 * I.
-	 * This depends on the fixed instruction size of block.
-	 * For ARM mode, this is 12 Bytes, for THUMB mode 14 Bytes.
-	 *
-	 * block(shift) implements the test-and-update-quotient core.
-	 * It assumes (r0 << shift) can be computed without overflow and
-	 * that (r0 << shift) < 2 * r1. The quotient is stored in r3.
-	 */
+
+	// Implement division using binary long division algorithm.
+	//
+	// r0 is the numerator, r1 the denominator.
+	//
+	// The code before JMP computes the correct shift I, so that
+	// r0 and (r1 << I) have the highest bit set in the same position.
+	// At the time of JMP, ip := .Ldiv0block - 12 * I.
+	// This depends on the fixed instruction size of block.
+	// For ARM mode, this is 12 Bytes, for THUMB mode 14 Bytes.
+	//
+	// block(shift) implements the test-and-update-quotient core.
+	// It assumes (r0 << shift) can be computed without overflow and
+	// that (r0 << shift) < 2 * r1. The quotient is stored in r3.
 
 #  ifdef __ARM_FEATURE_CLZ
 	clz	ip, r0
 	clz	r3, r1
-	/* r0 >= r1 implies clz(r0) <= clz(r1), so ip <= r3. */
+	// r0 >= r1 implies clz(r0) <= clz(r1), so ip <= r3.
 	sub	r3, r3, ip
 #    if defined(USE_THUMB_2)
 	adr	ip, LOCAL_LABEL(div0block) + 1
@@ -98,11 +97,11 @@ DEFINE_COMPILERRT_FUNCTION(__udivmodsi4)
 	movhs	r4, r3
 	subhs	ip, ip, #(2 * 12)
 
-	/* Last block, no need to update r3 or r4. */
+	// Last block, no need to update r3 or r4.
 	cmp	r1, r4, lsr #1
 	subls	ip, ip, #(1 * 12)
 
-	ldr	r4, [sp], #8	/* restore r4, we are done with it. */
+	ldr	r4, [sp], #8	// restore r4, we are done with it.
 	mov	r3, #0
 
 	JMP(ip)
@@ -163,7 +162,7 @@ LOCAL_LABEL(divby1):
 	mov	r3, #0
 	str	r3, [r2]
 	JMP(lr)
-#endif /* __ARM_ARCH_EXT_IDIV__ */
+#endif // __ARM_ARCH_EXT_IDIV__
 
 LOCAL_LABEL(divby0):
 	mov	r0, #0

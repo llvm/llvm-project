@@ -1,5 +1,6 @@
 add_llvm_library(LLVMOrcJIT
   CompileOnDemandLayer.cpp
+  CompileUtils.cpp
   Core.cpp
   ExecutionUtils.cpp
   IndirectionUtils.cpp
@@ -11,6 +12,7 @@ add_llvm_library(LLVMOrcJIT
   Layer.cpp
   LLJIT.cpp
   NullResolver.cpp
+  ObjectLinkingLayer.cpp
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
   OrcCBindings.cpp

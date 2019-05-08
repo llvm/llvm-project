@@ -109,13 +109,11 @@ public:
 
   bool GetSendAcks() { return m_send_acks; }
 
-  //------------------------------------------------------------------
   // Set the global packet timeout.
   //
   // For clients, this is the timeout that gets used when sending
   // packets and waiting for responses. For servers, this is used when waiting
   // for ACKs.
-  //------------------------------------------------------------------
   std::chrono::seconds SetPacketTimeout(std::chrono::seconds packet_timeout) {
     const auto old_packet_timeout = m_packet_timeout;
     m_packet_timeout = packet_timeout;
@@ -124,10 +122,8 @@ public:
 
   std::chrono::seconds GetPacketTimeout() const { return m_packet_timeout; }
 
-  //------------------------------------------------------------------
   // Start a debugserver instance on the current host using the
   // supplied connection URL.
-  //------------------------------------------------------------------
   Status StartDebugserverProcess(
       const char *url,
       Platform *platform, // If non nullptr, then check with the platform for

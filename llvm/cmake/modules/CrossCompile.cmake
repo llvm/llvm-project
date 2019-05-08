@@ -1,3 +1,5 @@
+include(LLVMExternalProjectUtils)
+
 function(llvm_create_cross_target_internal target_name toolchain buildtype)
 
   if(NOT DEFINED LLVM_${target_name}_BUILD)
@@ -43,6 +45,11 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
   string(REPLACE ";" "$<SEMICOLON>" experimental_targets_to_build_arg
          "${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD}")
 
+  string(REPLACE ";" "$<SEMICOLON>" llvm_enable_projects_arg
+         "${LLVM_ENABLE_PROJECTS}")
+  string(REPLACE ";" "$<SEMICOLON>" llvm_external_projects_arg
+         "${LLVM_EXTERNAL_PROJECTS}")
+
   add_custom_command(OUTPUT ${LLVM_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
@@ -52,6 +59,8 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
         -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="${experimental_targets_to_build_arg}"
         -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}"
         -DLLVM_TARGET_ARCH="${LLVM_TARGET_ARCH}"
+        -DLLVM_ENABLE_PROJECTS="${llvm_enable_projects_arg}"
+        -DLLVM_EXTERNAL_PROJECTS="${llvm_external_projects_arg}"
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         ${build_type_flags} ${linker_flag} ${external_clang_dir}
     WORKING_DIRECTORY ${LLVM_${target_name}_BUILD}
@@ -65,6 +74,31 @@ endfunction()
 
 function(llvm_create_cross_target target_name sysroot)
   llvm_create_cross_target_internal(${target_name} ${sysroot} ${CMAKE_BUILD_TYPE})
+endfunction()
+
+# Sets up a native build for a tool, used e.g. for cross-compilation and
+# LLVM_OPTIMIZED_TABLEGEN. Always builds in Release.
+# - target: The target to build natively
+# - output_path_var: A variable name which receives the path to the built target
+# - DEPENDS: Any additional dependencies for the target
+function(build_native_tool target output_path_var)
+  cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
+
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_path "${LLVM_NATIVE_BUILD}/Release/bin/${target}")
+  else()
+    set(output_path "${LLVM_NATIVE_BUILD}/bin/${target}")
+  endif()
+
+  llvm_ExternalProject_BuildCmd(build_cmd ${target} ${LLVM_NATIVE_BUILD}
+                                CONFIGURATION Release)
+  add_custom_command(OUTPUT "${output_path}"
+                     COMMAND ${build_cmd}
+                     DEPENDS CONFIGURE_LLVM_NATIVE ${ARG_DEPENDS}
+                     WORKING_DIRECTORY "${LLVM_NATIVE_BUILD}"
+                     COMMENT "Building native ${target}..."
+                     USES_TERMINAL)
+  set(${output_path_var} "${output_path}" PARENT_SCOPE)
 endfunction()
 
 llvm_create_cross_target_internal(NATIVE "" Release)

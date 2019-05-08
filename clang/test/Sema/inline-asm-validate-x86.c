@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple i686 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64 -fsyntax-only -verify -DAMD64 %s
 
 void I(int i, int j) {
   static const int BelowMin = -1;
@@ -137,3 +137,21 @@ void O(int i, int j) {
           : "0"(i), "O"(64)); // expected-no-error
 }
 
+void pr40890(void) {
+  struct s {
+    int a, b;
+  };
+  static struct s s;
+  // This null pointer can be used as an integer constant expression.
+  __asm__ __volatile__("\n#define S_A abcd%0\n" : : "n"(&((struct s*)0)->a));
+  // This offset-from-null pointer can be used as an integer constant expression.
+  __asm__ __volatile__("\n#define S_B abcd%0\n" : : "n"(&((struct s*)0)->b));
+  // This pointer cannot be used as an integer constant expression.
+  __asm__ __volatile__("\n#define GLOBAL_A abcd%0\n" : : "n"(&s.a)); // expected-error{{constraint 'n' expects an integer constant expression}}
+  // Floating-point is also not okay.
+  __asm__ __volatile__("\n#define PI abcd%0\n" : : "n"(3.14f)); // expected-error{{constraint 'n' expects an integer constant expression}}
+#ifdef AMD64
+  // This arbitrary pointer is fine.
+  __asm__ __volatile__("\n#define BEEF abcd%0\n" : : "n"((int*)0xdeadbeeeeeef));
+#endif
+}

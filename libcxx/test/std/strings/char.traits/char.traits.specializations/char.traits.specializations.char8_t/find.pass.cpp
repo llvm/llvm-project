@@ -39,6 +39,7 @@ int main(int, char**)
     assert(std::char_traits<char8_t>::find(NULL, 0, char8_t(0)) == 0);
 
     static_assert(test_constexpr(), "" );
+    return 0;
 }
 #else
 int main(int, char**) {

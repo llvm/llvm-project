@@ -49,9 +49,8 @@ body:             |
     ; CHECK: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[TRUNC9]], [[C5]]
     ; CHECK: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[SHL2]], [[C5]]
     ; CHECK: $w0 = COPY [[ASHR2]](s32)
-    ; CHECK: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[TRUNC10:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC10]], [[C6]]
+    ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC10]], [[C4]]
     ; CHECK: $w0 = COPY [[AND3]](s32)
     ; CHECK: [[TRUNC11:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: $w0 = COPY [[TRUNC11]](s32)
@@ -61,8 +60,6 @@ body:             |
     ; CHECK: $x0 = COPY [[FPEXT]](s64)
     ; CHECK: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: $w0 = COPY [[C7]](s32)
-    ; CHECK: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $w0 = COPY [[C8]](s32)
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK: $w0 = COPY [[DEF]](s32)
     %0:_(s64) = COPY $x0
@@ -170,5 +167,200 @@ body:             |
     %2:_(s8) = G_ZEXT %1(s1)
     %3:_(s32) = G_ANYEXT %2(s8)
     $w0 = COPY %3(s32)
+
+...
+---
+name:            test_zext_v8s16_from_v8s8
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+    ; CHECK-LABEL: name: test_zext_v8s16_from_v8s8
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(<8 x s8>) = COPY $d0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(<8 x s16>) = G_ZEXT [[COPY]](<8 x s8>)
+    ; CHECK: $q0 = COPY [[ZEXT]](<8 x s16>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %1:fpr(<8 x s8>) = COPY $d0
+    %2:_(<8 x s16>) = G_ZEXT %1(<8 x s8>)
+    $q0 = COPY %2(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_sext_v8s16_from_v8s8
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+    ; CHECK-LABEL: name: test_sext_v8s16_from_v8s8
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(<8 x s8>) = COPY $d0
+    ; CHECK: [[SEXT:%[0-9]+]]:_(<8 x s16>) = G_SEXT [[COPY]](<8 x s8>)
+    ; CHECK: $q0 = COPY [[SEXT]](<8 x s16>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %1:fpr(<8 x s8>) = COPY $d0
+    %2:_(<8 x s16>) = G_SEXT %1(<8 x s8>)
+    $q0 = COPY %2(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_anyext_v8s16_from_v8s8
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+    ; CHECK-LABEL: name: test_anyext_v8s16_from_v8s8
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(<8 x s8>) = COPY $d0
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<8 x s16>) = G_ANYEXT [[COPY]](<8 x s8>)
+    ; CHECK: $q0 = COPY [[ANYEXT]](<8 x s16>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %1:fpr(<8 x s8>) = COPY $d0
+    %2:_(<8 x s16>) = G_ANYEXT %1(<8 x s8>)
+    $q0 = COPY %2(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_zext_v4s32_from_v4s16
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_zext_v4s32_from_v4s16
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(<4 x s32>) = G_ZEXT [[COPY]](<4 x s16>)
+    ; CHECK: $q0 = COPY [[ZEXT]](<4 x s32>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s32>) = G_ZEXT %0(<4 x s16>)
+    $q0 = COPY %1(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_sext_v4s32_from_v4s16
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_sext_v4s32_from_v4s16
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK: [[SEXT:%[0-9]+]]:_(<4 x s32>) = G_SEXT [[COPY]](<4 x s16>)
+    ; CHECK: $q0 = COPY [[SEXT]](<4 x s32>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s32>) = G_SEXT %0(<4 x s16>)
+    $q0 = COPY %1(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_anyext_v4s32_from_v4s16
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_anyext_v4s32_from_v4s16
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[COPY]](<4 x s16>)
+    ; CHECK: $q0 = COPY [[ANYEXT]](<4 x s32>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s32>) = G_ANYEXT %0(<4 x s16>)
+    $q0 = COPY %1(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_zext_v2s64_from_v2s32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_zext_v2s64_from_v2s32
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s32>)
+    ; CHECK: $q0 = COPY [[ZEXT]](<2 x s64>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s64>) = G_ZEXT %0(<2 x s32>)
+    $q0 = COPY %1(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_sext_v2s64_from_v2s32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_sext_v2s64_from_v2s32
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[COPY]](<2 x s32>)
+    ; CHECK: $q0 = COPY [[SEXT]](<2 x s64>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s64>) = G_SEXT %0(<2 x s32>)
+    $q0 = COPY %1(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_anyext_v2s64_from_v2s32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_anyext_v2s64_from_v2s32
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[COPY]](<2 x s32>)
+    ; CHECK: $q0 = COPY [[ANYEXT]](<2 x s64>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s64>) = G_ANYEXT %0(<2 x s32>)
+    $q0 = COPY %1(<2 x s64>)
+    RET_ReallyLR implicit $q0
 
 ...

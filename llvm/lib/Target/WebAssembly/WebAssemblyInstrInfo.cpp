@@ -27,6 +27,10 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "WebAssemblyGenInstrInfo.inc"
 
+// defines WebAssembly::getNamedOperandIdx
+#define GET_INSTRINFO_NAMED_OPS
+#include "WebAssemblyGenInstrInfo.inc"
+
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
     : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
                               WebAssembly::ADJCALLSTACKUP,
@@ -97,6 +101,13 @@ bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                          MachineBasicBlock *&FBB,
                                          SmallVectorImpl<MachineOperand> &Cond,
                                          bool /*AllowModify*/) const {
+  const auto &MFI = *MBB.getParent()->getInfo<WebAssemblyFunctionInfo>();
+  // WebAssembly has control flow that doesn't have explicit branches or direct
+  // fallthrough (e.g. try/catch), which can't be modeled by analyzeBranch. It
+  // is created after CFGStackify.
+  if (MFI.isCFGStackified())
+    return true;
+
   bool HaveCond = false;
   for (MachineInstr &MI : MBB.terminators()) {
     switch (MI.getOpcode()) {
@@ -106,9 +117,6 @@ bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     case WebAssembly::BR_IF:
       if (HaveCond)
         return true;
-      // If we're running after CFGStackify, we can't optimize further.
-      if (!MI.getOperand(0).isMBB())
-        return true;
       Cond.push_back(MachineOperand::CreateImm(true));
       Cond.push_back(MI.getOperand(1));
       TBB = MI.getOperand(0).getMBB();
@@ -117,18 +125,12 @@ bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     case WebAssembly::BR_UNLESS:
       if (HaveCond)
         return true;
-      // If we're running after CFGStackify, we can't optimize further.
-      if (!MI.getOperand(0).isMBB())
-        return true;
       Cond.push_back(MachineOperand::CreateImm(false));
       Cond.push_back(MI.getOperand(1));
       TBB = MI.getOperand(0).getMBB();
       HaveCond = true;
       break;
     case WebAssembly::BR:
-      // If we're running after CFGStackify, we can't optimize further.
-      if (!MI.getOperand(0).isMBB())
-        return true;
       if (!HaveCond)
         TBB = MI.getOperand(0).getMBB();
       else
@@ -136,9 +138,6 @@ bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       break;
     case WebAssembly::BR_ON_EXN:
       if (HaveCond)
-        return true;
-      // If we're running after CFGStackify, we can't optimize further.
-      if (!MI.getOperand(0).isMBB())
         return true;
       Cond.push_back(MachineOperand::CreateImm(true));
       Cond.push_back(MI.getOperand(2));
@@ -200,7 +199,7 @@ unsigned WebAssemblyInstrInfo::insertBranch(
       const char *CPPExnSymbol = MF.createExternalSymbolName("__cpp_exception");
       BuildMI(&MBB, DL, get(WebAssembly::BR_ON_EXN))
           .addMBB(TBB)
-          .addExternalSymbol(CPPExnSymbol, WebAssemblyII::MO_SYMBOL_EVENT)
+          .addExternalSymbol(CPPExnSymbol)
           .add(Cond[1]);
     } else
       BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).add(Cond[1]);

@@ -71,29 +71,29 @@ private:
   uint64_t m_cache_hits;
   uint64_t m_cache_misses;
 
-  Entry &GetEntry(const ConstString &type);
+  Entry &GetEntry(ConstString type);
 
 public:
   FormatCache();
 
-  bool GetFormat(const ConstString &type, lldb::TypeFormatImplSP &format_sp);
+  bool GetFormat(ConstString type, lldb::TypeFormatImplSP &format_sp);
 
-  bool GetSummary(const ConstString &type, lldb::TypeSummaryImplSP &summary_sp);
+  bool GetSummary(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
 
-  bool GetSynthetic(const ConstString &type,
+  bool GetSynthetic(ConstString type,
                     lldb::SyntheticChildrenSP &synthetic_sp);
 
-  bool GetValidator(const ConstString &type,
+  bool GetValidator(ConstString type,
                     lldb::TypeValidatorImplSP &summary_sp);
 
-  void SetFormat(const ConstString &type, lldb::TypeFormatImplSP &format_sp);
+  void SetFormat(ConstString type, lldb::TypeFormatImplSP &format_sp);
 
-  void SetSummary(const ConstString &type, lldb::TypeSummaryImplSP &summary_sp);
+  void SetSummary(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
 
-  void SetSynthetic(const ConstString &type,
+  void SetSynthetic(ConstString type,
                     lldb::SyntheticChildrenSP &synthetic_sp);
 
-  void SetValidator(const ConstString &type,
+  void SetValidator(ConstString type,
                     lldb::TypeValidatorImplSP &synthetic_sp);
 
   void Clear();

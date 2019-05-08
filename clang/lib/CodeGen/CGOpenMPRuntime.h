@@ -772,6 +772,11 @@ public:
   virtual ~CGOpenMPRuntime() {}
   virtual void clear();
 
+  /// Checks if the \p Body is the \a CompoundStmt and returns its child
+  /// statement iff there is only one that is not evaluatable at the compile
+  /// time.
+  static const Stmt *getSingleCompoundChild(ASTContext &Ctx, const Stmt *Body);
+
   /// Get the platform-specific name separator.
   std::string getName(ArrayRef<StringRef> Parts) const;
 
@@ -1229,7 +1234,7 @@ public:
   /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
-  llvm::Function *emitReductionFunction(CodeGenModule &CGM, SourceLocation Loc,
+  llvm::Function *emitReductionFunction(SourceLocation Loc,
                                         llvm::Type *ArgsType,
                                         ArrayRef<const Expr *> Privates,
                                         ArrayRef<const Expr *> LHSExprs,
@@ -1565,7 +1570,7 @@ public:
   /// schedule clause.
   virtual void getDefaultScheduleAndChunk(CodeGenFunction &CGF,
       const OMPLoopDirective &S, OpenMPScheduleClauseKind &ScheduleKind,
-      const Expr *&ChunkExpr) const {}
+      const Expr *&ChunkExpr) const;
 
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
@@ -1597,8 +1602,12 @@ public:
 
   /// Perform check on requires decl to ensure that target architecture
   /// supports unified addressing
-  virtual void checkArchForUnifiedAddressing(CodeGenModule &CGM,
-                                             const OMPRequiresDecl *D) const {}
+  virtual void checkArchForUnifiedAddressing(const OMPRequiresDecl *D) const {}
+
+  /// Checks if the variable has associated OMPAllocateDeclAttr attribute with
+  /// the predefined allocator and translates it into the corresponding address
+  /// space.
+  virtual bool hasAllocateAttributeForGlobalVar(const VarDecl *VD, LangAS &AS);
 };
 
 /// Class supports emissionof SIMD-only code.
@@ -2163,6 +2172,12 @@ public:
   /// \param TargetParam Corresponding target-specific parameter.
   Address getParameterAddress(CodeGenFunction &CGF, const VarDecl *NativeParam,
                               const VarDecl *TargetParam) const override;
+
+  /// Gets the OpenMP-specific address of the local variable.
+  Address getAddressOfLocalVariable(CodeGenFunction &CGF,
+                                    const VarDecl *VD) override {
+    return Address::invalid();
+  }
 };
 
 } // namespace CodeGen

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 -mcpu=pentiumpro %s -filetype=obj -o - | llvm-readobj -file-headers -s -sd -r -t -macho-segment -macho-dysymtab -macho-indirect-symbols | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 -mcpu=pentiumpro %s -filetype=obj -o - | llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols | FileCheck %s
 
 # 1 byte nop test
         .align 4, 0 # start with 16 byte alignment filled with zeros

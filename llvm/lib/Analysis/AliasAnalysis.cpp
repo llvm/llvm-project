@@ -79,12 +79,16 @@ AAResults::~AAResults() {
 
 bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv) {
-  // Check if the AA manager itself has been invalidated.
+  // AAResults preserves the AAManager by default, due to the stateless nature
+  // of AliasAnalysis. There is no need to check whether it has been preserved
+  // explicitly. Check if any module dependency was invalidated and caused the
+  // AAManager to be invalidated. Invalidate ourselves in that case.
   auto PAC = PA.getChecker<AAManager>();
-  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
-    return true; // The manager needs to be blown away, clear everything.
+  if (!PAC.preservedWhenStateless())
+    return true;
 
-  // Check all of the dependencies registered.
+  // Check if any of the function dependencies were invalidated, and invalidate
+  // ourselves in that case.
   for (AnalysisKey *ID : AADeps)
     if (Inv.invalidate(ID, F, PA))
       return true;
@@ -99,8 +103,14 @@ bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
 
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB) {
+  AAQueryInfo AAQIP;
+  return alias(LocA, LocB, AAQIP);
+}
+
+AliasResult AAResults::alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI) {
   for (const auto &AA : AAs) {
-    auto Result = AA->alias(LocA, LocB);
+    auto Result = AA->alias(LocA, LocB, AAQI);
     if (Result != MayAlias)
       return Result;
   }
@@ -109,8 +119,14 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 
 bool AAResults::pointsToConstantMemory(const MemoryLocation &Loc,
                                        bool OrLocal) {
+  AAQueryInfo AAQIP;
+  return pointsToConstantMemory(Loc, AAQIP, OrLocal);
+}
+
+bool AAResults::pointsToConstantMemory(const MemoryLocation &Loc,
+                                       AAQueryInfo &AAQI, bool OrLocal) {
   for (const auto &AA : AAs)
-    if (AA->pointsToConstantMemory(Loc, OrLocal))
+    if (AA->pointsToConstantMemory(Loc, AAQI, OrLocal))
       return true;
 
   return false;
@@ -131,10 +147,16 @@ ModRefInfo AAResults::getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
 }
 
 ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(I, Call2, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
+                                    AAQueryInfo &AAQI) {
   // We may have two calls.
   if (const auto *Call1 = dyn_cast<CallBase>(I)) {
     // Check if the two calls modify the same memory.
-    return getModRefInfo(Call1, Call2);
+    return getModRefInfo(Call1, Call2, AAQI);
   } else if (I->isFenceLike()) {
     // If this is a fence, just return ModRef.
     return ModRefInfo::ModRef;
@@ -144,7 +166,7 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2) {
     // is that if the call references what this instruction
     // defines, it must be clobbered by this location.
     const MemoryLocation DefLoc = MemoryLocation::get(I);
-    ModRefInfo MR = getModRefInfo(Call2, DefLoc);
+    ModRefInfo MR = getModRefInfo(Call2, DefLoc, AAQI);
     if (isModOrRefSet(MR))
       return setModAndRef(MR);
   }
@@ -153,10 +175,17 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2) {
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(Call, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   ModRefInfo Result = ModRefInfo::ModRef;
 
   for (const auto &AA : AAs) {
-    Result = intersectModRef(Result, AA->getModRefInfo(Call, Loc));
+    Result = intersectModRef(Result, AA->getModRefInfo(Call, Loc, AAQI));
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (isNoModRef(Result))
@@ -214,10 +243,16 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(Call1, Call2, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
+                                    const CallBase *Call2, AAQueryInfo &AAQI) {
   ModRefInfo Result = ModRefInfo::ModRef;
 
   for (const auto &AA : AAs) {
-    Result = intersectModRef(Result, AA->getModRefInfo(Call1, Call2));
+    Result = intersectModRef(Result, AA->getModRefInfo(Call1, Call2, AAQI));
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (isNoModRef(Result))
@@ -396,6 +431,12 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
 
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(L, Loc, AAQIP);
+}
+ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
   if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
     return ModRefInfo::ModRef;
@@ -403,7 +444,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
   // If the load address doesn't alias the given address, it doesn't read
   // or write the specified memory.
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(L), Loc);
+    AliasResult AR = alias(MemoryLocation::get(L), Loc, AAQI);
     if (AR == NoAlias)
       return ModRefInfo::NoModRef;
     if (AR == MustAlias)
@@ -415,12 +456,18 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
 
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(S, Loc, AAQIP);
+}
+ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
   if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(S), Loc);
+    AliasResult AR = alias(MemoryLocation::get(S), Loc, AAQI);
     // If the store address cannot alias the pointer in question, then the
     // specified memory cannot be modified by the store.
     if (AR == NoAlias)
@@ -428,7 +475,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
 
     // If the pointer is a pointer to constant memory, then it could not have
     // been modified by this store.
-    if (pointsToConstantMemory(Loc))
+    if (pointsToConstantMemory(Loc, AAQI))
       return ModRefInfo::NoModRef;
 
     // If the store address aliases the pointer as must alias, set Must.
@@ -441,17 +488,31 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
 }
 
 ModRefInfo AAResults::getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(S, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   // If we know that the location is a constant memory location, the fence
   // cannot modify this location.
-  if (Loc.Ptr && pointsToConstantMemory(Loc))
+  if (Loc.Ptr && pointsToConstantMemory(Loc, AAQI))
     return ModRefInfo::Ref;
   return ModRefInfo::ModRef;
 }
 
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(V, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(V), Loc);
+    AliasResult AR = alias(MemoryLocation::get(V), Loc, AAQI);
     // If the va_arg address cannot alias the pointer in question, then the
     // specified memory cannot be accessed by the va_arg.
     if (AR == NoAlias)
@@ -459,7 +520,7 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
 
     // If the pointer is a pointer to constant memory, then it could not have
     // been modified by this va_arg.
-    if (pointsToConstantMemory(Loc))
+    if (pointsToConstantMemory(Loc, AAQI))
       return ModRefInfo::NoModRef;
 
     // If the va_arg aliases the pointer as must alias, set Must.
@@ -473,10 +534,17 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
 
 ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(CatchPad, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
     // If the pointer is a pointer to constant memory,
     // then it could not have been modified by this catchpad.
-    if (pointsToConstantMemory(Loc))
+    if (pointsToConstantMemory(Loc, AAQI))
       return ModRefInfo::NoModRef;
   }
 
@@ -486,10 +554,17 @@ ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
 
 ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(CatchRet, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
     // If the pointer is a pointer to constant memory,
     // then it could not have been modified by this catchpad.
-    if (pointsToConstantMemory(Loc))
+    if (pointsToConstantMemory(Loc, AAQI))
       return ModRefInfo::NoModRef;
   }
 
@@ -499,12 +574,19 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
 
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(CX, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   // Acquire/Release cmpxchg has properties that matter for arbitrary addresses.
   if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(CX), Loc);
+    AliasResult AR = alias(MemoryLocation::get(CX), Loc, AAQI);
     // If the cmpxchg address does not alias the location, it does not access
     // it.
     if (AR == NoAlias)
@@ -520,12 +602,19 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(RMW, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   // Acquire/Release atomicrmw has properties that matter for arbitrary addresses.
   if (isStrongerThanMonotonic(RMW->getOrdering()))
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(RMW), Loc);
+    AliasResult AR = alias(MemoryLocation::get(RMW), Loc, AAQI);
     // If the atomicrmw address does not alias the location, it does not access
     // it.
     if (AR == NoAlias)

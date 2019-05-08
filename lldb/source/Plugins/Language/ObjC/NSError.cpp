@@ -163,7 +163,7 @@ public:
 
   bool MightHaveChildren() override { return true; }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
     static ConstString g___userInfo("_userInfo");
     if (name == g___userInfo)
       return 0;

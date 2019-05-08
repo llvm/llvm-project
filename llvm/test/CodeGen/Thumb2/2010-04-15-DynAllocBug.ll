@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a8 -arm-atomic-cfg-tidy=0 -O3 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a8 -arm-atomic-cfg-tidy=0 -O2 | FileCheck %s
 ; rdar://7493908
 
 ; Make sure the result of the first dynamic_alloc isn't copied back to sp more

@@ -10,6 +10,7 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
 
@@ -19,17 +20,10 @@ namespace {
 class MainLoopTest : public testing::Test {
 public:
   static void SetUpTestCase() {
-#ifdef _MSC_VER
-    WSADATA data;
-    ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &data));
-#endif
+    ASSERT_THAT_ERROR(Socket::Initialize(), llvm::Succeeded());
   }
 
-  static void TearDownTestCase() {
-#ifdef _MSC_VER
-    ASSERT_EQ(0, WSACleanup());
-#endif
-  }
+  static void TearDownTestCase() { Socket::Terminate(); }
 
   void SetUp() override {
     bool child_processes_inherit = false;

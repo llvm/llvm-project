@@ -540,10 +540,10 @@ getUnderlyingObjects(const MachineInstr &MI,
 
   const Value *V = (*MI.memoperands_begin())->getValue();
 
-  SmallVector<Value *, 4> Objs;
-  GetUnderlyingObjects(const_cast<Value *>(V), Objs, DL);
+  SmallVector<const Value *, 4> Objs;
+  GetUnderlyingObjects(V, Objs, DL);
 
-  for (SmallVectorImpl<Value *>::iterator I = Objs.begin(), E = Objs.end();
+  for (SmallVectorImpl<const Value *>::iterator I = Objs.begin(), E = Objs.end();
        I != E; ++I) {
     if (!isIdentifiedObject(V))
       return false;

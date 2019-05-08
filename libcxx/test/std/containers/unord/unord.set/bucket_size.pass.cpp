@@ -72,7 +72,7 @@ int main(int, char**)
     {
         typedef std::unordered_set<int> C;
         C c;
-        C::size_type i = c.bucket_size(3);
+        (void) c.bucket_size(3);
         assert(false);
     }
 #endif

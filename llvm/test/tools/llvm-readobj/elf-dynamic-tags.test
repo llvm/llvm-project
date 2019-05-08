@@ -3,7 +3,7 @@
 # RUN: llvm-readobj --dynamic-table %t | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf --dynamic-table %t | FileCheck %s --check-prefix=GNU
 
-# LLVM:      DynamicSection [ (60 entries)
+# LLVM:      DynamicSection [ (61 entries)
 # LLVM-NEXT:   Tag                Type                 Name/Value
 # LLVM-NEXT:   0x0000000000000001 NEEDED               Shared library: [D]
 # LLVM-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
@@ -60,6 +60,7 @@
 # LLVM-NEXT:   0x000000006FFFFFFE VERNEED              0x1000
 # LLVM-NEXT:   0x000000006FFFFFFF VERNEEDNUM           0
 # LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY            Auxiliary library: [D]
+# LLVM-NEXT:   0x000000007FFFFFFE USED                 Not needed object: [U]
 # LLVM-NEXT:   0x000000007FFFFFFF FILTER               Filter library: [U]
 # LLVM-NEXT:   0x0000000012345678 unknown              0x8765432187654321
 # LLVM-NEXT:   0x000000006ABCDEF0 unknown              0x9988776655443322
@@ -67,7 +68,7 @@
 # LLVM-NEXT:   0x0000000000000000 NULL                 0x0
 # LLVM-NEXT: ]
 
-# GNU:      DynamicSection [ (60 entries)
+# GNU:      DynamicSection [ (61 entries)
 # GNU-NEXT:   Tag                Type                 Name/Value
 # GNU-NEXT:   0x0000000000000001 NEEDED               Shared library: [D]
 # GNU-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
@@ -124,6 +125,7 @@
 # GNU-NEXT:   0x000000006ffffffe VERNEED              0x1000
 # GNU-NEXT:   0x000000006fffffff VERNEEDNUM           0
 # GNU-NEXT:   0x000000007ffffffd AUXILIARY            Auxiliary library: [D]
+# GNU-NEXT:   0x000000007ffffffe USED                 Not needed object: [U]
 # GNU-NEXT:   0x000000007fffffff FILTER               Filter library: [U]
 # GNU-NEXT:   0x0000000012345678 unknown              0x8765432187654321
 # GNU-NEXT:   0x000000006abcdef0 unknown              0x9988776655443322
@@ -257,6 +259,8 @@ Sections:
         Value: 0x0
       - Tag:   DT_AUXILIARY
         Value: 0x1
+      - Tag:   DT_USED
+        Value: 0x3
       - Tag:   DT_FILTER
         Value: 0x3
       # Show behaviour for unknown values in special and un-marked ranges.

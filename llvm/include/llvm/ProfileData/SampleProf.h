@@ -410,6 +410,34 @@ public:
     return getNameInModule(Name, M);
   }
 
+  /// Return the canonical name for a function, taking into account
+  /// suffix elision policy attributes.
+  static StringRef getCanonicalFnName(const Function &F) {
+    static const char *knownSuffixes[] = { ".llvm.", ".part." };
+    auto AttrName = "sample-profile-suffix-elision-policy";
+    auto Attr = F.getFnAttribute(AttrName).getValueAsString();
+    if (Attr == "" || Attr == "all") {
+      return F.getName().split('.').first;
+    } else if (Attr == "selected") {
+      StringRef Cand(F.getName());
+      for (const auto &Suf : knownSuffixes) {
+        StringRef Suffix(Suf);
+        auto It = Cand.rfind(Suffix);
+        if (It == StringRef::npos)
+          return Cand;
+        auto Dit = Cand.rfind('.');
+        if (Dit == It + Suffix.size() - 1)
+          Cand = Cand.substr(0, It);
+      }
+      return Cand;
+    } else if (Attr == "none") {
+      return F.getName();
+    } else {
+      assert(false && "internal error: unknown suffix elision policy");
+    }
+    return F.getName();
+  }
+
   /// Translate \p Name into its original name in Module.
   /// When the Format is not SPF_Compact_Binary, \p Name needs no translation.
   /// When the Format is SPF_Compact_Binary, \p Name in current FunctionSamples
@@ -465,11 +493,9 @@ public:
         /// built in post-thin-link phase and var promotion has been done,
         /// we need to add the substring of function name without the suffix
         /// into the GUIDToFuncNameMap.
-        auto pos = OrigName.find('.');
-        if (pos != StringRef::npos) {
-          StringRef NewName = OrigName.substr(0, pos);
-          GUIDToFuncNameMap.insert({Function::getGUID(NewName), NewName});
-        }
+        StringRef CanonName = getCanonicalFnName(F);
+        if (CanonName != OrigName)
+          GUIDToFuncNameMap.insert({Function::getGUID(CanonName), CanonName});
       }
       CurrentModule = &M;
     }
@@ -546,10 +572,9 @@ public:
   SampleSorter(const std::map<LocationT, SampleT> &Samples) {
     for (const auto &I : Samples)
       V.push_back(&I);
-    std::stable_sort(V.begin(), V.end(),
-                     [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
-                       return A->first < B->first;
-                     });
+    llvm::stable_sort(V, [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
+      return A->first < B->first;
+    });
   }
 
   const SamplesWithLocList &get() const { return V; }

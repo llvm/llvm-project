@@ -1,5 +1,6 @@
 # RUN: llvm-mc -triple powerpc64le-unknown-linux-gnu %s -filetype=obj -o - | \
 # RUN:    llvm-objdump -D  -r - | FileCheck %s
+
         .text
         .abiversion 2
         .global test

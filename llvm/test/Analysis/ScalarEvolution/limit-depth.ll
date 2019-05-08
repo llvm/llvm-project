@@ -1,4 +1,4 @@
-; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-ext-depth=0 -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-cast-depth=0 -analyze -scalar-evolution < %s | FileCheck %s
 
 ; Check that depth set to 0 prevents getAddExpr and getMulExpr from making
 ; transformations in SCEV. We expect the result to be very straightforward.
@@ -96,5 +96,33 @@ loop2:
 
 exit:
   %ze2 = zext i64 %iv2.inc to i128
+  ret void
+}
+
+define void @test_trunc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+; CHECK-LABEL: @test_trunc
+; CHECK:          %trunc2 = trunc i64 %iv2.inc to i32
+; CHECK-NEXT:     -->  {(trunc i64 (1 + {7,+,1}<%loop>) to i32),+,1}<%loop2>
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i128 [ 6, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i128 %iv, 1
+  %cond = icmp sle i128 %iv.inc, 50
+  br i1 %cond, label %loop, label %between
+
+between:
+  %trunc = trunc i128 %iv.inc to i64
+  br label %loop2
+
+loop2:
+  %iv2 = phi i64 [ %trunc, %between ], [ %iv2.inc, %loop2 ]
+  %iv2.inc = add nuw i64 %iv2, 1
+  %cond2 = icmp sle i64 %iv2.inc, 50
+  br i1 %cond2, label %loop2, label %exit
+
+exit:
+  %trunc2 = trunc i64 %iv2.inc to i32
   ret void
 }

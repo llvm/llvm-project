@@ -169,25 +169,6 @@ createUniqueEntity(const Twine &Model, int &ResultFD,
                    SmallVectorImpl<char> &ResultPath, bool MakeAbsolute,
                    unsigned Mode, FSEntity Type,
                    sys::fs::OpenFlags Flags = sys::fs::OF_None) {
-  SmallString<128> ModelStorage;
-  Model.toVector(ModelStorage);
-
-  if (MakeAbsolute) {
-    // Make model absolute by prepending a temp directory if it's not already.
-    if (!sys::path::is_absolute(Twine(ModelStorage))) {
-      SmallString<128> TDir;
-      sys::path::system_temp_directory(true, TDir);
-      sys::path::append(TDir, Twine(ModelStorage));
-      ModelStorage.swap(TDir);
-    }
-  }
-
-  // From here on, DO NOT modify model. It may be needed if the randomly chosen
-  // path already exists.
-  ResultPath = ModelStorage;
-  // Null terminate.
-  ResultPath.push_back(0);
-  ResultPath.pop_back();
 
   // Limit the number of attempts we make, so that we don't infinite loop. E.g.
   // "permission denied" could be for a specific file (so we retry with a
@@ -195,13 +176,7 @@ createUniqueEntity(const Twine &Model, int &ResultFD,
   // Checking which is racy, so we try a number of times, then give up.
   std::error_code EC;
   for (int Retries = 128; Retries > 0; --Retries) {
-    // Replace '%' with random chars.
-    for (unsigned i = 0, e = ModelStorage.size(); i != e; ++i) {
-      if (ModelStorage[i] == '%')
-        ResultPath[i] =
-            "0123456789abcdef"[sys::Process::GetRandomNumber() & 15];
-    }
-
+    sys::fs::createUniquePath(Model, ResultPath, MakeAbsolute);
     // Try to open + create the file.
     switch (Type) {
     case FS_File: {
@@ -322,7 +297,8 @@ reverse_iterator rbegin(StringRef Path, Style style) {
   I.Path = Path;
   I.Position = Path.size();
   I.S = style;
-  return ++I;
+  ++I;
+  return I;
 }
 
 reverse_iterator rend(StringRef Path) {
@@ -762,6 +738,32 @@ std::error_code getUniqueID(const Twine Path, UniqueID &Result) {
   return std::error_code();
 }
 
+void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
+                      bool MakeAbsolute) {
+  SmallString<128> ModelStorage;
+  Model.toVector(ModelStorage);
+
+  if (MakeAbsolute) {
+    // Make model absolute by prepending a temp directory if it's not already.
+    if (!sys::path::is_absolute(Twine(ModelStorage))) {
+      SmallString<128> TDir;
+      sys::path::system_temp_directory(true, TDir);
+      sys::path::append(TDir, Twine(ModelStorage));
+      ModelStorage.swap(TDir);
+    }
+  }
+
+  ResultPath = ModelStorage;
+  ResultPath.push_back(0);
+  ResultPath.pop_back();
+
+  // Replace '%' with random chars.
+  for (unsigned i = 0, e = ModelStorage.size(); i != e; ++i) {
+    if (ModelStorage[i] == '%')
+      ResultPath[i] = "0123456789abcdef"[sys::Process::GetRandomNumber() & 15];
+  }
+}
+
 std::error_code createUniqueFile(const Twine &Model, int &ResultFd,
                                  SmallVectorImpl<char> &ResultPath,
                                  unsigned Mode) {
@@ -958,6 +960,7 @@ static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   return std::error_code();
 }
 
+#ifndef __APPLE__
 std::error_code copy_file(const Twine &From, const Twine &To) {
   int ReadFD, WriteFD;
   if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
@@ -975,6 +978,7 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
 
   return EC;
 }
+#endif
 
 std::error_code copy_file(const Twine &From, int ToFD) {
   int ReadFD;

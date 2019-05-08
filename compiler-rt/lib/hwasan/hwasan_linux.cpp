@@ -374,14 +374,25 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
 }
 
 static void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame,
-                              ucontext_t *uc) {
+                              ucontext_t *uc, uptr *registers_frame = nullptr) {
   InternalMmapVector<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
   stack->Unwind(pc, frame, uc, common_flags()->fast_unwind_on_fatal);
 
+  // The second stack frame contains the failure __hwasan_check function, as
+  // we have a stack frame for the registers saved in __hwasan_tag_mismatch that
+  // we wish to ignore. This (currently) only occurs on AArch64, as x64
+  // implementations use SIGTRAP to implement the failure, and thus do not go
+  // through the stack saver.
+  if (registers_frame && stack->trace && stack->size > 0) {
+    stack->trace++;
+    stack->size--;
+  }
+
   bool fatal = flags()->halt_on_error || !ai.recover;
-  ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store, fatal);
+  ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store, fatal,
+                    registers_frame);
 }
 
 static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
@@ -401,8 +412,10 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   return true;
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __hwasan_tag_mismatch(
-    uptr addr, uptr access_info) {
+// Entry point stub for interoperability between __hwasan_tag_mismatch (ASM) and
+// the rest of the mismatch handling code (C++).
+extern "C" void __hwasan_tag_mismatch_stub(uptr addr, uptr access_info,
+                                           uptr *registers_frame) {
   AccessInfo ai;
   ai.is_store = access_info & 0x10;
   ai.recover = false;
@@ -410,7 +423,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __hwasan_tag_mismatch(
   ai.size = 1 << (access_info & 0xf);
 
   HandleTagMismatch(ai, (uptr)__builtin_return_address(0),
-                    (uptr)__builtin_frame_address(0), nullptr);
+                    (uptr)__builtin_frame_address(0), nullptr, registers_frame);
   __builtin_unreachable();
 }
 

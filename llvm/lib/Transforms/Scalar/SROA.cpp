@@ -2727,15 +2727,26 @@ private:
 
     Type *AllocaTy = NewAI.getAllocatedType();
     Type *ScalarTy = AllocaTy->getScalarType();
+    
+    const bool CanContinue = [&]() {
+      if (VecTy || IntTy)
+        return true;
+      if (BeginOffset > NewAllocaBeginOffset ||
+          EndOffset < NewAllocaEndOffset)
+        return false;
+      auto *C = cast<ConstantInt>(II.getLength());
+      if (C->getBitWidth() > 64)
+        return false;
+      const auto Len = C->getZExtValue();
+      auto *Int8Ty = IntegerType::getInt8Ty(NewAI.getContext());
+      auto *SrcTy = VectorType::get(Int8Ty, Len);
+      return canConvertValue(DL, SrcTy, AllocaTy) &&
+        DL.isLegalInteger(DL.getTypeSizeInBits(ScalarTy));
+    }();
 
     // If this doesn't map cleanly onto the alloca type, and that type isn't
     // a single value type, just emit a memset.
-    if (!VecTy && !IntTy &&
-        (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset ||
-         SliceSize != DL.getTypeStoreSize(AllocaTy) ||
-         !AllocaTy->isSingleValueType() ||
-         !DL.isLegalInteger(DL.getTypeSizeInBits(ScalarTy)) ||
-         DL.getTypeSizeInBits(ScalarTy) % 8 != 0)) {
+    if (!CanContinue) {
       Type *SizeTy = II.getLength()->getType();
       Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
       CallInst *New = IRB.CreateMemSet(

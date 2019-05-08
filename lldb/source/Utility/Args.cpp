@@ -165,9 +165,7 @@ Args::ArgEntry::ArgEntry(llvm::StringRef str, char quote) : quote(quote) {
   ref = llvm::StringRef(c_str(), size);
 }
 
-//----------------------------------------------------------------------
 // Args constructor
-//----------------------------------------------------------------------
 Args::Args(llvm::StringRef command) { SetCommandString(command); }
 
 Args::Args(const Args &rhs) { *this = rhs; }
@@ -190,9 +188,7 @@ Args &Args::operator=(const Args &rhs) {
   return *this;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 Args::~Args() {}
 
 void Args::Dump(Stream &s, const char *label_name) const {
@@ -640,14 +636,15 @@ std::string Args::EscapeLLDBCommandArgument(const std::string &arg,
   case '\0':
     chars_to_escape = " \t\\'\"`";
     break;
-  case '\'':
-    chars_to_escape = "";
-    break;
   case '"':
     chars_to_escape = "$\"`\\";
     break;
+  case '`':
+  case '\'':
+    return arg;
   default:
     assert(false && "Unhandled quote character");
+    return arg;
   }
 
   std::string res;

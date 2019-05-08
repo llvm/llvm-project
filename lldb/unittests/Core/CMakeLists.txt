@@ -1,7 +1,5 @@
 add_lldb_unittest(LLDBCoreTests
   MangledTest.cpp
-  RangeMapTest.cpp
-  RangeTest.cpp
   RichManglingContextTest.cpp
   StreamCallbackTest.cpp
 

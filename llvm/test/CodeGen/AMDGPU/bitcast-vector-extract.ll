@@ -70,8 +70,8 @@ define amdgpu_kernel void @store_bitcast_constant_v8i32_to_v16i16(<8 x float> ad
 
 ; GCN-LABEL: {{^}}store_value_lowered_to_undef_bitcast_source:
 ; GCN-NOT: store_dword
-define amdgpu_kernel void @store_value_lowered_to_undef_bitcast_source(<2 x i32> addrspace(1)* %out, i64 %a, i64 %b, i32 %c) #0 {
-  %undef = call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 %c) #1
+define amdgpu_kernel void @store_value_lowered_to_undef_bitcast_source(<2 x i32> addrspace(1)* %out, i64 %a, i64 %b) #0 {
+  %undef = call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 999) #1
   %bc = bitcast i64 %undef to <2 x i32>
   store volatile <2 x i32> %bc, <2 x i32> addrspace(1)* %out
   ret void
@@ -79,8 +79,8 @@ define amdgpu_kernel void @store_value_lowered_to_undef_bitcast_source(<2 x i32>
 
 ; GCN-LABEL: {{^}}store_value_lowered_to_undef_bitcast_source_extractelt:
 ; GCN-NOT: store_dword
-define amdgpu_kernel void @store_value_lowered_to_undef_bitcast_source_extractelt(i32 addrspace(1)* %out, i64 %a, i64 %b, i32 %c) #0 {
-  %undef = call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 %c) #1
+define amdgpu_kernel void @store_value_lowered_to_undef_bitcast_source_extractelt(i32 addrspace(1)* %out, i64 %a, i64 %b) #0 {
+  %undef = call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 9999) #1
   %bc = bitcast i64 %undef to <2 x i32>
   %elt1 = extractelement <2 x i32> %bc, i32 1
   store volatile i32 %elt1, i32 addrspace(1)* %out

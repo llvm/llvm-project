@@ -435,7 +435,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       OutMI.addOperand(MaybeMCOp.getValue());
 
   // Handle a few special cases to eliminate operand modifiers.
-ReSimplify:
   switch (OutMI.getOpcode()) {
   case X86::LEA64_32r:
   case X86::LEA64r:
@@ -551,11 +550,6 @@ ReSimplify:
     case X86::TAILJMPd64:
       Opcode = X86::JMP_1;
       goto SetTailJmpOpcode;
-    case X86::TAILJMPd_CC:
-    case X86::TAILJMPd64_CC:
-      Opcode = X86::GetCondBranchFromCond(
-          static_cast<X86::CondCode>(MI->getOperand(1).getImm()));
-      goto SetTailJmpOpcode;
 
     SetTailJmpOpcode:
       MCOperand Saved = OutMI.getOperand(0);
@@ -564,6 +558,17 @@ ReSimplify:
       OutMI.addOperand(Saved);
       break;
     }
+
+  case X86::TAILJMPd_CC:
+  case X86::TAILJMPd64_CC: {
+    MCOperand Saved = OutMI.getOperand(0);
+    MCOperand Saved2 = OutMI.getOperand(1);
+    OutMI = MCInst();
+    OutMI.setOpcode(X86::JCC_1);
+    OutMI.addOperand(Saved);
+    OutMI.addOperand(Saved2);
+    break;
+  }
 
   case X86::DEC16r:
   case X86::DEC32r:
@@ -582,21 +587,6 @@ ReSimplify:
       OutMI.setOpcode(Opcode);
     }
     break;
-
-  // These are pseudo-ops for OR to help with the OR->ADD transformation.  We do
-  // this with an ugly goto in case the resultant OR uses EAX and needs the
-  // short form.
-  case X86::ADD8rr_DB:    OutMI.setOpcode(X86::OR8rr);    goto ReSimplify;
-  case X86::ADD16rr_DB:   OutMI.setOpcode(X86::OR16rr);   goto ReSimplify;
-  case X86::ADD32rr_DB:   OutMI.setOpcode(X86::OR32rr);   goto ReSimplify;
-  case X86::ADD64rr_DB:   OutMI.setOpcode(X86::OR64rr);   goto ReSimplify;
-  case X86::ADD8ri_DB:    OutMI.setOpcode(X86::OR8ri);    goto ReSimplify;
-  case X86::ADD16ri_DB:   OutMI.setOpcode(X86::OR16ri);   goto ReSimplify;
-  case X86::ADD32ri_DB:   OutMI.setOpcode(X86::OR32ri);   goto ReSimplify;
-  case X86::ADD64ri32_DB: OutMI.setOpcode(X86::OR64ri32); goto ReSimplify;
-  case X86::ADD16ri8_DB:  OutMI.setOpcode(X86::OR16ri8);  goto ReSimplify;
-  case X86::ADD32ri8_DB:  OutMI.setOpcode(X86::OR32ri8);  goto ReSimplify;
-  case X86::ADD64ri8_DB:  OutMI.setOpcode(X86::OR64ri8);  goto ReSimplify;
 
   // We don't currently select the correct instruction form for instructions
   // which have a short %eax, etc. form. Handle this by custom lowering, for
@@ -962,6 +952,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
       MI.addOperand(MaybeOperand.getValue());
 
+  OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
   OutStreamer->EmitInstruction(MI, getSubtargetInfo());
 }
 
@@ -1373,7 +1364,8 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
     MBB = MBB->getPrevNode();
     MBBI = MBB->end();
   }
-  return --MBBI;
+  --MBBI;
+  return MBBI;
 }
 
 static const Constant *getConstantFromPool(const MachineInstr &MI,

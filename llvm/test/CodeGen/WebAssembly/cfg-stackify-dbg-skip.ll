@@ -7,7 +7,6 @@
 ; CHECK: body:
 ; CHECK: BLOCK
 ;                       <-- Stackified expression starts
-; CHECK-NEXT: LOCAL_GET_I64
 ; CHECK-NEXT: I32_WRAP_I64
 ; CHECK-NEXT: DBG_VALUE
 ;                       <-- BLOCK should NOT be placed here!

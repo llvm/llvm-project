@@ -37,14 +37,6 @@ class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
   let TSFlags{2}   = PPC970_Cracked;
   let TSFlags{5-3} = PPC970_Unit;
 
-  /// Indicate that the VSX instruction is to use VSX numbering/encoding.
-  /// Since ISA 3.0, there are scalar instructions that use the upper
-  /// half of the VSX register set only. Rather than adding further complexity
-  /// to the register class set, the VSX registers just include the Altivec
-  /// registers and this flag decides the numbering to be used for them.
-  bits<1> UseVSXReg = 0;
-  let TSFlags{6}   = UseVSXReg;
-
   // Indicate that this instruction is of type X-Form Load or Store
   bits<1> XFormMemOp = 0;
   let TSFlags{7}  = XFormMemOp;
@@ -73,7 +65,6 @@ class PPC970_Unit_VALU     { bits<3> PPC970_Unit = 5;   }
 class PPC970_Unit_VPERM    { bits<3> PPC970_Unit = 6;   }
 class PPC970_Unit_BRU      { bits<3> PPC970_Unit = 7;   }
 
-class UseVSXReg { bits<1> UseVSXReg = 1; }
 class XFormMemOp { bits<1> XFormMemOp = 1; }
 
 // Two joined instructions; used to emit two adjacent instructions as one.
@@ -729,6 +720,7 @@ class XForm_25_memOp<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   : XForm_base_r3xo_memOp<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
 }
 
+// [PO RT /// RB XO RC]
 class XForm_26<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>
   : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
@@ -1192,9 +1184,9 @@ class XX2_RD6_DCMX7_RS6<bits<6> opcode, bits<4> xo1, bits<3> xo2,
   let Inst{11-15} = DCMX{4-0};
   let Inst{16-20} = XB{4-0};
   let Inst{21-24} = xo1;
-  let Inst{25}    = DCMX{5};
+  let Inst{25}    = DCMX{6};
   let Inst{26-28} = xo2;
-  let Inst{29}    = DCMX{6};
+  let Inst{29}    = DCMX{5};
   let Inst{30}    = XB{5};
   let Inst{31}    = XT{5};
 }

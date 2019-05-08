@@ -43,7 +43,6 @@ const CMIUtilString
 const CMIUtilString CMIDriver::ms_constAppNameLong(MIRSRC(IDS_MI_APPNAME_LONG));
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIDriver constructor.
 // Type:    Method.
 // Args:    None.
@@ -61,7 +60,6 @@ CMIDriver::CMIDriver()
       m_bHaveCommandFileNamePathOnCmdLine(false) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIDriver destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -71,7 +69,6 @@ CMIDriver::CMIDriver()
 CMIDriver::~CMIDriver() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set whether *this driver (the parent) is enabled to pass a command
 // to its
 //          fall through (child) driver to interpret the command and do work
@@ -90,7 +87,6 @@ bool CMIDriver::SetEnableFallThru(const bool vbYes) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get whether *this driver (the parent) is enabled to pass a command
 // to its
 //          fall through (child) driver to interpret the command and do work
@@ -106,7 +102,6 @@ bool CMIDriver::GetEnableFallThru() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve MI's application name of itself.
 // Type:    Method.
 // Args:    None.
@@ -118,7 +113,6 @@ const CMIUtilString &CMIDriver::GetAppNameShort() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve MI's application name of itself.
 // Type:    Method.
 // Args:    None.
@@ -130,7 +124,6 @@ const CMIUtilString &CMIDriver::GetAppNameLong() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve MI's version description of itself.
 // Type:    Method.
 // Args:    None.
@@ -142,7 +135,6 @@ const CMIUtilString &CMIDriver::GetVersionDescription() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize setup *this driver ready for use.
 // Type:    Method.
 // Args:    None.
@@ -191,7 +183,6 @@ bool CMIDriver::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unbind detach or release resources used by *this driver.
 // Type:    Method.
 // Args:    None.
@@ -238,7 +229,6 @@ bool CMIDriver::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Work function. Client (the driver's user) is able to append their
 // own message
 //          in to the MI's Log trace file.
@@ -255,7 +245,6 @@ bool CMIDriver::WriteMessageToLog(const CMIUtilString &vMessage) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CDriverMgr calls *this driver initialize setup ready for use.
 // Type:    Overridden.
 // Args:    None.
@@ -266,7 +255,6 @@ bool CMIDriver::WriteMessageToLog(const CMIUtilString &vMessage) {
 bool CMIDriver::DoInitialize() { return CMIDriver::Instance().Initialize(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CDriverMgr calls *this driver to unbind detach or release resources
 // used by
 //          *this driver.
@@ -279,7 +267,6 @@ bool CMIDriver::DoInitialize() { return CMIDriver::Instance().Initialize(); }
 bool CMIDriver::DoShutdown() { return CMIDriver::Instance().Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the name for *this driver.
 // Type:    Overridden.
 // Args:    None.
@@ -296,7 +283,6 @@ const CMIUtilString &CMIDriver::GetName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve *this driver's last error condition.
 // Type:    Overridden.
 // Args:    None.
@@ -306,7 +292,6 @@ const CMIUtilString &CMIDriver::GetName() const {
 CMIUtilString CMIDriver::GetError() const { return GetErrorDescription(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Call *this driver to return it's debugger.
 // Type:    Overridden.
 // Args:    None.
@@ -318,7 +303,6 @@ lldb::SBDebugger &CMIDriver::GetTheDebugger() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Specify another driver *this driver can call should this driver not
 // be able
 //          to handle the client data input. DoFallThruToAnotherDriver() makes
@@ -336,7 +320,6 @@ bool CMIDriver::SetDriverToFallThruTo(const CMIDriverBase &vrOtherDriver) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Proxy function CMIDriverMgr IDriver interface implementation. *this
 // driver's
 //          implementation called from here to match the existing function name
@@ -373,7 +356,6 @@ lldb::SBError CMIDriver::DoParseArgs(const int argc, const char *argv[],
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Check the arguments that were passed to this program to make sure
 // they are
 //          valid and to get their argument values (if any). The following are
@@ -483,7 +465,6 @@ lldb::SBError CMIDriver::ParseArgs(const int argc, const char *argv[],
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: A client can ask if *this driver is GDB/MI compatible.
 // Type:    Overridden.
 // Args:    None.
@@ -494,7 +475,6 @@ lldb::SBError CMIDriver::ParseArgs(const int argc, const char *argv[],
 bool CMIDriver::GetDriverIsGDBMICompatibleDriver() const { return true; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Start worker threads for the driver.
 // Type:    Method.
 // Args:    None.
@@ -521,7 +501,6 @@ bool CMIDriver::StartWorkerThreads() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Stop worker threads for the driver.
 // Type:    Method.
 // Args:    None.
@@ -535,7 +514,6 @@ bool CMIDriver::StopWorkerThreads() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Call this function puts *this driver to work.
 //          This function is used by the application's main thread.
 // Type:    Overridden.
@@ -610,7 +588,6 @@ bool CMIDriver::DoMainLoop() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set things in motion, set state etc that brings *this driver (and
 // the
 //          application) to a tidy shutdown.
@@ -634,7 +611,6 @@ bool CMIDriver::DoAppQuit() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: *this driver passes text commands to a fall through driver is it
 // does not
 //          understand them (the LLDB driver).
@@ -686,7 +662,6 @@ bool CMIDriver::InterpretCommandFallThruDriver(const CMIUtilString &vTextLine,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the name for *this driver.
 // Type:    Overridden.
 // Args:    None.
@@ -696,7 +671,6 @@ bool CMIDriver::InterpretCommandFallThruDriver(const CMIUtilString &vTextLine,
 const CMIUtilString &CMIDriver::GetDriverName() const { return GetName(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the unique ID for *this driver.
 // Type:    Overridden.
 // Args:    None.
@@ -706,7 +680,6 @@ const CMIUtilString &CMIDriver::GetDriverName() const { return GetName(); }
 const CMIUtilString &CMIDriver::GetDriverId() const { return GetId(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: This function allows *this driver to call on another driver to
 // perform work
 //          should this driver not be able to handle the client data input.
@@ -731,7 +704,6 @@ bool CMIDriver::DoFallThruToAnotherDriver(const CMIUtilString &vCmd,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: *this driver provides a file stream to other drivers on which *this
 // driver
 //          write's out to and they read as expected input. *this driver is
@@ -752,7 +724,6 @@ FILE *CMIDriver::GetStdin() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: *this driver provides a file stream to other pass through assigned
 // drivers
 //          so they know what to write to.
@@ -770,7 +741,6 @@ FILE *CMIDriver::GetStdout() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: *this driver provides a error file stream to other pass through
 // assigned drivers
 //          so they know what to write to.
@@ -789,7 +759,6 @@ FILE *CMIDriver::GetStderr() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set a unique ID for *this driver. It cannot be empty.
 // Type:    Overridden.
 // Args:    vId - (R) Text description.
@@ -809,7 +778,6 @@ bool CMIDriver::SetId(const CMIUtilString &vId) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the unique ID for *this driver.
 // Type:    Overridden.
 // Args:    None.
@@ -819,7 +787,6 @@ bool CMIDriver::SetId(const CMIUtilString &vId) {
 const CMIUtilString &CMIDriver::GetId() const { return m_strDriverId; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Interpret the text data and match against current commands to see if
 // there
 //          is a match. If a match then the command is issued and actioned on.
@@ -849,7 +816,6 @@ bool CMIDriver::InterpretCommand(const CMIUtilString &vTextLine) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Helper function for CMIDriver::InterpretCommandThisDriver.
 //          Convert a CLI command to MI command (just wrap any CLI command
 //          into "<tokens>-interpreter-exec command \"<CLI command>\"").
@@ -925,7 +891,6 @@ CMIDriver::WrapCLICommandIntoMICommand(const CMIUtilString &vTextLine) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Interpret the text data and match against current commands to see if
 // there
 //          is a match. If a match then the command is issued and actioned on.
@@ -998,7 +963,6 @@ bool CMIDriver::InterpretCommandThisDriver(const CMIUtilString &vTextLine,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Having previously had the potential command validated and found
 // valid now
 //          get the command executed.
@@ -1015,7 +979,6 @@ bool CMIDriver::ExecuteCommand(const SMICmdData &vCmdData) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the MI Driver's exit application flag. The application checks
 // this flag
 //          after every stdin line is read so the exit may not be instantaneous.
@@ -1048,7 +1011,6 @@ void CMIDriver::SetExitApplicationFlag(const bool vbForceExit) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the  MI Driver's exit exit application flag.
 //          This is related to the running state of the MI driver.
 // Type:    Method.
@@ -1060,7 +1022,6 @@ void CMIDriver::SetExitApplicationFlag(const bool vbForceExit) {
 bool CMIDriver::GetExitApplicationFlag() const { return m_bExitApp; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the current running state of the MI Driver.
 // Type:    Method.
 // Args:    None.
@@ -1072,7 +1033,6 @@ CMIDriver::DriverState_e CMIDriver::GetCurrentDriverState() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the current running state of the MI Driver to running and
 // currently not in
 //          a debug session.
@@ -1119,7 +1079,6 @@ bool CMIDriver::SetDriverStateRunningNotDebugging() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the current running state of the MI Driver to running and
 // currently not in
 //          a debug session. The driver's state must in the state running and in
@@ -1168,7 +1127,6 @@ bool CMIDriver::SetDriverStateRunningDebugging() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Prepare the client IDE so it will start working/communicating with
 // *this MI
 //          driver.
@@ -1184,7 +1142,6 @@ bool CMIDriver::InitClientIDEToMIDriver() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The IDE Eclipse when debugging locally expects "(gdb)\n" character
 //          sequence otherwise it refuses to communicate and times out. This
 //          should be
@@ -1200,7 +1157,6 @@ bool CMIDriver::InitClientIDEEclipse() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Ask *this driver whether it found an executable in the MI Driver's
 // list of
 //          arguments which to open and debug. If so instigate commands to set
@@ -1219,7 +1175,6 @@ bool CMIDriver::HaveExecutableFileNamePathOnCmdLine() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve from *this driver executable file name path to start a
 // debug session
 //          with (if present see HaveExecutableFileNamePathOnCmdLine()).
@@ -1233,7 +1188,6 @@ const CMIUtilString &CMIDriver::GetExecutableFileNamePathOnCmdLine() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Execute commands (by injecting them into the stdin line queue
 // container) and
 //          other code to set up the MI Driver such that is can take the
@@ -1256,7 +1210,6 @@ bool CMIDriver::LocalDebugSessionStartupExecuteCommands() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the MI Driver into "its debugging an executable passed as an
 // argument"
 //          mode as against running via a client like Eclipse.
@@ -1270,7 +1223,6 @@ void CMIDriver::SetDriverDebuggingArgExecutable() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the MI Driver state indicating if it is operating in "its
 // debugging
 //          an executable passed as an argument" mode as against running via a
@@ -1286,7 +1238,6 @@ bool CMIDriver::IsDriverDebuggingArgExecutable() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Execute commands from command source file in specified mode, and
 //          set exit-flag if needed.
 // Type:    Method.
@@ -1352,7 +1303,6 @@ bool CMIDriver::ExecuteCommandFile(const bool vbAsyncMode) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Gets called when lldb-mi gets a signal. Stops the process if it was
 // SIGINT.
 //

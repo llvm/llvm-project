@@ -29,15 +29,14 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // FunctionCaller constructor
-//----------------------------------------------------------------------
 FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
                                const CompilerType &return_type,
                                const Address &functionAddress,
                                const ValueList &arg_value_list,
                                const char *name)
-    : Expression(exe_scope), m_execution_unit_sp(), m_parser(),
+    : Expression(exe_scope, eKindFunctionCaller),
+      m_execution_unit_sp(), m_parser(),
       m_jit_module_wp(), m_name(name ? name : "<unknown>"),
       m_function_ptr(NULL), m_function_addr(functionAddress),
       m_function_return_type(return_type),
@@ -50,9 +49,7 @@ FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
   assert(m_jit_process_wp.lock());
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 FunctionCaller::~FunctionCaller() {
   lldb::ProcessSP process_sp(m_jit_process_wp.lock());
   if (process_sp) {
@@ -102,7 +99,8 @@ bool FunctionCaller::WriteFunctionWrapper(
       jit_file.GetFilename() = const_func_name;
       jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
       m_jit_module_wp = jit_module_sp;
-      process->GetTarget().GetImages().Append(jit_module_sp);
+      process->GetTarget().GetImages().Append(jit_module_sp, 
+                                              true /* notify */);
     }
   }
   if (process && m_jit_start_addr)

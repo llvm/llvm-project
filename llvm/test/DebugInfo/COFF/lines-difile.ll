@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc < %s -filetype=obj | llvm-readobj -codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc < %s -filetype=obj | llvm-readobj --codeview | FileCheck %s --check-prefix=OBJ
 
 ; Test what happens when we have two DIFile entries with differing slashes.
 ; Make sure we only emit one file checksum entry.

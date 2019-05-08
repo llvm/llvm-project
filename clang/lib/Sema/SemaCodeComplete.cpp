@@ -2605,6 +2605,11 @@ static std::string
 FormatFunctionParameter(const PrintingPolicy &Policy, const ParmVarDecl *Param,
                         bool SuppressName = false, bool SuppressBlock = false,
                         Optional<ArrayRef<QualType>> ObjCSubsts = None) {
+  // Params are unavailable in FunctionTypeLoc if the FunctionType is invalid.
+  // It would be better to pass in the param Type, which is usually avaliable.
+  // But this case is rare, so just pretend we fell back to int as elsewhere.
+  if (!Param)
+    return "int";
   bool ObjCMethodParam = isa<ObjCMethodDecl>(Param->getDeclContext());
   if (Param->getType()->isDependentType() ||
       !Param->getType()->isBlockPointerType()) {
@@ -4784,22 +4789,19 @@ typedef CodeCompleteConsumer::OverloadCandidate ResultCandidate;
 static void mergeCandidatesWithResults(
     Sema &SemaRef, SmallVectorImpl<ResultCandidate> &Results,
     OverloadCandidateSet &CandidateSet, SourceLocation Loc) {
-  if (!CandidateSet.empty()) {
-    // Sort the overload candidate set by placing the best overloads first.
-    std::stable_sort(
-        CandidateSet.begin(), CandidateSet.end(),
-        [&](const OverloadCandidate &X, const OverloadCandidate &Y) {
-          return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
-                                           CandidateSet.getKind());
-        });
+  // Sort the overload candidate set by placing the best overloads first.
+  llvm::stable_sort(CandidateSet, [&](const OverloadCandidate &X,
+                                      const OverloadCandidate &Y) {
+    return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
+                                     CandidateSet.getKind());
+  });
 
-    // Add the remaining viable overload candidates as code-completion results.
-    for (OverloadCandidate &Candidate : CandidateSet) {
-      if (Candidate.Function && Candidate.Function->isDeleted())
-        continue;
-      if (Candidate.Viable)
-        Results.push_back(ResultCandidate(Candidate.Function));
-    }
+  // Add the remaining viable overload candidates as code-completion results.
+  for (OverloadCandidate &Candidate : CandidateSet) {
+    if (Candidate.Function && Candidate.Function->isDeleted())
+      continue;
+    if (Candidate.Viable)
+      Results.push_back(ResultCandidate(Candidate.Function));
   }
 }
 
@@ -6407,8 +6409,9 @@ void Sema::CodeCompleteObjCSuperMessage(Scope *S, SourceLocation SuperLoc,
       SourceLocation TemplateKWLoc;
       UnqualifiedId id;
       id.setIdentifier(Super, SuperLoc);
-      ExprResult SuperExpr =
-          ActOnIdExpression(S, SS, TemplateKWLoc, id, false, false);
+      ExprResult SuperExpr = ActOnIdExpression(S, SS, TemplateKWLoc, id,
+                                               /*HasTrailingLParen=*/false,
+                                               /*IsAddressOfOperand=*/false);
       return CodeCompleteObjCInstanceMessage(S, (Expr *)SuperExpr.get(),
                                              SelIdents, AtArgumentExpression);
     }
@@ -8378,7 +8381,8 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
   // We need the native slashes for the actual file system interactions.
   SmallString<128> NativeRelDir = StringRef(RelDir);
   llvm::sys::path::native(NativeRelDir);
-  auto FS = getSourceManager().getFileManager().getVirtualFileSystem();
+  llvm::vfs::FileSystem &FS =
+      getSourceManager().getFileManager().getVirtualFileSystem();
 
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
@@ -8424,7 +8428,7 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
 
     std::error_code EC;
     unsigned Count = 0;
-    for (auto It = FS->dir_begin(Dir, EC);
+    for (auto It = FS.dir_begin(Dir, EC);
          !EC && It != llvm::vfs::directory_iterator(); It.increment(EC)) {
       if (++Count == 2500) // If we happen to hit a huge directory,
         break;             // bail out early so we're not too slow.

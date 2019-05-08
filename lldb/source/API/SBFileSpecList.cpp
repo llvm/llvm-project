@@ -14,7 +14,6 @@
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include <limits.h>
@@ -29,16 +28,8 @@ SBFileSpecList::SBFileSpecList() : m_opaque_up(new FileSpecList()) {
 SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_up() {
   LLDB_RECORD_CONSTRUCTOR(SBFileSpecList, (const lldb::SBFileSpecList &), rhs);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   m_opaque_up = clone(rhs.m_opaque_up);
-
-  if (log) {
-    log->Printf("SBFileSpecList::SBFileSpecList (const SBFileSpecList "
-                "rhs.ap=%p) => SBFileSpecList(%p)",
-                static_cast<void *>(rhs.m_opaque_up.get()),
-                static_cast<void *>(m_opaque_up.get()));
-  }
 }
 
 SBFileSpecList::~SBFileSpecList() {}
@@ -50,7 +41,7 @@ const SBFileSpecList &SBFileSpecList::operator=(const SBFileSpecList &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 uint32_t SBFileSpecList::GetSize() const {
@@ -131,4 +122,31 @@ bool SBFileSpecList::GetDescription(SBStream &description) const {
     strm.PutCString("No value");
 
   return true;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBFileSpecList>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpecList, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpecList, (const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBFileSpecList &,
+      SBFileSpecList, operator=,(const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBFileSpecList, GetSize, ());
+  LLDB_REGISTER_METHOD(void, SBFileSpecList, Append,
+                       (const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(bool, SBFileSpecList, AppendIfUnique,
+                       (const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(void, SBFileSpecList, Clear, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBFileSpecList, FindFileIndex,
+                       (uint32_t, const lldb::SBFileSpec &, bool));
+  LLDB_REGISTER_METHOD_CONST(const lldb::SBFileSpec, SBFileSpecList,
+                             GetFileSpecAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpecList, GetDescription,
+                             (lldb::SBStream &));
+}
+
+}
 }

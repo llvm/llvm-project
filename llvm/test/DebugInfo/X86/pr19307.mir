@@ -191,7 +191,7 @@ body:             |
     renamable $rcx = MOV64ri @.str, debug-location !46
     CALL64pcrel32 @_ZNKSs7compareEmmPKc, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit killed $rdx, implicit killed $rcx, implicit-def $eax, debug-location !46
     CMP32ri8 killed renamable $eax, 0, implicit-def $eflags, debug-location !46
-    JNE_1 %bb.2, implicit $eflags, debug-location !46
+    JCC_1 %bb.2, 5, implicit $eflags, debug-location !46
   
   bb.1.lor.lhs.false:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
@@ -200,7 +200,7 @@ body:             |
     CALL64pcrel32 @_ZNSsixEm, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rax, debug-location !48
     renamable $ecx = MOVSX32rm8 killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !48 :: (load 1 from %ir.call1)
     CMP32ri8 killed renamable $ecx, 45, implicit-def $eflags, debug-location !48
-    JNE_1 %bb.3, implicit $eflags, debug-location !48
+    JCC_1 %bb.3, 5, implicit $eflags, debug-location !48
   
   bb.2.if.then:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45

@@ -110,6 +110,12 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // ...getContext().yield();
   }
 
+  // Before we mark all of *this* SCC's analyses as preserved below, intersect
+  // this with the cross-SCC preserved analysis set. This is used to allow
+  // CGSCC passes to mutate ancestor SCCs and still trigger proper invalidation
+  // for them.
+  UR.CrossSCCPA.intersect(PA);
+
   // Invalidation was handled after each pass in the above loop for the current
   // SCC. Therefore, the remaining analysis results in the AnalysisManager are
   // preserved. We mark this with a set so that we don't need to inspect each

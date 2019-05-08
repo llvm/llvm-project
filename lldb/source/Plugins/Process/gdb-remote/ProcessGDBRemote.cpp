@@ -111,7 +111,13 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"packet-timeout", OptionValue::eTypeUInt64, true, 1, NULL, {},
+    {"packet-timeout", OptionValue::eTypeUInt64, true, 5
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+      * 2
+#endif
+#endif
+      , NULL, {},
      "Specify the default packet timeout in seconds."},
     {"target-definition-file", OptionValue::eTypeFileSpec, true, 0, NULL, {},
      "The file that provides the description for remote target registers."}};
@@ -178,7 +184,7 @@ public:
 
     std::error_code EC;
     m_stream_up = llvm::make_unique<raw_fd_ostream>(history_file.GetPath(), EC,
-                                                    sys::fs::OpenFlags::F_None);
+                                                    sys::fs::OpenFlags::F_Text);
     return m_stream_up.get();
   }
 
@@ -282,9 +288,7 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
-//----------------------------------------------------------------------
 // ProcessGDBRemote constructor
-//----------------------------------------------------------------------
 ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    ListenerSP listener_sp)
     : Process(target_sp, listener_sp),
@@ -347,9 +351,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
     m_gdb_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ProcessGDBRemote::~ProcessGDBRemote() {
   //  m_mach_process.UnregisterNotificationCallbacks (this);
   Clear();
@@ -367,9 +369,7 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   KillDebugserverProcess();
 }
 
-//----------------------------------------------------------------------
 // PluginInterface
-//----------------------------------------------------------------------
 ConstString ProcessGDBRemote::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ProcessGDBRemote::GetPluginVersion() { return 1; }
@@ -377,7 +377,7 @@ uint32_t ProcessGDBRemote::GetPluginVersion() { return 1; }
 bool ProcessGDBRemote::ParsePythonTargetDefinition(
     const FileSpec &target_definition_fspec) {
   ScriptInterpreter *interpreter =
-      GetTarget().GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+      GetTarget().GetDebugger().GetScriptInterpreter();
   Status error;
   StructuredData::ObjectSP module_object_sp(
       interpreter->LoadPluginModule(target_definition_fspec, error));
@@ -803,9 +803,7 @@ Status ProcessGDBRemote::WillLaunchOrAttach() {
   return error;
 }
 
-//----------------------------------------------------------------------
 // Process Control
-//----------------------------------------------------------------------
 Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                   ProcessLaunchInfo &launch_info) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
@@ -2718,9 +2716,7 @@ void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
   Process::SetUnixSignals(std::make_shared<GDBRemoteSignals>(signals_sp));
 }
 
-//------------------------------------------------------------------
 // Process Queries
-//------------------------------------------------------------------
 
 bool ProcessGDBRemote::IsAlive() {
   return m_gdb_comm.IsConnected() && Process::IsAlive();
@@ -2764,9 +2760,7 @@ void ProcessGDBRemote::WillPublicStop() {
   }
 }
 
-//------------------------------------------------------------------
 // Process Memory
-//------------------------------------------------------------------
 size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                       Status &error) {
   GetMaxMemorySize();
@@ -3127,9 +3121,7 @@ Status ProcessGDBRemote::DoDeallocateMemory(lldb::addr_t addr) {
   return error;
 }
 
-//------------------------------------------------------------------
 // Process STDIO
-//------------------------------------------------------------------
 size_t ProcessGDBRemote::PutSTDIN(const char *src, size_t src_len,
                                   Status &error) {
   if (m_stdio_communication.IsConnected()) {
@@ -4213,7 +4205,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
 }
 
 Status ProcessGDBRemote::ConfigureStructuredData(
-    const ConstString &type_name, const StructuredData::ObjectSP &config_sp) {
+    ConstString type_name, const StructuredData::ObjectSP &config_sp) {
   return m_gdb_comm.ConfigureRemoteStructuredData(type_name, config_sp);
 }
 

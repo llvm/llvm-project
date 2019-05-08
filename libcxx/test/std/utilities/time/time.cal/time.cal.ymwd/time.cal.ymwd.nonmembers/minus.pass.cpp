@@ -23,7 +23,6 @@
 
 #include "test_macros.h"
 
-#include <iostream>
 
 constexpr bool testConstexprYears ()
 {

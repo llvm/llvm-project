@@ -69,9 +69,7 @@
 
 namespace lldb {
 
-//----------------------------------------------------------------------
 // Process and Thread States
-//----------------------------------------------------------------------
 enum StateType {
   eStateInvalid = 0,
   eStateUnloaded,  ///< Process is object is valid, but not currently loaded
@@ -95,9 +93,7 @@ enum StateType {
   kLastStateType = eStateSuspended
 };
 
-//----------------------------------------------------------------------
 // Launch Flags
-//----------------------------------------------------------------------
 FLAGS_ENUM(LaunchFlags){
     eLaunchFlagNone = 0u,
     eLaunchFlagExec = (1u << 0),  ///< Exec when launching and turn the calling
@@ -130,14 +126,10 @@ FLAGS_ENUM(LaunchFlags){
     eLaunchFlagCloseTTYOnExit = (1u << 11), ///< Close the open TTY on exit
 };
 
-//----------------------------------------------------------------------
 // Thread Run Modes
-//----------------------------------------------------------------------
 enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 
-//----------------------------------------------------------------------
 // Byte ordering definitions
-//----------------------------------------------------------------------
 enum ByteOrder {
   eByteOrderInvalid = 0,
   eByteOrderBig = 1,
@@ -145,9 +137,7 @@ enum ByteOrder {
   eByteOrderLittle = 4
 };
 
-//----------------------------------------------------------------------
 // Register encoding definitions
-//----------------------------------------------------------------------
 enum Encoding {
   eEncodingInvalid = 0,
   eEncodingUint,    // unsigned integer
@@ -156,9 +146,7 @@ enum Encoding {
   eEncodingVector   // vector registers
 };
 
-//----------------------------------------------------------------------
 // Display format definitions
-//----------------------------------------------------------------------
 enum Format {
   eFormatDefault = 0,
   eFormatInvalid = 0,
@@ -208,10 +196,8 @@ enum Format {
   kNumFormats
 };
 
-//----------------------------------------------------------------------
 // Description levels for "void GetDescription(Stream *, DescriptionLevel)"
 // calls
-//----------------------------------------------------------------------
 enum DescriptionLevel {
   eDescriptionLevelBrief = 0,
   eDescriptionLevelFull,
@@ -220,9 +206,7 @@ enum DescriptionLevel {
   kNumDescriptionLevels
 };
 
-//----------------------------------------------------------------------
 // Script interpreter types
-//----------------------------------------------------------------------
 enum ScriptLanguage {
   eScriptLanguageNone,
   eScriptLanguagePython,
@@ -230,11 +214,9 @@ enum ScriptLanguage {
   eScriptLanguageUnknown
 };
 
-//----------------------------------------------------------------------
 // Register numbering types
 // See RegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
 // these to the lldb internal register numbering scheme (eRegisterKindLLDB).
-//----------------------------------------------------------------------
 enum RegisterKind {
   eRegisterKindEHFrame = 0, // the register numbers seen in eh_frame
   eRegisterKindDWARF,       // the register numbers seen DWARF
@@ -246,9 +228,7 @@ enum RegisterKind {
   kNumRegisterKinds
 };
 
-//----------------------------------------------------------------------
 // Thread stop reasons
-//----------------------------------------------------------------------
 enum StopReason {
   eStopReasonInvalid = 0,
   eStopReasonNone,
@@ -263,9 +243,7 @@ enum StopReason {
   eStopReasonInstrumentation
 };
 
-//----------------------------------------------------------------------
 // Command Return Status Types
-//----------------------------------------------------------------------
 enum ReturnStatus {
   eReturnStatusInvalid,
   eReturnStatusSuccessFinishNoResult,
@@ -277,9 +255,7 @@ enum ReturnStatus {
   eReturnStatusQuit
 };
 
-//----------------------------------------------------------------------
 // The results of expression evaluation:
-//----------------------------------------------------------------------
 enum ExpressionResults {
   eExpressionCompleted = 0,
   eExpressionSetupError,
@@ -303,9 +279,7 @@ enum SearchDepth {
     kLastSearchDepthKind = eSearchDepthAddress
 };
 
-//----------------------------------------------------------------------
 // Connection Status Types
-//----------------------------------------------------------------------
 enum ConnectionStatus {
   eConnectionStatusSuccess,        // Success
   eConnectionStatusEndOfFile,      // End-of-file encountered
@@ -338,9 +312,7 @@ enum ValueType {
   eValueTypeVariableThreadLocal = 8 // thread local storage variable
 };
 
-//----------------------------------------------------------------------
 // Token size/granularities for Input Readers
-//----------------------------------------------------------------------
 
 enum InputReaderGranularity {
   eInputReaderGranularityInvalid = 0,
@@ -350,7 +322,6 @@ enum InputReaderGranularity {
   eInputReaderGranularityAll
 };
 
-//------------------------------------------------------------------
 /// These mask bits allow a common interface for queries that can
 /// limit the amount of information that gets parsed to only the
 /// information that is requested. These bits also can indicate what
@@ -359,7 +330,6 @@ enum InputReaderGranularity {
 /// Each definition corresponds to a one of the member variables
 /// in this class, and requests that that item be resolved, or
 /// indicates that the member did get resolved.
-//------------------------------------------------------------------
 FLAGS_ENUM(SymbolContextItem){
     eSymbolContextTarget = (1u << 0), ///< Set when \a target is requested from
                                       /// a query, or was located in query
@@ -446,14 +416,12 @@ FLAGS_ENUM(WatchpointEventType){
     eWatchpointEventTypeThreadChanged = (1u << 11),
     eWatchpointEventTypeTypeChanged = (1u << 12)};
 
-//----------------------------------------------------------------------
 /// Programming language type.
 ///
 /// These enumerations use the same language enumerations as the DWARF
 /// specification for ease of use and consistency.
 /// The enum -> string code is in Language.cpp, don't change this
 /// table without updating that code as well.
-//----------------------------------------------------------------------
 enum LanguageType {
   eLanguageTypeUnknown = 0x0000,        ///< Unknown or invalid language value.
   eLanguageTypeC89 = 0x0001,            ///< ISO C:1989.
@@ -623,9 +591,7 @@ enum CommandArgumentType {
                   // enumeration!!
 };
 
-//----------------------------------------------------------------------
 // Symbol types
-//----------------------------------------------------------------------
 enum SymbolType {
   eSymbolTypeAny = 0,
   eSymbolTypeInvalid = 0,
@@ -747,9 +713,7 @@ FLAGS_ENUM(FunctionNameType){
 };
 LLDB_MARK_AS_BITMASK_ENUM(FunctionNameType)
 
-//----------------------------------------------------------------------
 // Basic types enumeration for the public API SBType::GetBasicType()
-//----------------------------------------------------------------------
 enum BasicType {
   eBasicTypeInvalid = 0,
   eBasicTypeVoid = 1,
@@ -834,10 +798,8 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindNullPtr,
 };
 
-//----------------------------------------------------------------------
 // Options that can be set for a formatter to alter its behavior Not all of
 // these are applicable to all formatter types
-//----------------------------------------------------------------------
 FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionCascade = (1u << 0),
                         eTypeOptionSkipPointers = (1u << 1),
@@ -851,7 +813,6 @@ FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionFrontEndWantsDereference = (1u << 9)
 };
 
-//----------------------------------------------------------------------
 // This is the return value for frame comparisons.  If you are comparing frame
 // A to frame B the following cases arise: 1) When frame A pushes frame B (or a
 // frame that ends up pushing B) A is Older than B. 2) When frame A pushed
@@ -863,7 +824,6 @@ FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
 // 5) If the two frames are on different threads or processes the comparison is
 // Invalid 6) If for some reason we can't figure out what went on, we return
 // Unknown.
-//----------------------------------------------------------------------
 enum FrameComparison {
   eFrameCompareInvalid,
   eFrameCompareUnknown,
@@ -873,12 +833,10 @@ enum FrameComparison {
   eFrameCompareOlder
 };
 
-//----------------------------------------------------------------------
 // File Permissions
 //
 // Designed to mimic the unix file permission bits so they can be used with
 // functions that set 'mode_t' to certain values for permissions.
-//----------------------------------------------------------------------
 FLAGS_ENUM(FilePermissions){
     eFilePermissionsUserRead = (1u << 8), eFilePermissionsUserWrite = (1u << 7),
     eFilePermissionsUserExecute = (1u << 6),
@@ -934,35 +892,29 @@ FLAGS_ENUM(FilePermissions){
     eFilePermissionsDirectoryDefault = eFilePermissionsUserRWX,
 };
 
-//----------------------------------------------------------------------
 // Queue work item types
 //
 // The different types of work that can be enqueued on a libdispatch aka Grand
 // Central Dispatch (GCD) queue.
-//----------------------------------------------------------------------
 enum QueueItemKind {
   eQueueItemKindUnknown = 0,
   eQueueItemKindFunction,
   eQueueItemKindBlock
 };
 
-//----------------------------------------------------------------------
 // Queue type
 // libdispatch aka Grand Central Dispatch (GCD) queues can be either serial
 // (executing on one thread) or concurrent (executing on multiple threads).
-//----------------------------------------------------------------------
 enum QueueKind {
   eQueueKindUnknown = 0,
   eQueueKindSerial,
   eQueueKindConcurrent
 };
 
-//----------------------------------------------------------------------
 // Expression Evaluation Stages
 // These are the cancellable stages of expression evaluation, passed to the
 // expression evaluation callback, so that you can interrupt expression
 // evaluation at the various points in its lifecycle.
-//----------------------------------------------------------------------
 enum ExpressionEvaluationPhase {
   eExpressionEvaluationParse = 0,
   eExpressionEvaluationIRGen,
@@ -970,11 +922,9 @@ enum ExpressionEvaluationPhase {
   eExpressionEvaluationComplete
 };
 
-//----------------------------------------------------------------------
 // Watchpoint Kind
 // Indicates what types of events cause the watchpoint to fire. Used by Native
 // *Protocol-related classes.
-//----------------------------------------------------------------------
 FLAGS_ENUM(WatchpointKind){eWatchpointKindWrite = (1u << 0),
                            eWatchpointKindRead = (1u << 1)};
 
@@ -987,11 +937,9 @@ enum GdbSignal {
   eGdbSignalBreakpoint = 0x96
 };
 
-//----------------------------------------------------------------------
 // Used with SBHost::GetPath (lldb::PathType) to find files that are related to
 // LLDB on the current host machine. Most files are relative to LLDB or are in
 // known locations.
-//----------------------------------------------------------------------
 enum PathType {
   ePathTypeLLDBShlibDir, // The directory where the lldb.so (unix) or LLDB
                          // mach-o file in LLDB.framework (MacOSX) exists
@@ -1008,10 +956,8 @@ enum PathType {
   ePathTypeClangDir                 // Find path to Clang builtin headers
 };
 
-//----------------------------------------------------------------------
 // Kind of member function
 // Used by the type system
-//----------------------------------------------------------------------
 enum MemberFunctionKind {
   eMemberFunctionKindUnknown = 0,    // Not sure what the type of this is
   eMemberFunctionKindConstructor,    // A function used to create instances
@@ -1023,14 +969,10 @@ enum MemberFunctionKind {
                                      // than any instance
 };
 
-//----------------------------------------------------------------------
 // String matching algorithm used by SBTarget
-//----------------------------------------------------------------------
 enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
 
-//----------------------------------------------------------------------
 // Bitmask that describes details about a type
-//----------------------------------------------------------------------
 FLAGS_ENUM(TypeFlags){
     eTypeHasChildren = (1u << 0),       eTypeHasValue = (1u << 1),
     eTypeIsArray = (1u << 2),           eTypeIsBlock = (1u << 3),
@@ -1046,7 +988,6 @@ FLAGS_ENUM(TypeFlags){
     eTypeInstanceIsPointer = (1u << 22)};
 
 FLAGS_ENUM(CommandFlags){
-    //----------------------------------------------------------------------
     // eCommandRequiresTarget
     //
     // Ensures a valid target is contained in m_exe_ctx prior to executing the
@@ -1054,9 +995,7 @@ FLAGS_ENUM(CommandFlags){
     // and CommandObject::GetInvalidTargetDescription() will be returned as the
     // error. CommandObject subclasses can override the virtual function for
     // GetInvalidTargetDescription() to provide custom strings when needed.
-    //----------------------------------------------------------------------
     eCommandRequiresTarget = (1u << 0),
-    //----------------------------------------------------------------------
     // eCommandRequiresProcess
     //
     // Ensures a valid process is contained in m_exe_ctx prior to executing the
@@ -1065,9 +1004,7 @@ FLAGS_ENUM(CommandFlags){
     // the error. CommandObject subclasses can override the virtual function
     // for GetInvalidProcessDescription() to provide custom strings when
     // needed.
-    //----------------------------------------------------------------------
     eCommandRequiresProcess = (1u << 1),
-    //----------------------------------------------------------------------
     // eCommandRequiresThread
     //
     // Ensures a valid thread is contained in m_exe_ctx prior to executing the
@@ -1075,9 +1012,7 @@ FLAGS_ENUM(CommandFlags){
     // and CommandObject::GetInvalidThreadDescription() will be returned as the
     // error. CommandObject subclasses can override the virtual function for
     // GetInvalidThreadDescription() to provide custom strings when needed.
-    //----------------------------------------------------------------------
     eCommandRequiresThread = (1u << 2),
-    //----------------------------------------------------------------------
     // eCommandRequiresFrame
     //
     // Ensures a valid frame is contained in m_exe_ctx prior to executing the
@@ -1085,9 +1020,7 @@ FLAGS_ENUM(CommandFlags){
     // and CommandObject::GetInvalidFrameDescription() will be returned as the
     // error. CommandObject subclasses can override the virtual function for
     // GetInvalidFrameDescription() to provide custom strings when needed.
-    //----------------------------------------------------------------------
     eCommandRequiresFrame = (1u << 3),
-    //----------------------------------------------------------------------
     // eCommandRequiresRegContext
     //
     // Ensures a valid register context (from the selected frame if there is a
@@ -1097,34 +1030,25 @@ FLAGS_ENUM(CommandFlags){
     // CommandObject::GetInvalidRegContextDescription() will be returned as the
     // error. CommandObject subclasses can override the virtual function for
     // GetInvalidRegContextDescription() to provide custom strings when needed.
-    //----------------------------------------------------------------------
     eCommandRequiresRegContext = (1u << 4),
-    //----------------------------------------------------------------------
     // eCommandTryTargetAPILock
     //
     // Attempts to acquire the target lock if a target is selected in the
     // command interpreter. If the command object fails to acquire the API
     // lock, the command will fail with an appropriate error message.
-    //----------------------------------------------------------------------
     eCommandTryTargetAPILock = (1u << 5),
-    //----------------------------------------------------------------------
     // eCommandProcessMustBeLaunched
     //
     // Verifies that there is a launched process in m_exe_ctx, if there isn't,
     // the command will fail with an appropriate error message.
-    //----------------------------------------------------------------------
     eCommandProcessMustBeLaunched = (1u << 6),
-    //----------------------------------------------------------------------
     // eCommandProcessMustBePaused
     //
     // Verifies that there is a paused process in m_exe_ctx, if there isn't,
     // the command will fail with an appropriate error message.
-    //----------------------------------------------------------------------
     eCommandProcessMustBePaused = (1u << 7)};
 
-//----------------------------------------------------------------------
 // Whether a summary should cap how much data it returns to users or not
-//----------------------------------------------------------------------
 enum TypeSummaryCapping {
   eTypeSummaryCapped = true,
   eTypeSummaryUncapped = false

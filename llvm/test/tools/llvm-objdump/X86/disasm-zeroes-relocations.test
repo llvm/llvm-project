@@ -1,10 +1,9 @@
 # RUN: yaml2obj %s > %t
 
 ## Check we do not skip zeroes blocks if have relocations pointed to these places.
-# RUN: llvm-objdump -D -reloc %t
+# RUN: llvm-objdump -D --reloc %t
 
-# CHECK:      Disassembly of section .rodata:
-# CHECK-NEXT: 0000000000000000 .rodata:
+# CHECK:      0000000000000000 .rodata:
 # CHECK-NEXT:        0:       00 00   addb    %al, (%rax)
 # CHECK-NEXT:                 0000000000000000:  R_X86_64_64  *ABS*
 # CHECK-NEXT:        2:       00 00   addb    %al, (%rax)
@@ -19,9 +18,9 @@
 ## Check that without -reloc all zeroes would be omitted.
 # RUN: llvm-objdump -D %t | FileCheck %s --check-prefix=SKIP
 
-# SKIP:      Disassembly of section .rodata:
-# SKIP-NEXT: 0000000000000000 .rodata:
+# SKIP:      0000000000000000 .rodata:
 # SKIP-NEXT:   ...
+# SKIP-EMPTY:
 # SKIP-NEXT: Disassembly of section .rela.rodata:
 
 --- !ELF
@@ -50,3 +49,6 @@ Sections:
       - Offset:          0x0000000000000008
         Symbol:          x
         Type:            R_X86_64_64
+Symbols:
+  - Name: x
+    Binding:         STB_GLOBAL

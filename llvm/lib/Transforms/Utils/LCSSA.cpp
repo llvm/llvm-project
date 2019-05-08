@@ -31,11 +31,12 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 using namespace llvm;
@@ -442,6 +444,8 @@ struct LCSSAWrapperPass : public FunctionPass {
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<ScalarEvolutionWrapperPass>();
     AU.addPreserved<SCEVAAWrapperPass>();
+    AU.addPreserved<BranchProbabilityInfoWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
 
     // This is needed to perform LCSSA verification inside LPPassManager
     AU.addRequired<LCSSAVerificationPass>();
@@ -485,5 +489,9 @@ PreservedAnalyses LCSSAPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<GlobalsAA>();
   PA.preserve<SCEVAA>();
   PA.preserve<ScalarEvolutionAnalysis>();
+  // BPI maps terminators to probabilities, since we don't modify the CFG, no
+  // updates are needed to preserve it.
+  PA.preserve<BranchProbabilityAnalysis>();
+  PA.preserve<MemorySSAAnalysis>();
   return PA;
 }

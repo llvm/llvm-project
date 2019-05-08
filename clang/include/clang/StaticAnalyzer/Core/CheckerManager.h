@@ -136,6 +136,12 @@ public:
   AnalyzerOptions &getAnalyzerOptions() { return AOptions; }
   ASTContext &getASTContext() { return Context; }
 
+  /// Emits an error through a DiagnosticsEngine about an invalid user supplied
+  /// checker option value.
+  void reportInvalidCheckerOptionValue(const CheckerBase *C,
+                                       StringRef OptionName,
+                                       StringRef ExpectedValueDesc);
+
   using CheckerRef = CheckerBase *;
   using CheckerTag = const void *;
   using CheckerDtor = CheckerFn<void ()>;

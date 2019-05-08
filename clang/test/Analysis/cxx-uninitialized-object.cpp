@@ -1,10 +1,10 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++14 -verify  %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++14 -verify  %s
 
 //===----------------------------------------------------------------------===//
@@ -358,7 +358,7 @@ template <class T>
 void wontInitialize(const T &);
 
 class PassingToUnknownFunctionTest1 {
-  int a, b; // expected-note{{uninitialized field 'this->b'}}
+  int a, b;
 
 public:
   PassingToUnknownFunctionTest1() {
@@ -368,7 +368,8 @@ public:
   }
 
   PassingToUnknownFunctionTest1(int) {
-    mayInitialize(a); // expected-warning{{1 uninitialized field at the end of the constructor call}}
+    mayInitialize(a);
+    // All good!
   }
 
   PassingToUnknownFunctionTest1(int, int) {
@@ -1128,4 +1129,30 @@ struct CXX11MemberInitTest2 {
 void fCXX11MemberInitTest2() {
   // TODO: we'd expect the warning: {{2 uninitializeds field}}
   CXX11MemberInitTest2(); // no-warning
+}
+
+//===----------------------------------------------------------------------===//
+// "Esoteric" primitive type tests.
+//===----------------------------------------------------------------------===//
+
+struct MyAtomicInt {
+  _Atomic(int) x; // expected-note{{uninitialized field 'this->x'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  MyAtomicInt() {} // expected-warning{{1 uninitialized field}}
+};
+
+void _AtomicTest() {
+  MyAtomicInt b;
+}
+
+struct VectorSizeLong {
+  VectorSizeLong() {}
+  __attribute__((__vector_size__(16))) long x;
+};
+
+void __vector_size__LongTest() {
+  // TODO: Warn for v.x.
+  VectorSizeLong v;
+  v.x[0] = 0;
 }

@@ -24,8 +24,8 @@ namespace lto {
 /// (e.g. in a cache).
 ///
 /// Buffer callbacks must be thread safe.
-typedef std::function<void(unsigned Task, std::unique_ptr<MemoryBuffer> MB)>
-    AddBufferFn;
+using AddBufferFn =
+    std::function<void(unsigned Task, std::unique_ptr<MemoryBuffer> MB)>;
 
 /// Create a local file system cache which uses the given cache directory and
 /// file callback. This function also creates the cache directory if it does not

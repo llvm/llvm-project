@@ -68,13 +68,13 @@ body:             |
     %23:vreg_128 = COPY killed %17
     %24:sreg_64 = COPY killed %16
     %25:vgpr_32 = V_OR_B32_e32 %22, %11, implicit $exec
-    %26:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %25, undef %27:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
+    %26:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %25, undef %27:sreg_128, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
     %28:vgpr_32 = V_LSHRREV_B32_e32 30, killed %26.sub0, implicit $exec
     %29:vreg_128 = COPY killed %21
     %29.sub0:vreg_128 = COPY %1
     %30:sreg_64 = V_CMP_NE_U32_e64 0, %28, implicit $exec
     %31:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %28, implicit $exec
-    dead %32:vgpr_32 = V_CNDMASK_B32_e64 0, -1, killed %31, implicit $exec
+    dead %32:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %31, implicit $exec
     %33:vreg_128 = COPY %29
     %33.sub1:vreg_128 = COPY undef %32
     %34:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
@@ -159,7 +159,7 @@ body:             |
     %17:vreg_128 = COPY killed %80
     %18:vgpr_32 = COPY killed %76
     %19:vreg_128 = COPY killed %77
-    $exec = S_ANDN2_B64_term $exec, %60
+    $exec = S_ANDN2_B64_term $exec, %60, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.4, implicit $exec
     S_BRANCH %bb.6
 
@@ -180,7 +180,7 @@ body:             |
     %73:sreg_64 = COPY %85
     %74:vreg_128 = COPY %59
     %75:vreg_128 = COPY killed %86
-    $exec = S_ANDN2_B64_term $exec, %85
+    $exec = S_ANDN2_B64_term $exec, %85, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.10, implicit $exec
     S_BRANCH %bb.12
 
@@ -264,5 +264,5 @@ body:             |
     %115:vgpr_32 = V_MAX_F32_e32 0, killed %114, implicit $exec
     %116:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, killed %115, 0, 1065353216, 0, 0, implicit $exec
     EXP 0, undef %117:vgpr_32, killed %116, undef %118:vgpr_32, undef %119:vgpr_32, -1, -1, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...

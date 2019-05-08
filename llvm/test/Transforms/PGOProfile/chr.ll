@@ -1886,6 +1886,125 @@ bb4:
   ret i32 %v13
 }
 
+; Test the case where two scopes share a common instruction to hoist (%cmp.i).
+; Two scopes would hoist it to their hoist points, but since the outer scope
+; hoists (entry/bb6-9) it first to its hoist point, it'd be wrong (causing bad
+; IR) for the inner scope (bb1-4) to hoist the same instruction to its hoist
+; point.
+; Roughly,
+; if (j != k) {
+;   if (i != 2)
+;     foo();
+;   cmp.i = i == 86
+;   if (!cmp.i)
+;     foo();
+;   if (j != i)
+;     foo();
+;   if (!cmp.i)
+;     foo();
+;  }
+;  return 45;
+define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
+; CHECK-LABEL: @test_chr_21(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i64 [[J:%.*]], [[K:%.*]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[J]], [[I:%.*]]
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[I]], 86
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CMP0]], [[CMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], [[CMP_I]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof !15
+; CHECK:       bb1:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[I]], 2
+; CHECK-NEXT:    switch i64 [[I]], label [[BB2:%.*]] [
+; CHECK-NEXT:    i64 2, label [[BB3_NONCHR2:%.*]]
+; CHECK-NEXT:    i64 86, label [[BB2_NONCHR1:%.*]]
+; CHECK-NEXT:    ], !prof !20
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB7:%.*]]
+; CHECK:       bb2.nonchr1:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3_NONCHR2]]
+; CHECK:       bb3.nonchr2:
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[BB4_NONCHR3:%.*]], label [[BB7]], !prof !18
+; CHECK:       bb4.nonchr3:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB7]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB10:%.*]]
+; CHECK:       entry.split.nonchr:
+; CHECK-NEXT:    br i1 [[CMP0]], label [[BB1_NONCHR:%.*]], label [[BB10]], !prof !18
+; CHECK:       bb1.nonchr:
+; CHECK-NEXT:    [[CMP2_NONCHR:%.*]] = icmp eq i64 [[I]], 2
+; CHECK-NEXT:    br i1 [[CMP2_NONCHR]], label [[BB3_NONCHR:%.*]], label [[BB2_NONCHR:%.*]], !prof !16
+; CHECK:       bb3.nonchr:
+; CHECK-NEXT:    [[CMP_I_NONCHR:%.*]] = icmp eq i64 [[I]], 86
+; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB6_NONCHR:%.*]], label [[BB4_NONCHR:%.*]], !prof !16
+; CHECK:       bb6.nonchr:
+; CHECK-NEXT:    [[CMP3_NONCHR:%.*]] = icmp eq i64 [[J]], [[I]]
+; CHECK-NEXT:    br i1 [[CMP3_NONCHR]], label [[BB8_NONCHR:%.*]], label [[BB7_NONCHR:%.*]], !prof !16
+; CHECK:       bb8.nonchr:
+; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB10]], label [[BB9_NONCHR:%.*]], !prof !16
+; CHECK:       bb9.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB10]]
+; CHECK:       bb7.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB8_NONCHR]]
+; CHECK:       bb4.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB6_NONCHR]]
+; CHECK:       bb2.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3_NONCHR]]
+; CHECK:       bb10:
+; CHECK-NEXT:    ret i32 45
+;
+entry:
+  %cmp0 = icmp eq i64 %j, %k
+  br i1 %cmp0, label %bb10, label %bb1, !prof !15
+
+bb1:
+  %cmp2 = icmp eq i64 %i, 2
+  br i1 %cmp2, label %bb3, label %bb2, !prof !15
+
+bb2:
+  call void @foo()
+  br label %bb3
+
+bb3:
+  %cmp.i = icmp eq i64 %i, 86
+  br i1 %cmp.i, label %bb5, label %bb4, !prof !15
+
+bb4:
+  call void @foo()
+  br label %bb5
+
+bb5:
+  br label %bb6
+
+bb6:
+  %cmp3 = icmp eq i64 %j, %i
+  br i1 %cmp3, label %bb8, label %bb7, !prof !15
+
+bb7:
+  call void @foo()
+  br label %bb8
+
+bb8:
+  br i1 %cmp.i, label %bb10, label %bb9, !prof !15
+
+bb9:
+  call void @foo()
+  br label %bb10
+
+bb10:
+  ret i32 45
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

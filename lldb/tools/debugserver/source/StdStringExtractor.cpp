@@ -21,9 +21,7 @@ static inline int xdigit_to_sint(char ch) {
   return -1;
 }
 
-//----------------------------------------------------------------------
 // StdStringExtractor constructor
-//----------------------------------------------------------------------
 StdStringExtractor::StdStringExtractor() : m_packet(), m_index(0) {}
 
 StdStringExtractor::StdStringExtractor(const char *packet_cstr)
@@ -32,15 +30,11 @@ StdStringExtractor::StdStringExtractor(const char *packet_cstr)
     m_packet.assign(packet_cstr);
 }
 
-//----------------------------------------------------------------------
 // StdStringExtractor copy constructor
-//----------------------------------------------------------------------
 StdStringExtractor::StdStringExtractor(const StdStringExtractor &rhs)
     : m_packet(rhs.m_packet), m_index(rhs.m_index) {}
 
-//----------------------------------------------------------------------
 // StdStringExtractor assignment operator
-//----------------------------------------------------------------------
 const StdStringExtractor &StdStringExtractor::
 operator=(const StdStringExtractor &rhs) {
   if (this != &rhs) {
@@ -50,9 +44,7 @@ operator=(const StdStringExtractor &rhs) {
   return *this;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 StdStringExtractor::~StdStringExtractor() {}
 
 char StdStringExtractor::GetChar(char fail_value) {
@@ -65,14 +57,12 @@ char StdStringExtractor::GetChar(char fail_value) {
   return fail_value;
 }
 
-//----------------------------------------------------------------------
 // If a pair of valid hex digits exist at the head of the
 // StdStringExtractor they are decoded into an unsigned byte and returned
 // by this function
 //
 // If there is not a pair of valid hex digits at the head of the
 // StdStringExtractor, it is left unchanged and -1 is returned
-//----------------------------------------------------------------------
 int StdStringExtractor::DecodeHexU8() {
   SkipSpaces();
   if (GetBytesLeft() < 2) {
@@ -87,10 +77,8 @@ int StdStringExtractor::DecodeHexU8() {
   return (uint8_t)((hi_nibble << 4) + lo_nibble);
 }
 
-//----------------------------------------------------------------------
 // Extract an unsigned character from two hex ASCII chars in the packet
 // string, or return fail_value on failure
-//----------------------------------------------------------------------
 uint8_t StdStringExtractor::GetHexU8(uint8_t fail_value, bool set_eof_on_fail) {
   // On success, fail_value will be overwritten with the next
   // character in the stream
@@ -290,12 +278,10 @@ size_t StdStringExtractor::GetHexBytes(void *dst_void, size_t dst_len,
   return bytes_extracted;
 }
 
-//----------------------------------------------------------------------
 // Decodes all valid hex encoded bytes at the head of the
 // StdStringExtractor, limited by dst_len.
 //
 // Returns the number of bytes successfully decoded
-//----------------------------------------------------------------------
 size_t StdStringExtractor::GetHexBytesAvail(void *dst_void, size_t dst_len) {
   uint8_t *dst = (uint8_t *)dst_void;
   size_t bytes_extracted = 0;

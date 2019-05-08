@@ -69,7 +69,7 @@ body: |
     %18:vgpr_32 = V_MIN_F32_e32 1065353216, killed %17, implicit $exec
     %19:sreg_64_xexec = V_CMP_NEQ_F32_e64 0, 1065353216, 0, killed %18, 0, implicit $exec
     %20:vgpr_32 = V_MOV_B32_e32 2143289344, implicit $exec
-    %21:vgpr_32 = V_CNDMASK_B32_e64 0, killed %20, killed %19, implicit $exec
+    %21:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, killed %20, killed %19, implicit $exec
     %22:sreg_64 = V_CMP_LT_F32_e64 0, 0, 0, killed %21, 0, implicit $exec
     %23:sreg_64 = COPY $exec, implicit-def $exec
     %24:sreg_64 = S_AND_B64 %23, %22, implicit-def dead $scc
@@ -145,10 +145,10 @@ body: |
     %40:vgpr_32 = V_MAD_F32 0, killed %39, 0, -1090519040, 0, 1056964608, 0, 0, implicit $exec
     %41:vgpr_32 = V_MAD_F32 0, killed %40, 0, 0, 0, -1090519040, 0, 0, implicit $exec
     %42:vgpr_32 = V_CVT_I32_F32_e32 killed %41, implicit $exec
-    %43:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %44:sreg_128, 12, 0 :: (dereferenceable invariant load 4)
+    %43:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %44:sreg_128, 12, 0, 0 :: (dereferenceable invariant load 4)
     %45:vgpr_32 = V_MUL_LO_I32 killed %42, killed %43, implicit $exec
     %46:vgpr_32 = V_LSHLREV_B32_e32 2, killed %45, implicit $exec
-    %47:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN killed %46, undef %48:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, align 1, addrspace 4)
+    %47:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN killed %46, undef %48:sreg_128, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, align 1, addrspace 4)
     %49:sreg_64 = V_CMP_NE_U32_e64 0, killed %47, implicit $exec
     %50:sreg_64 = COPY $exec, implicit-def $exec
     %51:sreg_64 = S_AND_B64 %50, %49, implicit-def dead $scc
@@ -180,5 +180,5 @@ body: |
     successors: %bb.21(0x80000000)
 
   bb.21:
-    S_ENDPGM
+    S_ENDPGM 0
 ...

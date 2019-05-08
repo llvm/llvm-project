@@ -207,8 +207,6 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                           names.
      ``gfx906``                  ``amdgcn``   dGPU  - xnack            - Radeon Instinct MI50
                                                       [off]            - Radeon Instinct MI60
-                                                      sram-ecc
-                                                      [on]
      ``gfx909``                  ``amdgcn``   APU   - xnack            *TBA* (Raven Ridge 2)
                                                       [on]
                                                                        .. TODO
@@ -281,9 +279,9 @@ LLVM Address Space number is used throughout LLVM (for example, in LLVM IR).
   .. table:: Address Space Mapping
      :name: amdgpu-address-space-mapping-table
 
-     ================== =================
+     ================== =================================
      LLVM Address Space Memory Space
-     ================== =================
+     ================== =================================
      0                  Generic (Flat)
      1                  Global
      2                  Region (GDS)
@@ -291,7 +289,15 @@ LLVM Address Space number is used throughout LLVM (for example, in LLVM IR).
      4                  Constant
      5                  Private (Scratch)
      6                  Constant 32-bit
-     ================== =================
+     7                  Buffer Fat Pointer (experimental)
+     ================== =================================
+
+The buffer fat pointer is an experimental address space that is currently
+unsupported in the backend. It exposes a non-integral pointer that is in future
+intended to support the modelling of 128-bit buffer descriptors + a 32-bit
+offset into the buffer descriptor (in total encapsulating a 160-bit 'pointer'),
+allowing us to use normal LLVM load/store/atomic operations to model the buffer
+descriptors used heavily in graphics workloads targeting the backend.
 
 .. _amdgpu-memory-scopes:
 
@@ -315,62 +321,80 @@ is conservatively correct for OpenCL.
   .. table:: AMDHSA LLVM Sync Scopes
      :name: amdgpu-amdhsa-llvm-sync-scopes-table
 
-     ================ ==========================================================
-     LLVM Sync Scope  Description
-     ================ ==========================================================
-     *none*           The default: ``system``.
+     ======================= ===================================================
+     LLVM Sync Scope         Description
+     ======================= ===================================================
+     *none*                  The default: ``system``.
 
-                      Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+                             Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system``.
-                      - ``agent`` and executed by a thread on the same agent.
-                      - ``workgroup`` and executed by a thread in the same
-                        workgroup.
-                      - ``wavefront`` and executed by a thread in the same
-                        wavefront.
+                             - ``system``.
+                             - ``agent`` and executed by a thread on the same
+                               agent.
+                             - ``workgroup`` and executed by a thread in the
+                               same workgroup.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``agent``        Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+     ``agent``               Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system`` or ``agent`` and executed by a thread on the
-                        same agent.
-                      - ``workgroup`` and executed by a thread in the same
-                        workgroup.
-                      - ``wavefront`` and executed by a thread in the same
-                        wavefront.
+                             - ``system`` or ``agent`` and executed by a thread
+                               on the same agent.
+                             - ``workgroup`` and executed by a thread in the
+                               same workgroup.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``workgroup``    Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+     ``workgroup``           Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system``, ``agent`` or ``workgroup`` and executed by a
-                        thread in the same workgroup.
-                      - ``wavefront`` and executed by a thread in the same
-                        wavefront.
+                             - ``system``, ``agent`` or ``workgroup`` and
+                               executed by a thread in the same workgroup.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``wavefront``    Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+     ``wavefront``           Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system``, ``agent``, ``workgroup`` or ``wavefront``
-                        and executed by a thread in the same wavefront.
+                             - ``system``, ``agent``, ``workgroup`` or
+                               ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``singlethread`` Only synchronizes with, and participates in modification
-                      and seq_cst total orderings with, other operations (except
-                      image operations) running in the same thread for all
-                      address spaces (for example, in signal handlers).
-     ================ ==========================================================
+     ``singlethread``        Only synchronizes with, and participates in
+                             modification and seq_cst total orderings with,
+                             other operations (except image operations) running
+                             in the same thread for all address spaces (for
+                             example, in signal handlers).
+
+     ``one-as``              Same as ``system`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
+                             other operations within the same address space.
+
+     ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
+                             other operations within the same address space.
+
+     ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
+                             other operations within the same address space.
+     ======================= ===================================================
 
 AMDGPU Intrinsics
 -----------------
@@ -409,6 +433,12 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-waves-per-eu"="m,n"             Specify the minimum and maximum number of waves per
                                              execution unit. Generated by the ``amdgpu_waves_per_eu``
                                              CLANG attribute [CLANG-ATTR]_.
+     "amdgpu-ieee" true/false.               Specify whether the function expects the IEEE field of the
+                                             mode register to be set on entry. Overrides the default for
+                                             the calling convention.
+     "amdgpu-dx10-clamp" true/false.         Specify whether the function expects the DX10_CLAMP field of
+                                             the mode register to be set on entry. Overrides the default
+                                             for the calling convention.
      ======================================= ==========================================================
 
 Code Object
@@ -673,21 +703,32 @@ if needed.
 Note Records
 ------------
 
-As required by ``ELFCLASS32`` and ``ELFCLASS64``, minimal zero byte padding must
-be generated after the ``name`` field to ensure the ``desc`` field is 4 byte
-aligned. In addition, minimal zero byte padding must be generated to ensure the
-``desc`` field size is a multiple of 4 bytes. The ``sh_addralign`` field of the
-``.note`` section must be at least 4 to indicate at least 8 byte alignment.
+The AMDGPU backend code object contains ELF note records in the ``.note``
+section. The set of generated notes and their semantics depend on the code
+object version; see :ref:`amdgpu-note-records-v2` and
+:ref:`amdgpu-note-records-v3`.
+
+As required by ``ELFCLASS32`` and ``ELFCLASS64``, minimal zero byte padding
+must be generated after the ``name`` field to ensure the ``desc`` field is 4
+byte aligned. In addition, minimal zero byte padding must be generated to
+ensure the ``desc`` field size is a multiple of 4 bytes. The ``sh_addralign``
+field of the ``.note`` section must be at least 4 to indicate at least 8 byte
+alignment.
 
 .. _amdgpu-note-records-v2:
 
 Code Object V2 Note Records (-mattr=-code-object-v3)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section.
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the notes generated with the
+  default configuration (Code Object V3) see :ref:`amdgpu-note-records-v3`.
 
-Additional note records can be present.
+The AMDGPU backend code object uses the following ELF note record in the
+``.note`` section when compiling for Code Object V2 (-mattr=-code-object-v3).
+
+Additional note records may be present, but any which are not documented here
+are deprecated and should not be used.
 
   .. table:: AMDGPU Code Object V2 ELF Note Records
      :name: amdgpu-elf-note-records-table-v2
@@ -724,9 +765,10 @@ Code Object V3 Note Records (-mattr=+code-object-v3)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section.
+``.note`` section when compiling for Code Object V3 (-mattr=+code-object-v3).
 
-Additional note records can be present.
+Additional note records may be present, but any which are not documented here
+are deprecated and should not be used.
 
   .. table:: AMDGPU Code Object V3 ELF Note Records
      :name: amdgpu-elf-note-records-table-v3
@@ -1048,18 +1090,27 @@ Code Object Metadata
 
 The code object metadata specifies extensible metadata associated with the code
 objects executed on HSA [HSA]_ compatible runtimes such as AMD's ROCm
-[AMD-ROCm]_. It is specified in a note record (see :ref:`amdgpu-note-records`)
-and is required when the target triple OS is ``amdhsa`` (see
-:ref:`amdgpu-target-triples`). It must contain the minimum information
-necessary to support the ROCM kernel queries. For example, the segment sizes
-needed in a dispatch packet. In addition, a high level language runtime may
-require other information to be included. For example, the AMD OpenCL runtime
-records kernel argument information.
+[AMD-ROCm]_. The encoding and semantics of this metadata depends on the code
+object version; see :ref:`amdgpu-amdhsa-code-object-metadata-v2` and
+:ref:`amdgpu-amdhsa-code-object-metadata-v3`.
+
+Code object metadata is specified in a note record (see
+:ref:`amdgpu-note-records`) and is required when the target triple OS is
+``amdhsa`` (see :ref:`amdgpu-target-triples`). It must contain the minimum
+information necessary to support the ROCM kernel queries. For example, the
+segment sizes needed in a dispatch packet. In addition, a high level language
+runtime may require other information to be included. For example, the AMD
+OpenCL runtime records kernel argument information.
 
 .. _amdgpu-amdhsa-code-object-metadata-v2:
 
 Code Object V2 Metadata (-mattr=-code-object-v3)
 ++++++++++++++++++++++++++++++++++++++++++++++++
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the metadata generated with the
+  default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-code-object-metadata-v3`.
 
 Code object V2 metadata is specified by the ``NT_AMD_AMDGPU_METADATA`` note
 record (see :ref:`amdgpu-note-records-v2`).
@@ -4774,8 +4825,72 @@ For full list of supported instructions, refer to "Vector ALU instructions".
 .. TODO
    Remove once we switch to code object v3 by default.
 
-HSA Code Object Directives
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-predefined-symbols-v2:
+
+Code Object V2 Predefined Symbols (-mattr=-code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the predefined symbols available
+  with the default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-assembler-predefined-symbols-v3`.
+
+The AMDGPU assembler defines and updates some symbols automatically. These
+symbols do not affect code generation.
+
+.option.machine_version_major
++++++++++++++++++++++++++++++
+
+Set to the GFX major generation number of the target being assembled for. For
+example, when assembling for a "GFX9" target this will be set to the integer
+value "9". The possible GFX major generation numbers are presented in
+:ref:`amdgpu-processors`.
+
+.option.machine_version_minor
++++++++++++++++++++++++++++++
+
+Set to the GFX minor generation number of the target being assembled for. For
+example, when assembling for a "GFX810" target this will be set to the integer
+value "1". The possible GFX minor generation numbers are presented in
+:ref:`amdgpu-processors`.
+
+.option.machine_version_stepping
+++++++++++++++++++++++++++++++++
+
+Set to the GFX stepping generation number of the target being assembled for.
+For example, when assembling for a "GFX704" target this will be set to the
+integer value "4". The possible GFX stepping generation numbers are presented
+in :ref:`amdgpu-processors`.
+
+.kernel.vgpr_count
+++++++++++++++++++
+
+Set to zero each time a
+:ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
+encountered. At each instruction, if the current value of this symbol is less
+than or equal to the maximum VPGR number explicitly referenced within that
+instruction then the symbol value is updated to equal that VGPR number plus
+one.
+
+.kernel.sgpr_count
+++++++++++++++++++
+
+Set to zero each time a
+:ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
+encountered. At each instruction, if the current value of this symbol is less
+than or equal to the maximum VPGR number explicitly referenced within that
+instruction then the symbol value is updated to equal that SGPR number plus
+one.
+
+.. _amdgpu-amdhsa-assembler-directives-v2:
+
+Code Object V2 Directives (-mattr=-code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the directives supported with
+  the default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-assembler-directives-v3`.
 
 AMDGPU ABI defines auxiliary data in output code object. In assembly source,
 one can specify them with assembler directives.
@@ -4798,6 +4913,8 @@ set architecture (ISA) version of the assembly program.
 
 By default, the assembler will derive the ISA version, *vendor*, and *arch*
 from the value of the -mcpu option that is passed to the assembler.
+
+.. _amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel:
 
 .amdgpu_hsa_kernel (name)
 +++++++++++++++++++++++++
@@ -4831,7 +4948,17 @@ function label and before any instructions.
 For a full list of amd_kernel_code_t keys, refer to AMDGPU ABI document,
 comments in lib/Target/AMDGPU/AmdKernelCodeT.h and test/CodeGen/AMDGPU/hsa.s.
 
-Here is an example of a minimal amd_kernel_code_t specification:
+.. _amdgpu-amdhsa-assembler-example-v2:
+
+Code Object V2 Example Source Code (-mattr=-code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the directives supported with
+  the default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-assembler-example-v3`.
+
+Here is an example of a minimal assembly source file, defining one HSA kernel:
 
 .. code-block:: none
 
@@ -4866,8 +4993,10 @@ Here is an example of a minimal amd_kernel_code_t specification:
    .Lfunc_end0:
         .size   hello_world, .Lfunc_end0-hello_world
 
-Predefined Symbols (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-predefined-symbols-v3:
+
+Code Object V3 Predefined Symbols (-mattr=+code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The AMDGPU assembler defines and updates some symbols automatically. These
 symbols do not affect code generation.
@@ -4896,6 +5025,8 @@ For example, when assembling for a "GFX704" target this will be set to the
 integer value "4". The possible GFX stepping generation numbers are presented
 in :ref:`amdgpu-processors`.
 
+.. _amdgpu-amdhsa-assembler-symbol-next_free_vgpr:
+
 .amdgcn.next_free_vgpr
 ++++++++++++++++++++++
 
@@ -4908,6 +5039,8 @@ May be used to set the `.amdhsa_next_free_vpgr` directive in
 :ref:`amdhsa-kernel-directives-table`.
 
 May be set at any time, e.g. manually set to zero at the start of each kernel.
+
+.. _amdgpu-amdhsa-assembler-symbol-next_free_sgpr:
 
 .amdgcn.next_free_sgpr
 ++++++++++++++++++++++
@@ -4922,8 +5055,10 @@ May be used to set the `.amdhsa_next_free_spgr` directive in
 
 May be set at any time, e.g. manually set to zero at the start of each kernel.
 
-Code Object Directives (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-directives-v3:
+
+Code Object V3 Directives (-mattr=+code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Directives which begin with ``.amdgcn`` are valid for all ``amdgcn``
 architecture processors, and are not OS-specific. Directives which begin with
@@ -5063,8 +5198,10 @@ semantics described in :ref:`amdgpu-amdhsa-code-object-metadata-v3`.
 
 This directive is terminated by an ``.end_amdgpu_metadata`` directive.
 
-Example HSA Source Code (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-example-v3:
+
+Code Object V3 Example Source Code (-mattr=+code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 
@@ -5113,6 +5250,80 @@ Here is an example of a minimal assembly source file, defining one HSA kernel:
       .max_flat_workgroup_size: 256
   ...
   .end_amdgpu_metadata
+
+If an assembly source file contains multiple kernels and/or functions, the
+:ref:`amdgpu-amdhsa-assembler-symbol-next_free_vgpr` and
+:ref:`amdgpu-amdhsa-assembler-symbol-next_free_sgpr` symbols may be reset using
+the ``.set <symbol>, <expression>`` directive. For example, in the case of two
+kernels, where ``function1`` is only called from ``kernel1`` it is sufficient
+to group the function with the kernel that calls it and reset the symbols
+between the two connected components:
+
+.. code-block:: none
+
+  .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
+
+  // gpr tracking symbols are implicitly set to zero
+
+  .text
+  .globl kern0
+  .p2align 8
+  .type kern0,@function
+  kern0:
+    // ...
+    s_endpgm
+  .Lkern0_end:
+    .size   kern0, .Lkern0_end-kern0
+
+  .rodata
+  .p2align 6
+  .amdhsa_kernel kern0
+    // ...
+    .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
+    .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
+  .end_amdhsa_kernel
+
+  // reset symbols to begin tracking usage in func1 and kern1
+  .set .amdgcn.next_free_vgpr, 0
+  .set .amdgcn.next_free_sgpr, 0
+
+  .text
+  .hidden func1
+  .global func1
+  .p2align 2
+  .type func1,@function
+  func1:
+    // ...
+    s_setpc_b64 s[30:31]
+  .Lfunc1_end:
+  .size func1, .Lfunc1_end-func1
+
+  .globl kern1
+  .p2align 8
+  .type kern1,@function
+  kern1:
+    // ...
+    s_getpc_b64 s[4:5]
+    s_add_u32 s4, s4, func1@rel32@lo+4
+    s_addc_u32 s5, s5, func1@rel32@lo+4
+    s_swappc_b64 s[30:31], s[4:5]
+    // ...
+    s_endpgm
+  .Lkern1_end:
+    .size   kern1, .Lkern1_end-kern1
+
+  .rodata
+  .p2align 6
+  .amdhsa_kernel kern1
+    // ...
+    .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
+    .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
+  .end_amdhsa_kernel
+
+These symbols cannot identify connected components in order to automatically
+track the usage for each kernel. However, in some cases careful organization of
+the kernels and functions in the source file means there is minimal additional
+effort required to accurately calculate GPR usage.
 
 Additional Documentation
 ========================

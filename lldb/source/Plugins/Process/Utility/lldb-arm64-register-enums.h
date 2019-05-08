@@ -12,9 +12,7 @@
 namespace lldb_private {
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 
-//---------------------------------------------------------------------------
 // Internal codes for all ARM64 registers.
-//---------------------------------------------------------------------------
 enum {
   k_first_gpr_arm64,
   gpr_x0_arm64 = k_first_gpr_arm64,

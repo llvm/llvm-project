@@ -2379,8 +2379,8 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
   if (VT.isSimple() && LT.second != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires expand/truncate for data and a shuffle for mask.
-    Cost += getShuffleCost(TTI::SK_Select, SrcVTy, 0, nullptr) +
-            getShuffleCost(TTI::SK_Select, MaskTy, 0, nullptr);
+    Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, 0, nullptr) +
+            getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, 0, nullptr);
 
   else if (LT.second.getVectorNumElements() > NumElem) {
     VectorType *NewMaskTy = VectorType::get(MaskTy->getVectorElementType(),
@@ -2486,6 +2486,48 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
 
     if (ST->hasSSE42())
       if (const auto *Entry = CostTableLookup(SSE42CostTblNoPairWise, ISD, MTy))
+        return LT.first * Entry->Cost;
+  }
+
+  static const CostTblEntry AVX2BoolReduction[] = {
+    { ISD::AND,  MVT::v16i16,  2 }, // vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,   2 }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v16i16,  2 }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,   2 }, // vpmovmskb + cmp
+  };
+
+  static const CostTblEntry AVX1BoolReduction[] = {
+    { ISD::AND,  MVT::v4i64,   2 }, // vmovmskpd + cmp
+    { ISD::AND,  MVT::v8i32,   2 }, // vmovmskps + cmp
+    { ISD::AND,  MVT::v16i16,  4 }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,   4 }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::OR,   MVT::v4i64,   2 }, // vmovmskpd + cmp
+    { ISD::OR,   MVT::v8i32,   2 }, // vmovmskps + cmp
+    { ISD::OR,   MVT::v16i16,  4 }, // vextractf128 + vpor + vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,   4 }, // vextractf128 + vpor + vpmovmskb + cmp
+  };
+
+  static const CostTblEntry SSE2BoolReduction[] = {
+    { ISD::AND,  MVT::v2i64,   2 }, // movmskpd + cmp
+    { ISD::AND,  MVT::v4i32,   2 }, // movmskps + cmp
+    { ISD::AND,  MVT::v8i16,   2 }, // pmovmskb + cmp
+    { ISD::AND,  MVT::v16i8,   2 }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v2i64,   2 }, // movmskpd + cmp
+    { ISD::OR,   MVT::v4i32,   2 }, // movmskps + cmp
+    { ISD::OR,   MVT::v8i16,   2 }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v16i8,   2 }, // pmovmskb + cmp
+  };
+
+  // Handle bool allof/anyof patterns.
+  if (ValTy->getVectorElementType()->isIntegerTy(1)) {
+    if (ST->hasAVX2())
+      if (const auto *Entry = CostTableLookup(AVX2BoolReduction, ISD, MTy))
+        return LT.first * Entry->Cost;
+    if (ST->hasAVX())
+      if (const auto *Entry = CostTableLookup(AVX1BoolReduction, ISD, MTy))
+        return LT.first * Entry->Cost;
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2BoolReduction, ISD, MTy))
         return LT.first * Entry->Cost;
   }
 
@@ -2984,26 +3026,71 @@ bool X86TTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
 }
 
 bool X86TTIImpl::canMacroFuseCmp() {
-  return ST->hasMacroFusion();
+  return ST->hasMacroFusion() || ST->hasBranchFusion();
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
+  if (!ST->hasAVX())
+    return false;
+
   // The backend can't handle a single element vector.
   if (isa<VectorType>(DataTy) && DataTy->getVectorNumElements() == 1)
     return false;
   Type *ScalarTy = DataTy->getScalarType();
-  int DataWidth = isa<PointerType>(ScalarTy) ?
-    DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
 
-  return ((DataWidth == 32 || DataWidth == 64) && ST->hasAVX()) ||
-         ((DataWidth == 8 || DataWidth == 16) && ST->hasBWI());
+  if (ScalarTy->isPointerTy())
+    return true;
+
+  if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
+    return true;
+
+  if (!ScalarTy->isIntegerTy())
+    return false;
+
+  unsigned IntWidth = ScalarTy->getIntegerBitWidth();
+  return IntWidth == 32 || IntWidth == 64 ||
+         ((IntWidth == 8 || IntWidth == 16) && ST->hasBWI());
 }
 
 bool X86TTIImpl::isLegalMaskedStore(Type *DataType) {
   return isLegalMaskedLoad(DataType);
 }
 
+bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
+  if (!isa<VectorType>(DataTy))
+    return false;
+
+  if (!ST->hasAVX512())
+    return false;
+
+  // The backend can't handle a single element vector.
+  if (DataTy->getVectorNumElements() == 1)
+    return false;
+
+  Type *ScalarTy = DataTy->getVectorElementType();
+
+  if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
+    return true;
+
+  if (!ScalarTy->isIntegerTy())
+    return false;
+
+  unsigned IntWidth = ScalarTy->getIntegerBitWidth();
+  return IntWidth == 32 || IntWidth == 64 ||
+         ((IntWidth == 8 || IntWidth == 16) && ST->hasVBMI2());
+}
+
+bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
+  return isLegalMaskedExpandLoad(DataTy);
+}
+
 bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
+  // Some CPUs have better gather performance than others.
+  // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
+  // enable gather with a -march.
+  if (!(ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2())))
+    return false;
+
   // This function is called now in two cases: from the Loop Vectorizer
   // and from the Scalarizer.
   // When the Loop Vectorizer asks about legality of the feature,
@@ -3022,14 +3109,17 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
       return false;
   }
   Type *ScalarTy = DataTy->getScalarType();
-  int DataWidth = isa<PointerType>(ScalarTy) ?
-    DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
+  if (ScalarTy->isPointerTy())
+    return true;
 
-  // Some CPUs have better gather performance than others.
-  // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
-  // enable gather with a -march.
-  return (DataWidth == 32 || DataWidth == 64) &&
-         (ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2()));
+  if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
+    return true;
+
+  if (!ScalarTy->isIntegerTy())
+    return false;
+
+  unsigned IntWidth = ScalarTy->getIntegerBitWidth();
+  return IntWidth == 32 || IntWidth == 64;
 }
 
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType) {

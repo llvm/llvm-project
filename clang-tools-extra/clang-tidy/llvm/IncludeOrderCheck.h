@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDE_ORDER_CHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDE_ORDER_CHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -22,7 +22,8 @@ class IncludeOrderCheck : public ClangTidyCheck {
 public:
   IncludeOrderCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
 };
 
 } // namespace llvm

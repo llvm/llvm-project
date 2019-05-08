@@ -11,12 +11,11 @@ add_lldb_unittest(LLDBMinidumpTests
     lldbUtilityHelpers
     LLVMTestingSupport
   LINK_COMPONENTS
+    ObjectYAML
     Support
   )
 
 set(test_inputs
-   bad_duplicate_streams.dmp
-   bad_overlapping_streams.dmp
    fizzbuzz_no_heap.dmp
    fizzbuzz_wow64.dmp
    linux-i386.dmp
@@ -24,10 +23,6 @@ set(test_inputs
    linux-x86_64_not_crashed.dmp
    memory-list-not-padded.dmp
    memory-list-padded.dmp
-   module-list-not-padded.dmp
-   module-list-padded.dmp
-   modules-dup-min-addr.dmp
-   modules-order.dmp
    regions-linux-map.dmp
    regions-memlist.dmp
    regions-memlist64.dmp

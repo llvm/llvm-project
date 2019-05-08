@@ -4,24 +4,24 @@
 ;
 ; There we should have just a single loop.
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=8 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=8 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=false \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ;
 ; Single loop, not unswitched

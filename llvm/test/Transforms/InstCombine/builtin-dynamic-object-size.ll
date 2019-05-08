@@ -71,6 +71,40 @@ entry:
 
 ; CHECK: ret i64 0
 
+@d = common global i8 0, align 1
+@c = common global i32 0, align 4
+
+; Function Attrs: nounwind
+define void @f() {
+entry:
+  %.pr = load i32, i32* @c, align 4
+  %tobool4 = icmp eq i32 %.pr, 0
+  br i1 %tobool4, label %for.end, label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %dp.05 = phi i8* [ %add.ptr, %for.body ], [ @d, %entry ]
+  %0 = tail call i64 @llvm.objectsize.i64.p0i8(i8* %dp.05, i1 false, i1 true, i1 true)
+  %conv = trunc i64 %0 to i32
+  tail call void @bury(i32 %conv) #3
+  %1 = load i32, i32* @c, align 4
+  %idx.ext = sext i32 %1 to i64
+  %add.ptr.offs = add i64 %idx.ext, 0
+  %2 = add i64 undef, %add.ptr.offs
+  %add.ptr = getelementptr inbounds i8, i8* %dp.05, i64 %idx.ext
+  %add = shl nsw i32 %1, 1
+  store i32 %add, i32* @c, align 4
+  %tobool = icmp eq i32 %1, 0
+  br i1 %tobool, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; CHECK:   define void @f()
+; CHECK:     call i64 @llvm.objectsize.i64.p0i8(
+
+declare void @bury(i32) local_unnamed_addr #2
+
 ; Function Attrs: nounwind allocsize(0)
 declare i8* @malloc(i64)
 

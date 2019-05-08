@@ -47,15 +47,14 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
+    void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
     void printOperand(const MachineInstr *MI, int OpNum,
                       raw_ostream &O, const char* Modifier = nullptr);
     void printSrcMemOperand(const MachineInstr *MI, int OpNum,
                             raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         unsigned AsmVariant, const char *ExtraCode,
-                         raw_ostream &O) override;
-    bool PrintAsmMemoryOperand(const MachineInstr *MI,
-                               unsigned OpNo, unsigned AsmVariant,
+                         const char *ExtraCode, raw_ostream &O) override;
+    bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &O) override;
     void EmitInstruction(const MachineInstr *MI) override;
 
@@ -63,6 +62,17 @@ namespace {
   };
 } // end of anonymous namespace
 
+void MSP430AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+                                          raw_ostream &O) {
+  uint64_t Offset = MO.getOffset();
+  if (Offset)
+    O << '(' << Offset << '+';
+
+  getSymbol(MO.getGlobal())->print(O, MAI);
+
+  if (Offset)
+    O << ')';
+}
 
 void MSP430AsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
                                     raw_ostream &O, const char *Modifier) {
@@ -81,25 +91,13 @@ void MSP430AsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     MO.getMBB()->getSymbol()->print(O, MAI);
     return;
   case MachineOperand::MO_GlobalAddress: {
-    bool isMemOp  = Modifier && !strcmp(Modifier, "mem");
-    uint64_t Offset = MO.getOffset();
-
     // If the global address expression is a part of displacement field with a
     // register base, we should not emit any prefix symbol here, e.g.
-    //   mov.w &foo, r1
-    // vs
     //   mov.w glb(r1), r2
     // Otherwise (!) msp430-as will silently miscompile the output :(
     if (!Modifier || strcmp(Modifier, "nohash"))
-      O << (isMemOp ? '&' : '#');
-    if (Offset)
-      O << '(' << Offset << '+';
-
-    getSymbol(MO.getGlobal())->print(O, MAI);
-
-    if (Offset)
-      O << ')';
-
+      O << '#';
+    PrintSymbolOperand(MO, O);
     return;
   }
   }
@@ -128,18 +126,17 @@ void MSP430AsmPrinter::printSrcMemOperand(const MachineInstr *MI, int OpNum,
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
 bool MSP430AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                       unsigned AsmVariant,
                                        const char *ExtraCode, raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0])
-    return true; // Unknown modifier.
+    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
 
   printOperand(MI, OpNo, O);
   return false;
 }
 
 bool MSP430AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                             unsigned OpNo, unsigned AsmVariant,
+                                             unsigned OpNo,
                                              const char *ExtraCode,
                                              raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {

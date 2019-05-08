@@ -206,6 +206,7 @@ static std::string formatSourceLanguage(SourceLanguage Lang) {
     RETURN_CASE(SourceLanguage, MSIL, "msil");
     RETURN_CASE(SourceLanguage, HLSL, "hlsl");
     RETURN_CASE(SourceLanguage, D, "d");
+    RETURN_CASE(SourceLanguage, Swift, "swift");
   }
   return formatUnknownEnum(Lang);
 }
@@ -330,7 +331,7 @@ Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record,
   // append to the existing line.
   P.formatLine("{0} | {1} [size = {2}]",
                fmt_align(Offset, AlignStyle::Right, 6),
-               formatSymbolKind(Record.Type), Record.length());
+               formatSymbolKind(Record.kind()), Record.length());
   P.Indent();
   return Error::success();
 }

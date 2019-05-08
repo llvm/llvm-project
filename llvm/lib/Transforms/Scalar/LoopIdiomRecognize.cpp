@@ -284,7 +284,7 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
 
   // Determine if code size heuristics need to be applied.
   ApplyCodeSizeHeuristics =
-      L->getHeader()->getParent()->optForSize() && UseLIRCodeSizeHeurs;
+      L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
 
   HasMemset = TLI->has(LibFunc_memset);
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);

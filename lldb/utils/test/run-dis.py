@@ -5,6 +5,8 @@ Run lldb disassembler on all the binaries specified by a combination of root dir
 and path pattern.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 import subprocess
@@ -68,7 +70,7 @@ def walk_and_invoke(sdk_root, path_regexp, suffix, num_symbols):
 
             command = template % (
                 scriptPath, path, num_symbols if num_symbols > 0 else 1000)
-            print "Running %s" % (command)
+            print("Running %s" % (command))
             os.system(command)
 
 
@@ -130,10 +132,10 @@ and path pattern.
     suffix = opts.suffix
     num_symbols = opts.num_symbols
 
-    print "Root directory for SDK symbols:", root_dir
-    print "Regular expression for the binaries:", path_pattern
-    print "Suffix of the binaries to look for:", suffix
-    print "num of symbols to disassemble:", num_symbols
+    print("Root directory for SDK symbols:", root_dir)
+    print("Regular expression for the binaries:", path_pattern)
+    print("Suffix of the binaries to look for:", suffix)
+    print("num of symbols to disassemble:", num_symbols)
 
     walk_and_invoke(root_dir, path_regexp, suffix, num_symbols)
 

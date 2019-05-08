@@ -121,6 +121,9 @@ void TextNodeDumper::Visit(const Stmt *Node) {
   dumpPointer(Node);
   dumpSourceRange(Node->getSourceRange());
 
+  if (Node->isOMPStructuredBlock())
+    OS << " openmp_structured_block";
+
   if (const auto *E = dyn_cast<Expr>(Node)) {
     dumpType(E->getType());
 
@@ -1412,6 +1415,12 @@ void TextNodeDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {
 void TextNodeDumper::VisitPragmaDetectMismatchDecl(
     const PragmaDetectMismatchDecl *D) {
   OS << " \"" << D->getName() << "\" \"" << D->getValue() << "\"";
+}
+
+void TextNodeDumper::VisitOMPExecutableDirective(
+    const OMPExecutableDirective *D) {
+  if (D->isStandaloneDirective())
+    OS << " openmp_standalone_directive";
 }
 
 void TextNodeDumper::VisitOMPDeclareReductionDecl(

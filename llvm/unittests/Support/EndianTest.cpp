@@ -200,4 +200,13 @@ TEST(Endian, PackedEndianSpecificIntegral) {
   EXPECT_EQ(*big_val, *little_val);
 }
 
+TEST(Endian, PacketEndianSpecificIntegralAsEnum) {
+  enum class Test : uint16_t { ONETWO = 0x0102, TWOONE = 0x0201 };
+  unsigned char bytes[] = {0x01, 0x02};
+  using LittleTest = little_t<Test>;
+  using BigTest = big_t<Test>;
+  EXPECT_EQ(Test::TWOONE, *reinterpret_cast<LittleTest *>(bytes));
+  EXPECT_EQ(Test::ONETWO, *reinterpret_cast<BigTest *>(bytes));
+}
+
 } // end anon namespace

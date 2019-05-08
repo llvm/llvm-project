@@ -1258,6 +1258,52 @@ Value *InstCombiner::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) 
   return nullptr;
 }
 
+/// This a limited reassociation for a special case (see above) where we are
+/// checking if two values are either both NAN (unordered) or not-NAN (ordered).
+/// This could be handled more generally in '-reassociation', but it seems like
+/// an unlikely pattern for a large number of logic ops and fcmps.
+static Instruction *reassociateFCmps(BinaryOperator &BO,
+                                     InstCombiner::BuilderTy &Builder) {
+  Instruction::BinaryOps Opcode = BO.getOpcode();
+  assert((Opcode == Instruction::And || Opcode == Instruction::Or) &&
+         "Expecting and/or op for fcmp transform");
+
+  // There are 4 commuted variants of the pattern. Canonicalize operands of this
+  // logic op so an fcmp is operand 0 and a matching logic op is operand 1.
+  Value *Op0 = BO.getOperand(0), *Op1 = BO.getOperand(1), *X;
+  FCmpInst::Predicate Pred;
+  if (match(Op1, m_FCmp(Pred, m_Value(), m_AnyZeroFP())))
+    std::swap(Op0, Op1);
+
+  // Match inner binop and the predicate for combining 2 NAN checks into 1.
+  BinaryOperator *BO1;
+  FCmpInst::Predicate NanPred = Opcode == Instruction::And ? FCmpInst::FCMP_ORD
+                                                           : FCmpInst::FCMP_UNO;
+  if (!match(Op0, m_FCmp(Pred, m_Value(X), m_AnyZeroFP())) || Pred != NanPred ||
+      !match(Op1, m_BinOp(BO1)) || BO1->getOpcode() != Opcode)
+    return nullptr;
+
+  // The inner logic op must have a matching fcmp operand.
+  Value *BO10 = BO1->getOperand(0), *BO11 = BO1->getOperand(1), *Y;
+  if (!match(BO10, m_FCmp(Pred, m_Value(Y), m_AnyZeroFP())) ||
+      Pred != NanPred || X->getType() != Y->getType())
+    std::swap(BO10, BO11);
+
+  if (!match(BO10, m_FCmp(Pred, m_Value(Y), m_AnyZeroFP())) ||
+      Pred != NanPred || X->getType() != Y->getType())
+    return nullptr;
+
+  // and (fcmp ord X, 0), (and (fcmp ord Y, 0), Z) --> and (fcmp ord X, Y), Z
+  // or  (fcmp uno X, 0), (or  (fcmp uno Y, 0), Z) --> or  (fcmp uno X, Y), Z
+  Value *NewFCmp = Builder.CreateFCmp(Pred, X, Y);
+  if (auto *NewFCmpInst = dyn_cast<FCmpInst>(NewFCmp)) {
+    // Intersect FMF from the 2 source fcmps.
+    NewFCmpInst->copyIRFlags(Op0);
+    NewFCmpInst->andIRFlags(BO10);
+  }
+  return BinaryOperator::Create(Opcode, NewFCmp, BO11);
+}
+
 /// Match De Morgan's Laws:
 /// (~A & ~B) == (~(A | B))
 /// (~A | ~B) == (~(A & B))
@@ -1618,6 +1664,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       // ((C1 OP zext(X)) & C2) -> zext((C1-X) & C2) if C2 fits in the bitwidth
       // of X and OP behaves well when given trunc(C1) and X.
+      // TODO: Do this for vectors by using m_APInt isntead of m_ConstantInt.
       switch (Op0I->getOpcode()) {
       default:
         break;
@@ -1628,7 +1675,10 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       case Instruction::Sub:
         Value *X;
         ConstantInt *C1;
-        if (match(Op0I, m_c_BinOp(m_ZExt(m_Value(X)), m_ConstantInt(C1)))) {
+        // TODO: The one use restrictions could be relaxed a little if the AND
+        // is going to be removed.
+        if (match(Op0I, m_OneUse(m_c_BinOp(m_OneUse(m_ZExt(m_Value(X))),
+                                           m_ConstantInt(C1))))) {
           if (AndRHSMask.isIntN(X->getType()->getScalarSizeInBits())) {
             auto *TruncC1 = ConstantExpr::getTrunc(C1, X->getType());
             Value *BinOp;
@@ -1745,6 +1795,9 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
       if (Value *Res = foldLogicOfFCmps(LHS, RHS, true))
         return replaceInstUsesWith(I, Res);
+
+  if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
+    return FoldedFCmps;
 
   if (Instruction *CastedAnd = foldCastedBitwiseLogic(I))
     return CastedAnd;
@@ -2414,6 +2467,9 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
       if (Value *Res = foldLogicOfFCmps(LHS, RHS, false))
         return replaceInstUsesWith(I, Res);
+
+  if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
+    return FoldedFCmps;
 
   if (Instruction *CastedOr = foldCastedBitwiseLogic(I))
     return CastedOr;

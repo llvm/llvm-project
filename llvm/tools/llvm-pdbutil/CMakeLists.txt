@@ -30,5 +30,6 @@ add_llvm_tool(llvm-pdbutil
   PrettyTypedefDumper.cpp
   PrettyVariableDumper.cpp
   StreamUtil.cpp
+  TypeReferenceTracker.cpp
   YAMLOutputStyle.cpp
   )

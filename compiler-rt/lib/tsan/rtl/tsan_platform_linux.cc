@@ -401,6 +401,10 @@ ThreadState *cur_thread() {
   return thr;
 }
 
+void set_cur_thread(ThreadState *thr) {
+  *get_android_tls_ptr() = reinterpret_cast<uptr>(thr);
+}
+
 void cur_thread_finalize() {
   __sanitizer_sigset_t emptyset;
   internal_sigfillset(&emptyset);

@@ -2565,6 +2565,8 @@ ATOMIC_CMPX_L_CPT(fixed8, orl_cpt, kmp_int64, 64, ||,
       new_value = rhs;                                                         \
     else                                                                       \
       new_value = old_value;                                                   \
+  } else {                                                                     \
+    new_value = *lhs;                                                          \
   }                                                                            \
   __kmp_release_atomic_lock(&ATOMIC_LOCK##LCK_ID, gtid);                       \
   return new_value;

@@ -273,7 +273,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     if (RefKind & AArch64MCExpr::VK_NC) {
       Value &= 0xFFFF;
     }
-    else if (RefKind & AArch64MCExpr::VK_SABS) {
+    else if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS) {
       if (SignedValue > 0xFFFF || SignedValue < -0xFFFF)
         Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
 
@@ -397,7 +397,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
   AArch64MCExpr::VariantKind RefKind =
     static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
-  if (RefKind & AArch64MCExpr::VK_SABS) {
+  if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS) {
     // If the immediate is negative, generate MOVN else MOVZ.
     // (Bit 30 = 0) ==> MOVN, (Bit 30 = 1) ==> MOVZ.
     if (SignedValue < 0)

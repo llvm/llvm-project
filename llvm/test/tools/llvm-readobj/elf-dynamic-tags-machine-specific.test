@@ -1,66 +1,37 @@
 # Test that hexagon machine-specific tags can be dumped.
-# RUN: yaml2obj --docnum=1 %s -o %t.hex
+# RUN: yaml2obj --docnum=1 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.hex
 # RUN: llvm-readobj --dynamic-table %t.hex | FileCheck %s --check-prefix=LLVM-HEXAGON
 # RUN: llvm-readelf --dynamic-table %t.hex | FileCheck %s --check-prefix=GNU-HEXAGON
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_HEXAGON
-Sections:
-  - Name:    .dynstr
-    Type:    SHT_STRTAB
-    Address: 0x1000
-    Size:    0x10
-    Content: "004400550066007700"
-  - Name:    .dynamic
-    Type:    SHT_DYNAMIC
-    Address: 0x1010
-    Entries:
-      - Tag:   DT_HEXAGON_SYMSZ
-        Value: 0x10
-      - Tag:   DT_HEXAGON_VER
-        Value: 0x1000
-      - Tag:   DT_HEXAGON_PLT
-        Value: 0x1000
-      - Tag:   DT_NULL
-        Value: 0
-ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
-
-# LLVM-HEXAGON:      DynamicSection [ (4 entries)
+# LLVM-HEXAGON:      DynamicSection [ (6 entries)
 # LLVM-HEXAGON-NEXT:   Tag                Type                 Name/Value
+# LLVM-HEXAGON-NEXT:   0x0000000000000004 HASH                 0x1000
 # LLVM-HEXAGON-NEXT:   0x0000000070000000 HEXAGON_SYMSZ        0x10
 # LLVM-HEXAGON-NEXT:   0x0000000070000001 HEXAGON_VER          4096
 # LLVM-HEXAGON-NEXT:   0x0000000070000002 HEXAGON_PLT          0x1000
+# LLVM-HEXAGON-NEXT:   0x000000001234ABCD unknown              0x1
 # LLVM-HEXAGON-NEXT:   0x0000000000000000 NULL                 0x0
 # LLVM-HEXAGON-NEXT: ]
 
-# GNU-HEXAGON:      DynamicSection [ (4 entries)
+# GNU-HEXAGON:      DynamicSection [ (6 entries)
 # GNU-HEXAGON-NEXT:   Tag                Type                 Name/Value
+# GNU-HEXAGON-NEXT:   0x0000000000000004 HASH                 0x1000
 # GNU-HEXAGON-NEXT:   0x0000000070000000 HEXAGON_SYMSZ        0x10
 # GNU-HEXAGON-NEXT:   0x0000000070000001 HEXAGON_VER          4096
 # GNU-HEXAGON-NEXT:   0x0000000070000002 HEXAGON_PLT          0x1000
+# GNU-HEXAGON-NEXT:   0x000000001234abcd unknown              0x1
 # GNU-HEXAGON-NEXT:   0x0000000000000000 NULL                 0x0
 # GNU-HEXAGON-NEXT: ]
 
+
 # Test that MIPS machine-specific tags can be dumped.
-# RUN: yaml2obj --docnum=2 %s -o %t.mips
+# RUN: yaml2obj --docnum=2 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.mips
 # RUN: llvm-readobj --dynamic-table %t.mips | FileCheck %s --check-prefix=LLVM-MIPS
 # RUN: llvm-readelf --dynamic-table %t.mips | FileCheck %s --check-prefix=GNU-MIPS
 
-# LLVM-MIPS:      DynamicSection [ (46 entries)
+# LLVM-MIPS:      DynamicSection [ (48 entries)
 # LLVM-MIPS-NEXT:   Tag                Type                 Name/Value
+# LLVM-MIPS-NEXT:   0x0000000000000004 HASH                 0x1000
 # LLVM-MIPS-NEXT:   0x0000000070000001 MIPS_RLD_VERSION     305419896
 # LLVM-MIPS-NEXT:   0x0000000070000002 MIPS_TIME_STAMP      0x11223344
 # LLVM-MIPS-NEXT:   0x0000000070000003 MIPS_ICHECKSUM       0x11112222
@@ -106,11 +77,13 @@ ProgramHeaders:
 # LLVM-MIPS-NEXT:   0x0000000070000032 MIPS_PLTGOT          0x1000
 # LLVM-MIPS-NEXT:   0x0000000070000034 MIPS_RWPLT           0x1000
 # LLVM-MIPS-NEXT:   0x0000000070000035 MIPS_RLD_MAP_REL     0x1000
+# LLVM-MIPS-NEXT:   0x000000001234ABCD unknown              0x1
 # LLVM-MIPS-NEXT:   0x0000000000000000 NULL                 0x0
 # LLVM-MIPS-NEXT: ]
 
-# GNU-MIPS:      DynamicSection [ (46 entries)
+# GNU-MIPS:      DynamicSection [ (48 entries)
 # GNU-MIPS-NEXT:     Tag                Type                 Name/Value
+# GNU-MIPS-NEXT:   0x0000000000000004 HASH                 0x1000
 # GNU-MIPS-NEXT:   0x0000000070000001 MIPS_RLD_VERSION     305419896
 # GNU-MIPS-NEXT:   0x0000000070000002 MIPS_TIME_STAMP      0x11223344
 # GNU-MIPS-NEXT:   0x0000000070000003 MIPS_ICHECKSUM       0x11112222
@@ -156,172 +129,28 @@ ProgramHeaders:
 # GNU-MIPS-NEXT:   0x0000000070000032 MIPS_PLTGOT          0x1000
 # GNU-MIPS-NEXT:   0x0000000070000034 MIPS_RWPLT           0x1000
 # GNU-MIPS-NEXT:   0x0000000070000035 MIPS_RLD_MAP_REL     0x1000
+# GNU-MIPS-NEXT:   0x000000001234abcd unknown              0x1
 # GNU-MIPS-NEXT:   0x0000000000000000 NULL                 0x0
 # GNU-MIPS-NEXT: ]
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_MIPS
-Sections:
-  - Name:    .dynstr
-    Type:    SHT_STRTAB
-    Address: 0x1000
-    Size:    0x10
-    Content: "004400550066007700"
-  - Name:    .dynamic
-    Type:    SHT_DYNAMIC
-    Address: 0x1010
-    Entries:
-      - Tag:   DT_MIPS_RLD_VERSION
-        Value: 0x12345678
-      - Tag:   DT_MIPS_TIME_STAMP
-        Value: 0x11223344
-      - Tag:   DT_MIPS_ICHECKSUM
-        Value: 0x11112222
-      - Tag:   DT_MIPS_IVERSION
-        Value: 0x1
-      - Tag:   DT_MIPS_FLAGS
-        Value: 0x11111111
-      - Tag:   DT_MIPS_BASE_ADDRESS
-        Value: 0x87654321
-      - Tag:   DT_MIPS_MSYM
-        Value: 0x1000
-      - Tag:   DT_MIPS_CONFLICT
-        Value: 0x1000
-      - Tag:   DT_MIPS_LIBLIST
-        Value: 0x1000
-      - Tag:   DT_MIPS_LOCAL_GOTNO
-        Value: 0x1
-      - Tag:   DT_MIPS_CONFLICTNO
-        Value: 0x1
-      - Tag:   DT_MIPS_LIBLISTNO
-        Value: 0x1
-      - Tag:   DT_MIPS_SYMTABNO
-        Value: 0x1
-      - Tag:   DT_MIPS_UNREFEXTNO
-        Value: 0x0
-      - Tag:   DT_MIPS_GOTSYM
-        Value: 0x0
-      - Tag:   DT_MIPS_HIPAGENO
-        Value: 0x88776655
-      - Tag:   DT_MIPS_RLD_MAP
-        Value: 0x1000
-      - Tag:   DT_MIPS_DELTA_CLASS
-        Value: 0x1000
-      - Tag:   DT_MIPS_DELTA_CLASS_NO
-        Value: 0x1
-      - Tag:   DT_MIPS_DELTA_INSTANCE
-        Value: 0x1000
-      - Tag:   DT_MIPS_DELTA_INSTANCE_NO
-        Value: 0x1
-      - Tag:   DT_MIPS_DELTA_RELOC
-        Value: 0x1000
-      - Tag:   DT_MIPS_DELTA_RELOC_NO
-        Value: 0x1
-      - Tag:   DT_MIPS_DELTA_SYM
-        Value: 0x1000
-      - Tag:   DT_MIPS_DELTA_SYM_NO
-        Value: 0x1
-      - Tag:   DT_MIPS_DELTA_CLASSSYM
-        Value: 0x1000
-      - Tag:   DT_MIPS_DELTA_CLASSSYM_NO
-        Value: 0x1
-      - Tag:   DT_MIPS_CXX_FLAGS
-        Value: 0x88887777
-      - Tag:   DT_MIPS_PIXIE_INIT
-        Value: 0x1000
-      - Tag:   DT_MIPS_LOCALPAGE_GOTIDX
-        Value: 0x1
-      - Tag:   DT_MIPS_LOCAL_GOTIDX
-        Value: 0x1
-      - Tag:   DT_MIPS_HIDDEN_GOTIDX
-        Value: 0x1
-      - Tag:   DT_MIPS_PROTECTED_GOTIDX
-        Value: 0x1
-      - Tag:   DT_MIPS_OPTIONS
-        Value: 0x1000
-      - Tag:   DT_MIPS_INTERFACE
-        Value: 0x1000
-      - Tag:   DT_MIPS_DYNSTR_ALIGN
-        Value: 0x88888888
-      - Tag:   DT_MIPS_INTERFACE_SIZE
-        Value: 0x10
-      - Tag:   DT_MIPS_RLD_TEXT_RESOLVE_ADDR
-        Value: 0x8
-      - Tag:   DT_MIPS_PERF_SUFFIX
-        Value: 0x0
-      - Tag:   DT_MIPS_COMPACT_SIZE
-        Value: 0x10
-      - Tag:   DT_MIPS_GP_VALUE
-        Value: 0x1
-      - Tag:   DT_MIPS_AUX_DYNAMIC
-        Value: 0x1000
-      - Tag:   DT_MIPS_PLTGOT
-        Value: 0x1000
-      - Tag:   DT_MIPS_RWPLT
-        Value: 0x1000
-      - Tag:   DT_MIPS_RLD_MAP_REL
-        Value: 0x1000
-      - Tag:   DT_NULL
-        Value: 0
-ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
 
 # Test that PPC64 machine-specific tags can be dumped.
-# RUN: yaml2obj --docnum=3 %s -o %t.ppc
+# RUN: yaml2obj --docnum=3 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.ppc
 # RUN: llvm-readobj --dynamic-table %t.ppc | FileCheck %s --check-prefix=LLVM-PPC
 # RUN: llvm-readelf --dynamic-table %t.ppc | FileCheck %s --check-prefix=GNU-PPC
 
-# LLVM-PPC:      DynamicSection [ (2 entries)
+# LLVM-PPC:      DynamicSection [ (4 entries)
 # LLVM-PPC-NEXT:   Tag                Type                 Name/Value
+# LLVM-PPC-NEXT:   0x0000000000000004 HASH                 0x1000
 # LLVM-PPC-NEXT:   0x0000000070000000 PPC64_GLINK          0x1000
+# LLVM-PPC-NEXT:   0x000000001234ABCD unknown              0x1
 # LLVM-PPC-NEXT:   0x0000000000000000 NULL                 0x0
 # LLVM-PPC-NEXT: ]
 
-# GNU-PPC:      DynamicSection [ (2 entries)
+# GNU-PPC:      DynamicSection [ (4 entries)
 # GNU-PPC-NEXT:   Tag                Type                 Name/Value
+# GNU-PPC-NEXT:   0x0000000000000004 HASH                 0x1000
 # GNU-PPC-NEXT:   0x0000000070000000 PPC64_GLINK          0x1000
+# GNU-PPC-NEXT:   0x000000001234abcd unknown              0x1
 # GNU-PPC-NEXT:   0x0000000000000000 NULL                 0x0
 # GNU-PPC-NEXT: ]
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_PPC64
-Sections:
-  - Name:    .dynstr
-    Type:    SHT_STRTAB
-    Address: 0x1000
-    Size:    0x10
-    Content: "004400550066007700"
-  - Name:    .dynamic
-    Type:    SHT_DYNAMIC
-    Address: 0x1010
-    Entries:
-      - Tag:   DT_PPC64_GLINK
-        Value: 0x1000
-      - Tag:   DT_NULL
-        Value: 0
-ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic

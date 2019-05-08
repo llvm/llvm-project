@@ -100,9 +100,7 @@ protected:
   std::string m_new_process_action;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessLaunch
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessLaunch
 class CommandObjectProcessLaunch : public CommandObjectProcessLaunchOrAttach {
 public:
@@ -149,7 +147,7 @@ public:
 
 protected:
   bool DoExecute(Args &launch_args, CommandReturnObject &result) override {
-    Debugger &debugger = m_interpreter.GetDebugger();
+    Debugger &debugger = GetDebugger();
     Target *target = debugger.GetSelectedTarget().get();
     // If our listener is nullptr, users aren't allows to launch
     ModuleSP exe_module_sp = target->GetExecutableModule();
@@ -295,9 +293,7 @@ protected:
 //#undef SET2
 //#undef SET3
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessAttach
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_attach_options[] = {
     // clang-format off
@@ -434,9 +430,9 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
 
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     // N.B. The attach should be synchronous.  It doesn't help much to get the
     // prompt back between initiating the attach and the target actually
     // stopping.  So even if the interpreter is set to be asynchronous, we wait
@@ -453,8 +449,8 @@ protected:
       TargetSP new_target_sp;
       Status error;
 
-      error = m_interpreter.GetDebugger().GetTargetList().CreateTarget(
-          m_interpreter.GetDebugger(), "", "", eLoadDependentsNo,
+      error = GetDebugger().GetTargetList().CreateTarget(
+          GetDebugger(), "", "", eLoadDependentsNo,
           nullptr, // No platform options
           new_target_sp);
       target = new_target_sp.get();
@@ -462,7 +458,7 @@ protected:
         result.AppendError(error.AsCString("Error creating target"));
         return false;
       }
-      m_interpreter.GetDebugger().GetTargetList().SetSelectedTarget(target);
+      GetDebugger().GetTargetList().SetSelectedTarget(target);
     }
 
     // Record the old executable module, we want to issue a warning if the
@@ -547,9 +543,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessContinue
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_continue_options[] = {
     // clang-format off
@@ -711,9 +705,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessDetach
-//-------------------------------------------------------------------------
 static constexpr OptionDefinition g_process_detach_options[] = {
     // clang-format off
   { LLDB_OPT_SET_1, false, "keep-stopped", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "Whether or not the process should be kept stopped on detach (if possible)." },
@@ -809,9 +801,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessConnect
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_connect_options[] = {
     // clang-format off
@@ -899,7 +889,7 @@ protected:
       plugin_name = m_options.plugin_name.c_str();
 
     Status error;
-    Debugger &debugger = m_interpreter.GetDebugger();
+    Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
     ProcessSP process_sp = platform_sp->ConnectProcess(
         command.GetArgumentAtIndex(0), plugin_name, debugger,
@@ -915,9 +905,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessPlugin
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessPlugin
 
 class CommandObjectProcessPlugin : public CommandObjectProxy {
@@ -938,9 +926,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessLoad
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_load_options[] = {
     // clang-format off
@@ -1054,9 +1040,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessUnload
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessUnload
 
 class CommandObjectProcessUnload : public CommandObjectParsed {
@@ -1102,9 +1086,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessSignal
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessSignal
 
 class CommandObjectProcessSignal : public CommandObjectParsed {
@@ -1169,9 +1151,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessInterrupt
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessInterrupt
 
 class CommandObjectProcessInterrupt : public CommandObjectParsed {
@@ -1213,9 +1193,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessKill
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessKill
 
 class CommandObjectProcessKill : public CommandObjectParsed {
@@ -1256,9 +1234,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessSaveCore
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessSaveCore
 
 class CommandObjectProcessSaveCore : public CommandObjectParsed {
@@ -1302,9 +1278,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessStatus
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessStatus
 
 class CommandObjectProcessStatus : public CommandObjectParsed {
@@ -1336,9 +1310,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessHandle
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_handle_options[] = {
     // clang-format off
@@ -1488,7 +1460,7 @@ public:
 
 protected:
   bool DoExecute(Args &signal_args, CommandReturnObject &result) override {
-    TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
+    TargetSP target_sp = GetDebugger().GetSelectedTarget();
 
     if (!target_sp) {
       result.AppendError("No current target;"
@@ -1595,9 +1567,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordProcess
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
     CommandInterpreter &interpreter)

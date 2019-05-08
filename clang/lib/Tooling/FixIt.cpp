@@ -18,12 +18,11 @@ namespace tooling {
 namespace fixit {
 
 namespace internal {
-StringRef getText(SourceRange Range, const ASTContext &Context) {
-  return Lexer::getSourceText(CharSourceRange::getTokenRange(Range),
-                              Context.getSourceManager(),
+StringRef getText(CharSourceRange Range, const ASTContext &Context) {
+  return Lexer::getSourceText(Range, Context.getSourceManager(),
                               Context.getLangOpts());
 }
-} // end namespace internal
+} // namespace internal
 
 } // end namespace fixit
 } // end namespace tooling

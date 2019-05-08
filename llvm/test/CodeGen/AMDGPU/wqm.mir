@@ -3,7 +3,7 @@
 ---
 # Check for awareness that s_or_saveexec_b64 clobbers SCC
 #
-#CHECK: S_OR_SAVEEXEC_B64
+#CHECK: ENTER_WWM
 #CHECK: S_CMP_LT_I32
 #CHECK: S_CSELECT_B32
 name:            test_wwm_scc

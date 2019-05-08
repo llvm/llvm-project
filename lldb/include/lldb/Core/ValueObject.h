@@ -379,16 +379,12 @@ public:
 
   virtual bool CanProvideValue();
 
-  //------------------------------------------------------------------
   // Subclasses must implement the functions below.
-  //------------------------------------------------------------------
   virtual uint64_t GetByteSize() = 0;
 
   virtual lldb::ValueType GetValueType() const = 0;
 
-  //------------------------------------------------------------------
   // Subclasses can implement the functions below.
-  //------------------------------------------------------------------
   virtual ConstString GetTypeName();
 
   virtual ConstString GetDisplayTypeName();
@@ -478,12 +474,10 @@ public:
 
   virtual bool GetDeclaration(Declaration &decl);
 
-  //------------------------------------------------------------------
   // The functions below should NOT be modified by subclasses
-  //------------------------------------------------------------------
   const Status &GetError();
 
-  const ConstString &GetName() const;
+  ConstString GetName() const;
 
   virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create);
 
@@ -503,10 +497,10 @@ public:
   GetChildAtNamePath(llvm::ArrayRef<std::pair<ConstString, bool>> names,
                      ConstString *name_of_error = nullptr);
 
-  virtual lldb::ValueObjectSP GetChildMemberWithName(const ConstString &name,
+  virtual lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
                                                      bool can_create);
 
-  virtual size_t GetIndexOfChildWithName(const ConstString &name);
+  virtual size_t GetIndexOfChildWithName(ConstString name);
 
   size_t GetNumChildren(uint32_t max = UINT32_MAX);
 
@@ -573,14 +567,14 @@ public:
   // Change the name of the current ValueObject. Should *not* be used from a
   // synthetic child provider as it would change the name of the non synthetic
   // child as well.
-  void SetName(const ConstString &name);
+  void SetName(ConstString name);
 
   virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
                                     AddressType *address_type = nullptr);
 
   lldb::addr_t GetPointerValue(AddressType *address_type = nullptr);
 
-  lldb::ValueObjectSP GetSyntheticChild(const ConstString &key) const;
+  lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
 
   lldb::ValueObjectSP GetSyntheticArrayMember(size_t index, bool can_create);
 
@@ -617,7 +611,7 @@ public:
   GetQualifiedRepresentationIfAvailable(lldb::DynamicValueType dynValue,
                                         bool synthValue);
 
-  virtual lldb::ValueObjectSP CreateConstantValue(const ConstString &name);
+  virtual lldb::ValueObjectSP CreateConstantValue(ConstString name);
 
   virtual lldb::ValueObjectSP Dereference(Status &error);
 
@@ -625,7 +619,7 @@ public:
   // ValueObject as its parent. It should be used when we want to change the
   // name of a ValueObject without modifying the actual ValueObject itself
   // (e.g. sythetic child provider).
-  virtual lldb::ValueObjectSP Clone(const ConstString &new_name);
+  virtual lldb::ValueObjectSP Clone(ConstString new_name);
 
   virtual lldb::ValueObjectSP AddressOf(Status &error);
 
@@ -788,7 +782,6 @@ public:
 
   void SetHasCompleteType() { m_did_calculate_complete_objc_class_type = true; }
 
-  //------------------------------------------------------------------
   /// Find out if a ValueObject might have children.
   ///
   /// This call is much more efficient than CalculateNumChildren() as
@@ -800,10 +793,9 @@ public:
   /// pointers, references, arrays and more. Again, it does so without
   /// doing any expensive type completion.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the ValueObject might have children, or \b
   ///     false otherwise.
-  //------------------------------------------------------------------
   virtual bool MightHaveChildren();
 
   virtual lldb::VariableSP GetVariable() { return nullptr; }
@@ -858,9 +850,7 @@ protected:
     size_t m_children_count;
   };
 
-  //------------------------------------------------------------------
   // Classes that inherit from ValueObject can see and modify these
-  //------------------------------------------------------------------
   ValueObject
       *m_parent; // The parent value object, or nullptr if this has no parent
   ValueObject *m_root; // The root of the hierarchy for this ValueObject (or
@@ -943,9 +933,7 @@ protected:
   friend class ValueObjectConstResultImpl;
   friend class ValueObjectSynthetic; // For ClearUserVisibleData
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
 
   // Use the no-argument constructor to make a constant variable object (with
   // no ExecutionContextScope.)
@@ -999,15 +987,13 @@ protected:
   void ClearUserVisibleData(
       uint32_t items = ValueObject::eClearUserVisibleDataItemsAllStrings);
 
-  void AddSyntheticChild(const ConstString &key, ValueObject *valobj);
+  void AddSyntheticChild(ConstString key, ValueObject *valobj);
 
   DataExtractor &GetDataExtractor();
 
   void ClearDynamicTypeInformation();
 
-  //------------------------------------------------------------------
   // Subclasses must implement the functions below.
-  //------------------------------------------------------------------
 
   virtual CompilerType GetCompilerTypeImpl() = 0;
 
@@ -1031,14 +1017,12 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ValueObject);
 };
 
-//------------------------------------------------------------------------------
 // A value object manager class that is seeded with the static variable value
 // and it vends the user facing value object. If the type is dynamic it can
 // vend the dynamic type. If this user type also has a synthetic type
 // associated with it, it will vend the synthetic type. The class watches the
 // process' stop
 // ID and will update the user type when needed.
-//------------------------------------------------------------------------------
 class ValueObjectManager {
   // The root value object is the static typed variable object.
   lldb::ValueObjectSP m_root_valobj_sp;

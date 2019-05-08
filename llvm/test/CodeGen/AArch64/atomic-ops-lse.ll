@@ -821,7 +821,7 @@ define i8 @test_atomic_load_sub_i8_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var8
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var8
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddalb w[[IMM]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -835,7 +835,7 @@ define i16 @test_atomic_load_sub_i16_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var16
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var16
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddalh w[[IMM]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -849,7 +849,7 @@ define i32 @test_atomic_load_sub_i32_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddal w[[IMM]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -863,7 +863,7 @@ define i64 @test_atomic_load_sub_i64_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddal x[[IMM]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -984,7 +984,7 @@ define i8 @test_atomic_load_and_i8_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var8
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var8
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclralb w[[CONST]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i8 %old
@@ -996,7 +996,7 @@ define i16 @test_atomic_load_and_i16_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var16
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var16
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclralh w[[CONST]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i16 %old
@@ -1008,7 +1008,7 @@ define i32 @test_atomic_load_and_i32_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclral w[[CONST]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i32 %old
@@ -1020,7 +1020,7 @@ define i64 @test_atomic_load_and_i64_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclral x[[CONST]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i64 %old
@@ -1311,7 +1311,7 @@ define void @test_atomic_load_add_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stadd w0, [x[[ADDR]]]
+; CHECK: ldadd w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1323,7 +1323,7 @@ define void @test_atomic_load_add_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stadd x0, [x[[ADDR]]]
+; CHECK: ldadd x{{[0-9]}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1387,7 +1387,7 @@ define void @test_atomic_load_add_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: staddl w0, [x[[ADDR]]]
+; CHECK: ldaddl w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1399,7 +1399,7 @@ define void @test_atomic_load_add_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddl x0, [x[[ADDR]]]
+; CHECK: ldaddl x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1696,7 +1696,7 @@ define void @test_atomic_load_and_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stclr w[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldclr w{{[0-9]+}}, w[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1709,7 +1709,7 @@ define void @test_atomic_load_and_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stclr x[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldclr x{{[0-9]+}}, x[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1774,7 +1774,7 @@ define void @test_atomic_load_and_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stclrl w[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldclrl w{{[0-9]*}}, w[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1787,7 +1787,7 @@ define void @test_atomic_load_and_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stclrl x[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldclrl x{{[0-9]*}}, x[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2306,7 +2306,7 @@ define void @test_atomic_load_max_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmax w0, [x[[ADDR]]]
+; CHECK: ldsmax w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2318,7 +2318,7 @@ define void @test_atomic_load_max_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmax x0, [x[[ADDR]]]
+; CHECK: ldsmax x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2382,7 +2382,7 @@ define void @test_atomic_load_max_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmaxl w0, [x[[ADDR]]]
+; CHECK: ldsmaxl w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2394,7 +2394,7 @@ define void @test_atomic_load_max_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmaxl x0, [x[[ADDR]]]
+; CHECK: ldsmaxl x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2686,7 +2686,7 @@ define void @test_atomic_load_min_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmin w0, [x[[ADDR]]]
+; CHECK: ldsmin w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2698,7 +2698,7 @@ define void @test_atomic_load_min_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmin x0, [x[[ADDR]]]
+; CHECK: ldsmin x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2762,7 +2762,7 @@ define void @test_atomic_load_min_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsminl w0, [x[[ADDR]]]
+; CHECK: ldsminl w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2774,7 +2774,7 @@ define void @test_atomic_load_min_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsminl x0, [x[[ADDR]]]
+; CHECK: ldsminl x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3066,7 +3066,7 @@ define void @test_atomic_load_or_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stset w0, [x[[ADDR]]]
+; CHECK: ldset w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3078,7 +3078,7 @@ define void @test_atomic_load_or_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stset x0, [x[[ADDR]]]
+; CHECK: ldset x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3142,7 +3142,7 @@ define void @test_atomic_load_or_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsetl w0, [x[[ADDR]]]
+; CHECK: ldsetl w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3154,7 +3154,7 @@ define void @test_atomic_load_or_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsetl x0, [x[[ADDR]]]
+; CHECK: ldsetl x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3467,7 +3467,7 @@ define void @test_atomic_load_sub_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stadd w[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldadd w{{[0-9]+}}, w[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -3481,7 +3481,7 @@ define void @test_atomic_load_sub_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stadd x[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldadd x{{[0-9]+}}, x[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -3551,7 +3551,7 @@ define void @test_atomic_load_sub_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: staddl w[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldaddl w{{[0-9]*}}, w[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -3565,7 +3565,7 @@ define void @test_atomic_load_sub_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddl x[[NEW:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldaddl x{{[0-9]*}}, x[[NEW:[1-9][0-9]*]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -4256,7 +4256,7 @@ define void @test_atomic_load_umax_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumax w0, [x[[ADDR]]]
+; CHECK: ldumax w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4268,7 +4268,7 @@ define void @test_atomic_load_umax_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumax x0, [x[[ADDR]]]
+; CHECK: ldumax x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4332,7 +4332,7 @@ define void @test_atomic_load_umax_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumaxl w0, [x[[ADDR]]]
+; CHECK: ldumaxl w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4344,7 +4344,7 @@ define void @test_atomic_load_umax_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumaxl x0, [x[[ADDR]]]
+; CHECK: ldumaxl x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4636,7 +4636,7 @@ define void @test_atomic_load_umin_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumin w0, [x[[ADDR]]]
+; CHECK: ldumin w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4648,7 +4648,7 @@ define void @test_atomic_load_umin_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumin x0, [x[[ADDR]]]
+; CHECK: ldumin x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4712,7 +4712,7 @@ define void @test_atomic_load_umin_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stuminl w0, [x[[ADDR]]]
+; CHECK: lduminl w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4724,7 +4724,7 @@ define void @test_atomic_load_umin_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stuminl x0, [x[[ADDR]]]
+; CHECK: lduminl x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5016,7 +5016,7 @@ define void @test_atomic_load_xor_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: steor w0, [x[[ADDR]]]
+; CHECK: ldeor w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5028,7 +5028,7 @@ define void @test_atomic_load_xor_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: steor x0, [x[[ADDR]]]
+; CHECK: ldeor x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5092,7 +5092,7 @@ define void @test_atomic_load_xor_i32_noret_release(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: steorl w0, [x[[ADDR]]]
+; CHECK: ldeorl w{{[0-9]+}}, w{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5104,7 +5104,7 @@ define void @test_atomic_load_xor_i64_noret_release(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: steorl x0, [x[[ADDR]]]
+; CHECK: ldeorl x{{[0-9]+}}, x{{[1-9][0-9]*}}, [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }

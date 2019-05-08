@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj -sections -relocations - | FileCheck %s
+# RUN: yaml2obj %s | llvm-readobj --sections -r - | FileCheck %s
 
 !ELF
 FileHeader:        !FielHeader
@@ -21,7 +21,6 @@ Sections:
     Info:            .text
     Relocations:     
       - Offset:          0x000000000000000C
-        Symbol:          ''
         Type:            R_ARM_V4BX
   - Name:            .data
     Type:            SHT_PROGBITS
@@ -37,25 +36,24 @@ Sections:
     Type:            SHT_ARM_ATTRIBUTES
     AddressAlign:    0x0000000000000001
     Content:         4115000000616561626900010B000000060208010901
-Symbols:         
-  Local:           
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
-    - Name:            .data
-      Type:            STT_SECTION
-      Section:         .data
-    - Name:            .bss
-      Type:            STT_SECTION
-      Section:         .bss
-    - Name:            '$a'
-      Section:         .text
-    - Name:            call_weak_fn
-      Type:            STT_FUNC
-      Section:         .text
-    - Name:            .ARM.attributes
-      Type:            STT_SECTION
-      Section:         .ARM.attributes
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+  - Name:            '$a'
+    Section:         .text
+  - Name:            call_weak_fn
+    Type:            STT_FUNC
+    Section:         .text
+  - Name:            .ARM.attributes
+    Type:            STT_SECTION
+    Section:         .ARM.attributes
 
 # CHECK:        Section {
 # CHECK-NEXT:     Index: 0

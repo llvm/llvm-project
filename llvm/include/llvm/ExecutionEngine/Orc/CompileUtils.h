@@ -13,25 +13,17 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COMPILEUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEUTILS_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Object/Binary.h"
-#include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <memory>
 
 namespace llvm {
 
+class JITTargetMachineBuilder;
 class MCContext;
+class MemoryBuffer;
 class Module;
+class ObjectCache;
+class TargetMachine;
 
 namespace orc {
 
@@ -50,51 +42,11 @@ public:
   void setObjectCache(ObjectCache *NewCache) { ObjCache = NewCache; }
 
   /// Compile a Module to an ObjectFile.
-  CompileResult operator()(Module &M) {
-    CompileResult CachedObject = tryToLoadFromObjectCache(M);
-    if (CachedObject)
-      return CachedObject;
-
-    SmallVector<char, 0> ObjBufferSV;
-
-    {
-      raw_svector_ostream ObjStream(ObjBufferSV);
-
-      legacy::PassManager PM;
-      MCContext *Ctx;
-      if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
-        llvm_unreachable("Target does not support MC emission.");
-      PM.run(M);
-    }
-
-    auto ObjBuffer =
-        llvm::make_unique<SmallVectorMemoryBuffer>(std::move(ObjBufferSV));
-    auto Obj =
-        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-
-    if (Obj) {
-      notifyObjectCompiled(M, *ObjBuffer);
-      return std::move(ObjBuffer);
-    }
-
-    // TODO: Actually report errors helpfully.
-    consumeError(Obj.takeError());
-    return nullptr;
-  }
+  CompileResult operator()(Module &M);
 
 private:
-
-  CompileResult tryToLoadFromObjectCache(const Module &M) {
-    if (!ObjCache)
-      return CompileResult();
-
-    return ObjCache->getObject(&M);
-  }
-
-  void notifyObjectCompiled(const Module &M, const MemoryBuffer &ObjBuffer) {
-    if (ObjCache)
-      ObjCache->notifyObjectCompiled(&M, ObjBuffer.getMemBufferRef());
-  }
+  CompileResult tryToLoadFromObjectCache(const Module &M);
+  void notifyObjectCompiled(const Module &M, const MemoryBuffer &ObjBuffer);
 
   TargetMachine &TM;
   ObjectCache *ObjCache = nullptr;
@@ -107,16 +59,11 @@ private:
 class ConcurrentIRCompiler {
 public:
   ConcurrentIRCompiler(JITTargetMachineBuilder JTMB,
-                       ObjectCache *ObjCache = nullptr)
-      : JTMB(std::move(JTMB)), ObjCache(ObjCache) {}
+                       ObjectCache *ObjCache = nullptr);
 
   void setObjectCache(ObjectCache *ObjCache) { this->ObjCache = ObjCache; }
 
-  std::unique_ptr<MemoryBuffer> operator()(Module &M) {
-    auto TM = cantFail(JTMB.createTargetMachine());
-    SimpleCompiler C(*TM, ObjCache);
-    return C(M);
-  }
+  std::unique_ptr<MemoryBuffer> operator()(Module &M);
 
 private:
   JITTargetMachineBuilder JTMB;

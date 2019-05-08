@@ -262,6 +262,12 @@ public:
     return const_cast<APValue*>(this)->getInt();
   }
 
+  /// Try to convert this value to an integral constant. This works if it's an
+  /// integer, null pointer, or offset from a null pointer. Returns true on
+  /// success.
+  bool toIntegralConstant(APSInt &Result, QualType SrcTy,
+                          const ASTContext &Ctx) const;
+
   APFloat &getFloat() {
     assert(isFloat() && "Invalid accessor");
     return *(APFloat*)(char*)Data.buffer;

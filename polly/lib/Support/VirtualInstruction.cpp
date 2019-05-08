@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Support/VirtualInstruction.h"
-#include "polly/Support/SCEVValidator.h"
 
 using namespace polly;
 using namespace llvm;

@@ -927,9 +927,9 @@ bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 }
 
 bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
-    MachineInstr &MIa, MachineInstr &MIb, AliasAnalysis *AA) const {
+    const MachineInstr &MIa, const MachineInstr &MIb, AliasAnalysis *AA) const {
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
+  const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   unsigned WidthA = 0, WidthB = 0;
 
@@ -1714,6 +1714,68 @@ bool AArch64InstrInfo::isUnscaledLdSt(unsigned Opc) {
   }
 }
 
+Optional<unsigned> AArch64InstrInfo::getUnscaledLdSt(unsigned Opc) {
+  switch (Opc) {
+  default: return {};
+  case AArch64::PRFMui: return AArch64::PRFUMi;
+  case AArch64::LDRXui: return AArch64::LDURXi;
+  case AArch64::LDRWui: return AArch64::LDURWi;
+  case AArch64::LDRBui: return AArch64::LDURBi;
+  case AArch64::LDRHui: return AArch64::LDURHi;
+  case AArch64::LDRSui: return AArch64::LDURSi;
+  case AArch64::LDRDui: return AArch64::LDURDi;
+  case AArch64::LDRQui: return AArch64::LDURQi;
+  case AArch64::LDRBBui: return AArch64::LDURBBi;
+  case AArch64::LDRHHui: return AArch64::LDURHHi;
+  case AArch64::LDRSBXui: return AArch64::LDURSBXi;
+  case AArch64::LDRSBWui: return AArch64::LDURSBWi;
+  case AArch64::LDRSHXui: return AArch64::LDURSHXi;
+  case AArch64::LDRSHWui: return AArch64::LDURSHWi;
+  case AArch64::LDRSWui: return AArch64::LDURSWi;
+  case AArch64::STRXui: return AArch64::STURXi;
+  case AArch64::STRWui: return AArch64::STURWi;
+  case AArch64::STRBui: return AArch64::STURBi;
+  case AArch64::STRHui: return AArch64::STURHi;
+  case AArch64::STRSui: return AArch64::STURSi;
+  case AArch64::STRDui: return AArch64::STURDi;
+  case AArch64::STRQui: return AArch64::STURQi;
+  case AArch64::STRBBui: return AArch64::STURBBi;
+  case AArch64::STRHHui: return AArch64::STURHHi;
+  }
+}
+
+unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 2;
+  case AArch64::LDPXi:
+  case AArch64::LDPDi:
+  case AArch64::STPXi:
+  case AArch64::STPDi:
+  case AArch64::LDNPXi:
+  case AArch64::LDNPDi:
+  case AArch64::STNPXi:
+  case AArch64::STNPDi:
+  case AArch64::LDPQi:
+  case AArch64::STPQi:
+  case AArch64::LDNPQi:
+  case AArch64::STNPQi:
+  case AArch64::LDPWi:
+  case AArch64::LDPSi:
+  case AArch64::STPWi:
+  case AArch64::STPSi:
+  case AArch64::LDNPWi:
+  case AArch64::LDNPSi:
+  case AArch64::STNPWi:
+  case AArch64::STNPSi:
+  case AArch64::LDG:
+    return 3;
+  case AArch64::ADDG:
+  case AArch64::STGOffset:
+    return 2;
+  }
+}
+
 bool AArch64InstrInfo::isPairableLdStInst(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -1836,7 +1898,7 @@ unsigned AArch64InstrInfo::convertToFlagSettingOpc(unsigned Opc,
 
 // Is this a candidate for ld/st merging or pairing?  For example, we don't
 // touch volatiles or load/stores that have a hint to avoid pair formation.
-bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
+bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // If this is a volatile load/store, don't mess with it.
   if (MI.hasOrderedMemoryRef())
     return false;
@@ -1878,8 +1940,8 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
   return true;
 }
 
-bool AArch64InstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
-                                          MachineOperand *&BaseOp,
+bool AArch64InstrInfo::getMemOperandWithOffset(const MachineInstr &LdSt,
+                                          const MachineOperand *&BaseOp,
                                           int64_t &Offset,
                                           const TargetRegisterInfo *TRI) const {
   unsigned Width;
@@ -1887,7 +1949,7 @@ bool AArch64InstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
 }
 
 bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
-    MachineInstr &LdSt, MachineOperand *&BaseOp, int64_t &Offset,
+    const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
     unsigned &Width, const TargetRegisterInfo *TRI) const {
   assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
   // Handle only loads/stores with base register followed by immediate offset.
@@ -1943,7 +2005,7 @@ AArch64InstrInfo::getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const {
 
 bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
                                     unsigned &Width, int64_t &MinOffset,
-                                    int64_t &MaxOffset) const {
+                                    int64_t &MaxOffset) {
   switch (Opcode) {
   // Not a memory operation or something we want to handle.
   default:
@@ -1964,6 +2026,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     MinOffset = -256;
     MaxOffset = 255;
     break;
+  case AArch64::PRFUMi:
   case AArch64::LDURXi:
   case AArch64::LDURDi:
   case AArch64::STURXi:
@@ -2033,6 +2096,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     MinOffset = -64;
     MaxOffset = 63;
     break;
+  case AArch64::PRFMui:
   case AArch64::LDRXui:
   case AArch64::LDRDui:
   case AArch64::STRXui:
@@ -2065,6 +2129,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     break;
   case AArch64::LDRHui:
   case AArch64::LDRHHui:
+  case AArch64::LDRSHWui:
+  case AArch64::LDRSHXui:
   case AArch64::STRHui:
   case AArch64::STRHHui:
     Scale = Width = 2;
@@ -2073,11 +2139,25 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     break;
   case AArch64::LDRBui:
   case AArch64::LDRBBui:
+  case AArch64::LDRSBWui:
+  case AArch64::LDRSBXui:
   case AArch64::STRBui:
   case AArch64::STRBBui:
     Scale = Width = 1;
     MinOffset = 0;
     MaxOffset = 4095;
+    break;
+  case AArch64::ADDG:
+    Scale = 16;
+    Width = 0;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LDG:
+  case AArch64::STGOffset:
+    Scale = Width = 16;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   }
 
@@ -2180,11 +2260,11 @@ static bool shouldClusterFI(const MachineFrameInfo &MFI, int FI1,
 /// Detect opportunities for ldp/stp formation.
 ///
 /// Only called for LdSt for which getMemOperandWithOffset returns true.
-bool AArch64InstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
-                                           MachineOperand &BaseOp2,
+bool AArch64InstrInfo::shouldClusterMemOps(const MachineOperand &BaseOp1,
+                                           const MachineOperand &BaseOp2,
                                            unsigned NumLoads) const {
-  MachineInstr &FirstLdSt = *BaseOp1.getParent();
-  MachineInstr &SecondLdSt = *BaseOp2.getParent();
+  const MachineInstr &FirstLdSt = *BaseOp1.getParent();
+  const MachineInstr &SecondLdSt = *BaseOp2.getParent();
   if (BaseOp1.getType() != BaseOp2.getType())
     return false;
 
@@ -3142,11 +3222,6 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
                                     bool *OutUseUnscaledOp,
                                     unsigned *OutUnscaledOp,
                                     int *EmittableOffset) {
-  int Scale = 1;
-  bool IsSigned = false;
-  // The ImmIdx should be changed case by case if it is not 2.
-  unsigned ImmIdx = 2;
-  unsigned UnscaledOp = 0;
   // Set output values in case of early exit.
   if (EmittableOffset)
     *EmittableOffset = 0;
@@ -3154,10 +3229,12 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
     *OutUseUnscaledOp = false;
   if (OutUnscaledOp)
     *OutUnscaledOp = 0;
+
+  // Exit early for structured vector spills/fills as they can't take an
+  // immediate offset.
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("unhandled opcode in rewriteAArch64FrameIndex");
-  // Vector spills/fills can't take an immediate offset.
+    break;
   case AArch64::LD1Twov2d:
   case AArch64::LD1Threev2d:
   case AArch64::LD1Fourv2d:
@@ -3171,207 +3248,50 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
   case AArch64::ST1Threev1d:
   case AArch64::ST1Fourv1d:
     return AArch64FrameOffsetCannotUpdate;
-  case AArch64::PRFMui:
-    Scale = 8;
-    UnscaledOp = AArch64::PRFUMi;
-    break;
-  case AArch64::LDRXui:
-    Scale = 8;
-    UnscaledOp = AArch64::LDURXi;
-    break;
-  case AArch64::LDRWui:
-    Scale = 4;
-    UnscaledOp = AArch64::LDURWi;
-    break;
-  case AArch64::LDRBui:
-    Scale = 1;
-    UnscaledOp = AArch64::LDURBi;
-    break;
-  case AArch64::LDRHui:
-    Scale = 2;
-    UnscaledOp = AArch64::LDURHi;
-    break;
-  case AArch64::LDRSui:
-    Scale = 4;
-    UnscaledOp = AArch64::LDURSi;
-    break;
-  case AArch64::LDRDui:
-    Scale = 8;
-    UnscaledOp = AArch64::LDURDi;
-    break;
-  case AArch64::LDRQui:
-    Scale = 16;
-    UnscaledOp = AArch64::LDURQi;
-    break;
-  case AArch64::LDRBBui:
-    Scale = 1;
-    UnscaledOp = AArch64::LDURBBi;
-    break;
-  case AArch64::LDRHHui:
-    Scale = 2;
-    UnscaledOp = AArch64::LDURHHi;
-    break;
-  case AArch64::LDRSBXui:
-    Scale = 1;
-    UnscaledOp = AArch64::LDURSBXi;
-    break;
-  case AArch64::LDRSBWui:
-    Scale = 1;
-    UnscaledOp = AArch64::LDURSBWi;
-    break;
-  case AArch64::LDRSHXui:
-    Scale = 2;
-    UnscaledOp = AArch64::LDURSHXi;
-    break;
-  case AArch64::LDRSHWui:
-    Scale = 2;
-    UnscaledOp = AArch64::LDURSHWi;
-    break;
-  case AArch64::LDRSWui:
-    Scale = 4;
-    UnscaledOp = AArch64::LDURSWi;
-    break;
-
-  case AArch64::STRXui:
-    Scale = 8;
-    UnscaledOp = AArch64::STURXi;
-    break;
-  case AArch64::STRWui:
-    Scale = 4;
-    UnscaledOp = AArch64::STURWi;
-    break;
-  case AArch64::STRBui:
-    Scale = 1;
-    UnscaledOp = AArch64::STURBi;
-    break;
-  case AArch64::STRHui:
-    Scale = 2;
-    UnscaledOp = AArch64::STURHi;
-    break;
-  case AArch64::STRSui:
-    Scale = 4;
-    UnscaledOp = AArch64::STURSi;
-    break;
-  case AArch64::STRDui:
-    Scale = 8;
-    UnscaledOp = AArch64::STURDi;
-    break;
-  case AArch64::STRQui:
-    Scale = 16;
-    UnscaledOp = AArch64::STURQi;
-    break;
-  case AArch64::STRBBui:
-    Scale = 1;
-    UnscaledOp = AArch64::STURBBi;
-    break;
-  case AArch64::STRHHui:
-    Scale = 2;
-    UnscaledOp = AArch64::STURHHi;
-    break;
-
-  case AArch64::LDPXi:
-  case AArch64::LDPDi:
-  case AArch64::STPXi:
-  case AArch64::STPDi:
-  case AArch64::LDNPXi:
-  case AArch64::LDNPDi:
-  case AArch64::STNPXi:
-  case AArch64::STNPDi:
-    ImmIdx = 3;
-    IsSigned = true;
-    Scale = 8;
-    break;
-  case AArch64::LDPQi:
-  case AArch64::STPQi:
-  case AArch64::LDNPQi:
-  case AArch64::STNPQi:
-    ImmIdx = 3;
-    IsSigned = true;
-    Scale = 16;
-    break;
-  case AArch64::LDPWi:
-  case AArch64::LDPSi:
-  case AArch64::STPWi:
-  case AArch64::STPSi:
-  case AArch64::LDNPWi:
-  case AArch64::LDNPSi:
-  case AArch64::STNPWi:
-  case AArch64::STNPSi:
-    ImmIdx = 3;
-    IsSigned = true;
-    Scale = 4;
-    break;
-
-  case AArch64::LDURXi:
-  case AArch64::LDURWi:
-  case AArch64::LDURBi:
-  case AArch64::LDURHi:
-  case AArch64::LDURSi:
-  case AArch64::LDURDi:
-  case AArch64::LDURQi:
-  case AArch64::LDURHHi:
-  case AArch64::LDURBBi:
-  case AArch64::LDURSBXi:
-  case AArch64::LDURSBWi:
-  case AArch64::LDURSHXi:
-  case AArch64::LDURSHWi:
-  case AArch64::LDURSWi:
-  case AArch64::STURXi:
-  case AArch64::STURWi:
-  case AArch64::STURBi:
-  case AArch64::STURHi:
-  case AArch64::STURSi:
-  case AArch64::STURDi:
-  case AArch64::STURQi:
-  case AArch64::STURBBi:
-  case AArch64::STURHHi:
-    Scale = 1;
-    break;
   }
 
-  Offset += MI.getOperand(ImmIdx).getImm() * Scale;
+  // Get the min/max offset and the scale.
+  unsigned Scale, Width;
+  int64_t MinOff, MaxOff;
+  if (!AArch64InstrInfo::getMemOpInfo(MI.getOpcode(), Scale, Width, MinOff,
+                                      MaxOff))
+    llvm_unreachable("unhandled opcode in isAArch64FrameOffsetLegal");
 
-  bool useUnscaledOp = false;
+  // Construct the complete offset.
+  const MachineOperand &ImmOpnd =
+      MI.getOperand(AArch64InstrInfo::getLoadStoreImmIdx(MI.getOpcode()));
+  Offset += ImmOpnd.getImm() * Scale;
+
   // If the offset doesn't match the scale, we rewrite the instruction to
   // use the unscaled instruction instead. Likewise, if we have a negative
-  // offset (and have an unscaled op to use).
-  if ((Offset & (Scale - 1)) != 0 || (Offset < 0 && UnscaledOp != 0))
-    useUnscaledOp = true;
+  // offset and there is an unscaled op to use.
+  Optional<unsigned> UnscaledOp =
+      AArch64InstrInfo::getUnscaledLdSt(MI.getOpcode());
+  bool useUnscaledOp = UnscaledOp && (Offset % Scale || Offset < 0);
+  if (useUnscaledOp &&
+      !AArch64InstrInfo::getMemOpInfo(*UnscaledOp, Scale, Width, MinOff, MaxOff))
+    llvm_unreachable("unhandled opcode in isAArch64FrameOffsetLegal");
 
-  // Use an unscaled addressing mode if the instruction has a negative offset
-  // (or if the instruction is already using an unscaled addressing mode).
-  unsigned MaskBits;
-  if (IsSigned) {
-    // ldp/stp instructions.
-    MaskBits = 7;
-    Offset /= Scale;
-  } else if (UnscaledOp == 0 || useUnscaledOp) {
-    MaskBits = 9;
-    IsSigned = true;
-    Scale = 1;
-  } else {
-    MaskBits = 12;
-    IsSigned = false;
-    Offset /= Scale;
+  int64_t Remainder = Offset % Scale;
+  assert(!(Remainder && useUnscaledOp) &&
+         "Cannot have remainder when using unscaled op");
+
+  assert(MinOff < MaxOff && "Unexpected Min/Max offsets");
+  int NewOffset = Offset / Scale;
+  if (MinOff <= NewOffset && NewOffset <= MaxOff)
+    Offset = Remainder;
+  else {
+    NewOffset = NewOffset < 0 ? MinOff : MaxOff;
+    Offset = Offset - NewOffset * Scale + Remainder;
   }
 
-  // Attempt to fold address computation.
-  int MaxOff = (1 << (MaskBits - IsSigned)) - 1;
-  int MinOff = (IsSigned ? (-MaxOff - 1) : 0);
-  if (Offset >= MinOff && Offset <= MaxOff) {
-    if (EmittableOffset)
-      *EmittableOffset = Offset;
-    Offset = 0;
-  } else {
-    int NewOff = Offset < 0 ? MinOff : MaxOff;
-    if (EmittableOffset)
-      *EmittableOffset = NewOff;
-    Offset = (Offset - NewOff) * Scale;
-  }
+  if (EmittableOffset)
+    *EmittableOffset = NewOffset;
   if (OutUseUnscaledOp)
     *OutUseUnscaledOp = useUnscaledOp;
-  if (OutUnscaledOp)
-    *OutUnscaledOp = UnscaledOp;
+  if (OutUnscaledOp && UnscaledOp)
+    *OutUnscaledOp = *UnscaledOp;
+
   return AArch64FrameOffsetCanUpdate |
          (Offset == 0 ? AArch64FrameOffsetIsLegal : 0);
 }
@@ -5014,8 +4934,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // At this point, we have a stack instruction that we might need to
     // fix up. We'll handle it if it's a load or store.
     if (MI.mayLoadOrStore()) {
-      MachineOperand *Base; // Filled with the base operand of MI.
-      int64_t Offset;       // Filled with the offset of MI.
+      const MachineOperand *Base; // Filled with the base operand of MI.
+      int64_t Offset;             // Filled with the offset of MI.
 
       // Does it allow us to offset the base operand and is the base the
       // register SP?
@@ -5384,7 +5304,7 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 
 void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
   for (MachineInstr &MI : MBB) {
-    MachineOperand *Base;
+    const MachineOperand *Base;
     unsigned Width;
     int64_t Offset;
 
@@ -5582,7 +5502,7 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
 
 bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   MachineFunction &MF) const {
-  return MF.getFunction().optForMinSize();
+  return MF.getFunction().hasMinSize();
 }
 
 #define GET_INSTRINFO_HELPERS

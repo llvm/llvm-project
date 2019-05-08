@@ -11,3 +11,4 @@ def READONLY : Flag<["/", "-"], "READONLY">, HelpText<"">;
 def VERBOSE : Flag<["/", "-"], "VERBOSE">, HelpText<"">;
 def HELP : Flag<["/", "-"], "HELP">;
 def H : Flag<["/", "-"], "H">, Alias<HELP>;
+def HELP_Q : Flag<["/?", "-?"], "">, Alias<HELP>;

@@ -102,6 +102,7 @@ class BasicExprCommandsTestCase(TestBase):
         # (const char *) $8 = 0x... "/Volumes/data/lldb/svn/trunk/test/expression_command/test/a.out"
 
     @add_test_categories(['pyapi'])
+    @expectedFlakeyNetBSD
     def test_evaluate_expression_python(self):
         """Test SBFrame.EvaluateExpression() API for evaluating an expression."""
         self.build()

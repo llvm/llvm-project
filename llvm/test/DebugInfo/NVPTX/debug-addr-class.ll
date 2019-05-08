@@ -142,7 +142,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b8 1                                   // DW_FORM_addr
 ; CHECK-NEXT: .b8 64                                  // DW_AT_frame_base
 ; CHECK-NEXT: .b8 10                                  // DW_FORM_block1
-; CHECK-NEXT: .b8 135,64                              // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 135                                 // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 64
 ; CHECK-NEXT: .b8 8                                   // DW_FORM_string
 ; CHECK-NEXT: .b8 3                                   // DW_AT_name
 ; CHECK-NEXT: .b8 8                                   // DW_FORM_string
@@ -177,20 +178,85 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b32 .debug_abbrev                      // Offset Into Abbrev. Section
 ; CHECK-NEXT: .b8 8                                   // Address Size (in bytes)
 ; CHECK-NEXT: .b8 1                                   // Abbrev [1] 0xb:0xd2 DW_TAG_compile_unit
-; CHECK-NEXT: .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,57,46,48,46,48,32,40,116,114,117,110,107,32,51,53,49,57,54,57,41,32,40,108,108,118,109 // DW_AT_producer
-; CHECK-NEXT: .b8 47,116,114,117,110,107,32,51,53,49,57,55,51,41
+; CHECK-NEXT: .b8 99                                  // DW_AT_producer
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 105
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 57
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 48
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 40
+; CHECK-NEXT: .b8 116
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 117
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 107
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 53
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 57
+; CHECK-NEXT: .b8 54
+; CHECK-NEXT: .b8 57
+; CHECK-NEXT: .b8 41
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 40
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 118
+; CHECK-NEXT: .b8 109
+; CHECK-NEXT: .b8 47
+; CHECK-NEXT: .b8 116
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 117
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 107
+; CHECK-NEXT: .b8 32
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 53
+; CHECK-NEXT: .b8 49
+; CHECK-NEXT: .b8 57
+; CHECK-NEXT: .b8 55
+; CHECK-NEXT: .b8 51
+; CHECK-NEXT: .b8 41
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 4                                   // DW_AT_language
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 110,101,119,46,99,99                // DW_AT_name
+; CHECK-NEXT: .b8 110                                 // DW_AT_name
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 119
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b32 .debug_line                        // DW_AT_stmt_list
-; CHECK-NEXT: .b8 47,116,109,112                      // DW_AT_comp_dir
+; CHECK-NEXT: .b8 47                                  // DW_AT_comp_dir
+; CHECK-NEXT: .b8 116
+; CHECK-NEXT: .b8 109
+; CHECK-NEXT: .b8 112
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b64 Lfunc_begin0                       // DW_AT_low_pc
 ; CHECK-NEXT: .b64 Lfunc_end0                         // DW_AT_high_pc
 ; CHECK-NEXT: .b8 2                                   // Abbrev [2] 0x65:0x1a DW_TAG_variable
-; CHECK-NEXT: .b8 71,76,79,66,65,76                   // DW_AT_name
+; CHECK-NEXT: .b8 71                                  // DW_AT_name
+; CHECK-NEXT: .b8 76
+; CHECK-NEXT: .b8 79
+; CHECK-NEXT: .b8 66
+; CHECK-NEXT: .b8 65
+; CHECK-NEXT: .b8 76
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b32 127                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
@@ -201,12 +267,19 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b8 3
 ; CHECK-NEXT: .b64 GLOBAL
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0x7f:0x7 DW_TAG_base_type
-; CHECK-NEXT: .b8 105,110,116                         // DW_AT_name
+; CHECK-NEXT: .b8 105                                 // DW_AT_name
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 5                                   // DW_AT_encoding
 ; CHECK-NEXT: .b8 4                                   // DW_AT_byte_size
 ; CHECK-NEXT: .b8 2                                   // Abbrev [2] 0x86:0x1a DW_TAG_variable
-; CHECK-NEXT: .b8 83,72,65,82,69,68                   // DW_AT_name
+; CHECK-NEXT: .b8 83                                  // DW_AT_name
+; CHECK-NEXT: .b8 72
+; CHECK-NEXT: .b8 65
+; CHECK-NEXT: .b8 82
+; CHECK-NEXT: .b8 69
+; CHECK-NEXT: .b8 68
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b32 127                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
@@ -221,9 +294,15 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b64 Lfunc_end0                         // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                   // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
-; CHECK-NEXT: .b8 116,101,115,116                     // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 116                                 // DW_AT_MIPS_linkage_name
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 116,101,115,116                     // DW_AT_name
+; CHECK-NEXT: .b8 116                                 // DW_AT_name
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 1                                   // DW_AT_decl_file
 ; CHECK-NEXT: .b8 6                                   // DW_AT_decl_line
@@ -242,7 +321,11 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b32 127                                // DW_AT_type
 ; CHECK-NEXT: .b8 0                                   // End Of Children Mark
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0xd3:0x9 DW_TAG_base_type
-; CHECK-NEXT: .b8 102,108,111,97,116                  // DW_AT_name
+; CHECK-NEXT: .b8 102                                 // DW_AT_name
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 4                                   // DW_AT_encoding
 ; CHECK-NEXT: .b8 4                                   // DW_AT_byte_size

@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include "LoopConvertUtils.h"
 
 namespace clang {

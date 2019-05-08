@@ -59,7 +59,7 @@ static lldb::addr_t findSymbolAddress(Process *proc, ConstString findName) {
   for (size_t i = 0; i < symtab->GetNumSymbols(); i++) {
     const Symbol *sym = symtab->SymbolAtIndex(i);
     assert(sym != nullptr);
-    const ConstString &symName = sym->GetName();
+    ConstString symName = sym->GetName();
 
     if (ConstString::Compare(findName, symName) == 0) {
       Address addr = sym->GetAddress();
@@ -199,7 +199,7 @@ ModuleSP DynamicLoaderHexagonDYLD::GetTargetExecutable() {
     return executable;
 
   // TODO: What case is this code used?
-  executable = target.GetSharedModule(module_spec);
+  executable = target.GetOrCreateModule(module_spec, true /* notify */);
   if (executable.get() != target.GetExecutableModulePointer()) {
     // Don't load dependent images since we are in dyld where we will know and
     // find out about all images that are loaded
@@ -243,9 +243,9 @@ void DynamicLoaderHexagonDYLD::UpdateLoadedSections(ModuleSP module,
   }
 }
 
-/// Removes the loaded sections from the target in @p module.
+/// Removes the loaded sections from the target in \p module.
 ///
-/// @param module The module to traverse.
+/// \param module The module to traverse.
 void DynamicLoaderHexagonDYLD::UnloadSections(const ModuleSP module) {
   Target &target = m_process->GetTarget();
   const SectionList *sections = GetSectionListFromModule(module);

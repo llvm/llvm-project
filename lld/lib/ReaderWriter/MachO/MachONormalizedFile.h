@@ -287,7 +287,8 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
 /// Takes in-memory normalized view and writes a mach-o object file.
 llvm::Error writeBinary(const NormalizedFile &file, StringRef path);
 
-size_t headerAndLoadCommandsSize(const NormalizedFile &file);
+size_t headerAndLoadCommandsSize(const NormalizedFile &file,
+                                 bool includeFunctionStarts);
 
 
 /// Parses a yaml encoded mach-o file to produce an in-memory normalized view.

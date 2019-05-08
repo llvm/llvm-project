@@ -55,7 +55,7 @@ const SBEvent &SBEvent::operator=(const SBEvent &rhs) {
     m_event_sp = rhs.m_event_sp;
     m_opaque_ptr = rhs.m_opaque_ptr;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBEvent::~SBEvent() {}
@@ -75,23 +75,12 @@ const char *SBEvent::GetDataFlavor() {
 uint32_t SBEvent::GetType() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBEvent, GetType);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   const Event *lldb_event = get();
   uint32_t event_type = 0;
   if (lldb_event)
     event_type = lldb_event->GetType();
 
-  if (log) {
-    StreamString sstr;
-    if (lldb_event && lldb_event->GetBroadcaster() &&
-        lldb_event->GetBroadcaster()->GetEventNames(sstr, event_type, true))
-      log->Printf("SBEvent(%p)::GetType () => 0x%8.8x (%s)",
-                  static_cast<void *>(get()), event_type, sstr.GetData());
-    else
-      log->Printf("SBEvent(%p)::GetType () => 0x%8.8x",
-                  static_cast<void *>(get()), event_type);
-  }
 
   return event_type;
 }
@@ -135,11 +124,6 @@ bool SBEvent::BroadcasterMatchesRef(const SBBroadcaster &broadcaster) {
   if (lldb_event)
     success = lldb_event->BroadcasterIs(broadcaster.get());
 
-  // For logging, this gets a little chatty so only enable this when verbose
-  // logging is on
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  LLDB_LOGV(log, "({0}) (SBBroadcaster({1}): {2}) => {3}", get(),
-            broadcaster.get(), broadcaster.GetName(), success);
 
   return success;
 }
@@ -177,6 +161,10 @@ void SBEvent::reset(Event *event_ptr) {
 
 bool SBEvent::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBEvent, IsValid);
+  return this->operator bool();
+}
+SBEvent::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBEvent, operator bool);
 
   // Do NOT use m_opaque_ptr directly!!! Must use the SBEvent::get() accessor.
   // See comments in SBEvent::get()....
@@ -186,14 +174,6 @@ bool SBEvent::IsValid() const {
 const char *SBEvent::GetCStringFromEvent(const SBEvent &event) {
   LLDB_RECORD_STATIC_METHOD(const char *, SBEvent, GetCStringFromEvent,
                             (const lldb::SBEvent &), event);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBEvent(%p)::GetCStringFromEvent () => \"%s\"",
-                static_cast<void *>(event.get()),
-                reinterpret_cast<const char *>(
-                    EventDataBytes::GetBytesFromEvent(event.get())));
 
   return reinterpret_cast<const char *>(
       EventDataBytes::GetBytesFromEvent(event.get()));
@@ -225,4 +205,38 @@ bool SBEvent::GetDescription(SBStream &description) const {
     strm.PutCString("No value");
 
   return true;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBEvent>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (uint32_t, const char *, uint32_t));
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (lldb::EventSP &));
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (lldb_private::Event *));
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(const lldb::SBEvent &,
+                       SBEvent, operator=,(const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(const char *, SBEvent, GetDataFlavor, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBEvent, GetType, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBBroadcaster, SBEvent, GetBroadcaster,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBEvent, GetBroadcasterClass, ());
+  LLDB_REGISTER_METHOD(bool, SBEvent, BroadcasterMatchesPtr,
+                       (const lldb::SBBroadcaster *));
+  LLDB_REGISTER_METHOD(bool, SBEvent, BroadcasterMatchesRef,
+                       (const lldb::SBBroadcaster &));
+  LLDB_REGISTER_METHOD(void, SBEvent, Clear, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBEvent, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBEvent, operator bool, ());
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBEvent, GetCStringFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(bool, SBEvent, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBEvent, GetDescription,
+                             (lldb::SBStream &));
+}
+
+}
 }

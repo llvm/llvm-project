@@ -691,7 +691,8 @@ SystemZVectorConstantInfo::SystemZVectorConstantInfo(BuildVectorSDNode *BVN) {
                        true);
 }
 
-bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
+bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                         bool ForCodeSize) const {
   // We can load zero using LZ?R and negative zero using LZ?R;LC?BR.
   if (Imm.isZero() || Imm.isNegZero())
     return true;

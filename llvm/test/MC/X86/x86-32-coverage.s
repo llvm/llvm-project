@@ -10808,3 +10808,11 @@ enclu
 // CHECK: enclv
 // CHECK: encoding: [0x0f,0x01,0xc0]
 enclv
+
+// CHECK: aam # encoding: [0xd4,0x0a]
+// INTEL: aam{{$}}
+aam $10
+
+// CHECK: aad # encoding: [0xd5,0x0a]
+// INTEL: aad{{$}}
+aad $10

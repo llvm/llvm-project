@@ -132,10 +132,10 @@ define i128 @or128(i128* %p) {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl %edi, 12(%esi)
-; X32-NEXT:    movl %edx, 8(%esi)
-; X32-NEXT:    movl %ecx, 4(%esi)
+; X32-NEXT:    movl %edi, 8(%esi)
+; X32-NEXT:    movl %edx, 12(%esi)
 ; X32-NEXT:    movl %eax, (%esi)
+; X32-NEXT:    movl %ecx, 4(%esi)
 ; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    leal -8(%ebp), %esp
 ; X32-NEXT:    popl %esi

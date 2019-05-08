@@ -13,6 +13,7 @@
 #ifndef LLD_ELF_SYMBOLS_H
 #define LLD_ELF_SYMBOLS_H
 
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Strings.h"
@@ -29,15 +30,6 @@ std::string toString(const elf::Symbol &);
 std::string toString(const elf::InputFile *);
 
 namespace elf {
-
-class ArchiveFile;
-class BitcodeFile;
-class BssSection;
-class InputFile;
-class LazyObjFile;
-template <class ELFT> class ObjFile;
-class OutputSection;
-template <class ELFT> class SharedFile;
 
 // This is a StringRef-like container that doesn't run strlen().
 //
@@ -109,8 +101,8 @@ public:
 
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for
-  // unreferenced DSO symbols and bitcode symbols that are unreferenced except
-  // by other bitcode objects.
+  // unreferenced DSO symbols, lazy (archive) symbols, and bitcode symbols that
+  // are unreferenced except by other bitcode objects.
   unsigned IsUsedInRegularObj : 1;
 
   // If this flag is true and the symbol has protected or default visibility, it
@@ -273,9 +265,7 @@ public:
       this->Type = llvm::ELF::STT_FUNC;
   }
 
-  template <class ELFT> SharedFile<ELFT> &getFile() const {
-    return *cast<SharedFile<ELFT>>(File);
-  }
+  SharedFile &getFile() const { return *cast<SharedFile>(File); }
 
   uint32_t Alignment;
 

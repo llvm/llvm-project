@@ -154,14 +154,14 @@ body:             |
     $rsp = frame-setup SUB64ri8 $rsp, 56, implicit-def dead $eflags
     CALL64r undef $rax, csr_64, implicit $rsp, implicit undef $rdi, implicit undef $rsi, implicit-def $rsp, implicit-def $rax
     TEST64rr $rax, $rax, implicit-def $eflags
-    JNE_1 %bb.3.bb3, implicit killed $eflags
+    JCC_1 %bb.3.bb3, 5, implicit killed $eflags
   
   bb.1.bb2:
     successors: %bb.2(0x40000000), %bb.13.bb59(0x40000000)
   
     $ebp = XOR32rr undef $ebp, undef $ebp, implicit-def dead $eflags
     TEST8rr $bpl, $bpl, implicit-def $eflags
-    JE_1 %bb.13.bb59, implicit killed $eflags
+    JCC_1 %bb.13.bb59, 4, implicit killed $eflags
   
   bb.2:
     successors: %bb.12.bb51(0x80000000)
@@ -194,7 +194,7 @@ body:             |
     $ebx = MOV32rr killed $eax, implicit-def $rbx
     $r14d = MOV32rr $ebx, implicit-def $r14
     TEST8rr $sil, $sil, implicit-def $eflags
-    JNE_1 %bb.6.bb26, implicit $eflags
+    JCC_1 %bb.6.bb26, 5, implicit $eflags
   
   bb.5.bb15:
     successors: %bb.6.bb26(0x80000000)
@@ -217,7 +217,7 @@ body:             |
     $rax = MOV64ri @global.1
     $rax = MOV64rm killed $rax, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from @global.1)
     TEST64rr $rax, $rax, implicit-def $eflags
-    $rax = CMOVE64rr undef $rax, killed $rax, implicit killed $eflags
+    $rax = CMOV64rr undef $rax, killed $rax, 4, implicit killed $eflags
     $ecx = MOV32rm undef $rax, 1, $noreg, 0, $noreg :: (load 4 from `i32* undef`)
     $rdx = MOV64rm $r12, 8, $r14, 0, $noreg :: (load 8 from %ir.tmp3)
     $r15 = LEA64r $rdx, 1, $noreg, 1, _
@@ -227,7 +227,7 @@ body:             |
     $r13 = MOV64rm killed $rax, 1, $noreg, 768, $noreg :: (load 8 from %ir.tmp33)
     TEST8rr $sil, $sil, implicit-def $eflags
     $rax = IMPLICIT_DEF
-    JNE_1 %bb.8.bb37, implicit $eflags
+    JCC_1 %bb.8.bb37, 5, implicit $eflags
   
   bb.7.bb35:
     successors: %bb.8.bb37(0x80000000)
@@ -244,7 +244,7 @@ body:             |
   
     $rcx = MOV64rm killed $rax, 1, $noreg, 760, $noreg :: (load 8 from %ir.tmp40)
     CMP64rr $r13, $rcx, implicit-def $eflags
-    JL_1 %bb.10.bb37, implicit $eflags
+    JCC_1 %bb.10.bb37, 12, implicit $eflags
   
   bb.9.bb37:
     successors: %bb.10.bb37(0x80000000)
@@ -264,7 +264,7 @@ body:             |
     $ecx = MOV32ri 6
     CMP32ri $eax, 15141, implicit-def $eflags
     $xmm0 = MOVSDrm $rsp, 1, $noreg, 40, $noreg :: (load 8 from %stack.4)
-    JL_1 %bb.4.bb7, implicit $eflags
+    JCC_1 %bb.4.bb7, 12, implicit $eflags
   
   bb.11.bb51.loopexit:
     successors: %bb.12.bb51(0x80000000)

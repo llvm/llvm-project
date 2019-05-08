@@ -1,7 +1,7 @@
 # Check that yaml2obj takes in account section AddressAlign field.
 
 # RUN: yaml2obj %s > %t
-# RUN: llvm-readobj -s %t | FileCheck %s
+# RUN: llvm-readobj -S %t | FileCheck %s
 
 # CHECK:      Section {
 # CHECK:        Index: 2
@@ -41,13 +41,14 @@ Sections:
     Size:          4
 
 Symbols:
-  Global:
-    - Name:     T0
-      Type:     STT_FUNC
-      Section:  .text
-      Size:     4
-    - Name:     D0
-      Type:     STT_OBJECT
-      Section:  .data
-      Size:     4
+  - Name:     T0
+    Type:     STT_FUNC
+    Section:  .text
+    Size:     4
+    Binding:  STB_GLOBAL
+  - Name:     D0
+    Type:     STT_OBJECT
+    Section:  .data
+    Size:     4
+    Binding:  STB_GLOBAL
 ...

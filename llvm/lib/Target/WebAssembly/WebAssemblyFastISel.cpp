@@ -207,7 +207,6 @@ public:
 } // end anonymous namespace
 
 bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
-
   const User *U = nullptr;
   unsigned Opcode = Instruction::UserOp1;
   if (const auto *I = dyn_cast<Instruction>(Obj)) {
@@ -230,6 +229,8 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
       return false;
 
   if (const auto *GV = dyn_cast<GlobalValue>(Obj)) {
+    if (TLI.isPositionIndependent())
+      return false;
     if (Addr.getGlobalValue())
       return false;
     Addr.setGlobalValue(GV);
@@ -604,7 +605,9 @@ unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
 }
 
 unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
-  if (const auto *GV = dyn_cast<GlobalValue>(C)) {
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
+    if (TLI.isPositionIndependent())
+      return 0;
     unsigned ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                : &WebAssembly::I32RegClass);
@@ -845,6 +848,13 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     Args.push_back(Reg);
   }
 
+  unsigned CalleeReg = 0;
+  if (!IsDirect) {
+    CalleeReg = getRegForValue(Call->getCalledValue());
+    if (!CalleeReg)
+      return false;
+  }
+
   auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc));
 
   if (!IsVoid)
@@ -852,12 +862,8 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (IsDirect)
     MIB.addGlobalAddress(Func);
-  else {
-    unsigned Reg = getRegForValue(Call->getCalledValue());
-    if (Reg == 0)
-      return false;
-    MIB.addReg(Reg);
-  }
+  else
+    MIB.addReg(CalleeReg);
 
   for (unsigned ArgReg : Args)
     MIB.addReg(ArgReg);

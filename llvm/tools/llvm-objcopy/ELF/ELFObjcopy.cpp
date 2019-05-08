@@ -70,7 +70,22 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !isDWOSection(Sec);
 }
 
-static uint64_t setSectionFlagsPreserveMask(uint64_t OldFlags,
+uint64_t getNewShfFlags(SectionFlag AllFlags) {
+  uint64_t NewFlags = 0;
+  if (AllFlags & SectionFlag::SecAlloc)
+    NewFlags |= ELF::SHF_ALLOC;
+  if (!(AllFlags & SectionFlag::SecReadonly))
+    NewFlags |= ELF::SHF_WRITE;
+  if (AllFlags & SectionFlag::SecCode)
+    NewFlags |= ELF::SHF_EXECINSTR;
+  if (AllFlags & SectionFlag::SecMerge)
+    NewFlags |= ELF::SHF_MERGE;
+  if (AllFlags & SectionFlag::SecStrings)
+    NewFlags |= ELF::SHF_STRINGS;
+  return NewFlags;
+}
+
+static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
                                             uint64_t NewFlags) {
   // Preserve some flags which should not be dropped when setting flags.
   // Also, preserve anything OS/processor dependant.
@@ -79,6 +94,18 @@ static uint64_t setSectionFlagsPreserveMask(uint64_t OldFlags,
                                 ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
                                 ELF::SHF_TLS | ELF::SHF_INFO_LINK;
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
+}
+
+static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
+  Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, getNewShfFlags(Flags));
+
+  // In GNU objcopy, certain flags promote SHT_NOBITS to SHT_PROGBITS. This rule
+  // may promote more non-ALLOC sections than GNU objcopy, but it is fine as
+  // non-ALLOC SHT_NOBITS sections do not make much sense.
+  if (Sec.Type == SHT_NOBITS &&
+      (!(Sec.Flags & ELF::SHF_ALLOC) ||
+       Flags & (SectionFlag::SecContents | SectionFlag::SecLoad)))
+    Sec.Type = SHT_PROGBITS;
 }
 
 static ElfType getOutputElfType(const Binary &Bin) {
@@ -157,6 +184,16 @@ findBuildID(const object::ELFObjectFileBase &In) {
   llvm_unreachable("Bad file format");
 }
 
+template <class... Ts>
+static Error makeStringError(std::error_code EC, const Twine &Msg, Ts&&... Args) {
+  std::string FullMsg = (EC.message() + ": " + Msg).str();
+  return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
+}
+
+#define MODEL_8 "%%%%%%%%"
+#define MODEL_16 MODEL_8 MODEL_8
+#define MODEL_32 (MODEL_16 MODEL_16)
+
 static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
                               StringRef Suffix,
                               ArrayRef<uint8_t> BuildIdBytes) {
@@ -165,19 +202,43 @@ static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
   if (auto EC = sys::fs::create_directories(Path))
     return createFileError(
         Path.str(),
-        createStringError(EC, "cannot create build ID link directory"));
+        makeStringError(EC, "cannot create build ID link directory"));
 
   sys::path::append(Path,
                     llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
   Path += Suffix;
-  if (auto EC = sys::fs::create_hard_link(ToLink, Path)) {
-    // Hard linking failed, try to remove the file first if it exists.
-    if (sys::fs::exists(Path))
-      sys::fs::remove(Path);
-    EC = sys::fs::create_hard_link(ToLink, Path);
-    if (EC)
-      return createStringError(EC, "cannot link %s to %s", ToLink.data(),
-                               Path.data());
+  SmallString<128> TmpPath;
+  // create_hard_link races so we need to link to a temporary path but
+  // we want to make sure that we choose a filename that does not exist.
+  // By using 32 model characters we get 128-bits of entropy. It is
+  // unlikely that this string has ever existed before much less exists
+  // on this disk or in the current working directory.
+  // Additionally we prepend the original Path for debugging but also
+  // because it ensures that we're linking within a directory on the same
+  // partition on the same device which is critical. It has the added
+  // win of yet further decreasing the odds of a conflict.
+  sys::fs::createUniquePath(Twine(Path) + "-" + MODEL_32 + ".tmp", TmpPath,
+                            /*MakeAbsolute*/ false);
+  if (auto EC = sys::fs::create_hard_link(ToLink, TmpPath)) {
+    Path.push_back('\0');
+    return makeStringError(EC, "cannot link %s to %s", ToLink.data(),
+                             Path.data());
+  }
+  // We then atomically rename the link into place which will just move the
+  // link. If rename fails something is more seriously wrong so just return
+  // an error.
+  if (auto EC = sys::fs::rename(TmpPath, Path)) {
+    Path.push_back('\0');
+    return makeStringError(EC, "cannot link %s to %s", ToLink.data(),
+                             Path.data());
+  }
+  // If `Path` was already a hard-link to the same underlying file then the
+  // temp file will be left so we need to remove it. Remove will not cause
+  // an error by default if the file is already gone so just blindly remove
+  // it rather than checking.
+  if (auto EC = sys::fs::remove(TmpPath)) {
+    TmpPath.push_back('\0');
+    return makeStringError(EC, "could not remove %s", TmpPath.data());
   }
   return Error::success();
 }
@@ -188,10 +249,13 @@ static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
     return onlyKeepDWOPred(*DWOFile, Sec);
   };
-  if (Error E = DWOFile->removeSections(OnlyKeepDWOPred))
+  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks,
+                                        OnlyKeepDWOPred))
     return E;
-  if (Config.OutputArch)
+  if (Config.OutputArch) {
     DWOFile->Machine = Config.OutputArch.getValue().EMachine;
+    DWOFile->OSABI = Config.OutputArch.getValue().OSABI;
+  }
   FileBuffer FB(File);
   auto Writer = createWriter(Config, *DWOFile, FB, OutputElfType);
   if (Error E = Writer->finalize())
@@ -229,30 +293,27 @@ static bool isCompressable(const SectionBase &Section) {
 }
 
 static void replaceDebugSections(
-    const CopyConfig &Config, Object &Obj, SectionPred &RemovePred,
+    Object &Obj, SectionPred &RemovePred,
     function_ref<bool(const SectionBase &)> shouldReplace,
     function_ref<SectionBase *(const SectionBase *)> addSection) {
+  // Build a list of the debug sections we are going to replace.
+  // We can't call `addSection` while iterating over sections,
+  // because it would mutate the sections array.
   SmallVector<SectionBase *, 13> ToReplace;
-  SmallVector<RelocationSection *, 13> RelocationSections;
-  for (auto &Sec : Obj.sections()) {
-    if (RelocationSection *R = dyn_cast<RelocationSection>(&Sec)) {
-      if (shouldReplace(*R->getSection()))
-        RelocationSections.push_back(R);
-      continue;
-    }
-
+  for (auto &Sec : Obj.sections())
     if (shouldReplace(Sec))
       ToReplace.push_back(&Sec);
-  }
 
-  for (SectionBase *S : ToReplace) {
-    SectionBase *NewSection = addSection(S);
+  // Build a mapping from original section to a new one.
+  DenseMap<SectionBase *, SectionBase *> FromTo;
+  for (SectionBase *S : ToReplace)
+    FromTo[S] = addSection(S);
 
-    for (RelocationSection *RS : RelocationSections) {
-      if (RS->getSection() == S)
-        RS->setSection(NewSection);
-    }
-  }
+  // Now we want to update the target sections of relocation
+  // sections. Also we will update the relocations themselves
+  // to update the symbol references.
+  for (auto &Sec : Obj.sections())
+    Sec.replaceSectionReferences(FromTo);
 
   RemovePred = [shouldReplace, RemovePred](const SectionBase &Sec) {
     return shouldReplace(Sec) || RemovePred(Sec);
@@ -265,108 +326,94 @@ static bool isUnneededSymbol(const Symbol &Sym) {
          Sym.Type != STT_FILE && Sym.Type != STT_SECTION;
 }
 
-// This function handles the high level operations of GNU objcopy including
-// handling command line options. It's important to outline certain properties
-// we expect to hold of the command line operations. Any operation that "keeps"
-// should keep regardless of a remove. Additionally any removal should respect
-// any previous removals. Lastly whether or not something is removed shouldn't
-// depend a) on the order the options occur in or b) on some opaque priority
-// system. The only priority is that keeps/copies overrule removes.
-static Error handleArgs(const CopyConfig &Config, Object &Obj,
-                        const Reader &Reader, ElfType OutputElfType) {
-
-  if (!Config.SplitDWO.empty())
-    if (Error E =
-            splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
-      return E;
-
-  if (Config.OutputArch)
-    Obj.Machine = Config.OutputArch.getValue().EMachine;
-
+static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   // TODO: update or remove symbols only if there is an option that affects
   // them.
-  if (Obj.SymbolTable) {
-    Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      // Common and undefined symbols don't make sense as local symbols, and can
-      // even cause crashes if we localize those, so skip them.
-      if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
-          ((Config.LocalizeHidden &&
-            (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-           is_contained(Config.SymbolsToLocalize, Sym.Name)))
-        Sym.Binding = STB_LOCAL;
+  if (!Obj.SymbolTable)
+    return Error::success();
 
-      // Note: these two globalize flags have very similar names but different
-      // meanings:
-      //
-      // --globalize-symbol: promote a symbol to global
-      // --keep-global-symbol: all symbols except for these should be made local
-      //
-      // If --globalize-symbol is specified for a given symbol, it will be
-      // global in the output file even if it is not included via
-      // --keep-global-symbol. Because of that, make sure to check
-      // --globalize-symbol second.
-      if (!Config.SymbolsToKeepGlobal.empty() &&
-          !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_LOCAL;
+  Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    // Common and undefined symbols don't make sense as local symbols, and can
+    // even cause crashes if we localize those, so skip them.
+    if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
+        ((Config.LocalizeHidden &&
+          (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
+         is_contained(Config.SymbolsToLocalize, Sym.Name)))
+      Sym.Binding = STB_LOCAL;
 
-      if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_GLOBAL;
+    // Note: these two globalize flags have very similar names but different
+    // meanings:
+    //
+    // --globalize-symbol: promote a symbol to global
+    // --keep-global-symbol: all symbols except for these should be made local
+    //
+    // If --globalize-symbol is specified for a given symbol, it will be
+    // global in the output file even if it is not included via
+    // --keep-global-symbol. Because of that, make sure to check
+    // --globalize-symbol second.
+    if (!Config.SymbolsToKeepGlobal.empty() &&
+        !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_LOCAL;
 
-      if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
-          Sym.Binding == STB_GLOBAL)
-        Sym.Binding = STB_WEAK;
+    if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_GLOBAL;
 
-      if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_WEAK;
+    if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
+        Sym.Binding == STB_GLOBAL)
+      Sym.Binding = STB_WEAK;
 
-      const auto I = Config.SymbolsToRename.find(Sym.Name);
-      if (I != Config.SymbolsToRename.end())
-        Sym.Name = I->getValue();
+    if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_WEAK;
 
-      if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
-        Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
-    });
+    const auto I = Config.SymbolsToRename.find(Sym.Name);
+    if (I != Config.SymbolsToRename.end())
+      Sym.Name = I->getValue();
 
-    // The purpose of this loop is to mark symbols referenced by sections
-    // (like GroupSection or RelocationSection). This way, we know which
-    // symbols are still 'needed' and which are not.
-    if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty()) {
-      for (auto &Section : Obj.sections())
-        Section.markSymbols();
-    }
+    if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
+      Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
+  });
 
-    auto RemoveSymbolsPred = [&](const Symbol &Sym) {
-      if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
-          (Config.KeepFileSymbols && Sym.Type == STT_FILE))
-        return false;
-
-      if ((Config.DiscardMode == DiscardType::All ||
-           (Config.DiscardMode == DiscardType::Locals &&
-            StringRef(Sym.Name).startswith(".L"))) &&
-          Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
-          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
-        return true;
-
-      if (Config.StripAll || Config.StripAllGNU)
-        return true;
-
-      if (is_contained(Config.SymbolsToRemove, Sym.Name))
-        return true;
-
-      if ((Config.StripUnneeded ||
-           is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
-          isUnneededSymbol(Sym))
-        return true;
-
-      return false;
-    };
-    if (Error E = Obj.removeSymbols(RemoveSymbolsPred))
-      return E;
+  // The purpose of this loop is to mark symbols referenced by sections
+  // (like GroupSection or RelocationSection). This way, we know which
+  // symbols are still 'needed' and which are not.
+  if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty()) {
+    for (auto &Section : Obj.sections())
+      Section.markSymbols();
   }
 
+  auto RemoveSymbolsPred = [&](const Symbol &Sym) {
+    if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
+        (Config.KeepFileSymbols && Sym.Type == STT_FILE))
+      return false;
+
+    if ((Config.DiscardMode == DiscardType::All ||
+         (Config.DiscardMode == DiscardType::Locals &&
+          StringRef(Sym.Name).startswith(".L"))) &&
+        Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
+        Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+      return true;
+
+    if (Config.StripAll || Config.StripAllGNU)
+      return true;
+
+    if (is_contained(Config.SymbolsToRemove, Sym.Name))
+      return true;
+
+    if ((Config.StripUnneeded ||
+         is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
+        isUnneededSymbol(Sym))
+      return true;
+
+    return false;
+  };
+
+  return Obj.removeSymbols(RemoveSymbolsPred);
+}
+
+static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
   // Removes:
@@ -406,7 +453,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
 
   if (Config.StripSections) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
-      return RemovePred(Sec) || (Sec.Flags & SHF_ALLOC) == 0;
+      return RemovePred(Sec) || Sec.ParentSegment == nullptr;
     };
   }
 
@@ -422,7 +469,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
         return true;
       if (&Sec == Obj.SectionNames)
         return false;
-      return (Sec.Flags & SHF_ALLOC) == 0;
+      return (Sec.Flags & SHF_ALLOC) == 0 && Sec.ParentSegment == nullptr;
     };
 
   if (Config.StripAll)
@@ -432,6 +479,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       if (&Sec == Obj.SectionNames)
         return false;
       if (StringRef(Sec.Name).startswith(".gnu.warning"))
+        return false;
+      if (Sec.ParentSegment != nullptr)
         return false;
       return (Sec.Flags & SHF_ALLOC) == 0;
     };
@@ -484,21 +533,51 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   }
 
   if (Config.CompressionType != DebugCompressionType::None)
-    replaceDebugSections(Config, Obj, RemovePred, isCompressable,
+    replaceDebugSections(Obj, RemovePred, isCompressable,
                          [&Config, &Obj](const SectionBase *S) {
                            return &Obj.addSection<CompressedSection>(
                                *S, Config.CompressionType);
                          });
   else if (Config.DecompressDebugSections)
     replaceDebugSections(
-        Config, Obj, RemovePred,
+        Obj, RemovePred,
         [](const SectionBase &S) { return isa<CompressedSection>(&S); },
         [&Obj](const SectionBase *S) {
           auto CS = cast<CompressedSection>(S);
           return &Obj.addSection<DecompressedSection>(*CS);
         });
 
-  if (Error E = Obj.removeSections(RemovePred))
+  return Obj.removeSections(Config.AllowBrokenLinks, RemovePred);
+}
+
+// This function handles the high level operations of GNU objcopy including
+// handling command line options. It's important to outline certain properties
+// we expect to hold of the command line operations. Any operation that "keeps"
+// should keep regardless of a remove. Additionally any removal should respect
+// any previous removals. Lastly whether or not something is removed shouldn't
+// depend a) on the order the options occur in or b) on some opaque priority
+// system. The only priority is that keeps/copies overrule removes.
+static Error handleArgs(const CopyConfig &Config, Object &Obj,
+                        const Reader &Reader, ElfType OutputElfType) {
+
+  if (!Config.SplitDWO.empty())
+    if (Error E =
+            splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
+      return E;
+
+  if (Config.OutputArch) {
+    Obj.Machine = Config.OutputArch.getValue().EMachine;
+    Obj.OSABI = Config.OutputArch.getValue().OSABI;
+  }
+
+  // It is important to remove the sections first. For example, we want to
+  // remove the relocation sections before removing the symbols. That allows
+  // us to avoid reporting the inappropriate errors about removing symbols
+  // named in relocations.
+  if (Error E = replaceAndRemoveSections(Config, Obj))
+    return E;
+
+  if (Error E = updateAndRemoveSymbols(Config, Obj))
     return E;
 
   if (!Config.SectionsToRename.empty()) {
@@ -508,8 +587,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
         const SectionRename &SR = Iter->second;
         Sec.Name = SR.NewName;
         if (SR.NewFlags.hasValue())
-          Sec.Flags =
-              setSectionFlagsPreserveMask(Sec.Flags, SR.NewFlags.getValue());
+          setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
       }
     }
   }
@@ -519,39 +597,35 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       const auto Iter = Config.SetSectionFlags.find(Sec.Name);
       if (Iter != Config.SetSectionFlags.end()) {
         const SectionFlagsUpdate &SFU = Iter->second;
-        Sec.Flags = setSectionFlagsPreserveMask(Sec.Flags, SFU.NewFlags);
+        setSectionFlagsAndType(Sec, SFU.NewFlags);
       }
     }
   }
 
-  if (!Config.AddSection.empty()) {
-    for (const auto &Flag : Config.AddSection) {
-      std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-      StringRef SecName = SecPair.first;
-      StringRef File = SecPair.second;
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-          MemoryBuffer::getFile(File);
-      if (!BufOrErr)
-        return createFileError(File, errorCodeToError(BufOrErr.getError()));
-      std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
-      ArrayRef<uint8_t> Data(
-          reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
-          Buf->getBufferSize());
-      OwnedDataSection &NewSection =
-          Obj.addSection<OwnedDataSection>(SecName, Data);
-      if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
-        NewSection.Type = SHT_NOTE;
-    }
+  for (const auto &Flag : Config.AddSection) {
+    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+    StringRef SecName = SecPair.first;
+    StringRef File = SecPair.second;
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFile(File);
+    if (!BufOrErr)
+      return createFileError(File, errorCodeToError(BufOrErr.getError()));
+    std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
+    ArrayRef<uint8_t> Data(
+        reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
+        Buf->getBufferSize());
+    OwnedDataSection &NewSection =
+        Obj.addSection<OwnedDataSection>(SecName, Data);
+    if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
+      NewSection.Type = SHT_NOTE;
   }
 
-  if (!Config.DumpSection.empty()) {
-    for (const auto &Flag : Config.DumpSection) {
-      std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-      StringRef SecName = SecPair.first;
-      StringRef File = SecPair.second;
-      if (Error E = dumpSectionToFile(SecName, File, Obj))
-        return createFileError(Config.InputFilename, std::move(E));
-    }
+  for (const auto &Flag : Config.DumpSection) {
+    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+    StringRef SecName = SecPair.first;
+    StringRef File = SecPair.second;
+    if (Error E = dumpSectionToFile(SecName, File, Obj))
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   if (!Config.AddGnuDebugLink.empty())

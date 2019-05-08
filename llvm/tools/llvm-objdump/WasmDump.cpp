@@ -14,10 +14,10 @@
 #include "llvm-objdump.h"
 #include "llvm/Object/Wasm.h"
 
-using namespace llvm;
-using namespace object;
+using namespace llvm::object;
 
-void llvm::printWasmFileHeader(const object::ObjectFile *Obj) {
+namespace llvm {
+void printWasmFileHeader(const object::ObjectFile *Obj) {
   const auto *File = dyn_cast<const WasmObjectFile>(Obj);
 
   outs() << "Program Header:\n";
@@ -26,10 +26,9 @@ void llvm::printWasmFileHeader(const object::ObjectFile *Obj) {
   outs() << "\n";
 }
 
-std::error_code
-llvm::getWasmRelocationValueString(const WasmObjectFile *Obj,
-                                   const RelocationRef &RelRef,
-                                   SmallVectorImpl<char> &Result) {
+Error getWasmRelocationValueString(const WasmObjectFile *Obj,
+                                         const RelocationRef &RelRef,
+                                         SmallVectorImpl<char> &Result) {
   const wasm::WasmRelocation &Rel = Obj->getWasmRelocation(RelRef);
   symbol_iterator SI = RelRef.getSymbol();
   std::string FmtBuf;
@@ -41,12 +40,13 @@ llvm::getWasmRelocationValueString(const WasmObjectFile *Obj,
   } else {
     Expected<StringRef> SymNameOrErr = SI->getName();
     if (!SymNameOrErr)
-      return errorToErrorCode(SymNameOrErr.takeError());
+      return SymNameOrErr.takeError();
     StringRef SymName = *SymNameOrErr;
     Result.append(SymName.begin(), SymName.end());
   }
   Fmt << (Rel.Addend < 0 ? "" : "+") << Rel.Addend;
   Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
-  return std::error_code();
+  return Error::success();
 }
+} // namespace llvm

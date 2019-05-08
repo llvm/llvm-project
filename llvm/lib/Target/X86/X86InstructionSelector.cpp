@@ -512,10 +512,22 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   LLT Ty = MRI.getType(DefReg);
   const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
+  assert(I.hasOneMemOperand());
   auto &MemOp = **I.memoperands_begin();
-  if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
-    LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
-    return false;
+  if (MemOp.isAtomic()) {
+    // Note: for unordered operations, we rely on the fact the appropriate MMO
+    // is already on the instruction we're mutating, and thus we don't need to
+    // make any changes.  So long as we select an opcode which is capable of
+    // loading or storing the appropriate size atomically, the rest of the
+    // backend is required to respect the MMO state. 
+    if (!MemOp.isUnordered()) {
+      LLVM_DEBUG(dbgs() << "Atomic ordering not supported yet\n");
+      return false;
+    }
+    if (MemOp.getAlignment() < Ty.getSizeInBits()/8) {
+      LLVM_DEBUG(dbgs() << "Unaligned atomics not supported yet\n");
+      return false;
+    }
   }
 
   unsigned NewOpc = getLoadStoreOp(Ty, RB, Opc, MemOp.getAlignment());
@@ -935,7 +947,6 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
   bool SwapArgs;
   std::tie(CC, SwapArgs) = X86::getX86ConditionCode(
       (CmpInst::Predicate)I.getOperand(1).getPredicate());
-  unsigned OpSet = X86::getSETFromCond(CC);
 
   unsigned LHS = I.getOperand(2).getReg();
   unsigned RHS = I.getOperand(3).getReg();
@@ -969,7 +980,7 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
            .addReg(RHS);
 
   MachineInstr &SetInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                   TII.get(OpSet), I.getOperand(0).getReg());
+                                   TII.get(X86::SETCCr), I.getOperand(0).getReg()).addImm(CC);
 
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(SetInst, TII, TRI, RBI);
@@ -990,8 +1001,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
 
   // FCMP_OEQ and FCMP_UNE cannot be checked with a single instruction.
   static const uint16_t SETFOpcTable[2][3] = {
-      {X86::SETEr, X86::SETNPr, X86::AND8rr},
-      {X86::SETNEr, X86::SETPr, X86::OR8rr}};
+      {X86::COND_E, X86::COND_NP, X86::AND8rr},
+      {X86::COND_NE, X86::COND_P, X86::OR8rr}};
   const uint16_t *SETFOpc = nullptr;
   switch (Predicate) {
   default:
@@ -1031,9 +1042,9 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     unsigned FlagReg1 = MRI.createVirtualRegister(&X86::GR8RegClass);
     unsigned FlagReg2 = MRI.createVirtualRegister(&X86::GR8RegClass);
     MachineInstr &Set1 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                  TII.get(SETFOpc[0]), FlagReg1);
+                                  TII.get(X86::SETCCr), FlagReg1).addImm(SETFOpc[0]);
     MachineInstr &Set2 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                  TII.get(SETFOpc[1]), FlagReg2);
+                                  TII.get(X86::SETCCr), FlagReg2).addImm(SETFOpc[1]);
     MachineInstr &Set3 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                   TII.get(SETFOpc[2]), ResultReg)
                               .addReg(FlagReg1)
@@ -1051,7 +1062,6 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   bool SwapArgs;
   std::tie(CC, SwapArgs) = X86::getX86ConditionCode(Predicate);
   assert(CC <= X86::LAST_VALID_COND && "Unexpected condition code.");
-  unsigned Opc = X86::getSETFromCond(CC);
 
   if (SwapArgs)
     std::swap(LhsReg, RhsReg);
@@ -1063,7 +1073,7 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
            .addReg(RhsReg);
 
   MachineInstr &Set =
-      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), ResultReg);
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr), ResultReg).addImm(CC);
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(Set, TII, TRI, RBI);
   I.eraseFromParent();
@@ -1408,8 +1418,8 @@ bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::TEST8ri))
            .addReg(CondReg)
            .addImm(1);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::JNE_1))
-      .addMBB(DestMBB);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::JCC_1))
+      .addMBB(DestMBB).addImm(X86::COND_NE);
 
   constrainSelectedInstRegOperands(TestInst, TII, TRI, RBI);
 

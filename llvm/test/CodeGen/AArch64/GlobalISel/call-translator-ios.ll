@@ -71,7 +71,7 @@ define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
 ; CHECK: G_STORE [[EXT1]](s64), [[ADDR]](p0) :: (store 8 into stack, align 1)
 
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
-; CHECK: [[OFF:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+; CHECK: [[OFF:%[0-9]+]]:_(s64) = COPY [[CST]]
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF]]
 ; CHECK: G_STORE [[EXT2]](s64), [[ADDR]](p0) :: (store 8 into stack + 8, align 1)
 define void @test_split_struct([2 x i64]* %ptr) {

@@ -15,6 +15,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -56,6 +57,15 @@ void CheckerManager::finishedCheckerRegistration() {
     assert(Event.second.HasDispatcher &&
            "No dispatcher registered for an event");
 #endif
+}
+
+void CheckerManager::reportInvalidCheckerOptionValue(
+    const CheckerBase *C, StringRef OptionName, StringRef ExpectedValueDesc) {
+
+  Context.getDiagnostics()
+      .Report(diag::err_analyzer_checker_option_invalid_input)
+          << (llvm::Twine() + C->getTagDescription() + ":" + OptionName).str()
+          << ExpectedValueDesc;
 }
 
 //===----------------------------------------------------------------------===//

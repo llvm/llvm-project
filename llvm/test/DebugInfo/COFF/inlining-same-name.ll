@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-windows-msvc < %s -filetype=obj -o - | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc -mtriple=x86_64-windows-msvc < %s -filetype=obj -o - | llvm-readobj - --codeview | FileCheck %s
 
 ; We should only get one func id record, and both inlinees should point to it,
 ; even though there are two DISubprograms.

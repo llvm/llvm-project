@@ -15,6 +15,9 @@
 
 namespace scudo {
 
+// MapPlatformData is unused on Linux, define it as a minimally sized structure.
+struct MapPlatformData {};
+
 #if SCUDO_ANDROID
 
 #if defined(__aarch64__)

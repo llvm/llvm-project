@@ -239,6 +239,14 @@ public:
   virtual void PragmaWarningPop(SourceLocation Loc) {
   }
 
+  /// Callback invoked when a \#pragma execution_character_set(push) directive
+  /// is read.
+  virtual void PragmaExecCharsetPush(SourceLocation Loc, StringRef Str) {}
+
+  /// Callback invoked when a \#pragma execution_character_set(pop) directive
+  /// is read.
+  virtual void PragmaExecCharsetPop(SourceLocation Loc) {}
+
   /// Callback invoked when a \#pragma clang assume_nonnull begin directive
   /// is read.
   virtual void PragmaAssumeNonNullBegin(SourceLocation Loc) {}
@@ -475,6 +483,16 @@ public:
   void PragmaWarningPop(SourceLocation Loc) override {
     First->PragmaWarningPop(Loc);
     Second->PragmaWarningPop(Loc);
+  }
+
+  void PragmaExecCharsetPush(SourceLocation Loc, StringRef Str) override {
+    First->PragmaExecCharsetPush(Loc, Str);
+    Second->PragmaExecCharsetPush(Loc, Str);
+  }
+
+  void PragmaExecCharsetPop(SourceLocation Loc) override {
+    First->PragmaExecCharsetPop(Loc);
+    Second->PragmaExecCharsetPop(Loc);
   }
 
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override {

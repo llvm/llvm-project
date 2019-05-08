@@ -33,3 +33,10 @@ entry:
   store float %r.val, float addrspace(1)* %r
   ret void
 }
+
+; GFX906-LABEL: {{^}}fdot2_inline_literal
+; GFX906: v_dot2_f32_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+define float @fdot2_inline_literal(<2 x half> %a, <2 x half> %b) {
+  %ret = tail call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float 1.0, i1 false)
+  ret float %ret
+}

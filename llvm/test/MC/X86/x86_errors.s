@@ -158,3 +158,24 @@ mov v_ecx(%eax), %ecx
 // 32: 7: error: invalid operand for instruction
 // 64: 7: error: invalid operand for instruction
 addb (%dx), %al
+
+// 32: error: instruction requires: 64-bit mode
+cqto
+
+// 32: error: instruction requires: 64-bit mode
+cltq
+
+// 32: error: instruction requires: 64-bit mode
+cmpxchg16b (%eax)
+
+// 32: error: unsupported instruction
+// 64: error: unsupported instruction
+{vex2} vmovdqu32 %xmm0, %xmm0
+
+// 32: error: unsupported instruction
+// 64: error: unsupported instruction
+{vex3} vmovdqu32 %xmm0, %xmm0
+
+// 32: error: unsupported instruction
+// 64: error: unsupported instruction
+{evex} vmovdqu %xmm0, %xmm0

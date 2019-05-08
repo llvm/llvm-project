@@ -61,9 +61,6 @@ struct LoopStandardAnalysisResults {
   MemorySSA *MSSA;
 };
 
-/// Enables memory ssa as a dependency for loop passes.
-extern cl::opt<bool> EnableMSSALoopDependency;
-
 /// Extern template declaration for the analysis set for this IR unit.
 extern template class AllAnalysesOn<Loop>;
 

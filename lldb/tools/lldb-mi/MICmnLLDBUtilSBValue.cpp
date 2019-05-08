@@ -21,7 +21,6 @@ static const char *kUnknownValue = "??";
 static const char *kUnresolvedCompositeValue = "{...}";
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLLDBUtilSBValue constructor.
 // Type:    Method.
 // Args:    vrValue             - (R) The LLDB value object.
@@ -41,7 +40,6 @@ CMICmnLLDBUtilSBValue::CMICmnLLDBUtilSBValue(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLLDBUtilSBValue destructor.
 // Type:    Method.
 // Args:    None.
@@ -51,7 +49,6 @@ CMICmnLLDBUtilSBValue::CMICmnLLDBUtilSBValue(
 CMICmnLLDBUtilSBValue::~CMICmnLLDBUtilSBValue() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve from the LLDB SB Value object the name of the variable. If
 // the name
 //          is invalid (or the SBValue object invalid) then "??" is returned.
@@ -68,7 +65,6 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve from the LLDB SB Value object the value of the variable
 // described in
 //          text. If the value is invalid (or the SBValue object invalid) then
@@ -119,7 +115,6 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetValue(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve from the LLDB SB Value object the value of the variable
 // described in
 //          text if it has a simple format (not composite).
@@ -246,7 +241,6 @@ CMICmnLLDBUtilSBValue::GetValueSummary(bool valueOnly,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Check that basic type is a char type. Char type can be signed or
 // unsigned.
 // Type:    Static.
@@ -268,7 +262,6 @@ bool CMICmnLLDBUtilSBValue::IsCharBasicType(lldb::BasicType eType) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the flag stating whether this value object is a char type
 // or some
 //          other type. Char type can be signed or unsigned.
@@ -283,7 +276,6 @@ bool CMICmnLLDBUtilSBValue::IsCharType() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the flag stating whether first child value object of *this
 // object is
 //          a char type or some other type. Returns false if there are not
@@ -307,7 +299,6 @@ bool CMICmnLLDBUtilSBValue::IsFirstChildCharType() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the flag stating whether pointee object of *this object is
 //          a char type or some other type. Returns false if there are not
 //          children. Char
@@ -330,7 +321,6 @@ bool CMICmnLLDBUtilSBValue::IsPointeeCharType() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the flag stating whether this value object is a integer
 // type or some
 //          other type. Char type can be signed or unsigned and short or
@@ -355,7 +345,6 @@ bool CMICmnLLDBUtilSBValue::IsIntegerType() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the flag stating whether this value object is a pointer
 // type or some
 //          other type.
@@ -369,7 +358,6 @@ bool CMICmnLLDBUtilSBValue::IsPointerType() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the flag stating whether this value object is an array type
 // or some
 //          other type.
@@ -383,7 +371,6 @@ bool CMICmnLLDBUtilSBValue::IsArrayType() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the C string data of value object by read the memory where
 // the
 //          variable is held.
@@ -418,7 +405,6 @@ CMICmnLLDBUtilSBValue::ReadCStringFromHostMemory(lldb::SBValue &vrValue,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the state of the value object's name.
 // Type:    Method.
 // Args:    None.
@@ -431,7 +417,6 @@ bool CMICmnLLDBUtilSBValue::IsNameUnknown() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the state of the value object's value data.
 // Type:    Method.
 // Args:    None.
@@ -444,7 +429,6 @@ bool CMICmnLLDBUtilSBValue::IsValueUnknown() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the value object's type name if valid.
 // Type:    Method.
 // Args:    None.
@@ -459,7 +443,6 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetTypeName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the value object's display type name if valid.
 // Type:    Method.
 // Args:    None.
@@ -474,7 +457,6 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetTypeNameDisplay() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve whether the value object's is valid or not.
 // Type:    Method.
 // Args:    None.
@@ -484,7 +466,6 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetTypeNameDisplay() const {
 bool CMICmnLLDBUtilSBValue::IsValid() const { return m_bValidSBValue; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the value object' has a name. A value object can be valid
 // but still
 //          have no name which suggest it is not a variable.
@@ -505,7 +486,6 @@ bool CMICmnLLDBUtilSBValue::HasName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Determine if the value object' represents a LLDB variable i.e. "$0".
 // Type:    Method.
 // Args:    None.

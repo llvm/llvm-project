@@ -883,6 +883,54 @@ define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
 }
 
 ;
+; Broadcast scale factor for xyz vector - slp will have vectorized xy.
+; FIXME: Load as a broadcast and then use the scalar 0'th element.
+;
+define double @broadcast_scale_xyz(double* nocapture readonly, double* nocapture readonly) nounwind {
+; X32-LABEL: broadcast_scale_xyz:
+; X32:       ## %bb.0:
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; X32-NEXT:    vmulpd (%eax), %xmm1, %xmm1
+; X32-NEXT:    vmulsd 16(%eax), %xmm0, %xmm0
+; X32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X32-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X32-NEXT:    vmovsd %xmm0, (%esp)
+; X32-NEXT:    fldl (%esp)
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_scale_xyz:
+; X64:       ## %bb.0:
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; X64-NEXT:    vmulpd (%rsi), %xmm1, %xmm1
+; X64-NEXT:    vmulsd 16(%rsi), %xmm0, %xmm0
+; X64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X64-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %3 = bitcast double* %1 to <2 x double>*
+  %4 = load <2 x double>, <2 x double>* %3, align 8
+  %5 = getelementptr inbounds double, double* %1, i64 2
+  %6 = load double, double* %5, align 8
+  %7 = load double, double* %0, align 8
+  %8 = insertelement <2 x double> undef, double %7, i32 0
+  %9 = shufflevector <2 x double> %8, <2 x double> undef, <2 x i32> zeroinitializer
+  %10 = fmul <2 x double> %4, %9
+  %11 = fmul double %6, %7
+  %12 = extractelement <2 x double> %10, i32 0
+  %13 = extractelement <2 x double> %10, i32 1
+  %14 = fadd double %12, %13
+  %15 = fadd double %11, %14
+  ret double %15
+}
+
+;
 ; When VBROADCAST replaces an existing load, ensure it still respects lifetime dependencies.
 ;
 define float @broadcast_lifetime() nounwind {

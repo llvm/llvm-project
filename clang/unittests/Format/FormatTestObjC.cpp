@@ -1329,6 +1329,58 @@ TEST_F(FormatTestObjC, AlwaysBreakBeforeMultilineStrings) {
                "           @\"fffff\"];");
 }
 
+TEST_F(FormatTestObjC, DisambiguatesCallsFromCppLambdas) {
+  verifyFormat("x = ([a foo:bar] && b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] + b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] + !b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] + ~b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] - b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] / b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] % b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] | b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] || b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] && b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] == b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] != b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] <= b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] >= b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] << b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] ? b->c == 'd' : 'e');");
+  // FIXME: The following are wrongly classified as C++ lambda expressions.
+  // For example this code:
+  //   x = ([a foo:bar] & b->c == 'd');
+  // is formatted as:
+  //   x = ([a foo:bar] & b -> c == 'd');
+  // verifyFormat("x = ([a foo:bar] & b->c == 'd');");
+  // verifyFormat("x = ([a foo:bar] > b->c == 'd');");
+  // verifyFormat("x = ([a foo:bar] < b->c == 'd');");
+  // verifyFormat("x = ([a foo:bar] >> b->c == 'd');");
+}
+
+TEST_F(FormatTestObjC,  DisambiguatesCallsFromStructuredBindings) {
+  verifyFormat("int f() {\n"
+               "  if (a && [f arg])\n"
+               "    return 0;\n"
+               "}");
+  verifyFormat("int f() {\n"
+               "  if (a & [f arg])\n"
+               "    return 0;\n"
+               "}");
+  verifyFormat("int f() {\n"
+               "  for (auto &[elem] : list)\n"
+               "    return 0;\n"
+               "}");
+  verifyFormat("int f() {\n"
+               "  for (auto &&[elem] : list)\n"
+               "    return 0;\n"
+               "}");
+  verifyFormat(
+      "int f() {\n"
+      "  for (auto /**/ const /**/ volatile /**/ && /**/ [elem] : list)\n"
+      "    return 0;\n"
+      "}");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

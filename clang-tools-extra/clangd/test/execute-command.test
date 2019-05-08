@@ -1,0 +1,68 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"int main(int i, char **a) { if (i = 2) {}}"}}}
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "code": "-Wparentheses",
+# CHECK-NEXT:        "message": "Using the result of an assignment as a condition without parentheses (fixes available)",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 37,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 32,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "severity": 2,
+# CHECK-NEXT:        "source": "clang"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ],
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
+# CHECK-NEXT:  }
+---
+# No command name
+{"jsonrpc":"2.0","id":3,"method":"workspace/executeCommand","params":{}}
+---
+# Invalid, non-scalar command name
+{"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command": {}}}
+---
+{"jsonrpc":"2.0","id":5,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","custom":"foo", "arguments":[{"changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":{"start":{"line":0,"character":37},"end":{"line":0,"character":37}},"newText":")"}]}}]}}
+---
+# Arguments not a sequence.
+{"jsonrpc":"2.0","id":6,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":"foo"}}
+---
+# Unknown command.
+{"jsonrpc":"2.0","id":7,"method":"workspace/executeCommand","params":{"command":"mycommand"}}
+---
+# ApplyFix argument not a mapping node.
+{"jsonrpc":"2.0","id":8,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","custom":"foo", "arguments":[""]}}
+---
+# Custom field in WorkspaceEdit
+{"jsonrpc":"2.0","id":9,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":[{"custom":"foo", "changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":{"start":{"line":0,"character":37},"end":{"line":0,"character":37}},"newText":")"}]}}]}}
+---
+# changes in WorkspaceEdit with no mapping node
+{"jsonrpc":"2.0","id":10,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":[{"changes":"foo"}]}}
+---
+# Custom field in WorkspaceEditChange
+{"jsonrpc":"2.0","id":11,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":[{"changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":{"start":{"line":0,"character":37},"end":{"line":0,"character":37}},"newText":")"}], "custom":"foo"}}]}}
+---
+# No sequence node for TextEdits
+{"jsonrpc":"2.0","id":12,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":[{"changes":{"test:///foo.c":"bar"}}]}}
+---
+# No mapping node for TextEdit
+{"jsonrpc":"2.0","id":13,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":[{"changes":{"test:///foo.c":[""]}}]}}
+---
+# TextEdit not decoded
+{"jsonrpc":"2.0","id":14,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":[{"changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":"","newText":")"}]}}]}}
+---
+# Command name after arguments
+{"jsonrpc":"2.0","id":9,"method":"workspace/executeCommand","params":{"arguments":[{"custom":"foo", "changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":{"start":{"line":0,"character":37},"end":{"line":0,"character":37}},"newText":")"}]}}],"command":"clangd.applyFix"}}
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

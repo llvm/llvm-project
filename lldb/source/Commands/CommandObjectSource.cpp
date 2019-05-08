@@ -32,9 +32,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 #pragma mark CommandObjectSourceInfo
-//----------------------------------------------------------------------
 // CommandObjectSourceInfo - debug line entries dumping command
-//----------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_info_options[] = {
     // clang-format off
@@ -194,7 +192,7 @@ protected:
           continue;
 
         // Print a new header if the module changed.
-        const ConstString &module_file_name =
+        ConstString module_file_name =
             module->GetFileSpec().GetFilename();
         assert(module_file_name);
         if (module_file_name != last_module_file_name) {
@@ -240,8 +238,8 @@ protected:
 
         // Dump all matching lines at or above start_line for the file in the
         // CU.
-        const ConstString &file_spec_name = file_spec.GetFilename();
-        const ConstString &module_file_name =
+        ConstString file_spec_name = file_spec.GetFilename();
+        ConstString module_file_name =
             module->GetFileSpec().GetFilename();
         bool cu_header_printed = false;
         uint32_t line = start_line;
@@ -574,7 +572,7 @@ protected:
 
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target == nullptr) {
-      target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+      target = GetDebugger().GetSelectedTarget().get();
       if (target == nullptr) {
         result.AppendError("invalid target, create a debug target using the "
                            "'target create' command.");
@@ -644,9 +642,7 @@ protected:
 };
 
 #pragma mark CommandObjectSourceList
-//-------------------------------------------------------------------------
 // CommandObjectSourceList
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_list_options[] = {
     // clang-format off
@@ -780,7 +776,7 @@ protected:
     ConstString function;
     LineEntry line_entry;
 
-    SourceInfo(const ConstString &name, const LineEntry &line_entry)
+    SourceInfo(ConstString name, const LineEntry &line_entry)
         : function(name), line_entry(line_entry) {}
 
     SourceInfo() : function(), line_entry() {}
@@ -901,7 +897,7 @@ protected:
   // these somewhere, there should probably be a module-filter-list that can be
   // passed to the various ModuleList::Find* calls, which would either be a
   // vector of string names or a ModuleSpecList.
-  size_t FindMatchingFunctions(Target *target, const ConstString &name,
+  size_t FindMatchingFunctions(Target *target, ConstString name,
                                SymbolContextList &sc_list) {
     // Displaying the source for a symbol:
     bool include_inlines = true;
@@ -934,7 +930,7 @@ protected:
     return num_matches;
   }
 
-  size_t FindMatchingFunctionSymbols(Target *target, const ConstString &name,
+  size_t FindMatchingFunctionSymbols(Target *target, ConstString name,
                                      SymbolContextList &sc_list) {
     size_t num_matches = 0;
     const size_t num_modules = m_options.modules.size();
@@ -1136,8 +1132,7 @@ protected:
               m_options.num_lines >= 10 ? 5 : m_options.num_lines / 2;
 
           const uint32_t column =
-              (m_interpreter.GetDebugger().GetStopShowColumn() !=
-               eStopShowColumnNone)
+              (GetDebugger().GetStopShowColumn() != eStopShowColumnNone)
                   ? sc.line_entry.column
                   : 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
@@ -1292,9 +1287,7 @@ protected:
 };
 
 #pragma mark CommandObjectMultiwordSource
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordSource
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordSource::CommandObjectMultiwordSource(
     CommandInterpreter &interpreter)

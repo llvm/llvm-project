@@ -765,7 +765,10 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitInstruction(Instruction &I) {
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
     const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
     ObjectSizeOpts EvalOpts)
-    : DL(DL), TLI(TLI), Context(Context), Builder(Context, TargetFolder(DL)),
+    : DL(DL), TLI(TLI), Context(Context),
+      Builder(Context, TargetFolder(DL),
+              IRBuilderCallbackInserter(
+                  [&](Instruction *I) { InsertedInstructions.insert(I); })),
       EvalOpts(EvalOpts) {
   // IntTy and Zero must be set for each compute() since the address space may
   // be different for later objects.
@@ -788,9 +791,16 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute(Value *V) {
       if (CacheIt != CacheMap.end() && anyKnown(CacheIt->second))
         CacheMap.erase(CacheIt);
     }
+
+    // Erase any instructions we inserted as part of the traversal.
+    for (Instruction *I : InsertedInstructions) {
+      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      I->eraseFromParent();
+    }
   }
 
   SeenVals.clear();
+  InsertedInstructions.clear();
   return Result;
 }
 
@@ -934,24 +944,28 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
     if (!bothKnown(EdgeData)) {
       OffsetPHI->replaceAllUsesWith(UndefValue::get(IntTy));
       OffsetPHI->eraseFromParent();
+      InsertedInstructions.erase(OffsetPHI);
       SizePHI->replaceAllUsesWith(UndefValue::get(IntTy));
       SizePHI->eraseFromParent();
+      InsertedInstructions.erase(SizePHI);
       return unknown();
     }
     SizePHI->addIncoming(EdgeData.first, PHI.getIncomingBlock(i));
     OffsetPHI->addIncoming(EdgeData.second, PHI.getIncomingBlock(i));
   }
 
-  Value *Size = SizePHI, *Offset = OffsetPHI, *Tmp;
-  if ((Tmp = SizePHI->hasConstantValue())) {
+  Value *Size = SizePHI, *Offset = OffsetPHI;
+  if (Value *Tmp = SizePHI->hasConstantValue()) {
     Size = Tmp;
     SizePHI->replaceAllUsesWith(Size);
     SizePHI->eraseFromParent();
+    InsertedInstructions.erase(SizePHI);
   }
-  if ((Tmp = OffsetPHI->hasConstantValue())) {
+  if (Value *Tmp = OffsetPHI->hasConstantValue()) {
     Offset = Tmp;
     OffsetPHI->replaceAllUsesWith(Offset);
     OffsetPHI->eraseFromParent();
+    InsertedInstructions.erase(OffsetPHI);
   }
   return std::make_pair(Size, Offset);
 }

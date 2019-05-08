@@ -1,0 +1,42 @@
+# XFAIL: system-windows
+# REQUIRES: native && target-x86_64
+# RUN: %clangxx -fomit-frame-pointer %p/Inputs/x86-64-gp-read.cpp -o %t
+# RUN: %lldb -b -s %s %t | FileCheck %s
+process launch
+
+register read --all
+# CHECK-DAG: rax = 0x0102030405060708
+# CHECK-DAG: rbx = 0x1112131415161718
+# CHECK-DAG: rcx = 0x2122232425262728
+# CHECK-DAG: rdx = 0x3132333435363738
+# CHECK-DAG: rdi = 0x7172737475767778
+# CHECK-DAG: rsi = 0x6162636465666768
+# CHECK-DAG: rbp = 0x5152535455565758
+# CHECK-DAG: rsp = 0x4142434445464748
+# CHECK-DAG: eax = 0x05060708
+# CHECK-DAG: ebx = 0x15161718
+# CHECK-DAG: ecx = 0x25262728
+# CHECK-DAG: edx = 0x35363738
+# CHECK-DAG: edi = 0x75767778
+# CHECK-DAG: esi = 0x65666768
+# CHECK-DAG: ebp = 0x55565758
+# CHECK-DAG: esp = 0x45464748
+# CHECK-DAG: ax = 0x0708
+# CHECK-DAG: bx = 0x1718
+# CHECK-DAG: cx = 0x2728
+# CHECK-DAG: dx = 0x3738
+# CHECK-DAG: di = 0x7778
+# CHECK-DAG: si = 0x6768
+# CHECK-DAG: bp = 0x5758
+# CHECK-DAG: sp = 0x4748
+# CHECK-DAG: ah = 0x07
+# CHECK-DAG: bh = 0x17
+# CHECK-DAG: ch = 0x27
+# CHECK-DAG: dh = 0x37
+# CHECK-DAG: al = 0x08
+# CHECK-DAG: bl = 0x18
+# CHECK-DAG: cl = 0x28
+# CHECK-DAG: dl = 0x38
+
+process continue
+# CHECK: Process {{[0-9]+}} exited with status = 0

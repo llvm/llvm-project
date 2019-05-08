@@ -39,7 +39,7 @@ int main() {
 // CHECK: WARNING: ThreadSanitizer: data race
 // ...
 // CHECK: Location is heap block of size 99 at [[ADDR]] allocated by thread T1:
-// CHCEK:     #0 malloc
+// CHECK:     #0 malloc
 // CHECK:     #{{1|2}} alloc
 // CHECK:     #{{2|3}} AllocThread
 // ...

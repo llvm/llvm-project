@@ -1,20 +1,20 @@
 // Test this without pch.
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include %S/cxx-templates.h -verify %s -ast-dump -o -
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include %S/cxx-templates.h -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include %S/cxx-templates.h %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
 
 // Test with pch.
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -x c++-header -emit-pch -o %t %S/cxx-templates.h
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t -verify %s -ast-dump  -o -
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t %s -emit-llvm -o - -error-on-deserialized-decl doNotDeserialize -DNO_ERRORS | FileCheck %s
 
 // Test with modules.
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -x c++-header -emit-pch -o %t %S/cxx-templates.h
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -include-pch %t -verify %s -ast-dump  -o -
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -include-pch %t -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fmodules -include-pch %t %s -emit-llvm -o - -error-on-deserialized-decl doNotDeserialize -DNO_ERRORS -fmodules-ignore-macro=NO_ERRORS | FileCheck %s
 
 // Test with pch and delayed template parsing.
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -x c++-header -emit-pch -o %t %S/cxx-templates.h
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t -verify %s -ast-dump  -o -
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
 
 // CHECK: define weak_odr {{.*}}void @_ZN2S4IiE1mEv
@@ -132,3 +132,25 @@ int test() {
   return z1 + z2 + z3;
 }
 } // end namespace PR34728
+
+namespace ClassScopeExplicitSpecializations {
+  // FIXME: It's unclear these warnings (and the behavior they're describing)
+  // are desirable. These explicit instantiations could meaningfully
+  // instantiate the explicit specializations defined in the primary template.
+  template int A<3>::f<0>() const; // expected-warning {{has no effect}}
+  template int A<3>::f<1>() const;
+  template int A<4>::f<0>() const; // expected-warning {{has no effect}}
+  template int A<4>::f<1>() const;
+  // expected-note@cxx-templates.h:403 2{{here}}
+
+  static_assert(A<0>().f<1>() == 3, "");
+  static_assert(A<0>().f<0>() == 4, "");
+  static_assert(A<1>().f<1>() == 1, "");
+  static_assert(A<1>().f<0>() == 2, "");
+  static_assert(A<2>().f<1>() == 1, "");
+  static_assert(A<2>().f<0>() == 2, "");
+  static_assert(A<3>().f<1>() == 1, "");
+  static_assert(A<3>().f<0>() == 2, "");
+  static_assert(A<4>().f<1>() == 1, "");
+  static_assert(A<4>().f<0>() == 2, "");
+}

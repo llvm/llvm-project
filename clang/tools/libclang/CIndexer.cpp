@@ -32,11 +32,68 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(_AIX)
+#include <errno.h>
+#include <sys/ldr.h>
 #else
 #include <dlfcn.h>
 #endif
 
 using namespace clang;
+
+#ifdef _AIX
+namespace clang {
+namespace {
+
+template <typename LibClangPathType>
+void getClangResourcesPathImplAIX(LibClangPathType &LibClangPath) {
+  int PrevErrno = errno;
+
+  size_t BufSize = 2048u;
+  std::unique_ptr<char[]> Buf;
+  while (true) {
+    Buf = llvm::make_unique<char []>(BufSize);
+    errno = 0;
+    int Ret = loadquery(L_GETXINFO, Buf.get(), (unsigned int)BufSize);
+    if (Ret != -1)
+      break; // loadquery() was successful.
+    if (errno != ENOMEM)
+      llvm_unreachable("Encountered an unexpected loadquery() failure");
+
+    // errno == ENOMEM; try to allocate more memory.
+    if ((BufSize & ~((-1u) >> 1u)) != 0u)
+      llvm::report_fatal_error("BufSize needed for loadquery() too large");
+
+    Buf.release();
+    BufSize <<= 1u;
+  }
+
+  // Extract the function entry point from the function descriptor.
+  uint64_t EntryAddr =
+      reinterpret_cast<uintptr_t &>(clang_createTranslationUnit);
+
+  // Loop to locate the function entry point in the loadquery() results.
+  ld_xinfo *CurInfo = reinterpret_cast<ld_xinfo *>(Buf.get());
+  while (true) {
+    uint64_t CurTextStart = (uint64_t)CurInfo->ldinfo_textorg;
+    uint64_t CurTextEnd = CurTextStart + CurInfo->ldinfo_textsize;
+    if (CurTextStart <= EntryAddr && EntryAddr < CurTextEnd)
+      break; // Successfully located.
+
+    if (CurInfo->ldinfo_next == 0u)
+      llvm::report_fatal_error("Cannot locate entry point in "
+                               "the loadquery() results");
+    CurInfo = reinterpret_cast<ld_xinfo *>(reinterpret_cast<char *>(CurInfo) +
+                                           CurInfo->ldinfo_next);
+  }
+
+  LibClangPath += reinterpret_cast<char *>(CurInfo) + CurInfo->ldinfo_filename;
+  errno = PrevErrno;
+}
+
+} // end anonymous namespace
+} // end namespace clang
+#endif
 
 const std::string &CIndexer::getClangResourcesPath() {
   // Did we already compute the path?
@@ -64,6 +121,8 @@ const std::string &CIndexer::getClangResourcesPath() {
 #endif
 
   LibClangPath += path;
+#elif defined(_AIX)
+  getClangResourcesPathImplAIX(LibClangPath);
 #else
   // This silly cast below avoids a C++ warning.
   Dl_info info;

@@ -205,6 +205,10 @@ GetNestedTagDefinition(const NestedTypeRecord &Record,
   return std::move(child);
 }
 
+static bool IsAnonymousNamespaceName(llvm::StringRef name) {
+  return name == "`anonymous namespace'" || name == "`anonymous-namespace'";
+}
+
 PdbAstBuilder::PdbAstBuilder(ObjectFile &obj, PdbIndex &index)
     : m_index(index), m_clang(GetClangASTContext(obj)) {
   BuildParentMap();
@@ -256,7 +260,7 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
     for (llvm::ms_demangle::Node *scope : scopes) {
       auto *nii = static_cast<llvm::ms_demangle::NamedIdentifierNode *>(scope);
       std::string str = nii->toString();
-      context = m_clang.GetUniqueNamespaceDeclaration(str.c_str(), context);
+      context = GetOrCreateNamespaceDecl(str.c_str(), *context);
     }
     return {context, uname};
   }
@@ -525,7 +529,7 @@ PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   // If that fails, treat it as a series of namespaces.
   for (const MSVCUndecoratedNameSpecifier &spec : specs) {
     std::string ns_name = spec.GetBaseName().str();
-    context = m_clang.GetUniqueNamespaceDeclaration(ns_name.c_str(), context);
+    context = GetOrCreateNamespaceDecl(ns_name.c_str(), *context);
   }
   return {context, uname};
 }
@@ -568,7 +572,7 @@ PdbAstBuilder::GetParentDeclContextForSymbol(const CVSymbol &sym) {
   clang::DeclContext *context = &GetTranslationUnitDecl();
   while (!name_components.empty()) {
     std::string ns = name_components.front()->toString();
-    context = m_clang.GetUniqueNamespaceDeclaration(ns.c_str(), context);
+    context = GetOrCreateNamespaceDecl(ns.c_str(), *context);
     name_components = name_components.drop_front();
   }
   return context;
@@ -805,9 +809,10 @@ clang::Decl *PdbAstBuilder::TryGetDecl(PdbSymUid uid) const {
 }
 
 clang::NamespaceDecl *
-PdbAstBuilder::GetOrCreateNamespaceDecl(llvm::StringRef name,
+PdbAstBuilder::GetOrCreateNamespaceDecl(const char *name,
                                         clang::DeclContext &context) {
-  return m_clang.GetUniqueNamespaceDeclaration(name.str().c_str(), &context);
+  return m_clang.GetUniqueNamespaceDeclaration(
+      IsAnonymousNamespaceName(name) ? nullptr : name, &context);
 }
 
 clang::BlockDecl *

@@ -34,6 +34,8 @@ struct CoverageViewOptions {
   bool ShowRegionSummary;
   bool ShowInstantiationSummary;
   bool ExportSummaryOnly;
+  bool SkipExpansions;
+  bool SkipFunctions;
   OutputFormat Format;
   std::string ShowOutputDirectory;
   std::vector<std::string> DemanglerOpts;

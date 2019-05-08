@@ -8,23 +8,22 @@
 define void @foo(i8* %P, i32 %E, i32 %H) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    monitor
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    leaq (%rdi), %rax
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    monitor
 ; X64-NEXT:    retq
 ;
 ; WIN64-LABEL: foo:
 ; WIN64:       # %bb.0: # %entry
-; WIN64-NEXT:    leaq (%rcx), %rax
+; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    movl %edx, %ecx
 ; WIN64-NEXT:    movl %r8d, %edx
 ; WIN64-NEXT:    monitor

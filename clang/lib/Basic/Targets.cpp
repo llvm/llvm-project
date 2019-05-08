@@ -332,6 +332,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new OpenBSDTargetInfo<PPC32TargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
       return new RTEMSTargetInfo<PPC32TargetInfo>(Triple, Opts);
+    case llvm::Triple::AIX:
+      return new AIXPPC32TargetInfo(Triple, Opts);
     default:
       return new PPC32TargetInfo(Triple, Opts);
     }
@@ -348,6 +350,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new FreeBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
+    case llvm::Triple::AIX:
+      return new AIXPPC64TargetInfo(Triple, Opts);
     default:
       return new PPC64TargetInfo(Triple, Opts);
     }
@@ -584,6 +588,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     switch (Triple.getOS()) {
       case llvm::Triple::WASI:
         return new WASITargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
+      case llvm::Triple::Emscripten:
+        return new EmscriptenTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
       case llvm::Triple::UnknownOS:
         return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
       default:
@@ -597,6 +603,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     switch (Triple.getOS()) {
       case llvm::Triple::WASI:
         return new WASITargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+      case llvm::Triple::Emscripten:
+        return new EmscriptenTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
       case llvm::Triple::UnknownOS:
         return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
       default:

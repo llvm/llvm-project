@@ -197,8 +197,8 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
   if (TripMultiple == 1 || TripMultiple % Count != 0) {
     if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
                                     /*UseEpilogRemainder*/ true,
-                                    UnrollRemainder, LI, SE, DT, AC, true,
-                                    EpilogueLoop)) {
+                                    UnrollRemainder, /*ForgetAllSCEV*/ false,
+                                    LI, SE, DT, AC, true, EpilogueLoop)) {
       LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;

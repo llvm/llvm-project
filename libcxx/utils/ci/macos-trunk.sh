@@ -98,13 +98,10 @@ LIBCXX_INSTALL_DIR="${TEMP_DIR}/libcxx-install"
 LIBCXXABI_BUILD_DIR="${TEMP_DIR}/libcxxabi-build"
 LIBCXXABI_INSTALL_DIR="${TEMP_DIR}/libcxxabi-install"
 
-LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
-export CC="$(xcrun --find clang)"
-export CXX="$(xcrun --find clang++)"
-
 
 echo "@@@ Downloading LLVM tarball of master (only used for CMake configuration) @@@"
 mkdir "${LLVM_ROOT}"
+LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
 curl -L "${LLVM_TARBALL_URL}" | tar -xz --strip-components=1 -C "${LLVM_ROOT}"
 echo "@@@@@@"
 
@@ -124,6 +121,7 @@ mkdir -p "${LIBCXX_BUILD_DIR}"
     -DLLVM_PATH="${LLVM_ROOT}" \
     -DCMAKE_INSTALL_PREFIX="${LIBCXX_INSTALL_DIR}" \
     -DLIBCXX_ENABLE_EXCEPTIONS="${LIBCXX_EXCEPTIONS}" \
+    -DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=OFF \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" # Build a universal dylib
 )
@@ -138,6 +136,7 @@ mkdir -p "${LIBCXXABI_BUILD_DIR}"
     -DLLVM_PATH="${LLVM_ROOT}" \
     -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_INSTALL_DIR}" \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=ON \
+    -DLIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS=ON \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" # Build a universal dylib
 )
@@ -145,8 +144,8 @@ echo "@@@@@@"
 
 
 echo "@@@ Building libc++.dylib and libc++abi.dylib from sources (just to make sure it works) @@@"
-ninja -C "${LIBCXX_BUILD_DIR}" install-cxx
-ninja -C "${LIBCXXABI_BUILD_DIR}" install-cxxabi
+ninja -C "${LIBCXX_BUILD_DIR}" install-cxx -v
+ninja -C "${LIBCXXABI_BUILD_DIR}" install-cxxabi -v
 echo "@@@@@@"
 
 

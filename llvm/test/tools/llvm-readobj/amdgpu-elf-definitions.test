@@ -1,4 +1,4 @@
-RUN: llvm-readobj -file-headers -program-headers -sections -symbols %p/Inputs/trivial.obj.elf-amdhsa-gfx803 | FileCheck %s
+RUN: llvm-readobj --file-headers -l -S --symbols %p/Inputs/trivial.obj.elf-amdhsa-gfx803 | FileCheck %s
 
 CHECK: Format: ELF64-amdgpu
 CHECK: Arch: unknown

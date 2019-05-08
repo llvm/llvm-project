@@ -81,9 +81,9 @@ define i32 @foo2(double* noalias nocapture %B, double* noalias nocapture %A, i32
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_019:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ [[TMP1]], [[ENTRY]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> <double 1.000000e+01, double 1.000000e+01>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> <double 4.000000e+00, double 4.000000e+00>, [[TMP3]]
-; CHECK-NEXT:    [[TMP5]] = fadd <2 x double> <double 4.000000e+00, double 4.000000e+00>, [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+01, double 1.000000e+01>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[TMP5]] = fadd <2 x double> [[TMP4]], <double 4.000000e+00, double 4.000000e+00>
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_019]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
@@ -150,9 +150,9 @@ define float @foo3(float* nocapture readonly %A) #0 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[R_052:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[TMP3]], [[ENTRY]] ], [ [[TMP12:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[TMP14:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x float> [ [[REORDER_SHUFFLE]], [[ENTRY]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[TMP3]], [[ENTRY]] ], [ [[TMP11:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[TMP13:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x float> [ [[REORDER_SHUFFLE]], [[ENTRY]] ], [ [[TMP18:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP5]], 7.000000e+00
 ; CHECK-NEXT:    [[ADD6]] = fadd float [[R_052]], [[MUL]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVARS_IV]], 2
@@ -163,27 +163,26 @@ define float @foo3(float* nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[ARRAYIDX19]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x float>, <2 x float>* [[TMP9]], align 4
 ; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> <float 1.100000e+01, float 1.000000e+01, float 9.000000e+00, float undef>, float [[TMP4]], i32 3
-; CHECK-NEXT:    [[TMP12]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> undef, float [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP14]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[TMP8]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> [[TMP16]], float 8.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP18:%.*]] = fmul <4 x float> [[TMP11]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19]] = fadd <4 x float> [[TMP6]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP20]], 121
+; CHECK-NEXT:    [[TMP11]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> undef, float [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP13]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP12]], float [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul <4 x float> [[TMP16]], <float 1.100000e+01, float 1.000000e+01, float 9.000000e+00, float 8.000000e+00>
+; CHECK-NEXT:    [[TMP18]] = fadd <4 x float> [[TMP6]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP19]], 121
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x float> [[TMP19]], i32 3
-; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x float> [[TMP19]], i32 2
-; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP22]]
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x float> [[TMP19]], i32 1
-; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP23]]
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x float> [[TMP19]], i32 0
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP24]]
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x float> [[TMP18]], i32 3
+; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP20]]
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x float> [[TMP18]], i32 2
+; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x float> [[TMP18]], i32 1
+; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP22]]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x float> [[TMP18]], i32 0
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP23]]
 ; CHECK-NEXT:    ret float [[ADD31]]
 ;
 entry:
@@ -255,7 +254,7 @@ define float @sort_phi_type(float* nocapture readonly %A) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP5]], i32 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP9]] = fmul <4 x float> <float 8.000000e+00, float 9.000000e+00, float 1.000000e+02, float 1.110000e+02>, [[TMP8]]
+; CHECK-NEXT:    [[TMP9]] = fmul <4 x float> [[TMP8]], <float 8.000000e+00, float 9.000000e+00, float 1.000000e+02, float 1.110000e+02>
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]

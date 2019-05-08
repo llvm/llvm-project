@@ -36,8 +36,10 @@ RUN apt-get update && \
       software-properties-common \
       gnupg \
       apt-transport-https \
+      sudo \
       systemd \
-      sysvinit-utils && \
+      sysvinit-utils \
+      systemd-sysv && \
   update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.gold" 20 && \
   update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.bfd" 10 && \
   rm -rf /var/lib/apt/lists/*
@@ -165,6 +167,7 @@ RUN ln -s /opt/gcc-5/bin/gcc /usr/local/bin/gcc-4.9 && \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     bash-completion \
+    vim \
     buildbot-slave \
   && rm -rf /var/lib/apt/lists/*
 

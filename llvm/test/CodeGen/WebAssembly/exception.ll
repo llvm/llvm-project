@@ -17,14 +17,6 @@ define void @test_throw(i8* %p) {
   ret void
 }
 
-; CHECK-LABEL: test_rethrow:
-; CHECK:     rethrow
-; CHECK-NOT: unreachable
-define void @test_rethrow(i8* %p) {
-  call void @llvm.wasm.rethrow()
-  ret void
-}
-
 ; Simple test with a try-catch
 ;
 ; void foo();
@@ -43,7 +35,7 @@ define void @test_rethrow(i8* %p) {
 ; CHECK:       global.set  __stack_pointer
 ; CHECK:       block i32
 ; CHECK:         br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
-; CHECK:         rethrow
+; CHECK:         rethrow   $[[EXCEPT_REF]]
 ; CHECK:       end_block
 ; CHECK:       extract_exception $[[EXN:[0-9]+]]=
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
@@ -55,7 +47,7 @@ define void @test_rethrow(i8* %p) {
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        1
 ; CHECK:       end_block
-; CHECK:       call      __cxa_rethrow
+; CHECK:       rethrow   $[[EXCEPT_REF]]
 ; CHECK:     end_try
 define void @test_catch() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -79,7 +71,7 @@ catch:                                            ; preds = %catch.start
   catchret from %1 to label %try.cont
 
 rethrow:                                          ; preds = %catch.start
-  call void @__cxa_rethrow() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %entry, %catch
@@ -100,10 +92,10 @@ try.cont:                                         ; preds = %entry, %catch
 ; CHECK-LABEL: test_cleanup:
 ; CHECK: try
 ; CHECK:   call      foo
-; CHECK: catch
+; CHECK: catch     $[[EXCEPT_REF:[0-9]+]]=
 ; CHECK:   global.set  __stack_pointer
 ; CHECK:   i32.call  $drop=, _ZN4TempD2Ev
-; CHECK:   rethrow
+; CHECK:   rethrow   $[[EXCEPT_REF]]
 ; CHECK: end_try
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -231,7 +223,7 @@ terminate:                                        ; preds = %ehcleanup
 ; CHECK-NOT:         global.set  __stack_pointer, $pop{{.+}}
 ; CHECK:           end_try
 ; CHECK:         end_block
-; CHECK:         call      __cxa_rethrow
+; CHECK:         rethrow
 ; CHECK:       end_block
 ; CHECK-NOT:   global.set  __stack_pointer, $pop{{.+}}
 ; CHECK:       call      __cxa_end_catch
@@ -266,7 +258,7 @@ invoke.cont1:                                     ; preds = %catch
   catchret from %1 to label %try.cont
 
 rethrow:                                          ; preds = %catch.start
-  call void @__cxa_rethrow() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %entry, %invoke.cont1
@@ -342,13 +334,12 @@ declare void @foo()
 declare void @bar(i32*)
 declare i32 @__gxx_wasm_personality_v0(...)
 declare void @llvm.wasm.throw(i32, i8*)
-declare void @llvm.wasm.rethrow()
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
+declare void @llvm.wasm.rethrow.in.catch()
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
-declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
 declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* returned)
 

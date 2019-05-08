@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_OBJCOPY_COPY_CONFIG_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -29,20 +30,48 @@ namespace objcopy {
 // lets us map architecture names to ELF types and the e_machine value of the
 // ELF file.
 struct MachineInfo {
+  MachineInfo(uint16_t EM, uint8_t ABI, bool Is64, bool IsLittle)
+      : EMachine(EM), OSABI(ABI), Is64Bit(Is64), IsLittleEndian(IsLittle) {}
+  // Alternative constructor that defaults to NONE for OSABI.
+  MachineInfo(uint16_t EM, bool Is64, bool IsLittle)
+      : MachineInfo(EM, ELF::ELFOSABI_NONE, Is64, IsLittle) {}
+  // Default constructor for unset fields.
+  MachineInfo() : MachineInfo(0, 0, false, false) {}
   uint16_t EMachine;
+  uint8_t OSABI;
   bool Is64Bit;
   bool IsLittleEndian;
+};
+
+// Flags set by --set-section-flags or --rename-section. Interpretation of these
+// is format-specific and not all flags are meaningful for all object file
+// formats. This is a bitmask; many section flags may be set.
+enum SectionFlag {
+  SecNone = 0,
+  SecAlloc = 1 << 0,
+  SecLoad = 1 << 1,
+  SecNoload = 1 << 2,
+  SecReadonly = 1 << 3,
+  SecDebug = 1 << 4,
+  SecCode = 1 << 5,
+  SecData = 1 << 6,
+  SecRom = 1 << 7,
+  SecMerge = 1 << 8,
+  SecStrings = 1 << 9,
+  SecContents = 1 << 10,
+  SecShare = 1 << 11,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ SecShare)
 };
 
 struct SectionRename {
   StringRef OriginalName;
   StringRef NewName;
-  Optional<uint64_t> NewFlags;
+  Optional<SectionFlag> NewFlags;
 };
 
 struct SectionFlagsUpdate {
   StringRef Name;
-  uint64_t NewFlags;
+  SectionFlag NewFlags;
 };
 
 enum class DiscardType {
@@ -120,6 +149,7 @@ struct CopyConfig {
   std::function<uint64_t(uint64_t)> EntryExpr;
 
   // Boolean options
+  bool AllowBrokenLinks = false;
   bool DeterministicArchives = true;
   bool ExtractDWO = false;
   bool KeepFileSymbols = false;

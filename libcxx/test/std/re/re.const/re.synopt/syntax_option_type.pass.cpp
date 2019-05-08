@@ -38,7 +38,11 @@ int main(int, char**)
     assert(std::regex_constants::nosubs != 0);
     assert(std::regex_constants::optimize != 0);
     assert(std::regex_constants::collate != 0);
+#ifdef _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO  // https://bugs.llvm.org/show_bug.cgi?id=35967
+    assert(std::regex_constants::ECMAScript != 0);
+#else
     assert(std::regex_constants::ECMAScript == 0);
+#endif
     assert(std::regex_constants::basic != 0);
     assert(std::regex_constants::extended != 0);
     assert(std::regex_constants::awk != 0);

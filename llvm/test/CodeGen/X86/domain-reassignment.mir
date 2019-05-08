@@ -123,7 +123,7 @@ body:             |
   ; CHECK:   [[COPY7:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK:   [[COPY8:%[0-9]+]]:gr8 = COPY [[COPY7]].sub_8bit
   ; CHECK:   TEST8ri killed [[COPY8]], 1, implicit-def $eflags
-  ; CHECK:   JE_1 %bb.2, implicit $eflags
+  ; CHECK:   JCC_1 %bb.2, 4, implicit $eflags
   ; CHECK:   JMP_1 %bb.1
   ; CHECK: bb.1.if:
   ; CHECK:   successors: %bb.3(0x80000000)
@@ -138,11 +138,12 @@ body:             |
   ; CHECK:   [[COPY12:%[0-9]+]]:vk8 = COPY [[COPY11]]
   ; CHECK: bb.3.exit:
   ; CHECK:   [[PHI:%[0-9]+]]:vk8 = PHI [[COPY12]], %bb.2, [[COPY10]], %bb.1
+  ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY13:%[0-9]+]]:vk32 = COPY [[PHI]]
   ; CHECK:   [[COPY14:%[0-9]+]]:vk1wm = COPY [[COPY13]]
   ; CHECK:   [[COPY15:%[0-9]+]]:vr128x = COPY [[COPY4]]
-  ; CHECK:   [[DEF:%[0-9]+]]:vr128 = IMPLICIT_DEF
-  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF]], [[COPY5]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:vr128 = IMPLICIT_DEF
+  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF1]], [[COPY5]]
   ; CHECK:   [[COPY16:%[0-9]+]]:fr32x = COPY [[VMOVSSZrrk]]
   ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store 4 into %ir.fptr)
   ; CHECK:   RET 0
@@ -160,7 +161,7 @@ body:             |
     %3 = COPY $edi
     %11 = COPY %3.sub_8bit
     TEST8ri killed %11, 1, implicit-def $eflags
-    JE_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
     JMP_1 %bb.1
 
   bb.1.if:
@@ -273,6 +274,7 @@ body:             |
   ; CHECK:   [[KANDBrr:%[0-9]+]]:vk8 = KANDBrr [[KORBrr]], [[KSHIFTLBri]]
   ; CHECK:   [[KXORBrr:%[0-9]+]]:vk8 = KXORBrr [[KANDBrr]], [[KSHIFTRBri]]
   ; CHECK:   [[KADDBrr:%[0-9]+]]:vk8 = KADDBrr [[KXORBrr]], [[KNOTBrr]]
+  ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY7:%[0-9]+]]:vk32 = COPY [[KADDBrr]]
   ; CHECK:   [[COPY8:%[0-9]+]]:vk8wm = COPY [[COPY7]]
   ; CHECK:   [[VMOVAPDZrrk:%[0-9]+]]:vr512 = VMOVAPDZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]
@@ -310,7 +312,7 @@ body:             |
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; TEST8rr %18, %18, implicit-def $eflags
-    ; JE_1 %bb.1, implicit $eflags
+    ; JCC_1 %bb.1, 4, implicit $eflags
     ; JMP_1 %bb.2
 
   bb.1:
@@ -391,6 +393,7 @@ body:             |
   ; CHECK:   [[KORWrr:%[0-9]+]]:vk16 = KORWrr [[KNOTWrr]], [[KSHIFTRWri]]
   ; CHECK:   [[KANDWrr:%[0-9]+]]:vk16 = KANDWrr [[KORWrr]], [[KSHIFTLWri]]
   ; CHECK:   [[KXORWrr:%[0-9]+]]:vk16 = KXORWrr [[KANDWrr]], [[KSHIFTRWri]]
+  ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY7:%[0-9]+]]:vk32 = COPY [[KXORWrr]]
   ; CHECK:   [[COPY8:%[0-9]+]]:vk16wm = COPY [[COPY7]]
   ; CHECK:   [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]
@@ -427,7 +430,7 @@ body:             |
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; FIXME TEST16rr %17, %17, implicit-def $eflags
-    ; FIXME JE_1 %bb.1, implicit $eflags
+    ; FIXME JCC_1 %bb.1, 4, implicit $eflags
     ; FIXME JMP_1 %bb.2
 
   bb.1:
@@ -530,7 +533,7 @@ body:             |
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; FIXME TEST32rr %13, %13, implicit-def $eflags
-    ; FIXME JE_1 %bb.1, implicit $eflags
+    ; FIXME JCC_1 %bb.1, 4, implicit $eflags
     ; FIXME JMP_1 %bb.2
 
   bb.1:
@@ -633,7 +636,7 @@ body:             |
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; FIXME TEST64rr %13, %13, implicit-def $eflags
-    ; FIXME JE_1 %bb.1, implicit $eflags
+    ; FIXME JCC_1 %bb.1, 4, implicit $eflags
     ; FIXME JMP_1 %bb.2
 
   bb.1:

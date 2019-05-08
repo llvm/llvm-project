@@ -18,7 +18,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -40,13 +39,17 @@ const SBFunction &SBFunction::operator=(const SBFunction &rhs) {
                      SBFunction, operator=,(const lldb::SBFunction &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBFunction::~SBFunction() { m_opaque_ptr = NULL; }
 
 bool SBFunction::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, IsValid);
+  return this->operator bool();
+}
+SBFunction::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, operator bool);
 
   return m_opaque_ptr != NULL;
 }
@@ -58,15 +61,6 @@ const char *SBFunction::GetName() const {
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetName().AsCString();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (cstr)
-      log->Printf("SBFunction(%p)::GetName () => \"%s\"",
-                  static_cast<void *>(m_opaque_ptr), cstr);
-    else
-      log->Printf("SBFunction(%p)::GetName () => NULL",
-                  static_cast<void *>(m_opaque_ptr));
-  }
   return cstr;
 }
 
@@ -79,15 +73,6 @@ const char *SBFunction::GetDisplayName() const {
                .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
                .AsCString();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (cstr)
-      log->Printf("SBFunction(%p)::GetDisplayName () => \"%s\"",
-                  static_cast<void *>(m_opaque_ptr), cstr);
-    else
-      log->Printf("SBFunction(%p)::GetDisplayName () => NULL",
-                  static_cast<void *>(m_opaque_ptr));
-  }
   return cstr;
 }
 
@@ -97,15 +82,6 @@ const char *SBFunction::GetMangledName() const {
   const char *cstr = NULL;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (cstr)
-      log->Printf("SBFunction(%p)::GetMangledName () => \"%s\"",
-                  static_cast<void *>(m_opaque_ptr), cstr);
-    else
-      log->Printf("SBFunction(%p)::GetMangledName () => NULL",
-                  static_cast<void *>(m_opaque_ptr));
-  }
   return cstr;
 }
 
@@ -267,4 +243,40 @@ bool SBFunction::GetIsOptimized() {
       return m_opaque_ptr->GetCompileUnit()->GetIsOptimized();
   }
   return false;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBFunction>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBFunction, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBFunction, (const lldb::SBFunction &));
+  LLDB_REGISTER_METHOD(const lldb::SBFunction &,
+                       SBFunction, operator=,(const lldb::SBFunction &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFunction, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFunction, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetName, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetDisplayName, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetMangledName, ());
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBFunction, operator==,(const lldb::SBFunction &));
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBFunction, operator!=,(const lldb::SBFunction &));
+  LLDB_REGISTER_METHOD(bool, SBFunction, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
+                       (lldb::SBTarget));
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
+                       (lldb::SBTarget, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBFunction, GetStartAddress, ());
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBFunction, GetEndAddress, ());
+  LLDB_REGISTER_METHOD(const char *, SBFunction, GetArgumentName, (uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBFunction, GetPrologueByteSize, ());
+  LLDB_REGISTER_METHOD(lldb::SBType, SBFunction, GetType, ());
+  LLDB_REGISTER_METHOD(lldb::SBBlock, SBFunction, GetBlock, ());
+  LLDB_REGISTER_METHOD(lldb::LanguageType, SBFunction, GetLanguage, ());
+  LLDB_REGISTER_METHOD(bool, SBFunction, GetIsOptimized, ());
+}
+
+}
 }

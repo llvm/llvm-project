@@ -23,6 +23,62 @@ define <2 x i1> @PR1738_vec_undef(<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %or
 }
 
+define i1 @PR41069(double %a, double %b, double %c, double %d) {
+; CHECK-LABEL: @PR41069(
+; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %uno1 = fcmp uno double %a, %b
+  %uno2 = fcmp uno double %c, 0.0
+  %or = or i1 %uno1, %uno2
+  %uno3 = fcmp uno double %d, 0.0
+  %r = or i1 %or, %uno3
+  ret i1 %r
+}
+
+define i1 @PR41069_commute(double %a, double %b, double %c, double %d) {
+; CHECK-LABEL: @PR41069_commute(
+; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %uno1 = fcmp uno double %a, %b
+  %uno2 = fcmp uno double %c, 0.0
+  %or = or i1 %uno1, %uno2
+  %uno3 = fcmp uno double %d, 0.0
+  %r = or i1 %uno3, %or
+  ret i1 %r
+}
+
+define <2 x i1> @PR41069_vec(<2 x i1> %z, <2 x float> %c, <2 x float> %d) {
+; CHECK-LABEL: @PR41069_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <2 x float> [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %uno1 = fcmp uno <2 x float> %c, zeroinitializer
+  %or = or <2 x i1> %uno1, %z
+  %uno2 = fcmp uno <2 x float> %d, <float 0.0, float undef>
+  %r = or <2 x i1> %or, %uno2
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @PR41069_vec_commute(<2 x i1> %z, <2 x float> %c, <2 x float> %d) {
+; CHECK-LABEL: @PR41069_vec_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <2 x float> [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %uno1 = fcmp uno <2 x float> %c, zeroinitializer
+  %or = or <2 x i1> %uno1, %z
+  %uno2 = fcmp uno <2 x float> %d, <float 0.0, float undef>
+  %r = or <2 x i1> %uno2, %or
+  ret <2 x i1> %r
+}
+
 define i1 @fcmp_uno_nonzero(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_uno_nonzero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno float [[X:%.*]], [[Y:%.*]]

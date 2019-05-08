@@ -1,7 +1,5 @@
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-plt.exe.elf-mipsel | FileCheck %s
-RUN: llvm-readobj -mips-plt-got --elf-output-style=GNU \
-RUN:              %p/Inputs/got-plt.exe.elf-mipsel \
-RUN:   | FileCheck --check-prefix=GNU %s
+RUN: llvm-readobj --mips-plt-got %p/Inputs/got-plt.exe.elf-mipsel | FileCheck %s
+RUN: llvm-readelf --mips-plt-got %p/Inputs/got-plt.exe.elf-mipsel | FileCheck --check-prefix=GNU %s
 
 CHECK:      PLT GOT {
 CHECK-NEXT:   Reserved entries [

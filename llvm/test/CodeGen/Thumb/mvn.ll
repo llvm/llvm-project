@@ -194,26 +194,26 @@ for.cond.cleanup:
 
 define void @test128(i128* %a) {
 ; CHECK-LABEL: test128:
-; CHECK:         ldr r1, [r0, #4]
+; CHECK:         ldr r1, [r0, #8]
 ; CHECK-NEXT:    ldr r2, .LCPI8_0
 ; CHECK-NEXT:    eors r2, r1
-; CHECK-NEXT:    str r2, [r0, #4]
+; CHECK-NEXT:    str r2, [r0, #8]
 ; CHECK-NEXT:    ldr r1, [r0]
 ; CHECK-NEXT:    ldr r2, .LCPI8_1
 ; CHECK-NEXT:    eors r2, r1
 ; CHECK-NEXT:    str r2, [r0]
-; CHECK-NEXT:    ldr r1, [r0, #8]
+; CHECK-NEXT:    ldr r1, [r0, #4]
 ; CHECK-NEXT:    ldr r2, .LCPI8_2
 ; CHECK-NEXT:    eors r2, r1
-; CHECK-NEXT:    str r2, [r0, #8]
+; CHECK-NEXT:    str r2, [r0, #4]
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LCPI8_0:
-; CHECK-NEXT:    .long 4075008415
+; CHECK-NEXT:    .long 6692605
 ; CHECK-NEXT:  .LCPI8_1:
 ; CHECK-NEXT:    .long 2080661269
 ; CHECK-NEXT:  .LCPI8_2:
-; CHECK-NEXT:    .long 6692605
+; CHECK-NEXT:    .long 4075008415
   %x = load i128, i128* %a
   %xn = xor i128 %x, 123456789123456789123456789
   store i128 %xn, i128* %a

@@ -18,4 +18,4 @@
 type = Library
 name = Core
 parent = Libraries
-required_libraries = BinaryFormat Support
+required_libraries = BinaryFormat Remarks Support

@@ -2,7 +2,7 @@
 ; RUN: grep -v "module asm" %s | llvm-as -o %t/embedded.bc
 ; RUN: llc -I=%t -filetype=obj -o %t/obj.o %s
 ; RUN: llvm-ar crs %t/lib.a %t/obj.o
-; RUN: llvm-nm -m -no-llvm-bc %t/lib.a | FileCheck %s
+; RUN: llvm-nm -m --no-llvm-bc %t/lib.a | FileCheck %s
 
 target triple = "x86_64-apple-macosx10.11"
 

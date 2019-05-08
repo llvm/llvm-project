@@ -58,20 +58,20 @@ public:
 
     Type GetType() const { return m_type; }
 
-    const ConstString &GetFullName() const { return m_full; }
+    ConstString GetFullName() const { return m_full; }
 
     ConstString GetFullNameWithoutCategory(bool empty_if_no_category);
 
     bool SetName(const char *name, bool strict);
     bool SetName(llvm::StringRef name, bool strict);
 
-    const ConstString &GetClassName();
+    ConstString GetClassName();
 
-    const ConstString &GetClassNameWithCategory();
+    ConstString GetClassNameWithCategory();
 
-    const ConstString &GetCategory();
+    ConstString GetCategory();
 
-    const ConstString &GetSelector();
+    ConstString GetSelector();
 
     // Get all possible names for a method. Examples:
     // If name is "+[NSString(my_additions) myStringWithCString:]"
@@ -123,9 +123,7 @@ public:
 
   const Highlighter *GetHighlighter() const override { return &m_highlighter; }
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -154,9 +152,7 @@ public:
       return false;
   }
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

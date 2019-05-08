@@ -498,7 +498,7 @@ sections.
    2,              314  (51.5%)
 
 
-  Schedulers - number of cycles where we saw N instructions issued:
+  Schedulers - number of cycles where we saw N micro opcodes issued:
   [# issued], [# cycles]
    0,          7  (1.1%)
    1,          306  (50.2%)
@@ -552,9 +552,9 @@ dispatch statistics are displayed by either using the command option
 ``-all-stats`` or ``-dispatch-stats``.
 
 The next table, *Schedulers*, presents a histogram displaying a count,
-representing the number of instructions issued on some number of cycles.  In
-this case, of the 610 simulated cycles, single instructions were issued 306
-times (50.2%) and there were 7 cycles where no instructions were issued.
+representing the number of micro opcodes issued on some number of cycles. In
+this case, of the 610 simulated cycles, single opcodes were issued 306 times
+(50.2%) and there were 7 cycles where no opcodes were issued.
 
 The *Scheduler's queue usage* table shows that the average and maximum number of
 buffer entries (i.e., scheduler queue entries) used at runtime.  Resource JFPU01

@@ -5,6 +5,10 @@
 // CHECK: error: invalid operand for instruction
 ds_add_u32 v2, v4 offset:1000000000
 
+// offset too big
+// CHECK: error: invalid operand for instruction
+ds_add_u32 v2, v4 offset:0x10000
+
 // offset0 twice
 // CHECK:  error: invalid operand for instruction
 ds_write2_b32 v2, v4, v6 offset0:4 offset0:8
@@ -17,9 +21,17 @@ ds_write2_b32 v2, v4, v6 offset1:4 offset1:8
 // CHECK: invalid operand for instruction
 ds_write2_b32 v2, v4, v6 offset0:1000000000
 
+// offset0 too big
+// CHECK: invalid operand for instruction
+ds_write2_b32 v2, v4, v6 offset0:0x100
+
 // offset1 too big
 // CHECK: invalid operand for instruction
 ds_write2_b32 v2, v4, v6 offset1:1000000000
+
+// offset1 too big
+// CHECK: invalid operand for instruction
+ds_write2_b32 v2, v4, v6 offset1:0x100
 
 //===----------------------------------------------------------------------===//
 // swizzle

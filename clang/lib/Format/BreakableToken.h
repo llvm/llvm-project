@@ -359,7 +359,7 @@ public:
   BreakableBlockComment(const FormatToken &Token, unsigned StartColumn,
                         unsigned OriginalStartColumn, bool FirstInLine,
                         bool InPPDirective, encoding::Encoding Encoding,
-                        const FormatStyle &Style);
+                        const FormatStyle &Style, bool UseCRLF);
 
   unsigned getRangeLength(unsigned LineIndex, unsigned Offset,
                           StringRef::size_type Length,

@@ -26,6 +26,8 @@ public:
 
   const lldb::SBSymbol &operator=(const lldb::SBSymbol &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetName() const;
@@ -53,16 +55,12 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
-  //----------------------------------------------------------------------
   // Returns true if the symbol is externally visible in the module that it is
   // defined in
-  //----------------------------------------------------------------------
   bool IsExternal();
 
-  //----------------------------------------------------------------------
   // Returns true if the symbol was synthetically generated from something
   // other than the actual symbol table itself in the object file.
-  //----------------------------------------------------------------------
   bool IsSynthetic();
 
 protected:

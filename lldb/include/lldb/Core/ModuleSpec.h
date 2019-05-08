@@ -124,7 +124,7 @@ public:
 
   ConstString &GetObjectName() { return m_object_name; }
 
-  const ConstString &GetObjectName() const { return m_object_name; }
+  ConstString GetObjectName() const { return m_object_name; }
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
@@ -311,8 +311,10 @@ public:
 
   ModuleSpecList &operator=(const ModuleSpecList &rhs) {
     if (this != &rhs) {
-      std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex);
-      std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex);
+      std::lock(m_mutex, rhs.m_mutex);
+      std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex, std::adopt_lock);
+      std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex, 
+                                                      std::adopt_lock);
       m_specs = rhs.m_specs;
     }
     return *this;

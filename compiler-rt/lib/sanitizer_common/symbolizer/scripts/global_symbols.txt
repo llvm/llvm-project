@@ -36,6 +36,7 @@ __umoddi3 U
 _exit U
 abort U
 access U
+bcmp U
 calloc U
 catclose U
 catgets U
@@ -132,6 +133,7 @@ strtol U
 strtold_l U
 strtoll_l U
 strtoull_l U
+syscall U
 tcgetattr U
 uname U
 ungetc U

@@ -227,6 +227,7 @@ public:
     case DILexicalBlockKind:
     case DILexicalBlockFileKind:
     case DINamespaceKind:
+    case DICommonBlockKind:
     case DITemplateTypeParameterKind:
     case DITemplateValueParameterKind:
     case DIGlobalVariableKind:
@@ -485,6 +486,7 @@ public:
     case DILexicalBlockKind:
     case DILexicalBlockFileKind:
     case DINamespaceKind:
+    case DICommonBlockKind:
     case DIModuleKind:
       return true;
     }
@@ -1635,9 +1637,6 @@ public:
 };
 
 /// Subprogram description.
-///
-/// TODO: Remove DisplayName.  It's always equal to Name.
-/// TODO: Split up flags.
 class DISubprogram : public DILocalScope {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -1675,7 +1674,8 @@ public:
   // Helper for converting old bitfields to new flags word.
   static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
                              bool IsOptimized,
-                             unsigned Virtuality = SPFlagNonvirtual) {
+                             unsigned Virtuality = SPFlagNonvirtual,
+                             bool IsMainSubprogram = false) {
     // We're assuming virtuality is the low-order field.
     static_assert(
         int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
@@ -1685,7 +1685,8 @@ public:
         (Virtuality & SPFlagVirtuality) |
         (IsLocalToUnit ? SPFlagLocalToUnit : SPFlagZero) |
         (IsDefinition ? SPFlagDefinition : SPFlagZero) |
-        (IsOptimized ? SPFlagOptimized : SPFlagZero));
+        (IsOptimized ? SPFlagOptimized : SPFlagZero) |
+        (IsMainSubprogram ? SPFlagMainSubprogram : SPFlagZero));
   }
 
 private:
@@ -1784,6 +1785,7 @@ public:
   bool isLocalToUnit() const { return getSPFlags() & SPFlagLocalToUnit; }
   bool isDefinition() const { return getSPFlags() & SPFlagDefinition; }
   bool isOptimized() const { return getSPFlags() & SPFlagOptimized; }
+  bool isMainSubprogram() const { return getSPFlags() & SPFlagMainSubprogram; }
 
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isPrivate() const {
@@ -1800,7 +1802,9 @@ public:
   bool areAllCallsDescribed() const {
     return getFlags() & FlagAllCallsDescribed;
   }
-  bool isMainSubprogram() const { return getFlags() & FlagMainSubprogram; }
+  bool isPure() const { return getSPFlags() & SPFlagPure; }
+  bool isElemental() const { return getSPFlags() & SPFlagElemental; }
+  bool isRecursive() const { return getSPFlags() & SPFlagRecursive; }
 
   /// Check if this is reference-qualified.
   ///
@@ -2503,6 +2507,9 @@ public:
   /// Return whether this is a piece of an aggregate variable.
   bool isFragment() const { return getFragmentInfo().hasValue(); }
 
+  /// Return whether this is an implicit location description.
+  bool isImplicit() const;
+
   /// Append \p Ops with operations to apply the \p Offset.
   static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);
 
@@ -2665,6 +2672,65 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIGlobalVariableKind;
+  }
+};
+
+class DICommonBlock : public DIScope {
+  unsigned LineNo;
+
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DICommonBlock(LLVMContext &Context, StorageType Storage, unsigned LineNo,
+                ArrayRef<Metadata *> Ops)
+      : DIScope(Context, DICommonBlockKind, Storage, dwarf::DW_TAG_common_block,
+                Ops), LineNo(LineNo) {}
+
+  static DICommonBlock *getImpl(LLVMContext &Context, DIScope *Scope,
+                                DIGlobalVariable *Decl, StringRef Name,
+                                DIFile *File, unsigned LineNo,
+                                StorageType Storage,
+                                bool ShouldCreate = true) {
+    return getImpl(Context, Scope, Decl, getCanonicalMDString(Context, Name),
+                   File, LineNo, Storage, ShouldCreate);
+  }
+  static DICommonBlock *getImpl(LLVMContext &Context, Metadata *Scope,
+                                Metadata *Decl, MDString *Name, Metadata *File,
+                                unsigned LineNo, 
+                                StorageType Storage, bool ShouldCreate = true);
+
+  TempDICommonBlock cloneImpl() const {
+    return getTemporary(getContext(), getScope(), getDecl(), getName(),
+                        getFile(), getLineNo());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DICommonBlock,
+                    (DIScope *Scope, DIGlobalVariable *Decl, StringRef Name,
+                     DIFile *File, unsigned LineNo),
+                    (Scope, Decl, Name, File, LineNo))
+  DEFINE_MDNODE_GET(DICommonBlock,
+                    (Metadata *Scope, Metadata *Decl, MDString *Name,
+                     Metadata *File, unsigned LineNo),
+                    (Scope, Decl, Name, File, LineNo))
+
+  TempDICommonBlock clone() const { return cloneImpl(); }
+
+  DIScope *getScope() const { return cast_or_null<DIScope>(getRawScope()); }
+  DIGlobalVariable *getDecl() const {
+    return cast_or_null<DIGlobalVariable>(getRawDecl());
+  }
+  StringRef getName() const { return getStringOperand(2); }
+  DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
+  unsigned getLineNo() const { return LineNo; }
+
+  Metadata *getRawScope() const { return getOperand(0); }
+  Metadata *getRawDecl() const { return getOperand(1); }
+  MDString *getRawName() const { return getOperandAs<MDString>(2); }
+  Metadata *getRawFile() const { return getOperand(3); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DICommonBlockKind;
   }
 };
 

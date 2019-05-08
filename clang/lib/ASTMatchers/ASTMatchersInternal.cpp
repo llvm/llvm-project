@@ -845,5 +845,10 @@ AST_TYPELOC_TRAVERSE_MATCHER_DEF(
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
                                     PointerType, ReferenceType));
 
+const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
+    ompExecutableDirective;
+const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
+    ompDefaultClause;
+
 } // end namespace ast_matchers
 } // end namespace clang

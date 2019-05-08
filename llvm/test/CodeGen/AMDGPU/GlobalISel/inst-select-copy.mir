@@ -18,7 +18,7 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
     ; GCN: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]]
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %0:sgpr(p1) = COPY $sgpr2_sgpr3
     %1:vgpr(p1) = COPY %0
     %2:vgpr(s32) = G_IMPLICIT_DEF

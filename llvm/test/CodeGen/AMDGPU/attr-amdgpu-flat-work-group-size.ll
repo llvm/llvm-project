@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=-code-object-v3 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=HSAMD %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=-code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck --check-prefix=HSAMD %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
 ; CHECK: SGPRBlocks: 0

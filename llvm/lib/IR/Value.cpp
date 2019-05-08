@@ -648,10 +648,14 @@ unsigned Value::getPointerAlignment(const DataLayout &DL) const {
 
   unsigned Align = 0;
   if (auto *GO = dyn_cast<GlobalObject>(this)) {
-    // Don't make any assumptions about function pointer alignment. Some
-    // targets use the LSBs to store additional information.
-    if (isa<Function>(GO))
-      return 0;
+    if (isa<Function>(GO)) {
+      switch (DL.getFunctionPtrAlignType()) {
+      case DataLayout::FunctionPtrAlignType::Independent:
+        return DL.getFunctionPtrAlign();
+      case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
+        return std::max(DL.getFunctionPtrAlign(), GO->getAlignment());
+      }
+    }
     Align = GO->getAlignment();
     if (Align == 0) {
       if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {

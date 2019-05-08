@@ -26,10 +26,9 @@ entry:
 define void @load_store_i1(i1* %px, i1* %py) {
 ; MIPS32-LABEL: load_store_i1:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lbu $5, 0($5)
-; MIPS32-NEXT:    lui $1, 0
-; MIPS32-NEXT:    ori $1, $1, 1
-; MIPS32-NEXT:    and $1, $5, $1
+; MIPS32-NEXT:    lbu $1, 0($5)
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $1, $1, $2
 ; MIPS32-NEXT:    sb $1, 0($4)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -42,8 +41,8 @@ entry:
 define void @load_store_i8(i8* %px, i8* %py) {
 ; MIPS32-LABEL: load_store_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lbu $5, 0($5)
-; MIPS32-NEXT:    sb $5, 0($4)
+; MIPS32-NEXT:    lbu $1, 0($5)
+; MIPS32-NEXT:    sb $1, 0($4)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -55,8 +54,8 @@ entry:
 define void @load_store_i16(i16* %px, i16* %py) {
 ; MIPS32-LABEL: load_store_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lhu $5, 0($5)
-; MIPS32-NEXT:    sh $5, 0($4)
+; MIPS32-NEXT:    lhu $1, 0($5)
+; MIPS32-NEXT:    sh $1, 0($4)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -68,8 +67,8 @@ entry:
 define void @load_store_i32(i32* %px, i32* %py) {
 ; MIPS32-LABEL: load_store_i32:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lw $5, 0($5)
-; MIPS32-NEXT:    sw $5, 0($4)
+; MIPS32-NEXT:    lw $1, 0($5)
+; MIPS32-NEXT:    sw $1, 0($4)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

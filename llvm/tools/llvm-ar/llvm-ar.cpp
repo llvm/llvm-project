@@ -66,7 +66,7 @@ OPTIONS:
 const char ArHelp[] = R"(
 OVERVIEW: LLVM Archiver
 
-USAGE: llvm-ar [options] [-]<operation>[modifiers] [relpos] <archive> [files]
+USAGE: llvm-ar [options] [-]<operation>[modifiers] [relpos] [count] <archive> [files]
        llvm-ar -M [<mri-script]
 
 OPTIONS:
@@ -97,6 +97,7 @@ MODIFIERS:
   [i] - put [files] before [relpos] (same as [b])
   [l] - ignored for compatibility
   [L] - add archive's contents
+  [N] - use instance [count] of name
   [o] - preserve original dates
   [P] - use full names when matching (implied for thin archives)
   [s] - create an archive index (cf. ranlib)
@@ -187,6 +188,11 @@ static bool AddLibrary = false;      ///< 'L' modifier
 // one variable.
 static std::string RelPos;
 
+// Count parameter for 'N' modifier. This variable specifies which file should
+// match for extract/delete operations when there are multiple matches. This is
+// 1-indexed. A value of 0 is invalid, and implies 'N' is not used.
+static int CountParam = 0;
+
 // This variable holds the name of the archive file as given on the
 // command line.
 static std::string ArchiveName;
@@ -204,6 +210,19 @@ static void getRelPos() {
   if (PositionalArgs.empty())
     fail("Expected [relpos] for a, b, or i modifier");
   RelPos = PositionalArgs[0];
+  PositionalArgs.erase(PositionalArgs.begin());
+}
+
+// Extract the parameter from the command line for the [count] argument
+// associated with the N modifier
+static void getCountParam() {
+  if (PositionalArgs.empty())
+    fail("Expected [count] for N modifier");
+  auto CountParamArg = StringRef(PositionalArgs[0]);
+  if (CountParamArg.getAsInteger(10, CountParam))
+    fail("Value for [count] must be numeric, got: " + CountParamArg);
+  if (CountParam < 1)
+    fail("Value for [count] must be positive, got: " + CountParamArg);
   PositionalArgs.erase(PositionalArgs.begin());
 }
 
@@ -336,6 +355,9 @@ static ArchiveOperation parseCommandLine() {
     case 'U':
       Deterministic = false;
       break;
+    case 'N':
+      getCountParam();
+      break;
     case 'T':
       Thin = true;
       // Thin archives store path names, so P should be forced.
@@ -371,11 +393,14 @@ static ArchiveOperation parseCommandLine() {
     fail("Only one operation may be specified");
   if (NumPositional > 1)
     fail("You may only specify one of a, b, and i modifiers");
-  if (AddAfter || AddBefore) {
+  if (AddAfter || AddBefore)
     if (Operation != Move && Operation != ReplaceOrInsert)
       fail("The 'a', 'b' and 'i' modifiers can only be specified with "
            "the 'm' or 'r' operations");
-  }
+  if (CountParam)
+    if (Operation != Extract && Operation != Delete)
+      fail("The 'N' modifier can only be specified with the 'x' or 'd' "
+           "operations");
   if (OriginalDates && Operation != Extract)
     fail("The 'o' modifier is only applicable to the 'x' operation");
   if (OnlyUpdate && Operation != ReplaceOrInsert)
@@ -513,6 +538,7 @@ static void performReadOperation(ArchiveOperation Operation,
     fail("extracting from a thin archive is not supported");
 
   bool Filter = !Members.empty();
+  StringMap<int> MemberCount;
   {
     Error Err = Error::success();
     for (auto &C : OldArchive->children(Err)) {
@@ -525,6 +551,8 @@ static void performReadOperation(ArchiveOperation Operation,
           return Name == normalizePath(Path);
         });
         if (I == Members.end())
+          continue;
+        if (CountParam && ++MemberCount[Name] != CountParam)
           continue;
         Members.erase(I);
       }
@@ -627,10 +655,10 @@ enum InsertAction {
 static InsertAction computeInsertAction(ArchiveOperation Operation,
                                         const object::Archive::Child &Member,
                                         StringRef Name,
-                                        std::vector<StringRef>::iterator &Pos) {
+                                        std::vector<StringRef>::iterator &Pos,
+                                        StringMap<int> &MemberCount) {
   if (Operation == QuickAppend || Members.empty())
     return IA_AddOldMember;
-
   auto MI = find_if(
       Members, [Name](StringRef Path) { return Name == normalizePath(Path); });
 
@@ -639,8 +667,11 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
 
   Pos = MI;
 
-  if (Operation == Delete)
+  if (Operation == Delete) {
+    if (CountParam && ++MemberCount[Name] != CountParam)
+      return IA_AddOldMember;
     return IA_Delete;
+  }
 
   if (Operation == Move)
     return IA_MoveOldMember;
@@ -683,6 +714,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   StringRef PosName = normalizePath(RelPos);
   if (OldArchive) {
     Error Err = Error::success();
+    StringMap<int> MemberCount;
     for (auto &Child : OldArchive->children(Err)) {
       int Pos = Ret.size();
       Expected<StringRef> NameOrErr = Child.getName();
@@ -698,7 +730,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
 
       std::vector<StringRef>::iterator MemberI = Members.end();
       InsertAction Action =
-          computeInsertAction(Operation, Child, Name, MemberI);
+          computeInsertAction(Operation, Child, Name, MemberI, MemberCount);
       switch (Action) {
       case IA_AddOldMember:
         addChildMember(Ret, Child, /*FlattenArchive=*/Thin);
@@ -715,7 +747,12 @@ computeNewArchiveMembers(ArchiveOperation Operation,
         addMember(Moved, *MemberI);
         break;
       }
-      if (MemberI != Members.end())
+      // When processing elements with the count param, we need to preserve the
+      // full members list when iterating over all archive members. For
+      // instance, "llvm-ar dN 2 archive.a member.o" should delete the second
+      // file named member.o it sees; we are not done with member.o the first
+      // time we see it in the archive.
+      if (MemberI != Members.end() && !CountParam)
         Members.erase(MemberI);
     }
     failIfError(std::move(Err));

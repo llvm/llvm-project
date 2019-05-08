@@ -26,13 +26,13 @@ public:
 
   void Dump(lldb_private::Stream *s);
 
-  void Insert(const lldb_private::ConstString &name, const DIERef &die_ref);
+  void Insert(lldb_private::ConstString name, const DIERef &die_ref);
 
   void Append(const NameToDIE &other);
 
   void Finalize();
 
-  size_t Find(const lldb_private::ConstString &name,
+  size_t Find(lldb_private::ConstString name,
               DIEArray &info_array) const;
 
   size_t Find(const lldb_private::RegularExpression &regex,

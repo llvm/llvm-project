@@ -20,7 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionValueProperties::OptionValueProperties(const ConstString &name)
+OptionValueProperties::OptionValueProperties(ConstString name)
     : OptionValue(), m_name(name), m_properties(), m_name_to_index() {}
 
 OptionValueProperties::OptionValueProperties(
@@ -66,8 +66,8 @@ void OptionValueProperties::SetValueChangedCallback(
     property->SetValueChangedCallback(callback, baton);
 }
 
-void OptionValueProperties::AppendProperty(const ConstString &name,
-                                           const ConstString &desc,
+void OptionValueProperties::AppendProperty(ConstString name,
+                                           ConstString desc,
                                            bool is_global,
                                            const OptionValueSP &value_sp) {
   Property property(name, desc, is_global, value_sp);
@@ -98,7 +98,7 @@ void OptionValueProperties::AppendProperty(const ConstString &name,
 //
 lldb::OptionValueSP
 OptionValueProperties::GetValueForKey(const ExecutionContext *exe_ctx,
-                                      const ConstString &key,
+                                      ConstString key,
                                       bool will_modify) const {
   lldb::OptionValueSP value_sp;
   size_t idx = m_name_to_index.Find(key, SIZE_MAX);
@@ -159,7 +159,7 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
     // args if executable basename is "test" and arch is "x86_64"
     if (sub_name[1]) {
       llvm::StringRef predicate_start = sub_name.drop_front();
-      size_t pos = predicate_start.find_first_of('}');
+      size_t pos = predicate_start.find('}');
       if (pos != llvm::StringRef::npos) {
         auto predicate = predicate_start.take_front(pos);
         auto rest = predicate_start.drop_front(pos);
@@ -204,7 +204,6 @@ Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
     if (Properties::IsSettingExperimental(part))
       name_contains_experimental = true;
 
-  
   lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
   if (value_sp)
     error = value_sp->SetValueFromString(value, op);
@@ -219,14 +218,14 @@ Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
 }
 
 uint32_t
-OptionValueProperties::GetPropertyIndex(const ConstString &name) const {
+OptionValueProperties::GetPropertyIndex(ConstString name) const {
   return m_name_to_index.Find(name, SIZE_MAX);
 }
 
 const Property *
 OptionValueProperties::GetProperty(const ExecutionContext *exe_ctx,
                                    bool will_modify,
-                                   const ConstString &name) const {
+                                   ConstString name) const {
   return GetPropertyAtIndex(
       exe_ctx, will_modify,
       m_name_to_index.Find(name, SIZE_MAX));
@@ -667,7 +666,7 @@ void OptionValueProperties::Apropos(
 
 lldb::OptionValuePropertiesSP
 OptionValueProperties::GetSubProperty(const ExecutionContext *exe_ctx,
-                                      const ConstString &name) {
+                                      ConstString name) {
   lldb::OptionValueSP option_value_sp(GetValueForKey(exe_ctx, name, false));
   if (option_value_sp) {
     OptionValueProperties *ov_properties = option_value_sp->GetAsProperties();

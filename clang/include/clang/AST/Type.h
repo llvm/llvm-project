@@ -317,6 +317,11 @@ public:
     qs.removeObjCLifetime();
     return qs;
   }
+  Qualifiers withoutAddressSpace() const {
+    Qualifiers qs = *this;
+    qs.removeAddressSpace();
+    return qs;
+  }
 
   bool hasObjCLifetime() const { return Mask & LifetimeMask; }
   ObjCLifetime getObjCLifetime() const {
@@ -1814,7 +1819,9 @@ public:
   friend class ASTWriter;
 
   Type(const Type &) = delete;
+  Type(Type &&) = delete;
   Type &operator=(const Type &) = delete;
+  Type &operator=(Type &&) = delete;
 
   TypeClass getTypeClass() const { return static_cast<TypeClass>(TypeBits.TC); }
 
@@ -4181,6 +4188,41 @@ public:
   QualType desugar() const;
 
   static bool classof(const Type *T) { return T->getTypeClass() == Typedef; }
+};
+
+/// Sugar type that represents a type that was qualified by a qualifier written
+/// as a macro invocation.
+class MacroQualifiedType : public Type {
+  friend class ASTContext; // ASTContext creates these.
+
+  QualType UnderlyingTy;
+  const IdentifierInfo *MacroII;
+
+  MacroQualifiedType(QualType UnderlyingTy, QualType CanonTy,
+                     const IdentifierInfo *MacroII)
+      : Type(MacroQualified, CanonTy, UnderlyingTy->isDependentType(),
+             UnderlyingTy->isInstantiationDependentType(),
+             UnderlyingTy->isVariablyModifiedType(),
+             UnderlyingTy->containsUnexpandedParameterPack()),
+        UnderlyingTy(UnderlyingTy), MacroII(MacroII) {
+    assert(isa<AttributedType>(UnderlyingTy) &&
+           "Expected a macro qualified type to only wrap attributed types.");
+  }
+
+public:
+  const IdentifierInfo *getMacroIdentifier() const { return MacroII; }
+  QualType getUnderlyingType() const { return UnderlyingTy; }
+
+  /// Return this attributed type's modified type with no qualifiers attached to
+  /// it.
+  QualType getModifiedType() const;
+
+  bool isSugared() const { return true; }
+  QualType desugar() const;
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == MacroQualified;
+  }
 };
 
 /// Represents a `typeof` (or __typeof__) expression (a GCC extension).
@@ -6804,6 +6846,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
       Ty = P->desugar().getTypePtr();
     else if (const auto *A = dyn_cast<AdjustedType>(Ty))
       Ty = A->desugar().getTypePtr();
+    else if (const auto *M = dyn_cast<MacroQualifiedType>(Ty))
+      Ty = M->desugar().getTypePtr();
     else
       break;
   }

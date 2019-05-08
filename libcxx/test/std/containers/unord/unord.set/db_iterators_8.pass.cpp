@@ -29,16 +29,16 @@ int main(int, char**)
     typedef std::unordered_set<T> C;
     C c(1);
     C::iterator i = c.end();
-    T j = *i;
+    (void) *i;
     assert(false);
     }
 #if TEST_STD_VER >= 11
     {
     typedef int T;
-    typedef std::unordered_set<T, min_allocator<T>> C;
+    typedef std::unordered_set<T, std::hash<T>, std::equal_to<T>, min_allocator<T>> C;
     C c(1);
     C::iterator i = c.end();
-    T j = *i;
+    (void) *i;
     assert(false);
     }
 #endif

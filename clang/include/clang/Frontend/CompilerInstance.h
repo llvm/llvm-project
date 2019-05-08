@@ -44,7 +44,7 @@ class ExternalASTSource;
 class FileEntry;
 class FileManager;
 class FrontendAction;
-class MemoryBufferCache;
+class InMemoryModuleCache;
 class Module;
 class Preprocessor;
 class Sema;
@@ -82,9 +82,6 @@ class CompilerInstance : public ModuleLoader {
   /// Auxiliary Target info.
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
-  /// The virtual file system.
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VirtualFileSystem;
-
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
 
@@ -92,7 +89,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<MemoryBufferCache> PCMCache;
+  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -192,7 +189,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      MemoryBufferCache *SharedPCMCache = nullptr);
+      InMemoryModuleCache *SharedModuleCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -382,20 +379,8 @@ public:
   /// @name Virtual File System
   /// {
 
-  bool hasVirtualFileSystem() const { return VirtualFileSystem != nullptr; }
-
   llvm::vfs::FileSystem &getVirtualFileSystem() const {
-    assert(hasVirtualFileSystem() &&
-           "Compiler instance has no virtual file system");
-    return *VirtualFileSystem;
-  }
-
-  /// Replace the current virtual file system.
-  ///
-  /// \note Most clients should use setFileManager, which will implicitly reset
-  /// the virtual file system to the one contained in the file manager.
-  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
-    VirtualFileSystem = std::move(FS);
+    return getFileManager().getVirtualFileSystem();
   }
 
   /// }
@@ -645,7 +630,8 @@ public:
   /// Create the file manager and replace any existing one with it.
   ///
   /// \return The new file manager on success, or null on failure.
-  FileManager *createFileManager();
+  FileManager *
+  createFileManager(IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Create the source manager and replace any existing one with it.
   void createSourceManager(FileManager &FileMgr);
@@ -671,7 +657,8 @@ public:
   /// \return - The new object on success, or null on failure.
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
-      bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
+      bool AllowPCHWithCompilerErrors, Preprocessor &PP,
+      InMemoryModuleCache &ModuleCache, ASTContext &Context,
       const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       DependencyFileGenerator *DependencyFile,
@@ -813,7 +800,7 @@ public:
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
-  MemoryBufferCache &getPCMCache() const { return *PCMCache; }
+  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
 };
 
 } // end namespace clang

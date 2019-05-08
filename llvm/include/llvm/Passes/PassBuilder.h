@@ -66,6 +66,30 @@ struct PGOOptions {
   bool SamplePGOSupport;
 };
 
+/// Tunable parameters for passes in the default pipelines.
+class PipelineTuningOptions {
+public:
+  /// Constructor sets pipeline tuning defaults based on cl::opts. Each option
+  /// can be set in the PassBuilder when using a LLVM as a library.
+  PipelineTuningOptions();
+
+  /// Tuning option to set loop interleaving on/off. Its default value is that
+  /// of the flag: `-interleave-loops`.
+  bool LoopInterleaving;
+
+  /// Tuning option to enable/disable loop vectorization. Its default value is
+  /// that of the flag: `-vectorize-loops`.
+  bool LoopVectorization;
+
+  /// Tuning option to cap the number of calls to retrive clobbering accesses in
+  /// MemorySSA, in LICM.
+  unsigned LicmMssaOptCap;
+
+  /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
+  /// the number of access is too large.
+  unsigned LicmMssaNoAccForPromotionCap;
+};
+
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -74,6 +98,7 @@ struct PGOOptions {
 /// construction.
 class PassBuilder {
   TargetMachine *TM;
+  PipelineTuningOptions PTO;
   Optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
 
@@ -97,9 +122,9 @@ public:
   enum class ThinLTOPhase {
     /// No ThinLTO behavior needed.
     None,
-    // ThinLTO prelink (summary) phase.
+    /// ThinLTO prelink (summary) phase.
     PreLink,
-    // ThinLTO postlink (backend compile) phase.
+    /// ThinLTO postlink (backend compile) phase.
     PostLink
   };
 
@@ -190,14 +215,15 @@ public:
   };
 
   explicit PassBuilder(TargetMachine *TM = nullptr,
+                       PipelineTuningOptions PTO = PipelineTuningOptions(),
                        Optional<PGOOptions> PGOOpt = None,
                        PassInstrumentationCallbacks *PIC = nullptr)
-      : TM(TM), PGOOpt(PGOOpt), PIC(PIC) {}
+      : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {}
 
   /// Cross register the analysis managers through their proxies.
   ///
   /// This is an interface that can be used to cross register each
-  // AnalysisManager with all the others analysis managers.
+  /// AnalysisManager with all the others analysis managers.
   void crossRegisterProxies(LoopAnalysisManager &LAM,
                             FunctionAnalysisManager &FAM,
                             CGSCCAnalysisManager &CGAM,
@@ -406,7 +432,7 @@ public:
   /// {{@ Parse a textual pass pipeline description into a specific PassManager
   ///
   /// Automatic deduction of an appropriate pass manager stack is not supported.
-  /// For example, to insert a loop pass 'lpass' into a FunctinoPassManager,
+  /// For example, to insert a loop pass 'lpass' into a FunctionPassManager,
   /// this is the valid pipeline text:
   ///
   ///   function(lpass)

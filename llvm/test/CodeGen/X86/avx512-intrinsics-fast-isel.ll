@@ -5875,7 +5875,7 @@ define <2 x double> @test_mm_mask3_fmsub_round_sd(<2 x double> %__W, <2 x double
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    vxorpd {{\.LCPI.*}}, %xmm2, %xmm3
-; X86-NEXT:    vfmadd213sd %xmm3, %xmm0, %xmm1
+; X86-NEXT:    vfmadd213sd {rn-sae}, %xmm3, %xmm0, %xmm1
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
 ; X86-NEXT:    vmovapd %xmm2, %xmm0
@@ -5884,7 +5884,7 @@ define <2 x double> @test_mm_mask3_fmsub_round_sd(<2 x double> %__W, <2 x double
 ; X64-LABEL: test_mm_mask3_fmsub_round_sd:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vxorpd {{.*}}(%rip), %xmm2, %xmm3
-; X64-NEXT:    vfmadd213sd %xmm3, %xmm0, %xmm1
+; X64-NEXT:    vfmadd213sd {rn-sae}, %xmm3, %xmm0, %xmm1
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
 ; X64-NEXT:    vmovapd %xmm2, %xmm0
@@ -7787,8 +7787,8 @@ define double @test_mm512_reduce_max_pd(<8 x double> %__W) {
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vmovlpd %xmm0, (%esp)
+; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -7803,7 +7803,7 @@ define double @test_mm512_reduce_max_pd(<8 x double> %__W) {
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -7912,8 +7912,8 @@ define double @test_mm512_reduce_min_pd(<8 x double> %__W) {
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vminpd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vmovlpd %xmm0, (%esp)
+; X86-NEXT:    vminsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -7928,7 +7928,7 @@ define double @test_mm512_reduce_min_pd(<8 x double> %__W) {
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-NEXT:    vminpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -8057,8 +8057,8 @@ define double @test_mm512_mask_reduce_max_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vmovlpd %xmm0, (%esp)
+; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -8076,7 +8076,7 @@ define double @test_mm512_mask_reduce_max_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -8209,8 +8209,8 @@ define double @test_mm512_mask_reduce_min_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vminpd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vmovlpd %xmm0, (%esp)
+; X86-NEXT:    vminsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -8228,7 +8228,7 @@ define double @test_mm512_mask_reduce_min_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-NEXT:    vminpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -8334,7 +8334,7 @@ define float @test_mm512_reduce_max_ps(<16 x float> %__W) {
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -8351,7 +8351,7 @@ define float @test_mm512_reduce_max_ps(<16 x float> %__W) {
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -8460,7 +8460,7 @@ define float @test_mm512_reduce_min_ps(<16 x float> %__W) {
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X86-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X86-NEXT:    vminps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vminss %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -8477,7 +8477,7 @@ define float @test_mm512_reduce_min_ps(<16 x float> %__W) {
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X64-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X64-NEXT:    vminps %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vminss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -8638,7 +8638,7 @@ define float @test_mm512_mask_reduce_max_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -8658,7 +8658,7 @@ define float @test_mm512_mask_reduce_max_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -8823,7 +8823,7 @@ define float @test_mm512_mask_reduce_min_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X86-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X86-NEXT:    vminps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vminss %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -8843,7 +8843,7 @@ define float @test_mm512_mask_reduce_min_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X64-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X64-NEXT:    vminps %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vminss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:

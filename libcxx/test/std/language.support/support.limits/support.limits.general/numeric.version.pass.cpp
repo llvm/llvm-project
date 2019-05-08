@@ -15,6 +15,7 @@
 
 /*  Constant                        Value
     __cpp_lib_gcd_lcm               201606L [C++17]
+    __cpp_lib_interpolate           201902L [C++2a]
     __cpp_lib_parallel_algorithm    201603L [C++17]
 */
 
@@ -27,6 +28,10 @@
 #   error "__cpp_lib_gcd_lcm should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++2a"
+# endif
+
 # ifdef __cpp_lib_parallel_algorithm
 #   error "__cpp_lib_parallel_algorithm should not be defined before c++17"
 # endif
@@ -35,6 +40,10 @@
 
 # ifdef __cpp_lib_gcd_lcm
 #   error "__cpp_lib_gcd_lcm should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_parallel_algorithm
@@ -48,6 +57,10 @@
 # endif
 # if __cpp_lib_gcd_lcm != 201606L
 #   error "__cpp_lib_gcd_lcm should have the value 201606L in c++17"
+# endif
+
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -70,6 +83,13 @@
 # endif
 # if __cpp_lib_gcd_lcm != 201606L
 #   error "__cpp_lib_gcd_lcm should have the value 201606L in c++2a"
+# endif
+
+# ifndef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should be defined in c++2a"
+# endif
+# if __cpp_lib_interpolate != 201902L
+#   error "__cpp_lib_interpolate should have the value 201902L in c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

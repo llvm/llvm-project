@@ -3,7 +3,7 @@
 
 // REQUIRES: aarch64-registered-target
 // RUN: llvm-mc -filetype=obj -triple aarch64-windows %s -o - \
-// RUN:   | llvm-readobj -unwind - | FileCheck %s
+// RUN:   | llvm-readobj --unwind - | FileCheck %s
 
 // CHECK:     Prologue [
 // CHECK:        0xdf                ; Bad opcode!

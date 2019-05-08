@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "gtest/gtest.h"
 
+#include <stdint.h>
 #include <string.h>
 
 namespace __sanitizer {
@@ -108,6 +109,21 @@ TEST(SanitizerCommon, IntFlags) {
   EXPECT_DEATH(TestFlag(-11, "flag_name", 0), "expected '='");
   EXPECT_DEATH(TestFlag(-11, "flag_name=42U", 0),
                "Invalid value for int option");
+}
+
+TEST(SanitizerCommon, LongLongIntFlags) {
+  s64 InitValue = -5;
+  s64 IntMin = INT64_MIN;
+  s64 IntMax = INT64_MAX;
+  TestFlag(InitValue, "flag_name=0", 0ll);
+  TestFlag(InitValue, "flag_name=42", 42ll);
+  TestFlag(InitValue, "flag_name=-42", -42ll);
+
+  TestFlag(InitValue, "flag_name=-9223372036854775808", IntMin);
+  TestFlag(InitValue, "flag_name=9223372036854775807", IntMax);
+
+  TestFlag(InitValue, "flag_name=-92233720368547758080000", IntMin);
+  TestFlag(InitValue, "flag_name=92233720368547758070000", IntMax);
 }
 
 TEST(SanitizerCommon, StrFlags) {

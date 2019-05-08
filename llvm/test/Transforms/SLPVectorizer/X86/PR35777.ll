@@ -10,7 +10,7 @@ define { i64, i64 } @patatino(double %arg) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([6 x double], [6 x double]* @global, i64 0, i64 2) to <2 x double>*), align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[ARG:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[ARG]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([6 x double], [6 x double]* @global, i64 0, i64 4) to <2 x double>*), align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], [[TMP5]]

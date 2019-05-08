@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Support/ISLTools.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <vector>
 
 using namespace polly;
 

@@ -318,7 +318,7 @@ multiclass VOP3P_Real_vi<bits<10> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
             VOP3Pe <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicates = [HasVOP3PInsts];
-    let DecoderNamespace = "VI";
+    let DecoderNamespace = "GFX8";
   }
 }
 
@@ -378,3 +378,37 @@ defm V_DOT4_I32_I8  : VOP3P_Real_vi <0x3a8>;
 defm V_DOT8_I32_I4  : VOP3P_Real_vi <0x3aa>;
 
 } // End SubtargetPredicate = HasDot1Insts
+
+//===----------------------------------------------------------------------===//
+// GFX10.
+//===----------------------------------------------------------------------===//
+
+let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
+  multiclass VOP3P_Real_gfx10<bits<10> op> {
+    def _gfx10 : VOP3P_Real<!cast<VOP3P_Pseudo>(NAME), SIEncodingFamily.GFX10>,
+                 VOP3Pe_gfx10 <op, !cast<VOP3P_Pseudo>(NAME).Pfl>;
+  }
+} // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
+
+defm V_PK_MAD_I16     : VOP3P_Real_gfx10<0x000>;
+defm V_PK_MUL_LO_U16  : VOP3P_Real_gfx10<0x001>;
+defm V_PK_ADD_I16     : VOP3P_Real_gfx10<0x002>;
+defm V_PK_SUB_I16     : VOP3P_Real_gfx10<0x003>;
+defm V_PK_LSHLREV_B16 : VOP3P_Real_gfx10<0x004>;
+defm V_PK_LSHRREV_B16 : VOP3P_Real_gfx10<0x005>;
+defm V_PK_ASHRREV_I16 : VOP3P_Real_gfx10<0x006>;
+defm V_PK_MAX_I16     : VOP3P_Real_gfx10<0x007>;
+defm V_PK_MIN_I16     : VOP3P_Real_gfx10<0x008>;
+defm V_PK_MAD_U16     : VOP3P_Real_gfx10<0x009>;
+defm V_PK_ADD_U16     : VOP3P_Real_gfx10<0x00a>;
+defm V_PK_SUB_U16     : VOP3P_Real_gfx10<0x00b>;
+defm V_PK_MAX_U16     : VOP3P_Real_gfx10<0x00c>;
+defm V_PK_MIN_U16     : VOP3P_Real_gfx10<0x00d>;
+defm V_PK_FMA_F16     : VOP3P_Real_gfx10<0x00e>;
+defm V_PK_ADD_F16     : VOP3P_Real_gfx10<0x00f>;
+defm V_PK_MUL_F16     : VOP3P_Real_gfx10<0x010>;
+defm V_PK_MIN_F16     : VOP3P_Real_gfx10<0x011>;
+defm V_PK_MAX_F16     : VOP3P_Real_gfx10<0x012>;
+defm V_FMA_MIX_F32    : VOP3P_Real_gfx10<0x020>;
+defm V_FMA_MIXLO_F16  : VOP3P_Real_gfx10<0x021>;
+defm V_FMA_MIXHI_F16  : VOP3P_Real_gfx10<0x022>;

@@ -81,7 +81,7 @@ public:
   void bar() {
     int b, argv, d, c, e, f8;
 #pragma omp target
-#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f8) thread_limit(d) copyin(x)
+#pragma omp teams distribute parallel for allocate(b) default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f8) thread_limit(d) copyin(x) allocate(argv)
     for (int k = 0; k < a.a; ++k)
       ++a.a;
   }
@@ -93,7 +93,7 @@ public:
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams distribute parallel for private(this->a) private(this->a)
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f8) thread_limit(d) copyin(x)
+// CHECK-NEXT: #pragma omp teams distribute parallel for allocate(b) default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f8) thread_limit(d) copyin(x) allocate(argv)
 
 template <class T, int N>
 T tmain(T argc) {

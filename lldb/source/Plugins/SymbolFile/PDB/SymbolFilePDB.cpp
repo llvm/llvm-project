@@ -64,6 +64,8 @@ lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
     return lldb::LanguageType::eLanguageTypeC_plus_plus;
   case PDB_Lang::C:
     return lldb::LanguageType::eLanguageTypeC;
+  case PDB_Lang::Swift:
+    return lldb::LanguageType::eLanguageTypeSwift;
   default:
     return lldb::LanguageType::eLanguageTypeUnknown;
   }
@@ -122,7 +124,7 @@ SymbolFilePDB::CreateInstance(lldb_private::ObjectFile *obj_file) {
 
 SymbolFilePDB::SymbolFilePDB(lldb_private::ObjectFile *object_file)
     : SymbolFile(object_file), m_session_up(), m_global_scope_up(),
-      m_cached_compile_unit_count(0), m_tu_decl_ctx_up() {}
+      m_cached_compile_unit_count(0) {}
 
 SymbolFilePDB::~SymbolFilePDB() {}
 
@@ -187,14 +189,6 @@ void SymbolFilePDB::InitializeObject() {
   if (!m_global_scope_up)
     m_global_scope_up = m_session_up->getGlobalScope();
   lldbassert(m_global_scope_up.get());
-
-  TypeSystem *type_system =
-      GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
-  ClangASTContext *clang_type_system =
-      llvm::dyn_cast_or_null<ClangASTContext>(type_system);
-  lldbassert(clang_type_system);
-  m_tu_decl_ctx_up = llvm::make_unique<CompilerDeclContext>(
-      type_system, clang_type_system->GetTranslationUnitDecl());
 }
 
 uint32_t SymbolFilePDB::GetNumCompileUnits() {
@@ -307,7 +301,8 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   comp_unit.AddFunction(func_sp);
 
-  TypeSystem *type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  LanguageType lang = ParseLanguage(comp_unit);
+  TypeSystem *type_system = GetTypeSystemForLanguage(lang);
   if (!type_system)
     return nullptr;
   ClangASTContext *clang_type_system =
@@ -1046,7 +1041,7 @@ SymbolFilePDB::ParseVariables(const lldb_private::SymbolContext &sc,
 }
 
 uint32_t SymbolFilePDB::FindGlobalVariables(
-    const lldb_private::ConstString &name,
+    lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, lldb_private::VariableList &variables) {
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
@@ -1246,7 +1241,7 @@ void SymbolFilePDB::CacheFunctionNames() {
 }
 
 uint32_t SymbolFilePDB::FindFunctions(
-    const lldb_private::ConstString &name,
+    lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines, bool append,
     lldb_private::SymbolContextList &sc_list) {
@@ -1386,7 +1381,7 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
 }
 
 uint32_t SymbolFilePDB::FindTypes(
-    const lldb_private::ConstString &name,
+    lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx, bool append,
     uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
@@ -1628,7 +1623,7 @@ PDBASTParser *SymbolFilePDB::GetPDBAstParser() {
 
 
 lldb_private::CompilerDeclContext SymbolFilePDB::FindNamespace(
-    const lldb_private::ConstString &name,
+    lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx) {
   auto type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   auto clang_type_system = llvm::dyn_cast_or_null<ClangASTContext>(type_system);

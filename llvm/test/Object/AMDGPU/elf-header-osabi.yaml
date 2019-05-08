@@ -1,11 +1,11 @@
 # RUN: yaml2obj -docnum=1 %s > %t.o.1
-# RUN: llvm-readobj -s -file-headers %t.o.1 | FileCheck --check-prefixes=ELF-HSA %s
+# RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-HSA %s
 # RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-HSA %s
 # RUN: yaml2obj -docnum=2 %s > %t.o.2
-# RUN: llvm-readobj -s -file-headers %t.o.2 | FileCheck --check-prefixes=ELF-PAL %s
+# RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-PAL %s
 # RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-PAL %s
 # RUN: yaml2obj -docnum=3 %s > %t.o.3
-# RUN: llvm-readobj -s -file-headers %t.o.3 | FileCheck --check-prefixes=ELF-MESA3D %s
+# RUN: llvm-readobj -S --file-headers %t.o.3 | FileCheck --check-prefixes=ELF-MESA3D %s
 # RUN: obj2yaml %t.o.3 | FileCheck --check-prefixes=YAML-MESA3D %s
 
 # ELF-HSA:    OS/ABI: AMDGPU_HSA    (0x40)

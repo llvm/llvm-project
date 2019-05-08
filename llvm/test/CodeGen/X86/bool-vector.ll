@@ -77,62 +77,31 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %esi, -8
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    andl $1, %eax
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    andl $1, %edx
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    andl $1, %esi
-; X32-NEXT:    leal (%eax,%ecx,2), %eax
-; X32-NEXT:    leal (%eax,%edx,4), %eax
-; X32-NEXT:    leal (%eax,%esi,8), %eax
+; X32-NEXT:    andl $1, %edx
+; X32-NEXT:    andl $1, %ecx
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    leal (%esi,%edx,2), %edx
+; X32-NEXT:    leal (%edx,%ecx,4), %ecx
+; X32-NEXT:    leal (%ecx,%eax,8), %eax
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X32-SSE2-LABEL: PR15215_good:
 ; X32-SSE2:       # %bb.0: # %entry
-; X32-SSE2-NEXT:    pushl %esi
-; X32-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X32-SSE2-NEXT:    .cfi_offset %esi, -8
-; X32-SSE2-NEXT:    movd %xmm0, %eax
-; X32-SSE2-NEXT:    andl $1, %eax
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X32-SSE2-NEXT:    movd %xmm1, %ecx
-; X32-SSE2-NEXT:    andl $1, %ecx
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X32-SSE2-NEXT:    movd %xmm1, %edx
-; X32-SSE2-NEXT:    andl $1, %edx
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; X32-SSE2-NEXT:    movd %xmm0, %esi
-; X32-SSE2-NEXT:    andl $1, %esi
-; X32-SSE2-NEXT:    leal (%eax,%ecx,2), %eax
-; X32-SSE2-NEXT:    leal (%eax,%edx,4), %eax
-; X32-SSE2-NEXT:    leal (%eax,%esi,8), %eax
-; X32-SSE2-NEXT:    popl %esi
-; X32-SSE2-NEXT:    .cfi_def_cfa_offset 4
+; X32-SSE2-NEXT:    pslld $31, %xmm0
+; X32-SSE2-NEXT:    movmskps %xmm0, %eax
 ; X32-SSE2-NEXT:    retl
 ;
 ; X32-AVX2-LABEL: PR15215_good:
 ; X32-AVX2:       # %bb.0: # %entry
-; X32-AVX2-NEXT:    pushl %esi
-; X32-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X32-AVX2-NEXT:    .cfi_offset %esi, -8
-; X32-AVX2-NEXT:    vmovd %xmm0, %eax
-; X32-AVX2-NEXT:    andl $1, %eax
-; X32-AVX2-NEXT:    vpextrd $1, %xmm0, %ecx
-; X32-AVX2-NEXT:    andl $1, %ecx
-; X32-AVX2-NEXT:    vpextrd $2, %xmm0, %edx
-; X32-AVX2-NEXT:    andl $1, %edx
-; X32-AVX2-NEXT:    vpextrd $3, %xmm0, %esi
-; X32-AVX2-NEXT:    andl $1, %esi
-; X32-AVX2-NEXT:    leal (%eax,%ecx,2), %eax
-; X32-AVX2-NEXT:    leal (%eax,%edx,4), %eax
-; X32-AVX2-NEXT:    leal (%eax,%esi,8), %eax
-; X32-AVX2-NEXT:    popl %esi
-; X32-AVX2-NEXT:    .cfi_def_cfa_offset 4
+; X32-AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; X32-AVX2-NEXT:    vmovmskps %xmm0, %eax
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-LABEL: PR15215_good:
@@ -152,35 +121,14 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ;
 ; X64-SSE2-LABEL: PR15215_good:
 ; X64-SSE2:       # %bb.0: # %entry
-; X64-SSE2-NEXT:    movd %xmm0, %eax
-; X64-SSE2-NEXT:    andl $1, %eax
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X64-SSE2-NEXT:    movd %xmm1, %ecx
-; X64-SSE2-NEXT:    andl $1, %ecx
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X64-SSE2-NEXT:    movd %xmm1, %edx
-; X64-SSE2-NEXT:    andl $1, %edx
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; X64-SSE2-NEXT:    movd %xmm0, %esi
-; X64-SSE2-NEXT:    andl $1, %esi
-; X64-SSE2-NEXT:    leal (%rax,%rcx,2), %eax
-; X64-SSE2-NEXT:    leal (%rax,%rdx,4), %eax
-; X64-SSE2-NEXT:    leal (%rax,%rsi,8), %eax
+; X64-SSE2-NEXT:    pslld $31, %xmm0
+; X64-SSE2-NEXT:    movmskps %xmm0, %eax
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: PR15215_good:
 ; X64-AVX2:       # %bb.0: # %entry
-; X64-AVX2-NEXT:    vmovd %xmm0, %eax
-; X64-AVX2-NEXT:    andl $1, %eax
-; X64-AVX2-NEXT:    vpextrd $1, %xmm0, %ecx
-; X64-AVX2-NEXT:    andl $1, %ecx
-; X64-AVX2-NEXT:    vpextrd $2, %xmm0, %edx
-; X64-AVX2-NEXT:    andl $1, %edx
-; X64-AVX2-NEXT:    vpextrd $3, %xmm0, %esi
-; X64-AVX2-NEXT:    andl $1, %esi
-; X64-AVX2-NEXT:    leal (%rax,%rcx,2), %eax
-; X64-AVX2-NEXT:    leal (%rax,%rdx,4), %eax
-; X64-AVX2-NEXT:    leal (%rax,%rsi,8), %eax
+; X64-AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovmskps %xmm0, %eax
 ; X64-AVX2-NEXT:    retq
 entry:
   %0 = trunc <4 x i32> %input to <4 x i1>

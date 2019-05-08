@@ -28,12 +28,12 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/Triple.h"
 
 #include "ProcessGDBRemoteLog.h"
@@ -55,9 +55,7 @@ const static uint32_t g_default_packet_timeout_sec = 20; // seconds
 const static uint32_t g_default_packet_timeout_sec = 0; // not specified
 #endif
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationServerCommon constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
     const char *comm_name, const char *listener_name)
     : GDBRemoteCommunicationServer(comm_name, listener_name),
@@ -176,9 +174,7 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
       &GDBRemoteCommunicationServerCommon::Handle_vFile_unlink);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerCommon::~GDBRemoteCommunicationServerCommon() {}
 
 GDBRemoteCommunication::PacketResult

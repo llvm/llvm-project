@@ -64,7 +64,7 @@ Parser::ParseObjCAtDirectives(ParsedAttributesWithRange &Attrs) {
   case tok::objc_protocol:
     return ParseObjCAtProtocolDeclaration(AtLoc, Attrs);
   case tok::objc_implementation:
-    return ParseObjCAtImplementationDeclaration(AtLoc);
+    return ParseObjCAtImplementationDeclaration(AtLoc, Attrs);
   case tok::objc_end:
     return ParseObjCAtEndDeclaration(AtLoc);
   case tok::objc_compatibility_alias:
@@ -623,6 +623,8 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
     }
     // Ignore excess semicolons.
     if (Tok.is(tok::semi)) {
+      // FIXME: This should use ConsumeExtraSemi() for extraneous semicolons,
+      // to make -Wextra-semi diagnose them.
       ConsumeToken();
       continue;
     }
@@ -646,7 +648,19 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
       // erroneous r_brace would cause an infinite loop if not handled here.
       if (Tok.is(tok::r_brace))
         break;
+
       ParsedAttributesWithRange attrs(AttrFactory);
+
+      // Since we call ParseDeclarationOrFunctionDefinition() instead of
+      // ParseExternalDeclaration() below (so that this doesn't parse nested
+      // @interfaces), this needs to duplicate some code from the latter.
+      if (Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
+        SourceLocation DeclEnd;
+        allTUVariables.push_back(
+            ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs));
+        continue;
+      }
+
       allTUVariables.push_back(ParseDeclarationOrFunctionDefinition(attrs));
       continue;
     }
@@ -1875,6 +1889,7 @@ void Parser::HelperActionsForIvarDeclarations(Decl *interfaceDecl, SourceLocatio
 ///     ';'
 ///     objc-instance-variable-decl-list objc-visibility-spec
 ///     objc-instance-variable-decl-list objc-instance-variable-decl ';'
+///     objc-instance-variable-decl-list static_assert-declaration
 ///     objc-instance-variable-decl-list ';'
 ///
 ///   objc-visibility-spec:
@@ -1943,6 +1958,15 @@ void Parser::ParseObjCClassInstanceVariables(Decl *interfaceDecl,
       Actions.CodeCompleteOrdinaryName(getCurScope(),
                                        Sema::PCC_ObjCInstanceVariableList);
       return cutOffParsing();
+    }
+
+    // This needs to duplicate a small amount of code from
+    // ParseStructUnionBody() for things that should work in both
+    // C struct and in Objective-C class instance variables.
+    if (Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
+      SourceLocation DeclEnd;
+      ParseStaticAssertDeclaration(DeclEnd);
+      continue;
     }
 
     auto ObjCIvarCallback = [&](ParsingFieldDeclarator &FD) {
@@ -2073,7 +2097,8 @@ Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
 ///   objc-category-implementation-prologue:
 ///     @implementation identifier ( identifier )
 Parser::DeclGroupPtrTy
-Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc) {
+Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc,
+                                             ParsedAttributes &Attrs) {
   assert(Tok.isObjCAtKeyword(tok::objc_implementation) &&
          "ParseObjCAtImplementationDeclaration(): Expected @implementation");
   CheckNestedObjCContexts(AtLoc);
@@ -2150,8 +2175,7 @@ Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc) {
                                         /*consumeLastToken=*/true);
     }
     ObjCImpDecl = Actions.ActOnStartCategoryImplementation(
-                                    AtLoc, nameId, nameLoc, categoryId,
-                                    categoryLoc);
+        AtLoc, nameId, nameLoc, categoryId, categoryLoc, Attrs);
 
   } else {
     // We have a class implementation
@@ -2165,8 +2189,7 @@ Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc) {
       superClassLoc = ConsumeToken(); // Consume super class name
     }
     ObjCImpDecl = Actions.ActOnStartClassImplementation(
-                                    AtLoc, nameId, nameLoc,
-                                    superClassId, superClassLoc);
+        AtLoc, nameId, nameLoc, superClassId, superClassLoc, Attrs);
 
     if (Tok.is(tok::l_brace)) // we have ivars
       ParseObjCClassInstanceVariables(ObjCImpDecl, tok::objc_private, AtLoc);

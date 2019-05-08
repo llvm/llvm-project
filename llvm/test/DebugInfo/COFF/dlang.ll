@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s --check-prefix=OBJ
 
 ; ASM:      .short  4412                    # Record kind: S_COMPILE3
 ; ASM-NEXT: .long   68                      # Flags and language

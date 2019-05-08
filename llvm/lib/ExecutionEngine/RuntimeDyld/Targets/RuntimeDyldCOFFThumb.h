@@ -50,7 +50,7 @@ public:
                        JITSymbolResolver &Resolver)
       : RuntimeDyldCOFF(MM, Resolver) {}
 
-  unsigned getMaxStubSize() override {
+  unsigned getMaxStubSize() const override {
     return 16; // 8-byte load instructions, 4-byte jump, 4-byte padding
   }
 

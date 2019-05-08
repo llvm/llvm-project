@@ -44,17 +44,19 @@ protected:
     DominatorTree DT;
     AssumptionCache AC;
     BasicAAResult BAA;
+    AAQueryInfo AAQI;
 
     TestAnalyses(BasicAATest &Test)
-        : DT(*Test.F), AC(*Test.F), BAA(Test.DL, *Test.F, Test.TLI, AC, &DT) {}
+        : DT(*Test.F), AC(*Test.F), BAA(Test.DL, *Test.F, Test.TLI, AC, &DT),
+          AAQI() {}
   };
 
   llvm::Optional<TestAnalyses> Analyses;
 
-  BasicAAResult &setupAnalyses() {
+  TestAnalyses &setupAnalyses() {
     assert(F);
     Analyses.emplace(*this);
-    return Analyses->BAA;
+    return Analyses.getValue();
   }
 
 public:
@@ -83,15 +85,17 @@ TEST_F(BasicAATest, AliasInstWithObjectOfImpreciseSize) {
   GlobalPtr->setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
   GlobalPtr->setInitializer(B.getInt8(0));
 
-  BasicAAResult &BasicAA = setupAnalyses();
+  auto &AllAnalyses = setupAnalyses();
+  BasicAAResult &BasicAA = AllAnalyses.BAA;
+  AAQueryInfo &AAQI = AllAnalyses.AAQI;
   ASSERT_EQ(
       BasicAA.alias(MemoryLocation(IncomingI32Ptr, LocationSize::precise(4)),
-                    MemoryLocation(GlobalPtr, LocationSize::precise(1))),
+                    MemoryLocation(GlobalPtr, LocationSize::precise(1)), AAQI),
       AliasResult::NoAlias);
 
   ASSERT_EQ(
       BasicAA.alias(MemoryLocation(IncomingI32Ptr, LocationSize::upperBound(4)),
-                    MemoryLocation(GlobalPtr, LocationSize::precise(1))),
+                    MemoryLocation(GlobalPtr, LocationSize::precise(1)), AAQI),
       AliasResult::MayAlias);
 }
 
@@ -110,14 +114,18 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   auto *I8AtUncertainOffset =
       cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), I8, ArbitraryI32));
 
-  BasicAAResult &BasicAA = setupAnalyses();
+  auto &AllAnalyses = setupAnalyses();
+  BasicAAResult &BasicAA = AllAnalyses.BAA;
+  AAQueryInfo &AAQI = AllAnalyses.AAQI;
   ASSERT_EQ(BasicAA.alias(
                 MemoryLocation(I8, LocationSize::precise(2)),
-                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1))),
+                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1)),
+                AAQI),
             AliasResult::PartialAlias);
 
   ASSERT_EQ(BasicAA.alias(
                 MemoryLocation(I8, LocationSize::upperBound(2)),
-                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1))),
+                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1)),
+                AAQI),
             AliasResult::MayAlias);
 }

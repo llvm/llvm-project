@@ -54,7 +54,7 @@ class RsyncOverSsh(transfer.protocol.Protocol):
         for spec in transfer_specs:
             cmd = self.build_rsync_command(spec, dry_run)
             if self.options.verbose:
-                print "executing the following command:\n{}".format(cmd)
+                print("executing the following command:\n{}".format(cmd))
             result = subprocess.call(
                 cmd, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
             if result != 0:

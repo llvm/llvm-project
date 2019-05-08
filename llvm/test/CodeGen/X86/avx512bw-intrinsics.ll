@@ -763,6 +763,58 @@ define <32 x i16>@test_int_x86_avx512_mask_vpermi2var_hi_512(<32 x i16> %x0, <32
   ret <32 x i16> %res2
 }
 
+declare <64 x i8> @llvm.x86.avx512.pavg.b.512(<64 x i8>, <64 x i8>)
+
+define <64 x i8> @test_int_x86_avx512_mask_pavg_b_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2, i64 %x3) {
+; X86-LABEL: test_int_x86_avx512_mask_pavg_b_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpavgb %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf1,0x7d,0x48,0xe0,0xd9]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpavgb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe0,0xd1]
+; X86-NEXT:    vpaddb %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfc,0xc3]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx512_mask_pavg_b_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpavgb %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf1,0x7d,0x48,0xe0,0xd9]
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpavgb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe0,0xd1]
+; X64-NEXT:    vpaddb %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfc,0xc3]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <64 x i8> @llvm.x86.avx512.pavg.b.512(<64 x i8> %x0, <64 x i8> %x1)
+  %2 = bitcast i64 %x3 to <64 x i1>
+  %3 = select <64 x i1> %2, <64 x i8> %1, <64 x i8> %x2
+  %4 = call <64 x i8> @llvm.x86.avx512.pavg.b.512(<64 x i8> %x0, <64 x i8> %x1)
+  %res2 = add <64 x i8> %3, %4
+  ret <64 x i8> %res2
+}
+
+declare <32 x i16> @llvm.x86.avx512.pavg.w.512(<32 x i16>, <32 x i16>)
+
+define <32 x i16> @test_int_x86_avx512_mask_pavg_w_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3) {
+; X86-LABEL: test_int_x86_avx512_mask_pavg_w_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpavgw %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf1,0x7d,0x48,0xe3,0xd9]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpavgw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe3,0xd1]
+; X86-NEXT:    vpaddw %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfd,0xc3]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx512_mask_pavg_w_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpavgw %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf1,0x7d,0x48,0xe3,0xd9]
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpavgw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe3,0xd1]
+; X64-NEXT:    vpaddw %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfd,0xc3]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <32 x i16> @llvm.x86.avx512.pavg.w.512(<32 x i16> %x0, <32 x i16> %x1)
+  %2 = bitcast i32 %x3 to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %x2
+  %4 = call <32 x i16> @llvm.x86.avx512.pavg.w.512(<32 x i16> %x0, <32 x i16> %x1)
+  %res2 = add <32 x i16> %3, %4
+  ret <32 x i16> %res2
+}
+
 declare <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8>, <64 x i8>)
 
 define <64 x i8>@test_int_x86_avx512_pshuf_b_512(<64 x i8> %x0, <64 x i8> %x1) {

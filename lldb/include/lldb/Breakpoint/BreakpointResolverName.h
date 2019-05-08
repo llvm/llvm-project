@@ -17,11 +17,9 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class BreakpointResolverName BreakpointResolverName.h
+/// \class BreakpointResolverName BreakpointResolverName.h
 /// "lldb/Breakpoint/BreakpointResolverName.h" This class sets breakpoints on
 /// a given function name, either by exact match or by regular expression.
-//----------------------------------------------------------------------
 
 class BreakpointResolverName : public BreakpointResolver {
 public:
@@ -87,7 +85,7 @@ protected:
   lldb::LanguageType m_language;
   bool m_skip_prologue;
 
-  void AddNameLookup(const ConstString &name,
+  void AddNameLookup(ConstString name,
                      lldb::FunctionNameType name_type_mask);
 };
 

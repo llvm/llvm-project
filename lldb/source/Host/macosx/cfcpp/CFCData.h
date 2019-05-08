@@ -13,9 +13,7 @@
 
 class CFCData : public CFCReleaser<CFDataRef> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CFCData(CFDataRef data = NULL);
   CFCData(const CFCData &rhs);
   CFCData &operator=(const CFCData &rhs);
@@ -26,9 +24,7 @@ public:
   CFIndex GetLength() const;
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from CFCData can see and modify these
-  //------------------------------------------------------------------
 };
 
 #endif // #ifndef CoreFoundationCPP_CFData_h_

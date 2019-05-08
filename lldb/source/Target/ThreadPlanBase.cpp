@@ -22,11 +22,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanBase: This one always stops, and never has anything particular to
 // do.
 // FIXME: The "signal handling" policies should probably go here.
-//----------------------------------------------------------------------
 
 ThreadPlanBase::ThreadPlanBase(Thread &thread)
     : ThreadPlan(ThreadPlan::eKindBase, "base plan", thread, eVoteYes,

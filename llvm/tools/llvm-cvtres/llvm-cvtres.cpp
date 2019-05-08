@@ -24,6 +24,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -102,7 +103,7 @@ int main(int Argc, const char **Argv) {
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (InputArgs.hasArg(OPT_HELP)) {
-    T.PrintHelp(outs(), "llvm-cvtres [options] file...", "Resource Converter", false);
+    T.PrintHelp(outs(), "llvm-cvtres [options] file...", "Resource Converter");
     return 0;
   }
 

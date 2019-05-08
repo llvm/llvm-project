@@ -31,9 +31,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-//----------------------------------------------------------------------
 // Thread Registers
-//----------------------------------------------------------------------
 
 ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_thread_name(), m_dispatch_queue_name(),

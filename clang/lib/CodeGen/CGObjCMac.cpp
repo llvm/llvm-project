@@ -6262,7 +6262,8 @@ CGObjCNonFragileABIMac::BuildClassObject(const ObjCInterfaceDecl *CI,
 bool CGObjCNonFragileABIMac::ImplementationIsNonLazy(
     const ObjCImplDecl *OD) const {
   return OD->getClassMethod(GetNullarySelector("load")) != nullptr ||
-         OD->getClassInterface()->hasAttr<ObjCNonLazyClassAttr>();
+         OD->getClassInterface()->hasAttr<ObjCNonLazyClassAttr>() ||
+         OD->hasAttr<ObjCNonLazyClassAttr>();
 }
 
 void CGObjCNonFragileABIMac::GetClassSizeInfo(const ObjCImplementationDecl *OID,
@@ -6809,7 +6810,7 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocolRef(
     // reference or not. At module finalization we add the empty
     // contents for protocols which were referenced but never defined.
     llvm::SmallString<64> Protocol;
-    llvm::raw_svector_ostream(Protocol) << "\01l_OBJC_PROTOCOL_$_"
+    llvm::raw_svector_ostream(Protocol) << "_OBJC_PROTOCOL_$_"
                                         << PD->getObjCRuntimeNameAsString();
 
     Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
@@ -6901,7 +6902,7 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
   } else {
     llvm::SmallString<64> symbolName;
     llvm::raw_svector_ostream(symbolName)
-      << "\01l_OBJC_PROTOCOL_$_" << PD->getObjCRuntimeNameAsString();
+      << "_OBJC_PROTOCOL_$_" << PD->getObjCRuntimeNameAsString();
 
     Entry = values.finishAndCreateGlobal(symbolName, CGM.getPointerAlign(),
                                          /*constant*/ false,
@@ -6917,7 +6918,7 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
   // Use this protocol meta-data to build protocol list table in section
   // __DATA, __objc_protolist
   llvm::SmallString<64> ProtocolRef;
-  llvm::raw_svector_ostream(ProtocolRef) << "\01l_OBJC_LABEL_PROTOCOL_$_"
+  llvm::raw_svector_ostream(ProtocolRef) << "_OBJC_LABEL_PROTOCOL_$_"
                                          << PD->getObjCRuntimeNameAsString();
 
   llvm::GlobalVariable *PTGV =

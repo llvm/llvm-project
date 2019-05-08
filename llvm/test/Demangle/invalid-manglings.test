@@ -1,5 +1,5 @@
 ; Run llvm-undname with invalid inputs and make sure it doesn't crash.
-; RUN: llvm-undname < %s 2>&1 | FileCheck %s
+; RUN: not llvm-undname < %s 2>&1 | FileCheck %s
 
 ?ff@@$$J0YAXAU?$AS_@$0A@PEAU?$AS_@$0A@H@__clang@@@__clang@@@Z
 ; CHECK: ?ff@@$$J0YAXAU?$AS_@$0A@PEAU?$AS_@$0A@H@__clang@@@__clang@@@Z
@@ -8,4 +8,164 @@
 ?f0@@YAXPEU?$AS_@$00$$CAD@__clang@@@Z
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ?f0@@YAXPEU?$AS_@$00$$CAD@__clang@@@Z
+; CHECK-NEXT: error: Invalid mangled name
+
+?@@8
+; CHECK-EMPTY:
+; CHECK-NEXT: ?@@8
+; CHECK-NEXT: error: Invalid mangled name
+
+??
+; CHECK-EMPTY:
+; CHECK-NEXT: ??
+; CHECK-NEXT: error: Invalid mangled name
+
+??0@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??0@
+; CHECK-NEXT: error: Invalid mangled name
+
+? @@   YC@
+; CHECK-EMPTY:
+; CHECK-NEXT: ? @@   YC@
+; CHECK-NEXT: error: Invalid mangled name
+
+??B@$$J0
+; CHECK-EMPTY:
+; CHECK-NEXT: ??B@$$J0
+; CHECK-NEXT: error: Invalid mangled name
+
+??B@4
+; CHECK-EMPTY:
+; CHECK-NEXT: ??B@4
+; CHECK-NEXT: error: Invalid mangled name
+
+?A?@?@???B@4D
+; CHECK-EMPTY:
+; CHECK-NEXT: ?A?@?@???B@4D
+; CHECK-NEXT: error: Invalid mangled name
+
+?A?@?@???B@4DD
+; CHECK-EMPTY:
+; CHECK-NEXT: ?A?@?@???B@4DD
+; CHECK-NEXT: error: Invalid mangled name
+
+??$A@P15@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??$A@P15@
+; CHECK-NEXT: error: Invalid mangled name
+
+??$A@P
+; CHECK-EMPTY:
+; CHECK-NEXT: ??$A@P
+; CHECK-NEXT: error: Invalid mangled name
+
+?A@@
+; CHECK-EMPTY:
+; CHECK-NEXT: ?A@@
+; CHECK-NEXT: error: Invalid mangled name
+
+?A@@P
+; CHECK-EMPTY:
+; CHECK-NEXT: ?A@@P
+; CHECK-NEXT: error: Invalid mangled name
+
+?A@@4PQA@@
+; CHECK-EMPTY:
+; CHECK-NEXT: ?A@@4PQA@@
+; CHECK-NEXT: error: Invalid mangled name
+
+??__E
+; CHECK-EMPTY:
+; CHECK-NEXT: ??__E
+; CHECK-NEXT: error: Invalid mangled name
+
+??__E@@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??__E@@
+; CHECK-NEXT: error: Invalid mangled name
+
+??__E?Foo@@0HA@@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??__E?Foo@@0HA@@
+; CHECK-NEXT: error: Invalid mangled name
+
+??8@8
+; CHECK-EMPTY:
+; CHECK-NEXT: ??8@8
+; CHECK-NEXT: error: Invalid mangled name
+
+?B@?$?K$H?
+; CHECK-EMPTY:
+; CHECK-NEXT: ?B@?$?K$H?
+; CHECK-NEXT: error: Invalid mangled name
+
+??C@$
+; CHECK-EMPTY:
+; CHECK-NEXT: ??C@$
+; CHECK-NEXT: error: Invalid mangled name
+
+?x@@3PAW
+; CHECK-EMPTY:
+; CHECK-NEXT: ?x@@3PAW
+; CHECK-NEXT: error: Invalid mangled name
+
+??}
+; CHECK-EMPTY:
+; CHECK-NEXT: ??}
+; CHECK-NEXT: error: Invalid mangled name
+
+?foo@?$?_
+; CHECK-EMPTY:
+; CHECK-NEXT: ?foo@?$?_
+; CHECK-NEXT: error: Invalid mangled name
+
+??_R4
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_R4
+; CHECK-NEXT: error: Invalid mangled name
+
+??_R4foo@@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_R4foo@@
+; CHECK-NEXT: error: Invalid mangled name
+
+?foo@?$?BH@@QAEHXZ
+; CHECK-EMPTY:
+; CHECK-NEXT: ?foo@?$?BH@@QAEHXZ
+; CHECK-NEXT: error: Invalid mangled name
+
+?foo@?$?0H@
+; CHECK-EMPTY:
+; CHECK-NEXT: ?foo@?$?0H@
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_0A@01234567@a
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_0A@01234567@a
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_1A@01234567@a
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_1A@01234567@a
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_0301234567@a
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_0301234567@a
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_1301234567@a
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_1301234567@a
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_0601234567@abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZabcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZabcdefghijklmnopqrtsuvwxyz
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_0601234567@abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZabcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZabcdefghijklmnopqrtsuvwxyz
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_12@?z
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_12@?z
 ; CHECK-NEXT: error: Invalid mangled name

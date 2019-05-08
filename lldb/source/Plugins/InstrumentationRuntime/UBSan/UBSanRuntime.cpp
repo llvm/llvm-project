@@ -131,7 +131,7 @@ StructuredData::ObjectSP UndefinedBehaviorSanitizerRuntime::RetrieveReportData(
   options.SetTryAllThreads(true);
   options.SetStopOthers(true);
   options.SetIgnoreBreakpoints(true);
-  options.SetTimeout(std::chrono::seconds(2));
+  options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
   options.SetPrefix(ub_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);

@@ -78,7 +78,7 @@ public:
   bool AddModulesForCompileUnit(CompileUnit &cu, ModuleVector &exported_modules,
                                 Stream &error_stream) override;
 
-  uint32_t FindDecls(const ConstString &name, bool append, uint32_t max_matches,
+  uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
                      std::vector<clang::NamedDecl *> &decls) override;
 
   void ForEachMacro(const ModuleVector &modules,
@@ -229,15 +229,23 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
                             std::equal(sysroot_begin, sysroot_end, path_begin);
     // No need to inject search paths to modules in the sysroot.
     if (!is_system_module) {
+      auto error = [&]() {
+        error_stream.Printf("error: No module map file in %s\n",
+                            module.search_path.AsCString());
+        return false;
+      };
+
       bool is_system = true;
       bool is_framework = false;
       auto *dir =
           HS.getFileMgr().getDirectory(module.search_path.GetStringRef());
+      if (!dir)
+        return error();
       auto *file = HS.lookupModuleMapFile(dir, is_framework);
+      if (!file)
+        return error();
       if (!HS.loadModuleMapFile(file, is_system))
-        error_stream.Printf("error: No module map file in %s\n",
-                            module.search_path.AsCString());
-      return false;
+        return error();
     }
   }
   if (!HS.lookupModule(module.path.front().GetStringRef())) {
@@ -340,7 +348,7 @@ bool ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
 // ClangImporter::lookupValue
 
 uint32_t
-ClangModulesDeclVendorImpl::FindDecls(const ConstString &name, bool append,
+ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
                                       uint32_t max_matches,
                                       std::vector<clang::NamedDecl *> &decls) {
   if (!m_enabled) {
@@ -600,7 +608,7 @@ ClangModulesDeclVendor::Create(Target &target) {
     compiler_invocation_arguments.push_back(module_cache_argument);
   }
 
-  FileSpecList &module_search_paths = target.GetClangModuleSearchPaths();
+  FileSpecList module_search_paths = target.GetClangModuleSearchPaths();
 
   for (size_t spi = 0, spe = module_search_paths.GetSize(); spi < spe; ++spi) {
     const FileSpec &search_path = module_search_paths.GetFileSpecAtIndex(spi);
@@ -624,12 +632,21 @@ ClangModulesDeclVendor::Create(Target &target) {
       clang::CompilerInstance::createDiagnostics(new clang::DiagnosticOptions,
                                                  new StoringDiagnosticConsumer);
 
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  if (log)
+    log->PutString("ClangModulesDeclVendor::Create()");
   std::vector<const char *> compiler_invocation_argument_cstrs;
   compiler_invocation_argument_cstrs.reserve(
       compiler_invocation_arguments.size());
   for (const std::string &arg : compiler_invocation_arguments) {
     compiler_invocation_argument_cstrs.push_back(arg.c_str());
+    if (log) {
+      log->PutString("\n  ");
+      log->PutString(arg);
+    }
   }
+  if (log)
+    log->PutString("\n");
 
   std::shared_ptr<clang::CompilerInvocation> invocation =
       clang::createInvocationFromCommandLine(compiler_invocation_argument_cstrs,
@@ -662,7 +679,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   }
 
   // Make sure clang uses the same VFS as LLDB.
-  instance->setVirtualFileSystem(FileSystem::Instance().GetVirtualFileSystem());
+  instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
   instance->setDiagnostics(diagnostics_engine.get());
   instance->setInvocation(invocation);
 

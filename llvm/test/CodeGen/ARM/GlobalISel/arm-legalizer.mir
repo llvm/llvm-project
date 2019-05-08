@@ -1,40 +1,10 @@
 # RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
 --- |
-  define void @test_load_store_64() #0 { ret void }
-
   define void @test_constants_s64() { ret void }
 
   define void @test_phi_s64() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2" }
-...
----
-name:            test_load_store_64
-# CHECK-LABEL: name: test_load_store_64
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0
-
-    ; These are legal, so we should find them unchanged in the output
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s64), %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s64) = G_LOAD %0(p0)
-    %0(p0) = COPY $r0
-    %1(s64) = G_LOAD %0(p0) :: (load 8)
-    G_STORE %1(s64), %0(p0) :: (store 8)
-    BX_RET 14, $noreg
 ...
 ---
 name:            test_constants_s64

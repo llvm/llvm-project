@@ -821,12 +821,7 @@ void llvm::computeDeadSymbols(
         // If this is an alias, visit the aliasee VI to ensure that all copies
         // are marked live and it is added to the worklist for further
         // processing of its references.
-        // FIXME: The aliasee GUID is only populated in the summary when we
-        // read them from bitcode, which is currently the only way we can
-        // get here (we don't yet support reading the summary index directly
-        // from LLVM assembly code in tools that can perform a thin link).
-        // If that ever changes, the below call to getAliaseGUID will assert.
-        visit(Index.getValueInfo(AS->getAliaseeGUID()));
+        visit(AS->getAliaseeVI());
         continue;
       }
 

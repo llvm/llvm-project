@@ -69,7 +69,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #0
 declare void @SetMotionVectorsMB(%structK* nocapture, i32) #1
 
 ; Function Attrs: nounwind
-define void @set_stored_macroblock_parameters() #1 {
+define void @set_stored_macroblock_parameters(i16 %a0, i32 %a1) #1 {
 entry:
   %0 = load %structB*, %structB** @img, align 4
   %1 = load i32, i32* undef, align 4
@@ -126,20 +126,22 @@ if.end230:                                        ; preds = %if.end164
   %b8pdir = getelementptr inbounds %structK, %structK* %2, i32 %1, i32 15
   %3 = bitcast [4 x i32]* %b8pdir to i8*
   tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %3, i8* align 4 bitcast ([4 x i32]* @b8pdir to i8*), i32 16, i1 false)
-  br i1 undef, label %if.end236, label %if.then233
+  %tobool.if.end230 = icmp ne i8* %3, null
+  br i1 %tobool.if.end230, label %if.end236, label %if.then233
 
 if.then233:                                       ; preds = %if.end230
   unreachable
 
 if.end236:                                        ; preds = %if.end230
-  %cmp242 = icmp ne i16 undef, 8
+  %cmp242 = icmp ne i16 %a0, 8
   %4 = load i32, i32* @luma_transform_size_8x8_flag, align 4
   %tobool245 = icmp ne i32 %4, 0
   %or.cond812 = or i1 %cmp242, %tobool245
   br i1 %or.cond812, label %if.end249, label %land.lhs.true246
 
 land.lhs.true246:                                 ; preds = %if.end236
-  br i1 undef, label %if.end249, label %if.then248
+  %tobool246 = icmp sgt i32 %4, 1
+  br i1 %tobool246, label %if.end249, label %if.then248
 
 if.then248:                                       ; preds = %land.lhs.true246
   tail call void asm sideeffect "", "~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11}"() nounwind
@@ -154,7 +156,7 @@ if.end249:                                        ; preds = %if.then248, %land.l
   %luma_transform_size_8x8_flag264 = getelementptr inbounds %structA, %structA* %6, i32 0, i32 21
   store i32 %5, i32* %luma_transform_size_8x8_flag264, align 4
   %7 = load i32, i32* undef, align 4
-  %add281 = add nsw i32 %7, 0
+  %add281 = add nsw i32 %7, %4
   br label %for.body285
 
 for.body285:                                      ; preds = %for.inc503, %if.end249
@@ -177,7 +179,7 @@ for.body285:                                      ; preds = %for.inc503, %if.end
   %14 = load %structB*, %structB** @img, align 4
   %MbaffFrameFlag327 = getelementptr inbounds %structB, %structB* %14, i32 0, i32 100
   %15 = load i32, i32* %MbaffFrameFlag327, align 4
-  %tobool328 = icmp eq i32 %15, 0
+  %tobool328 = icmp eq i32 %15, %a1
   br i1 %tobool328, label %if.end454, label %if.then329
 
 if.then329:                                       ; preds = %for.body285

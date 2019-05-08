@@ -29,9 +29,9 @@ body: |
     %13:vgpr_32 = V_OR_B32_e32 %11, %12.sub2, implicit $exec
     %14:vgpr_32 = V_AND_B32_e32 1, %13, implicit $exec
     %15:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %14, implicit $exec
-    %16:vgpr_32 = V_CNDMASK_B32_e64 0, 1, %15, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN_exact %16, undef %17:vgpr_32, undef %18:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into constant-pool, align 1, addrspace 4)
-    S_ENDPGM
+    %16:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %15, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN_exact %16, undef %17:vgpr_32, undef %18:sreg_128, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into constant-pool, align 1, addrspace 4)
+    S_ENDPGM 0
 
   bb.2:
     successors: %bb.3, %bb.4
@@ -78,9 +78,9 @@ body: |
 
   bb.8:
     successors: %bb.10
-    %31:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %32:vgpr_32, undef %33:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, align 1, addrspace 4)
+    %31:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %32:vgpr_32, undef %33:sreg_128, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, align 1, addrspace 4)
     %34:sreg_64_xexec = V_CMP_NE_U32_e64 0, %31, implicit $exec
-    %35:vgpr_32 = V_CNDMASK_B32_e64 0, -1, %34, implicit $exec
+    %35:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, %34, implicit $exec
     %28:vreg_1 = COPY %35
     S_BRANCH %bb.10
 
@@ -93,7 +93,7 @@ body: |
     $exec = S_OR_B64 $exec, %29, implicit-def $scc
     %36:vreg_1 = COPY %28
     %37:sreg_64_xexec = V_CMP_NE_U32_e64 0, %36, implicit $exec
-    %38:vgpr_32 = V_CNDMASK_B32_e64 0, 1, %37, implicit $exec
+    %38:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %37, implicit $exec
     %39:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     undef %40.sub0:vreg_128 = COPY %39
     %40.sub1:vreg_128 = COPY %39

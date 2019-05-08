@@ -11,7 +11,6 @@
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Utility/Log.h"
 
 #include <vector>
 
@@ -95,7 +94,7 @@ operator=(const SBMemoryRegionInfoList &rhs) {
   if (this != &rhs) {
     *m_opaque_up = *rhs.m_opaque_up;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 uint32_t SBMemoryRegionInfoList::GetSize() const {
@@ -109,21 +108,7 @@ bool SBMemoryRegionInfoList::GetMemoryRegionAtIndex(
   LLDB_RECORD_METHOD(bool, SBMemoryRegionInfoList, GetMemoryRegionAtIndex,
                      (uint32_t, lldb::SBMemoryRegionInfo &), idx, region_info);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  bool result = m_opaque_up->GetMemoryRegionInfoAtIndex(idx, region_info.ref());
-
-  if (log) {
-    SBStream sstr;
-    region_info.GetDescription(sstr);
-    log->Printf("SBMemoryRegionInfoList::GetMemoryRegionAtIndex (this.ap=%p, "
-                "idx=%d) => SBMemoryRegionInfo (this.ap=%p, '%s')",
-                static_cast<void *>(m_opaque_up.get()), idx,
-                static_cast<void *>(region_info.m_opaque_up.get()),
-                sstr.GetData());
-  }
-
-  return result;
+  return m_opaque_up->GetMemoryRegionInfoAtIndex(idx, region_info.ref());
 }
 
 void SBMemoryRegionInfoList::Clear() {
@@ -153,4 +138,29 @@ const MemoryRegionInfoListImpl *SBMemoryRegionInfoList::operator->() const {
 const MemoryRegionInfoListImpl &SBMemoryRegionInfoList::operator*() const {
   assert(m_opaque_up.get());
   return *m_opaque_up;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBMemoryRegionInfoList>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfoList, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfoList,
+                            (const lldb::SBMemoryRegionInfoList &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBMemoryRegionInfoList &,
+      SBMemoryRegionInfoList, operator=,(
+                                  const lldb::SBMemoryRegionInfoList &));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBMemoryRegionInfoList, GetSize, ());
+  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfoList, GetMemoryRegionAtIndex,
+                       (uint32_t, lldb::SBMemoryRegionInfo &));
+  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Clear, ());
+  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Append,
+                       (lldb::SBMemoryRegionInfo &));
+  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Append,
+                       (lldb::SBMemoryRegionInfoList &));
+}
+
+}
 }

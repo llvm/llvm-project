@@ -14,7 +14,7 @@ body:             |
   ; CHECK:   %0.sub1:sreg_64_xexec = COPY %0.sub0
   ; CHECK:   S_BRANCH %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   S_ENDPGM implicit %0
+  ; CHECK:   S_ENDPGM 0, implicit %0
   bb.0:
     successors: %bb.1
 
@@ -29,7 +29,7 @@ body:             |
 
   bb.2:
     dead %2:sreg_32_xm0 = COPY %0.sub0:sreg_64_xexec
-    S_ENDPGM implicit killed %1
+    S_ENDPGM 0, implicit killed %1
 
 ...
 ---
@@ -40,11 +40,11 @@ body:             |
     ; CHECK-LABEL: name: couldnt_join_subrange_no_implicit_def_inst
     ; CHECK: undef %0.sub0:sreg_64 = S_MOV_B32 0
     ; CHECK: %0.sub1:sreg_64 = COPY %0.sub0
-    ; CHECK: S_ENDPGM implicit %0.sub1
+    ; CHECK: S_ENDPGM 0, implicit %0.sub1
     undef %0.sub0:sreg_64 = S_MOV_B32 0
     %1:sreg_64 = COPY %0:sreg_64
     %0.sub1:sreg_64 = COPY %0.sub0:sreg_64
-    S_ENDPGM implicit %1.sub1:sreg_64
+    S_ENDPGM 0, implicit %1.sub1:sreg_64
 
 ...
 ---
@@ -59,7 +59,7 @@ body:             |
   ; CHECK:   %0.sub0:sreg_64 = S_MOV_B32 0
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
   ; CHECK:   dead %0.sub1:sreg_64 = COPY %0.sub0
-  ; CHECK:   S_ENDPGM implicit [[COPY]].sub1
+  ; CHECK:   S_ENDPGM 0, implicit [[COPY]].sub1
   bb.0:
     successors: %bb.1
     undef %0.sub1:sreg_64 = S_MOV_B32 -1
@@ -68,7 +68,7 @@ body:             |
     %0.sub0:sreg_64 = S_MOV_B32 0
     %1:sreg_64 = COPY %0:sreg_64
     dead %0.sub1:sreg_64 = COPY %0.sub0:sreg_64
-    S_ENDPGM implicit %1.sub1:sreg_64
+    S_ENDPGM 0, implicit %1.sub1:sreg_64
 
 ...
 ---
@@ -82,13 +82,13 @@ body:             |
     ; CHECK: %0.sub1:sreg_64_xexec = S_MOV_B32 0
     ; CHECK: S_NOP 0, implicit %0.sub1
     ; CHECK: S_NOP 0, implicit %0
-    ; CHECK: S_ENDPGM
+    ; CHECK: S_ENDPGM 0
     undef %0.sub0:sreg_64_xexec = S_MOV_B32 0
     %1:sreg_64 = COPY %0
     %0.sub1:sreg_64_xexec = S_MOV_B32 0
     S_NOP 0, implicit %0.sub1
     S_NOP 0, implicit %1
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -102,7 +102,7 @@ body:             |
   ; CHECK:   %0.sub1:sreg_64_xexec = COPY %0.sub0
   ; CHECK: bb.1:
   ; CHECK:   S_NOP 0, implicit %0.sub1
-  ; CHECK:   S_ENDPGM implicit %0
+  ; CHECK:   S_ENDPGM 0, implicit %0
   bb.0:
     successors: %bb.1
 
@@ -113,6 +113,6 @@ body:             |
   bb.1:
 
     S_NOP 0, implicit %0.sub1
-    S_ENDPGM implicit %1
+    S_ENDPGM 0, implicit %1
 
 ...

@@ -22,7 +22,7 @@ define i32 @foo(double* nocapture %A, float* nocapture %B, i32 %g) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[B:%.*]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> <float 5.000000e+00, float 8.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], <float 5.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[G:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:

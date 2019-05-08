@@ -33,12 +33,6 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
   if (section_list) {
     SectionSP section_sp(section_list->FindSectionByType(sect_type, true));
     if (section_sp) {
-      // See if we memory mapped the DWARF segment?
-      if (m_dwarf_data.GetByteSize()) {
-        data.SetData(m_dwarf_data, section_sp->GetOffset(),
-                     section_sp->GetFileSize());
-        return;
-      }
 
       if (m_obj_file->ReadSectionData(section_sp.get(), data) != 0)
         return;
@@ -107,7 +101,7 @@ lldb::TypeSP SymbolFileDWARFDwo::FindDefinitionTypeForDWARFDeclContext(
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
-    const DWARFDIE &die, const lldb_private::ConstString &type_name,
+    const DWARFDIE &die, lldb_private::ConstString type_name,
     bool must_be_implementation) {
   return GetBaseSymbolFile()->FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);

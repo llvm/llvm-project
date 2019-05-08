@@ -17,9 +17,7 @@ namespace lldb_private {
 
 class StopInfoMachException : public StopInfo {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   StopInfoMachException(Thread &thread, uint32_t exc_type,
                         uint32_t exc_data_count, uint64_t exc_code,
                         uint64_t exc_subcode)

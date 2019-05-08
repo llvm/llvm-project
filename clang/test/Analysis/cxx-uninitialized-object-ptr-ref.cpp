@@ -1,10 +1,10 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
 
 //===----------------------------------------------------------------------===//
@@ -254,6 +254,29 @@ struct CharPointerTest {
 
 void fCharPointerTest() {
   CharPointerTest();
+}
+
+struct VectorSizePointer {
+  VectorSizePointer() {} // expected-warning{{1 uninitialized field}}
+  __attribute__((__vector_size__(8))) int *x; // expected-note{{uninitialized pointer 'this->x'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+};
+
+void __vector_size__PointerTest() {
+  VectorSizePointer v;
+}
+
+struct VectorSizePointee {
+  using MyVectorType = __attribute__((__vector_size__(8))) int;
+  MyVectorType *x;
+
+  VectorSizePointee(decltype(x) x) : x(x) {}
+};
+
+void __vector_size__PointeeTest() {
+  VectorSizePointee::MyVectorType i;
+  // TODO: Report v.x's pointee.
+  VectorSizePointee v(&i);
 }
 
 struct CyclicPointerTest1 {

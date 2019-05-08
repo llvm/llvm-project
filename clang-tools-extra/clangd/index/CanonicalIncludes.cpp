@@ -37,31 +37,12 @@ void CanonicalIncludes::addSymbolMapping(llvm::StringRef QualifiedName,
 }
 
 llvm::StringRef
-CanonicalIncludes::mapHeader(llvm::ArrayRef<std::string> Headers,
+CanonicalIncludes::mapHeader(llvm::StringRef Header,
                              llvm::StringRef QualifiedName) const {
-  assert(!Headers.empty());
+  assert(!Header.empty());
   auto SE = SymbolMapping.find(QualifiedName);
   if (SE != SymbolMapping.end())
     return SE->second;
-  // Find the first header such that the extension is not '.inc', and isn't a
-  // recognized non-header file
-  auto I = llvm::find_if(Headers, [](llvm::StringRef Include) {
-    // Skip .inc file whose including header file should
-    // be #included instead.
-    return !Include.endswith(".inc");
-  });
-  if (I == Headers.end())
-    return Headers[0]; // Fallback to the declaring header.
-  llvm::StringRef Header = *I;
-  // If Header is not expected be included (e.g. .cc file), we fall back to
-  // the declaring header.
-  llvm::StringRef Ext = llvm::sys::path::extension(Header).trim('.');
-  // Include-able headers must have precompile type. Treat files with
-  // non-recognized extenstions (TY_INVALID) as headers.
-  auto ExtType = driver::types::lookupTypeForExtension(Ext);
-  if ((ExtType != driver::types::TY_INVALID) &&
-      !driver::types::onlyPrecompileType(ExtType))
-    return Headers[0];
 
   auto MapIt = FullPathMapping.find(Header);
   if (MapIt != FullPathMapping.end())
@@ -107,57 +88,30 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
 
 void addSystemHeadersMapping(CanonicalIncludes *Includes) {
   static const std::vector<std::pair<const char *, const char *>> SymbolMap = {
-      {"std::addressof", "<memory>"},
       // Map symbols in <iosfwd> to their preferred includes.
       {"std::basic_filebuf", "<fstream>"},
-      {"std::basic_fstream", "<fstream>"},
-      {"std::basic_ifstream", "<fstream>"},
-      {"std::basic_ofstream", "<fstream>"},
       {"std::filebuf", "<fstream>"},
-      {"std::fstream", "<fstream>"},
-      {"std::ifstream", "<fstream>"},
-      {"std::ofstream", "<fstream>"},
       {"std::wfilebuf", "<fstream>"},
-      {"std::wfstream", "<fstream>"},
-      {"std::wifstream", "<fstream>"},
-      {"std::wofstream", "<fstream>"},
-      {"std::basic_ios", "<ios>"},
-      {"std::ios", "<ios>"},
-      {"std::wios", "<ios>"},
-      {"std::basic_iostream", "<iostream>"},
-      {"std::iostream", "<iostream>"},
-      {"std::wiostream", "<iostream>"},
       {"std::basic_istream", "<istream>"},
       {"std::istream", "<istream>"},
       {"std::wistream", "<istream>"},
-      {"std::istreambuf_iterator", "<iterator>"},
-      {"std::ostreambuf_iterator", "<iterator>"},
       {"std::basic_ostream", "<ostream>"},
       {"std::ostream", "<ostream>"},
       {"std::wostream", "<ostream>"},
-      {"std::basic_istringstream", "<sstream>"},
-      {"std::basic_ostringstream", "<sstream>"},
-      {"std::basic_stringbuf", "<sstream>"},
-      {"std::basic_stringstream", "<sstream>"},
-      {"std::istringstream", "<sstream>"},
-      {"std::ostringstream", "<sstream>"},
-      {"std::string", "<string>"},
-      {"std::stringbuf", "<sstream>"},
-      {"std::stringstream", "<sstream>"},
-      {"std::wistringstream", "<sstream>"},
-      {"std::wostringstream", "<sstream>"},
-      {"std::wstringbuf", "<sstream>"},
-      {"std::wstringstream", "<sstream>"},
-      {"std::basic_streambuf", "<streambuf>"},
-      {"std::streambuf", "<streambuf>"},
-      {"std::wstreambuf", "<streambuf>"},
       {"std::uint_least16_t", "<cstdint>"}, // <type_traits> redeclares these
       {"std::uint_least32_t", "<cstdint>"},
-      {"std::declval", "<utility>"},
+#define SYMBOL(Name, NameSpace, Header) { #NameSpace#Name, #Header },
+      #include "StdSymbolMap.inc"
+#undef SYMBOL
   };
   for (const auto &Pair : SymbolMap)
     Includes->addSymbolMapping(Pair.first, Pair.second);
 
+  // FIXME: remove the std header mapping once we support ambiguous symbols, now
+  // it serves as a fallback to disambiguate:
+  //   - symbols with mulitiple headers (e.g. std::move)
+  //   - symbols with a primary template in one header and a specialization in
+  //     another (std::abs)
   static const std::vector<std::pair<const char *, const char *>>
       SystemHeaderMap = {
           {"include/__stddef_max_align_t.h", "<cstddef>"},

@@ -19,7 +19,6 @@ static_library("AsmParser") {
   ]
   include_dirs = [ ".." ]
   sources = [
-    "X86AsmInstrumentation.cpp",
     "X86AsmParser.cpp",
   ]
 }

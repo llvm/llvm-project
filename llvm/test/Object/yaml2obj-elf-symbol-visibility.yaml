@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj -symbols - | \
+# RUN: yaml2obj %s | llvm-readobj --symbols - | \
 # RUN:   FileCheck --check-prefix OBJ %s
 # RUN: yaml2obj %s | obj2yaml - | FileCheck --check-prefix YAML %s
 
@@ -57,35 +57,39 @@
 # OBJ-NEXT: }
 
 # YAML:      Symbols:
-# YAML-NEXT:   Global:
-# YAML-NEXT:     - Name:            default1
-# YAML-NEXT:       Type:            STT_OBJECT
-# YAML-NEXT:       Section:         .data
-# YAML-NEXT:       Size:            0x0000000000000004
-# YAML-NEXT:     - Name:            default2
-# YAML-NEXT:       Type:            STT_OBJECT
-# YAML-NEXT:       Section:         .data
-# YAML-NEXT:       Value:           0x0000000000000004
-# YAML-NEXT:       Size:            0x0000000000000004
-# YAML-NEXT:     - Name:            internal
-# YAML-NEXT:       Type:            STT_OBJECT
-# YAML-NEXT:       Section:         .data
-# YAML-NEXT:       Value:           0x0000000000000008
-# YAML-NEXT:       Size:            0x0000000000000004
-# YAML-NEXT:       Visibility:      STV_INTERNAL
-# YAML-NEXT:     - Name:            hidden
-# YAML-NEXT:       Type:            STT_OBJECT
-# YAML-NEXT:       Section:         .data
-# YAML-NEXT:       Value:           0x000000000000000C
-# YAML-NEXT:       Size:            0x0000000000000004
-# YAML-NEXT:       Visibility:      STV_HIDDEN
-# YAML-NEXT:     - Name:            protected
-# YAML-NEXT:       Type:            STT_OBJECT
-# YAML-NEXT:       Section:         .data
-# YAML-NEXT:       Value:           0x0000000000000010
-# YAML-NEXT:       Size:            0x0000000000000004
-# YAML-NEXT:       Visibility:      STV_PROTECTED
-# YAML-NEXT:       Other:           [ STO_MIPS_PIC, STO_MIPS_MICROMIPS ]
+# YAML-NEXT:   - Name:            default1
+# YAML-NEXT:     Type:            STT_OBJECT
+# YAML-NEXT:     Section:         .data
+# YAML-NEXT:     Binding:         STB_GLOBAL
+# YAML-NEXT:     Size:            0x0000000000000004
+# YAML-NEXT:   - Name:            default2
+# YAML-NEXT:     Type:            STT_OBJECT
+# YAML-NEXT:     Section:         .data
+# YAML-NEXT:     Binding:         STB_GLOBAL
+# YAML-NEXT:     Value:           0x0000000000000004
+# YAML-NEXT:     Size:            0x0000000000000004
+# YAML-NEXT:   - Name:            internal
+# YAML-NEXT:     Type:            STT_OBJECT
+# YAML-NEXT:     Section:         .data
+# YAML-NEXT:     Binding:         STB_GLOBAL
+# YAML-NEXT:     Value:           0x0000000000000008
+# YAML-NEXT:     Size:            0x0000000000000004
+# YAML-NEXT:     Visibility:      STV_INTERNAL
+# YAML-NEXT:   - Name:            hidden
+# YAML-NEXT:     Type:            STT_OBJECT
+# YAML-NEXT:     Section:         .data
+# YAML-NEXT:     Binding:         STB_GLOBAL
+# YAML-NEXT:     Value:           0x000000000000000C
+# YAML-NEXT:     Size:            0x0000000000000004
+# YAML-NEXT:     Visibility:      STV_HIDDEN
+# YAML-NEXT:   - Name:            protected
+# YAML-NEXT:     Type:            STT_OBJECT
+# YAML-NEXT:     Section:         .data
+# YAML-NEXT:     Binding:         STB_GLOBAL
+# YAML-NEXT:     Value:           0x0000000000000010
+# YAML-NEXT:     Size:            0x0000000000000004
+# YAML-NEXT:     Visibility:      STV_PROTECTED
+# YAML-NEXT:     Other:           [ STO_MIPS_PIC, STO_MIPS_MICROMIPS ]
 
 --- !ELF
 FileHeader:
@@ -103,34 +107,38 @@ Sections:
     Size:            0x14
 
 Symbols:
-  Global:
-    - Name:            default1
-      Type:            STT_OBJECT
-      Visibility:      STV_DEFAULT
-      Section:         .data
-      Value:           0x00
-      Size:            0x04
-    - Name:            default2
-      Type:            STT_OBJECT
-      Section:         .data
-      Value:           0x04
-      Size:            0x04
-    - Name:            internal
-      Type:            STT_OBJECT
-      Visibility:      STV_INTERNAL
-      Section:         .data
-      Value:           0x08
-      Size:            0x04
-    - Name:            hidden
-      Type:            STT_OBJECT
-      Visibility:      STV_HIDDEN
-      Section:         .data
-      Value:           0x0C
-      Size:            0x04
-    - Name:            protected
-      Type:            STT_OBJECT
-      Visibility:      STV_PROTECTED
-      Other:           [ STO_MIPS_MICROMIPS, STO_MIPS_PIC ]
-      Section:         .data
-      Value:           0x10
-      Size:            0x04
+  - Name:            default1
+    Type:            STT_OBJECT
+    Visibility:      STV_DEFAULT
+    Section:         .data
+    Value:           0x00
+    Size:            0x04
+    Binding:         STB_GLOBAL
+  - Name:            default2
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x04
+    Size:            0x04
+    Binding:         STB_GLOBAL
+  - Name:            internal
+    Type:            STT_OBJECT
+    Visibility:      STV_INTERNAL
+    Section:         .data
+    Value:           0x08
+    Size:            0x04
+    Binding:         STB_GLOBAL
+  - Name:            hidden
+    Type:            STT_OBJECT
+    Visibility:      STV_HIDDEN
+    Section:         .data
+    Value:           0x0C
+    Size:            0x04
+    Binding:         STB_GLOBAL
+  - Name:            protected
+    Type:            STT_OBJECT
+    Visibility:      STV_PROTECTED
+    Other:           [ STO_MIPS_MICROMIPS, STO_MIPS_PIC ]
+    Section:         .data
+    Value:           0x10
+    Size:            0x04
+    Binding:         STB_GLOBAL

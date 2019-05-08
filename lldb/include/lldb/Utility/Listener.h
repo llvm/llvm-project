@@ -42,9 +42,7 @@ public:
   friend class Broadcaster;
   friend class BroadcasterManager;
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   //
   // Listeners have to be constructed into shared pointers - at least if you
   // want them to listen to Broadcasters,
@@ -99,9 +97,7 @@ public:
   size_t HandleBroadcastEvent(lldb::EventSP &event_sp);
 
 private:
-  //------------------------------------------------------------------
   // Classes that inherit from Listener can see and modify these
-  //------------------------------------------------------------------
   struct BroadcasterInfo {
     BroadcasterInfo(uint32_t mask, HandleBroadcastCallback cb = nullptr,
                     void *ud = nullptr)
@@ -149,9 +145,7 @@ private:
   //                             uint32_t event_mask,
   //                             bool exact);
 
-  //------------------------------------------------------------------
   // For Listener only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(Listener);
 };
 

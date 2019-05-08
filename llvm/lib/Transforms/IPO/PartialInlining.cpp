@@ -775,9 +775,10 @@ bool PartialInlinerImpl::shouldPartialInline(
   bool RemarksEnabled =
       Callee->getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
-  InlineCost IC =
-      getInlineCost(CS, getInlineParams(), CalleeTTI, *GetAssumptionCache,
-                    GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
+  assert(Call && "invalid callsite for partial inline");
+  InlineCost IC = getInlineCost(cast<CallBase>(*Call), getInlineParams(),
+                                CalleeTTI, *GetAssumptionCache, GetBFI, PSI,
+                                RemarksEnabled ? &ORE : nullptr);
 
   if (IC.isAlways()) {
     ORE.emit([&]() {
@@ -811,7 +812,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   const DataLayout &DL = Caller->getParent()->getDataLayout();
 
   // The savings of eliminating the call:
-  int NonWeightedSavings = getCallsiteCost(CS, DL);
+  int NonWeightedSavings = getCallsiteCost(cast<CallBase>(*Call), DL);
   BlockFrequency NormWeightedSavings(NonWeightedSavings);
 
   // Weighted saving is smaller than weighted cost, return false
@@ -868,12 +869,12 @@ int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB) {
       continue;
 
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      InlineCost += getCallsiteCost(CallSite(CI), DL);
+      InlineCost += getCallsiteCost(*CI, DL);
       continue;
     }
 
     if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
-      InlineCost += getCallsiteCost(CallSite(II), DL);
+      InlineCost += getCallsiteCost(*II, DL);
       continue;
     }
 

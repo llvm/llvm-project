@@ -6,8 +6,8 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t2.so.o
 # RUN: ld.lld -shared -mips-got-size 32 %t1.so.o %t2.so.o -o %t-sgot.so
 # RUN: ld.lld -shared -mips-got-size 24 %t1.so.o %t2.so.o -o %t-mgot.so
-# RUN: llvm-readobj -r -dt -mips-plt-got %t-sgot.so | FileCheck -check-prefix=SGOT %s
-# RUN: llvm-readobj -r -dt -mips-plt-got %t-mgot.so | FileCheck -check-prefix=MGOT %s
+# RUN: llvm-readobj -r --dyn-syms --mips-plt-got %t-sgot.so | FileCheck -check-prefix=SGOT %s
+# RUN: llvm-readobj -r --dyn-syms --mips-plt-got %t-mgot.so | FileCheck -check-prefix=MGOT %s
 
 # SGOT:      Primary GOT {
 # SGOT-NEXT:   Canonical gp value: 0x27FF0

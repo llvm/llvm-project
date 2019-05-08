@@ -1127,8 +1127,8 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const Thumb2InstrInfo *>(STI->getInstrInfo());
 
   // Optimizing / minimizing size? Minimizing size implies optimizing for size.
-  OptimizeSize = MF.getFunction().optForSize();
-  MinimizeSize = STI->optForMinSize();
+  OptimizeSize = MF.getFunction().hasOptSize();
+  MinimizeSize = STI->hasMinSize();
 
   BlockInfo.clear();
   BlockInfo.resize(MF.getNumBlockIDs());
