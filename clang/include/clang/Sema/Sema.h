@@ -4552,6 +4552,9 @@ public:
   /// locations.
   ExprResult ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
                            MultiExprArg ArgExprs, SourceLocation RParenLoc,
+                           Expr *ExecConfig = nullptr);
+  ExprResult BuildCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
+                           MultiExprArg ArgExprs, SourceLocation RParenLoc,
                            Expr *ExecConfig = nullptr,
                            bool IsExecConfig = false);
   ExprResult
