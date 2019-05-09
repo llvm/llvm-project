@@ -180,32 +180,32 @@ anon_minuend_long1:
 # Both forms "A: .quad A - B + C" and "A: .quad B - A + C" are tested.
 #
 # Check "A: .quad B - A + C".
-# jitlink-check: *{8}subtrahend_quad2 = (named_data - subtrahend_quad2 + 2)
+# jitlink-check: *{8}subtrahend_quad2 = (named_data - subtrahend_quad2 - 2)
         .globl  subtrahend_quad2
         .p2align  3
 subtrahend_quad2:
-        .quad named_data - subtrahend_quad2 + 2
+        .quad named_data - subtrahend_quad2 - 2
 
 # Check "A: .long B - A + C".
-# jitlink-check: *{4}subtrahend_long2 = (named_data - subtrahend_long2 + 2)[31:0]
+# jitlink-check: *{4}subtrahend_long2 = (named_data - subtrahend_long2 - 2)[31:0]
         .globl  subtrahend_long2
         .p2align  2
 subtrahend_long2:
-        .long named_data - subtrahend_long2 + 2
+        .long named_data - subtrahend_long2 - 2
 
 # Check "A: .quad A - B + C".
-# jitlink-check: *{8}minuend_quad3 = (minuend_quad3 - named_data + 2)
+# jitlink-check: *{8}minuend_quad3 = (minuend_quad3 - named_data - 2)
         .globl  minuend_quad3
         .p2align  3
 minuend_quad3:
-        .quad minuend_quad3 - named_data + 2
+        .quad minuend_quad3 - named_data - 2
 
 # Check "A: .long B - A + C".
-# jitlink-check: *{4}minuend_long3 = (minuend_long3 - named_data + 2)[31:0]
+# jitlink-check: *{4}minuend_long3 = (minuend_long3 - named_data - 2)[31:0]
         .globl  minuend_long3
         .p2align  2
 minuend_long3:
-        .long minuend_long3 - named_data + 2
+        .long minuend_long3 - named_data - 2
 
 # Check X86_64_RELOC_SUBTRACTOR handling for exprs of the form
 # "A: .quad/long B - C + D", where 'B' or 'C' is at a fixed offset from 'A'
