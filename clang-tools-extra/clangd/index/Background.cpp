@@ -148,19 +148,20 @@ BackgroundIndex::BackgroundIndex(
           })) {
   assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
-  while (ThreadPoolSize--)
-    ThreadPool.emplace_back([this] { run(); });
+  for (unsigned I = 0; I < ThreadPoolSize; ++I) {
+    ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1),
+                        [this] { run(); });
+  }
   if (BuildIndexPeriodMs > 0) {
     log("BackgroundIndex: build symbol index periodically every {0} ms.",
         BuildIndexPeriodMs);
-    ThreadPool.emplace_back([this] { buildIndex(); });
+    ThreadPool.runAsync("background-index-builder", [this] { buildIndex(); });
   }
 }
 
 BackgroundIndex::~BackgroundIndex() {
   stop();
-  for (auto &Thread : ThreadPool)
-    Thread.join();
+  ThreadPool.wait();
 }
 
 void BackgroundIndex::stop() {

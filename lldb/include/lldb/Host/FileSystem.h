@@ -39,7 +39,7 @@ public:
         m_mapped(false) {}
   FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
              bool mapped = false)
-      : m_fs(fs), m_mapped(mapped) {}
+      : m_fs(fs), m_collector(nullptr), m_mapped(mapped) {}
 
   FileSystem(const FileSystem &fs) = delete;
   FileSystem &operator=(const FileSystem &fs) = delete;

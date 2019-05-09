@@ -83,11 +83,11 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|constexpr if condition}0 "
+  "array size|constexpr if condition|explicit specifier argument}0 "
   "is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|constexpr if condition}0 "
+  "array size|constexpr if condition|explicit specifier argument}0 "
   "%select{cannot be narrowed from type %2 to %3|"
   "evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
@@ -2115,9 +2115,8 @@ def err_deduction_guide_wrong_scope : Error<
   "deduction guide must be declared in the same scope as template %q0">;
 def err_deduction_guide_defines_function : Error<
   "deduction guide cannot have a function definition">;
-def err_deduction_guide_explicit_mismatch : Error<
-  "deduction guide is %select{not |}0declared 'explicit' but "
-  "previous declaration was%select{ not|}0">;
+def err_deduction_guide_redeclared : Error<
+  "redeclaration of deduction guide">;
 def err_deduction_guide_specialized : Error<"deduction guide cannot be "
   "%select{explicitly instantiated|explicitly specialized}0">;
 def err_deduction_guide_template_not_deducible : Error<
@@ -3640,6 +3639,10 @@ def note_ovl_candidate : Note<
     "| has different qualifiers (expected %5 but found %6)"
     "| has different exception specification}4">;
 
+def note_ovl_candidate_explicit_forbidden : Note<
+    "candidate %0 ignored: cannot be explicit">;
+def note_explicit_bool_resolved_to_true : Note<
+    "explicit(bool) specifier resolved to true">;
 def note_ovl_candidate_inherited_constructor : Note<
     "constructor from base class %0 inherited here">;
 def note_ovl_candidate_inherited_constructor_slice : Note<
@@ -3962,6 +3965,15 @@ def err_template_member_noparams : Error<
   "extraneous 'template<>' in declaration of member %0">;
 def err_template_tag_noparams : Error<
   "extraneous 'template<>' in declaration of %0 %1">;
+
+def warn_cxx17_compat_adl_only_template_id : Warning<
+  "use of function template name with no prior function template "
+  "declaration in function call with explicit template arguments "
+  "is incompatible with C++ standards before C++2a">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
+def ext_adl_only_template_id : ExtWarn<
+  "use of function template name with no prior declaration in function call "
+  "with explicit template arguments is a C++2a extension">, InGroup<CXX2a>;
 
 // C++ Template Argument Lists
 def err_template_missing_args : Error<
@@ -7005,6 +7017,19 @@ def err_typecheck_incompatible_address_space : Error<
   "sending to parameter of different type}0,1"
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " changes address space of pointer">;
+def err_typecheck_incompatible_nested_address_space : Error<
+  "%select{%diff{assigning $ to $|assigning to different types}1,0"
+  "|%diff{passing $ to parameter of type $|"
+  "passing to parameter of different type}0,1"
+  "|%diff{returning $ from a function with result type $|"
+  "returning from function with different return type}0,1"
+  "|%diff{converting $ to type $|converting between types}0,1"
+  "|%diff{initializing $ with an expression of type $|"
+  "initializing with expression of different type}0,1"
+  "|%diff{sending $ to parameter of type $|"
+  "sending to parameter of different type}0,1"
+  "|%diff{casting $ to type $|casting between types}0,1}2"
+  " changes address space of nested pointer">;
 def err_typecheck_incompatible_ownership : Error<
   "%select{%diff{assigning $ to $|assigning to different types}1,0"
   "|%diff{passing $ to parameter of type $|"
@@ -8797,8 +8822,6 @@ def err_omp_threadprivate_incomplete_type : Error<
   "threadprivate variable with incomplete type %0">;
 def err_omp_no_dsa_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes">;
-def note_omp_default_dsa_none : Note<
-  "explicit data sharing attribute requested here">;
 def err_omp_wrong_dsa : Error<
   "%0 variable cannot be %1">;
 def err_omp_variably_modified_type_not_supported : Error<

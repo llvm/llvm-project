@@ -24,105 +24,51 @@ define <4 x float> @t1(<4 x float> %Q) nounwind {
 ; Possibly misplaced test, but since we're checking undef scenarios...
 
 define float @scalar_fsub_neg0_undef(float %x) nounwind {
-; X32-SSE1-LABEL: scalar_fsub_neg0_undef:
-; X32-SSE1:       # %bb.0:
-; X32-SSE1-NEXT:    pushl %eax
-; X32-SSE1-NEXT:    xorps {{\.LCPI.*}}, %xmm0
-; X32-SSE1-NEXT:    movss %xmm0, (%esp)
-; X32-SSE1-NEXT:    flds (%esp)
-; X32-SSE1-NEXT:    popl %eax
-; X32-SSE1-NEXT:    retl
+; X32-SSE-LABEL: scalar_fsub_neg0_undef:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    fldz
+; X32-SSE-NEXT:    retl
 ;
-; X32-SSE2-LABEL: scalar_fsub_neg0_undef:
-; X32-SSE2:       # %bb.0:
-; X32-SSE2-NEXT:    pushl %eax
-; X32-SSE2-NEXT:    movss %xmm0, (%esp)
-; X32-SSE2-NEXT:    flds (%esp)
-; X32-SSE2-NEXT:    popl %eax
-; X32-SSE2-NEXT:    retl
-;
-; X64-SSE1-LABEL: scalar_fsub_neg0_undef:
-; X64-SSE1:       # %bb.0:
-; X64-SSE1-NEXT:    xorps {{.*}}(%rip), %xmm0
-; X64-SSE1-NEXT:    retq
-;
-; X64-SSE2-LABEL: scalar_fsub_neg0_undef:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    retq
+; X64-SSE-LABEL: scalar_fsub_neg0_undef:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    retq
   %r = fsub float -0.0, undef
   ret float %r
 }
 
 define float @scalar_fneg_undef(float %x) nounwind {
-; X32-SSE1-LABEL: scalar_fneg_undef:
-; X32-SSE1:       # %bb.0:
-; X32-SSE1-NEXT:    pushl %eax
-; X32-SSE1-NEXT:    xorps {{\.LCPI.*}}, %xmm0
-; X32-SSE1-NEXT:    movss %xmm0, (%esp)
-; X32-SSE1-NEXT:    flds (%esp)
-; X32-SSE1-NEXT:    popl %eax
-; X32-SSE1-NEXT:    retl
+; X32-SSE-LABEL: scalar_fneg_undef:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    fldz
+; X32-SSE-NEXT:    retl
 ;
-; X32-SSE2-LABEL: scalar_fneg_undef:
-; X32-SSE2:       # %bb.0:
-; X32-SSE2-NEXT:    pushl %eax
-; X32-SSE2-NEXT:    movss %xmm0, (%esp)
-; X32-SSE2-NEXT:    flds (%esp)
-; X32-SSE2-NEXT:    popl %eax
-; X32-SSE2-NEXT:    retl
-;
-; X64-SSE1-LABEL: scalar_fneg_undef:
-; X64-SSE1:       # %bb.0:
-; X64-SSE1-NEXT:    xorps {{.*}}(%rip), %xmm0
-; X64-SSE1-NEXT:    retq
-;
-; X64-SSE2-LABEL: scalar_fneg_undef:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    retq
+; X64-SSE-LABEL: scalar_fneg_undef:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    retq
   %r = fneg float undef
   ret float %r
 }
 
 define <4 x float> @fsub_neg0_undef(<4 x float> %Q) nounwind {
-; X32-SSE1-LABEL: fsub_neg0_undef:
-; X32-SSE1:       # %bb.0:
-; X32-SSE1-NEXT:    xorps {{\.LCPI.*}}, %xmm0
-; X32-SSE1-NEXT:    retl
+; X32-SSE-LABEL: fsub_neg0_undef:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    retl
 ;
-; X32-SSE2-LABEL: fsub_neg0_undef:
-; X32-SSE2:       # %bb.0:
-; X32-SSE2-NEXT:    retl
-;
-; X64-SSE1-LABEL: fsub_neg0_undef:
-; X64-SSE1:       # %bb.0:
-; X64-SSE1-NEXT:    xorps {{.*}}(%rip), %xmm0
-; X64-SSE1-NEXT:    retq
-;
-; X64-SSE2-LABEL: fsub_neg0_undef:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    retq
+; X64-SSE-LABEL: fsub_neg0_undef:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    retq
   %r = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, undef
   ret <4 x float> %r
 }
 
 define <4 x float> @fneg_undef(<4 x float> %Q) nounwind {
-; X32-SSE1-LABEL: fneg_undef:
-; X32-SSE1:       # %bb.0:
-; X32-SSE1-NEXT:    xorps {{\.LCPI.*}}, %xmm0
-; X32-SSE1-NEXT:    retl
+; X32-SSE-LABEL: fneg_undef:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    retl
 ;
-; X32-SSE2-LABEL: fneg_undef:
-; X32-SSE2:       # %bb.0:
-; X32-SSE2-NEXT:    retl
-;
-; X64-SSE1-LABEL: fneg_undef:
-; X64-SSE1:       # %bb.0:
-; X64-SSE1-NEXT:    xorps {{.*}}(%rip), %xmm0
-; X64-SSE1-NEXT:    retq
-;
-; X64-SSE2-LABEL: fneg_undef:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    retq
+; X64-SSE-LABEL: fneg_undef:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    retq
   %r = fneg <4 x float> undef
   ret <4 x float> %r
 }

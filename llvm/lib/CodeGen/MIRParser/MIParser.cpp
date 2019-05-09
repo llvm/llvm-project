@@ -176,7 +176,7 @@ void PerTargetMIParsingState::initNames2SubRegIndices() {
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   for (unsigned I = 1, E = TRI->getNumSubRegIndices(); I < E; ++I)
     Names2SubRegIndices.insert(
-        std::make_pair(StringRef(TRI->getSubRegIndexName(I)).lower(), I));
+        std::make_pair(TRI->getSubRegIndexName(I), I));
 }
 
 unsigned PerTargetMIParsingState::getSubRegIndex(StringRef Name) {

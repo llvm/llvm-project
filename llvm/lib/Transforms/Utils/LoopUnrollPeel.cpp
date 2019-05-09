@@ -671,7 +671,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   SE->forgetTopmostLoop(L);
 
   // FIXME: Incrementally update loop-simplify
-  simplifyLoop(L, DT, LI, SE, AC, PreserveLCSSA);
+  simplifyLoop(L, DT, LI, SE, AC, nullptr, PreserveLCSSA);
 
   NumPeeled++;
 

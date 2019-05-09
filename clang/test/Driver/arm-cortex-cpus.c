@@ -340,30 +340,31 @@
 // RUN: %clang -target armv8a-linux-eabi -mcpu=cortex-a53+fp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-CORTEX-A53-FP16 %s
 // RUN: %clang -target armv8a-linux-eabi -mcpu=cortex-a53+nofp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-CORTEX-A53-NOFP16 %s
 // CHECK-CORTEX-A53-FP16: "-cc1" {{.*}}"-target-cpu" "cortex-a53" {{.*}}"-target-feature" "+fullfp16"
-// CHECK-CORTEX-A53-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
-// CHECK-CORTEX-A53-NOFP16: "-cc1" {{.*}}"-target-cpu" "cortex-a53" {{.*}}"-target-feature" "-fullfp16" "-target-feature" "-fp16fml"
+// CHECK-CORTEX-A53-FP16-NOT: "-target-feature" "+fp16fml"
+// CHECK-CORTEX-A53-NOFP16-NOT: "+fullfp16"
+// CHECK-CORTEX-A53-NOFP16-NOT: "+fp16fml"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V8A-NOFP16FML %s
-// CHECK-V8A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
-// CHECK-V8A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
+// CHECK-V8A-NOFP16FML-NOT: "-target-feature" "+fp16fml"
+// CHECK-V8A-NOFP16FML-NOT: "-target-feature" "+fullfp16"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V8A-FP16 %s
-// CHECK-V8A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// CHECK-V8A-FP16-NOT: "-target-feature" "+fp16fml"
 // CHECK-V8A-FP16: "-target-feature" "+fullfp16"
-// CHECK-V8A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// CHECK-V8A-FP16-NOT: "-target-feature" "+fp16fml"
 // CHECK-V8A-FP16-SAME: {{$}}
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V8A-FP16FML %s
 // CHECK-V8A-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.2-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V82A-NOFP16FML %s
-// CHECK-V82A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
-// CHECK-V82A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
+// CHECK-V82A-NOFP16FML-NOT: "-target-feature" "+fp16fml"
+// CHECK-V82A-NOFP16FML-NOT: "-target-feature" "+fullfp16"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.2-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V82A-FP16 %s
-// CHECK-V82A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// CHECK-V82A-FP16-NOT: "-target-feature" "+fp16fml"
 // CHECK-V82A-FP16: "-target-feature" "+fullfp16"
-// CHECK-V82A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// CHECK-V82A-FP16-NOT: "-target-feature" "+fp16fml"
 // CHECK-V82A-FP16-SAME: {{$}}
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.2-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V82A-FP16FML %s
@@ -382,13 +383,13 @@
 // CHECK-V82A-NOFP16-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.3-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V83A-NOFP16FML %s
-// CHECK-V83A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
-// CHECK-V83A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
+// CHECK-V83A-NOFP16FML-NOT: "-target-feature" "+fp16fml"
+// CHECK-V83A-NOFP16FML-NOT: "-target-feature" "+fullfp16"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.3-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V83A-FP16 %s
-// CHECK-V83A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// CHECK-V83A-FP16-NOT: "-target-feature" "+fp16fml"
 // CHECK-V83A-FP16: "-target-feature" "+fullfp16"
-// CHECK-V83A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// CHECK-V83A-FP16-NOT: "-target-feature" "+fp16fml"
 // CHECK-V83A-FP16-SAME: {{$}}
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.3-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V83A-FP16FML %s
@@ -407,8 +408,8 @@
 // CHECK-V83A-NOFP16-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.4-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V84A-NOFP16FML %s
-// CHECK-V84A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
-// CHECK-V84A-NOFP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
+// CHECK-V84A-NOFP16FML-NOT: "-target-feature" "+fp16fml"
+// CHECK-V84A-NOFP16FML-NOT: "-target-feature" "+fullfp16"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.4-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V84A-FP16 %s
 // CHECK-V84A-FP16: "-target-feature" "+fullfp16" "-target-feature" "+fp16fml"
@@ -853,3 +854,7 @@
 // RUN: %clang -target arm -march=Armv6t2 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CASE-INSENSITIVE-V6T2-THUMB %s
 // RUN: %clang -target arm -march=ARMV6T2 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CASE-INSENSITIVE-V6T2-THUMB %s
 // CHECK-CASE-INSENSITIVE-V6T2-THUMB: "-cc1"{{.*}} "-triple" "thumbv6t2-{{.*}} "-target-cpu" "arm1156t2-s"
+
+// ================== Check that the correct PROCESSOR features are added when used -mcpu=PROCESSOR+FEATURESLIST
+// RUN: %clang -### --target=arm-arm-none-eabi -march=armv7-a -mcpu=cortex-a8+nocrc -c %s 2>&1 | FileCheck -check-prefix=A8FEATURES %s
+// A8FEATURES: "-target-feature" "+dsp"

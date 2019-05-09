@@ -166,9 +166,10 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 }
 
 /// InsertBinop - Insert the specified binary operator, doing a small amount
-/// of work to avoid inserting an obviously redundant operation.
+/// of work to avoid inserting an obviously redundant operation, and hoisting
+/// to an outer loop when the opportunity is there and it is safe.
 Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
-                                 Value *LHS, Value *RHS) {
+                                 Value *LHS, Value *RHS, bool IsSafeToHoist) {
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
@@ -210,14 +211,16 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   DebugLoc Loc = Builder.GetInsertPoint()->getDebugLoc();
   SCEVInsertPointGuard Guard(Builder, this);
 
-  // Move the insertion point out of as many loops as we can.
-  while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
-    if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS)) break;
-    BasicBlock *Preheader = L->getLoopPreheader();
-    if (!Preheader) break;
+  if (IsSafeToHoist) {
+    // Move the insertion point out of as many loops as we can.
+    while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
+      if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS)) break;
+      BasicBlock *Preheader = L->getLoopPreheader();
+      if (!Preheader) break;
 
-    // Ok, move up a level.
-    Builder.SetInsertPoint(Preheader->getTerminator());
+      // Ok, move up a level.
+      Builder.SetInsertPoint(Preheader->getTerminator());
+    }
   }
 
   // If we haven't found this binop, insert it.
@@ -734,7 +737,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expandCodeFor(SE.getNegativeSCEV(Op), Ty);
       Sum = InsertNoopCastOfTo(Sum, Ty);
-      Sum = InsertBinop(Instruction::Sub, Sum, W);
+      Sum = InsertBinop(Instruction::Sub, Sum, W, /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple add.
@@ -742,7 +745,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       Sum = InsertNoopCastOfTo(Sum, Ty);
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Sum)) std::swap(Sum, W);
-      Sum = InsertBinop(Instruction::Add, Sum, W);
+      Sum = InsertBinop(Instruction::Add, Sum, W, /*IsSafeToHoist*/ true);
       ++I;
     }
   }
@@ -794,9 +797,11 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
     if (Exponent & 1)
       Result = P;
     for (uint64_t BinExp = 2; BinExp <= Exponent; BinExp <<= 1) {
-      P = InsertBinop(Instruction::Mul, P, P);
+      P = InsertBinop(Instruction::Mul, P, P, /*IsSafeToHoist*/ true);
       if (Exponent & BinExp)
-        Result = Result ? InsertBinop(Instruction::Mul, Result, P) : P;
+        Result = Result ? InsertBinop(Instruction::Mul, Result, P,
+                                      /*IsSafeToHoist*/ true)
+                        : P;
     }
 
     I = E;
@@ -811,7 +816,8 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
     } else if (I->second->isAllOnesValue()) {
       // Instead of doing a multiply by negative one, just do a negate.
       Prod = InsertNoopCastOfTo(Prod, Ty);
-      Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod);
+      Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
+                         /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple mul.
@@ -824,9 +830,10 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
         // Canonicalize Prod*(1<<C) to Prod<<C.
         assert(!Ty->isVectorTy() && "vector types are not SCEVable");
         Prod = InsertBinop(Instruction::Shl, Prod,
-                           ConstantInt::get(Ty, RHS->logBase2()));
+                           ConstantInt::get(Ty, RHS->logBase2()),
+                           /*IsSafeToHoist*/ true);
       } else {
-        Prod = InsertBinop(Instruction::Mul, Prod, W);
+        Prod = InsertBinop(Instruction::Mul, Prod, W, /*IsSafeToHoist*/ true);
       }
     }
   }
@@ -842,11 +849,13 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
     const APInt &RHS = SC->getAPInt();
     if (RHS.isPowerOf2())
       return InsertBinop(Instruction::LShr, LHS,
-                         ConstantInt::get(Ty, RHS.logBase2()));
+                         ConstantInt::get(Ty, RHS.logBase2()),
+                         /*IsSafeToHoist*/ true);
   }
 
   Value *RHS = expandCodeFor(S->getRHS(), Ty);
-  return InsertBinop(Instruction::UDiv, LHS, RHS);
+  return InsertBinop(Instruction::UDiv, LHS, RHS,
+                     /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
 
 /// Move parts of Base into Rest to leave Base with the minimal
