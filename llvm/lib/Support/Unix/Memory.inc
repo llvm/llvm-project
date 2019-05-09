@@ -103,7 +103,7 @@ Memory::allocateMappedMemory(size_t NumBytes,
   // Use any near hint and the page size to set a page-aligned starting address
   uintptr_t Start = NearBlock ? reinterpret_cast<uintptr_t>(NearBlock->base()) +
                                       NearBlock->size() : 0;
-  static const size_t PageSize = Process::getPageSize();
+  static const size_t PageSize = Process::getPageSizeEstimate();
   if (Start && Start % PageSize)
     Start += PageSize - Start % PageSize;
 
@@ -149,7 +149,7 @@ Memory::releaseMappedMemory(MemoryBlock &M) {
 
 std::error_code
 Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
-  static const size_t PageSize = Process::getPageSize();
+  static const size_t PageSize = Process::getPageSizeEstimate();
   if (M.Address == nullptr || M.Size == 0)
     return std::error_code();
 

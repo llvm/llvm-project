@@ -196,6 +196,12 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
           // able to find construction context at all.
           break;
         }
+        if (isa<BlockInvocationContext>(CallerLCtx)) {
+          // Unwrap block invocation contexts. They're mostly part of
+          // the current stack frame.
+          CallerLCtx = CallerLCtx->getParent();
+          assert(!isa<BlockInvocationContext>(CallerLCtx));
+        }
         return prepareForObjectConstruction(
             cast<Expr>(SFC->getCallSite()), State, CallerLCtx,
             RTC->getConstructionContext(), CallOpts);

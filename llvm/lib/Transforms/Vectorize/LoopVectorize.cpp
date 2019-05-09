@@ -2894,11 +2894,11 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
         CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
                         CountRoundDown, "cmp.n", MiddleBlock->getTerminator());
 
-    // Here we use the same DebugLoc as the scalar loop latch branch instead
-    // of the corresponding compare because they may have ended up with
-    // different line numbers and we want to avoid awkward line stepping while
-    // debugging. Eg. if the compare has got a line number inside the loop.
-    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchBr->getDebugLoc());
+    // Provide correct stepping behaviour by using the same DebugLoc as the
+    // scalar loop latch branch cmp if it exists.
+    if (CmpInst *ScalarLatchCmp =
+            dyn_cast_or_null<CmpInst>(ScalarLatchBr->getCondition()))
+      cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchCmp->getDebugLoc());
   }
 
   BranchInst *BrInst = BranchInst::Create(ExitBlock, ScalarPH, CmpN);
@@ -3631,15 +3631,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // Reduce all of the unrolled parts into a single vector.
   Value *ReducedPartRdx = VectorLoopValueMap.getVectorValue(LoopExitInst, 0);
   unsigned Op = RecurrenceDescriptor::getRecurrenceBinOp(RK);
-
-  // The middle block terminator has already been assigned a DebugLoc here (the
-  // OrigLoop's single latch terminator). We want the whole middle block to
-  // appear to execute on this line because: (a) it is all compiler generated,
-  // (b) these instructions are always executed after evaluating the latch
-  // conditional branch, and (c) other passes may add new predecessors which
-  // terminate on this line. This is the easiest way to ensure we don't
-  // accidently cause an extra step back into the loop while debugging.
-  setDebugLocFromInst(Builder, LoopMiddleBlock->getTerminator());
+  setDebugLocFromInst(Builder, ReducedPartRdx);
   for (unsigned Part = 1; Part < UF; ++Part) {
     Value *RdxPart = VectorLoopValueMap.getVectorValue(LoopExitInst, Part);
     if (Op != Instruction::ICmp && Op != Instruction::FCmp)
@@ -7582,7 +7574,8 @@ bool LoopVectorizePass::runImpl(
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
   for (auto &L : *LI)
-    Changed |= simplifyLoop(L, DT, LI, SE, AC, false /* PreserveLCSSA */);
+    Changed |=
+        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops

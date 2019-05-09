@@ -2083,12 +2083,22 @@ bool llvm::runIPSCCP(
         // If we have forced an edge for an indeterminate value, then force the
         // terminator to fold to that edge.
         forceIndeterminateEdge(I, Solver);
-        bool Folded = ConstantFoldTerminator(I->getParent(),
+        BasicBlock *InstBB = I->getParent();
+        bool Folded = ConstantFoldTerminator(InstBB,
                                              /*DeleteDeadConditions=*/false,
                                              /*TLI=*/nullptr, &DTU);
         assert(Folded &&
               "Expect TermInst on constantint or blockaddress to be folded");
         (void) Folded;
+        // If we folded the terminator to an unconditional branch to another
+        // dead block, replace it with Unreachable, to avoid trying to fold that
+        // branch again.
+        BranchInst *BI = cast<BranchInst>(InstBB->getTerminator());
+        if (BI && BI->isUnconditional() &&
+            !Solver.isBlockExecutable(BI->getSuccessor(0))) {
+          InstBB->getTerminator()->eraseFromParent();
+          new UnreachableInst(InstBB->getContext(), InstBB);
+        }
       }
       // Mark dead BB for deletion.
       DTU.deleteBB(DeadBB);

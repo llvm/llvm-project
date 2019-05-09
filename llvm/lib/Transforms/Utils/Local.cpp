@@ -1894,9 +1894,13 @@ unsigned llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
 }
 
 unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
-                                   bool PreserveLCSSA, DomTreeUpdater *DTU) {
+                                   bool PreserveLCSSA, DomTreeUpdater *DTU,
+                                   MemorySSAUpdater *MSSAU) {
   BasicBlock *BB = I->getParent();
   std::vector <DominatorTree::UpdateType> Updates;
+
+  if (MSSAU)
+    MSSAU->changeToUnreachable(I);
 
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.

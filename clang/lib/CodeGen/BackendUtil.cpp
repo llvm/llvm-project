@@ -931,20 +931,32 @@ static void addSanitizersAtO0(ModulePassManager &MPM,
                               const Triple &TargetTriple,
                               const LangOptions &LangOpts,
                               const CodeGenOptions &CodeGenOpts) {
-  if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
+  auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
     MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-    bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        AddressSanitizerPass(/*CompileKernel=*/false, Recover,
-                             CodeGenOpts.SanitizeAddressUseAfterScope)));
+    bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
+    MPM.addPass(createModuleToFunctionPassAdaptor(AddressSanitizerPass(
+        CompileKernel, Recover, CodeGenOpts.SanitizeAddressUseAfterScope)));
     bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
-    MPM.addPass(ModuleAddressSanitizerPass(
-        /*CompileKernel=*/false, Recover, ModuleUseAfterScope,
-        CodeGenOpts.SanitizeAddressUseOdrIndicator));
+    MPM.addPass(
+        ModuleAddressSanitizerPass(CompileKernel, Recover, ModuleUseAfterScope,
+                                   CodeGenOpts.SanitizeAddressUseOdrIndicator));
+  };
+
+  if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
+    ASanPass(SanitizerKind::Address, /*CompileKernel=*/false);
+  }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::KernelAddress)) {
+    ASanPass(SanitizerKind::KernelAddress, /*CompileKernel=*/true);
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
     MPM.addPass(createModuleToFunctionPassAdaptor(MemorySanitizerPass({})));
+  }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::KernelMemory)) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        MemorySanitizerPass({0, false, /*Kernel=*/true})));
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {

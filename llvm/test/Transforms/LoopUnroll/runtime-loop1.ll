@@ -10,29 +10,31 @@
 ; EPILOG: for.body.preheader:
 ; EPILOG:   br i1 %1, label %for.end.loopexit.unr-lcssa, label %for.body.preheader.new, !dbg [[PH_LOC:![0-9]+]]
 ; EPILOG: for.body:
-; EPILOG:   br i1 %niter.ncmp.1, label %for.end.loopexit.unr-lcssa.loopexit, label %for.body, !dbg [[PH_LOC]]
+; EPILOG:   br i1 %niter.ncmp.1, label %for.end.loopexit.unr-lcssa.loopexit, label %for.body, !dbg [[BODY_LOC:![0-9]+]]
 ; EPILOG-NOT: br i1 %niter.ncmp.2, label %for.end.loopexit{{.*}}, label %for.body
 ; EPILOG: for.body.epil.preheader:
-; EPILOG:   br label %for.body.epil, !dbg [[PH_LOC]]
+; EPILOG:   br label %for.body.epil, !dbg [[BODY_LOC]]
 ; EPILOG: for.body.epil:
-; EPILOG:   br label %for.end.loopexit.epilog-lcssa, !dbg [[PH_LOC]]
+; EPILOG:   br label %for.end.loopexit.epilog-lcssa, !dbg [[BODY_LOC]]
 ; EPILOG: for.end.loopexit:
 ; EPILOG:   br label %for.end, !dbg [[EXIT_LOC:![0-9]+]]
 
-; EPILOG-DAG: [[PH_LOC]] = !DILocation(line: 102, column: 1, scope: !{{.*}})
+; EPILOG-DAG: [[PH_LOC]] = !DILocation(line: 101, column: 1, scope: !{{.*}})
+; EPILOG-DAG: [[BODY_LOC]] = !DILocation(line: 102, column: 1, scope: !{{.*}})
 ; EPILOG-DAG: [[EXIT_LOC]] = !DILocation(line: 103, column: 1, scope: !{{.*}})
 
 ; PROLOG: for.body.preheader:
 ; PROLOG:   br {{.*}} label %for.body.prol.preheader, label %for.body.prol.loopexit, !dbg [[PH_LOC:![0-9]+]]
 ; PROLOG: for.body.prol:
-; PROLOG:   br label %for.body.prol.loopexit, !dbg [[PH_LOC:![0-9]+]]
+; PROLOG:   br label %for.body.prol.loopexit, !dbg [[BODY_LOC:![0-9]+]]
 ; PROLOG: for.body.prol.loopexit:
 ; PROLOG:   br {{.*}} label %for.end.loopexit, label %for.body.preheader.new, !dbg [[PH_LOC]]
 ; PROLOG: for.body:
-; PROLOG:   br i1 %exitcond.1, label %for.end.loopexit.unr-lcssa, label %for.body, !dbg [[PH_LOC]]
+; PROLOG:   br i1 %exitcond.1, label %for.end.loopexit.unr-lcssa, label %for.body, !dbg [[BODY_LOC]]
 ; PROLOG-NOT: br i1 %exitcond.4, label %for.end.loopexit{{.*}}, label %for.body
 
-; PROLOG-DAG: [[PH_LOC]] = !DILocation(line: 102, column: 1, scope: !{{.*}})
+; PROLOG-DAG: [[PH_LOC]] = !DILocation(line: 101, column: 1, scope: !{{.*}})
+; PROLOG-DAG: [[BODY_LOC]] = !DILocation(line: 102, column: 1, scope: !{{.*}})
 
 define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly !dbg !6 {
 entry:

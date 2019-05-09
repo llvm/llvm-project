@@ -176,10 +176,13 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
   if (TM.shouldAssumeDSOLocal(M, GV))
     return X86II::MO_NO_FLAG;
 
+  // Functions on COFF can be non-DSO local for two reasons:
+  // - They are marked dllimport
+  // - They are extern_weak, and a stub is needed
   if (isTargetCOFF()) {
-    assert(GV->hasDLLImportStorageClass() &&
-           "shouldAssumeDSOLocal gave inconsistent answer");
-    return X86II::MO_DLLIMPORT;
+    if (GV->hasDLLImportStorageClass())
+      return X86II::MO_DLLIMPORT;
+    return X86II::MO_COFFSTUB;
   }
 
   const Function *F = dyn_cast_or_null<Function>(GV);

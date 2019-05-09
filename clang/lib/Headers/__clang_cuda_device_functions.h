@@ -1615,12 +1615,16 @@ __DEVICE__ long lround(double __a) { return round(__a); }
 __DEVICE__ long lroundf(float __a) { return roundf(__a); }
 #endif
 __DEVICE__ int max(int __a, int __b) { return __nv_max(__a, __b); }
+// These functions shouldn't be declared when including this header
+// for math function resolution purposes.
+#ifndef _OPENMP
 __DEVICE__ void *memcpy(void *__a, const void *__b, size_t __c) {
   return __builtin_memcpy(__a, __b, __c);
 }
 __DEVICE__ void *memset(void *__a, int __b, size_t __c) {
   return __builtin_memset(__a, __b, __c);
 }
+#endif
 __DEVICE__ int min(int __a, int __b) { return __nv_min(__a, __b); }
 __DEVICE__ double modf(double __a, double *__b) { return __nv_modf(__a, __b); }
 __DEVICE__ float modff(float __a, float *__b) { return __nv_modff(__a, __b); }

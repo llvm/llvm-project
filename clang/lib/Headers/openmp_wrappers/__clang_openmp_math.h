@@ -24,9 +24,6 @@
 
 #if defined(__cplusplus)
   #include <__clang_cuda_math_forward_declares.h>
-  #include <stdlib.h>
-#else
-  #include <stddef.h>
 #endif
 
 /// Include declarations for libdevice functions.

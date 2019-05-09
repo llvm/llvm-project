@@ -1164,6 +1164,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-internal-isystem");
       CmdArgs.push_back(Args.MakeArgString(P));
     }
+
+    CmdArgs.push_back("-include");
+    CmdArgs.push_back("__clang_openmp_math.h");
   }
 
   // Add -i* options, and automatically translate to

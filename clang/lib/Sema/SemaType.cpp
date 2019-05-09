@@ -7612,7 +7612,9 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     // applied to ObjC builtin attributes.
     if (isa<AttributedType>(type) && attr.hasMacroIdentifier() &&
         !type.getQualifiers().hasObjCLifetime() &&
-        !type.getQualifiers().hasObjCGCAttr()) {
+        !type.getQualifiers().hasObjCGCAttr() &&
+        attr.getKind() != ParsedAttr::AT_ObjCGC &&
+        attr.getKind() != ParsedAttr::AT_ObjCOwnership) {
       const IdentifierInfo *MacroII = attr.getMacroIdentifier();
       type = state.getSema().Context.getMacroQualifiedType(type, MacroII);
       state.setExpansionLocForMacroQualifiedType(

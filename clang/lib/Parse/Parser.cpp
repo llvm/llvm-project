@@ -315,6 +315,14 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
       else
         SkipUntil(tok::r_brace);
       break;
+    case tok::question:
+      // Recursively skip ? ... : pairs; these function as brackets. But
+      // still stop at a semicolon if requested.
+      ConsumeToken();
+      SkipUntil(tok::colon,
+                SkipUntilFlags(unsigned(Flags) &
+                               unsigned(StopAtCodeCompletion | StopAtSemi)));
+      break;
 
     // Okay, we found a ']' or '}' or ')', which we think should be balanced.
     // Since the user wasn't looking for this token (if they were, it would
@@ -1600,6 +1608,20 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
       Actions.ClassifyName(getCurScope(), SS, Name, NameLoc, Next,
                            IsAddressOfOperand, SS.isEmpty() ? CCC : nullptr);
 
+  // If name lookup found nothing and we guessed that this was a template name,
+  // double-check before committing to that interpretation. C++20 requires that
+  // we interpret this as a template-id if it can be, but if it can't be, then
+  // this is an error recovery case.
+  if (Classification.getKind() == Sema::NC_UndeclaredTemplate &&
+      isTemplateArgumentList(1) == TPResult::False) {
+    // It's not a template-id; re-classify without the '<' as a hint.
+    Token FakeNext = Next;
+    FakeNext.setKind(tok::unknown);
+    Classification =
+        Actions.ClassifyName(getCurScope(), SS, Name, NameLoc, FakeNext,
+                             IsAddressOfOperand, SS.isEmpty() ? CCC : nullptr);
+  }
+
   switch (Classification.getKind()) {
   case Sema::NC_Error:
     return ANK_Error;
@@ -1668,7 +1690,8 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
     }
     LLVM_FALLTHROUGH;
   case Sema::NC_VarTemplate:
-  case Sema::NC_FunctionTemplate: {
+  case Sema::NC_FunctionTemplate:
+  case Sema::NC_UndeclaredTemplate: {
     // We have a type, variable or function template followed by '<'.
     ConsumeToken();
     UnqualifiedId Id;
@@ -1791,7 +1814,8 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
     } else if (Tok.is(tok::annot_template_id)) {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
       if (TemplateId->Kind != TNK_Type_template &&
-          TemplateId->Kind != TNK_Dependent_template_name) {
+          TemplateId->Kind != TNK_Dependent_template_name &&
+          TemplateId->Kind != TNK_Undeclared_template) {
         Diag(Tok, diag::err_typename_refers_to_non_type_template)
           << Tok.getAnnotationRange();
         return true;
@@ -1890,6 +1914,8 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
     }
 
     // If this is a template-id, annotate with a template-id or type token.
+    // FIXME: This appears to be dead code. We already have formed template-id
+    // tokens when parsing the scope specifier; this can never form a new one.
     if (NextToken().is(tok::less)) {
       TemplateTy Template;
       UnqualifiedId TemplateName;
@@ -1900,14 +1926,19 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
               /*hasTemplateKeyword=*/false, TemplateName,
               /*ObjectType=*/nullptr, /*EnteringContext*/false, Template,
               MemberOfUnknownSpecialization)) {
-        // Consume the identifier.
-        ConsumeToken();
-        if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
-                                    TemplateName)) {
-          // If an unrecoverable error occurred, we need to return true here,
-          // because the token stream is in a damaged state.  We may not return
-          // a valid identifier.
-          return true;
+        // Only annotate an undeclared template name as a template-id if the
+        // following tokens have the form of a template argument list.
+        if (TNK != TNK_Undeclared_template ||
+            isTemplateArgumentList(1) != TPResult::False) {
+          // Consume the identifier.
+          ConsumeToken();
+          if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
+                                      TemplateName)) {
+            // If an unrecoverable error occurred, we need to return true here,
+            // because the token stream is in a damaged state.  We may not
+            // return a valid identifier.
+            return true;
+          }
         }
       }
     }

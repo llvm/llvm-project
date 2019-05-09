@@ -180,6 +180,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return I1 == E1 && I2 == E2;
   }
 
+  case TemplateName::AssumedTemplate: {
+    AssumedTemplateStorage *TN1 = N1.getAsAssumedTemplateName(),
+                           *TN2 = N1.getAsAssumedTemplateName();
+    return TN1->getDeclName() == TN2->getDeclName();
+  }
+
   case TemplateName::QualifiedTemplate: {
     QualifiedTemplateName *QN1 = N1.getAsQualifiedTemplateName(),
                           *QN2 = N2.getAsQualifiedTemplateName();
@@ -318,6 +324,36 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
   if (EI1.getNoCfCheck() != EI2.getNoCfCheck())
     return false;
+
+  return true;
+}
+
+/// Check the equivalence of exception specifications.
+static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
+                                      const FunctionProtoType *Proto1,
+                                      const FunctionProtoType *Proto2) {
+
+  auto Spec1 = Proto1->getExceptionSpecType();
+  auto Spec2 = Proto2->getExceptionSpecType();
+
+  if (isUnresolvedExceptionSpec(Spec1) || isUnresolvedExceptionSpec(Spec2))
+    return true;
+
+  if (Spec1 != Spec2)
+    return false;
+  if (Spec1 == EST_Dynamic) {
+    if (Proto1->getNumExceptions() != Proto2->getNumExceptions())
+      return false;
+    for (unsigned I = 0, N = Proto1->getNumExceptions(); I != N; ++I) {
+      if (!IsStructurallyEquivalent(Context, Proto1->getExceptionType(I),
+                                    Proto2->getExceptionType(I)))
+        return false;
+    }
+  } else if (isComputedNoexcept(Spec1)) {
+    if (!IsStructurallyEquivalent(Context, Proto1->getNoexceptExpr(),
+                                  Proto2->getNoexceptExpr()))
+      return false;
+  }
 
   return true;
 }
@@ -536,24 +572,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         cast<FunctionProtoType>(OrigT1.getDesugaredType(Context.FromCtx));
     const auto *OrigProto2 =
         cast<FunctionProtoType>(OrigT2.getDesugaredType(Context.ToCtx));
-    auto Spec1 = OrigProto1->getExceptionSpecType();
-    auto Spec2 = OrigProto2->getExceptionSpecType();
-
-    if (Spec1 != Spec2)
+    if (!IsEquivalentExceptionSpec(Context, OrigProto1, OrigProto2))
       return false;
-    if (Spec1 == EST_Dynamic) {
-      if (OrigProto1->getNumExceptions() != OrigProto2->getNumExceptions())
-        return false;
-      for (unsigned I = 0, N = OrigProto1->getNumExceptions(); I != N; ++I) {
-        if (!IsStructurallyEquivalent(Context, OrigProto1->getExceptionType(I),
-                                      OrigProto2->getExceptionType(I)))
-          return false;
-      }
-    } else if (isComputedNoexcept(Spec1)) {
-      if (!IsStructurallyEquivalent(Context, OrigProto1->getNoexceptExpr(),
-                                    OrigProto2->getNoexceptExpr()))
-        return false;
-    }
 
     // Fall through to check the bits common with FunctionNoProtoType.
     LLVM_FALLTHROUGH;
@@ -962,13 +982,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   if (auto *Constructor1 = dyn_cast<CXXConstructorDecl>(Method1)) {
     auto *Constructor2 = cast<CXXConstructorDecl>(Method2);
-    if (Constructor1->isExplicit() != Constructor2->isExplicit())
+    if (!Constructor1->getExplicitSpecifier().isEquivalent(
+            Constructor2->getExplicitSpecifier()))
       return false;
   }
 
   if (auto *Conversion1 = dyn_cast<CXXConversionDecl>(Method1)) {
     auto *Conversion2 = cast<CXXConversionDecl>(Method2);
-    if (Conversion1->isExplicit() != Conversion2->isExplicit())
+    if (!Conversion1->getExplicitSpecifier().isEquivalent(
+            Conversion2->getExplicitSpecifier()))
       return false;
     if (!IsStructurallyEquivalent(Context, Conversion1->getConversionType(),
                                   Conversion2->getConversionType()))

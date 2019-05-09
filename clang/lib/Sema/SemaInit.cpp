@@ -3763,9 +3763,10 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
          hasCopyOrMoveCtorParam(S.Context, Info));
 
     if (Info.ConstructorTmpl)
-      S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
-                                     /*ExplicitArgs*/ nullptr, Args,
-                                     CandidateSet, SuppressUserConversions);
+      S.AddTemplateOverloadCandidate(
+          Info.ConstructorTmpl, Info.FoundDecl,
+          /*ExplicitArgs*/ nullptr, Args, CandidateSet, SuppressUserConversions,
+          /*PartialOverloading=*/false, AllowExplicit);
     else {
       // C++ [over.match.copy]p1:
       //   - When initializing a temporary to be bound to the first parameter
@@ -3779,8 +3780,8 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
                                hasCopyOrMoveCtorParam(S.Context, Info);
       S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl, Args,
                              CandidateSet, SuppressUserConversions,
-                             /*PartialOverloading=*/false,
-                             /*AllowExplicit=*/AllowExplicitConv);
+                             /*PartialOverloading=*/false, AllowExplicit,
+                             AllowExplicitConv);
     }
   }
 
@@ -3813,16 +3814,17 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
         else
           Conv = cast<CXXConversionDecl>(D);
 
-        if ((AllowExplicit && !CopyInitializing) || !Conv->isExplicit()) {
+        if (AllowExplicit || !Conv->isExplicit()) {
           if (ConvTemplate)
-            S.AddTemplateConversionCandidate(ConvTemplate, I.getPair(),
-                                             ActingDC, Initializer, DestType,
-                                             CandidateSet, AllowExplicit,
-                                             /*AllowResultConversion*/false);
+            S.AddTemplateConversionCandidate(
+                ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,
+                CandidateSet, AllowExplicit, AllowExplicit,
+                /*AllowResultConversion*/ false);
           else
             S.AddConversionCandidate(Conv, I.getPair(), ActingDC, Initializer,
                                      DestType, CandidateSet, AllowExplicit,
-                                     /*AllowResultConversion*/false);
+                                     AllowExplicit,
+                                     /*AllowResultConversion*/ false);
         }
       }
     }
@@ -4368,14 +4370,16 @@ static OverloadingResult TryRefInitWithConversionFunction(
       if (!Info.Constructor->isInvalidDecl() &&
           Info.Constructor->isConvertingConstructor(AllowExplicitCtors)) {
         if (Info.ConstructorTmpl)
-          S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
-                                         /*ExplicitArgs*/ nullptr,
-                                         Initializer, CandidateSet,
-                                         /*SuppressUserConversions=*/true);
+          S.AddTemplateOverloadCandidate(
+              Info.ConstructorTmpl, Info.FoundDecl,
+              /*ExplicitArgs*/ nullptr, Initializer, CandidateSet,
+              /*SuppressUserConversions=*/true,
+              /*PartialOverloading*/ false, AllowExplicitCtors);
         else
-          S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl,
-                                 Initializer, CandidateSet,
-                                 /*SuppressUserConversions=*/true);
+          S.AddOverloadCandidate(
+              Info.Constructor, Info.FoundDecl, Initializer, CandidateSet,
+              /*SuppressUserConversions=*/true,
+              /*PartialOverloading*/ false, AllowExplicitCtors);
       }
     }
   }
@@ -4410,17 +4414,17 @@ static OverloadingResult TryRefInitWithConversionFunction(
       // candidates with reference-compatible results? That might be needed to
       // break recursion.
       if ((AllowExplicitConvs || !Conv->isExplicit()) &&
-          (AllowRValues || Conv->getConversionType()->isLValueReferenceType())){
+          (AllowRValues ||
+           Conv->getConversionType()->isLValueReferenceType())) {
         if (ConvTemplate)
-          S.AddTemplateConversionCandidate(ConvTemplate, I.getPair(),
-                                           ActingDC, Initializer,
-                                           DestType, CandidateSet,
-                                           /*AllowObjCConversionOnExplicit=*/
-                                             false);
+          S.AddTemplateConversionCandidate(
+              ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,
+              CandidateSet,
+              /*AllowObjCConversionOnExplicit=*/false, AllowExplicitConvs);
         else
-          S.AddConversionCandidate(Conv, I.getPair(), ActingDC,
-                                   Initializer, DestType, CandidateSet,
-                                   /*AllowObjCConversionOnExplicit=*/false);
+          S.AddConversionCandidate(
+              Conv, I.getPair(), ActingDC, Initializer, DestType, CandidateSet,
+              /*AllowObjCConversionOnExplicit=*/false, AllowExplicitConvs);
       }
     }
   }
@@ -4996,14 +5000,16 @@ static void TryUserDefinedConversion(Sema &S,
         if (!Info.Constructor->isInvalidDecl() &&
             Info.Constructor->isConvertingConstructor(AllowExplicit)) {
           if (Info.ConstructorTmpl)
-            S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
-                                           /*ExplicitArgs*/ nullptr,
-                                           Initializer, CandidateSet,
-                                           /*SuppressUserConversions=*/true);
+            S.AddTemplateOverloadCandidate(
+                Info.ConstructorTmpl, Info.FoundDecl,
+                /*ExplicitArgs*/ nullptr, Initializer, CandidateSet,
+                /*SuppressUserConversions=*/true,
+                /*PartialOverloading*/ false, AllowExplicit);
           else
             S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl,
                                    Initializer, CandidateSet,
-                                   /*SuppressUserConversions=*/true);
+                                   /*SuppressUserConversions=*/true,
+                                   /*PartialOverloading*/ false, AllowExplicit);
         }
       }
     }
@@ -5038,12 +5044,12 @@ static void TryUserDefinedConversion(Sema &S,
 
         if (AllowExplicit || !Conv->isExplicit()) {
           if (ConvTemplate)
-            S.AddTemplateConversionCandidate(ConvTemplate, I.getPair(),
-                                             ActingDC, Initializer, DestType,
-                                             CandidateSet, AllowExplicit);
+            S.AddTemplateConversionCandidate(
+                ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,
+                CandidateSet, AllowExplicit, AllowExplicit);
           else
-            S.AddConversionCandidate(Conv, I.getPair(), ActingDC,
-                                     Initializer, DestType, CandidateSet,
+            S.AddConversionCandidate(Conv, I.getPair(), ActingDC, Initializer,
+                                     DestType, CandidateSet, AllowExplicit,
                                      AllowExplicit);
         }
       }
@@ -9336,6 +9342,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   OverloadCandidateSet::iterator Best;
 
   bool HasAnyDeductionGuide = false;
+  bool AllowExplicit = !Kind.isCopyInit() || ListInit;
 
   auto tryToResolveOverload =
       [&](bool OnlyListConstructors) -> OverloadingResult {
@@ -9361,7 +9368,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       //   converting constructors (12.3.1) of that class.
       // C++ [over.match.copy]p1: (non-list copy-initialization from class)
       //   The converting constructors of T are candidate functions.
-      if (Kind.isCopyInit() && !ListInit) {
+      if (!AllowExplicit) {
         // Only consider converting constructors.
         if (GD->isExplicit())
           continue;
@@ -9396,11 +9403,13 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
       if (TD)
         AddTemplateOverloadCandidate(TD, I.getPair(), /*ExplicitArgs*/ nullptr,
-                                     Inits, Candidates,
-                                     SuppressUserConversions);
+                                     Inits, Candidates, SuppressUserConversions,
+                                     /*PartialOverloading*/ false,
+                                     AllowExplicit);
       else
         AddOverloadCandidate(GD, I.getPair(), Inits, Candidates,
-                             SuppressUserConversions);
+                             SuppressUserConversions,
+                             /*PartialOverloading*/ false, AllowExplicit);
     }
     return Candidates.BestViableFunction(*this, Kind.getLocation(), Best);
   };
