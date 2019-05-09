@@ -11629,6 +11629,10 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   }
 
   // (fsub -0.0, N1) -> -N1
+  // NOTE: It is safe to transform an FSUB(-0.0,X) into an FNEG(X), since the
+  //       FSUB does not specify the sign bit of a NaN. Also note that for
+  //       the same reason, the inverse transform is not safe, unless fast math
+  //       flags are in play.
   if (N0CFP && N0CFP->isZero()) {
     if (N0CFP->isNegative() ||
         (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())) {
