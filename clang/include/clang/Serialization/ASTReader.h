@@ -2430,6 +2430,14 @@ public:
                                                  ID);
   }
 
+  ExplicitSpecifier readExplicitSpec() {
+    uint64_t Kind = readInt();
+    bool HasExpr = Kind & 0x1;
+    Kind = Kind >> 1;
+    return ExplicitSpecifier(HasExpr ? readExpr() : nullptr,
+                             static_cast<ExplicitSpecKind>(Kind));
+  }
+
   void readExceptionSpec(SmallVectorImpl<QualType> &ExceptionStorage,
                          FunctionProtoType::ExceptionSpecInfo &ESI) {
     return Reader->readExceptionSpec(*F, ExceptionStorage, ESI, Record, Idx);

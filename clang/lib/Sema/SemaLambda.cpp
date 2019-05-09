@@ -1325,7 +1325,7 @@ static void addFunctionPointerConversion(Sema &S,
   CXXConversionDecl *Conversion = CXXConversionDecl::Create(
       S.Context, Class, Loc,
       DeclarationNameInfo(ConversionName, Loc, ConvNameLoc), ConvTy, ConvTSI,
-      /*isInline=*/true, /*isExplicit=*/false,
+      /*isInline=*/true, ExplicitSpecifier(),
       /*isConstexpr=*/S.getLangOpts().CPlusPlus17,
       CallOperator->getBody()->getEndLoc());
   Conversion->setAccess(AS_public);
@@ -1412,7 +1412,7 @@ static void addBlockPointerConversion(Sema &S,
   CXXConversionDecl *Conversion = CXXConversionDecl::Create(
       S.Context, Class, Loc, DeclarationNameInfo(Name, Loc, NameLoc), ConvTy,
       S.Context.getTrivialTypeSourceInfo(ConvTy, Loc),
-      /*isInline=*/true, /*isExplicit=*/false,
+      /*isInline=*/true, ExplicitSpecifier(),
       /*isConstexpr=*/false, CallOperator->getBody()->getEndLoc());
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);

@@ -2369,16 +2369,6 @@ public:
   /// that was defined in the class body.
   bool isInlined() const { return FunctionDeclBits.IsInline; }
 
-  /// Whether this function is marked as explicit explicitly.
-  bool isExplicitSpecified() const {
-    return FunctionDeclBits.IsExplicitSpecified;
-  }
-
-  /// State that this function is marked as explicit explicitly.
-  void setExplicitSpecified(bool ExpSpec = true) {
-    FunctionDeclBits.IsExplicitSpecified = ExpSpec;
-  }
-
   bool isInlineDefinitionExternallyVisible() const;
 
   bool isMSExternInline() const;
