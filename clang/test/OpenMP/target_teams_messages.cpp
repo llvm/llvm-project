@@ -47,14 +47,14 @@ int main(int argc, char **argv) {
        break;
     }
   }
-#pragma omp target teams default(none) // expected-note {{explicit data sharing attribute requested here}}
+#pragma omp target teams default(none)
   ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
-#pragma omp target teams default(none) // expected-note {{explicit data sharing attribute requested here}}
+#pragma omp target teams default(none)
 #pragma omp parallel num_threads(argc) // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
   ;
 
-#pragma omp target teams default(none) // expected-note {{explicit data sharing attribute requested here}}
+#pragma omp target teams default(none)
   {
 #pragma omp parallel num_threads(argc) // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     ;

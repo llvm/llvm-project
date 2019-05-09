@@ -3384,10 +3384,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     LangOpts.NeededByPCHOrCompilationUsesPCH = true;
 
   // Turn on -Wspir-compat for SPIR target.
-  auto Arch = T.getArch();
-  if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64) {
+  if (T.isSPIR())
     Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
-  }
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&

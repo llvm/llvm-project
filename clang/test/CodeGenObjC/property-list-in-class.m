@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
-// CHECK: l_OBJC_$_PROP_LIST_C2" = private global { i32, i32, [3 x %struct._prop_t] } { i32 16, i32 3
+// CHECK: _OBJC_$_PROP_LIST_C2" = internal global { i32, i32, [3 x %struct._prop_t] } { i32 16, i32 3
 
 @protocol P 
 @property int i;

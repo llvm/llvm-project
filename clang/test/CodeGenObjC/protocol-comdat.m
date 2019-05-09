@@ -20,8 +20,8 @@ _Bool f(void) {
 
 // CHECK: $"_OBJC_PROTOCOL_$_P" = comdat any
 // CHECK: $"_OBJC_LABEL_PROTOCOL_$_P" = comdat any
-// CHECK: $"\01l_OBJC_PROTOCOL_REFERENCE_$_Q" = comdat any
-// CHECK: $"\01l_OBJC_PROTOCOL_REFERENCE_$_R" = comdat any
+// CHECK: $"_OBJC_PROTOCOL_REFERENCE_$_Q" = comdat any
+// CHECK: $"_OBJC_PROTOCOL_REFERENCE_$_R" = comdat any
 
 // CHECK: @"_OBJC_PROTOCOL_$_P" = {{.*}}, comdat
 // CHECK: @"_OBJC_LABEL_PROTOCOL_$_P" = {{.*}}, comdat
