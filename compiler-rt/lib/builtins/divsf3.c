@@ -67,7 +67,7 @@ COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
     if (!bAbs)
       return fromRep(infRep | quotientSign);
 
-    // one or both of a or b is denormal, the other (if applicable) is a
+    // One or both of a or b is denormal.  The other (if applicable) is a
     // normal number.  Renormalize one or both of a and b, and set scale to
     // include the necessary exponent adjustment.
     if (aAbs < implicitBit)
@@ -76,12 +76,13 @@ COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
       scale -= normalize(&bSignificand);
   }
 
-  // Or in the implicit significand bit.  (If we fell through from the
+  // Set the implicit significand bit.  If we fell through from the
   // denormal path it was already set by normalize( ), but setting it twice
-  // won't hurt anything.)
+  // won't hurt anything.
   aSignificand |= implicitBit;
   bSignificand |= implicitBit;
   int quotientExponent = aExponent - bExponent + scale;
+  // 0x7504F333 / 2^32 + 1 = 3/4 + 1/sqrt(2)
 
   // Align the significand of b as a Q31 fixed-point number in the range
   // [1, 2.0) and get a Q32 approximate reciprocal using a small minimax
@@ -95,8 +96,7 @@ COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
   //     x1 = x0 * (2 - x0 * b)
   //
   // This doubles the number of correct binary digits in the approximation
-  // with each iteration, so after three iterations, we have about 28 binary
-  // digits of accuracy.
+  // with each iteration.
   uint32_t correction;
   correction = -((uint64_t)reciprocal * q31b >> 32);
   reciprocal = (uint64_t)reciprocal * correction >> 31;
@@ -105,12 +105,10 @@ COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
   correction = -((uint64_t)reciprocal * q31b >> 32);
   reciprocal = (uint64_t)reciprocal * correction >> 31;
 
-  // Exhaustive testing shows that the error in reciprocal after three steps
-  // is in the interval [-0x1.f58108p-31, 0x1.d0e48cp-29], in line with our
-  // expectations.  We bump the reciprocal by a tiny value to force the error
-  // to be strictly positive (in the range [0x1.4fdfp-37,0x1.287246p-29], to
-  // be specific).  This also causes 1/1 to give a sensible approximation
-  // instead of zero (due to overflow).
+  // Adust the final 32-bit reciprocal estimate downward to ensure that it is
+  // strictly smaller than the infinitely precise exact reciprocal.  Because
+  // the computation of the Newton-Raphson step is truncating at every step,
+  // this adjustment is small; most of the work is already done.
   reciprocal -= 2;
 
   // The numerical reciprocal is accurate to within 2^-28, lies in the
@@ -120,11 +118,11 @@ COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
   //
   //    1. q < a/b
   //    2. q is in the interval [0x1.000000eep-1, 0x1.fffffffcp0)
-  //    3. the error in q is at most 2^-24 + 2^-27 -- the 2^24 term comes
+  //    3. The error in q is at most 2^-24 + 2^-27 -- the 2^24 term comes
   //       from the fact that we truncate the product, and the 2^27 term
   //       is the error in the reciprocal of b scaled by the maximum
   //       possible value of a.  As a consequence of this error bound,
-  //       either q or nextafter(q) is the correctly rounded
+  //       either q or nextafter(q) is the correctly rounded.
   rep_t quotient = (uint64_t)reciprocal * (aSignificand << 1) >> 32;
 
   // Two cases: quotient is in [0.5, 1.0) or quotient is in [1.0, 2.0).
@@ -136,7 +134,7 @@ COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
   //
   //     0 <= r < ulp(q)*b
   //
-  // if r is greater than 1/2 ulp(q)*b, then q rounds up.  Otherwise, we
+  // If r is greater than 1/2 ulp(q)*b, then q rounds up.  Otherwise, we
   // already have the correct result.  The exact halfway case cannot occur.
   // We also take this time to right shift quotient if it falls in the [1,2)
   // range and adjust the exponent accordingly.
@@ -176,13 +174,13 @@ COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
 
   else {
     const bool round = (residual << 1) > bSignificand;
-    // Clear the implicit bit
+    // Clear the implicit bit.
     rep_t absResult = quotient & significandMask;
-    // Insert the exponent
+    // Insert the exponent.
     absResult |= (rep_t)writtenExponent << significandBits;
-    // Round
+    // Round.
     absResult += round;
-    // Insert the sign and return
+    // Insert the sign and return.
     return fromRep(absResult | quotientSign);
   }
 }

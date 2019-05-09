@@ -28,11 +28,11 @@
 //
 // Finally, the following assumptions are made:
 //
-// 1. floating-point types and integer types have the same endianness on the
-//    target platform
+// 1. Floating-point types and integer types have the same endianness on the
+//    target platform.
 //
-// 2. quiet NaNs, if supported, are indicated by the leading bit of the
-//    significand field being set
+// 2. Quiet NaNs, if supported, are indicated by the leading bit of the
+//    significand field being set.
 //
 //===----------------------------------------------------------------------===//
 
@@ -69,7 +69,7 @@ static __inline dst_t __truncXfYf2__(src_t a) {
   const dst_rep_t dstQNaN = DST_REP_C(1) << (dstSigBits - 1);
   const dst_rep_t dstNaNCode = dstQNaN - 1;
 
-  // Break a into a sign and representation of the absolute value
+  // Break a into a sign and representation of the absolute value.
   const src_rep_t aRep = srcToRep(a);
   const src_rep_t aAbs = aRep & srcAbsMask;
   const src_rep_t sign = aRep & srcSignMask;
@@ -83,10 +83,10 @@ static __inline dst_t __truncXfYf2__(src_t a) {
     absResult -= (dst_rep_t)(srcExpBias - dstExpBias) << dstSigBits;
 
     const src_rep_t roundBits = aAbs & roundMask;
-    // Round to nearest
+    // Round to nearest.
     if (roundBits > halfway)
       absResult++;
-    // Ties to even
+    // Tie to even.
     else if (roundBits == halfway)
       absResult += absResult & 1;
   } else if (aAbs > srcInfinity) {
@@ -126,7 +126,7 @@ static __inline dst_t __truncXfYf2__(src_t a) {
     }
   }
 
-  // Apply the signbit to (dst_t)abs(a).
+  // Apply the signbit to the absolute value.
   const dst_rep_t result = absResult | sign >> (srcBits - dstBits);
   return dstFromRep(result);
 }
