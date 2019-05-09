@@ -283,6 +283,19 @@ struct C {} decltype(D())::c; // expected-error {{'decltype' cannot be used to n
 #endif
 }
 
+namespace ArrayMemberAccess {
+  struct A {
+    int x;
+    template<typename T> int f() const;
+  };
+  void f(const A (&a)[]) {
+    // OK: not a template-id.
+    bool cond = a->x < 10 && a->x > 0;
+    // OK: a template-id.
+    a->f<int>();
+  }
+}
+
 // PR11109 must appear at the end of the source file
 class pr11109r3 { // expected-note{{to match this '{'}}
   public // expected-error{{expected ':'}} expected-error{{expected '}'}} expected-error{{expected ';' after class}}
