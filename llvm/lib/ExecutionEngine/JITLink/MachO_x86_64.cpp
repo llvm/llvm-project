@@ -157,9 +157,9 @@ private:
     // Read the current fixup value.
     uint64_t FixupValue = 0;
     if (SubRI.r_length == 3)
-      FixupValue = *(const ulittle64_t *)FixupContent;
+      FixupValue = *(const little64_t *)FixupContent;
     else
-      FixupValue = *(const ulittle32_t *)FixupContent;
+      FixupValue = *(const little32_t *)FixupContent;
 
     // Find 'ToAtom' using symbol number or address, depending on whether the
     // paired UNSIGNED relocation is extern.
