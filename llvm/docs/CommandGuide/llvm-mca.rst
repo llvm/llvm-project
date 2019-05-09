@@ -192,16 +192,54 @@ example:
 
 .. code-block:: none
 
-  # LLVM-MCA-BEGIN My Code Region
+  # LLVM-MCA-BEGIN
     ...
   # LLVM-MCA-END
 
-Multiple regions can be specified provided that they do not overlap.  A code
-region can have an optional description. If no user-defined region is specified,
-then :program:`llvm-mca` assumes a default region which contains every
-instruction in the input file.  Every region is analyzed in isolation, and the
-final performance report is the union of all the reports generated for every
-code region.
+If no user-defined region is specified, then :program:`llvm-mca` assumes a
+default region which contains every instruction in the input file.  Every region
+is analyzed in isolation, and the final performance report is the union of all
+the reports generated for every code region.
+
+Code regions can have names. For example:
+
+.. code-block:: none
+
+  # LLVM-MCA-BEGIN A simple example
+    add %eax, %eax
+  # LLVM-MCA-END 
+
+The code from the example above defines a region named "A simple example" with a
+single instruction in it. Note how the region name doesn't have to be repeated
+in the ``LLVM-MCA-END`` directive. In the absence of overlapping regions,
+an anonymous ``LLVM-MCA-END`` directive always ends the currently active user
+defined region.
+
+Example of nesting regions:
+
+.. code-block:: none
+
+  # LLVM-MCA-BEGIN foo
+    add %eax, %edx
+  # LLVM-MCA-BEGIN bar
+    sub %eax, %edx
+  # LLVM-MCA-END bar
+  # LLVM-MCA-END foo
+
+Example of overlapping regions:
+
+.. code-block:: none
+
+  # LLVM-MCA-BEGIN foo
+    add %eax, %edx
+  # LLVM-MCA-BEGIN bar
+    sub %eax, %edx
+  # LLVM-MCA-END foo
+    add %eax, %edx
+  # LLVM-MCA-END bar
+
+Note that multiple anonymous regions cannot overlap. Also, overlapping regions
+cannot have the same name.
 
 Inline assembly directives may be used from source code to annotate the
 assembly text:

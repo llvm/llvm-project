@@ -86,7 +86,11 @@ void MCACommentConsumer::HandleComment(SMLoc Loc, StringRef CommentText) {
 
   Comment = Comment.drop_front(Position);
   if (Comment.consume_front("LLVM-MCA-END")) {
-    Regions.endRegion(Loc);
+    // Skip spaces and tabs.
+    Position = Comment.find_first_not_of(" \t");
+    if (Position < Comment.size())
+      Comment = Comment.drop_front(Position);
+    Regions.endRegion(Comment, Loc);
     return;
   }
 

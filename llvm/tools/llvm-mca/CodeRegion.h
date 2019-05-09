@@ -79,12 +79,16 @@ public:
   llvm::StringRef getDescription() const { return Description; }
 };
 
+class CodeRegionParseError final : public Error {};
+
 class CodeRegions {
   // A source manager. Used by the tool to generate meaningful warnings.
   llvm::SourceMgr &SM;
 
   using UniqueCodeRegion = std::unique_ptr<CodeRegion>;
   std::vector<UniqueCodeRegion> Regions;
+  llvm::StringMap<unsigned> ActiveRegions;
+  bool FoundErrors;
 
   CodeRegions(const CodeRegions &) = delete;
   CodeRegions &operator=(const CodeRegions &) = delete;
@@ -101,7 +105,7 @@ public:
   const_iterator end() const { return Regions.cend(); }
 
   void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc);
-  void endRegion(llvm::SMLoc Loc);
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
   void addInstruction(const llvm::MCInst &Instruction);
   llvm::SourceMgr &getSourceMgr() const { return SM; }
 
@@ -114,6 +118,8 @@ public:
       return Region->empty();
     });
   }
+
+  bool isValid() const { return !FoundErrors; }
 };
 
 } // namespace mca
