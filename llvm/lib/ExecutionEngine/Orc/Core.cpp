@@ -133,7 +133,7 @@ struct PrintSymbolMapElemsMatchingCLOpts {
 namespace llvm {
 namespace orc {
 
-  SymbolStringPool::PoolMapEntry SymbolStringPtr::Tombstone(0);
+SymbolStringPool::PoolMapEntry SymbolStringPtr::Tombstone(0);
 
 char FailedToMaterialize::ID = 0;
 char SymbolsNotFound::ID = 0;
