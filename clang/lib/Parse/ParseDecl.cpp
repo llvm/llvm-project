@@ -3934,7 +3934,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
     }
 
-    assert(!isAlreadyConsumed || RangeEnd != SourceLocation() &&
+    assert((!isAlreadyConsumed || RangeEnd != SourceLocation()) &&
                                      "both or neither of isAlreadyConsumed and "
                                      "RangeEnd needs to be set");
     DS.SetRangeEnd(isAlreadyConsumed ? RangeEnd : Tok.getLocation());
