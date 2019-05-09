@@ -448,11 +448,13 @@ private:
     return MachOAtomGraphBuilder_x86_64(**MachOObj).buildGraph();
   }
 
-  static Error targetOutOfRangeError(const Edge &E) {
+  static Error targetOutOfRangeError(const Atom &A, const Edge &E) {
     std::string ErrMsg;
     {
       raw_string_ostream ErrStream(ErrMsg);
-      ErrStream << "Target \"" << E.getTarget() << "\" out of range";
+      ErrStream << "Relocation target out of range: ";
+      printEdge(ErrStream, A, E, getMachOX86RelocationKindName(E.getKind()));
+      ErrStream << "\n";
     }
     return make_error<JITLinkError>(std::move(ErrMsg));
   }
@@ -471,7 +473,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(E);
+        return targetOutOfRangeError(A, E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -489,7 +491,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(E);
+        return targetOutOfRangeError(A, E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -501,7 +503,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(E);
+        return targetOutOfRangeError(A, E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -518,7 +520,7 @@ private:
       if (E.getKind() == Delta32 || E.getKind() == NegDelta32) {
         if (Value < std::numeric_limits<int32_t>::min() ||
             Value > std::numeric_limits<int32_t>::max())
-          return targetOutOfRangeError(E);
+          return targetOutOfRangeError(A, E);
         *(little32_t *)FixupPtr = Value;
       } else
         *(little64_t *)FixupPtr = Value;
