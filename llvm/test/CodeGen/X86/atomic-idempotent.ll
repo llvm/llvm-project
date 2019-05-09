@@ -166,70 +166,38 @@ define i32 @and32 (i32* %p) {
 }
 
 define void @or32_nouse_monotonic(i32* %p) {
-; X64-LABEL: or32_nouse_monotonic:
-; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    retq
-;
-; X32-LABEL: or32_nouse_monotonic:
-; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    mfence
-; X32-NEXT:    movl (%eax), %eax
-; X32-NEXT:    retl
+; CHECK-LABEL: or32_nouse_monotonic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #MEMBARRIER
+; CHECK-NEXT:    ret{{[l|q]}}
   atomicrmw or i32* %p, i32 0 monotonic
   ret void
 }
 
 
 define void @or32_nouse_acquire(i32* %p) {
-; X64-LABEL: or32_nouse_acquire:
-; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    retq
-;
-; X32-LABEL: or32_nouse_acquire:
-; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    mfence
-; X32-NEXT:    movl (%eax), %eax
-; X32-NEXT:    retl
+; CHECK-LABEL: or32_nouse_acquire:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #MEMBARRIER
+; CHECK-NEXT:    ret{{[l|q]}}
   atomicrmw or i32* %p, i32 0 acquire
   ret void
 }
 
 define void @or32_nouse_release(i32* %p) {
-; X64-LABEL: or32_nouse_release:
-; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    retq
-;
-; X32-LABEL: or32_nouse_release:
-; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    mfence
-; X32-NEXT:    movl (%eax), %eax
-; X32-NEXT:    retl
+; CHECK-LABEL: or32_nouse_release:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #MEMBARRIER
+; CHECK-NEXT:    ret{{[l|q]}}
   atomicrmw or i32* %p, i32 0 release
   ret void
 }
 
 define void @or32_nouse_acq_rel(i32* %p) {
-; X64-LABEL: or32_nouse_acq_rel:
-; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    retq
-;
-; X32-LABEL: or32_nouse_acq_rel:
-; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    mfence
-; X32-NEXT:    movl (%eax), %eax
-; X32-NEXT:    retl
+; CHECK-LABEL: or32_nouse_acq_rel:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #MEMBARRIER
+; CHECK-NEXT:    ret{{[l|q]}}
   atomicrmw or i32* %p, i32 0 acq_rel
   ret void
 }
@@ -237,15 +205,12 @@ define void @or32_nouse_acq_rel(i32* %p) {
 define void @or32_nouse_seq_cst(i32* %p) {
 ; X64-LABEL: or32_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    lock orl $0, (%rsp)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: or32_nouse_seq_cst:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    mfence
-; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    lock orl $0, (%esp)
 ; X32-NEXT:    retl
   atomicrmw or i32* %p, i32 0 seq_cst
   ret void
@@ -255,8 +220,7 @@ define void @or32_nouse_seq_cst(i32* %p) {
 define void @or64_nouse_seq_cst(i64* %p) {
 ; X64-LABEL: or64_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    lock orl $0, (%rsp)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: or64_nouse_seq_cst:
@@ -334,15 +298,12 @@ define void @or128_nouse_seq_cst(i128* %p) {
 define void @or16_nouse_seq_cst(i16* %p) {
 ; X64-LABEL: or16_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    lock orl $0, (%rsp)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: or16_nouse_seq_cst:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    mfence
-; X32-NEXT:    movzwl (%eax), %eax
+; X32-NEXT:    lock orl $0, (%esp)
 ; X32-NEXT:    retl
   atomicrmw or i16* %p, i16 0 seq_cst
   ret void
@@ -351,15 +312,12 @@ define void @or16_nouse_seq_cst(i16* %p) {
 define void @or8_nouse_seq_cst(i8* %p) {
 ; X64-LABEL: or8_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
-; X64-NEXT:    movb (%rdi), %al
+; X64-NEXT:    lock orl $0, (%rsp)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: or8_nouse_seq_cst:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    mfence
-; X32-NEXT:    movb (%eax), %al
+; X32-NEXT:    lock orl $0, (%esp)
 ; X32-NEXT:    retl
   atomicrmw or i8* %p, i8 0 seq_cst
   ret void

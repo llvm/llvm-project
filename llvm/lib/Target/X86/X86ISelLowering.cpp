@@ -25727,6 +25727,14 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   if (MemType->getPrimitiveSizeInBits() > NativeWidth)
     return nullptr;
 
+  // If this is a canonical idempotent atomicrmw w/no uses, we have a better
+  // lowering available in lowerAtomicArith.
+  // TODO: push more cases through this path. 
+  if (auto *C = dyn_cast<ConstantInt>(AI->getValOperand()))
+    if (AI->getOperation() == AtomicRMWInst::Or && C->isZero() &&
+        AI->use_empty())
+      return nullptr;
+
   auto Builder = IRBuilder<>(AI);
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto SSID = AI->getSyncScopeID();
@@ -26223,6 +26231,59 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
 }
 
+/// Emit a locked operation on a stack location which does not change any
+/// memory location, but does involve a lock prefix.  Location is chosen to be
+/// a) very likely accessed only by a single thread to minimize cache traffic,
+/// and b) definitely dereferenceable.  Returns the new Chain result.  
+static SDValue emitLockedStackOp(SelectionDAG &DAG,
+                                 const X86Subtarget &Subtarget,
+                                 SDValue Chain, SDLoc DL) {
+  // Implementation notes:
+  // 1) LOCK prefix creates a full read/write reordering barrier for memory
+  // operations issued by the current processor.  As such, the location
+  // referenced is not relevant for the ordering properties of the instruction.
+  // See: Intel® 64 and IA-32 ArchitecturesSoftware Developer’s Manual,
+  // 8.2.3.9  Loads and Stores Are Not Reordered with Locked Instructions 
+  // 2) Using an immediate operand appears to be the best encoding choice
+  // here since it doesn't require an extra register.
+  // 3) OR appears to be very slightly faster than ADD. (Though, the difference
+  // is small enough it might just be measurement noise.)
+  // 4) For the moment, we are using top of stack.  This creates false sharing
+  // with actual stack access/call sequences, and it would be better to use a
+  // location within the redzone.  For the moment, this is still better than an
+  // mfence though.  TODO: Revise the offset used when we can assume a redzone.
+  // 
+  // For a general discussion of the tradeoffs and benchmark results, see:
+  // https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
+
+  if (Subtarget.is64Bit()) {
+    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i8);
+    SDValue Ops[] = {
+      DAG.getRegister(X86::RSP, MVT::i64),                  // Base
+      DAG.getTargetConstant(1, DL, MVT::i8),                // Scale
+      DAG.getRegister(0, MVT::i64),                         // Index
+      DAG.getTargetConstant(0, DL, MVT::i32),               // Disp
+      DAG.getRegister(0, MVT::i32),                         // Segment.
+      Zero,
+      Chain};
+    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::Other, Ops);
+    return SDValue(Res, 0);
+  }
+
+  SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
+  SDValue Ops[] = {
+    DAG.getRegister(X86::ESP, MVT::i32),            // Base
+    DAG.getTargetConstant(1, DL, MVT::i8),          // Scale
+    DAG.getRegister(0, MVT::i32),                   // Index
+    DAG.getTargetConstant(0, DL, MVT::i32),         // Disp
+    DAG.getRegister(0, MVT::i32),                   // Segment.
+    Zero,
+    Chain
+  };
+  SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, DL, MVT::Other, Ops);
+  return SDValue(Res, 0);
+}
+
 static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
   unsigned NewOpc = 0;
@@ -26257,6 +26318,7 @@ static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
 /// Lower atomic_load_ops into LOCK-prefixed operations.
 static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
+  AtomicSDNode *AN = cast<AtomicSDNode>(N.getNode());
   SDValue Chain = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
@@ -26271,7 +26333,6 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
     // Handle (atomic_load_sub p, v) as (atomic_load_add p, -v), to be able to
     // select LXADD if LOCK_SUB can't be selected.
     if (Opc == ISD::ATOMIC_LOAD_SUB) {
-      AtomicSDNode *AN = cast<AtomicSDNode>(N.getNode());
       RHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
       return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, VT, Chain, LHS,
                            RHS, AN->getMemOperand());
@@ -26279,6 +26340,32 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
     assert(Opc == ISD::ATOMIC_LOAD_ADD &&
            "Used AtomicRMW ops other than Add should have been expanded!");
     return N;
+  }
+
+  // Specialized lowering for the canonical form of an idemptotent atomicrmw.
+  // The core idea here is that since the memory location isn't actually
+  // changing, all we need is a lowering for the *ordering* impacts of the
+  // atomicrmw.  As such, we can chose a different operation and memory
+  // location to minimize impact on other code.
+  if (Opc == ISD::ATOMIC_LOAD_OR && isNullConstant(RHS)) {
+    // On X86, the only ordering which actually requires an instruction is
+    // seq_cst which isn't SingleThread, everything just needs to be preserved
+    // during codegen and then dropped. Note that we expect (but don't assume),
+    // that orderings other than seq_cst and acq_rel have been canonicalized to
+    // a store or load. 
+    if (AN->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+        AN->getSyncScopeID() == SyncScope::System) {
+      // Prefer a locked operation against a stack location to minimize cache
+      // traffic.  This assumes that stack locations are very likely to be
+      // accessed only by the owning thread. 
+      SDValue NewChain = emitLockedStackOp(DAG, Subtarget, Chain, DL);
+      DAG.ReplaceAllUsesOfValueWith(N.getValue(1), NewChain);
+      return SDValue();
+    }
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    SDValue NewChain = DAG.getNode(X86ISD::MEMBARRIER, DL, MVT::Other, Chain);
+    DAG.ReplaceAllUsesOfValueWith(N.getValue(1), NewChain);
+    return SDValue();
   }
 
   SDValue LockOp = lowerAtomicArithWithLOCK(N, DAG, Subtarget);
