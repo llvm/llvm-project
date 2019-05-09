@@ -42,6 +42,9 @@ extern "C" {
      contents). */
   void __msan_unpoison_string(const volatile char *a);
 
+  /* Make first n parameters of the next function call fully initialized. */
+  void __msan_unpoison_param(size_t n);
+
   /* Make memory region fully uninitialized (without changing its contents).
      This is a legacy interface that does not update origin information. Use
      __msan_allocated_memory() instead. */
