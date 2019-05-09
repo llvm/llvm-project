@@ -90,28 +90,36 @@ SymbolSlab indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 }
 
 void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
-                         std::unique_ptr<RefSlab> Refs) {
+                         std::unique_ptr<RefSlab> Refs, bool CountReferences) {
   std::lock_guard<std::mutex> Lock(Mutex);
   if (!Symbols)
     FileToSymbols.erase(Path);
   else
     FileToSymbols[Path] = std::move(Symbols);
-  if (!Refs)
+  if (!Refs) {
     FileToRefs.erase(Path);
-  else
-    FileToRefs[Path] = std::move(Refs);
+    return;
+  }
+  RefSlabAndCountReferences Item;
+  Item.CountReferences = CountReferences;
+  Item.Slab = std::move(Refs);
+  FileToRefs[Path] = std::move(Item);
 }
 
 std::unique_ptr<SymbolIndex>
 FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
   std::vector<std::shared_ptr<SymbolSlab>> SymbolSlabs;
   std::vector<std::shared_ptr<RefSlab>> RefSlabs;
+  std::vector<RefSlab *> MainFileRefs;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     for (const auto &FileAndSymbols : FileToSymbols)
       SymbolSlabs.push_back(FileAndSymbols.second);
-    for (const auto &FileAndRefs : FileToRefs)
-      RefSlabs.push_back(FileAndRefs.second);
+    for (const auto &FileAndRefs : FileToRefs) {
+      RefSlabs.push_back(FileAndRefs.second.Slab);
+      if (FileAndRefs.second.CountReferences)
+        MainFileRefs.push_back(RefSlabs.back().get());
+    }
   }
   std::vector<const Symbol *> AllSymbols;
   std::vector<Symbol> SymsStorage;
@@ -120,25 +128,35 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
     llvm::DenseMap<SymbolID, Symbol> Merged;
     for (const auto &Slab : SymbolSlabs) {
       for (const auto &Sym : *Slab) {
+        assert(Sym.References == 0 &&
+               "Symbol with non-zero references sent to FileSymbols");
         auto I = Merged.try_emplace(Sym.ID, Sym);
         if (!I.second)
           I.first->second = mergeSymbol(I.first->second, Sym);
       }
     }
+    for (const RefSlab *Refs : MainFileRefs)
+      for (const auto &Sym : *Refs) {
+        auto It = Merged.find(Sym.first);
+        assert(It != Merged.end() && "Reference to unknown symbol");
+        It->getSecond().References += Sym.second.size();
+      }
     SymsStorage.reserve(Merged.size());
     for (auto &Sym : Merged) {
       SymsStorage.push_back(std::move(Sym.second));
       AllSymbols.push_back(&SymsStorage.back());
     }
-    // FIXME: aggregate symbol reference count based on references.
     break;
   }
   case DuplicateHandling::PickOne: {
     llvm::DenseSet<SymbolID> AddedSymbols;
     for (const auto &Slab : SymbolSlabs)
-      for (const auto &Sym : *Slab)
+      for (const auto &Sym : *Slab) {
+        assert(Sym.References == 0 &&
+               "Symbol with non-zero references sent to FileSymbols");
         if (AddedSymbols.insert(Sym.ID).second)
           AllSymbols.push_back(&Sym);
+      }
     break;
   }
   }
@@ -201,9 +219,9 @@ void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
                                std::shared_ptr<Preprocessor> PP,
                                const CanonicalIncludes &Includes) {
   auto Symbols = indexHeaderSymbols(AST, std::move(PP), Includes);
-  PreambleSymbols.update(Path,
-                         llvm::make_unique<SymbolSlab>(std::move(Symbols)),
-                         llvm::make_unique<RefSlab>());
+  PreambleSymbols.update(
+      Path, llvm::make_unique<SymbolSlab>(std::move(Symbols)),
+      llvm::make_unique<RefSlab>(), /*CountReferences=*/false);
   PreambleIndex.reset(
       PreambleSymbols.buildIndex(UseDex ? IndexType::Heavy : IndexType::Light,
                                  DuplicateHandling::PickOne));
@@ -213,7 +231,8 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   auto Contents = indexMainDecls(AST);
   MainFileSymbols.update(
       Path, llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
-      llvm::make_unique<RefSlab>(std::move(Contents.second)));
+      llvm::make_unique<RefSlab>(std::move(Contents.second)),
+      /*CountReferences=*/true);
   MainFileIndex.reset(
       MainFileSymbols.buildIndex(IndexType::Light, DuplicateHandling::PickOne));
 }
