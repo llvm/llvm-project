@@ -433,28 +433,16 @@ void prune(AtomGraph &G) {
     //
     // We replace if all of the following hold:
     //   (1) The atom is marked should-discard,
-    //   (2) it is live, and
-    //   (3) it has edges pointing to it.
+    //   (2) it has live edges (i.e. edges from live atoms) pointing to it.
     //
     // Otherwise we simply delete the atom.
-    bool ReplaceWithExternal = DA->isLive() && DA->shouldDiscard();
-    std::vector<Edge *> *EdgesToUpdateForDA = nullptr;
-    if (ReplaceWithExternal) {
-      auto ETUItr = EdgesToUpdate.find(DA);
-      if (ETUItr == EdgesToUpdate.end())
-        ReplaceWithExternal = false;
-      else
-        EdgesToUpdateForDA = &ETUItr->second;
-    }
 
     G.removeDefinedAtom(*DA);
 
-    if (ReplaceWithExternal) {
-      assert(EdgesToUpdateForDA &&
-             "Replacing atom: There should be edges to update");
-
+    auto EdgesToUpdateItr = EdgesToUpdate.find(DA);
+    if (EdgesToUpdateItr != EdgesToUpdate.end()) {
       auto &ExternalReplacement = G.addExternalAtom(DA->getName());
-      for (auto *EdgeToUpdate : *EdgesToUpdateForDA)
+      for (auto *EdgeToUpdate : EdgesToUpdateItr->second)
         EdgeToUpdate->setTarget(ExternalReplacement);
       LLVM_DEBUG(dbgs() << "replaced with " << ExternalReplacement << "\n");
     } else
