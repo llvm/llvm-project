@@ -856,5 +856,5 @@
 // CHECK-CASE-INSENSITIVE-V6T2-THUMB: "-cc1"{{.*}} "-triple" "thumbv6t2-{{.*}} "-target-cpu" "arm1156t2-s"
 
 // ================== Check that the correct PROCESSOR features are added when used -mcpu=PROCESSOR+FEATURESLIST
-// RUN: %clang -### --target=arm-arm-none-eabi -march=armv7-a -mcpu=cortex-a8+nocrc -x c -S -o - - <<< "" 2>&1 | FileCheck -check-prefix=A8FEATURES %s
+// RUN: %clang -### --target=arm-arm-none-eabi -march=armv7-a -mcpu=cortex-a8+nocrc -c %s 2>&1 | FileCheck -check-prefix=A8FEATURES %s
 // A8FEATURES: "-target-feature" "+dsp"
