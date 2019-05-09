@@ -16,7 +16,7 @@
 static __inline fixint_t __fixint(fp_t a) {
   const fixint_t fixint_max = (fixint_t)((~(fixuint_t)0) / 2);
   const fixint_t fixint_min = -fixint_max - 1;
-  // Break a into sign, exponent, significand
+  // Break a into sign, exponent, significand parts.
   const rep_t aRep = toRep(a);
   const rep_t aAbs = aRep & absMask;
   const fixint_t sign = aRep & signBit ? -1 : 1;

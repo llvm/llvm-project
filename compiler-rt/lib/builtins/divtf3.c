@@ -68,7 +68,7 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
     if (!bAbs)
       return fromRep(infRep | quotientSign);
 
-    // one or both of a or b is denormal, the other (if applicable) is a
+    // One or both of a or b is denormal.  The other (if applicable) is a
     // normal number.  Renormalize one or both of a and b, and set scale to
     // include the necessary exponent adjustment.
     if (aAbs < implicitBit)
@@ -77,9 +77,9 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
       scale -= normalize(&bSignificand);
   }
 
-  // Or in the implicit significand bit.  (If we fell through from the
+  // Set the implicit significand bit.  If we fell through from the
   // denormal path it was already set by normalize( ), but setting it twice
-  // won't hurt anything.)
+  // won't hurt anything.
   aSignificand |= implicitBit;
   bSignificand |= implicitBit;
   int quotientExponent = aExponent - bExponent + scale;
@@ -110,10 +110,9 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
   correction64 = -((rep_t)recip64 * q63b >> 64);
   recip64 = (rep_t)recip64 * correction64 >> 63;
 
-  // recip64 might have overflowed to exactly zero in the preceeding
-  // computation if the high word of b is exactly 1.0.  This would sabotage
-  // the full-width final stage of the computation that follows, so we adjust
-  // recip64 downward by one bit.
+  // The reciprocal may have overflowed to zero if the upper half of b is
+  // exactly 1.0.  This would sabatoge the full-width final stage of the
+  // computation that follows, so we adjust the reciprocal down by one bit.
   recip64--;
 
   // We need to perform one more iteration to get us to 112 binary digits;
@@ -137,11 +136,10 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
 
   reciprocal = r64cH + (r64cL >> 64);
 
-  // We already adjusted the 64-bit estimate, now we need to adjust the final
-  // 128-bit reciprocal estimate downward to ensure that it is strictly smaller
-  // than the infinitely precise exact reciprocal.  Because the computation
-  // of the Newton-Raphson step is truncating at every step, this adjustment
-  // is small; most of the work is already done.
+  // Adjust the final 128-bit reciprocal estimate downward to ensure that it
+  // is strictly smaller than the infinitely precise exact reciprocal. Because
+  // the computation of the Newton-Raphson step is truncating at every step,
+  // this adjustment is small; most of the work is already done.
   reciprocal -= 2;
 
   // The numerical reciprocal is accurate to within 2^-112, lies in the
@@ -151,7 +149,7 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
   //
   //    1. q < a/b
   //    2. q is in the interval [0.5, 2.0)
-  //    3. the error in q is bounded away from 2^-113 (actually, we have a
+  //    3. The error in q is bounded away from 2^-113 (actually, we have a
   //       couple of bits to spare, but this is all we need).
 
   // We need a 128 x 128 multiply high to compute q, which isn't a basic
@@ -168,7 +166,7 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
   //
   //     0 <= r < ulp(q)*b
   //
-  // if r is greater than 1/2 ulp(q)*b, then q rounds up.  Otherwise, we
+  // If r is greater than 1/2 ulp(q)*b, then q rounds up.  Otherwise, we
   // already have the correct result.  The exact halfway case cannot occur.
   // We also take this time to right shift quotient if it falls in the [1,2)
   // range and adjust the exponent accordingly.
@@ -208,13 +206,13 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
     return fromRep(quotientSign);
   } else {
     const bool round = (residual << 1) >= bSignificand;
-    // Clear the implicit bit
+    // Clear the implicit bit.
     rep_t absResult = quotient & significandMask;
-    // Insert the exponent
+    // Insert the exponent.
     absResult |= (rep_t)writtenExponent << significandBits;
-    // Round
+    // Round.
     absResult += round;
-    // Insert the sign and return
+    // Insert the sign and return.
     const long double result = fromRep(absResult | quotientSign);
     return result;
   }
