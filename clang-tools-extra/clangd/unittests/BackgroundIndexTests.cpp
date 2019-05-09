@@ -32,6 +32,7 @@ MATCHER(EmptyIncludeNode, "") {
   return !arg.IsTU && !arg.URI.empty() && arg.Digest == FileDigest{{0}} &&
          arg.DirectIncludes.empty();
 }
+MATCHER_P(NumReferences, N, "") { return arg.References == N; }
 
 class MemoryShardStorage : public BackgroundIndexStorage {
   mutable std::mutex StorageMu;
@@ -112,6 +113,9 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
       #include "A.h"
       void f_b() {
         (void)common;
+        (void)common;
+        (void)common;
+        (void)common;
       })cpp";
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
@@ -127,20 +131,25 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
 
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
-  EXPECT_THAT(
-      runFuzzyFind(Idx, ""),
-      UnorderedElementsAre(Named("common"), Named("A_CC"), Named("g"),
-                           AllOf(Named("f_b"), Declared(), Not(Defined()))));
+  EXPECT_THAT(runFuzzyFind(Idx, ""),
+              UnorderedElementsAre(AllOf(Named("common"), NumReferences(1U)),
+                                   AllOf(Named("A_CC"), NumReferences(0U)),
+                                   AllOf(Named("g"), NumReferences(0U)),
+                                   AllOf(Named("f_b"), Declared(),
+                                         Not(Defined()), NumReferences(0U))));
 
   Cmd.Filename = testPath("root/B.cc");
   Cmd.CommandLine = {"clang++", Cmd.Filename};
-  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+  CDB.setCompileCommand(testPath("root/B.cc"), Cmd);
 
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   // B_CC is dropped as we don't collect symbols from A.h in this compilation.
   EXPECT_THAT(runFuzzyFind(Idx, ""),
-              UnorderedElementsAre(Named("common"), Named("A_CC"), Named("g"),
-                                   AllOf(Named("f_b"), Declared(), Defined())));
+              UnorderedElementsAre(AllOf(Named("common"), NumReferences(5U)),
+                                   AllOf(Named("A_CC"), NumReferences(0U)),
+                                   AllOf(Named("g"), NumReferences(0U)),
+                                   AllOf(Named("f_b"), Declared(), Defined(),
+                                         NumReferences(1U))));
 
   auto Syms = runFuzzyFind(Idx, "common");
   EXPECT_THAT(Syms, UnorderedElementsAre(Named("common")));
@@ -148,6 +157,9 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   EXPECT_THAT(getRefs(Idx, Common.ID),
               RefsAre({FileURI("unittest:///root/A.h"),
                        FileURI("unittest:///root/A.cc"),
+                       FileURI("unittest:///root/B.cc"),
+                       FileURI("unittest:///root/B.cc"),
+                       FileURI("unittest:///root/B.cc"),
                        FileURI("unittest:///root/B.cc")}));
 }
 
