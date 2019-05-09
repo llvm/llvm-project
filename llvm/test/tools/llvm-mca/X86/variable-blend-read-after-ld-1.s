@@ -48,7 +48,7 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # BDVER2:       Dispatch Width:    4
 # BDVER2-NEXT:  uOps Per Cycle:    0.20
 # BDVER2-NEXT:  IPC:               0.20
-# BDVER2-NEXT:  Block RThroughput: 2.5
+# BDVER2-NEXT:  Block RThroughput: 2.0
 
 # BDWELL:       Dispatch Width:    4
 # BDWELL-NEXT:  uOps Per Cycle:    0.40

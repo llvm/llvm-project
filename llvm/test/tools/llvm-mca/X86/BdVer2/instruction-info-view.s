@@ -13,14 +13,14 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # ENABLED:       Iterations:        100
 # ENABLED-NEXT:  Instructions:      300
-# ENABLED-NEXT:  Total Cycles:      228
+# ENABLED-NEXT:  Total Cycles:      583
 # ENABLED-NEXT:  Total uOps:        700
 
 
 # ENABLED:       Dispatch Width:    4
-# ENABLED-NEXT:  uOps Per Cycle:    3.07
-# ENABLED-NEXT:  IPC:               1.32
-# ENABLED-NEXT:  Block RThroughput: 2.0
+# ENABLED-NEXT:  uOps Per Cycle:    1.20
+# ENABLED-NEXT:  IPC:               0.51
+# ENABLED-NEXT:  Block RThroughput: 5.5
 
 # ENABLED:       Instruction Info:
 # ENABLED-NEXT:  [1]: #uOps
@@ -32,5 +32,5 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # ENABLED:       [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # ENABLED-NEXT:   1      5     1.00                        vmulps	%xmm0, %xmm1, %xmm2
-# ENABLED-NEXT:   3      11    1.00                        vhaddps	%xmm2, %xmm2, %xmm3
-# ENABLED-NEXT:   3      11    1.00                        vhaddps	%xmm3, %xmm3, %xmm4
+# ENABLED-NEXT:   3      11    2.50                        vhaddps	%xmm2, %xmm2, %xmm3
+# ENABLED-NEXT:   3      11    2.50                        vhaddps	%xmm3, %xmm3, %xmm4

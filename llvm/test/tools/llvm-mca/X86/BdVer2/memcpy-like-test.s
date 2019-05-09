@@ -12,13 +12,13 @@ vmovaps %xmm0, 48(%rdi)
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      800
-# CHECK-NEXT: Total Cycles:      408
+# CHECK-NEXT: Total Cycles:      806
 # CHECK-NEXT: Total uOps:        800
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.96
-# CHECK-NEXT: IPC:               1.96
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 8.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -29,14 +29,14 @@ vmovaps %xmm0, 48(%rdi)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      5     0.50    *                   vmovaps	(%rsi), %xmm0
-# CHECK-NEXT:  1      1     1.00           *            vmovaps	%xmm0, (%rdi)
-# CHECK-NEXT:  1      5     0.50    *                   vmovaps	16(%rsi), %xmm0
-# CHECK-NEXT:  1      1     1.00           *            vmovaps	%xmm0, 16(%rdi)
-# CHECK-NEXT:  1      5     0.50    *                   vmovaps	32(%rsi), %xmm0
-# CHECK-NEXT:  1      1     1.00           *            vmovaps	%xmm0, 32(%rdi)
-# CHECK-NEXT:  1      5     0.50    *                   vmovaps	48(%rsi), %xmm0
-# CHECK-NEXT:  1      1     1.00           *            vmovaps	%xmm0, 48(%rdi)
+# CHECK-NEXT:  1      5     1.50    *                   vmovaps	(%rsi), %xmm0
+# CHECK-NEXT:  1      1     1.50           *            vmovaps	%xmm0, (%rdi)
+# CHECK-NEXT:  1      5     1.50    *                   vmovaps	16(%rsi), %xmm0
+# CHECK-NEXT:  1      1     1.50           *            vmovaps	%xmm0, 16(%rdi)
+# CHECK-NEXT:  1      5     1.50    *                   vmovaps	32(%rsi), %xmm0
+# CHECK-NEXT:  1      1     1.50           *            vmovaps	%xmm0, 32(%rdi)
+# CHECK-NEXT:  1      5     1.50    *                   vmovaps	48(%rsi), %xmm0
+# CHECK-NEXT:  1      1     1.50           *            vmovaps	%xmm0, 48(%rdi)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -65,31 +65,31 @@ vmovaps %xmm0, 48(%rdi)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 4.00   4.00    -      -      -      -      -      -     2.00   2.00    -      -      -     4.00   3.95   4.05    -      -      -     2.00   2.00    -     4.00
+# CHECK-NEXT: 8.00   8.00    -      -      -      -      -      -     6.00   6.00    -      -      -     4.00   2.00   2.00   6.00   6.00    -     6.00   6.00    -     4.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT: 0.97   0.03    -      -      -      -      -      -      -     1.00    -      -      -      -     0.97   0.03    -      -      -      -     1.00    -      -     vmovaps	(%rsi), %xmm0
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%xmm0, (%rdi)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -     vmovaps	16(%rsi), %xmm0
-# CHECK-NEXT: 0.02   0.98    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%xmm0, 16(%rdi)
-# CHECK-NEXT: 0.98   0.02    -      -      -      -      -      -      -     1.00    -      -      -      -     0.98   0.02    -      -      -      -     1.00    -      -     vmovaps	32(%rsi), %xmm0
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%xmm0, 32(%rdi)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -     vmovaps	48(%rsi), %xmm0
-# CHECK-NEXT: 0.03   0.97    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%xmm0, 48(%rdi)
+# CHECK-NEXT: 2.97   0.03    -      -      -      -      -      -      -     3.00    -      -      -      -      -     1.00    -      -      -      -     3.00    -      -     vmovaps	(%rsi), %xmm0
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   vmovaps	%xmm0, (%rdi)
+# CHECK-NEXT: 0.03   2.97    -      -      -      -      -      -     3.00    -      -      -      -      -     1.00    -      -      -      -     3.00    -      -      -     vmovaps	16(%rsi), %xmm0
+# CHECK-NEXT: 0.01   0.99    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   vmovaps	%xmm0, 16(%rdi)
+# CHECK-NEXT:  -     3.00    -      -      -      -      -      -      -     3.00    -      -      -      -      -     1.00    -      -      -      -     3.00    -      -     vmovaps	32(%rsi), %xmm0
+# CHECK-NEXT: 0.99   0.01    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   vmovaps	%xmm0, 32(%rdi)
+# CHECK-NEXT: 3.00    -      -      -      -      -      -      -     3.00    -      -      -      -      -     1.00    -      -      -      -     3.00    -      -      -     vmovaps	48(%rsi), %xmm0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   vmovaps	%xmm0, 48(%rdi)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  ..   vmovaps	(%rsi), %xmm0
-# CHECK-NEXT: [0,1]     D=====eER ..   vmovaps	%xmm0, (%rdi)
-# CHECK-NEXT: [0,2]     DeeeeeE-R ..   vmovaps	16(%rsi), %xmm0
-# CHECK-NEXT: [0,3]     D======eER..   vmovaps	%xmm0, 16(%rdi)
-# CHECK-NEXT: [0,4]     .DeeeeeE-R..   vmovaps	32(%rsi), %xmm0
-# CHECK-NEXT: [0,5]     .D======eER.   vmovaps	%xmm0, 32(%rdi)
-# CHECK-NEXT: [0,6]     .DeeeeeE--R.   vmovaps	48(%rsi), %xmm0
-# CHECK-NEXT: [0,7]     .D=======eER   vmovaps	%xmm0, 48(%rdi)
+# CHECK:      [0,0]     DeeeeeER  .  .   vmovaps	(%rsi), %xmm0
+# CHECK-NEXT: [0,1]     D======eER.  .   vmovaps	%xmm0, (%rdi)
+# CHECK-NEXT: [0,2]     DeeeeeE--R.  .   vmovaps	16(%rsi), %xmm0
+# CHECK-NEXT: [0,3]     D=======eER  .   vmovaps	%xmm0, 16(%rdi)
+# CHECK-NEXT: [0,4]     .D==eeeeeER  .   vmovaps	32(%rsi), %xmm0
+# CHECK-NEXT: [0,5]     .D========eER.   vmovaps	%xmm0, 32(%rdi)
+# CHECK-NEXT: [0,6]     .D==eeeeeE--R.   vmovaps	48(%rsi), %xmm0
+# CHECK-NEXT: [0,7]     .D=========eER   vmovaps	%xmm0, 48(%rdi)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -99,10 +99,10 @@ vmovaps %xmm0, 48(%rdi)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vmovaps	(%rsi), %xmm0
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       vmovaps	%xmm0, (%rdi)
-# CHECK-NEXT: 2.     1     1.0    1.0    1.0       vmovaps	16(%rsi), %xmm0
-# CHECK-NEXT: 3.     1     7.0    0.0    0.0       vmovaps	%xmm0, 16(%rdi)
-# CHECK-NEXT: 4.     1     1.0    1.0    1.0       vmovaps	32(%rsi), %xmm0
-# CHECK-NEXT: 5.     1     7.0    0.0    0.0       vmovaps	%xmm0, 32(%rdi)
-# CHECK-NEXT: 6.     1     1.0    1.0    2.0       vmovaps	48(%rsi), %xmm0
-# CHECK-NEXT: 7.     1     8.0    0.0    0.0       vmovaps	%xmm0, 48(%rdi)
+# CHECK-NEXT: 1.     1     7.0    1.0    0.0       vmovaps	%xmm0, (%rdi)
+# CHECK-NEXT: 2.     1     1.0    1.0    2.0       vmovaps	16(%rsi), %xmm0
+# CHECK-NEXT: 3.     1     8.0    0.0    0.0       vmovaps	%xmm0, 16(%rdi)
+# CHECK-NEXT: 4.     1     3.0    3.0    0.0       vmovaps	32(%rsi), %xmm0
+# CHECK-NEXT: 5.     1     9.0    1.0    0.0       vmovaps	%xmm0, 32(%rdi)
+# CHECK-NEXT: 6.     1     3.0    3.0    2.0       vmovaps	48(%rsi), %xmm0
+# CHECK-NEXT: 7.     1     10.0   0.0    0.0       vmovaps	%xmm0, 48(%rdi)

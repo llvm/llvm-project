@@ -29,13 +29,13 @@ vpcmpeqw  %xmm3, %xmm3, %xmm5
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1500
-# CHECK-NEXT: Total Cycles:      754
+# CHECK-NEXT: Total Cycles:      1353
 # CHECK-NEXT: Total uOps:        1500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.99
-# CHECK-NEXT: IPC:               1.99
-# CHECK-NEXT: Block RThroughput: 7.5
+# CHECK-NEXT: uOps Per Cycle:    1.11
+# CHECK-NEXT: IPC:               1.11
+# CHECK-NEXT: Block RThroughput: 13.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -49,27 +49,27 @@ vpcmpeqw  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  1      2     0.50                        pcmpeqb	%mm2, %mm2
 # CHECK-NEXT:  1      2     0.50                        pcmpeqd	%mm2, %mm2
 # CHECK-NEXT:  1      2     0.50                        pcmpeqw	%mm2, %mm2
-# CHECK-NEXT:  1      2     0.50                        pcmpeqb	%xmm2, %xmm2
-# CHECK-NEXT:  1      2     0.50                        pcmpeqd	%xmm2, %xmm2
-# CHECK-NEXT:  1      2     0.50                        pcmpeqq	%xmm2, %xmm2
-# CHECK-NEXT:  1      2     0.50                        pcmpeqw	%xmm2, %xmm2
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqd	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqq	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqw	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqb	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqd	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqq	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqw	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  1      2     1.00                        pcmpeqb	%xmm2, %xmm2
+# CHECK-NEXT:  1      2     1.00                        pcmpeqd	%xmm2, %xmm2
+# CHECK-NEXT:  1      2     1.00                        pcmpeqq	%xmm2, %xmm2
+# CHECK-NEXT:  1      2     1.00                        pcmpeqw	%xmm2, %xmm2
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqb	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqq	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqw	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqb	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqd	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqq	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqw	%xmm3, %xmm3, %xmm5
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    1500
-# CHECK-NEXT: Max number of mappings used:         72
+# CHECK-NEXT: Max number of mappings used:         69
 
 # CHECK:      *  Register File #1 -- PdFpuPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 1500
-# CHECK-NEXT:    Max number of mappings used:      72
+# CHECK-NEXT:    Max number of mappings used:      69
 
 # CHECK:      *  Register File #2 -- PdIntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     96
@@ -103,45 +103,45 @@ vpcmpeqw  %xmm3, %xmm3, %xmm5
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     7.50   7.50    -      -     7.50   7.50    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     13.50  13.50   -      -     7.50   7.50    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqb	%mm2, %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqd	%mm2, %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqw	%mm2, %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqb	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqd	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -     pcmpeqq	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqw	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqb	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqd	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqq	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqw	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeER.    ..   pcmpeqb	%mm2, %mm2
-# CHECK-NEXT: [0,1]     DeeER.    ..   pcmpeqd	%mm2, %mm2
-# CHECK-NEXT: [0,2]     D=eeER    ..   pcmpeqw	%mm2, %mm2
-# CHECK-NEXT: [0,3]     D==eeER   ..   pcmpeqb	%xmm2, %xmm2
-# CHECK-NEXT: [0,4]     .DeeE-R   ..   pcmpeqd	%xmm2, %xmm2
-# CHECK-NEXT: [0,5]     .D==eeER  ..   pcmpeqq	%xmm2, %xmm2
-# CHECK-NEXT: [0,6]     .D=eeE-R  ..   pcmpeqw	%xmm2, %xmm2
-# CHECK-NEXT: [0,7]     .D===eeER ..   vpcmpeqb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,8]     . D=eeE-R ..   vpcmpeqd	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,9]     . D===eeER..   vpcmpeqq	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,10]    . D==eeE-R..   vpcmpeqw	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,11]    . D===eeER..   vpcmpeqb	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,12]    .  D===eeER.   vpcmpeqd	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,13]    .  D===eeER.   vpcmpeqq	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,14]    .  D====eeER   vpcmpeqw	%xmm3, %xmm3, %xmm5
+# CHECK:      [0,0]     DeeER.    .    ..   pcmpeqb	%mm2, %mm2
+# CHECK-NEXT: [0,1]     DeeER.    .    ..   pcmpeqd	%mm2, %mm2
+# CHECK-NEXT: [0,2]     D=eeER    .    ..   pcmpeqw	%mm2, %mm2
+# CHECK-NEXT: [0,3]     D==eeER   .    ..   pcmpeqb	%xmm2, %xmm2
+# CHECK-NEXT: [0,4]     .DeeE-R   .    ..   pcmpeqd	%xmm2, %xmm2
+# CHECK-NEXT: [0,5]     .D==eeER  .    ..   pcmpeqq	%xmm2, %xmm2
+# CHECK-NEXT: [0,6]     .D===eeER .    ..   pcmpeqw	%xmm2, %xmm2
+# CHECK-NEXT: [0,7]     .D=====eeER    ..   vpcmpeqb	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,8]     . D===eeE-R    ..   vpcmpeqd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,9]     . D======eeER  ..   vpcmpeqq	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,10]    . D=====eeE-R  ..   vpcmpeqw	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,11]    . D=======eeER ..   vpcmpeqb	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,12]    .  D=======eeER..   vpcmpeqd	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,13]    .  D========eeER.   vpcmpeqq	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,14]    .  D=========eeER   vpcmpeqw	%xmm3, %xmm3, %xmm5
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -156,12 +156,12 @@ vpcmpeqw  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 3.     1     3.0    3.0    0.0       pcmpeqb	%xmm2, %xmm2
 # CHECK-NEXT: 4.     1     1.0    1.0    1.0       pcmpeqd	%xmm2, %xmm2
 # CHECK-NEXT: 5.     1     3.0    0.0    0.0       pcmpeqq	%xmm2, %xmm2
-# CHECK-NEXT: 6.     1     2.0    2.0    1.0       pcmpeqw	%xmm2, %xmm2
-# CHECK-NEXT: 7.     1     4.0    4.0    0.0       vpcmpeqb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: 8.     1     2.0    2.0    1.0       vpcmpeqd	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: 9.     1     4.0    0.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: 10.    1     3.0    3.0    1.0       vpcmpeqw	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: 11.    1     4.0    4.0    0.0       vpcmpeqb	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: 12.    1     4.0    4.0    0.0       vpcmpeqd	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: 13.    1     4.0    0.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: 14.    1     5.0    5.0    0.0       vpcmpeqw	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: 6.     1     4.0    4.0    0.0       pcmpeqw	%xmm2, %xmm2
+# CHECK-NEXT: 7.     1     6.0    6.0    0.0       vpcmpeqb	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: 8.     1     4.0    4.0    1.0       vpcmpeqd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: 9.     1     7.0    1.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: 10.    1     6.0    6.0    1.0       vpcmpeqw	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: 11.    1     8.0    8.0    0.0       vpcmpeqb	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: 12.    1     8.0    8.0    0.0       vpcmpeqd	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: 13.    1     9.0    2.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: 14.    1     10.0   10.0   0.0       vpcmpeqw	%xmm3, %xmm3, %xmm5

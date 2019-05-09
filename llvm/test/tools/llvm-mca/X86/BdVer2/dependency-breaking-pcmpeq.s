@@ -14,13 +14,13 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      6000
-# CHECK-NEXT: Total Cycles:      3005
+# CHECK-NEXT: Total Cycles:      6003
 # CHECK-NEXT: Total uOps:        6000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    2.00
-# CHECK-NEXT: IPC:               2.00
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    1.00
+# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -31,10 +31,10 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT:  1      2     0.50                        vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  1      2     1.00                        vpcmpeqq	%xmm3, %xmm3, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -63,31 +63,31 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     2.00   2.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     4.00   4.00    -      -     2.00   2.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT:                     01234
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeER.    .   vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [0,1]     D=eeER    .   vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DeeE-R    .   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [0,3]     D==eeER   .   vpcmpeqq	%xmm3, %xmm3, %xmm0
-# CHECK-NEXT: [1,0]     .DeeE-R   .   vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [1,1]     .D==eeER  .   vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .D=eeE-R  .   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .D===eeER .   vpcmpeqq	%xmm3, %xmm3, %xmm0
-# CHECK-NEXT: [2,0]     . D=eeE-R .   vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [2,1]     . D===eeER.   vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: [2,2]     . D==eeE-R.   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [2,3]     . D====eeER   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK:      [0,0]     DeeER.    .   .   vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [0,1]     D==eeER   .   .   vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DeeE--R   .   .   vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [0,3]     D==eeER   .   .   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: [1,0]     .D===eeER .   .   vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [1,1]     .D=====eeER   .   vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .D===eeE--R   .   vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .D=====eeER   .   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: [2,0]     . D======eeER .   vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [2,1]     . D========eeER   vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [2,2]     . D======eeE--R   vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [2,3]     . D========eeER   vpcmpeqq	%xmm3, %xmm3, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -96,7 +96,7 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.3    1.3    0.7       vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: 1.     3     3.0    3.0    0.0       vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: 2.     3     2.0    2.0    1.0       vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: 3.     3     4.0    0.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: 0.     3     4.0    4.0    0.0       vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: 1.     3     6.0    6.0    0.0       vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: 2.     3     4.0    4.0    2.0       vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: 3.     3     6.0    0.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm0

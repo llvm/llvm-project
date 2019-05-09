@@ -13,8 +13,8 @@ cmpxchg16b (%rax)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  18     3     1.00    *      *            cmpxchg8b	(%rax)
-# CHECK-NEXT:  22     3     1.00    *      *            cmpxchg16b	(%rax)
+# CHECK-NEXT:  18     3     26.00   *      *            cmpxchg8b	(%rax)
+# CHECK-NEXT:  22     3     69.00   *      *            cmpxchg16b	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -43,9 +43,9 @@ cmpxchg16b (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -     95.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg8b	(%rax)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg16b	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     26.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg8b	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     69.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg16b	(%rax)

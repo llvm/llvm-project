@@ -19,12 +19,12 @@ popcntq     (%rax), %rcx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      4     0.50                        popcntw	%cx, %cx
-# CHECK-NEXT:  1      8     0.50    *                   popcntw	(%rax), %cx
-# CHECK-NEXT:  1      4     0.50                        popcntl	%eax, %ecx
-# CHECK-NEXT:  1      8     0.50    *                   popcntl	(%rax), %ecx
-# CHECK-NEXT:  1      4     0.50                        popcntq	%rax, %rcx
-# CHECK-NEXT:  1      8     0.50    *                   popcntq	(%rax), %rcx
+# CHECK-NEXT:  1      4     2.00                        popcntw	%cx, %cx
+# CHECK-NEXT:  1      8     2.00    *                   popcntw	(%rax), %cx
+# CHECK-NEXT:  1      4     2.00                        popcntl	%eax, %ecx
+# CHECK-NEXT:  1      8     2.00    *                   popcntl	(%rax), %ecx
+# CHECK-NEXT:  1      4     2.00                        popcntq	%rax, %rcx
+# CHECK-NEXT:  1      8     2.00    *                   popcntq	(%rax), %rcx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -53,13 +53,13 @@ popcntq     (%rax), %rcx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 1.50   1.50    -      -      -     3.00   3.00    -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50    -      -
+# CHECK-NEXT: 4.50   4.50    -      -      -     12.00  12.00   -      -      -      -      -      -      -      -      -      -      -      -     4.50   4.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     popcntw	%cx, %cx
-# CHECK-NEXT: 0.50   0.50    -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     popcntw	(%rax), %cx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     popcntl	%eax, %ecx
-# CHECK-NEXT: 0.50   0.50    -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     popcntl	(%rax), %ecx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     popcntq	%rax, %rcx
-# CHECK-NEXT: 0.50   0.50    -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     popcntq	(%rax), %rcx
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     popcntw	%cx, %cx
+# CHECK-NEXT: 1.50   1.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50    -      -     popcntw	(%rax), %cx
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     popcntl	%eax, %ecx
+# CHECK-NEXT: 1.50   1.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50    -      -     popcntl	(%rax), %ecx
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     popcntq	%rax, %rcx
+# CHECK-NEXT: 1.50   1.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50    -      -     popcntq	(%rax), %rcx

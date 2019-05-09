@@ -13,7 +13,7 @@
 # CHECK:      Dispatch Width:    3
 # CHECK-NEXT: uOps Per Cycle:    0.38
 # CHECK-NEXT: IPC:               0.38
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -24,16 +24,16 @@
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.50                        addq	%rdi, %rsi
-# CHECK-NEXT:  1      5     0.50    *                   addq	(%rsp), %rsi
-# CHECK-NEXT:  1      1     0.50                        addq	%rdx, %r8
+# CHECK-NEXT:  1      1     1.00                        addq	%rdi, %rsi
+# CHECK-NEXT:  1      5     1.50    *                   addq	(%rsp), %rsi
+# CHECK-NEXT:  1      1     1.00                        addq	%rdx, %r8
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     01234567
 
 # CHECK:      [0,0]     DeER . .   addq	%rdi, %rsi
 # CHECK-NEXT: [0,1]     DeeeeeER   addq	(%rsp), %rsi
-# CHECK-NEXT: [0,2]     D=eE---R   addq	%rdx, %r8
+# CHECK-NEXT: [0,2]     D==eE--R   addq	%rdx, %r8
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -44,4 +44,4 @@
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       addq	%rdi, %rsi
 # CHECK-NEXT: 1.     1     1.0    0.0    0.0       addq	(%rsp), %rsi
-# CHECK-NEXT: 2.     1     2.0    2.0    3.0       addq	%rdx, %r8
+# CHECK-NEXT: 2.     1     3.0    3.0    2.0       addq	%rdx, %r8

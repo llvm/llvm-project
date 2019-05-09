@@ -29,17 +29,17 @@ aeskeygenassist $22, (%rax), %xmm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  2      9     1.00                        aesdec	%xmm0, %xmm2
-# CHECK-NEXT:  2      14    1.00    *                   aesdec	(%rax), %xmm2
+# CHECK-NEXT:  2      14    1.50    *                   aesdec	(%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00                        aesdeclast	%xmm0, %xmm2
-# CHECK-NEXT:  2      14    1.00    *                   aesdeclast	(%rax), %xmm2
+# CHECK-NEXT:  2      14    1.50    *                   aesdeclast	(%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00                        aesenc	%xmm0, %xmm2
-# CHECK-NEXT:  2      14    1.00    *                   aesenc	(%rax), %xmm2
+# CHECK-NEXT:  2      14    1.50    *                   aesenc	(%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00                        aesenclast	%xmm0, %xmm2
-# CHECK-NEXT:  2      14    1.00    *                   aesenclast	(%rax), %xmm2
+# CHECK-NEXT:  2      14    1.50    *                   aesenclast	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        aesimc	%xmm0, %xmm2
-# CHECK-NEXT:  1      10    1.00    *                   aesimc	(%rax), %xmm2
+# CHECK-NEXT:  1      10    1.50    *                   aesimc	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        aeskeygenassist	$22, %xmm0, %xmm2
-# CHECK-NEXT:  1      10    1.00    *                   aeskeygenassist	$22, (%rax), %xmm2
+# CHECK-NEXT:  1      10    1.50    *                   aeskeygenassist	$22, (%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -68,19 +68,19 @@ aeskeygenassist $22, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 3.00   3.00    -      -      -      -      -      -      -      -      -      -     12.00   -     12.00   -      -      -      -     3.00   3.00    -      -
+# CHECK-NEXT: 9.00   9.00    -      -      -      -      -      -      -      -      -      -     12.00   -     12.00   -      -      -      -     9.00   9.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     aesdec	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     0.50   0.50    -      -     aesdec	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     1.50   1.50    -      -     aesdec	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     aesdeclast	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     0.50   0.50    -      -     aesdeclast	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     1.50   1.50    -      -     aesdeclast	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     aesenc	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     0.50   0.50    -      -     aesenc	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     1.50   1.50    -      -     aesenc	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     aesenclast	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     0.50   0.50    -      -     aesenclast	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     1.50   1.50    -      -     aesenclast	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     aesimc	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     0.50   0.50    -      -     aesimc	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     1.50   1.50    -      -     aesimc	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     aeskeygenassist	$22, %xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     0.50   0.50    -      -     aeskeygenassist	$22, (%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     1.50   1.50    -      -     aeskeygenassist	$22, (%rax), %xmm2

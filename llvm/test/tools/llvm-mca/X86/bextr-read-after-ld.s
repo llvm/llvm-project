@@ -33,7 +33,7 @@ bextrl	%esi, (%rdi), %eax
 # BDVER2:       Dispatch Width:    4
 # BDVER2-NEXT:  uOps Per Cycle:    0.33
 # BDVER2-NEXT:  IPC:               0.22
-# BDVER2-NEXT:  Block RThroughput: 1.0
+# BDVER2-NEXT:  Block RThroughput: 2.0
 
 # BDWELL:       Dispatch Width:    4
 # BDWELL-NEXT:  uOps Per Cycle:    0.40
@@ -70,8 +70,8 @@ bextrl	%esi, (%rdi), %eax
 
 # ALL:          [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 
-# BDVER2-NEXT:   1      1     0.50                        addl	%edi, %esi
-# BDVER2-NEXT:   2      6     0.50    *                   bextrl	%esi, (%rdi), %eax
+# BDVER2-NEXT:   1      1     1.00                        addl	%edi, %esi
+# BDVER2-NEXT:   2      6     1.50    *                   bextrl	%esi, (%rdi), %eax
 
 # BDWELL-NEXT:   1      1     0.25                        addl	%edi, %esi
 # BDWELL-NEXT:   3      7     0.50    *                   bextrl	%esi, (%rdi), %eax

@@ -16,7 +16,7 @@ vmulps  (%rdi), %xmm1, %xmm2
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.15
 # CHECK-NEXT: IPC:               0.15
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -28,7 +28,7 @@ vmulps  (%rdi), %xmm1, %xmm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      5     1.00                        vaddps	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT:  1      10    1.00    *                   vmulps	(%rdi), %xmm1, %xmm2
+# CHECK-NEXT:  1      10    1.50    *                   vmulps	(%rdi), %xmm1, %xmm2
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012

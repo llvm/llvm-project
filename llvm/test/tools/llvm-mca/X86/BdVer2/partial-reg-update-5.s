@@ -7,13 +7,13 @@ lzcnt %ax, %bx  ## partial register stall.
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      1500
-# CHECK-NEXT: Total Cycles:      1504
+# CHECK-NEXT: Total Cycles:      3003
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.99
-# CHECK-NEXT: IPC:               1.00
-# CHECK-NEXT: Block RThroughput: 0.5
+# CHECK-NEXT: uOps Per Cycle:    1.00
+# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -24,7 +24,7 @@ lzcnt %ax, %bx  ## partial register stall.
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      2     0.50                        lzcntw	%ax, %bx
+# CHECK-NEXT:  2      2     2.00                        lzcntw	%ax, %bx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -53,18 +53,18 @@ lzcnt %ax, %bx  ## partial register stall.
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lzcntw	%ax, %bx
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lzcntw	%ax, %bx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DeeER..   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,0]     D=eeER.   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,0]     .D=eeER   lzcntw	%ax, %bx
+# CHECK:      [0,0]     DeeER.  .   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,0]     D==eeER .   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,0]     .D===eeER   lzcntw	%ax, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -73,4 +73,4 @@ lzcnt %ax, %bx  ## partial register stall.
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.7    0.3    0.0       lzcntw	%ax, %bx
+# CHECK-NEXT: 0.     3     2.7    1.0    0.0       lzcntw	%ax, %bx

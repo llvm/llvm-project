@@ -44,25 +44,25 @@ mwait
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      5     1.00                        addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      10    1.00    *                   addsubpd	(%rax), %xmm2
+# CHECK-NEXT:  1      10    1.50    *                   addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        addsubps	%xmm0, %xmm2
-# CHECK-NEXT:  1      10    1.00    *                   addsubps	(%rax), %xmm2
-# CHECK-NEXT:  3      11    1.00                        haddpd	%xmm0, %xmm2
-# CHECK-NEXT:  4      16    1.00    *                   haddpd	(%rax), %xmm2
-# CHECK-NEXT:  3      11    1.00                        haddps	%xmm0, %xmm2
-# CHECK-NEXT:  4      16    1.00    *                   haddps	(%rax), %xmm2
-# CHECK-NEXT:  3      11    1.00                        hsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  4      16    1.00    *                   hsubpd	(%rax), %xmm2
-# CHECK-NEXT:  3      11    1.00                        hsubps	%xmm0, %xmm2
-# CHECK-NEXT:  4      16    1.00    *                   hsubps	(%rax), %xmm2
-# CHECK-NEXT:  1      5     0.50    *                   lddqu	(%rax), %xmm2
+# CHECK-NEXT:  1      10    1.50    *                   addsubps	(%rax), %xmm2
+# CHECK-NEXT:  3      11    2.50                        haddpd	%xmm0, %xmm2
+# CHECK-NEXT:  4      16    2.50    *                   haddpd	(%rax), %xmm2
+# CHECK-NEXT:  3      11    2.50                        haddps	%xmm0, %xmm2
+# CHECK-NEXT:  4      16    2.50    *                   haddps	(%rax), %xmm2
+# CHECK-NEXT:  3      11    2.50                        hsubpd	%xmm0, %xmm2
+# CHECK-NEXT:  4      16    2.50    *                   hsubpd	(%rax), %xmm2
+# CHECK-NEXT:  3      11    2.50                        hsubps	%xmm0, %xmm2
+# CHECK-NEXT:  4      16    2.50    *                   hsubps	(%rax), %xmm2
+# CHECK-NEXT:  1      5     1.50    *                   lddqu	(%rax), %xmm2
 # CHECK-NEXT:  1      100   0.50                  U     monitor
-# CHECK-NEXT:  1      2     0.50                        movddup	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     0.50    *                   movddup	(%rax), %xmm2
-# CHECK-NEXT:  1      2     0.50                        movshdup	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     0.50    *                   movshdup	(%rax), %xmm2
-# CHECK-NEXT:  1      2     0.50                        movsldup	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     0.50    *                   movsldup	(%rax), %xmm2
+# CHECK-NEXT:  1      2     1.00                        movddup	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.50    *                   movddup	(%rax), %xmm2
+# CHECK-NEXT:  1      2     1.00                        movshdup	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.50    *                   movshdup	(%rax), %xmm2
+# CHECK-NEXT:  1      2     1.00                        movsldup	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.50    *                   movsldup	(%rax), %xmm2
 # CHECK-NEXT:  1      100   0.50    *      *      U     mwait
 
 # CHECK:      Resources:
@@ -92,28 +92,28 @@ mwait
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 5.00   5.00    -      -      -     1.00   1.00    -     9.00   9.00   0.50   0.50    -      -     15.50  3.50    -      -      -     5.00   5.00    -      -
+# CHECK-NEXT: 15.00  15.00   -      -      -     1.00   1.00    -     28.00  28.00  1.50   1.50    -      -     15.50  3.50    -      -      -     15.00  15.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     addsubpd	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     0.50   0.50    -      -     addsubpd	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     1.50   1.50    -      -     addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     addsubps	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     0.50   0.50    -      -     addsubps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     haddpd	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     0.50   0.50    -      -     haddpd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     haddps	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     0.50   0.50    -      -     haddps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     hsubpd	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     0.50   0.50    -      -     hsubpd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     hsubps	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     0.50   0.50    -      -     hsubps	(%rax), %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     lddqu	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     1.50   1.50    -      -     addsubps	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     haddpd	%xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -     1.50   1.50    -      -     haddpd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     haddps	%xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -     1.50   1.50    -      -     haddps	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     hsubpd	%xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -     1.50   1.50    -      -     hsubpd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     hsubps	%xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     2.50   2.50    -      -      -      -     1.00    -      -      -      -     1.50   1.50    -      -     hsubps	(%rax), %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -     1.50   1.50    -      -     0.50   0.50    -      -      -     1.50   1.50    -      -     lddqu	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     monitor
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movddup	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     movddup	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movshdup	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     movshdup	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movsldup	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     movsldup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movddup	%xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.50   0.50    -      -      -     1.50   1.50    -      -     movddup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movshdup	%xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.50   0.50    -      -      -     1.50   1.50    -      -     movshdup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movsldup	%xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.50   0.50    -      -      -     1.50   1.50    -      -     movsldup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mwait

@@ -44,8 +44,8 @@ salc
 # CHECK-NEXT:  1      100   0.50                        daa
 # CHECK-NEXT:  1      100   0.50                        das
 # CHECK-NEXT:  1      100   0.50                  U     into
-# CHECK-NEXT:  1      1     0.50    *                   leave
-# CHECK-NEXT:  1      1     0.50                  U     salc
+# CHECK-NEXT:  1      1     1.00    *                   leave
+# CHECK-NEXT:  1      1     1.00                  U     salc
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -74,7 +74,7 @@ salc
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -     6.50   6.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -     7.50   7.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
@@ -89,5 +89,5 @@ salc
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     daa
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     das
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     into
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leave
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     salc
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leave
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     salc

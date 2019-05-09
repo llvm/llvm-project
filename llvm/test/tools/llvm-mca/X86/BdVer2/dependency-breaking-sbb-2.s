@@ -13,13 +13,13 @@ sbb %eax, %eax
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      4500
-# CHECK-NEXT: Total Cycles:      3006
+# CHECK-NEXT: Total Cycles:      4014
 # CHECK-NEXT: Total uOps:        4500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.50
-# CHECK-NEXT: IPC:               1.50
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    1.12
+# CHECK-NEXT: IPC:               1.12
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -30,8 +30,8 @@ sbb %eax, %eax
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      4     1.00                        imull	%edx, %eax
-# CHECK-NEXT:  1      1     0.50                        addl	%edx, %edx
+# CHECK-NEXT:  1      4     2.00                        imull	%edx, %eax
+# CHECK-NEXT:  1      1     1.00                        addl	%edx, %edx
 # CHECK-NEXT:  1      1     1.00                        sbbl	%eax, %eax
 
 # CHECK:      Resources:
@@ -61,27 +61,27 @@ sbb %eax, %eax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -
+# CHECK-NEXT:  -      -      -      -      -     2.66   2.34    -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     imull	%edx, %eax
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     addl	%edx, %edx
-# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbl	%eax, %eax
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     imull	%edx, %eax
+# CHECK-NEXT:  -      -      -      -      -     1.33   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     addl	%edx, %edx
+# CHECK-NEXT:  -      -      -      -      -     1.33   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbl	%eax, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     01234
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     D=eeeeER  ..   imull	%edx, %eax
-# CHECK-NEXT: [0,1]     DeE----R  ..   addl	%edx, %edx
-# CHECK-NEXT: [0,2]     D==eE--R  ..   sbbl	%eax, %eax
-# CHECK-NEXT: [1,0]     D===eeeeER..   imull	%edx, %eax
-# CHECK-NEXT: [1,1]     .DeE-----R..   addl	%edx, %edx
-# CHECK-NEXT: [1,2]     .D===eE--R..   sbbl	%eax, %eax
-# CHECK-NEXT: [2,0]     .D====eeeeER   imull	%edx, %eax
-# CHECK-NEXT: [2,1]     .D=eE------R   addl	%edx, %edx
-# CHECK-NEXT: [2,2]     . D====eE--R   sbbl	%eax, %eax
+# CHECK:      [0,0]     D==eeeeER .   .   imull	%edx, %eax
+# CHECK-NEXT: [0,1]     DeE-----R .   .   addl	%edx, %edx
+# CHECK-NEXT: [0,2]     D===eE--R .   .   sbbl	%eax, %eax
+# CHECK-NEXT: [1,0]     D=====eeeeER  .   imull	%edx, %eax
+# CHECK-NEXT: [1,1]     .DeE-------R  .   addl	%edx, %edx
+# CHECK-NEXT: [1,2]     .D====eE---R  .   sbbl	%eax, %eax
+# CHECK-NEXT: [2,0]     .D=======eeeeER   imull	%edx, %eax
+# CHECK-NEXT: [2,1]     .D==eE--------R   addl	%edx, %edx
+# CHECK-NEXT: [2,2]     . D=====eE----R   sbbl	%eax, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -90,6 +90,6 @@ sbb %eax, %eax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     3.7    0.7    0.0       imull	%edx, %eax
-# CHECK-NEXT: 1.     3     1.3    0.3    5.0       addl	%edx, %edx
-# CHECK-NEXT: 2.     3     4.0    2.0    2.0       sbbl	%eax, %eax
+# CHECK-NEXT: 0.     3     5.7    2.0    0.0       imull	%edx, %eax
+# CHECK-NEXT: 1.     3     1.7    0.7    6.7       addl	%edx, %edx
+# CHECK-NEXT: 2.     3     5.0    2.7    3.0       sbbl	%eax, %eax

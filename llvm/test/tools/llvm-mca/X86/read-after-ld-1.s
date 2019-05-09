@@ -37,7 +37,7 @@ vaddps  (%rax), %xmm1, %xmm1
 # BDVER2:       Dispatch Width:    4
 # BDVER2-NEXT:  uOps Per Cycle:    0.12
 # BDVER2-NEXT:  IPC:               0.12
-# BDVER2-NEXT:  Block RThroughput: 10.0
+# BDVER2-NEXT:  Block RThroughput: 5.0
 
 # BDWELL:       Dispatch Width:    4
 # BDWELL-NEXT:  uOps Per Cycle:    0.18
