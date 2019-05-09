@@ -366,6 +366,29 @@ static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
                                    Attr.getSpellingListIndex());
 }
 
+static ExplicitSpecifier
+instantiateExplicitSpecifier(Sema &S,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             ExplicitSpecifier ES, FunctionDecl *New) {
+  if (!ES.getExpr())
+    return ES;
+  Expr *OldCond = ES.getExpr();
+  Expr *Cond = nullptr;
+  {
+    EnterExpressionEvaluationContext Unevaluated(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    ExprResult SubstResult = S.SubstExpr(OldCond, TemplateArgs);
+    if (SubstResult.isInvalid()) {
+      return ExplicitSpecifier::Invalid();
+    }
+    Cond = SubstResult.get();
+  }
+  ExplicitSpecifier Result(Cond, ES.getKind());
+  if (!Cond->isTypeDependent())
+    S.tryResolveExplicitSpecifier(Result);
+  return Result;
+}
+
 static void instantiateDependentAMDGPUWavesPerEUAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const AMDGPUWavesPerEUAttr &Attr, Decl *New) {
@@ -1690,6 +1713,14 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
       cast<Decl>(Owner)->isDefinedOutsideFunctionOrMethod());
   LocalInstantiationScope Scope(SemaRef, MergeWithParentScope);
 
+  ExplicitSpecifier InstantiatedExplicitSpecifier;
+  if (auto *DGuide = dyn_cast<CXXDeductionGuideDecl>(D)) {
+    InstantiatedExplicitSpecifier = instantiateExplicitSpecifier(
+        SemaRef, TemplateArgs, DGuide->getExplicitSpecifier(), DGuide);
+    if (InstantiatedExplicitSpecifier.isInvalid())
+      return nullptr;
+  }
+
   SmallVector<ParmVarDecl *, 4> Params;
   TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
   if (!TInfo)
@@ -1727,8 +1758,9 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
   FunctionDecl *Function;
   if (auto *DGuide = dyn_cast<CXXDeductionGuideDecl>(D)) {
     Function = CXXDeductionGuideDecl::Create(
-      SemaRef.Context, DC, D->getInnerLocStart(), DGuide->isExplicit(),
-      NameInfo, T, TInfo, D->getSourceRange().getEnd());
+        SemaRef.Context, DC, D->getInnerLocStart(),
+        InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
+        D->getSourceRange().getEnd());
     if (DGuide->isCopyDeductionCandidate())
       cast<CXXDeductionGuideDecl>(Function)->setIsCopyDeductionCandidate();
     Function->setAccess(D->getAccess());
@@ -1996,6 +2028,12 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     }
   }
 
+  ExplicitSpecifier InstantiatedExplicitSpecifier =
+      instantiateExplicitSpecifier(SemaRef, TemplateArgs,
+                                   ExplicitSpecifier::getFromDecl(D), D);
+  if (InstantiatedExplicitSpecifier.isInvalid())
+    return nullptr;
+
   SmallVector<ParmVarDecl *, 4> Params;
   TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
   if (!TInfo)
@@ -2035,11 +2073,10 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   DeclarationNameInfo NameInfo
     = SemaRef.SubstDeclarationNameInfo(D->getNameInfo(), TemplateArgs);
   if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
-    Method = CXXConstructorDecl::Create(SemaRef.Context, Record,
-                                        StartLoc, NameInfo, T, TInfo,
-                                        Constructor->isExplicit(),
-                                        Constructor->isInlineSpecified(),
-                                        false, Constructor->isConstexpr());
+    Method = CXXConstructorDecl::Create(
+        SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
+        InstantiatedExplicitSpecifier, Constructor->isInlineSpecified(), false,
+        Constructor->isConstexpr());
     Method->setRangeEnd(Constructor->getEndLoc());
   } else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(D)) {
     Method = CXXDestructorDecl::Create(SemaRef.Context, Record,
@@ -2050,7 +2087,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   } else if (CXXConversionDecl *Conversion = dyn_cast<CXXConversionDecl>(D)) {
     Method = CXXConversionDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
-        Conversion->isInlineSpecified(), Conversion->isExplicit(),
+        Conversion->isInlineSpecified(), InstantiatedExplicitSpecifier,
         Conversion->isConstexpr(), Conversion->getEndLoc());
   } else {
     StorageClass SC = D->isStatic() ? SC_Static : SC_None;
