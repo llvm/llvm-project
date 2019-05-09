@@ -132,8 +132,8 @@ int main(int argc, char **argv) {
 // CHECK: static int a;
   static float g;
 #pragma omp threadprivate(g)
-#pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc)
-  // CHECK: #pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc)
+#pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a)
+  // CHECK: #pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

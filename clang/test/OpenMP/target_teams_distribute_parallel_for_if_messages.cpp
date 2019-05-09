@@ -106,8 +106,6 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for if(distribute : argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute parallel for'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for default(none) if(argc+argv[0][0]) // expected-error {{variable 'argv' must have explicitly specified data sharing attributes}} expected-error {{variable 'argc' must have explicitly specified data sharing attributes}} expected-note 2 {{explicit data sharing attribute requested here}}
-  for (i = 0; i < argc; ++i) foo();
 
   return tmain(argc, argv);
 }
