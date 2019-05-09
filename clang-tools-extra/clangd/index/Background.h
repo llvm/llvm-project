@@ -146,7 +146,7 @@ private:
   std::condition_variable QueueCV;
   bool ShouldStop = false;
   std::deque<std::pair<Task, llvm::ThreadPriority>> Queue;
-  std::vector<std::thread> ThreadPool; // FIXME: Abstract this away.
+  AsyncTaskRunner ThreadPool;
   GlobalCompilationDatabase::CommandChanged::Subscription CommandsChanged;
 };
 
