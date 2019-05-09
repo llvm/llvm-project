@@ -5904,7 +5904,7 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
 static Value *getTrueOrFalseValue(
     SelectInst *SI, bool isTrue,
     const SmallPtrSet<const Instruction *, 2> &Selects) {
-  Value *V;
+  Value *V = nullptr;
 
   for (SelectInst *DefSI = SI; DefSI != nullptr && Selects.count(DefSI);
        DefSI = dyn_cast<SelectInst>(V)) {
@@ -5912,6 +5912,8 @@ static Value *getTrueOrFalseValue(
            "The condition of DefSI does not match with SI");
     V = (isTrue ? DefSI->getTrueValue() : DefSI->getFalseValue());
   }
+
+  assert(V && "Failed to get select true/false value");
   return V;
 }
 
