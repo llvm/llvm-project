@@ -138,7 +138,9 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
     for (const RefSlab *Refs : MainFileRefs)
       for (const auto &Sym : *Refs) {
         auto It = Merged.find(Sym.first);
-        assert(It != Merged.end() && "Reference to unknown symbol");
+        // This might happen while background-index is still running.
+        if (It == Merged.end())
+          continue;
         It->getSecond().References += Sym.second.size();
       }
     SymsStorage.reserve(Merged.size());
