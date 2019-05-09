@@ -76,7 +76,7 @@ L1:
     }
   }
 #pragma omp target
-#pragma omp teams distribute simd default(none) // expected-note {{explicit data sharing attribute requested here}}
+#pragma omp teams distribute simd default(none)
   for (int i = 0; i < 10; ++i)
     ++argc; // expected-error {{ariable 'argc' must have explicitly specified data sharing attributes}}
 

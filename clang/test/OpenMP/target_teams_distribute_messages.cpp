@@ -61,7 +61,7 @@ L1:
       break;
     }
   }
-#pragma omp target teams distribute default(none) // expected-note {{explicit data sharing attribute requested here}}
+#pragma omp target teams distribute default(none)
   for (int i = 0; i < 10; ++i)
     ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
