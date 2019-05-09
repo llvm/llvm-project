@@ -841,7 +841,7 @@ namespace VirtualFromBase {
   // Virtual f(), not OK.
   constexpr X<X<S2>> xxs2;
   constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
-  static_assert(q->f() == sizeof(X<S2>), ""); // expected-error {{constant expression}} expected-note {{virtual function call}}
+  static_assert(q->f() == sizeof(X<S2>), ""); // expected-error {{constant expression}} expected-note {{virtual function}}
 }
 
 namespace Lifetime {

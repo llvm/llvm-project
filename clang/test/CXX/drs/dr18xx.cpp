@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2a -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus < 201103L
 // expected-error@+1 {{variadic macro}}
@@ -41,6 +42,23 @@ namespace dr1815 { // dr1815: no
 #endif
 }
 
+namespace dr1872 { // dr1872: 9
+#if __cplusplus >= 201103L
+  template<typename T> struct A : T {
+    constexpr int f() const { return 0; }
+  };
+  struct X {};
+  struct Y { virtual int f() const; };
+  struct Z : virtual X {};
+
+  constexpr int x = A<X>().f();
+  constexpr int y = A<Y>().f(); // expected-error {{constant expression}} expected-note {{call to virtual function}}
+  // Note, this is invalid even though it would not use virtual dispatch.
+  constexpr int y2 = A<Y>().A<Y>::f(); // expected-error {{constant expression}} expected-note {{call to virtual function}}
+  constexpr int z = A<Z>().f(); // expected-error {{constant expression}} expected-note {{non-literal type}}
+#endif
+}
+
 namespace dr1881 { // dr1881: 7
   struct A { int a : 4; };
   struct B : A { int b : 3; };
@@ -56,19 +74,31 @@ namespace dr1881 { // dr1881: 7
 void dr1891() { // dr1891: 4
 #if __cplusplus >= 201103L
   int n;
-  auto a = []{}; // expected-note 2{{candidate}} expected-note 2{{here}}
-  auto b = [=]{ return n; }; // expected-note 2{{candidate}} expected-note 2{{here}}
+  auto a = []{}; // expected-note 0-4{{}}
+  auto b = [=]{ return n; }; // expected-note 0-4{{}}
   typedef decltype(a) A;
   typedef decltype(b) B;
 
   static_assert(!__has_trivial_constructor(A), "");
+#if __cplusplus > 201703L
+  // expected-error@-2 {{failed}}
+#endif
   static_assert(!__has_trivial_constructor(B), "");
 
-  A x; // expected-error {{no matching constructor}}
+  // C++20 allows default construction for non-capturing lambdas (P0624R2).
+  A x;
+#if __cplusplus <= 201703L
+  // expected-error@-2 {{no matching constructor}}
+#endif
   B y; // expected-error {{no matching constructor}}
 
-  a = a; // expected-error {{copy assignment operator is implicitly deleted}}
-  a = static_cast<A&&>(a); // expected-error {{copy assignment operator is implicitly deleted}}
+  // C++20 allows assignment for non-capturing lambdas (P0624R2).
+  a = a;
+  a = static_cast<A&&>(a);
+#if __cplusplus <= 201703L
+  // expected-error@-3 {{copy assignment operator is implicitly deleted}}
+  // expected-error@-3 {{copy assignment operator is implicitly deleted}}
+#endif
   b = b; // expected-error {{copy assignment operator is implicitly deleted}}
   b = static_cast<B&&>(b); // expected-error {{copy assignment operator is implicitly deleted}}
 #endif
