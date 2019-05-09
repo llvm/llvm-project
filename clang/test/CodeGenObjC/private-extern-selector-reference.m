@@ -15,4 +15,4 @@ __attribute__((visibility("default"))) __attribute__((availability(ios,introduce
 @end
 
 // CHECK: @"OBJC_METACLASS_$_ObserverQuery" = global %struct._class_t
-// CHECK: @OBJC_SELECTOR_REFERENCES_ = private externally_initialized global
+// CHECK: @OBJC_SELECTOR_REFERENCES_ = internal externally_initialized global

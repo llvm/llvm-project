@@ -15,6 +15,6 @@
 @end
 
 
-// CHECK: l_OBJC_$_PROP_LIST_Foo_$_Category" = private global
-// CHECK: l_OBJC_$_CATEGORY_Foo_$_Category" = private global
-// CHECK: l_OBJC_$_PROP_LIST_Foo_$_Category
+// CHECK: _OBJC_$_PROP_LIST_Foo_$_Category" = internal global
+// CHECK: _OBJC_$_CATEGORY_Foo_$_Category" = internal global
+// CHECK: _OBJC_$_PROP_LIST_Foo_$_Category
