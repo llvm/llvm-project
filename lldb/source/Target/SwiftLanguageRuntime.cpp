@@ -1303,6 +1303,9 @@ public:
       auto addr = address.getAddressData();
       if (addr >= m_local_buffer &&
           addr + size <= m_local_buffer + m_local_buffer_size) {
+        // If this crashes, the assumptions stated in
+        // GetDynamicTypeAndAddress_Protocol() most likely no longer
+        // hold.
         memcpy(dest, (void *) addr, size);
         return true;
       }
@@ -1926,14 +1929,18 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
   lldb::addr_t existential_address;
   bool use_local_buffer = false;
 
-  if (in_value.GetValueType() == eValueTypeConstResult) {
+  if (in_value.GetValueType() == eValueTypeConstResult &&
+      in_value.GetValue().GetValueType() ==
+          lldb_private::Value::eValueTypeHostAddress) {
     if (log)
       log->Printf("existential value is a const result");
 
-    // We have a locally materialized value, so let our MemoryReader
-    // know where it is so that RemoteAST can read from it.
+    // We have a locally materialized value that is a host address;
+    // register it with MemoryReader so it does not treat it as a load
+    // address.  Note that this assumes that any address at that host
+    // address is also a load address. If this assumption breaks there
+    // will be a crash in readBytes().
     existential_address = in_value.GetValue().GetScalar().ULongLong();
-
     use_local_buffer = true;
   } else {
     existential_address = in_value.GetAddressOf();
