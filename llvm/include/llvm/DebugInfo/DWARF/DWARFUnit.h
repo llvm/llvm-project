@@ -385,6 +385,13 @@ public:
     return DWARFDie(this, &DieArray[0]);
   }
 
+  DWARFDie getNonSkeletonUnitDIE(bool ExtractUnitDIEOnly = true) {
+    parseDWO();
+    if (DWO)
+      return DWO->getUnitDIE(ExtractUnitDIEOnly);
+    return getUnitDIE(ExtractUnitDIEOnly);
+  }
+
   const char *getCompilationDir();
   Optional<uint64_t> getDWOId() {
     extractDIEsIfNeeded(/*CUDieOnly*/ true);

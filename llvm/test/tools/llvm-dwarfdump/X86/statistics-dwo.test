@@ -1,0 +1,96 @@
+# Test of the llmv-dwarfdump --statistics with split dwarf (dwo files)
+# (version 3).
+#
+# Create a directory in which to put all files, so .o file can find .dwo file.
+RUN: rm -rf %t && mkdir -p %t
+RUN: cp -f %S/Inputs/statistics-fib.split-dwarf.s %t/.
+RUN: cd %t
+RUN: llvm-mc -triple x86_64-unknown-linux-gnu statistics-fib.split-dwarf.s -filetype=obj -split-dwarf-file statistics-fib.split-dwarf.dwo -o statistics-fib.split-dwarf.o
+RUN: llvm-dwarfdump --statistics statistics-fib.split-dwarf.o | FileCheck %s
+
+# Source program - A version of Fibonacci
+# Compilation options:  -gsplit-dwarf -O3 -c -S
+#
+# int
+# real_fib (int x, int answers[11])
+# {
+#   int result;
+# 
+#   if ((answers)[x] != -1)
+#     return (answers)[x];
+# 
+#   result = real_fib(x-1, answers) + real_fib(x-2, answers);
+#   (answers)[x] = result;
+# 
+#   return result;
+# }
+# 
+# int
+# fib (int x)
+# {
+#   int answers[11];
+#   int i;
+# 
+#   if (x > 10)
+#     return -1;
+# 
+#   for (i = 0; i < 11; i++)
+#     answers[i] = -1;
+# 
+#   answers[0] = 0;
+#   answers[1] = 1;
+#   answers[2] = 1;
+# 
+#   return real_fib(x, answers);
+# }
+# 
+# int main (int argc, char **argv)
+# {
+#   int result;
+# 
+#   result = fib(3);
+#   printf ("fibonacci(3) = %d\n", result);
+#   result = fib(4);
+#   printf ("fibonacci(4) = %d\n", result);
+#   result = fib(5);
+#   printf ("fibonacci(5) = %d\n", result);
+#   result = fib(6);
+#   printf ("fibonacci(6) = %d\n", result);
+#   result = fib(7);
+#   printf ("fibonacci(7) = %d\n", result);
+#   result = fib(8);
+#   printf ("fibonacci(8) = %d\n", result);
+#   result = fib(9);
+#   printf ("fibonacci(9) = %d\n", result);
+#   result = fib(10);
+#   printf ("fibonacci(10) = %d\n", result);
+# 
+#   return 0;
+# }
+#
+
+CHECK: "version":3
+CHECK: "source functions":3
+CHECK: "source functions with location":3
+CHECK: "inlined functions":7
+CHECK: "inlined funcs with abstract origins":7
+CHECK: "unique source variables":9
+CHECK: "source variables":30
+
+# Ideally the value below would be 33 but currently it's not.
+CHECK: "variables with location":22
+CHECK: "call site entries":7
+CHECK: "scope bytes total":2817
+CHECK: "scope bytes covered":506
+CHECK: "total function size":594
+CHECK: "total inlined function size":345
+CHECK: "total formal params":12
+CHECK: "formal params with source location":12
+CHECK: "formal params with type":12
+CHECK: "formal params with binary location":12
+CHECK: "total vars":18
+CHECK: "vars with source location":18
+CHECK: "vars with type":18
+
+# Ideally the value below would be 18, but currently it's not.
+CHECK: "vars with binary location":10
