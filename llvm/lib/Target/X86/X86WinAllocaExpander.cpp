@@ -84,10 +84,6 @@ static int64_t getWinAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
   unsigned AmountReg = MI->getOperand(0).getReg();
   MachineInstr *Def = MRI->getUniqueVRegDef(AmountReg);
 
-  // Look through copies.
-  while (Def && Def->isCopy() && Def->getOperand(1).isReg())
-    Def = MRI->getUniqueVRegDef(Def->getOperand(1).getReg());
-
   if (!Def ||
       (Def->getOpcode() != X86::MOV32ri && Def->getOpcode() != X86::MOV64ri) ||
       !Def->getOperand(1).isImm())
@@ -268,18 +264,10 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
   unsigned AmountReg = MI->getOperand(0).getReg();
   MI->eraseFromParent();
 
-  // Delete the definition of AmountReg, possibly walking a chain of copies.
-  for (;;) {
-    if (!MRI->use_empty(AmountReg))
-      break;
-    MachineInstr *AmountDef = MRI->getUniqueVRegDef(AmountReg);
-    if (!AmountDef)
-      break;
-    if (AmountDef->isCopy() && AmountDef->getOperand(1).isReg())
-      AmountReg = AmountDef->getOperand(1).isReg();
-    AmountDef->eraseFromParent();
-    break;
-  }
+  // Delete the definition of AmountReg.
+  if (MRI->use_empty(AmountReg))
+    if (MachineInstr *AmountDef = MRI->getUniqueVRegDef(AmountReg))
+      AmountDef->eraseFromParent();
 }
 
 bool X86WinAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
