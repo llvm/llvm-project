@@ -85,7 +85,7 @@ bool IndexDataStoreImpl::foreachUnitName(bool sorted,
   }
 
   if (sorted) {
-    llvm::array_pod_sort(filenames.begin(), filenames.end());
+    std::sort(filenames.begin(), filenames.end());
     for (auto &fname : filenames)
       if (!receiver(fname))
         return false;
