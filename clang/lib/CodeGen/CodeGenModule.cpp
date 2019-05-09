@@ -539,8 +539,7 @@ void CodeGenModule::Release() {
   if (LangOpts.OpenCL) {
     EmitOpenCLMetadata();
     // Emit SPIR version.
-    if (getTriple().getArch() == llvm::Triple::spir ||
-        getTriple().getArch() == llvm::Triple::spir64) {
+    if (getTriple().isSPIR()) {
       // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
       // opencl.spir.version named metadata.
       llvm::Metadata *SPIRVerElts[] = {
