@@ -3273,6 +3273,48 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::UMULFIX:
     Results.push_back(TLI.expandFixedPointMul(Node, DAG));
     break;
+  case ISD::ADDCARRY:
+  case ISD::SUBCARRY: {
+    SDValue LHS = Node->getOperand(0);
+    SDValue RHS = Node->getOperand(1);
+    SDValue Carry = Node->getOperand(2);
+
+    bool IsAdd = Node->getOpcode() == ISD::ADDCARRY;
+
+    // Initial add of the 2 operands.
+    unsigned Op = IsAdd ? ISD::ADD : ISD::SUB;
+    EVT VT = LHS.getValueType();
+    SDValue Sum = DAG.getNode(Op, dl, VT, LHS, RHS);
+
+    // Initial check for overflow.
+    EVT CarryType = Node->getValueType(1);
+    EVT SetCCType = getSetCCResultType(Node->getValueType(0));
+    ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
+    SDValue Overflow = DAG.getSetCC(dl, SetCCType, Sum, LHS, CC);
+
+    // Add of the sum and the carry.
+    SDValue CarryExt =
+        DAG.getZeroExtendInReg(DAG.getZExtOrTrunc(Carry, dl, VT), dl, MVT::i1);
+    SDValue Sum2 = DAG.getNode(Op, dl, VT, Sum, CarryExt);
+
+    // Second check for overflow. If we are adding, we can only overflow if the
+    // initial sum is all 1s ang the carry is set, resulting in a new sum of 0.
+    // If we are subtracting, we can only overflow if the initial sum is 0 and
+    // the carry is set, resulting in a new sum of all 1s.
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    SDValue Overflow2 =
+        IsAdd ? DAG.getSetCC(dl, SetCCType, Sum2, Zero, ISD::SETEQ)
+              : DAG.getSetCC(dl, SetCCType, Sum, Zero, ISD::SETEQ);
+    Overflow2 = DAG.getNode(ISD::AND, dl, SetCCType, Overflow2,
+                            DAG.getZExtOrTrunc(Carry, dl, SetCCType));
+
+    SDValue ResultCarry =
+        DAG.getNode(ISD::OR, dl, SetCCType, Overflow, Overflow2);
+
+    Results.push_back(Sum2);
+    Results.push_back(DAG.getBoolExtOrTrunc(ResultCarry, dl, CarryType, VT));
+    break;
+  }
   case ISD::SADDO:
   case ISD::SSUBO: {
     SDValue LHS = Node->getOperand(0);
