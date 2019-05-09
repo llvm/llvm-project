@@ -14857,9 +14857,11 @@ void DAGCombiner::getStoreMergeCandidates(
 
   RootNode = St->getChain().getNode();
 
+  unsigned NumNodesExplored = 0;
   if (LoadSDNode *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
     RootNode = Ldn->getChain().getNode();
-    for (auto I = RootNode->use_begin(), E = RootNode->use_end(); I != E; ++I)
+    for (auto I = RootNode->use_begin(), E = RootNode->use_end();
+         I != E && NumNodesExplored < 1024; ++I, ++NumNodesExplored)
       if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) // walk down chain
         for (auto I2 = (*I)->use_begin(), E2 = (*I)->use_end(); I2 != E2; ++I2)
           if (I2.getOperandNo() == 0)
@@ -14870,7 +14872,8 @@ void DAGCombiner::getStoreMergeCandidates(
                 StoreNodes.push_back(MemOpLink(OtherST, PtrDiff));
             }
   } else
-    for (auto I = RootNode->use_begin(), E = RootNode->use_end(); I != E; ++I)
+    for (auto I = RootNode->use_begin(), E = RootNode->use_end();
+         I != E && NumNodesExplored < 1024; ++I, ++NumNodesExplored)
       if (I.getOperandNo() == 0)
         if (StoreSDNode *OtherST = dyn_cast<StoreSDNode>(*I)) {
           BaseIndexOffset Ptr;
