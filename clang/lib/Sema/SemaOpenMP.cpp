@@ -1695,7 +1695,8 @@ bool Sema::isInOpenMPTargetExecutionDirective() const {
              false);
 }
 
-VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
+VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
+                                    unsigned StopAt) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
 
@@ -1764,6 +1765,22 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
     }
   }
 
+  if (CheckScopeInfo) {
+    bool OpenMPFound = false;
+    for (unsigned I = StopAt + 1; I > 0; --I) {
+      FunctionScopeInfo *FSI = FunctionScopes[I - 1];
+      if(!isa<CapturingScopeInfo>(FSI))
+        return nullptr;
+      if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(FSI))
+        if (RSI->CapRegionKind == CR_OpenMP) {
+          OpenMPFound = true;
+          break;
+        }
+    }
+    if (!OpenMPFound)
+      return nullptr;
+  }
+
   if (DSAStack->getCurrentDirective() != OMPD_unknown &&
       (!DSAStack->isClauseParsingMode() ||
        DSAStack->getParentDirective() != OMPD_unknown)) {
@@ -1780,7 +1797,10 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
     DVarPrivate = DSAStack->hasDSA(D, isOpenMPPrivate,
                                    [](OpenMPDirectiveKind) { return true; },
                                    DSAStack->isClauseParsingMode());
-    if (DVarPrivate.CKind != OMPC_unknown)
+    // The variable is not private or it is the variable in the directive with
+    // default(none) clause and not used in any clause.
+    if (DVarPrivate.CKind != OMPC_unknown ||
+        (VD && DSAStack->getDefaultDSA() == DSA_none))
       return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
   }
   return nullptr;
@@ -4184,6 +4204,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   for (const auto &P : VarsWithInheritedDSA) {
     Diag(P.second->getExprLoc(), diag::err_omp_no_dsa_for_variable)
         << P.first << P.second->getSourceRange();
+    Diag(DSAStack->getDefaultDSALocation(), diag::note_omp_default_dsa_none);
   }
   ErrorFound = !VarsWithInheritedDSA.empty() || ErrorFound;
 
