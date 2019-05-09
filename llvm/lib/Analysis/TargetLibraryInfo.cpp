@@ -1434,6 +1434,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
 bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
                                        LibFunc &F) const {
+  // Intrinsics don't overlap w/libcalls; if our module has a large number of
+  // intrinsics, this ends up being an interesting compile time win since we
+  // avoid string normalization and comparison. 
+  if (FDecl.isIntrinsic()) return false;
+  
   const DataLayout *DL =
       FDecl.getParent() ? &FDecl.getParent()->getDataLayout() : nullptr;
   return getLibFunc(FDecl.getName(), F) &&
