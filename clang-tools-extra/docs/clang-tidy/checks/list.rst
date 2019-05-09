@@ -219,6 +219,7 @@ Clang-Tidy Checks
    modernize-use-noexcept
    modernize-use-nullptr
    modernize-use-override
+   modernize-use-trailing-return-type
    modernize-use-transparent-functors
    modernize-use-uncaught-exceptions
    modernize-use-using

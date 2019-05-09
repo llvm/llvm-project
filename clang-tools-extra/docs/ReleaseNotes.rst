@@ -151,6 +151,14 @@ Improvements to clang-tidy
   finds and replaces cases that match the pattern ``var &&
   isa<X>(var)``, where ``var`` is evaluated twice.
 
+- New :doc:`modernize-use-trailing-type-return
+  <clang-tidy/checks/modernize-use-trailing-type-return>` check.
+
+  Rewrites function signatures to use a trailing return type.
+
+Improvements to include-fixer
+-----------------------------
+
 - New :doc:`openmp-exception-escape
   <clang-tidy/checks/openmp-exception-escape>` check.
 
