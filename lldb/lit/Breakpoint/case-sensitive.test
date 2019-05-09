@@ -1,4 +1,4 @@
-# REQUIRES: nowindows
+# UNSUPPORTED: system-windows
 #
 # RUN: %build %p/Inputs/case-sensitive.c --nodefaultlib -o %t
 # RUN: lldb-test breakpoints %t %s | FileCheck %s

@@ -58,7 +58,7 @@ class LLVMConfig(object):
         elif platform.system() == "Linux":
             features.add('system-linux')
         elif platform.system() in ['FreeBSD']:
-            config.available_features.add('system-freebsd')
+            features.add('system-freebsd')
         elif platform.system() == "NetBSD":
             features.add('system-netbsd')
 
