@@ -315,9 +315,10 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
     return false;
   else {
     Target &target = GetThread().GetProcess()->GetTarget();
-    uint32_t branch_index;
-    branch_index =
-        instructions->GetIndexOfNextBranchInstruction(pc_index, target);
+    const bool ignore_calls = GetKind() == eKindStepOverRange;
+    uint32_t branch_index =
+        instructions->GetIndexOfNextBranchInstruction(pc_index, target,
+                                                      ignore_calls);
 
     Address run_to_address;
 
