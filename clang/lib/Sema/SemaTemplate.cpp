@@ -130,10 +130,15 @@ void Sema::FilterAcceptableTemplateNames(LookupResult &R,
 
 bool Sema::hasAnyAcceptableTemplateNames(LookupResult &R,
                                          bool AllowFunctionTemplates,
-                                         bool AllowDependent) {
-  for (LookupResult::iterator I = R.begin(), IEnd = R.end(); I != IEnd; ++I)
+                                         bool AllowDependent,
+                                         bool AllowNonTemplateFunctions) {
+  for (LookupResult::iterator I = R.begin(), IEnd = R.end(); I != IEnd; ++I) {
     if (getAsTemplateNameDecl(*I, AllowFunctionTemplates, AllowDependent))
       return true;
+    if (AllowNonTemplateFunctions &&
+        isa<FunctionDecl>((*I)->getUnderlyingDecl()))
+      return true;
+  }
 
   return false;
 }
@@ -171,11 +176,25 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
 
   QualType ObjectType = ObjectTypePtr.get();
 
+  AssumedTemplateKind AssumedTemplate;
   LookupResult R(*this, TName, Name.getBeginLoc(), LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
-                         MemberOfUnknownSpecialization))
+                         MemberOfUnknownSpecialization, SourceLocation(),
+                         &AssumedTemplate))
     return TNK_Non_template;
-  if (R.empty()) return TNK_Non_template;
+
+  if (AssumedTemplate != AssumedTemplateKind::None) {
+    TemplateResult = TemplateTy::make(Context.getAssumedTemplateName(TName));
+    // Let the parser know whether we found nothing or found functions; if we
+    // found nothing, we want to more carefully check whether this is actually
+    // a function template name versus some other kind of undeclared identifier.
+    return AssumedTemplate == AssumedTemplateKind::FoundNothing
+               ? TNK_Undeclared_template
+               : TNK_Function_template;
+  }
+
+  if (R.empty())
+    return TNK_Non_template;
 
   NamedDecl *D = nullptr;
   if (R.isAmbiguous()) {
@@ -325,7 +344,11 @@ bool Sema::LookupTemplateName(LookupResult &Found,
                               QualType ObjectType,
                               bool EnteringContext,
                               bool &MemberOfUnknownSpecialization,
-                              SourceLocation TemplateKWLoc) {
+                              SourceLocation TemplateKWLoc,
+                              AssumedTemplateKind *ATK) {
+  if (ATK)
+    *ATK = AssumedTemplateKind::None;
+
   Found.setTemplateNameLookup(true);
 
   // Determine where to perform name lookup
@@ -405,6 +428,32 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   if (Found.isAmbiguous())
     return false;
 
+  if (ATK && !SS.isSet() && ObjectType.isNull() && TemplateKWLoc.isInvalid()) {
+    // C++2a [temp.names]p2:
+    //   A name is also considered to refer to a template if it is an
+    //   unqualified-id followed by a < and name lookup finds either one or more
+    //   functions or finds nothing.
+    //
+    // To keep our behavior consistent, we apply the "finds nothing" part in
+    // all language modes, and diagnose the empty lookup in ActOnCallExpr if we
+    // successfully form a call to an undeclared template-id.
+    bool AllFunctions =
+        getLangOpts().CPlusPlus2a &&
+        std::all_of(Found.begin(), Found.end(), [](NamedDecl *ND) {
+          return isa<FunctionDecl>(ND->getUnderlyingDecl());
+        });
+    if (AllFunctions || (Found.empty() && !IsDependent)) {
+      // If lookup found any functions, or if this is a name that can only be
+      // used for a function, then strongly assume this is a function
+      // template-id.
+      *ATK = (Found.empty() && Found.getLookupName().isIdentifier())
+                 ? AssumedTemplateKind::FoundNothing
+                 : AssumedTemplateKind::FoundFunctions;
+      Found.clear();
+      return false;
+    }
+  }
+
   if (Found.empty() && !IsDependent) {
     // If we did not find any names, attempt to correct any typos.
     DeclarationName Name = Found.getLookupName();
@@ -418,13 +467,13 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     if (TypoCorrection Corrected =
             CorrectTypo(Found.getLookupNameInfo(), Found.getLookupKind(), S,
                         &SS, FilterCCC, CTK_ErrorRecovery, LookupCtx)) {
-      Found.setLookupName(Corrected.getCorrection());
       if (auto *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
       FilterAcceptableTemplateNames(Found);
       if (Found.isAmbiguous()) {
         Found.clear();
       } else if (!Found.empty()) {
+        Found.setLookupName(Corrected.getCorrection());
         if (LookupCtx) {
           std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
           bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
@@ -436,8 +485,6 @@ bool Sema::LookupTemplateName(LookupResult &Found,
           diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest) << Name);
         }
       }
-    } else {
-      Found.setLookupName(Name);
     }
   }
 
@@ -3348,14 +3395,65 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
   return Context.getTemplateSpecializationType(Name, TemplateArgs, CanonType);
 }
 
-TypeResult
-Sema::ActOnTemplateIdType(CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                          TemplateTy TemplateD, IdentifierInfo *TemplateII,
-                          SourceLocation TemplateIILoc,
-                          SourceLocation LAngleLoc,
-                          ASTTemplateArgsPtr TemplateArgsIn,
-                          SourceLocation RAngleLoc,
-                          bool IsCtorOrDtorName, bool IsClassName) {
+void Sema::ActOnUndeclaredTypeTemplateName(Scope *S, TemplateTy &ParsedName,
+                                           TemplateNameKind &TNK,
+                                           SourceLocation NameLoc,
+                                           IdentifierInfo *&II) {
+  assert(TNK == TNK_Undeclared_template && "not an undeclared template name");
+
+  TemplateName Name = ParsedName.get();
+  auto *ATN = Name.getAsAssumedTemplateName();
+  assert(ATN && "not an assumed template name");
+  II = ATN->getDeclName().getAsIdentifierInfo();
+
+  if (!resolveAssumedTemplateNameAsType(S, Name, NameLoc, /*Diagnose*/false)) {
+    // Resolved to a type template name.
+    ParsedName = TemplateTy::make(Name);
+    TNK = TNK_Type_template;
+  }
+}
+
+bool Sema::resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
+                                            SourceLocation NameLoc,
+                                            bool Diagnose) {
+  // We assumed this undeclared identifier to be an (ADL-only) function
+  // template name, but it was used in a context where a type was required.
+  // Try to typo-correct it now.
+  AssumedTemplateStorage *ATN = Name.getAsAssumedTemplateName();
+  assert(ATN && "not an assumed template name");
+
+  LookupResult R(*this, ATN->getDeclName(), NameLoc, LookupOrdinaryName);
+  struct CandidateCallback : CorrectionCandidateCallback {
+    bool ValidateCandidate(const TypoCorrection &TC) override {
+      return TC.getCorrectionDecl() &&
+             getAsTypeTemplateDecl(TC.getCorrectionDecl());
+    }
+    std::unique_ptr<CorrectionCandidateCallback> clone() override {
+      return llvm::make_unique<CandidateCallback>(*this);
+    }
+  } FilterCCC;
+
+  TypoCorrection Corrected =
+      CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, nullptr,
+                  FilterCCC, CTK_ErrorRecovery);
+  if (Corrected && Corrected.getFoundDecl()) {
+    diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest)
+                                << ATN->getDeclName());
+    Name = TemplateName(Corrected.getCorrectionDeclAs<TemplateDecl>());
+    return false;
+  }
+
+  if (Diagnose)
+    Diag(R.getNameLoc(), diag::err_no_template) << R.getLookupName();
+  return true;
+}
+
+TypeResult Sema::ActOnTemplateIdType(
+    Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    TemplateTy TemplateD, IdentifierInfo *TemplateII,
+    SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
+    ASTTemplateArgsPtr TemplateArgsIn, SourceLocation RAngleLoc,
+    bool IsCtorOrDtorName, bool IsClassName) {
   if (SS.isInvalid())
     return true;
 
@@ -3396,6 +3494,9 @@ Sema::ActOnTemplateIdType(CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
   }
 
   TemplateName Template = TemplateD.get();
+  if (Template.getAsAssumedTemplateName() &&
+      resolveAssumedTemplateNameAsType(S, Template, TemplateIILoc))
+    return true;
 
   // Translate the parser's template argument list in our AST format.
   TemplateArgumentListInfo TemplateArgs(LAngleLoc, RAngleLoc);
@@ -4141,7 +4242,6 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   //       vs template<class T, class U> void f(U);
 
   // These should be filtered out by our callers.
-  assert(!R.empty() && "empty lookup results when building templateid");
   assert(!R.isAmbiguous() && "ambiguous lookup when building templateid");
 
   // Non-function templates require a template argument list.

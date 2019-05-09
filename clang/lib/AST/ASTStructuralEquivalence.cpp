@@ -180,6 +180,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return I1 == E1 && I2 == E2;
   }
 
+  case TemplateName::AssumedTemplate: {
+    AssumedTemplateStorage *TN1 = N1.getAsAssumedTemplateName(),
+                           *TN2 = N1.getAsAssumedTemplateName();
+    return TN1->getDeclName() == TN2->getDeclName();
+  }
+
   case TemplateName::QualifiedTemplate: {
     QualifiedTemplateName *QN1 = N1.getAsQualifiedTemplateName(),
                           *QN2 = N2.getAsQualifiedTemplateName();

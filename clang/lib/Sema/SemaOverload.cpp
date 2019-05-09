@@ -12017,7 +12017,8 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
     // We don't perform ADL for implicit declarations of builtins.
     // Verify that this was correctly set up.
     FunctionDecl *F;
-    if (ULE->decls_begin() + 1 == ULE->decls_end() &&
+    if (ULE->decls_begin() != ULE->decls_end() &&
+        ULE->decls_begin() + 1 == ULE->decls_end() &&
         (F = dyn_cast<FunctionDecl>(*ULE->decls_begin())) &&
         F->getBuiltinID() && F->isImplicit())
       llvm_unreachable("performing ADL for builtin");
@@ -12201,10 +12202,9 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   OverloadingResult OverloadResult =
       CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
 
-  return FinishOverloadedCallExpr(*this, S, Fn, ULE, LParenLoc, Args,
-                                  RParenLoc, ExecConfig, &CandidateSet,
-                                  &Best, OverloadResult,
-                                  AllowTypoCorrection);
+  return FinishOverloadedCallExpr(*this, S, Fn, ULE, LParenLoc, Args, RParenLoc,
+                                  ExecConfig, &CandidateSet, &Best,
+                                  OverloadResult, AllowTypoCorrection);
 }
 
 static bool IsOverloaded(const UnresolvedSetImpl &Functions) {

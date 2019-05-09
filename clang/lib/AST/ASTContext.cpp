@@ -5231,6 +5231,11 @@ ASTContext::getNameForTemplate(TemplateName Name,
     return DeclarationNameInfo((*Storage->begin())->getDeclName(), NameLoc);
   }
 
+  case TemplateName::AssumedTemplate: {
+    AssumedTemplateStorage *Storage = Name.getAsAssumedTemplateName();
+    return DeclarationNameInfo(Storage->getDeclName(), NameLoc);
+  }
+
   case TemplateName::DependentTemplate: {
     DependentTemplateName *DTN = Name.getAsDependentTemplateName();
     DeclarationName DName;
@@ -5278,7 +5283,8 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name) const {
   }
 
   case TemplateName::OverloadedTemplate:
-    llvm_unreachable("cannot canonicalize overloaded template");
+  case TemplateName::AssumedTemplate:
+    llvm_unreachable("cannot canonicalize unresolved template");
 
   case TemplateName::DependentTemplate: {
     DependentTemplateName *DTN = Name.getAsDependentTemplateName();
@@ -7622,6 +7628,13 @@ ASTContext::getOverloadedTemplateName(UnresolvedSetIterator Begin,
     *Storage++ = D;
   }
 
+  return TemplateName(OT);
+}
+
+/// Retrieve a template name representing an unqualified-id that has been
+/// assumed to name a template for ADL purposes.
+TemplateName ASTContext::getAssumedTemplateName(DeclarationName Name) const {
+  auto *OT = new (*this) AssumedTemplateStorage(Name);
   return TemplateName(OT);
 }
 
