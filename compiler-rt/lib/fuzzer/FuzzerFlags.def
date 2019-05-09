@@ -151,7 +151,9 @@ FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
                 "after this one. Useful for fuzzers that need to do their own "
                 "argument parsing.")
 FUZZER_FLAG_STRING(focus_function, "Experimental. "
-     "Fuzzing will focus on inputs that trigger calls to this function")
+     "Fuzzing will focus on inputs that trigger calls to this function. "
+     "If -focus_function=auto and -data_flow_trace is used, libFuzzer "
+     "will choose the focus functions automatically.")
 
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)

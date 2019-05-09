@@ -157,8 +157,9 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   AllocateCurrentUnitData();
   CurrentUnitSize = 0;
   memset(BaseSha1, 0, sizeof(BaseSha1));
-  TPC.SetFocusFunction(Options.FocusFunction);
-  DFT.Init(Options.DataFlowTrace, Options.FocusFunction);
+  auto FocusFunctionOrAuto = Options.FocusFunction;
+  DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto , MD.GetRand());
+  TPC.SetFocusFunction(FocusFunctionOrAuto);
 }
 
 Fuzzer::~Fuzzer() {}
