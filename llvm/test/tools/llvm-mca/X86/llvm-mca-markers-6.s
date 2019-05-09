@@ -6,7 +6,9 @@
 
 # LLVM-MCA-END
 
-# CHECK:      llvm-mca-markers-6.s:5:2: warning: Ignoring invalid region start
-# CHECK-NEXT: # LLVM-MCA-BEGIN  bar
+# CHECK:      llvm-mca-markers-6.s:7:2: error: found an invalid region end directive
+# CHECK-NEXT: # LLVM-MCA-END
 # CHECK-NEXT:  ^
-# CHECK-NEXT: error: no assembly instructions found.
+# CHECK-NEXT: llvm-mca-markers-6.s:7:2: note: unable to find an active anonymous region
+# CHECK-NEXT: # LLVM-MCA-END
+# CHECK-NEXT:  ^

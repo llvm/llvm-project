@@ -364,6 +364,11 @@ int main(int argc, char **argv) {
     return 1;
   }
   const mca::CodeRegions &Regions = *RegionsOrErr;
+
+  // Early exit if errors were found by the code region parsing logic.
+  if (!Regions.isValid())
+    return 1;
+
   if (Regions.empty()) {
     WithColor::error() << "no assembly instructions found.\n";
     return 1;
