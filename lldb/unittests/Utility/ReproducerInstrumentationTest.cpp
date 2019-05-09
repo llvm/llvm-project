@@ -54,7 +54,7 @@ static llvm::Optional<Serializer> g_serializer;
 static llvm::Optional<TestingRegistry> g_registry;
 
 #define LLDB_GET_INSTRUMENTATION_DATA()                                        \
-  InstrumentationData(*g_serializer, *g_registry)
+  g_serializer ? InstrumentationData(*g_serializer, *g_registry) : InstrumentationData()
 
 class InstrumentedFoo {
 public:
@@ -109,6 +109,8 @@ static std::vector<InstrumentedFoo *> g_foos;
 static std::vector<InstrumentedBar *> g_bars;
 
 void ClearObjects() {
+  g_registry.reset();
+  g_serializer.reset();
   g_foos.clear();
   g_bars.clear();
 }

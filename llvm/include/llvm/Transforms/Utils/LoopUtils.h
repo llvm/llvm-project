@@ -51,7 +51,7 @@ class TargetLibraryInfo;
 class TargetTransformInfo;
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
-                                   bool PreserveLCSSA);
+                                   MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
 
 /// Ensure that all exit blocks of the loop are dedicated exits.
 ///

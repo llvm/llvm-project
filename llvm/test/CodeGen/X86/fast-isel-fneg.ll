@@ -99,3 +99,50 @@ define void @loo(float* %x, float* %y) nounwind {
   store float %b, float* %y
   ret void
 }
+
+define double @too(double %x) nounwind {
+; CHECK-LABEL: too:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx ## imm = 0x8000000000000000
+; CHECK-NEXT:    xorq %rax, %rcx
+; CHECK-NEXT:    movq %rcx, %xmm0
+; CHECK-NEXT:    retq
+;
+; SSE2-LABEL: too:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushl %ebp
+; SSE2-NEXT:    movl %esp, %ebp
+; SSE2-NEXT:    andl $-8, %esp
+; SSE2-NEXT:    subl $8, %esp
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE2-NEXT:    movlps %xmm0, (%esp)
+; SSE2-NEXT:    fldl (%esp)
+; SSE2-NEXT:    movl %ebp, %esp
+; SSE2-NEXT:    popl %ebp
+; SSE2-NEXT:    retl
+  %y = fneg double %x
+  ret double %y
+}
+
+define float @zoo(float %x) nounwind {
+; CHECK-LABEL: zoo:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorl $2147483648, %eax ## imm = 0x80000000
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    retq
+;
+; SSE2-LABEL: zoo:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushl %eax
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE2-NEXT:    movss %xmm0, (%esp)
+; SSE2-NEXT:    flds (%esp)
+; SSE2-NEXT:    popl %eax
+; SSE2-NEXT:    retl
+  %y = fneg float %x
+  ret float %y
+}

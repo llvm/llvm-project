@@ -9,14 +9,14 @@ struct S
   static int v; //expected-error{{redefinition of 'v' as different kind of symbol}}
   int v; //expected-error{{duplicate member 'v'}}
   static int v; //expected-error{{redefinition of 'v' as different kind of symbol}}
-  enum EnumT { E = 10 };
+  enum EnumT { E = 10 }; // expected-note {{declared here}}
   friend struct M;
   struct X;  //expected-note{{forward declaration of 'S::X'}}
   friend struct X;
 };
 
 S::EnumT Evar = S::E; // ok
-S::EnumT Evar2 = EnumT(); //expected-error{{use of undeclared identifier 'EnumT'}}
+S::EnumT Evar2 = EnumT(); //expected-error{{use of undeclared identifier 'EnumT'; did you mean 'S::EnumT'?}}
 S::M m; //expected-error{{no type named 'M' in 'S'}}
 S::X x; //expected-error{{variable has incomplete type 'S::X'}}
 

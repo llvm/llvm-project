@@ -7005,6 +7005,19 @@ def err_typecheck_incompatible_address_space : Error<
   "sending to parameter of different type}0,1"
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " changes address space of pointer">;
+def err_typecheck_incompatible_nested_address_space : Error<
+  "%select{%diff{assigning $ to $|assigning to different types}1,0"
+  "|%diff{passing $ to parameter of type $|"
+  "passing to parameter of different type}0,1"
+  "|%diff{returning $ from a function with result type $|"
+  "returning from function with different return type}0,1"
+  "|%diff{converting $ to type $|converting between types}0,1"
+  "|%diff{initializing $ with an expression of type $|"
+  "initializing with expression of different type}0,1"
+  "|%diff{sending $ to parameter of type $|"
+  "sending to parameter of different type}0,1"
+  "|%diff{casting $ to type $|casting between types}0,1}2"
+  " changes address space of nested pointer">;
 def err_typecheck_incompatible_ownership : Error<
   "%select{%diff{assigning $ to $|assigning to different types}1,0"
   "|%diff{passing $ to parameter of type $|"

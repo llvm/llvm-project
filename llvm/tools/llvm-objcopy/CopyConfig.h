@@ -120,6 +120,7 @@ struct CopyConfig {
   Optional<StringRef> BuildIdLinkOutput;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
+  StringRef AllocSectionsPrefix;
   DiscardType DiscardMode = DiscardType::None;
 
   // Repeated options

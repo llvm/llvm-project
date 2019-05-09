@@ -580,7 +580,6 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
     return std::move(Err);
 
   // Now add the new descriptor.
-  SchedClassID = MCDesc.getSchedClass();
   bool IsVariadic = MCDesc.isVariadic();
   if (!IsVariadic && !IsVariant) {
     Descriptors[MCI.getOpcode()] = std::move(ID);

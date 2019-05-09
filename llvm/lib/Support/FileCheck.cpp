@@ -145,12 +145,6 @@ FileCheckPattern::parseNumericExpression(StringRef Name, StringRef Trailer,
   return Context->makeNumExpr(Value);
 }
 
-/// Parses the given string into the Pattern.
-///
-/// \p Prefix provides which prefix is being matched, \p SM provides the
-/// SourceMgr used for error reports, and \p LineNumber is the line number in
-/// the input file from which the pattern string was read. Returns true in
-/// case of an error, false otherwise.
 bool FileCheckPattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
                            SourceMgr &SM, unsigned LineNumber,
                            const FileCheckRequest &Req) {
@@ -377,15 +371,6 @@ void FileCheckPattern::AddBackrefToRegEx(unsigned BackrefNum) {
   RegExStr += Backref;
 }
 
-/// Matches the pattern string against the input buffer \p Buffer
-///
-/// This returns the position that is matched or npos if there is no match. If
-/// there is a match, the size of the matched string is returned in \p
-/// MatchLen.
-///
-/// The GlobalVariableTable StringMap in the FileCheckPatternContext class
-/// instance provides the current values of FileCheck pattern variables and is
-/// updated if this match defines new values.
 size_t FileCheckPattern::match(StringRef Buffer, size_t &MatchLen) const {
   // If this is the EOF pattern, match it immediately.
   if (CheckTy == Check::CheckEOF) {
@@ -451,9 +436,6 @@ size_t FileCheckPattern::match(StringRef Buffer, size_t &MatchLen) const {
   return FullMatch.data() - Buffer.data() + MatchStartSkip;
 }
 
-/// Computes an arbitrary estimate for the quality of matching this pattern at
-/// the start of \p Buffer; a distance of zero should correspond to a perfect
-/// match.
 unsigned FileCheckPattern::computeMatchDistance(StringRef Buffer) const {
   // Just compute the number of matching characters. For regular expressions, we
   // just compare against the regex itself and hope for the best.
@@ -590,11 +572,6 @@ FileCheckNumExpr *FileCheckPatternContext::makeNumExpr(Types... Args) {
   return NumExprs.back().get();
 }
 
-/// Finds the closing sequence of a regex variable usage or definition.
-///
-/// \p Str has to point in the beginning of the definition (right after the
-/// opening sequence). Returns the offset of the closing sequence within Str,
-/// or npos if it was not found.
 size_t FileCheckPattern::FindRegexVarEnd(StringRef Str, SourceMgr &SM) {
   // Offset keeps track of the current offset within the input Str
   size_t Offset = 0;
@@ -633,8 +610,6 @@ size_t FileCheckPattern::FindRegexVarEnd(StringRef Str, SourceMgr &SM) {
   return StringRef::npos;
 }
 
-/// Canonicalize whitespaces in the file. Line endings are replaced with
-/// UNIX-style '\n'.
 StringRef
 llvm::FileCheck::CanonicalizeFile(MemoryBuffer &MB,
                                   SmallVectorImpl<char> &OutputBuffer) {
@@ -693,7 +668,6 @@ Check::FileCheckType &Check::FileCheckType::setCount(int C) {
   return *this;
 }
 
-// Get a description of the type.
 std::string Check::FileCheckType::getDescription(StringRef Prefix) const {
   switch (Kind) {
   case Check::CheckNone:
@@ -786,7 +760,7 @@ static size_t SkipWord(StringRef Str, size_t Loc) {
   return Loc;
 }
 
-/// Search the buffer for the first prefix in the prefix regular expression.
+/// Searches the buffer for the first prefix in the prefix regular expression.
 ///
 /// This searches the buffer using the provided regular expression, however it
 /// enforces constraints beyond that:
@@ -795,7 +769,7 @@ static size_t SkipWord(StringRef Str, size_t Loc) {
 /// 2) The found prefix must be followed by a valid check type suffix using \c
 ///    FindCheckType above.
 ///
-/// Returns a pair of StringRefs into the Buffer, which combines:
+/// \returns a pair of StringRefs into the Buffer, which combines:
 ///   - the first match of the regular expression to satisfy these two is
 ///   returned,
 ///     otherwise an empty StringRef is returned to indicate failure.
@@ -856,10 +830,6 @@ FindFirstMatchingPrefix(Regex &PrefixRE, StringRef &Buffer,
   return {StringRef(), StringRef()};
 }
 
-/// Read the check file, which specifies the sequence of expected strings.
-///
-/// The strings are added to the CheckStrings vector. Returns true in case of
-/// an error, false otherwise.
 bool llvm::FileCheck::ReadCheckFile(
     SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
     std::vector<FileCheckString> &CheckStrings) {
@@ -1111,7 +1081,7 @@ static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
                MatchedCount, Buffer, VerboseVerbose, Diags);
 }
 
-/// Count the number of newlines in the specified range.
+/// Counts the number of newlines in the specified range.
 static unsigned CountNumNewlinesBetween(StringRef Range,
                                         const char *&FirstNewLine) {
   unsigned NumNewLines = 0;
@@ -1134,7 +1104,6 @@ static unsigned CountNumNewlinesBetween(StringRef Range,
   }
 }
 
-/// Match check string and its "not strings" and/or "dag strings".
 size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
                               bool IsLabelScanMode, size_t &MatchLen,
                               FileCheckRequest &Req,
@@ -1215,7 +1184,6 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
   return FirstMatchPos;
 }
 
-/// Verify there is a single line in the given buffer.
 bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
   if (Pat.getCheckTy() != Check::CheckNext &&
       Pat.getCheckTy() != Check::CheckEmpty)
@@ -1255,7 +1223,6 @@ bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
   return false;
 }
 
-/// Verify there is no newline in the given buffer.
 bool FileCheckString::CheckSame(const SourceMgr &SM, StringRef Buffer) const {
   if (Pat.getCheckTy() != Check::CheckSame)
     return false;
@@ -1278,7 +1245,6 @@ bool FileCheckString::CheckSame(const SourceMgr &SM, StringRef Buffer) const {
   return false;
 }
 
-/// Verify there's no "not strings" in the given buffer.
 bool FileCheckString::CheckNot(
     const SourceMgr &SM, StringRef Buffer,
     const std::vector<const FileCheckPattern *> &NotStrings,
@@ -1304,7 +1270,6 @@ bool FileCheckString::CheckNot(
   return false;
 }
 
-/// Match "dag strings" and their mixed "not strings".
 size_t
 FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
                           std::vector<const FileCheckPattern *> &NotStrings,
@@ -1459,11 +1424,6 @@ bool llvm::FileCheck::ValidateCheckPrefixes() {
   return true;
 }
 
-// Combines the check prefixes into a single regex so that we can efficiently
-// scan for any of the set.
-//
-// The semantics are that the longest-match wins which matches our regex
-// library.
 Regex llvm::FileCheck::buildCheckPrefixRegex() {
   // I don't think there's a way to specify an initial value for cl::list,
   // so if nothing was specified, add the default
@@ -1548,10 +1508,6 @@ void FileCheckPatternContext::clearLocalVars() {
     GlobalVariableTable.erase(Var);
 }
 
-/// Check the input to FileCheck provided in the \p Buffer against the \p
-/// CheckStrings read from the check file.
-///
-/// Returns false if the input fails to satisfy the checks.
 bool llvm::FileCheck::CheckInput(SourceMgr &SM, StringRef Buffer,
                                  ArrayRef<FileCheckString> CheckStrings,
                                  std::vector<FileCheckDiag> *Diags) {
