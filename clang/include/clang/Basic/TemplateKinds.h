@@ -21,7 +21,8 @@ enum TemplateNameKind {
   /// The name does not refer to a template.
   TNK_Non_template = 0,
   /// The name refers to a function template or a set of overloaded
-  /// functions that includes at least one function template.
+  /// functions that includes at least one function template, or (in C++20)
+  /// refers to a set of non-template functions but is followed by a '<'.
   TNK_Function_template,
   /// The name refers to a template whose specialization produces a
   /// type. The template itself could be a class template, template
@@ -42,7 +43,11 @@ enum TemplateNameKind {
   /// whether the template name is assumed to refer to a type template or a
   /// function template depends on the context in which the template
   /// name occurs.
-  TNK_Dependent_template_name
+  TNK_Dependent_template_name,
+  /// Lookup for the name failed, but we're assuming it was a template name
+  /// anyway. In C++20, this is mandatory in order to parse ADL-only function
+  /// template specialization calls.
+  TNK_Undeclared_template,
 };
 
 }

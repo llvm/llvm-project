@@ -863,4 +863,24 @@ struct DenseMapInfo<clang::DeclarationName> {
 
 } // namespace llvm
 
+// The definition of AssumedTemplateStorage is factored out of TemplateName to
+// resolve a cyclic dependency between it and DeclarationName (via Type).
+namespace clang {
+
+/// A structure for storing the information associated with a name that has
+/// been assumed to be a template name (despite finding no TemplateDecls).
+class AssumedTemplateStorage : public UncommonTemplateNameStorage {
+  friend class ASTContext;
+
+  AssumedTemplateStorage(DeclarationName Name)
+      : UncommonTemplateNameStorage(Assumed, 0), Name(Name) {}
+  DeclarationName Name;
+
+public:
+  /// Get the name of the template.
+  DeclarationName getDeclName() const { return Name; }
+};
+
+} // namespace clang
+
 #endif // LLVM_CLANG_AST_DECLARATIONNAME_H

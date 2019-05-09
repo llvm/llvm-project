@@ -2065,11 +2065,12 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       // is in the wrong place to recover. Suggest the typo
       // correction, but don't make it a fix-it since we're not going
       // to recover well anyway.
-      AcceptableWithoutRecovery =
-          isa<TypeDecl>(UnderlyingND) || isa<ObjCInterfaceDecl>(UnderlyingND);
+      AcceptableWithoutRecovery = isa<TypeDecl>(UnderlyingND) ||
+                                  getAsTypeTemplateDecl(UnderlyingND) ||
+                                  isa<ObjCInterfaceDecl>(UnderlyingND);
     } else {
-      // FIXME: We found a keyword or a type. Suggest it, but don't provide a
-      // fix-it because we aren't able to recover.
+      // FIXME: We found a keyword. Suggest it, but don't provide a fix-it
+      // because we aren't able to recover.
       AcceptableWithoutRecovery = true;
     }
 
@@ -2221,8 +2222,10 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // this becomes a performance hit, we can work harder to preserve those
     // results until we get here but it's likely not worth it.
     bool MemberOfUnknownSpecialization;
+    AssumedTemplateKind AssumedTemplate;
     if (LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
-                           MemberOfUnknownSpecialization, TemplateKWLoc))
+                           MemberOfUnknownSpecialization, TemplateKWLoc,
+                           &AssumedTemplate))
       return ExprError();
 
     if (MemberOfUnknownSpecialization ||
@@ -5518,7 +5521,24 @@ tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
 ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig) {
-  return BuildCallExpr(Scope, Fn, LParenLoc, ArgExprs, RParenLoc, ExecConfig);
+  ExprResult Call =
+      BuildCallExpr(Scope, Fn, LParenLoc, ArgExprs, RParenLoc, ExecConfig);
+  if (Call.isInvalid())
+    return Call;
+
+  // Diagnose uses of the C++20 "ADL-only template-id call" feature in earlier
+  // language modes.
+  if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn)) {
+    if (ULE->hasExplicitTemplateArgs() &&
+        ULE->decls_begin() == ULE->decls_end()) {
+      Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus2a
+                                 ? diag::warn_cxx17_compat_adl_only_template_id
+                                 : diag::ext_adl_only_template_id)
+          << ULE->getName();
+    }
+  }
+
+  return Call;
 }
 
 /// BuildCallExpr - Handle a call to Fn with the specified array of arguments.

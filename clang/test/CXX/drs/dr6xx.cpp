@@ -1048,10 +1048,13 @@ namespace dr686 { // dr686: yes
   template<struct R {} *> struct Y; // expected-error {{cannot be defined in a type specifier}}
 }
 
-namespace dr687 { // dr687 still open
+namespace dr687 { // dr687 (9 c++20, but the issue is still considered open)
   template<typename T> void f(T a) {
-    // FIXME: This is valid in C++20.
-    g<int>(a); // expected-error {{undeclared}} expected-error {{'('}}
+    // This is valid in C++20.
+    g<int>(a);
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{C++2a extension}}
+#endif
 
     // This is not.
     template g<int>(a); // expected-error {{expected expression}}
