@@ -31,7 +31,7 @@ def note_constexpr_invalid_inhctor : Note<
 def note_constexpr_no_return : Note<
   "control reached end of constexpr function">;
 def note_constexpr_virtual_call : Note<
-  "cannot evaluate virtual function call in a constant expression">;
+  "cannot evaluate call to virtual function in a constant expression">;
 def note_constexpr_virtual_base : Note<
   "cannot construct object of type %0 with virtual base class "
   "in a constant expression">;
