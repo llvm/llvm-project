@@ -159,7 +159,8 @@ LANGSTANDARD(opencl20, "cl2.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL)
 LANGSTANDARD(openclcpp, "c++",
              OpenCL, "OpenCL C++ 1.0",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs | OpenCL)
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             Digraphs | HexFloat | OpenCL)
 
 LANGSTANDARD_ALIAS_DEPR(opencl10, "CL")
 LANGSTANDARD_ALIAS_DEPR(opencl11, "CL1.1")

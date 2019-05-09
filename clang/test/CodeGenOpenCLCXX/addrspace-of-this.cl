@@ -112,15 +112,9 @@ __kernel void test__global() {
 // IMPL: call void @llvm.memcpy.p4i8.p4i8.i32(i8 addrspace(4)* {{.*}}[[C2GENVOID]], i8 addrspace(4)* {{.*}}[[C1GENVOID]]
 
 // Test the address space of 'this' when invoking the operator+
-// COMMON: [[C3GEN:%[0-9]+]] = addrspacecast %class.C* %c3 to %class.C addrspace(4)*
 // COMMON: [[C1GEN:%[0-9]+]] = addrspacecast %class.C* %c1 to %class.C addrspace(4)*
 // COMMON: [[C2GEN:%[0-9]+]] = addrspacecast %class.C* %c2 to %class.C addrspace(4)*
-// COMMON: call void @_ZNU3AS41CplERU3AS4KS_(%class.C* sret %ref.tmp, %class.C addrspace(4)* [[C1GEN]], %class.C addrspace(4)* dereferenceable(4) [[C2GEN]])
-// COMMON: [[REFGEN:%[0-9]+]] = addrspacecast %class.C* %ref.tmp to %class.C addrspace(4)*
-// EXPL: call void @_ZNU3AS41CC1EOU3AS4S_(%class.C addrspace(4)* [[C3GEN]], %class.C addrspace(4)* dereferenceable(4) [[REFGEN]])
-// IMPL: [[C3VOID:%[0-9]+]] = bitcast %class.C* %c3 to i8*
-// IMPL: [[REFGENVOID:%[0-9]+]] = bitcast %class.C addrspace(4)* [[REFGEN]] to i8 addrspace(4)*
-// IMPL: call void @llvm.memcpy.p0i8.p4i8.i32(i8* {{.*}}[[C3VOID]], i8 addrspace(4)* {{.*}}[[REFGENVOID]]
+// COMMON: call void @_ZNU3AS41CplERU3AS4KS_(%class.C* sret %c3, %class.C addrspace(4)* [[C1GEN]], %class.C addrspace(4)* dereferenceable(4) [[C2GEN]])
 
 // Test the address space of 'this' when invoking the move constructor
 // COMMON: [[C4GEN:%[0-9]+]] = addrspacecast %class.C* %c4 to %class.C addrspace(4)*
