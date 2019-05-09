@@ -69,20 +69,32 @@ def main():
   temp_file_name = temp_file_name + extension
 
   clang_tidy_extra_args = extra_args
-  if len(clang_tidy_extra_args) == 0:
-    clang_tidy_extra_args = ['--']
+  clang_extra_args = []
+  if '--' in extra_args:
+    i = clang_tidy_extra_args.index('--')
+    clang_extra_args = clang_tidy_extra_args[i + 1:]
+    clang_tidy_extra_args = clang_tidy_extra_args[:i]
+
+  # If the test does not specify a formatting style, force "none"; otherwise
+  # autodetection logic can discover a ".clang-tidy" file that is not related to
+  # the test.
+  if not any(
+      [arg.startswith('-format-style=') for arg in clang_tidy_extra_args]):
+    clang_tidy_extra_args.append('-format-style=none')
+
+  if len(clang_extra_args) == 0:
     if extension in ['.cpp', '.hpp', '.mm']:
-      clang_tidy_extra_args.append('--std=c++11')
+      clang_extra_args.append('--std=c++11')
     if extension in ['.m', '.mm']:
-      clang_tidy_extra_args.extend(
+      clang_extra_args.extend(
           ['-fobjc-abi-version=2', '-fobjc-arc'])
 
   # Tests should not rely on STL being available, and instead provide mock
   # implementations of relevant APIs.
-  clang_tidy_extra_args.append('-nostdinc++')
+  clang_extra_args.append('-nostdinc++')
 
   if resource_dir is not None:
-    clang_tidy_extra_args.append('-resource-dir=%s' % resource_dir)
+    clang_extra_args.append('-resource-dir=%s' % resource_dir)
 
   with open(input_file_name, 'r') as input_file:
     input_text = input_file.read()
@@ -138,7 +150,7 @@ def main():
   write_file(original_file_name, cleaned_test)
 
   args = ['clang-tidy', temp_file_name, '-fix', '--checks=-*,' + check_name] + \
-        clang_tidy_extra_args
+      clang_tidy_extra_args + ['--'] + clang_extra_args
   if expect_clang_tidy_error:
     args.insert(0, 'not')
   print('Running ' + repr(args) + '...')
