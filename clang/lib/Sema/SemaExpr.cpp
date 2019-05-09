@@ -2068,8 +2068,8 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       AcceptableWithoutRecovery =
           isa<TypeDecl>(UnderlyingND) || isa<ObjCInterfaceDecl>(UnderlyingND);
     } else {
-      // FIXME: We found a keyword. Suggest it, but don't provide a fix-it
-      // because we aren't able to recover.
+      // FIXME: We found a keyword or a type. Suggest it, but don't provide a
+      // fix-it because we aren't able to recover.
       AcceptableWithoutRecovery = true;
     }
 
