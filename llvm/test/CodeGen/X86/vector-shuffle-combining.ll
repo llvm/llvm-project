@@ -2701,21 +2701,36 @@ define <4 x i32> @combine_constant_insertion_v4i32(i32 %f) {
 }
 
 define <4 x float> @PR22377(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: PR22377:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm0[2,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,0,2]
-; SSE-NEXT:    addps %xmm0, %xmm1
-; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    retq
+; SSE2-LABEL: PR22377:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,0,2]
+; SSE2-NEXT:    addps %xmm0, %xmm1
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR22377:
+; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    movaps %xmm0, %xmm1
+; SSSE3-NEXT:    haddps %xmm0, %xmm1
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,1]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR22377:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    haddps %xmm0, %xmm1
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,1]
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: PR22377:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,2,3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,0,2]
-; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm1
-; AVX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm1
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,1]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    retq
 entry:
   %s1 = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 1, i32 3, i32 1, i32 3>
