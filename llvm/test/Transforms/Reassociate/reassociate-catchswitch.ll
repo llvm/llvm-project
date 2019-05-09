@@ -1,3 +1,8 @@
+; Catchswitch is interesting because reassociate previously tried to insert
+; into the catchswitch block, which is impossible.
+;
+; RUN: opt -reassociate -disable-output < %s
+;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "catchswitch.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"

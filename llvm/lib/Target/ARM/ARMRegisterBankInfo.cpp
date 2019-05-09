@@ -433,8 +433,14 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case DBG_VALUE: {
     SmallVector<const ValueMapping *, 4> OperandBanks(NumOperands);
-    if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg())
-      OperandBanks[0] = &ARM::ValueMappings[ARM::GPR3OpsIdx];
+    const MachineOperand &MaybeReg = MI.getOperand(0);
+    if (MaybeReg.isReg() && MaybeReg.getReg()) {
+      unsigned Size = MRI.getType(MaybeReg.getReg()).getSizeInBits();
+      if (Size > 32 && Size != 64)
+        return getInvalidInstructionMapping();
+      OperandBanks[0] = Size == 64 ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
+                                   : &ARM::ValueMappings[ARM::GPR3OpsIdx];
+    }
     OperandsMapping = getOperandsMapping(OperandBanks);
     break;
   }
