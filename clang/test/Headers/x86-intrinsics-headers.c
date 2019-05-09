@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -flax-vector-conversions=all %s
 // RUN: %clang_cc1 -fsyntax-only -ffreestanding -flax-vector-conversions=none %s
 // RUN: %clang_cc1 -fsyntax-only -ffreestanding -x c++ %s
 
