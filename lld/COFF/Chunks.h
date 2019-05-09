@@ -121,10 +121,6 @@ protected:
   // The RVA of this chunk in the output. The writer sets a value.
   uint32_t RVA = 0;
 
-public:
-  // The offset from beginning of the output section. The writer sets a value.
-  uint32_t OutputSectionOff = 0;
-
 protected:
   // The output section for this chunk.
   OutputSection *Out = nullptr;
