@@ -71,6 +71,7 @@ Configuration *elf::Config;
 LinkerDriver *elf::Driver;
 
 static void setConfigs(opt::InputArgList &Args);
+static void readConfigs(opt::InputArgList &Args);
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
@@ -440,6 +441,11 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
+  // The Target instance handles target-specific stuff, such as applying
+  // relocations or writing a PLT section. It also contains target-dependent
+  // values such as a default image base address.
+  Target = getTarget();
+
   switch (Config->EKind) {
   case ELF32LEKind:
     link<ELF32LE>(Args);
@@ -756,7 +762,7 @@ static void parseClangOption(StringRef Opt, const Twine &Msg) {
 }
 
 // Initializes Config members by the command line options.
-void LinkerDriver::readConfigs(opt::InputArgList &Args) {
+static void readConfigs(opt::InputArgList &Args) {
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
@@ -1615,11 +1621,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // or -strip-debug are given.
   if (Config->Strip != StripPolicy::None)
     llvm::erase_if(InputSections, [](InputSectionBase *S) { return S->Debug; });
-
-  // The Target instance handles target-specific stuff, such as applying
-  // relocations or writing a PLT section. It also contains target-dependent
-  // values such as a default image base address.
-  Target = getTarget();
 
   Config->EFlags = Target->calcEFlags();
   Config->MaxPageSize = getMaxPageSize(Args);

@@ -13,8 +13,8 @@ prefetchw   (%rax)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      5     0.50    *      *            prefetch	(%rax)
-# CHECK-NEXT:  1      5     0.50    *      *            prefetchw	(%rax)
+# CHECK-NEXT:  1      5     1.00    *      *            prefetch	(%rax)
+# CHECK-NEXT:  1      5     1.00    *      *            prefetchw	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -43,9 +43,9 @@ prefetchw   (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     prefetch	(%rax)
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     prefetchw	(%rax)
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     prefetch	(%rax)
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -     prefetchw	(%rax)

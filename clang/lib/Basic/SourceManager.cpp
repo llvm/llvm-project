@@ -167,16 +167,16 @@ const llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
   // http://en.wikipedia.org/wiki/Byte_order_mark for more information.
   StringRef BufStr = Buffer.getPointer()->getBuffer();
   const char *InvalidBOM = llvm::StringSwitch<const char *>(BufStr)
-    .StartsWith("\xFE\xFF", "UTF-16 (BE)")
-    .StartsWith("\xFF\xFE", "UTF-16 (LE)")
     .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
                                                   "UTF-32 (BE)")
     .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
                                                   "UTF-32 (LE)")
+    .StartsWith("\xFE\xFF", "UTF-16 (BE)")
+    .StartsWith("\xFF\xFE", "UTF-16 (LE)")
     .StartsWith("\x2B\x2F\x76", "UTF-7")
     .StartsWith("\xF7\x64\x4C", "UTF-1")
     .StartsWith("\xDD\x73\x66\x73", "UTF-EBCDIC")
-    .StartsWith("\x0E\xFE\xFF", "SDSU")
+    .StartsWith("\x0E\xFE\xFF", "SCSU")
     .StartsWith("\xFB\xEE\x28", "BOCU-1")
     .StartsWith("\x84\x31\x95\x33", "GB-18030")
     .Default(nullptr);

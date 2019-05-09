@@ -44,14 +44,15 @@
 // ===============
 //  F0 11111111111111
 //  F1 10000000000000
-//  C0 1 2 3 4
-//  C1
+//  C0 1 2 3 4 5
+//  C1 8
 //  ===============
 // "FN xxxxxxxxxx": tells what bytes of the input does the function N depend on.
 //    The byte string is LEN+1 bytes. The last byte is set if the function
 //    depends on the input length.
-// "CN X Y Z": tells that a function N has basic blocks X, Y, and Z covered
-//    in addition to the function's entry block.
+// "CN X Y Z T": tells that a function N has basic blocks X, Y, and Z covered
+//    in addition to the function's entry block, out of T total instrumented
+//    blocks.
 //
 //===----------------------------------------------------------------------===*/
 
@@ -87,6 +88,10 @@ enum {
   PCFLAG_FUNC_ENTRY = 1,
 };
 
+static inline bool BlockIsEntry(size_t BlockIdx) {
+  return PCsBeg[BlockIdx * 2 + 1] & PCFLAG_FUNC_ENTRY;
+}
+
 // Prints all instrumented functions.
 static int PrintFunctions() {
   // We don't have the symbolizer integrated with dfsan yet.
@@ -99,8 +104,7 @@ static int PrintFunctions() {
                      "| sed 's/dfs\\$//g'", "w");
   for (size_t I = 0; I < NumGuards; I++) {
     uintptr_t PC = PCsBeg[I * 2];
-    uintptr_t PCFlags = PCsBeg[I * 2 + 1];
-    if (!(PCFlags & PCFLAG_FUNC_ENTRY)) continue;
+    if (!BlockIsEntry(I)) continue;
     void *const Buf[1] = {(void*)PC};
     backtrace_symbols_fd(Buf, 1, fileno(Pipe));
   }
@@ -142,23 +146,22 @@ static void PrintDataFlow(FILE *Out) {
 static void PrintCoverage(FILE *Out) {
   ssize_t CurrentFuncGuard = -1;
   ssize_t CurrentFuncNum = -1;
-  int NumFuncsCovered = 0;
-  for (size_t I = 0; I < NumGuards; I++) {
-    bool IsEntry = PCsBeg[I * 2 + 1] & PCFLAG_FUNC_ENTRY;
-    if (IsEntry) {
-      CurrentFuncNum++;
-      CurrentFuncGuard = I;
+  ssize_t NumBlocksInCurrentFunc = -1;
+  for (size_t FuncBeg = 0; FuncBeg < NumGuards;) {
+    CurrentFuncNum++;
+    assert(BlockIsEntry(FuncBeg));
+    size_t FuncEnd = FuncBeg + 1;
+    for (; FuncEnd < NumGuards && !BlockIsEntry(FuncEnd); FuncEnd++)
+      ;
+    if (BBExecuted[FuncBeg]) {
+      fprintf(Out, "C%zd", CurrentFuncNum);
+      for (size_t I = FuncBeg + 1; I < FuncEnd; I++)
+        if (BBExecuted[I])
+          fprintf(Out, " %zd", I - FuncBeg);
+      fprintf(Out, " %zd\n", FuncEnd - FuncBeg);
     }
-    if (!BBExecuted[I]) continue;
-    if (IsEntry) {
-      if (NumFuncsCovered) fprintf(Out, "\n");
-      fprintf(Out, "C%zd ", CurrentFuncNum);
-      NumFuncsCovered++;
-    } else {
-      fprintf(Out, "%zd ", I - CurrentFuncGuard);
-    }
+    FuncBeg = FuncEnd;
   }
-  fprintf(Out, "\n");
 }
 
 int main(int argc, char **argv) {
@@ -229,7 +232,7 @@ void __sanitizer_cov_pcs_init(const uintptr_t *pcs_beg,
   PCsEnd = pcs_end;
   assert(NumGuards == (PCsEnd - PCsBeg) / 2);
   for (size_t i = 0; i < NumGuards; i++) {
-    if (PCsBeg[i * 2 + 1] & PCFLAG_FUNC_ENTRY) {
+    if (BlockIsEntry(i)) {
       NumFuncs++;
       GuardsBeg[i] = NumFuncs;
     }

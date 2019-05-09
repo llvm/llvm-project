@@ -522,7 +522,7 @@ public:
 
   void addSymbol(Twine Name, uint8_t Bind, uint8_t Type, SectionBase *DefinedIn,
                  uint64_t Value, uint8_t Visibility, uint16_t Shndx,
-                 uint64_t Size);
+                 uint64_t SymbolSize);
   void prepareForLayout();
   // An 'empty' symbol table still contains a null symbol.
   bool empty() const { return Symbols.size() == 1; }

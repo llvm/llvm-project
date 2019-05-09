@@ -922,15 +922,15 @@ multiclass T2I_sh_ir<bits<2> opcod, string opc, Operand ty, SDNode opnode> {
 /// T2I_cmp_irs - Defines a set of (op r, {so_imm|r|so_reg}) cmp / test
 /// patterns. Similar to T2I_bin_irs except the instruction does not produce
 /// a explicit result, only implicitly set CPSR.
-multiclass T2I_cmp_irs<bits<4> opcod, string opc,
+multiclass T2I_cmp_irs<bits<4> opcod, string opc, RegisterClass LHSGPR,
                      InstrItinClass iii, InstrItinClass iir, InstrItinClass iis,
                      SDPatternOperator opnode> {
 let isCompare = 1, Defs = [CPSR] in {
    // shifted imm
    def ri : T2OneRegCmpImm<
-                (outs), (ins GPRnopc:$Rn, t2_so_imm:$imm), iii,
+                (outs), (ins LHSGPR:$Rn, t2_so_imm:$imm), iii,
                 opc, ".w\t$Rn, $imm",
-                [(opnode GPRnopc:$Rn, t2_so_imm:$imm)]>, Sched<[WriteCMP]> {
+                [(opnode LHSGPR:$Rn, t2_so_imm:$imm)]>, Sched<[WriteCMP]> {
      let Inst{31-27} = 0b11110;
      let Inst{25} = 0;
      let Inst{24-21} = opcod;
@@ -940,9 +940,9 @@ let isCompare = 1, Defs = [CPSR] in {
    }
    // register
    def rr : T2TwoRegCmp<
-                (outs), (ins GPRnopc:$Rn, rGPR:$Rm), iir,
+                (outs), (ins LHSGPR:$Rn, rGPR:$Rm), iir,
                 opc, ".w\t$Rn, $Rm",
-                [(opnode GPRnopc:$Rn, rGPR:$Rm)]>, Sched<[WriteCMP]> {
+                [(opnode LHSGPR:$Rn, rGPR:$Rm)]>, Sched<[WriteCMP]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
      let Inst{24-21} = opcod;
@@ -954,9 +954,9 @@ let isCompare = 1, Defs = [CPSR] in {
    }
    // shifted register
    def rs : T2OneRegCmpShiftedReg<
-                (outs), (ins GPRnopc:$Rn, t2_so_reg:$ShiftedRm), iis,
+                (outs), (ins LHSGPR:$Rn, t2_so_reg:$ShiftedRm), iis,
                 opc, ".w\t$Rn, $ShiftedRm",
-                [(opnode GPRnopc:$Rn, t2_so_reg:$ShiftedRm)]>,
+                [(opnode LHSGPR:$Rn, t2_so_reg:$ShiftedRm)]>,
                 Sched<[WriteCMPsi]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
@@ -970,9 +970,9 @@ let isCompare = 1, Defs = [CPSR] in {
   // No alias here for 'rr' version as not all instantiations of this
   // multiclass want one (CMP in particular, does not).
   def : t2InstAlias<!strconcat(opc, "${p}", " $Rn, $imm"),
-     (!cast<Instruction>(NAME#"ri") GPRnopc:$Rn, t2_so_imm:$imm, pred:$p)>;
+     (!cast<Instruction>(NAME#"ri") LHSGPR:$Rn, t2_so_imm:$imm, pred:$p)>;
   def : t2InstAlias<!strconcat(opc, "${p}", " $Rn, $shift"),
-     (!cast<Instruction>(NAME#"rs") GPRnopc:$Rn, t2_so_reg:$shift, pred:$p)>;
+     (!cast<Instruction>(NAME#"rs") LHSGPR:$Rn, t2_so_reg:$shift, pred:$p)>;
 }
 
 /// T2I_ld - Defines a set of (op r, {imm12|imm8|so_reg}) load patterns.
@@ -3058,7 +3058,7 @@ def t2CRC32CW : T2I_crc32<1, 0b10, "cw", int_arm_crc32cw>;
 //===----------------------------------------------------------------------===//
 //  Comparison Instructions...
 //
-defm t2CMP  : T2I_cmp_irs<0b1101, "cmp",
+defm t2CMP  : T2I_cmp_irs<0b1101, "cmp", GPRnopc,
                           IIC_iCMPi, IIC_iCMPr, IIC_iCMPsi, ARMcmp>;
 
 def : T2Pat<(ARMcmpZ  GPRnopc:$lhs, t2_so_imm:$imm),
@@ -3126,10 +3126,10 @@ def : T2Pat<(ARMcmp  GPR:$src, t2_so_imm_neg:$imm),
 def : T2Pat<(ARMcmpZ GPRnopc:$src, t2_so_imm_neg:$imm),
             (t2CMNri GPRnopc:$src, t2_so_imm_neg:$imm)>;
 
-defm t2TST  : T2I_cmp_irs<0b0000, "tst",
+defm t2TST  : T2I_cmp_irs<0b0000, "tst", rGPR,
                           IIC_iTSTi, IIC_iTSTr, IIC_iTSTsi,
                          BinOpFrag<(ARMcmpZ (and_su node:$LHS, node:$RHS), 0)>>;
-defm t2TEQ  : T2I_cmp_irs<0b0100, "teq",
+defm t2TEQ  : T2I_cmp_irs<0b0100, "teq", rGPR,
                           IIC_iTSTi, IIC_iTSTr, IIC_iTSTsi,
                          BinOpFrag<(ARMcmpZ (xor_su node:$LHS, node:$RHS), 0)>>;
 
@@ -4551,9 +4551,9 @@ def : t2InstAlias<"sub${s}${p} $Rdn, $ShiftedRm",
 def : t2InstAlias<"cmn${p} $Rn, $Rm",
                   (t2CMNzrr GPRnopc:$Rn, rGPR:$Rm, pred:$p)>;
 def : t2InstAlias<"teq${p} $Rn, $Rm",
-                  (t2TEQrr GPRnopc:$Rn, rGPR:$Rm, pred:$p)>;
+                  (t2TEQrr rGPR:$Rn, rGPR:$Rm, pred:$p)>;
 def : t2InstAlias<"tst${p} $Rn, $Rm",
-                  (t2TSTrr GPRnopc:$Rn, rGPR:$Rm, pred:$p)>;
+                  (t2TSTrr rGPR:$Rn, rGPR:$Rm, pred:$p)>;
 
 // Memory barriers
 def : InstAlias<"dmb${p}", (t2DMB 0xf, pred:$p), 0>, Requires<[HasDB]>;

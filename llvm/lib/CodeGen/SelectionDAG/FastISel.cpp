@@ -1839,6 +1839,9 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
   case Instruction::Xor:
     return selectBinaryOp(I, ISD::XOR);
 
+  case Instruction::FNeg:
+    return selectFNeg(I, I->getOperand(0));
+
   case Instruction::GetElementPtr:
     return selectGetElementPtr(I);
 

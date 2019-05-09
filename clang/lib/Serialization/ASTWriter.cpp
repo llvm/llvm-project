@@ -1277,7 +1277,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECL_CXX_RECORD);
   RECORD(DECL_CXX_METHOD);
   RECORD(DECL_CXX_CONSTRUCTOR);
-  RECORD(DECL_CXX_INHERITED_CONSTRUCTOR);
   RECORD(DECL_CXX_DESTRUCTOR);
   RECORD(DECL_CXX_CONVERSION);
   RECORD(DECL_ACCESS_SPEC);
@@ -5874,6 +5873,12 @@ void ASTRecordWriter::AddTemplateName(TemplateName Name) {
     Record->push_back(OvT->size());
     for (const auto &I : *OvT)
       AddDeclRef(I);
+    break;
+  }
+
+  case TemplateName::AssumedTemplate: {
+    AssumedTemplateStorage *ADLT = Name.getAsAssumedTemplateName();
+    AddDeclarationName(ADLT->getDeclName());
     break;
   }
 

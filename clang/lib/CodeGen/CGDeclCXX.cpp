@@ -580,6 +580,19 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, CXXGlobalInits);
   AddGlobalCtor(Fn);
 
+  // In OpenCL global init functions must be converted to kernels in order to
+  // be able to launch them from the host.
+  // FIXME: Some more work might be needed to handle destructors correctly.
+  // Current initialization function makes use of function pointers callbacks.
+  // We can't support function pointers especially between host and device.
+  // However it seems global destruction has little meaning without any
+  // dynamic resource allocation on the device and program scope variables are
+  // destroyed by the runtime when program is released.
+  if (getLangOpts().OpenCL) {
+    GenOpenCLArgMetadata(Fn);
+    Fn->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+  }
+
   CXXGlobalInits.clear();
 }
 

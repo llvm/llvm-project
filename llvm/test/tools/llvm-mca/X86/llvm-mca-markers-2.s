@@ -5,7 +5,7 @@
 # LLVM-MCA-END
   add %esi, %eax
 
-# CHECK:      [0] Code Region - Default
+# CHECK:      [0] Code Region
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      1

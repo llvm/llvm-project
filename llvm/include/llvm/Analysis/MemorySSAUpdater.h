@@ -105,7 +105,12 @@ public:
   /// Update the MemoryPhi in `To` to have a single incoming edge from `From`,
   /// following a CFG change that replaced multiple edges (switch) with a direct
   /// branch.
-  void removeDuplicatePhiEdgesBetween(BasicBlock *From, BasicBlock *To);
+  void removeDuplicatePhiEdgesBetween(const BasicBlock *From,
+                                      const BasicBlock *To);
+  /// Update MemorySSA when inserting a unique backedge block for a loop.
+  void updatePhisWhenInsertingUniqueBackedgeBlock(BasicBlock *LoopHeader,
+                                                  BasicBlock *LoopPreheader,
+                                                  BasicBlock *BackedgeBlock);
   /// Update MemorySSA after a loop was cloned, given the blocks in RPO order,
   /// the exit blocks and a 1:1 mapping of all blocks and instructions
   /// cloned. This involves duplicating all defs and uses in the cloned blocks
@@ -239,6 +244,16 @@ public:
   /// Phi nodes may already be updated. Instructions in DeadBlocks should be
   /// deleted after this call.
   void removeBlocks(const SmallPtrSetImpl<BasicBlock *> &DeadBlocks);
+
+  /// Instruction I will be changed to an unreachable. Remove all accesses in
+  /// I's block that follow I (inclusive), and update the Phis in the blocks'
+  /// successors.
+  void changeToUnreachable(const Instruction *I);
+
+  /// Conditional branch BI is changed or replaced with an unconditional branch
+  /// to `To`. Update Phis in BI's successors to remove BI's BB.
+  void changeCondBranchToUnconditionalTo(const BranchInst *BI,
+                                         const BasicBlock *To);
 
   /// Get handle on MemorySSA.
   MemorySSA* getMemorySSA() const { return MSSA; }

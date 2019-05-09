@@ -25,8 +25,8 @@ add    %ecx, %ebx
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      6     4.00                        imulq	%rax, %rbx
-# CHECK-NEXT:  2      2     0.50                        lzcntw	%ax, %bx
-# CHECK-NEXT:  1      1     0.50                        addl	%ecx, %ebx
+# CHECK-NEXT:  2      2     2.00                        lzcntw	%ax, %bx
+# CHECK-NEXT:  1      1     1.00                        addl	%ecx, %ebx
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
