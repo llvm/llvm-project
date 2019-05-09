@@ -175,13 +175,17 @@ public:
 
 }
 
-static bool generateSignBits(Value *V) {
+static bool GenerateSignBits(Value *V) {
+  if (auto *Arg = dyn_cast<Argument>(V))
+    return Arg->hasSExtAttr();
+
   if (!isa<Instruction>(V))
     return false;
 
   unsigned Opc = cast<Instruction>(V)->getOpcode();
   return Opc == Instruction::AShr || Opc == Instruction::SDiv ||
-         Opc == Instruction::SRem;
+         Opc == Instruction::SRem || Opc == Instruction::SExt ||
+         Opc == Instruction::SIToFP;
 }
 
 static bool EqualTypeSize(Value *V) {
@@ -414,7 +418,7 @@ static bool isPromotedResultSafe(Value *V) {
   if (!isa<Instruction>(V))
     return true;
 
-  if (generateSignBits(V))
+  if (GenerateSignBits(V))
     return false;
 
   return !isa<OverflowingBinaryOperator>(V);
@@ -833,6 +837,11 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
     return EqualTypeSize(I->getOperand(0));
   }
 
+  if (GenerateSignBits(V)) {
+    LLVM_DEBUG(dbgs() << "ARM CGP: No, instruction can generate sign bits.\n");
+    return false;
+  }
+
   // Memory instructions
   if (isa<StoreInst>(V) || isa<GetElementPtrInst>(V))
     return true;
@@ -848,9 +857,6 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
   if (isa<PHINode>(V) || isa<SelectInst>(V) || isa<ReturnInst>(V) ||
       isa<LoadInst>(V))
     return isSupportedType(V);
-
-  if (isa<SExtInst>(V))
-    return false;
 
   if (auto *Cast = dyn_cast<CastInst>(V))
     return isSupportedType(Cast) || isSupportedType(Cast->getOperand(0));
@@ -868,10 +874,6 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
   if (!isSupportedType(V))
     return false;
 
-  if (generateSignBits(V)) {
-    LLVM_DEBUG(dbgs() << "ARM CGP: No, instruction can generate sign bits.\n");
-    return false;
-  }
   return true;
 }
 

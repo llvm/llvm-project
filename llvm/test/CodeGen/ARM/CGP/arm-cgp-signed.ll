@@ -43,3 +43,28 @@ define i16 @test_srem(i16 zeroext %arg) {
   ret i16 %conv 
 }
 
+; CHECK-LABEL: test_signext_b
+; CHECK: ldrb [[LDR:r[0-9]+]], [r0]
+; CHECK: sxtb [[SXT:r[0-9]+]], [[LDR]]
+; CHECK: cm{{.*}} [[SXT]]
+define i32 @test_signext_b(i8* %ptr, i8 signext %arg) {
+entry:
+  %0 = load i8, i8* %ptr, align 1
+  %1 = add nuw nsw i8 %0, %arg
+  %cmp = icmp ult i8 %1, 128
+  %res = select i1 %cmp, i32 42, i32 20894
+  ret i32 %res
+}
+
+; CHECK-LABEL: test_signext_h
+; CHECK: ldrh [[LDR:r[0-9]+]], [r0]
+; CHECK: sxth [[SXT:r[0-9]+]], [[LDR]]
+; CHECK: cm{{.*}} [[SXT]]
+define i32 @test_signext_h(i16* %ptr, i16 signext %arg) {
+entry:
+  %0 = load i16, i16* %ptr, align 1
+  %1 = add nuw nsw i16 %0, %arg
+  %cmp = icmp ult i16 %1, 32768
+  %res = select i1 %cmp, i32 42, i32 20894
+  ret i32 %res
+}
