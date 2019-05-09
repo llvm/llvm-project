@@ -341,8 +341,8 @@ bool PerfJITEventListener::OpenMarker() {
   //
   // Mapping must be PROT_EXEC to ensure it is captured by perf record
   // even when not using -d option.
-  MarkerAddr = ::mmap(NULL, sys::Process::getPageSize(), PROT_READ | PROT_EXEC,
-                      MAP_PRIVATE, DumpFd, 0);
+  MarkerAddr = ::mmap(NULL, sys::Process::getPageSizeEstimate(),
+                      PROT_READ | PROT_EXEC, MAP_PRIVATE, DumpFd, 0);
 
   if (MarkerAddr == MAP_FAILED) {
     errs() << "could not mmap JIT marker\n";
@@ -355,7 +355,7 @@ void PerfJITEventListener::CloseMarker() {
   if (!MarkerAddr)
     return;
 
-  munmap(MarkerAddr, sys::Process::getPageSize());
+  munmap(MarkerAddr, sys::Process::getPageSizeEstimate());
   MarkerAddr = nullptr;
 }
 
