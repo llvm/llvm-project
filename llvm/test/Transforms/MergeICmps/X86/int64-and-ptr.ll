@@ -1,6 +1,6 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-unknown -mergeicmps -S | FileCheck %s --check-prefix=X86
 
-; 8-byte int and 8-byte pointer should merge into a 16-byte memcpy.
+; 8-byte int and 8-byte pointer should merge into a 16-byte memcmp.
 ; X86: memcmp(i8* {{.*}}, i8* {{.*}}, i64 16)
 
 %struct.outer = type { i64, %struct.inner* }
