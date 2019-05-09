@@ -151,12 +151,16 @@ def availability(issue):
 count = {}
 for dr in drs:
   if dr.status in ('concepts',):
-    # Yeah, cool story bro.
+    # This refers to the old ("C++0x") concepts feature, which was not part
+    # of any C++ International Standard or Technical Specification.
     continue
   if dr.status in ('open', 'concurrency', 'drafting', 'review', 'extension'):
     # We may have to deal with these some day, but not yet.
     row_style = ' class="open"'
-    avail = 'Not resolved'
+    if dr.status == 'extension':
+      avail = 'Extension'
+    else:
+      avail = 'Not resolved'
     avail_style = ''
     assert dr.issue not in status_map, "have status for not-ready dr %s" % dr.issue
   else:
@@ -167,11 +171,11 @@ for dr in drs:
 
   print >> out_file, '''\
   <tr%s id="%s">
-    <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/%s">%s</a></td>
+    <td><a href="http://wg21.link/cwg%s">%s</a></td>
     <td>%s</td>
     <td>%s</td>
     <td%s align="center">%s</td>
-  </tr>''' % (row_style, dr.issue, dr.url, dr.issue, dr.status, dr.title, avail_style, avail)
+  </tr>''' % (row_style, dr.issue, dr.issue, dr.issue, dr.status, dr.title, avail_style, avail)
 
 for status, num in sorted(count.items()):
   print "%s: %s" % (status, num)
