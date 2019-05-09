@@ -235,6 +235,7 @@ def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_invalid_sycl_target : Error<"SYCL target is invalid: '%0'">;
 def err_drv_sycl_target_conflict : Error<"The option -fsycl-targets conflicts with -fsycl-link-targets">;
 def err_drv_sycl_add_link_conflict : Error<"The option -fsycl-link-targets conflicts with -fsycl-add-targets">;
+def err_drv_sycl_link_link_targets_conflict : Error<"The option -fsycl-link-targets conflicts with -fsycl-link">;
 def err_drv_omp_host_ir_file_not_found : Error<
   "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
 def err_drv_omp_host_target_not_supported : Error<

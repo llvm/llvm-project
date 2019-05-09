@@ -719,12 +719,17 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           C.getInputArgs().getLastArg(options::OPT_fsycl_link_targets_EQ);
   Arg *SYCLAddTargets =
           C.getInputArgs().getLastArg(options::OPT_fsycl_add_targets_EQ);
+  Arg *SYCLLink =
+          C.getInputArgs().getLastArg(options::OPT_fsycl_link);
   // -fsycl-targets cannot be used with -fsycl-link-targets
   if (SYCLTargets && SYCLLinkTargets)
     Diag(clang::diag::err_drv_sycl_target_conflict);
   // -fsycl-link-targets and -fsycl-add-targets cannot be used together
   if (SYCLLinkTargets && SYCLAddTargets)
     Diag(clang::diag::err_drv_sycl_add_link_conflict);
+  // -fsycl-link-targets is not allowed with -fsycl-link
+  if (SYCLLinkTargets && SYCLLink)
+    Diag(clang::diag::err_drv_sycl_link_link_targets_conflict);
 
   // -fsycl-add-targets is a list of paired items (Triple and file) which are
   // gathered and used to be linked into the final device binary. This can
@@ -2997,6 +3002,9 @@ class OffloadingActionBuilder final {
     /// Flag to signal if the user requested device-only compilation.
     bool CompileDeviceOnly = false;
 
+    /// Flag to signal if the user requested the device object to be wrapped
+    bool WrapDeviceOnlyBinary = false;
+
     /// The SYCL actions for the current input.
     ActionList SYCLDeviceActions;
 
@@ -3061,8 +3069,17 @@ class OffloadingActionBuilder final {
           for (auto SDA : SYCLDeviceActions) {
             SYCLLinkBinaryList.push_back(SDA);
           }
-          SYCLLinkBinary = C.MakeAction<LinkJobAction>(SYCLLinkBinaryList,
-                                                       types::TY_Image);
+          if (WrapDeviceOnlyBinary) {
+            auto *DeviceLinkAction =
+              C.MakeAction<LinkJobAction>(SYCLLinkBinaryList, types::TY_Image);
+            // Wrap the binary when -fsycl-link is given
+            SYCLLinkBinary =
+                C.MakeAction<OffloadWrappingJobAction>(DeviceLinkAction,
+                                                       types::TY_Object);
+          }
+          else
+            SYCLLinkBinary = C.MakeAction<LinkJobAction>(SYCLLinkBinaryList,
+                                                         types::TY_Image);
 
           // Remove the SYCL actions as they are already connected to an host
           // action or fat binary.
@@ -3217,9 +3234,11 @@ class OffloadingActionBuilder final {
 
       Arg *SYCLLinkTargets = Args.getLastArg(
                                   options::OPT_fsycl_link_targets_EQ);
-      CompileDeviceOnly = SYCLLinkTargets &&
-                          SYCLLinkTargets->getOption().matches(
-                              options::OPT_fsycl_link_targets_EQ);
+      WrapDeviceOnlyBinary = Args.hasArg(options::OPT_fsycl_link);
+      CompileDeviceOnly = (SYCLLinkTargets &&
+                           SYCLLinkTargets->getOption().matches(
+                              options::OPT_fsycl_link_targets_EQ)) ||
+                          WrapDeviceOnlyBinary;
       Arg *SYCLAddTargets = Args.getLastArg(
                                   options::OPT_fsycl_add_targets_EQ);
       if (SYCLAddTargets) {
@@ -4654,9 +4673,10 @@ InputInfo Driver::BuildJobsForActionNoCache(
     Result = InputInfo(A, BaseInput);
   else {
     std::string OffloadingPrefix;
-    // When generating binaries with -fsycl-link-target, the output file prefix
-    // is the triple arch only
-    if (Args.getLastArg(options::OPT_fsycl_link_targets_EQ)) {
+    // When generating binaries with -fsycl-link-target or -fsycl-link, the
+    // output file prefix is the triple arch only.
+    if (Args.getLastArg(options::OPT_fsycl_link_targets_EQ) ||
+        Args.hasArg(options::OPT_fsycl_link)) {
       OffloadingPrefix = "-";
       OffloadingPrefix += TC->getTriple().getArchName();
     } else {

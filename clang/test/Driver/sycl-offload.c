@@ -282,6 +282,32 @@
 
 /// ###########################################################################
 
+/// Check -fsycl-link behaviors unbundle
+// RUN:   touch %t.o
+// RUN:   %clang -### -ccc-print-phases -target x86_64-unknown-linux-gnu -fsycl -o %t.out -fsycl-link %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-LINK-UB %s
+// CHK-LINK-UB: 0: input, "[[INPUT:.+\.o]]", object
+// CHK-LINK-UB: 1: clang-offload-unbundler, {0}, object
+// CHK-LINK-UB: 2: linker, {1}, image, (device-sycl)
+// CHK-LINK-UB: 3: clang-offload-wrapper, {2}, object, (device-sycl)
+// CHK-LINK-UB: 4: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {3}, object
+
+/// ###########################################################################
+
+/// Check -fsycl-link behaviors from source
+// RUN:   %clang -### -ccc-print-phases -target x86_64-unknown-linux-gnu -fsycl -o %t.out -fsycl-link %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-LINK %s
+// CHK-LINK: 0: input, "[[INPUT:.+\.c]]", c, (device-sycl)
+// CHK-LINK: 1: preprocessor, {0}, cpp-output, (device-sycl)
+// CHK-LINK: 2: compiler, {1}, ir, (device-sycl)
+// CHK-LINK: 3: backend, {2}, assembler, (device-sycl)
+// CHK-LINK: 4: assembler, {3}, object, (device-sycl)
+// CHK-LINK: 5: linker, {4}, image, (device-sycl)
+// CHK-LINK: 6: clang-offload-wrapper, {5}, object, (device-sycl)
+// CHK-LINK: 7: offload, "device-sycl (spir64-unknown-linux-sycldevice)" {6}, object
+
+/// ###########################################################################
+
 /// Check -fsycl-add-targets=<triple> behaviors unbundle
 // RUN:   touch %t.o
 // RUN:   %clang -### -ccc-print-phases -target x86_64-unknown-linux-gnu -fsycl -o %t.out -fsycl-add-targets=spir64-unknown-linux-sycldevice:dummy.spv %t.o 2>&1 \
