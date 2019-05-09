@@ -39412,7 +39412,8 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
   GetShuffle(RHS, C, D, RMask);
 
   // At least one of the operands should be a vector shuffle.
-  if (LMask.empty() && RMask.empty())
+  unsigned NumShuffles = (LMask.empty() ? 0 : 1) + (RMask.empty() ? 0 : 1);
+  if (NumShuffles == 0)
     return false;
 
   if (LMask.empty()) {
@@ -39474,7 +39475,7 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
   LHS = A.getNode() ? A : B; // If A is 'UNDEF', use B for it.
   RHS = B.getNode() ? B : A; // If B is 'UNDEF', use A for it.
 
-  if (!shouldUseHorizontalOp(LHS == RHS, DAG, Subtarget))
+  if (!shouldUseHorizontalOp(LHS == RHS && NumShuffles < 2, DAG, Subtarget))
     return false;
 
   LHS = DAG.getBitcast(VT, LHS);
