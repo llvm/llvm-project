@@ -542,6 +542,8 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   memcpy(DataCopy, Data, Size);
   if (EF->__msan_unpoison)
     EF->__msan_unpoison(DataCopy, Size);
+  if (EF->__msan_unpoison_param)
+    EF->__msan_unpoison_param(2);
   if (CurrentUnitData && CurrentUnitData != Data)
     memcpy(CurrentUnitData, Data, Size);
   CurrentUnitSize = Size;
@@ -702,7 +704,7 @@ void Fuzzer::MutateAndTestOne() {
       break;  // We will mutate this input more in the next rounds.
     }
     if (Options.ReduceDepth && !FoundUniqFeatures)
-        break;
+      break;
   }
 }
 
