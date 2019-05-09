@@ -12,7 +12,7 @@ stmxcsr (%rsp)
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.03
 # CHECK-NEXT: IPC:               0.02
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 18.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -24,7 +24,7 @@ stmxcsr (%rsp)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      100   0.50    *      *      U     int3
-# CHECK-NEXT:  2      1     1.00    *      *      U     stmxcsr	(%rsp)
+# CHECK-NEXT:  2      1     18.00   *      *      U     stmxcsr	(%rsp)
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789          0123456789          0123456789

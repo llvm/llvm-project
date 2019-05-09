@@ -2541,48 +2541,42 @@ computeHash(llvm::MutableArrayRef<uint8_t> HashBuf,
   HashFn(HashBuf.data(), Hashes);
 }
 
-static std::vector<uint8_t> computeBuildId(llvm::ArrayRef<uint8_t> Buf) {
-  std::vector<uint8_t> BuildId;
+template <class ELFT> void Writer<ELFT>::writeBuildId() {
+  if (!In.BuildId || !In.BuildId->getParent())
+    return;
+
+  if (Config->BuildId == BuildIdKind::Hexstring) {
+    In.BuildId->writeBuildId(Config->BuildIdVector);
+    return;
+  }
+
+  // Compute a hash of all sections of the output file.
+  std::vector<uint8_t> BuildId(In.BuildId->HashSize);
+  llvm::ArrayRef<uint8_t> Buf{Out::BufferStart, size_t(FileSize)};
+
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
-    BuildId.resize(8);
     computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
       write64le(Dest, xxHash64(Arr));
     });
     break;
   case BuildIdKind::Md5:
-    BuildId.resize(16);
-    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, MD5::hash(Arr).data(), 16);
+    computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, MD5::hash(Arr).data(), In.BuildId->HashSize);
     });
     break;
   case BuildIdKind::Sha1:
-    BuildId.resize(20);
-    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, SHA1::hash(Arr).data(), 20);
+    computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, SHA1::hash(Arr).data(), In.BuildId->HashSize);
     });
     break;
   case BuildIdKind::Uuid:
-    BuildId.resize(16);
-    if (auto EC = llvm::getRandomBytes(BuildId.data(), 16))
+    if (auto EC = llvm::getRandomBytes(BuildId.data(), In.BuildId->HashSize))
       error("entropy source failure: " + EC.message());
-    break;
-  case BuildIdKind::Hexstring:
-    BuildId = Config->BuildIdVector;
     break;
   default:
     llvm_unreachable("unknown BuildIdKind");
   }
-  return BuildId;
-}
-
-template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!In.BuildId || !In.BuildId->getParent())
-    return;
-
-  // Compute a hash of all sections of the output file.
-  std::vector<uint8_t> BuildId =
-      computeBuildId({Out::BufferStart, size_t(FileSize)});
   In.BuildId->writeBuildId(BuildId);
 }
 

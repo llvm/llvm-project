@@ -1315,6 +1315,19 @@ public:
   llvm::Value *
   createOpenCLIntToSamplerConversion(const Expr *E, CodeGenFunction &CGF);
 
+  /// OpenCL v1.2 s5.6.4.6 allows the compiler to store kernel argument
+  /// information in the program executable. The argument information stored
+  /// includes the argument name, its type, the address and access qualifiers
+  /// used. This helper can be used to generate metadata for source code kernel
+  /// function as well as generated implicitly kernels. If a kernel is generated
+  /// implicitly null value has to be passed to the last two parameters,
+  /// otherwise all parameters must have valid non-null values.
+  /// \param FN is a pointer to IR function being generated.
+  /// \param FD is a pointer to function declaration if any.
+  /// \param CGF is a pointer to CodeGenFunction that generates this function.
+  void GenOpenCLArgMetadata(llvm::Function *Fn, const FunctionDecl *FD=nullptr,  
+                                 CodeGenFunction *CGF=nullptr);
+
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.
   /// \param QT is the clang QualType of the null pointer.

@@ -83,7 +83,8 @@ MODULE_PASS("strip-dead-prototypes", StripDeadPrototypesPass())
 MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass(nullptr, nullptr))
 MODULE_PASS("verify", VerifierPass())
-MODULE_PASS("asan-module", ModuleAddressSanitizerPass(false, false, true, false))
+MODULE_PASS("asan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/false, false, true, false))
+MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, false, true, false))
 #undef MODULE_PASS
 
 #ifndef CGSCC_ANALYSIS
@@ -235,7 +236,9 @@ FUNCTION_PASS("view-cfg", CFGViewerPass())
 FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("asan", AddressSanitizerPass(false, false, false))
+FUNCTION_PASS("kasan", AddressSanitizerPass(true, false, false))
 FUNCTION_PASS("msan", MemorySanitizerPass({}))
+FUNCTION_PASS("kmsan", MemorySanitizerPass({0, false, /*Kernel=*/true}))
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 #undef FUNCTION_PASS
 

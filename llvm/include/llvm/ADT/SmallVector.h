@@ -41,8 +41,8 @@ protected:
   unsigned Size = 0, Capacity;
 
   SmallVectorBase() = delete;
-  SmallVectorBase(void *FirstEl, size_t Capacity)
-      : BeginX(FirstEl), Capacity(Capacity) {}
+  SmallVectorBase(void *FirstEl, size_t TotalCapacity)
+      : BeginX(FirstEl), Capacity(TotalCapacity) {}
 
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.

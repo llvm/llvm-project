@@ -566,6 +566,21 @@ void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   }
 }
 
+static void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
+                                   PrintingPolicy &Policy,
+                                   unsigned Indentation) {
+  std::string Proto = "explicit";
+  llvm::raw_string_ostream EOut(Proto);
+  if (ES.getExpr()) {
+    EOut << "(";
+    ES.getExpr()->printPretty(EOut, nullptr, Policy, Indentation);
+    EOut << ")";
+  }
+  EOut << " ";
+  EOut.flush();
+  Out << EOut.str();
+}
+
 void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   if (!D->getDescribedFunctionTemplate() &&
       !D->isFunctionTemplateSpecialization())
@@ -596,10 +611,9 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (D->isVirtualAsWritten()) Out << "virtual ";
     if (D->isModulePrivate())    Out << "__module_private__ ";
     if (D->isConstexpr() && !D->isExplicitlyDefaulted()) Out << "constexpr ";
-    if ((CDecl && CDecl->isExplicitSpecified()) ||
-        (ConversionDecl && ConversionDecl->isExplicitSpecified()) ||
-        (GuideDecl && GuideDecl->isExplicitSpecified()))
-      Out << "explicit ";
+    ExplicitSpecifier ExplicitSpec = ExplicitSpecifier::getFromDecl(D);
+    if (ExplicitSpec.isSpecified())
+      printExplicitSpecifier(ExplicitSpec, Out, Policy, Indentation);
   }
 
   PrintingPolicy SubPolicy(Policy);
