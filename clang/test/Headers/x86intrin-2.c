@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual %s -verify
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -flax-vector-conversions=none -Wcast-qual %s -verify
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual -flax-vector-conversions=all %s -verify
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual -flax-vector-conversions=none %s -verify
 // RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual -x c++ %s -verify
 // expected-no-diagnostics
 

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only %s -verify -Wvector-conversion
+// RUN: %clang_cc1 -fsyntax-only %s -verify=expected,no-lax -Wvector-conversion -flax-vector-conversions=none
+// RUN: %clang_cc1 -fsyntax-only %s -verify=expected,lax -Wvector-conversion -flax-vector-conversions=all
 
 typedef long long t1 __attribute__ ((vector_size (8)));
 typedef char t2 __attribute__ ((vector_size (16)));
@@ -41,7 +42,9 @@ type 't1' (vector of 1 'long long' value) and integer type 'short' of different 
 void f2(t2 X); // expected-note{{passing argument to parameter 'X' here}}
 
 void f3(t3 Y) {
-  f2(Y);  // expected-warning {{incompatible vector types passing 't3' (vector of 4 'float' values) to parameter of type 't2' (vector of 16 'char' values)}}
+  f2(Y);
+  // lax-warning@-1 {{incompatible vector types passing 't3' (vector of 4 'float' values) to parameter of type 't2' (vector of 16 'char' values)}}
+  // no-lax-error@-2 {{passing 't3' (vector of 4 'float' values) to parameter of incompatible type 't2' (vector of 16 'char' values)}}
 }
 
 typedef float float2 __attribute__ ((vector_size (8)));
@@ -58,13 +61,15 @@ void f4() {
   float64x2_t v = {0.0, 1.0};
   f2 += d; // expected-error {{cannot convert between scalar type 'double' and vector type 'float2' (vector of 2 'float' values) as implicit conversion would cause truncation}}
   d += f2; // expected-error {{assigning to 'double' from incompatible type 'float2' (vector of 2 'float' values)}}
-  a = 3.0 + vget_low_f64(v);
-  b = vget_low_f64(v) + 3.0;
-  c = vget_low_f64(v);
-  c -= vget_low_f64(v);
+  a = 3.0 + vget_low_f64(v); // no-lax-error {{assigning to 'double' from incompatible type 'float64x1_t' (vector of 1 'double' value)}}
+  b = vget_low_f64(v) + 3.0; // no-lax-error {{assigning to 'double' from incompatible type 'float64x1_t' (vector of 1 'double' value)}}
+  c = vget_low_f64(v); // no-lax-error {{assigning to 'double' from incompatible type 'float64x1_t' (vector of 1 'double' value)}}
+  c -= vget_low_f64(v); // no-lax-error {{assigning to 'double' from incompatible type 'float64x1_t' (vector of 1 'double' value)}}
   // LAX conversions between scalar and vector types require same size and one element sized vectors.
   d = f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
-  d = d + f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
+  d = d + f2;
+  // lax-error@-1 {{assigning to 'double' from incompatible type 'float2' (vector of 2 'float' values)}}
+  // no-lax-error@-2 {{cannot convert between scalar type 'double' and vector type 'float2' (vector of 2 'float' values) as implicit conversion would cause truncation}}
 }
 
 // rdar://15931426
@@ -78,6 +83,8 @@ void f5() {
 }
 
 void f6(vSInt32 a0) {
-  vUInt32 counter = (float16){0.0f, 0.0f, 0.0f, 0.0f}; // expected-warning {{incompatible vector types initializing 'vUInt32' (vector of 4 'unsigned int' values) with an expression of type 'float16' (vector of 4 'float' values)}}
+  vUInt32 counter = (float16){0.0f, 0.0f, 0.0f, 0.0f};
+  // lax-warning@-1 {{incompatible vector types initializing 'vUInt32' (vector of 4 'unsigned int' values) with an expression of type 'float16' (vector of 4 'float' values)}}
+  // no-lax-error@-2 {{initializing 'vUInt32' (vector of 4 'unsigned int' values) with an expression of incompatible type 'float16' (vector of 4 'float' values)}}
   counter -= a0;
 }
