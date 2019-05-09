@@ -210,7 +210,7 @@ static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
     if (!var_name || var_name == ConstString(".block_descriptor"))
       continue;
 
-    if (!expr.empty() && !ExprBodyContainsVar(expr, var_name.GetStringRef()))
+    if (!expr.empty() && !ExprBodyContainsVar(var_name.GetStringRef(), expr))
       continue;
 
     if ((var_name == ConstString("self") || var_name == ConstString("_cmd")) &&
