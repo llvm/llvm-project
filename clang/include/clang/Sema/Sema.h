@@ -1848,7 +1848,8 @@ public:
     NC_NestedNameSpecifier,
     NC_TypeTemplate,
     NC_VarTemplate,
-    NC_FunctionTemplate
+    NC_FunctionTemplate,
+    NC_UndeclaredTemplate,
   };
 
   class NameClassification {
@@ -1896,6 +1897,12 @@ public:
       return Result;
     }
 
+    static NameClassification UndeclaredTemplate(TemplateName Name) {
+      NameClassification Result(NC_UndeclaredTemplate);
+      Result.Template = Name;
+      return Result;
+    }
+
     NameClassificationKind getKind() const { return Kind; }
 
     ParsedType getType() const {
@@ -1910,7 +1917,7 @@ public:
 
     TemplateName getTemplateName() const {
       assert(Kind == NC_TypeTemplate || Kind == NC_FunctionTemplate ||
-             Kind == NC_VarTemplate);
+             Kind == NC_VarTemplate || Kind == NC_UndeclaredTemplate);
       return Template;
     }
 
@@ -1922,6 +1929,8 @@ public:
         return TNK_Function_template;
       case NC_VarTemplate:
         return TNK_Var_template;
+      case NC_UndeclaredTemplate:
+        return TNK_Undeclared_template;
       default:
         llvm_unreachable("unsupported name classification.");
       }
@@ -2765,7 +2774,8 @@ public:
     CCEK_Enumerator,  ///< Enumerator value with fixed underlying type.
     CCEK_TemplateArg, ///< Value of a non-type template parameter.
     CCEK_NewExpr,     ///< Constant expression in a noptr-new-declarator.
-    CCEK_ConstexprIf  ///< Condition in a constexpr if statement.
+    CCEK_ConstexprIf, ///< Condition in a constexpr if statement.
+    CCEK_ExplicitBool ///< Condition in an explicit(bool) specifier.
   };
   ExprResult CheckConvertedConstantExpression(Expr *From, QualType T,
                                               llvm::APSInt &Value, CCEKind CCE);
@@ -2887,7 +2897,8 @@ public:
                             OverloadCandidateSet &CandidateSet,
                             bool SuppressUserConversions = false,
                             bool PartialOverloading = false,
-                            bool AllowExplicit = false,
+                            bool AllowExplicit = true,
+                            bool AllowExplicitConversion = false,
                             ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
                             ConversionSequenceList EarlyConversions = None);
   void AddFunctionCandidates(const UnresolvedSetImpl &Functions,
@@ -2926,7 +2937,7 @@ public:
       FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
       TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
       OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
-      bool PartialOverloading = false,
+      bool PartialOverloading = false, bool AllowExplicit = true,
       ADLCallKind IsADLCandidate = ADLCallKind::NotADL);
   bool CheckNonDependentConversions(FunctionTemplateDecl *FunctionTemplate,
                                     ArrayRef<QualType> ParamTypes,
@@ -2938,20 +2949,16 @@ public:
                                     QualType ObjectType = QualType(),
                                     Expr::Classification
                                         ObjectClassification = {});
-  void AddConversionCandidate(CXXConversionDecl *Conversion,
-                              DeclAccessPair FoundDecl,
-                              CXXRecordDecl *ActingContext,
-                              Expr *From, QualType ToType,
-                              OverloadCandidateSet& CandidateSet,
-                              bool AllowObjCConversionOnExplicit,
-                              bool AllowResultConversion = true);
-  void AddTemplateConversionCandidate(FunctionTemplateDecl *FunctionTemplate,
-                                      DeclAccessPair FoundDecl,
-                                      CXXRecordDecl *ActingContext,
-                                      Expr *From, QualType ToType,
-                                      OverloadCandidateSet &CandidateSet,
-                                      bool AllowObjCConversionOnExplicit,
-                                      bool AllowResultConversion = true);
+  void AddConversionCandidate(
+      CXXConversionDecl *Conversion, DeclAccessPair FoundDecl,
+      CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
+      OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
+      bool AllowExplicit, bool AllowResultConversion = true);
+  void AddTemplateConversionCandidate(
+      FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
+      CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
+      OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
+      bool AllowExplicit, bool AllowResultConversion = true);
   void AddSurrogateCandidate(CXXConversionDecl *Conversion,
                              DeclAccessPair FoundDecl,
                              CXXRecordDecl *ActingContext,
@@ -6316,7 +6323,8 @@ public:
                                      bool AllowDependent = true);
   bool hasAnyAcceptableTemplateNames(LookupResult &R,
                                      bool AllowFunctionTemplates = true,
-                                     bool AllowDependent = true);
+                                     bool AllowDependent = true,
+                                     bool AllowNonTemplateFunctions = false);
   /// Try to interpret the lookup result D as a template-name.
   ///
   /// \param D A declaration found by name lookup.
@@ -6328,10 +6336,20 @@ public:
                                    bool AllowFunctionTemplates = true,
                                    bool AllowDependent = true);
 
+  enum class AssumedTemplateKind {
+    /// This is not assumed to be a template name.
+    None,
+    /// This is assumed to be a template name because lookup found nothing.
+    FoundNothing,
+    /// This is assumed to be a template name because lookup found one or more
+    /// functions (but no function templates).
+    FoundFunctions,
+  };
   bool LookupTemplateName(LookupResult &R, Scope *S, CXXScopeSpec &SS,
                           QualType ObjectType, bool EnteringContext,
                           bool &MemberOfUnknownSpecialization,
-                          SourceLocation TemplateKWLoc = SourceLocation());
+                          SourceLocation TemplateKWLoc = SourceLocation(),
+                          AssumedTemplateKind *ATK = nullptr);
 
   TemplateNameKind isTemplateName(Scope *S,
                                   CXXScopeSpec &SS,
@@ -6341,6 +6359,20 @@ public:
                                   bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization);
+
+  /// Try to resolve an undeclared template name as a type template.
+  ///
+  /// Sets II to the identifier corresponding to the template name, and updates
+  /// Name to a corresponding (typo-corrected) type template name and TNK to
+  /// the corresponding kind, if possible.
+  void ActOnUndeclaredTypeTemplateName(Scope *S, TemplateTy &Name,
+                                       TemplateNameKind &TNK,
+                                       SourceLocation NameLoc,
+                                       IdentifierInfo *&II);
+
+  bool resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
+                                        SourceLocation NameLoc,
+                                        bool Diagnose = true);
 
   /// Determine whether a particular identifier might be the name in a C++1z
   /// deduction-guide declaration.
@@ -6451,14 +6483,11 @@ public:
                               TemplateArgumentListInfo &TemplateArgs);
 
   TypeResult
-  ActOnTemplateIdType(CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+  ActOnTemplateIdType(Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                       TemplateTy Template, IdentifierInfo *TemplateII,
-                      SourceLocation TemplateIILoc,
-                      SourceLocation LAngleLoc,
-                      ASTTemplateArgsPtr TemplateArgs,
-                      SourceLocation RAngleLoc,
-                      bool IsCtorOrDtorName = false,
-                      bool IsClassName = false);
+                      SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
+                      ASTTemplateArgsPtr TemplateArgs, SourceLocation RAngleLoc,
+                      bool IsCtorOrDtorName = false, bool IsClassName = false);
 
   /// Parsed an elaborated-type-specifier that refers to a template-id,
   /// such as \c class T::template apply<U>.
@@ -10192,6 +10221,14 @@ public:
   /// \return true iff there were any errors
   ExprResult CheckBooleanCondition(SourceLocation Loc, Expr *E,
                                    bool IsConstexpr = false);
+
+  /// ActOnExplicitBoolSpecifier - Build an ExplicitSpecifier from an expression
+  /// found in an explicit(bool) specifier.
+  ExplicitSpecifier ActOnExplicitBoolSpecifier(Expr *E);
+
+  /// tryResolveExplicitSpecifier - Attempt to resolve the explict specifier.
+  /// Returns true if the explicit specifier is now resolved.
+  bool tryResolveExplicitSpecifier(ExplicitSpecifier &ExplicitSpec);
 
   /// DiagnoseAssignmentAsCondition - Given that an expression is
   /// being used as a boolean condition, warn if it's an assignment.

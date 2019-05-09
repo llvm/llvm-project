@@ -487,6 +487,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
                                                         EnteringContext,
                                                         Template,
                                               MemberOfUnknownSpecialization)) {
+        // If lookup didn't find anything, we treat the name as a template-name
+        // anyway. C++20 requires this, and in prior language modes it improves
+        // error recovery. But before we commit to this, check that we actually
+        // have something that looks like a template-argument-list next.
+        if (!IsTypename && TNK == TNK_Undeclared_template &&
+            isTemplateArgumentList(1) == TPResult::False)
+          break;
+
         // We have found a template name, so annotate this token
         // with a template-id annotation. We do not permit the
         // template-id to be translated into a type annotation,
@@ -501,7 +509,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
       }
 
       if (MemberOfUnknownSpecialization && (ObjectType || SS.isSet()) &&
-          (IsTypename || IsTemplateArgumentList(1))) {
+          (IsTypename || isTemplateArgumentList(1) == TPResult::True)) {
         // We have something like t::getAs<T>, where getAs is a
         // member of an unknown specialization. However, this will only
         // parse correctly as a template, so suggest the keyword 'template'
@@ -2138,9 +2146,15 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
                                    TemplateKWLoc.isValid(), Id,
                                    ObjectType, EnteringContext, Template,
                                    MemberOfUnknownSpecialization);
+      // If lookup found nothing but we're assuming that this is a template
+      // name, double-check that makes sense syntactically before committing
+      // to it.
+      if (TNK == TNK_Undeclared_template &&
+          isTemplateArgumentList(0) == TPResult::False)
+        return false;
 
       if (TNK == TNK_Non_template && MemberOfUnknownSpecialization &&
-          ObjectType && IsTemplateArgumentList()) {
+          ObjectType && isTemplateArgumentList(0) == TPResult::True) {
         // We have something like t->getAs<T>(), where getAs is a
         // member of an unknown specialization. However, this will only
         // parse correctly as a template, so suggest the keyword 'template'
@@ -2244,11 +2258,9 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
   ASTTemplateArgsPtr TemplateArgsPtr(TemplateArgs);
 
   // Constructor and destructor names.
-  TypeResult Type
-    = Actions.ActOnTemplateIdType(SS, TemplateKWLoc,
-                                  Template, Name, NameLoc,
-                                  LAngleLoc, TemplateArgsPtr, RAngleLoc,
-                                  /*IsCtorOrDtorName=*/true);
+  TypeResult Type = Actions.ActOnTemplateIdType(
+      getCurScope(), SS, TemplateKWLoc, Template, Name, NameLoc, LAngleLoc,
+      TemplateArgsPtr, RAngleLoc, /*IsCtorOrDtorName=*/true);
   if (Type.isInvalid())
     return true;
 
