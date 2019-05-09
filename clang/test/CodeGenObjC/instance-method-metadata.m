@@ -27,7 +27,7 @@
 @synthesize prop;
 @end
 
-// CHECK: l_OBJC_$_INSTANCE_METHODS_Bar:
+// CHECK: _OBJC_$_INSTANCE_METHODS_Bar:
 // CHECK-NEXT:        .long   24
 // CHECK-NEXT:        .long   2
 // CHECK-NEXT:        .quad   L_OBJC_METH_VAR_NAME_
