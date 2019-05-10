@@ -6,9 +6,7 @@ declare void @use(float)
 define float @fneg_fneg(float %a) {
 ;
 ; CHECK-LABEL: @fneg_fneg(
-; CHECK-NEXT:    [[F:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fneg float [[F]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %f = fneg float %a
   %r = fneg float %f

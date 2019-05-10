@@ -1821,6 +1821,15 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
+Instruction *InstCombiner::visitFNeg(UnaryOperator &I) {
+  if (Value *V = SimplifyFNegInst(I.getOperand(0), I.getFastMathFlags(),
+                                  SQ.getWithInstruction(&I)))
+    return replaceInstUsesWith(I, V);
+
+  return nullptr;
+}
+
+
 Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (Value *V = SimplifyFSubInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
