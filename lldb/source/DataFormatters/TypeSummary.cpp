@@ -177,7 +177,7 @@ bool ScriptSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
   }
 
   ScriptInterpreter *script_interpreter =
-      target_sp->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+      target_sp->GetDebugger().GetScriptInterpreter();
 
   if (!script_interpreter) {
     retval.assign("error: no ScriptInterpreter");

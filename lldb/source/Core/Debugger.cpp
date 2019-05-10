@@ -841,7 +841,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(llvm::make_unique<CommandInterpreter>(
-          *this, eScriptLanguageDefault, false)),
+          *this, eScriptLanguageDefault, false)), m_script_interpreter_sp(),
       m_input_reader_stack(), m_instance_name(), m_loaded_plugins(),
       m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
@@ -982,12 +982,10 @@ void Debugger::SetOutputFileHandle(FILE *fh, bool tranfer_ownership) {
   if (!out_file.IsValid())
     out_file.SetStream(stdout, false);
 
-  // do not create the ScriptInterpreter just for setting the output file
-  // handle as the constructor will know how to do the right thing on its own
-  const bool can_create = false;
-  ScriptInterpreter *script_interpreter =
-      GetCommandInterpreter().GetScriptInterpreter(can_create);
-  if (script_interpreter)
+  // Do not create the ScriptInterpreter just for setting the output file
+  // handle as the constructor will know how to do the right thing on its own.
+  if (ScriptInterpreter *script_interpreter =
+          GetScriptInterpreter(/*can_create=*/false))
     script_interpreter->ResetOutputFileHandle(fh);
 }
 
@@ -1399,6 +1397,19 @@ bool Debugger::EnableLog(llvm::StringRef channel,
 
   return Log::EnableLogChannel(log_stream_sp, log_options, channel, categories,
                                error_stream);
+}
+
+ScriptInterpreter *Debugger::GetScriptInterpreter(bool can_create) {
+  std::lock_guard<std::recursive_mutex> locker(m_script_interpreter_mutex);
+
+  if (!m_script_interpreter_sp) {
+    if (!can_create)
+      return nullptr;
+    m_script_interpreter_sp = PluginManager::GetScriptInterpreterForLanguage(
+        GetScriptLanguage(), *this);
+  }
+
+  return m_script_interpreter_sp.get();
 }
 
 SourceManager &Debugger::GetSourceManager() {

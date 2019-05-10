@@ -10,7 +10,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 
@@ -21,21 +20,21 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ScriptInterpreterNone::ScriptInterpreterNone(CommandInterpreter &interpreter)
-    : ScriptInterpreter(interpreter, eScriptLanguageNone) {}
+ScriptInterpreterNone::ScriptInterpreterNone(Debugger &debugger)
+    : ScriptInterpreter(debugger, eScriptLanguageNone) {}
 
 ScriptInterpreterNone::~ScriptInterpreterNone() {}
 
 bool ScriptInterpreterNone::ExecuteOneLine(llvm::StringRef command,
                                            CommandReturnObject *,
                                            const ExecuteScriptOptions &) {
-  m_interpreter.GetDebugger().GetErrorFile()->PutCString(
+  m_debugger.GetErrorFile()->PutCString(
       "error: there is no embedded script interpreter in this mode.\n");
   return false;
 }
 
 void ScriptInterpreterNone::ExecuteInterpreterLoop() {
-  m_interpreter.GetDebugger().GetErrorFile()->PutCString(
+  m_debugger.GetErrorFile()->PutCString(
       "error: there is no embedded script interpreter in this mode.\n");
 }
 
@@ -52,8 +51,8 @@ void ScriptInterpreterNone::Initialize() {
 void ScriptInterpreterNone::Terminate() {}
 
 lldb::ScriptInterpreterSP
-ScriptInterpreterNone::CreateInstance(CommandInterpreter &interpreter) {
-  return std::make_shared<ScriptInterpreterNone>(interpreter);
+ScriptInterpreterNone::CreateInstance(Debugger &debugger) {
+  return std::make_shared<ScriptInterpreterNone>(debugger);
 }
 
 lldb_private::ConstString ScriptInterpreterNone::GetPluginNameStatic() {

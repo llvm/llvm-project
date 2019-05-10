@@ -48,7 +48,6 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded() {
   if (m_breakpoint) {
     TargetSP target_sp = m_breakpoint->GetTargetSP();
     ScriptInterpreter *script_interp = target_sp->GetDebugger()
-                                                .GetCommandInterpreter()
                                                 .GetScriptInterpreter();
     if (!script_interp)
       return;
@@ -107,7 +106,6 @@ BreakpointResolverScripted::CreateFromStructuredData(
   }
   ScriptInterpreter *script_interp = bkpt->GetTarget()
                                          .GetDebugger()
-                                         .GetCommandInterpreter()
                                          .GetScriptInterpreter();
   return new BreakpointResolverScripted(bkpt, class_name, depth, args_data_impl,
                                       *script_interp);
@@ -124,8 +122,7 @@ BreakpointResolverScripted::SerializeToStructuredData() {
 }
 
 ScriptInterpreter *BreakpointResolverScripted::GetScriptInterpreter() {
-    return m_breakpoint->GetTarget().GetDebugger().GetCommandInterpreter()
-        .GetScriptInterpreter();
+  return m_breakpoint->GetTarget().GetDebugger().GetScriptInterpreter();
 }
 
 Searcher::CallbackReturn
