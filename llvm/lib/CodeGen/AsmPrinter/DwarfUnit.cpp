@@ -639,7 +639,8 @@ DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
   else if (auto *STy = dyn_cast<DISubroutineType>(Ty))
     constructTypeDIE(TyDIE, STy);
   else if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
-    if (DD->generateTypeUnits() && !Ty->isForwardDecl()) {
+    if (DD->generateTypeUnits() && !Ty->isForwardDecl() &&
+        (Ty->getRawName() || CTy->getRawIdentifier())) {
       // Skip updating the accelerator tables since this is not the full type.
       if (MDString *TypeId = CTy->getRawIdentifier())
         DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);

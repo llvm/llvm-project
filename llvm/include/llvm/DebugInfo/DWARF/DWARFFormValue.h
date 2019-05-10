@@ -104,6 +104,11 @@ public:
   /// getAsFoo functions below return the extracted value as Foo if only
   /// DWARFFormValue has form class is suitable for representing Foo.
   Optional<uint64_t> getAsReference() const;
+  struct UnitOffset {
+    DWARFUnit *Unit;
+    uint64_t Offset;
+  };
+  Optional<UnitOffset> getAsRelativeReference() const;
   Optional<uint64_t> getAsUnsignedConstant() const;
   Optional<int64_t> getAsSignedConstant() const;
   Optional<const char *> getAsCString() const;
