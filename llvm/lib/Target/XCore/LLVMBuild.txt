@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -38,7 +38,6 @@ required_libraries =
  Support
  Target
  TransformUtils
- XCoreAsmPrinter
  XCoreDesc
  XCoreInfo
 add_to_library_groups = XCore
