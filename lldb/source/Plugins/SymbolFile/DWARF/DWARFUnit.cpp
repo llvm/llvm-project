@@ -58,7 +58,7 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   const DWARFDataExtractor &data = GetData();
   DWARFFormValue::FixedFormSizes fixed_form_sizes =
       DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
-  if (offset < GetNextCompileUnitOffset() &&
+  if (offset < GetNextUnitOffset() &&
       m_first_die.FastExtract(data, this, fixed_form_sizes, &offset)) {
     AddUnitDIE(m_first_die);
     return;
@@ -151,7 +151,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
   lldb::offset_t offset = GetFirstDIEOffset();
-  lldb::offset_t next_cu_offset = GetNextCompileUnitOffset();
+  lldb::offset_t next_cu_offset = GetNextUnitOffset();
 
   DWARFDebugInfoEntry die;
 
@@ -366,7 +366,7 @@ size_t DWARFUnit::AppendDIEsWithTag(const dw_tag_t tag,
   return dies.size() - old_size;
 }
 
-dw_offset_t DWARFUnit::GetNextCompileUnitOffset() const {
+dw_offset_t DWARFUnit::GetNextUnitOffset() const {
   return m_offset + GetLengthByteSize() + GetLength();
 }
 

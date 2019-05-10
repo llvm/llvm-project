@@ -301,13 +301,13 @@ size_t SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
     if (dwarf_cu == 0)
       return 0;
     GetTypes(dwarf_cu->DIE(), dwarf_cu->GetOffset(),
-             dwarf_cu->GetNextCompileUnitOffset(), type_mask, type_set);
+             dwarf_cu->GetNextUnitOffset(), type_mask, type_set);
   } else {
     DWARFDebugInfo *info = DebugInfo();
     if (info) {
-      const size_t num_cus = info->GetNumCompileUnits();
+      const size_t num_cus = info->GetNumUnits();
       for (size_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
-        dwarf_cu = info->GetCompileUnitAtIndex(cu_idx);
+        dwarf_cu = info->GetUnitAtIndex(cu_idx);
         if (dwarf_cu) {
           GetTypes(dwarf_cu->DIE(), 0, UINT32_MAX, type_mask, type_set);
         }
@@ -690,7 +690,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   DWARFDebugInfo *info = DebugInfo();
   if (info) {
     // The compile unit ID is the index of the DWARF unit.
-    DWARFUnit *dwarf_cu = info->GetCompileUnitAtIndex(comp_unit->GetID());
+    DWARFUnit *dwarf_cu = info->GetUnitAtIndex(comp_unit->GetID());
     if (dwarf_cu && dwarf_cu->GetUserData() == NULL)
       dwarf_cu->SetUserData(comp_unit);
     return dwarf_cu;
@@ -794,7 +794,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
 uint32_t SymbolFileDWARF::GetNumCompileUnits() {
   DWARFDebugInfo *info = DebugInfo();
   if (info)
-    return info->GetNumCompileUnits();
+    return info->GetNumUnits();
   return 0;
 }
 
@@ -803,7 +803,7 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
   CompUnitSP cu_sp;
   DWARFDebugInfo *info = DebugInfo();
   if (info) {
-    DWARFUnit *dwarf_cu = info->GetCompileUnitAtIndex(cu_idx);
+    DWARFUnit *dwarf_cu = info->GetUnitAtIndex(cu_idx);
     if (dwarf_cu)
       cu_sp = ParseCompileUnit(dwarf_cu, cu_idx);
   }
@@ -1588,7 +1588,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
   const uint32_t num_compile_units = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-    DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+    DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
 
     const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
     if (die && !die.HasChildren()) {
@@ -1752,8 +1752,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
         }
       } else {
         uint32_t cu_idx = DW_INVALID_INDEX;
-        DWARFUnit *dwarf_cu =
-            debug_info->GetCompileUnitAtOffset(cu_offset, &cu_idx);
+        DWARFUnit *dwarf_cu = debug_info->GetUnitAtOffset(cu_offset, &cu_idx);
         if (dwarf_cu) {
           sc.comp_unit = GetCompUnitForDWARFCompUnit(dwarf_cu, cu_idx);
           if (sc.comp_unit) {
@@ -1853,8 +1852,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
       uint32_t cu_idx;
       DWARFUnit *dwarf_cu = NULL;
 
-      for (cu_idx = 0;
-           (dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx)) != NULL;
+      for (cu_idx = 0; (dwarf_cu = debug_info->GetUnitAtIndex(cu_idx)) != NULL;
            ++cu_idx) {
         CompileUnit *dc_cu = GetCompUnitForDWARFCompUnit(dwarf_cu, cu_idx);
         const bool full_match = (bool)file_spec.GetDirectory();
@@ -2343,10 +2341,10 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
   DWARFDebugInfo *info = DebugInfo();
   uint32_t num_comp_units = 0;
   if (info)
-    num_comp_units = info->GetNumCompileUnits();
+    num_comp_units = info->GetNumUnits();
 
   for (uint32_t i = 0; i < num_comp_units; i++) {
-    DWARFUnit *cu = info->GetCompileUnitAtIndex(i);
+    DWARFUnit *cu = info->GetUnitAtIndex(i);
     if (cu == nullptr)
       continue;
 
@@ -2685,7 +2683,7 @@ bool SymbolFileDWARF::Supports_DW_AT_APPLE_objc_complete_type(
       DWARFDebugInfo *debug_info = DebugInfo();
       const uint32_t num_compile_units = GetNumCompileUnits();
       for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+        DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
         if (dwarf_cu != cu &&
             dwarf_cu->Supports_DW_AT_APPLE_objc_complete_type()) {
           m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
@@ -3110,7 +3108,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         return num_variables;
       }
     } else if (sc.comp_unit) {
-      DWARFUnit *dwarf_cu = info->GetCompileUnitAtIndex(sc.comp_unit->GetID());
+      DWARFUnit *dwarf_cu = info->GetUnitAtIndex(sc.comp_unit->GetID());
 
       if (dwarf_cu == NULL)
         return 0;
