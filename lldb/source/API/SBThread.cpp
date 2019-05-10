@@ -84,7 +84,7 @@ const lldb::SBThread &SBThread::operator=(const SBThread &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 //----------------------------------------------------------------------
@@ -1422,9 +1422,8 @@ lldb_private::Thread *SBThread::operator->() {
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
-    return thread_sp.get();
-  else
-    return NULL;
+    return LLDB_RECORD_RESULT(thread_sp.get());
+  return nullptr;
 }
 
 lldb_private::Thread *SBThread::get() {
@@ -1432,9 +1431,8 @@ lldb_private::Thread *SBThread::get() {
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
-    return thread_sp.get();
-  else
-    return NULL;
+    return LLDB_RECORD_RESULT(thread_sp.get());
+  return nullptr;
 }
 
 namespace lldb_private {

@@ -60,7 +60,7 @@ const SBAddress &SBAddress::operator=(const SBAddress &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {

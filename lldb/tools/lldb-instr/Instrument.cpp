@@ -245,7 +245,9 @@ public:
 
     // If the function returns a class or struct, we need to wrap its return
     // statement(s).
-    if (!ShouldInsertDummy && ReturnType->isStructureOrClassType()) {
+    bool ShouldRecordResult = ReturnType->isStructureOrClassType() ||
+                              ReturnType->getPointeeCXXRecordDecl();
+    if (!ShouldInsertDummy && ShouldRecordResult) {
       SBReturnVisitor Visitor(MyRewriter);
       Visitor.TraverseDecl(Decl);
     }

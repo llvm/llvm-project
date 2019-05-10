@@ -41,7 +41,7 @@ const SBLineEntry &SBLineEntry::operator=(const SBLineEntry &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 void SBLineEntry::SetLineEntry(const lldb_private::LineEntry &lldb_object_ref) {
