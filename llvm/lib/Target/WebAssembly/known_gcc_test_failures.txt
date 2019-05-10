@@ -109,7 +109,6 @@ thread_local5g.C
 spec5.C
 addr1.C
 ef_test.C
-friend18.C
 member2.C
 new39.C
 new40.C
