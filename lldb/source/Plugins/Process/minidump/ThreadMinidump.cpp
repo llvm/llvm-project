@@ -33,9 +33,9 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace minidump;
 
-ThreadMinidump::ThreadMinidump(Process &process, const MinidumpThread &td,
+ThreadMinidump::ThreadMinidump(Process &process, const minidump::Thread &td,
                                llvm::ArrayRef<uint8_t> gpregset_data)
-    : Thread(process, td.thread_id), m_thread_reg_ctx_sp(),
+    : Thread(process, td.ThreadId), m_thread_reg_ctx_sp(),
       m_gpregset_data(gpregset_data) {}
 
 ThreadMinidump::~ThreadMinidump() {}

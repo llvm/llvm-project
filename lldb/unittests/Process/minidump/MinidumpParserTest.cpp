@@ -91,14 +91,14 @@ Streams:
 
 TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
   SetUpData("linux-x86_64.dmp");
-  llvm::ArrayRef<MinidumpThread> thread_list;
+  llvm::ArrayRef<minidump::Thread> thread_list;
 
   thread_list = parser->GetThreads();
   ASSERT_EQ(1UL, thread_list.size());
 
-  const MinidumpThread thread = thread_list[0];
+  const minidump::Thread &thread = thread_list[0];
 
-  EXPECT_EQ(16001UL, thread.thread_id);
+  EXPECT_EQ(16001UL, thread.ThreadId);
 
   llvm::ArrayRef<uint8_t> context = parser->GetThreadContext(thread);
   EXPECT_EQ(1232UL, context.size());
@@ -108,12 +108,12 @@ TEST_F(MinidumpParserTest, GetThreadListNotPadded) {
   // Verify that we can load a thread list that doesn't have 4 bytes of padding
   // after the thread count.
   SetUpData("thread-list-not-padded.dmp");
-  llvm::ArrayRef<MinidumpThread> thread_list;
+  llvm::ArrayRef<minidump::Thread> thread_list;
 
   thread_list = parser->GetThreads();
   ASSERT_EQ(2UL, thread_list.size());
-  EXPECT_EQ(0x11223344UL, thread_list[0].thread_id);
-  EXPECT_EQ(0x55667788UL, thread_list[1].thread_id);
+  EXPECT_EQ(0x11223344UL, thread_list[0].ThreadId);
+  EXPECT_EQ(0x55667788UL, thread_list[1].ThreadId);
 }
 
 TEST_F(MinidumpParserTest, GetThreadListPadded) {
@@ -122,8 +122,8 @@ TEST_F(MinidumpParserTest, GetThreadListPadded) {
   SetUpData("thread-list-padded.dmp");
   auto thread_list = parser->GetThreads();
   ASSERT_EQ(2UL, thread_list.size());
-  EXPECT_EQ(0x11223344UL, thread_list[0].thread_id);
-  EXPECT_EQ(0x55667788UL, thread_list[1].thread_id);
+  EXPECT_EQ(0x11223344UL, thread_list[0].ThreadId);
+  EXPECT_EQ(0x55667788UL, thread_list[1].ThreadId);
 }
 
 TEST_F(MinidumpParserTest, GetMemoryListNotPadded) {
@@ -460,8 +460,8 @@ TEST_F(MinidumpParserTest, GetPidWow64) {
 
 TEST_F(MinidumpParserTest, GetThreadContext_x86_32) {
   SetUpData("linux-i386.dmp");
-  llvm::ArrayRef<MinidumpThread> thread_list = parser->GetThreads();
-  const MinidumpThread thread = thread_list[0];
+  llvm::ArrayRef<minidump::Thread> thread_list = parser->GetThreads();
+  const minidump::Thread &thread = thread_list[0];
   llvm::ArrayRef<uint8_t> registers(parser->GetThreadContext(thread));
   const MinidumpContext_x86_32 *context;
   EXPECT_TRUE(consumeObject(registers, context).Success());
@@ -491,8 +491,8 @@ TEST_F(MinidumpParserTest, GetThreadContext_x86_32) {
 
 TEST_F(MinidumpParserTest, GetThreadContext_x86_64) {
   SetUpData("linux-x86_64.dmp");
-  llvm::ArrayRef<MinidumpThread> thread_list = parser->GetThreads();
-  const MinidumpThread thread = thread_list[0];
+  llvm::ArrayRef<minidump::Thread> thread_list = parser->GetThreads();
+  const minidump::Thread &thread = thread_list[0];
   llvm::ArrayRef<uint8_t> registers(parser->GetThreadContext(thread));
   const MinidumpContext_x86_64 *context;
   EXPECT_TRUE(consumeObject(registers, context).Success());
@@ -526,8 +526,8 @@ TEST_F(MinidumpParserTest, GetThreadContext_x86_64) {
 
 TEST_F(MinidumpParserTest, GetThreadContext_x86_32_wow64) {
   SetUpData("fizzbuzz_wow64.dmp");
-  llvm::ArrayRef<MinidumpThread> thread_list = parser->GetThreads();
-  const MinidumpThread thread = thread_list[0];
+  llvm::ArrayRef<minidump::Thread> thread_list = parser->GetThreads();
+  const minidump::Thread &thread = thread_list[0];
   llvm::ArrayRef<uint8_t> registers(parser->GetThreadContextWow64(thread));
   const MinidumpContext_x86_32 *context;
   EXPECT_TRUE(consumeObject(registers, context).Success());
