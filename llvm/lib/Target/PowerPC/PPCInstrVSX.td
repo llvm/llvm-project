@@ -53,6 +53,15 @@ def PPCRegSPILLTOVSRRCAsmOperand : AsmOperandClass {
 def spilltovsrrc : RegisterOperand<SPILLTOVSRRC> {
   let ParserMatchClass = PPCRegSPILLTOVSRRCAsmOperand;
 }
+
+def SDT_PPCldvsxlh : SDTypeProfile<1, 1, [
+  SDTCisVT<0, v4f32>, SDTCisPtrTy<1>
+]>;
+
+def SDT_PPCfpextlh : SDTypeProfile<1, 1, [
+  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>
+]>;
+
 // Little-endian-specific nodes.
 def SDT_PPClxvd2x : SDTypeProfile<1, 1, [
   SDTCisVT<0, v2f64>, SDTCisPtrTy<1>
@@ -83,6 +92,10 @@ def PPCsvec2fp : SDNode<"PPCISD::SINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
 def PPCvabsd : SDNode<"PPCISD::VABSD", SDTVabsd, []>;
+
+def PPCfpextlh : SDNode<"PPCISD::FP_EXTEND_LH", SDT_PPCfpextlh, []>;
+def PPCldvsxlh : SDNode<"PPCISD::LD_VSX_LH", SDT_PPCldvsxlh,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
                     string asmstr, InstrItinClass itin, Intrinsic Int,
@@ -1059,6 +1072,8 @@ def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 0)),
           (v2f64 (XVCVUXWDP (v2i64 (XXMRGHW $C, $C))))>;
 def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 1)),
           (v2f64 (XVCVUXWDP (v2i64 (XXMRGLW $C, $C))))>;
+
+def : Pat<(v2f64 (PPCfpextlh v4f32:$C)), (XVCVSPDP (XXMRGHW $C, $C))>;
 
 // Loads.
 let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
@@ -3266,6 +3281,10 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(f32 (fpround (f64 (extloadf32 ixaddr:$src)))),
             (f32 (DFLOADf32 ixaddr:$src))>;
 
+  def : Pat<(v4f32 (PPCldvsxlh xaddr:$src)),
+            (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC)>;
+  def : Pat<(v4f32 (PPCldvsxlh ixaddr:$src)),
+            (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC)>;
 
   let AddedComplexity = 400 in {
   // The following pseudoinstructions are used to ensure the utilization

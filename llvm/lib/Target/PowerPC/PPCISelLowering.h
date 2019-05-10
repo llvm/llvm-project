@@ -404,6 +404,9 @@ namespace llvm {
       /// representation.
       QBFLT,
 
+      /// Custom extend v4f32 to v2f64.
+      FP_EXTEND_LH,
+
       /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
       /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
       /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
@@ -444,6 +447,10 @@ namespace llvm {
       /// Maps directly to an lxvd2x instruction that will be followed by
       /// an xxswapd.
       LXVD2X,
+
+      /// VSRC, CHAIN = LD_VSX_LH CHAIN, Ptr - This is a floating-point load of a
+      /// v2f32 value into the lower half of a VSR register.
+      LD_VSX_LH,
 
       /// CHAIN = STXVD2X CHAIN, VSRC, Ptr - Occurs only for little endian.
       /// Maps directly to an stxvd2x instruction that will be preceded by
@@ -1021,6 +1028,7 @@ namespace llvm {
     SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
