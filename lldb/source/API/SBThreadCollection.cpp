@@ -32,7 +32,7 @@ operator=(const SBThreadCollection &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBThreadCollection::SBThreadCollection(const ThreadCollectionSP &threads)

@@ -89,6 +89,8 @@ public:
   /// {
   InstrumentedBar();
   InstrumentedFoo GetInstrumentedFoo();
+  InstrumentedFoo &GetInstrumentedFooRef();
+  InstrumentedFoo *GetInstrumentedFooPtr();
   void SetInstrumentedFoo(InstrumentedFoo *foo);
   void SetInstrumentedFoo(InstrumentedFoo &foo);
   void Validate();
@@ -201,6 +203,22 @@ InstrumentedFoo InstrumentedBar::GetInstrumentedFoo() {
   return LLDB_RECORD_RESULT(InstrumentedFoo(0));
 }
 
+InstrumentedFoo &InstrumentedBar::GetInstrumentedFooRef() {
+  LLDB_RECORD_METHOD_NO_ARGS(InstrumentedFoo &, InstrumentedBar,
+                             GetInstrumentedFooRef);
+  InstrumentedFoo *foo = new InstrumentedFoo(0);
+  m_get_instrumend_foo_called = true;
+  return LLDB_RECORD_RESULT(*foo);
+}
+
+InstrumentedFoo *InstrumentedBar::GetInstrumentedFooPtr() {
+  LLDB_RECORD_METHOD_NO_ARGS(InstrumentedFoo *, InstrumentedBar,
+                             GetInstrumentedFooPtr);
+  InstrumentedFoo *foo = new InstrumentedFoo(0);
+  m_get_instrumend_foo_called = true;
+  return LLDB_RECORD_RESULT(foo);
+}
+
 void InstrumentedBar::SetInstrumentedFoo(InstrumentedFoo *foo) {
   LLDB_RECORD_METHOD(void, InstrumentedBar, SetInstrumentedFoo,
                      (InstrumentedFoo *), foo);
@@ -239,6 +257,10 @@ TestingRegistry::TestingRegistry() {
   LLDB_REGISTER_CONSTRUCTOR(InstrumentedBar, ());
   LLDB_REGISTER_METHOD(InstrumentedFoo, InstrumentedBar, GetInstrumentedFoo,
                        ());
+  LLDB_REGISTER_METHOD(InstrumentedFoo &, InstrumentedBar,
+                       GetInstrumentedFooRef, ());
+  LLDB_REGISTER_METHOD(InstrumentedFoo *, InstrumentedBar,
+                       GetInstrumentedFooPtr, ());
   LLDB_REGISTER_METHOD(void, InstrumentedBar, SetInstrumentedFoo,
                        (InstrumentedFoo *));
   LLDB_REGISTER_METHOD(void, InstrumentedBar, SetInstrumentedFoo,
@@ -487,6 +509,80 @@ TEST(RecordReplayTest, InstrumentedBar) {
   {
     InstrumentedBar bar;
     InstrumentedFoo foo = bar.GetInstrumentedFoo();
+#if 0
+    InstrumentedFoo& foo_ref = bar.GetInstrumentedFooRef();
+    InstrumentedFoo* foo_ptr = bar.GetInstrumentedFooPtr();
+#endif
+
+    int b = 200;
+    float c = 300.3;
+    double e = 400.4;
+
+    foo.A(100);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
+
+  ClearObjects();
+
+  TestingRegistry registry;
+  registry.Replay(os.str());
+
+  ValidateObjects(1, 1);
+}
+
+TEST(RecordReplayTest, InstrumentedBarRef) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  g_registry.emplace();
+  g_serializer.emplace(os);
+
+  {
+    InstrumentedBar bar;
+    InstrumentedFoo &foo = bar.GetInstrumentedFooRef();
+
+    int b = 200;
+    float c = 300.3;
+    double e = 400.4;
+
+    foo.A(100);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
+
+  ClearObjects();
+
+  TestingRegistry registry;
+  registry.Replay(os.str());
+
+  ValidateObjects(1, 1);
+}
+
+TEST(RecordReplayTest, InstrumentedBarPtr) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  g_registry.emplace();
+  g_serializer.emplace(os);
+
+  {
+    InstrumentedBar bar;
+    InstrumentedFoo &foo = *(bar.GetInstrumentedFooPtr());
 
     int b = 200;
     float c = 300.3;

@@ -43,7 +43,7 @@ operator=(const SBMemoryRegionInfo &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBMemoryRegionInfo::~SBMemoryRegionInfo() {}

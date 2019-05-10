@@ -99,7 +99,7 @@ operator=(const SBVariablesOptions &options) {
       options);
 
   m_opaque_up.reset(new VariablesOptionsImpl(options.ref()));
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBVariablesOptions::~SBVariablesOptions() = default;

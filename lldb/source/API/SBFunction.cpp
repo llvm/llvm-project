@@ -39,7 +39,7 @@ const SBFunction &SBFunction::operator=(const SBFunction &rhs) {
                      SBFunction, operator=,(const lldb::SBFunction &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBFunction::~SBFunction() { m_opaque_ptr = NULL; }

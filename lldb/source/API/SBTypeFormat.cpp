@@ -121,7 +121,7 @@ lldb::SBTypeFormat &SBTypeFormat::operator=(const lldb::SBTypeFormat &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBTypeFormat::operator==(lldb::SBTypeFormat &rhs) {

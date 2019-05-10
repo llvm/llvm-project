@@ -41,7 +41,7 @@ const SBBlock &SBBlock::operator=(const SBBlock &rhs) {
                      SBBlock, operator=,(const lldb::SBBlock &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBBlock::~SBBlock() { m_opaque_ptr = NULL; }

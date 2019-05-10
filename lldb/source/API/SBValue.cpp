@@ -236,7 +236,7 @@ SBValue &SBValue::operator=(const SBValue &rhs) {
   if (this != &rhs) {
     SetSP(rhs.m_opaque_sp);
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBValue::~SBValue() {}
