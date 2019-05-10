@@ -15,7 +15,7 @@
 
 namespace clang {
 namespace tidy {
-namespace llvm {
+namespace llvm_check {
 
 namespace {
 class IncludeOrderPPCallbacks : public PPCallbacks {
@@ -176,6 +176,6 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
   IncludeDirectives.clear();
 }
 
-} // namespace llvm
+} // namespace llvm_check
 } // namespace tidy
 } // namespace clang

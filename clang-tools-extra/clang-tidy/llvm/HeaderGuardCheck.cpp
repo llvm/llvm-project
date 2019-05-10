@@ -10,7 +10,7 @@
 
 namespace clang {
 namespace tidy {
-namespace llvm {
+namespace llvm_check {
 
 LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
                                            ClangTidyContext *Context)
@@ -49,6 +49,6 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
   return StringRef(Guard).upper();
 }
 
-} // namespace llvm
+} // namespace llvm_check
 } // namespace tidy
 } // namespace clang

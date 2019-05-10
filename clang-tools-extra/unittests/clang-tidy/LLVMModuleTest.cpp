@@ -3,7 +3,7 @@
 #include "llvm/IncludeOrderCheck.h"
 #include "gtest/gtest.h"
 
-using namespace clang::tidy::llvm;
+using namespace clang::tidy::llvm_check;
 
 namespace clang {
 namespace tidy {
