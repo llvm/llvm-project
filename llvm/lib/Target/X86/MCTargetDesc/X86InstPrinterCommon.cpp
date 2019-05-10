@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86InstPrinterCommon.h"
-#include "MCTargetDesc/X86BaseInfo.h"
+#include "X86BaseInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
