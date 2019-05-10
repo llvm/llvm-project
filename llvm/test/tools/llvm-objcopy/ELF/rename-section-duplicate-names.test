@@ -1,0 +1,30 @@
+## When multiple sections have the same name, and --rename-section is specified,
+## GNU objcopy renames all these sections. This test shows that llvm-objcopy
+## does the same.
+
+## Note: we have to do this test in two stages because yaml2obj cannot handle
+## multiple sections with the same name. This has the benefit of showing that
+## we can rename to an already existing name.
+# RUN: yaml2obj %s -o %t.o
+
+## First make two sections with the same name...
+# RUN: llvm-objcopy --rename-section=.foo=.bar %t.o %t2.o
+## ... then rename them both.
+# RUN: llvm-objcopy --rename-section=.bar=.baz %t2.o %t3.o
+# RUN: llvm-readobj --sections %t3.o | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+  - Name:  .bar
+    Type:  SHT_PROGBITS
+
+# CHECK: Name: .baz
+# CHECK: Name: .baz
