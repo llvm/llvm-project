@@ -133,6 +133,37 @@ public:
   /// attribute on declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override { return false; }
 
+  unsigned getExnObjectAlignment() const override {
+    // Older versions of libc++abi guarantee an alignment of only 8-bytes for
+    // exception objects because of a bug in __cxa_exception that was
+    // eventually fixed in r319123.
+    llvm::VersionTuple MinVersion;
+    const llvm::Triple &T = this->getTriple();
+
+    // Compute the earliest OS versions that have the fix to libc++abi.
+    switch (T.getOS()) {
+    case llvm::Triple::Darwin:
+    case llvm::Triple::MacOSX: // Earliest supporting version is 10.14.
+      MinVersion = llvm::VersionTuple(10U, 14U);
+      break;
+    case llvm::Triple::IOS:
+    case llvm::Triple::TvOS: // Earliest supporting version is 12.0.0.
+      MinVersion = llvm::VersionTuple(12U);
+      break;
+    case llvm::Triple::WatchOS: // Earliest supporting version is 5.0.0.
+      MinVersion = llvm::VersionTuple(5U);
+      break;
+    default:
+      llvm_unreachable("Unexpected OS");
+    }
+
+    unsigned Major, Minor, Micro;
+    T.getOSVersion(Major, Minor, Micro);
+    if (llvm::VersionTuple(Major, Minor, Micro) < MinVersion)
+      return 64;
+    return OSTargetInfo<Target>::getExnObjectAlignment();
+  }
+
   TargetInfo::IntType getLeastIntTypeByWidth(unsigned BitWidth,
                                              bool IsSigned) const final {
     // Darwin uses `long long` for `int_least64_t` and `int_fast64_t`.

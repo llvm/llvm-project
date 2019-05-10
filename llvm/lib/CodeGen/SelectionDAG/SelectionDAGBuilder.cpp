@@ -4717,7 +4717,10 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
                             MemVT.getStoreSize(), I.getAlignment(), AAMDNodes(),
                             nullptr, SSID, Ordering);
 
-  SDValue Val = DAG.getPtrExtOrTrunc(getValue(I.getValueOperand()), dl, MemVT);
+  SDValue Val = getValue(I.getValueOperand());
+  if (Val.getValueType() != MemVT)
+    Val = DAG.getPtrExtOrTrunc(Val, dl, MemVT);
+
   SDValue OutChain = DAG.getAtomic(ISD::ATOMIC_STORE, dl, MemVT, InChain,
                                    getValue(I.getPointerOperand()), Val, MMO);
 

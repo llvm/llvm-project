@@ -1,0 +1,56 @@
+## This test shows that llvm-objcopy does not baulk at overlapping sections
+## where such sections are within segments.
+## These don't really make sense, but the tool should still handle invalid
+## inputs somehow.
+# RUN: yaml2obj %s -o %t.o
+
+## First, check that the section header table appears immediately after the program
+## header table.
+# RUN: llvm-readobj --file-headers %t.o | FileCheck %s --check-prefix=SHDRS-OFFSET
+# SHDRS-OFFSET: SectionHeaderOffset: 0x78{{$}}
+
+## Binary edit the section header sh_offset field of the second section to
+## overlap the first one.
+# RUN: %python -c "with open('%/t.o', 'r+b') as input: import struct; bytes = struct.pack('<Q', 0x1001); input.seek(272); input.write(bytes)"
+
+## Sanity check that the binary editing modified the correct field.
+# RUN: llvm-readobj --section-headers %t.o | FileCheck %s
+
+## Check that the contents are as expected before the copy.
+# RUN: llvm-readobj -x .first -x .second %t.o | FileCheck %s --check-prefix=CONTENTS
+
+## Now check that the section contents are still correct after the copy and show that
+## llvm-objcopy hasn't "unoverlapped" these sections because they are in segments.
+# RUN: llvm-objcopy %t.o %t2.o
+# RUN: llvm-readobj --section-headers %t2.o | FileCheck %s
+# RUN: llvm-readobj -x .first -x .second %t2.o | FileCheck %s --check-prefix=CONTENTS
+
+# CHECK: Name: .first
+# CHECK: Offset: 0x1000
+# CHECK: Name: .second
+# CHECK: Offset: 0x1001
+
+# CONTENTS:      Hex dump of section '.first':
+# CONTENTS-NEXT: 0x00000000 01234567
+# CONTENTS-NEXT: Hex dump of section '.second':
+# CONTENTS-NEXT: 0x00000000 23456789
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .first
+    Type: SHT_PROGBITS
+    Content: '01234567'
+    AddressAlign: 0x1000
+  - Name: .second
+    Type: SHT_PROGBITS
+    Content: '89abcdef'
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FileSize: 5
+    Offset:   0x1000
+    Align:    0x1000

@@ -40,6 +40,7 @@ Use & Extension
    use/symbolication
    use/symbols
    use/python
+   use/python-reference
    use/remote
    use/troubleshooting
    use/architecture

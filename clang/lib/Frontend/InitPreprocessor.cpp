@@ -1072,8 +1072,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro(#Ext);
 #include "clang/Basic/OpenCLExtensions.def"
 
-    auto Arch = TI.getTriple().getArch();
-    if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64)
+    if (TI.getTriple().isSPIR())
       Builder.defineMacro("__IMAGE_SUPPORT__");
   }
 

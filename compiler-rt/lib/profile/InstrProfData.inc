@@ -742,7 +742,7 @@ typedef struct InstrProfValueData {
 #endif /* INSTR_PROF_DATA_INC */
 
 #ifndef INSTR_ORDER_FILE_INC
-// The maximal # of functions: 128*1024 (the buffer size will be 128*4 KB).
+/* The maximal # of functions: 128*1024 (the buffer size will be 128*4 KB). */
 #define INSTR_ORDER_FILE_BUFFER_SIZE 131072
 #define INSTR_ORDER_FILE_BUFFER_BITS 17
 #define INSTR_ORDER_FILE_BUFFER_MASK 0x1ffff

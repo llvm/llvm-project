@@ -244,7 +244,7 @@ protected:
   friend class SymbolRef;
 
   virtual Expected<StringRef> getSymbolName(DataRefImpl Symb) const = 0;
-  std::error_code printSymbolName(raw_ostream &OS,
+  Error printSymbolName(raw_ostream &OS,
                                   DataRefImpl Symb) const override;
   virtual Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const = 0;
   virtual uint64_t getSymbolValueImpl(DataRefImpl Symb) const = 0;
@@ -330,11 +330,6 @@ public:
 
   /// Create a triple from the data in this object file.
   Triple makeTriple() const;
-
-  virtual std::error_code
-    getBuildAttributes(ARMAttributeParser &Attributes) const {
-      return std::error_code();
-    }
 
   /// Maps a debug section name to a standard DWARF section name.
   virtual StringRef mapDebugSectionName(StringRef Name) const { return Name; }

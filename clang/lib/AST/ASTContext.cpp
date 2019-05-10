@@ -6303,12 +6303,13 @@ void ASTContext::getObjCEncodingForMethodParameter(Decl::ObjCDeclQualifier QT,
   // Encode type qualifer, 'in', 'inout', etc. for the parameter.
   getObjCEncodingForTypeQualifier(QT, S);
   // Encode parameter type.
-  getObjCEncodingForTypeImpl(T, S, true, true, nullptr,
-                             true     /*OutermostType*/,
-                             false    /*EncodingProperty*/,
-                             false    /*StructField*/,
-                             Extended /*EncodeBlockParameters*/,
-                             Extended /*EncodeClassNames*/);
+  getObjCEncodingForTypeImpl(T, S, /*ExpandPointedToStructures=*/true,
+                             /*ExpandStructures=*/true, /*Field=*/nullptr,
+                             /*OutermostType=*/true,
+                             /*EncodingProperty=*/false,
+                             /*StructField=*/false,
+                             /*EncodeBlockParameters=*/Extended,
+                             /*EncodeClassNames=*/Extended);
 }
 
 /// getObjCEncodingForMethodDecl - Return the encoded type for this method
@@ -6500,9 +6501,13 @@ void ASTContext::getObjCEncodingForType(QualType T, std::string& S,
   // directly pointed to, and expanding embedded structures. Note that
   // these rules are sufficient to prevent recursive encoding of the
   // same type.
-  getObjCEncodingForTypeImpl(T, S, true, true, Field,
-                             true /* outermost type */, false, false,
-                             false, false, false, NotEncodedT);
+  getObjCEncodingForTypeImpl(T, S, /*ExpandPointedToStructures=*/true,
+                             /*ExpandStructures=*/true, Field,
+                             /*OutermostType=*/true, /*EncodingProperty=*/false,
+                             /*StructField=*/false,
+                             /*EncodeBlockParameters=*/false,
+                             /*EncodeClassNames=*/false,
+                             /*EncodePointerToObjCTypedef=*/false, NotEncodedT);
 }
 
 void ASTContext::getObjCEncodingForPropertyType(QualType T,
@@ -6510,9 +6515,9 @@ void ASTContext::getObjCEncodingForPropertyType(QualType T,
   // Encode result type.
   // GCC has some special rules regarding encoding of properties which
   // closely resembles encoding of ivars.
-  getObjCEncodingForTypeImpl(T, S, true, true, nullptr,
-                             true /* outermost type */,
-                             true /* encoding property */);
+  getObjCEncodingForTypeImpl(
+      T, S, /*ExpandPointedToStructures=*/true, /*ExpandStructures=*/true,
+      /*Field=*/nullptr, /*OutermostType=*/true, /*EncodingProperty=*/true);
 }
 
 static char getObjCEncodingForPrimitiveKind(const ASTContext *C,
@@ -6685,14 +6690,18 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
   case Type::Complex: {
     const auto *CT = T->castAs<ComplexType>();
     S += 'j';
-    getObjCEncodingForTypeImpl(CT->getElementType(), S, false, false, nullptr);
+    getObjCEncodingForTypeImpl(CT->getElementType(), S,
+                               /*ExpandPointedToStructures=*/false,
+                               /*ExpandStructures=*/false, /*Field=*/nullptr);
     return;
   }
 
   case Type::Atomic: {
     const auto *AT = T->castAs<AtomicType>();
     S += 'A';
-    getObjCEncodingForTypeImpl(AT->getValueType(), S, false, false, nullptr);
+    getObjCEncodingForTypeImpl(AT->getValueType(), S,
+                               /*ExpandPointedToStructures=*/false,
+                               /*ExpandStructures=*/false, /*Field=*/nullptr);
     return;
   }
 
@@ -6762,9 +6771,13 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
     S += '^';
     getLegacyIntegralTypeEncoding(PointeeTy);
 
-    getObjCEncodingForTypeImpl(PointeeTy, S, false, ExpandPointedToStructures,
-                               nullptr, false, false, false, false, false, false,
-                               NotEncodedT);
+    getObjCEncodingForTypeImpl(
+        PointeeTy, S, /*ExpandPointedToStructures=*/false,
+        /*ExpandStructures=*/ExpandPointedToStructures, /*Field=*/nullptr,
+        /*OutermostType=*/false, /*EncodingProperty=*/false,
+        /*StructField=*/false, /*EncodeBlockParameters=*/false,
+        /*EncodeClassNames=*/false, /*EncodePointerToObjCTypedef=*/false,
+        NotEncodedT);
     return;
   }
 
@@ -6778,7 +6791,8 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
       S += '^';
 
       getObjCEncodingForTypeImpl(AT->getElementType(), S,
-                                 false, ExpandStructures, FD);
+                                 /*ExpandPointedToStructures=*/false,
+                                 ExpandStructures, FD);
     } else {
       S += '[';
 
@@ -6791,10 +6805,13 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
         S += '0';
       }
 
-      getObjCEncodingForTypeImpl(AT->getElementType(), S,
-                                 false, ExpandStructures, FD,
-                                 false, false, false, false, false, false,
-                                 NotEncodedT);
+      getObjCEncodingForTypeImpl(
+          AT->getElementType(), S,
+          /*ExpandPointedToStructures=*/false, ExpandStructures, FD,
+          /*OutermostType=*/false,
+          /*EncodingProperty=*/false, /*StructField=*/false,
+          /*EncodeBlockParameters=*/false, /*EncodeClassNames=*/false,
+          /*EncodePointerToObjCTypedef=*/false, NotEncodedT);
       S += ']';
     }
     return;
@@ -6834,16 +6851,19 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
 
           // Special case bit-fields.
           if (Field->isBitField()) {
-            getObjCEncodingForTypeImpl(Field->getType(), S, false, true,
-                                       Field);
+            getObjCEncodingForTypeImpl(Field->getType(), S,
+                                       /*ExpandPointedToStructures=*/false,
+                                       /*ExpandStructures=*/true, Field);
           } else {
             QualType qt = Field->getType();
             getLegacyIntegralTypeEncoding(qt);
-            getObjCEncodingForTypeImpl(qt, S, false, true,
-                                       FD, /*OutermostType*/false,
-                                       /*EncodingProperty*/false,
-                                       /*StructField*/true,
-                                       false, false, false, NotEncodedT);
+            getObjCEncodingForTypeImpl(
+                qt, S, /*ExpandPointedToStructures=*/false,
+                /*ExpandStructures=*/true, FD, /*OutermostType=*/false,
+                /*EncodingProperty=*/false,
+                /*StructField=*/true, /*EncodeBlockParameters=*/false,
+                /*EncodeClassNames=*/false,
+                /*EncodePointerToObjCTypedef=*/false, NotEncodedT);
           }
         }
       }
@@ -6862,9 +6882,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
       // Block return type
       getObjCEncodingForTypeImpl(
           FT->getReturnType(), S, ExpandPointedToStructures, ExpandStructures,
-          FD, false /* OutermostType */, EncodingProperty,
-          false /* StructField */, EncodeBlockParameters, EncodeClassNames, false,
-                                 NotEncodedT);
+          FD, /*OutermostType=*/false, EncodingProperty,
+          /*StructField=*/false, EncodeBlockParameters, EncodeClassNames,
+          /*EncodePointerToObjCTypedef=*/false, NotEncodedT);
       // Block self
       S += "@?";
       // Block parameters
@@ -6872,9 +6892,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
         for (const auto &I : FPT->param_types())
           getObjCEncodingForTypeImpl(
               I, S, ExpandPointedToStructures, ExpandStructures, FD,
-              false /* OutermostType */, EncodingProperty,
-              false /* StructField */, EncodeBlockParameters, EncodeClassNames,
-                                     false, NotEncodedT);
+              /*OutermostType=*/false, EncodingProperty,
+              /*StructField=*/false, EncodeBlockParameters, EncodeClassNames,
+              /*EncodePointerToObjCTypedef=*/false, NotEncodedT);
       }
       S += '>';
     }
@@ -6909,12 +6929,18 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
       for (unsigned i = 0, e = Ivars.size(); i != e; ++i) {
         const FieldDecl *Field = Ivars[i];
         if (Field->isBitField())
-          getObjCEncodingForTypeImpl(Field->getType(), S, false, true, Field);
+          getObjCEncodingForTypeImpl(Field->getType(), S,
+                                     /*ExpandPointedToStructures=*/false,
+                                     /*ExpandStructures=*/true, Field);
         else
-          getObjCEncodingForTypeImpl(Field->getType(), S, false, true, FD,
-                                     false, false, false, false, false,
-                                     EncodePointerToObjCTypedef,
-                                     NotEncodedT);
+          getObjCEncodingForTypeImpl(
+              Field->getType(), S,
+              /*ExpandPointedToStructures=*/false,
+              /*ExpandStructures=*/true, FD, /*OutermostType=*/false,
+              /*EncodingProperty=*/false,
+              /*StructField=*/false, /*EncodeBlockParameters=*/false,
+              /*EncodeClassNames=*/false, EncodePointerToObjCTypedef,
+              NotEncodedT);
       }
     }
     S += '}';
@@ -6930,8 +6956,8 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
 
     if (OPT->isObjCClassType() || OPT->isObjCQualifiedClassType()) {
       // FIXME: Consider if we need to output qualifiers for 'Class<p>'.
-      // Since this is a binary compatibility issue, need to consult with runtime
-      // folks. Fortunately, this is a *very* obscure construct.
+      // Since this is a binary compatibility issue, need to consult with
+      // runtime folks. Fortunately, this is a *very* obscure construct.
       S += '#';
       return;
     }
@@ -6976,11 +7002,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
           }
         }
       }
-      getObjCEncodingForTypeImpl(PointeeTy, S,
-                                 false, ExpandPointedToStructures,
-                                 nullptr,
-                                 false, false, false, false, false,
-                                 /*EncodePointerToObjCTypedef*/true);
+      getObjCEncodingForTypeImpl(
+          PointeeTy, S,
+          /*ExpandPointedToStructures=*/false,
+          /*ExpandStructures=*/ExpandPointedToStructures,
+          /*Field=*/nullptr,
+          /*OutermostType=*/false, /*EncodingProperty=*/false,
+          /*StructField=*/false, /*EncodeBlockParameters=*/false,
+          /*EncodeClassNames=*/false,
+          /*EncodePointerToObjCTypedef=*/true);
       return;
     }
 
@@ -7162,11 +7192,14 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
       } else {
         QualType qt = field->getType();
         getLegacyIntegralTypeEncoding(qt);
-        getObjCEncodingForTypeImpl(qt, S, false, true, FD,
-                                   /*OutermostType*/false,
-                                   /*EncodingProperty*/false,
-                                   /*StructField*/true,
-                                   false, false, false, NotEncodedT);
+        getObjCEncodingForTypeImpl(
+            qt, S, /*ExpandPointedToStructures=*/false,
+            /*ExpandStructures=*/true, FD,
+            /*OutermostType=*/false,
+            /*EncodingProperty=*/false,
+            /*StructField=*/true, /*EncodeBlockParameters=*/false,
+            /*EncodeClassNames=*/false, /*EncodePointerToObjCTypedef=*/false,
+            NotEncodedT);
 #ifndef NDEBUG
         CurOffs += getTypeSize(field->getType());
 #endif

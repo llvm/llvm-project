@@ -186,7 +186,6 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   Opts.CollectIncludePath = true;
-  Opts.CountReferences = true;
   if (Opts.Origin == SymbolOrigin::Unknown)
     Opts.Origin = SymbolOrigin::Static;
   Opts.StoreAllDocumentation = false;

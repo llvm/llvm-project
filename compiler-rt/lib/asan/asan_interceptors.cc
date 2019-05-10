@@ -580,8 +580,8 @@ INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
 #endif  // ASAN_INTERCEPT___CXA_ATEXIT
 
 #if ASAN_INTERCEPT_VFORK
-DEFINE_REAL(int, vfork);
-DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork);
+DEFINE_REAL(int, vfork)
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
 #endif
 
 // ---------------------- InitializeAsanInterceptors ---------------- {{{1

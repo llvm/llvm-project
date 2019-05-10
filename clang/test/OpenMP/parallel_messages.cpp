@@ -77,3 +77,25 @@ int main(int argc, char **argv) {
   return 0;
 }
 
+struct a {
+  static constexpr int b = 0;
+};
+template <bool> struct c;
+template <typename d, typename e> bool operator<(d, e);
+struct f {
+  int cbegin;
+};
+class g {
+  f blocks;
+  void j();
+};
+template <typename> struct is_error_code_enum : a {};
+struct h {
+  template <typename i, typename = c<is_error_code_enum<i>::b>> h(i);
+};
+h operator<(h, h);
+void g::j() {
+#pragma omp parallel for default(none) if(a::b)
+  for (auto a = blocks.cbegin; a < blocks; ++a) // expected-error {{invalid operands to binary expression ('f' and 'int')}}
+    ;
+}

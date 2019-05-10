@@ -6576,6 +6576,12 @@ def err_throw_incomplete : Error<
   "cannot throw object of incomplete type %0">;
 def err_throw_incomplete_ptr : Error<
   "cannot throw pointer to object of incomplete type %0">;
+def warn_throw_underaligned_obj : Warning<
+  "underaligned exception object thrown">,
+  InGroup<UnderalignedExceptionObject>;
+def note_throw_underaligned_obj : Note<
+  "required alignment of type %0 (%1 bytes) is larger than the supported "
+  "alignment of C++ exception objects on this target (%2 bytes)">;
 def err_return_in_constructor_handler : Error<
   "return in the catch of a function try block of a constructor is illegal">;
 def warn_cdtor_function_try_handler_mem_expr : Warning<

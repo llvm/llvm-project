@@ -326,12 +326,12 @@ void ProcessMinidump::Clear() { Process::m_thread_list.Clear(); }
 
 bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
                                        ThreadList &new_thread_list) {
-  for (const MinidumpThread& thread : m_thread_list) {
-    LocationDescriptor context_location = thread.thread_context;
+  for (const minidump::Thread &thread : m_thread_list) {
+    LocationDescriptor context_location = thread.Context;
 
     // If the minidump contains an exception context, use it
     if (m_active_exception != nullptr &&
-        m_active_exception->thread_id == thread.thread_id) {
+        m_active_exception->thread_id == thread.ThreadId) {
       context_location = m_active_exception->thread_context;
     }
 
@@ -368,7 +368,6 @@ void ProcessMinidump::ReadModuleList() {
 
     const auto uuid = m_minidump_parser->GetModuleUUID(module);
     auto file_spec = FileSpec(name, GetArchitecture().GetTriple());
-    FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
     module_spec.GetArchitecture() = GetArchitecture();
     Status error;
