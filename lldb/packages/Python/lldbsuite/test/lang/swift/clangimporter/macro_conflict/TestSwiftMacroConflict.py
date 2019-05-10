@@ -50,22 +50,21 @@ class TestSwiftMacroConflict(TestBase):
 
         process = target.LaunchSimple(None, None, os.getcwd())
 
-        self.expect("p bar", "correct bar", substrs=["23"])
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, bar_breakpoint)
+        frame = threads[0].GetFrameAtIndex(0)
+        value = frame.EvaluateExpression("bar")
+        # This is expected to fail because we use the same -D define as below.
+        self.assertFalse(value.GetError().Success())
         self.expect("fr var bar", "correct bar", substrs=["23"])
-        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Foo.swift'))
         process.Continue()
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, foo_breakpoint)
-        frame = threads[0].GetFrameAtIndex(0)
-        value = frame.EvaluateExpression("foo")
-        # This is expected to fail because we use the same -D define as before.
-        self.assertFalse(value.GetError().Success())
+        self.expect("p foo", "correct foo", substrs=["42"])
         self.expect("fr var foo", "correct foo", substrs=["42"])
-        
+        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
 if __name__ == '__main__':
     import atexit
