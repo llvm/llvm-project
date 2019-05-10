@@ -1219,11 +1219,12 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       }
       S.TypeName = getNMTypeName(Obj, Sym);
       S.TypeChar = getNMSectionTagAndName(Obj, Sym, S.SectionName);
-      std::error_code EC = Sym.printName(OS);
-      if (EC && MachO)
-        OS << "bad string index";
-      else
-        error(EC);
+      if (Error E = Sym.printName(OS)) {
+        if (MachO)
+          OS << "bad string index";
+        else
+          error(std::move(E), Obj.getFileName());
+      }
       OS << '\0';
       S.Sym = Sym;
       SymbolList.push_back(S);
