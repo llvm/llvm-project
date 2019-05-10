@@ -234,8 +234,8 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
 #endif
 
 #if HWASAN_WITH_INTERCEPTORS
-DEFINE_REAL(int, vfork);
-DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork);
+DEFINE_REAL(int, vfork)
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
 #endif
 
 static void BeforeFork() {
