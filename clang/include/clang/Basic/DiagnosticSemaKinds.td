@@ -6576,6 +6576,12 @@ def err_throw_incomplete : Error<
   "cannot throw object of incomplete type %0">;
 def err_throw_incomplete_ptr : Error<
   "cannot throw pointer to object of incomplete type %0">;
+def warn_throw_underaligned_obj : Warning<
+  "underaligned exception object thrown">,
+  InGroup<UnderalignedExceptionObject>;
+def note_throw_underaligned_obj : Note<
+  "required alignment of type %0 (%1 bytes) is larger than the supported "
+  "alignment of C++ exception objects on this target (%2 bytes)">;
 def err_return_in_constructor_handler : Error<
   "return in the catch of a function try block of a constructor is illegal">;
 def warn_cdtor_function_try_handler_mem_expr : Warning<
@@ -8821,6 +8827,8 @@ def err_omp_threadprivate_incomplete_type : Error<
   "threadprivate variable with incomplete type %0">;
 def err_omp_no_dsa_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes">;
+def note_omp_default_dsa_none : Note<
+  "explicit data sharing attribute requested here">;
 def err_omp_wrong_dsa : Error<
   "%0 variable cannot be %1">;
 def err_omp_variably_modified_type_not_supported : Error<

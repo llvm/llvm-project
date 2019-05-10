@@ -338,21 +338,21 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
     auto AltEntryStartItr = AltEntryStarts.find(&*AltEntryPred);
     if (AltEntryStartItr != AltEntryStarts.end()) {
       // If the predecessor was an alt-entry atom then re-use its value.
-      AltEntryStarts[DA] = AltEntryStartItr->second;
       LLVM_DEBUG({
         dbgs() << "  " << *DA << " -> " << *AltEntryStartItr->second
                << " (based on existing entry for " << *AltEntryPred << ")\n";
       });
+      AltEntryStarts[DA] = AltEntryStartItr->second;
     } else {
       // If the predecessor does not have an entry then add an entry for this
       // atom (i.e. the alt_entry atom) and a self-reference entry for the
       /// predecessory atom that is the start of this chain.
-      AltEntryStarts[&*AltEntryPred] = &*AltEntryPred;
-      AltEntryStarts[DA] = &*AltEntryPred;
       LLVM_DEBUG({
         dbgs() << "  " << *AltEntryPred << " -> " << *AltEntryPred << "\n"
                << "  " << *DA << " -> " << *AltEntryPred << "\n";
       });
+      AltEntryStarts[&*AltEntryPred] = &*AltEntryPred;
+      AltEntryStarts[DA] = &*AltEntryPred;
     }
   }
 

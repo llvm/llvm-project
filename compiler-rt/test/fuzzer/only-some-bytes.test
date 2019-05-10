@@ -31,7 +31,16 @@ RUN: %t-Fuzz -focus_function=f0 -data_flow_trace=%t/IN_DFT -runs=100 %t/IN 2>&1 
 HAVE_DFT: INFO: 1/{{.*}} inputs have the Data Flow Trace
 
 # Collect DFT, then use it.
-RUN: rm -rf %t/C  && mkdir %t/C &&  cp %t/IN/* %t/C
+RUN: rm -rf %t/C %t/C1  && mkdir %t/C %t/C1 &&  cp %t/IN/* %t/C
 RUN: rm -rf %t/C_DFT && %libfuzzer_src/scripts/collect_data_flow.py %t-DFT %t/C %t/C_DFT > /dev/null 2>&1
-RUN: not %t-Fuzz -focus_function=f0 -data_flow_trace=%t/C_DFT -seed=1 -runs=1000000 -use_value_profile=1 %t/C 2> %t/log
+RUN: not %t-Fuzz -focus_function=f0 -data_flow_trace=%t/C_DFT -seed=1 -runs=1000000 -use_value_profile=1 %t/C1 %t/C 2> %t/log
+RUN: grep BINGO %t/log
+
+# Test -focus_function=auto: run 50 times and verify that 'f0' is the most frequent focus function.
+RUN: %t-Fuzz -focus_function=auto -data_flow_trace=%t/C_DFT -runs=0 %t/C -jobs=50 2>&1 | grep AUTOFOCUS  | sort | uniq -c | sort -g -r | head -n 1 | FileCheck %s --check-prefix=AUTOFOCUS
+AUTOFOCUS: INFO: AUTOFOCUS: {{.*}} f0
+
+# Actually execute 50 fuzzing processes with a small number of runs, to test  -focus_function=auto for real.
+# We can not test data_flow_trace=auto in just a single run, because it may choose to focus on a wrong function.
+RUN: not %t-Fuzz -focus_function=auto -data_flow_trace=%t/C_DFT %t/C -jobs=50 -runs=200000 -use_value_profile=1 2> %t/log
 RUN: grep BINGO %t/log

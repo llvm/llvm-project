@@ -11,7 +11,7 @@ target triple = "wasm32-unknown-unknown"
 @data_addr = local_unnamed_addr global i32* @data, align 4
 @data_addr_external = local_unnamed_addr global i32* @data_external, align 4
 
-define i32 @foo() {
+define hidden i32 @foo() {
 entry:
   ; To ensure we use __stack_pointer
   %ptr = alloca i32
@@ -38,7 +38,7 @@ define void @_start() {
 ; CHECK-NEXT:         Table:
 ; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x00000000
+; CHECK-NEXT:             Initial:         0x00000001
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __memory_base
 ; CHECK-NEXT:         Kind:            GLOBAL
