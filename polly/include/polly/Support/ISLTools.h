@@ -463,6 +463,21 @@ isl::union_map applyDomainRange(isl::union_map UMap, isl::union_map Func);
 /// @return { Domain[] -> Range[] }
 isl::map intersectRange(isl::map Map, isl::union_set Range);
 
+/// Subtract the parameter space @p Params from @p Map.
+/// This is akin to isl::map::intersect_params.
+///
+/// Example:
+///   subtractParams(
+///     { [i] -> [i] },
+///     [x] -> { : x < 0 }
+///   ) = [x] -> { [i] -> [i] : x >= 0 }
+///
+/// @param Map    Remove the conditions of @p Params from this map.
+/// @param Params Parameter set to subtract.
+///
+/// @param The map with the parameter conditions removed.
+isl::map subtractParams(isl::map Map, isl::set Params);
+
 /// If @p PwAff maps to a constant, return said constant. If @p Max/@p Min, it
 /// can also be a piecewise constant and it would return the minimum/maximum
 /// value. Otherwise, return NaN.
