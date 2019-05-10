@@ -280,6 +280,18 @@ public:
 
   virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
                                              uint32_t actual_line);
+  struct RegisterInfoResolver {
+    virtual ~RegisterInfoResolver(); // anchor
+
+    virtual const RegisterInfo *ResolveName(llvm::StringRef name) const = 0;
+    virtual const RegisterInfo *ResolveNumber(lldb::RegisterKind kind,
+                                              uint32_t number) const = 0;
+  };
+  virtual lldb::UnwindPlanSP
+  GetUnwindPlan(const Address &address, const RegisterInfoResolver &resolver) {
+    return nullptr;
+  }
+
   virtual void Dump(Stream &s) {}
 
 protected:

@@ -217,3 +217,5 @@ void SymbolFile::AssertModuleLock() {
          "Module is not locked");
 #endif
 }
+
+SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;
