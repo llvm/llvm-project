@@ -77,7 +77,10 @@ Modified Compiler Flags
 
 - `clang -dumpversion` now returns the version of Clang itself.
 
-- ...
+- On ELF, ``-gz`` now defaults to ``-gz=zlib``. It produces ``SHF_COMPRESSED``
+  style compression of debug information. GNU binutils 2.26 or newer, or lld is
+  required to link produced object files. Use ``-gz=zlib-gnu`` to get the old
+  behavior.
 
 New Pragmas in Clang
 --------------------
