@@ -29,6 +29,7 @@
 #define LLVM_FUZZER_DATA_FLOW_TRACE
 
 #include "FuzzerDefs.h"
+#include "FuzzerIO.h"
 
 #include <unordered_map>
 #include <vector>
@@ -37,8 +38,7 @@
 namespace fuzzer {
 
 int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
-                    const Vector<std::string> &CorpusDirs,
-                    const Vector<std::string> &ExtraSeeds);
+                    const Vector<SizedFile> &CorporaFiles);
 
 class BlockCoverage {
  public:
