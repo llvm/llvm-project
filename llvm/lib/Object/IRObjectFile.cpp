@@ -42,10 +42,9 @@ void IRObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
   Symb.p += sizeof(ModuleSymbolTable::Symbol);
 }
 
-std::error_code IRObjectFile::printSymbolName(raw_ostream &OS,
-                                              DataRefImpl Symb) const {
+Error IRObjectFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
   SymTab.printSymbolName(OS, getSym(Symb));
-  return std::error_code();
+  return Error::success();
 }
 
 uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
