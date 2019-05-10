@@ -55,8 +55,8 @@ int main() {
     "movaps  %%xmm15, 0x70(%1)\n\t"
     :
     : "a"(r64), "b"(xmm), "m"(xmm_fill)
-    : "%mm0", "%mm1", "%mm2", "%mm3", "%mm4", "%mm5", "%mm6", "%mm7", "%xmm0",
-      "%xmm1", "%xmm2", "%xmm3", "%xmm4", "%xmm5", "%xmm6", "%xmm7"
+    : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%xmm8",
+      "%xmm9", "%xmm10", "%xmm11", "%xmm12", "%xmm13", "%xmm14", "%xmm15"
   );
 
   for (int i = 0; i < 8; ++i)
