@@ -733,7 +733,7 @@ public:
     // Also it is safe to make it readnone, since we never load or store the
     // classref except by calling this function.
     llvm::Type *params[] = { Int8PtrPtrTy };
-    return CGM.CreateRuntimeFunction(
+    auto F = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ClassnfABIPtrTy, params, false),
         "objc_loadClassref",
         llvm::AttributeList::get(CGM.getLLVMContext(),
@@ -741,6 +741,11 @@ public:
                                  {llvm::Attribute::NonLazyBind,
                                   llvm::Attribute::ReadNone,
                                   llvm::Attribute::NoUnwind}));
+    if (!CGM.getTriple().isOSBinFormatCOFF())
+      cast<llvm::Function>(F.getCallee())->setLinkage(
+        llvm::Function::ExternalWeakLinkage);
+
+    return F;
   }
 
   llvm::StructType *EHTypeTy;
@@ -898,6 +903,9 @@ protected:
 
   /// DefinedCategories - List of defined categories.
   SmallVector<llvm::GlobalValue*, 16> DefinedCategories;
+
+  /// DefinedStubCategories - List of defined categories on class stubs.
+  SmallVector<llvm::GlobalValue*, 16> DefinedStubCategories;
 
   /// DefinedNonLazyCategories - List of defined "non-lazy" categories.
   SmallVector<llvm::GlobalValue*, 16> DefinedNonLazyCategories;
@@ -6097,6 +6105,9 @@ void CGObjCNonFragileABIMac::FinishNonFragileABIModule() {
   AddModuleClassList(DefinedCategories, "OBJC_LABEL_CATEGORY_$",
                      GetSectionName("__objc_catlist",
                                     "regular,no_dead_strip"));
+  AddModuleClassList(DefinedStubCategories, "OBJC_LABEL_STUB_CATEGORY_$",
+                     GetSectionName("__objc_catlist2",
+                                    "regular,no_dead_strip"));
   AddModuleClassList(DefinedNonLazyCategories, "OBJC_LABEL_NONLAZY_CATEGORY_$",
                      GetSectionName("__objc_nlcatlist",
                                     "regular,no_dead_strip"));
@@ -6588,7 +6599,10 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   llvm::GlobalVariable *GCATV =
       finishAndCreateGlobal(values, ExtCatName.str(), CGM);
   CGM.addCompilerUsedGlobal(GCATV);
-  DefinedCategories.push_back(GCATV);
+  if (Interface->hasAttr<ObjCClassStubAttr>())
+    DefinedStubCategories.push_back(GCATV);
+  else
+    DefinedCategories.push_back(GCATV);
 
   // Determine if this category is also "non-lazy".
   if (ImplementationIsNonLazy(OCD))
@@ -7322,7 +7336,9 @@ CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
         getLinkageTypeForObjCMetadata(CGM, SectionName), ClassGV,
         "OBJC_CLASSLIST_REFERENCES_$_");
     Entry->setAlignment(CGF.getPointerAlign().getQuantity());
-    Entry->setSection(SectionName);
+    if (!ID || !ID->hasAttr<ObjCClassStubAttr>())
+      Entry->setSection(SectionName);
+
     CGM.addCompilerUsedGlobal(Entry);
   }
 
