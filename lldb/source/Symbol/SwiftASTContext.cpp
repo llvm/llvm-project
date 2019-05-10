@@ -3006,10 +3006,22 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     GetDiagnosticEngine().addConsumer(*new swift::PrintingDiagnosticConsumer());
   }
 
-  // Install the parseable interface module loader.
-  std::string moduleCachePath = GetClangImporterOptions().ModuleCachePath;
+  // Create the clang importer and determine the clang module cache path
+  std::string moduleCachePath = "";
+  std::unique_ptr<swift::ClangImporter> clang_importer_ap;
+  auto &clang_importer_options = GetClangImporterOptions();
+  if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
+    if (!clang_importer_options.OverrideResourceDir.empty()) {
+      clang_importer_ap = swift::ClangImporter::create(
+          *m_ast_context_ap, clang_importer_options);
+      moduleCachePath = swift::getModuleCachePathFromClang(
+          clang_importer_ap->getClangInstance());
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using clang module cache path: %s",
+                 moduleCachePath.c_str());
+    }
+  }
 
-  // Use the default location of the prebuilt module cache:
+  // Compute the prebuilt module cache path to use:
   // <resource-dir>/<platform>/prebuilt-modules
   llvm::Triple triple(GetTriple());
   llvm::SmallString<128> prebuiltModuleCachePath = GetResourceDir(triple);
@@ -3019,6 +3031,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using prebuilt module cache path: %s",
              prebuiltModuleCachePath.c_str());
 
+  // Determine the Swift module loading mode to use.
   auto props = ModuleList::GetGlobalModuleListProperties();
   swift::ModuleLoadingMode loading_mode;
   switch (props.GetSwiftModuleLoadingMode()) {
@@ -3036,7 +3049,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     break;
   }
 
-  // Install the memory buffer serialized module loader.
+  // The order here matters due to fallback behaviors:
+  // 1. Create and install the memory buffer serialized module loader.
   std::unique_ptr<swift::ModuleLoader> memory_buffer_loader_ap(
       swift::MemoryBufferSerializedModuleLoader::create(*m_ast_context_ap,
                                                         tracker, loading_mode));
@@ -3047,7 +3061,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     m_ast_context_ap->addModuleLoader(std::move(memory_buffer_loader_ap));
   }
 
-  // Install the parseable interface module loader.
+  // 2. Create and install the parseable interface module loader.
+  std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap;
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
         swift::ParseableInterfaceModuleLoader::create(
@@ -3057,12 +3072,33 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       m_ast_context_ap->addModuleLoader(std::move(parseable_module_loader_ap));
   }
 
-  // Install the serialized module loader.
+  // 3. Create and install the serialized module loader.
   std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
       swift::SerializedModuleLoader::create(*m_ast_context_ap, tracker,
                                             loading_mode));
   if (serialized_module_loader_ap)
     m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
+
+  // 4. Install the clang importer.
+  if (clang_importer_ap) {
+    m_clang_importer = (swift::ClangImporter *)clang_importer_ap.get();
+    m_ast_context_ap->addModuleLoader(std::move(clang_importer_ap),
+                                      /*isClang=*/true);
+  }
+
+  // 5. Create and install the DWARF importer, but only for the module AST
+  //    context.
+  if (!m_is_scratch_context) {
+    auto props = ModuleList::GetGlobalModuleListProperties();
+    if (props.GetUseDWARFImporter()) {
+      auto dwarf_importer_ap = swift::DWARFImporter::create(
+          *m_ast_context_ap, clang_importer_options);
+      if (dwarf_importer_ap) {
+        m_dwarf_importer = dwarf_importer_ap.get();
+        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap));
+      }
+    }
+  }
 
   // Set up the required state for the evaluator in the TypeChecker.
   registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
@@ -3084,41 +3120,7 @@ SwiftASTContext::GetMemoryBufferModuleLoader() {
 swift::ClangImporter *SwiftASTContext::GetClangImporter() {
   VALID_OR_RETURN(nullptr);
 
-  const bool is_clang = true;
-  auto &clang_importer_options = GetClangImporterOptions();
-
-  if (!m_clang_importer) {
-    swift::ASTContext *ast_ctx = GetASTContext();
-    // Install the Clang module loader.
-    if (ast_ctx &&
-        (!ast_ctx->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK())) {
-      if (!clang_importer_options.OverrideResourceDir.empty()) {
-        auto clang_importer_ap = swift::ClangImporter::create(
-            *m_ast_context_ap, clang_importer_options);
-        if (clang_importer_ap) {
-          m_clang_importer = (swift::ClangImporter *)clang_importer_ap.get();
-          m_ast_context_ap->addModuleLoader(std::move(clang_importer_ap),
-                                            is_clang);
-        }
-      }
-    }
-  }
-
-  // We only want to register the DWARF importer for the module AST context.
-  if (!m_dwarf_importer && !this->m_is_scratch_context) {
-    // Install the DWARF importer fallback loader.
-    auto props = ModuleList::GetGlobalModuleListProperties();
-    if (props.GetUseDWARFImporter()) {
-      auto dwarf_importer_ap = swift::DWARFImporter::create(
-          *m_ast_context_ap, clang_importer_options);
-      if (dwarf_importer_ap) {
-        m_dwarf_importer = dwarf_importer_ap.get();
-        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap),
-                                          !is_clang);
-      }
-    }
-  }
-
+  GetASTContext();
   return m_clang_importer;
 }
 
