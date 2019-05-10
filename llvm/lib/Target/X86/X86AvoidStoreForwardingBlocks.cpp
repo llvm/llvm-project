@@ -406,7 +406,9 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
   MachineInstr *StInst = StoreInst;
-  if (StoreInst->getPrevNode() == LoadInst)
+  auto PrevInstrIt = skipDebugInstructionsBackward(
+      std::prev(MachineBasicBlock::instr_iterator(StoreInst)), MBB->instr_begin());
+  if (PrevInstrIt.getNodePtr() == LoadInst)
     StInst = LoadInst;
   MachineInstr *NewStore =
       BuildMI(*MBB, StInst, StInst->getDebugLoc(), TII->get(NStoreOpcode))
@@ -530,7 +532,7 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
       if (!isPotentialBlockedMemCpyLd(MI.getOpcode()))
         continue;
       int DefVR = MI.getOperand(0).getReg();
-      if (!MRI->hasOneUse(DefVR))
+      if (!MRI->hasOneNonDBGUse(DefVR))
         continue;
       for (auto UI = MRI->use_nodbg_begin(DefVR), UE = MRI->use_nodbg_end();
            UI != UE;) {
