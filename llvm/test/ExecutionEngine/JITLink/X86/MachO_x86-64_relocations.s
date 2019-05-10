@@ -263,4 +263,13 @@ subtractor_with_alt_entry_subtrahend_quad:
 subtractor_with_alt_entry_subtrahend_quad_B:
         .quad 0
 
+# Check that unreferenced atoms in no-dead-strip sections are not dead stripped.
+# We need to use a local symbol for this as any named symbol will end up in the
+# ORC responsibility set, which is automatically marked live and would couse
+# spurious passes.
+#
+# jitlink-check: *{8}section_addr(macho_reloc.o, __nds_test_sect) = 0
+        .section        __DATA,__nds_test_sect,regular,no_dead_strip
+        .quad 0
+
 .subsections_via_symbols
