@@ -148,8 +148,7 @@ SubtargetFeatures ELFObjectFileBase::getMIPSFeatures() const {
 SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   SubtargetFeatures Features;
   ARMAttributeParser Attributes;
-  std::error_code EC = getBuildAttributes(Attributes);
-  if (EC)
+  if (Error E = getBuildAttributes(Attributes))
     return SubtargetFeatures();
 
   // both ARMv7-M and R have to support thumb hardware div
@@ -279,8 +278,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     return;
 
   ARMAttributeParser Attributes;
-  std::error_code EC = getBuildAttributes(Attributes);
-  if (EC)
+  if (Error E = getBuildAttributes(Attributes))
     return;
 
   std::string Triple;

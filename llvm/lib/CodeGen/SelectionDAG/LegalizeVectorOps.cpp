@@ -264,7 +264,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         LLVM_FALLTHROUGH;
       case TargetLowering::Expand:
         Changed = true;
-        return LegalizeOp(ExpandLoad(Op));
+        return ExpandLoad(Op);
       }
     }
   } else if (Op.getOpcode() == ISD::STORE) {
@@ -289,7 +289,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       }
       case TargetLowering::Expand:
         Changed = true;
-        return LegalizeOp(ExpandStore(Op));
+        return ExpandStore(Op);
       }
     }
   }
@@ -1253,9 +1253,13 @@ SDValue VectorLegalizer::ExpandMULO(SDValue Op) {
   if (!TLI.expandMULO(Op.getNode(), Result, Overflow, DAG))
     std::tie(Result, Overflow) = DAG.UnrollVectorOverflowOp(Op.getNode());
 
-  AddLegalizedOperand(Op.getValue(0), Result);
-  AddLegalizedOperand(Op.getValue(1), Overflow);
-  return Op.getResNo() ? Overflow : Result;
+  if (Op.getResNo() == 0) {
+    AddLegalizedOperand(Op.getValue(1), LegalizeOp(Overflow));
+    return Result;
+  } else {
+    AddLegalizedOperand(Op.getValue(0), LegalizeOp(Result));
+    return Overflow;
+  }
 }
 
 SDValue VectorLegalizer::ExpandAddSubSat(SDValue Op) {

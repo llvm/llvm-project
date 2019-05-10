@@ -165,7 +165,7 @@ static cl::opt<unsigned> ComplexityLimit(
   cl::desc("LSR search space complexity limit"));
 
 static cl::opt<unsigned> SetupCostDepthLimit(
-    "lsr-setupcost-depth-limit", cl::Hidden, cl::init(7),
+    "lsr-setupcost-depth-limit", cl::Hidden, cl::init(10),
     cl::desc("The limit on recursion depth for LSRs setup cost"));
 
 #ifndef NDEBUG

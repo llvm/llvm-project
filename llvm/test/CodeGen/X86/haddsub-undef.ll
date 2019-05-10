@@ -247,7 +247,7 @@ define <8 x float> @test10_undef(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: test10_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %a, i32 1
@@ -300,7 +300,7 @@ define <8 x float> @test12_undef(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: test12_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %a, i32 1

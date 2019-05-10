@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/XCoreInstPrinter.h"
+#include "MCTargetDesc/XCoreInstPrinter.h"
 #include "XCore.h"
 #include "XCoreInstrInfo.h"
 #include "XCoreMCInstLower.h"

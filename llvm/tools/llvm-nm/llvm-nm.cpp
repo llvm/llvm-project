@@ -1220,9 +1220,10 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       S.TypeName = getNMTypeName(Obj, Sym);
       S.TypeChar = getNMSectionTagAndName(Obj, Sym, S.SectionName);
       if (Error E = Sym.printName(OS)) {
-        if (MachO)
+        if (MachO) {
           OS << "bad string index";
-        else
+          consumeError(std::move(E));
+        } else
           error(std::move(E), Obj.getFileName());
       }
       OS << '\0';

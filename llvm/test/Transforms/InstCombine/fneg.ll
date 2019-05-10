@@ -3,6 +3,16 @@
 
 declare void @use(float)
 
+define float @fneg_fneg(float %a) {
+;
+; CHECK-LABEL: @fneg_fneg(
+; CHECK-NEXT:    ret float [[A:%.*]]
+;
+  %f = fneg float %a
+  %r = fneg float %f
+  ret float %r
+}
+
 ; -(X * C) --> X * (-C)
 
 define float @fmul_fsub(float %x) {

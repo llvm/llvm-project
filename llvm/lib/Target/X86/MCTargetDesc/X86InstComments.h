@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_X86_INSTPRINTER_X86INSTCOMMENTS_H
-#define LLVM_LIB_TARGET_X86_INSTPRINTER_X86INSTCOMMENTS_H
+#ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86INSTCOMMENTS_H
+#define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86INSTCOMMENTS_H
 
 namespace llvm {
 

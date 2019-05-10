@@ -11,7 +11,7 @@ $g1 = comdat any
 ; CHECK:  %idxprom.i = zext i32 %x0 to i64
 ; CHECK:  %arrayidx.i = getelementptr %struct.S, %struct.S* addrspacecast (%struct.S addrspace(3)* @g1 to %struct.S*), i64 0, i32 0, i64 %idxprom.i
 ; CHECK:  tail call void @f1(i32* %arrayidx.i, i32 undef) #0
-; CHECK:  %x1 = load i32, i32* getelementptr (%struct.S, %struct.S* addrspacecast (%struct.S addrspace(3)* @g1 to %struct.S*), i64 0, i32 0, i64 0), align 4
+; CHECK:  %x1 = load i32, i32 addrspace(3)* getelementptr inbounds (%struct.S, %struct.S addrspace(3)* @g1, i64 0, i32 0, i64 0), align 4
 ; CHECK:  %L.sroa.0.0.insert.ext.i = zext i32 %x1 to i64
 ; CHECK:  tail call void @f2(i64* null, i64 %L.sroa.0.0.insert.ext.i) #0
 ; CHECK:  ret void

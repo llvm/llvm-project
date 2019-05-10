@@ -100,26 +100,7 @@ Error MachOAtomGraphBuilder::parseSections() {
     if (auto EC = SecRef.getName(Name))
       return errorCodeToError(EC);
 
-    StringRef Content;
-
-    // If this is a virtual section, leave its content empty.
-    if (!SecRef.isVirtual()) {
-      if (auto EC = SecRef.getContents(Content))
-        return errorCodeToError(EC);
-      if (Content.size() != SecRef.getSize())
-        return make_error<JITLinkError>("Section content size does not match "
-                                        "declared size for " +
-                                        Name);
-    }
-
     unsigned SectionIndex = SecRef.getIndex() + 1;
-
-    LLVM_DEBUG({
-      dbgs() << "Adding section " << Name << ": "
-             << format("0x%016" PRIx64, SecRef.getAddress())
-             << ", size: " << Content.size()
-             << ", align: " << SecRef.getAlignment() << "\n";
-    });
 
     // FIXME: Get real section permissions
     // How, exactly, on MachO?
@@ -132,12 +113,41 @@ Error MachOAtomGraphBuilder::parseSections() {
                                                        sys::Memory::MF_WRITE);
 
     auto &GenericSection = G->createSection(Name, Prot, SecRef.isBSS());
-    if (SecRef.isVirtual())
-      Sections[SectionIndex] =
-          MachOSection(GenericSection, SecRef.getAddress(),
-                       SecRef.getAlignment(), SecRef.getSize());
-    Sections[SectionIndex] = MachOSection(GenericSection, SecRef.getAddress(),
-                                          SecRef.getAlignment(), Content);
+
+    LLVM_DEBUG({
+      dbgs() << "Adding section " << Name << ": "
+             << format("0x%016" PRIx64, SecRef.getAddress())
+             << ", align: " << SecRef.getAlignment() << "\n";
+    });
+
+    assert(!Sections.count(SectionIndex) && "Section index already in use");
+
+    auto &MachOSec =
+        Sections
+            .try_emplace(SectionIndex, GenericSection, SecRef.getAddress(),
+                         SecRef.getAlignment())
+            .first->second;
+
+    if (!SecRef.isVirtual()) {
+      // If this section has content then record it.
+      StringRef Content;
+      if (auto EC = SecRef.getContents(Content))
+        return errorCodeToError(EC);
+      if (Content.size() != SecRef.getSize())
+        return make_error<JITLinkError>("Section content size does not match "
+                                        "declared size for " +
+                                        Name);
+      MachOSec.setContent(Content);
+    } else {
+      // If this is a zero-fill section then just record the size.
+      MachOSec.setZeroFill(SecRef.getSize());
+    }
+
+    uint32_t SectionFlags =
+        Obj.is64Bit() ? Obj.getSection64(SecRef.getRawDataRefImpl()).flags
+                      : Obj.getSection(SecRef.getRawDataRefImpl()).flags;
+
+    MachOSec.setNoDeadStrip(SectionFlags & MachO::S_ATTR_NO_DEAD_STRIP);
   }
 
   return Error::success();
@@ -290,7 +300,7 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
 
   LLVM_DEBUG(dbgs() << "MachOGraphBuilder setting atom content\n");
 
-  // Set atom contents.
+  // Set atom contents and any section-based flags.
   for (auto &KV : SecToAtoms) {
     auto &S = *KV.first;
     auto &SecAtoms = KV.second;
@@ -304,10 +314,16 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
         dbgs() << "  " << A << " to [ " << S.getAddress() + Offset << " .. "
                << S.getAddress() + LastAtomAddr << " ]\n";
       });
+
       if (S.isZeroFill())
         A.setZeroFill(LastAtomAddr - Offset);
       else
         A.setContent(S.getContent().substr(Offset, LastAtomAddr - Offset));
+
+      // If the section has no-dead-strip set then mark the atom as live.
+      if (S.isNoDeadStrip())
+        A.setLive(true);
+
       LastAtomAddr = Offset;
     }
   }

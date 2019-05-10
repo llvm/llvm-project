@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_XCORE_INSTPRINTER_XCOREINSTPRINTER_H
-#define LLVM_LIB_TARGET_XCORE_INSTPRINTER_XCOREINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_XCORE_MCTARGETDESC_XCOREINSTPRINTER_H
+#define LLVM_LIB_TARGET_XCORE_MCTARGETDESC_XCOREINSTPRINTER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -43,4 +43,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_XCORE_INSTPRINTER_XCOREINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_XCORE_MCTARGETDESC_XCOREINSTPRINTER_H
