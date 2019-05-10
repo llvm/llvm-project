@@ -633,7 +633,7 @@ DWARFUnit::getInlinedChainForAddress(uint64_t Address,
   // First, find the subroutine that contains the given address (the leaf
   // of inlined chain).
   DWARFDie SubroutineDIE =
-      (DWO ? DWO.get() : this)->getSubroutineForAddress(Address);
+      (DWO ? *DWO : *this).getSubroutineForAddress(Address);
 
   if (!SubroutineDIE)
     return;

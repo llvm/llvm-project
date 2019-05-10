@@ -516,7 +516,7 @@ vmovaps %ymm3, (%rbx)
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.50
 # CHECK-NEXT: IPC:               0.50
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -527,10 +527,10 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      2     1.00           *      U     movd	%mm0, (%rax)
-# CHECK-NEXT:  1      2     1.00           *      U     movd	%mm1, (%rcx)
-# CHECK-NEXT:  1      2     1.00           *      U     movd	%mm2, (%rdx)
-# CHECK-NEXT:  1      2     1.00           *      U     movd	%mm3, (%rbx)
+# CHECK-NEXT:  1      2     1.50           *      U     movd	%mm0, (%rax)
+# CHECK-NEXT:  1      2     1.50           *      U     movd	%mm1, (%rcx)
+# CHECK-NEXT:  1      2     1.50           *      U     movd	%mm2, (%rdx)
+# CHECK-NEXT:  1      2     1.50           *      U     movd	%mm3, (%rbx)
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0
@@ -591,14 +591,14 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     4.00    -     4.00    -      -      -      -      -      -     4.00
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     4.00    -      -     6.00   6.00    -      -      -      -     4.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movd	%mm0, (%rax)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movd	%mm1, (%rcx)
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movd	%mm2, (%rdx)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movd	%mm3, (%rbx)
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   movd	%mm0, (%rax)
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movd	%mm1, (%rcx)
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   movd	%mm2, (%rdx)
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movd	%mm3, (%rbx)
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
@@ -625,13 +625,13 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      403
+# CHECK-NEXT: Total Cycles:      602
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.99
-# CHECK-NEXT: IPC:               0.99
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: uOps Per Cycle:    0.66
+# CHECK-NEXT: IPC:               0.66
+# CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -642,30 +642,29 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     1.00           *            movaps	%xmm0, (%rax)
-# CHECK-NEXT:  1      1     1.00           *            movaps	%xmm1, (%rcx)
-# CHECK-NEXT:  1      1     1.00           *            movaps	%xmm2, (%rdx)
-# CHECK-NEXT:  1      1     1.00           *            movaps	%xmm3, (%rbx)
+# CHECK-NEXT:  1      1     1.50           *            movaps	%xmm0, (%rax)
+# CHECK-NEXT:  1      1     1.50           *            movaps	%xmm1, (%rcx)
+# CHECK-NEXT:  1      1     1.50           *            movaps	%xmm2, (%rdx)
+# CHECK-NEXT:  1      1     1.50           *            movaps	%xmm3, (%rbx)
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
-# CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
+# CHECK-NEXT: SCHEDQ  - Scheduler full:                            185  (30.7%)
 # CHECK-NEXT: LQ      - Load queue full:                           0
-# CHECK-NEXT: SQ      - Store queue full:                          370  (91.8%)
+# CHECK-NEXT: SQ      - Store queue full:                          372  (61.8%)
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
-# CHECK-NEXT:  0,              25  (6.2%)
-# CHECK-NEXT:  1,              370  (91.8%)
-# CHECK-NEXT:  2,              1  (0.2%)
-# CHECK-NEXT:  4,              7  (1.7%)
+# CHECK-NEXT:  0,              223  (37.0%)
+# CHECK-NEXT:  1,              372  (61.8%)
+# CHECK-NEXT:  4,              7  (1.2%)
 
 # CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
-# CHECK-NEXT:  0,          3  (0.7%)
-# CHECK-NEXT:  1,          400  (99.3%)
+# CHECK-NEXT:  0,          202  (33.6%)
+# CHECK-NEXT:  1,          400  (66.4%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: [1] Resource name.
@@ -674,8 +673,8 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             22         23         40
-# CHECK-NEXT: PdFPU            22         23         64
+# CHECK-NEXT: PdEX             22         24         40
+# CHECK-NEXT: PdFPU            22         24         64
 # CHECK-NEXT: PdLoad           0          0          40
 # CHECK-NEXT: PdStore          23         24         24
 
@@ -706,22 +705,22 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     4.00    -     4.00    -      -      -      -      -      -     4.00
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     4.00    -      -     6.00   6.00    -      -      -      -     4.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movaps	%xmm0, (%rax)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movaps	%xmm1, (%rcx)
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movaps	%xmm2, (%rdx)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   movaps	%xmm3, (%rbx)
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   movaps	%xmm0, (%rax)
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movaps	%xmm1, (%rcx)
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   movaps	%xmm2, (%rdx)
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movaps	%xmm3, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234567
 
-# CHECK:      [0,0]     DeER ..   movaps	%xmm0, (%rax)
-# CHECK-NEXT: [0,1]     D=eER..   movaps	%xmm1, (%rcx)
-# CHECK-NEXT: [0,2]     D==eER.   movaps	%xmm2, (%rdx)
-# CHECK-NEXT: [0,3]     D===eER   movaps	%xmm3, (%rbx)
+# CHECK:      [0,0]     DeER . .   movaps	%xmm0, (%rax)
+# CHECK-NEXT: [0,1]     D=eER. .   movaps	%xmm1, (%rcx)
+# CHECK-NEXT: [0,2]     D===eER.   movaps	%xmm2, (%rdx)
+# CHECK-NEXT: [0,3]     D====eER   movaps	%xmm3, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -732,20 +731,20 @@ vmovaps %ymm3, (%rbx)
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movaps	%xmm0, (%rax)
 # CHECK-NEXT: 1.     1     2.0    0.0    0.0       movaps	%xmm1, (%rcx)
-# CHECK-NEXT: 2.     1     3.0    0.0    0.0       movaps	%xmm2, (%rdx)
-# CHECK-NEXT: 3.     1     4.0    0.0    0.0       movaps	%xmm3, (%rbx)
+# CHECK-NEXT: 2.     1     4.0    1.0    0.0       movaps	%xmm2, (%rdx)
+# CHECK-NEXT: 3.     1     5.0    0.0    0.0       movaps	%xmm3, (%rbx)
 
 # CHECK:      [6] Code Region
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      403
+# CHECK-NEXT: Total Cycles:      7170
 # CHECK-NEXT: Total uOps:        1600
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    3.97
-# CHECK-NEXT: IPC:               0.99
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: uOps Per Cycle:    0.22
+# CHECK-NEXT: IPC:               0.06
+# CHECK-NEXT: Block RThroughput: 72.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -756,28 +755,28 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  4      1     1.00           *            vmovaps	%ymm0, (%rax)
-# CHECK-NEXT:  4      1     1.00           *            vmovaps	%ymm1, (%rcx)
-# CHECK-NEXT:  4      1     1.00           *            vmovaps	%ymm2, (%rdx)
-# CHECK-NEXT:  4      1     1.00           *            vmovaps	%ymm3, (%rbx)
+# CHECK-NEXT:  4      1     18.00          *            vmovaps	%ymm0, (%rax)
+# CHECK-NEXT:  4      1     18.00          *            vmovaps	%ymm1, (%rcx)
+# CHECK-NEXT:  4      1     18.00          *            vmovaps	%ymm2, (%rdx)
+# CHECK-NEXT:  4      1     18.00          *            vmovaps	%ymm3, (%rbx)
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
-# CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
+# CHECK-NEXT: SCHEDQ  - Scheduler full:                            5963  (83.2%)
 # CHECK-NEXT: LQ      - Load queue full:                           0
-# CHECK-NEXT: SQ      - Store queue full:                          0
+# CHECK-NEXT: SQ      - Store queue full:                          374  (5.2%)
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
-# CHECK-NEXT:  0,              3  (0.7%)
-# CHECK-NEXT:  4,              400  (99.3%)
+# CHECK-NEXT:  0,              6770  (94.4%)
+# CHECK-NEXT:  4,              400  (5.6%)
 
 # CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
-# CHECK-NEXT:  0,          3  (0.7%)
-# CHECK-NEXT:  4,          400  (99.3%)
+# CHECK-NEXT:  0,          6770  (94.4%)
+# CHECK-NEXT:  4,          400  (5.6%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: [1] Resource name.
@@ -786,10 +785,10 @@ vmovaps %ymm3, (%rbx)
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             1          1          40
-# CHECK-NEXT: PdFPU            1          1          64
+# CHECK-NEXT: PdEX             23         24         40
+# CHECK-NEXT: PdFPU            23         24         64
 # CHECK-NEXT: PdLoad           0          0          40
-# CHECK-NEXT: PdStore          2          2          24
+# CHECK-NEXT: PdStore          23         24         24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -818,22 +817,23 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     4.00    -     4.00    -      -      -      -      -      -     4.00
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     8.00    -      -     72.00  72.00   -      -      -      -     4.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%ymm0, (%rax)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%ymm1, (%rcx)
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%ymm2, (%rdx)
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -     1.00   vmovaps	%ymm3, (%rbx)
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     36.00   -      -      -      -     1.00   vmovaps	%ymm0, (%rax)
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     36.00   -      -      -      -      -     1.00   vmovaps	%ymm1, (%rcx)
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     36.00   -      -      -      -     1.00   vmovaps	%ymm2, (%rdx)
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     36.00   -      -      -      -      -     1.00   vmovaps	%ymm3, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: Index     0123456789          0123456789          01
 
-# CHECK:      [0,0]     DeER ..   vmovaps	%ymm0, (%rax)
-# CHECK-NEXT: [0,1]     .DeER..   vmovaps	%ymm1, (%rcx)
-# CHECK-NEXT: [0,2]     . DeER.   vmovaps	%ymm2, (%rdx)
-# CHECK-NEXT: [0,3]     .  DeER   vmovaps	%ymm3, (%rbx)
+# CHECK:      [0,0]     DeER .    .    .    .    .    .    .    ..   vmovaps	%ymm0, (%rax)
+# CHECK-NEXT: [0,1]     .D=eER    .    .    .    .    .    .    ..   vmovaps	%ymm1, (%rcx)
+# CHECK-NEXT: [0,2]     . D==================================eER..   vmovaps	%ymm2, (%rdx)
+# CHECK-NEXT: [0,3]     .  D===================================eER   vmovaps	%ymm3, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -843,6 +843,6 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vmovaps	%ymm0, (%rax)
-# CHECK-NEXT: 1.     1     1.0    0.0    0.0       vmovaps	%ymm1, (%rcx)
-# CHECK-NEXT: 2.     1     1.0    0.0    0.0       vmovaps	%ymm2, (%rdx)
-# CHECK-NEXT: 3.     1     1.0    0.0    0.0       vmovaps	%ymm3, (%rbx)
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       vmovaps	%ymm1, (%rcx)
+# CHECK-NEXT: 2.     1     35.0   33.0   0.0       vmovaps	%ymm2, (%rdx)
+# CHECK-NEXT: 3.     1     36.0   1.0    0.0       vmovaps	%ymm3, (%rbx)

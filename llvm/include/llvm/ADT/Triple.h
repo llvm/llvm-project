@@ -671,6 +671,11 @@ public:
            getEnvironment() == Triple::MuslEABIHF;
   }
 
+  /// Tests whether the target is SPIR (32- or 64-bit).
+  bool isSPIR() const {
+    return getArch() == Triple::spir || getArch() == Triple::spir64;
+  }
+
   /// Tests whether the target is NVPTX (32- or 64-bit).
   bool isNVPTX() const {
     return getArch() == Triple::nvptx || getArch() == Triple::nvptx64;

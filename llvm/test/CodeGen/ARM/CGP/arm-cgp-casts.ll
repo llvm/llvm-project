@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=thumbv8.main -mcpu=cortex-m33 %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NODSP
 ; RUN: llc -mtriple=thumbv7-linux-android %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NODSP
-; RUN: llc -mtriple=thumbv7em %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DSP
+; RUN: llc -mtriple=thumbv7em -mcpu=cortex-m7 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DSP
 ; RUN: llc -mtriple=thumbv8 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DSP-IMM
 
 ; Transform will fail because the trunc is not a sink.
@@ -642,4 +642,46 @@ cond.false:
 cond.end:
   %cond = phi i32 [ %phitmp, %cond.false ], [ 0, %entry ]
   ret i32 %cond
+}
+
+; CHECK-LABEL: test_i8_sitofp
+; CHECK: uxtb [[UXT:r[0-9]+]], r1
+; CHECK: sxtb [[SXT:r[0-9]+]], r1
+; CHECK: vmov [[VMOV:s[0-9]+]], [[SXT]]
+; CHECK: vcvt.f32.s32 [[CVT:s[0-9]+]], [[VMOV]]
+define float @test_i8_sitofp(i8* %ptr, i8 %arg) {
+entry:
+  %0 = load i8, i8* %ptr, align 1
+   %cmp = icmp eq i8 %0, %arg
+   br i1 %cmp, label %exit, label %if.end
+
+if.end:
+  %conv = sitofp i8 %arg to float
+  %div = fdiv float %conv, 2.000000e+01
+  br label %exit
+
+exit:
+  %res = phi float [ 0.0, %entry ], [ %div, %if.end ]
+  ret float %res
+}
+
+; CHECK-LABEL: test_i16_sitofp
+; CHECK: uxth [[UXT:r[0-9]+]], r1
+; CHECK: sxth [[SXT:r[0-9]+]], r1
+; CHECK: vmov [[VMOV:s[0-9]+]], [[SXT]]
+; CHECK: vcvt.f32.s32 [[CVT:s[0-9]+]], [[VMOV]]
+define float @test_i16_sitofp(i16* %ptr, i16 %arg) {
+entry:
+  %0 = load i16, i16* %ptr, align 1
+   %cmp = icmp eq i16 %0, %arg
+   br i1 %cmp, label %exit, label %if.end
+
+if.end:
+  %conv = sitofp i16 %arg to float
+  %div = fdiv float %conv, 2.000000e+01
+  br label %exit
+
+exit:
+  %res = phi float [ 0.0, %entry ], [ %div, %if.end ]
+  ret float %res
 }

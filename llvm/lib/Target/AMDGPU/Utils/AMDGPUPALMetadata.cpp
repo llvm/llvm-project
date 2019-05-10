@@ -252,12 +252,15 @@ static const char *getRegisterName(unsigned RegNum) {
       {PALMD::R_2CCA_SPI_SHADER_PGM_RSRC1_ES + 1, "SPI_SHADER_PGM_RSRC2_ES"},
       {PALMD::R_2C8A_SPI_SHADER_PGM_RSRC1_GS, "SPI_SHADER_PGM_RSRC1_GS"},
       {PALMD::R_2C8A_SPI_SHADER_PGM_RSRC1_GS + 1, "SPI_SHADER_PGM_RSRC2_GS"},
+      {PALMD::R_2E00_COMPUTE_DISPATCH_INITIATOR, "COMPUTE_DISPATCH_INITIATOR"},
       {PALMD::R_2E12_COMPUTE_PGM_RSRC1, "COMPUTE_PGM_RSRC1"},
       {PALMD::R_2E12_COMPUTE_PGM_RSRC1 + 1, "COMPUTE_PGM_RSRC2"},
       {PALMD::R_2C0A_SPI_SHADER_PGM_RSRC1_PS, "SPI_SHADER_PGM_RSRC1_PS"},
       {PALMD::R_2C0A_SPI_SHADER_PGM_RSRC1_PS + 1, "SPI_SHADER_PGM_RSRC2_PS"},
       {PALMD::R_A1B3_SPI_PS_INPUT_ENA, "SPI_PS_INPUT_ENA"},
       {PALMD::R_A1B4_SPI_PS_INPUT_ADDR, "SPI_PS_INPUT_ADDR"},
+      {PALMD::R_A1B6_SPI_PS_IN_CONTROL, "SPI_PS_IN_CONTROL"},
+      {PALMD::R_A2D5_VGT_SHADER_STAGES_EN, "VGT_SHADER_STAGES_EN"},
 
       // Registers not known to code generation.
       {0x2c07, "SPI_SHADER_PGM_RSRC3_PS"},
@@ -283,7 +286,6 @@ static const char *getRegisterName(unsigned RegNum) {
       {0xa1c5, "SPI_SHADER_COL_FORMAT"},
       {0xa203, "DB_SHADER_CONTROL"},
       {0xa08f, "CB_SHADER_MASK"},
-      {0xa1b6, "SPI_PS_IN_CONTROL"},
       {0xa191, "SPI_PS_INPUT_CNTL_0"},
       {0xa192, "SPI_PS_INPUT_CNTL_1"},
       {0xa193, "SPI_PS_INPUT_CNTL_2"},
@@ -334,7 +336,6 @@ static const char *getRegisterName(unsigned RegNum) {
       {0xa29b, "VGT_GS_OUT_PRIM_TYPE"},
       {0xa2ac, "VGT_GSVS_RING_ITEMSIZE"},
 
-      {0xa2d5, "VGT_SHADER_STAGES_EN"},
       {0xa2ad, "VGT_REUSE_OFF"},
       {0xa1b8, "SPI_BARYC_CNTL"},
 

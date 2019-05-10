@@ -241,11 +241,13 @@ public:
     if (S.getTargetStreamer() == nullptr)
       new AArch64TargetStreamer(S);
 
-    // Alias .hword/.word/xword to the target-independent .2byte/.4byte/.8byte
-    // directives as they have the same form and semantics:
-    ///  ::= (.hword | .word | .xword ) [ expression (, expression)* ]
+    // Alias .hword/.word/.[dx]word to the target-independent
+    // .2byte/.4byte/.8byte directives as they have the same form and
+    // semantics:
+    ///  ::= (.hword | .word | .dword | .xword ) [ expression (, expression)* ]
     Parser.addAliasForDirective(".hword", ".2byte");
     Parser.addAliasForDirective(".word", ".4byte");
+    Parser.addAliasForDirective(".dword", ".8byte");
     Parser.addAliasForDirective(".xword", ".8byte");
 
     // Initialize the set of available features.
