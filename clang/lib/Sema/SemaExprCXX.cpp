@@ -2200,24 +2200,6 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     MarkFunctionReferenced(StartLoc, OperatorDelete);
   }
 
-  // C++0x [expr.new]p17:
-  //   If the new expression creates an array of objects of class type,
-  //   access and ambiguity control are done for the destructor.
-  QualType BaseAllocType = Context.getBaseElementType(AllocType);
-  if (ArraySize && !BaseAllocType->isDependentType()) {
-    if (const RecordType *BaseRecordType = BaseAllocType->getAs<RecordType>()) {
-      if (CXXDestructorDecl *dtor = LookupDestructor(
-              cast<CXXRecordDecl>(BaseRecordType->getDecl()))) {
-        MarkFunctionReferenced(StartLoc, dtor);
-        CheckDestructorAccess(StartLoc, dtor,
-                              PDiag(diag::err_access_dtor)
-                                << BaseAllocType);
-        if (DiagnoseUseOfDecl(dtor, StartLoc))
-          return ExprError();
-      }
-    }
-  }
-
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                             PassAlignment, UsualArrayDeleteWantsSize,
                             PlacementArgs, TypeIdParens, ArraySize, initStyle,
