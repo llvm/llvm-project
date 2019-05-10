@@ -98,38 +98,38 @@ state. In each case, if there is no currently selected entity of the
 appropriate type, the variable's IsValid method will return false. These
 variables are:
 
-+-------------------+---------------------+-------------------------------------------------------------------------------------------------+
-| Variable          | Type                | Description                                                                                     |
-+-------------------+---------------------+-------------------------------------------------------------------------------------------------+
-| **lldb.debugger** | **lldb.SBDebugger** | Contains the debugger object whose **script** command was invoked.                              |
-|                   |                     |             The **lldb.SBDebugger** object owns the command interpreter                         |
-|                   |                     |             and all the targets in your debug session.  There will always be a                  |
-|                   |                     |             Debugger in the embedded interpreter.                                               |
-+-------------------+---------------------+-------------------------------------------------------------------------------------------------+
-| **lldb.target**   | **lldb.SBTarget**   | Contains the currently selected target - for instance the one made with the                     |
-|                   |                     |             **file** or selected by the **target select <target-index>** command.               |
-|                   |                     |             The **lldb.SBTarget** manages one running process, and all the executable           |
-|                   |                     |             and debug files for the process.                                                    |
-+-------------------+---------------------+-------------------------------------------------------------------------------------------------+
-| **lldb.process**  | **lldb.SBProcess**  | Contains the process of the currently selected target.                                          |
-|                   |                     |             The **lldb.SBProcess** object manages the threads and allows access to              |
-|                   |                     |             memory for the process.                                                             |
-+-------------------+---------------------+-------------------------------------------------------------------------------------------------+
-| **lldb.thread**   | **lldb.SBThread**   | Contains the currently selected thread.                                                         |
-|                   |                     |             The **lldb.SBThread** object manages the stack frames in that thread.               |
-|                   |                     |             A thread is always selected in the command interpreter when a target stops.         |
-|                   |                     |             The **thread select <thread-index>** command can be used to change the              |
-|                   |                     |             currently selected thread.  So as long as you have a stopped process, there will be |
-|                   |                     |             some selected thread.                                                               |
-+-------------------+---------------------+-------------------------------------------------------------------------------------------------+
-| **lldb.frame**    | **lldb.SBFrame**    | Contains the currently selected stack frame.                                                    |
-|                   |                     |             The **lldb.SBFrame** object manage the stack locals and the register set for        |
-|                   |                     |             that stack.                                                                         |
-|                   |                     |             A stack frame is always selected in the command interpreter when a target stops.    |
-|                   |                     |             The **frame select <frame-index>** command can be used to change the                |
-|                   |                     |             currently selected frame.  So as long as you have a stopped process, there will     |
-|                   |                     |             be some selected frame.                                                             |
-+-------------------+---------------------+-------------------------------------------------------------------------------------------------+
++-------------------+---------------------+-------------------------------------------------------------------------------------+
+| Variable          | Type                | Description                                                                         |
++-------------------+---------------------+-------------------------------------------------------------------------------------+
+| **lldb.debugger** | **lldb.SBDebugger** | Contains the debugger object whose **script** command was invoked.                  |
+|                   |                     | The **lldb.SBDebugger** object owns the command interpreter                         |
+|                   |                     | and all the targets in your debug session.  There will always be a                  |
+|                   |                     | Debugger in the embedded interpreter.                                               |
++-------------------+---------------------+-------------------------------------------------------------------------------------+
+| **lldb.target**   | **lldb.SBTarget**   | Contains the currently selected target - for instance the one made with the         |
+|                   |                     | **file** or selected by the **target select <target-index>** command.               |
+|                   |                     | The **lldb.SBTarget** manages one running process, and all the executable           |
+|                   |                     | and debug files for the process.                                                    |
++-------------------+---------------------+-------------------------------------------------------------------------------------+
+| **lldb.process**  | **lldb.SBProcess**  | Contains the process of the currently selected target.                              |
+|                   |                     | The **lldb.SBProcess** object manages the threads and allows access to              |
+|                   |                     | memory for the process.                                                             |
++-------------------+---------------------+-------------------------------------------------------------------------------------+
+| **lldb.thread**   | **lldb.SBThread**   | Contains the currently selected thread.                                             |
+|                   |                     | The **lldb.SBThread** object manages the stack frames in that thread.               |
+|                   |                     | A thread is always selected in the command interpreter when a target stops.         |
+|                   |                     | The **thread select <thread-index>** command can be used to change the              |
+|                   |                     | currently selected thread.  So as long as you have a stopped process, there will be |
+|                   |                     | some selected thread.                                                               |
++-------------------+---------------------+-------------------------------------------------------------------------------------+
+| **lldb.frame**    | **lldb.SBFrame**    | Contains the currently selected stack frame.                                        |
+|                   |                     | The **lldb.SBFrame** object manage the stack locals and the register set for        |
+|                   |                     | that stack.                                                                         |
+|                   |                     | A stack frame is always selected in the command interpreter when a target stops.    |
+|                   |                     | The **frame select <frame-index>** command can be used to change the                |
+|                   |                     | currently selected frame.  So as long as you have a stopped process, there will     |
+|                   |                     | be some selected frame.                                                             |
++-------------------+---------------------+-------------------------------------------------------------------------------------+
 
 
 While extremely convenient, these variables have a couple caveats that you
@@ -183,19 +183,19 @@ arguments:
      # Your code goes here
 
 
-+------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Argument   | Type                          | Description                                                                                                                                           |
-+------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+
-| **frame**  | **lldb.SBFrame**              | The current stack frame where the breakpoint got hit.                                                                                                 |
-|            |                               |             The object will always be valid.                                                                                                          |
-|            |                               |             This **frame** argument might *not* match the currently selected stack frame found in the **lldb** module global variable **lldb.frame**. |
-+------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+
-| **bp_loc** | **lldb.SBBreakpointLocation** | The breakpoint location that just got hit. Breakpoints are represented by **lldb.SBBreakpoint**                                                       |
-|            |                               |             objects. These breakpoint objects can have one or more locations. These locations                                                         |
-|            |                               |             are represented by **lldb.SBBreakpointLocation** objects.                                                                                 |
-+------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+
-| **dict**   | **dict**                      | The python session dictionary as a standard python dictionary object.                                                                                 |
-+------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+
++------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+| Argument   | Type                          | Description                                                                                                                               |
++------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+| **frame**  | **lldb.SBFrame**              | The current stack frame where the breakpoint got hit.                                                                                     |
+|            |                               | The object will always be valid.                                                                                                          |
+|            |                               | This **frame** argument might *not* match the currently selected stack frame found in the **lldb** module global variable **lldb.frame**. |
++------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+| **bp_loc** | **lldb.SBBreakpointLocation** | The breakpoint location that just got hit. Breakpoints are represented by **lldb.SBBreakpoint**                                           |
+|            |                               | objects. These breakpoint objects can have one or more locations. These locations                                                         |
+|            |                               | are represented by **lldb.SBBreakpointLocation** objects.                                                                                 |
++------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+| **dict**   | **dict**                      | The python session dictionary as a standard python dictionary object.                                                                     |
++------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
 
 Optionally, a Python breakpoint command can return a value. Returning False
 tells LLDB that you do not want to stop at the breakpoint. Any other return
@@ -327,45 +327,45 @@ custom Resolver, not a custom SearchFilter.
 
 The custom Resolver is provided as a Python class with the following methods:
 
-+--------------------+---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
-| Name               | Arguments                             | Description                                                                                                                     |
-+--------------------+---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
-| **__init__**       | **bkpt: lldb.SBBreakpoint**           | This is the constructor for the new Resolver.                                                                                   |
-|                    | **extra_args: lldb.SBStructuredData** |                                                                                                                                 |
-|                    |                                       |                                                                                                                                 |
-|                    |                                       | **bkpt** is the breakpoint owning this Resolver.                                                                                |
-|                    |                                       |                                                                                                                                 |
-|                    |                                       |                                                                                                                                 |
-|                    |                                       | **extra_args** is an SBStructuredData object that the user can pass in when creating instances of this                          |
-|                    |                                       |                breakpoint.  It is not required, but is quite handy.  For instance if you were implementing a breakpoint on some |
-|                    |                                       |                symbol name, you could write a generic symbol name based Resolver, and then allow the user to pass               |
-|                    |                                       |                in the particular symbol in the extra_args                                                                       |
-+--------------------+---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
-| **__callback__**   | **sym_ctx: lldb.SBSymbolContext**     | This is the Resolver callback.                                                                                                  |
-|                    |                                       |             The **sym_ctx** argument will be filled with the current stage                                                      |
-|                    |                                       |             of the search.                                                                                                      |
-|                    |                                       |                                                                                                                                 |
-|                    |                                       |                                                                                                                                 |
-|                    |                                       |                For instance, if you asked for a search depth of lldb.eSearchDepthCompUnit, then the                             |
-|                    |                                       |                target, module and compile_unit fields of the sym_ctx will be filled.  The callback should look just in the      |
-|                    |                                       |                context passed in **sym_ctx** for new locations.  If the callback finds an address of interest, it               |
-|                    |                                       |                can add it to the breakpoint with the **SBBreakpoint::AddLocation** method, using the breakpoint passed          |
-|                    |                                       |                in to the **__init__** method.                                                                                   |
-+--------------------+---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
-| **__get_depth__**  | **None**                              | Specify the depth at which you wish your callback to get called.  The currently supported options are:                          |
-|                    |                                       |                                                                                                                                 |
-|                    |                                       | lldb.eSearchDepthModule                                                                                                         |
-|                    |                                       | lldb.eSearchDepthCompUnit                                                                                                       |
-|                    |                                       | lldb.eSearchDepthFunction                                                                                                       |
-|                    |                                       |                                                                                                                                 |
-|                    |                                       |             For instance, if you are looking                                                                                    |
-|                    |                                       |             up symbols, which are stored at the Module level, you will want to get called back module by module.                |
-|                    |                                       |             So you would want to return **lldb.eSearchDepthModule**.  This method is optional.  If not provided the search      |
-|                    |                                       |             will be done at Module depth.                                                                                       |
-+--------------------+---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
-| **get_short_help** | **None**                              | This is an optional method.  If provided, the returned string will be printed at the beginning of                               |
-|                    |                                       |             the description for this breakpoint.                                                                                |
-+--------------------+---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
++--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
+| Name               | Arguments                             | Description                                                                                                      |
++--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
+| **__init__**       | **bkpt: lldb.SBBreakpoint**           | This is the constructor for the new Resolver.                                                                    |
+|                    | **extra_args: lldb.SBStructuredData** |                                                                                                                  |
+|                    |                                       |                                                                                                                  |
+|                    |                                       | **bkpt** is the breakpoint owning this Resolver.                                                                 |
+|                    |                                       |                                                                                                                  |
+|                    |                                       |                                                                                                                  |
+|                    |                                       | **extra_args** is an SBStructuredData object that the user can pass in when creating instances of this           |
+|                    |                                       | breakpoint.  It is not required, but is quite handy.  For instance if you were implementing a breakpoint on some |
+|                    |                                       | symbol name, you could write a generic symbol name based Resolver, and then allow the user to pass               |
+|                    |                                       | in the particular symbol in the extra_args                                                                       |
++--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
+| **__callback__**   | **sym_ctx: lldb.SBSymbolContext**     | This is the Resolver callback.                                                                                   |
+|                    |                                       | The **sym_ctx** argument will be filled with the current stage                                                   |
+|                    |                                       | of the search.                                                                                                   |
+|                    |                                       |                                                                                                                  |
+|                    |                                       |                                                                                                                  |
+|                    |                                       | For instance, if you asked for a search depth of lldb.eSearchDepthCompUnit, then the                             |
+|                    |                                       | target, module and compile_unit fields of the sym_ctx will be filled.  The callback should look just in the      |
+|                    |                                       | context passed in **sym_ctx** for new locations.  If the callback finds an address of interest, it               |
+|                    |                                       | can add it to the breakpoint with the **SBBreakpoint::AddLocation** method, using the breakpoint passed          |
+|                    |                                       | in to the **__init__** method.                                                                                   |
++--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
+| **__get_depth__**  | **None**                              | Specify the depth at which you wish your callback to get called.  The currently supported options are:           |
+|                    |                                       |                                                                                                                  |
+|                    |                                       | lldb.eSearchDepthModule                                                                                          |
+|                    |                                       | lldb.eSearchDepthCompUnit                                                                                        |
+|                    |                                       | lldb.eSearchDepthFunction                                                                                        |
+|                    |                                       |                                                                                                                  |
+|                    |                                       | For instance, if you are looking                                                                                 |
+|                    |                                       | up symbols, which are stored at the Module level, you will want to get called back module by module.             |
+|                    |                                       | So you would want to return **lldb.eSearchDepthModule**.  This method is optional.  If not provided the search   |
+|                    |                                       | will be done at Module depth.                                                                                    |
++--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
+| **get_short_help** | **None**                              | This is an optional method.  If provided, the returned string will be printed at the beginning of                |
+|                    |                                       | the description for this breakpoint.                                                                             |
++--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
 
 To define a new breakpoint command defined by this class from the lldb command
 line, use the command:
@@ -436,23 +436,23 @@ methods:
 | Name              | Arguments                          | Description                                                                           |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
 | **__init__**      | **thread_plan: lldb.SBThreadPlan** | This is the underlying SBThreadPlan that is pushed onto the plan stack.               |
-|                   |                                    |             You will want to store this away in an ivar.  Also, if you are going to   |
-|                   |                                    |             use one of the canned thread plans, you can queue it at this point.       |
+|                   |                                    | You will want to store this away in an ivar.  Also, if you are going to               |
+|                   |                                    | use one of the canned thread plans, you can queue it at this point.                   |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
 | **explains_stop** | **event: lldb.SBEvent**            | Return True if this stop is part of your thread plans logic, false otherwise.         |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
 | **is_stale**      | **None**                           | If your plan is no longer relevant (for instance, you were                            |
-|                   |                                    |             stepping in a particular stack frame, but some other operation            |
-|                   |                                    |             pushed that frame off the stack) return True and your plan will           |
-|                   |                                    |             get popped.                                                               |
+|                   |                                    | stepping in a particular stack frame, but some other operation                        |
+|                   |                                    | pushed that frame off the stack) return True and your plan will                       |
+|                   |                                    | get popped.                                                                           |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
 | **should_step**   | **None**                           | Return True if you want lldb to instruction step one instruction,                     |
-|                   |                                    |             or False to continue till the next breakpoint is hit.                     |
+|                   |                                    | or False to continue till the next breakpoint is hit.                                 |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
 | **should_stop**   | **event: lldb.SBEvent**            | If your plan wants to stop and return control to the user at this point, return True. |
-|                   |                                    |             If your plan is done at this point, call SetPlanComplete on your          |
-|                   |                                    |             thread plan instance.                                                     |
-|                   |                                    |             Also, do any work you need here to set up the next stage of stepping.     |
+|                   |                                    | If your plan is done at this point, call SetPlanComplete on your                      |
+|                   |                                    | thread plan instance.                                                                 |
+|                   |                                    | Also, do any work you need here to set up the next stage of stepping.                 |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
 
 To use this class to implement a step, use the command:
@@ -514,19 +514,19 @@ signature as such:
 | **debugger**      | **lldb.SBDebugger**            | The current debugger object.                                                                                                     |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 | **command**       | **python string**              | A python string containing all arguments for your command. If you need to chop up the arguments                                  |
-|                   |                                |             try using the **shlex** module's shlex.split(command) to properly extract the                                        |
-|                   |                                |             arguments.                                                                                                           |
+|                   |                                | try using the **shlex** module's shlex.split(command) to properly extract the                                                    |
+|                   |                                | arguments.                                                                                                                       |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 | **exe_ctx**       | **lldb.SBExecutionContext**    | An execution context object carrying around information on the inferior process' context in which the command is expected to act |
 |                   |                                |                                                                                                                                  |
 |                   |                                | *Optional since SVN r218834, unavailable before*                                                                                 |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 | **result**        | **lldb.SBCommandReturnObject** | A return object which encapsulates success/failure information for the command and output text                                   |
-|                   |                                |             that needs to be printed as a result of the command. The plain Python "print" command also works but                 |
-|                   |                                |             text won't go in the result by default (it is useful as a temporary logging facility).                               |
+|                   |                                | that needs to be printed as a result of the command. The plain Python "print" command also works but                             |
+|                   |                                | text won't go in the result by default (it is useful as a temporary logging facility).                                           |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 | **internal_dict** | **python dict object**         | The dictionary for the current embedded script session which contains all variables                                              |
-|                   |                                |             and functions.                                                                                                       |
+|                   |                                | and functions.                                                                                                                   |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 
 Starting with SVN revision 232224, Python commands can also be implemented by
