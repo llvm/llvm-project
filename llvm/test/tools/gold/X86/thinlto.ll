@@ -119,11 +119,11 @@
 
 ; DIS1: ^0 = module: (path: "{{.*}}thinlto.ll.tmp.o", hash: (0, 0, 0, 0, 0))
 ; DIS1: ^1 = module: (path: "{{.*}}thinlto.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
-; DIS1: ^2 = gv: (guid: 13146401226427987378, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0), insts: 1)))
-; DIS1: ^3 = gv: (guid: 14740650423002898831, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0), insts: 2, calls: ((callee: ^2)))))
+; DIS1: ^2 = gv: (guid: 13146401226427987378, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; DIS1: ^3 = gv: (guid: 14740650423002898831, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 2, calls: ((callee: ^2)))))
 
 ; DIS2: ^0 = module: (path: "{{.*}}thinlto.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
-; DIS2: ^1 = gv: (guid: 13146401226427987378, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0), insts: 1)))
+; DIS2: ^1 = gv: (guid: 13146401226427987378, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 1)))
 
 ; COMBINED: <MODULE_STRTAB_BLOCK
 ; COMBINED-NEXT: <ENTRY {{.*}} record string = '{{.*}}/test/tools/gold/X86/Output/thinlto.ll.tmp{{.*}}.o'

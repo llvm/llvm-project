@@ -7859,7 +7859,7 @@ bool LLParser::ParseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
   StringRef ModulePath;
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
       /*Linkage=*/GlobalValue::ExternalLinkage, /*NotEligibleToImport=*/false,
-      /*Live=*/false, /*IsLocal=*/false);
+      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
   unsigned InstCount;
   std::vector<FunctionSummary::EdgeTy> Calls;
   FunctionSummary::TypeIdInfo TypeIdInfo;
@@ -7929,7 +7929,7 @@ bool LLParser::ParseVariableSummary(std::string Name, GlobalValue::GUID GUID,
   StringRef ModulePath;
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
       /*Linkage=*/GlobalValue::ExternalLinkage, /*NotEligibleToImport=*/false,
-      /*Live=*/false, /*IsLocal=*/false);
+      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
   GlobalVarSummary::GVarFlags GVarFlags(/*ReadOnly*/ false);
   std::vector<ValueInfo> Refs;
   if (ParseToken(lltok::colon, "expected ':' here") ||
@@ -7972,7 +7972,7 @@ bool LLParser::ParseAliasSummary(std::string Name, GlobalValue::GUID GUID,
   StringRef ModulePath;
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
       /*Linkage=*/GlobalValue::ExternalLinkage, /*NotEligibleToImport=*/false,
-      /*Live=*/false, /*IsLocal=*/false);
+      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
   if (ParseToken(lltok::colon, "expected ':' here") ||
       ParseToken(lltok::lparen, "expected '(' here") ||
       ParseModuleReference(ModulePath) ||
@@ -8462,41 +8462,55 @@ bool LLParser::ParseVFuncId(FunctionSummary::VFuncId &VFuncId,
 /// GVFlags
 ///   ::= 'flags' ':' '(' 'linkage' ':' OptionalLinkageAux ','
 ///         'notEligibleToImport' ':' Flag ',' 'live' ':' Flag ','
-///         'dsoLocal' ':' Flag ')'
+///         'dsoLocal' ':' Flag ',' 'canAutoHide' ':' Flag ')'
 bool LLParser::ParseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
   assert(Lex.getKind() == lltok::kw_flags);
   Lex.Lex();
 
-  bool HasLinkage;
   if (ParseToken(lltok::colon, "expected ':' here") ||
-      ParseToken(lltok::lparen, "expected '(' here") ||
-      ParseToken(lltok::kw_linkage, "expected 'linkage' here") ||
-      ParseToken(lltok::colon, "expected ':' here"))
+      ParseToken(lltok::lparen, "expected '(' here"))
     return true;
 
-  GVFlags.Linkage = parseOptionalLinkageAux(Lex.getKind(), HasLinkage);
-  assert(HasLinkage && "Linkage not optional in summary entry");
-  Lex.Lex();
-
-  unsigned Flag;
-  if (ParseToken(lltok::comma, "expected ',' here") ||
-      ParseToken(lltok::kw_notEligibleToImport,
-                 "expected 'notEligibleToImport' here") ||
-      ParseToken(lltok::colon, "expected ':' here") || ParseFlag(Flag))
-    return true;
-  GVFlags.NotEligibleToImport = Flag;
-
-  if (ParseToken(lltok::comma, "expected ',' here") ||
-      ParseToken(lltok::kw_live, "expected 'live' here") ||
-      ParseToken(lltok::colon, "expected ':' here") || ParseFlag(Flag))
-    return true;
-  GVFlags.Live = Flag;
-
-  if (ParseToken(lltok::comma, "expected ',' here") ||
-      ParseToken(lltok::kw_dsoLocal, "expected 'dsoLocal' here") ||
-      ParseToken(lltok::colon, "expected ':' here") || ParseFlag(Flag))
-    return true;
-  GVFlags.DSOLocal = Flag;
+  do {
+    unsigned Flag;
+    switch (Lex.getKind()) {
+    case lltok::kw_linkage:
+      Lex.Lex();
+      if (ParseToken(lltok::colon, "expected ':'"))
+        return true;
+      bool HasLinkage;
+      GVFlags.Linkage = parseOptionalLinkageAux(Lex.getKind(), HasLinkage);
+      assert(HasLinkage && "Linkage not optional in summary entry");
+      Lex.Lex();
+      break;
+    case lltok::kw_notEligibleToImport:
+      Lex.Lex();
+      if (ParseToken(lltok::colon, "expected ':'") || ParseFlag(Flag))
+        return true;
+      GVFlags.NotEligibleToImport = Flag;
+      break;
+    case lltok::kw_live:
+      Lex.Lex();
+      if (ParseToken(lltok::colon, "expected ':'") || ParseFlag(Flag))
+        return true;
+      GVFlags.Live = Flag;
+      break;
+    case lltok::kw_dsoLocal:
+      Lex.Lex();
+      if (ParseToken(lltok::colon, "expected ':'") || ParseFlag(Flag))
+        return true;
+      GVFlags.DSOLocal = Flag;
+      break;
+    case lltok::kw_canAutoHide:
+      Lex.Lex();
+      if (ParseToken(lltok::colon, "expected ':'") || ParseFlag(Flag))
+        return true;
+      GVFlags.CanAutoHide = Flag;
+      break;
+    default:
+      return Error(Lex.getLoc(), "expected gv flag type");
+    }
+  } while (EatIfPresent(lltok::comma));
 
   if (ParseToken(lltok::rparen, "expected ')' here"))
     return true;
