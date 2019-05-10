@@ -1279,6 +1279,7 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     // This is the first place we are able to copy this information.
     Alias->setExternal(Symbol.isExternal());
     Alias->setBinding(Symbol.getBinding());
+    Alias->setOther(Symbol.getOther());
 
     if (!Symbol.isUndefined() && !Rest.startswith("@@@"))
       continue;

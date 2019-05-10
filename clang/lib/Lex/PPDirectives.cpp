@@ -1871,6 +1871,18 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     return {ImportAction::None};
   }
 
+  // Check for circular inclusion of the main file.
+  // We can't generate a consistent preamble with regard to the conditional
+  // stack if the main file is included again as due to the preamble bounds
+  // some directives (e.g. #endif of a header guard) will never be seen.
+  // Since this will lead to confusing errors, avoid the inclusion.
+  if (File && PreambleConditionalStack.isRecording() &&
+      SourceMgr.translateFile(File) == SourceMgr.getMainFileID()) {
+    Diag(FilenameTok.getLocation(),
+         diag::err_pp_including_mainfile_in_preamble);
+    return {ImportAction::None};
+  }
+
   // Should we enter the source file? Set to Skip if either the source file is
   // known to have no effect beyond its effect on module visibility -- that is,
   // if it's got an include guard that is already defined, set to Import if it

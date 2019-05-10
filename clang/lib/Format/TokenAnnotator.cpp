@@ -1119,10 +1119,10 @@ public:
       return LT_ImportStatement;
     }
 
-    // In .proto files, top-level options are very similar to import statements
-    // and should not be line-wrapped.
+    // In .proto files, top-level options and package statements are very
+    // similar to import statements and should not be line-wrapped.
     if (Style.Language == FormatStyle::LK_Proto && Line.Level == 0 &&
-        CurrentToken->is(Keywords.kw_option)) {
+        CurrentToken->isOneOf(Keywords.kw_option, Keywords.kw_package)) {
       next();
       if (CurrentToken && CurrentToken->is(tok::identifier)) {
         while (CurrentToken)

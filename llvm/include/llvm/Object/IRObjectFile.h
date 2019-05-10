@@ -37,8 +37,7 @@ class IRObjectFile : public SymbolicFile {
 public:
   ~IRObjectFile() override;
   void moveSymbolNext(DataRefImpl &Symb) const override;
-  std::error_code printSymbolName(raw_ostream &OS,
-                                  DataRefImpl Symb) const override;
+  Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override;
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;

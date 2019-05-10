@@ -7,7 +7,7 @@
 @end
 
 // CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\01\00"
-// CHECK-MODERN: @"\01l_OBJC_CLASS_RO_$_Foo" = {{.*}} { i32 772
+// CHECK-MODERN: @"_OBJC_CLASS_RO_$_Foo" = {{.*}} { i32 772
 //   772 == 0x304
 //            ^ HasMRCWeakIvars
 //            ^ HasCXXDestructorOnly

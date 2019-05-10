@@ -1,6 +1,8 @@
 # REQUIRES: python-psutil
 
 # llvm.org/PR33944
+# This should be system-windows as windows does not cover all cases, but
+# apparently neither does system-windows
 # UNSUPPORTED: windows
 
 # FIXME: This test is fragile because it relies on time which can
