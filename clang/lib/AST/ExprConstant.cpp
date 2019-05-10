@@ -4381,6 +4381,14 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
     return false;
   }
 
+  // DR1872: An instantiated virtual constexpr function can't be called in a
+  // constant expression.
+  if (isa<CXXMethodDecl>(Declaration) &&
+      cast<CXXMethodDecl>(Declaration)->isVirtual()) {
+    Info.FFDiag(CallLoc, diag::note_constexpr_virtual_call);
+    return false;
+  }
+
   // Can we evaluate this function call?
   if (Definition && Definition->isConstexpr() &&
       !Definition->isInvalidDecl() && Body)
@@ -4902,7 +4910,6 @@ public:
     const FunctionDecl *FD = nullptr;
     LValue *This = nullptr, ThisVal;
     auto Args = llvm::makeArrayRef(E->getArgs(), E->getNumArgs());
-    bool HasQualifier = false;
 
     // Extract function decl and 'this' pointer from the callee.
     if (CalleeType->isSpecificBuiltinType(BuiltinType::BoundMember)) {
@@ -4913,7 +4920,6 @@ public:
           return false;
         Member = ME->getMemberDecl();
         This = &ThisVal;
-        HasQualifier = ME->hasQualifier();
       } else if (const BinaryOperator *BE = dyn_cast<BinaryOperator>(Callee)) {
         // Indirect bound member calls ('.*' or '->*').
         Member = HandleMemberPointerAccess(Info, BE, ThisVal, false);
@@ -4998,12 +5004,6 @@ public:
 
     if (This && !This->checkSubobject(Info, E, CSK_This))
       return false;
-
-    // DR1358 allows virtual constexpr functions in some cases. Don't allow
-    // calls to such functions in constant expressions.
-    if (This && !HasQualifier &&
-        isa<CXXMethodDecl>(FD) && cast<CXXMethodDecl>(FD)->isVirtual())
-      return Error(E, diag::note_constexpr_virtual_call);
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);

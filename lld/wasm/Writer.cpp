@@ -1142,6 +1142,10 @@ void Writer::calculateTypes() {
     registerType(E->Signature);
 }
 
+static bool requiresGOTAccess(const Symbol* Sym) {
+  return Config->Pic && !Sym->isHidden() && !Sym->isLocal();
+}
+
 void Writer::processRelocations(InputChunk *Chunk) {
   if (!Chunk->Live)
     return;
@@ -1153,8 +1157,8 @@ void Writer::processRelocations(InputChunk *Chunk) {
     case R_WASM_TABLE_INDEX_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB: {
       FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
-      if (Sym->hasTableIndex() || !Sym->hasFunctionIndex())
-        continue;
+      if (Sym->hasTableIndex() || !Sym->hasFunctionIndex() || requiresGOTAccess(Sym))
+        break;
       Sym->setTableIndex(TableBase + IndirectFunctions.size());
       IndirectFunctions.emplace_back(Sym);
       break;
@@ -1206,7 +1210,7 @@ void Writer::processRelocations(InputChunk *Chunk) {
         // will be converted into code by `generateRelocationCode`.  This code
         // requires the symbols to have GOT entires.
         auto* Sym = File->getSymbols()[Reloc.Index];
-        if (!Sym->isHidden() && !Sym->isLocal() && !Sym->isInGOT()) {
+        if (requiresGOTAccess(Sym) && !Sym->isInGOT()) {
           Sym->setGOTIndex(NumImportedGlobals++);
           GOTSymbols.push_back(Sym);
         }

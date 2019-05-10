@@ -3041,12 +3041,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
   while (1) {
     bool isInvalid = false;
     bool isStorageClass = false;
-    bool isAlreadyConsumed = false;
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
 
-    // This value need to be set when isAlreadyConsumed is set to true.
-    SourceLocation RangeEnd;
+    // This value needs to be set to the location of the last token if the last
+    // token of the specifier is already consumed.
+    SourceLocation ConsumedEnd;
 
     // HACK: MSVC doesn't consider _Atomic to be a keyword and its STL
     // implementation for VS2013 uses _Atomic as an identifier for one of the
@@ -3603,8 +3603,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       SourceLocation ExplicitLoc = Loc;
       SourceLocation CloseParenLoc;
       ExplicitSpecifier ExplicitSpec(nullptr, ExplicitSpecKind::ResolvedTrue);
-      isAlreadyConsumed = true;
-      RangeEnd = ExplicitLoc;
+      ConsumedEnd = ExplicitLoc;
       ConsumeToken(); // kw_explicit
       if (Tok.is(tok::l_paren)) {
         if (getLangOpts().CPlusPlus2a) {
@@ -3612,7 +3611,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           BalancedDelimiterTracker Tracker(*this, tok::l_paren);
           Tracker.consumeOpen();
           ExplicitExpr = ParseConstantExpression();
-          RangeEnd = Tok.getLocation();
+          ConsumedEnd = Tok.getLocation();
           if (ExplicitExpr.isUsable()) {
             CloseParenLoc = Tok.getLocation();
             Tracker.consumeClose();
@@ -3971,10 +3970,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
     }
 
-    assert((!isAlreadyConsumed || RangeEnd != SourceLocation()) &&
-                                     "both or neither of isAlreadyConsumed and "
-                                     "RangeEnd needs to be set");
-    DS.SetRangeEnd(isAlreadyConsumed ? RangeEnd : Tok.getLocation());
+    DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
 
     // If the specifier wasn't legal, issue a diagnostic.
     if (isInvalid) {
@@ -3995,7 +3991,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Diag(Loc, DiagID) << PrevSpec;
     }
 
-    if (DiagID != diag::err_bool_redeclaration && !isAlreadyConsumed)
+    if (DiagID != diag::err_bool_redeclaration && ConsumedEnd.isInvalid())
       // After an error the next token can be an annotation token.
       ConsumeAnyToken();
 
