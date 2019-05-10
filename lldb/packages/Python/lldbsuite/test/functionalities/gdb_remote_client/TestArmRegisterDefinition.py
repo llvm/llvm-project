@@ -110,6 +110,9 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
         self.server.responder = MyResponder()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(
+                    lambda: self.runCmd("log disable gdb-remote packets"))
+
         self.dbg.SetDefaultArchitecture("armv7em")
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
 
@@ -126,6 +129,3 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
 
         pc_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("pc")
         self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800d22e)
-
-        if self.TraceOn():
-            self.runCmd("log disable gdb-remote packets")
