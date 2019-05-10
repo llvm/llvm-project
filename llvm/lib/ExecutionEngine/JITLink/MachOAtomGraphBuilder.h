@@ -75,7 +75,7 @@ protected:
 
     StringRef getContent() const {
       assert(ContentPtr && "getContent() called on zero-fill section");
-      return {ContentPtr, Size};
+      return {ContentPtr, static_cast<size_t>(Size)};
     }
 
     JITTargetAddress getAddress() const { return Address; }
