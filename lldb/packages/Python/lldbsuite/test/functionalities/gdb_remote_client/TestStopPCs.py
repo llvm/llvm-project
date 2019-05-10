@@ -44,3 +44,6 @@ class TestStopPCs(GDBRemoteTestBase):
         self.assertEqual(th1.GetThreadID(), 0x2ff0d)
         self.assertEqual(th0.GetFrameAtIndex(0).GetPC(), 0x10001bc00)
         self.assertEqual(th1.GetFrameAtIndex(0).GetPC(), 0x10002bc00)
+
+        if self.TraceOn():
+          self.runCmd("log disable gdb-remote packets")
