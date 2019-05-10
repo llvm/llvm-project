@@ -71,6 +71,7 @@ endfunction()
 check_cxx_section_exists(".init_array" COMPILER_RT_HAS_INITFINI_ARRAY
   SOURCE "__attribute__((constructor)) void f() {}\nint main() { return 0; }\n")
 
+append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 CRT_CFLAGS)
 append_list_if(COMPILER_RT_HAS_INITFINI_ARRAY -DCRT_HAS_INITFINI_ARRAY CRT_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC CRT_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic CRT_CFLAGS)
