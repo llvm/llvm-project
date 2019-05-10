@@ -1,0 +1,248 @@
+# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes DEBUG-LABEL,CHECK
+# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes NODEBUG-LABEL,CHECK
+#
+# This was generated from:
+#
+# using alpha = float __attribute__((ext_vector_type(4)));
+#
+# void bravo(alpha charlie) {
+#   unsigned char *delta = (unsigned char *)&charlie;
+#   delta[0] = 0;
+#   volatile alpha echo = charlie;
+# }
+#
+# Using the command line:
+# clang -g -c 1.cpp -O2 -S -emit-llvm -fno-strict-aliasing --target=x86_64-unknown-unknown -o test.ll
+
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "1.cpp"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-unknown"
+
+  ; Function Attrs: nounwind uwtable
+  define dso_local void @debug(<4 x float> %charlie) local_unnamed_addr #0 !dbg !10 {
+  entry:
+    %charlie.addr = alloca <4 x float>, align 16
+    %echo = alloca <4 x float>, align 16
+    call void @llvm.dbg.value(metadata <4 x float> %charlie, metadata !19, metadata !DIExpression()), !dbg !23
+    store <4 x float> %charlie, <4 x float>* %charlie.addr, align 16
+    call void @llvm.dbg.value(metadata i8* undef, metadata !20, metadata !DIExpression()), !dbg !24
+    %charlie.addr.0.charlie.addr.0.arrayidx.sroa_cast = bitcast <4 x float>* %charlie.addr to i8*, !dbg !25
+    store i8 0, i8* %charlie.addr.0.charlie.addr.0.arrayidx.sroa_cast, align 16, !dbg !25
+    %echo.0.echo.0..sroa_cast = bitcast <4 x float>* %echo to i8*, !dbg !26
+    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %echo.0.echo.0..sroa_cast), !dbg !26
+    call void @llvm.dbg.declare(metadata <4 x float>* %echo, metadata !21, metadata !DIExpression()), !dbg !27
+    %charlie.addr.0.charlie.addr.0. = load <4 x float>, <4 x float>* %charlie.addr, align 16, !dbg !28
+    call void @llvm.dbg.value(metadata <4 x float> %charlie.addr.0.charlie.addr.0., metadata !19, metadata !DIExpression()), !dbg !23
+    store volatile <4 x float> %charlie.addr.0.charlie.addr.0., <4 x float>* %echo, align 16, !dbg !27
+    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %echo.0.echo.0..sroa_cast), !dbg !29
+    ret void, !dbg !29
+  }
+
+  ; Function Attrs: nounwind uwtable
+  define dso_local void @nodebug(<4 x float> %charlie) local_unnamed_addr #0 {
+  entry:
+    %charlie.addr = alloca <4 x float>, align 16
+    %echo = alloca <4 x float>, align 16
+    store <4 x float> %charlie, <4 x float>* %charlie.addr, align 16
+    %charlie.addr.0.charlie.addr.0.arrayidx.sroa_cast = bitcast <4 x float>* %charlie.addr to i8*
+    store i8 0, i8* %charlie.addr.0.charlie.addr.0.arrayidx.sroa_cast, align 16
+    %echo.0.echo.0..sroa_cast = bitcast <4 x float>* %echo to i8*
+    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %echo.0.echo.0..sroa_cast)
+    %charlie.addr.0.charlie.addr.0. = load <4 x float>, <4 x float>* %charlie.addr, align 16
+    store volatile <4 x float> %charlie.addr.0.charlie.addr.0., <4 x float>* %echo, align 16
+    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %echo.0.echo.0..sroa_cast)
+    ret void
+  }
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #3
+
+  attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { argmemonly nounwind }
+  attributes #3 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!6, !7, !8}
+  !llvm.ident = !{!9}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 9.0.0 (https://github.com/llvm/llvm-project.git dfaba1587d4c17409f28c4be46b184fb77237e8e)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "1.cpp", directory: "C:\5CUsers\5Cgbdawsoc\5CDocuments\5Cllvm\5Cbg40969")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 64)
+  !5 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
+  !6 = !{i32 2, !"Dwarf Version", i32 4}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{i32 1, !"wchar_size", i32 4}
+  !9 = !{!"clang version 9.0.0 (https://github.com/llvm/llvm-project.git dfaba1587d4c17409f28c4be46b184fb77237e8e)"}
+  !10 = distinct !DISubprogram(name: "bravo", linkageName: "_Z5bravoDv4_f", scope: !1, file: !1, line: 3, type: !11, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !18)
+  !11 = !DISubroutineType(types: !12)
+  !12 = !{null, !13}
+  !13 = !DIDerivedType(tag: DW_TAG_typedef, name: "alpha", file: !1, line: 1, baseType: !14)
+  !14 = !DICompositeType(tag: DW_TAG_array_type, baseType: !15, size: 128, flags: DIFlagVector, elements: !16)
+  !15 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
+  !16 = !{!17}
+  !17 = !DISubrange(count: 4)
+  !18 = !{!19, !20, !21}
+  !19 = !DILocalVariable(name: "charlie", arg: 1, scope: !10, file: !1, line: 3, type: !13)
+  !20 = !DILocalVariable(name: "delta", scope: !10, file: !1, line: 4, type: !4)
+  !21 = !DILocalVariable(name: "echo", scope: !10, file: !1, line: 6, type: !22)
+  !22 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !13)
+  !23 = !DILocation(line: 3, column: 18, scope: !10)
+  !24 = !DILocation(line: 4, column: 18, scope: !10)
+  !25 = !DILocation(line: 5, column: 12, scope: !10)
+  !26 = !DILocation(line: 6, column: 3, scope: !10)
+  !27 = !DILocation(line: 6, column: 18, scope: !10)
+  !28 = !DILocation(line: 6, column: 25, scope: !10)
+  !29 = !DILocation(line: 7, column: 1, scope: !10)
+
+...
+---
+name:            debug
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: vr128, preferred-register: '' }
+  - { id: 1, class: vr128, preferred-register: '' }
+liveins:
+  - { reg: '$xmm0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: charlie.addr, type: default, offset: 0, size: 16, alignment: 16,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: echo, type: default, offset: 0, size: 16, alignment: 16,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '!21', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!27' }
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $xmm0
+
+    DBG_VALUE $xmm0, $noreg, !19, !DIExpression(), debug-location !23
+    %0:vr128 = COPY $xmm0
+    DBG_VALUE %0, $noreg, !19, !DIExpression(), debug-location !23
+    MOVAPSmr %stack.0.charlie.addr, 1, $noreg, 0, $noreg, %0 :: (store 16 into %ir.charlie.addr)
+    DBG_VALUE $noreg, $noreg, !20, !DIExpression(), debug-location !24
+    MOV8mi %stack.0.charlie.addr, 1, $noreg, 0, $noreg, 0, debug-location !25 :: (store 1 into %ir.charlie.addr.0.charlie.addr.0.arrayidx.sroa_cast, align 16)
+    %1:vr128 = MOVAPSrm %stack.0.charlie.addr, 1, $noreg, 0, $noreg, debug-location !28 :: (dereferenceable load 16 from %ir.charlie.addr)
+    DBG_VALUE %1, $noreg, !19, !DIExpression(), debug-location !23
+    MOVAPSmr %stack.1.echo, 1, $noreg, 0, $noreg, killed %1, debug-location !27 :: (volatile store 16 into %ir.echo)
+    RET 0, debug-location !29
+
+...
+---
+name:            nodebug
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: vr128, preferred-register: '' }
+  - { id: 1, class: vr128, preferred-register: '' }
+liveins:
+  - { reg: '$xmm0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: charlie.addr, type: default, offset: 0, size: 16, alignment: 16,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: echo, type: default, offset: 0, size: 16, alignment: 16,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $xmm0
+
+    %0:vr128 = COPY $xmm0
+    MOVAPSmr %stack.0.charlie.addr, 1, $noreg, 0, $noreg, %0 :: (store 16 into %ir.charlie.addr)
+    MOV8mi %stack.0.charlie.addr, 1, $noreg, 0, $noreg, 0 :: (store 1 into %ir.charlie.addr.0.charlie.addr.0.arrayidx.sroa_cast, align 16)
+    %1:vr128 = MOVAPSrm %stack.0.charlie.addr, 1, $noreg, 0, $noreg :: (dereferenceable load 16 from %ir.charlie.addr)
+    MOVAPSmr %stack.1.echo, 1, $noreg, 0, $noreg, killed %1 :: (volatile store 16 into %ir.echo)
+    RET 0
+
+    ; DEBUG-LABEL: name: debug
+    ; NODEBUG-LABEL: name: nodebug
+    ; CHECK: %0:vr128 = COPY $xmm0
+    ; CHECK: MOVAPSmr
+    ; CHECK: MOV8mi
+    ; ChECK: %2:gr8 = MOV8rm
+    ; CHECK: MOV8mr
+    ; CHECK: %3:gr64 = MOV64rm
+    ; CHECK: MOV64mr
+    ; CHECK: %4:gr32 = MOV32rm
+    ; CHECK: MOV32mr
+    ; CHECK: %5:gr16 = MOV16rm
+    ; CHECK: MOV16mr
+    ; CHECK: %6:gr8 = MOV8rm
+    ; CHECK: MOV8mr
+    ; CHECK: RET 0
+    ; DEBUG-LABEL: name: nodebug
+...
