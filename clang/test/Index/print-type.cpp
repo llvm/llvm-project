@@ -90,6 +90,8 @@ class X {
 namespace {
   int a;
 }
+
+inline namespace InlineNS {}
 // RUN: c-index-test -test-print-type %s -std=c++14 | FileCheck %s
 // CHECK: Namespace=outer:1:11 (Definition) [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: ClassTemplate=Foo:4:8 (Definition) [type=] [typekind=Invalid] [isPOD=0]
@@ -204,3 +206,4 @@ namespace {
 // CHECK: UnionDecl=:86:3 (Definition) [type=X::(anonymous union at {{.*}}print-type.cpp:86:3)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1]
 // CHECK: EnumDecl=:87:3 (Definition) [type=X::(anonymous enum at {{.*}}print-type.cpp:87:3)] [typekind=Enum] [isPOD=1] [isAnon=1]
 // CHECK: Namespace=:90:11 (Definition) [type=] [typekind=Invalid] [isPOD=0] [isAnon=1]
+// CHECK: Namespace=InlineNS:94:18 (Definition) [type=] [typekind=Invalid] [isPOD=0] [isAnonRecDecl=0] [isInlineNamespace=1]

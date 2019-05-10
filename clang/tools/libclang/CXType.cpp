@@ -1271,6 +1271,14 @@ unsigned clang_Cursor_isAnonymousRecordDecl(CXCursor C){
   return 0;
 }
 
+unsigned clang_Cursor_isInlineNamespace(CXCursor C) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+  const Decl *D = cxcursor::getCursorDecl(C);
+  const NamespaceDecl *ND = dyn_cast_or_null<NamespaceDecl>(D);
+  return ND ? ND->isInline() : 0;
+}
+
 CXType clang_Type_getNamedType(CXType CT){
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();

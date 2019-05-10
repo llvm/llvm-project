@@ -1671,6 +1671,13 @@ static enum CXChildVisitResult PrintType(CXCursor cursor, CXCursor p,
       printf(" [isAnonRecDecl=%d]", isAnonRecDecl);
     }
 
+    /* Print if it is an inline namespace decl */
+    {
+      unsigned isInlineNamespace = clang_Cursor_isInlineNamespace(cursor);
+      if (isInlineNamespace != 0)
+        printf(" [isInlineNamespace=%d]", isInlineNamespace);
+    }
+
     printf("\n");
   }
   return CXChildVisit_Recurse;

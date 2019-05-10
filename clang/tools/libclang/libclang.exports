@@ -43,6 +43,7 @@ clang_Cursor_isAnonymousRecordDecl
 clang_Cursor_isBitField
 clang_Cursor_isDynamicCall
 clang_Cursor_isExternalSymbol
+clang_Cursor_isInlineNamespace
 clang_Cursor_isNull
 clang_Cursor_isObjCOptional
 clang_Cursor_isVariadic
