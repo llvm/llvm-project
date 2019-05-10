@@ -6438,7 +6438,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a subobject
       if (Value.hasLValuePath() && Value.getLValuePath().size() == 1 &&
           VD && VD->getType()->isArrayType() &&
-          Value.getLValuePath()[0].ArrayIndex == 0 &&
+          Value.getLValuePath()[0].getAsArrayIndex() == 0 &&
           !Value.isLValueOnePastTheEnd() && ParamType->isPointerType()) {
         // Per defect report (no number yet):
         //   ... other than a pointer to the first element of a complete array
