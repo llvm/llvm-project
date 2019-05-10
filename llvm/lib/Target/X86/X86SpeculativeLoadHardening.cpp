@@ -1964,6 +1964,14 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
     LLVM_DEBUG(
         dbgs() << "  Skipping hardening base of explicit stack frame load: ";
         MI.dump(); dbgs() << "\n");
+  } else if (BaseMO.getReg() == X86::RSP) {
+    // Some idempotent atomic operations are lowered directly to a locked
+    // OR with 0 to the top of stack(or slightly offset from top) which uses an
+    // explicit RSP register as the base.
+    assert(IndexMO.getReg() == X86::NoRegister &&
+           "Explicit RSP access with dynamic index!");
+    LLVM_DEBUG(
+        dbgs() << "  Cannot harden base of explicit RSP offset in a load!");
   } else if (BaseMO.getReg() == X86::RIP ||
              BaseMO.getReg() == X86::NoRegister) {
     // For both RIP-relative addressed loads or absolute loads, we cannot
