@@ -1288,6 +1288,19 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   return false;
 }
 
+/// Produce a DebugLoc to use for each dbg.declare/inst pair that are promoted
+/// to a dbg.value. Because no machine insts can come from debug intrinsics,
+/// only the scope and inlinedAt is significant. Zero line numbers are used in
+/// case this DebugLoc leaks into any adjacent instructions.
+static DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII, Instruction *Src) {
+  // Original dbg.declare must have a location.
+  DebugLoc DeclareLoc = DII->getDebugLoc();
+  MDNode *Scope = DeclareLoc.getScope();
+  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
+  // Produce an unknown location with the correct scope / inlinedAt fields.
+  return DebugLoc::get(0, 0, Scope, InlinedAt);
+}
+
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
@@ -1297,6 +1310,8 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   assert(DIVar && "Missing variable");
   auto *DIExpr = DII->getExpression();
   Value *DV = SI->getValueOperand();
+
+  DebugLoc NewLoc = getDebugValueLoc(DII, SI);
 
   if (!valueCoversEntireFragment(DV->getType(), DII)) {
     // FIXME: If storing to a part of the variable described by the dbg.declare,
@@ -1308,14 +1323,12 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
     // know nothing about the variable's content.
     DV = UndefValue::get(DV->getType());
     if (!LdStHasDebugValue(DIVar, DIExpr, SI))
-      Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, DII->getDebugLoc(),
-                                      SI);
+      Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
     return;
   }
 
   if (!LdStHasDebugValue(DIVar, DIExpr, SI))
-    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, DII->getDebugLoc(),
-                                    SI);
+    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
@@ -1338,12 +1351,14 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
     return;
   }
 
+  DebugLoc NewLoc = getDebugValueLoc(DII, nullptr);
+
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
   Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
-      LI, DIVar, DIExpr, DII->getDebugLoc(), (Instruction *)nullptr);
+      LI, DIVar, DIExpr, NewLoc, (Instruction *)nullptr);
   DbgValue->insertAfter(LI);
 }
 
@@ -1370,12 +1385,13 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   BasicBlock *BB = APN->getParent();
   auto InsertionPt = BB->getFirstInsertionPt();
 
+  DebugLoc NewLoc = getDebugValueLoc(DII, nullptr);
+
   // The block may be a catchswitch block, which does not have a valid
   // insertion point.
   // FIXME: Insert dbg.value markers in the successors when appropriate.
   if (InsertionPt != BB->end())
-    Builder.insertDbgValueIntrinsic(APN, DIVar, DIExpr, DII->getDebugLoc(),
-                                    &*InsertionPt);
+    Builder.insertDbgValueIntrinsic(APN, DIVar, DIExpr, NewLoc, &*InsertionPt);
 }
 
 /// Determine whether this alloca is either a VLA or an array.
@@ -1430,10 +1446,11 @@ bool llvm::LowerDbgDeclare(Function &F) {
         // This is a call by-value or some other instruction that takes a
         // pointer to the variable. Insert a *value* intrinsic that describes
         // the variable by dereferencing the alloca.
+        DebugLoc NewLoc = getDebugValueLoc(DDI, nullptr);
         auto *DerefExpr =
             DIExpression::append(DDI->getExpression(), dwarf::DW_OP_deref);
-        DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(), DerefExpr,
-                                    DDI->getDebugLoc(), CI);
+        DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(), DerefExpr, NewLoc,
+                                    CI);
       }
     }
     DDI->eraseFromParent();

@@ -41,6 +41,9 @@ entry:
   ret void, !dbg !22
 }
 
+; LOWERING: ![[SCOPE:[0-9]+]] = distinct !DISubprogram(name: "foo",
+; LOWERING: ![[LOC]] = !DILocation(line: 0, scope: ![[SCOPE]]
+
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
