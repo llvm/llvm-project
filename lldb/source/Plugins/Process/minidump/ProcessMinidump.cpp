@@ -368,7 +368,6 @@ void ProcessMinidump::ReadModuleList() {
 
     const auto uuid = m_minidump_parser->GetModuleUUID(module);
     auto file_spec = FileSpec(name, GetArchitecture().GetTriple());
-    FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
     module_spec.GetArchitecture() = GetArchitecture();
     Status error;
