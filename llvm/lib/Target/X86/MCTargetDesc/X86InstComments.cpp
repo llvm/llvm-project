@@ -13,8 +13,8 @@
 
 #include "X86InstComments.h"
 #include "X86ATTInstPrinter.h"
-#include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86BaseInfo.h"
+#include "X86MCTargetDesc.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"

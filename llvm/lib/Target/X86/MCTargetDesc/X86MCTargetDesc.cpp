@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCTargetDesc.h"
-#include "InstPrinter/X86ATTInstPrinter.h"
-#include "InstPrinter/X86IntelInstPrinter.h"
+#include "X86ATTInstPrinter.h"
 #include "X86BaseInfo.h"
+#include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Triple.h"

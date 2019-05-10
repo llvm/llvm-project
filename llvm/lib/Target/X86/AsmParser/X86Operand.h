@@ -9,7 +9,7 @@
 #ifndef LLVM_LIB_TARGET_X86_ASMPARSER_X86OPERAND_H
 #define LLVM_LIB_TARGET_X86_ASMPARSER_X86OPERAND_H
 
-#include "InstPrinter/X86IntelInstPrinter.h"
+#include "MCTargetDesc/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86AsmParserCommon.h"
 #include "llvm/ADT/STLExtras.h"

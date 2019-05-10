@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "X86AsmParserCommon.h"
