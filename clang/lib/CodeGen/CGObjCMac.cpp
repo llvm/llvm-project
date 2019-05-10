@@ -733,7 +733,7 @@ public:
     // Also it is safe to make it readnone, since we never load or store the
     // classref except by calling this function.
     llvm::Type *params[] = { Int8PtrPtrTy };
-    auto *F = CGM.CreateRuntimeFunction(
+    auto F = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ClassnfABIPtrTy, params, false),
         "objc_loadClassref",
         llvm::AttributeList::get(CGM.getLLVMContext(),
@@ -742,7 +742,8 @@ public:
                                   llvm::Attribute::ReadNone,
                                   llvm::Attribute::NoUnwind}));
     if (!CGM.getTriple().isOSBinFormatCOFF())
-      cast<llvm::Function>(F)->setLinkage(llvm::Function::ExternalWeakLinkage);
+      cast<llvm::Function>(F.getCallee())->setLinkage(
+        llvm::Function::ExternalWeakLinkage);
 
     return F;
   }
