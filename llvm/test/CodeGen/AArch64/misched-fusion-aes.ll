@@ -205,7 +205,9 @@ entry:
 
 ; CHECK-LABEL: aes_load_store:
 ; CHECK: aese [[VA:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VA]], [[VA]]
+; aese and aesmc are described to share a unit, hence won't be scheduled on the
+; same cycle and the scheduler can find another instruction to place inbetween
+; CHECK: aesmc [[VA]], [[VA]]
 ; CHECK: aese [[VB:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK-NEXT: aesmc [[VB]], [[VB]]
 ; CHECK-NOT: aesmc
