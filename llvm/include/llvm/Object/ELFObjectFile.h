@@ -64,6 +64,7 @@ protected:
   virtual uint64_t getSectionOffset(DataRefImpl Sec) const = 0;
 
   virtual Expected<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
+  virtual Error getBuildAttributes(ARMAttributeParser &Attributes) const = 0;
 
 public:
   using elf_symbol_iterator_range = iterator_range<elf_symbol_iterator>;
@@ -352,6 +353,28 @@ protected:
         (Visibility == ELF::STV_DEFAULT || Visibility == ELF::STV_PROTECTED));
   }
 
+  Error getBuildAttributes(ARMAttributeParser &Attributes) const override {
+    auto SectionsOrErr = EF.sections();
+    if (!SectionsOrErr)
+      return SectionsOrErr.takeError();
+
+    for (const Elf_Shdr &Sec : *SectionsOrErr) {
+      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES) {
+        auto ErrorOrContents = EF.getSectionContents(&Sec);
+        if (!ErrorOrContents)
+          return ErrorOrContents.takeError();
+
+        auto Contents = ErrorOrContents.get();
+        if (Contents[0] != ARMBuildAttrs::Format_Version || Contents.size() == 1)
+          return Error::success();
+
+        Attributes.Parse(Contents, ELFT::TargetEndianness == support::little);
+        break;
+      }
+    }
+    return Error::success();
+  }
+
   // This flag is used for classof, to distinguish ELFObjectFile from
   // its subclass. If more subclasses will be created, this flag will
   // have to become an enum.
@@ -392,28 +415,6 @@ public:
   Expected<uint64_t> getStartAddress() const override;
 
   unsigned getPlatformFlags() const override { return EF.getHeader()->e_flags; }
-
-  std::error_code getBuildAttributes(ARMAttributeParser &Attributes) const override {
-    auto SectionsOrErr = EF.sections();
-    if (!SectionsOrErr)
-      return errorToErrorCode(SectionsOrErr.takeError());
-
-    for (const Elf_Shdr &Sec : *SectionsOrErr) {
-      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES) {
-        auto ErrorOrContents = EF.getSectionContents(&Sec);
-        if (!ErrorOrContents)
-          return errorToErrorCode(ErrorOrContents.takeError());
-
-        auto Contents = ErrorOrContents.get();
-        if (Contents[0] != ARMBuildAttrs::Format_Version || Contents.size() == 1)
-          return std::error_code();
-
-        Attributes.Parse(Contents, ELFT::TargetEndianness == support::little);
-        break;
-      }
-    }
-    return std::error_code();
-  }
 
   const ELFFile<ELFT> *getELFFile() const { return &EF; }
 

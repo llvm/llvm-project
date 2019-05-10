@@ -331,11 +331,6 @@ public:
   /// Create a triple from the data in this object file.
   Triple makeTriple() const;
 
-  virtual std::error_code
-    getBuildAttributes(ARMAttributeParser &Attributes) const {
-      return std::error_code();
-    }
-
   /// Maps a debug section name to a standard DWARF section name.
   virtual StringRef mapDebugSectionName(StringRef Name) const { return Name; }
 
