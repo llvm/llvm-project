@@ -519,7 +519,6 @@ if (MSVC)
       -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
       -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
       -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
-      -wd4800 # Suppress ''type' : forcing value to bool 'true' or 'false' (performance warning)'
       -wd4100 # Suppress 'unreferenced formal parameter'
       -wd4127 # Suppress 'conditional expression is constant'
       -wd4512 # Suppress 'assignment operator could not be generated'
