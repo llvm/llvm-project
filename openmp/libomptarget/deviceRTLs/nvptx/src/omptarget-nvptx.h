@@ -166,7 +166,6 @@ public:
   // methods for other fields
   INLINE uint16_t &NThreads() { return items.nthreads; }
   INLINE uint16_t &ThreadId() { return items.threadId; }
-  INLINE uint16_t &ThreadsInTeam() { return items.threadsInTeam; }
   INLINE uint64_t &RuntimeChunkSize() { return items.runtimeChunkSize; }
   INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() const { return prev; }
   INLINE void SetPrevTaskDescr(omptarget_nvptx_TaskDescr *taskDescr) {
@@ -174,14 +173,12 @@ public:
   }
   // init & copy
   INLINE void InitLevelZeroTaskDescr(bool isSPMDExecutionMode);
-  INLINE void InitLevelOneTaskDescr(uint16_t tnum,
-                                    omptarget_nvptx_TaskDescr *parentTaskDescr);
+  INLINE void InitLevelOneTaskDescr(omptarget_nvptx_TaskDescr *parentTaskDescr);
   INLINE void Copy(omptarget_nvptx_TaskDescr *sourceTaskDescr);
   INLINE void CopyData(omptarget_nvptx_TaskDescr *sourceTaskDescr);
   INLINE void CopyParent(omptarget_nvptx_TaskDescr *parentTaskDescr);
   INLINE void CopyForExplicitTask(omptarget_nvptx_TaskDescr *parentTaskDescr);
-  INLINE void CopyToWorkDescr(omptarget_nvptx_TaskDescr *masterTaskDescr,
-                              uint16_t tnum);
+  INLINE void CopyToWorkDescr(omptarget_nvptx_TaskDescr *masterTaskDescr);
   INLINE void CopyFromWorkDescr(omptarget_nvptx_TaskDescr *workTaskDescr);
   INLINE void CopyConvergentParent(omptarget_nvptx_TaskDescr *parentTaskDescr,
                                    uint16_t tid, uint16_t tnum);
@@ -213,7 +210,6 @@ private:
     uint8_t unused;
     uint16_t nthreads;         // thread num for subsequent parallel regions
     uint16_t threadId;         // thread id
-    uint16_t threadsInTeam;    // threads in current team
     uint64_t runtimeChunkSize; // runtime chunk size
   } items;
   omptarget_nvptx_TaskDescr *prev;
@@ -407,6 +403,7 @@ extern __device__ __shared__ uint32_t usedSlotIdx;
 extern __device__ __shared__ uint8_t
     parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 extern __device__ __shared__ uint16_t threadLimit;
+extern __device__ __shared__ uint16_t threadsInTeam;
 extern __device__ __shared__
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
 
