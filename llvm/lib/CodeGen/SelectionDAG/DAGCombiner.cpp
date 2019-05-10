@@ -17573,9 +17573,9 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
 
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C), 0 --> ext X, C
-  if (isNullConstant(N->getOperand(1)) &&
-      V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse() &&
-      isa<ConstantSDNode>(V.getOperand(1))) {
+  SDValue Index = N->getOperand(1);
+  if (isNullConstant(Index) && V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      V.hasOneUse() && isa<ConstantSDNode>(V.getOperand(1))) {
     if (TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
                                     V.getConstantOperandVal(1)) &&
         TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {
@@ -17590,8 +17590,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   //    Vi if possible
   // Only operand 0 is checked as 'concat' assumes all inputs of the same
   // type.
-  if (V.getOpcode() == ISD::CONCAT_VECTORS &&
-      isa<ConstantSDNode>(N->getOperand(1)) &&
+  if (V.getOpcode() == ISD::CONCAT_VECTORS && isa<ConstantSDNode>(Index) &&
       V.getOperand(0).getValueType() == NVT) {
     unsigned Idx = N->getConstantOperandVal(1);
     unsigned NumElems = NVT.getVectorNumElements();
@@ -17604,7 +17603,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
 
   // If the input is a build vector. Try to make a smaller build vector.
   if (V.getOpcode() == ISD::BUILD_VECTOR) {
-    if (auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+    if (auto *IdxC = dyn_cast<ConstantSDNode>(Index)) {
       EVT InVT = V.getValueType();
       unsigned ExtractSize = NVT.getSizeInBits();
       unsigned EltSize = InVT.getScalarSizeInBits();
@@ -17619,7 +17618,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
              (NumElems == 1 ||
               TLI.isOperationLegal(ISD::BUILD_VECTOR, ExtractVT))) &&
             (!LegalTypes || TLI.isTypeLegal(ExtractVT))) {
-          unsigned IdxVal = Idx->getZExtValue();
+          unsigned IdxVal = IdxC->getZExtValue();
           IdxVal *= NVT.getScalarSizeInBits();
           IdxVal /= EltSize;
 
@@ -17647,9 +17646,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
       return SDValue();
 
     // Only handle cases where both indexes are constants.
-    auto *ExtIdx = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    auto *ExtIdx = dyn_cast<ConstantSDNode>(Index);
     auto *InsIdx = dyn_cast<ConstantSDNode>(V.getOperand(2));
-
     if (InsIdx && ExtIdx) {
       // Combine:
       //    (extract_subvec (insert_subvec V1, V2, InsIdx), ExtIdx)
@@ -17662,7 +17660,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
       return DAG.getNode(
           ISD::EXTRACT_SUBVECTOR, SDLoc(N), NVT,
           DAG.getBitcast(N->getOperand(0).getValueType(), V.getOperand(0)),
-          N->getOperand(1));
+          Index);
     }
   }
 
