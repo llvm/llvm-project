@@ -2473,7 +2473,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
   // If we have no red zones or if the function returns twice (possibly without
   // using the `ret` instruction) like setjmp, we need to save the expected
   // return address prior to the call.
-  if (MF.getFunction().hasFnAttribute(Attribute::NoRedZone) ||
+  if (!Subtarget->getFrameLowering()->has128ByteRedZone(MF) ||
       MF.exposesReturnsTwice()) {
     // If we don't have red zones, we need to compute the expected return
     // address prior to the call and store it in a register that lives across
