@@ -2,6 +2,5 @@
 // CHECK: file not found
 #include <vector> 
 
-// MSVC has C++ headers in same directory as C headers.
-// REQUIRES: non-ms-sdk
-// REQUIRES: non-ps4-sdk
+// MSVC and PS4 have C++ headers in the same directory as C headers.
+// UNSUPPORTED: ms-sdk, ps4
