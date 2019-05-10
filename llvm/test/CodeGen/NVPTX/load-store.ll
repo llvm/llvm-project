@@ -59,7 +59,7 @@ define void @volatile(i8* %a, i16* %b, i32* %c, i64* %d) local_unnamed_addr {
 }
 
 ; CHECK-LABEL: monotonic
-define void @monotonic(i8* %a, i16* %b, i32* %c, i64* %d) local_unnamed_addr {
+define void @monotonic(i8* %a, i16* %b, i32* %c, i64* %d, float* %e) local_unnamed_addr {
   ; CHECK: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic i8, i8* %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -83,6 +83,12 @@ define void @monotonic(i8* %a, i16* %b, i32* %c, i64* %d) local_unnamed_addr {
   %d.add = add i64 %d.load, 1
   ; CHECK: st.volatile.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
   store atomic i64 %d.add, i64* %d monotonic, align 8
+
+  ; CHECK: ld.volatile.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic float, float* %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.0
+  ; CHECK: st.volatile.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic float %e.add, float* %e monotonic, align 4
 
   ret void
 }
