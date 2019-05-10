@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -DNO_DTORS -fno-c++-static-destructors -verify %s
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -DNO_DTORS -DNO_EXCEPTIONS -fno-c++-static-destructors -verify %s
+// RUN: %clang_cc1 -DNO_EXCEPTIONS -verify %s
+// RUN: %clang_cc1 -DNO_DTORS -fexceptions -fno-c++-static-destructors -verify %s
+// RUN: %clang_cc1 -fexceptions -verify %s
 
 struct SecretDestructor {
 #ifndef NO_DTORS
   // expected-note@+2 4 {{private}}
 #endif
-private: ~SecretDestructor(); // expected-note 2 {{private}}
+private: ~SecretDestructor(); // expected-note + {{private}}
 };
 
 SecretDestructor sd1;
@@ -44,3 +46,30 @@ struct [[clang::no_destroy]] DoesntApply {};  // expected-warning{{'no_destroy' 
 
 [[clang::no_destroy(0)]] int no_args; // expected-error{{'no_destroy' attribute takes no arguments}}
 [[clang::always_destroy(0)]] int no_args2; // expected-error{{'always_destroy' attribute takes no arguments}}
+
+// expected-error@+1 {{temporary of type 'SecretDestructor' has private destructor}}
+SecretDestructor arr[10];
+
+void local_arrays() {
+  // expected-error@+1 {{temporary of type 'SecretDestructor' has private destructor}}
+  static SecretDestructor arr2[10];
+  // expected-error@+1 {{temporary of type 'SecretDestructor' has private destructor}}
+  thread_local SecretDestructor arr3[10];
+}
+
+struct Base {
+  ~Base();
+};
+struct Derived1 {
+  Derived1(int);
+  Base b;
+};
+struct Derived2 {
+  Derived1 b;
+};
+
+void dontcrash() {
+  [[clang::no_destroy]] static Derived2 d2[] = {0, 0};
+}
+
+[[clang::no_destroy]] Derived2 d2[] = {0, 0};

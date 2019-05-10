@@ -1707,6 +1707,30 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   }
 }
 
+/// Check if the type of a class element has an accessible destructor, and marks
+/// it referenced. Returns true if we shouldn't form a reference to the
+/// destructor.
+///
+/// Aggregate initialization requires a class element's destructor be
+/// accessible per 11.6.1 [dcl.init.aggr]:
+///
+/// The destructor for each element of class type is potentially invoked
+/// (15.4 [class.dtor]) from the context where the aggregate initialization
+/// occurs.
+static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
+                                     Sema &SemaRef) {
+  auto *CXXRD = ElementType->getAsCXXRecordDecl();
+  if (!CXXRD)
+    return false;
+
+  CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
+  SemaRef.CheckDestructorAccess(Loc, Destructor,
+                                SemaRef.PDiag(diag::err_access_dtor_temp)
+                                << ElementType);
+  SemaRef.MarkFunctionReferenced(Loc, Destructor);
+  return SemaRef.DiagnoseUseOfDecl(Destructor, Loc);
+}
+
 void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
                                      InitListExpr *IList, QualType &DeclType,
                                      llvm::APSInt elementIndex,
@@ -1715,6 +1739,14 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
                                      InitListExpr *StructuredList,
                                      unsigned &StructuredIndex) {
   const ArrayType *arrayType = SemaRef.Context.getAsArrayType(DeclType);
+
+  if (!VerifyOnly) {
+    if (checkDestructorReference(arrayType->getElementType(),
+                                 IList->getEndLoc(), SemaRef)) {
+      hadError = true;
+      return;
+    }
+  }
 
   // Check for the special-case of initializing an array with a string.
   if (Index < IList->getNumInits()) {
@@ -1877,30 +1909,6 @@ bool InitListChecker::CheckFlexibleArrayInit(const InitializedEntity &Entity,
   return FlexArrayDiag != diag::ext_flexible_array_init;
 }
 
-/// Check if the type of a class element has an accessible destructor.
-///
-/// Aggregate initialization requires a class element's destructor be
-/// accessible per 11.6.1 [dcl.init.aggr]:
-///
-/// The destructor for each element of class type is potentially invoked
-/// (15.4 [class.dtor]) from the context where the aggregate initialization
-/// occurs.
-static bool hasAccessibleDestructor(QualType ElementType, SourceLocation Loc,
-                                    Sema &SemaRef) {
-  auto *CXXRD = ElementType->getAsCXXRecordDecl();
-  if (!CXXRD)
-    return false;
-
-  CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
-  SemaRef.CheckDestructorAccess(Loc, Destructor,
-                                SemaRef.PDiag(diag::err_access_dtor_temp)
-                                    << ElementType);
-  SemaRef.MarkFunctionReferenced(Loc, Destructor);
-  if (SemaRef.DiagnoseUseOfDecl(Destructor, Loc))
-    return true;
-  return false;
-}
-
 void InitListChecker::CheckStructUnionTypes(
     const InitializedEntity &Entity, InitListExpr *IList, QualType DeclType,
     CXXRecordDecl::base_class_range Bases, RecordDecl::field_iterator Field,
@@ -1924,7 +1932,7 @@ void InitListChecker::CheckStructUnionTypes(
     if (!VerifyOnly)
       for (FieldDecl *FD : RD->fields()) {
         QualType ET = SemaRef.Context.getBaseElementType(FD->getType());
-        if (hasAccessibleDestructor(ET, IList->getEndLoc(), SemaRef)) {
+        if (checkDestructorReference(ET, IList->getEndLoc(), SemaRef)) {
           hadError = true;
           return;
         }
@@ -1984,7 +1992,7 @@ void InitListChecker::CheckStructUnionTypes(
     }
 
     if (!VerifyOnly)
-      if (hasAccessibleDestructor(Base.getType(), InitLoc, SemaRef)) {
+      if (checkDestructorReference(Base.getType(), InitLoc, SemaRef)) {
         hadError = true;
         return;
       }
@@ -2026,7 +2034,7 @@ void InitListChecker::CheckStructUnionTypes(
         while (std::next(F) != Field)
           ++F;
         QualType ET = SemaRef.Context.getBaseElementType(F->getType());
-        if (hasAccessibleDestructor(ET, InitLoc, SemaRef)) {
+        if (checkDestructorReference(ET, InitLoc, SemaRef)) {
           hadError = true;
           return;
         }
@@ -2075,7 +2083,7 @@ void InitListChecker::CheckStructUnionTypes(
 
     if (!VerifyOnly) {
       QualType ET = SemaRef.Context.getBaseElementType(Field->getType());
-      if (hasAccessibleDestructor(ET, InitLoc, SemaRef)) {
+      if (checkDestructorReference(ET, InitLoc, SemaRef)) {
         hadError = true;
         return;
       }
@@ -2131,7 +2139,7 @@ void InitListChecker::CheckStructUnionTypes(
                                                      : Field;
     for (RecordDecl::field_iterator E = RD->field_end(); I != E; ++I) {
       QualType ET = SemaRef.Context.getBaseElementType(I->getType());
-      if (hasAccessibleDestructor(ET, IList->getEndLoc(), SemaRef)) {
+      if (checkDestructorReference(ET, IList->getEndLoc(), SemaRef)) {
         hadError = true;
         return;
       }
@@ -6324,6 +6332,10 @@ PerformConstructorInitialization(Sema &S,
   S.CheckConstructorAccess(Loc, Constructor, Step.Function.FoundDecl, Entity);
   if (S.DiagnoseUseOfDecl(Step.Function.FoundDecl, Loc))
     return ExprError();
+
+  if (const ArrayType *AT = S.Context.getAsArrayType(Entity.getType()))
+    if (checkDestructorReference(S.Context.getBaseElementType(AT), Loc, S))
+      return ExprError();
 
   if (shouldBindAsTemporary(Entity))
     CurInit = S.MaybeBindToTemporary(CurInit.get());
