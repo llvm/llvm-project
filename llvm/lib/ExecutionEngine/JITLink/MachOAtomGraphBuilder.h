@@ -34,17 +34,10 @@ protected:
   public:
     MachOSection() = default;
 
-    /// Create a MachO section with the given content.
+    /// Create a MachO section with the given address and alignment.
     MachOSection(Section &GenericSection, JITTargetAddress Address,
-                 unsigned Alignment, StringRef Content)
+                 unsigned Alignment)
         : Address(Address), GenericSection(&GenericSection),
-          ContentPtr(Content.data()), Size(Content.size()),
-          Alignment(Alignment) {}
-
-    /// Create a zero-fill MachO section with the given size.
-    MachOSection(Section &GenericSection, JITTargetAddress Address,
-                 unsigned Alignment, size_t ZeroFillSize)
-        : Address(Address), GenericSection(&GenericSection), Size(ZeroFillSize),
           Alignment(Alignment) {}
 
     /// Create a section without address, content or size (used for common
@@ -59,6 +52,19 @@ protected:
     StringRef getName() const {
       assert(GenericSection && "No generic section attached");
       return GenericSection->getName();
+    }
+
+    MachOSection &setContent(StringRef Content) {
+      assert(!ContentPtr && !Size && "Content/zeroFill already set");
+      ContentPtr = Content.data();
+      Size = Content.size();
+      return *this;
+    }
+
+    MachOSection &setZeroFill(uint64_t Size) {
+      assert(!ContentPtr && !Size && "Content/zeroFill already set");
+      this->Size = Size;
+      return *this;
     }
 
     bool isZeroFill() const { return !ContentPtr; }
@@ -76,12 +82,20 @@ protected:
 
     unsigned getAlignment() const { return Alignment; }
 
+    MachOSection &setNoDeadStrip(bool NoDeadStrip) {
+      this->NoDeadStrip = NoDeadStrip;
+      return *this;
+    }
+
+    bool isNoDeadStrip() const { return NoDeadStrip; }
+
   private:
     JITTargetAddress Address = 0;
     Section *GenericSection = nullptr;
     const char *ContentPtr = nullptr;
-    size_t Size = 0;
+    uint64_t Size = 0;
     unsigned Alignment = 0;
+    bool NoDeadStrip = false;
   };
 
   using CustomAtomizeFunction = std::function<Error(MachOSection &S)>;
