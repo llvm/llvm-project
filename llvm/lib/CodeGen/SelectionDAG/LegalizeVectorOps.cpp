@@ -264,7 +264,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         LLVM_FALLTHROUGH;
       case TargetLowering::Expand:
         Changed = true;
-        return LegalizeOp(ExpandLoad(Op));
+        return ExpandLoad(Op);
       }
     }
   } else if (Op.getOpcode() == ISD::STORE) {
@@ -289,7 +289,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       }
       case TargetLowering::Expand:
         Changed = true;
-        return LegalizeOp(ExpandStore(Op));
+        return ExpandStore(Op);
       }
     }
   }
