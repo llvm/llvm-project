@@ -8581,6 +8581,22 @@ static SDValue getHopForBuildVector(const BuildVectorSDNode *BV,
   else if (V1.getValueSizeInBits() < Width)
     V1 = insertSubVector(DAG.getUNDEF(VT), V1, 0, DAG, SDLoc(BV), Width);
 
+  unsigned NumElts = VT.getVectorNumElements();
+  APInt DemandedElts = APInt::getAllOnesValue(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i)
+    if (BV->getOperand(i).isUndef())
+      DemandedElts.clearBit(i);
+
+  // If we don't need the upper xmm, then perform as a xmm hop.
+  unsigned HalfNumElts = NumElts / 2;
+  if (VT.is256BitVector() && DemandedElts.lshr(HalfNumElts) == 0) {
+    MVT HalfVT = MVT::getVectorVT(VT.getScalarType(), HalfNumElts);
+    V0 = extractSubVector(V0, 0, DAG, SDLoc(BV), 128);
+    V1 = extractSubVector(V1, 0, DAG, SDLoc(BV), 128);
+    SDValue Half = DAG.getNode(HOpcode, SDLoc(BV), HalfVT, V0, V1);
+    return insertSubVector(DAG.getUNDEF(VT), Half, 0, DAG, SDLoc(BV), 256);
+  }
+
   return DAG.getNode(HOpcode, SDLoc(BV), VT, V0, V1);
 }
 
