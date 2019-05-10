@@ -1095,8 +1095,8 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
   size_t i;
   for (i = start; i < num_instructions; i++) {
     if (m_instructions[i]->DoesBranch()) {
-//      if (ignore_calls && m_instructions[i]->IsCall())
-//        continue;
+      if (ignore_calls && m_instructions[i]->IsCall())
+        continue;
       next_branch = i;
       break;
     }
