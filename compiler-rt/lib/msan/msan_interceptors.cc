@@ -1543,6 +1543,8 @@ void __msan_poison_stack(void *a, uptr size) {
   SetShadow(a, size, __msan::flags()->poison_stack_with_zeroes ? 0 : -1);
 }
 
+void __msan_unpoison_param(uptr n) { UnpoisonParam(n); }
+
 void __msan_clear_and_unpoison(void *a, uptr size) {
   REAL(memset)(a, 0, size);
   SetShadow(a, size, 0);
