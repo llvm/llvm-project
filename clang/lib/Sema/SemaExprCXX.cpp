@@ -941,6 +941,21 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
     }
   }
 
+  // Under the Itanium C++ ABI, memory for the exception object is allocated by
+  // the runtime with no ability for the compiler to request additional
+  // alignment. Warn if the exception type requires alignment beyond the minimum
+  // guaranteed by the target C++ runtime.
+  if (Context.getTargetInfo().getCXXABI().isItaniumFamily()) {
+    CharUnits TypeAlign = Context.getTypeAlignInChars(Ty);
+    CharUnits ExnObjAlign = Context.getExnObjectAlignment();
+    if (ExnObjAlign < TypeAlign) {
+      Diag(ThrowLoc, diag::warn_throw_underaligned_obj);
+      Diag(ThrowLoc, diag::note_throw_underaligned_obj)
+          << Ty << (unsigned)TypeAlign.getQuantity()
+          << (unsigned)ExnObjAlign.getQuantity();
+    }
+  }
+
   return false;
 }
 

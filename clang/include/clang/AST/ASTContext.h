@@ -2166,6 +2166,13 @@ public:
   /// pointers and large arrays get extra alignment.
   CharUnits getDeclAlign(const Decl *D, bool ForAlignof = false) const;
 
+  /// Return the alignment (in bytes) of the thrown exception object. This is
+  /// only meaningful for targets that allocate C++ exceptions in a system
+  /// runtime, such as those using the Itanium C++ ABI.
+  CharUnits getExnObjectAlignment() const {
+    return toCharUnitsFromBits(Target->getExnObjectAlignment());
+  }
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
