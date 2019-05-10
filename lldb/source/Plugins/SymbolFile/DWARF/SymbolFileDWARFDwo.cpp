@@ -56,7 +56,7 @@ SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu,
 DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
   // Only dwo files with 1 compile unit is supported
   if (GetNumCompileUnits() == 1)
-    return DebugInfo()->GetCompileUnitAtIndex(0);
+    return DebugInfo()->GetUnitAtIndex(0);
   else
     return nullptr;
 }

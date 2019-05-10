@@ -84,12 +84,12 @@ public:
 
   bool ContainsDIEOffset(dw_offset_t die_offset) const {
     return die_offset >= GetFirstDIEOffset() &&
-           die_offset < GetNextCompileUnitOffset();
+           die_offset < GetNextUnitOffset();
   }
   dw_offset_t GetFirstDIEOffset() const {
     return m_offset + GetHeaderByteSize();
   }
-  dw_offset_t GetNextCompileUnitOffset() const;
+  dw_offset_t GetNextUnitOffset() const;
   // Size of the CU data (without initial length and without header).
   size_t GetDebugInfoSize() const;
   // Size of the CU data incl. header but without initial length.

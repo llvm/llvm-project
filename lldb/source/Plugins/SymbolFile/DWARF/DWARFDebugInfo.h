@@ -39,12 +39,11 @@ public:
   explicit DWARFDebugInfo(lldb_private::DWARFContext &context);
   void SetDwarfData(SymbolFileDWARF *dwarf2Data);
 
-  size_t GetNumCompileUnits();
-  DWARFUnit *GetCompileUnitAtIndex(lldb::user_id_t idx);
-  DWARFUnit *GetCompileUnitAtOffset(dw_offset_t cu_offset,
-                                    uint32_t *idx_ptr = NULL);
-  DWARFUnit *GetCompileUnitContainingDIEOffset(dw_offset_t die_offset);
-  DWARFUnit *GetCompileUnit(const DIERef &die_ref);
+  size_t GetNumUnits();
+  DWARFUnit *GetUnitAtIndex(lldb::user_id_t idx);
+  DWARFUnit *GetUnitAtOffset(dw_offset_t cu_offset, uint32_t *idx_ptr = NULL);
+  DWARFUnit *GetUnitContainingDIEOffset(dw_offset_t die_offset);
+  DWARFUnit *GetUnit(const DIERef &die_ref);
   DWARFDIE GetDIEForDIEOffset(dw_offset_t die_offset);
   DWARFDIE GetDIE(const DIERef &die_ref);
 
@@ -58,24 +57,24 @@ public:
   llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
 
 protected:
-  static bool OffsetLessThanCompileUnitOffset(dw_offset_t offset,
-                                              const DWARFUnitSP &cu_sp);
+  static bool OffsetLessThanUnitOffset(dw_offset_t offset,
+                                       const DWARFUnitSP &cu_sp);
 
-  typedef std::vector<DWARFUnitSP> CompileUnitColl;
+  typedef std::vector<DWARFUnitSP> UnitColl;
 
   // Member variables
   SymbolFileDWARF *m_dwarf2Data;
   lldb_private::DWARFContext &m_context;
-  CompileUnitColl m_compile_units;
+  UnitColl m_units;
   std::unique_ptr<DWARFDebugAranges>
       m_cu_aranges_up; // A quick address to compile unit table
 
 private:
   // All parsing needs to be done partially any managed by this class as
   // accessors are called.
-  void ParseCompileUnitHeadersIfNeeded();
+  void ParseUnitHeadersIfNeeded();
 
-  uint32_t FindCompileUnitIndex(dw_offset_t offset);
+  uint32_t FindUnitIndex(dw_offset_t offset);
 
   DISALLOW_COPY_AND_ASSIGN(DWARFDebugInfo);
 };

@@ -32,9 +32,9 @@ void ManualDWARFIndex::Index() {
   Timer scoped_timer(func_cat, "%p", static_cast<void *>(&debug_info));
 
   std::vector<DWARFUnit *> units_to_index;
-  units_to_index.reserve(debug_info.GetNumCompileUnits());
-  for (size_t U = 0; U < debug_info.GetNumCompileUnits(); ++U) {
-    DWARFUnit *unit = debug_info.GetCompileUnitAtIndex(U);
+  units_to_index.reserve(debug_info.GetNumUnits());
+  for (size_t U = 0; U < debug_info.GetNumUnits(); ++U) {
+    DWARFUnit *unit = debug_info.GetUnitAtIndex(U);
     if (unit && m_units_to_avoid.count(unit->GetOffset()) == 0)
       units_to_index.push_back(unit);
   }
@@ -43,8 +43,8 @@ void ManualDWARFIndex::Index() {
 
   std::vector<IndexSet> sets(units_to_index.size());
 
-  // Keep memory down by clearing DIEs for any compile units if indexing
-  // caused us to load the compile unit's DIEs.
+  // Keep memory down by clearing DIEs for any units if indexing
+  // caused us to load the unit's DIEs.
   std::vector<llvm::Optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
       units_to_index.size());
   auto parser_fn = [&](size_t cu_idx) {
@@ -55,17 +55,17 @@ void ManualDWARFIndex::Index() {
     clear_cu_dies[cu_idx] = units_to_index[cu_idx]->ExtractDIEsScoped();
   };
 
-  // Create a task runner that extracts dies for each DWARF compile unit in a
+  // Create a task runner that extracts dies for each DWARF unit in a
   // separate thread
-  // First figure out which compile units didn't have their DIEs already
+  // First figure out which units didn't have their DIEs already
   // parsed and remember this.  If no DIEs were parsed prior to this index
   // function call, we are going to want to clear the CU dies after we are
   // done indexing to make sure we don't pull in all DWARF dies, but we need
-  // to wait until all compile units have been indexed in case a DIE in one
-  // compile unit refers to another and the indexes accesses those DIEs.
+  // to wait until all units have been indexed in case a DIE in one
+  // unit refers to another and the indexes accesses those DIEs.
   TaskMapOverInt(0, units_to_index.size(), extract_fn);
 
-  // Now create a task runner that can index each DWARF compile unit in a
+  // Now create a task runner that can index each DWARF unit in a
   // separate thread so we can index quickly.
 
   TaskMapOverInt(0, units_to_index.size(), parser_fn);
@@ -95,7 +95,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
 
   if (log) {
     m_module.LogMessage(
-        log, "ManualDWARFIndex::IndexUnit for compile unit at .debug_info[0x%8.8x]",
+        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[0x%8.8x]",
         unit.GetOffset());
   }
 
@@ -213,7 +213,7 @@ void ManualDWARFIndex::IndexUnitImpl(
                 //   if (block_data) {
                 //     uint32_t block_length = form_value.Unsigned();
                 //     if (block_length == 1 +
-                //     attributes.CompileUnitAtIndex(i)->GetAddressByteSize()) {
+                //     attributes.UnitAtIndex(i)->GetAddressByteSize()) {
                 //       if (block_data[0] == DW_OP_addr)
                 //         add_die = true;
                 //     }
