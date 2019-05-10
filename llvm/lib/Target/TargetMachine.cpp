@@ -167,13 +167,13 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (GV && !GV->hasDefaultVisibility())
     return true;
 
-  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatWasm()) {
+  if (TT.isOSBinFormatMachO()) {
     if (RM == Reloc::Static)
       return true;
     return GV && GV->isStrongDefinitionForLinker();
   }
 
-  assert(TT.isOSBinFormatELF());
+  assert(TT.isOSBinFormatELF() || TT.isOSBinFormatWasm());
   assert(RM != Reloc::DynamicNoPIC);
 
   bool IsExecutable =
@@ -201,7 +201,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       return true;
   }
 
-  // ELF supports preemption of other symbols.
+  // ELF & wasm support preemption of other symbols.
   return false;
 }
 

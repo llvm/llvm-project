@@ -171,6 +171,8 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   case R_WASM_TABLE_INDEX_I32:
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_TABLE_INDEX_REL_SLEB:
+    if (Config->Pic && !getFunctionSymbol(Reloc.Index)->hasTableIndex())
+      return 0;
     return getFunctionSymbol(Reloc.Index)->getTableIndex();
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_I32:
