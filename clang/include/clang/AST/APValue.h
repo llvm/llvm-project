@@ -96,10 +96,14 @@ public:
       return Version;
     }
 
-    bool operator==(const LValueBase &Other) const {
-      return Ptr == Other.Ptr && CallIndex == Other.CallIndex &&
-             Version == Other.Version;
+    friend bool operator==(const LValueBase &LHS, const LValueBase &RHS) {
+      return LHS.Ptr == RHS.Ptr && LHS.CallIndex == RHS.CallIndex &&
+             LHS.Version == RHS.Version;
     }
+    friend bool operator!=(const LValueBase &LHS, const LValueBase &RHS) {
+      return !(LHS == RHS);
+    }
+    friend llvm::hash_code hash_value(const LValueBase &Base);
 
   private:
     PtrTy Ptr;
