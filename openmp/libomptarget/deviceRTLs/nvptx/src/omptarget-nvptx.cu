@@ -137,8 +137,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   omptarget_nvptx_TaskDescr *newTaskDescr =
       omptarget_nvptx_threadPrivateContext->Level1TaskDescr(threadId);
   ASSERT0(LT_FUSSY, newTaskDescr, "expected a task descr");
-  newTaskDescr->InitLevelOneTaskDescr(ThreadLimit,
-                                      currTeamDescr.LevelZeroTaskDescr());
+  newTaskDescr->InitLevelOneTaskDescr(currTeamDescr.LevelZeroTaskDescr());
   // install new top descriptor
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
                                                              newTaskDescr);
@@ -147,7 +146,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   PRINT(LD_PAR,
         "thread will execute parallel region with id %d in a team of "
         "%d threads\n",
-        (int)newTaskDescr->ThreadId(), (int)newTaskDescr->ThreadsInTeam());
+        (int)newTaskDescr->ThreadId(), (int)ThreadLimit);
 
   if (RequiresDataSharing && GetLaneId() == 0) {
     // Warp master innitializes data sharing environment.
