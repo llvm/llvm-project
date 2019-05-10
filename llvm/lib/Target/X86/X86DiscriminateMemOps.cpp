@@ -115,14 +115,15 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
       if (X86II::getMemoryOperandNo(MI.getDesc().TSFlags) < 0)
         continue;
       const DILocation *DI = MI.getDebugLoc();
-      if (!DI) {
+      bool HasDebug = DI;
+      if (!HasDebug) {
         DI = ReferenceDI;
       }
       Location L = diToLocation(DI);
       DenseSet<unsigned> &Set = Seen[L];
       const std::pair<DenseSet<unsigned>::iterator, bool> TryInsert =
           Set.insert(DI->getBaseDiscriminator());
-      if (!TryInsert.second) {
+      if (!TryInsert.second || !HasDebug) {
         unsigned BF, DF, CI = 0;
         DILocation::decodeDiscriminator(DI->getDiscriminator(), BF, DF, CI);
         Optional<unsigned> EncodedDiscriminator = DILocation::encodeDiscriminator(
