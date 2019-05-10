@@ -187,6 +187,7 @@ void llvm::computeLTOCacheKey(
   auto AddUsedThings = [&](GlobalValueSummary *GS) {
     if (!GS) return;
     AddUnsigned(GS->isLive());
+    AddUnsigned(GS->canAutoHide());
     for (const ValueInfo &VI : GS->refs()) {
       AddUnsigned(VI.isDSOLocal());
       AddUsedCfiGlobal(VI.getGUID());
@@ -295,13 +296,13 @@ void llvm::computeLTOCacheKey(
 }
 
 static void thinLTOResolvePrevailingGUID(
-    GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
-    DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
+    ValueInfo VI, DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
-        recordNewLinkage) {
-  for (auto &S : GVSummaryList) {
+        recordNewLinkage,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  for (auto &S : VI.getSummaryList()) {
     GlobalValue::LinkageTypes OriginalLinkage = S->linkage();
     // Ignore local and appending linkage values since the linker
     // doesn't resolve them.
@@ -316,17 +317,29 @@ static void thinLTOResolvePrevailingGUID(
     // ensure a copy is kept to satisfy the exported reference.
     // FIXME: We may want to split the compile time and correctness
     // aspects into separate routines.
-    if (isPrevailing(GUID, S.get())) {
-      if (GlobalValue::isLinkOnceLinkage(OriginalLinkage))
+    if (isPrevailing(VI.getGUID(), S.get())) {
+      if (GlobalValue::isLinkOnceLinkage(OriginalLinkage)) {
         S->setLinkage(GlobalValue::getWeakLinkage(
             GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
+        // The kept copy is eligible for auto-hiding (hidden visibility) if all
+        // copies were (i.e. they were all linkonce_odr global unnamed addr).
+        // If any copy is not (e.g. it was originally weak_odr), then the symbol
+        // must remain externally available (e.g. a weak_odr from an explicitly
+        // instantiated template). Additionally, if it is in the
+        // GUIDPreservedSymbols set, that means that it is visibile outside
+        // the summary (e.g. in a native object or a bitcode file without
+        // summary), and in that case we cannot hide it as it isn't possible to
+        // check all copies.
+        S->setCanAutoHide(VI.canAutoHide() &&
+                          !GUIDPreservedSymbols.count(VI.getGUID()));
+      }
     }
     // Alias and aliasee can't be turned into available_externally.
     else if (!isa<AliasSummary>(S.get()) &&
              !GlobalInvolvedWithAlias.count(S.get()))
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
     if (S->linkage() != OriginalLinkage)
-      recordNewLinkage(S->modulePath(), GUID, S->linkage());
+      recordNewLinkage(S->modulePath(), VI.getGUID(), S->linkage());
   }
 }
 
@@ -341,7 +354,8 @@ void llvm::thinLTOResolvePrevailingInIndex(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
-        recordNewLinkage) {
+        recordNewLinkage,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   // We won't optimize the globals that are referenced by an alias for now
   // Ideally we should turn the alias into a global and duplicate the definition
   // when needed.
@@ -352,9 +366,9 @@ void llvm::thinLTOResolvePrevailingInIndex(
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
   for (auto &I : Index)
-    thinLTOResolvePrevailingGUID(I.second.SummaryList, I.first,
-                                 GlobalInvolvedWithAlias, isPrevailing,
-                                 recordNewLinkage);
+    thinLTOResolvePrevailingGUID(Index.getValueInfo(I), GlobalInvolvedWithAlias,
+                                 isPrevailing, recordNewLinkage,
+                                 GUIDPreservedSymbols);
 }
 
 static void thinLTOInternalizeAndPromoteGUID(
@@ -903,7 +917,7 @@ Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
 
   Error Result = runRegularLTO(AddStream);
   if (!Result)
-    Result = runThinLTO(AddStream, Cache);
+    Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
 
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());
@@ -1206,7 +1220,8 @@ ThinBackend lto::createWriteIndexesThinBackend(
   };
 }
 
-Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
+Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
+                      const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   if (ThinLTO.ModuleMap.empty())
     return Error::success();
 
@@ -1288,7 +1303,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
   thinLTOResolvePrevailingInIndex(ThinLTO.CombinedIndex, isPrevailing,
-                                  recordNewLinkage);
+                                  recordNewLinkage, GUIDPreservedSymbols);
 
   std::unique_ptr<ThinBackendProc> BackendProc =
       ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
