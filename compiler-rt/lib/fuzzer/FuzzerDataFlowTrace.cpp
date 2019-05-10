@@ -197,10 +197,8 @@ void DataFlowTrace::Init(const std::string &DirPath,
 }
 
 int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
-                    const Vector<std::string> &CorpusDirs,
-                    const Vector<std::string> &ExtraSeeds) {
-  Printf("INFO: collecting data flow. DFTBinary: %s DirPath: %s\n",
-         DFTBinary.c_str(), DirPath.c_str());
+                    const Vector<SizedFile> &CorporaFiles) {
+  Printf("INFO: collecting data flow for %zd files\n", CorporaFiles.size());
   return 0;
 }
 

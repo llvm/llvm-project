@@ -584,6 +584,22 @@ Vector<std::string> ParseSeedInuts(const char *seed_inputs) {
   return Files;
 }
 
+static Vector<SizedFile> ReadCorpora(const Vector<std::string> &CorpusDirs,
+    const Vector<std::string> &ExtraSeedFiles) {
+  Vector<SizedFile> SizedFiles;
+  size_t LastNumFiles = 0;
+  for (auto &Dir : CorpusDirs) {
+    GetSizedFilesFromDir(Dir, &SizedFiles);
+    Printf("INFO: % 8zd files found in %s\n", SizedFiles.size() - LastNumFiles,
+           Dir.c_str());
+    LastNumFiles = SizedFiles.size();
+  }
+  for (auto &File : ExtraSeedFiles)
+    if (auto Size = FileSize(File))
+      SizedFiles.push_back({File, Size});
+  return SizedFiles;
+}
+
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   using namespace fuzzer;
   assert(argc && argv && "Argument pointers cannot be nullptr");
@@ -666,9 +682,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       return 1;
   if (Flags.verbosity > 0 && !Dictionary.empty())
     Printf("Dictionary: %zd entries\n", Dictionary.size());
-  bool DoPlainRun = AllInputsAreFiles();
+  bool RunIndividualFiles = AllInputsAreFiles();
   Options.SaveArtifacts =
-      !DoPlainRun || Flags.minimize_crash_internal_step;
+      !RunIndividualFiles || Flags.minimize_crash_internal_step;
   Options.PrintNewCovPcs = Flags.print_pcs;
   Options.PrintNewCovFuncs = Flags.print_funcs;
   Options.PrintFinalStats = Flags.print_final_stats;
@@ -686,8 +702,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.FeaturesDir = Flags.features_dir;
   Options.LazyCounters = Flags.lazy_counters;
 
-  auto ExtraSeedFiles = ParseSeedInuts(Flags.seed_inputs);
-
   unsigned Seed = Flags.seed;
   // Initialize Seed.
   if (Seed == 0)
@@ -696,9 +710,14 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 
-  if (Flags.collect_data_flow)
-    return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
-                           *Inputs, ExtraSeedFiles);
+  if (Flags.collect_data_flow) {
+    if (RunIndividualFiles)
+      return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
+                        ReadCorpora({}, *Inputs));
+    else
+      return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
+                        ReadCorpora(*Inputs, {}));
+  }
 
   Random Rand(Seed);
   auto *MD = new MutationDispatcher(Rand, Options);
@@ -734,7 +753,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.cleanse_crash)
     return CleanseCrashInput(Args, Options);
 
-  if (DoPlainRun) {
+  if (RunIndividualFiles) {
     Options.SaveArtifacts = false;
     int Runs = std::max(1, Flags.runs);
     Printf("%s: Running %zd inputs %d time(s) each.\n", ProgName->c_str(),
@@ -792,7 +811,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  F->Loop(*Inputs, ExtraSeedFiles);
+  auto CorporaFiles = ReadCorpora(*Inputs, ParseSeedInuts(Flags.seed_inputs));
+  F->Loop(CorporaFiles);
 
   if (Flags.verbosity)
     Printf("Done %zd runs in %zd second(s)\n", F->getTotalNumberOfRuns(),
