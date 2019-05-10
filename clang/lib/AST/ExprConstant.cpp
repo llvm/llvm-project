@@ -103,28 +103,19 @@ namespace {
   }
 
   /// Get an LValue path entry, which is known to not be an array index, as a
-  /// field or base class.
-  static
-  APValue::BaseOrMemberType getAsBaseOrMember(APValue::LValuePathEntry E) {
-    APValue::BaseOrMemberType Value;
-    Value.setFromOpaqueValue(E.BaseOrMember);
-    return Value;
-  }
-
-  /// Get an LValue path entry, which is known to not be an array index, as a
   /// field declaration.
   static const FieldDecl *getAsField(APValue::LValuePathEntry E) {
-    return dyn_cast<FieldDecl>(getAsBaseOrMember(E).getPointer());
+    return dyn_cast<FieldDecl>(E.getAsBaseOrMember().getPointer());
   }
   /// Get an LValue path entry, which is known to not be an array index, as a
   /// base class declaration.
   static const CXXRecordDecl *getAsBaseClass(APValue::LValuePathEntry E) {
-    return dyn_cast<CXXRecordDecl>(getAsBaseOrMember(E).getPointer());
+    return dyn_cast<CXXRecordDecl>(E.getAsBaseOrMember().getPointer());
   }
   /// Determine whether this LValue path entry for a base class names a virtual
   /// base class.
   static bool isVirtualBaseClass(APValue::LValuePathEntry E) {
-    return getAsBaseOrMember(E).getInt();
+    return E.getAsBaseOrMember().getInt();
   }
 
   /// Given a CallExpr, try to get the alloc_size attribute. May return null.
@@ -316,7 +307,8 @@ namespace {
       if (IsOnePastTheEnd)
         return true;
       if (!isMostDerivedAnUnsizedArray() && MostDerivedIsArrayElement &&
-          Entries[MostDerivedPathLength - 1].ArrayIndex == MostDerivedArraySize)
+          Entries[MostDerivedPathLength - 1].getAsArrayIndex() ==
+              MostDerivedArraySize)
         return true;
       return false;
     }
@@ -333,8 +325,8 @@ namespace {
       // an array of length one with the type of the object as its element type.
       bool IsArray = MostDerivedPathLength == Entries.size() &&
                      MostDerivedIsArrayElement;
-      uint64_t ArrayIndex =
-          IsArray ? Entries.back().ArrayIndex : (uint64_t)IsOnePastTheEnd;
+      uint64_t ArrayIndex = IsArray ? Entries.back().getAsArrayIndex()
+                                    : (uint64_t)IsOnePastTheEnd;
       uint64_t ArraySize =
           IsArray ? getMostDerivedArraySize() : (uint64_t)1;
       return {ArrayIndex, ArraySize - ArrayIndex};
@@ -360,9 +352,7 @@ namespace {
 
     /// Update this designator to refer to the first element within this array.
     void addArrayUnchecked(const ConstantArrayType *CAT) {
-      PathEntry Entry;
-      Entry.ArrayIndex = 0;
-      Entries.push_back(Entry);
+      Entries.push_back(PathEntry::ArrayIndex(0));
 
       // This is a most-derived object.
       MostDerivedType = CAT->getElementType();
@@ -373,9 +363,7 @@ namespace {
     /// Update this designator to refer to the first element within the array of
     /// elements of type T. This is an array of unknown size.
     void addUnsizedArrayUnchecked(QualType ElemTy) {
-      PathEntry Entry;
-      Entry.ArrayIndex = 0;
-      Entries.push_back(Entry);
+      Entries.push_back(PathEntry::ArrayIndex(0));
 
       MostDerivedType = ElemTy;
       MostDerivedIsArrayElement = true;
@@ -388,10 +376,7 @@ namespace {
     /// Update this designator to refer to the given base or member of this
     /// object.
     void addDeclUnchecked(const Decl *D, bool Virtual = false) {
-      PathEntry Entry;
-      APValue::BaseOrMemberType Value(D, Virtual);
-      Entry.BaseOrMember = Value.getOpaqueValue();
-      Entries.push_back(Entry);
+      Entries.push_back(APValue::BaseOrMemberType(D, Virtual));
 
       // If this isn't a base class, it's a new most-derived object.
       if (const FieldDecl *FD = dyn_cast<FieldDecl>(D)) {
@@ -403,9 +388,7 @@ namespace {
     }
     /// Update this designator to refer to the given complex component.
     void addComplexUnchecked(QualType EltTy, bool Imag) {
-      PathEntry Entry;
-      Entry.ArrayIndex = Imag;
-      Entries.push_back(Entry);
+      Entries.push_back(PathEntry::ArrayIndex(Imag));
 
       // This is technically a most-derived object, though in practice this
       // is unlikely to matter.
@@ -426,7 +409,8 @@ namespace {
         // Can't verify -- trust that the user is doing the right thing (or if
         // not, trust that the caller will catch the bad behavior).
         // FIXME: Should we reject if this overflows, at least?
-        Entries.back().ArrayIndex += TruncatedN;
+        Entries.back() = PathEntry::ArrayIndex(
+            Entries.back().getAsArrayIndex() + TruncatedN);
         return;
       }
 
@@ -435,8 +419,8 @@ namespace {
       // an array of length one with the type of the object as its element type.
       bool IsArray = MostDerivedPathLength == Entries.size() &&
                      MostDerivedIsArrayElement;
-      uint64_t ArrayIndex =
-          IsArray ? Entries.back().ArrayIndex : (uint64_t)IsOnePastTheEnd;
+      uint64_t ArrayIndex = IsArray ? Entries.back().getAsArrayIndex()
+                                    : (uint64_t)IsOnePastTheEnd;
       uint64_t ArraySize =
           IsArray ? getMostDerivedArraySize() : (uint64_t)1;
 
@@ -456,7 +440,7 @@ namespace {
              "bounds check succeeded for out-of-bounds index");
 
       if (IsArray)
-        Entries.back().ArrayIndex = ArrayIndex;
+        Entries.back() = PathEntry::ArrayIndex(ArrayIndex);
       else
         IsOnePastTheEnd = (ArrayIndex != 0);
     }
@@ -2881,7 +2865,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // Next subobject is an array element.
       const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(ObjType);
       assert(CAT && "vla in literal type?");
-      uint64_t Index = Sub.Entries[I].ArrayIndex;
+      uint64_t Index = Sub.Entries[I].getAsArrayIndex();
       if (CAT->getSize().ule(Index)) {
         // Note, it should not be possible to form a pointer with a valid
         // designator which points more than one past the end of the array.
@@ -2904,7 +2888,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         O = &O->getArrayFiller();
     } else if (ObjType->isAnyComplexType()) {
       // Next subobject is a complex number.
-      uint64_t Index = Sub.Entries[I].ArrayIndex;
+      uint64_t Index = Sub.Entries[I].getAsArrayIndex();
       if (Index > 1) {
         if (Info.getLangOpts().CPlusPlus11)
           Info.FFDiag(E, diag::note_constexpr_access_past_end)
@@ -3089,7 +3073,7 @@ static unsigned FindDesignatorMismatch(QualType ObjType,
     if (!ObjType.isNull() &&
         (ObjType->isArrayType() || ObjType->isAnyComplexType())) {
       // Next subobject is an array element.
-      if (A.Entries[I].ArrayIndex != B.Entries[I].ArrayIndex) {
+      if (A.Entries[I].getAsArrayIndex() != B.Entries[I].getAsArrayIndex()) {
         WasArrayIndex = true;
         return I;
       }
@@ -3098,7 +3082,8 @@ static unsigned FindDesignatorMismatch(QualType ObjType,
       else
         ObjType = ObjType->castAsArrayTypeUnsafe()->getElementType();
     } else {
-      if (A.Entries[I].BaseOrMember != B.Entries[I].BaseOrMember) {
+      if (A.Entries[I].getAsBaseOrMember() !=
+          B.Entries[I].getAsBaseOrMember()) {
         WasArrayIndex = false;
         return I;
       }
@@ -3397,7 +3382,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
           Info.FFDiag(Conv);
         return false;
       }
-      uint64_t CharIndex = LVal.Designator.Entries[0].ArrayIndex;
+      uint64_t CharIndex = LVal.Designator.Entries[0].getAsArrayIndex();
       RVal = APValue(extractStringLiteralCharacter(Info, Base, CharIndex));
       return true;
     }
@@ -4997,8 +4982,6 @@ public:
         } else
           FD = LambdaCallOp;
       }
-
-
     } else
       return Error(E);
 
@@ -7981,13 +7964,13 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
       if (I + 1 == E)
         return true;
       const auto *CAT = cast<ConstantArrayType>(Ctx.getAsArrayType(BaseType));
-      uint64_t Index = Entry.ArrayIndex;
+      uint64_t Index = Entry.getAsArrayIndex();
       if (Index + 1 != CAT->getSize())
         return false;
       BaseType = CAT->getElementType();
     } else if (BaseType->isAnyComplexType()) {
       const auto *CT = BaseType->castAs<ComplexType>();
-      uint64_t Index = Entry.ArrayIndex;
+      uint64_t Index = Entry.getAsArrayIndex();
       if (Index != 1)
         return false;
       BaseType = CT->getElementType();
@@ -8129,7 +8112,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   if (Designator.MostDerivedIsArrayElement &&
       Designator.Entries.size() == Designator.MostDerivedPathLength) {
     uint64_t ArraySize = Designator.getMostDerivedArraySize();
-    uint64_t ArrayIndex = Designator.Entries.back().ArrayIndex;
+    uint64_t ArrayIndex = Designator.Entries.back().getAsArrayIndex();
     ElemsRemaining = ArraySize <= ArrayIndex ? 0 : ArraySize - ArrayIndex;
   } else {
     ElemsRemaining = Designator.isOnePastTheEnd() ? 0 : 1;
