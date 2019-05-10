@@ -3019,7 +3019,7 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
       }
     } else {
       for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+        DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
           const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
@@ -3071,7 +3071,7 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
       const uint32_t num_compile_units = GetNumCompileUnits();
 
       for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+        DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
           const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
