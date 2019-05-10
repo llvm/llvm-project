@@ -158,3 +158,5 @@ FUZZER_FLAG_STRING(focus_function, "Experimental. "
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")
+FUZZER_FLAG_STRING(collect_data_flow,
+                   "Experimental: collect the data flow trace")
