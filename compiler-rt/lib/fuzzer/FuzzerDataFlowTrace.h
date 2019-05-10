@@ -36,6 +36,10 @@
 
 namespace fuzzer {
 
+int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
+                    const Vector<std::string> &CorpusDirs,
+                    const Vector<std::string> &ExtraSeeds);
+
 class BlockCoverage {
  public:
   bool AppendCoverage(std::istream &IN);
