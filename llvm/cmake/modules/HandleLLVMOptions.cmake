@@ -512,7 +512,6 @@ if (MSVC)
       -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
       -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'
       -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
-      -wd4355 # Suppress ''this' : used in base member initializer list'
       -wd4456 # Suppress 'declaration of 'var' hides local variable'
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
