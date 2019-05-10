@@ -33,6 +33,7 @@ public:
   lldb_private::CompactUnwindInfo *GetCompactUnwindInfo();
 
   ArmUnwindInfo *GetArmUnwindInfo();
+  SymbolFile *GetSymbolFile();
 
   lldb::FuncUnwindersSP GetFuncUnwindersContainingAddress(const Address &addr,
                                                           SymbolContext &sc);
