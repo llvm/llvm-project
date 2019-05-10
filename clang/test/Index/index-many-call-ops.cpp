@@ -5,7 +5,7 @@
 // call operators.
 
 // UBSan increses stack usage.
-// REQUIRES: not_ubsan
+// UNSUPPORTED: ubsan
 
 struct S {
   S &operator()();

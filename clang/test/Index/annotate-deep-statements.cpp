@@ -4,7 +4,7 @@
 // Check that we don't get stack overflow trying to annotate an extremely deep AST.
 
 // AddressSanitizer and UndefinedBehaviorSanitizer increases stack usage.
-// REQUIRES: not_asan, not_ubsan
+// UNSUPPORTED: asan, ubsan
 
 struct S {
   S &operator()();
