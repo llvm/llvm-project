@@ -927,3 +927,66 @@ entry:
 exit:
   ret i1 %cmp
 }
+
+define i1 @urem_unknown(i32 %a) {
+; CHECK-LABEL: @urem_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[A:%.*]], 30
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UREM]], 30
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %urem = urem i32 %a, 30
+  %cmp = icmp ult i32 %urem, 30
+  br label %exit
+exit:
+  ret i1 %cmp
+}
+
+define i1 @srem_unknown(i32 %a) {
+; CHECK-LABEL: @srem_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A:%.*]], 30
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[SREM]], 30
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -30
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %srem = srem i32 %a, 30
+  %cmp1 = icmp slt i32 %srem, 30
+  %cmp2 = icmp sgt i32 %srem, -30
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @sdiv_unknown(i32 %a) {
+; CHECK-LABEL: @sdiv_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SREM:%.*]] = sdiv i32 [[A:%.*]], 123
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[SREM]], 17459217
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -17459217
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %srem = sdiv i32 %a, 123
+  %cmp1 = icmp slt i32 %srem, 17459217
+  %cmp2 = icmp sgt i32 %srem, -17459217
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
