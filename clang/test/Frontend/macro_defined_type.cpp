@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux-gnu %s
 
 #define NODEREF __attribute__((noderef))
 
