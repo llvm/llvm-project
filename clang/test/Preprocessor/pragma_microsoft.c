@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple i686-unknown-windows-msvc %s -fsyntax-only -verify -fms-extensions -Wunknown-pragmas
 // RUN: not %clang_cc1 -triple i686-unknown-windows-msvc %s -fms-extensions -E | FileCheck %s
-// REQUIRES: non-ps4-sdk
+// UNSUPPORTED: ps4
 
 // rdar://6495941
 

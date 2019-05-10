@@ -1325,8 +1325,9 @@ public:
   /// \param FN is a pointer to IR function being generated.
   /// \param FD is a pointer to function declaration if any.
   /// \param CGF is a pointer to CodeGenFunction that generates this function.
-  void GenOpenCLArgMetadata(llvm::Function *Fn, const FunctionDecl *FD=nullptr,  
-                                 CodeGenFunction *CGF=nullptr);
+  void GenOpenCLArgMetadata(llvm::Function *FN,
+                            const FunctionDecl *FD = nullptr,
+                            CodeGenFunction *CGF = nullptr);
 
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.

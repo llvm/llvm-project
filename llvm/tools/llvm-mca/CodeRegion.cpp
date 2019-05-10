@@ -16,7 +16,7 @@
 namespace llvm {
 namespace mca {
 
-CodeRegions::CodeRegions(llvm::SourceMgr &S) : SM(S) {
+CodeRegions::CodeRegions(llvm::SourceMgr &S) : SM(S), FoundErrors(false) {
   // Create a default region for the input code sequence.
   Regions.emplace_back(make_unique<CodeRegion>("", SMLoc()));
 }
@@ -30,41 +30,87 @@ bool CodeRegion::isLocInRange(SMLoc Loc) const {
 }
 
 void CodeRegions::beginRegion(StringRef Description, SMLoc Loc) {
-  assert(!Regions.empty() && "Missing Default region");
-  const CodeRegion &CurrentRegion = *Regions.back();
-  if (CurrentRegion.startLoc().isValid() && !CurrentRegion.endLoc().isValid()) {
-    SM.PrintMessage(Loc, SourceMgr::DK_Warning,
-                    "Ignoring invalid region start");
-    return;
+  if (ActiveRegions.empty()) {
+    // Remove the default region if there is at least one user defined region.
+    // By construction, only the default region has an invalid start location.
+    if (Regions.size() == 1 && !Regions[0]->startLoc().isValid() &&
+        !Regions[0]->endLoc().isValid()) {
+      ActiveRegions[Description] = 0;
+      Regions[0] = make_unique<CodeRegion>(Description, Loc);
+      return;
+    }
+  } else {
+    auto It = ActiveRegions.find(Description);
+    if (It != ActiveRegions.end()) {
+      const CodeRegion &R = *Regions[It->second];
+      if (Description.empty()) {
+        SM.PrintMessage(Loc, SourceMgr::DK_Error,
+                        "found multiple overlapping anonymous regions");
+        SM.PrintMessage(R.startLoc(), SourceMgr::DK_Note,
+                        "Previous anonymous region was defined here");
+        FoundErrors = true;
+        return;
+      }
+
+      SM.PrintMessage(Loc, SourceMgr::DK_Error,
+                      "overlapping regions cannot have the same name");
+      SM.PrintMessage(R.startLoc(), SourceMgr::DK_Note,
+                      "region " + Description + " was previously defined here");
+      FoundErrors = true;
+      return;
+    }
   }
 
-  // Remove the default region if there are user defined regions.
-  if (!CurrentRegion.startLoc().isValid())
-    Regions.erase(Regions.begin());
+  ActiveRegions[Description] = Regions.size();
   Regions.emplace_back(make_unique<CodeRegion>(Description, Loc));
+  return;
 }
 
-void CodeRegions::endRegion(SMLoc Loc) {
-  assert(!Regions.empty() && "Missing Default region");
-  CodeRegion &CurrentRegion = *Regions.back();
-  if (CurrentRegion.endLoc().isValid()) {
-    SM.PrintMessage(Loc, SourceMgr::DK_Warning,
-                    "Ignoring invalid region end");
+void CodeRegions::endRegion(StringRef Description, SMLoc Loc) {
+  if (Description.empty()) {
+    // Special case where there is only one user defined region,
+    // and this LLVM-MCA-END directive doesn't provide a region name.
+    // In this case, we assume that the user simply wanted to just terminate
+    // the only active region.
+    if (ActiveRegions.size() == 1) {
+      auto It = ActiveRegions.begin();
+      Regions[It->second]->setEndLocation(Loc);
+      ActiveRegions.erase(It);
+      return;
+    }
+
+    // Special case where the region end marker applies to the default region.
+    if (ActiveRegions.empty() && Regions.size() == 1 &&
+        !Regions[0]->startLoc().isValid() && !Regions[0]->endLoc().isValid()) {
+      Regions[0]->setEndLocation(Loc);
+      return;
+    }
+  }
+
+  auto It = ActiveRegions.find(Description);
+  if (It != ActiveRegions.end()) {
+    Regions[It->second]->setEndLocation(Loc);
+    ActiveRegions.erase(It);
     return;
   }
 
-  CurrentRegion.setEndLocation(Loc);
+  FoundErrors = true;
+  SM.PrintMessage(Loc, SourceMgr::DK_Error,
+                  "found an invalid region end directive");
+  if (!Description.empty()) {
+    SM.PrintMessage(Loc, SourceMgr::DK_Note,
+                    "unable to find an active region named " + Description);
+  } else {
+    SM.PrintMessage(Loc, SourceMgr::DK_Note,
+                    "unable to find an active anonymous region");
+  }
 }
 
 void CodeRegions::addInstruction(const MCInst &Instruction) {
-  const SMLoc &Loc = Instruction.getLoc();
-  const auto It =
-      std::find_if(Regions.rbegin(), Regions.rend(),
-                   [Loc](const UniqueCodeRegion &Region) {
-                     return Region->isLocInRange(Loc);
-                   });
-  if (It != Regions.rend())
-    (*It)->addInstruction(Instruction);
+  SMLoc Loc = Instruction.getLoc();
+  for (UniqueCodeRegion &Region : Regions)
+    if (Region->isLocInRange(Loc))
+      Region->addInstruction(Instruction);
 }
 
 } // namespace mca

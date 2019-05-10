@@ -634,7 +634,7 @@ void printCOFFSymbolTable(const object::COFFImportFile *i) {
     std::string Name;
     raw_string_ostream NS(Name);
 
-    Sym.printName(NS);
+    cantFail(Sym.printName(NS));
     NS.flush();
 
     outs() << "[" << format("%2d", Index) << "]"

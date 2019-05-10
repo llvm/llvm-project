@@ -323,7 +323,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   GlobalStats GlobalStats;
   StringMap<PerFunctionStats> Statistics;
   for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units())
-    if (DWARFDie CUDie = CU->getUnitDIE(false))
+    if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false))
       collectStatsRecursive(CUDie, "/", "g", 0, 0, 0, Statistics, GlobalStats);
 
   /// The version number should be increased every time the algorithm is changed

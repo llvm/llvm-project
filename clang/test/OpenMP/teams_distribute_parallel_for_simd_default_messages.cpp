@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<200; i++) foo();
 
   #pragma omp target
-  #pragma omp teams distribute parallel for simd default(none)
+  #pragma omp teams distribute parallel for simd default(none) // expected-note {{explicit data sharing attribute requested here}}
   for (int i=0; i<200; i++) ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
 
   return 0;

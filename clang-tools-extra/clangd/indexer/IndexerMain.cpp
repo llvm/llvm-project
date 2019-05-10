@@ -41,6 +41,7 @@ public:
 
   clang::FrontendAction *create() override {
     SymbolCollector::Options Opts;
+    Opts.CountReferences = true;
     return createStaticIndexingAction(
                Opts,
                [&](SymbolSlab S) {

@@ -1,0 +1,30 @@
+## If the e_shoff field is set to a value either past the end of the file, or
+## such that e_shoff + e_shnum * sizeof(Elf_Shdr) is past the end of the file,
+## we should emit an error. This test checks that the emitted error is sensible.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: cp %t.o %t2.o
+
+## Sanity check that the section header table is at offset 64:
+# RUN: llvm-readobj --file-headers %t.o | FileCheck %s --check-prefix=VALIDATE
+# VALIDATE: SectionHeaderOffset: 0x40{{$}}
+
+## Truncate the file to end before the section header table ends.
+# RUN: %python -c "with open('%/t.o', 'r+b') as input: input.truncate(65)"
+# RUN: not llvm-objcopy %t.o 2>&1 | FileCheck %s -DINPUT=%t.o
+
+## Set the e_shoff field to a value much larger than the object file size.
+# RUN: %python -c "with open('%/t2.o', 'r+b') as input: import struct; bytes = struct.pack('<Q', 0x40000000); input.seek(40); input.write(bytes)"
+# RUN: not llvm-objcopy %t2.o 2>&1 | FileCheck %s -DINPUT=%t2.o
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+
+# CHECK: error: '[[INPUT]]': section header table goes past the end of the file
