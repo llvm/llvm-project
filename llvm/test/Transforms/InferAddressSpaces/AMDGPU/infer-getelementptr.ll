@@ -71,3 +71,15 @@ define void @repeated_constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 
   ret void
 }
+
+; CHECK-LABEL: @unorder_constexpr_gep_bitcast(
+; CHECK-NEXT: %x0 = load i32, i32 addrspace(3)* bitcast ([648 x double] addrspace(3)* @lds to i32 addrspace(3)*), align 4
+; CHECK-NEXT: %x1 = load i32, i32 addrspace(3)* getelementptr (i32, i32 addrspace(3)* bitcast ([648 x double] addrspace(3)* @lds to i32 addrspace(3)*), i32 1), align 4
+define void @unorder_constexpr_gep_bitcast() {
+  %x0 = load i32, i32* bitcast ([648 x double]* addrspacecast ([648 x double] addrspace(3)* @lds to [648 x double]*) to i32*), align 4
+  %x1 = load i32, i32* getelementptr (i32, i32* bitcast ([648 x double]* addrspacecast ([648 x double] addrspace(3)* @lds to [648 x double]*) to i32*), i32 1), align 4
+  call void @use(i32 %x0, i32 %x1)
+  ret void
+}
+
+declare void @use(i32, i32)
