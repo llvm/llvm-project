@@ -13,3 +13,9 @@ void Func() {
   auto NODEREF *auto_i_ptr2 = i_ptr;
   auto NODEREF auto_i2 = i; // expected-warning{{'noderef' can only be used on an array or pointer type}}
 }
+
+// Added test for fix for P41835
+#define _LIBCPP_FLOAT_ABI __attribute__((pcs("aapcs")))
+struct A {
+  _LIBCPP_FLOAT_ABI int operator()() throw(); // expected-warning{{'pcs' calling convention ignored for this target}}
+};
