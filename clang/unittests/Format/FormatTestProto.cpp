@@ -397,6 +397,16 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "};");
 }
 
+TEST_F(FormatTestProto, DoesntWrapPackageStatements) {
+  verifyFormat(
+      "package"
+      " some.really.long.package.that.exceeds.the.column.limit00000000;");
+}
+
+TEST_F(FormatTestProto, TrailingCommentAfterPackage) {
+  verifyFormat("package foo.pkg;  // comment\n");
+}
+
 TEST_F(FormatTestProto, FormatsService) {
   verifyFormat("service SearchService {\n"
                "  rpc Search(SearchRequest) returns (SearchResponse) {\n"
