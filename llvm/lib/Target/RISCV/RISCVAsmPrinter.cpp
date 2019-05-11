@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "InstPrinter/RISCVInstPrinter.h"
+#include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AsmPrinter.h"

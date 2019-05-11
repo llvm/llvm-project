@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_RISCV_INSTPRINTER_RISCVINSTPRINTER_H
-#define LLVM_LIB_TARGET_RISCV_INSTPRINTER_RISCVINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVINSTPRINTER_H
+#define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVINSTPRINTER_H
 
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
