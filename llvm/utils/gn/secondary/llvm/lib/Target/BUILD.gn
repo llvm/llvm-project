@@ -61,13 +61,6 @@ group("AllTargetsAsmParsers") {
   }
 }
 
-group("AllTargetsAsmPrinters") {
-  deps = []
-  foreach(target, llvm_targets_to_build) {
-    deps += [ "$target/InstPrinter" ]
-  }
-}
-
 group("AllTargetsDescs") {
   deps = []
   foreach(target, llvm_targets_to_build) {

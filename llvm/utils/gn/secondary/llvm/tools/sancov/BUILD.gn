@@ -7,7 +7,6 @@ executable("sancov") {
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
-    "//llvm/lib/Target:AllTargetsAsmPrinters",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",

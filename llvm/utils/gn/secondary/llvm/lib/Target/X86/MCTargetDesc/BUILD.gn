@@ -18,13 +18,29 @@ tablegen("X86GenSubtargetInfo") {
   td_file = "../X86.td"
 }
 
+tablegen("X86GenAsmWriter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../X86.td"
+}
+
+tablegen("X86GenAsmWriter1") {
+  visibility = [ ":tablegen" ]
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+  td_file = "../X86.td"
+}
+
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
-    "../InstPrinter",
     "../TargetInfo",
   ]
   public_deps = [
+    ":X86GenAsmWriter",
+    ":X86GenAsmWriter1",
     ":X86GenInstrInfo",
     ":X86GenRegisterInfo",
     ":X86GenSubtargetInfo",
@@ -41,13 +57,17 @@ static_library("MCTargetDesc") {
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
-    "//llvm/lib/Target/X86/InstPrinter",
     "//llvm/lib/Target/X86/TargetInfo",
+    "//llvm/lib/Target/X86/Utils",
   ]
   include_dirs = [ ".." ]
   sources = [
+    "X86ATTInstPrinter.cpp",
     "X86AsmBackend.cpp",
     "X86ELFObjectWriter.cpp",
+    "X86InstComments.cpp",
+    "X86InstPrinterCommon.cpp",
+    "X86IntelInstPrinter.cpp",
     "X86MCAsmInfo.cpp",
     "X86MCCodeEmitter.cpp",
     "X86MCTargetDesc.cpp",
