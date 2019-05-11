@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPARC_INSTPRINTER_SPARCINSTPRINTER_H
-#define LLVM_LIB_TARGET_SPARC_INSTPRINTER_SPARCINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCINSTPRINTER_H
+#define LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
 

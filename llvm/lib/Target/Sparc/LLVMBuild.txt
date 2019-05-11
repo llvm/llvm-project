@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -30,6 +30,6 @@ has_jit = 1
 type = Library
 name = SparcCodeGen
 parent = Sparc
-required_libraries = AsmPrinter CodeGen Core MC SelectionDAG SparcAsmPrinter
+required_libraries = AsmPrinter CodeGen Core MC SelectionDAG
                      SparcDesc SparcInfo Support Target
 add_to_library_groups = Sparc

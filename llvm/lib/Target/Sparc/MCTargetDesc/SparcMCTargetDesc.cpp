@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcMCTargetDesc.h"
-#include "InstPrinter/SparcInstPrinter.h"
+#include "SparcInstPrinter.h"
 #include "SparcMCAsmInfo.h"
 #include "SparcTargetStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"

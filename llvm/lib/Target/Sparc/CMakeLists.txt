@@ -30,6 +30,5 @@ add_llvm_target(SparcCodeGen
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
-add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
