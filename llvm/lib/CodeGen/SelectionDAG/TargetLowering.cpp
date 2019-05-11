@@ -1268,6 +1268,16 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::BITREVERSE: {
+    SDValue Src = Op.getOperand(0);
+    APInt DemandedSrcBits = DemandedBits.reverseBits();
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
+                             Depth + 1))
+      return true;
+    Known.One = Known2.One.reverseBits();
+    Known.Zero = Known2.Zero.reverseBits();
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();

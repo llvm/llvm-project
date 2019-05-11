@@ -40,7 +40,6 @@ define i32 @test_bitreverse_bitreverse(i32 %a0) nounwind {
 define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X86-LABEL: test_demandedbits_bitreverse:
 ; X86:       # %bb.0:
-; X86-NEXT:    por {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    pxor %xmm1, %xmm1
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
@@ -79,7 +78,6 @@ define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ;
 ; X64-LABEL: test_demandedbits_bitreverse:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm2
