@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsISelLowering.h"
-#include "InstPrinter/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
+#include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MipsCCState.h"
 #include "MipsInstrInfo.h"

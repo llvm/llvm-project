@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -29,6 +29,6 @@ has_disassembler = 1
 type = Library
 name = AVRCodeGen
 parent = AVR
-required_libraries = AsmPrinter CodeGen Core MC AVRAsmPrinter AVRDesc AVRInfo SelectionDAG Support Target
+required_libraries = AsmPrinter CodeGen Core MC AVRDesc AVRInfo SelectionDAG Support Target
 add_to_library_groups = AVR
 

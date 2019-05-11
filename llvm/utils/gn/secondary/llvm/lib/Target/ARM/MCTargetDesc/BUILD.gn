@@ -1,5 +1,11 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("ARMGenAsmWriter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../ARM.td"
+}
+
 tablegen("ARMGenInstrInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-instr-info" ]
@@ -27,11 +33,11 @@ tablegen("ARMGenSubtargetInfo") {
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
-    "../InstPrinter",
     "../TargetInfo",
     "../Utils",
   ]
   public_deps = [
+    ":ARMGenAsmWriter",
     ":ARMGenInstrInfo",
     ":ARMGenMCCodeEmitter",
     ":ARMGenRegisterInfo",
@@ -47,7 +53,6 @@ static_library("MCTargetDesc") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",
-    "//llvm/lib/Target/ARM/InstPrinter",
     "//llvm/lib/Target/ARM/TargetInfo",
     "//llvm/lib/Target/ARM/Utils",
   ]
@@ -56,6 +61,7 @@ static_library("MCTargetDesc") {
     "ARMAsmBackend.cpp",
     "ARMELFObjectWriter.cpp",
     "ARMELFStreamer.cpp",
+    "ARMInstPrinter.cpp",
     "ARMMCAsmInfo.cpp",
     "ARMMCCodeEmitter.cpp",
     "ARMMCExpr.cpp",

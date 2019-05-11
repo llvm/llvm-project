@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -30,5 +30,5 @@ has_jit = 1
 type = Library
 name = PowerPCCodeGen
 parent = PowerPC
-required_libraries = Analysis AsmPrinter CodeGen Core MC PowerPCAsmPrinter PowerPCDesc PowerPCInfo Scalar SelectionDAG Support Target TransformUtils
+required_libraries = Analysis AsmPrinter CodeGen Core MC PowerPCDesc PowerPCInfo Scalar SelectionDAG Support Target TransformUtils
 add_to_library_groups = PowerPC
