@@ -1,5 +1,11 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("PPCGenAsmWriter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../PPC.td"
+}
+
 tablegen("PPCGenInstrInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-instr-info" ]
@@ -31,6 +37,7 @@ group("tablegen") {
     "../TargetInfo",
   ]
   public_deps = [
+    ":PPCGenAsmWriter",
     ":PPCGenInstrInfo",
     ":PPCGenMCCodeEmitter",
     ":PPCGenRegisterInfo",
@@ -46,13 +53,13 @@ static_library("MCTargetDesc") {
   deps = [
     "//llvm/lib/MC",
     "//llvm/lib/Support",
-    "//llvm/lib/Target/PowerPC/InstPrinter",
     "//llvm/lib/Target/PowerPC/TargetInfo",
   ]
   include_dirs = [ ".." ]
   sources = [
     "PPCAsmBackend.cpp",
     "PPCELFObjectWriter.cpp",
+    "PPCInstPrinter.cpp",
     "PPCMCAsmInfo.cpp",
     "PPCMCCodeEmitter.cpp",
     "PPCMCExpr.cpp",
