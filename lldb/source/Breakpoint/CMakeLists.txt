@@ -30,7 +30,6 @@ add_lldb_library(lldbBreakpoint
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginObjCLanguage
 
   LINK_COMPONENTS
     Support
