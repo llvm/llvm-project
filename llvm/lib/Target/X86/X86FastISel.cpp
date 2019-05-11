@@ -2498,8 +2498,7 @@ bool X86FastISel::X86SelectFPExt(const Instruction *I) {
     unsigned Opc =
         HasAVX512 ? X86::VCVTSS2SDZrr
                   : Subtarget->hasAVX() ? X86::VCVTSS2SDrr : X86::CVTSS2SDrr;
-    return X86SelectFPExtOrFPTrunc(
-        I, Opc, HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass);
+    return X86SelectFPExtOrFPTrunc(I, Opc, TLI.getRegClassFor(MVT::f64));
   }
 
   return false;
@@ -2513,8 +2512,7 @@ bool X86FastISel::X86SelectFPTrunc(const Instruction *I) {
     unsigned Opc =
         HasAVX512 ? X86::VCVTSD2SSZrr
                   : Subtarget->hasAVX() ? X86::VCVTSD2SSrr : X86::CVTSD2SSrr;
-    return X86SelectFPExtOrFPTrunc(
-        I, Opc, HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass);
+    return X86SelectFPExtOrFPTrunc(I, Opc, TLI.getRegClassFor(MVT::f32));
   }
 
   return false;
@@ -3887,33 +3885,26 @@ unsigned X86FastISel::fastMaterializeFloatZero(const ConstantFP *CF) {
   // Get opcode and regclass for the given zero.
   bool HasAVX512 = Subtarget->hasAVX512();
   unsigned Opc = 0;
-  const TargetRegisterClass *RC = nullptr;
   switch (VT.SimpleTy) {
   default: return 0;
   case MVT::f32:
-    if (X86ScalarSSEf32) {
+    if (X86ScalarSSEf32)
       Opc = HasAVX512 ? X86::AVX512_FsFLD0SS : X86::FsFLD0SS;
-      RC  = HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp032;
-      RC  = &X86::RFP32RegClass;
-    }
     break;
   case MVT::f64:
-    if (X86ScalarSSEf64) {
+    if (X86ScalarSSEf64)
       Opc = HasAVX512 ? X86::AVX512_FsFLD0SD : X86::FsFLD0SD;
-      RC  = HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp064;
-      RC  = &X86::RFP64RegClass;
-    }
     break;
   case MVT::f80:
     // No f80 support yet.
     return 0;
   }
 
-  unsigned ResultReg = createResultReg(RC);
+  unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg);
   return ResultReg;
 }
