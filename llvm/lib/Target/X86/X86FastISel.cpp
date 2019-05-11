@@ -396,7 +396,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   case MVT::v2i64:
   case MVT::v8i16:
   case MVT::v16i8:
-    if (IsNonTemporal && Alignment >= 16)
+    if (IsNonTemporal && Alignment >= 16 && HasSSE41)
       Opc = HasVLX ? X86::VMOVNTDQAZ128rm :
             HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
     else if (Alignment >= 16)
