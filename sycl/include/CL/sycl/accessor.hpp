@@ -679,13 +679,13 @@ class accessor
   friend class cl::sycl::simple_scheduler::ExecuteKernelCommand;
 
   template <int AccessDimensions, typename KernelType>
-  friend uint cl::sycl::simple_scheduler::passGlobalAccessorAsArg(
-      uint I, int LambdaOffset, cl_kernel ClKernel,
+  friend uint32_t cl::sycl::simple_scheduler::passGlobalAccessorAsArg(
+      uint32_t I, int LambdaOffset, cl_kernel ClKernel,
       const KernelType &HostKernel);
 
   template <int AccessDimensions, typename KernelType>
-  friend uint cl::sycl::simple_scheduler::passLocalAccessorAsArg(
-      uint I, int LambdaOffset, cl_kernel ClKernel,
+  friend uint32_t cl::sycl::simple_scheduler::passLocalAccessorAsArg(
+      uint32_t I, int LambdaOffset, cl_kernel ClKernel,
       const KernelType &HostKernel);
 
   template <class Obj>

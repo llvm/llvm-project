@@ -408,11 +408,13 @@ private:
 // accessor in lambda function. 'ClKernel' is the kernel. 'HostKernel'
 // is the pointer to the lambda function.
 template <int AccessDimensions, typename KernelType>
-uint passGlobalAccessorAsArg(uint I, int LambdaOffset, cl_kernel ClKernel,
-                             const KernelType &HostKernel);
+uint32_t passGlobalAccessorAsArg(uint32_t I, int LambdaOffset,
+                                 cl_kernel ClKernel,
+                                 const KernelType &HostKernel);
 template <int AccessDimensions, typename KernelType>
-uint passLocalAccessorAsArg(uint I, int LambdaOffset, cl_kernel ClKernel,
-                            const KernelType &HostKernel);
+uint32_t passLocalAccessorAsArg(uint32_t I, int LambdaOffset,
+                                cl_kernel ClKernel,
+                                const KernelType &HostKernel);
 
 } // namespace simple_scheduler
 } // namespace sycl
