@@ -12,7 +12,7 @@
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "BPF.h"
-#include "InstPrinter/BPFInstPrinter.h"
+#include "MCTargetDesc/BPFInstPrinter.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"

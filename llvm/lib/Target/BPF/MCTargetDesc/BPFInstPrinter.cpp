@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BPFInstPrinter.h"
+#include "MCTargetDesc/BPFInstPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
