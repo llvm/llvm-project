@@ -12,7 +12,7 @@
 
 #include "LanaiInstPrinter.h"
 #include "Lanai.h"
-#include "MCTargetDesc/LanaiMCExpr.h"
+#include "LanaiMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
