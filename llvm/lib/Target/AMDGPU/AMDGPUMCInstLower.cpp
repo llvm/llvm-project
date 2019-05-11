@@ -15,7 +15,7 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "InstPrinter/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600AsmPrinter.h"
 #include "SIInstrInfo.h"

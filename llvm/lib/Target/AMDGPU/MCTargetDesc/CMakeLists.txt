@@ -2,6 +2,7 @@ add_llvm_library(LLVMAMDGPUDesc
   AMDGPUAsmBackend.cpp
   AMDGPUELFObjectWriter.cpp
   AMDGPUELFStreamer.cpp
+  AMDGPUInstPrinter.cpp
   AMDGPUMCAsmInfo.cpp
   AMDGPUMCCodeEmitter.cpp
   AMDGPUMCTargetDesc.cpp
@@ -10,3 +11,5 @@ add_llvm_library(LLVMAMDGPUDesc
   R600MCTargetDesc.cpp
   SIMCCodeEmitter.cpp
 )
+
+add_dependencies(LLVMAMDGPUDesc LLVMAMDGPUUtils)
