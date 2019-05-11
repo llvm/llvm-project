@@ -8035,7 +8035,7 @@ bool LLParser::ParseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
     return true;
 
   do {
-    unsigned Val;
+    unsigned Val = 0;
     switch (Lex.getKind()) {
     case lltok::kw_readNone:
       Lex.Lex();
