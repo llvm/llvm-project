@@ -224,9 +224,7 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
   m_lookups.emplace_back(lookup);
 
   auto add_variant_funcs = [&](Language *lang) {
-    std::vector<ConstString> variant_names;
-    lang->GetMethodNameVariants(name, variant_names);
-    for (ConstString variant_name : variant_names) {
+    for (ConstString variant_name : lang->GetMethodNameVariants(name)) {
       Module::LookupInfo variant_lookup(name, name_type_mask,
                                         lang->GetLanguageType());
       variant_lookup.SetLookupName(variant_name);
@@ -238,9 +236,9 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
   if (Language *lang = Language::FindPlugin(m_language)) {
     add_variant_funcs(lang);
   } else {
-    // Most likely m_language is eLanguageTypeUnknown. We check each language for
-    // possible variants or more qualified names and create lookups for those as
-    // well.
+    // Most likely m_language is eLanguageTypeUnknown. We check each language
+    // for possible variants or more qualified names and create lookups for
+    // those as well.
     Language::ForEach(add_variant_funcs);
   }
 

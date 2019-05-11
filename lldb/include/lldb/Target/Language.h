@@ -193,10 +193,9 @@ public:
   // If a language can have more than one possible name for a method, this
   // function can be used to enumerate them. This is useful when doing name
   // lookups.
-  virtual void
-  GetMethodNameVariants(ConstString method_name,
-                        std::vector<ConstString> &variant_names) const {
-    return;
+  virtual std::vector<ConstString>
+  GetMethodNameVariants(ConstString method_name) const {
+    return std::vector<ConstString>();
   };
 
   // if an individual data formatter can apply to several types and cross a
