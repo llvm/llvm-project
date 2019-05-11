@@ -742,8 +742,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   StringRef GroupName = "sdag";
   StringRef GroupDescription = "Instruction Selection and Scheduling";
   std::string BlockName;
-  int BlockNumber = -1;
-  (void)BlockNumber;
   bool MatchFilterBB = false; (void)MatchFilterBB;
 #ifndef NDEBUG
   TargetTransformInfo &TTI =
@@ -764,7 +762,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       ViewSUnitDAGs)
 #endif
   {
-    BlockNumber = FuncInfo->MBB->getNumber();
     BlockName =
         (MF->getName() + ":" + FuncInfo->MBB->getBasicBlock()->getName()).str();
   }
