@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_LANAI_INSTPRINTER_LANAIINSTPRINTER_H
-#define LLVM_LIB_TARGET_LANAI_INSTPRINTER_LANAIINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIINSTPRINTER_H
+#define LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIINSTPRINTER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -62,4 +62,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_LANAI_INSTPRINTER_LANAIINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIINSTPRINTER_H
