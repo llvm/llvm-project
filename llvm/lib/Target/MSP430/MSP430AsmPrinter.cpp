@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/MSP430InstPrinter.h"
+#include "MCTargetDesc/MSP430InstPrinter.h"
 #include "MSP430.h"
 #include "MSP430InstrInfo.h"
 #include "MSP430MCInstLower.h"
