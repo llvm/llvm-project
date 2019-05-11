@@ -2101,16 +2101,14 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
                                         CommandReturnObject &result) {
   FileSpec init_file;
   if (in_cwd) {
-    ExecutionContext exe_ctx(GetExecutionContext());
-    Target *target = exe_ctx.GetTargetPtr();
-    if (target) {
+    lldb::TargetPropertiesSP properties = Target::GetGlobalProperties();
+    if (properties) {
       // In the current working directory we don't load any program specific
       // .lldbinit files, we only look for a ".lldbinit" file.
       if (m_skip_lldbinit_files)
         return;
 
-      LoadCWDlldbinitFile should_load =
-          target->TargetProperties::GetLoadCWDlldbinitFile();
+      LoadCWDlldbinitFile should_load = properties->GetLoadCWDlldbinitFile();
       if (should_load == eLoadCWDlldbinitWarn) {
         FileSpec dot_lldb(".lldbinit");
         FileSystem::Instance().Resolve(dot_lldb);
@@ -2181,6 +2179,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
     const bool saved_batch = SetBatchCommandMode(true);
     CommandInterpreterRunOptions options;
     options.SetSilent(true);
+    options.SetPrintErrors(true);
     options.SetStopOnError(false);
     options.SetStopOnContinue(true);
 
@@ -2372,7 +2371,8 @@ enum {
   eHandleCommandFlagEchoCommand = (1u << 2),
   eHandleCommandFlagEchoCommentCommand = (1u << 3),
   eHandleCommandFlagPrintResult = (1u << 4),
-  eHandleCommandFlagStopOnCrash = (1u << 5)
+  eHandleCommandFlagPrintErrors = (1u << 5),
+  eHandleCommandFlagStopOnCrash = (1u << 6)
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
@@ -2469,6 +2469,17 @@ void CommandInterpreter::HandleCommandsFromFile(
     }
   } else if (options.m_print_results == eLazyBoolYes) {
     flags |= eHandleCommandFlagPrintResult;
+  }
+
+  if (options.m_print_errors == eLazyBoolCalculate) {
+    if (m_command_source_flags.empty()) {
+      // Print output by default
+      flags |= eHandleCommandFlagPrintErrors;
+    } else if (m_command_source_flags.back() & eHandleCommandFlagPrintErrors) {
+      flags |= eHandleCommandFlagPrintErrors;
+    }
+  } else if (options.m_print_errors == eLazyBoolYes) {
+    flags |= eHandleCommandFlagPrintErrors;
   }
 
   if (flags & eHandleCommandFlagPrintResult) {
@@ -2798,7 +2809,9 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
   HandleCommand(line.c_str(), eLazyBoolCalculate, result);
 
   // Now emit the command output text from the command we just executed
-  if (io_handler.GetFlags().Test(eHandleCommandFlagPrintResult)) {
+  if ((result.Succeeded() &&
+       io_handler.GetFlags().Test(eHandleCommandFlagPrintResult)) ||
+      io_handler.GetFlags().Test(eHandleCommandFlagPrintErrors)) {
     // Display any STDOUT/STDERR _prior_ to emitting the command result text
     GetProcessOutput();
 
@@ -2968,8 +2981,11 @@ CommandInterpreter::GetIOHandler(bool force_create,
         flags |= eHandleCommandFlagEchoCommentCommand;
       if (options->m_print_results != eLazyBoolNo)
         flags |= eHandleCommandFlagPrintResult;
+      if (options->m_print_errors != eLazyBoolNo)
+        flags |= eHandleCommandFlagPrintErrors;
     } else {
-      flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult;
+      flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult |
+              eHandleCommandFlagPrintErrors;
     }
 
     m_command_io_handler_sp = std::make_shared<IOHandlerEditline>(

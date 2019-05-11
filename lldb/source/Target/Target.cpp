@@ -2917,6 +2917,7 @@ void Target::RunStopHooks() {
         options.SetStopOnError(true);
         options.SetEchoCommands(false);
         options.SetPrintResults(true);
+        options.SetPrintErrors(true);
         options.SetAddToHistory(false);
 
         GetDebugger().GetCommandInterpreter().HandleCommands(
