@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_NVPTX_INSTPRINTER_NVPTXINSTPRINTER_H
-#define LLVM_LIB_TARGET_NVPTX_INSTPRINTER_NVPTXINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXINSTPRINTER_H
+#define LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
 
