@@ -17,7 +17,7 @@
 #include "ARCSubtarget.h"
 #include "ARCTargetMachine.h"
 #include "ARCTargetStreamer.h"
-#include "InstPrinter/ARCInstPrinter.h"
+#include "MCTargetDesc/ARCInstPrinter.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/AsmPrinter.h"
