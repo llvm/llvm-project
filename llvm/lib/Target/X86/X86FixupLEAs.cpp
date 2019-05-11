@@ -366,6 +366,8 @@ bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
     unsigned NewOpcode;
     bool isINC = MI.getOperand(1 + X86::AddrDisp).getImm() == 1;
     switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected LEA instruction");
     case X86::LEA32r:
     case X86::LEA64_32r:
       NewOpcode = isINC ? X86::INC32r : X86::DEC32r;
