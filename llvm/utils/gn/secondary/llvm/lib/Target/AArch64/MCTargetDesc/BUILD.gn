@@ -24,14 +24,30 @@ tablegen("AArch64GenSubtargetInfo") {
   td_file = "../AArch64.td"
 }
 
+tablegen("AArch64GenAsmWriter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../AArch64.td"
+}
+
+tablegen("AArch64GenAsmWriter1") {
+  visibility = [ ":tablegen" ]
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+  td_file = "../AArch64.td"
+}
+
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
-    "../InstPrinter",
     "../TargetInfo",
     "../Utils",
   ]
   public_deps = [
+    ":AArch64GenAsmWriter",
+    ":AArch64GenAsmWriter1",
     ":AArch64GenInstrInfo",
     ":AArch64GenMCCodeEmitter",
     ":AArch64GenRegisterInfo",
@@ -47,7 +63,6 @@ static_library("MCTargetDesc") {
   deps = [
     "//llvm/lib/MC",
     "//llvm/lib/Support",
-    "//llvm/lib/Target/AArch64/InstPrinter",
     "//llvm/lib/Target/AArch64/TargetInfo",
     "//llvm/lib/Target/AArch64/Utils",
   ]
@@ -56,6 +71,7 @@ static_library("MCTargetDesc") {
     "AArch64AsmBackend.cpp",
     "AArch64ELFObjectWriter.cpp",
     "AArch64ELFStreamer.cpp",
+    "AArch64InstPrinter.cpp",
     "AArch64MCAsmInfo.cpp",
     "AArch64MCCodeEmitter.cpp",
     "AArch64MCExpr.cpp",

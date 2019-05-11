@@ -13,7 +13,6 @@ static_library("AsmParser") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
-    "//llvm/lib/Target/X86/InstPrinter",
     "//llvm/lib/Target/X86/MCTargetDesc",
     "//llvm/lib/Target/X86/TargetInfo",
   ]
