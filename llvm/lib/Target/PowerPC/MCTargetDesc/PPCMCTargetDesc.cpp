@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PPCMCTargetDesc.h"
-#include "InstPrinter/PPCInstPrinter.h"
+#include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCTargetStreamer.h"
 #include "llvm/ADT/StringRef.h"
