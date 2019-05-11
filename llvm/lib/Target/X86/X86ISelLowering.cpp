@@ -33875,8 +33875,13 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       if (DemandedVecBits == 0)
         return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
 
-      KnownBits KnownVec;
+      APInt KnownUndef, KnownZero;
       APInt DemandedVecElts = APInt::getOneBitSet(NumVecElts, Idx);
+      if (SimplifyDemandedVectorElts(Vec, DemandedVecElts, KnownUndef,
+                                     KnownZero, TLO, Depth + 1))
+        return true;
+
+      KnownBits KnownVec;
       if (SimplifyDemandedBits(Vec, DemandedVecBits, DemandedVecElts,
                                KnownVec, TLO, Depth + 1))
         return true;
