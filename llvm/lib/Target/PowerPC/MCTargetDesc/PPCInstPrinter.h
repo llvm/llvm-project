@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_POWERPC_INSTPRINTER_PPCINSTPRINTER_H
-#define LLVM_LIB_TARGET_POWERPC_INSTPRINTER_PPCINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCINSTPRINTER_H
+#define LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCINSTPRINTER_H
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInstPrinter.h"
