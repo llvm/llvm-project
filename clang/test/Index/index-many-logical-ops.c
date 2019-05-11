@@ -5,7 +5,7 @@
 // logical operators.
 
 // UBSan increases stack usage.
-// REQUIRES: not_ubsan
+// UNSUPPORTED: ubsan
 
 // CHECK: [indexDeclaration]: kind: function | name: foo
 int foo(int x) {

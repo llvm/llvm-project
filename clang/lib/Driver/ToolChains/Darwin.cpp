@@ -593,15 +593,26 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (getToolChain().ShouldLinkCXXStdlib(Args))
     getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+
+  bool NoStdOrDefaultLibs =
+      Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs);
+  bool ForceLinkBuiltins = Args.hasArg(options::OPT_fapple_link_rtlib);
+  if (!NoStdOrDefaultLibs || ForceLinkBuiltins) {
     // link_ssp spec is empty.
 
-    // Let the tool chain choose which runtime library to link.
-    getMachOToolChain().AddLinkRuntimeLibArgs(Args, CmdArgs);
+    // If we have both -nostdlib/nodefaultlibs and -fapple-link-rtlib then
+    // we just want to link the builtins, not the other libs like libSystem.
+    if (NoStdOrDefaultLibs && ForceLinkBuiltins) {
+      getMachOToolChain().AddLinkRuntimeLib(Args, CmdArgs, "builtins");
+    } else {
+      // Let the tool chain choose which runtime library to link.
+      getMachOToolChain().AddLinkRuntimeLibArgs(Args, CmdArgs,
+                                                ForceLinkBuiltins);
 
-    // No need to do anything for pthreads. Claim argument to avoid warning.
-    Args.ClaimAllArgs(options::OPT_pthread);
-    Args.ClaimAllArgs(options::OPT_pthreads);
+      // No need to do anything for pthreads. Claim argument to avoid warning.
+      Args.ClaimAllArgs(options::OPT_pthread);
+      Args.ClaimAllArgs(options::OPT_pthreads);
+    }
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
@@ -1128,7 +1139,8 @@ ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
 }
 
 void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
-                                        ArgStringList &CmdArgs) const {
+                                        ArgStringList &CmdArgs,
+                                        bool ForceLinkBuiltinRT) const {
   // Call once to ensure diagnostic is printed if wrong value was specified
   GetRuntimeLibType(Args);
 
@@ -1136,8 +1148,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   // libraries with -static.
   if (Args.hasArg(options::OPT_static) ||
       Args.hasArg(options::OPT_fapple_kext) ||
-      Args.hasArg(options::OPT_mkernel))
+      Args.hasArg(options::OPT_mkernel)) {
+    if (ForceLinkBuiltinRT)
+      AddLinkRuntimeLib(Args, CmdArgs, "builtins");
     return;
+  }
 
   // Reject -static-libgcc for now, we can deal with this when and if someone
   // cares. This is useful in situations where someone wants to statically link
@@ -2106,7 +2121,8 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
 }
 
 void MachO::AddLinkRuntimeLibArgs(const ArgList &Args,
-                                  ArgStringList &CmdArgs) const {
+                                  ArgStringList &CmdArgs,
+                                  bool ForceLinkBuiltinRT) const {
   // Embedded targets are simple at the moment, not supporting sanitizers and
   // with different libraries for each member of the product { static, PIC } x
   // { hard-float, soft-float }

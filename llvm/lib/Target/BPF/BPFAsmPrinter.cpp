@@ -16,7 +16,7 @@
 #include "BPFMCInstLower.h"
 #include "BPFTargetMachine.h"
 #include "BTFDebug.h"
-#include "InstPrinter/BPFInstPrinter.h"
+#include "MCTargetDesc/BPFInstPrinter.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

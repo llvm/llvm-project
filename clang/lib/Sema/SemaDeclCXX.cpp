@@ -13098,12 +13098,17 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
     return;
 
   CXXDestructorDecl *Destructor = LookupDestructor(ClassDecl);
-  MarkFunctionReferenced(VD->getLocation(), Destructor);
-  CheckDestructorAccess(VD->getLocation(), Destructor,
-                        PDiag(diag::err_access_dtor_var)
-                        << VD->getDeclName()
-                        << VD->getType());
-  DiagnoseUseOfDecl(Destructor, VD->getLocation());
+
+  // If this is an array, we'll require the destructor during initialization, so
+  // we can skip over this. We still want to emit exit-time destructor warnings
+  // though.
+  if (!VD->getType()->isArrayType()) {
+    MarkFunctionReferenced(VD->getLocation(), Destructor);
+    CheckDestructorAccess(VD->getLocation(), Destructor,
+                          PDiag(diag::err_access_dtor_var)
+                              << VD->getDeclName() << VD->getType());
+    DiagnoseUseOfDecl(Destructor, VD->getLocation());
+  }
 
   if (Destructor->isTrivial()) return;
   if (!VD->hasGlobalStorage()) return;

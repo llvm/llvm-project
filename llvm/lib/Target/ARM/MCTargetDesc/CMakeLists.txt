@@ -2,6 +2,7 @@ add_llvm_library(LLVMARMDesc
   ARMAsmBackend.cpp
   ARMELFObjectWriter.cpp
   ARMELFStreamer.cpp
+  ARMInstPrinter.cpp
   ARMMachObjectWriter.cpp
   ARMMachORelocationInfo.cpp
   ARMMCAsmInfo.cpp

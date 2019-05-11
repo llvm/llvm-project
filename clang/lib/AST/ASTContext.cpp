@@ -2758,6 +2758,12 @@ QualType ASTContext::getFunctionTypeWithExceptionSpec(
     return getParenType(
         getFunctionTypeWithExceptionSpec(PT->getInnerType(), ESI));
 
+  // Might be wrapped in a macro qualified type.
+  if (const auto *MQT = dyn_cast<MacroQualifiedType>(Orig))
+    return getMacroQualifiedType(
+        getFunctionTypeWithExceptionSpec(MQT->getUnderlyingType(), ESI),
+        MQT->getMacroIdentifier());
+
   // Might have a calling-convention attribute.
   if (const auto *AT = dyn_cast<AttributedType>(Orig))
     return getAttributedType(

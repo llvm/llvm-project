@@ -3880,6 +3880,39 @@ The ``no_destroy`` attribute specifies that a variable with static or thread
 storage duration shouldn't have its exit-time destructor run. Annotating every
 static and thread duration variable with this attribute is equivalent to
 invoking clang with -fno-c++-static-destructors.
+
+If a variable is declared with this attribute, clang doesn't access check or
+generate the type's destructor. If you have a type that you only want to be
+annotated with ``no_destroy``, you can therefore declare the destructor private:
+
+.. code-block:: c++
+
+  struct only_no_destroy {
+    only_no_destroy();
+  private:
+    ~only_no_destroy();
+  };
+
+  [[clang::no_destroy]] only_no_destroy global; // fine!
+
+Note that destructors are still required for subobjects of aggregates annotated
+with this attribute. This is because previously constructed subobjects need to
+be destroyed if an exception gets thrown before the initialization of the
+complete object is complete. For instance:
+
+.. code-block::c++
+
+  void f() {
+    try {
+      [[clang::no_destroy]]
+      static only_no_destroy array[10]; // error, only_no_destroy has a private destructor.
+    } catch (...) {
+      // Handle the error
+    }
+  }
+
+Here, if the construction of `array[9]` fails with an exception, `array[0..8]`
+will be destroyed, so the element's destructor needs to be accessible.
   }];
 }
 
