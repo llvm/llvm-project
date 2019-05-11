@@ -2281,8 +2281,10 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
   case MVT::i8:  Opc = X86::CMOV_GR8;  break;
   case MVT::i16: Opc = X86::CMOV_GR16; break;
   case MVT::i32: Opc = X86::CMOV_GR32; break;
-  case MVT::f32: Opc = X86::CMOV_FR32; break;
-  case MVT::f64: Opc = X86::CMOV_FR64; break;
+  case MVT::f32: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR32X
+                                              : X86::CMOV_FR32; break;
+  case MVT::f64: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR64X
+                                              : X86::CMOV_FR64; break;
   }
 
   const Value *Cond = I->getOperand(0);
