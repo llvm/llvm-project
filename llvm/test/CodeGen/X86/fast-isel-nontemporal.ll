@@ -300,10 +300,20 @@ entry:
 }
 
 define <16 x i8> @test_load_nt16xi8(<16 x i8>* nocapture %ptr) {
-; SSE-LABEL: test_load_nt16xi8:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movntdqa (%rdi), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_load_nt16xi8:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4A-LABEL: test_load_nt16xi8:
+; SSE4A:       # %bb.0: # %entry
+; SSE4A-NEXT:    movdqa (%rdi), %xmm0
+; SSE4A-NEXT:    retq
+;
+; SSE41-LABEL: test_load_nt16xi8:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    movntdqa (%rdi), %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt16xi8:
 ; AVX:       # %bb.0: # %entry
@@ -320,10 +330,20 @@ entry:
 }
 
 define <8 x i16> @test_load_nt8xi16(<8 x i16>* nocapture %ptr) {
-; SSE-LABEL: test_load_nt8xi16:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movntdqa (%rdi), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_load_nt8xi16:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4A-LABEL: test_load_nt8xi16:
+; SSE4A:       # %bb.0: # %entry
+; SSE4A-NEXT:    movdqa (%rdi), %xmm0
+; SSE4A-NEXT:    retq
+;
+; SSE41-LABEL: test_load_nt8xi16:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    movntdqa (%rdi), %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt8xi16:
 ; AVX:       # %bb.0: # %entry
@@ -340,10 +360,20 @@ entry:
 }
 
 define <4 x i32> @test_load_nt4xi32(<4 x i32>* nocapture %ptr) {
-; SSE-LABEL: test_load_nt4xi32:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movntdqa (%rdi), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_load_nt4xi32:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4A-LABEL: test_load_nt4xi32:
+; SSE4A:       # %bb.0: # %entry
+; SSE4A-NEXT:    movdqa (%rdi), %xmm0
+; SSE4A-NEXT:    retq
+;
+; SSE41-LABEL: test_load_nt4xi32:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    movntdqa (%rdi), %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt4xi32:
 ; AVX:       # %bb.0: # %entry
@@ -360,10 +390,20 @@ entry:
 }
 
 define <2 x i64> @test_load_nt2xi64(<2 x i64>* nocapture %ptr) {
-; SSE-LABEL: test_load_nt2xi64:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movntdqa (%rdi), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_load_nt2xi64:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4A-LABEL: test_load_nt2xi64:
+; SSE4A:       # %bb.0: # %entry
+; SSE4A-NEXT:    movdqa (%rdi), %xmm0
+; SSE4A-NEXT:    retq
+;
+; SSE41-LABEL: test_load_nt2xi64:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    movntdqa (%rdi), %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_load_nt2xi64:
 ; AVX:       # %bb.0: # %entry
