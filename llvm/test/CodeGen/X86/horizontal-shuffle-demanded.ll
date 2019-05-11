@@ -10,15 +10,13 @@ define void @test_demanded_haddps_128(<4 x float> %a0, <4 x float> %a1, float *%
 ; X86-LABEL: test_demanded_haddps_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastss %xmm1, %xmm1
-; X86-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demanded_haddps_128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastss %xmm1, %xmm1
-; X64-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x float> %a1, <4 x float> undef, <4 x i32> zeroinitializer
@@ -32,14 +30,12 @@ define void @test_demanded_hsubps_128(<4 x float> %a0, <4 x float> %a1, float *%
 ; X86-LABEL: test_demanded_hsubps_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastss %xmm0, %xmm0
 ; X86-NEXT:    vhsubps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vextractps $2, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demanded_hsubps_128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastss %xmm0, %xmm0
 ; X64-NEXT:    vhsubps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vextractps $2, %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -54,15 +50,13 @@ define void @test_demanded_haddpd_128(<2 x double> %a0, <2 x double> %a1, double
 ; X86-LABEL: test_demanded_haddpd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; X86-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demanded_haddpd_128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; X64-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovlpd %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %1 = shufflevector <2 x double> %a1, <2 x double> undef, <2 x i32> zeroinitializer
@@ -76,15 +70,13 @@ define void @test_demanded_hsubpd_128(<2 x double> %a0, <2 x double> %a1, double
 ; X86-LABEL: test_demanded_hsubpd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; X86-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vhsubpd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demanded_hsubpd_128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; X64-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vhsubpd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovlpd %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %1 = shufflevector <2 x double> %a1, <2 x double> undef, <2 x i32> zeroinitializer
@@ -98,15 +90,13 @@ define void @test_demanded_phaddd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) no
 ; X86-LABEL: test_demanded_phaddd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X86-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demanded_phaddd_128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X64-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovd %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -120,15 +110,13 @@ define void @test_demanded_phsubd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) no
 ; X86-LABEL: test_demanded_phsubd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X86-NEXT:    vphsubd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vphsubd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vpextrd $1, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demanded_phsubd_128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X64-NEXT:    vphsubd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vphsubd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vpextrd $1, %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -190,8 +178,7 @@ define void @test_demanded_haddps_256(<8 x float> %a0, <8 x float> %a1, float *%
 ; X86-LABEL: test_demanded_haddps_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastss %xmm1, %ymm1
-; X86-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -199,8 +186,7 @@ define void @test_demanded_haddps_256(<8 x float> %a0, <8 x float> %a1, float *%
 ;
 ; X64-LABEL: test_demanded_haddps_256:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastss %xmm1, %ymm1
-; X64-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rdi)
 ; X64-NEXT:    vzeroupper
@@ -216,7 +202,6 @@ define void @test_demanded_hsubps_256(<8 x float> %a0, <8 x float> %a1, float *%
 ; X86-LABEL: test_demanded_hsubps_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastss %xmm0, %ymm0
 ; X86-NEXT:    vhsubps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vextractps $3, %xmm0, (%eax)
@@ -225,7 +210,6 @@ define void @test_demanded_hsubps_256(<8 x float> %a0, <8 x float> %a1, float *%
 ;
 ; X64-LABEL: test_demanded_hsubps_256:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastss %xmm0, %ymm0
 ; X64-NEXT:    vhsubps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vextractps $3, %xmm0, (%rdi)
@@ -242,8 +226,7 @@ define void @test_demanded_haddpd_256(<4 x double> %a0, <4 x double> %a1, double
 ; X86-LABEL: test_demanded_haddpd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastsd %xmm1, %ymm1
-; X86-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vhaddpd %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -251,8 +234,7 @@ define void @test_demanded_haddpd_256(<4 x double> %a0, <4 x double> %a1, double
 ;
 ; X64-LABEL: test_demanded_haddpd_256:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastsd %xmm1, %ymm1
-; X64-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vhaddpd %ymm0, %ymm0, %ymm0
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vmovlpd %xmm0, (%rdi)
 ; X64-NEXT:    vzeroupper
@@ -268,8 +250,7 @@ define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, double
 ; X86-LABEL: test_demanded_hsubpd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastsd %xmm1, %ymm1
-; X86-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vhsubpd %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -277,8 +258,7 @@ define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, double
 ;
 ; X64-LABEL: test_demanded_hsubpd_256:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastsd %xmm1, %ymm1
-; X64-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vhsubpd %ymm0, %ymm0, %ymm0
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vmovlpd %xmm0, (%rdi)
 ; X64-NEXT:    vzeroupper
@@ -294,7 +274,6 @@ define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) no
 ; X86-LABEL: test_demanded_phaddd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; X86-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vpextrd $3, %xmm0, (%eax)
@@ -303,7 +282,6 @@ define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) no
 ;
 ; X64-LABEL: test_demanded_phaddd_256:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; X64-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vpextrd $3, %xmm0, (%rdi)
@@ -320,8 +298,7 @@ define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) no
 ; X86-LABEL: test_demanded_phsubd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpbroadcastd %xmm1, %ymm1
-; X86-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vphsubd %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vpextrd $1, %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -329,8 +306,7 @@ define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) no
 ;
 ; X64-LABEL: test_demanded_phsubd_256:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastd %xmm1, %ymm1
-; X64-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vphsubd %ymm0, %ymm0, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vpextrd $1, %xmm0, (%rdi)
 ; X64-NEXT:    vzeroupper
