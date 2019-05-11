@@ -2172,19 +2172,6 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   if (NeedSwap)
     std::swap(CmpLHS, CmpRHS);
 
-  // Choose the SSE instruction sequence based on data type (float or double).
-  static const uint16_t OpcTable[2][4] = {
-    { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
-    { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
-  };
-
-  const uint16_t *Opc = nullptr;
-  switch (RetVT.SimpleTy) {
-  default: return false;
-  case MVT::f32: Opc = &OpcTable[0][0]; break;
-  case MVT::f64: Opc = &OpcTable[1][0]; break;
-  }
-
   const Value *LHS = I->getOperand(1);
   const Value *RHS = I->getOperand(2);
 
@@ -2255,6 +2242,19 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), ResultReg).addReg(VBlendReg);
   } else {
+    // Choose the SSE instruction sequence based on data type (float or double).
+    static const uint16_t OpcTable[2][4] = {
+      { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
+      { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
+    };
+
+    const uint16_t *Opc = nullptr;
+    switch (RetVT.SimpleTy) {
+    default: return false;
+    case MVT::f32: Opc = &OpcTable[0][0]; break;
+    case MVT::f64: Opc = &OpcTable[1][0]; break;
+    }
+
     const TargetRegisterClass *VR128 = &X86::VR128RegClass;
     unsigned CmpReg = fastEmitInst_rri(Opc[0], RC, CmpLHSReg, CmpLHSIsKill,
                                        CmpRHSReg, CmpRHSIsKill, CC);
