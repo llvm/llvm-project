@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_ARM_INSTPRINTER_ARMINSTPRINTER_H
-#define LLVM_LIB_TARGET_ARM_INSTPRINTER_ARMINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMINSTPRINTER_H
+#define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMINSTPRINTER_H
 
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -246,4 +246,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_ARM_INSTPRINTER_ARMINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMINSTPRINTER_H
