@@ -229,7 +229,7 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
     for (ConstString variant_name : variant_names) {
       Module::LookupInfo variant_lookup(name, name_type_mask,
                                         lang->GetLanguageType());
-      lookup.SetLookupName(variant_name);
+      variant_lookup.SetLookupName(variant_name);
       m_lookups.emplace_back(variant_lookup);
     }
     return true;
