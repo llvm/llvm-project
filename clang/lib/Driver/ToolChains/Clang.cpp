@@ -1007,7 +1007,7 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
   if (checkDebugInfoOption(A, Args, D, TC)) {
     if (A->getOption().getID() == options::OPT_gz) {
       if (llvm::zlib::isAvailable())
-        CmdArgs.push_back("-compress-debug-sections");
+        CmdArgs.push_back("--compress-debug-sections");
       else
         D.Diag(diag::warn_debug_compression_unavailable);
       return;
@@ -1015,11 +1015,11 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
 
     StringRef Value = A->getValue();
     if (Value == "none") {
-      CmdArgs.push_back("-compress-debug-sections=none");
+      CmdArgs.push_back("--compress-debug-sections=none");
     } else if (Value == "zlib" || Value == "zlib-gnu") {
       if (llvm::zlib::isAvailable()) {
         CmdArgs.push_back(
-            Args.MakeArgString("-compress-debug-sections=" + Twine(Value)));
+            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
       } else {
         D.Diag(diag::warn_debug_compression_unavailable);
       }

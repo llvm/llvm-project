@@ -67,13 +67,13 @@ def note_constexpr_past_end : Note<
   "%select{temporary|%2}1 is not a constant expression">;
 def note_constexpr_past_end_subobject : Note<
   "cannot %select{access base class of|access derived class of|access field of|"
-  "access array element of|ERROR|call member function on|"
+  "access array element of|ERROR|"
   "access real component of|access imaginary component of}0 "
   "pointer past the end of object">;
 def note_constexpr_null_subobject : Note<
   "cannot %select{access base class of|access derived class of|access field of|"
   "access array element of|perform pointer arithmetic on|"
-  "call member function on|access real component of|"
+  "access real component of|"
   "access imaginary component of}0 null pointer">;
 def note_constexpr_var_init_non_constant : Note<
   "initializer of %0 is not a constant expression">;
@@ -96,10 +96,10 @@ def note_constexpr_this : Note<
   "%select{|implicit }0use of 'this' pointer is only allowed within the "
   "evaluation of a call to a 'constexpr' member function">;
 def note_constexpr_lifetime_ended : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 "
+  "%select{read of|assignment to|increment of|decrement of|member call on}0 "
   "%select{temporary|variable}1 whose lifetime has ended">;
 def note_constexpr_access_uninit : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 "
+  "%select{read of|assignment to|increment of|decrement of|member call on}0 "
   "object outside its lifetime is not allowed in a constant expression">;
 def note_constexpr_use_uninit_reference : Note<
   "use of reference outside its lifetime "
@@ -108,10 +108,10 @@ def note_constexpr_modify_const_type : Note<
   "modification of object of const-qualified type %0 is not allowed "
   "in a constant expression">;
 def note_constexpr_access_volatile_type : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 "
+  "%select{read of|assignment to|increment of|decrement of|<ERROR>}0 "
   "volatile-qualified type %1 is not allowed in a constant expression">;
 def note_constexpr_access_volatile_obj : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 volatile "
+  "%select{read of|assignment to|increment of|decrement of|<ERROR>}0 volatile "
   "%select{temporary|object %2|member %2}1 is not allowed in "
   "a constant expression">;
 def note_constexpr_volatile_here : Note<
@@ -125,21 +125,21 @@ def note_constexpr_ltor_non_constexpr : Note<
 def note_constexpr_ltor_incomplete_type : Note<
   "read of incomplete type %0 is not allowed in a constant expression">;
 def note_constexpr_access_null : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 "
+  "%select{read of|assignment to|increment of|decrement of|member call on}0 "
   "dereferenced null pointer is not allowed in a constant expression">;
 def note_constexpr_access_past_end : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 "
+  "%select{read of|assignment to|increment of|decrement of|member call on}0 "
   "dereferenced one-past-the-end pointer is not allowed in a constant expression">;
 def note_constexpr_access_unsized_array : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 "
-  "pointer to element of array without known bound "
+  "%select{read of|assignment to|increment of|decrement of|member call on}0 "
+  "element of array without known bound "
   "is not allowed in a constant expression">;
 def note_constexpr_access_inactive_union_member : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 "
+  "%select{read of|assignment to|increment of|decrement of|member call on}0 "
   "member %1 of union with %select{active member %3|no active member}2 "
   "is not allowed in a constant expression">;
 def note_constexpr_access_static_temporary : Note<
-  "%select{read of|assignment to|increment of|decrement of}0 temporary "
+  "%select{read of|assignment to|increment of|decrement of|<ERROR>}0 temporary "
   "is not allowed in a constant expression outside the expression that "
   "created the temporary">;
 def note_constexpr_modify_global : Note<
