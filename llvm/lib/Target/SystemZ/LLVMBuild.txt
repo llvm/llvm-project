@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -30,5 +30,5 @@ has_jit = 1
 type = Library
 name = SystemZCodeGen
 parent = SystemZ
-required_libraries = Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support SystemZAsmPrinter SystemZDesc SystemZInfo Target
+required_libraries = Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support SystemZDesc SystemZInfo Target
 add_to_library_groups = SystemZ

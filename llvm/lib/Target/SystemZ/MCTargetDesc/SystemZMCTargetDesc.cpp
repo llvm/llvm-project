@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCTargetDesc.h"
-#include "InstPrinter/SystemZInstPrinter.h"
+#include "SystemZInstPrinter.h"
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
