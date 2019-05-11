@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_BPF_INSTPRINTER_BPFINSTPRINTER_H
-#define LLVM_LIB_TARGET_BPF_INSTPRINTER_BPFINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFINSTPRINTER_H
+#define LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
 
