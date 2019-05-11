@@ -1,5 +1,20 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("AArch64GenAsmWriter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../AArch64.td"
+}
+
+tablegen("AArch64GenAsmWriter1") {
+  visibility = [ ":tablegen" ]
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+  td_file = "../AArch64.td"
+}
+
 tablegen("AArch64GenInstrInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-instr-info" ]
@@ -21,21 +36,6 @@ tablegen("AArch64GenRegisterInfo") {
 tablegen("AArch64GenSubtargetInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-subtarget" ]
-  td_file = "../AArch64.td"
-}
-
-tablegen("AArch64GenAsmWriter") {
-  visibility = [ ":tablegen" ]
-  args = [ "-gen-asm-writer" ]
-  td_file = "../AArch64.td"
-}
-
-tablegen("AArch64GenAsmWriter1") {
-  visibility = [ ":tablegen" ]
-  args = [
-    "-gen-asm-writer",
-    "-asmwriternum=1",
-  ]
   td_file = "../AArch64.td"
 }
 

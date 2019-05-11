@@ -1,5 +1,20 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("X86GenAsmWriter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../X86.td"
+}
+
+tablegen("X86GenAsmWriter1") {
+  visibility = [ ":tablegen" ]
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+  td_file = "../X86.td"
+}
+
 tablegen("X86GenInstrInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-instr-info" ]
@@ -15,21 +30,6 @@ tablegen("X86GenRegisterInfo") {
 tablegen("X86GenSubtargetInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-subtarget" ]
-  td_file = "../X86.td"
-}
-
-tablegen("X86GenAsmWriter") {
-  visibility = [ ":tablegen" ]
-  args = [ "-gen-asm-writer" ]
-  td_file = "../X86.td"
-}
-
-tablegen("X86GenAsmWriter1") {
-  visibility = [ ":tablegen" ]
-  args = [
-    "-gen-asm-writer",
-    "-asmwriternum=1",
-  ]
   td_file = "../X86.td"
 }
 
