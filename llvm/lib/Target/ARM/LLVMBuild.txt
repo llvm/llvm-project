@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo Utils
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo Utils
 
 [component_0]
 type = TargetGroup
@@ -30,5 +30,5 @@ has_jit = 1
 type = Library
 name = ARMCodeGen
 parent = ARM
-required_libraries = ARMAsmPrinter ARMDesc ARMInfo Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target GlobalISel ARMUtils TransformUtils
+required_libraries = ARMDesc ARMInfo Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target GlobalISel ARMUtils TransformUtils
 add_to_library_groups = ARM
