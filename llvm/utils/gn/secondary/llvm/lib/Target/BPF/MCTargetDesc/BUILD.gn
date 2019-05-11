@@ -1,5 +1,11 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("BPFGenAsmWriter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../BPF.td"
+}
+
 tablegen("BPFGenInstrInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-instr-info" ]
@@ -27,10 +33,10 @@ tablegen("BPFGenSubtargetInfo") {
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
-    "../InstPrinter",
     "../TargetInfo",
   ]
   public_deps = [
+    ":BPFGenAsmWriter",
     ":BPFGenInstrInfo",
     ":BPFGenMCCodeEmitter",
     ":BPFGenRegisterInfo",
@@ -47,13 +53,13 @@ static_library("MCTargetDesc") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",
-    "//llvm/lib/Target/BPF/InstPrinter",
     "//llvm/lib/Target/BPF/TargetInfo",
   ]
   include_dirs = [ ".." ]
   sources = [
     "BPFAsmBackend.cpp",
     "BPFELFObjectWriter.cpp",
+    "BPFInstPrinter.cpp",
     "BPFMCCodeEmitter.cpp",
     "BPFMCTargetDesc.cpp",
   ]
