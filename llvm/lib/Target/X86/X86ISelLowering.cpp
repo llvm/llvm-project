@@ -30477,7 +30477,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::TLSCall_64:
     return EmitLoweredTLSCall(MI, BB);
   case X86::CMOV_FR32:
+  case X86::CMOV_FR32X:
   case X86::CMOV_FR64:
+  case X86::CMOV_FR64X:
   case X86::CMOV_GR8:
   case X86::CMOV_GR16:
   case X86::CMOV_GR32:
