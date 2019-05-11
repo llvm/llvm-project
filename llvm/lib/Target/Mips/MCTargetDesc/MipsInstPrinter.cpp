@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsInstPrinter.h"
-#include "MCTargetDesc/MipsMCExpr.h"
 #include "MipsInstrInfo.h"
+#include "MipsMCExpr.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"

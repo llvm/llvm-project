@@ -4,6 +4,7 @@ add_llvm_library(LLVMMipsDesc
   MipsAsmBackend.cpp
   MipsELFObjectWriter.cpp
   MipsELFStreamer.cpp
+  MipsInstPrinter.cpp
   MipsMCAsmInfo.cpp
   MipsMCCodeEmitter.cpp
   MipsMCExpr.cpp
