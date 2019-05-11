@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXAsmPrinter.h"
-#include "InstPrinter/NVPTXInstPrinter.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "MCTargetDesc/NVPTXMCAsmInfo.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
 #include "NVPTX.h"

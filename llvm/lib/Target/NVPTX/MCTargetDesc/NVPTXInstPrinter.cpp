@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/NVPTXInstPrinter.h"
+#include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/MC/MCExpr.h"
