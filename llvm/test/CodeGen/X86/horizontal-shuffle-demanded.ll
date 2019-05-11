@@ -94,6 +94,94 @@ define void @test_demanded_hsubpd_128(<2 x double> %a0, <2 x double> %a1, double
   ret void
 }
 
+define void @test_demanded_phaddd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) nounwind {
+; X86-LABEL: test_demanded_phaddd_128:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastd %xmm1, %xmm1
+; X86-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovd %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phaddd_128:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
+; X64-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovd %xmm0, (%rdi)
+; X64-NEXT:    retq
+  %1 = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> zeroinitializer
+  %2 = call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %a0, <4 x i32> %1)
+  %3 = extractelement <4 x i32> %2, i32 0
+  store i32 %3, i32 *%a2
+  ret void
+}
+
+define void @test_demanded_phsubd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) nounwind {
+; X86-LABEL: test_demanded_phsubd_128:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastd %xmm1, %xmm1
+; X86-NEXT:    vphsubd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpextrd $1, %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phsubd_128:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
+; X64-NEXT:    vphsubd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpextrd $1, %xmm0, (%rdi)
+; X64-NEXT:    retq
+  %1 = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> zeroinitializer
+  %2 = call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %a0, <4 x i32> %1)
+  %3 = extractelement <4 x i32> %2, i32 1
+  store i32 %3, i32 *%a2
+  ret void
+}
+
+define void @test_demanded_phaddw_128(<8 x i16> %a0, <8 x i16> %a1, i16 *%a2) nounwind {
+; X86-LABEL: test_demanded_phaddw_128:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X86-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpextrw $0, %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phaddw_128:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X64-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; X64-NEXT:    retq
+  %1 = shufflevector <8 x i16> %a1, <8 x i16> undef, <8 x i32> zeroinitializer
+  %2 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a0, <8 x i16> %1)
+  %3 = extractelement <8 x i16> %2, i16 0
+  store i16 %3, i16 *%a2
+  ret void
+}
+
+define void @test_demanded_phsubw_128(<8 x i16> %a0, <8 x i16> %a1, i16 *%a2) nounwind {
+; X86-LABEL: test_demanded_phsubw_128:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X86-NEXT:    vphsubw %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpextrw $2, %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phsubw_128:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X64-NEXT:    vphsubw %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; X64-NEXT:    retq
+  %1 = shufflevector <8 x i16> %a1, <8 x i16> undef, <8 x i32> zeroinitializer
+  %2 = call <8 x i16> @llvm.x86.ssse3.phsub.w.128(<8 x i16> %a0, <8 x i16> %1)
+  %3 = extractelement <8 x i16> %2, i16 2
+  store i16 %3, i16 *%a2
+  ret void
+}
+
 ;
 ; 256-bit Vectors
 ;
@@ -199,6 +287,106 @@ define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, double
   %2 = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %a0, <4 x double> %1)
   %3 = extractelement <4 x double> %2, i32 2
   store double %3, double *%a2
+  ret void
+}
+
+define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) nounwind {
+; X86-LABEL: test_demanded_phaddd_256:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastd %xmm1, %ymm1
+; X86-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; X86-NEXT:    vmovd %xmm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phaddd_256:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastd %xmm1, %ymm1
+; X64-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; X64-NEXT:    vmovd %xmm0, (%rdi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = shufflevector <8 x i32> %a1, <8 x i32> undef, <8 x i32> zeroinitializer
+  %2 = call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> %a0, <8 x i32> %1)
+  %3 = extractelement <8 x i32> %2, i32 4
+  store i32 %3, i32 *%a2
+  ret void
+}
+
+define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) nounwind {
+; X86-LABEL: test_demanded_phsubd_256:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastd %xmm1, %ymm1
+; X86-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; X86-NEXT:    vpextrd $1, %xmm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phsubd_256:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastd %xmm1, %ymm1
+; X64-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; X64-NEXT:    vpextrd $1, %xmm0, (%rdi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = shufflevector <8 x i32> %a1, <8 x i32> undef, <8 x i32> zeroinitializer
+  %2 = call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> %a0, <8 x i32> %1)
+  %3 = extractelement <8 x i32> %2, i32 5
+  store i32 %3, i32 *%a2
+  ret void
+}
+
+define void @test_demanded_phaddw_256(<16 x i16> %a0, <16 x i16> %a1, i16 *%a2) nounwind {
+; X86-LABEL: test_demanded_phaddw_256:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X86-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpextrw $4, %xmm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phaddw_256:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X64-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = shufflevector <16 x i16> %a1, <16 x i16> undef, <16 x i32> zeroinitializer
+  %2 = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> %a0, <16 x i16> %1)
+  %3 = extractelement <16 x i16> %2, i32 4
+  store i16 %3, i16 *%a2
+  ret void
+}
+
+define void @test_demanded_phsubw_256(<16 x i16> %a0, <16 x i16> %a1, i16 *%a2) nounwind {
+; X86-LABEL: test_demanded_phsubw_256:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X86-NEXT:    vphsubw %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpextrw $6, %xmm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_demanded_phsubw_256:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X64-NEXT:    vphsubw %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = shufflevector <16 x i16> %a1, <16 x i16> undef, <16 x i32> zeroinitializer
+  %2 = call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> %a0, <16 x i16> %1)
+  %3 = extractelement <16 x i16> %2, i32 6
+  store i16 %3, i16 *%a2
   ret void
 }
 
