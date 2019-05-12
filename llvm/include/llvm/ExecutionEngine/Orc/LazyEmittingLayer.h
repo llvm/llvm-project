@@ -34,8 +34,8 @@ namespace orc {
 
 /// Lazy-emitting IR layer.
 ///
-///   This layer accepts LLVM IR Modules (via addModule), but does not
-/// immediately emit them the layer below. Instead, emissing to the base layer
+///   This layer accepts LLVM IR Modules (via addModule) but does not
+/// immediately emit them the layer below. Instead, emission to the base layer
 /// is deferred until the first time the client requests the address (via
 /// JITSymbol::getAddress) for a symbol contained in this layer.
 template <typename BaseLayerT> class LazyEmittingLayer {
