@@ -26,7 +26,8 @@ define float @fneg_v4f32(<4 x float> %x) nounwind {
 define double @fneg_v4f64(<4 x double> %x) nounwind {
 ; X64-LABEL: fneg_v4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; X64-NEXT:    # xmm1 = mem[0,0]
 ; X64-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -37,7 +38,8 @@ define double @fneg_v4f64(<4 x double> %x) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vmovddup {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; X86-NEXT:    # xmm1 = mem[0,0]
 ; X86-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovlps %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)

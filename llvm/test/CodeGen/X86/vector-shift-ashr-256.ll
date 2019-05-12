@@ -677,7 +677,7 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; XOPAVX1-LABEL: splatvar_shift_v4i64:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
