@@ -224,8 +224,9 @@ void Parser::ParseGNUAttributes(ParsedAttributes &attrs,
 
     // If this was declared in a macro, attach the macro IdentifierInfo to the
     // parsed attribute.
-    if (FindLocsWithCommonFileID(PP, AttrTokLoc, Loc)) {
-      auto &SM = PP.getSourceManager();
+    auto &SM = PP.getSourceManager();
+    if (!SM.isWrittenInBuiltinFile(SM.getSpellingLoc(AttrTokLoc)) &&
+        FindLocsWithCommonFileID(PP, AttrTokLoc, Loc)) {
       CharSourceRange ExpansionRange = SM.getExpansionRange(AttrTokLoc);
       StringRef FoundName =
           Lexer::getSourceText(ExpansionRange, SM, PP.getLangOpts());
