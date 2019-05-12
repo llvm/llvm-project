@@ -62,7 +62,7 @@ protected:
     }
 
     MachOSection &setZeroFill(uint64_t Size) {
-      assert(!ContentPtr && !Size && "Content/zeroFill already set");
+      assert(!ContentPtr && !this->Size && "Content/zeroFill already set");
       this->Size = Size;
       return *this;
     }

@@ -526,6 +526,11 @@ private:
 
     uint64_t LoadAddr = LoadAddrExprResult.getValue();
 
+    // If there is no error but the content pointer is null then this is a
+    // zero-fill symbol/section.
+    if (LoadAddr == 0)
+      return std::make_pair(0, RemainingExpr);
+
     return std::make_pair(
         EvalResult(Checker.readMemoryAtAddr(LoadAddr, ReadSize)),
         RemainingExpr);
@@ -735,8 +740,12 @@ uint64_t RuntimeDyldCheckerImpl::getSymbolLocalAddr(StringRef Symbol) const {
     logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return 0;
   }
+
+  if (SymInfo->isZeroFill())
+    return 0;
+
   return static_cast<uint64_t>(
-      reinterpret_cast<uintptr_t>(SymInfo->Content.data()));
+      reinterpret_cast<uintptr_t>(SymInfo->getContent().data()));
 }
 
 uint64_t RuntimeDyldCheckerImpl::getSymbolRemoteAddr(StringRef Symbol) const {
@@ -746,7 +755,7 @@ uint64_t RuntimeDyldCheckerImpl::getSymbolRemoteAddr(StringRef Symbol) const {
     return 0;
   }
 
-  return SymInfo->TargetAddress;
+  return SymInfo->getTargetAddress();
 }
 
 uint64_t RuntimeDyldCheckerImpl::readMemoryAtAddr(uint64_t SrcAddr,
@@ -774,7 +783,7 @@ StringRef RuntimeDyldCheckerImpl::getSymbolContent(StringRef Symbol) const {
     logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return StringRef();
   }
-  return SymInfo->Content;
+  return SymInfo->getContent();
 }
 
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(
@@ -796,10 +805,13 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(
 
   uint64_t Addr = 0;
 
-  if (IsInsideLoad)
-    Addr = pointerToJITTargetAddress(SecInfo->Content.data());
-  else
-    Addr = SecInfo->TargetAddress;
+  if (IsInsideLoad) {
+    if (SecInfo->isZeroFill())
+      Addr = 0;
+    else
+      Addr = pointerToJITTargetAddress(SecInfo->getContent().data());
+  } else
+    Addr = SecInfo->getTargetAddress();
 
   return std::make_pair(Addr, "");
 }
@@ -823,10 +835,12 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubOrGOTAddrFor(
 
   uint64_t Addr = 0;
 
-  if (IsInsideLoad)
-    Addr = pointerToJITTargetAddress(StubInfo->Content.data());
-  else
-    Addr = StubInfo->TargetAddress;
+  if (IsInsideLoad) {
+    if (StubInfo->isZeroFill())
+      return std::make_pair((uint64_t)0, "Detected zero-filled stub/GOT entry");
+    Addr = pointerToJITTargetAddress(StubInfo->getContent().data());
+  } else
+    Addr = StubInfo->getTargetAddress();
 
   return std::make_pair(Addr, "");
 }

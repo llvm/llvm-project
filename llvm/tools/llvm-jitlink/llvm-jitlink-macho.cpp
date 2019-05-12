@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// .
+// MachO parsing support for llvm-jitlink.
 //
 //===----------------------------------------------------------------------===//
 
@@ -105,8 +105,6 @@ Error registerMachOStubsAndGOT(Session &S, AtomGraph &G) {
     bool isGOTSection = isMachOGOTSection(Sec);
     bool isStubsSection = isMachOStubsSection(Sec);
 
-    auto &SectionInfo = FileInfo.SectionInfos[Sec.getName()];
-
     auto *FirstAtom = *Sec.atoms().begin();
     auto *LastAtom = FirstAtom;
     for (auto *DA : Sec.atoms()) {
@@ -115,25 +113,46 @@ Error registerMachOStubsAndGOT(Session &S, AtomGraph &G) {
       if (DA->getAddress() > LastAtom->getAddress())
         LastAtom = DA;
       if (isGOTSection) {
+        if (Sec.isZeroFill())
+          return make_error<StringError>("Content atom in zero-fill section",
+                                         inconvertibleErrorCode());
+
         if (auto TA = getMachOGOTTarget(G, *DA)) {
           FileInfo.GOTEntryInfos[TA->getName()] = {DA->getContent(),
                                                    DA->getAddress()};
         } else
           return TA.takeError();
       } else if (isStubsSection) {
+        if (Sec.isZeroFill())
+          return make_error<StringError>("Content atom in zero-fill section",
+                                         inconvertibleErrorCode());
+
         if (auto TA = getMachOStubTarget(G, *DA))
           FileInfo.StubInfos[TA->getName()] = {DA->getContent(),
                                                DA->getAddress()};
         else
           return TA.takeError();
-      } else if (DA->hasName() && DA->isGlobal())
-        S.SymbolInfos[DA->getName()] = {DA->getContent(), DA->getAddress()};
+      } else if (DA->hasName() && DA->isGlobal()) {
+        if (DA->isZeroFill())
+          S.SymbolInfos[DA->getName()] = {DA->getSize(), DA->getAddress()};
+        else {
+          if (Sec.isZeroFill())
+            return make_error<StringError>("Content atom in zero-fill section",
+                                           inconvertibleErrorCode());
+          S.SymbolInfos[DA->getName()] = {DA->getContent(), DA->getAddress()};
+        }
+      }
     }
-    const char *StartAddr = FirstAtom->getContent().data();
-    const char *EndAddr =
-        LastAtom->getContent().data() + LastAtom->getContent().size();
-    SectionInfo.TargetAddress = FirstAtom->getAddress();
-    SectionInfo.Content = StringRef(StartAddr, EndAddr - StartAddr);
+
+    JITTargetAddress SecAddr = FirstAtom->getAddress();
+    uint64_t SecSize = (LastAtom->getAddress() + LastAtom->getSize()) -
+                       FirstAtom->getAddress();
+
+    if (Sec.isZeroFill())
+      FileInfo.SectionInfos[Sec.getName()] = {SecSize, SecAddr};
+    else
+      FileInfo.SectionInfos[Sec.getName()] = {
+          StringRef(FirstAtom->getContent().data(), SecSize), SecAddr};
   }
 
   return Error::success();

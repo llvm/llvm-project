@@ -73,9 +73,63 @@ class raw_ostream;
 ///
 class RuntimeDyldChecker {
 public:
-  struct MemoryRegionInfo {
-    StringRef Content;
-    JITTargetAddress TargetAddress;
+  class MemoryRegionInfo {
+  public:
+    MemoryRegionInfo() = default;
+
+    /// Constructor for symbols/sections with content.
+    MemoryRegionInfo(StringRef Content, JITTargetAddress TargetAddress)
+        : ContentPtr(Content.data()), Size(Content.size()),
+          TargetAddress(TargetAddress) {}
+
+    /// Constructor for zero-fill symbols/sections.
+    MemoryRegionInfo(uint64_t Size, JITTargetAddress TargetAddress)
+        : Size(Size), TargetAddress(TargetAddress) {}
+
+    /// Returns true if this is a zero-fill symbol/section.
+    bool isZeroFill() const {
+      assert(Size && "setContent/setZeroFill must be called first");
+      return !ContentPtr;
+    }
+
+    /// Set the content for this memory region.
+    void setContent(StringRef Content) {
+      assert(!ContentPtr && !Size && "Content/zero-fill already set");
+      ContentPtr = Content.data();
+      Size = Content.size();
+    }
+
+    /// Set a zero-fill length for this memory region.
+    void setZeroFill(uint64_t Size) {
+      assert(!ContentPtr && !this->Size && "Content/zero-fill already set");
+      this->Size = Size;
+    }
+
+    /// Returns the content for this section if there is any.
+    StringRef getContent() const {
+      assert(!isZeroFill() && "Can't get content for a zero-fill section");
+      return StringRef(ContentPtr, static_cast<size_t>(Size));
+    }
+
+    /// Returns the zero-fill length for this section.
+    uint64_t getZeroFillLength() const {
+      assert(isZeroFill() && "Can't get zero-fill length for content section");
+      return Size;
+    }
+
+    /// Set the target address for this region.
+    void setTargetAddress(JITTargetAddress TargetAddress) {
+      assert(!this->TargetAddress && "TargetAddress already set");
+      this->TargetAddress = TargetAddress;
+    }
+
+    /// Return the target address for this region.
+    JITTargetAddress getTargetAddress() const { return TargetAddress; }
+
+  private:
+    const char *ContentPtr = 0;
+    uint64_t Size = 0;
+    JITTargetAddress TargetAddress = 0;
   };
 
   using IsSymbolValidFunction = std::function<bool(StringRef Symbol)>;
