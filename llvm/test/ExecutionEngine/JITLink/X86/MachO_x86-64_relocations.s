@@ -272,4 +272,9 @@ subtractor_with_alt_entry_subtrahend_quad_B:
         .section        __DATA,__nds_test_sect,regular,no_dead_strip
         .quad 0
 
+# Check that explicit zero-fill symbols are supported
+# jitlink-check: *{8}zero_fill_test = 0
+        .globl zero_fill_test
+.zerofill __DATA,__zero_fill_test,zero_fill_test,8,3
+
 .subsections_via_symbols
