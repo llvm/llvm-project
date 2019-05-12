@@ -101,6 +101,13 @@ Improvements to clang-tidy
   Finds and fixes ``absl::Time`` subtraction expressions to do subtraction
   in the Time domain instead of the numeric domain.
 
+- New :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone-unhandled-self-assignment>` check.
+
+  Finds user-defined copy assignment operators which do not protect the code
+  against self-assignment either by checking self-assignment explicitly or
+  using the copy-and-swap or the copy-and-move method.
+
 - New :doc:`google-readability-avoid-underscore-in-googletest-name
   <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
   check.
