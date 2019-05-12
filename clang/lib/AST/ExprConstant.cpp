@@ -213,7 +213,7 @@ namespace {
   // The order of this enum is important for diagnostics.
   enum CheckSubobjectKind {
     CSK_Base, CSK_Derived, CSK_Field, CSK_ArrayToPointer, CSK_ArrayIndex,
-    CSK_This, CSK_Real, CSK_Imag
+    CSK_Real, CSK_Imag
   };
 
   /// A path from a glvalue to a subobject of that glvalue.
@@ -1326,13 +1326,21 @@ void EvalInfo::addCallStack(unsigned Limit) {
   }
 }
 
-/// Kinds of access we can perform on an object, for diagnostics.
+/// Kinds of access we can perform on an object, for diagnostics. Note that
+/// we consider a member function call to be a kind of access, even though
+/// it is not formally an access of the object, because it has (largely) the
+/// same set of semantic restrictions.
 enum AccessKinds {
   AK_Read,
   AK_Assign,
   AK_Increment,
-  AK_Decrement
+  AK_Decrement,
+  AK_MemberCall,
 };
+
+static bool isModification(AccessKinds AK) {
+  return AK != AK_Read && AK != AK_MemberCall;
+}
 
 namespace {
   struct ComplexValue {
@@ -2820,6 +2828,31 @@ static bool diagnoseUnreadableFields(EvalInfo &Info, const Expr *E,
   return false;
 }
 
+static bool lifetimeStartedInEvaluation(EvalInfo &Info,
+                                        APValue::LValueBase Base) {
+  // A temporary we created.
+  if (Base.getCallIndex())
+    return true;
+
+  auto *Evaluating = Info.EvaluatingDecl.dyn_cast<const ValueDecl*>();
+  if (!Evaluating)
+    return false;
+
+  // The variable whose initializer we're evaluating.
+  if (auto *BaseD = Base.dyn_cast<const ValueDecl*>())
+    if (declaresSameEntity(Evaluating, BaseD))
+      return true;
+
+  // A temporary lifetime-extended by the variable whose initializer we're
+  // evaluating.
+  if (auto *BaseE = Base.dyn_cast<const Expr *>())
+    if (auto *BaseMTE = dyn_cast<MaterializeTemporaryExpr>(BaseE))
+      if (declaresSameEntity(BaseMTE->getExtendingDecl(), Evaluating))
+        return true;
+
+  return false;
+}
+
 namespace {
 /// A handle to a complete object (an object that is not a subobject of
 /// another object).
@@ -2830,17 +2863,21 @@ struct CompleteObject {
   APValue *Value;
   /// The type of the complete object.
   QualType Type;
-  bool LifetimeStartedInEvaluation;
 
   CompleteObject() : Value(nullptr) {}
-  CompleteObject(APValue::LValueBase Base, APValue *Value, QualType Type,
-                 bool LifetimeStartedInEvaluation)
-      : Base(Base), Value(Value), Type(Type),
-        LifetimeStartedInEvaluation(LifetimeStartedInEvaluation) {
-    assert(Value && "missing value for complete object");
+  CompleteObject(APValue::LValueBase Base, APValue *Value, QualType Type)
+      : Base(Base), Value(Value), Type(Type) {}
+
+  bool mayReadMutableMembers(EvalInfo &Info) const {
+    // In C++14 onwards, it is permitted to read a mutable member whose
+    // lifetime began within the evaluation.
+    // FIXME: Should we also allow this in C++11?
+    if (!Info.getLangOpts().CPlusPlus14)
+      return false;
+    return lifetimeStartedInEvaluation(Info, Base);
   }
 
-  explicit operator bool() const { return Value; }
+  explicit operator bool() const { return !Type.isNull(); }
 };
 } // end anonymous namespace
 
@@ -2880,8 +2917,6 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
   APValue *O = Obj.Value;
   QualType ObjType = Obj.Type;
   const FieldDecl *LastField = nullptr;
-  const bool MayReadMutableMembers =
-      Obj.LifetimeStartedInEvaluation && Info.getLangOpts().CPlusPlus14;
   const FieldDecl *VolatileField = nullptr;
 
   // Walk the designator's path to find the subobject.
@@ -2910,7 +2945,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     // If this is our last pass, check that the final object type is OK.
     if (I == N || (I == N - 1 && ObjType->isAnyComplexType())) {
       // Accesses to volatile objects are prohibited.
-      if (ObjType.isVolatileQualified()) {
+      if (ObjType.isVolatileQualified() &&
+          handler.AccessKind != AK_MemberCall) {
         if (Info.getLangOpts().CPlusPlus) {
           int DiagKind;
           SourceLocation Loc;
@@ -2942,7 +2978,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // cannot perform this read. (This only happens when performing a trivial
       // copy or assignment.)
       if (ObjType->isRecordType() && handler.AccessKind == AK_Read &&
-          !MayReadMutableMembers && diagnoseUnreadableFields(Info, E, ObjType))
+          !Obj.mayReadMutableMembers(Info) &&
+          diagnoseUnreadableFields(Info, E, ObjType))
         return handler.failed();
     }
 
@@ -2951,7 +2988,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         return false;
 
       // If we modified a bit-field, truncate it to the right width.
-      if (handler.AccessKind != AK_Read &&
+      if (isModification(handler.AccessKind) &&
           LastField && LastField->isBitField() &&
           !truncateBitfieldValue(Info, E, *O, LastField))
         return false;
@@ -3010,11 +3047,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
                                    : O->getComplexFloatReal(), ObjType);
       }
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
-      // In C++14 onwards, it is permitted to read a mutable member whose
-      // lifetime began within the evaluation.
-      // FIXME: Should we also allow this in C++11?
       if (Field->isMutable() && handler.AccessKind == AK_Read &&
-          !MayReadMutableMembers) {
+          !Obj.mayReadMutableMembers(Info)) {
         Info.FFDiag(E, diag::note_constexpr_ltor_mutable, 1)
           << Field;
         Info.Note(Field->getLocation(), diag::note_declared_at);
@@ -3226,7 +3260,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   // is not a constant expression (even if the object is non-volatile). We also
   // apply this rule to C++98, in order to conform to the expected 'volatile'
   // semantics.
-  if (LValType.isVolatileQualified()) {
+  if (AK != AK_MemberCall && LValType.isVolatileQualified()) {
     if (Info.getLangOpts().CPlusPlus)
       Info.FFDiag(E, diag::note_constexpr_access_volatile_type)
         << AK << LValType;
@@ -3235,10 +3269,16 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     return CompleteObject();
   }
 
+  // The wording is unclear on this, but for the purpose of determining the
+  // validity of a member function call, we assume that all objects whose
+  // lifetimes did not start within the constant evaluation are in fact within
+  // their lifetimes, so member calls on them are valid. (This simultaneously
+  // includes all members of a union!)
+  bool NeedValue = AK != AK_MemberCall;
+
   // Compute value storage location and type of base object.
   APValue *BaseVal = nullptr;
   QualType BaseType = getType(LVal.Base);
-  bool LifetimeStartedInEvaluation = Frame;
 
   if (const ValueDecl *D = LVal.Base.dyn_cast<const ValueDecl*>()) {
     // In C++98, const, non-volatile integers initialized with ICEs are ICEs.
@@ -3262,22 +3302,25 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     // the variable we're reading must be const.
     if (!Frame) {
       if (Info.getLangOpts().CPlusPlus14 &&
-          VD == Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()) {
+          declaresSameEntity(
+              VD, Info.EvaluatingDecl.dyn_cast<const ValueDecl *>())) {
         // OK, we can read and modify an object if we're in the process of
         // evaluating its initializer, because its lifetime began in this
         // evaluation.
-        LifetimeStartedInEvaluation = true;
-      } else if (AK != AK_Read) {
-        // All the remaining cases only permit reading.
+      } else if (isModification(AK)) {
+        // All the remaining cases do not permit modification of the object.
         Info.FFDiag(E, diag::note_constexpr_modify_global);
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
       } else if (BaseType->isIntegralOrEnumerationType()) {
-        // In OpenCL if a variable is in constant address space it is a const value.
+        // In OpenCL if a variable is in constant address space it is a const
+        // value.
         if (!(BaseType.isConstQualified() ||
               (Info.getLangOpts().OpenCL &&
                BaseType.getAddressSpace() == LangAS::opencl_constant))) {
+          if (!NeedValue)
+            return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
           if (Info.getLangOpts().CPlusPlus) {
             Info.FFDiag(E, diag::note_constexpr_ltor_non_const_int, 1) << VD;
             Info.Note(VD->getLocation(), diag::note_declared_at);
@@ -3286,6 +3329,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
           }
           return CompleteObject();
         }
+      } else if (!NeedValue) {
+        return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
       } else if (BaseType->isFloatingType() && BaseType.isConstQualified()) {
         // We support folding of const floating-point types, in order to make
         // static const data members of such types (supported as an extension)
@@ -3345,6 +3390,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         if (!(BaseType.isConstQualified() &&
               BaseType->isIntegralOrEnumerationType()) &&
             !(VD && VD->getCanonicalDecl() == ED->getCanonicalDecl())) {
+          if (!NeedValue)
+            return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
           Info.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
           Info.Note(MTE->getExprLoc(), diag::note_constexpr_temporary_here);
           return CompleteObject();
@@ -3352,8 +3399,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
         BaseVal = Info.Ctx.getMaterializedTemporaryValue(MTE, false);
         assert(BaseVal && "got reference to unevaluated temporary");
-        LifetimeStartedInEvaluation = true;
       } else {
+        if (!NeedValue)
+          return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
         Info.FFDiag(E);
         return CompleteObject();
       }
@@ -3370,11 +3418,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   // to be read here (but take care with 'mutable' fields).
   if ((Frame && Info.getLangOpts().CPlusPlus14 &&
        Info.EvalStatus.HasSideEffects) ||
-      (AK != AK_Read && Depth < Info.SpeculativeEvaluationDepth))
+      (isModification(AK) && Depth < Info.SpeculativeEvaluationDepth))
     return CompleteObject();
 
-  return CompleteObject(LVal.getLValueBase(), BaseVal, BaseType,
-                        LifetimeStartedInEvaluation);
+  return CompleteObject(LVal.getLValueBase(), BaseVal, BaseType);
 }
 
 /// Perform an lvalue-to-rvalue conversion on the given glvalue. This
@@ -3408,7 +3455,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
       APValue Lit;
       if (!Evaluate(Lit, Info, CLE->getInitializer()))
         return false;
-      CompleteObject LitObj(LVal.Base, &Lit, Base->getType(), false);
+      CompleteObject LitObj(LVal.Base, &Lit, Base->getType());
       return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal);
     } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
       // Special-case character extraction so we don't have to construct an
@@ -4454,6 +4501,48 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   return false;
 }
 
+namespace {
+struct CheckMemberCallThisPointerHandler {
+  static const AccessKinds AccessKind = AK_MemberCall;
+  typedef bool result_type;
+  bool failed() { return false; }
+  bool found(APValue &Subobj, QualType SubobjType) { return true; }
+  bool found(APSInt &Value, QualType SubobjType) { return true; }
+  bool found(APFloat &Value, QualType SubobjType) { return true; }
+};
+} // end anonymous namespace
+
+const AccessKinds CheckMemberCallThisPointerHandler::AccessKind;
+
+/// Check that the pointee of the 'this' pointer in a member function call is
+/// either within its lifetime or in its period of construction or destruction.
+static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
+                                       const LValue &This) {
+  CompleteObject Obj =
+      findCompleteObject(Info, E, AK_MemberCall, This, QualType());
+
+  if (!Obj)
+    return false;
+
+  if (!Obj.Value) {
+    // The object is not usable in constant expressions, so we can't inspect
+    // its value to see if it's in-lifetime or what the active union members
+    // are. We can still check for a one-past-the-end lvalue.
+    if (This.Designator.isOnePastTheEnd() ||
+        This.Designator.isMostDerivedAnUnsizedArray()) {
+      Info.FFDiag(E, This.Designator.isOnePastTheEnd()
+                         ? diag::note_constexpr_access_past_end
+                         : diag::note_constexpr_access_unsized_array)
+          << AK_MemberCall;
+      return false;
+    }
+    return true;
+  }
+
+  CheckMemberCallThisPointerHandler Handler;
+  return Obj && findSubobject(Info, E, Obj, This.Designator, Handler);
+}
+
 /// Determine if a class has any fields that might need to be copied by a
 /// trivial copy or move operation.
 static bool hasFields(const CXXRecordDecl *RD) {
@@ -5038,7 +5127,7 @@ public:
     } else
       return Error(E);
 
-    if (This && !This->checkSubobject(Info, E, CSK_This))
+    if (This && !checkMemberCallThisPointer(Info, E, *This))
       return false;
 
     const FunctionDecl *Definition = nullptr;
@@ -5093,7 +5182,7 @@ public:
     // Note: there is no lvalue base here. But this case should only ever
     // happen in C or in C++98, where we cannot be evaluating a constexpr
     // constructor, which is the only case the base matters.
-    CompleteObject Obj(APValue::LValueBase(), &Val, BaseTy, true);
+    CompleteObject Obj(APValue::LValueBase(), &Val, BaseTy);
     SubobjectDesignator Designator(BaseTy);
     Designator.addDeclUnchecked(FD);
 

@@ -210,8 +210,8 @@ namespace UndefinedBehavior {
       constexpr int f() const { return 0; }
     } constexpr c = C();
     constexpr int k1 = c.f(); // ok
-    constexpr int k2 = ((C*)nullptr)->f(); // expected-error {{constant expression}} expected-note {{cannot call member function on null pointer}}
-    constexpr int k3 = (&c)[1].f(); // expected-error {{constant expression}} expected-note {{cannot call member function on pointer past the end of object}}
+    constexpr int k2 = ((C*)nullptr)->f(); // expected-error {{constant expression}} expected-note {{member call on dereferenced null pointer}}
+    constexpr int k3 = (&c)[1].f(); // expected-error {{constant expression}} expected-note {{member call on dereferenced one-past-the-end pointer}}
     C c2;
     constexpr int k4 = c2.f(); // ok!
 
