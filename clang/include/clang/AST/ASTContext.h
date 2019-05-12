@@ -569,7 +569,17 @@ private:
   clang::PrintingPolicy PrintingPolicy;
   std::unique_ptr<interp::Context> InterpContext;
 
+  ast_type_traits::TraversalKind Traversal = ast_type_traits::TK_AsIs;
+
 public:
+  ast_type_traits::TraversalKind getTraversalKind() const { return Traversal; }
+  void setTraversalKind(ast_type_traits::TraversalKind TK) { Traversal = TK; }
+
+  const Expr *traverseIgnored(const Expr *E) const;
+  Expr *traverseIgnored(Expr *E) const;
+  ast_type_traits::DynTypedNode
+  traverseIgnored(const ast_type_traits::DynTypedNode &N) const;
+
   IdentifierTable &Idents;
   SelectorTable &Selectors;
   Builtin::Context &BuiltinInfo;
@@ -2996,7 +3006,7 @@ private:
 
   std::vector<Decl *> TraversalScope;
   class ParentMap;
-  std::unique_ptr<ParentMap> Parents;
+  std::map<ast_type_traits::TraversalKind, std::unique_ptr<ParentMap>> Parents;
 
   std::unique_ptr<VTableContextBase> VTContext;
 
@@ -3039,6 +3049,22 @@ inline Selector GetUnarySelector(StringRef name, ASTContext &Ctx) {
   IdentifierInfo* II = &Ctx.Idents.get(name);
   return Ctx.Selectors.getSelector(1, &II);
 }
+
+class TraversalKindScope {
+  ASTContext &Ctx;
+  ast_type_traits::TraversalKind TK = ast_type_traits::TK_AsIs;
+
+public:
+  TraversalKindScope(ASTContext &Ctx,
+                     llvm::Optional<ast_type_traits::TraversalKind> ScopeTK)
+      : Ctx(Ctx) {
+    TK = Ctx.getTraversalKind();
+    if (ScopeTK)
+      Ctx.setTraversalKind(*ScopeTK);
+  }
+
+  ~TraversalKindScope() { Ctx.setTraversalKind(TK); }
+};
 
 } // namespace clang
 
