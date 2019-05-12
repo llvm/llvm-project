@@ -586,8 +586,6 @@ define <8 x float> @PR41512_v8f32(float %x, float %y) {
 ;
 ; AVX-LABEL: PR41512_v8f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]

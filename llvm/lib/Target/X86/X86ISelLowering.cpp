@@ -33593,6 +33593,18 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       ExtSizeInBits = SizeInBits / 4;
 
     switch (Opc) {
+      // Zero upper elements.
+    case X86ISD::VZEXT_MOVL: {
+      SDLoc DL(Op);
+      SDValue Ext0 =
+          extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, ExtSizeInBits);
+      SDValue ExtOp =
+          TLO.DAG.getNode(Opc, DL, Ext0.getValueType(), Ext0);
+      SDValue UndefVec = TLO.DAG.getUNDEF(VT);
+      SDValue Insert =
+          insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
+      return TLO.CombineTo(Op, Insert);
+    }
       // Byte shifts by immediate.
     case X86ISD::VSHLDQ:
     case X86ISD::VSRLDQ:
