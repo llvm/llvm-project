@@ -17583,6 +17583,30 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     }
   }
 
+  // Try to move vector bitcast after extract_subv by scaling extraction index:
+  // extract_subv (bitcast X), Index --> bitcast (extract_subv X, Index')
+  if (isa<ConstantSDNode>(Index) && V.getOpcode() == ISD::BITCAST &&
+      V.getOperand(0).getValueType().isVector()) {
+    SDValue SrcOp = V.getOperand(0);
+    EVT SrcVT = SrcOp.getValueType();
+    unsigned SrcNumElts = SrcVT.getVectorNumElements();
+    unsigned DestNumElts = V.getValueType().getVectorNumElements();
+    if ((SrcNumElts % DestNumElts) == 0) {
+      unsigned SrcDestRatio = SrcNumElts / DestNumElts;
+      unsigned NewExtNumElts = NVT.getVectorNumElements() * SrcDestRatio;
+      EVT NewExtVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
+                                      NewExtNumElts);
+      if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NewExtVT)) {
+        unsigned IndexValScaled = N->getConstantOperandVal(1) * SrcDestRatio;
+        SDLoc DL(N);
+        SDValue NewIndex = DAG.getIntPtrConstant(IndexValScaled, DL);
+        SDValue NewExtract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewExtVT,
+                                         V.getOperand(0), NewIndex);
+        return DAG.getBitcast(NVT, NewExtract);
+      }
+    }
+  }
+
   // Combine:
   //    (extract_subvec (concat V1, V2, ...), i)
   // Into:
