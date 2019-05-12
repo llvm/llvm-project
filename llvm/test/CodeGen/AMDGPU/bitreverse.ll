@@ -36,7 +36,6 @@ define amdgpu_kernel void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) 
 ; FLAT-NEXT:    s_mov_b32 s7, 0xf000
 ; FLAT-NEXT:    s_mov_b32 s6, -1
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    s_and_b32 s0, s0, 0xffff
 ; FLAT-NEXT:    s_brev_b32 s0, s0
 ; FLAT-NEXT:    s_lshr_b32 s0, s0, 16
 ; FLAT-NEXT:    v_mov_b32_e32 v0, s0
@@ -1020,7 +1019,7 @@ define float @missing_truncate_promote_bitreverse(i32 %arg) {
 ; FLAT-LABEL: missing_truncate_promote_bitreverse:
 ; FLAT:       ; %bb.0: ; %bb
 ; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FLAT-NEXT:    v_bfrev_b32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; FLAT-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; FLAT-NEXT:    s_setpc_b64 s[30:31]
 bb:

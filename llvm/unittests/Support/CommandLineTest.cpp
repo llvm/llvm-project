@@ -1527,4 +1527,77 @@ TEST(CommandLineTest, GroupingAndPrefix) {
   cl::ResetAllOptionOccurrences();
 }
 
+TEST(CommandLineTest, LongOptions) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptA("a", cl::desc("Some flag"));
+  StackOption<bool> OptBLong("long-flag", cl::desc("Some long flag"));
+  StackOption<bool, cl::alias> OptB("b", cl::desc("Alias to --long-flag"),
+                                    cl::aliasopt(OptBLong));
+  StackOption<std::string> OptAB("ab", cl::desc("Another long option"));
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *args1[] = {"prog", "-a", "-ab", "val1"};
+  const char *args2[] = {"prog", "-a", "--ab", "val1"};
+  const char *args3[] = {"prog", "-ab", "--ab", "val1"};
+
+  //
+  // The following tests treat `-` and `--` the same, and always match the
+  // longest string.
+  //
+
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(OptA);
+  EXPECT_FALSE(OptBLong);
+  EXPECT_STREQ("val1", OptAB.c_str());
+  EXPECT_TRUE(Errs.empty()); Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(OptA);
+  EXPECT_FALSE(OptBLong);
+  EXPECT_STREQ("val1", OptAB.c_str());
+  EXPECT_TRUE(Errs.empty()); Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  // Fails because `-ab` and `--ab` are treated the same and appear more than
+  // once.  Also, `val1` is unexpected.
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS)); OS.flush();
+  outs()<< Errs << "\n";
+  EXPECT_FALSE(Errs.empty()); Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  //
+  // The following tests treat `-` and `--` differently, with `-` for short, and
+  // `--` for long options.
+  //
+
+  // Fails because `-ab` is treated as `-a -b`, so `-a` is seen twice, and
+  // `val1` is unexpected.
+  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(),
+                                           &OS, nullptr, true)); OS.flush();
+  EXPECT_FALSE(Errs.empty()); Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  // Works because `-a` is treated differently than `--ab`.
+  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(),
+                                           &OS, nullptr, true)); OS.flush();
+  EXPECT_TRUE(Errs.empty()); Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  // Works because `-ab` is treated as `-a -b`, and `--ab` is a long option.
+  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args3, StringRef(),
+                                           &OS, nullptr, true));
+  EXPECT_TRUE(OptA);
+  EXPECT_TRUE(OptBLong);
+  EXPECT_STREQ("val1", OptAB.c_str());
+  OS.flush();
+  EXPECT_TRUE(Errs.empty()); Errs.clear();
+  cl::ResetAllOptionOccurrences();
+}
 }  // anonymous namespace

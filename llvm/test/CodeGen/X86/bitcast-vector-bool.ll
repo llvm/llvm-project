@@ -63,12 +63,12 @@ define i2 @bitcast_v4i32_to_v2i2(<4 x i32> %a0) nounwind {
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vmovmskps %xmm0, %eax
 ; AVX12-NEXT:    movl %eax, %ecx
-; AVX12-NEXT:    andl $3, %ecx
-; AVX12-NEXT:    vmovq %rcx, %xmm0
-; AVX12-NEXT:    shrl $2, %eax
-; AVX12-NEXT:    vmovq %rax, %xmm1
-; AVX12-NEXT:    vpextrb $0, %xmm0, %ecx
-; AVX12-NEXT:    vpextrb $0, %xmm1, %eax
+; AVX12-NEXT:    shrl $2, %ecx
+; AVX12-NEXT:    vmovd %ecx, %xmm0
+; AVX12-NEXT:    andl $3, %eax
+; AVX12-NEXT:    vmovd %eax, %xmm1
+; AVX12-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX12-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX12-NEXT:    addb %cl, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq
@@ -81,10 +81,9 @@ define i2 @bitcast_v4i32_to_v2i2(<4 x i32> %a0) nounwind {
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    shrl $2, %ecx
 ; AVX512-NEXT:    andl $3, %ecx
-; AVX512-NEXT:    vmovq %rcx, %xmm0
-; AVX512-NEXT:    movzwl %ax, %eax
+; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    andl $3, %eax
-; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
@@ -120,9 +119,9 @@ define i4 @bitcast_v8i16_to_v2i4(<8 x i16> %a0) nounwind {
 ; AVX12-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX12-NEXT:    movzbl %al, %ecx
 ; AVX12-NEXT:    shrl $4, %ecx
-; AVX12-NEXT:    vmovq %rcx, %xmm0
+; AVX12-NEXT:    vmovd %ecx, %xmm0
 ; AVX12-NEXT:    andl $15, %eax
-; AVX12-NEXT:    vmovq %rax, %xmm1
+; AVX12-NEXT:    vmovd %eax, %xmm1
 ; AVX12-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX12-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX12-NEXT:    addb %cl, %al
@@ -135,10 +134,9 @@ define i4 @bitcast_v8i16_to_v2i4(<8 x i16> %a0) nounwind {
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    shrl $4, %ecx
-; AVX512-NEXT:    vmovq %rcx, %xmm0
-; AVX512-NEXT:    movzwl %ax, %eax
+; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    andl $15, %eax
-; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
@@ -243,12 +241,12 @@ define i2 @bitcast_v4i64_to_v2i2(<4 x i64> %a0) nounwind {
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vmovmskpd %ymm0, %eax
 ; AVX12-NEXT:    movl %eax, %ecx
-; AVX12-NEXT:    andl $3, %ecx
-; AVX12-NEXT:    vmovq %rcx, %xmm0
-; AVX12-NEXT:    shrl $2, %eax
-; AVX12-NEXT:    vmovq %rax, %xmm1
-; AVX12-NEXT:    vpextrb $0, %xmm0, %ecx
-; AVX12-NEXT:    vpextrb $0, %xmm1, %eax
+; AVX12-NEXT:    shrl $2, %ecx
+; AVX12-NEXT:    vmovd %ecx, %xmm0
+; AVX12-NEXT:    andl $3, %eax
+; AVX12-NEXT:    vmovd %eax, %xmm1
+; AVX12-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX12-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX12-NEXT:    addb %cl, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    vzeroupper
@@ -262,10 +260,9 @@ define i2 @bitcast_v4i64_to_v2i2(<4 x i64> %a0) nounwind {
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    shrl $2, %ecx
 ; AVX512-NEXT:    andl $3, %ecx
-; AVX512-NEXT:    vmovq %rcx, %xmm0
-; AVX512-NEXT:    movzwl %ax, %eax
+; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    andl $3, %eax
-; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
@@ -301,12 +298,12 @@ define i4 @bitcast_v8i32_to_v2i4(<8 x i32> %a0) nounwind {
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vmovmskps %ymm0, %eax
 ; AVX12-NEXT:    movl %eax, %ecx
-; AVX12-NEXT:    andl $15, %ecx
-; AVX12-NEXT:    vmovq %rcx, %xmm0
-; AVX12-NEXT:    shrl $4, %eax
-; AVX12-NEXT:    vmovq %rax, %xmm1
-; AVX12-NEXT:    vpextrb $0, %xmm0, %ecx
-; AVX12-NEXT:    vpextrb $0, %xmm1, %eax
+; AVX12-NEXT:    shrl $4, %ecx
+; AVX12-NEXT:    vmovd %ecx, %xmm0
+; AVX12-NEXT:    andl $15, %eax
+; AVX12-NEXT:    vmovd %eax, %xmm1
+; AVX12-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX12-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX12-NEXT:    addb %cl, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    vzeroupper
@@ -319,10 +316,9 @@ define i4 @bitcast_v8i32_to_v2i4(<8 x i32> %a0) nounwind {
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    shrl $4, %ecx
-; AVX512-NEXT:    vmovq %rcx, %xmm0
-; AVX512-NEXT:    movzwl %ax, %eax
+; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    andl $15, %eax
-; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
@@ -549,9 +545,9 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; AVX1-NEXT:    vmovmskps %ymm0, %eax
 ; AVX1-NEXT:    movl %eax, %ecx
 ; AVX1-NEXT:    shrl $4, %ecx
-; AVX1-NEXT:    vmovq %rcx, %xmm0
+; AVX1-NEXT:    vmovd %ecx, %xmm0
 ; AVX1-NEXT:    andl $15, %eax
-; AVX1-NEXT:    vmovq %rax, %xmm1
+; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX1-NEXT:    addb %cl, %al
@@ -569,9 +565,9 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vmovmskps %ymm0, %eax
 ; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    shrl $4, %ecx
-; AVX2-NEXT:    vmovq %rcx, %xmm0
+; AVX2-NEXT:    vmovd %ecx, %xmm0
 ; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vmovq %rax, %xmm1
+; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX2-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX2-NEXT:    addb %cl, %al
@@ -586,10 +582,9 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    shrl $4, %ecx
-; AVX512-NEXT:    vmovq %rcx, %xmm0
-; AVX512-NEXT:    movzwl %ax, %eax
+; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    andl $15, %eax
-; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpextrb $0, %xmm1, %ecx
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
