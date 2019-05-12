@@ -2014,7 +2014,11 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     return true;
 
   llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
-    return Instantiation->getQualifiedNameAsString();
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                        /*Qualified=*/true);
+    return Name;
   });
 
   Pattern = PatternDef;

@@ -4156,7 +4156,11 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   }
 
   llvm::TimeTraceScope TimeScope("InstantiateFunction", [&]() {
-    return Function->getQualifiedNameAsString();
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    Function->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                   /*Qualified=*/true);
+    return Name;
   });
 
   // If we're performing recursive template instantiation, create our own
