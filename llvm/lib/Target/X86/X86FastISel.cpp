@@ -2172,19 +2172,6 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   if (NeedSwap)
     std::swap(CmpLHS, CmpRHS);
 
-  // Choose the SSE instruction sequence based on data type (float or double).
-  static const uint16_t OpcTable[2][4] = {
-    { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
-    { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
-  };
-
-  const uint16_t *Opc = nullptr;
-  switch (RetVT.SimpleTy) {
-  default: return false;
-  case MVT::f32: Opc = &OpcTable[0][0]; break;
-  case MVT::f64: Opc = &OpcTable[1][0]; break;
-  }
-
   const Value *LHS = I->getOperand(1);
   const Value *RHS = I->getOperand(2);
 
@@ -2255,6 +2242,19 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), ResultReg).addReg(VBlendReg);
   } else {
+    // Choose the SSE instruction sequence based on data type (float or double).
+    static const uint16_t OpcTable[2][4] = {
+      { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
+      { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
+    };
+
+    const uint16_t *Opc = nullptr;
+    switch (RetVT.SimpleTy) {
+    default: return false;
+    case MVT::f32: Opc = &OpcTable[0][0]; break;
+    case MVT::f64: Opc = &OpcTable[1][0]; break;
+    }
+
     const TargetRegisterClass *VR128 = &X86::VR128RegClass;
     unsigned CmpReg = fastEmitInst_rri(Opc[0], RC, CmpLHSReg, CmpLHSIsKill,
                                        CmpRHSReg, CmpRHSIsKill, CC);
@@ -2281,8 +2281,10 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
   case MVT::i8:  Opc = X86::CMOV_GR8;  break;
   case MVT::i16: Opc = X86::CMOV_GR16; break;
   case MVT::i32: Opc = X86::CMOV_GR32; break;
-  case MVT::f32: Opc = X86::CMOV_FR32; break;
-  case MVT::f64: Opc = X86::CMOV_FR64; break;
+  case MVT::f32: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR32X
+                                              : X86::CMOV_FR32; break;
+  case MVT::f64: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR64X
+                                              : X86::CMOV_FR64; break;
   }
 
   const Value *Cond = I->getOperand(0);
@@ -2498,8 +2500,7 @@ bool X86FastISel::X86SelectFPExt(const Instruction *I) {
     unsigned Opc =
         HasAVX512 ? X86::VCVTSS2SDZrr
                   : Subtarget->hasAVX() ? X86::VCVTSS2SDrr : X86::CVTSS2SDrr;
-    return X86SelectFPExtOrFPTrunc(
-        I, Opc, HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass);
+    return X86SelectFPExtOrFPTrunc(I, Opc, TLI.getRegClassFor(MVT::f64));
   }
 
   return false;
@@ -2513,8 +2514,7 @@ bool X86FastISel::X86SelectFPTrunc(const Instruction *I) {
     unsigned Opc =
         HasAVX512 ? X86::VCVTSD2SSZrr
                   : Subtarget->hasAVX() ? X86::VCVTSD2SSrr : X86::CVTSD2SSrr;
-    return X86SelectFPExtOrFPTrunc(
-        I, Opc, HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass);
+    return X86SelectFPExtOrFPTrunc(I, Opc, TLI.getRegClassFor(MVT::f32));
   }
 
   return false;
@@ -3887,33 +3887,26 @@ unsigned X86FastISel::fastMaterializeFloatZero(const ConstantFP *CF) {
   // Get opcode and regclass for the given zero.
   bool HasAVX512 = Subtarget->hasAVX512();
   unsigned Opc = 0;
-  const TargetRegisterClass *RC = nullptr;
   switch (VT.SimpleTy) {
   default: return 0;
   case MVT::f32:
-    if (X86ScalarSSEf32) {
+    if (X86ScalarSSEf32)
       Opc = HasAVX512 ? X86::AVX512_FsFLD0SS : X86::FsFLD0SS;
-      RC  = HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp032;
-      RC  = &X86::RFP32RegClass;
-    }
     break;
   case MVT::f64:
-    if (X86ScalarSSEf64) {
+    if (X86ScalarSSEf64)
       Opc = HasAVX512 ? X86::AVX512_FsFLD0SD : X86::FsFLD0SD;
-      RC  = HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp064;
-      RC  = &X86::RFP64RegClass;
-    }
     break;
   case MVT::f80:
     // No f80 support yet.
     return 0;
   }
 
-  unsigned ResultReg = createResultReg(RC);
+  unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg);
   return ResultReg;
 }
