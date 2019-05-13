@@ -1,7 +1,7 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("BPFGenAsmWriter") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-asm-writer" ]
   td_file = "../BPF.td"
 }
@@ -13,7 +13,7 @@ tablegen("BPFGenInstrInfo") {
 }
 
 tablegen("BPFGenMCCodeEmitter") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-emitter" ]
   td_file = "../BPF.td"
 }
@@ -30,15 +30,16 @@ tablegen("BPFGenSubtargetInfo") {
   td_file = "../BPF.td"
 }
 
+# This should contain tablegen targets generating .inc files included
+# by other targets. .inc files only used by .cpp files in this directory
+# should be in deps on the static_library instead.
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
     "../TargetInfo",
   ]
   public_deps = [
-    ":BPFGenAsmWriter",
     ":BPFGenInstrInfo",
-    ":BPFGenMCCodeEmitter",
     ":BPFGenRegisterInfo",
     ":BPFGenSubtargetInfo",
   ]
@@ -50,6 +51,8 @@ static_library("MCTargetDesc") {
     ":tablegen",
   ]
   deps = [
+    ":BPFGenAsmWriter",
+    ":BPFGenMCCodeEmitter",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",

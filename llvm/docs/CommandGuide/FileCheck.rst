@@ -105,6 +105,11 @@ and from the command line.
   Sets a filecheck pattern variable ``VAR`` with value ``VALUE`` that can be
   used in ``CHECK:`` lines.
 
+.. option:: -D#<NUMVAR>=<VALUE>
+
+  Sets a filecheck numeric variable ``NUMVAR`` to ``<VALUE>`` that can be used
+  in ``CHECK:`` lines.
+
 .. option:: -version
 
  Show the version number of this program.
@@ -560,8 +565,51 @@ CHECK-LABEL block. Global variables are not affected by CHECK-LABEL.
 This makes it easier to ensure that individual tests are not affected
 by variables set in preceding tests.
 
-FileCheck Numeric Expressions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+FileCheck Numeric Variables and Expressions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:program:`FileCheck` also allows checking for numeric values that satisfy a
+numeric expression constraint based on numeric variables. This allows
+``CHECK:`` directives to verify a numeric relation between two numbers, such as
+the need for consecutive registers to be used.
+
+The syntax to check a numeric expression constraint is
+``[[#<NUMVAR><op><offset>]]`` where:
+
+*``<NUMVAR>`` is the name of a numeric variable defined on the command line.
+
+*``<op>`` is an optional numeric operation to perform on the value of
+``<NUMVAR>``. Currently supported numeric operations are ``+`` and ``-``.
+
+*``<offset>`` is the immediate value that constitutes the second operand of
+the numeric operation <op>. It must be present if ``<op>`` is present,
+absent otherwise.
+
+For example:
+
+.. code-block:: llvm
+
+    ; CHECK: add r[[#REG]], r[[#REG]], r[[#REG+1]]
+
+The above example would match the line:
+
+.. code-block:: llvm
+
+    add r5, r5, r6
+
+but would not match the line:
+
+.. code-block:: llvm
+
+    add r5, r5, r7
+
+due to ``7`` being unequal to ``5 + 1``.
+
+The ``--enable-var-scope`` option has the same effect on numeric variables as
+on pattern variables.
+
+FileCheck Pseudo Numeric Variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Sometimes there's a need to verify output that contains line numbers of the
 match file, e.g. when testing compiler diagnostics.  This introduces a certain
@@ -569,11 +617,9 @@ fragility of the match file structure, as "``CHECK:``" lines contain absolute
 line numbers in the same file, which have to be updated whenever line numbers
 change due to text addition or deletion.
 
-To support this case, FileCheck allows using ``[[#@LINE]]``,
-``[[#@LINE+<offset>]]`` and ``[[#@LINE-<offset>]]`` numeric expressions in
-patterns, with an arbitrary number of spaces between each element of the
-expression. These expressions expand to the number of the line where a pattern
-is located (with an optional integer offset).
+To support this case, FileCheck understands the ``@LINE`` pseudo numeric
+variable which evaluates to the line number of the CHECK pattern where it is
+found.
 
 This way match patterns can be put near the relevant test lines and include
 relative line number references, for example:

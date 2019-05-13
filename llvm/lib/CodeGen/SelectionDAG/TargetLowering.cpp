@@ -588,6 +588,10 @@ bool TargetLowering::SimplifyDemandedBits(
   // Don't know anything.
   Known = KnownBits(BitWidth);
 
+  // Undef operand.
+  if (Op.isUndef())
+    return false;
+
   if (Op.getOpcode() == ISD::Constant) {
     // We know all of the bits for a constant!
     Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
@@ -610,9 +614,7 @@ bool TargetLowering::SimplifyDemandedBits(
     DemandedElts = APInt::getAllOnesValue(NumElts);
   } else if (OriginalDemandedBits == 0 || OriginalDemandedElts == 0) {
     // Not demanding any bits/elts from Op.
-    if (!Op.isUndef())
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
-    return false;
+    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
   } else if (Depth == 6) { // Limit search depth.
     return false;
   }
@@ -1367,6 +1369,30 @@ bool TargetLowering::SimplifyDemandedBits(
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
+      return true;
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+    assert(Known.getBitWidth() == InBits && "Src width has changed?");
+    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
+    break;
+  }
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    // TODO - merge this with ZERO_EXTEND above?
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    unsigned InBits = SrcVT.getScalarSizeInBits();
+    unsigned InElts = SrcVT.getVectorNumElements();
+
+    // If we only need the non-extended bits of the bottom element
+    // then we can just bitcast to the result.
+    if (DemandedBits.getActiveBits() <= InBits && DemandedElts == 1 &&
+        VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+        TLO.DAG.getDataLayout().isLittleEndian())
+      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+
+    APInt InDemandedBits = DemandedBits.trunc(InBits);
+    APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
+    if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     assert(Known.getBitWidth() == InBits && "Src width has changed?");

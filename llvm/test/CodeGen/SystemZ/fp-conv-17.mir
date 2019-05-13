@@ -163,39 +163,39 @@ body:             |
     STE %16, %1, 0, $noreg :: (volatile store 4 into %ir.ptr2)
     STE %17, %1, 0, $noreg :: (volatile store 4 into %ir.ptr2)
     STE %18, %1, 0, $noreg :: (volatile store 4 into %ir.ptr2)
-    %19 = LDEBR %2
+    %19 = LDEBR %2, implicit $fpc
     STD %19, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %20 = LDEBR %3
+    %20 = LDEBR %3, implicit $fpc
     STD %20, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %21 = LDEBR %4
+    %21 = LDEBR %4, implicit $fpc
     STD %21, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %22 = LDEBR %5
+    %22 = LDEBR %5, implicit $fpc
     STD %22, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %23 = LDEBR %6
+    %23 = LDEBR %6, implicit $fpc
     STD %23, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %24 = LDEBR %7
+    %24 = LDEBR %7, implicit $fpc
     STD %24, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %25 = LDEBR %8
+    %25 = LDEBR %8, implicit $fpc
     STD %25, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %26 = LDEBR %9
+    %26 = LDEBR %9, implicit $fpc
     STD %26, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %27 = LDEBR %10
+    %27 = LDEBR %10, implicit $fpc
     STD %27, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %28 = LDEBR %11
+    %28 = LDEBR %11, implicit $fpc
     STD %28, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %29 = LDEBR %12
+    %29 = LDEBR %12, implicit $fpc
     STD %29, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %30 = LDEBR %13
+    %30 = LDEBR %13, implicit $fpc
     STD %30, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %31 = LDEBR %14
+    %31 = LDEBR %14, implicit $fpc
     STD %31, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %32 = LDEBR %15
+    %32 = LDEBR %15, implicit $fpc
     STD %32, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %33 = LDEBR %16
+    %33 = LDEBR %16, implicit $fpc
     STD %33, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %34 = LDEBR %17
+    %34 = LDEBR %17, implicit $fpc
     STD %34, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
-    %35 = LDEBR %18
+    %35 = LDEBR %18, implicit $fpc
     STD %35, %0, 0, $noreg :: (volatile store 8 into %ir.ptr1)
     Return
 

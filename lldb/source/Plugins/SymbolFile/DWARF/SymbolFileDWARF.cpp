@@ -1259,7 +1259,20 @@ SymbolFileDWARF::DecodedUID SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
         debug_map->GetOSOIndexFromUserID(uid));
     return {dwarf, {DW_INVALID_OFFSET, dw_offset_t(uid)}};
   }
-  return {this, {dw_offset_t(uid >> 32), dw_offset_t(uid)}};
+  uint32_t dwarf_id = uid >> 32;
+  dw_offset_t die_offset = uid;
+
+  if (die_offset == DW_INVALID_OFFSET)
+    return {nullptr, DIERef()};
+
+  SymbolFileDWARF *dwarf = this;
+  if (DebugInfo()) {
+    if (DWARFUnit *unit = DebugInfo()->GetUnitAtIndex(dwarf_id)) {
+      if (unit->GetDwoSymbolFile())
+        dwarf = unit->GetDwoSymbolFile();
+    }
+  }
+  return {dwarf, {DW_INVALID_OFFSET, die_offset}};
 }
 
 DWARFDIE

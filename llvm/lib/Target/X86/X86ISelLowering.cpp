@@ -7183,9 +7183,10 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
   }
 
   // Find all zeroable elements.
-  std::bitset<4> Zeroable;
-  for (int i=0; i < 4; ++i) {
-    SDValue Elt = Op->getOperand(i);
+  std::bitset<4> Zeroable, Undefs;
+  for (int i = 0; i < 4; ++i) {
+    SDValue Elt = Op.getOperand(i);
+    Undefs[i] = Elt.isUndef();
     Zeroable[i] = (Elt.isUndef() || X86::isZeroNode(Elt));
   }
   assert(Zeroable.size() - Zeroable.count() > 1 &&
@@ -7195,10 +7196,10 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
   // zeroable or extract_vector_elt with constant index.
   SDValue FirstNonZero;
   unsigned FirstNonZeroIdx;
-  for (unsigned i=0; i < 4; ++i) {
+  for (unsigned i = 0; i < 4; ++i) {
     if (Zeroable[i])
       continue;
-    SDValue Elt = Op->getOperand(i);
+    SDValue Elt = Op.getOperand(i);
     if (Elt.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
         !isa<ConstantSDNode>(Elt.getOperand(1)))
       return SDValue();
@@ -7237,10 +7238,12 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
 
   if (EltIdx == 4) {
     // Let the shuffle legalizer deal with blend operations.
-    SDValue VZero = getZeroVector(VT, Subtarget, DAG, SDLoc(Op));
+    SDValue VZeroOrUndef = (Zeroable == Undefs)
+                               ? DAG.getUNDEF(VT)
+                               : getZeroVector(VT, Subtarget, DAG, SDLoc(Op));
     if (V1.getSimpleValueType() != VT)
       V1 = DAG.getBitcast(VT, V1);
-    return DAG.getVectorShuffle(VT, SDLoc(V1), V1, VZero, Mask);
+    return DAG.getVectorShuffle(VT, SDLoc(V1), V1, VZeroOrUndef, Mask);
   }
 
   // See if we can lower this build_vector to a INSERTPS.
@@ -19033,16 +19036,11 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
   if (!IsFP && !Subtarget.hasSSSE3())
     return Op;
 
-  // Defer forming the minimal horizontal op if the vector source has more than
-  // the 2 extract element uses that we're matching here. In that case, we might
-  // form a horizontal op that includes more than 1 add/sub op.
+  // Extract from a common vector.
   if (LHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       RHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       LHS.getOperand(0) != RHS.getOperand(0) ||
-      !LHS.getOperand(0)->hasNUsesOfValue(2, 0))
-    return Op;
-
-  if (!isa<ConstantSDNode>(LHS.getOperand(1)) ||
+      !isa<ConstantSDNode>(LHS.getOperand(1)) ||
       !isa<ConstantSDNode>(RHS.getOperand(1)) ||
       !shouldUseHorizontalOp(true, DAG, Subtarget))
     return Op;
@@ -35112,8 +35110,13 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // X86ISD::PEXTRW/X86ISD::PEXTRB in:
   // XFormVExtractWithShuffleIntoLoad, combineHorizontalPredicateResult and
   // combineBasicSADPattern.
-  if (IsPextr)
+  if (IsPextr) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (TLI.SimplifyDemandedBits(
+            SDValue(N, 0), APInt::getAllOnesValue(VT.getSizeInBits()), DCI))
+      return SDValue(N, 0);
     return SDValue();
+  }
 
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;

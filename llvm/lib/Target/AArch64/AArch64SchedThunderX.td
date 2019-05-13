@@ -25,7 +25,7 @@ def ThunderXT8XModel : SchedMachineModel {
   let PostRAScheduler = 1;    // Use PostRA scheduler.
   let CompleteModel = 1;
 
-  list<Predicate> UnsupportedFeatures = [HasSVE];
+  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;

@@ -63,7 +63,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
 
   // init team context
   omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
-  currTeamDescr.InitTeamDescr(/*isSPMDExecutionMode=*/false);
+  currTeamDescr.InitTeamDescr();
   // this thread will start execution... has to update its task ICV
   // to point to the level zero task ICV. That ICV was init in
   // InitTeamDescr()
@@ -73,7 +73,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   // set number of threads and thread limit in team to started value
   omptarget_nvptx_TaskDescr *currTaskDescr =
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
-  currTaskDescr->NThreads() = GetNumberOfWorkersInTeam();
+  nThreads = GetNumberOfWorkersInTeam();
   threadLimit = ThreadLimit;
 }
 
@@ -123,7 +123,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
     omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
     // init team context
-    currTeamDescr.InitTeamDescr(/*isSPMDExecutionMode=*/true);
+    currTeamDescr.InitTeamDescr();
   }
   // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
   __SYNCTHREADS();

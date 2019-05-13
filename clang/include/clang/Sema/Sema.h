@@ -5204,7 +5204,8 @@ public:
   ExprResult BuildCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
                               BinaryOperatorKind Operator,
                               SourceLocation EllipsisLoc, Expr *RHS,
-                              SourceLocation RParenLoc);
+                              SourceLocation RParenLoc,
+                              Optional<unsigned> NumExpansions);
   ExprResult BuildEmptyCXXFoldExpr(SourceLocation EllipsisLoc,
                                    BinaryOperatorKind Operator);
 
