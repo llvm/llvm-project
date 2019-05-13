@@ -220,11 +220,12 @@ ConstString ObjCLanguage::MethodName::GetFullNameWithoutCategory(
   return ConstString();
 }
 
-void ObjCLanguage::GetMethodNameVariants(
-    ConstString method_name, std::vector<ConstString> &variant_names) const {
+std::vector<ConstString>
+ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
+  std::vector<ConstString> variant_names;
   ObjCLanguage::MethodName objc_method(method_name.GetCString(), false);
   if (!objc_method.IsValid(false)) {
-    return;
+    return variant_names;
   }
 
   const bool is_class_method =
@@ -257,6 +258,8 @@ void ObjCLanguage::GetMethodNameVariants(
       variant_names.emplace_back(strm.GetString());
     }
   }
+
+  return variant_names;
 }
 
 static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
