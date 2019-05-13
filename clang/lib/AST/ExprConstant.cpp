@@ -4537,6 +4537,9 @@ const AccessKinds CheckMemberCallThisPointerHandler::AccessKind;
 /// either within its lifetime or in its period of construction or destruction.
 static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
                                        const LValue &This) {
+  if (This.Designator.Invalid)
+    return false;
+
   CompleteObject Obj =
       findCompleteObject(Info, E, AK_MemberCall, This, QualType());
 
