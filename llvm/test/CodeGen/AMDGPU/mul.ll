@@ -141,11 +141,6 @@ define amdgpu_kernel void @v_mul_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; crash with a 'failed to select' error.
 
 ; FUNC-LABEL: {{^}}s_mul_i64:
-; GFX9_10-DAG: s_mul_i32
-; GFX9_10-DAG: s_mul_hi_u32
-; GFX9_10-DAG: s_mul_i32
-; GFX9_10-DAG: s_mul_i32
-; GFX9_10: s_endpgm
 define amdgpu_kernel void @s_mul_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %mul = mul i64 %a, %b
   store i64 %mul, i64 addrspace(1)* %out, align 8
