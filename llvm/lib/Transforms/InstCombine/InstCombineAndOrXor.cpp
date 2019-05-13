@@ -1898,6 +1898,13 @@ static Instruction *matchRotate(Instruction &Or) {
         match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
       return X;
 
+    // Similar to above, but the shift amount may be extended after masking,
+    // so return the extended value as the parameter for the intrinsic.
+    if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
+        match(R, m_And(m_Neg(m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))),
+                       m_SpecificInt(Mask))))
+      return L;
+
     return nullptr;
   };
 
