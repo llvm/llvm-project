@@ -9,13 +9,10 @@ add_subdirectory(lldb-test EXCLUDE_FROM_ALL)
 
 add_lldb_tool_subdirectory(lldb-instr)
 add_lldb_tool_subdirectory(lldb-mi)
+add_lldb_tool_subdirectory(lldb-server)
 add_lldb_tool_subdirectory(lldb-vscode)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   add_subdirectory(darwin-debug)
   add_subdirectory(debugserver)
-endif()
-
-if (LLDB_CAN_USE_LLDB_SERVER AND NOT SKIP_LLDB_SERVER_BUILD)
-  add_subdirectory(lldb-server)
 endif()
