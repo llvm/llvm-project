@@ -23,7 +23,7 @@ def FalkorModel : SchedMachineModel {
   let MispredictPenalty = 11;  // Minimum branch misprediction penalty.
   let CompleteModel = 1;
 
-  list<Predicate> UnsupportedFeatures = [HasSVE];
+  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;

@@ -18,7 +18,7 @@ def CycloneModel : SchedMachineModel {
   let MispredictPenalty = 16; // 14-19 cycles are typical.
   let CompleteModel = 1;
 
-  list<Predicate> UnsupportedFeatures = [HasSVE];
+  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
 }
 
 //===----------------------------------------------------------------------===//

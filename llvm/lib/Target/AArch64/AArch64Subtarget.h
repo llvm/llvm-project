@@ -119,6 +119,7 @@ protected:
 
   bool HasLSLFast = false;
   bool HasSVE = false;
+  bool HasSVE2 = false;
   bool HasRCPC = false;
   bool HasAggressiveFMA = false;
 
@@ -133,6 +134,12 @@ protected:
   bool HasBTI = false;
   bool HasRandGen = false;
   bool HasMTE = false;
+
+  // Arm SVE2 extensions
+  bool HasSVE2AES = false;
+  bool HasSVE2SM4 = false;
+  bool HasSVE2SHA3 = false;
+  bool HasSVE2BitPerm = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -360,6 +367,7 @@ public:
   bool hasSPE() const { return HasSPE; }
   bool hasLSLFast() const { return HasLSLFast; }
   bool hasSVE() const { return HasSVE; }
+  bool hasSVE2() const { return HasSVE2; }
   bool hasRCPC() const { return HasRCPC; }
   bool hasAggressiveFMA() const { return HasAggressiveFMA; }
   bool hasAlternativeNZCV() const { return HasAlternativeNZCV; }
@@ -372,6 +380,11 @@ public:
   bool hasBTI() const { return HasBTI; }
   bool hasRandGen() const { return HasRandGen; }
   bool hasMTE() const { return HasMTE; }
+  // Arm SVE2 extensions
+  bool hasSVE2AES() const { return HasSVE2AES; }
+  bool hasSVE2SM4() const { return HasSVE2SM4; }
+  bool hasSVE2SHA3() const { return HasSVE2SHA3; }
+  bool hasSVE2BitPerm() const { return HasSVE2BitPerm; }
 
   bool isLittleEndian() const { return IsLittle; }
 
