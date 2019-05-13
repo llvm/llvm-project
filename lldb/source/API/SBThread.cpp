@@ -1412,11 +1412,21 @@ bool SBThread::SafeToCallFunctions() {
 }
 
 lldb_private::Thread *SBThread::operator->() {
-  return get();
+  LLDB_RECORD_METHOD_NO_ARGS(lldb_private::Thread *, SBThread, operator->);
+
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (thread_sp)
+    return LLDB_RECORD_RESULT(thread_sp.get());
+  return nullptr;
 }
 
 lldb_private::Thread *SBThread::get() {
-  return m_opaque_sp->GetThreadSP().get();
+  LLDB_RECORD_METHOD_NO_ARGS(lldb_private::Thread *, SBThread, get);
+
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (thread_sp)
+    return LLDB_RECORD_RESULT(thread_sp.get());
+  return nullptr;
 }
 
 namespace lldb_private {

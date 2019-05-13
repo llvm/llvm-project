@@ -1303,7 +1303,7 @@ static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
              "loaded\n";
     break;
 
-  case swift::serialization::Status::MissingShadowedModule:
+  case swift::serialization::Status::MissingUnderlyingModule:
     error << "the swift module file is an overlay for a clang module, which "
              "can't be found\n";
     break;
@@ -1550,6 +1550,42 @@ void SwiftASTContext::RemapClangImporterOptions(
   }
 }
 
+/// Retrieve the .dSYM bundle for \p module.
+static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
+  SymbolVendor *sym_vendor = module.GetSymbolVendor();
+  if (!sym_vendor)
+    return {};
+
+  auto sym_file = sym_vendor->GetSymbolFile();
+  if (!sym_file)
+    return {};
+
+  auto obj_file = sym_file->GetObjectFile();
+  if (!obj_file)
+    return {};
+
+  StringRef dir = obj_file->GetFileSpec().GetDirectory().GetStringRef();
+  auto it = llvm::sys::path::rbegin(dir);
+  auto end = llvm::sys::path::rend(dir);
+  if (it == end)
+    return {};
+  if (*it != "DWARF")
+    return {};
+  if (++it == end)
+    return {};
+  if (*it != "Resources")
+    return {};
+  if (++it == end)
+    return {};
+  if (*it != "Contents")
+    return {};
+  StringRef sep = llvm::sys::path::get_separator();
+  StringRef dsym = dir.take_front(it - end - sep.size());
+  if (llvm::sys::path::extension(dsym) != ".dSYM")
+    return {};
+  return dsym;
+}
+
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Module &module,
                                                    Target *target) {
@@ -1759,6 +1795,25 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
 
+  // Add Swift interfaces in the .dSYM at the end of the search paths.
+  // .swiftmodules win over .swiftinterfaces, when they are loaded
+  // directly from the .swift_ast section.
+  //
+  // FIXME: Since these paths also end up in the scratch context, we
+  //        would need a mechanism to ensure that and newer versions
+  //        (in the library evolution sense, not the date on disk) win
+  //        over older versions of the same .swiftinterface.
+  if (auto dsym = GetDSYMBundle(module)) {
+    llvm::SmallString<256> path(*dsym);
+    llvm::Triple triple(swift_ast_sp->GetTriple());
+    StringRef arch = llvm::Triple::getArchTypeName(triple.getArch());
+    llvm::sys::path::append(path, "Contents", "Resources", "Swift", arch);
+    bool exists = false;
+    llvm::sys::fs::is_directory(path, exists);
+    if (exists)
+      swift_ast_sp->AddModuleSearchPath(path.c_str());
+  }
+  
   if (!swift_ast_sp->GetClangImporter()) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES,
                "(\"%s\") returning NULL - couldn't create a ClangImporter",
@@ -3062,6 +3117,12 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   }
 
   // 2. Create and install the parseable interface module loader.
+  //
+  // TODO: It may be nice to reverse the order between PIML and SML in
+  //       LLDB, since binary swift modules likely contain private
+  //       types that the parseable interfaces are missing. On the
+  //       other hand if we need to go looking for a module on disk,
+  //       something is already screwed up in the debug info.
   std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap;
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
@@ -8117,7 +8178,7 @@ static const char *getImportFailureString(swift::serialization::Status status) {
            "the debugger.";
   case swift::serialization::Status::MissingDependency:
     return "The module file depends on another module that can't be loaded.";
-  case swift::serialization::Status::MissingShadowedModule:
+  case swift::serialization::Status::MissingUnderlyingModule:
     return "The module file is an overlay for a Clang module, which can't be "
            "found.";
   case swift::serialization::Status::CircularDependency:

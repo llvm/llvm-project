@@ -190,6 +190,15 @@ public:
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();
 
+  // If a language can have more than one possible name for a method, this
+  // function can be used to enumerate them. This is useful when doing name
+  // lookups.
+  virtual void
+  GetMethodNameVariants(ConstString method_name,
+                        std::vector<ConstString> &variant_names) const {
+    return;
+  };
+
   // if an individual data formatter can apply to several types and cross a
   // language boundary it makes sense for individual languages to want to
   // customize the printing of values of that type by appending proper
