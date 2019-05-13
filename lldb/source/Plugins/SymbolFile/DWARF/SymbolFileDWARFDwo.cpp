@@ -23,7 +23,7 @@ SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
                                        DWARFUnit *dwarf_cu)
     : SymbolFileDWARF(objfile.get()), m_obj_file_sp(objfile),
       m_base_dwarf_cu(dwarf_cu) {
-  SetID(((lldb::user_id_t)dwarf_cu->GetOffset()) << 32);
+  SetID(((lldb::user_id_t)dwarf_cu->GetID()) << 32);
 }
 
 void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
@@ -158,6 +158,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  lldbassert(m_base_dwarf_cu->GetOffset() == die_ref.cu_offset);
+  lldbassert(die_ref.cu_offset == m_base_dwarf_cu->GetOffset() ||
+             die_ref.cu_offset == DW_INVALID_OFFSET);
   return DebugInfo()->GetDIEForDIEOffset(die_ref.die_offset);
 }
