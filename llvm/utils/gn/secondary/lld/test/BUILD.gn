@@ -54,7 +54,8 @@ write_lit_cfg("lit_site_cfg") {
     extra_values += [ "HAVE_LIBZ=0" ]  # Must be 0.
   }
 
-  if (current_cpu == "x64" || current_cpu == "arm64") {
+  if (current_cpu == "x64" || current_cpu == "arm64" ||
+      current_cpu == "ppc64") {
     extra_values += [ "CMAKE_SIZEOF_VOID_P=8" ]
   } else {
     extra_values += [ "CMAKE_SIZEOF_VOID_P=4" ]
