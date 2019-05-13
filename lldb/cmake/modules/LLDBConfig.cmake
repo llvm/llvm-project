@@ -416,8 +416,10 @@ list(APPEND system_libs ${CMAKE_DL_LIBS})
 
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Android|Darwin|FreeBSD|Linux|NetBSD")
-  set(LLDB_TOOL_LLDB_SERVER_BUILD OFF)
+if (CMAKE_SYSTEM_NAME MATCHES "Android|Darwin|FreeBSD|Linux|NetBSD")
+  set(LLDB_CAN_USE_LLDB_SERVER 1 INTERNAL)
+else()
+  set(LLDB_CAN_USE_LLDB_SERVER 0 INTERNAL)
 endif()
 
 # Figure out if lldb could use debugserver.  If so, then we'll
