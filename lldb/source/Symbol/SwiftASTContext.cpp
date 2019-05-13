@@ -1303,7 +1303,7 @@ static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
              "loaded\n";
     break;
 
-  case swift::serialization::Status::MissingShadowedModule:
+  case swift::serialization::Status::MissingUnderlyingModule:
     error << "the swift module file is an overlay for a clang module, which "
              "can't be found\n";
     break;
@@ -8171,7 +8171,7 @@ static const char *getImportFailureString(swift::serialization::Status status) {
            "the debugger.";
   case swift::serialization::Status::MissingDependency:
     return "The module file depends on another module that can't be loaded.";
-  case swift::serialization::Status::MissingShadowedModule:
+  case swift::serialization::Status::MissingUnderlyingModule:
     return "The module file is an overlay for a Clang module, which can't be "
            "found.";
   case swift::serialization::Status::CircularDependency:
