@@ -295,6 +295,13 @@ def CC : SystemZReg<"cc">;
 let isAllocatable = 0, CopyCost = -1 in
   def CCR : RegisterClass<"SystemZ", [i32], 32, (add CC)>;
 
+// The floating-point control register.
+// Note: We only model the current rounding modes and the IEEE masks.
+// IEEE flags and DXC are not modeled here.
+def FPC : SystemZReg<"fpc">;
+let isAllocatable = 0 in
+  def FPCRegs : RegisterClass<"SystemZ", [i32], 32, (add FPC)>;
+
 // Access registers.
 class ACR32<bits<16> num, string n> : SystemZReg<n> {
   let HWEncoding = num;

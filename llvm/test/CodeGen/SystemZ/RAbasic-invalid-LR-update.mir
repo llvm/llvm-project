@@ -181,11 +181,11 @@ body:             |
     J %bb.3
   
   bb.3:
-    WFCDB undef %46, %45, implicit-def $cc
+    WFCDB undef %46, %45, implicit-def $cc, implicit $fpc
     %48 = IPM implicit killed $cc
     %48 = AFIMux %48, 268435456, implicit-def dead $cc
     %6 = RISBMux undef %6, %48, 31, 159, 35
-    WFCDB undef %50, %45, implicit-def $cc
+    WFCDB undef %50, %45, implicit-def $cc, implicit $fpc
     BRC 15, 6, %bb.1, implicit killed $cc
     J %bb.4
   

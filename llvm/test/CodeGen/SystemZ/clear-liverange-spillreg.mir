@@ -401,7 +401,7 @@ body:             |
     BRC 14, 6, %bb.29, implicit killed $cc
   
   bb.28:
-    %130 = CDFBR %60
+    %130 = CDFBR %60, implicit $fpc
     J %bb.30
   
   bb.29:

@@ -85,8 +85,8 @@ body:             |
     %6:fp32bit = SelectVR32 %3, %4, 15, 7, implicit $cc
     DBG_VALUE %6, $noreg, !7, !DIExpression(), debug-location !9
     %7:fp32bit = SelectVR32 %1, %4, 15, 7, implicit $cc
-    %8:fp32bit = AEBR %5, killed %6, implicit-def dead $cc
-    %9:fp32bit = AEBR %8, killed %7, implicit-def dead $cc
+    %8:fp32bit = AEBR %5, killed %6, implicit-def dead $cc, implicit $fpc
+    %9:fp32bit = AEBR %8, killed %7, implicit-def dead $cc, implicit $fpc
     $f0s = COPY %9
     Return implicit $f0s
 

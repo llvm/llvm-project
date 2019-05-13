@@ -255,7 +255,7 @@ let isCall = 1, Defs = [CC] in {
 }
 
 // Regular calls.
-let isCall = 1, Defs = [R14D, CC] in {
+let isCall = 1, Defs = [R14D, CC], Uses = [FPC] in {
   def CallBRASL : Alias<6, (outs), (ins pcrel32:$I2, variable_ops),
                         [(z_call pcrel32:$I2)]>;
   def CallBASR  : Alias<2, (outs), (ins ADDR64:$R2, variable_ops),
