@@ -3,6 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3 < %s -mattr=-flat-for-global | FileCheck -check-prefix=GCNHSA -check-prefix=CIHSA -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3,-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=VIHSA -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3,-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=GFX10HSA -check-prefix=ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 
@@ -42,6 +43,10 @@
 ; GCNHSA: private_segment_alignment = 4
 ; GCNHSA: .end_amd_kernel_code_t
 
+; GFX10HSA: s_add_u32 [[FLAT_SCR_LO:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GFX10HSA-DAG: s_addc_u32 [[FLAT_SCR_HI:s[0-9]+]], s{{[0-9]+}}, 0
+; GFX10HSA-DAG: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), [[FLAT_SCR_LO]]
+; GFX10HSA-DAG: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), [[FLAT_SCR_HI]]
 
 ; GCNHSA: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen
 ; GCNHSA: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen

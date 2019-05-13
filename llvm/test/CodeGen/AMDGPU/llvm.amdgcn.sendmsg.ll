@@ -1,5 +1,6 @@
-;RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-;RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+;RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
+;RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIPLUS -check-prefix=SIVI %s
+;RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIPLUS -check-prefix=GFX9 %s
 
 ; GCN-LABEL: {{^}}test_interrupt:
 ; GCN: s_mov_b32 m0, 0
@@ -51,9 +52,21 @@ body:
   ret void
 }
 
+; GCN-LABEL: {{^}}test_gs_alloc_req:
+; GCN: s_mov_b32 m0, s0
+; GCN-NOT: s_mov_b32 m0
+; VIPLUS-NEXT: s_nop 0
+; SIVI: s_sendmsg 9
+; GFX9: s_sendmsg sendmsg(MSG_GS_ALLOC_REQ)
+define amdgpu_kernel void @test_gs_alloc_req(i32 inreg %a) {
+body:
+  call void @llvm.amdgcn.s.sendmsg(i32 9, i32 %a)
+  ret void
+}
+
 ; GCN-LABEL: {{^}}sendmsg:
 ; GCN: s_mov_b32 m0, s0
-; VI-NEXT: s_nop 0
+; VIPLUS-NEXT: s_nop 0
 ; GCN-NEXT: sendmsg(MSG_GS_DONE, GS_OP_NOP)
 ; GCN-NEXT: s_endpgm
 define amdgpu_gs void @sendmsg(i32 inreg %a) #0 {
@@ -63,7 +76,7 @@ define amdgpu_gs void @sendmsg(i32 inreg %a) #0 {
 
 ; GCN-LABEL: {{^}}sendmsghalt:
 ; GCN: s_mov_b32 m0, s0
-; VI-NEXT: s_nop 0
+; VIPLUS-NEXT: s_nop 0
 ; GCN-NEXT: s_sendmsghalt sendmsg(MSG_INTERRUPT)
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @sendmsghalt(i32 inreg %a) #0 {
