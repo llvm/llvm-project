@@ -402,6 +402,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     if (CurrentDef == Shape.PromiseAlloca)
       continue;
 
+    uint64_t Count = 1;
     Type *Ty = nullptr;
     if (auto *AI = dyn_cast<AllocaInst>(CurrentDef)) {
       Ty = AI->getAllocatedType();
@@ -413,11 +414,18 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
           Padder.addType(PaddingTy);
         }
       }
+      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize()))
+        Count = CI->getValue().getZExtValue();
+      else
+        report_fatal_error("Coroutines cannot handle non static allocas yet");
     } else {
       Ty = CurrentDef->getType();
     }
     S.setFieldIndex(Types.size());
-    Types.push_back(Ty);
+    if (Count == 1)
+      Types.push_back(Ty);
+    else
+      Types.push_back(ArrayType::get(Ty, Count));
     Padder.addType(Ty);
   }
   FrameTy->setBody(Types);
@@ -470,6 +478,7 @@ static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
 //
 static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   auto *CB = Shape.CoroBegin;
+  LLVMContext &C = CB->getContext();
   IRBuilder<> Builder(CB->getNextNode());
   StructType *FrameTy = Shape.FrameTy;
   PointerType *FramePtrTy = FrameTy->getPointerTo();
@@ -491,14 +500,38 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   if (Shape.PromiseAlloca)
     Allocas.emplace_back(Shape.PromiseAlloca, coro::Shape::PromiseField);
 
+  // Create a GEP with the given index into the coroutine frame for the original
+  // value Orig. Appends an extra 0 index for array-allocas, preserving the
+  // original type.
+  auto GetFramePointer = [&](uint32_t Index, Value *Orig) -> Value * {
+    SmallVector<Value *, 3> Indices = {
+        ConstantInt::get(Type::getInt32Ty(C), 0),
+        ConstantInt::get(Type::getInt32Ty(C), Index),
+    };
+
+    if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
+      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
+        auto Count = CI->getValue().getZExtValue();
+        if (Count > 1) {
+          Indices.push_back(ConstantInt::get(Type::getInt32Ty(C), 0));
+        }
+      } else {
+        report_fatal_error("Coroutines cannot handle non static allocas yet");
+      }
+    }
+
+    return Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices);
+  };
+
   // Create a load instruction to reload the spilled value from the coroutine
   // frame.
   auto CreateReload = [&](Instruction *InsertBefore) {
     assert(Index && "accessing unassigned field number");
     Builder.SetInsertPoint(InsertBefore);
-    auto *G = Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, Index,
-                                                 CurrentValue->getName() +
-                                                     Twine(".reload.addr"));
+
+    auto *G = GetFramePointer(Index, CurrentValue);
+    G->setName(CurrentValue->getName() + Twine(".reload.addr"));
+
     return isa<AllocaInst>(CurrentValue)
                ? G
                : Builder.CreateLoad(FrameTy->getElementType(Index), G,
@@ -588,8 +621,8 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   Builder.SetInsertPoint(&Shape.AllocaSpillBlock->front());
   // If we found any allocas, replace all of their remaining uses with Geps.
   for (auto &P : Allocas) {
-    auto *G =
-        Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, P.second);
+    auto *G = GetFramePointer(P.second, P.first);
+
     // We are not using ReplaceInstWithInst(P.first, cast<Instruction>(G)) here,
     // as we are changing location of the instruction.
     G->takeName(P.first);
