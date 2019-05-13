@@ -160,10 +160,26 @@ define <16 x i32> @test16_v16i32_undef(<16 x i32> %a, <16 x i32> %b) {
 ; SSE-NEXT:    phaddd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test16_v16i32_undef:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX-SLOW-LABEL: test16_v16i32_undef:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: test16_v16i32_undef:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    retq
+;
+; AVX2-FAST-LABEL: test16_v16i32_undef:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    retq
+;
+; AVX512-FAST-LABEL: test16_v16i32_undef:
+; AVX512-FAST:       # %bb.0:
+; AVX512-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-FAST-NEXT:    retq
   %vecext = extractelement <16 x i32> %a, i32 0
   %vecext1 = extractelement <16 x i32> %a, i32 1
   %add = add i32 %vecext, %vecext1
