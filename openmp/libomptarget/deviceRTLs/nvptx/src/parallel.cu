@@ -249,8 +249,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   uint16_t &NumThreadsClause =
       omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
 
-  uint16_t NumThreads = determineNumberOfThreads(
-      NumThreadsClause, currTaskDescr->NThreads(), threadLimit);
+  uint16_t NumThreads =
+      determineNumberOfThreads(NumThreadsClause, nThreads, threadLimit);
 
   if (NumThreadsClause != 0) {
     // Reset request to avoid propagating to successive #parallel
@@ -308,7 +308,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
     PRINT(LD_PAR,
           "thread will execute parallel region with id %d in a team of "
           "%d threads\n",
-          (int)newTaskDescr->ThreadId(), (int)newTaskDescr->NThreads());
+          (int)newTaskDescr->ThreadId(), (int)nThreads);
 
     isActive = true;
     IncParallelLevel(threadsInTeam != 1);
