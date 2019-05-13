@@ -1,0 +1,20 @@
+MODULE Linux x86_64 E5894855C35DCCCCCCCCCCCCCCCCCCCC0 linux.out
+INFO CODE_ID E35C283BC327C28762DB788BF5A4078BE2351448
+FUNC 0 2 0 func0
+FUNC 2 1 0 func2
+FUNC 3 1 0 func3
+FUNC 4 1 0 func4
+FUNC 5 1 0 func5
+FUNC 6 1 0 func6
+FUNC 7 2 0 func7
+FUNC 9 1 0 func9
+STACK CFI INIT 0 2 .cfa: $rsp .ra: .cfa $rbp: $rsp
+STACK CFI 1 $rbp: $rax $rbx: $rcx
+STACK CFI INIT 2 1 $r47: $r42
+STACK CFI INIT 3 1 $rbp:
+STACK CFI INIT 4 1 $rbp
+STACK CFI INIT 5 1 $rbp: $rbx $rsp:
+STACK CFI INIT 6 1 $rbp: $rsp:
+STACK CFI INIT 7 1 .cfa: $rsp
+STACK CFI bogus
+STACK CFI INIT 9 1 .cfa: $rbp .ra: $rax

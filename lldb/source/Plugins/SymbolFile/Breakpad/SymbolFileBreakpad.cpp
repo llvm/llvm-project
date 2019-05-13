@@ -15,9 +15,11 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace lldb;
@@ -370,6 +372,155 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   symtab.CalculateSymbolSizes();
 }
 
+static llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+GetRule(llvm::StringRef &unwind_rules) {
+  // Unwind rules are of the form
+  //   register1: expression1 register2: expression2 ...
+  // We assume none of the tokens in expression<n> end with a colon.
+
+  llvm::StringRef lhs, rest;
+  std::tie(lhs, rest) = getToken(unwind_rules);
+  if (!lhs.consume_back(":"))
+    return llvm::None;
+
+  // Seek forward to the next register: expression pair
+  llvm::StringRef::size_type pos = rest.find(": ");
+  if (pos == llvm::StringRef::npos) {
+    // No pair found, this means the rest of the string is a single expression.
+    unwind_rules = llvm::StringRef();
+    return std::make_pair(lhs, rest);
+  }
+
+  // Go back one token to find the end of the current rule.
+  pos = rest.rfind(' ', pos);
+  if (pos == llvm::StringRef::npos)
+    return llvm::None;
+
+  llvm::StringRef rhs = rest.take_front(pos);
+  unwind_rules = rest.drop_front(pos);
+  return std::make_pair(lhs, rhs);
+}
+
+static const RegisterInfo *
+ResolveRegister(const SymbolFile::RegisterInfoResolver &resolver,
+                llvm::StringRef name) {
+  if (name.consume_front("$"))
+    return resolver.ResolveName(name);
+
+  return nullptr;
+}
+
+static const RegisterInfo *
+ResolveRegisterOrRA(const SymbolFile::RegisterInfoResolver &resolver,
+                    llvm::StringRef name) {
+  if (name == ".ra")
+    return resolver.ResolveNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  return ResolveRegister(resolver, name);
+}
+
+bool SymbolFileBreakpad::ParseUnwindRow(llvm::StringRef unwind_rules,
+                                        const RegisterInfoResolver &resolver,
+                                        UnwindPlan::Row &row) {
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
+
+  llvm::BumpPtrAllocator node_alloc;
+  while (auto rule = GetRule(unwind_rules)) {
+    node_alloc.Reset();
+    llvm::StringRef lhs = rule->first;
+    postfix::Node *rhs = postfix::Parse(rule->second, node_alloc);
+    if (!rhs) {
+      LLDB_LOG(log, "Could not parse `{0}` as unwind rhs.", rule->second);
+      return false;
+    }
+
+    bool success = postfix::ResolveSymbols(
+        rhs, [&](postfix::SymbolNode &symbol) -> postfix::Node * {
+          llvm::StringRef name = symbol.GetName();
+          if (name == ".cfa" && lhs != ".cfa")
+            return postfix::MakeNode<postfix::InitialValueNode>(node_alloc);
+
+          if (const RegisterInfo *info = ResolveRegister(resolver, name)) {
+            return postfix::MakeNode<postfix::RegisterNode>(
+                node_alloc, info->kinds[eRegisterKindLLDB]);
+          }
+          return nullptr;
+        });
+
+    if (!success) {
+      LLDB_LOG(log, "Resolving symbols in `{0}` failed.", rule->second);
+      return false;
+    }
+
+    ArchSpec arch = m_obj_file->GetArchitecture();
+    StreamString dwarf(Stream::eBinary, arch.GetAddressByteSize(),
+                       arch.GetByteOrder());
+    ToDWARF(*rhs, dwarf);
+    uint8_t *saved = m_allocator.Allocate<uint8_t>(dwarf.GetSize());
+    std::memcpy(saved, dwarf.GetData(), dwarf.GetSize());
+
+    if (lhs == ".cfa") {
+      row.GetCFAValue().SetIsDWARFExpression(saved, dwarf.GetSize());
+    } else if (const RegisterInfo *info = ResolveRegisterOrRA(resolver, lhs)) {
+      UnwindPlan::Row::RegisterLocation loc;
+      loc.SetIsDWARFExpression(saved, dwarf.GetSize());
+      row.SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
+    } else
+      LLDB_LOG(log, "Invalid register `{0}` in unwind rule.", lhs);
+  }
+  if (unwind_rules.empty())
+    return true;
+
+  LLDB_LOG(log, "Could not parse `{0}` as an unwind rule.", unwind_rules);
+  return false;
+}
+
+UnwindPlanSP
+SymbolFileBreakpad::GetUnwindPlan(const Address &address,
+                                  const RegisterInfoResolver &resolver) {
+  ParseUnwindData();
+  const UnwindMap::Entry *entry =
+      m_unwind_data->FindEntryThatContains(address.GetFileAddress());
+  if (!entry)
+    return nullptr;
+
+  addr_t base = GetBaseFileAddress();
+  if (base == LLDB_INVALID_ADDRESS)
+    return nullptr;
+
+  LineIterator It(*m_obj_file, Record::StackCFI, entry->data), End(*m_obj_file);
+  llvm::Optional<StackCFIRecord> init_record = StackCFIRecord::parse(*It);
+  assert(init_record.hasValue());
+  assert(init_record->Size.hasValue());
+
+  auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
+  plan_sp->SetSourceName("breakpad STACK CFI");
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  plan_sp->SetPlanValidAddressRange(
+      AddressRange(base + init_record->Address, *init_record->Size,
+                   m_obj_file->GetModule()->GetSectionList()));
+
+  auto row_sp = std::make_shared<UnwindPlan::Row>();
+  row_sp->SetOffset(0);
+  if (!ParseUnwindRow(init_record->UnwindRules, resolver, *row_sp))
+    return nullptr;
+  plan_sp->AppendRow(row_sp);
+  for (++It; It != End; ++It) {
+    llvm::Optional<StackCFIRecord> record = StackCFIRecord::parse(*It);
+    if (!record.hasValue())
+      return nullptr;
+    if (record->Size.hasValue())
+      break;
+
+    row_sp = std::make_shared<UnwindPlan::Row>(*row_sp);
+    row_sp->SetOffset(record->Address - init_record->Address);
+    if (!ParseUnwindRow(record->UnwindRules, resolver, *row_sp))
+      return nullptr;
+    plan_sp->AppendRow(row_sp);
+  }
+  return plan_sp;
+}
+
 SymbolVendor &SymbolFileBreakpad::GetSymbolVendor() {
   return *m_obj_file->GetModule()->GetSymbolVendor();
 }
@@ -475,4 +626,28 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
   if (next_addr)
     finish_sequence();
   data.support_files = map.translate(cu, *m_files);
+}
+
+void SymbolFileBreakpad::ParseUnwindData() {
+  if (m_unwind_data)
+    return;
+
+  m_unwind_data.emplace();
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
+  addr_t base = GetBaseFileAddress();
+  if (base == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "SymbolFile parsing failed: Unable to fetch the base address "
+                  "of object file.");
+  }
+
+  for (LineIterator It(*m_obj_file, Record::StackCFI), End(*m_obj_file);
+       It != End; ++It) {
+    if (auto record = StackCFIRecord::parse(*It)) {
+      if (record->Size)
+        m_unwind_data->Append(UnwindMap::Entry(
+            base + record->Address, *record->Size, It.GetBookmark()));
+    } else
+      LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", *It);
+  }
+  m_unwind_data->Sort();
 }
