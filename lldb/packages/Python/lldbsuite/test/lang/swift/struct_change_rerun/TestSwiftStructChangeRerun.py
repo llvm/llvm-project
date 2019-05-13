@@ -25,16 +25,11 @@ class TestSwiftStructChangeRerun(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=decorators.no_match("dsym"))
-    @swiftTest
-    def test_swift_struct_change_rerun(self):
-        """Test that we display self correctly for an inline-initialized struct"""
-        self.do_test(True)
-
     def setUp(self):
         TestBase.setUp(self)
 
-    def do_test(self, build_dsym):
+    @swiftTest
+    def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""
         copied_main_swift = self.getBuildArtifact("main.swift")
         
@@ -69,10 +64,7 @@ class TestSwiftStructChangeRerun(TestBase):
         print('build with main2.swift')
         cleanup()
         shutil.copyfile("main2.swift", copied_main_swift)
-        if build_dsym:
-            self.buildDsym()
-        else:
-            self.buildDwarf()
+        self.build()
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
