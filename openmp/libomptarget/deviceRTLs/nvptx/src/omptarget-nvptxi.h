@@ -31,7 +31,7 @@ INLINE void omptarget_nvptx_TaskDescr::SetRuntimeSched(omp_sched_t sched) {
 }
 
 INLINE void
-omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr(bool isSPMDExecutionMode) {
+omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
   // slow method
   // flag:
   //   default sched is static,
@@ -39,8 +39,6 @@ omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr(bool isSPMDExecutionMode) {
   //   not in parallel
 
   items.flags = 0;
-  items.nthreads = GetNumberOfProcsInTeam(isSPMDExecutionMode);
-  ;                                // threads: whatever was alloc by kernel
   items.threadId = 0;         // is master
   items.runtimeChunkSize = 1; // prefered chunking statik with chunk 1
 }
@@ -57,7 +55,6 @@ INLINE void omptarget_nvptx_TaskDescr::InitLevelOneTaskDescr(
 
   items.flags =
       TaskDescr_InPar | TaskDescr_IsParConstr; // set flag to parallel
-  items.nthreads = 0; // # threads for subsequent parallel region
   items.threadId =
       GetThreadIdInBlock(); // get ids from cuda (only called for 1st level)
   items.runtimeChunkSize = 1; // prefered chunking statik with chunk 1
@@ -173,8 +170,8 @@ omptarget_nvptx_ThreadPrivateContext::InitThreadPrivateContext(int tid) {
 // Team Descriptor
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr(bool isSPMDExecutionMode) {
-  levelZeroTaskDescr.InitLevelZeroTaskDescr(isSPMDExecutionMode);
+INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr() {
+  levelZeroTaskDescr.InitLevelZeroTaskDescr();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
