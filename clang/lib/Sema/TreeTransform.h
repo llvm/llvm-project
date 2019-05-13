@@ -3254,9 +3254,10 @@ public:
   ExprResult RebuildCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
                                 BinaryOperatorKind Operator,
                                 SourceLocation EllipsisLoc, Expr *RHS,
-                                SourceLocation RParenLoc) {
+                                SourceLocation RParenLoc,
+                                Optional<unsigned> NumExpansions) {
     return getSema().BuildCXXFoldExpr(LParenLoc, LHS, Operator, EllipsisLoc,
-                                      RHS, RParenLoc);
+                                      RHS, RParenLoc, NumExpansions);
   }
 
   /// Build an empty C++1z fold-expression with the given operator.
@@ -11823,7 +11824,8 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
   // be expanded.
   bool Expand = true;
   bool RetainExpansion = false;
-  Optional<unsigned> NumExpansions;
+  Optional<unsigned> OrigNumExpansions = E->getNumExpansions(),
+                     NumExpansions = OrigNumExpansions;
   if (getDerived().TryExpandParameterPacks(E->getEllipsisLoc(),
                                            Pattern->getSourceRange(),
                                            Unexpanded,
@@ -11852,7 +11854,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
 
     return getDerived().RebuildCXXFoldExpr(
         E->getBeginLoc(), LHS.get(), E->getOperator(), E->getEllipsisLoc(),
-        RHS.get(), E->getEndLoc());
+        RHS.get(), E->getEndLoc(), NumExpansions);
   }
 
   // The transform has determined that we should perform an elementwise
@@ -11873,7 +11875,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
 
     Result = getDerived().RebuildCXXFoldExpr(
         E->getBeginLoc(), Out.get(), E->getOperator(), E->getEllipsisLoc(),
-        Result.get(), E->getEndLoc());
+        Result.get(), E->getEndLoc(), OrigNumExpansions);
     if (Result.isInvalid())
       return true;
   }
@@ -11890,7 +11892,8 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       Result = getDerived().RebuildCXXFoldExpr(
           E->getBeginLoc(), LeftFold ? Result.get() : Out.get(),
           E->getOperator(), E->getEllipsisLoc(),
-          LeftFold ? Out.get() : Result.get(), E->getEndLoc());
+          LeftFold ? Out.get() : Result.get(), E->getEndLoc(),
+          OrigNumExpansions);
     } else if (Result.isUsable()) {
       // We've got down to a single element; build a binary operator.
       Result = getDerived().RebuildBinaryOperator(
@@ -11915,7 +11918,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
 
     Result = getDerived().RebuildCXXFoldExpr(
         E->getBeginLoc(), Result.get(), E->getOperator(), E->getEllipsisLoc(),
-        Out.get(), E->getEndLoc());
+        Out.get(), E->getEndLoc(), OrigNumExpansions);
     if (Result.isInvalid())
       return true;
   }

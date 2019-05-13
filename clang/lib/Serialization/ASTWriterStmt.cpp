@@ -1780,6 +1780,7 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Record.AddSourceLocation(E->LParenLoc);
   Record.AddSourceLocation(E->EllipsisLoc);
   Record.AddSourceLocation(E->RParenLoc);
+  Record.push_back(E->NumExpansions);
   Record.AddStmt(E->SubExprs[0]);
   Record.AddStmt(E->SubExprs[1]);
   Record.push_back(E->Opcode);
