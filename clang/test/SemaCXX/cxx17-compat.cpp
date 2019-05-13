@@ -63,3 +63,12 @@ void ForRangeInit() {
     // expected-warning@-4 {{range-based for loop initialization statements are incompatible with C++ standards before C++2a}}
 #endif
 }
+
+struct ConstexprVirtual {
+  virtual constexpr void f() {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{virtual function cannot be constexpr}}
+#else
+    // expected-warning@-4 {{virtual constexpr functions are incompatible with C++ standards before C++2a}}
+#endif
+};

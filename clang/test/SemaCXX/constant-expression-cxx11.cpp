@@ -2284,3 +2284,11 @@ namespace PR40430 {
   };
   static_assert(S().foo() == 'f', "");
 }
+
+namespace PR41854 {
+  struct e { operator int(); };
+  struct f { e c; };
+  int a;
+  f &d = reinterpret_cast<f&>(a);
+  unsigned b = d.c;
+}
