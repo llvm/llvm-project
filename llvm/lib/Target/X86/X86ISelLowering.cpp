@@ -44027,40 +44027,12 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
 
     // If we are in non-pic codegen mode, we allow the address of a global (with
     // an optional displacement) to be used with 'i'.
-    GlobalAddressSDNode *GA = nullptr;
-    int64_t Offset = 0;
-
-    // Match either (GA), (GA+C), (GA+C1+C2), etc.
-    while (1) {
-      if ((GA = dyn_cast<GlobalAddressSDNode>(Op))) {
-        Offset += GA->getOffset();
-        break;
-      } else if (Op.getOpcode() == ISD::ADD) {
-        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-          Offset += C->getZExtValue();
-          Op = Op.getOperand(0);
-          continue;
-        }
-      } else if (Op.getOpcode() == ISD::SUB) {
-        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-          Offset += -C->getZExtValue();
-          Op = Op.getOperand(0);
-          continue;
-        }
-      }
-
-      // Otherwise, this isn't something we can handle, reject it.
-      return;
-    }
-
-    const GlobalValue *GV = GA->getGlobal();
-    // If we require an extra load to get this address, as in PIC mode, we
-    // can't accept it.
-    if (isGlobalStubReference(Subtarget.classifyGlobalReference(GV)))
-      return;
-
-    Result = DAG.getTargetGlobalAddress(GV, SDLoc(Op),
-                                        GA->getValueType(0), Offset);
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Op))
+      // If we require an extra load to get this address, as in PIC mode, we
+      // can't accept it.
+      if (isGlobalStubReference(
+              Subtarget.classifyGlobalReference(GA->getGlobal())))
+        return;
     break;
   }
   }
