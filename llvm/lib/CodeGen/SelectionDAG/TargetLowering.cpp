@@ -3542,46 +3542,41 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   case 'i':    // Simple Integer or Relocatable Constant
   case 'n':    // Simple Integer
   case 's': {  // Relocatable Constant
-    // These operands are interested in values of the form (GV+C), where C may
-    // be folded in as an offset of GV, or it may be explicitly added.  Also, it
-    // is possible and fine if either GV or C are missing.
-    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op);
-    GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op);
 
-    // If we have "(add GV, C)", pull out GV/C
-    if (Op.getOpcode() == ISD::ADD) {
-      C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
-      GA = dyn_cast<GlobalAddressSDNode>(Op.getOperand(0));
-      if (!C || !GA) {
-        C = dyn_cast<ConstantSDNode>(Op.getOperand(0));
-        GA = dyn_cast<GlobalAddressSDNode>(Op.getOperand(1));
-      }
-      if (!C || !GA) {
-        C = nullptr;
-        GA = nullptr;
-      }
-    }
+    GlobalAddressSDNode *GA;
+    ConstantSDNode *C;
+    uint64_t Offset = 0;
 
-    // If we find a valid operand, map to the TargetXXX version so that the
-    // value itself doesn't get selected.
-    if (GA) {   // Either &GV   or   &GV+C
-      if (ConstraintLetter != 'n') {
-        int64_t Offs = GA->getOffset();
-        if (C) Offs += C->getZExtValue();
-        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(),
-                                                 C ? SDLoc(C) : SDLoc(),
-                                                 Op.getValueType(), Offs));
-      }
-      return;
-    }
-    if (C) {   // just C, no GV.
-      // Simple constants are not allowed for 's'.
-      if (ConstraintLetter != 's') {
-        // gcc prints these as sign extended.  Sign extend value to 64 bits
-        // now; without this it would get ZExt'd later in
-        // ScheduleDAGSDNodes::EmitNode, which is very generic.
-        Ops.push_back(DAG.getTargetConstant(C->getSExtValue(),
+    // Match (GA) or (C) or (GA+C) or (GA-C) or ((GA+C)+C) or (((GA+C)+C)+C),
+    // etc., since getelementpointer is variadic. We can't use
+    // SelectionDAG::FoldSymbolOffset because it expects the GA to be accessible
+    // while in this case the GA may be furthest from the root node which is
+    // likely an ISD::ADD.
+    while (1) {
+      if ((GA = dyn_cast<GlobalAddressSDNode>(Op)) && ConstraintLetter != 'n') {
+        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
+                                                 GA->getValueType(0),
+                                                 Offset + GA->getOffset()));
+        return;
+      } else if ((C = dyn_cast<ConstantSDNode>(Op)) &&
+                 ConstraintLetter != 's') {
+        Ops.push_back(DAG.getTargetConstant(Offset + C->getSExtValue(),
                                             SDLoc(C), MVT::i64));
+        return;
+      } else {
+        const unsigned OpCode = Op.getOpcode();
+        if (OpCode == ISD::ADD || OpCode == ISD::SUB) {
+          if ((C = dyn_cast<ConstantSDNode>(Op.getOperand(0))))
+            Op = Op.getOperand(1);
+          // Subtraction is not commutative.
+          else if (OpCode == ISD::ADD &&
+                   (C = dyn_cast<ConstantSDNode>(Op.getOperand(1))))
+            Op = Op.getOperand(0);
+          else
+            return;
+          Offset += (OpCode == ISD::ADD ? 1 : -1) * C->getSExtValue();
+          continue;
+        }
       }
       return;
     }
