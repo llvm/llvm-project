@@ -25848,12 +25848,13 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
       DAG.getTargetConstant(1, dl, MVT::i8),   // Scale
       DAG.getRegister(0, MVT::i32),            // Index
       DAG.getTargetConstant(0, dl, MVT::i32),  // Disp
-      DAG.getRegister(0, MVT::i32),            // Segment.
+      DAG.getRegister(0, MVT::i16),            // Segment.
       Zero,
       Chain
     };
-    SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, dl, MVT::Other, Ops);
-    return SDValue(Res, 0);
+    SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, dl, MVT::i32,
+                                     MVT::Other, Ops);
+    return SDValue(Res, 1);
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
@@ -26299,17 +26300,18 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
   // https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
 
   if (Subtarget.is64Bit()) {
-    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i8);
+    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
     SDValue Ops[] = {
       DAG.getRegister(X86::RSP, MVT::i64),                  // Base
       DAG.getTargetConstant(1, DL, MVT::i8),                // Scale
       DAG.getRegister(0, MVT::i64),                         // Index
       DAG.getTargetConstant(0, DL, MVT::i32),               // Disp
-      DAG.getRegister(0, MVT::i32),                         // Segment.
+      DAG.getRegister(0, MVT::i16),                         // Segment.
       Zero,
       Chain};
-    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::Other, Ops);
-    return SDValue(Res, 0);
+    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+                                     MVT::Other, Ops);
+    return SDValue(Res, 1);
   }
 
   SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
@@ -26318,12 +26320,13 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
     DAG.getTargetConstant(1, DL, MVT::i8),          // Scale
     DAG.getRegister(0, MVT::i32),                   // Index
     DAG.getTargetConstant(0, DL, MVT::i32),         // Disp
-    DAG.getRegister(0, MVT::i32),                   // Segment.
+    DAG.getRegister(0, MVT::i16),                   // Segment.
     Zero,
     Chain
   };
-  SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, DL, MVT::Other, Ops);
-  return SDValue(Res, 0);
+  SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+                                   MVT::Other, Ops);
+  return SDValue(Res, 1);
 }
 
 static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
