@@ -163,3 +163,56 @@ define <2 x i8> @PR39893_2(<2 x float> %x) {
   ret <2 x i8> %shuffle
 }
 
+define <4 x double> @fmul_v2f64(<2 x  double> %x, <2 x double> %y) {
+; SSE-LABEL: fmul_v2f64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movapd %xmm1, %xmm2
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE-NEXT:    mulpd %xmm0, %xmm0
+; SSE-NEXT:    mulpd %xmm2, %xmm2
+; SSE-NEXT:    addpd %xmm0, %xmm2
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: fmul_v2f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: fmul_v2f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
+; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX2-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: fmul_v2f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX512-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    retq
+  %s = shufflevector <2 x double> %x, <2 x double> %y, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
+  %bo = fmul fast <4 x double> %s, %s
+  %ext = shufflevector <4 x double> %bo, <4 x double> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %add = fadd fast <4 x double> %bo, %ext
+  %rdx = shufflevector <4 x double> %add, <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  ret <4 x double> %rdx
+}
+
