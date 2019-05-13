@@ -52,9 +52,19 @@ namespace dr1872 { // dr1872: 9
   struct Z : virtual X {};
 
   constexpr int x = A<X>().f();
-  constexpr int y = A<Y>().f(); // expected-error {{constant expression}} expected-note {{call to virtual function}}
+  constexpr int y = A<Y>().f();
+#if __cplusplus <= 201703L
+  // expected-error@-2 {{constant expression}} expected-note@-2 {{call to virtual function}}
+#else
+  static_assert(y == 0);
+#endif
   // Note, this is invalid even though it would not use virtual dispatch.
-  constexpr int y2 = A<Y>().A<Y>::f(); // expected-error {{constant expression}} expected-note {{call to virtual function}}
+  constexpr int y2 = A<Y>().A<Y>::f();
+#if __cplusplus <= 201703L
+  // expected-error@-2 {{constant expression}} expected-note@-2 {{call to virtual function}}
+#else
+  static_assert(y == 0);
+#endif
   constexpr int z = A<Z>().f(); // expected-error {{constant expression}} expected-note {{non-literal type}}
 #endif
 }
