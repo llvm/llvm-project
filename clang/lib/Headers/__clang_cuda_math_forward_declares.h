@@ -27,11 +27,13 @@
   static __inline__ __attribute__((always_inline)) __attribute__((device))
 #endif
 
-__DEVICE__ double abs(double);
-__DEVICE__ float abs(float);
-__DEVICE__ int abs(int);
+#if !(defined(_OPENMP) && defined(__cplusplus))
 __DEVICE__ long abs(long);
 __DEVICE__ long long abs(long long);
+#endif
+__DEVICE__ int abs(int);
+__DEVICE__ double abs(double);
+__DEVICE__ float abs(float);
 __DEVICE__ double acos(double);
 __DEVICE__ float acos(float);
 __DEVICE__ double acosh(double);

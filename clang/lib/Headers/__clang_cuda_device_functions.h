@@ -1493,8 +1493,10 @@ __DEVICE__ double cbrt(double __a) { return __nv_cbrt(__a); }
 __DEVICE__ float cbrtf(float __a) { return __nv_cbrtf(__a); }
 __DEVICE__ double ceil(double __a) { return __nv_ceil(__a); }
 __DEVICE__ float ceilf(float __a) { return __nv_ceilf(__a); }
+#ifndef _OPENMP
 __DEVICE__ int clock() { return __nvvm_read_ptx_sreg_clock(); }
 __DEVICE__ long long clock64() { return __nvvm_read_ptx_sreg_clock64(); }
+#endif
 __DEVICE__ double copysign(double __a, double __b) {
   return __nv_copysign(__a, __b);
 }

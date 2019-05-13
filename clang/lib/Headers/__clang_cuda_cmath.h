@@ -36,8 +36,10 @@
 #define __DEVICE__ static __device__ __inline__ __attribute__((always_inline))
 #endif
 
+#if !(defined(_OPENMP) && defined(__cplusplus))
 __DEVICE__ long long abs(long long __n) { return ::llabs(__n); }
 __DEVICE__ long abs(long __n) { return ::labs(__n); }
+#endif
 __DEVICE__ float abs(float __x) { return ::fabsf(__x); }
 __DEVICE__ double abs(double __x) { return ::fabs(__x); }
 __DEVICE__ float acos(float __x) { return ::acosf(__x); }
