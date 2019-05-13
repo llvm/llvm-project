@@ -1,5 +1,5 @@
 // clang-format off
-// REQUIRES: lld
+// REQUIRES: lld, system-windows
 
 // RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
