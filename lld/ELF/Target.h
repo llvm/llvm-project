@@ -81,7 +81,7 @@ public:
 
   virtual ~TargetInfo();
 
-  unsigned PageSize = 4096;
+  unsigned DefaultCommonPageSize = 4096;
   unsigned DefaultMaxPageSize = 4096;
 
   uint64_t getImageBase() const;

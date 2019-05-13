@@ -2132,7 +2132,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     // segment is the last loadable segment, align the offset of the
     // following section to avoid loading non-segments parts of the file.
     if (LastRX && LastRX->LastSec == Sec)
-      Off = alignTo(Off, Target->PageSize);
+      Off = alignTo(Off, Config->CommonPageSize);
   }
 
   SectionHeaderOff = alignTo(Off, Config->Wordsize);
@@ -2184,7 +2184,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       // The glibc dynamic loader rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
       // rounds up.
-      P->p_memsz = alignTo(P->p_memsz, Target->PageSize);
+      P->p_memsz = alignTo(P->p_memsz, Config->CommonPageSize);
     }
 
     if (P->p_type == PT_TLS && P->p_memsz) {
@@ -2477,10 +2477,10 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   // Fill the last page.
   for (PhdrEntry *P : Phdrs)
     if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
-      fillTrap(Out::BufferStart +
-                   alignDown(P->p_offset + P->p_filesz, Target->PageSize),
+      fillTrap(Out::BufferStart + alignDown(P->p_offset + P->p_filesz,
+                                            Config->CommonPageSize),
                Out::BufferStart +
-                   alignTo(P->p_offset + P->p_filesz, Target->PageSize));
+                   alignTo(P->p_offset + P->p_filesz, Config->CommonPageSize));
 
   // Round up the file size of the last segment to the page boundary iff it is
   // an executable segment to ensure that other tools don't accidentally
@@ -2491,7 +2491,8 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       Last = P;
 
   if (Last && (Last->p_flags & PF_X))
-    Last->p_memsz = Last->p_filesz = alignTo(Last->p_filesz, Target->PageSize);
+    Last->p_memsz = Last->p_filesz =
+        alignTo(Last->p_filesz, Config->CommonPageSize);
 }
 
 // Write section contents to a mmap'ed file.
