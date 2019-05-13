@@ -595,6 +595,17 @@ TypeSP SymbolFileNativePDB::CreateArrayType(PdbTypeSymId type_id,
   return array_sp;
 }
 
+
+TypeSP SymbolFileNativePDB::CreateFunctionType(PdbTypeSymId type_id,
+                                               const MemberFunctionRecord &mfr,
+                                               CompilerType ct) {
+  Declaration decl;
+  return std::make_shared<lldb_private::Type>(
+      toOpaqueUid(type_id), this, ConstString(), 0, nullptr, LLDB_INVALID_UID,
+      lldb_private::Type::eEncodingIsUID, decl, ct,
+      lldb_private::Type::eResolveStateFull);
+}
+
 TypeSP SymbolFileNativePDB::CreateProcedureType(PdbTypeSymId type_id,
                                                 const ProcedureRecord &pr,
                                                 CompilerType ct) {
@@ -654,6 +665,11 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     ProcedureRecord pr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
     return CreateProcedureType(type_id, pr, ct);
+  }
+  if (cvt.kind() == LF_MFUNCTION) {
+    MemberFunctionRecord mfr;
+    llvm::cantFail(TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr));
+    return CreateFunctionType(type_id, mfr, ct);
   }
 
   return nullptr;
