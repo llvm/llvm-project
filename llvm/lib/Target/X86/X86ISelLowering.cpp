@@ -19033,16 +19033,11 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
   if (!IsFP && !Subtarget.hasSSSE3())
     return Op;
 
-  // Defer forming the minimal horizontal op if the vector source has more than
-  // the 2 extract element uses that we're matching here. In that case, we might
-  // form a horizontal op that includes more than 1 add/sub op.
+  // Extract from a common vector.
   if (LHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       RHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       LHS.getOperand(0) != RHS.getOperand(0) ||
-      !LHS.getOperand(0)->hasNUsesOfValue(2, 0))
-    return Op;
-
-  if (!isa<ConstantSDNode>(LHS.getOperand(1)) ||
+      !isa<ConstantSDNode>(LHS.getOperand(1)) ||
       !isa<ConstantSDNode>(RHS.getOperand(1)) ||
       !shouldUseHorizontalOp(true, DAG, Subtarget))
     return Op;
