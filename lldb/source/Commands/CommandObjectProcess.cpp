@@ -193,7 +193,10 @@ protected:
     if (target->GetDisableSTDIO())
       m_options.launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
 
-    m_options.launch_info.GetEnvironment() = target->GetEnvironment();
+    // Merge the launch info environment with the target environment.
+    Environment target_env = target->GetEnvironment();
+    m_options.launch_info.GetEnvironment().insert(target_env.begin(),
+                                                  target_env.end());
 
     if (!target_settings_argv0.empty()) {
       m_options.launch_info.GetArguments().AppendArgument(
