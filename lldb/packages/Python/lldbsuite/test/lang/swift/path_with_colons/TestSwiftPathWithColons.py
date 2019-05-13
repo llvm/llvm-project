@@ -41,11 +41,8 @@ class TestSwiftPathWithColon(TestBase):
 
     def do_test(self):
         """Test that LLDB correctly handles paths with colons"""
-
-        cwd = os.path.dirname(os.path.realpath(__file__))
-
-        src = os.path.join(cwd, 'main.swift')
-        colon_dir = os.path.join(cwd, 'pro:ject')
+        src = os.path.join(self.getSourceDir(), 'main.swift')
+        colon_dir = self.getBuildArtifact('pro:ject')
         copied_src = os.path.join(colon_dir, 'main.swift')
         dst = os.path.join(colon_dir, 'a.out')
         dst_makefile = os.path.join(colon_dir, 'Makefile')
@@ -57,13 +54,17 @@ class TestSwiftPathWithColon(TestBase):
         # clean slate for the next test case.
         def cleanup():
             shutil.rmtree(colon_dir)
+            os.chdir(self.getSourceDir())
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
         f = open(dst_makefile, 'w')
-        f.write(
-            'LEVEL = ../../../../make\nSWIFT_SOURCES := main.swift\ninclude $(LEVEL)/Makefile.rules\n')
+        f.write('''
+LEVEL = ../../../../make
+SWIFT_SOURCES := main.swift
+include $(LEVEL)/Makefile.rules
+''')
         f.close()
 
         shutil.copy(src, copied_src)
@@ -71,11 +72,8 @@ class TestSwiftPathWithColon(TestBase):
         os.chdir(colon_dir)
         self.build()
 
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
         # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.assertTrue(target, VALID_TARGET)
 
         # Don't allow ansi highlighting to interfere with the output.
