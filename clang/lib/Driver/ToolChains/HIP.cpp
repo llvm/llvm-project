@@ -307,8 +307,8 @@ void HIPToolChain::addClangTargetOptions(
   if (BCLibs.empty()) {
     // Get the bc lib file name for ISA version. For example,
     // gfx803 => oclc_isa_version_803.amdgcn.bc.
-    std::string ISAVerBC =
-        "oclc_isa_version_" + GpuArch.drop_front(3).str() + ".amdgcn.bc";
+    std::string GFXVersion = GpuArch.drop_front(3).str();
+    std::string ISAVerBC = "oclc_isa_version_" + GFXVersion + ".amdgcn.bc";
 
     llvm::StringRef FlushDenormalControlBC;
     if (DriverArgs.hasArg(options::OPT_fcuda_flush_denormals_to_zero))
