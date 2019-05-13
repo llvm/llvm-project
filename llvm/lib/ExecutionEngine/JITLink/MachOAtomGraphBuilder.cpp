@@ -85,7 +85,7 @@ MachOAtomGraphBuilder::MachOSection &MachOAtomGraphBuilder::getCommonSection() {
   if (!CommonSymbolsSection) {
     auto Prot = static_cast<sys::Memory::ProtectionFlags>(
         sys::Memory::MF_READ | sys::Memory::MF_WRITE);
-    auto &GenericSection = G->createSection("<common>", Prot, true);
+    auto &GenericSection = G->createSection("<common>", 1, Prot, true);
     CommonSymbolsSection = MachOSection(GenericSection);
   }
   return *CommonSymbolsSection;
@@ -102,6 +102,12 @@ Error MachOAtomGraphBuilder::parseSections() {
 
     unsigned SectionIndex = SecRef.getIndex() + 1;
 
+    uint32_t Align = SecRef.getAlignment();
+    if (!isPowerOf2_32(Align))
+      return make_error<JITLinkError>("Section " + Name +
+                                      " has non-power-of-2 "
+                                      "alignment");
+
     // FIXME: Get real section permissions
     // How, exactly, on MachO?
     sys::Memory::ProtectionFlags Prot;
@@ -112,7 +118,7 @@ Error MachOAtomGraphBuilder::parseSections() {
       Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
                                                        sys::Memory::MF_WRITE);
 
-    auto &GenericSection = G->createSection(Name, Prot, SecRef.isBSS());
+    auto &GenericSection = G->createSection(Name, Align, Prot, SecRef.isBSS());
 
     LLVM_DEBUG({
       dbgs() << "Adding section " << Name << ": "
