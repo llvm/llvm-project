@@ -272,4 +272,29 @@ subtractor_with_alt_entry_subtrahend_quad_B:
         .section        __DATA,__nds_test_sect,regular,no_dead_strip
         .quad 0
 
+# Check that explicit zero-fill symbols are supported
+# jitlink-check: *{8}zero_fill_test = 0
+        .globl zero_fill_test
+.zerofill __DATA,__zero_fill_test,zero_fill_test,8,3
+
+# Check that section alignments are respected.
+# We test this by introducing two segments with alignment 8, each containing one
+# byte of data. We require both symbols to have an aligned address.
+#
+# jitlink-check: section_alignment_check1[2:0] = 0
+# jitlink-check: section_alignment_check2[2:0] = 0
+        .section        __DATA,__sec_align_chk1
+        .p2align 3
+
+        .globl section_alignment_check1
+section_alignment_check1:
+        .byte 0
+
+        .section        __DATA,__sec_align_chk2
+        .p2align 3
+
+        .globl section_alignment_check2
+section_alignment_check2:
+        .byte 0
+
 .subsections_via_symbols
