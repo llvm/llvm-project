@@ -11,9 +11,9 @@ a.out: main.swift
 	# different machine can debug the binary by invoking lldb in their source
 	# root (which could be at a completely different absolute path) and it will
 	# be able to find the source files.
-	mkdir srcroot
-	cp $^ srcroot
-	$(SWIFTC) srcroot/main.swift -debug-prefix-map $(realpath .)=. -o $@ $(SWIFTFLAGS)
+	mkdir $(BUILDDIR)/srcroot
+	cp $^ $(BUILDDIR)/srcroot
+	$(SWIFTC) srcroot/main.swift -debug-prefix-map $(BUILDDIR)=. -o $@ $(SWIFTFLAGS)
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
