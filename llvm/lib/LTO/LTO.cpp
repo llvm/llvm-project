@@ -371,6 +371,14 @@ void llvm::thinLTOResolvePrevailingInIndex(
                                  GUIDPreservedSymbols);
 }
 
+static bool isWeakWriteableObject(GlobalValueSummary *GVS) {
+  if (auto *VarSummary = dyn_cast<GlobalVarSummary>(GVS->getBaseObject()))
+    return !VarSummary->isReadOnly() &&
+           (VarSummary->linkage() == GlobalValue::WeakODRLinkage ||
+            VarSummary->linkage() == GlobalValue::LinkOnceODRLinkage);
+  return false;
+}
+
 static void thinLTOInternalizeAndPromoteGUID(
     GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
     function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
@@ -385,7 +393,12 @@ static void thinLTOInternalizeAndPromoteGUID(
                S->linkage() != GlobalValue::AppendingLinkage &&
                // We can't internalize available_externally globals because this
                // can break function pointer equality.
-               S->linkage() != GlobalValue::AvailableExternallyLinkage)
+               S->linkage() != GlobalValue::AvailableExternallyLinkage &&
+               // Functions and read-only variables with linkonce_odr and weak_odr 
+               // linkage can be internalized. We can't internalize linkonce_odr
+               // and weak_odr variables which are modified somewhere in the
+               // program because reads and writes will become inconsistent.
+               !isWeakWriteableObject(S.get()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
 }
