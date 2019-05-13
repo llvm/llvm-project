@@ -1,13 +1,13 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("AArch64GenAsmWriter") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-asm-writer" ]
   td_file = "../AArch64.td"
 }
 
 tablegen("AArch64GenAsmWriter1") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [
     "-gen-asm-writer",
     "-asmwriternum=1",
@@ -22,7 +22,7 @@ tablegen("AArch64GenInstrInfo") {
 }
 
 tablegen("AArch64GenMCCodeEmitter") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-emitter" ]
   td_file = "../AArch64.td"
 }
@@ -39,6 +39,9 @@ tablegen("AArch64GenSubtargetInfo") {
   td_file = "../AArch64.td"
 }
 
+# This should contain tablegen targets generating .inc files included
+# by other targets. .inc files only used by .cpp files in this directory
+# should be in deps on the static_library instead.
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
@@ -46,10 +49,7 @@ group("tablegen") {
     "../Utils",
   ]
   public_deps = [
-    ":AArch64GenAsmWriter",
-    ":AArch64GenAsmWriter1",
     ":AArch64GenInstrInfo",
-    ":AArch64GenMCCodeEmitter",
     ":AArch64GenRegisterInfo",
     ":AArch64GenSubtargetInfo",
   ]
@@ -61,6 +61,9 @@ static_library("MCTargetDesc") {
     ":tablegen",
   ]
   deps = [
+    ":AArch64GenAsmWriter",
+    ":AArch64GenAsmWriter1",
+    ":AArch64GenMCCodeEmitter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AArch64/TargetInfo",
