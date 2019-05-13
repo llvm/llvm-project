@@ -164,7 +164,6 @@ public:
   }
   INLINE int IsTaskConstruct() const { return !IsParallelConstruct(); }
   // methods for other fields
-  INLINE uint16_t &NThreads() { return items.nthreads; }
   INLINE uint16_t &ThreadId() { return items.threadId; }
   INLINE uint64_t &RuntimeChunkSize() { return items.runtimeChunkSize; }
   INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() const { return prev; }
@@ -172,7 +171,7 @@ public:
     prev = taskDescr;
   }
   // init & copy
-  INLINE void InitLevelZeroTaskDescr(bool isSPMDExecutionMode);
+  INLINE void InitLevelZeroTaskDescr();
   INLINE void InitLevelOneTaskDescr(omptarget_nvptx_TaskDescr *parentTaskDescr);
   INLINE void Copy(omptarget_nvptx_TaskDescr *sourceTaskDescr);
   INLINE void CopyData(omptarget_nvptx_TaskDescr *sourceTaskDescr);
@@ -208,7 +207,6 @@ private:
   struct TaskDescr_items {
     uint8_t flags; // 6 bit used (see flag above)
     uint8_t unused;
-    uint16_t nthreads;         // thread num for subsequent parallel regions
     uint16_t threadId;         // thread id
     uint64_t runtimeChunkSize; // runtime chunk size
   } items;
@@ -249,7 +247,7 @@ public:
   INLINE uint64_t *getLastprivateIterBuffer() { return &lastprivateIterBuffer; }
 
   // init
-  INLINE void InitTeamDescr(bool isSPMDExecutionMode);
+  INLINE void InitTeamDescr();
 
   INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
     // If this is invoked by the master thread of the master warp then intialize
@@ -404,6 +402,7 @@ extern __device__ __shared__ uint8_t
     parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 extern __device__ __shared__ uint16_t threadLimit;
 extern __device__ __shared__ uint16_t threadsInTeam;
+extern __device__ __shared__ uint16_t nThreads;
 extern __device__ __shared__
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
 

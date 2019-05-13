@@ -37,10 +37,8 @@ EXTERN void omp_set_num_threads(int num) {
   PRINT(LD_IO, "call omp_set_num_threads(num %d)\n", num);
   if (num <= 0) {
     WARNING0(LW_INPUT, "expected positive num; ignore\n");
-  } else {
-    omptarget_nvptx_TaskDescr *currTaskDescr =
-        getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
-    currTaskDescr->NThreads() = num;
+  } else if (parallelLevel[GetWarpId()] == 0) {
+    nThreads = num;
   }
 }
 
@@ -54,12 +52,10 @@ EXTERN int omp_get_max_threads(void) {
   if (parallelLevel[GetWarpId()] > 0)
     // We're already in parallel region.
     return 1; // default is 1 thread avail
-  omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
-  ASSERT0(LT_FUSSY, !currTaskDescr->InParallelRegion(),
-          "Should no be in the parallel region");
   // Not currently in a parallel region, return what was set.
-  int rc = currTaskDescr->NThreads();
+  int rc = 1;
+  if (parallelLevel[GetWarpId()] == 0)
+    rc = nThreads;
   ASSERT0(LT_FUSSY, rc >= 0, "bad number of threads");
   PRINT(LD_IO, "call omp_get_max_threads() return %d\n", rc);
   return rc;
@@ -175,7 +171,7 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
                 (int)currTaskDescr->InParallelRegion(), (int)sched,
                 currTaskDescr->RuntimeChunkSize(),
                 (int)currTaskDescr->ThreadId(), (int)threadsInTeam,
-                (int)currTaskDescr->NThreads());
+                (int)nThreads);
         }
 
         if (currTaskDescr->IsParallelConstruct()) {
