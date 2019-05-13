@@ -102,9 +102,8 @@ public:
   //  variant_names[1] => "-[NSString(my_additions) myStringWithCString:]"
   //  variant_names[2] => "+[NSString myStringWithCString:]"
   //  variant_names[3] => "-[NSString myStringWithCString:]"
-  void
-  GetMethodNameVariants(ConstString method_name,
-                        std::vector<ConstString> &variant_names) const override;
+  std::vector<ConstString>
+  GetMethodNameVariants(ConstString method_name) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
