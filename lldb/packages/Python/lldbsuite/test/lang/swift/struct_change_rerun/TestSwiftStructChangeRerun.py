@@ -25,37 +25,31 @@ class TestSwiftStructChangeRerun(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=decorators.no_match("dsym"))
-    @swiftTest
-    def test_swift_struct_change_rerun(self):
-        """Test that we display self correctly for an inline-initialized struct"""
-        self.do_test(True)
-
     def setUp(self):
         TestBase.setUp(self)
 
-    def do_test(self, build_dsym):
+    @swiftTest
+    def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""
-
+        copied_main_swift = self.getBuildArtifact("main.swift")
+        
         # Cleanup the copied source file
         def cleanup():
-            if os.path.exists("main.swift"):
-                os.unlink("main.swift")
+            if os.path.exists(copied_main_swift):
+                os.unlink(copied_main_swift)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        if os.path.exists("main.swift"):
-            os.unlink("main.swift")
-        shutil.copyfile('main1.swift', "main.swift")
         print('build with main1.swift')
+        cleanup()
+        shutil.copyfile("main1.swift", copied_main_swift)
         self.build()
         (target, process, thread, breakpoint) = \
             lldbutil.run_to_source_breakpoint(
                 self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
         var_a = self.frame().EvaluateExpression("a")
-        print(var_a)
         var_a_a = var_a.GetChildMemberWithName("a")
         lldbutil.check_variable(self, var_a_a, False, value="12")
 
@@ -64,16 +58,13 @@ class TestSwiftStructChangeRerun(TestBase):
 
         var_a_c = var_a.GetChildMemberWithName("c")
         self.assertFalse(var_a_c.IsValid(), "make sure a.c doesn't exist")
-
         process.Kill()
 
+        
         print('build with main2.swift')
-        os.unlink("main.swift")
-        shutil.copyfile('main2.swift', "main.swift")
-        if build_dsym:
-            self.buildDsym()
-        else:
-            self.buildDwarf()
+        cleanup()
+        shutil.copyfile("main2.swift", copied_main_swift)
+        self.build()
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -86,7 +77,6 @@ class TestSwiftStructChangeRerun(TestBase):
         self.assertTrue(len(threads) == 1)
 
         var_a = self.frame().EvaluateExpression("a")
-        print(var_a)
         var_a_a = var_a.GetChildMemberWithName("a")
         lldbutil.check_variable(self, var_a_a, False, value="12")
 
