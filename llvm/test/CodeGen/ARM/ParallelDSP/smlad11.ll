@@ -4,15 +4,15 @@
 ; A more complicated chain: 4 mul operations, so we expect 2 smlad calls.
 ;
 ; CHECK:  %mac1{{\.}}054 = phi i32 [ [[V17:%[0-9]+]], %for.body ], [ 0, %for.body.preheader ]
-; CHECK:  [[V8:%[0-9]+]] = bitcast i16* %arrayidx8 to i32*
-; CHECK:  [[V9:%[0-9]+]] = load i32, i32* [[V8]], align 2
 ; CHECK:  [[V10:%[0-9]+]] = bitcast i16* %arrayidx to i32*
 ; CHECK:  [[V11:%[0-9]+]] = load i32, i32* [[V10]], align 2
-; CHECK:  [[V12:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V9]], i32 [[V11]], i32 %mac1{{\.}}054)
-; CHECK:  [[V13:%[0-9]+]] = bitcast i16* %arrayidx17 to i32*
-; CHECK:  [[V14:%[0-9]+]] = load i32, i32* [[V13]], align 2
 ; CHECK:  [[V15:%[0-9]+]] = bitcast i16* %arrayidx4 to i32*
 ; CHECK:  [[V16:%[0-9]+]] = load i32, i32* [[V15]], align 2
+; CHECK:  [[V8:%[0-9]+]] = bitcast i16* %arrayidx8 to i32*
+; CHECK:  [[V9:%[0-9]+]] = load i32, i32* [[V8]], align 2
+; CHECK:  [[V13:%[0-9]+]] = bitcast i16* %arrayidx17 to i32*
+; CHECK:  [[V14:%[0-9]+]] = load i32, i32* [[V13]], align 2
+; CHECK:  [[V12:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V9]], i32 [[V11]], i32 %mac1{{\.}}054)
 ; CHECK:  [[V17:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V14]], i32 [[V16]], i32 [[V12]])
 ;
 ; And we don't want to see a 3rd smlad:
