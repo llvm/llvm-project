@@ -607,6 +607,15 @@ let IntrProperties = [IntrInaccessibleMemOnly] in {
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
 
+  def int_experimental_constrained_fptrunc : Intrinsic<[ llvm_anyfloat_ty ],
+                                                       [ llvm_anyfloat_ty,
+                                                         llvm_metadata_ty,
+                                                         llvm_metadata_ty ]>;
+
+  def int_experimental_constrained_fpext : Intrinsic<[ llvm_anyfloat_ty ],
+                                                     [ llvm_anyfloat_ty,
+                                                       llvm_metadata_ty ]>;
+
   // These intrinsics are sensitive to the rounding mode so we need constrained
   // versions of each of them.  When strict rounding and exception control are
   // not required the non-constrained versions of these intrinsics should be
@@ -688,9 +697,7 @@ let IntrProperties = [IntrInaccessibleMemOnly] in {
                                                        llvm_metadata_ty,
                                                        llvm_metadata_ty ]>;
 }
-// FIXME: Add intrinsics for fcmp, fptrunc, fpext, fptoui and fptosi.
-// FIXME: Add intrinsics for fabs and copysign?
-
+// FIXME: Add intrinsics for fcmp, fptoui and fptosi.
 
 //===------------------------- Expect Intrinsics --------------------------===//
 //

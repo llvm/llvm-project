@@ -154,6 +154,8 @@ private:
 
   SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
                            const SDLoc &dl);
+  SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
+                           const SDLoc &dl, SDValue ChainIn);
   SDValue ExpandBUILD_VECTOR(SDNode *Node);
   SDValue ExpandSCALAR_TO_VECTOR(SDNode *Node);
   void ExpandDYNAMIC_STACKALLOC(SDNode *Node,
@@ -1115,6 +1117,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FTRUNC:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FP_EXTEND:
     // These pseudo-ops get legalized as if they were their non-strict
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
@@ -1741,6 +1745,12 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(EVT VT, SDValue &LHS,
 /// The resultant code need not be legal.
 SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                                EVT DestVT, const SDLoc &dl) {
+  return EmitStackConvert(SrcOp, SlotVT, DestVT, dl, DAG.getEntryNode());
+}
+
+SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
+                                               EVT DestVT, const SDLoc &dl,
+                                               SDValue Chain) {
   // Create the stack frame object.
   unsigned SrcAlign = DAG.getDataLayout().getPrefTypeAlignment(
       SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
@@ -1761,19 +1771,19 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   // later than DestVT.
   SDValue Store;
 
-  if (SrcSize > SlotSize)
-    Store = DAG.getTruncStore(DAG.getEntryNode(), dl, SrcOp, FIPtr, PtrInfo,
+  if (SrcSize > SlotSize) 
+    Store = DAG.getTruncStore(Chain, dl, SrcOp, FIPtr, PtrInfo,
                               SlotVT, SrcAlign);
   else {
     assert(SrcSize == SlotSize && "Invalid store");
     Store =
-        DAG.getStore(DAG.getEntryNode(), dl, SrcOp, FIPtr, PtrInfo, SrcAlign);
+        DAG.getStore(Chain, dl, SrcOp, FIPtr, PtrInfo, SrcAlign);
   }
 
   // Result is a load from the stack slot.
   if (SlotSize == DestSize)
     return DAG.getLoad(DestVT, dl, Store, FIPtr, PtrInfo, DestAlign);
-
+    
   assert(SlotSize < DestSize && "Unknown extension!");
   return DAG.getExtLoad(ISD::EXTLOAD, dl, DestVT, Store, FIPtr, PtrInfo, SlotVT,
                         DestAlign);
@@ -2777,12 +2787,27 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
+  case ISD::STRICT_FP_ROUND:
+    Tmp1 = EmitStackConvert(Node->getOperand(1), 
+                            Node->getValueType(0),
+                            Node->getValueType(0), dl, Node->getOperand(0));
+    ReplaceNode(Node, Tmp1.getNode());
+    LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_ROUND node\n");
+    return true;
   case ISD::FP_ROUND:
   case ISD::BITCAST:
-    Tmp1 = EmitStackConvert(Node->getOperand(0), Node->getValueType(0),
+    Tmp1 = EmitStackConvert(Node->getOperand(0), 
+                            Node->getValueType(0),
                             Node->getValueType(0), dl);
     Results.push_back(Tmp1);
     break;
+  case ISD::STRICT_FP_EXTEND:
+    Tmp1 = EmitStackConvert(Node->getOperand(1),
+                            Node->getOperand(1).getValueType(),
+                            Node->getValueType(0), dl, Node->getOperand(0));
+    ReplaceNode(Node, Tmp1.getNode());
+    LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_EXTEND node\n");
+    return true;
   case ISD::FP_EXTEND:
     Tmp1 = EmitStackConvert(Node->getOperand(0),
                             Node->getOperand(0).getValueType(),

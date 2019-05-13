@@ -7611,6 +7611,10 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   case ISD::STRICT_FFLOOR: NewOpc = ISD::FFLOOR; IsUnary = true; break;
   case ISD::STRICT_FROUND: NewOpc = ISD::FROUND; IsUnary = true; break;
   case ISD::STRICT_FTRUNC: NewOpc = ISD::FTRUNC; IsUnary = true; break;
+  // STRICT_FP_ROUND takes an extra argument describing whether or not
+  // the value will be changed by this node. See ISDOpcodes.h for details.
+  case ISD::STRICT_FP_ROUND: NewOpc = ISD::FP_ROUND; break;
+  case ISD::STRICT_FP_EXTEND: NewOpc = ISD::FP_EXTEND; IsUnary = true; break;
   }
 
   // We're taking this node out of the chain, so we need to re-link things.
@@ -7618,8 +7622,19 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   SDValue OutputChain = SDValue(Node, 1);
   ReplaceAllUsesOfValueWith(OutputChain, InputChain);
 
-  SDVTList VTs = getVTList(Node->getOperand(1).getValueType());
+  SDVTList VTs;
   SDNode *Res = nullptr;
+
+  switch (OrigOpc) {
+  default:
+    VTs = getVTList(Node->getOperand(1).getValueType());
+    break;
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FP_EXTEND:
+    VTs = getVTList(Node->getValueType(0));
+    break;
+  }
+
   if (IsUnary)
     Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1) });
   else if (IsTernary)

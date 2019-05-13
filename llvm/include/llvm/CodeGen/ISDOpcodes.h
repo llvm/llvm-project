@@ -297,6 +297,26 @@ namespace ISD {
     STRICT_FRINT, STRICT_FNEARBYINT, STRICT_FMAXNUM, STRICT_FMINNUM,
     STRICT_FCEIL, STRICT_FFLOOR, STRICT_FROUND, STRICT_FTRUNC,
 
+    /// X = STRICT_FP_ROUND(Y, TRUNC) - Rounding 'Y' from a larger floating 
+    /// point type down to the precision of the destination VT.  TRUNC is a 
+    /// flag, which is always an integer that is zero or one.  If TRUNC is 0,
+    /// this is a normal rounding, if it is 1, this FP_ROUND is known to not
+    /// change the value of Y.
+    ///
+    /// The TRUNC = 1 case is used in cases where we know that the value will
+    /// not be modified by the node, because Y is not using any of the extra
+    /// precision of source type.  This allows certain transformations like
+    /// STRICT_FP_EXTEND(STRICT_FP_ROUND(X,1)) -> X which are not safe for
+    /// STRICT_FP_EXTEND(STRICT_FP_ROUND(X,0)) because the extra bits aren't
+    /// removed.
+    /// It is used to limit optimizations while the DAG is being optimized.
+    STRICT_FP_ROUND,
+
+    /// X = STRICT_FP_EXTEND(Y) - Extend a smaller FP type into a larger FP
+    /// type.
+    /// It is used to limit optimizations while the DAG is being optimized.
+    STRICT_FP_EXTEND,
+
     /// FMA - Perform a * b + c with no intermediate rounding step.
     FMA,
 

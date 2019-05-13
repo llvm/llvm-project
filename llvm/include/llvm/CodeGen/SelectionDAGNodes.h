@@ -691,6 +691,8 @@ public:
       case ISD::STRICT_FFLOOR:
       case ISD::STRICT_FROUND:
       case ISD::STRICT_FTRUNC:
+      case ISD::STRICT_FP_ROUND:
+      case ISD::STRICT_FP_EXTEND:
         return true;
     }
   }

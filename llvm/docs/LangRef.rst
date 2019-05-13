@@ -14823,6 +14823,77 @@ The result produced is the product of the first two operands added to the third
 operand computed with infinite precision, and then rounded to the target
 precision.
 
+'``llvm.experimental.constrained.fptrunc``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ty2>
+      @llvm.experimental.constrained.fptrunc(<type> <value>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.fptrunc``' intrinsic truncates ``value``
+to type ``ty2``.
+
+Arguments:
+""""""""""
+
+The first argument to the '``llvm.experimental.constrained.fptrunc``'
+intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
+<t_vector>` of floating point values. This argument must be larger in size
+than the result.
+
+The second and third arguments specify the rounding mode and exception 
+behavior as described above.
+
+Semantics:
+""""""""""
+
+The result produced is a floating point value truncated to be smaller in size
+than the operand.
+
+'``llvm.experimental.constrained.fpext``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ty2>
+      @llvm.experimental.constrained.fpext(<type> <value>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.fpext``' intrinsic extends a 
+floating-point ``value`` to a larger floating-point value.
+
+Arguments:
+""""""""""
+
+The first argument to the '``llvm.experimental.constrained.fpext``'
+intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
+<t_vector>` of floating point values. This argument must be smaller in size
+than the result.
+
+The second argument specifies the exception behavior as described above.
+
+Semantics:
+""""""""""
+
+The result produced is a floating point value extended to be larger in size
+than the operand. All restrictions that apply to the fpext instruction also
+apply to this intrinsic.
+
 Constrained libm-equivalent Intrinsics
 --------------------------------------
 
