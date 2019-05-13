@@ -1,13 +1,13 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("X86GenAsmWriter") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-asm-writer" ]
   td_file = "../X86.td"
 }
 
 tablegen("X86GenAsmWriter1") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [
     "-gen-asm-writer",
     "-asmwriternum=1",
@@ -33,14 +33,15 @@ tablegen("X86GenSubtargetInfo") {
   td_file = "../X86.td"
 }
 
+# This should contain tablegen targets generating .inc files included
+# by other targets. .inc files only used by .cpp files in this directory
+# should be in deps on the static_library instead.
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
     "../TargetInfo",
   ]
   public_deps = [
-    ":X86GenAsmWriter",
-    ":X86GenAsmWriter1",
     ":X86GenInstrInfo",
     ":X86GenRegisterInfo",
     ":X86GenSubtargetInfo",
@@ -53,6 +54,8 @@ static_library("MCTargetDesc") {
     ":tablegen",
   ]
   deps = [
+    ":X86GenAsmWriter",
+    ":X86GenAsmWriter1",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
