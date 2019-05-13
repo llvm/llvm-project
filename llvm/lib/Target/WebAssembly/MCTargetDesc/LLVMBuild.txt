@@ -18,5 +18,5 @@
 type = Library
 name = WebAssemblyDesc
 parent = WebAssembly
-required_libraries = MC Support WebAssemblyAsmPrinter WebAssemblyInfo
+required_libraries = MC Support WebAssemblyInfo
 add_to_library_groups = WebAssembly
