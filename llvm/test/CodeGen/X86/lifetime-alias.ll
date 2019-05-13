@@ -40,26 +40,28 @@ define dso_local i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (
 ; CHECK-NEXT:    movl $1701999988, -{{[0-9]+}}(%rsp) # imm = 0x65727574
 ; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movabsq $1513209474796486656, %rax # imm = 0x1500000000000000
+; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $21, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $7308613581744070988, %rax # imm = 0x656D69547473614C
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movups {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movabsq $7308613581744070988, %rcx # imm = 0x656D69547473614C
-; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movabsq $792633534417207296, %rcx # imm = 0xB00000000000000
-; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
-; CHECK-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
-; CHECK-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
-; CHECK-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $792633534417207296, %rax # imm = 0xB00000000000000
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; CHECK-NEXT:    movups %xmm1, -{{[0-9]+}}(%rsp)
