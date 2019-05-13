@@ -1596,9 +1596,6 @@ bool Sema::CheckConstexprFunctionDecl(const FunctionDecl *NewFD) {
     //  The definition of a constexpr constructor shall satisfy the following
     //  constraints:
     //  - the class shall not have any virtual base classes;
-    //
-    // FIXME: This only applies to constructors, not arbitrary member
-    // functions.
     const CXXRecordDecl *RD = MD->getParent();
     if (RD->getNumVBases()) {
       Diag(NewFD->getLocation(), diag::err_constexpr_virtual_base)
@@ -1615,25 +1612,21 @@ bool Sema::CheckConstexprFunctionDecl(const FunctionDecl *NewFD) {
     // C++11 [dcl.constexpr]p3:
     //  The definition of a constexpr function shall satisfy the following
     //  constraints:
-    // - it shall not be virtual; (removed in C++20)
+    // - it shall not be virtual;
     const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(NewFD);
     if (Method && Method->isVirtual()) {
-      if (getLangOpts().CPlusPlus2a) {
-        Diag(Method->getLocation(), diag::warn_cxx17_compat_constexpr_virtual);
-      } else {
-        Method = Method->getCanonicalDecl();
-        Diag(Method->getLocation(), diag::err_constexpr_virtual);
+      Method = Method->getCanonicalDecl();
+      Diag(Method->getLocation(), diag::err_constexpr_virtual);
 
-        // If it's not obvious why this function is virtual, find an overridden
-        // function which uses the 'virtual' keyword.
-        const CXXMethodDecl *WrittenVirtual = Method;
-        while (!WrittenVirtual->isVirtualAsWritten())
-          WrittenVirtual = *WrittenVirtual->begin_overridden_methods();
-        if (WrittenVirtual != Method)
-          Diag(WrittenVirtual->getLocation(),
-               diag::note_overridden_virtual_function);
-        return false;
-      }
+      // If it's not obvious why this function is virtual, find an overridden
+      // function which uses the 'virtual' keyword.
+      const CXXMethodDecl *WrittenVirtual = Method;
+      while (!WrittenVirtual->isVirtualAsWritten())
+        WrittenVirtual = *WrittenVirtual->begin_overridden_methods();
+      if (WrittenVirtual != Method)
+        Diag(WrittenVirtual->getLocation(),
+             diag::note_overridden_virtual_function);
+      return false;
     }
 
     // - its return type shall be a literal type;
@@ -15204,8 +15197,7 @@ void Sema::MarkVirtualMemberExceptionSpecsNeeded(SourceLocation Loc,
 }
 
 void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
-                                        const CXXRecordDecl *RD,
-                                        bool ConstexprOnly) {
+                                        const CXXRecordDecl *RD) {
   // Mark all functions which will appear in RD's vtable as used.
   CXXFinalOverriderMap FinalOverriders;
   RD->getFinalOverriders(FinalOverriders);
@@ -15220,7 +15212,7 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
 
       // C++ [basic.def.odr]p2:
       //   [...] A virtual member function is used if it is not pure. [...]
-      if (!Overrider->isPure() && (!ConstexprOnly || Overrider->isConstexpr()))
+      if (!Overrider->isPure())
         MarkFunctionReferenced(Loc, Overrider);
     }
   }

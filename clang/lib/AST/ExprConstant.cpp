@@ -37,7 +37,6 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
@@ -2486,21 +2485,6 @@ static bool HandleLValueBasePath(EvalInfo &Info, const CastExpr *E,
   return true;
 }
 
-/// Cast an lvalue referring to a derived class to a known base subobject.
-static bool CastToBaseClass(EvalInfo &Info, const Expr *E, LValue &Result,
-                            const CXXRecordDecl *DerivedRD,
-                            const CXXRecordDecl *BaseRD) {
-  CXXBasePaths Paths(/*FindAmbiguities=*/false,
-                     /*RecordPaths=*/true, /*DetectVirtual=*/false);
-  if (!DerivedRD->isDerivedFrom(BaseRD, Paths))
-    llvm_unreachable("Class must be derived from the passed in base class!");
-
-  for (CXXBasePathElement &Elem : Paths.front())
-    if (!HandleLValueBase(Info, E, Result, Elem.Class, Elem.Base))
-      return false;
-  return true;
-}
-
 /// Update LVal to refer to the given field, which must be a member of the type
 /// currently described by LVal.
 static bool HandleLValueMember(EvalInfo &Info, const Expr *E, LValue &LVal,
@@ -4477,19 +4461,16 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   }
 
   // DR1872: An instantiated virtual constexpr function can't be called in a
-  // constant expression (prior to C++20). We can still constant-fold such a
-  // call.
-  if (!Info.Ctx.getLangOpts().CPlusPlus2a && isa<CXXMethodDecl>(Declaration) &&
-      cast<CXXMethodDecl>(Declaration)->isVirtual())
-    Info.CCEDiag(CallLoc, diag::note_constexpr_virtual_call);
-
-  if (Definition && Definition->isInvalidDecl()) {
-    Info.FFDiag(CallLoc, diag::note_invalid_subexpr_in_const_expr);
+  // constant expression.
+  if (isa<CXXMethodDecl>(Declaration) &&
+      cast<CXXMethodDecl>(Declaration)->isVirtual()) {
+    Info.FFDiag(CallLoc, diag::note_constexpr_virtual_call);
     return false;
   }
 
   // Can we evaluate this function call?
-  if (Definition && Definition->isConstexpr() && Body)
+  if (Definition && Definition->isConstexpr() &&
+      !Definition->isInvalidDecl() && Body)
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
@@ -4563,153 +4544,6 @@ static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
 
   CheckMemberCallThisPointerHandler Handler;
   return Obj && findSubobject(Info, E, Obj, This.Designator, Handler);
-}
-
-struct DynamicType {
-  /// The dynamic class type of the object.
-  const CXXRecordDecl *Type;
-  /// The corresponding path length in the lvalue.
-  unsigned PathLength;
-};
-
-static const CXXRecordDecl *getBaseClassType(SubobjectDesignator &Designator,
-                                             unsigned PathLength) {
-  assert(PathLength >= Designator.MostDerivedPathLength && PathLength <=
-      Designator.Entries.size() && "invalid path length");
-  return (PathLength == Designator.MostDerivedPathLength)
-             ? Designator.MostDerivedType->getAsCXXRecordDecl()
-             : getAsBaseClass(Designator.Entries[PathLength - 1]);
-}
-
-/// Determine the dynamic type of an object.
-static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, LValue &This) {
-  // If we don't have an lvalue denoting an object of class type, there is no
-  // meaningful dynamic type. (We consider objects of non-class type to have no
-  // dynamic type.)
-  if (This.Designator.IsOnePastTheEnd || This.Designator.Invalid ||
-      !This.Designator.MostDerivedType->getAsCXXRecordDecl())
-    return None;
-
-  // FIXME: For very deep class hierarchies, it might be beneficial to use a
-  // binary search here instead. But the overwhelmingly common case is that
-  // we're not in the middle of a constructor, so it probably doesn't matter
-  // in practice.
-  ArrayRef<APValue::LValuePathEntry> Path = This.Designator.Entries;
-  for (unsigned PathLength = This.Designator.MostDerivedPathLength;
-       PathLength <= Path.size(); ++PathLength) {
-    switch (Info.isEvaluatingConstructor(This.getLValueBase(),
-                                         Path.slice(0, PathLength))) {
-    case ConstructionPhase::Bases:
-      // We're constructing a base class. This is not the dynamic type.
-      break;
-
-    case ConstructionPhase::None:
-    case ConstructionPhase::AfterBases:
-      // We've finished constructing the base classes, so this is the dynamic
-      // type.
-      return DynamicType{getBaseClassType(This.Designator, PathLength),
-                         PathLength};
-    }
-  }
-
-  // CWG issue 1517: we're constructing a base class of the object described by
-  // 'This', so that object has not yet begun its period of construction and
-  // any polymorphic operation on it results in undefined behavior.
-  return None;
-}
-
-/// Perform virtual dispatch.
-static const CXXMethodDecl *HandleVirtualDispatch(
-    EvalInfo &Info, const Expr *E, LValue &This, const CXXMethodDecl *Found,
-    llvm::SmallVectorImpl<QualType> &CovariantAdjustmentPath) {
-  Optional<DynamicType> DynType = ComputeDynamicType(Info, This);
-  if (!DynType) {
-    Info.FFDiag(E);
-    return nullptr;
-  }
-
-  // Find the final overrider. It must be declared in one of the classes on the
-  // path from the dynamic type to the static type.
-  // FIXME: If we ever allow literal types to have virtual base classes, that
-  // won't be true.
-  const CXXMethodDecl *Callee = Found;
-  unsigned PathLength = DynType->PathLength;
-  for (/**/; PathLength <= This.Designator.Entries.size(); ++PathLength) {
-    const CXXRecordDecl *Class = getBaseClassType(This.Designator, PathLength);
-    assert(!Class->getNumVBases() &&
-           "can't handle virtual calls with virtual bases");
-
-    const CXXMethodDecl *Overrider =
-        Found->getCorrespondingMethodDeclaredInClass(Class, false);
-    if (Overrider) {
-      Callee = Overrider;
-      break;
-    }
-  }
-
-  // C++2a [class.abstract]p6:
-  //   the effect of making a virtual call to a pure virtual function [...] is
-  //   undefined
-  if (Callee->isPure()) {
-    Info.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << Callee;
-    Info.Note(Callee->getLocation(), diag::note_declared_at);
-    return nullptr;
-  }
-
-  // If necessary, walk the rest of the path to determine the sequence of
-  // covariant adjustment steps to apply.
-  if (!Info.Ctx.hasSameUnqualifiedType(Callee->getReturnType(),
-                                       Found->getReturnType())) {
-    CovariantAdjustmentPath.push_back(Callee->getReturnType());
-    for (unsigned CovariantPathLength = PathLength + 1;
-         CovariantPathLength != This.Designator.Entries.size();
-         ++CovariantPathLength) {
-      const CXXRecordDecl *NextClass =
-          getBaseClassType(This.Designator, CovariantPathLength);
-      const CXXMethodDecl *Next =
-          Found->getCorrespondingMethodDeclaredInClass(NextClass, false);
-      if (Next && !Info.Ctx.hasSameUnqualifiedType(
-                      Next->getReturnType(), CovariantAdjustmentPath.back()))
-        CovariantAdjustmentPath.push_back(Next->getReturnType());
-    }
-    if (!Info.Ctx.hasSameUnqualifiedType(Found->getReturnType(),
-                                         CovariantAdjustmentPath.back()))
-      CovariantAdjustmentPath.push_back(Found->getReturnType());
-  }
-
-  // Perform 'this' adjustment.
-  if (!CastToDerivedClass(Info, E, This, Callee->getParent(), PathLength))
-    return nullptr;
-
-  return Callee;
-}
-
-/// Perform the adjustment from a value returned by a virtual function to
-/// a value of the statically expected type, which may be a pointer or
-/// reference to a base class of the returned type.
-static bool HandleCovariantReturnAdjustment(EvalInfo &Info, const Expr *E,
-                                            APValue &Result,
-                                            ArrayRef<QualType> Path) {
-  assert(Result.isLValue() &&
-         "unexpected kind of APValue for covariant return");
-  if (Result.isNullPointer())
-    return true;
-
-  LValue LVal;
-  LVal.setFrom(Info.Ctx, Result);
-
-  const CXXRecordDecl *OldClass = Path[0]->getPointeeCXXRecordDecl();
-  for (unsigned I = 1; I != Path.size(); ++I) {
-    const CXXRecordDecl *NewClass = Path[I]->getPointeeCXXRecordDecl();
-    assert(OldClass && NewClass && "unexpected kind of covariant return");
-    if (OldClass != NewClass &&
-        !CastToBaseClass(Info, E, LVal, OldClass, NewClass))
-      return false;
-    OldClass = NewClass;
-  }
-
-  LVal.moveInto(Result);
-  return true;
 }
 
 /// Determine if a class has any fields that might need to be copied by a
@@ -4901,6 +4735,11 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
                                   BaseType->getAsCXXRecordDecl(), &Layout))
         return false;
       Value = &Result.getStructBase(BasesSeen++);
+
+      // This is the point at which the dynamic type of the object becomes this
+      // class type.
+      if (BasesSeen == RD->getNumBases())
+        EvalObj.finishedConstructingBases();
     } else if ((FD = I->getMember())) {
       if (!HandleLValueMember(Info, I->getInit(), Subobject, FD, &Layout))
         return false;
@@ -4961,11 +4800,6 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
         return false;
       Success = false;
     }
-
-    // This is the point at which the dynamic type of the object becomes this
-    // class type.
-    if (I->isBaseInitializer() && BasesSeen == RD->getNumBases())
-      EvalObj.finishedConstructingBases();
   }
 
   return Success &&
@@ -5206,30 +5040,27 @@ public:
     const FunctionDecl *FD = nullptr;
     LValue *This = nullptr, ThisVal;
     auto Args = llvm::makeArrayRef(E->getArgs(), E->getNumArgs());
-    bool HasQualifier = false;
 
     // Extract function decl and 'this' pointer from the callee.
     if (CalleeType->isSpecificBuiltinType(BuiltinType::BoundMember)) {
-      const CXXMethodDecl *Member = nullptr;
+      const ValueDecl *Member = nullptr;
       if (const MemberExpr *ME = dyn_cast<MemberExpr>(Callee)) {
         // Explicit bound member calls, such as x.f() or p->g();
         if (!EvaluateObjectArgument(Info, ME->getBase(), ThisVal))
           return false;
-        Member = dyn_cast<CXXMethodDecl>(ME->getMemberDecl());
-        if (!Member)
-          return Error(Callee);
+        Member = ME->getMemberDecl();
         This = &ThisVal;
-        HasQualifier = ME->hasQualifier();
       } else if (const BinaryOperator *BE = dyn_cast<BinaryOperator>(Callee)) {
         // Indirect bound member calls ('.*' or '->*').
-        Member = dyn_cast_or_null<CXXMethodDecl>(
-            HandleMemberPointerAccess(Info, BE, ThisVal, false));
-        if (!Member)
-          return Error(Callee);
+        Member = HandleMemberPointerAccess(Info, BE, ThisVal, false);
+        if (!Member) return false;
         This = &ThisVal;
       } else
         return Error(Callee);
-      FD = Member;
+
+      FD = dyn_cast<FunctionDecl>(Member);
+      if (!FD)
+        return Error(Callee);
     } else if (CalleeType->isFunctionPointerType()) {
       LValue Call;
       if (!EvaluatePointer(Callee, Call, Info))
@@ -5299,20 +5130,8 @@ public:
     } else
       return Error(E);
 
-    SmallVector<QualType, 4> CovariantAdjustmentPath;
-    if (This) {
-      // Check that the 'this' pointer points to an object of the right type.
-      if (!checkMemberCallThisPointer(Info, E, *This))
-        return false;
-
-      // Perform virtual dispatch, if necessary.
-      auto *NamedMember = dyn_cast<CXXMethodDecl>(FD);
-      if (NamedMember && NamedMember->isVirtual() && !HasQualifier) {
-        if (!(FD = HandleVirtualDispatch(Info, E, *This, NamedMember,
-                                         CovariantAdjustmentPath)))
-          return true;
-      }
-    }
+    if (This && !checkMemberCallThisPointer(Info, E, *This))
+      return false;
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
@@ -5320,11 +5139,6 @@ public:
     if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body) ||
         !HandleFunctionCall(E->getExprLoc(), Definition, This, Args, Body, Info,
                             Result, ResultSlot))
-      return false;
-
-    if (!CovariantAdjustmentPath.empty() &&
-        !HandleCovariantReturnAdjustment(Info, E, Result,
-                                         CovariantAdjustmentPath))
       return false;
 
     return true;

@@ -2298,17 +2298,6 @@ public:
               ->getCorrespondingMethodInClass(RD, MayBeBase);
   }
 
-  /// Find if \p RD declares a function that overrides this function, and if so,
-  /// return it. Does not search base classes.
-  CXXMethodDecl *getCorrespondingMethodDeclaredInClass(const CXXRecordDecl *RD,
-                                                       bool MayBeBase = false);
-  const CXXMethodDecl *
-  getCorrespondingMethodDeclaredInClass(const CXXRecordDecl *RD,
-                                        bool MayBeBase = false) const {
-    return const_cast<CXXMethodDecl *>(this)
-        ->getCorrespondingMethodDeclaredInClass(RD, MayBeBase);
-  }
-
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) {

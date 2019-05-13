@@ -1946,8 +1946,8 @@ static bool recursivelyOverrides(const CXXMethodDecl *DerivedMD,
 }
 
 CXXMethodDecl *
-CXXMethodDecl::getCorrespondingMethodDeclaredInClass(const CXXRecordDecl *RD,
-                                                     bool MayBeBase) {
+CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
+                                             bool MayBeBase) {
   if (this->getParent()->getCanonicalDecl() == RD->getCanonicalDecl())
     return this;
 
@@ -1972,15 +1972,6 @@ CXXMethodDecl::getCorrespondingMethodDeclaredInClass(const CXXRecordDecl *RD,
     if (MayBeBase && recursivelyOverrides(this, MD))
       return MD;
   }
-
-  return nullptr;
-}
-
-CXXMethodDecl *
-CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
-                                             bool MayBeBase) {
-  if (auto *MD = getCorrespondingMethodDeclaredInClass(RD, MayBeBase))
-    return MD;
 
   for (const auto &I : RD->bases()) {
     const RecordType *RT = I.getType()->getAs<RecordType>();
