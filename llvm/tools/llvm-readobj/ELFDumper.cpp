@@ -1164,6 +1164,7 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_LANAI,         "EM_LANAI"),
   ENUM_ENT(EM_BPF,           "EM_BPF"),
   ENUM_ENT(EM_VE,            "NEC SX-Aurora Vector Engine"),
+  ENUM_ENT(EM_DPU,           "UPMEM DPU"),
 };
 
 static const EnumEntry<unsigned> ElfSymbolBindings[] = {
