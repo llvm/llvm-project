@@ -160,6 +160,7 @@ copy("Headers") {
     "openmp_wrappers/math.h",
     "openmp_wrappers/cmath",
     "openmp_wrappers/__clang_openmp_math.h",
+    "openmp_wrappers/__clang_openmp_math_declares.h",
   ]
   outputs = [
     "$clang_resource_dir/include/{{source_target_relative}}",
