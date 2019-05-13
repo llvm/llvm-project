@@ -118,7 +118,6 @@ class JSONNodeDumper
       public NodeStreamer {
   friend class JSONDumper;
 
-  raw_ostream &OS;
   const SourceManager &SM;
   PrintingPolicy PrintPolicy;
 
@@ -161,7 +160,7 @@ class JSONNodeDumper
 public:
   JSONNodeDumper(raw_ostream &OS, const SourceManager &SrcMgr,
                  const PrintingPolicy &PrintPolicy)
-      : NodeStreamer(OS), OS(OS), SM(SrcMgr), PrintPolicy(PrintPolicy) {}
+      : NodeStreamer(OS), SM(SrcMgr), PrintPolicy(PrintPolicy) {}
 
   void Visit(const Attr *A);
   void Visit(const Stmt *Node);
