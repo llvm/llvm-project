@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_FRONTEND_ASTCONSUMERS_H
 #define LLVM_CLANG_FRONTEND_ASTCONSUMERS_H
 
+#include "clang/AST/ASTDumperUtils.h"
 #include "clang/Basic/LLVM.h"
 #include <memory>
 
@@ -35,10 +36,10 @@ std::unique_ptr<ASTConsumer> CreateASTPrinter(std::unique_ptr<raw_ostream> OS,
 
 // AST dumper: dumps the raw AST in human-readable form to the given output
 // stream, or stdout if OS is nullptr.
-std::unique_ptr<ASTConsumer> CreateASTDumper(std::unique_ptr<raw_ostream> OS,
-                                             StringRef FilterString,
-                                             bool DumpDecls, bool Deserialize,
-                                             bool DumpLookups);
+std::unique_ptr<ASTConsumer>
+CreateASTDumper(std::unique_ptr<raw_ostream> OS, StringRef FilterString,
+                bool DumpDecls, bool Deserialize, bool DumpLookups,
+                ASTDumpOutputFormat Format);
 
 // AST Decl node lister: prints qualified names of all filterable AST Decl
 // nodes.

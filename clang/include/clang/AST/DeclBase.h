@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_DECLBASE_H
 #define LLVM_CLANG_AST_DECLBASE_H
 
+#include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -1134,7 +1135,8 @@ public:
   // Same as dump(), but forces color printing.
   void dumpColor() const;
 
-  void dump(raw_ostream &Out, bool Deserialize = false) const;
+  void dump(raw_ostream &Out, bool Deserialize = false,
+            ASTDumpOutputFormat OutputFormat = ADOF_Default) const;
 
   /// \return Unique reproducible object identifier
   int64_t getID() const;
