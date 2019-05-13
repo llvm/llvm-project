@@ -24,6 +24,7 @@ list(APPEND LLDB_TEST_DEPS
   llc
   lldb
   lldb-test
+  lli
   llvm-config
   llvm-mc
   llvm-objcopy
