@@ -26404,13 +26404,17 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
       // traffic.  This assumes that stack locations are very likely to be
       // accessed only by the owning thread. 
       SDValue NewChain = emitLockedStackOp(DAG, Subtarget, Chain, DL);
-      DAG.ReplaceAllUsesOfValueWith(N.getValue(1), NewChain);
-      return SDValue();
+      assert(!N->hasAnyUseOfValue(0));
+      // NOTE: The getUNDEF is needed to give something for the unused result 0.
+      return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(),
+                         DAG.getUNDEF(VT), NewChain);
     }
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
     SDValue NewChain = DAG.getNode(X86ISD::MEMBARRIER, DL, MVT::Other, Chain);
-    DAG.ReplaceAllUsesOfValueWith(N.getValue(1), NewChain);
-    return SDValue();
+    assert(!N->hasAnyUseOfValue(0));
+    // NOTE: The getUNDEF is needed to give something for the unused result 0.
+    return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(),
+                       DAG.getUNDEF(VT), NewChain);
   }
 
   SDValue LockOp = lowerAtomicArithWithLOCK(N, DAG, Subtarget);
