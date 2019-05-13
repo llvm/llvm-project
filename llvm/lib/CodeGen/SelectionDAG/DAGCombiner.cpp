@@ -17409,11 +17409,44 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   return SDValue();
 }
 
+static SDValue narrowInsertExtractVectorBinOp(SDNode *Extract,
+                                              SelectionDAG &DAG) {
+  SDValue BinOp = Extract->getOperand(0);
+  if (!ISD::isBinaryOp(BinOp.getNode()))
+    return SDValue();
+
+  SDValue Bop0 = BinOp.getOperand(0), Bop1 = BinOp.getOperand(1);
+  SDValue Index = Extract->getOperand(1);
+  EVT VT = Extract->getValueType(0);
+  bool IsInsert0 = Bop0.getOpcode() == ISD::INSERT_SUBVECTOR &&
+                   Bop0.getOperand(1).getValueType() == VT &&
+                   Bop0.getOperand(2) == Index;
+  bool IsInsert1 = Bop1.getOpcode() == ISD::INSERT_SUBVECTOR &&
+                   Bop1.getOperand(1).getValueType() == VT &&
+                   Bop1.getOperand(2) == Index;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  // TODO: We could handle the case where only 1 operand is being inserted by
+  //       creating an extract of the other operand, but that requires checking
+  //       number of uses and/or costs.
+  if (!IsInsert0 || !IsInsert1 ||
+      !TLI.isOperationLegalOrCustom(BinOp.getOpcode(), VT))
+    return SDValue();
+
+  // We are inserting both operands of the wide binop only to extract back
+  // to the narrow vector size. Eliminate all of the insert/extract:
+  // ext (binop (ins ?, X, Index), (ins ?, Y, Index)), Index --> binop X, Y
+  return DAG.getNode(BinOp.getOpcode(), SDLoc(Extract), VT, Bop0.getOperand(1),
+                     Bop1.getOperand(1), BinOp->getFlags());
+}
+
 /// If we are extracting a subvector produced by a wide binary operator try
 /// to use a narrow binary operator and/or avoid concatenation and extraction.
 static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   // TODO: Refactor with the caller (visitEXTRACT_SUBVECTOR), so we can share
   // some of these bailouts with other transforms.
+
+  if (SDValue V = narrowInsertExtractVectorBinOp(Extract, DAG))
+    return V;
 
   // The extract index must be a constant, so we can map it to a concat operand.
   auto *ExtractIndexC = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
@@ -17493,7 +17526,6 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
 
   // We need at least one concatenation operation of a binop operand to make
   // this transform worthwhile. The concat must double the input vector sizes.
-  // TODO: Should we also handle INSERT_SUBVECTOR patterns?
   SDValue LHS = peekThroughBitcasts(BinOp.getOperand(0));
   SDValue RHS = peekThroughBitcasts(BinOp.getOperand(1));
   bool ConcatL =
