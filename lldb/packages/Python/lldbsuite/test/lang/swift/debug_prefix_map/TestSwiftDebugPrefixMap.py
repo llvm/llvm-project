@@ -35,16 +35,15 @@ class TestSwiftDebugPrefixMap(TestBase):
         TestBase.setUp(self)
 
     def do_test(self):
-        cwd = os.path.dirname(os.path.realpath(__file__))
-
+        os.chdir(self.getBuildDir())
         self.build()
 
         # Mirror the same source tree layout used in the Makefile. When lldb is
         # invoked in the CWD, it should find the source files with the same
         # relative paths used during compilation because the compiler's CWD was
         # remapped to ".".
-        src = os.path.join(cwd, 'main.swift')
-        local_srcroot = os.path.join(cwd, 'srcroot')
+        src = os.path.join(self.getSourceDir(), 'main.swift')
+        local_srcroot = self.getBuildArtifact('srcroot')
         local_main = os.path.join(local_srcroot, 'main.swift')
 
         if not os.path.exists(local_srcroot):
@@ -52,15 +51,14 @@ class TestSwiftDebugPrefixMap(TestBase):
         shutil.copy(src, local_main)
 
         # Clean up the files we created above when the test ends.
-        def _cleanup():
+        def cleanup():
             shutil.rmtree(local_srcroot)
-        self.addTearDownHook(_cleanup)
+            os.chdir(self.getSourceDir())
 
-        exe_name = 'a.out'
-        exe = self.getBuildArtifact(exe_name)
+        self.addTearDownHook(cleanup)
 
         # Create the target.
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.assertTrue(target, VALID_TARGET)
 
         # Don't allow ANSI highlighting to interfere with the output.
