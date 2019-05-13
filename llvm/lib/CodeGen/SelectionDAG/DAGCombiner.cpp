@@ -6128,7 +6128,7 @@ static unsigned BigEndianByteAt(unsigned BW, unsigned i) {
 }
 
 // Check if the bytes offsets we are looking at match with either big or
-// little endian value loaded. Return true for big endian, false for little 
+// little endian value loaded. Return true for big endian, false for little
 // endian, and None if match failed.
 static Optional<bool> isBigEndian(const SmallVector<int64_t, 4> &ByteOffsets,
                                   int64_t FirstOffset) {
@@ -19800,8 +19800,7 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
 
   bool IsAlias;
   if (BaseIndexOffset::computeAliasing(Op0, MUC0.NumBytes, Op1, MUC1.NumBytes,
-                                       DAG, IsAlias) &&
-      !IsAlias)
+                                       DAG, IsAlias))
     return IsAlias;
 
   // The following all rely on MMO0 and MMO1 being valid. Fail conservatively if
