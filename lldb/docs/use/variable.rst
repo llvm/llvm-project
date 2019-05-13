@@ -764,6 +764,7 @@ command, supports a --summary option that tells LLDB to use the named summary
 given instead of the default one.
 
 ::
+
    (lldb) type summary add --summary-string "x=${var.integer}" --name NamedSummary
    (lldb) frame variable one
    (i_am_cool) one = int = 3, float = 3.14159, char = 69
