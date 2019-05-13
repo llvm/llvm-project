@@ -22,6 +22,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -329,9 +330,12 @@ class Section {
   friend class AtomGraph;
 
 private:
-  Section(StringRef Name, sys::Memory::ProtectionFlags Prot, unsigned Ordinal,
-          bool IsZeroFill)
-      : Name(Name), Prot(Prot), Ordinal(Ordinal), IsZeroFill(IsZeroFill) {}
+  Section(StringRef Name, uint32_t Alignment, sys::Memory::ProtectionFlags Prot,
+          unsigned Ordinal, bool IsZeroFill)
+      : Name(Name), Alignment(Alignment), Prot(Prot), Ordinal(Ordinal),
+        IsZeroFill(IsZeroFill) {
+    assert(isPowerOf2_32(Alignment) && "Alignments must be a power of 2");
+  }
 
   using DefinedAtomSet = DenseSet<DefinedAtom *>;
 
@@ -341,6 +345,7 @@ public:
 
   ~Section();
   StringRef getName() const { return Name; }
+  uint32_t getAlignment() const { return Alignment; }
   sys::Memory::ProtectionFlags getProtectionFlags() const { return Prot; }
   unsigned getSectionOrdinal() const { return Ordinal; }
   size_t getNextAtomOrdinal() { return ++NextAtomOrdinal; }
@@ -388,6 +393,7 @@ private:
   }
 
   StringRef Name;
+  uint32_t Alignment = 0;
   sys::Memory::ProtectionFlags Prot;
   unsigned Ordinal = 0;
   unsigned NextAtomOrdinal = 0;
@@ -403,12 +409,16 @@ class DefinedAtom : public Atom {
 private:
   DefinedAtom(Section &Parent, JITTargetAddress Address, uint32_t Alignment)
       : Atom("", Address), Parent(Parent), Ordinal(Parent.getNextAtomOrdinal()),
-        Alignment(Alignment) {}
+        Alignment(Alignment) {
+    assert(isPowerOf2_32(Alignment) && "Alignments must be a power of two");
+  }
 
   DefinedAtom(Section &Parent, StringRef Name, JITTargetAddress Address,
               uint32_t Alignment)
       : Atom(Name, Address), Parent(Parent),
-        Ordinal(Parent.getNextAtomOrdinal()), Alignment(Alignment) {}
+        Ordinal(Parent.getNextAtomOrdinal()), Alignment(Alignment) {
+    assert(isPowerOf2_32(Alignment) && "Alignments must be a power of two");
+  }
 
 public:
   using edge_iterator = EdgeVector::iterator;
@@ -510,7 +520,7 @@ inline uint64_t SectionRange::getSize() const { return getEnd() - getStart(); }
 inline SectionRange Section::getRange() const {
   if (atoms_empty())
     return SectionRange();
-  DefinedAtom *First = *DefinedAtoms.begin(), *Last = *DefinedAtoms.end();
+  DefinedAtom *First = *DefinedAtoms.begin(), *Last = *DefinedAtoms.begin();
   for (auto *DA : atoms()) {
     if (DA->getAddress() < First->getAddress())
       First = DA;
@@ -602,10 +612,10 @@ public:
   support::endianness getEndianness() const { return Endianness; }
 
   /// Create a section with the given name, protection flags, and alignment.
-  Section &createSection(StringRef Name, sys::Memory::ProtectionFlags Prot,
-                         bool IsZeroFill) {
+  Section &createSection(StringRef Name, uint32_t Alignment,
+                         sys::Memory::ProtectionFlags Prot, bool IsZeroFill) {
     std::unique_ptr<Section> Sec(
-        new Section(Name, Prot, Sections.size(), IsZeroFill));
+        new Section(Name, Alignment, Prot, Sections.size(), IsZeroFill));
     Sections.push_back(std::move(Sec));
     return *Sections.back();
   }
