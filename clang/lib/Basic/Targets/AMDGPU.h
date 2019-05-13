@@ -41,7 +41,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
 
-
   bool hasFP64() const {
     return getTriple().getArch() == llvm::Triple::amdgcn ||
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_FP64);

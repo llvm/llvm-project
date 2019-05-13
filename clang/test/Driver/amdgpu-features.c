@@ -23,3 +23,9 @@
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx700 -mno-sram-ecc %s 2>&1 | FileCheck --check-prefix=NO-SRAM-ECC %s
 // NO-SRAM-ECC: "-target-feature" "-sram-ecc"
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mcumode %s 2>&1 | FileCheck --check-prefix=CUMODE %s
+// CUMODE: "-target-feature" "+cumode"
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mno-cumode %s 2>&1 | FileCheck --check-prefix=NO-CUMODE %s
+// NO-CUMODE: "-target-feature" "-cumode"
