@@ -35112,8 +35112,13 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // X86ISD::PEXTRW/X86ISD::PEXTRB in:
   // XFormVExtractWithShuffleIntoLoad, combineHorizontalPredicateResult and
   // combineBasicSADPattern.
-  if (IsPextr)
+  if (IsPextr) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (TLI.SimplifyDemandedBits(
+            SDValue(N, 0), APInt::getAllOnesValue(VT.getSizeInBits()), DCI))
+      return SDValue(N, 0);
     return SDValue();
+  }
 
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
