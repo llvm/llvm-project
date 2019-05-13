@@ -255,6 +255,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
         SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second)
           == SourceMgr.getLineNumber(CommentBeginDecomp.first,
                                      CommentBeginDecomp.second)) {
+      (**Comment).setAttached();
       return *Comment;
     }
   }
@@ -296,6 +297,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
   if (Text.find_first_of(";{}#@") != StringRef::npos)
     return nullptr;
 
+  (**Comment).setAttached();
   return *Comment;
 }
 
