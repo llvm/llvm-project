@@ -252,15 +252,22 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
 
     DA.setCallable(*SymType & object::SymbolRef::ST_Function);
 
-    // Check alt-entry.
+    // Check NDesc flags.
     {
       uint16_t NDesc = 0;
       if (Obj.is64Bit())
         NDesc = Obj.getSymbolTableEntry(SymI->getRawDataRefImpl()).n_desc;
       else
         NDesc = Obj.getSymbolTableEntry(SymI->getRawDataRefImpl()).n_desc;
+
+      // Record atom for alt-entry post-processing (where the layout-next
+      // constraints will be added).
       if (NDesc & MachO::N_ALT_ENTRY)
         AltEntryAtoms.push_back(&DA);
+
+      // If this atom has a no-dead-strip attr attached then mark it live.
+      if (NDesc & MachO::N_NO_DEAD_STRIP)
+        DA.setLive(true);
     }
 
     LLVM_DEBUG({
