@@ -32,6 +32,10 @@ def note_constexpr_no_return : Note<
   "control reached end of constexpr function">;
 def note_constexpr_virtual_call : Note<
   "cannot evaluate call to virtual function in a constant expression">;
+def note_constexpr_pure_virtual_call : Note<
+  "pure virtual function %q0 called">;
+def note_constexpr_virtual_out_of_lifetime : Note<
+  "virtual function called on object '%0' whose dynamic type is not constant">;
 def note_constexpr_virtual_base : Note<
   "cannot construct object of type %0 with virtual base class "
   "in a constant expression">;
