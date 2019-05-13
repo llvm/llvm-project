@@ -588,6 +588,10 @@ bool TargetLowering::SimplifyDemandedBits(
   // Don't know anything.
   Known = KnownBits(BitWidth);
 
+  // Undef operand.
+  if (Op.isUndef())
+    return false;
+
   if (Op.getOpcode() == ISD::Constant) {
     // We know all of the bits for a constant!
     Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
@@ -610,9 +614,7 @@ bool TargetLowering::SimplifyDemandedBits(
     DemandedElts = APInt::getAllOnesValue(NumElts);
   } else if (OriginalDemandedBits == 0 || OriginalDemandedElts == 0) {
     // Not demanding any bits/elts from Op.
-    if (!Op.isUndef())
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
-    return false;
+    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
   } else if (Depth == 6) { // Limit search depth.
     return false;
   }
