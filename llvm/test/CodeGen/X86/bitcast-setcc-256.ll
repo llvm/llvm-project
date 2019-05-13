@@ -448,22 +448,6 @@ define void @bitcast_8i32_store(i8* %p, <8 x i32> %a0) {
 define void @bitcast_4i64_store(i4* %p, <4 x i64> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_4i64_store:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
-; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm1
-; SSE2-SSSE3-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
-; SSE2-SSSE3-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm4
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm1
-; SSE2-SSSE3-NEXT:    por %xmm4, %xmm1
-; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm3
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSE2-SSSE3-NEXT:    por %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movb %al, (%rdi)
