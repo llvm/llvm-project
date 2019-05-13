@@ -1,4 +1,5 @@
 # XFAIL: system-netbsd
+# UNSUPPORTED: system-linux
 #
 # RUN: %build %p/inputs/main.c --nodefaultlib -o %t
 # RUN: %lldbmi %t < %s | FileCheck %s

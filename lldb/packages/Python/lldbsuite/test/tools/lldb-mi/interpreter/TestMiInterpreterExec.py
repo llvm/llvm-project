@@ -83,9 +83,9 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFlakeyLinux(bugnumber="llvm.org/pr25470")
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfDarwin
+    @skipIfLinux
     def test_lldbmi_settings_set_target_run_args_before(self):
         """Test that 'lldb-mi --interpreter' can set target arguments by 'setting set target.run-args' command before than target was created."""
 
