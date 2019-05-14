@@ -333,6 +333,18 @@ def int_arm_crc32cw : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
+// CMSE
+
+def int_arm_cmse_tt : GCCBuiltin<"__builtin_arm_cmse_TT">,
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
+def int_arm_cmse_ttt : GCCBuiltin<"__builtin_arm_cmse_TTT">,
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
+def int_arm_cmse_tta : GCCBuiltin<"__builtin_arm_cmse_TTA">,
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
+def int_arm_cmse_ttat : GCCBuiltin<"__builtin_arm_cmse_TTAT">,
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
 // HINT
 
 def int_arm_hint : Intrinsic<[], [llvm_i32_ty]>;
