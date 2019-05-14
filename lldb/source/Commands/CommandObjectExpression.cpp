@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "swift/AST/Identifier.h"
-#include "swift/AST/Module.h"
-#include "swift/IDE/REPLCodeCompletion.h"
-#include "swift/IDE/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
