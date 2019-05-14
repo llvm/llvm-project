@@ -22,7 +22,6 @@
 #include <queue>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -107,14 +106,14 @@ void DataFlowTrace::ReadCoverage(const std::string &DirPath) {
 }
 
 static void DFTStringAppendToVector(Vector<uint8_t> *DFT,
-                                    const std::string_view DFTString) {
+                                    const std::string &DFTString) {
   assert(DFT->size() == DFTString.size());
   for (size_t I = 0, Len = DFT->size(); I < Len; I++)
     (*DFT)[I] = DFTString[I] == '1';
 }
 
 // converts a string of '0' and '1' into a Vector<uint8_t>
-static Vector<uint8_t> DFTStringToVector(const std::string_view DFTString) {
+static Vector<uint8_t> DFTStringToVector(const std::string &DFTString) {
   Vector<uint8_t> DFT(DFTString.size());
   DFTStringAppendToVector(&DFT, DFTString);
   return DFT;
@@ -131,8 +130,10 @@ static bool ParseError(const char *Err, const std::string &Line) {
   return false;
 };
 
+// TODO(metzman): replace std::string with std::string_view for
+// better performance. Need to figure our how to use string_view on Windows.
 static bool ParseDFTLine(const std::string &Line, size_t *FunctionNum,
-                         std::string_view *DFTString) {
+                         std::string *DFTString) {
   if (!Line.empty() && Line[0] != 'F')
     return false; // Ignore coverage.
   size_t SpacePos = Line.find(' ');
@@ -213,7 +214,7 @@ bool DataFlowTrace::Init(const std::string &DirPath,
     std::ifstream IF(SF.File);
     while (std::getline(IF, L, '\n')) {
       size_t FunctionNum = 0;
-      std::string_view DFTString;
+      std::string DFTString;
       if (ParseDFTLine(L, &FunctionNum, &DFTString) &&
           FunctionNum == FocusFuncIdx) {
         NumTracesWithFocusFunction++;
@@ -282,7 +283,7 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
             Cov.insert(L);
           } else if (L[0] == 'F') {
             size_t FunctionNum = 0;
-            std::string_view DFTString;
+            std::string DFTString;
             if (ParseDFTLine(L, &FunctionNum, &DFTString)) {
               auto &DFT = DFTMap[FunctionNum];
               if (DFT.empty()) {
