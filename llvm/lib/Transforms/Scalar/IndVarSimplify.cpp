@@ -716,8 +716,6 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
 
   SmallVector<BasicBlock *, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
-  auto *LoopHeader = L->getHeader();
-  assert(LoopHeader && "Invalid loop");
 
   bool MadeAnyChanges = false;
   for (auto *ExitBB : ExitBlocks) {
@@ -766,7 +764,7 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
         assert(LoopPreheader && "Invalid loop");
         int PreheaderIdx = ExitVal->getBasicBlockIndex(LoopPreheader);
         if (PreheaderIdx != -1) {
-          assert(ExitVal->getParent() == LoopHeader &&
+          assert(ExitVal->getParent() == L->getHeader() &&
                  "ExitVal must be in loop header");
           MadeAnyChanges = true;
           PN.setIncomingValue(IncomingValIdx,
