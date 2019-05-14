@@ -129,3 +129,17 @@
 //
 // CHECK-MINGW-X86-64: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-MINGW-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}windows{{/|\\\\}}libclang_rt.profile-x86_64.a"
+
+// Test instrumented profiling dependent-lib flags
+//
+// RUN: %clang %s -### -o %t.o -target x86_64-pc-win32 \
+// RUN:     -fprofile-instr-generate 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-WINDOWS-X86-64-DEPENDENT-LIB %s
+//
+// CHECK-WINDOWS-X86-64-DEPENDENT-LIB: "--dependent-lib={{[^"]*}}clang_rt.profile-{{[^"]*}}.lib"
+//
+// RUN: %clang %s -### -o %t.o -target x86_64-mingw32 \
+// RUN:     -fprofile-instr-generate 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MINGW-X86-64-DEPENDENT-LIB %s
+//
+// CHECK-MINGW-X86-64-DEPENDENT-LIB-NOT: "--dependent-lib={{[^"]*}}clang_rt.profile-{{[^"]*}}.a"
