@@ -1151,14 +1151,14 @@ define void @idempotent_atomic(i32* %x) speculative_load_hardening {
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %rcx
 ; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    lock orl $0, (%rsp)
+; X64-NEXT:    lock orl $0, -64(%rsp)
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
 ; X64-NEXT:    retq
 ;
 ; X64-LFENCE-LABEL: idempotent_atomic:
 ; X64-LFENCE:       # %bb.0:
-; X64-LFENCE-NEXT:    lock orl $0, (%rsp)
+; X64-LFENCE-NEXT:    lock orl $0, -64(%rsp)
 ; X64-LFENCE-NEXT:    retq
   %tmp = atomicrmw or i32* %x, i32 0 seq_cst
   ret void
