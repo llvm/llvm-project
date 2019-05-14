@@ -23,6 +23,7 @@ if (llvm_targets_to_build == "host") {
     "AArch64",
     "ARM",
     "BPF",
+    "Lanai",
     "PowerPC",
     "WebAssembly",
     "X86",

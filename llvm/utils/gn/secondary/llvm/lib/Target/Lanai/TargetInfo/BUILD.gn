@@ -1,0 +1,11 @@
+static_library("TargetInfo") {
+  output_name = "LLVMLanaiInfo"
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "LanaiTargetInfo.cpp",
+  ]
+}
