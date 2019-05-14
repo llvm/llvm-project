@@ -117,6 +117,22 @@ bool SwiftLanguage::IsTopLevelFunction(Function &function) {
   return false;
 }
 
+std::vector<ConstString>
+SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
+  std::vector<ConstString> variant_names;
+
+  // NOTE:  We need to do this because we don't have a proper parser for Swift
+  // function name syntax so we try to ensure that if we autocomplete to
+  // something, we'll look for its mangled equivalent and use the mangled
+  // version as a lookup as well.
+
+  ConstString counterpart;
+  if (method_name.GetMangledCounterpart(counterpart))
+    if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetCString()))
+      variant_names.emplace_back(counterpart);
+  return variant_names;
+}
+
 static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   if (!swift_category_sp)
     return;
