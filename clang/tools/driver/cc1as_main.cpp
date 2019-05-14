@@ -221,7 +221,8 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
                                      OPT_compress_debug_sections_EQ)) {
     if (A->getOption().getID() == OPT_compress_debug_sections) {
-      Opts.CompressDebugSections = llvm::DebugCompressionType::Z;
+      // TODO: be more clever about the compression type auto-detection
+      Opts.CompressDebugSections = llvm::DebugCompressionType::GNU;
     } else {
       Opts.CompressDebugSections =
           llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
