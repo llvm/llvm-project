@@ -228,6 +228,9 @@ def have_cxx_shared_library():
 if have_cxx_shared_library():
     config.available_features.add('cxx-shared-library')
 
+if config.libcxx_used:
+    config.available_features.add('libcxx-used')
+
 # Direct object generation
 if not 'hexagon' in config.target_triple:
     config.available_features.add('object-emission')
