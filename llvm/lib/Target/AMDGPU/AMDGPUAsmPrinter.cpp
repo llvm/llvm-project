@@ -34,6 +34,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -204,6 +205,18 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
+
+  DumpCodeInstEmitter = nullptr;
+  if (STM.dumpCode()) {
+    // For -dumpcode, get the assembler out of the streamer, even if it does
+    // not really want to let us have it. This only works with -filetype=obj.
+    bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
+    OutStreamer->setUseAssemblerInfoForParsing(true);
+    MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
+    OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
+    if (Assembler)
+      DumpCodeInstEmitter = Assembler->getEmitterPtr();
+  }
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
@@ -261,7 +274,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
     getTargetStreamer()->EmitAMDGPUSymbolType(
         SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
-  if (STM.dumpCode()) {
+  if (DumpCodeInstEmitter) {
     // Disassemble function name label to text.
     DisasmLines.push_back(MF->getName().str() + ":");
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
@@ -272,8 +285,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
 }
 
 void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
-  const GCNSubtarget &STI = MBB.getParent()->getSubtarget<GCNSubtarget>();
-  if (STI.dumpCode() && !isBlockOnlyReachableByFallthrough(&MBB)) {
+  if (DumpCodeInstEmitter && !isBlockOnlyReachableByFallthrough(&MBB)) {
     // Write a line for the basic block label if it is not only fallthrough.
     DisasmLines.push_back(
         (Twine("BB") + Twine(getFunctionNumber())
@@ -479,7 +491,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       false);
   }
 
-  if (STM.dumpCode()) {
+  if (DumpCodeInstEmitter) {
 
     OutStreamer->SwitchSection(
         Context.getELFSection(".AMDGPU.disasm", ELF::SHT_NOTE, 0));
