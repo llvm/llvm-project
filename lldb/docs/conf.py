@@ -104,7 +104,7 @@ html_theme = 'haiku'
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-#html_title = None
+html_title = 'The LLDB Debugger'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -175,6 +175,9 @@ html_last_updated_fmt = '%b %d, %Y'
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'LLDBdoc'
 
+# If true, the reST sources are included in the HTML build as
+# _sources/name. The default is True.
+html_copy_source = False
 
 # -- Options for LaTeX output --------------------------------------------------
 

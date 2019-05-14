@@ -262,8 +262,8 @@ protected:
   virtual uint64_t getSectionAddress(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionIndex(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionSize(DataRefImpl Sec) const = 0;
-  virtual std::error_code getSectionContents(DataRefImpl Sec,
-                                             StringRef &Res) const = 0;
+  virtual Expected<ArrayRef<uint8_t>>
+  getSectionContents(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionAlignment(DataRefImpl Sec) const = 0;
   virtual bool isSectionCompressed(DataRefImpl Sec) const = 0;
   virtual bool isSectionText(DataRefImpl Sec) const = 0;
@@ -455,7 +455,12 @@ inline uint64_t SectionRef::getSize() const {
 }
 
 inline std::error_code SectionRef::getContents(StringRef &Result) const {
-  return OwningObject->getSectionContents(SectionPimpl, Result);
+  Expected<ArrayRef<uint8_t>> Res =
+      OwningObject->getSectionContents(SectionPimpl);
+  if (!Res)
+    return errorToErrorCode(Res.takeError());
+  Result = StringRef(reinterpret_cast<const char *>(Res->data()), Res->size());
+  return std::error_code();
 }
 
 inline uint64_t SectionRef::getAlignment() const {

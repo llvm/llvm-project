@@ -2202,6 +2202,11 @@ def msram_ecc : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
 def mno_sram_ecc : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>,
   HelpText<"Disable SRAM ECC (AMDGPU only)">;
 
+def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
+  HelpText<"CU wavefront execution mode is used (AMDGPU only)">;
+def mno_cumode : Flag<["-"], "mno-cumode">, Group<m_amdgpu_Features_Group>,
+  HelpText<"WGP wavefront execution mode is used (AMDGPU only)">;
+
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[DriverOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[DriverOption]>;
 def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>;

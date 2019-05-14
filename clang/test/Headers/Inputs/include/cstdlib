@@ -1,0 +1,16 @@
+#pragma once
+
+extern int abs (int __x) __attribute__ ((__const__)) ;
+extern long int labs (long int __x) __attribute__ ((__const__)) ;
+
+namespace std
+{
+
+using ::abs;
+
+inline long
+abs(long __i) { return __builtin_labs(__i); }
+
+inline long long
+abs(long long __x) { return __builtin_llabs (__x); }
+}

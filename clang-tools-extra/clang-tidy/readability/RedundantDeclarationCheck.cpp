@@ -17,6 +17,10 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
+AST_MATCHER(FunctionDecl, doesDeclarationForceExternallyVisibleDefinition) {
+  return Node.doesDeclarationForceExternallyVisibleDefinition();
+}
+
 RedundantDeclarationCheck::RedundantDeclarationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -25,8 +29,10 @@ RedundantDeclarationCheck::RedundantDeclarationCheck(StringRef Name,
 void RedundantDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       namedDecl(anyOf(varDecl(unless(isDefinition())),
-                      functionDecl(unless(anyOf(isDefinition(), isDefaulted(),
-                                                hasParent(friendDecl()))))))
+                      functionDecl(unless(anyOf(
+                          isDefinition(), isDefaulted(),
+                          doesDeclarationForceExternallyVisibleDefinition(),
+                          hasParent(friendDecl()))))))
           .bind("Decl"),
       this);
 }

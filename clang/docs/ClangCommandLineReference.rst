@@ -2396,6 +2396,11 @@ Generate code which only uses the general purpose registers (AArch64 only)
 
 AMDGPU
 ------
+.. option:: -mcumode, -mno-cumode
+
+CU wavefront execution mode is used if enabled and WGP wavefront execution mode
+is used if disabled (AMDGPU only)
+
 .. option:: -mxnack, -mno-xnack
 
 Enable XNACK (AMDGPU only)

@@ -479,12 +479,21 @@ namespace dr647 { // dr647: yes
   // This is partially superseded by dr1358.
   struct A {
     constexpr virtual void f() const;
-    constexpr virtual void g() const {} // expected-error {{virtual function cannot be constexpr}}
+    constexpr virtual void g() const {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{virtual function cannot be constexpr}}
+#endif
   };
 
-  struct X { virtual void f() const; }; // expected-note {{overridden}}
+  struct X { virtual void f() const; };
+#if __cplusplus <= 201703L
+  // expected-note@-2 {{overridden}}
+#endif
   struct B : X {
-    constexpr void f() const {} // expected-error {{virtual function cannot be constexpr}}
+    constexpr void f() const {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{virtual function cannot be constexpr}}
+#endif
   };
 
   struct NonLiteral { NonLiteral() {} }; // expected-note {{not an aggregate and has no constexpr constructors}}

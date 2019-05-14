@@ -5118,8 +5118,15 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT)
              == (lhsRecord == rhsRecord));
 
+    // Unions are never base classes, and never have base classes.
+    // It doesn't matter if they are complete or not. See PR#41843
+    if (lhsRecord && lhsRecord->getDecl()->isUnion())
+      return false;
+    if (rhsRecord && rhsRecord->getDecl()->isUnion())
+      return false;
+
     if (lhsRecord == rhsRecord)
-      return !lhsRecord->getDecl()->isUnion();
+      return true;
 
     // C++0x [meta.rel]p2:
     //   If Base and Derived are class types and are different types

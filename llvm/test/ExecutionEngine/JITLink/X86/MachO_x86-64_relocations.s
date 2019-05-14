@@ -272,6 +272,15 @@ subtractor_with_alt_entry_subtrahend_quad_B:
         .section        __DATA,__nds_test_sect,regular,no_dead_strip
         .quad 0
 
+# Check that unreferenced local symbols that have been marked no-dead-strip are
+# not dead-striped.
+#
+# jitlink-check: *{8}section_addr(macho_reloc.o, __nds_test_nlst) = 0
+        .section       __DATA,__nds_test_nlst,regular
+        .no_dead_strip no_dead_strip_test_symbol
+no_dead_strip_test_symbol:
+        .quad 0
+
 # Check that explicit zero-fill symbols are supported
 # jitlink-check: *{8}zero_fill_test = 0
         .globl zero_fill_test

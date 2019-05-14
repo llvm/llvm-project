@@ -11,7 +11,7 @@ define void @test1(i64* %ptr, i64 %val1) {
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE42-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE42-NEXT:    movlps %xmm0, (%eax)
-; SSE42-NEXT:    mfence
+; SSE42-NEXT:    lock orl $0, (%esp)
 ; SSE42-NEXT:    retl
 ;
 ; NOSSE-LABEL: test1:

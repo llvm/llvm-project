@@ -198,9 +198,7 @@ getSectionContents(const COFFObjectFile *Obj,
   const coff_section *Section;
   if (Error E = resolveSectionAndAddress(Obj, Sym, Section, Addr))
     return E;
-  if (std::error_code EC = Obj->getSectionContents(Section, Contents))
-    return errorCodeToError(EC);
-  return Error::success();
+  return Obj->getSectionContents(Section, Contents);
 }
 
 // Given a vector of relocations for a section and an offset into this section
