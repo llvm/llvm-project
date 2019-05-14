@@ -12,6 +12,7 @@
 
 #include "MSP430TargetMachine.h"
 #include "MSP430.h"
+#include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"

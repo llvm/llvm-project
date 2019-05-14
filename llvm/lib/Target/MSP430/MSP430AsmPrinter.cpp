@@ -16,6 +16,7 @@
 #include "MSP430InstrInfo.h"
 #include "MSP430MCInstLower.h"
 #include "MSP430TargetMachine.h"
+#include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"

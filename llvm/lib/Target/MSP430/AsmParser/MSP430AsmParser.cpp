@@ -9,6 +9,7 @@
 #include "MSP430.h"
 #include "MSP430RegisterInfo.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
+#include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringSwitch.h"
