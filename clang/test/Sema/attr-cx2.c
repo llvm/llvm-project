@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -fdouble-square-bracket-attributes %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c2x %s
 
 struct S {};
 struct S * [[clang::address_space(1)]] Foo;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c2x -verify %s
 
 struct [[nodiscard]] S1 { // ok
   int i;
