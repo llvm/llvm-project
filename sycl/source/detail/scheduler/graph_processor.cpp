@@ -32,7 +32,7 @@ Scheduler::GraphProcessor::getWaitList(EventImplPtr Event) {
 
 void Scheduler::GraphProcessor::waitForEvent(EventImplPtr Event) {
   Command *Cmd = getCommand(Event);
-  assert(!Cmd && "Event has no associated command?");
+  assert(Cmd && "Event has no associated command?");
   Command *FailedCommand = enqueueCommand(Cmd);
   if (FailedCommand)
     // TODO: Reschedule commands.
