@@ -42,7 +42,7 @@ breakpoints to have source line information that matches many header file
 paths.
 
 If you set a file and line breakpoint using a full path to the source file,
-like Xcode does when setting a breakpoint in its GUI on Mac OS X when you click
+like Xcode does when setting a breakpoint in its GUI on macOS when you click
 in the gutter of the source view, this path must match the full paths in the
 debug information. If the paths mismatch, possibly due to passing in a resolved
 source file path that doesn't match an unresolved path in the debug

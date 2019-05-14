@@ -746,7 +746,7 @@ container classes, regardless of the template arguments provided. The details
 for this are found at FormatManager.cpp
 
 The regular expression language used by LLDB is the POSIX extended language, as
-defined by the Single UNIX Specification, of which Mac OS X is a compliant
+defined by the Single UNIX Specification, of which macOS is a compliant
 implementation.
 
 Names Summaries
@@ -1032,7 +1032,7 @@ formatters for a same library or OS release.
 By default, several categories are created in LLDB:
 
 - default: this is the category where every formatter ends up, unless another category is specified
-- objc: formatters for basic and common Objective-C types that do not specifically depend on Mac OS X
+- objc: formatters for basic and common Objective-C types that do not specifically depend on macOS
 - gnu-libstdc++: formatters for std::string, std::vector, std::list and std::map as implemented by libstdcpp
 - libcxx: formatters for std::string, std::vector, std::list and std::map as implemented by libcxx
 - system: truly basic types for which a formatter is required

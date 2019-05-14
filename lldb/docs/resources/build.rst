@@ -113,7 +113,7 @@ and the working directory to point to binaries inside of the ninja tree.
 Building LLDB on macOS
 ----------------------
 
-There are two ways to build LLDB on Mac OS X: Using Xcode and using CMake
+There are two ways to build LLDB on macOS: Using Xcode and using CMake
 
 **Preliminaries**
 
@@ -122,13 +122,12 @@ There are two ways to build LLDB on Mac OS X: Using Xcode and using CMake
 
 **Building LLDB with Xcode**
 
-Building on Mac OS X with Xcode is as easy as downloading the code and building
+Building on macOS with Xcode is as easy as downloading the code and building
 the Xcode project or workspace:
 
 * Download the lldb sources.
 * Follow the code signing instructions in ``lldb/docs/code-signing.txt``.
-* In Xcode 3.x: ``lldb/lldb.xcodeproj``, select the lldb-tool target, and build.
-* In Xcode 4.x: ``lldb/lldb.xcworkspace``, select the lldb-tool scheme, and build.
+* In Xcode, open ``lldb/lldb.xcworkspace``, select the lldb-tool scheme, and build.
 
 **Building LLDB with CMake**
 

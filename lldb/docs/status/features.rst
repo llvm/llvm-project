@@ -13,6 +13,6 @@ LLDB supports a broad variety of basic debugging features such as reading DWARF,
   * Debugger plug-ins implement the host and target specific functions required to debug.
 
 * SWIG-generated script bridging allows Python to access and control the public API of the debugger library.
-* A remote protocol server, debugserver, implements Mac OS X debugging on i386 and x86-64.
+* A remote protocol server, debugserver, implements macOS debugging on i386 and x86-64.
 * A command line debugger - the lldb executable itself.
 * A framework API to the library.

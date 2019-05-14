@@ -672,7 +672,7 @@ Using the lldb.py module in Python
 ----------------------------------
 
 LLDB has all of its core code build into a shared library which gets used by
-the lldb command line application. On Mac OS X this shared library is a
+the `lldb` command line application. On macOS this shared library is a
 framework: LLDB.framework and on other unix variants the program is a shared
 library: lldb.so. LLDB also provides an lldb.py module that contains the
 bindings from LLDB into Python. To use the LLDB.framework to create your own
