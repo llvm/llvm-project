@@ -9,6 +9,8 @@
 #ifndef lldb_ARMDefines_h_
 #define lldb_ARMDefines_h_
 
+#include "llvm/Support/ErrorHandling.h"
+
 #include <cassert>
 #include <cstdint>
 
@@ -68,8 +70,6 @@ typedef enum {
 
 static inline const char *ARMCondCodeToString(uint32_t CC) {
   switch (CC) {
-  default:
-    assert(0 && "Unknown condition code");
   case COND_EQ:
     return "eq";
   case COND_NE:
@@ -101,6 +101,7 @@ static inline const char *ARMCondCodeToString(uint32_t CC) {
   case COND_AL:
     return "al";
   }
+  llvm_unreachable("Unknown condition code");
 }
 
 static inline bool ARMConditionPassed(const uint32_t condition,
