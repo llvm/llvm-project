@@ -179,10 +179,12 @@ if (config.host_ldflags.find("-m32") < 0
 
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
-# Others/can-execute.txt
-if sys.platform not in ['win32']:
+if sys.platform in ['win32']:
+    # ExecutionEngine, no weak symbols in COFF.
+    config.available_features.add('uses_COFF')
+else:
+    # Others/can-execute.txt
     config.available_features.add('can-execute')
-    config.available_features.add('not_COFF')
 
 # Loadable module
 # FIXME: This should be supplied by Makefile or autoconf.
