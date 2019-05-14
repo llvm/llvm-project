@@ -1,0 +1,95 @@
+RUN: FileCheck -D#VAR1=11 --input-file %s %s
+
+; We use CHECK-NEXT directives to force a match on all lines with digits.
+
+; Numeric expressions using variables defined on the command-line without
+; spaces
+USE NO SPC
+11
+12
+10
+CHECK-LABEL: USE NO SPC
+CHECK-NEXT: [[#VAR1]]
+CHECK-NEXT: [[#VAR1+1]]
+CHECK-NEXT: [[#VAR1-1]]
+
+; Numeric expressions using variables defined on the command-line in alternate
+; spacing
+USE ALT SPC
+11
+11
+12
+12
+12
+12
+10
+10
+10
+10
+CHECK-LABEL: USE ALT SPC
+CHECK-NEXT: [[# VAR1]]
+CHECK-NEXT: [[# VAR1 ]]
+CHECK-NEXT: [[# VAR1+1]]
+CHECK-NEXT: [[# VAR1 +1]]
+CHECK-NEXT: [[# VAR1 + 1]]
+CHECK-NEXT: [[# VAR1 + 1 ]]
+CHECK-NEXT: [[# VAR1-1]]
+CHECK-NEXT: [[# VAR1 -1]]
+CHECK-NEXT: [[# VAR1 - 1]]
+CHECK-NEXT: [[# VAR1 - 1 ]]
+
+; Numeric expressions using variables defined on the command-line and an
+; immediate interpreted as an unsigned value
+; Note: 9223372036854775819 = 0x8000000000000000 + 11
+;       9223372036854775808 = 0x8000000000000000
+USE UNSIGNED IMM
+9223372036854775819
+CHECK-LABEL: USE UNSIGNED IMM
+CHECK-NEXT: [[#VAR1+9223372036854775808]]
+
+; Numeric expression using undefined variable
+RUN: not FileCheck --check-prefix UNDEF-USE --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix UNDEF-USE-MSG %s
+
+UNDEF VAR USE
+UNDEFVAR: 11
+UNDEF-USE-LABEL: UNDEF VAR USE
+UNDEF-USE-NEXT: UNDEFVAR: [[#UNDEFVAR]]
+UNDEF-USE-MSG: numeric-expression.txt:[[#@LINE-1]]:30: error: using undefined numeric variable 'UNDEFVAR'
+UNDEF-USE-MSG-NEXT: {{U}}NDEF-USE-NEXT: UNDEFVAR: {{\[\[#UNDEFVAR\]\]}}
+UNDEF-USE-MSG-NEXT: {{^                             \^$}}
+
+; Numeric expression with unsupported operator
+RUN: not FileCheck -D#VAR1=11 --check-prefixes CHECK,INVAL-OP --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INVAL-OP-MSG %s
+
+INVALID OPERATOR
+VAR1*2: 22
+INVAL-OP-LABEL: INVALID OPERATOR
+INVAL-OP-NEXT: VAR1*2: [[#VAR1*2]]
+INVAL-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:31: error: unsupported numeric operation '*'
+INVAL-OP-MSG-NEXT: {{I}}NVAL-OP-NEXT: VAR1*2: {{\[\[#VAR1\*2\]\]}}
+INVAL-OP-MSG-NEXT: {{^                              \^$}}
+
+; Name conflict between Numeric variable definition and pattern variable
+; definition
+RUN: not FileCheck -D#VAR1=11 -D#NUMVAR=42 --check-prefixes CONFLICT,CONFLICT1 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CLI-INPUT-PAT-CONFLICT %s
+RUN: not FileCheck -D#VAR1=11 -D#NUMVAR=42 -DNUMVAR=foobar --check-prefix CONFLICT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CLI-CLI-PAT-CONFLICT %s
+RUN: not FileCheck -D#VAR1=11 -DPATVAR=foobar -D#PATVAR=42 --check-prefix CONFLICT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CLI-CLI-NUM-CONFLICT %s
+
+PATVAR NUMVAR CONFLICT
+foobar
+CONFLICT-LABEL: PATVAR NUMVAR CONFLICT
+CONFLICT1-NEXT: [[NUMVAR:foo.*]]
+CLI-INPUT-PAT-CONFLICT: numeric-expression.txt:[[#@LINE-1]]:19: error: numeric variable with name 'NUMVAR' already exists
+CLI-INPUT-PAT-CONFLICT-NEXT: {{C}}ONFLICT1-NEXT: {{\[\[NUMVAR:foo\.\*\]\]}}
+CLI-INPUT-PAT-CONFLICT-NEXT: {{^                  \^$}}
+CLI-CLI-PAT-CONFLICT: Global defines:3:19: error: numeric variable with name 'NUMVAR' already exists
+CLI-CLI-PAT-CONFLICT-NEXT: Global define #3: NUMVAR=foobar
+CLI-CLI-PAT-CONFLICT-NEXT: {{^                  \^$}}
+CLI-CLI-NUM-CONFLICT: Global defines:3:20: error: pattern variable with name 'PATVAR' already exists
+CLI-CLI-NUM-CONFLICT-NEXT: Global define #3: #PATVAR=42
+CLI-CLI-NUM-CONFLICT-NEXT: {{^                   \^$}}
