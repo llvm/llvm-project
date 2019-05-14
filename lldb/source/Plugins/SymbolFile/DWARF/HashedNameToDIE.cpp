@@ -13,8 +13,7 @@ void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
                                       DIEArray &die_offsets) {
   const size_t count = die_info_array.size();
   for (size_t i = 0; i < count; ++i)
-    die_offsets.emplace_back(die_info_array[i].cu_offset,
-                             die_info_array[i].offset);
+    die_offsets.emplace_back(die_info_array[i]);
 }
 
 void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
@@ -33,8 +32,7 @@ void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
               tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
       }
       if (tag_matches)
-        die_offsets.emplace_back(die_info_array[i].cu_offset,
-                                 die_info_array[i].offset);
+        die_offsets.emplace_back(die_info_array[i]);
     }
   }
 }
@@ -58,8 +56,7 @@ void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
               tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
       }
       if (tag_matches)
-        die_offsets.emplace_back(die_info_array[i].cu_offset,
-                                 die_info_array[i].offset);
+        die_offsets.emplace_back(die_info_array[i]);
     }
   }
 }
@@ -77,8 +74,7 @@ void DWARFMappedHash::ExtractClassOrStructDIEArray(
           // We found the one true definition for this class, so only return
           // that
           die_offsets.clear();
-          die_offsets.emplace_back(die_info_array[i].cu_offset,
-                                   die_info_array[i].offset);
+          die_offsets.emplace_back(die_info_array[i]);
           return;
         } else {
           // Put the one true definition as the first entry so it matches first
@@ -86,8 +82,7 @@ void DWARFMappedHash::ExtractClassOrStructDIEArray(
                               die_info_array[i].offset);
         }
       } else {
-        die_offsets.emplace_back(die_info_array[i].cu_offset,
-                                 die_info_array[i].offset);
+        die_offsets.emplace_back(die_info_array[i]);
       }
     }
   }
@@ -99,8 +94,7 @@ void DWARFMappedHash::ExtractTypesFromDIEArray(
   const size_t count = die_info_array.size();
   for (size_t i = 0; i < count; ++i) {
     if ((die_info_array[i].type_flags & type_flag_mask) == type_flag_value)
-      die_offsets.emplace_back(die_info_array[i].cu_offset,
-                               die_info_array[i].offset);
+      die_offsets.emplace_back(die_info_array[i]);
   }
 }
 
