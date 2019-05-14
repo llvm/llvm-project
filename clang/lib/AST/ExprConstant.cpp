@@ -4536,7 +4536,7 @@ const AccessKinds CheckMemberCallThisPointerHandler::AccessKind;
 /// Check that the pointee of the 'this' pointer in a member function call is
 /// either within its lifetime or in its period of construction or destruction.
 static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
-                                       const LValue &This) {
+                                       const LValue &This, bool IsVirtual) {
   if (This.Designator.Invalid)
     return false;
 
@@ -4556,6 +4556,16 @@ static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
                          ? diag::note_constexpr_access_past_end
                          : diag::note_constexpr_access_unsized_array)
           << AK_MemberCall;
+      return false;
+    } else if (IsVirtual) {
+      // Conservatively refuse to perform a virtual function call if we would
+      // not be able to read a notional 'vptr' value.
+      APValue Val;
+      This.moveInto(Val);
+      QualType StarThisType =
+          Info.Ctx.getLValueReferenceType(This.Designator.getType(Info.Ctx));
+      Info.FFDiag(E, diag::note_constexpr_virtual_out_of_lifetime)
+          << Val.getAsString(Info.Ctx, StarThisType);
       return false;
     }
     return true;
@@ -4636,8 +4646,10 @@ static const CXXMethodDecl *HandleVirtualDispatch(
   unsigned PathLength = DynType->PathLength;
   for (/**/; PathLength <= This.Designator.Entries.size(); ++PathLength) {
     const CXXRecordDecl *Class = getBaseClassType(This.Designator, PathLength);
-    assert(!Class->getNumVBases() &&
-           "can't handle virtual calls with virtual bases");
+    if (Class->getNumVBases()) {
+      Info.FFDiag(E);
+      return nullptr;
+    }
 
     const CXXMethodDecl *Overrider =
         Found->getCorrespondingMethodDeclaredInClass(Class, false);
@@ -5301,17 +5313,17 @@ public:
 
     SmallVector<QualType, 4> CovariantAdjustmentPath;
     if (This) {
+      auto *NamedMember = dyn_cast<CXXMethodDecl>(FD);
+      bool IsVirtual = NamedMember && NamedMember->isVirtual() && !HasQualifier;
+
       // Check that the 'this' pointer points to an object of the right type.
-      if (!checkMemberCallThisPointer(Info, E, *This))
+      if (!checkMemberCallThisPointer(Info, E, *This, IsVirtual))
         return false;
 
       // Perform virtual dispatch, if necessary.
-      auto *NamedMember = dyn_cast<CXXMethodDecl>(FD);
-      if (NamedMember && NamedMember->isVirtual() && !HasQualifier) {
-        if (!(FD = HandleVirtualDispatch(Info, E, *This, NamedMember,
-                                         CovariantAdjustmentPath)))
-          return true;
-      }
+      if (IsVirtual && !(FD = HandleVirtualDispatch(Info, E, *This, NamedMember,
+                                                    CovariantAdjustmentPath)))
+        return true;
     }
 
     const FunctionDecl *Definition = nullptr;

@@ -252,11 +252,9 @@ namespace Virtual {
   static_assert(a.f() == 'D');
   static_assert(b.f() == 'D');
 
-  // FIXME: It is unclear whether this should be permitted. We assume that
-  // objects whose values are not known within evaluation are within their
-  // lifetimes.
+  // FIXME: It is unclear whether this should be permitted.
   D d_not_constexpr;
-  static_assert(d_not_constexpr.f() == 'D');
+  static_assert(d_not_constexpr.f() == 'D'); // expected-error {{constant expression}} expected-note {{virtual function called on object 'd_not_constexpr' whose dynamic type is not constant}}
 
   // Check that we apply a proper adjustment for a covariant return type.
   struct Covariant1 {
