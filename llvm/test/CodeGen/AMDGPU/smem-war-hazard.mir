@@ -31,8 +31,8 @@ body: |
 
 # GCN-LABEL: name: hazard_smem_war_related_clause
 # GCN:      S_LOAD_DWORD_IMM
-# GCN:      S_WAITCNT
-# GCN:      S_ADD_U32
+# GCN-NEXT: S_WAITCNT
+# GCN-NEXT: S_ADD_U32
 # GCN-NEXT: V_CMP_EQ_F32
 ---
 name: hazard_smem_war_related_clause
@@ -41,6 +41,23 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr4, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 0
+    $sgpr3 = S_ADD_U32 $sgpr2, $sgpr4, implicit-def $scc
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_related_clause_vmcnt
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT 3952{{$}}
+# GCN-NEXT: S_ADD_U32
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_related_clause_vmcnt
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr4, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 3952
     $sgpr3 = S_ADD_U32 $sgpr2, $sgpr4, implicit-def $scc
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
     S_ENDPGM 0
