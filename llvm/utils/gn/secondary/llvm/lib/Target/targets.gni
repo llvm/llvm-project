@@ -23,6 +23,7 @@ if (llvm_targets_to_build == "host") {
     "AArch64",
     "ARM",
     "BPF",
+    "Hexagon",
     "Lanai",
     "PowerPC",
     "Sparc",
@@ -46,6 +47,8 @@ foreach(target, llvm_targets_to_build) {
     llvm_build_ARM = true
   } else if (target == "BPF") {
     llvm_build_BPF = true
+  } else if (target == "Hexagon") {
+    # Nothing to do.
   } else if (target == "Lanai") {
     # Nothing to do.
   } else if (target == "PowerPC") {
