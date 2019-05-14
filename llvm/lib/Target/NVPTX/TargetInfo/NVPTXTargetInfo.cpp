@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTX.h"
-#include "llvm/IR/Module.h"
+#include "TargetInfo/NVPTXTargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
