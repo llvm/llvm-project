@@ -32,6 +32,7 @@ namespace llvm {
 
 class AMDGPUMachineFunction;
 class AMDGPUTargetStreamer;
+class MCCodeEmitter;
 class MCOperand;
 class GCNSubtarget;
 
@@ -56,6 +57,8 @@ private:
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
 
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
+
+  MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
   SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF) const;
