@@ -10,6 +10,7 @@
 #include "LanaiAluCode.h"
 #include "LanaiCondCode.h"
 #include "MCTargetDesc/LanaiMCExpr.h"
+#include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"

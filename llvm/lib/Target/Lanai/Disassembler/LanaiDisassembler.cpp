@@ -14,6 +14,7 @@
 
 #include "Lanai.h"
 #include "LanaiSubtarget.h"
+#include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
