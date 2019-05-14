@@ -7,5 +7,7 @@ unittest("TextAPITests") {
   ]
   sources = [
     "ELFYAMLTest.cpp",
+    "TextStubV1Tests.cpp",
+    "TextStubV2Tests.cpp",
   ]
 }

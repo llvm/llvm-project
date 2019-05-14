@@ -120,14 +120,15 @@ private:
   void addUsersToMoveToVALUWorklist(unsigned Reg, MachineRegisterInfo &MRI,
                                     SetVectorType &Worklist) const;
 
-  void
-  addSCCDefUsersToVALUWorklist(MachineInstr &SCCDefInst,
-                               SetVectorType &Worklist) const;
+  void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+                                    MachineInstr &SCCDefInst,
+                                    SetVectorType &Worklist) const;
 
   const TargetRegisterClass *
   getDestEquivalentVGPRClass(const MachineInstr &Inst) const;
 
-  bool checkInstOffsetsDoNotOverlap(MachineInstr &MIa, MachineInstr &MIb) const;
+  bool checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
+                                    const MachineInstr &MIb) const;
 
   unsigned findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
@@ -172,11 +173,13 @@ public:
                                int64_t &Offset1,
                                int64_t &Offset2) const override;
 
-  bool getMemOperandWithOffset(MachineInstr &LdSt, MachineOperand *&BaseOp,
+  bool getMemOperandWithOffset(const MachineInstr &LdSt,
+                               const MachineOperand *&BaseOp,
                                int64_t &Offset,
                                const TargetRegisterInfo *TRI) const final;
 
-  bool shouldClusterMemOps(MachineOperand &BaseOp1, MachineOperand &BaseOp2,
+  bool shouldClusterMemOps(const MachineOperand &BaseOp1,
+                           const MachineOperand &BaseOp2,
                            unsigned NumLoads) const override;
 
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
@@ -293,7 +296,8 @@ public:
              unsigned Kind) const override;
 
   bool
-  areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+  areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                  const MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;
 
   bool isFoldableCopy(const MachineInstr &MI) const;
@@ -373,6 +377,14 @@ public:
 
   bool isSOPP(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SOPP;
+  }
+
+  static bool isPacked(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsPacked;
+  }
+
+  bool isPacked(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsPacked;
   }
 
   static bool isVOP1(const MachineInstr &MI) {
@@ -623,6 +635,10 @@ public:
 
   /// Whether we must prevent this instruction from executing with EXEC = 0.
   bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;
+
+  /// Returns true if the instruction could potentially depend on the value of
+  /// exec. If false, exec dependencies may safely be ignored.
+  bool mayReadEXEC(const MachineRegisterInfo &MRI, const MachineInstr &MI) const;
 
   bool isInlineConstant(const APInt &Imm) const;
 
@@ -1005,6 +1021,9 @@ namespace AMDGPU {
 
   LLVM_READONLY
   int getGlobalSaddrOp(uint16_t Opcode);
+
+  LLVM_READONLY
+  int getVCMPXNoSDstOp(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);

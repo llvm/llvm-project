@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
-#include "MIParser.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -21,6 +20,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -39,6 +39,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Target/TargetMachine.h"
 #include <memory>
 
 using namespace llvm;
@@ -53,10 +54,8 @@ class MIRParserImpl {
   StringRef Filename;
   LLVMContext &Context;
   SlotMapping IRSlots;
-  /// Maps from register class names to register classes.
-  Name2RegClassMap Names2RegClasses;
-  /// Maps from register bank names to register banks.
-  Name2RegBankMap Names2RegBanks;
+  std::unique_ptr<PerTargetMIParsingState> Target;
+
   /// True when the MIR file doesn't have LLVM IR. Dummy IR functions are
   /// created and inserted into the given module when this is true.
   bool NoLLVMIR = false;
@@ -149,20 +148,6 @@ private:
   /// block scalar string.
   SMDiagnostic diagFromBlockStringDiag(const SMDiagnostic &Error,
                                        SMRange SourceRange);
-
-  void initNames2RegClasses(const MachineFunction &MF);
-  void initNames2RegBanks(const MachineFunction &MF);
-
-  /// Check if the given identifier is a name of a register class.
-  ///
-  /// Return null if the name isn't a register class.
-  const TargetRegisterClass *getRegClass(const MachineFunction &MF,
-                                         StringRef Name);
-
-  /// Check if the given identifier is a name of a register bank.
-  ///
-  /// Return null if the name isn't a register bank.
-  const RegisterBank *getRegBank(const MachineFunction &MF, StringRef Name);
 
   void computeFunctionProperties(MachineFunction &MF);
 };
@@ -282,6 +267,11 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI) {
   // Parse the yaml.
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
+
+  const LLVMTargetMachine &TM = MMI.getTarget();
+  YamlMF.MachineFuncInfo = std::unique_ptr<yaml::MachineFunctionInfo>(
+      TM.createDefaultFuncInfoYAML());
+
   yaml::yamlize(In, YamlMF, false, Ctx);
   if (In.error())
     return true;
@@ -350,8 +340,13 @@ bool
 MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
                                          MachineFunction &MF) {
   // TODO: Recreate the machine function.
-  initNames2RegClasses(MF);
-  initNames2RegBanks(MF);
+  if (Target) {
+    // Avoid clearing state if we're using the same subtarget again.
+    Target->setTarget(MF.getSubtarget());
+  } else {
+    Target.reset(new PerTargetMIParsingState(MF.getSubtarget()));
+  }
+
   if (YamlMF.Alignment)
     MF.setAlignment(YamlMF.Alignment);
   MF.setExposesReturnsTwice(YamlMF.ExposesReturnsTwice);
@@ -367,8 +362,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   if (YamlMF.FailedISel)
     MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
 
-  PerFunctionMIParsingState PFS(MF, SM, IRSlots, Names2RegClasses,
-                                Names2RegBanks);
+  PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))
     return true;
   if (!YamlMF.Constants.empty()) {
@@ -419,6 +413,27 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   if (setupRegisterInfo(PFS, YamlMF))
     return true;
 
+  if (YamlMF.MachineFuncInfo) {
+    const LLVMTargetMachine &TM = MF.getTarget();
+    // Note this is called after the initial constructor of the
+    // MachineFunctionInfo based on the MachineFunction, which may depend on the
+    // IR.
+
+    SMRange SrcRange;
+    if (TM.parseMachineFunctionInfo(*YamlMF.MachineFuncInfo, PFS, Error,
+                                    SrcRange)) {
+      return error(Error, SrcRange);
+    }
+  }
+
+  // Set the reserved registers after parsing MachineFuncInfo. The target may
+  // have been recording information used to select the reserved registers
+  // there.
+  // FIXME: This is a temporary workaround until the reserved registers can be
+  // serialized.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MRI.freezeReservedRegs(MF);
+
   computeFunctionProperties(MF);
 
   MF.getSubtarget().mirFileLoaded(MF);
@@ -449,12 +464,12 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
       Info.Kind = VRegInfo::GENERIC;
       Info.D.RegBank = nullptr;
     } else {
-      const auto *RC = getRegClass(MF, VReg.Class.Value);
+      const auto *RC = Target->getRegClass(VReg.Class.Value);
       if (RC) {
         Info.Kind = VRegInfo::NORMAL;
         Info.D.RC = RC;
       } else {
-        const RegisterBank *RegBank = getRegBank(MF, VReg.Class.Value);
+        const RegisterBank *RegBank = Target->getRegBank(VReg.Class.Value);
         if (!RegBank)
           return error(
               VReg.Class.SourceRange.Start,
@@ -557,9 +572,6 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
     }
   }
 
-  // FIXME: This is a temporary workaround until the reserved registers can be
-  // serialized.
-  MRI.freezeReservedRegs(MF);
   return Error;
 }
 
@@ -608,8 +620,8 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                         Object.IsImmutable, Object.IsAliased);
     else
       ObjectIdx = MFI.CreateFixedSpillStackObject(Object.Size, Object.Offset);
-    MFI.setObjectAlignment(ObjectIdx, Object.Alignment);
     MFI.setStackID(ObjectIdx, Object.StackID);
+    MFI.setObjectAlignment(ObjectIdx, Object.Alignment);
     if (!PFS.FixedStackObjectSlots.insert(std::make_pair(Object.ID.Value,
                                                          ObjectIdx))
              .second)
@@ -642,9 +654,9 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     else
       ObjectIdx = MFI.CreateStackObject(
           Object.Size, Object.Alignment,
-          Object.Type == yaml::MachineStackObject::SpillSlot, Alloca);
+          Object.Type == yaml::MachineStackObject::SpillSlot, Alloca,
+          Object.StackID);
     MFI.setObjectOffset(ObjectIdx, Object.Offset);
-    MFI.setStackID(ObjectIdx, Object.StackID);
 
     if (!PFS.StackObjectSlots.insert(std::make_pair(Object.ID.Value, ObjectIdx))
              .second)
@@ -842,48 +854,6 @@ SMDiagnostic MIRParserImpl::diagFromBlockStringDiag(const SMDiagnostic &Error,
   return SMDiagnostic(SM, Loc, Filename, Line, Column, Error.getKind(),
                       Error.getMessage(), LineStr, Error.getRanges(),
                       Error.getFixIts());
-}
-
-void MIRParserImpl::initNames2RegClasses(const MachineFunction &MF) {
-  if (!Names2RegClasses.empty())
-    return;
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  for (unsigned I = 0, E = TRI->getNumRegClasses(); I < E; ++I) {
-    const auto *RC = TRI->getRegClass(I);
-    Names2RegClasses.insert(
-        std::make_pair(StringRef(TRI->getRegClassName(RC)).lower(), RC));
-  }
-}
-
-void MIRParserImpl::initNames2RegBanks(const MachineFunction &MF) {
-  if (!Names2RegBanks.empty())
-    return;
-  const RegisterBankInfo *RBI = MF.getSubtarget().getRegBankInfo();
-  // If the target does not support GlobalISel, we may not have a
-  // register bank info.
-  if (!RBI)
-    return;
-  for (unsigned I = 0, E = RBI->getNumRegBanks(); I < E; ++I) {
-    const auto &RegBank = RBI->getRegBank(I);
-    Names2RegBanks.insert(
-        std::make_pair(StringRef(RegBank.getName()).lower(), &RegBank));
-  }
-}
-
-const TargetRegisterClass *MIRParserImpl::getRegClass(const MachineFunction &MF,
-                                                      StringRef Name) {
-  auto RegClassInfo = Names2RegClasses.find(Name);
-  if (RegClassInfo == Names2RegClasses.end())
-    return nullptr;
-  return RegClassInfo->getValue();
-}
-
-const RegisterBank *MIRParserImpl::getRegBank(const MachineFunction &MF,
-                                              StringRef Name) {
-  auto RegBankInfo = Names2RegBanks.find(Name);
-  if (RegBankInfo == Names2RegBanks.end())
-    return nullptr;
-  return RegBankInfo->getValue();
 }
 
 MIRParser::MIRParser(std::unique_ptr<MIRParserImpl> Impl)

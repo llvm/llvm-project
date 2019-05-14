@@ -90,25 +90,8 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
     message(toString(File));
 
   // .so file
-  if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {
-    // DSOs are uniquified not by filename but by soname.
-    F->parseDynamic();
-    if (errorCount())
-      return;
-
-    // If a DSO appears more than once on the command line with and without
-    // --as-needed, --no-as-needed takes precedence over --as-needed because a
-    // user can add an extra DSO with --no-as-needed to force it to be added to
-    // the dependency list.
-    DenseMap<StringRef, InputFile *>::iterator It;
-    bool WasInserted;
-    std::tie(It, WasInserted) = SoNames.try_emplace(F->SoName, F);
-    cast<SharedFile<ELFT>>(It->second)->IsNeeded |= F->IsNeeded;
-    if (!WasInserted)
-      return;
-
-    SharedFiles.push_back(F);
-    F->parseRest();
+  if (auto *F = dyn_cast<SharedFile>(File)) {
+    F->parse<ELFT>();
     return;
   }
 
@@ -132,8 +115,11 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
 // Because all bitcode files that the program consists of are passed
 // to the compiler at once, it can do whole-program optimization.
 template <class ELFT> void SymbolTable::addCombinedLTOObject() {
-  if (BitcodeFiles.empty())
+  if (BitcodeFiles.empty()) {
+    if (Config->ThinLTOIndexOnly)
+      thinLTOCreateEmptyIndexFiles();
     return;
+  }
 
   // Compile bitcode files and replace bitcode symbols.
   LTO.reset(new BitcodeCompiler);
@@ -484,31 +470,30 @@ Defined *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
   return cast<Defined>(S);
 }
 
-template <typename ELFT>
-void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> &File,
-                            const typename ELFT::Sym &Sym, uint32_t Alignment,
-                            uint32_t VerdefIndex) {
+void SymbolTable::addShared(StringRef Name, uint8_t Binding, uint8_t StOther,
+                            uint8_t Type, uint64_t Value, uint64_t Size,
+                            uint32_t Alignment, uint32_t VerdefIndex,
+                            InputFile *File) {
   // DSO symbols do not affect visibility in the output, so we pass STV_DEFAULT
   // as the visibility, which will leave the visibility in the symbol table
   // unchanged.
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, STV_DEFAULT,
-                                    /*CanOmitFromDynSym*/ true, &File);
+                                    /*CanOmitFromDynSym*/ true, File);
   // Make sure we preempt DSO symbols with default visibility.
-  if (Sym.getVisibility() == STV_DEFAULT)
+  if (getVisibility(StOther) == STV_DEFAULT)
     S->ExportDynamic = true;
 
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
   auto Replace = [&](uint8_t Binding) {
-    replaceSymbol<SharedSymbol>(S, File, Name, Binding, Sym.st_other,
-                                Sym.getType(), Sym.st_value, Sym.st_size,
-                                Alignment, VerdefIndex);
+    replaceSymbol<SharedSymbol>(S, *File, Name, Binding, StOther, Type, Value,
+                                Size, Alignment, VerdefIndex);
   };
 
   if (WasInserted)
-    Replace(Sym.getBinding());
+    Replace(Binding);
   else if (S->Visibility == STV_DEFAULT && (S->isUndefined() || S->isLazy()))
     Replace(S->Binding);
 }
@@ -801,16 +786,3 @@ template void SymbolTable::fetchLazy<ELF32LE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);
-
-template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile<ELF32LE> &,
-                                              const typename ELF32LE::Sym &,
-                                              uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF32BE>(StringRef, SharedFile<ELF32BE> &,
-                                              const typename ELF32BE::Sym &,
-                                              uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile<ELF64LE> &,
-                                              const typename ELF64LE::Sym &,
-                                              uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> &,
-                                              const typename ELF64BE::Sym &,
-                                              uint32_t Alignment, uint32_t);

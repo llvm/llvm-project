@@ -483,18 +483,43 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(Opt));
       }
     }
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+      CmdArgs.push_back("-mllvm");
+      std::string Passes =
+          std::string("-lto-pass-remarks-filter=") + A->getValue();
+      CmdArgs.push_back(Args.MakeArgString(Passes));
+    }
   }
 
   // Propagate the -moutline flag to the linker in LTO.
-  if (Args.hasFlag(options::OPT_moutline, options::OPT_mno_outline, false)) {
-    if (getMachOToolChain().getMachOArchName(Args) == "arm64") {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-machine-outliner");
+  if (Arg *A =
+          Args.getLastArg(options::OPT_moutline, options::OPT_mno_outline)) {
+    if (A->getOption().matches(options::OPT_moutline)) {
+      if (getMachOToolChain().getMachOArchName(Args) == "arm64") {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-enable-machine-outliner");
 
-      // Outline from linkonceodr functions by default in LTO.
+        // Outline from linkonceodr functions by default in LTO.
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-enable-linkonceodr-outlining");
+      }
+    } else {
+      // Disable all outlining behaviour if we have mno-outline. We need to do
+      // this explicitly, because targets which support default outlining will
+      // try to do work if we don't.
       CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-linkonceodr-outlining");
+      CmdArgs.push_back("-enable-machine-outliner=never");
     }
+  }
+
+  // Setup statistics file output.
+  SmallString<128> StatsFile =
+      getStatsFileName(Args, Output, Inputs[0], getToolChain().getDriver());
+  if (!StatsFile.empty()) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-lto-stats-file=" + StatsFile.str()));
   }
 
   // It seems that the 'e' option is completely ignored for dynamic executables
@@ -868,6 +893,18 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
   }
 }
 
+/// Take a path that speculatively points into Xcode and return the
+/// `XCODE/Contents/Developer` path if it is an Xcode path, or an empty path
+/// otherwise.
+static StringRef getXcodeDeveloperPath(StringRef PathIntoXcode) {
+  static constexpr llvm::StringLiteral XcodeAppSuffix(
+      ".app/Contents/Developer");
+  size_t Index = PathIntoXcode.find(XcodeAppSuffix);
+  if (Index == StringRef::npos)
+    return "";
+  return PathIntoXcode.take_front(Index + XcodeAppSuffix.size());
+}
+
 void DarwinClang::AddLinkARCArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   // Avoid linking compatibility stubs on i386 mac.
@@ -880,10 +917,27 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
       runtime.hasSubscripting())
     return;
 
-  CmdArgs.push_back("-force_load");
   SmallString<128> P(getDriver().ClangExecutable);
   llvm::sys::path::remove_filename(P); // 'clang'
   llvm::sys::path::remove_filename(P); // 'bin'
+
+  // 'libarclite' usually lives in the same toolchain as 'clang'. However, the
+  // Swift open source toolchains for macOS distribute Clang without libarclite.
+  // In that case, to allow the linker to find 'libarclite', we point to the
+  // 'libarclite' in the XcodeDefault toolchain instead.
+  if (getXcodeDeveloperPath(P).empty()) {
+    if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+      // Try to infer the path to 'libarclite' in the toolchain from the
+      // specified SDK path.
+      StringRef XcodePathForSDK = getXcodeDeveloperPath(A->getValue());
+      if (!XcodePathForSDK.empty()) {
+        P = XcodePathForSDK;
+        llvm::sys::path::append(P, "Toolchains/XcodeDefault.xctoolchain/usr");
+      }
+    }
+  }
+
+  CmdArgs.push_back("-force_load");
   llvm::sys::path::append(P, "lib", "arc", "libarclite_");
   // Mash in the platform.
   if (isTargetWatchOSSimulator())
@@ -1115,8 +1169,6 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     AddLinkRuntimeLib(Args, CmdArgs, "stats_client", RLO_AlwaysLink);
     AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
   }
-  if (Sanitize.needsEsanRt())
-    AddLinkSanitizerLibArgs(Args, CmdArgs, "esan");
 
   const XRayArgs &XRay = getXRayArgs();
   if (XRay.needsXRayRt()) {
@@ -2360,6 +2412,8 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;

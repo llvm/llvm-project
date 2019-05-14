@@ -102,8 +102,7 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
   return s;
 }
 
-//----------------------------------------------------------------------
-/// @class Instrumenter IRDynamicChecks.cpp
+/// \class Instrumenter IRDynamicChecks.cpp
 /// Finds and instruments individual LLVM IR instructions
 ///
 /// When instrumenting LLVM IR, it is frequently desirable to first search for
@@ -129,38 +128,31 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
 ///
 /// - InspectFunction [default: iterates through the basic blocks in a
 ///   function calling InspectBasicBlock]
-//----------------------------------------------------------------------
 class Instrumenter {
 public:
-  //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The module being instrumented.
-  //------------------------------------------------------------------
   Instrumenter(llvm::Module &module, DynamicCheckerFunctions &checker_functions)
       : m_module(module), m_checker_functions(checker_functions),
         m_i8ptr_ty(nullptr), m_intptr_ty(nullptr) {}
 
   virtual ~Instrumenter() = default;
 
-  //------------------------------------------------------------------
   /// Inspect a function to find instructions to instrument
   ///
-  /// @param[in] function
+  /// \param[in] function
   ///     The function to inspect.
   ///
-  /// @return
+  /// \return
   ///     True on success; false on error.
-  //------------------------------------------------------------------
   bool Inspect(llvm::Function &function) { return InspectFunction(function); }
 
-  //------------------------------------------------------------------
   /// Instrument all the instructions found by Inspect()
   ///
-  /// @return
+  /// \return
   ///     True on success; false on error.
-  //------------------------------------------------------------------
   bool Instrument() {
     for (InstIterator ii = m_to_instrument.begin(),
                       last_ii = m_to_instrument.end();
@@ -173,48 +165,40 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   /// Add instrumentation to a single instruction
   ///
-  /// @param[in] inst
+  /// \param[in] inst
   ///     The instruction to be instrumented.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   virtual bool InstrumentInstruction(llvm::Instruction *inst) = 0;
 
-  //------------------------------------------------------------------
   /// Register a single instruction to be instrumented
   ///
-  /// @param[in] inst
+  /// \param[in] inst
   ///     The instruction to be instrumented.
-  //------------------------------------------------------------------
   void RegisterInstruction(llvm::Instruction &i) {
     m_to_instrument.push_back(&i);
   }
 
-  //------------------------------------------------------------------
   /// Determine whether a single instruction is interesting to instrument,
   /// and, if so, call RegisterInstruction
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///     The instruction to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
-  //------------------------------------------------------------------
   virtual bool InspectInstruction(llvm::Instruction &i) { return true; }
 
-  //------------------------------------------------------------------
   /// Scan a basic block to see if any instructions are interesting
   ///
-  /// @param[in] bb
+  /// \param[in] bb
   ///     The basic block to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
-  //------------------------------------------------------------------
   virtual bool InspectBasicBlock(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator ii = bb.begin(), last_ii = bb.end();
          ii != last_ii; ++ii) {
@@ -225,15 +209,13 @@ protected:
     return true;
   }
 
-  //------------------------------------------------------------------
   /// Scan a function to see if any instructions are interesting
   ///
-  /// @param[in] f
+  /// \param[in] f
   ///     The function to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
-  //------------------------------------------------------------------
   virtual bool InspectFunction(llvm::Function &f) {
     for (llvm::Function::iterator bbi = f.begin(), last_bbi = f.end();
          bbi != last_bbi; ++bbi) {
@@ -244,16 +226,14 @@ protected:
     return true;
   }
 
-  //------------------------------------------------------------------
   /// Build a function pointer for a function with signature void
   /// (*)(uint8_t*) with a given address
   ///
-  /// @param[in] start_address
+  /// \param[in] start_address
   ///     The address of the function.
   ///
-  /// @return
+  /// \return
   ///     The function pointer, for use in a CallInst.
-  //------------------------------------------------------------------
   llvm::FunctionCallee BuildPointerValidatorFunc(lldb::addr_t start_address) {
     llvm::Type *param_array[1];
 
@@ -269,16 +249,14 @@ protected:
     return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
   }
 
-  //------------------------------------------------------------------
   /// Build a function pointer for a function with signature void
   /// (*)(uint8_t*, uint8_t*) with a given address
   ///
-  /// @param[in] start_address
+  /// \param[in] start_address
   ///     The address of the function.
   ///
-  /// @return
+  /// \return
   ///     The function pointer, for use in a CallInst.
-  //------------------------------------------------------------------
   llvm::FunctionCallee BuildObjectCheckerFunc(lldb::addr_t start_address) {
     llvm::Type *param_array[2];
 

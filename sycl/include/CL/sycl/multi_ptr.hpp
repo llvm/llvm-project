@@ -43,7 +43,7 @@ public:
   multi_ptr(pointer_t pointer) : m_Pointer(pointer) {}
 #ifdef __SYCL_DEVICE_ONLY__
   multi_ptr(ElementType *pointer)
-      : m_Pointer(reinterpret_cast<pointer_t>(pointer)) {
+      : m_Pointer((pointer_t)(pointer)) {
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
   }

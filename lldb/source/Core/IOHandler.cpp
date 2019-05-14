@@ -331,7 +331,7 @@ IOHandlerEditline::~IOHandlerEditline() {
 
 void IOHandlerEditline::Activate() {
   IOHandler::Activate();
-  m_delegate.IOHandlerActivated(*this);
+  m_delegate.IOHandlerActivated(*this, GetIsInteractive());
 }
 
 void IOHandlerEditline::Deactivate() {
@@ -1078,9 +1078,7 @@ public:
 
   operator WINDOW *() { return m_window; }
 
-  //----------------------------------------------------------------------
   // Window drawing utilities
-  //----------------------------------------------------------------------
   void DrawTitleBox(const char *title, const char *bottom_message = nullptr) {
     attr_t attr = 0;
     if (IsActive())

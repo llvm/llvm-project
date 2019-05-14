@@ -51,6 +51,7 @@ class Lazy;
 class SectionChunk;
 class Symbol;
 class Undefined;
+class TpiSource;
 
 // The root class of input files.
 class InputFile {
@@ -74,12 +75,12 @@ public:
   StringRef ParentName;
 
   // Returns .drectve section contents if exist.
-  StringRef getDirectives() { return StringRef(Directives).trim(); }
+  StringRef getDirectives() { return Directives; }
 
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
 
-  std::string Directives;
+  StringRef Directives;
 
 private:
   const Kind FileKind;
@@ -99,7 +100,6 @@ public:
 
 private:
   std::unique_ptr<Archive> File;
-  std::string Filename;
   llvm::DenseSet<uint64_t> Seen;
 };
 
@@ -128,8 +128,12 @@ public:
   // Returns the underlying COFF file.
   COFFObjectFile *getCOFFObj() { return COFFObj.get(); }
 
-  // Whether the object was already merged into the final PDB or not
-  bool wasProcessedForPDB() const { return !!ModuleDBI; }
+  // Add a symbol for a range extension thunk. Return the new symbol table
+  // index. This index can be used to modify a relocation.
+  uint32_t addRangeThunkSymbol(Symbol *Thunk) {
+    Symbols.push_back(Thunk);
+    return Symbols.size() - 1;
+  }
 
   static std::vector<ObjFile *> Instances;
 
@@ -161,6 +165,15 @@ public:
   // Tells whether this file was compiled with /hotpatch
   bool HotPatchable = false;
 
+  // Whether the object was already merged into the final PDB or not
+  bool MergedIntoPDB = false;
+
+  // If the OBJ has a .debug$T stream, this tells how it will be handled.
+  TpiSource *DebugTypesObj = nullptr;
+
+  // The .debug$T stream if there's one.
+  llvm::Optional<llvm::codeview::CVTypeArray> DebugTypes;
+
 private:
   const coff_section* getSection(uint32_t I);
   const coff_section *getSection(COFFSymbolRef Sym) {
@@ -170,6 +183,7 @@ private:
   void initializeChunks();
   void initializeSymbols();
   void initializeFlags();
+  void initializeDependencies();
 
   SectionChunk *
   readSection(uint32_t SectionNumber,
@@ -281,7 +295,8 @@ public:
 // Used for LTO.
 class BitcodeFile : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
+  BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
+              uint64_t OffsetInArchive);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
   MachineTypes getMachineType() override;

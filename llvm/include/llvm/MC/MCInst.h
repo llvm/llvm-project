@@ -187,6 +187,7 @@ public:
 
   void clear() { Operands.clear(); }
   void erase(iterator I) { Operands.erase(I); }
+  void erase(iterator First, iterator Last) { Operands.erase(First, Last); }
   size_t size() const { return Operands.size(); }
   iterator begin() { return Operands.begin(); }
   const_iterator begin() const { return Operands.begin(); }

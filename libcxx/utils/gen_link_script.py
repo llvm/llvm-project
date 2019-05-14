@@ -7,77 +7,51 @@
 #
 #===----------------------------------------------------------------------===##
 
+"""
+Generate a linker script that links libc++ to the proper ABI library.
+An example script for c++abi would look like "INPUT(libc++.so.1 -lc++abi)".
+"""
+
+import argparse
 import os
 import sys
 
-def print_and_exit(msg):
-    sys.stderr.write(msg + '\n')
-    sys.exit(1)
-
-def usage_and_exit():
-    print_and_exit("Usage: ./gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <public_libs>...")
-
-def help_and_exit():
-    help_msg = \
-"""Usage
-
-  gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <public_libs>...
-
-  Generate a linker script that links libc++ to the proper ABI library.
-  The script replaces the specified libc++ symlink.
-  An example script for c++abi would look like "INPUT(libc++.so.1 -lc++abi)".
-
-Arguments
-  <path/to/libcxx.so> - The top level symlink to the versioned libc++ shared
-                        library. This file is replaced with a linker script.
-  <public_libs>       - List of library names to include in linker script.
-
-Exit Status:
-  0 if OK,
-  1 if the action failed.
-"""
-    print_and_exit(help_msg)
-
-def parse_args():
-    args = list(sys.argv)
-    del args[0]
-    if len(args) == 0:
-        usage_and_exit()
-    if args[0] == '--help':
-        help_and_exit()
-    dryrun = '--dryrun' == args[0]
-    if dryrun:
-        del args[0]
-    if len(args) < 2:
-        usage_and_exit()
-    symlink_file = args[0]
-    public_libs = args[1:]
-    return dryrun, symlink_file, public_libs
 
 def main():
-    dryrun, symlink_file, public_libs = parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dryrun", help="Don't write any output",
+                        action="store_true", default=False)
+    parser.add_argument("--rename", action="store_true", default=False,
+                        help="Rename the output as input so we can replace it")
+    parser.add_argument("--input", help="Path to libc++ library", required=True)
+    parser.add_argument("--output", help="Path to libc++ linker script", required=True)
+    parser.add_argument("libraries", nargs="+",
+                        help="List of libraries libc++ depends on")
+    args = parser.parse_args()
 
-    # Check that the given libc++.so file is a valid symlink.
-    if not os.path.islink(symlink_file):
-        print_and_exit("symlink file %s is not a symlink" % symlink_file)
-
-    # Read the symlink so we know what libc++ to link to in the linker script.
-    linked_libcxx = os.readlink(symlink_file)
+    # Use the relative path for the libc++ library.
+    libcxx = os.path.relpath(args.input, os.path.dirname(args.output))
 
     # Prepare the list of public libraries to link.
-    public_libs = ['-l%s' % l for l in public_libs]
+    public_libs = ['-l%s' % l for l in args.libraries]
 
-    # Generate the linker script contents and print the script and destination
-    # information.
-    contents = "INPUT(%s %s)" % (linked_libcxx, ' '.join(public_libs))
-    print("GENERATING SCRIPT: '%s' as file %s" % (contents, symlink_file))
+    # Generate the linker script contents.
+    contents = "INPUT(%s)" % ' '.join([libcxx] + public_libs)
+    print("GENERATING SCRIPT: '%s' as file %s" % (contents, args.output))
 
-    # Remove the existing libc++ symlink and replace it with the script.
-    if not dryrun:
-        os.unlink(symlink_file)
-        with open(symlink_file, 'w') as f:
-            f.write(contents + "\n")
+    if args.dryrun:
+        return 0
+
+    # Remove the existing libc++ symlink if it exists.
+    if os.path.islink(args.output):
+        os.unlink(args.output)
+
+    # Replace it with the linker script.
+    with open(args.output, 'w') as f:
+        f.write(contents + "\n")
+
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

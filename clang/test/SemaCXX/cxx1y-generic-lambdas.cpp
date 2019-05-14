@@ -944,6 +944,15 @@ namespace PR22117 {
   }(0)(0);
 }
 
+namespace PR41139 {
+  int y = [](auto outer) {
+    return [](auto inner) {
+      using T = int(decltype(outer), decltype(inner));
+      return 0;
+    };
+  }(0)(0);
+}
+
 namespace PR23716 {
 template<typename T>
 auto f(T x) {

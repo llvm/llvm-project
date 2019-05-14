@@ -161,7 +161,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (GV && !GV->hasDefaultVisibility())
     return true;
 
-  if (TT.isOSBinFormatMachO()) {
+  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatWasm()) {
     if (RM == Reloc::Static)
       return true;
     return GV && GV->isStrongDefinitionForLinker();

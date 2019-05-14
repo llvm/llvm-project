@@ -21,7 +21,7 @@ class ValueObject;
 using namespace lldb_private;
 
 ValueObjectConstResultCast::ValueObjectConstResultCast(
-    ValueObject &parent, const ConstString &name, const CompilerType &cast_type,
+    ValueObject &parent, ConstString name, const CompilerType &cast_type,
     lldb::addr_t live_address)
     : ValueObjectCast(parent, name, cast_type), m_impl(this, live_address) {
   m_name = name;

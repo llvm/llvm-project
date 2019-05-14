@@ -463,6 +463,8 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Address;
+    Res |= SanitizerKind::PointerCompare;
+    Res |= SanitizerKind::PointerSubtract;
     Res |= SanitizerKind::Function;
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::SafeStack;
@@ -471,7 +473,6 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
   }
   if (IsX86_64) {
     Res |= SanitizerKind::DataFlow;
-    Res |= SanitizerKind::Efficiency;
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
     Res |= SanitizerKind::HWAddress;

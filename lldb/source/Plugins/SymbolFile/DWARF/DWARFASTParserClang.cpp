@@ -10,7 +10,6 @@
 
 #include "DWARFASTParserClang.h"
 #include "DWARFDIE.h"
-#include "DWARFDIECollection.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
@@ -960,6 +959,14 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           }
         }
 
+        if (calling_convention == llvm::dwarf::DW_CC_pass_by_reference) {
+          clang::CXXRecordDecl *record_decl =
+              m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
+          if (record_decl)
+            record_decl->setArgPassingRestrictions(
+                clang::RecordDecl::APK_CannotPassInRegs);
+        }
+
       } break;
 
       case DW_TAG_enumeration_type: {
@@ -1393,7 +1400,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                         DIERef(class_type->GetID(), dwarf));
                   }
                   if (class_type_die) {
-                    DWARFDIECollection failures;
+                    std::vector<DWARFDIE> failures;
 
                     CopyUniqueClassMethodTypes(decl_ctx_die, class_type_die,
                                                class_type, failures);
@@ -1591,6 +1598,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
           if (!type_handled) {
             clang::FunctionDecl *function_decl = nullptr;
+            clang::FunctionDecl *template_function_decl = nullptr;
 
             if (abstract_origin_die_form.IsValid()) {
               DWARFDIE abs_die =
@@ -1618,10 +1626,14 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               if (has_template_params) {
                 ClangASTContext::TemplateParameterInfos template_param_infos;
                 ParseTemplateParameterInfos(die, template_param_infos);
+                template_function_decl = m_ast.CreateFunctionDeclaration(
+                    ignore_containing_context ? m_ast.GetTranslationUnitDecl()
+                                              : containing_decl_ctx,
+                    type_name_cstr, clang_type, storage, is_inline);
                 clang::FunctionTemplateDecl *func_template_decl =
                     m_ast.CreateFunctionTemplateDecl(
-                        containing_decl_ctx, function_decl, type_name_cstr,
-                        template_param_infos);
+                        containing_decl_ctx, template_function_decl,
+                        type_name_cstr, template_param_infos);
                 m_ast.CreateFunctionTemplateSpecializationInfo(
                     function_decl, func_template_decl, template_param_infos);
               }
@@ -1631,10 +1643,15 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               if (function_decl) {
                 LinkDeclContextToDIE(function_decl, die);
 
-                if (!function_param_decls.empty())
+                if (!function_param_decls.empty()) {
                   m_ast.SetFunctionParameters(function_decl,
                                               &function_param_decls.front(),
                                               function_param_decls.size());
+                  if (template_function_decl)
+                    m_ast.SetFunctionParameters(template_function_decl,
+                                                &function_param_decls.front(),
+                                                function_param_decls.size());
+                }
 
                 ClangASTMetadata metadata;
                 metadata.SetUserID(die.GetID());
@@ -2116,7 +2133,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
     return false;
 
 #if defined LLDB_CONFIGURATION_DEBUG
-  //----------------------------------------------------------------------
   // For debugging purposes, the LLDB_DWARF_DONT_COMPLETE_TYPENAMES environment
   // variable can be set with one or more typenames separated by ';'
   // characters. This will cause this function to not complete any types whose
@@ -2126,7 +2142,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   //
   // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo
   // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo;Bar;Baz
-  //----------------------------------------------------------------------
   const char *dont_complete_typenames_cstr =
       getenv("LLDB_DWARF_DONT_COMPLETE_TYPENAMES");
   if (dont_complete_typenames_cstr && dont_complete_typenames_cstr[0]) {
@@ -2194,7 +2209,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
         std::vector<int> member_accessibilities;
         bool is_a_class = false;
         // Parse members and base classes first
-        DWARFDIECollection member_function_dies;
+        std::vector<DWARFDIE> member_function_dies;
 
         DelayedPropertyList delayed_properties;
         ParseChildMembers(sc, die, clang_type, class_language, bases,
@@ -2203,12 +2218,8 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                           layout_info);
 
         // Now parse any methods if there were any...
-        size_t num_functions = member_function_dies.Size();
-        if (num_functions > 0) {
-          for (size_t i = 0; i < num_functions; ++i) {
-            dwarf->ResolveType(member_function_dies.GetDIEAtIndex(i));
-          }
-        }
+        for (const DWARFDIE &die : member_function_dies)
+          dwarf->ResolveType(die);
 
         if (class_language == eLanguageTypeObjC) {
           ConstString class_name(clang_type.GetTypeName());
@@ -2677,7 +2688,7 @@ bool DWARFASTParserClang::ParseChildMembers(
     CompilerType &class_clang_type, const LanguageType class_language,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<int> &member_accessibilities,
-    DWARFDIECollection &member_function_dies,
+    std::vector<DWARFDIE> &member_function_dies,
     DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
     bool &is_a_class, ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
@@ -3176,7 +3187,7 @@ bool DWARFASTParserClang::ParseChildMembers(
 
     case DW_TAG_subprogram:
       // Let the type parsing code handle this one for us.
-      member_function_dies.Append(die);
+      member_function_dies.push_back(die);
       break;
 
     case DW_TAG_inheritance: {
@@ -3798,8 +3809,11 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
       const char *namespace_name = die.GetName();
       clang::DeclContext *containing_decl_ctx =
           GetClangDeclContextContainingDIE(die, nullptr);
-      namespace_decl = m_ast.GetUniqueNamespaceDeclaration(namespace_name,
-                                                           containing_decl_ctx);
+      bool is_inline =
+          die.GetAttributeValueAsUnsigned(DW_AT_export_symbols, 0) != 0;
+
+      namespace_decl = m_ast.GetUniqueNamespaceDeclaration(
+          namespace_name, containing_decl_ctx, is_inline);
       Log *log =
           nullptr; // (LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
       if (log) {
@@ -3869,7 +3883,7 @@ void DWARFASTParserClang::LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
 
 bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     const DWARFDIE &src_class_die, const DWARFDIE &dst_class_die,
-    lldb_private::Type *class_type, DWARFDIECollection &failures) {
+    lldb_private::Type *class_type, std::vector<DWARFDIE> &failures) {
   if (!class_type || !src_class_die || !dst_class_die)
     return false;
   if (src_class_die.Tag() != dst_class_die.Tag())
@@ -4074,7 +4088,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
             log->Printf("warning: couldn't find a match for 0x%8.8x",
                         dst_die.GetOffset());
 
-          failures.Append(dst_die);
+          failures.push_back(dst_die);
         }
       }
     }
@@ -4139,9 +4153,9 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
                     "method '%s'",
                     dst_die.GetOffset(), dst_name_artificial.GetCString());
 
-      failures.Append(dst_die);
+      failures.push_back(dst_die);
     }
   }
 
-  return (failures.Size() != 0);
+  return !failures.empty();
 }

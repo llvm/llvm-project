@@ -215,10 +215,8 @@ MachineIRBuilder::materializeGEP(unsigned &Res, unsigned Op0,
   }
 
   Res = getMRI()->createGenericVirtualRegister(getMRI()->getType(Op0));
-  unsigned TmpReg = getMRI()->createGenericVirtualRegister(ValueTy);
-
-  buildConstant(TmpReg, Value);
-  return buildGEP(Res, Op0, TmpReg);
+  auto Cst = buildConstant(ValueTy, Value);
+  return buildGEP(Res, Op0, Cst.getReg(0));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,
@@ -348,6 +346,13 @@ MachineInstrBuilder MachineIRBuilder::buildStore(unsigned Val, unsigned Addr,
       .addUse(Val)
       .addUse(Addr)
       .addMemOperand(&MMO);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildUAddo(const DstOp &Res,
+                                                 const DstOp &CarryOut,
+                                                 const SrcOp &Op0,
+                                                 const SrcOp &Op1) {
+  return buildInstr(TargetOpcode::G_UADDO, {Res, CarryOut}, {Op0, Op1});
 }
 
 MachineInstrBuilder MachineIRBuilder::buildUAdde(const DstOp &Res,
@@ -540,6 +545,15 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildUnmerge(LLT Res,
+                                                   const SrcOp &Op) {
+  unsigned NumReg = Op.getLLTTy(*getMRI()).getSizeInBits() / Res.getSizeInBits();
+  SmallVector<unsigned, 8> TmpVec;
+  for (unsigned I = 0; I != NumReg; ++I)
+    TmpVec.push_back(getMRI()->createGenericVirtualRegister(Res));
+  return buildUnmerge(TmpVec, Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<unsigned> Res,
                                                    const SrcOp &Op) {
   // Unfortunately to convert from ArrayRef<unsigned> to ArrayRef<DstOp>,
@@ -602,13 +616,13 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(unsigned Res, unsigned Src,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
-                                                     unsigned Res,
+                                                     ArrayRef<unsigned> ResultRegs,
                                                      bool HasSideEffects) {
   auto MIB =
       buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
                                 : TargetOpcode::G_INTRINSIC);
-  if (Res)
-    MIB.addDef(Res);
+  for (unsigned ResultReg : ResultRegs)
+    MIB.addDef(ResultReg);
   MIB.addIntrinsicID(ID);
   return MIB;
 }
@@ -905,10 +919,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   }
   case TargetOpcode::COPY:
     assert(DstOps.size() == 1 && "Invalid Dst");
-    assert(SrcOps.size() == 1 && "Invalid Srcs");
-    assert(DstOps[0].getLLTTy(*getMRI()) == LLT() ||
-           SrcOps[0].getLLTTy(*getMRI()) == LLT() ||
-           DstOps[0].getLLTTy(*getMRI()) == SrcOps[0].getLLTTy(*getMRI()));
+    // If the caller wants to add a subreg source it has to be done separately
+    // so we may not have any SrcOps at this point yet.
     break;
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_ICMP: {

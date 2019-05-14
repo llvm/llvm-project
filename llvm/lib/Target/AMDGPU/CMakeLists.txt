@@ -95,7 +95,7 @@ add_llvm_target(AMDGPUCodeGen
   SIFixSGPRCopies.cpp
   SIFixupVectorISel.cpp
   SIFixVGPRCopies.cpp
-  SIFixWWMLiveness.cpp
+  SIPreAllocateWWMRegs.cpp
   SIFoldOperands.cpp
   SIFormMemoryClauses.cpp
   SIFrameLowering.cpp
@@ -116,6 +116,8 @@ add_llvm_target(AMDGPUCodeGen
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
   GCNILPSched.cpp
+  GCNRegBankReassign.cpp
+  GCNNSAReassign.cpp
   GCNDPPCombine.cpp
   SIModeRegister.cpp
   )

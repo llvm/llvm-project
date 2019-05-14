@@ -5,13 +5,13 @@ define <112 x i8> @pr34657(<112 x i8>* %src) local_unnamed_addr {
 ; CHECK-LABEL: pr34657:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    vmovups 96(%rsi), %xmm0
-; CHECK-NEXT:    vmovups 64(%rsi), %ymm1
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; CHECK-NEXT:    vmovups 64(%rsi), %ymm0
+; CHECK-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm1
 ; CHECK-NEXT:    vmovups (%rsi), %zmm2
-; CHECK-NEXT:    vmovaps %ymm1, 64(%rdi)
+; CHECK-NEXT:    vmovaps %ymm0, 64(%rdi)
 ; CHECK-NEXT:    vmovaps %zmm2, (%rdi)
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, 96(%rdi)
+; CHECK-NEXT:    vextractf32x4 $2, %zmm1, 96(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

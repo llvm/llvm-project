@@ -11,6 +11,7 @@
 
 #include "ClangdServer.h"
 #include "DraftStore.h"
+#include "Features.inc"
 #include "FindSymbols.h"
 #include "GlobalCompilationDatabase.h"
 #include "Path.h"
@@ -40,6 +41,7 @@ public:
   ClangdLSPServer(Transport &Transp, const FileSystemProvider &FSProvider,
                   const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
+                  llvm::Optional<OffsetEncoding> ForcedOffsetEncoding,
                   const ClangdServer::Options &Opts);
   ~ClangdLSPServer();
 
@@ -93,6 +95,8 @@ private:
   void onRename(const RenameParams &, Callback<WorkspaceEdit>);
   void onHover(const TextDocumentPositionParams &,
                Callback<llvm::Optional<Hover>>);
+  void onTypeHierarchy(const TypeHierarchyParams &,
+                       Callback<llvm::Optional<TypeHierarchyItem>>);
   void onChangeConfiguration(const DidChangeConfigurationParams &);
   void onSymbolInfo(const TextDocumentPositionParams &,
                     Callback<std::vector<SymbolDetails>>);
@@ -110,6 +114,10 @@ private:
   /// compilation database is changed.
   void reparseOpenedFiles();
   void applyConfiguration(const ConfigurationSettings &Settings);
+
+  /// Sends a "publishDiagnostics" notification to the LSP client.
+  void publishDiagnostics(const URIForFile &File,
+                          std::vector<clangd::Diagnostic> Diagnostics);
 
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.
@@ -159,6 +167,7 @@ private:
   // It is destroyed before run() returns, to ensure worker threads exit.
   ClangdServer::Options ClangdServerOpts;
   llvm::Optional<ClangdServer> Server;
+  llvm::Optional<OffsetEncoding> NegotiatedOffsetEncoding;
 };
 } // namespace clangd
 } // namespace clang

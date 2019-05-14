@@ -21,6 +21,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
@@ -401,6 +402,40 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   return 1;
 }
 
+int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
+  const MemCpyInst *MI = dyn_cast<MemCpyInst>(I);
+  assert(MI && "MemcpyInst expected");
+  ConstantInt *C = dyn_cast<ConstantInt>(MI->getLength());
+
+  // To model the cost of a library call, we assume 1 for the call, and
+  // 3 for the argument setup.
+  const unsigned LibCallCost = 4;
+
+  // If 'size' is not a constant, a library call will be generated.
+  if (!C)
+    return LibCallCost;
+
+  const unsigned Size = C->getValue().getZExtValue();
+  const unsigned DstAlign = MI->getDestAlignment();
+  const unsigned SrcAlign = MI->getSourceAlignment();
+  const Function *F = I->getParent()->getParent();
+  const unsigned Limit = TLI->getMaxStoresPerMemmove(F->hasMinSize());
+  std::vector<EVT> MemOps;
+
+  // MemOps will be poplulated with a list of data types that needs to be
+  // loaded and stored. That's why we multiply the number of elements by 2 to
+  // get the cost for this memcpy.
+  if (getTLI()->findOptimalMemOpLowering(
+          MemOps, Limit, Size, DstAlign, SrcAlign, false /*IsMemset*/,
+          false /*ZeroMemset*/, false /*MemcpyStrSrc*/, false /*AllowOverlap*/,
+          MI->getDestAddressSpace(), MI->getSourceAddressSpace(),
+          F->getAttributes()))
+    return MemOps.size() * 2;
+
+  // If we can't find an optimal memop lowering, return the default cost
+  return LibCallCost;
+}
+
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                Type *SubTp) {
   if (Kind == TTI::SK_Broadcast) {
@@ -602,7 +637,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable loop unrolling for Oz and Os.
   UP.OptSizeThreshold = 0;
   UP.PartialOptSizeThreshold = 0;
-  if (L->getHeader()->getParent()->optForSize())
+  if (L->getHeader()->getParent()->hasOptSize())
     return;
 
   // Only enable on Thumb-2 targets.

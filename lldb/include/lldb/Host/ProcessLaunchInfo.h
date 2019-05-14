@@ -23,11 +23,9 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // ProcessLaunchInfo
 //
 // Describes any information that is required to launch a process.
-//----------------------------------------------------------------------
 
 class ProcessLaunchInfo : public ProcessInfo {
 public:

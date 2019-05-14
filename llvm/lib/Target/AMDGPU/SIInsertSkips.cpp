@@ -137,6 +137,10 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
       if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
         return true;
 
+      // These instructions are potentially expensive even if EXEC = 0.
+      if (TII->isSMRD(*I) || TII->isVMEM(*I) || I->getOpcode() == AMDGPU::S_WAITCNT)
+        return true;
+
       ++NumInstr;
       if (NumInstr >= SkipThreshold)
         return true;
@@ -176,7 +180,7 @@ bool SIInsertSkips::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB) {
     .addImm(0); // en
 
   // ... and terminate wavefront.
-  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::S_ENDPGM));
+  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::S_ENDPGM)).addImm(0);
 
   return true;
 }
@@ -244,6 +248,10 @@ void SIInsertSkips::kill(MachineInstr &MI) {
       llvm_unreachable("invalid ISD:SET cond code");
     }
 
+    const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+    if (ST.hasNoSdstCMPX())
+      Opcode = AMDGPU::getVCMPXNoSDstOp(Opcode);
+
     assert(MI.getOperand(0).isReg());
 
     if (TRI->isVGPR(MBB.getParent()->getRegInfo(),
@@ -253,13 +261,17 @@ void SIInsertSkips::kill(MachineInstr &MI) {
           .add(MI.getOperand(1))
           .add(MI.getOperand(0));
     } else {
-      BuildMI(MBB, &MI, DL, TII->get(Opcode))
-          .addReg(AMDGPU::VCC, RegState::Define)
-          .addImm(0)  // src0 modifiers
-          .add(MI.getOperand(1))
-          .addImm(0)  // src1 modifiers
-          .add(MI.getOperand(0))
-          .addImm(0);  // omod
+      auto I = BuildMI(MBB, &MI, DL, TII->get(Opcode));
+      if (!ST.hasNoSdstCMPX())
+        I.addReg(AMDGPU::VCC, RegState::Define);
+
+      I.addImm(0)  // src0 modifiers
+        .add(MI.getOperand(1))
+        .addImm(0)  // src1 modifiers
+        .add(MI.getOperand(0));
+
+      if (!ST.hasNoSdstCMPX())
+        I.addImm(0);  // omod
     }
     break;
   }

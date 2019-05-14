@@ -336,6 +336,14 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                     &ARM::ValueMappings[ARM::GPR3OpsIdx]});
     break;
   }
+  case G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping = getOperandsMapping(
+        {Ty.getSizeInBits() == 64 ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
+                                  : &ARM::ValueMappings[ARM::SPR3OpsIdx],
+         nullptr});
+    break;
+  }
   case G_CONSTANT:
   case G_FRAME_INDEX:
   case G_GLOBAL_VALUE:
@@ -423,6 +431,13 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;
+  case DBG_VALUE: {
+    SmallVector<const ValueMapping *, 4> OperandBanks(NumOperands);
+    if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg())
+      OperandBanks[0] = &ARM::ValueMappings[ARM::GPR3OpsIdx];
+    OperandsMapping = getOperandsMapping(OperandBanks);
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }

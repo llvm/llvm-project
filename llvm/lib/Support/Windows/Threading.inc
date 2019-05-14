@@ -106,3 +106,19 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   // value.
   Name.clear();
 }
+
+SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+  // https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+  // Begin background processing mode. The system lowers the resource scheduling
+  // priorities of the thread so that it can perform background work without
+  // significantly affecting activity in the foreground.
+  // End background processing mode. The system restores the resource scheduling
+  // priorities of the thread as they were before the thread entered background
+  // processing mode.
+  return SetThreadPriority(GetCurrentThread(),
+                           Priority == ThreadPriority::Background
+                               ? THREAD_MODE_BACKGROUND_BEGIN
+                               : THREAD_MODE_BACKGROUND_END)
+             ? SetThreadPriorityResult::SUCCESS
+             : SetThreadPriorityResult::FAILURE;
+}

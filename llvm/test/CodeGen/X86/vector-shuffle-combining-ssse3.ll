@@ -745,37 +745,16 @@ define <16 x i8> @constant_fold_pshufb() {
   ret <16 x i8> %1
 }
 
-; FIXME - unnecessary pshufb/broadcast being used - pshufb mask only needs lowest byte.
 define <16 x i8> @constant_fold_pshufb_2() {
 ; SSE-LABEL: constant_fold_pshufb_2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl $2, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pshufb %xmm1, %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: constant_fold_pshufb_2:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl $2, %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: constant_fold_pshufb_2:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl $2, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: constant_fold_pshufb_2:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movl $2, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vpbroadcastb %xmm0, %xmm0
-; AVX512F-NEXT:    retq
+; AVX-LABEL: constant_fold_pshufb_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> <i8 2, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>)
   ret <16 x i8> %1
 }

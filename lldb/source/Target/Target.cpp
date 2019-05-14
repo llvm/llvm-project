@@ -615,13 +615,10 @@ Target::CreateScriptedBreakpoint(const llvm::StringRef class_name,
   StructuredDataImpl *extra_args_impl = new StructuredDataImpl();
   if (extra_args_sp)
     extra_args_impl->SetObjectSP(extra_args_sp);
-  
-  BreakpointResolverSP resolver_sp(new 
-                                   BreakpointResolverScripted(nullptr, class_name,
-                                   depth,
-                                   extra_args_impl,
-                                   *GetDebugger().GetCommandInterpreter()
-                                       .GetScriptInterpreter()));
+
+  BreakpointResolverSP resolver_sp(new BreakpointResolverScripted(
+      nullptr, class_name, depth, extra_args_impl,
+      *GetDebugger().GetScriptInterpreter()));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, false, true);
 
 }
@@ -701,7 +698,7 @@ void Target::AddBreakpointName(BreakpointName *bp_name) {
   m_breakpoint_names.insert(std::make_pair(bp_name->GetName(), bp_name));
 }
 
-BreakpointName *Target::FindBreakpointName(const ConstString &name, 
+BreakpointName *Target::FindBreakpointName(ConstString name, 
                                            bool can_create, 
                                            Status &error)
 {
@@ -726,7 +723,7 @@ BreakpointName *Target::FindBreakpointName(const ConstString &name,
 }
 
 void
-Target::DeleteBreakpointName(const ConstString &name)
+Target::DeleteBreakpointName(ConstString name)
 {
   BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
   
@@ -739,7 +736,7 @@ Target::DeleteBreakpointName(const ConstString &name)
 }
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
-                                const ConstString &name)
+                                ConstString name)
 {
   bp_sp->RemoveName(name.AsCString());
 }
@@ -1442,7 +1439,8 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
                        "Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());
 
-    m_images.Append(executable_sp); // The first image is our executable file
+    const bool notify = true;
+    m_images.Append(executable_sp, notify); // The first image is our executable file
 
     // If we haven't set an architecture yet, reset our architecture based on
     // what we found in the executable module.
@@ -1470,6 +1468,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     }
 
     if (executable_objfile && load_dependents) {
+      ModuleList added_modules;
       executable_objfile->GetDependentModules(dependent_files);
       for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
         FileSpec dependent_file_spec(
@@ -1482,13 +1481,16 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
           platform_dependent_file_spec = dependent_file_spec;
 
         ModuleSpec module_spec(platform_dependent_file_spec, m_arch.GetSpec());
-        ModuleSP image_module_sp(GetSharedModule(module_spec));
+        ModuleSP image_module_sp(GetOrCreateModule(module_spec, 
+                                 false /* notify */));
         if (image_module_sp) {
+          added_modules.AppendIfNeeded (image_module_sp, false);
           ObjectFile *objfile = image_module_sp->GetObjectFile();
           if (objfile)
             objfile->GetDependentModules(dependent_files);
         }
       }
+      ModulesDidLoad(added_modules);
     }
   }
 }
@@ -1569,8 +1571,9 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
                   arch_spec.GetArchitectureName(),
                   arch_spec.GetTriple().getTriple().c_str());
     ModuleSpec module_spec(executable_sp->GetFileSpec(), other);
+    FileSpecList search_paths = GetExecutableSearchPaths();
     Status error = ModuleList::GetSharedModule(module_spec, executable_sp,
-                                               &GetExecutableSearchPaths(),
+                                               &search_paths,
                                                nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
@@ -1606,20 +1609,19 @@ bool Target::MergeArchitecture(const ArchSpec &arch_spec) {
   return false;
 }
 
-void Target::WillClearList(const ModuleList &module_list) {}
+void Target::NotifyWillClearList(const ModuleList &module_list) {}
 
-void Target::ModuleAdded(const ModuleList &module_list,
+void Target::NotifyModuleAdded(const ModuleList &module_list,
                          const ModuleSP &module_sp) {
   // A module is being added to this target for the first time
   if (m_valid) {
     ModuleList my_module_list;
     my_module_list.Append(module_sp);
-    LoadScriptingResourceForModule(module_sp, this);
     ModulesDidLoad(my_module_list);
   }
 }
 
-void Target::ModuleRemoved(const ModuleList &module_list,
+void Target::NotifyModuleRemoved(const ModuleList &module_list,
                            const ModuleSP &module_sp) {
   // A module is being removed from this target.
   if (m_valid) {
@@ -1629,7 +1631,7 @@ void Target::ModuleRemoved(const ModuleList &module_list,
   }
 }
 
-void Target::ModuleUpdated(const ModuleList &module_list,
+void Target::NotifyModuleUpdated(const ModuleList &module_list,
                            const ModuleSP &old_module_sp,
                            const ModuleSP &new_module_sp) {
   // A module is replacing an already added module
@@ -1641,8 +1643,18 @@ void Target::ModuleUpdated(const ModuleList &module_list,
   }
 }
 
+void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
+  ModulesDidUnload (module_list, false);
+}
+
+
 void Target::ModulesDidLoad(ModuleList &module_list) {
-  if (m_valid && module_list.GetSize()) {
+  const size_t num_images = module_list.GetSize();
+  if (m_valid && num_images) {
+    for (size_t idx = 0; idx < num_images; ++idx) {
+      ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
+      LoadScriptingResourceForModule(module_sp, this);
+    }
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     if (m_process_sp) {
@@ -1984,8 +1996,8 @@ bool Target::ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
   return false;
 }
 
-ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
-                                 Status *error_ptr) {
+ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
+                                   Status *error_ptr) {
   ModuleSP module_sp;
 
   Status error;
@@ -2001,7 +2013,7 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
     ModuleSP old_module_sp; // This will get filled in if we have a new version
                             // of the library
     bool did_create_module = false;
-
+    FileSpecList search_paths = GetExecutableSearchPaths();
     // If there are image search path entries, try to use them first to acquire
     // a suitable image.
     if (m_image_search_paths.GetSize()) {
@@ -2012,7 +2024,7 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
         transformed_spec.GetFileSpec().GetFilename() =
             module_spec.GetFileSpec().GetFilename();
         error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                            &GetExecutableSearchPaths(),
+                                            &search_paths,
                                             &old_module_sp, &did_create_module);
       }
     }
@@ -2029,7 +2041,7 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
         error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                            &GetExecutableSearchPaths(),
+                                            &search_paths,
                                             &old_module_sp, &did_create_module);
       }
 
@@ -2039,7 +2051,7 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
               module_spec, m_process_sp.get(), module_sp,
-              &GetExecutableSearchPaths(), &old_module_sp, &did_create_module);
+              &search_paths, &old_module_sp, &did_create_module);
         } else {
           error.SetErrorString("no platform is currently set");
         }
@@ -2118,8 +2130,9 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
           Module *old_module_ptr = old_module_sp.get();
           old_module_sp.reset();
           ModuleList::RemoveSharedModuleIfOrphaned(old_module_ptr);
-        } else
-          m_images.Append(module_sp);
+        } else {
+          m_images.Append(module_sp, notify);
+        }
       } else
         module_sp.reset();
     }
@@ -2414,7 +2427,7 @@ ExpressionResults Target::EvaluateExpression(
 }
 
 lldb::ExpressionVariableSP
-Target::GetPersistentVariable(const ConstString &name) {
+Target::GetPersistentVariable(ConstString name) {
   lldb::ExpressionVariableSP variable_sp;
   m_scratch_type_system_map.ForEach(
       [name, &variable_sp](TypeSystem *type_system) -> bool {
@@ -2430,7 +2443,7 @@ Target::GetPersistentVariable(const ConstString &name) {
   return variable_sp;
 }
 
-lldb::addr_t Target::GetPersistentSymbol(const ConstString &name) {
+lldb::addr_t Target::GetPersistentSymbol(ConstString name) {
   lldb::addr_t address = LLDB_INVALID_ADDRESS;
 
   m_scratch_type_system_map.ForEach(
@@ -3143,9 +3156,7 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
   }
 }
 
-//--------------------------------------------------------------
 // Target::StopHook
-//--------------------------------------------------------------
 Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
     : UserID(uid), m_target_sp(target_sp), m_commands(), m_specifier_sp(),
       m_thread_spec_up() {}
@@ -3212,9 +3223,7 @@ void Target::StopHook::GetDescription(Stream *s,
   s->SetIndentLevel(indent_level);
 }
 
-//--------------------------------------------------------------
 // class TargetProperties
-//--------------------------------------------------------------
 
 // clang-format off
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
@@ -3327,6 +3336,9 @@ static constexpr PropertyDefinition g_properties[] = {
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, {},
      "Automatically load Clang modules referred to by the program."},
+    {"import-std-module", OptionValue::eTypeBoolean, false, false,
+     nullptr, {},
+     "Import the C++ std module to improve debugging STL containers."},
     {"auto-apply-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
      {}, "Automatically apply fix-it hints to expressions."},
     {"notify-about-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
@@ -3465,6 +3477,7 @@ enum {
   ePropertyDebugFileSearchPaths,
   ePropertyClangModuleSearchPaths,
   ePropertyAutoImportClangModules,
+  ePropertyImportStdModule,
   ePropertyAutoApplyFixIts,
   ePropertyNotifyAboutFixIts,
   ePropertySaveObjects,
@@ -3502,7 +3515,7 @@ enum {
 
 class TargetOptionValueProperties : public OptionValueProperties {
 public:
-  TargetOptionValueProperties(const ConstString &name)
+  TargetOptionValueProperties(ConstString name)
       : OptionValueProperties(name), m_target(nullptr), m_got_host_env(false) {}
 
   // This constructor is used when creating TargetOptionValueProperties when it
@@ -3571,9 +3584,7 @@ protected:
   mutable bool m_got_host_env;
 };
 
-//----------------------------------------------------------------------
 // TargetProperties
-//----------------------------------------------------------------------
 static constexpr PropertyDefinition g_experimental_properties[]{
     {"inject-local-vars", OptionValue::eTypeBoolean, true, true, nullptr,
      {},
@@ -3599,9 +3610,7 @@ TargetExperimentalProperties::TargetExperimentalProperties()
   m_collection_sp->Initialize(g_experimental_properties);
 }
 
-//----------------------------------------------------------------------
 // TargetProperties
-//----------------------------------------------------------------------
 TargetProperties::TargetProperties(Target *target)
     : Properties(), m_launch_info() {
   if (target) {
@@ -3854,27 +3863,36 @@ PathMappingList &TargetProperties::GetSourcePathMap() const {
   return option_value->GetCurrentValue();
 }
 
-FileSpecList &TargetProperties::GetExecutableSearchPaths() {
+void TargetProperties::AppendExecutableSearchPaths(const FileSpec& dir) {
   const uint32_t idx = ePropertyExecutableSearchPaths;
   OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                                    false, idx);
   assert(option_value);
-  return option_value->GetCurrentValue();
+  option_value->AppendCurrentValue(dir);
 }
 
-FileSpecList &TargetProperties::GetDebugFileSearchPaths() {
-  const uint32_t idx = ePropertyDebugFileSearchPaths;
-  OptionValueFileSpecList *option_value =
+FileSpecList TargetProperties::GetExecutableSearchPaths() {
+  const uint32_t idx = ePropertyExecutableSearchPaths;
+  const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                                    false, idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
 
-FileSpecList &TargetProperties::GetClangModuleSearchPaths() {
+FileSpecList TargetProperties::GetDebugFileSearchPaths() {
+  const uint32_t idx = ePropertyDebugFileSearchPaths;
+  const OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
+                                                                   false, idx);
+  assert(option_value);
+  return option_value->GetCurrentValue();
+}
+
+FileSpecList TargetProperties::GetClangModuleSearchPaths() {
   const uint32_t idx = ePropertyClangModuleSearchPaths;
-  OptionValueFileSpecList *option_value =
+  const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                                    false, idx);
   assert(option_value);
@@ -3883,6 +3901,12 @@ FileSpecList &TargetProperties::GetClangModuleSearchPaths() {
 
 bool TargetProperties::GetEnableAutoImportClangModules() const {
   const uint32_t idx = ePropertyAutoImportClangModules;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
+bool TargetProperties::GetEnableImportStdModule() const {
+  const uint32_t idx = ePropertyImportStdModule;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
@@ -4193,9 +4217,7 @@ void TargetProperties::DisableSTDIOValueChangedCallback(
     this_->m_launch_info.GetFlags().Clear(lldb::eLaunchFlagDisableSTDIO);
 }
 
-//----------------------------------------------------------------------
 // Target::TargetEventData
-//----------------------------------------------------------------------
 
 Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp)
     : EventData(), m_target_sp(target_sp), m_module_list() {}
@@ -4206,7 +4228,7 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
 
 Target::TargetEventData::~TargetEventData() = default;
 
-const ConstString &Target::TargetEventData::GetFlavorString() {
+ConstString Target::TargetEventData::GetFlavorString() {
   static ConstString g_flavor("Target::TargetEventData");
   return g_flavor;
 }

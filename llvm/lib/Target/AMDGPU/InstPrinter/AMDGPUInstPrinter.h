@@ -41,7 +41,8 @@ private:
   void printU4ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU8ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printS13ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printS13ImmDecOperand(const MCInst *MI, unsigned OpNo,
+                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printNamedBit(const MCInst *MI, unsigned OpNo, raw_ostream &O,
@@ -67,6 +68,8 @@ private:
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printGDS(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
+  void printDLC(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                raw_ostream &O);
   void printGLC(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printSLC(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -75,6 +78,8 @@ private:
                 raw_ostream &O);
   void printDMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
+  void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                raw_ostream &O);
   void printUNorm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printDA(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -149,6 +154,8 @@ private:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printMemOperand(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printDefaultVccOperand(unsigned OpNo, const MCSubtargetInfo &STI,
+                              raw_ostream &O);
 
 
   template <unsigned N>
@@ -213,6 +220,8 @@ protected:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printHwreg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
+  void printEndpgm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
 };
 
 class R600InstPrinter : public MCInstPrinter {

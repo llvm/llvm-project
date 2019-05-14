@@ -121,6 +121,13 @@ def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
+def ENTER_WWM : SPseudoInstSI <(outs SReg_64:$sdst), (ins i64imm:$src0)> {
+  let Defs = [EXEC];
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 def EXIT_WWM : SPseudoInstSI <(outs SReg_64:$sdst), (ins SReg_64:$src0)> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -168,24 +175,22 @@ def GET_GROUPSTATICSIZE : SPseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
 } // End let usesCustomInserter = 1, SALU = 1
 
-def S_MOV_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0)> {
-  let isAsCheapAsAMove = 1;
+// Wrap an instruction by duplicating it, except for setting isTerminator.
+class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
+      base_inst.OutOperandList,
+      base_inst.InOperandList> {
+  let Uses = base_inst.Uses;
+  let Defs = base_inst.Defs;
   let isTerminator = 1;
+  let isAsCheapAsAMove = base_inst.isAsCheapAsAMove;
+  let hasSideEffects = base_inst.hasSideEffects;
+  let UseNamedOperandTable = base_inst.UseNamedOperandTable;
+  let CodeSize = base_inst.CodeSize;
 }
 
-def S_XOR_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let isAsCheapAsAMove = 1;
-  let isTerminator = 1;
-  let Defs = [SCC];
-}
-
-def S_ANDN2_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let isAsCheapAsAMove = 1;
-  let isTerminator = 1;
-}
+def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
+def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
+def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
@@ -194,7 +199,6 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
-  let isBarrier = 1;
   let isConvergent = 1;
   let FixedSize = 1;
   let Size = 0;
@@ -479,7 +483,9 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 // SI_SPILL_32_* instructions.
 defm SI_SPILL_S32  : SI_SPILL_SGPR <SReg_32>;
 defm SI_SPILL_S64  : SI_SPILL_SGPR <SReg_64>;
+defm SI_SPILL_S96  : SI_SPILL_SGPR <SReg_96>;
 defm SI_SPILL_S128 : SI_SPILL_SGPR <SReg_128>;
+defm SI_SPILL_S160 : SI_SPILL_SGPR <SReg_160>;
 defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 
@@ -513,6 +519,7 @@ defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
 defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
 defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;
 defm SI_SPILL_V128 : SI_SPILL_VGPR <VReg_128>;
+defm SI_SPILL_V160 : SI_SPILL_VGPR <VReg_160>;
 defm SI_SPILL_V256 : SI_SPILL_VGPR <VReg_256>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 
@@ -698,7 +705,7 @@ def : FMADModsPat<V_MAD_F16, AMDGPUfmad_ftz, f16> {
 multiclass SelectPat <ValueType vt, Instruction inst> {
   def : GCNPat <
     (vt (select i1:$src0, vt:$src1, vt:$src2)),
-    (inst $src2, $src1, $src0)
+    (inst (i32 0), $src2, (i32 0), $src1, $src0)
   >;
 }
 
@@ -738,6 +745,22 @@ foreach Index = 0-2 in {
   >;
 }
 
+foreach Index = 0-2 in {
+  def Extract_Element_v3i32_#Index : Extract_Element <
+    i32, v3i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v3i32_#Index : Insert_Element <
+    i32, v3i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v3f32_#Index : Extract_Element <
+    f32, v3f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v3f32_#Index : Insert_Element <
+    f32, v3f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
 foreach Index = 0-3 in {
   def Extract_Element_v4i32_#Index : Extract_Element <
     i32, v4i32, Index, !cast<SubRegIndex>(sub#Index)
@@ -751,6 +774,22 @@ foreach Index = 0-3 in {
   >;
   def Insert_Element_v4f32_#Index : Insert_Element <
     f32, v4f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
+foreach Index = 0-4 in {
+  def Extract_Element_v5i32_#Index : Extract_Element <
+    i32, v5i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v5i32_#Index : Insert_Element <
+    i32, v5i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v5f32_#Index : Extract_Element <
+    f32, v5f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v5f32_#Index : Insert_Element <
+    f32, v5f32, Index, !cast<SubRegIndex>(sub#Index)
   >;
 }
 
@@ -869,6 +908,10 @@ def : BitConvert <i64, v4f16, VReg_64>;
 def : BitConvert <v4i32, v4f32, VReg_128>;
 def : BitConvert <v4f32, v4i32, VReg_128>;
 
+// 96-bit bitcast
+def : BitConvert <v3i32, v3f32, SGPR_96>;
+def : BitConvert <v3f32, v3i32, SGPR_96>;
+
 // 128-bit bitcast
 def : BitConvert <v2i64, v4i32, SReg_128>;
 def : BitConvert <v4i32, v2i64, SReg_128>;
@@ -878,6 +921,10 @@ def : BitConvert <v4f32, v2f64, VReg_128>;
 def : BitConvert <v4i32, v2f64, VReg_128>;
 def : BitConvert <v2i64, v2f64, VReg_128>;
 def : BitConvert <v2f64, v2i64, VReg_128>;
+
+// 160-bit bitcast
+def : BitConvert <v5i32, v5f32, SGPR_160>;
+def : BitConvert <v5f32, v5i32, SGPR_160>;
 
 // 256-bit bitcast
 def : BitConvert <v8i32, v8f32, SReg_256>;
@@ -1104,12 +1151,14 @@ def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 
 def : GCNPat <
   (i32 (sext i1:$src0)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src0)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                     /*src1mod*/(i32 0), /*src1*/(i32 -1), $src0)
 >;
 
 class Ext32Pat <SDNode ext> : GCNPat <
   (i32 (ext i1:$src0)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src0)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                     /*src1mod*/(i32 0), /*src1*/(i32 1), $src0)
 >;
 
 def : Ext32Pat <zext>;
@@ -1240,8 +1289,9 @@ def : GCNPat <
 class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <
   (i64 (ext i1:$src)),
     (REG_SEQUENCE VReg_64,
-      (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src), sub0,
-      (S_MOV_B32 (i32 0)), sub1)
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                         /*src1mod*/(i32 0), /*src1*/(i32 1), $src),
+      sub0, (S_MOV_B32 (i32 0)), sub1)
 >;
 
 
@@ -1259,8 +1309,10 @@ def : GCNPat <
 def : GCNPat <
   (i64 (sext i1:$src)),
   (REG_SEQUENCE VReg_64,
-    (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src), sub0,
-    (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src), sub1)
+    (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                       /*src1mod*/(i32 0), /*src1*/(i32 -1), $src), sub0,
+    (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                       /*src1mod*/(i32 0), /*src1*/(i32 -1), $src), sub1)
 >;
 
 class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, SDPatternOperator fp_to_int> : GCNPat <
@@ -1318,32 +1370,46 @@ def : GCNPat <
 
 def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_NEG_ONE), $src))
+  (V_CVT_F16_F32_e32 (
+      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        $src))
 >;
 
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_ONE), $src))
+  (V_CVT_F16_F32_e32 (
+      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        $src))
 >;
 
 def : GCNPat <
   (f32 (sint_to_fp i1:$src)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_NEG_ONE), $src)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        $src)
 >;
 
 def : GCNPat <
   (f32 (uint_to_fp i1:$src)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_ONE), $src)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        $src)
 >;
 
 def : GCNPat <
   (f64 (sint_to_fp i1:$src)),
-  (V_CVT_F64_I32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src))
+  (V_CVT_F64_I32_e32 (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                                        /*src1mod*/(i32 0), /*src1*/(i32 -1),
+                                        $src))
 >;
 
 def : GCNPat <
   (f64 (uint_to_fp i1:$src)),
-  (V_CVT_F64_U32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src))
+  (V_CVT_F64_U32_e32 (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                                        /*src1mod*/(i32 0), /*src1*/(i32 1),
+                                        $src))
 >;
 
 //===----------------------------------------------------------------------===//
@@ -1547,7 +1613,7 @@ def : GCNPat <
 // Fract Patterns
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isSI in {
+let SubtargetPredicate = isGFX6 in {
 
 // V_FRACT is buggy on SI, so the F32 version is never used and (x-floor(x)) is
 // used instead. However, SI doesn't have V_FLOOR_F64, so the most efficient
@@ -1574,7 +1640,7 @@ def : GCNPat <
       DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
-} // End SubtargetPredicates = isSI
+} // End SubtargetPredicates = isGFX6
 
 //============================================================================//
 // Miscellaneous Optimization Patterns
@@ -1658,8 +1724,8 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 
 def : FPMed3Pat<f32, V_MED3_F32>;
 
-let OtherPredicates = [isGFX9] in {
+let OtherPredicates = [isGFX9Plus] in {
 def : FP16Med3Pat<f16, V_MED3_F16>;
 defm : Int16Med3Pat<V_MED3_I16, smin, smax, smax_oneuse, smin_oneuse>;
 defm : Int16Med3Pat<V_MED3_U16, umin, umax, umax_oneuse, umin_oneuse>;
-} // End Predicates = [isGFX9]
+} // End Predicates = [isGFX9Plus]

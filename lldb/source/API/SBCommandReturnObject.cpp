@@ -13,7 +13,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
 using namespace lldb;
@@ -44,7 +43,7 @@ CommandReturnObject *SBCommandReturnObject::Release() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb_private::CommandReturnObject *,
                              SBCommandReturnObject, Release);
 
-  return m_opaque_up.release();
+  return LLDB_RECORD_RESULT(m_opaque_up.release());
 }
 
 const SBCommandReturnObject &SBCommandReturnObject::
@@ -56,11 +55,15 @@ operator=(const SBCommandReturnObject &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBCommandReturnObject::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandReturnObject, IsValid);
+  return this->operator bool();
+}
+SBCommandReturnObject::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandReturnObject, operator bool);
 
   return m_opaque_up != nullptr;
 }
@@ -68,22 +71,12 @@ bool SBCommandReturnObject::IsValid() const {
 const char *SBCommandReturnObject::GetOutput() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetOutput);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   if (m_opaque_up) {
     llvm::StringRef output = m_opaque_up->GetOutputData();
     ConstString result(output.empty() ? llvm::StringRef("") : output);
 
-    if (log)
-      log->Printf("SBCommandReturnObject(%p)::GetOutput () => \"%s\"",
-                  static_cast<void *>(m_opaque_up.get()), result.AsCString());
-
     return result.AsCString();
   }
-
-  if (log)
-    log->Printf("SBCommandReturnObject(%p)::GetOutput () => nullptr",
-                static_cast<void *>(m_opaque_up.get()));
 
   return nullptr;
 }
@@ -91,21 +84,11 @@ const char *SBCommandReturnObject::GetOutput() {
 const char *SBCommandReturnObject::GetError() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetError);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   if (m_opaque_up) {
     llvm::StringRef output = m_opaque_up->GetErrorData();
     ConstString result(output.empty() ? llvm::StringRef("") : output);
-    if (log)
-      log->Printf("SBCommandReturnObject(%p)::GetError () => \"%s\"",
-                  static_cast<void *>(m_opaque_up.get()), result.AsCString());
-
     return result.AsCString();
   }
-
-  if (log)
-    log->Printf("SBCommandReturnObject(%p)::GetError () => nullptr",
-                static_cast<void *>(m_opaque_up.get()));
 
   return nullptr;
 }
@@ -348,4 +331,61 @@ void SBCommandReturnObject::SetError(const char *error_cstr) {
 
   if (m_opaque_up && error_cstr)
     m_opaque_up->SetError(error_cstr);
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBCommandReturnObject>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandReturnObject, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandReturnObject,
+                            (const lldb::SBCommandReturnObject &));
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandReturnObject,
+                            (lldb_private::CommandReturnObject *));
+  LLDB_REGISTER_METHOD(lldb_private::CommandReturnObject *,
+                       SBCommandReturnObject, Release, ());
+  LLDB_REGISTER_METHOD(
+      const lldb::SBCommandReturnObject &,
+      SBCommandReturnObject, operator=,(const lldb::SBCommandReturnObject &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandReturnObject, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandReturnObject, operator bool, ());
+  LLDB_REGISTER_METHOD(const char *, SBCommandReturnObject, GetOutput, ());
+  LLDB_REGISTER_METHOD(const char *, SBCommandReturnObject, GetError, ());
+  LLDB_REGISTER_METHOD(size_t, SBCommandReturnObject, GetOutputSize, ());
+  LLDB_REGISTER_METHOD(size_t, SBCommandReturnObject, GetErrorSize, ());
+  LLDB_REGISTER_METHOD(size_t, SBCommandReturnObject, PutOutput, (FILE *));
+  LLDB_REGISTER_METHOD(size_t, SBCommandReturnObject, PutError, (FILE *));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, Clear, ());
+  LLDB_REGISTER_METHOD(lldb::ReturnStatus, SBCommandReturnObject, GetStatus,
+                       ());
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, SetStatus,
+                       (lldb::ReturnStatus));
+  LLDB_REGISTER_METHOD(bool, SBCommandReturnObject, Succeeded, ());
+  LLDB_REGISTER_METHOD(bool, SBCommandReturnObject, HasResult, ());
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, AppendMessage,
+                       (const char *));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, AppendWarning,
+                       (const char *));
+  LLDB_REGISTER_METHOD(bool, SBCommandReturnObject, GetDescription,
+                       (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, SetImmediateOutputFile,
+                       (FILE *));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, SetImmediateErrorFile,
+                       (FILE *));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, SetImmediateOutputFile,
+                       (FILE *, bool));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, SetImmediateErrorFile,
+                       (FILE *, bool));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, PutCString,
+                       (const char *, int));
+  LLDB_REGISTER_METHOD(const char *, SBCommandReturnObject, GetOutput,
+                       (bool));
+  LLDB_REGISTER_METHOD(const char *, SBCommandReturnObject, GetError, (bool));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, SetError,
+                       (lldb::SBError &, const char *));
+  LLDB_REGISTER_METHOD(void, SBCommandReturnObject, SetError, (const char *));
+}
+
+}
 }

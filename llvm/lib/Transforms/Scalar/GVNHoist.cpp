@@ -702,7 +702,7 @@ private:
       // Vector of PHIs contains PHIs for different instructions.
       // Sort the args according to their VNs, such that identical
       // instructions are together.
-      std::stable_sort(CHIs.begin(), CHIs.end(), cmpVN);
+      llvm::stable_sort(CHIs, cmpVN);
       auto TI = BB->getTerminator();
       auto B = CHIs.begin();
       // [PreIt, PHIIt) form a range of CHIs which have identical VNs.

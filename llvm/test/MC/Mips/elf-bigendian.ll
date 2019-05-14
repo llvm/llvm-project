@@ -1,4 +1,4 @@
-; DISABLE: llc -filetype=obj -mtriple mips-unknown-linux %s -o - | llvm-readobj -h -s -sd | FileCheck %s
+; DISABLE: llc -filetype=obj -mtriple mips-unknown-linux %s -o - | llvm-readobj -h -S --sd | FileCheck %s
 ; RUN: false
 ; XFAIL: *
 

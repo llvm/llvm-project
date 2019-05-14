@@ -11,6 +11,11 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchWaveOffsetReg: '$sgpr4'
+  frameOffsetReg:  '$sgpr4'
+
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_128 }
@@ -58,13 +63,13 @@ body:             |
 
   bb.3:
     %1 = COPY killed %17
-    FLAT_STORE_DWORD undef %10, %1.sub2, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD undef %10, %1.sub2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %14 = COPY %1.sub1
     %16 = COPY killed %1.sub0
     undef %15.sub0 = COPY killed %16
     %15.sub1 = COPY killed %14
-    FLAT_STORE_DWORDX2 undef %11, killed %15, 0, 0, 0, implicit $exec, implicit $flat_scr
-    S_ENDPGM
+    FLAT_STORE_DWORDX2 undef %11, killed %15, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
 
 ...
 ---
@@ -92,6 +97,10 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchWaveOffsetReg: '$sgpr4'
+  frameOffsetReg:  '$sgpr4'
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
   - { id: 1, class: vgpr_32, preferred-register: '' }
@@ -125,13 +134,12 @@ body:             |
     %6.sub2 = COPY %6.sub0
 
   bb.2:
-    BUFFER_STORE_DWORD_OFFEN %6.sub3, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 12, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %6.sub2, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %6.sub1, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %6.sub0, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %6.sub3, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 12, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %6.sub2, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %6.sub1, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %6.sub0, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
     $sgpr30_sgpr31 = COPY %5
-    $sgpr5 = COPY $sgpr5
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $sgpr5
+    S_SETPC_B64_return $sgpr30_sgpr31
 
 ...
 

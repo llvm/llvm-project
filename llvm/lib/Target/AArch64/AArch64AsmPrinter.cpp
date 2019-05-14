@@ -19,6 +19,7 @@
 #include "AArch64TargetObjectFile.h"
 #include "InstPrinter/AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "Utils/AArch64BaseInfo.h"
@@ -152,11 +153,9 @@ private:
                           raw_ostream &O);
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &O) override;
+                             const char *ExtraCode, raw_ostream &O) override;
 
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
@@ -266,6 +265,9 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
   MCSymbol *HwasanTagMismatchSym =
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch");
 
+  const MCSymbolRefExpr *HwasanTagMismatchRef =
+      MCSymbolRefExpr::create(HwasanTagMismatchSym, OutContext);
+
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = P.first.first;
     uint32_t AccessInfo = P.first.second;
@@ -316,6 +318,21 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
 
     OutStreamer->EmitLabel(HandleMismatchSym);
+
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::STPXpre)
+                                     .addReg(AArch64::SP)
+                                     .addReg(AArch64::X0)
+                                     .addReg(AArch64::X1)
+                                     .addReg(AArch64::SP)
+                                     .addImm(-32),
+                                 *STI);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::STPXi)
+                                     .addReg(AArch64::FP)
+                                     .addReg(AArch64::LR)
+                                     .addReg(AArch64::SP)
+                                     .addImm(29),
+                                 *STI);
+
     if (Reg != AArch64::X0)
       OutStreamer->EmitInstruction(MCInstBuilder(AArch64::ORRXrs)
                                        .addReg(AArch64::X0)
@@ -328,10 +345,27 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                      .addImm(AccessInfo)
                                      .addImm(0),
                                  *STI);
+
+    // Intentionally load the GOT entry and branch to it, rather than possibly
+    // late binding the function, which may clobber the registers before we have
+    // a chance to save them.
     OutStreamer->EmitInstruction(
-        MCInstBuilder(AArch64::B)
-            .addExpr(MCSymbolRefExpr::create(HwasanTagMismatchSym, OutContext)),
+        MCInstBuilder(AArch64::ADRP)
+            .addReg(AArch64::X16)
+            .addExpr(AArch64MCExpr::create(
+                HwasanTagMismatchRef,
+                AArch64MCExpr::VariantKind::VK_GOT_PAGE, OutContext)),
         *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::LDRXui)
+            .addReg(AArch64::X16)
+            .addReg(AArch64::X16)
+            .addExpr(AArch64MCExpr::create(
+                HwasanTagMismatchRef,
+                AArch64MCExpr::VariantKind::VK_GOT_LO12, OutContext)),
+        *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::BR).addReg(AArch64::X16), *STI);
   }
 }
 
@@ -402,14 +436,7 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
     break;
   }
   case MachineOperand::MO_GlobalAddress: {
-    const GlobalValue *GV = MO.getGlobal();
-    MCSymbol *Sym = getSymbol(GV);
-
-    // FIXME: Can we get anything other than a plain symbol here?
-    assert(!MO.getTargetFlags() && "Unknown operand target flag!");
-
-    Sym->print(O, MAI);
-    printOffset(MO.getOffset(), O);
+    PrintSymbolOperand(MO, O);
     break;
   }
   case MachineOperand::MO_BlockAddress: {
@@ -455,12 +482,11 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
 }
 
 bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                        unsigned AsmVariant,
                                         const char *ExtraCode, raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNum);
 
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, AsmVariant, ExtraCode, O))
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O))
     return false;
 
   // Does this asm operand have a single letter operand modifier?
@@ -471,9 +497,6 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     switch (ExtraCode[0]) {
     default:
       return true; // Unknown modifier.
-    case 'a':      // Print 'a' modifier
-      PrintAsmMemoryOperand(MI, OpNum, AsmVariant, ExtraCode, O);
-      return false;
     case 'w':      // Print W register
     case 'x':      // Print X register
       if (MO.isReg())
@@ -539,7 +562,6 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
 bool AArch64AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNum,
-                                              unsigned AsmVariant,
                                               const char *ExtraCode,
                                               raw_ostream &O) {
   if (ExtraCode && ExtraCode[0] && ExtraCode[0] != 'a')

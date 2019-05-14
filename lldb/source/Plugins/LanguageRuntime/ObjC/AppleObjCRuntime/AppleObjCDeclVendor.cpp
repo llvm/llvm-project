@@ -175,7 +175,7 @@ AppleObjCDeclVendor::GetDeclForISA(ObjCLanguageRuntime::ObjCISA isa) {
   if (!descriptor)
     return NULL;
 
-  const ConstString &name(descriptor->GetClassName());
+  ConstString name(descriptor->GetClassName());
 
   clang::IdentifierInfo &identifier_info =
       ast_ctx->Idents.get(name.GetStringRef());
@@ -547,7 +547,7 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
 }
 
 uint32_t
-AppleObjCDeclVendor::FindDecls(const ConstString &name, bool append,
+AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
                                uint32_t max_matches,
                                std::vector<clang::NamedDecl *> &decls) {
   static unsigned int invocation_id = 0;

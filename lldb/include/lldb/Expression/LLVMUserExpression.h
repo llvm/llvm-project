@@ -19,8 +19,7 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class LLVMUserExpression LLVMUserExpression.h
+/// \class LLVMUserExpression LLVMUserExpression.h
 /// "lldb/Expression/LLVMUserExpression.h" Encapsulates a one-time expression
 /// for use in lldb.
 ///
@@ -30,9 +29,13 @@ namespace lldb_private {
 /// expression. The actual parsing part will be provided by the specific
 /// implementations of LLVMUserExpression - which will be vended through the
 /// appropriate TypeSystem.
-//----------------------------------------------------------------------
 class LLVMUserExpression : public UserExpression {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindLLVMUserExpression;
+  }
+
   // The IRPasses struct is filled in by a runtime after an expression is
   // compiled and can be used to to run fixups/analysis passes as required.
   // EarlyPasses are run on the generated module before lldb runs its own IR
@@ -48,7 +51,8 @@ public:
   LLVMUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
                      llvm::StringRef prefix, lldb::LanguageType language,
                      ResultType desired_type,
-                     const EvaluateExpressionOptions &options);
+                     const EvaluateExpressionOptions &options,
+                     ExpressionKind kind);
   ~LLVMUserExpression() override;
 
   bool FinalizeJITExecution(
@@ -59,10 +63,8 @@ public:
 
   bool CanInterpret() override { return m_can_interpret; }
 
-  //------------------------------------------------------------------
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
-  //------------------------------------------------------------------
   const char *Text() override { return m_transformed_text.c_str(); }
 
   lldb::ModuleSP GetJITModule() override;

@@ -5,7 +5,7 @@
 #
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2 /merge:.edata=.rdata
 # RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK1 %s
-# RUN: llvm-readobj -file-headers -sections %t.dll | FileCheck -check-prefix=HEADER-MERGE %s
+# RUN: llvm-readobj --file-headers --sections %t.dll | FileCheck -check-prefix=HEADER-MERGE %s
 
 # CHECK1:      Export Table:
 # CHECK1:      DLL name: export32.test.tmp.dll

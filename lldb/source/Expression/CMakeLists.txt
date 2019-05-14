@@ -6,7 +6,6 @@ add_lldb_library(lldbExpression
   DiagnosticManager.cpp
   DWARFExpression.cpp
   Expression.cpp
-  ExpressionSourceCode.cpp
   ExpressionVariable.cpp
   FunctionCaller.cpp
   IRDynamicChecks.cpp

@@ -36,6 +36,6 @@ Sections:
           - VERSION_1
           - VERSION_2
 DynamicSymbols:
-  Global:
-    - Name:            bar
+  - Name:    bar
+    Binding: STB_GLOBAL
 ...

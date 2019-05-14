@@ -33,7 +33,33 @@ class TextDiagnosticBuffer;
 /// markers in the input source to check that all the emitted diagnostics match
 /// those expected.
 ///
-/// USING THE DIAGNOSTIC CHECKER:
+/// INVOKING THE DIAGNOSTIC CHECKER:
+///
+/// VerifyDiagnosticConsumer is typically invoked via the "-verify" option to
+/// "clang -cc1".  "-verify" is equivalent to "-verify=expected", so all
+/// diagnostics are typically specified with the prefix "expected".  For
+/// example:
+///
+/// \code
+///   int A = B; // expected-error {{use of undeclared identifier 'B'}}
+/// \endcode
+///
+/// Custom prefixes can be specified as a comma-separated sequence.  Each
+/// prefix must start with a letter and contain only alphanumeric characters,
+/// hyphens, and underscores.  For example, given just "-verify=foo,bar",
+/// the above diagnostic would be ignored, but the following diagnostics would
+/// be recognized:
+///
+/// \code
+///   int A = B; // foo-error {{use of undeclared identifier 'B'}}
+///   int C = D; // bar-error {{use of undeclared identifier 'D'}}
+/// \endcode
+///
+/// Multiple occurrences accumulate prefixes.  For example,
+/// "-verify -verify=foo,bar -verify=baz" is equivalent to
+/// "-verify=expected,foo,bar,baz".
+///
+/// SPECIFYING DIAGNOSTICS:
 ///
 /// Indicating that a line expects an error or a warning is simple. Put a
 /// comment on the line that has the diagnostic, use:
@@ -80,6 +106,19 @@ class TextDiagnosticBuffer;
 /// substituted with '*' meaning that any line number will match (useful where
 /// the included file is, for example, a system header where the actual line
 /// number may change and is not critical).
+///
+/// As an alternative to specifying a fixed line number, the location of a
+/// diagnostic can instead be indicated by a marker of the form "#<marker>".
+/// Markers are specified by including them in a comment, and then referenced
+/// by appending the marker to the diagnostic with "@#<marker>":
+///
+/// \code
+///   #warning some text  // #1
+///   // expected-warning@#1 {{some text}}
+/// \endcode
+///
+/// The name of a marker used in a directive must be unique within the
+/// compilation.
 ///
 /// The simple syntax above allows each specification to match exactly one
 /// error.  You can use the extended syntax to customize this. The extended
@@ -212,11 +251,14 @@ public:
     HasOtherExpectedDirectives
   };
 
+  class MarkerTracker;
+
 private:
   DiagnosticsEngine &Diags;
   DiagnosticConsumer *PrimaryClient;
   std::unique_ptr<DiagnosticConsumer> PrimaryClientOwner;
   std::unique_ptr<TextDiagnosticBuffer> Buffer;
+  std::unique_ptr<MarkerTracker> Markers;
   const Preprocessor *CurrentPreprocessor = nullptr;
   const LangOptions *LangOpts = nullptr;
   SourceManager *SrcManager = nullptr;

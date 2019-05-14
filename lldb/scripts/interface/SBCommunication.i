@@ -30,6 +30,8 @@ public:
     bool
     IsValid () const;
 
+    explicit operator bool() const;
+
     lldb::SBBroadcaster
     GetBroadcaster ();
 

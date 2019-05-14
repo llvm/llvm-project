@@ -50,6 +50,8 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:         SigIndex:        0
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0 ]
+; CHECK-NEXT:  - Type:            DATACOUNT
+; CHECK-NEXT:    Count:           1
 ; CHECK-NEXT:  - Type:            CODE
 ; CHECK-NEXT:    Relocations:
 ; CHECK-NEXT:      - Type:            R_WASM_FUNCTION_INDEX_LEB

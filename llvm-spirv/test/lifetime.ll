@@ -11,8 +11,8 @@
 ; CHECK-LLVM: %[[tmp1:[0-9]+]] = bitcast i32* %{{[0-9]+}} to i8*
 ; CHECK-LLVM: call void @llvm.lifetime.start.p0i8(i64 -1, i8* %[[tmp1]])
 ; CHECK-LLVM: call void @llvm.lifetime.end.p0i8(i64 -1, i8* %[[tmp1]])
-; CHECK-LLVM: declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-; CHECK-LLVM: declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+; CHECK-LLVM: declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+; CHECK-LLVM: declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 
 ; ModuleID = 'main'
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
@@ -40,10 +40,10 @@ define spir_kernel void @lifetime_simple(i32 addrspace(1)* nocapture %res, i32 a
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #0
 
 ; Function Attrs: nounwind readnone
 declare spir_func i64 @_Z13get_global_idj(i32) #1

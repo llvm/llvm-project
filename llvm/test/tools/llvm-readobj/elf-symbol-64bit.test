@@ -18,7 +18,6 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Symbols:
-  Local:
-    - Name:  a_sym
-      Value: 0xfedcba9876543210
-      Size:  0x0123456789abcdef
+  - Name:  a_sym
+    Value: 0xfedcba9876543210
+    Size:  0x0123456789abcdef

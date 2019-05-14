@@ -35,7 +35,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-const ConstString &Breakpoint::GetEventIdentifier() {
+ConstString Breakpoint::GetEventIdentifier() {
   static ConstString g_identifier("event-identifier.breakpoint.changed");
   return g_identifier;
 }
@@ -43,9 +43,7 @@ const ConstString &Breakpoint::GetEventIdentifier() {
 const char *Breakpoint::g_option_names[static_cast<uint32_t>(
     Breakpoint::OptionNames::LastOptionName)]{"Names", "Hardware"};
 
-//----------------------------------------------------------------------
 // Breakpoint constructor
-//----------------------------------------------------------------------
 Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
                        BreakpointResolverSP &resolver_sp, bool hardware,
                        bool resolve_indirect_symbols)
@@ -68,14 +66,10 @@ Breakpoint::Breakpoint(Target &new_target, Breakpoint &source_bp)
   m_filter_sp = source_bp.m_filter_sp->CopyForBreakpoint(*this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 Breakpoint::~Breakpoint() = default;
 
-//----------------------------------------------------------------------
 // Serialization
-//----------------------------------------------------------------------
 StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
   // Serialize the resolver:
   StructuredData::DictionarySP breakpoint_dict_sp(
@@ -496,9 +490,7 @@ void Breakpoint::ClearAllBreakpointSites() {
   m_locations.ClearAllBreakpointSites();
 }
 
-//----------------------------------------------------------------------
 // ModulesChanged: Pass in a list of new modules, and
-//----------------------------------------------------------------------
 
 void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
                                 bool delete_locations) {
@@ -972,7 +964,7 @@ void Breakpoint::GetResolverDescription(Stream *s) {
     m_resolver_sp->GetDescription(s);
 }
 
-bool Breakpoint::GetMatchingFileLine(const ConstString &filename,
+bool Breakpoint::GetMatchingFileLine(ConstString filename,
                                      uint32_t line_number,
                                      BreakpointLocationCollection &loc_coll) {
   // TODO: To be correct, this method needs to fill the breakpoint location
@@ -1048,12 +1040,12 @@ Breakpoint::BreakpointEventData::BreakpointEventData(
 
 Breakpoint::BreakpointEventData::~BreakpointEventData() = default;
 
-const ConstString &Breakpoint::BreakpointEventData::GetFlavorString() {
+ConstString Breakpoint::BreakpointEventData::GetFlavorString() {
   static ConstString g_flavor("Breakpoint::BreakpointEventData");
   return g_flavor;
 }
 
-const ConstString &Breakpoint::BreakpointEventData::GetFlavor() const {
+ConstString Breakpoint::BreakpointEventData::GetFlavor() const {
   return BreakpointEventData::GetFlavorString();
 }
 

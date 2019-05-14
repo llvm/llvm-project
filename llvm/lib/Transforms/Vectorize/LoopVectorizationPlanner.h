@@ -174,6 +174,10 @@ struct VectorizationFactor {
 
   // Width 1 means no vectorization, cost 0 means uncomputed cost.
   static VectorizationFactor Disabled() { return {1, 0}; }
+
+  bool operator==(const VectorizationFactor &rhs) const {
+    return Width == rhs.Width && Cost == rhs.Cost;
+  }
 };
 
 /// Planner drives the vectorization process after having passed

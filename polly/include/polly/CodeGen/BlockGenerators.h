@@ -16,24 +16,12 @@
 #define POLLY_BLOCK_GENERATORS_H
 
 #include "polly/CodeGen/IRBuilder.h"
-#include "polly/Support/GICHelper.h"
 #include "polly/Support/ScopHelper.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "isl/map.h"
-
-struct isl_ast_build;
-struct isl_id_to_ast_expr;
-
-namespace llvm {
-class Pass;
-class Region;
-class ScalarEvolution;
-} // namespace llvm
+#include "isl/isl-noexceptions.h"
 
 namespace polly {
 using namespace llvm;
-class ScopStmt;
 class MemoryAccess;
 class ScopArrayInfo;
 class IslExprBuilder;

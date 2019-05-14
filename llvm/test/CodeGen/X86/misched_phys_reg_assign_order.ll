@@ -49,4 +49,4 @@ k.end:                                            ; preds = %entry
 
 declare i32 @m()
 
-attributes #0 = { "no-frame-pointer-elim-non-leaf" }
+attributes #0 = { noimplicitfloat "no-frame-pointer-elim-non-leaf" }

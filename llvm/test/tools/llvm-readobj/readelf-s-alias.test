@@ -1,5 +1,5 @@
 # In llvm-readobj, -s is an alias for --sections.
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-i386 \
+RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix SEC
 RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix SEC

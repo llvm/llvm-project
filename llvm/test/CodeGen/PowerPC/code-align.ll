@@ -1,15 +1,15 @@
-; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s -check-prefix=GENERIC
-; RUN: llc -verify-machineinstrs -mcpu=970 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -verify-machineinstrs -mcpu=a2 < %s | FileCheck %s -check-prefix=BASIC
-; RUN: llc -verify-machineinstrs -mcpu=e500mc < %s | FileCheck %s -check-prefix=BASIC
-; RUN: llc -verify-machineinstrs -mcpu=e5500 < %s | FileCheck %s -check-prefix=BASIC
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -verify-machineinstrs -mcpu=pwr5 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -verify-machineinstrs -mcpu=pwr5x < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -verify-machineinstrs -mcpu=pwr6 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -verify-machineinstrs -mcpu=pwr6x < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s -check-prefixes=CHECK,GENERIC
+; RUN: llc -verify-machineinstrs -mcpu=970 < %s | FileCheck %s -check-prefixes=CHECK,PWR
+; RUN: llc -verify-machineinstrs -mcpu=a2 < %s | FileCheck %s -check-prefixes=CHECK,BASIC
+; RUN: llc -verify-machineinstrs -mcpu=e500mc < %s | FileCheck %s -check-prefixes=CHECK,BASIC
+; RUN: llc -verify-machineinstrs -mcpu=e5500 < %s | FileCheck %s -check-prefixes=CHECK,BASIC
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 < %s | FileCheck %s -check-prefixes=CHECK,PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr5 < %s | FileCheck %s -check-prefixes=CHECK,PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr5x < %s | FileCheck %s -check-prefixes=CHECK,PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr6 < %s | FileCheck %s -check-prefixes=CHECK,PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr6x < %s | FileCheck %s -check-prefixes=CHECK,PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s -check-prefixes=CHECK,PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck %s -check-prefixes=CHECK,PWR
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -19,15 +19,11 @@ entry:
   %mul = shl nsw i32 %x, 1
   ret i32 %mul
 
-; GENERIC-LABEL: .globl  foo
-; BASIC-LABEL: .globl  foo
-; PWR-LABEL: .globl  foo
+; CHECK-LABEL: .globl  foo
 ; GENERIC: .p2align  2
 ; BASIC: .p2align  4
 ; PWR: .p2align  4
-; GENERIC: @foo
-; BASIC: @foo
-; PWR: @foo
+; CHECK: @foo
 }
 
 ; Function Attrs: nounwind
@@ -35,21 +31,13 @@ define void @loop(i32 signext %x, i32* nocapture %a) #1 {
 entry:
   br label %vector.body
 
-; GENERIC-LABEL: @loop
-; BASIC-LABEL: @loop
-; PWR-LABEL: @loop
-; GENERIC: mtctr
-; BASIC: mtctr
-; PWR: mtctr
+; CHECK-LABEL: @loop
+; CHECK: mtctr
 ; GENERIC-NOT: .p2align
 ; BASIC: .p2align  4
 ; PWR: .p2align  4
-; GENERIC: lwzu
-; BASIC: lwzu
-; PWR: lwzu
-; GENERIC: bdnz
-; BASIC: bdnz
-; PWR: bdnz
+; CHECK: lwzu
+; CHECK: bdnz
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
@@ -77,18 +65,12 @@ define void @sloop(i32 signext %x, i32* nocapture %a) #1 {
 entry:
   br label %for.body
 
-; GENERIC-LABEL: @sloop
-; BASIC-LABEL: @sloop
-; PWR-LABEL: @sloop
-; GENERIC: mtctr
-; BASIC: mtctr
-; PWR: mtctr
+; CHECK-LABEL: @sloop
+; CHECK: mtctr
 ; GENERIC-NOT: .p2align
 ; BASIC: .p2align  4
 ; PWR: .p2align  5
-; GENERIC: bdnz
-; BASIC: bdnz
-; PWR: bdnz
+; CHECK: bdnz
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
@@ -110,21 +92,13 @@ define void @test_minsize(i32 signext %x, i32* nocapture %a) #2 {
 entry:
   br label %vector.body
 
-; GENERIC-LABEL: @test_minsize
-; BASIC-LABEL: @test_minsize
-; PWR-LABEL: @test_minsize
-; GENERIC: mtctr
-; BASIC: mtctr
-; PWR: mtctr
+; CHECK-LABEL: @test_minsize
+; CHECK: mtctr
 ; GENERIC-NOT: .p2align
 ; BASIC-NOT: .p2align
 ; PWR-NOT: .p2align
-; GENERIC: lwzu
-; BASIC: lwzu
-; PWR: lwzu
-; GENERIC: bdnz
-; BASIC: bdnz
-; PWR: bdnz
+; CHECK: lwzu
+; CHECK: bdnz
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]

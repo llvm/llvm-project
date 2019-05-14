@@ -79,6 +79,20 @@ public:
     return writeInteger<U>(static_cast<U>(Num));
   }
 
+  /// Write the unsigned integer Value to the underlying stream using ULEB128
+  /// encoding.
+  ///
+  /// \returns a success error code if the data was successfully written,
+  /// otherwise returns an appropriate error code.
+  Error writeULEB128(uint64_t Value);
+
+  /// Write the unsigned integer Value to the underlying stream using ULEB128
+  /// encoding.
+  ///
+  /// \returns a success error code if the data was successfully written,
+  /// otherwise returns an appropriate error code.
+  Error writeSLEB128(int64_t Value);
+
   /// Write the string \p Str to the underlying stream followed by a null
   /// terminator.  On success, updates the offset so that subsequent writes
   /// occur at the next unwritten position.  \p Str need not be null terminated

@@ -421,7 +421,6 @@ ELF-MIPSEL-NEXT:     GPRSize:         REG_32
 ELF-MIPSEL-NEXT:     CPR1Size:        REG_32
 ELF-MIPSEL-NEXT:     Flags1:          [ ODDSPREG ]
 ELF-MIPSEL-NEXT: Symbols:
-ELF-MIPSEL-NEXT:   Local:
 ELF-MIPSEL-NEXT:     - Name:            trivial.ll
 ELF-MIPSEL-NEXT:       Type:            STT_FILE
 ELF-MIPSEL-NEXT:       Index:           SHN_ABS
@@ -450,18 +449,22 @@ ELF-MIPSEL-NEXT:       Section:         .reginfo
 ELF-MIPSEL-NEXT:     - Name:            .MIPS.abiflags
 ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .MIPS.abiflags
-ELF-MIPSEL-NEXT:   Global:
 ELF-MIPSEL-NEXT:     - Name:            main
 ELF-MIPSEL-NEXT:       Type:            STT_FUNC
 ELF-MIPSEL-NEXT:       Section:         .text
+ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
 ELF-MIPSEL-NEXT:       Size:            0x000000000000004C
 ELF-MIPSEL-NEXT:     - Name:            var
 ELF-MIPSEL-NEXT:       Type:            STT_OBJECT
 ELF-MIPSEL-NEXT:       Section:         .bss
+ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
 ELF-MIPSEL-NEXT:       Size:            0x0000000000000004
 ELF-MIPSEL-NEXT:     - Name:            SomeOtherFunction
+ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
 ELF-MIPSEL-NEXT:     - Name:            _gp_disp
+ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
 ELF-MIPSEL-NEXT:     - Name:            puts
+ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
 
 ELF-MIPS64EL:      FileHeader:
 ELF-MIPS64EL-NEXT:   Class:           ELFCLASS64
@@ -505,7 +508,6 @@ ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPS64EL-NEXT:     AddressAlign:    0x0000000000000004
 ELF-MIPS64EL-NEXT:     Content:         ''
 ELF-MIPS64EL-NEXT: Symbols:
-ELF-MIPS64EL-NEXT:   Local:
 ELF-MIPS64EL-NEXT:     - Name:            .text
 ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
 ELF-MIPS64EL-NEXT:       Section:         .text
@@ -523,8 +525,8 @@ ELF-MIPS64EL-NEXT:       Section:         .MIPS.options
 ELF-MIPS64EL-NEXT:     - Name:            .pdr
 ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
 ELF-MIPS64EL-NEXT:       Section:         .pdr
-ELF-MIPS64EL-NEXT:   Global:
 ELF-MIPS64EL-NEXT:     - Name:            zed
+ELF-MIPS64EL-NEXT:       Binding:         STB_GLOBAL
 
 ELF-X86-64:      FileHeader:
 ELF-X86-64-NEXT:   Class:           ELFCLASS64
@@ -569,7 +571,6 @@ ELF-X86-64-NEXT:         Symbol:          SomeOtherFunction
 ELF-X86-64-NEXT:         Type:            R_X86_64_PC32
 ELF-X86-64-NEXT:         Addend:          -4
 ELF-X86-64-NEXT: Symbols:
-ELF-X86-64-NEXT:   Local:
 ELF-X86-64-NEXT:     - Name:            trivial-object-test.s
 ELF-X86-64-NEXT:       Type:            STT_FILE
 ELF-X86-64-NEXT:       Index:           SHN_ABS
@@ -582,14 +583,15 @@ ELF-X86-64-NEXT:       Section:         .rodata.str1.1
 ELF-X86-64-NEXT:     - Name:            .note.GNU-stack
 ELF-X86-64-NEXT:       Type:            STT_SECTION
 ELF-X86-64-NEXT:       Section:         .note.GNU-stack
-ELF-X86-64-NEXT:   Global:
 ELF-X86-64-NEXT:     - Name:            main
 ELF-X86-64-NEXT:       Type:            STT_FUNC
 ELF-X86-64-NEXT:       Section:         .text
+ELF-X86-64-NEXT:       Binding:         STB_GLOBAL
 ELF-X86-64-NEXT:       Size:            0x0000000000000026
 ELF-X86-64-NEXT:     - Name:            SomeOtherFunction
+ELF-X86-64-NEXT:       Binding:         STB_GLOBAL
 ELF-X86-64-NEXT:     - Name:            puts
-
+ELF-X86-64-NEXT:       Binding:         STB_GLOBAL
 
 ELF-AVR:      FileHeader:
 ELF-AVR-NEXT:   Class:           ELFCLASS32
@@ -610,7 +612,6 @@ ELF-AVR-NEXT:     Address:         0x0000000000800060
 ELF-AVR-NEXT:     AddressAlign:    0x0000000000000001
 ELF-AVR-NEXT:     Content:         ''
 ELF-AVR-NEXT: Symbols:
-ELF-AVR-NEXT:   Local:
 ELF-AVR-NEXT:     - Name:           .text
 ELF-AVR-NEXT:       Type:            STT_SECTION
 ELF-AVR-NEXT:       Section:         .text
@@ -623,38 +624,48 @@ ELF-AVR-NEXT:       Type:            STT_FILE
 ELF-AVR-NEXT:       Index:           SHN_ABS
 ELF-AVR-NEXT:     - Name:            main
 ELF-AVR-NEXT:       Section:         .text
-ELF-AVR-NEXT:   Global:
 ELF-AVR-NEXT:     - Name:            __trampolines_start
 ELF-AVR-NEXT:       Section:         .text
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:     - Name:            _etext
 ELF-AVR-NEXT:       Section:         .text
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:       Value:           0x0000000000000004
 ELF-AVR-NEXT:     - Name:            __data_load_end
 ELF-AVR-NEXT:       Index:           SHN_ABS
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:       Value:           0x0000000000000004
 ELF-AVR-NEXT:     - Name:            __trampolines_end
 ELF-AVR-NEXT:       Section:         .text
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:     - Name:            __data_load_start
 ELF-AVR-NEXT:       Index:           SHN_ABS
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:       Value:           0x0000000000000004
 ELF-AVR-NEXT:     - Name:            __dtors_end
 ELF-AVR-NEXT:       Section:         .text
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:     - Name:            __eeprom_end
 ELF-AVR-NEXT:       Section:         .data
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:       Value:           0x0000000000810000
 ELF-AVR-NEXT:     - Name:            __ctors_start
 ELF-AVR-NEXT:       Section:         .text
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:     - Name:            __dtors_start
 ELF-AVR-NEXT:       Section:         .text
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:     - Name:            __ctors_end
 ELF-AVR-NEXT:       Section:         .text
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:     - Name:            _edata
 ELF-AVR-NEXT:       Section:         .data
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:       Value:           0x0000000000800060
 ELF-AVR-NEXT:     - Name:            _end
 ELF-AVR-NEXT:       Section:         .data
+ELF-AVR-NEXT:       Binding:         STB_GLOBAL
 ELF-AVR-NEXT:       Value:           0x0000000000800060
-
 
 WASM:      --- !WASM
 WASM-NEXT: FileHeader:

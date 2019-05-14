@@ -872,11 +872,14 @@ namespace ISD {
     VECREDUCE_STRICT_FADD, VECREDUCE_STRICT_FMUL,
     /// These reductions are non-strict, and have a single vector operand.
     VECREDUCE_FADD, VECREDUCE_FMUL,
+    /// FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
+    VECREDUCE_FMAX, VECREDUCE_FMIN,
+    /// Integer reductions may have a result type larger than the vector element
+    /// type. However, the reduction is performed using the vector element type
+    /// and the value in the top bits is unspecified.
     VECREDUCE_ADD, VECREDUCE_MUL,
     VECREDUCE_AND, VECREDUCE_OR, VECREDUCE_XOR,
     VECREDUCE_SMAX, VECREDUCE_SMIN, VECREDUCE_UMAX, VECREDUCE_UMIN,
-    /// FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
-    VECREDUCE_FMAX, VECREDUCE_FMIN,
 
     /// BUILTIN_OP_END - This must be the last enum value in this list.
     /// The target-specific pre-isel opcode values start here.

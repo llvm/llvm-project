@@ -3,9 +3,9 @@
 define i8 @test_i8(i8 %a) nounwind {
 ; CHECK-LABEL: test_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:  sbfx w8, w0, #7, #1
-; CHECK-NEXT:  add w9, w0, w8
-; CHECK-NEXT:  eor w0, w9, w8
+; CHECK-NEXT:  sxtb w8, w0
+; CHECK-NEXT:  cmp w8, #0
+; CHECK-NEXT:  cneg w0, w8, mi
 ; CHECK-NEXT:  ret
   %tmp1neg = sub i8 0, %a
   %b = icmp sgt i8 %a, -1
@@ -16,9 +16,9 @@ define i8 @test_i8(i8 %a) nounwind {
 define i16 @test_i16(i16 %a) nounwind {
 ; CHECK-LABEL: test_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:  sbfx w8, w0, #15, #1
-; CHECK-NEXT:  add w9, w0, w8
-; CHECK-NEXT:  eor w0, w9, w8
+; CHECK-NEXT:  sxth w8, w0
+; CHECK-NEXT:  cmp w8, #0
+; CHECK-NEXT:  cneg w0, w8, mi
 ; CHECK-NEXT:  ret
   %tmp1neg = sub i16 0, %a
   %b = icmp sgt i16 %a, -1

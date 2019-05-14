@@ -115,6 +115,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <limits>
+#include <numeric>
 #include <map>
 #include <utility>
 
@@ -162,6 +163,10 @@ static cl::opt<unsigned> ComplexityLimit(
   "lsr-complexity-limit", cl::Hidden,
   cl::init(std::numeric_limits<uint16_t>::max()),
   cl::desc("LSR search space complexity limit"));
+
+static cl::opt<unsigned> SetupCostDepthLimit(
+    "lsr-setupcost-depth-limit", cl::Hidden, cl::init(7),
+    cl::desc("The limit on recursion depth for LSRs setup cost"));
 
 #ifndef NDEBUG
 // Stress test IV chain generation.
@@ -1010,10 +1015,15 @@ namespace {
 
 /// This class is used to measure and compare candidate formulae.
 class Cost {
+  const Loop *L = nullptr;
+  ScalarEvolution *SE = nullptr;
+  const TargetTransformInfo *TTI = nullptr;
   TargetTransformInfo::LSRCost C;
 
 public:
-  Cost() {
+  Cost() = delete;
+  Cost(const Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI) :
+    L(L), SE(&SE), TTI(&TTI) {
     C.Insns = 0;
     C.NumRegs = 0;
     C.AddRecCost = 0;
@@ -1024,7 +1034,7 @@ public:
     C.ScaleCost = 0;
   }
 
-  bool isLess(Cost &Other, const TargetTransformInfo &TTI);
+  bool isLess(Cost &Other);
 
   void Lose();
 
@@ -1043,12 +1053,9 @@ public:
     return C.NumRegs == ~0u;
   }
 
-  void RateFormula(const TargetTransformInfo &TTI,
-                   const Formula &F,
+  void RateFormula(const Formula &F,
                    SmallPtrSetImpl<const SCEV *> &Regs,
                    const DenseSet<const SCEV *> &VisitedRegs,
-                   const Loop *L,
-                   ScalarEvolution &SE, DominatorTree &DT,
                    const LSRUse &LU,
                    SmallPtrSetImpl<const SCEV *> *LoserRegs = nullptr);
 
@@ -1057,16 +1064,10 @@ public:
 
 private:
   void RateRegister(const Formula &F, const SCEV *Reg,
-                    SmallPtrSetImpl<const SCEV *> &Regs,
-                    const Loop *L,
-                    ScalarEvolution &SE, DominatorTree &DT,
-                    const TargetTransformInfo &TTI);
+                    SmallPtrSetImpl<const SCEV *> &Regs);
   void RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                            SmallPtrSetImpl<const SCEV *> &Regs,
-                           const Loop *L,
-                           ScalarEvolution &SE, DominatorTree &DT,
-                           SmallPtrSetImpl<const SCEV *> *LoserRegs,
-                           const TargetTransformInfo &TTI);
+                           SmallPtrSetImpl<const SCEV *> *LoserRegs);
 };
 
 /// An operand value in an instruction which is to be replaced with some
@@ -1211,19 +1212,36 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  bool HasBaseReg, int64_t Scale,
                                  Instruction *Fixup = nullptr);
 
+static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
+  if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
+    return 1;
+  if (Depth == 0)
+    return 0;
+  if (const auto *S = dyn_cast<SCEVAddRecExpr>(Reg))
+    return getSetupCost(S->getStart(), Depth - 1);
+  if (auto S = dyn_cast<SCEVCastExpr>(Reg))
+    return getSetupCost(S->getOperand(), Depth - 1);
+  if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
+    return std::accumulate(S->op_begin(), S->op_end(), 0,
+                           [&](unsigned i, const SCEV *Reg) {
+                             return i + getSetupCost(Reg, Depth - 1);
+                           });
+  if (auto S = dyn_cast<SCEVUDivExpr>(Reg))
+    return getSetupCost(S->getLHS(), Depth - 1) +
+           getSetupCost(S->getRHS(), Depth - 1);
+  return 0;
+}
+
 /// Tally up interesting quantities from the given register.
 void Cost::RateRegister(const Formula &F, const SCEV *Reg,
-                        SmallPtrSetImpl<const SCEV *> &Regs,
-                        const Loop *L,
-                        ScalarEvolution &SE, DominatorTree &DT,
-                        const TargetTransformInfo &TTI) {
+                        SmallPtrSetImpl<const SCEV *> &Regs) {
   if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Reg)) {
     // If this is an addrec for another loop, it should be an invariant
     // with respect to L since L is the innermost loop (at least
     // for now LSR only handles innermost loops).
     if (AR->getLoop() != L) {
       // If the AddRec exists, consider it's register free and leave it alone.
-      if (isExistingPhi(AR, SE))
+      if (isExistingPhi(AR, *SE))
         return;
 
       // It is bad to allow LSR for current loop to add induction variables
@@ -1239,23 +1257,23 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     }
 
     unsigned LoopCost = 1;
-    if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, AR->getType()) ||
-        TTI.isIndexedStoreLegal(TTI.MIM_PostInc, AR->getType())) {
+    if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
+        TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
 
       // If the step size matches the base offset, we could use pre-indexed
       // addressing.
-      if (TTI.shouldFavorBackedgeIndex(L)) {
-        if (auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
+      if (TTI->shouldFavorBackedgeIndex(L)) {
+        if (auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE)))
           if (Step->getAPInt() == F.BaseOffset)
             LoopCost = 0;
       }
 
-      if (TTI.shouldFavorPostInc()) {
-        const SCEV *LoopStep = AR->getStepRecurrence(SE);
+      if (TTI->shouldFavorPostInc()) {
+        const SCEV *LoopStep = AR->getStepRecurrence(*SE);
         if (isa<SCEVConstant>(LoopStep)) {
           const SCEV *LoopStart = AR->getStart();
           if (!isa<SCEVConstant>(LoopStart) &&
-              SE.isLoopInvariant(LoopStart, L))
+              SE->isLoopInvariant(LoopStart, L))
             LoopCost = 0;
         }
       }
@@ -1266,7 +1284,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     // TODO: The non-affine case isn't precisely modeled here.
     if (!AR->isAffine() || !isa<SCEVConstant>(AR->getOperand(1))) {
       if (!Regs.count(AR->getOperand(1))) {
-        RateRegister(F, AR->getOperand(1), Regs, L, SE, DT, TTI);
+        RateRegister(F, AR->getOperand(1), Regs);
         if (isLoser())
           return;
       }
@@ -1276,15 +1294,12 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
   // Rough heuristic; favor registers which don't require extra setup
   // instructions in the preheader.
-  if (!isa<SCEVUnknown>(Reg) &&
-      !isa<SCEVConstant>(Reg) &&
-      !(isa<SCEVAddRecExpr>(Reg) &&
-        (isa<SCEVUnknown>(cast<SCEVAddRecExpr>(Reg)->getStart()) ||
-         isa<SCEVConstant>(cast<SCEVAddRecExpr>(Reg)->getStart()))))
-    ++C.SetupCost;
+  C.SetupCost += getSetupCost(Reg, SetupCostDepthLimit);
+  // Ensure we don't, even with the recusion limit, produce invalid costs.
+  C.SetupCost = std::min<unsigned>(C.SetupCost, 1 << 16);
 
   C.NumIVMuls += isa<SCEVMulExpr>(Reg) &&
-               SE.hasComputableLoopEvolution(Reg, L);
+               SE->hasComputableLoopEvolution(Reg, L);
 }
 
 /// Record this register in the set. If we haven't seen it before, rate
@@ -1292,27 +1307,21 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 /// one of those regs an instant loser.
 void Cost::RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                                SmallPtrSetImpl<const SCEV *> &Regs,
-                               const Loop *L,
-                               ScalarEvolution &SE, DominatorTree &DT,
-                               SmallPtrSetImpl<const SCEV *> *LoserRegs,
-                               const TargetTransformInfo &TTI) {
+                               SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   if (LoserRegs && LoserRegs->count(Reg)) {
     Lose();
     return;
   }
   if (Regs.insert(Reg).second) {
-    RateRegister(F, Reg, Regs, L, SE, DT, TTI);
+    RateRegister(F, Reg, Regs);
     if (LoserRegs && isLoser())
       LoserRegs->insert(Reg);
   }
 }
 
-void Cost::RateFormula(const TargetTransformInfo &TTI,
-                       const Formula &F,
+void Cost::RateFormula(const Formula &F,
                        SmallPtrSetImpl<const SCEV *> &Regs,
                        const DenseSet<const SCEV *> &VisitedRegs,
-                       const Loop *L,
-                       ScalarEvolution &SE, DominatorTree &DT,
                        const LSRUse &LU,
                        SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   assert(F.isCanonical(*L) && "Cost is accurate only for canonical formula");
@@ -1325,7 +1334,7 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
       Lose();
       return;
     }
-    RatePrimaryRegister(F, ScaledReg, Regs, L, SE, DT, LoserRegs, TTI);
+    RatePrimaryRegister(F, ScaledReg, Regs, LoserRegs);
     if (isLoser())
       return;
   }
@@ -1334,7 +1343,7 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
       Lose();
       return;
     }
-    RatePrimaryRegister(F, BaseReg, Regs, L, SE, DT, LoserRegs, TTI);
+    RatePrimaryRegister(F, BaseReg, Regs, LoserRegs);
     if (isLoser())
       return;
   }
@@ -1345,11 +1354,11 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
     // Do not count the base and a possible second register if the target
     // allows to fold 2 registers.
     C.NumBaseAdds +=
-        NumBaseParts - (1 + (F.Scale && isAMCompletelyFolded(TTI, LU, F)));
+        NumBaseParts - (1 + (F.Scale && isAMCompletelyFolded(*TTI, LU, F)));
   C.NumBaseAdds += (F.UnfoldedOffset != 0);
 
   // Accumulate non-free scaling amounts.
-  C.ScaleCost += getScalingFactorCost(TTI, LU, F, *L);
+  C.ScaleCost += getScalingFactorCost(*TTI, LU, F, *L);
 
   // Tally up the non-zero immediates.
   for (const LSRFixup &Fixup : LU.Fixups) {
@@ -1364,7 +1373,7 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
     // Check with target if this offset with this instruction is
     // specifically not supported.
     if (LU.Kind == LSRUse::Address && Offset != 0 &&
-        !isAMCompletelyFolded(TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
+        !isAMCompletelyFolded(*TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
                               Offset, F.HasBaseReg, F.Scale, Fixup.UserInst))
       C.NumBaseAdds++;
   }
@@ -1377,7 +1386,7 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
 
   // Treat every new register that exceeds TTI.getNumberOfRegisters() - 1 as
   // additional instruction (at least fill).
-  unsigned TTIRegNum = TTI.getNumberOfRegisters(false) - 1;
+  unsigned TTIRegNum = TTI->getNumberOfRegisters(false) - 1;
   if (C.NumRegs > TTIRegNum) {
     // Cost already exceeded TTIRegNum, then only newly added register can add
     // new instructions.
@@ -1397,7 +1406,8 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
   //
   // For {-10, +, 1}:
   // i = i + 1;
-  if (LU.Kind == LSRUse::ICmpZero && !F.hasZeroEnd() && !TTI.canMacroFuseCmp())
+  if (LU.Kind == LSRUse::ICmpZero && !F.hasZeroEnd() &&
+      !TTI->canMacroFuseCmp())
     C.Insns++;
   // Each new AddRec adds 1 instruction to calculation.
   C.Insns += (C.AddRecCost - PrevAddRecCost);
@@ -1421,11 +1431,11 @@ void Cost::Lose() {
 }
 
 /// Choose the lower cost.
-bool Cost::isLess(Cost &Other, const TargetTransformInfo &TTI) {
+bool Cost::isLess(Cost &Other) {
   if (InsnsCost.getNumOccurrences() > 0 && InsnsCost &&
       C.Insns != Other.C.Insns)
     return C.Insns < Other.C.Insns;
-  return TTI.isLSRCostLess(C, Other.C);
+  return TTI->isLSRCostLess(C, Other.C);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1922,7 +1932,7 @@ class LSRInstance {
   SmallSetVector<Type *, 4> Types;
 
   /// The list of interesting uses.
-  SmallVector<LSRUse, 16> Uses;
+  mutable SmallVector<LSRUse, 16> Uses;
 
   /// Track which uses use which register candidates.
   RegUseTracker RegUses;
@@ -4126,11 +4136,17 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
 
       // Conservatively examine offsets between this orig reg a few selected
       // other orig regs.
+      int64_t First = Imms.begin()->first;
+      int64_t Last = std::prev(Imms.end())->first;
+      // Compute (First + Last)  / 2 without overflow using the fact that
+      // First + Last = 2 * (First + Last) + (First ^ Last).
+      int64_t Avg = (First & Last) + ((First ^ Last) >> 1);
+      // If the result is negative and First is odd and Last even (or vice versa),
+      // we rounded towards -inf. Add 1 in that case, to round towards 0.
+      Avg = Avg + ((First ^ Last) & ((uint64_t)Avg >> 63));
       ImmMapTy::const_iterator OtherImms[] = {
-        Imms.begin(), std::prev(Imms.end()),
-        Imms.lower_bound((Imms.begin()->first + std::prev(Imms.end())->first) /
-                         2)
-      };
+          Imms.begin(), std::prev(Imms.end()),
+         Imms.lower_bound(Avg)};
       for (size_t i = 0, e = array_lengthof(OtherImms); i != e; ++i) {
         ImmMapTy::const_iterator M = OtherImms[i];
         if (M == J || M == JE) continue;
@@ -4308,9 +4324,9 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
       // avoids the need to recompute this information across formulae using the
       // same bad AddRec. Passing LoserRegs is also essential unless we remove
       // the corresponding bad register from the Regs set.
-      Cost CostF;
+      Cost CostF(L, SE, TTI);
       Regs.clear();
-      CostF.RateFormula(TTI, F, Regs, VisitedRegs, L, SE, DT, LU, &LoserRegs);
+      CostF.RateFormula(F, Regs, VisitedRegs, LU, &LoserRegs);
       if (CostF.isLoser()) {
         // During initial formula generation, undesirable formulae are generated
         // by uses within other loops that have some non-trivial address mode or
@@ -4341,10 +4357,10 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
 
         Formula &Best = LU.Formulae[P.first->second];
 
-        Cost CostBest;
+        Cost CostBest(L, SE, TTI);
         Regs.clear();
-        CostBest.RateFormula(TTI, Best, Regs, VisitedRegs, L, SE, DT, LU);
-        if (CostF.isLess(CostBest, TTI))
+        CostBest.RateFormula(Best, Regs, VisitedRegs, LU);
+        if (CostF.isLess(CostBest))
           std::swap(F, Best);
         LLVM_DEBUG(dbgs() << "  Filtering out formula "; F.print(dbgs());
                    dbgs() << "\n"
@@ -4416,7 +4432,9 @@ void LSRInstance::NarrowSearchSpaceByDetectingSupersets() {
              I = F.BaseRegs.begin(), E = F.BaseRegs.end(); I != E; ++I) {
           if (const SCEVConstant *C = dyn_cast<SCEVConstant>(*I)) {
             Formula NewF = F;
-            NewF.BaseOffset += C->getValue()->getSExtValue();
+            //FIXME: Formulas should store bitwidth to do wrapping properly.
+            //       See PR41034.
+            NewF.BaseOffset += (uint64_t)C->getValue()->getSExtValue();
             NewF.BaseRegs.erase(NewF.BaseRegs.begin() +
                                 (I - F.BaseRegs.begin()));
             if (LU.HasFormulaWithSameRegs(NewF)) {
@@ -4592,12 +4610,13 @@ void LSRInstance::NarrowSearchSpaceByFilterFormulaWithSameScaledReg() {
 
       // If the new register numbers are the same, choose the Formula with
       // less Cost.
-      Cost CostFA, CostFB;
+      Cost CostFA(L, SE, TTI);
+      Cost CostFB(L, SE, TTI);
       Regs.clear();
-      CostFA.RateFormula(TTI, FA, Regs, VisitedRegs, L, SE, DT, LU);
+      CostFA.RateFormula(FA, Regs, VisitedRegs, LU);
       Regs.clear();
-      CostFB.RateFormula(TTI, FB, Regs, VisitedRegs, L, SE, DT, LU);
-      return CostFA.isLess(CostFB, TTI);
+      CostFB.RateFormula(FB, Regs, VisitedRegs, LU);
+      return CostFA.isLess(CostFB);
     };
 
     bool Any = false;
@@ -4883,7 +4902,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
       ReqRegs.insert(S);
 
   SmallPtrSet<const SCEV *, 16> NewRegs;
-  Cost NewCost;
+  Cost NewCost(L, SE, TTI);
   for (const Formula &F : LU.Formulae) {
     // Ignore formulae which may not be ideal in terms of register reuse of
     // ReqRegs.  The formula should use all required registers before
@@ -4907,8 +4926,8 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     // the current best, prune the search at that point.
     NewCost = CurCost;
     NewRegs = CurRegs;
-    NewCost.RateFormula(TTI, F, NewRegs, VisitedRegs, L, SE, DT, LU);
-    if (NewCost.isLess(SolutionCost, TTI)) {
+    NewCost.RateFormula(F, NewRegs, VisitedRegs, LU);
+    if (NewCost.isLess(SolutionCost)) {
       Workspace.push_back(&F);
       if (Workspace.size() != Uses.size()) {
         SolveRecurse(Solution, SolutionCost, Workspace, NewCost,
@@ -4917,9 +4936,9 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
           VisitedRegs.insert(F.ScaledReg ? F.ScaledReg : F.BaseRegs[0]);
       } else {
         LLVM_DEBUG(dbgs() << "New best at "; NewCost.print(dbgs());
-                   dbgs() << ".\n Regs:"; for (const SCEV *S
-                                               : NewRegs) dbgs()
-                                          << ' ' << *S;
+                   dbgs() << ".\nRegs:\n";
+                   for (const SCEV *S : NewRegs) dbgs()
+                      << "- " << *S << "\n";
                    dbgs() << '\n');
 
         SolutionCost = NewCost;
@@ -4934,9 +4953,9 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
 /// vector.
 void LSRInstance::Solve(SmallVectorImpl<const Formula *> &Solution) const {
   SmallVector<const Formula *, 8> Workspace;
-  Cost SolutionCost;
+  Cost SolutionCost(L, SE, TTI);
   SolutionCost.Lose();
-  Cost CurCost;
+  Cost CurCost(L, SE, TTI);
   SmallPtrSet<const SCEV *, 16> CurRegs;
   DenseSet<const SCEV *> VisitedRegs;
   Workspace.reserve(Uses.size());
@@ -5274,6 +5293,7 @@ void LSRInstance::RewriteForPHI(
   DenseMap<BasicBlock *, Value *> Inserted;
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
     if (PN->getIncomingValue(i) == LF.OperandValToReplace) {
+      bool needUpdateFixups = false;
       BasicBlock *BB = PN->getIncomingBlock(i);
 
       // If this is a critical edge, split the edge so that we do not insert
@@ -5312,6 +5332,8 @@ void LSRInstance::RewriteForPHI(
             e = PN->getNumIncomingValues();
             BB = NewBB;
             i = PN->getBasicBlockIndex(BB);
+
+            needUpdateFixups = true;
           }
         }
       }
@@ -5335,6 +5357,44 @@ void LSRInstance::RewriteForPHI(
 
         PN->setIncomingValue(i, FullV);
         Pair.first->second = FullV;
+      }
+
+      // If LSR splits critical edge and phi node has other pending
+      // fixup operands, we need to update those pending fixups. Otherwise
+      // formulae will not be implemented completely and some instructions
+      // will not be eliminated.
+      if (needUpdateFixups) {
+        for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
+          for (LSRFixup &Fixup : Uses[LUIdx].Fixups)
+            // If fixup is supposed to rewrite some operand in the phi
+            // that was just updated, it may be already moved to
+            // another phi node. Such fixup requires update.
+            if (Fixup.UserInst == PN) {
+              // Check if the operand we try to replace still exists in the
+              // original phi.
+              bool foundInOriginalPHI = false;
+              for (const auto &val : PN->incoming_values())
+                if (val == Fixup.OperandValToReplace) {
+                  foundInOriginalPHI = true;
+                  break;
+                }
+
+              // If fixup operand found in original PHI - nothing to do.
+              if (foundInOriginalPHI)
+                continue;
+
+              // Otherwise it might be moved to another PHI and requires update.
+              // If fixup operand not found in any of the incoming blocks that
+              // means we have already rewritten it - nothing to do.
+              for (const auto &Block : PN->blocks())
+                for (BasicBlock::iterator I = Block->begin(); isa<PHINode>(I);
+                     ++I) {
+                  PHINode *NewPN = cast<PHINode>(I);
+                  for (const auto &val : NewPN->incoming_values())
+                    if (val == Fixup.OperandValToReplace)
+                      Fixup.UserInst = NewPN;
+                }
+            }
       }
     }
 }

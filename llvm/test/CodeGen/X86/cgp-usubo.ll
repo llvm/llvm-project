@@ -207,3 +207,35 @@ end:
   ret i1 %ov
 }
 
+define void @PR41129(i64* %p64) {
+; CHECK-LABEL: PR41129:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    je .LBB10_2
+; CHECK-NEXT:  # %bb.1: # %false
+; CHECK-NEXT:    andl $7, %eax
+; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB10_2: # %true
+; CHECK-NEXT:    decq %rax
+; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %key = load i64, i64* %p64, align 8
+  %cond17 = icmp eq i64 %key, 0
+  br i1 %cond17, label %true, label %false
+
+false:
+  %andval = and i64 %key, 7
+  store i64 %andval, i64* %p64
+  br label %exit
+
+true:
+  %svalue = add i64 %key, -1
+  store i64 %svalue, i64* %p64
+  br label %exit
+
+exit:
+  ret void
+}

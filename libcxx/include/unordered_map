@@ -852,7 +852,6 @@ public:
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
-    static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_value_type<key_type, mapped_type>                 __value_type;
@@ -963,7 +962,11 @@ public:
       const allocator_type& __a)
       : unordered_map(__il, __n, __hf, key_equal(), __a) {}
 #endif
-    // ~unordered_map() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    ~unordered_map() {
+        static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_map& operator=(const unordered_map& __u)
     {
@@ -1678,7 +1681,6 @@ public:
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
-    static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_value_type<key_type, mapped_type>                 __value_type;
@@ -1787,7 +1789,11 @@ public:
       const allocator_type& __a)
       : unordered_multimap(__il, __n, __hf, key_equal(), __a) {}
 #endif
-    // ~unordered_multimap() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    ~unordered_multimap() {
+        static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_multimap& operator=(const unordered_multimap& __u)
     {

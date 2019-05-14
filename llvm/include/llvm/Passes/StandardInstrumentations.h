@@ -63,6 +63,8 @@ public:
   StandardInstrumentations() = default;
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+  TimePassesHandler &getTimePasses() { return TimePasses; }
 };
 } // namespace llvm
 

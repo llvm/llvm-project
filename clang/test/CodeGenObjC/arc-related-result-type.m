@@ -17,7 +17,7 @@ void test0(Test0 *val) {
 // CHECK-NEXT: load
 // CHECK-NEXT: bitcast
 // CHECK-NEXT: [[T0:%.*]] = call i8* bitcast (
-// CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+// CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
 // CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to [[TEST0]]*
 // CHECK-NEXT: store [[TEST0]]* [[T2]], [[TEST0]]** [[X]]
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[TEST0]]** [[X]] to i8**

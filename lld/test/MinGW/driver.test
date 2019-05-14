@@ -160,3 +160,7 @@ RUN: ld.lld -### -m i386pep foo.o --insert-timestamp --no-insert-timestamp | Fil
 NOTIMESTAMP: -timestamp:0
 RUN: ld.lld -### -m i386pep foo.o --no-insert-timestamp --insert-timestamp | FileCheck -check-prefix TIMESTAMP %s
 TIMESTAMP-NOT: -timestamp:0
+
+RUN: ld.lld -### -m i386pep foo.o -appcontainer | FileCheck -check-prefix APPCONTAINER %s
+RUN: ld.lld -### -m i386pep foo.o --appcontainer | FileCheck -check-prefix APPCONTAINER %s
+APPCONTAINER: -appcontainer

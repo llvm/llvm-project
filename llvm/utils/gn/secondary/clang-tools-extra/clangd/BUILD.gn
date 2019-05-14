@@ -1,0 +1,123 @@
+import("//clang-tools-extra/clangd/xpc/enable.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+config("features_config") {
+  # To pick up the generated inc files.
+  include_dirs = [ target_gen_dir ]
+  visibility = [ ":features" ]
+}
+
+write_cmake_config("features") {
+  input = "Features.inc.in"
+  output = "$target_gen_dir/Features.inc"
+  values = []
+  if (clangd_build_xpc) {
+    values += [ "CLANGD_BUILD_XPC=1" ]
+  } else {
+    values += [ "CLANGD_BUILD_XPC=0" ]
+  }
+  public_configs = [ ":features_config" ]
+}
+
+static_library("clangd") {
+  output_name = "clangDaemon"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    ":features",
+    "//clang-tools-extra/clang-tidy/abseil",
+    "//clang-tools-extra/clang-tidy/android",
+    "//clang-tools-extra/clang-tidy/boost",
+    "//clang-tools-extra/clang-tidy/bugprone",
+    "//clang-tools-extra/clang-tidy/cert",
+    "//clang-tools-extra/clang-tidy/cppcoreguidelines",
+    "//clang-tools-extra/clang-tidy/fuchsia",
+    "//clang-tools-extra/clang-tidy/google",
+    "//clang-tools-extra/clang-tidy/hicpp",
+    "//clang-tools-extra/clang-tidy/llvm",
+    "//clang-tools-extra/clang-tidy/misc",
+    "//clang-tools-extra/clang-tidy/modernize",
+    "//clang-tools-extra/clang-tidy/objc",
+    "//clang-tools-extra/clang-tidy/performance",
+    "//clang-tools-extra/clang-tidy/portability",
+    "//clang-tools-extra/clang-tidy/readability",
+    "//clang-tools-extra/clang-tidy/zircon",
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
+    "//clang/lib/Driver",
+    "//clang/lib/Format",
+    "//clang/lib/Frontend",
+    "//clang/lib/Index",
+    "//clang/lib/Lex",
+    "//clang/lib/Sema",
+    "//clang/lib/Serialization",
+    "//clang/lib/Tooling",
+    "//clang/lib/Tooling/Core",
+    "//clang/lib/Tooling/Inclusions",
+    "//clang/lib/Tooling/Refactoring",
+    "//llvm/lib/Support",
+    "//llvm/utils/gn/build/libs/atomic",
+    "//llvm/utils/gn/build/libs/pthread",
+  ]
+  include_dirs = [
+    ".",
+
+    # To pick up the generated inc files.
+    "$target_gen_dir/tool",
+  ]
+  sources = [
+    "AST.cpp",
+    "Cancellation.cpp",
+    "ClangdLSPServer.cpp",
+    "ClangdServer.cpp",
+    "ClangdUnit.cpp",
+    "CodeComplete.cpp",
+    "CodeCompletionStrings.cpp",
+    "Compiler.cpp",
+    "Context.cpp",
+    "Diagnostics.cpp",
+    "DraftStore.cpp",
+    "ExpectedTypes.cpp",
+    "FS.cpp",
+    "FSProvider.cpp",
+    "FileDistance.cpp",
+    "FindSymbols.cpp",
+    "FuzzyMatch.cpp",
+    "GlobalCompilationDatabase.cpp",
+    "Headers.cpp",
+    "IncludeFixer.cpp",
+    "JSONTransport.cpp",
+    "Logger.cpp",
+    "Protocol.cpp",
+    "Quality.cpp",
+    "RIFF.cpp",
+    "Selection.cpp",
+    "SourceCode.cpp",
+    "TUScheduler.cpp",
+    "Threading.cpp",
+    "Trace.cpp",
+    "URI.cpp",
+    "XRefs.cpp",
+    "index/Background.cpp",
+    "index/BackgroundIndexStorage.cpp",
+    "index/CanonicalIncludes.cpp",
+    "index/FileIndex.cpp",
+    "index/Index.cpp",
+    "index/IndexAction.cpp",
+    "index/MemIndex.cpp",
+    "index/Merge.cpp",
+    "index/Ref.cpp",
+    "index/Serialization.cpp",
+    "index/Symbol.cpp",
+    "index/SymbolCollector.cpp",
+    "index/SymbolID.cpp",
+    "index/SymbolLocation.cpp",
+    "index/SymbolOrigin.cpp",
+    "index/YAMLSerialization.cpp",
+    "index/dex/Dex.cpp",
+    "index/dex/Iterator.cpp",
+    "index/dex/PostingList.cpp",
+    "index/dex/Trigram.cpp",
+    "refactor/Tweak.cpp",
+  ]
+}

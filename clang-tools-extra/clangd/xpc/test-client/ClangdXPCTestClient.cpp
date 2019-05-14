@@ -49,8 +49,10 @@ int main(int argc, char *argv[]) {
   // Open the ClangdXPC dylib in the framework.
   std::string LibPath = getLibraryPath();
   void *dlHandle = dlopen(LibPath.c_str(), RTLD_LOCAL | RTLD_FIRST);
-  if (!dlHandle)
+  if (!dlHandle) {
+    llvm::errs() << "Failed to load framework from \'" << LibPath << "\'\n";
     return 1;
+  }
 
   // Lookup the XPC service bundle name, and launch it.
   clangd_xpc_get_bundle_identifier_t clangd_xpc_get_bundle_identifier =

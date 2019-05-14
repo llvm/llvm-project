@@ -1528,6 +1528,10 @@ void CStringChecker::evalStrlcat(CheckerContext &C, const CallExpr *CE) const {
   if (CE->getNumArgs() < 3)
     return;
 
+  // FIXME: strlcat() uses a different rule for bound checking, i.e. 'n' means
+  // a different thing as compared to strncat(). This currently causes
+  // false positives in the alpha string bound checker.
+
   //char *strlcat(char *s1, const char *s2, size_t n);
   evalStrcpyCommon(C, CE,
                    /* returnEnd = */ false,

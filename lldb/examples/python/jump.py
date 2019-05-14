@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import lldb
 import re
 
@@ -78,7 +80,7 @@ def parse_linespec(linespec, frame, result):
         if (mo is not None):
             matched = True
             # print "Matched <address-expression>"
-            address = long(mo.group(1), base=0)
+            address = int(mo.group(1), base=0)
             breakpoint = target.BreakpointCreateByAddress(address)
 
     if (not matched):
@@ -193,4 +195,4 @@ if lldb.debugger:
     # Module is being run inside the LLDB interpreter
     jump.__doc__ = usage_string()
     lldb.debugger.HandleCommand('command script add -f jump.jump jump')
-    print 'The "jump" command has been installed, type "help jump" or "jump <ENTER>" for detailed help.'
+    print('The "jump" command has been installed, type "help jump" or "jump <ENTER>" for detailed help.')

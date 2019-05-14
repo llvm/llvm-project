@@ -73,6 +73,8 @@ entry:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 0 ]
+; CHECK-NEXT:   - Type:            DATACOUNT
+; CHECK-NEXT:     Count:           3
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB

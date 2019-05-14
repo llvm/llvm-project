@@ -218,7 +218,7 @@ Property::Property(const PropertyDefinition &definition)
   }
 }
 
-Property::Property(const ConstString &name, const ConstString &desc,
+Property::Property(ConstString name, ConstString desc,
                    bool is_global, const lldb::OptionValueSP &value_sp)
     : m_name(name), m_description(desc), m_value_sp(value_sp),
       m_is_global(is_global) {}

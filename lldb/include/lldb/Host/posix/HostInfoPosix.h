@@ -32,9 +32,6 @@ public:
 
   static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
-  static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
-                                           llvm::StringRef dir);
-
   static UserIDResolver &GetUserIDResolver();
 
 protected:

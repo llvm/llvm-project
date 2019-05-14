@@ -36,21 +36,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformPOSIX::PlatformPOSIX(bool is_host)
     : RemoteAwarePlatform(is_host), // This is the local host platform
       m_option_group_platform_rsync(new OptionGroupPlatformRSync()),
       m_option_group_platform_ssh(new OptionGroupPlatformSSH()),
       m_option_group_platform_caching(new OptionGroupPlatformCaching()) {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformPOSIX::~PlatformPOSIX() {}
 
 lldb_private::OptionGroupOptions *PlatformPOSIX::GetConnectionOptions(
@@ -621,7 +617,7 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
   expr_options.SetLanguage(eLanguageTypeC_plus_plus);
   expr_options.SetTrapExceptions(false); // dlopen can't throw exceptions, so
                                          // don't do the work to trap them.
-  expr_options.SetTimeout(std::chrono::seconds(2));
+  expr_options.SetTimeout(process->GetUtilityExpressionTimeout());
 
   Status expr_error;
   ExpressionResults result =
@@ -946,7 +942,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   options.SetUnwindOnError(true);
   options.SetTrapExceptions(false); // dlopen can't throw exceptions, so
                                     // don't do the work to trap them.
-  options.SetTimeout(std::chrono::seconds(2));
+  options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetIsForUtilityExpr(true);
 
   Value return_value;

@@ -91,6 +91,8 @@ public:
 
   ~SBPlatform();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   void Clear();
@@ -107,9 +109,7 @@ public:
 
   bool IsConnected();
 
-  //----------------------------------------------------------------------
   // The following functions will work if the platform is connected
-  //----------------------------------------------------------------------
   const char *GetTriple();
 
   const char *GetHostname();

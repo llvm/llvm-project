@@ -21,3 +21,4 @@ def fuzz_obj(obj):
     obj.GetDescription(lldb.SBStream())
     for subsec in obj:
         s = str(subsec)
+    len(obj)

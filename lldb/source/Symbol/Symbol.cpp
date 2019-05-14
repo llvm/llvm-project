@@ -145,7 +145,7 @@ FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
   return FileSpec();
 }
 
-void Symbol::SetReExportedSymbolName(const ConstString &name) {
+void Symbol::SetReExportedSymbolName(ConstString name) {
   SetType(eSymbolTypeReExported);
   // For eSymbolTypeReExported, the "const char *" from a ConstString is used
   // as the offset in the address range base address.
@@ -325,7 +325,7 @@ uint32_t Symbol::GetPrologueByteSize() {
   return 0;
 }
 
-bool Symbol::Compare(const ConstString &name, SymbolType type) const {
+bool Symbol::Compare(ConstString name, SymbolType type) const {
   if (type == eSymbolTypeAny || m_type == type)
     return m_mangled.GetMangledName() == name ||
            m_mangled.GetDemangledName(GetLanguage()) == name;

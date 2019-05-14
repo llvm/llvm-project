@@ -113,6 +113,46 @@ orr     p15.b, p15/z, p15.b, p15.b
 
 
 // --------------------------------------------------------------------------//
+// Test aliases.
+
+orr     z0.s, z0.s, z0.s
+// CHECK-INST: mov     z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0x60,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 60 04 <unknown>
+
+orr     z0.h, z0.h, z0.h
+// CHECK-INST: mov     z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0x60,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 60 04 <unknown>
+
+orr     z0.b, z0.b, z0.b
+// CHECK-INST: mov     z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0x60,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 60 04 <unknown>
+
+orr     z23.s, z13.s, z8.s  // should not use mov-alias
+// CHECK-INST: orr     z23.d, z13.d, z8.d
+// CHECK-ENCODING: [0xb7,0x31,0x68,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 31 68 04 <unknown>
+
+orr     z23.h, z13.h, z8.h  // should not use mov-alias
+// CHECK-INST: orr     z23.d, z13.d, z8.d
+// CHECK-ENCODING: [0xb7,0x31,0x68,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 31 68 04 <unknown>
+
+orr     z23.b, z13.b, z8.b  // should not use mov-alias
+// CHECK-INST: orr     z23.d, z13.d, z8.d
+// CHECK-ENCODING: [0xb7,0x31,0x68,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 31 68 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
 
 movprfx z4.d, p7/z, z6.d

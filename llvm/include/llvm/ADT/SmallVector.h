@@ -318,6 +318,7 @@ class SmallVectorImpl : public SmallVectorTemplateBase<T> {
 public:
   using iterator = typename SuperClass::iterator;
   using const_iterator = typename SuperClass::const_iterator;
+  using reference = typename SuperClass::reference;
   using size_type = typename SuperClass::size_type;
 
 protected:
@@ -641,11 +642,12 @@ public:
     insert(I, IL.begin(), IL.end());
   }
 
-  template <typename... ArgTypes> void emplace_back(ArgTypes &&... Args) {
+  template <typename... ArgTypes> reference emplace_back(ArgTypes &&... Args) {
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
       this->grow();
     ::new ((void *)this->end()) T(std::forward<ArgTypes>(Args)...);
     this->set_size(this->size() + 1);
+    return this->back();
   }
 
   SmallVectorImpl &operator=(const SmallVectorImpl &RHS);

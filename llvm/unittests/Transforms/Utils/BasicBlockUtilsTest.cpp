@@ -25,6 +25,64 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   return Mod;
 }
 
+TEST(BasicBlockUtils, EliminateUnreachableBlocks) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(
+    C,
+    "define i32 @has_unreachable(i1 %cond) {\n"
+    "entry:\n"
+    "  br i1 %cond, label %bb0, label %bb1\n"
+    "bb0:\n"
+    "  br label %bb1\n"
+    "bb1:\n"
+    "  %phi = phi i32 [ 0, %entry ], [ 1, %bb0 ]"
+    "  ret i32 %phi\n"
+    "bb2:\n"
+    "  ret i32 42\n"
+    "}\n"
+    "\n"
+    );
+
+  auto *F = M->getFunction("has_unreachable");
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+
+  EXPECT_EQ(F->size(), (size_t)4);
+  bool Result = EliminateUnreachableBlocks(*F, &DTU);
+  EXPECT_TRUE(Result);
+  EXPECT_EQ(F->size(), (size_t)3);
+  EXPECT_TRUE(DT.verify());
+}
+
+TEST(BasicBlockUtils, NoUnreachableBlocksToEliminate) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(
+    C,
+    "define i32 @no_unreachable(i1 %cond) {\n"
+    "entry:\n"
+    "  br i1 %cond, label %bb0, label %bb1\n"
+    "bb0:\n"
+    "  br label %bb1\n"
+    "bb1:\n"
+    "  %phi = phi i32 [ 0, %entry ], [ 1, %bb0 ]"
+    "  ret i32 %phi\n"
+    "}\n"
+    "\n"
+    );
+
+  auto *F = M->getFunction("no_unreachable");
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+
+  EXPECT_EQ(F->size(), (size_t)3);
+  bool Result = EliminateUnreachableBlocks(*F, &DTU);
+  EXPECT_FALSE(Result);
+  EXPECT_EQ(F->size(), (size_t)3);
+  EXPECT_TRUE(DT.verify());
+}
+
 TEST(BasicBlockUtils, SplitBlockPredecessors) {
   LLVMContext C;
 

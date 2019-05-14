@@ -21,9 +21,10 @@ class ParsedAST;
 class SymbolIndex;
 
 /// Searches for the symbols matching \p Query. The syntax of \p Query can be
-/// the non-qualified name or fully qualified of a symbol. For example, "vector"
-/// will match the symbol std::vector and "std::vector" would also match it.
-/// Direct children of scopes (namepaces, etc) can be listed with a trailing
+/// the non-qualified name or fully qualified of a symbol. For example,
+/// "vector" will match the symbol std::vector and "std::vector" would also
+/// match it. Direct children of scopes (namepaces, etc) can be listed with a
+/// trailing
 /// "::". For example, "std::" will list all children of the std namespace and
 /// "::" alone will list all children of the global namespace.
 /// \p Limit limits the number of results returned (0 means no limit).

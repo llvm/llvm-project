@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MachOWriter.h"
-#include "../llvm-objcopy.h"
 #include "Object.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/MachO.h"

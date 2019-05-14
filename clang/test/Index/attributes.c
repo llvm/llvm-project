@@ -20,6 +20,14 @@ struct __attribute__((warn_unused)) WarnUnused {
   int b;
 };
 
+struct __attribute__((aligned(64))) Aligned1 {
+  int c;
+};
+
+struct Aligned2 {
+  int c;
+} __attribute__((aligned(64)));
+
 // CHECK: attributes.c:3:32: StructDecl=Test2:3:32 (Definition) Extent=[3:1 - 5:2]
 // CHECK: attributes.c:3:23: attribute(packed)=packed Extent=[3:23 - 3:29]
 // CHECK: attributes.c:4:8: FieldDecl=a:4:8 (Definition) Extent=[4:3 - 4:9] [access=public]
@@ -39,3 +47,7 @@ struct __attribute__((warn_unused)) WarnUnused {
 // CHECK: attributes.c:17:44: attribute(warn_unused_result)= Extent=[17:44 - 17:62]
 // CHECK: attributes.c:19:37: StructDecl=WarnUnused:19:37 (Definition) Extent=[19:1 - 21:2]
 // CHECK: attributes.c:19:23: attribute(warn_unused)= Extent=[19:23 - 19:34]
+// CHECK: attributes.c:23:37: StructDecl=Aligned1:23:37 (Definition) Extent=[23:1 - 25:2]
+// CHECK: attributes.c:23:23: attribute(aligned)= Extent=[23:23 - 23:34]
+// CHECK: attributes.c:27:8: StructDecl=Aligned2:27:8 (Definition) Extent=[27:1 - 29:2]
+// CHECK: attributes.c:29:18: attribute(aligned)= Extent=[29:18 - 29:29]

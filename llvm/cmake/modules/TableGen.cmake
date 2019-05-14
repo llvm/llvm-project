@@ -2,8 +2,6 @@
 # Extra parameters for `tblgen' may come after `ofn' parameter.
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 
-include(LLVMExternalProjectUtils)
-
 if(LLVM_MAIN_INCLUDE_DIR)
   set(LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_INCLUDE_DIR})
 endif()
@@ -121,49 +119,30 @@ macro(add_tablegen target project)
   set(${project}_TABLEGEN "${target}" CACHE
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
 
-  # Upgrade existing LLVM_TABLEGEN setting.
-  if(${project} STREQUAL LLVM)
-    if(${LLVM_TABLEGEN} STREQUAL tblgen)
-      set(LLVM_TABLEGEN "${target}" CACHE
-          STRING "Native TableGen executable. Saves building one when cross-compiling."
-          FORCE)
-    endif()
-  endif()
-
   # Effective tblgen executable to be used:
   set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN} PARENT_SCOPE)
   set(${project}_TABLEGEN_TARGET ${${project}_TABLEGEN} PARENT_SCOPE)
 
   if(LLVM_USE_HOST_TOOLS)
     if( ${${project}_TABLEGEN} STREQUAL "${target}" )
-      if (NOT CMAKE_CONFIGURATION_TYPES)
-        set(${project}_TABLEGEN_EXE "${LLVM_NATIVE_BUILD}/bin/${target}")
-      else()
-        set(${project}_TABLEGEN_EXE "${LLVM_NATIVE_BUILD}/Release/bin/${target}")
-      endif()
+      build_native_tool(${target} ${project}_TABLEGEN_EXE DEPENDS ${target})
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
-      llvm_ExternalProject_BuildCmd(tblgen_build_cmd ${target}
-                                    ${LLVM_NATIVE_BUILD}
-                                    CONFIGURATION Release)
+      add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})
+      set(${project}_TABLEGEN_TARGET ${project}-tablegen-host PARENT_SCOPE)
+
       # Create an artificial dependency between tablegen projects, because they
       # compile the same dependencies, thus using the same build folders.
       # FIXME: A proper fix requires sequentially chaining tablegens.
-      if (NOT ${project} STREQUAL LLVM AND TARGET ${project}-tablegen-host)
+      if (NOT ${project} STREQUAL LLVM AND TARGET ${project}-tablegen-host AND
+          TARGET LLVM-tablegen-host)
         add_dependencies(${project}-tablegen-host LLVM-tablegen-host)
       endif()
-      add_custom_command(OUTPUT ${${project}_TABLEGEN_EXE}
-        COMMAND ${tblgen_build_cmd}
-        DEPENDS CONFIGURE_LLVM_NATIVE ${target}
-        WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
-        COMMENT "Building native TableGen..."
-        USES_TERMINAL)
-      add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})
-      set(${project}_TABLEGEN_TARGET ${project}-tablegen-host PARENT_SCOPE)
     endif()
   endif()
 
   if (${project} STREQUAL LLVM AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+    set(export_to_llvmexports)
     if(${target} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
         NOT LLVM_DISTRIBUTION_COMPONENTS)
       set(export_to_llvmexports EXPORT LLVMExports)

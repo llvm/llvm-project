@@ -39,6 +39,7 @@ public:
   void addCombinedLTOObject();
 
   std::vector<ObjFile *> ObjectFiles;
+  std::vector<SharedFile *> SharedFiles;
   std::vector<BitcodeFile *> BitcodeFiles;
   std::vector<InputFunction *> SyntheticFunctions;
   std::vector<InputGlobal *> SyntheticGlobals;

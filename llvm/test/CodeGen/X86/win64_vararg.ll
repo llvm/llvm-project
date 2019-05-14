@@ -6,9 +6,9 @@
 define void @average_va(i32 %count, ...) nounwind {
 entry:
 ; CHECK: pushq
-; CHECK: movq   %r9, 40(%rsp)
-; CHECK: movq   %r8, 32(%rsp)
-; CHECK: movq   %rdx, 24(%rsp)
+; CHECK-DAG: movq   %r9, 40(%rsp)
+; CHECK-DAG: movq   %r8, 32(%rsp)
+; CHECK-DAG: movq   %rdx, 24(%rsp)
 ; CHECK: leaq   24(%rsp), %rax
 
   %ap = alloca i8*, align 8                       ; <i8**> [#uses=1]

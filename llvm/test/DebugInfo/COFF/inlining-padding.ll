@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj -o - | llvm-readobj -codeview -codeview-subsection-bytes | FileCheck %s
+; RUN: llc < %s -filetype=obj -o - | llvm-readobj --codeview --codeview-subsection-bytes | FileCheck %s
 
 ; Check how we pad out the LF_FUNC_ID records. The 00F3F2F1 bytes in LeafData are
 ; what's interesting here.

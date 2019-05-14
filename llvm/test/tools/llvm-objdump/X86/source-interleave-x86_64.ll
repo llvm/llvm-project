@@ -7,10 +7,8 @@
 ;  RUN: llvm-objdump -dS %t.o >%t3
 ;  RUN: cmp %t0 %t1
 ;  RUN: cmp %t2 %t3
-;  RUN: FileCheck --input-file %t0 --check-prefix="LINES" %t.ll
-;  RUN: FileCheck --input-file %t1 --check-prefix="LINES" %t.ll
-;  RUN: FileCheck --input-file %t2 --check-prefix="SOURCE" %t.ll
-;  RUN: FileCheck --input-file %t3 --check-prefix="SOURCE" %t.ll
+;  RUN: FileCheck --check-prefix=LINES %t.ll < %t0
+;  RUN: FileCheck --check-prefix=SOURCE --strict-whitespace %t.ll < %t2
 ; ModuleID = 'source-interleave-x86_64.bc'
 source_filename = "source-interleave-x86_64.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -79,3 +77,4 @@ attributes #1 = { nounwind readnone }
 
 ; SOURCE: main:
 ; SOURCE-NEXT: ; int main() {
+; SOURCE:      ;   int *b = &a;

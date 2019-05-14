@@ -15,9 +15,8 @@ body: |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C3]]
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[AND]](s32)
-    ; CHECK: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C4]]
+    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C3]]
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SHL]](s32)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[COPY1]]
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[OR]](s32)

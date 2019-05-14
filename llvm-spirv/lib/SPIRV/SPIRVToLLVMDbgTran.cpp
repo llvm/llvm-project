@@ -429,9 +429,6 @@ DINode *SPIRVToLLVMDbgTran::transFunction(const SPIRVExtInst *DebugInst) {
   StringRef LinkageName = getString(Ops[LinkageNameIdx]);
 
   SPIRVWord SPIRVDebugFlags = Ops[FlagsIdx];
-  bool IsDefinition = SPIRVDebugFlags & SPIRVDebug::FlagIsDefinition;
-  bool IsOptimized = SPIRVDebugFlags & SPIRVDebug::FlagIsOptimized;
-  bool IsLocal = SPIRVDebugFlags & SPIRVDebug::FlagIsLocal;
   DINode::DIFlags Flags = DINode::FlagZero;
   if (SPIRVDebugFlags & SPIRVDebug::FlagIsArtificial)
     Flags |= llvm::DINode::FlagArtificial;
@@ -449,8 +446,15 @@ DINode *SPIRVToLLVMDbgTran::transFunction(const SPIRVExtInst *DebugInst) {
     Flags |= llvm::DINode::FlagProtected;
   if (SPIRVDebugFlags & SPIRVDebug::FlagIsPrivate)
     Flags |= llvm::DINode::FlagPrivate;
-  if (BM->isEntryPoint(spv::ExecutionModelKernel, Ops[FunctionIdIdx]))
-    Flags |= llvm::DINode::FlagMainSubprogram;
+
+  bool IsDefinition = SPIRVDebugFlags & SPIRVDebug::FlagIsDefinition;
+  bool IsOptimized = SPIRVDebugFlags & SPIRVDebug::FlagIsOptimized;
+  bool IsLocal = SPIRVDebugFlags & SPIRVDebug::FlagIsLocal;
+  bool IsMainSubprogram =
+      BM->isEntryPoint(spv::ExecutionModelKernel, Ops[FunctionIdIdx]);
+  DISubprogram::DISPFlags SPFlags =
+      DISubprogram::toSPFlags(IsLocal, IsDefinition, IsOptimized,
+                              DISubprogram::SPFlagNonvirtual, IsMainSubprogram);
 
   unsigned ScopeLine = Ops[ScopeLineIdx];
 
@@ -471,8 +475,6 @@ DINode *SPIRVToLLVMDbgTran::transFunction(const SPIRVExtInst *DebugInst) {
   llvm::DITemplateParameterArray TParamsArray = TParams.get();
 
   DISubprogram *DIS = nullptr;
-  DISubprogram::DISPFlags SPFlags =
-      DISubprogram::toSPFlags(IsLocal, IsDefinition, IsOptimized);
   if ((isa<DICompositeType>(Scope) || isa<DINamespace>(Scope)) && !IsDefinition)
     DIS = Builder.createMethod(Scope, Name, LinkageName, File, LineNo, Ty, 0, 0,
                                nullptr, Flags, SPFlags, TParamsArray);

@@ -135,15 +135,15 @@ define float @flw_stack(float %a) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp)
-; RV32IF-NEXT:    sw s1, 8(sp)
-; RV32IF-NEXT:    mv s1, a0
+; RV32IF-NEXT:    sw s0, 8(sp)
+; RV32IF-NEXT:    mv s0, a0
 ; RV32IF-NEXT:    addi a0, sp, 4
 ; RV32IF-NEXT:    call notdead
-; RV32IF-NEXT:    fmv.w.x ft0, s1
+; RV32IF-NEXT:    fmv.w.x ft0, s0
 ; RV32IF-NEXT:    flw ft1, 4(sp)
 ; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
-; RV32IF-NEXT:    lw s1, 8(sp)
+; RV32IF-NEXT:    lw s0, 8(sp)
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
@@ -152,15 +152,15 @@ define float @flw_stack(float %a) nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -32
 ; RV64IF-NEXT:    sd ra, 24(sp)
-; RV64IF-NEXT:    sd s1, 16(sp)
-; RV64IF-NEXT:    mv s1, a0
+; RV64IF-NEXT:    sd s0, 16(sp)
+; RV64IF-NEXT:    mv s0, a0
 ; RV64IF-NEXT:    addi a0, sp, 12
 ; RV64IF-NEXT:    call notdead
-; RV64IF-NEXT:    fmv.w.x ft0, s1
+; RV64IF-NEXT:    fmv.w.x ft0, s0
 ; RV64IF-NEXT:    flw ft1, 12(sp)
 ; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
-; RV64IF-NEXT:    ld s1, 16(sp)
+; RV64IF-NEXT:    ld s0, 16(sp)
 ; RV64IF-NEXT:    ld ra, 24(sp)
 ; RV64IF-NEXT:    addi sp, sp, 32
 ; RV64IF-NEXT:    ret

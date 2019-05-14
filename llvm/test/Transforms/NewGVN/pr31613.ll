@@ -71,32 +71,35 @@ bb18:                                             ; preds = %bb4
 
 declare void @c.d.p(i64, i8*)
 
-define void @e() {
+define void @e(i32 %a0, i32 %a1, %struct.a** %p2) {
 ; CHECK-LABEL: @e(
 ; CHECK-NEXT:    [[F:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 undef, i32* [[F]], !g !0
+; CHECK-NEXT:    store i32 [[A0:%.*]], i32* [[F]], !g !0
 ; CHECK-NEXT:    br label [[H:%.*]]
 ; CHECK:       h:
 ; CHECK-NEXT:    call void @c.d.p(i64 8, i8* undef)
+; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[F]]
 ; CHECK-NEXT:    [[J:%.*]] = load i32, i32* null
-; CHECK-NEXT:    br i1 true, label [[L:%.*]], label [[Q:%.*]]
+; CHECK-NEXT:    [[K:%.*]] = icmp eq i32 [[I]], [[J]]
+; CHECK-NEXT:    br i1 [[K]], label [[L:%.*]], label [[Q:%.*]]
 ; CHECK:       l:
 ; CHECK-NEXT:    br label [[R:%.*]]
 ; CHECK:       q:
-; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    [[M:%.*]] = load %struct.a*, %struct.a** null
 ; CHECK-NEXT:    br label [[R]]
 ; CHECK:       r:
 ; CHECK-NEXT:    switch i32 undef, label [[N:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[S:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       s:
+; CHECK-NEXT:    store i32 [[A1:%.*]], i32* [[F]], !g !0
 ; CHECK-NEXT:    br label [[H]]
 ; CHECK:       n:
-; CHECK-NEXT:    [[O:%.*]] = load %struct.a*, %struct.a** null
+; CHECK-NEXT:    [[O:%.*]] = load %struct.a*, %struct.a** [[P2:%.*]]
 ; CHECK-NEXT:    ret void
 ;
   %f = alloca i32
-  store i32 undef, i32* %f, !g !0
+  store i32 %a0, i32* %f, !g !0
   br label %h
 
 h:                                                ; preds = %s, %0
@@ -120,11 +123,11 @@ r:                                                ; preds = %q, %l
   ]
 
 s:                                                ; preds = %r
-  store i32 undef, i32* %f, !g !0
+  store i32 %a1, i32* %f, !g !0
   br label %h
 
 n:                                                ; preds = %r
-  %o = load %struct.a*, %struct.a** null
+  %o = load %struct.a*, %struct.a** %p2
   %2 = bitcast %struct.a* %o to %struct.b*
   ret void
 }

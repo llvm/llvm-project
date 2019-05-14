@@ -29,6 +29,8 @@ include(CompilerRTUtils)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
+option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON)
+mark_as_advanced(COMPILER_RT_BUILD_CRT)
 option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
 option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
@@ -180,6 +182,27 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
+
+option(COMPILER_RT_INTERCEPT_LIBDISPATCH
+  "Support interception of libdispatch (GCD). Requires '-fblocks'" OFF)
+option(COMPILER_RT_LIBDISPATCH_INSTALL_PATH
+  "Specify if libdispatch is installed in a custom location" "")
+if (COMPILER_RT_INTERCEPT_LIBDISPATCH AND NOT APPLE)
+  set(COMPILER_RT_LIBDISPATCH_CFLAGS -fblocks)
+  set(COMPILER_RT_TEST_LIBDISPATCH_CFLAGS)
+  if (COMPILER_RT_LIBDISPATCH_INSTALL_PATH)
+    list(APPEND COMPILER_RT_TEST_LIBDISPATCH_CFLAGS
+        -I${COMPILER_RT_LIBDISPATCH_INSTALL_PATH}/include)
+    list(APPEND COMPILER_RT_TEST_LIBDISPATCH_CFLAGS
+        -L${COMPILER_RT_LIBDISPATCH_INSTALL_PATH}/lib
+        -Wl,-rpath=${COMPILER_RT_LIBDISPATCH_INSTALL_PATH}/lib)
+  endif()
+  list(APPEND COMPILER_RT_TEST_LIBDISPATCH_CFLAGS -lBlocksRuntime -ldispatch)
+endif()
+if (APPLE) # Always enable on Apple platforms.
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH ON)
+endif()
+pythonize_bool(COMPILER_RT_INTERCEPT_LIBDISPATCH)
 
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from

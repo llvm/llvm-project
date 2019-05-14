@@ -43,4 +43,17 @@ int main() {
 }
 // CHECK: }
 
+#pragma omp declare reduction(mymin:int                                        \
+                              : omp_out = omp_out > omp_in ? omp_in : omp_out) \
+    initializer(omp_priv = 2147483647)
+
+int foo(int argc, char **argv) {
+  int x;
+#pragma omp parallel for reduction(mymin : x)
+  for (int i = 0; i < 1000; i++)
+    ;
+  return 0;
+}
+
+// CHECK: #pragma omp parallel for reduction(mymin: x)
 #endif

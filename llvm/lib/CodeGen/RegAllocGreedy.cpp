@@ -2262,8 +2262,8 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
     ArrayRef<SlotIndex> RMS = LIS->getRegMaskSlotsInBlock(BI.MBB->getNumber());
     LLVM_DEBUG(dbgs() << RMS.size() << " regmasks in block:");
     // Constrain to VirtReg's live range.
-    unsigned ri = std::lower_bound(RMS.begin(), RMS.end(),
-                                   Uses.front().getRegSlot()) - RMS.begin();
+    unsigned ri =
+        llvm::lower_bound(RMS, Uses.front().getRegSlot()) - RMS.begin();
     unsigned re = RMS.size();
     for (unsigned i = 0; i != NumGaps && ri != re; ++i) {
       // Look for Uses[i] <= RMS <= Uses[i+1].

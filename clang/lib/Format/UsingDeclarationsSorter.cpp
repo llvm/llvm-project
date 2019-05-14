@@ -127,8 +127,7 @@ void endUsingDeclarationBlock(
   }
   SmallVector<UsingDeclaration, 4> SortedUsingDeclarations(
       UsingDeclarations->begin(), UsingDeclarations->end());
-  std::stable_sort(SortedUsingDeclarations.begin(),
-                   SortedUsingDeclarations.end());
+  llvm::stable_sort(SortedUsingDeclarations);
   SortedUsingDeclarations.erase(
       std::unique(SortedUsingDeclarations.begin(),
                   SortedUsingDeclarations.end(),

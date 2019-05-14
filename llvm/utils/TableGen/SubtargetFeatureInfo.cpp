@@ -44,20 +44,6 @@ SubtargetFeatureInfo::getAll(const RecordKeeper &Records) {
   return SubtargetFeatures;
 }
 
-void SubtargetFeatureInfo::emitSubtargetFeatureFlagEnumeration(
-    SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
-  OS << "// Flags for subtarget features that participate in "
-     << "instruction matching.\n";
-  OS << "enum SubtargetFeatureFlag : "
-     << getMinimalTypeForEnumBitfield(SubtargetFeatures.size()) << " {\n";
-  for (const auto &SF : SubtargetFeatures) {
-    const SubtargetFeatureInfo &SFI = SF.second;
-    OS << "  " << SFI.getEnumName() << " = (1ULL << " << SFI.Index << "),\n";
-  }
-  OS << "  Feature_None = 0\n";
-  OS << "};\n\n";
-}
-
 void SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(
     SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
   OS << "// Bits for subtarget features that participate in "
@@ -120,9 +106,9 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
 void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
     SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
-  OS << "uint64_t " << TargetName << ClassName << "::\n"
+  OS << "FeatureBitset " << TargetName << ClassName << "::\n"
      << FuncName << "(const FeatureBitset& FB) const {\n";
-  OS << "  uint64_t Features = 0;\n";
+  OS << "  FeatureBitset Features;\n";
   for (const auto &SF : SubtargetFeatures) {
     const SubtargetFeatureInfo &SFI = SF.second;
 
@@ -156,7 +142,7 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     } while (true);
 
     OS << ")\n";
-    OS << "    Features |= " << SFI.getEnumName() << ";\n";
+    OS << "    Features[" << SFI.getEnumBitName() << "] = 1;\n";
   }
   OS << "  return Features;\n";
   OS << "}\n\n";

@@ -49,6 +49,16 @@ static bool hasSinCosPiStret(const Triple &T) {
   return true;
 }
 
+static bool hasBcmp(const Triple &TT) {
+  // Posix removed support from bcmp() in 2001, but the glibc and several
+  // implementations of the libc still have it.
+  if (TT.isOSLinux())
+    return TT.isGNUEnvironment() || TT.isMusl();
+  // Both NetBSD and OpenBSD are planning to remove the function. Windows does
+  // not have it.
+  return TT.isOSFreeBSD() || TT.isOSSolaris() || TT.isOSDarwin();
+}
+
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
@@ -141,6 +151,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sincospif_stret);
   }
 
+  if (!hasBcmp(T))
+    TLI.setUnavailable(LibFunc_bcmp);
+
   if (T.isMacOSX() && T.getArch() == Triple::x86 &&
       !T.isMacOSXVersionLT(10, 7)) {
     // x86-32 OSX has a scheme where fwrite and fputs (and some other functions
@@ -152,11 +165,19 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailableWithName(LibFunc_fputs, "fputs$UNIX2003");
   }
 
-  // iprintf and friends are only available on XCore and TCE.
-  if (T.getArch() != Triple::xcore && T.getArch() != Triple::tce) {
+  // iprintf and friends are only available on XCore, TCE, and Emscripten.
+  if (T.getArch() != Triple::xcore && T.getArch() != Triple::tce &&
+      T.getOS() != Triple::Emscripten) {
     TLI.setUnavailable(LibFunc_iprintf);
     TLI.setUnavailable(LibFunc_siprintf);
     TLI.setUnavailable(LibFunc_fiprintf);
+  }
+
+  // __small_printf and friends are only available on Emscripten.
+  if (T.getOS() != Triple::Emscripten) {
+    TLI.setUnavailable(LibFunc_small_printf);
+    TLI.setUnavailable(LibFunc_small_sprintf);
+    TLI.setUnavailable(LibFunc_small_fprintf);
   }
 
   if (T.isOSWindows() && !T.isOSCygMing()) {
@@ -758,6 +779,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_stat:
   case LibFunc_statvfs:
   case LibFunc_siprintf:
+  case LibFunc_small_sprintf:
   case LibFunc_sprintf:
     return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy() &&
@@ -855,6 +877,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_getenv:
   case LibFunc_getpwnam:
   case LibFunc_iprintf:
+  case LibFunc_small_printf:
   case LibFunc_pclose:
   case LibFunc_perror:
   case LibFunc_printf:
@@ -934,6 +957,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(1)->isPointerTy());
   case LibFunc_fscanf:
   case LibFunc_fiprintf:
+  case LibFunc_small_fprintf:
   case LibFunc_fprintf:
     return (NumParams >= 2 && FTy.getReturnType()->isIntegerTy() &&
             FTy.getParamType(0)->isPointerTy() &&
@@ -1449,151 +1473,16 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   switch (VecLib) {
   case Accelerate: {
     const VecDesc VecFuncs[] = {
-        // Floating-Point Arithmetic and Auxiliary Functions
-        {"ceilf", "vceilf", 4},
-        {"fabsf", "vfabsf", 4},
-        {"llvm.fabs.f32", "vfabsf", 4},
-        {"floorf", "vfloorf", 4},
-        {"sqrtf", "vsqrtf", 4},
-        {"llvm.sqrt.f32", "vsqrtf", 4},
-
-        // Exponential and Logarithmic Functions
-        {"expf", "vexpf", 4},
-        {"llvm.exp.f32", "vexpf", 4},
-        {"expm1f", "vexpm1f", 4},
-        {"logf", "vlogf", 4},
-        {"llvm.log.f32", "vlogf", 4},
-        {"log1pf", "vlog1pf", 4},
-        {"log10f", "vlog10f", 4},
-        {"llvm.log10.f32", "vlog10f", 4},
-        {"logbf", "vlogbf", 4},
-
-        // Trigonometric Functions
-        {"sinf", "vsinf", 4},
-        {"llvm.sin.f32", "vsinf", 4},
-        {"cosf", "vcosf", 4},
-        {"llvm.cos.f32", "vcosf", 4},
-        {"tanf", "vtanf", 4},
-        {"asinf", "vasinf", 4},
-        {"acosf", "vacosf", 4},
-        {"atanf", "vatanf", 4},
-
-        // Hyperbolic Functions
-        {"sinhf", "vsinhf", 4},
-        {"coshf", "vcoshf", 4},
-        {"tanhf", "vtanhf", 4},
-        {"asinhf", "vasinhf", 4},
-        {"acoshf", "vacoshf", 4},
-        {"atanhf", "vatanhf", 4},
+    #define TLI_DEFINE_ACCELERATE_VECFUNCS
+    #include "llvm/Analysis/VecFuncs.def"
     };
     addVectorizableFunctions(VecFuncs);
     break;
   }
   case SVML: {
     const VecDesc VecFuncs[] = {
-        {"sin", "__svml_sin2", 2},
-        {"sin", "__svml_sin4", 4},
-        {"sin", "__svml_sin8", 8},
-
-        {"sinf", "__svml_sinf4", 4},
-        {"sinf", "__svml_sinf8", 8},
-        {"sinf", "__svml_sinf16", 16},
-
-        {"llvm.sin.f64", "__svml_sin2", 2},
-        {"llvm.sin.f64", "__svml_sin4", 4},
-        {"llvm.sin.f64", "__svml_sin8", 8},
-
-        {"llvm.sin.f32", "__svml_sinf4", 4},
-        {"llvm.sin.f32", "__svml_sinf8", 8},
-        {"llvm.sin.f32", "__svml_sinf16", 16},
-
-        {"cos", "__svml_cos2", 2},
-        {"cos", "__svml_cos4", 4},
-        {"cos", "__svml_cos8", 8},
-
-        {"cosf", "__svml_cosf4", 4},
-        {"cosf", "__svml_cosf8", 8},
-        {"cosf", "__svml_cosf16", 16},
-
-        {"llvm.cos.f64", "__svml_cos2", 2},
-        {"llvm.cos.f64", "__svml_cos4", 4},
-        {"llvm.cos.f64", "__svml_cos8", 8},
-
-        {"llvm.cos.f32", "__svml_cosf4", 4},
-        {"llvm.cos.f32", "__svml_cosf8", 8},
-        {"llvm.cos.f32", "__svml_cosf16", 16},
-
-        {"pow", "__svml_pow2", 2},
-        {"pow", "__svml_pow4", 4},
-        {"pow", "__svml_pow8", 8},
-
-        {"powf", "__svml_powf4", 4},
-        {"powf", "__svml_powf8", 8},
-        {"powf", "__svml_powf16", 16},
-
-        { "__pow_finite", "__svml_pow2", 2 },
-        { "__pow_finite", "__svml_pow4", 4 },
-        { "__pow_finite", "__svml_pow8", 8 },
-
-        { "__powf_finite", "__svml_powf4", 4 },
-        { "__powf_finite", "__svml_powf8", 8 },
-        { "__powf_finite", "__svml_powf16", 16 },
-
-        {"llvm.pow.f64", "__svml_pow2", 2},
-        {"llvm.pow.f64", "__svml_pow4", 4},
-        {"llvm.pow.f64", "__svml_pow8", 8},
-
-        {"llvm.pow.f32", "__svml_powf4", 4},
-        {"llvm.pow.f32", "__svml_powf8", 8},
-        {"llvm.pow.f32", "__svml_powf16", 16},
-
-        {"exp", "__svml_exp2", 2},
-        {"exp", "__svml_exp4", 4},
-        {"exp", "__svml_exp8", 8},
-
-        {"expf", "__svml_expf4", 4},
-        {"expf", "__svml_expf8", 8},
-        {"expf", "__svml_expf16", 16},
-
-        { "__exp_finite", "__svml_exp2", 2 },
-        { "__exp_finite", "__svml_exp4", 4 },
-        { "__exp_finite", "__svml_exp8", 8 },
-
-        { "__expf_finite", "__svml_expf4", 4 },
-        { "__expf_finite", "__svml_expf8", 8 },
-        { "__expf_finite", "__svml_expf16", 16 },
-
-        {"llvm.exp.f64", "__svml_exp2", 2},
-        {"llvm.exp.f64", "__svml_exp4", 4},
-        {"llvm.exp.f64", "__svml_exp8", 8},
-
-        {"llvm.exp.f32", "__svml_expf4", 4},
-        {"llvm.exp.f32", "__svml_expf8", 8},
-        {"llvm.exp.f32", "__svml_expf16", 16},
-
-        {"log", "__svml_log2", 2},
-        {"log", "__svml_log4", 4},
-        {"log", "__svml_log8", 8},
-
-        {"logf", "__svml_logf4", 4},
-        {"logf", "__svml_logf8", 8},
-        {"logf", "__svml_logf16", 16},
-
-        { "__log_finite", "__svml_log2", 2 },
-        { "__log_finite", "__svml_log4", 4 },
-        { "__log_finite", "__svml_log8", 8 },
-
-        { "__logf_finite", "__svml_logf4", 4 },
-        { "__logf_finite", "__svml_logf8", 8 },
-        { "__logf_finite", "__svml_logf16", 16 },
-
-        {"llvm.log.f64", "__svml_log2", 2},
-        {"llvm.log.f64", "__svml_log4", 4},
-        {"llvm.log.f64", "__svml_log8", 8},
-
-        {"llvm.log.f32", "__svml_logf4", 4},
-        {"llvm.log.f32", "__svml_logf8", 8},
-        {"llvm.log.f32", "__svml_logf16", 16},
+    #define TLI_DEFINE_SVML_VECFUNCS
+    #include "llvm/Analysis/VecFuncs.def"
     };
     addVectorizableFunctions(VecFuncs);
     break;
@@ -1608,9 +1497,8 @@ bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {
   if (funcName.empty())
     return false;
 
-  std::vector<VecDesc>::const_iterator I = std::lower_bound(
-      VectorDescs.begin(), VectorDescs.end(), funcName,
-      compareWithScalarFnName);
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(VectorDescs, funcName, compareWithScalarFnName);
   return I != VectorDescs.end() && StringRef(I->ScalarFnName) == funcName;
 }
 
@@ -1619,8 +1507,8 @@ StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
   F = sanitizeFunctionName(F);
   if (F.empty())
     return F;
-  std::vector<VecDesc>::const_iterator I = std::lower_bound(
-      VectorDescs.begin(), VectorDescs.end(), F, compareWithScalarFnName);
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(VectorDescs, F, compareWithScalarFnName);
   while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == F) {
     if (I->VectorizationFactor == VF)
       return I->VectorFnName;
@@ -1635,8 +1523,8 @@ StringRef TargetLibraryInfoImpl::getScalarizedFunction(StringRef F,
   if (F.empty())
     return F;
 
-  std::vector<VecDesc>::const_iterator I = std::lower_bound(
-      ScalarDescs.begin(), ScalarDescs.end(), F, compareWithVectorFnName);
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(ScalarDescs, F, compareWithVectorFnName);
   if (I == VectorDescs.end() || StringRef(I->VectorFnName) != F)
     return StringRef();
   VF = I->VectorizationFactor;

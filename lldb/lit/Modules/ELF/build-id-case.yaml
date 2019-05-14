@@ -32,10 +32,9 @@ Sections:
     AddressAlign:    0x0000000000000008
     Content:         DEADBEEFBAADF00D
 Symbols:
-  Local:
-    - Name:            main
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x00000000004003D0
-      Size:            0x0000000000000008
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x00000000004003D0
+    Size:            0x0000000000000008
 ...

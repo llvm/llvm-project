@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reduce -S | FileCheck %s
+; RUN: opt < %s -loop-reduce -lsr-setupcost-depth-limit=1 -S | FileCheck %s
 
 ; This test is adapted from the n-body test of the LLVM test-suite: A bug in
 ; r345114 caused LSR to generate incorrect code. The test verifies that the

@@ -121,6 +121,12 @@ def err_verify_missing_file : Error<
     "file '%0' could not be located in expected %1">;
 def err_verify_invalid_range : Error<
     "invalid range following '-' in expected %0">;
+def err_verify_ambiguous_marker : Error<
+    "reference to marker '%0' is ambiguous">;
+def note_verify_ambiguous_marker : Note<
+    "ambiguous marker '%0' is defined here">;
+def err_verify_no_such_marker : Error<
+    "use of undefined marker '%0'">;
 def err_verify_missing_start : Error<
     "cannot find start ('{{') of expected %0">;
 def err_verify_missing_end : Error<
@@ -167,10 +173,11 @@ def note_incompatible_analyzer_plugin_api : Note<
 
 def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
-def err_module_interface_requires_modules_ts : Error<
-  "module interface compilation requires '-fmodules-ts'">;
+def err_module_interface_requires_cpp_modules : Error<
+  "module interface compilation requires '-std=c++2a' or '-fmodules-ts'">;
 def err_header_module_requires_modules : Error<
-  "header module compilation requires '-fmodules' or '-fmodules-ts'">;
+  "header module compilation requires '-fmodules', '-std=c++2a', or "
+  "'-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;

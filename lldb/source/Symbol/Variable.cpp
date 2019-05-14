@@ -35,9 +35,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Variable constructor
-//----------------------------------------------------------------------
 Variable::Variable(
     lldb::user_id_t uid, const char *name,
     const char *mangled, // The mangled or fully qualified name of the variable.
@@ -52,9 +50,7 @@ Variable::Variable(
       m_artificial(artificial), m_loc_is_const_data(false),
       m_static_member(static_member) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 Variable::~Variable() {}
 
 lldb::LanguageType Variable::GetLanguage() const {
@@ -74,7 +70,7 @@ ConstString Variable::GetName() const {
 
 ConstString Variable::GetUnqualifiedName() const { return m_name; }
 
-bool Variable::NameMatches(const ConstString &name) const {
+bool Variable::NameMatches(ConstString name) const {
   if (m_name == name)
     return true;
   SymbolContext variable_sc;

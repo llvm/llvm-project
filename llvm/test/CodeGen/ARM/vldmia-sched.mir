@@ -1,0 +1,31 @@
+# RUN: llc -run-pass=post-RA-sched %s -o - | FileCheck %s
+# CHECK: VLDMDIA
+--- |
+  target triple = "thumbv7-w64-windows-gnu"
+  
+  @a = common dso_local local_unnamed_addr global [1 x float] zeroinitializer, align 4
+  
+  define dso_local arm_aapcs_vfpcc i32 @g() local_unnamed_addr #0 {
+    unreachable
+  }
+  
+  attributes #0 = { "target-cpu"="cortex-a9" }
+  
+...
+---
+name:            g
+alignment:       1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  
+    BUNDLE implicit-def $r0 {
+      $r0 = t2MOVi16 target-flags(arm-lo16) @a, 14, $noreg
+      $r0 = t2MOVTi16 internal $r0, target-flags(arm-hi16) @a, 14, $noreg
+    }
+    $r1 = t2ADDri $r0, 8, 14, $noreg, $noreg
+    VLDMDIA killed $r1, 14, $noreg, def $d23, def $d24, def $d25, def $d26, def $d27, def $d28, def $d29, def $d30, def $d31 :: (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 2, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 4, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 6, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 8, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 10, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 12, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 14, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 16, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 18, i32 0) to <2 x float>*)`, align 4)
+    $r0, dead $cpsr = tADDi8 killed $r0, 80, 14, $noreg
+    VLDMDIA killed $r0, 14, $noreg, def $d0, def $d1, def $d2, def $d3, def $d4, def $d5, def $d6 :: (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 20, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 22, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 24, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 26, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 28, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 30, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 32, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 33, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 34, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 35, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 36, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 37, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 38, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 39, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 40, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 41, i32 0) to <2 x float>*)`, align 4), (load 8 from `<2 x float>* bitcast (float* getelementptr ([1 x float], [1 x float]* @a, i32 42, i32 0) to <2 x float>*)`, align 4)
+
+...

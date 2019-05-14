@@ -14,7 +14,6 @@ add_llvm_library(LLVMInstrumentation
   PGOMemOPSizeOpt.cpp
   SanitizerCoverage.cpp
   ThreadSanitizer.cpp
-  EfficiencySanitizer.cpp
   HWAddressSanitizer.cpp
 
   ADDITIONAL_HEADER_DIRS

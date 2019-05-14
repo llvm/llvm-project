@@ -691,7 +691,6 @@ public:
 #define OPENMP_CLAUSE(Name, Class)                        \
   LLVM_ATTRIBUTE_NOINLINE \
   OMPClause *Transform ## Class(Class *S);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
 
   /// Build a new qualified type given its unqualified type and type location.
@@ -882,6 +881,12 @@ public:
   /// Build a new typedef type.
   QualType RebuildTypedefType(TypedefNameDecl *Typedef) {
     return SemaRef.Context.getTypeDeclType(Typedef);
+  }
+
+  /// Build a new MacroDefined type.
+  QualType RebuildMacroQualifiedType(QualType T,
+                                     const IdentifierInfo *MacroII) {
+    return SemaRef.Context.getMacroQualifiedType(T, MacroII);
   }
 
   /// Build a new class/struct/union type.
@@ -1555,6 +1560,16 @@ public:
     return getSema().ActOnOpenMPSimdlenClause(Len, StartLoc, LParenLoc, EndLoc);
   }
 
+  /// Build a new OpenMP 'allocator' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPAllocatorClause(Expr *A, SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPAllocatorClause(A, StartLoc, LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'collapse' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -1816,6 +1831,19 @@ public:
                                           MapperIdScopeSpec, MapperId, MapType,
                                           IsMapTypeImplicit, MapLoc, ColonLoc,
                                           VarList, Locs, UnresolvedMappers);
+  }
+
+  /// Build a new OpenMP 'allocate' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPAllocateClause(Expr *Allocate, ArrayRef<Expr *> VarList,
+                                      SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation ColonLoc,
+                                      SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPAllocateClause(Allocate, VarList, StartLoc,
+                                               LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_teams' clause.
@@ -3323,7 +3351,6 @@ OMPClause *TreeTransform<Derived>::TransformOMPClause(OMPClause *S) {
 #define OPENMP_CLAUSE(Name, Class)                                             \
   case OMPC_ ## Name :                                                         \
     return getDerived().Transform ## Class(cast<Class>(S));
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   }
 
@@ -6172,6 +6199,27 @@ TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,
   return Result;
 }
 
+template <typename Derived>
+QualType
+TreeTransform<Derived>::TransformMacroQualifiedType(TypeLocBuilder &TLB,
+                                                    MacroQualifiedTypeLoc TL) {
+  QualType Inner = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (Inner.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || Inner != TL.getInnerLoc().getType()) {
+    Result =
+        getDerived().RebuildMacroQualifiedType(Inner, TL.getMacroIdentifier());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  MacroQualifiedTypeLoc NewTL = TLB.push<MacroQualifiedTypeLoc>(Result);
+  NewTL.setExpansionLoc(TL.getExpansionLoc());
+  return Result;
+}
+
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformDependentNameType(
     TypeLocBuilder &TLB, DependentNameTypeLoc TL) {
@@ -8347,6 +8395,16 @@ TreeTransform<Derived>::TransformOMPSafelenClause(OMPSafelenClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPAllocatorClause(OMPAllocatorClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getAllocator());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPAllocatorClause(
+      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPSimdlenClause(OMPSimdlenClause *C) {
   ExprResult E = getDerived().TransformExpr(C->getSimdlen());
   if (E.isInvalid())
@@ -8886,6 +8944,29 @@ OMPClause *TreeTransform<Derived>::TransformOMPMapClause(OMPMapClause *C) {
       C->getMapTypeModifiers(), C->getMapTypeModifiersLoc(), MapperIdScopeSpec,
       MapperIdInfo, C->getMapType(), C->isImplicitMapType(), C->getMapLoc(),
       C->getColonLoc(), Vars, Locs, UnresolvedMappers);
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
+  Expr *Allocator = C->getAllocator();
+  if (Allocator) {
+    ExprResult AllocatorRes = getDerived().TransformExpr(Allocator);
+    if (AllocatorRes.isInvalid())
+      return nullptr;
+    Allocator = AllocatorRes.get();
+  }
+  llvm::SmallVector<Expr *, 16> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlists()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
+  return getDerived().RebuildOMPAllocateClause(
+      Allocator, Vars, C->getBeginLoc(), C->getLParenLoc(), C->getColonLoc(),
+      C->getEndLoc());
 }
 
 template <typename Derived>

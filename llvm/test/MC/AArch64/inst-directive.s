@@ -1,13 +1,13 @@
 // RUN: llvm-mc %s -triple=aarch64-none-linux-gnu -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=aarch64-none-linux-gnu -filetype=obj -o %t
-// RUN: llvm-readobj -s -sd %t | FileCheck %s  --check-prefix=CHECK-OBJ
+// RUN: llvm-readobj -S --sd %t | FileCheck %s  --check-prefix=CHECK-OBJ
 // RUN: llvm-objdump -t %t | FileCheck %s  --check-prefix=CHECK-SYMS
 
 // RUN: llvm-mc %s -triple=aarch64_be-none-linux-gnu -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=aarch64_be-none-linux-gnu -filetype=obj -o %t
-// RUN: llvm-readobj -s -sd %t | FileCheck %s  --check-prefix=CHECK-OBJ
+// RUN: llvm-readobj -S --sd %t | FileCheck %s  --check-prefix=CHECK-OBJ
 // RUN: llvm-objdump -t %t | FileCheck %s  --check-prefix=CHECK-SYMS
 
     .section    .inst.aarch64_inst

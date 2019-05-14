@@ -3,27 +3,20 @@
 
 from __future__ import print_function
 
+import io
 import os
 import urllib2
 import sys
-import tempfile
 import zipfile
-
-
-def download_url(url, output_file):
-    """Download url into output_file."""
-    print('downloading %s ...' % url, end='')
-    sys.stdout.flush()
-    output_file.write(urllib2.urlopen(url).read())
-    print(' done')
 
 
 def download_and_unpack(url, output_dir, gn):
     """Download an archive from url and extract gn from it into output_dir."""
-    with tempfile.TemporaryFile() as f:
-        download_url(url, f)
-        f.seek(0)
-        zipfile.ZipFile(f).extract(gn, path=output_dir)
+    print('downloading %s ...' % url, end='')
+    sys.stdout.flush()
+    data = urllib2.urlopen(url).read()
+    print(' done')
+    zipfile.ZipFile(io.BytesIO(data)).extract(gn, path=output_dir)
 
 
 def set_executable_bit(path):
@@ -33,7 +26,8 @@ def set_executable_bit(path):
 
 
 def get_platform():
-    if os.uname()[4] != 'x86_64':
+    import platform
+    if platform.machine() not in ('AMD64', 'x86_64'):
         return None
     if sys.platform.startswith('linux'):
         return 'linux-amd64'

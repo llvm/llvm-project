@@ -47,7 +47,8 @@ public:
         DL(std::move(DL)), Mangle(ES, this->DL),
         Ctx(llvm::make_unique<LLVMContext>()) {
     ES.getMainJITDylib().setGenerator(
-        cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+        cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+            DL.getGlobalPrefix())));
   }
 
   static Expected<std::unique_ptr<KaleidoscopeJIT>> Create() {

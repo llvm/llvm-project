@@ -192,9 +192,7 @@ ABISysV_i386::GetRegisterInfoArray(uint32_t &count) {
   return g_register_infos;
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -839,9 +837,7 @@ void ABISysV_i386::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_i386::GetPluginNameStatic() {
   static ConstString g_name("sysv-i386");

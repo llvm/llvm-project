@@ -45,6 +45,7 @@ set(LLVM_TEST_DEPENDS
           llc
           lli
           lli-child-target
+          llvm-addr2line
           llvm-ar
           llvm-as
           llvm-bcanalyzer
@@ -67,6 +68,7 @@ set(LLVM_TEST_DEPENDS
           llvm-exegesis
           llvm-extract
           llvm-isel-fuzzer
+          llvm-jitlink
           llvm-lib
           llvm-link
           llvm-lto2

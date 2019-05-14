@@ -21,9 +21,7 @@ public:
   typedef void (*ChangedCallback)(const PathMappingList &path_list,
                                   void *baton);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   PathMappingList();
 
   PathMappingList(ChangedCallback callback, void *callback_baton);
@@ -34,7 +32,7 @@ public:
 
   const PathMappingList &operator=(const PathMappingList &rhs);
 
-  void Append(const ConstString &path, const ConstString &replacement,
+  void Append(ConstString path, ConstString replacement,
               bool notify);
 
   void Append(const PathMappingList &rhs, bool notify);
@@ -51,43 +49,40 @@ public:
   bool GetPathsAtIndex(uint32_t idx, ConstString &path,
                        ConstString &new_path) const;
 
-  void Insert(const ConstString &path, const ConstString &replacement,
+  void Insert(ConstString path, ConstString replacement,
               uint32_t insert_idx, bool notify);
 
   bool Remove(size_t index, bool notify);
 
-  bool Remove(const ConstString &path, bool notify);
+  bool Remove(ConstString path, bool notify);
 
-  bool Replace(const ConstString &path, const ConstString &replacement,
+  bool Replace(ConstString path, ConstString replacement,
                bool notify);
 
-  bool Replace(const ConstString &path, const ConstString &replacement,
+  bool Replace(ConstString path, ConstString replacement,
                uint32_t index, bool notify);
-  bool RemapPath(const ConstString &path, ConstString &new_path) const;
+  bool RemapPath(ConstString path, ConstString &new_path) const;
 
-  //------------------------------------------------------------------
   /// Remaps a source file given \a path into \a new_path.
   ///
   /// Remaps \a path if any source remappings match. This function
   /// does NOT stat the file system so it can be used in tight loops
   /// where debug info is being parsed.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     The original source file path to try and remap.
   ///
-  /// @param[out] new_path
+  /// \param[out] new_path
   ///     The newly remapped filespec that is may or may not exist.
   ///
-  /// @return
+  /// \return
   ///     /b true if \a path was successfully located and \a new_path
   ///     is filled in with a new source path, \b false otherwise.
-  //------------------------------------------------------------------
   bool RemapPath(llvm::StringRef path, std::string &new_path) const;
   bool RemapPath(const char *, std::string &) const = delete;
 
   bool ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const;
 
-  //------------------------------------------------------------------
   /// Finds a source file given a file spec using the path remappings.
   ///
   /// Tries to resolve \a orig_spec by checking the path remappings.
@@ -96,20 +91,19 @@ public:
   /// or are even on the local file system, so use this function
   /// sparingly (not in a tight debug info parsing loop).
   ///
-  /// @param[in] orig_spec
+  /// \param[in] orig_spec
   ///     The original source file path to try and remap.
   ///
-  /// @param[out] new_spec
+  /// \param[out] new_spec
   ///     The newly remapped filespec that is guaranteed to exist.
   ///
-  /// @return
+  /// \return
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool FindFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
 
-  uint32_t FindIndexForPath(const ConstString &path) const;
+  uint32_t FindIndexForPath(ConstString path) const;
 
   uint32_t GetModificationID() const { return m_mod_id; }
 
@@ -119,9 +113,9 @@ protected:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  iterator FindIteratorForPath(const ConstString &path);
+  iterator FindIteratorForPath(ConstString path);
 
-  const_iterator FindIteratorForPath(const ConstString &path) const;
+  const_iterator FindIteratorForPath(ConstString path) const;
 
   collection m_pairs;
   ChangedCallback m_callback;

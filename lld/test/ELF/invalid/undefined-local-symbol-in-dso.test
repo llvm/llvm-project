@@ -23,5 +23,4 @@ Sections:
     Info:          1
     Type:          SHT_SYMTAB
 DynamicSymbols:
-  Local:
-    - Name: foo
+  - Name: foo

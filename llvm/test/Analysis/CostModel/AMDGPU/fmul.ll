@@ -20,11 +20,24 @@ define amdgpu_kernel void @fmul_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 }
 
 ; ALL: 'fmul_v3f32'
-; ALL: estimated cost of 3 for {{.*}} fmul <3 x float>
+; Allow for 4 when v3f32 is illegal and TargetLowering thinks it needs widening,
+; and 3 when it is legal.
+; ALL: estimated cost of {{[34]}} for {{.*}} fmul <3 x float>
 define amdgpu_kernel void @fmul_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %vaddr, <3 x float> %b) #0 {
   %vec = load <3 x float>, <3 x float> addrspace(1)* %vaddr
   %add = fmul <3 x float> %vec, %b
   store <3 x float> %add, <3 x float> addrspace(1)* %out
+  ret void
+}
+
+; ALL: 'fmul_v5f32'
+; Allow for 8 when v5f32 is illegal and TargetLowering thinks it needs widening,
+; and 5 when it is legal.
+; ALL: estimated cost of {{[58]}} for {{.*}} fmul <5 x float>
+define amdgpu_kernel void @fmul_v5f32(<5 x float> addrspace(1)* %out, <5 x float> addrspace(1)* %vaddr, <5 x float> %b) #0 {
+  %vec = load <5 x float>, <5 x float> addrspace(1)* %vaddr
+  %add = fmul <5 x float> %vec, %b
+  store <5 x float> %add, <5 x float> addrspace(1)* %out
   ret void
 }
 

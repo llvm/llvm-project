@@ -80,13 +80,6 @@ SmallCTRLoopThreshold("min-ctr-loop-threshold", cl::init(4), cl::Hidden,
 
 STATISTIC(NumCTRLoops, "Number of loops converted to CTR loops");
 
-namespace llvm {
-  void initializePPCCTRLoopsPass(PassRegistry&);
-#ifndef NDEBUG
-  void initializePPCCTRLoopsVerifyPass(PassRegistry&);
-#endif
-}
-
 namespace {
   struct PPCCTRLoops : public FunctionPass {
 
@@ -202,6 +195,7 @@ bool PPCCTRLoops::runOnFunction(Function &F) {
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   LibInfo = TLIP ? &TLIP->getTLI() : nullptr;
   PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
+  SchedModel.init(STI);
 
   bool MadeChange = false;
 

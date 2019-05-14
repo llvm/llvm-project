@@ -87,8 +87,7 @@ public:
                         lldb::offset_t *offset_ptr, const DWARFUnit *cu);
   static bool IsBlockForm(const dw_form_t form);
   static bool IsDataForm(const dw_form_t form);
-  static FixedFormSizes GetFixedFormSizesForAddressSize(uint8_t addr_size,
-                                                        bool is_dwarf64);
+  static FixedFormSizes GetFixedFormSizesForAddressSize(uint8_t addr_size);
   static int Compare(const DWARFFormValue &a, const DWARFFormValue &b);
   void Clear();
   static bool FormIsSupported(dw_form_t form);

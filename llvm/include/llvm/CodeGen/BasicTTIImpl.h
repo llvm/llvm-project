@@ -292,12 +292,12 @@ public:
   }
 
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<const Value *> Arguments) {
-    return BaseT::getIntrinsicCost(IID, RetTy, Arguments);
+                            ArrayRef<const Value *> Arguments, const User *U) {
+    return BaseT::getIntrinsicCost(IID, RetTy, Arguments, U);
   }
 
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Type *> ParamTys) {
+                            ArrayRef<Type *> ParamTys, const User *U) {
     if (IID == Intrinsic::cttz) {
       if (getTLI()->isCheapToSpeculateCttz())
         return TargetTransformInfo::TCC_Basic;
@@ -310,7 +310,7 @@ public:
       return TargetTransformInfo::TCC_Expensive;
     }
 
-    return BaseT::getIntrinsicCost(IID, RetTy, ParamTys);
+    return BaseT::getIntrinsicCost(IID, RetTy, ParamTys, U);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,

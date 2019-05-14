@@ -12,7 +12,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 declare i32 @fputs(i8*, %FILE*)
 
-; Check fputs(str, fp) --> fwrite(str, 1, strlen(s), fp).
+; Check fputs(str, fp) --> fwrite(str, strlen(s), 1, fp).
 
 define void @test_simplify1(%FILE* %fp) {
 ; CHECK-LABEL: @test_simplify1(

@@ -40,6 +40,11 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The optimizer will now convert calls to ``memcmp`` into a calls to ``bcmp`` in
+  some circumstances. Users who are building freestanding code (not depending on
+  the platform's libc) without specifying ``-ffreestanding`` may need to either
+  pass ``-fno-builtin-bcmp``, or provide a ``bcmp`` function.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
@@ -52,6 +57,10 @@ Non-comprehensive list of changes in this release
 
 Changes to the LLVM IR
 ----------------------
+
+* Added ``immarg`` parameter attribute. This indicates an intrinsic
+  parameter is required to be a simple constant. This annotation must
+  be accurate to avoid possible miscompiles.
 
 
 Changes to the ARM Backend

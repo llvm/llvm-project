@@ -61,7 +61,8 @@ inline MachineBasicBlock::instr_iterator getBundleEnd(
     MachineBasicBlock::instr_iterator I) {
   while (I->isBundledWithSucc())
     ++I;
-  return ++I;
+  ++I;
+  return I;
 }
 
 /// Returns an iterator pointing beyond the bundle containing \p I.
@@ -69,7 +70,8 @@ inline MachineBasicBlock::const_instr_iterator getBundleEnd(
     MachineBasicBlock::const_instr_iterator I) {
   while (I->isBundledWithSucc())
     ++I;
-  return ++I;
+  ++I;
+  return I;
 }
 
 //===----------------------------------------------------------------------===//

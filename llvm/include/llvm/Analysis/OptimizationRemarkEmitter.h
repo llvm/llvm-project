@@ -77,7 +77,7 @@ public:
     // remarks enabled. We can't currently check whether remarks are requested
     // for the calling pass since that requires actually building the remark.
 
-    if (F->getContext().getDiagnosticsOutputFile() ||
+    if (F->getContext().getRemarkStreamer() ||
         F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
       auto R = RemarkBuilder();
       emit((DiagnosticInfoOptimizationBase &)R);
@@ -92,7 +92,7 @@ public:
   /// provide more context so that non-trivial false positives can be quickly
   /// detected by the user.
   bool allowExtraAnalysis(StringRef PassName) const {
-    return (F->getContext().getDiagnosticsOutputFile() ||
+    return (F->getContext().getRemarkStreamer() ||
             F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
   }
 

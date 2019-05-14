@@ -115,6 +115,7 @@ static void initializeUsedResources(InstrDesc &ID,
     } else {
       // Remove the leading 1 from the resource group mask.
       NormalizedMask ^= PowerOf2Floor(NormalizedMask);
+      UsedResourceGroups |= (A.first ^ NormalizedMask);
     }
 
     for (unsigned J = I + 1; J < E; ++J) {

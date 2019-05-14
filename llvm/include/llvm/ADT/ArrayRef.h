@@ -430,7 +430,7 @@ namespace llvm {
       std::copy(Data.begin(), Data.end(), this->begin());
     }
 
-    OwningArrayRef(OwningArrayRef &&Other) { *this = Other; }
+    OwningArrayRef(OwningArrayRef &&Other) { *this = std::move(Other); }
 
     OwningArrayRef &operator=(OwningArrayRef &&Other) {
       delete[] this->data();

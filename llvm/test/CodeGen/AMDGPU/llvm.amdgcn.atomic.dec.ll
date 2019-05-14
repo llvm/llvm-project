@@ -12,34 +12,6 @@ declare i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* nocapture, i64, i32, i32, i1)
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-; Make sure no crash on invalid non-constant
-; GCN-LABEL: {{^}}invalid_variable_order_lds_atomic_dec_ret_i32:
-; CIVI-DAG: s_mov_b32 m0
-; GFX9-NOT: m0
-define amdgpu_kernel void @invalid_variable_order_lds_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr, i32 %order.var) #0 {
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 %order.var, i32 0, i1 false)
-  store i32 %result, i32 addrspace(1)* %out
-  ret void
-}
-
-; Make sure no crash on invalid non-constant
-; GCN-LABEL: {{^}}invalid_variable_scope_lds_atomic_dec_ret_i32:
-; CIVI-DAG: s_mov_b32 m0
-; GFX9-NOT: m0
-define amdgpu_kernel void @invalid_variable_scope_lds_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr, i32 %scope.var) #0 {
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 %scope.var, i1 false)
-  store i32 %result, i32 addrspace(1)* %out
-  ret void
-}
-
-; Make sure no crash on invalid non-constant
-; GCN-LABEL: {{^}}invalid_variable_volatile_lds_atomic_dec_ret_i32:
-define amdgpu_kernel void @invalid_variable_volatile_lds_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr, i1 %volatile.var) #0 {
-  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 %volatile.var)
-  store i32 %result, i32 addrspace(1)* %out
-  ret void
-}
-
 ; GCN-LABEL: {{^}}lds_atomic_dec_ret_i32:
 ; CIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0

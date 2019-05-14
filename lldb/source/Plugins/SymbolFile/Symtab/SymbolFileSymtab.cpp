@@ -64,11 +64,9 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
   if (m_obj_file) {
     const Symtab *symtab = m_obj_file->GetSymtab();
     if (symtab) {
-      //----------------------------------------------------------------------
       // The snippet of code below will get the indexes the module symbol table
       // entries that are code, data, or function related (debug info), sort
       // them by value (address) and dump the sorted symbols.
-      //----------------------------------------------------------------------
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeSourceFile,
                                               m_source_indexes)) {
         abilities |= CompileUnits;
@@ -261,9 +259,7 @@ uint32_t SymbolFileSymtab::ResolveSymbolContext(const Address &so_addr,
   return resolved_flags;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString SymbolFileSymtab::GetPluginName() {
   return GetPluginNameStatic();
 }

@@ -121,7 +121,9 @@ __declspec(dllimport) extern int GlobalRedecl5; // expected-warning{{redeclarati
 // External linkage is required.
 __declspec(dllimport) static int StaticGlobal; // expected-error{{'StaticGlobal' must have external linkage when declared 'dllimport'}}
 __declspec(dllimport) Internal InternalTypeGlobal; // expected-error{{'InternalTypeGlobal' must have external linkage when declared 'dllimport'}}
+#ifndef MS
 namespace    { __declspec(dllimport) int InternalGlobal; } // expected-error{{'(anonymous namespace)::InternalGlobal' must have external linkage when declared 'dllimport'}}
+#endif
 namespace ns { __declspec(dllimport) int ExternalGlobal; }
 
 __declspec(dllimport) auto InternalAutoTypeGlobal = Internal(); // expected-error{{'InternalAutoTypeGlobal' must have external linkage when declared 'dllimport'}}
@@ -213,7 +215,9 @@ template<typename T> __declspec(dllimport) extern int VarTmplRedecl4; // expecte
 // External linkage is required.
 template<typename T> __declspec(dllimport) static int StaticVarTmpl; // expected-error{{'StaticVarTmpl' must have external linkage when declared 'dllimport'}}
 template<typename T> __declspec(dllimport) Internal InternalTypeVarTmpl; // expected-error{{'InternalTypeVarTmpl' must have external linkage when declared 'dllimport'}}
+#ifndef MS
 namespace    { template<typename T> __declspec(dllimport) int InternalVarTmpl; } // expected-error{{'(anonymous namespace)::InternalVarTmpl' must have external linkage when declared 'dllimport'}}
+#endif
 namespace ns { template<typename T> __declspec(dllimport) int ExternalVarTmpl; }
 
 template<typename T> __declspec(dllimport) auto InternalAutoTypeVarTmpl = Internal(); // expected-error{{definition of dllimport data}} // expected-error{{'InternalAutoTypeVarTmpl' must have external linkage when declared 'dllimport'}}

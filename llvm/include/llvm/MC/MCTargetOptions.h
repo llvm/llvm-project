@@ -15,18 +15,18 @@
 namespace llvm {
 
 enum class ExceptionHandling {
-  None,     /// No exception support
-  DwarfCFI, /// DWARF-like instruction based exceptions
-  SjLj,     /// setjmp/longjmp based exceptions
-  ARM,      /// ARM EHABI
-  WinEH,    /// Windows Exception Handling
-  Wasm,     /// WebAssembly Exception Handling
+  None,     ///< No exception support
+  DwarfCFI, ///< DWARF-like instruction based exceptions
+  SjLj,     ///< setjmp/longjmp based exceptions
+  ARM,      ///< ARM EHABI
+  WinEH,    ///< Windows Exception Handling
+  Wasm,     ///< WebAssembly Exception Handling
 };
 
 enum class DebugCompressionType {
-  None, /// No compression
-  GNU,  /// zlib-gnu style compression
-  Z,    /// zlib style complession
+  None, ///< No compression
+  GNU,  ///< zlib-gnu style compression
+  Z,    ///< zlib style complession
 };
 
 class StringRef;
@@ -37,9 +37,6 @@ public:
     AsmInstrumentationNone,
     AsmInstrumentationAddress
   };
-
-  /// Enables AddressSanitizer instrumentation at machine level.
-  bool SanitizeAddress : 1;
 
   bool MCRelaxAll : 1;
   bool MCNoExecStack : 1;

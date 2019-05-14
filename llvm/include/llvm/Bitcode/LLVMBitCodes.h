@@ -310,6 +310,7 @@ enum MetadataCodes {
   METADATA_INDEX_OFFSET = 38,           // [offset]
   METADATA_INDEX = 39,                  // [bitpos]
   METADATA_LABEL = 40,                  // [distinct, scope, name, file, line]
+  METADATA_COMMON_BLOCK = 44,     // [distinct, scope, name, variable,...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -605,6 +606,7 @@ enum AttributeKindCodes {
   ATTR_KIND_OPT_FOR_FUZZING = 57,
   ATTR_KIND_SHADOWCALLSTACK = 58,
   ATTR_KIND_SPECULATIVE_LOAD_HARDENING = 59,
+  ATTR_KIND_IMMARG = 60
 };
 
 enum ComdatSelectionKindCodes {

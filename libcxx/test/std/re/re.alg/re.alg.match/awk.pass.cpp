@@ -19,6 +19,7 @@
 // TODO: investigation needed
 // TODO(netbsd): incomplete support for locales
 // XFAIL: linux-gnu, netbsd
+// REQUIRES: locale.cs_CZ.ISO8859-2
 
 #include <regex>
 #include <cassert>

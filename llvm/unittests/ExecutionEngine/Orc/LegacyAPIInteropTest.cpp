@@ -24,7 +24,7 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
 
   auto Resolver = createSymbolResolver(
       [&](const SymbolNameSet &Symbols) {
-        auto FlagsMap = JD.lookupFlags(Symbols);
+        auto FlagsMap = cantFail(JD.lookupFlags(Symbols));
         SymbolNameSet Result;
         for (auto &KV : FlagsMap)
           if (!KV.second.isStrong())
@@ -32,7 +32,7 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
         return Result;
       },
       [&](std::shared_ptr<AsynchronousSymbolQuery> Q, SymbolNameSet Symbols) {
-        return JD.legacyLookup(std::move(Q), Symbols);
+        return cantFail(JD.legacyLookup(std::move(Q), Symbols));
       });
 
   auto RS = Resolver->getResponsibilitySet(SymbolNameSet({Bar, Baz}));

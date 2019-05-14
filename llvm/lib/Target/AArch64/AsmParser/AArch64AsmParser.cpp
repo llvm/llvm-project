@@ -1090,8 +1090,7 @@ public:
     if (Kind != k_Register || Reg.Kind != RegKind::SVEDataVector)
       return DiagnosticPredicateTy::NoMatch;
 
-    if (isSVEVectorReg<Class>() &&
-           (ElementWidth == 0 || Reg.ElementWidth == ElementWidth))
+    if (isSVEVectorReg<Class>() && Reg.ElementWidth == ElementWidth)
       return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;
@@ -4097,15 +4096,6 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                    "unpredictable STXP instruction, status is also a source");
     break;
   }
-  case AArch64::LDGV: {
-    unsigned Rt = Inst.getOperand(0).getReg();
-    unsigned Rn = Inst.getOperand(1).getReg();
-    if (RI->isSubRegisterEq(Rt, Rn)) {
-      return Error(Loc[0],
-                  "unpredictable LDGV instruction, writeback register is also "
-                  "the target register");
-    }
-  }
   }
 
 
@@ -4166,7 +4156,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   }
 }
 
-static std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS,
+static std::string AArch64MnemonicSpellCheck(StringRef S,
+                                             const FeatureBitset &FBS,
                                              unsigned VariantID = 0);
 
 bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
@@ -4441,7 +4432,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPR64LSL64:
     return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, lsl #3'");
   case Match_InvalidZPR0:
-    return Error(Loc, "expected register without element width sufix");
+    return Error(Loc, "expected register without element width suffix");
   case Match_InvalidZPR8:
   case Match_InvalidZPR16:
   case Match_InvalidZPR32:
@@ -4776,10 +4767,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
 
   MCInst Inst;
+  FeatureBitset MissingFeatures;
   // First try to match against the secondary set of tables containing the
   // short-form NEON instructions (e.g. "fadd.2s v0, v1, v2").
   unsigned MatchResult =
-      MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm, 1);
+      MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                           MatchingInlineAsm, 1);
 
   // If that fails, try against the alternate table containing long-form NEON:
   // "fadd v0.2s, v1.2s, v2.2s"
@@ -4788,9 +4781,11 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // long-form match also fails.
     auto ShortFormNEONErrorInfo = ErrorInfo;
     auto ShortFormNEONMatchResult = MatchResult;
+    auto ShortFormNEONMissingFeatures = MissingFeatures;
 
     MatchResult =
-        MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm, 0);
+        MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                             MatchingInlineAsm, 0);
 
     // Now, both matches failed, and the long-form match failed on the mnemonic
     // suffix token operand.  The short-form match failure is probably more
@@ -4800,6 +4795,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         ((AArch64Operand &)*Operands[1]).isTokenSuffix()) {
       MatchResult = ShortFormNEONMatchResult;
       ErrorInfo = ShortFormNEONErrorInfo;
+      MissingFeatures = ShortFormNEONMissingFeatures;
     }
   }
 
@@ -4818,17 +4814,15 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return false;
   }
   case Match_MissingFeature: {
-    assert(ErrorInfo && "Unknown missing feature!");
+    assert(MissingFeatures.any() && "Unknown missing feature!");
     // Special case the error message for the very common case where only
     // a single subtarget feature is missing (neon, e.g.).
     std::string Msg = "instruction requires:";
-    uint64_t Mask = 1;
-    for (unsigned i = 0; i < (sizeof(ErrorInfo)*8-1); ++i) {
-      if (ErrorInfo & Mask) {
+    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
+      if (MissingFeatures[i]) {
         Msg += " ";
-        Msg += getSubtargetFeatureName(ErrorInfo & Mask);
+        Msg += getSubtargetFeatureName(i);
       }
-      Mask <<= 1;
     }
     return Error(IDLoc, Msg);
   }
@@ -5147,7 +5141,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
       FeatureBitset ToggleFeatures = EnableFeature
                                          ? (~Features & Extension.Features)
                                          : ( Features & Extension.Features);
-      uint64_t Features =
+      FeatureBitset Features =
           ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
       setAvailableFeatures(Features);
       break;
@@ -5159,15 +5153,9 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 /// parseDirectiveArchExtension
 ///   ::= .arch_extension [no]feature
 bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
-  MCAsmParser &Parser = getParser();
+  SMLoc ExtLoc = getLoc();
 
-  if (getLexer().isNot(AsmToken::Identifier))
-    return Error(getLexer().getLoc(), "expected architecture extension name");
-
-  const AsmToken &Tok = Parser.getTok();
-  StringRef Name = Tok.getString();
-  SMLoc ExtLoc = Tok.getLoc();
-  Lex();
+  StringRef Name = getParser().parseStringToEndOfStatement().trim();
 
   if (parseToken(AsmToken::EndOfStatement,
                  "unexpected token in '.arch_extension' directive"))
@@ -5191,7 +5179,7 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     FeatureBitset ToggleFeatures = EnableFeature
                                        ? (~Features & Extension.Features)
                                        : (Features & Extension.Features);
-    uint64_t Features =
+    FeatureBitset Features =
         ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
     setAvailableFeatures(Features);
     return false;
@@ -5256,7 +5244,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
       FeatureBitset ToggleFeatures = EnableFeature
                                          ? (~Features & Extension.Features)
                                          : ( Features & Extension.Features);
-      uint64_t Features =
+      FeatureBitset Features =
           ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
       setAvailableFeatures(Features);
       FoundExtension = true;

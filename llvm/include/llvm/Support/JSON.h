@@ -21,6 +21,9 @@
 /// - a convention and helpers for mapping between json::Value and user-defined
 ///   types. See fromJSON(), ObjectMapper, and the class comment on Value.
 ///
+/// - an output API json::OStream which can emit JSON without materializing
+///   all structures as json::Value.
+///
 /// Typically, JSON data would be read from an external source, parsed into
 /// a Value, and then converted into some native data structure before doing
 /// real work on it. (And vice versa when writing).
@@ -95,7 +98,7 @@ public:
   using iterator = Storage::iterator;
   using const_iterator = Storage::const_iterator;
 
-  explicit Object() = default;
+  Object() = default;
   // KV is a trivial key-value struct for list-initialization.
   // (using std::pair forces extra copies).
   struct KV;
@@ -156,7 +159,7 @@ public:
   using iterator = std::vector<Value>::iterator;
   using const_iterator = std::vector<Value>::const_iterator;
 
-  explicit Array() = default;
+  Array() = default;
   explicit Array(std::initializer_list<Value> Elements);
   template <typename Collection> explicit Array(const Collection &C) {
     for (const auto &V : C)
@@ -179,6 +182,7 @@ public:
 
   bool empty() const { return V.empty(); }
   size_t size() const { return V.size(); }
+  void reserve(size_t S) { V.reserve(S); }
 
   void clear() { V.clear(); }
   void push_back(const Value &E) { V.push_back(E); }
@@ -309,8 +313,8 @@ public:
     create<std::string>(std::move(V));
   }
   Value(const llvm::SmallVectorImpl<char> &V)
-      : Value(std::string(V.begin(), V.end())){};
-  Value(const llvm::formatv_object_base &V) : Value(V.str()){};
+      : Value(std::string(V.begin(), V.end())) {}
+  Value(const llvm::formatv_object_base &V) : Value(V.str()) {}
   // Strings: types with reference semantics. Must be valid UTF-8.
   Value(StringRef V) : Type(T_StringRef) {
     create<llvm::StringRef>(V);
@@ -436,11 +440,6 @@ public:
     return LLVM_LIKELY(Type == T_Array) ? &as<json::Array>() : nullptr;
   }
 
-  /// Serializes this Value to JSON, writing it to the provided stream.
-  /// The formatting is compact (no extra whitespace) and deterministic.
-  /// For pretty-printing, use the formatv() format_provider below.
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Value &);
-
 private:
   void destroy();
   void copyFrom(const Value &M);
@@ -461,9 +460,7 @@ private:
     return *static_cast<T *>(Storage);
   }
 
-  template <typename Indenter>
-  void print(llvm::raw_ostream &, const Indenter &) const;
-  friend struct llvm::format_provider<llvm::json::Value>;
+  friend class OStream;
 
   enum ValueType : char {
     T_Null,
@@ -485,7 +482,6 @@ private:
 
 bool operator==(const Value &, const Value &);
 inline bool operator!=(const Value &L, const Value &R) { return !(L == R); }
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Value &);
 
 /// ObjectKey is a used to capture keys in Object. Like Value but:
 ///   - only strings are allowed
@@ -698,6 +694,154 @@ public:
     return llvm::inconvertibleErrorCode();
   }
 };
+
+/// json::OStream allows writing well-formed JSON without materializing
+/// all structures as json::Value ahead of time.
+/// It's faster, lower-level, and less safe than OS << json::Value.
+///
+/// Only one "top-level" object can be written to a stream.
+/// Simplest usage involves passing lambdas (Blocks) to fill in containers:
+///
+///   json::OStream J(OS);
+///   J.array([&]{
+///     for (const Event &E : Events)
+///       J.object([&] {
+///         J.attribute("timestamp", int64_t(E.Time));
+///         J.attributeArray("participants", [&] {
+///           for (const Participant &P : E.Participants)
+///             J.string(P.toString());
+///         });
+///       });
+///   });
+///
+/// This would produce JSON like:
+///
+///   [
+///     {
+///       "timestamp": 19287398741,
+///       "participants": [
+///         "King Kong",
+///         "Miley Cyrus",
+///         "Cleopatra"
+///       ]
+///     },
+///     ...
+///   ]
+///
+/// The lower level begin/end methods (arrayBegin()) are more flexible but
+/// care must be taken to pair them correctly:
+///
+///   json::OStream J(OS);
+//    J.arrayBegin();
+///   for (const Event &E : Events) {
+///     J.objectBegin();
+///     J.attribute("timestamp", int64_t(E.Time));
+///     J.attributeBegin("participants");
+///     for (const Participant &P : E.Participants)
+///       J.value(P.toString());
+///     J.attributeEnd();
+///     J.objectEnd();
+///   }
+///   J.arrayEnd();
+///
+/// If the call sequence isn't valid JSON, asserts will fire in debug mode.
+/// This can be mismatched begin()/end() pairs, trying to emit attributes inside
+/// an array, and so on.
+/// With asserts disabled, this is undefined behavior.
+class OStream {
+ public:
+  using Block = llvm::function_ref<void()>;
+  // If IndentSize is nonzero, output is pretty-printed.
+  explicit OStream(llvm::raw_ostream &OS, unsigned IndentSize = 0)
+      : OS(OS), IndentSize(IndentSize) {
+    Stack.emplace_back();
+  }
+  ~OStream() {
+    assert(Stack.size() == 1 && "Unmatched begin()/end()");
+    assert(Stack.back().Ctx == Singleton);
+    assert(Stack.back().HasValue && "Did not write top-level value");
+  }
+
+  /// Flushes the underlying ostream. OStream does not buffer internally.
+  void flush() { OS.flush(); }
+
+  // High level functions to output a value.
+  // Valid at top-level (exactly once), in an attribute value (exactly once),
+  // or in an array (any number of times).
+
+  /// Emit a self-contained value (number, string, vector<string> etc).
+  void value(const Value &V);
+  /// Emit an array whose elements are emitted in the provided Block.
+  void array(Block Contents) {
+    arrayBegin();
+    Contents();
+    arrayEnd();
+  }
+  /// Emit an object whose elements are emitted in the provided Block.
+  void object(Block Contents) {
+    objectBegin();
+    Contents();
+    objectEnd();
+  }
+
+  // High level functions to output object attributes.
+  // Valid only within an object (any number of times).
+
+  /// Emit an attribute whose value is self-contained (number, vector<int> etc).
+  void attribute(llvm::StringRef Key, const Value& Contents) {
+    attributeImpl(Key, [&] { value(Contents); });
+  }
+  /// Emit an attribute whose value is an array with elements from the Block.
+  void attributeArray(llvm::StringRef Key, Block Contents) {
+    attributeImpl(Key, [&] { array(Contents); });
+  }
+  /// Emit an attribute whose value is an object with attributes from the Block.
+  void attributeObject(llvm::StringRef Key, Block Contents) {
+    attributeImpl(Key, [&] { object(Contents); });
+  }
+
+  // Low-level begin/end functions to output arrays, objects, and attributes.
+  // Must be correctly paired. Allowed contexts are as above.
+
+  void arrayBegin();
+  void arrayEnd();
+  void objectBegin();
+  void objectEnd();
+  void attributeBegin(llvm::StringRef Key);
+  void attributeEnd();
+
+ private:
+  void attributeImpl(llvm::StringRef Key, Block Contents) {
+    attributeBegin(Key);
+    Contents();
+    attributeEnd();
+  }
+
+  void valueBegin();
+  void newline();
+
+  enum Context {
+    Singleton, // Top level, or object attribute.
+    Array,
+    Object,
+  };
+  struct State {
+    Context Ctx = Singleton;
+    bool HasValue = false;
+  };
+  llvm::SmallVector<State, 16> Stack; // Never empty.
+  llvm::raw_ostream &OS;
+  unsigned IndentSize;
+  unsigned Indent = 0;
+};
+
+/// Serializes this Value to JSON, writing it to the provided stream.
+/// The formatting is compact (no extra whitespace) and deterministic.
+/// For pretty-printing, use the formatv() format_provider below.
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Value &V) {
+  OStream(OS).value(V);
+  return OS;
+}
 } // namespace json
 
 /// Allow printing json::Value with formatv().

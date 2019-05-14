@@ -1172,6 +1172,12 @@ public:
   /// implementation needs such an interface.
   unsigned size() const { return NumBlockIDs; }
 
+  /// Returns true if the CFG has no branches. Usually it boils down to the CFG
+  /// having exactly three blocks (entry, the actual code, exit), but sometimes
+  /// more blocks appear due to having control flow that can be fully
+  /// resolved in compile time.
+  bool isLinear() const;
+
   //===--------------------------------------------------------------------===//
   // CFG Debugging: Pretty-Printing and Visualization.
   //===--------------------------------------------------------------------===//

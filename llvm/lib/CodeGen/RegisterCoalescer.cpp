@@ -104,6 +104,19 @@ static cl::opt<unsigned> LateRematUpdateThreshold(
              "repeated work. "),
     cl::init(100));
 
+static cl::opt<unsigned> LargeIntervalSizeThreshold(
+    "large-interval-size-threshold", cl::Hidden,
+    cl::desc("If the valnos size of an interval is larger than the threshold, "
+             "it is regarded as a large interval. "),
+    cl::init(100));
+
+static cl::opt<unsigned> LargeIntervalFreqThreshold(
+    "large-interval-freq-threshold", cl::Hidden,
+    cl::desc("For a large interval, if it is coalesed with other live "
+             "intervals many times more than the threshold, stop its "
+             "coalescing to control the compile time. "),
+    cl::init(100));
+
 namespace {
 
   class RegisterCoalescer : public MachineFunctionPass,
@@ -152,6 +165,10 @@ namespace {
     /// lateLiveIntervalUpdate is called.
     DenseSet<unsigned> ToBeUpdated;
 
+    /// Record how many times the large live interval with many valnos
+    /// has been tried to join with other live interval.
+    DenseMap<unsigned, unsigned long> LargeLIVisitCounter;
+
     /// Recursively eliminate dead defs in DeadDefs.
     void eliminateDeadDefs();
 
@@ -193,6 +210,11 @@ namespace {
 
     /// Attempt joining two virtual registers. Return true on success.
     bool joinVirtRegs(CoalescerPair &CP);
+
+    /// If a live interval has many valnos and is coalesced with other
+    /// live intervals many times, we regard such live interval as having
+    /// high compile time cost.
+    bool isHighCostLiveInterval(LiveInterval &LI);
 
     /// Attempt joining with a reserved physreg.
     bool joinReservedPhysReg(CoalescerPair &CP);
@@ -671,8 +693,7 @@ bool RegisterCoalescer::hasOtherReachingDefs(LiveInterval &IntA,
 
   for (LiveRange::Segment &ASeg : IntA.segments) {
     if (ASeg.valno != AValNo) continue;
-    LiveInterval::iterator BI =
-      std::upper_bound(IntB.begin(), IntB.end(), ASeg.start);
+    LiveInterval::iterator BI = llvm::upper_bound(IntB, ASeg.start);
     if (BI != IntB.begin())
       --BI;
     for (; BI != IntB.end() && ASeg.end >= BI->start; ++BI) {
@@ -902,23 +923,25 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     }
     SlotIndex AIdx = CopyIdx.getRegSlot(true);
     LaneBitmask MaskA;
+    const SlotIndexes &Indexes = *LIS->getSlotIndexes();
     for (LiveInterval::SubRange &SA : IntA.subranges()) {
       VNInfo *ASubValNo = SA.getVNInfoAt(AIdx);
       assert(ASubValNo != nullptr);
       MaskA |= SA.LaneMask;
 
-      IntB.refineSubRanges(Allocator, SA.LaneMask,
-          [&Allocator,&SA,CopyIdx,ASubValNo,&ShrinkB]
-            (LiveInterval::SubRange &SR) {
-        VNInfo *BSubValNo = SR.empty()
-          ? SR.getNextValue(CopyIdx, Allocator)
-          : SR.getVNInfoAt(CopyIdx);
-        assert(BSubValNo != nullptr);
-        auto P = addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo);
-        ShrinkB |= P.second;
-        if (P.first)
-          BSubValNo->def = ASubValNo->def;
-      });
+      IntB.refineSubRanges(
+          Allocator, SA.LaneMask,
+          [&Allocator, &SA, CopyIdx, ASubValNo,
+           &ShrinkB](LiveInterval::SubRange &SR) {
+            VNInfo *BSubValNo = SR.empty() ? SR.getNextValue(CopyIdx, Allocator)
+                                           : SR.getVNInfoAt(CopyIdx);
+            assert(BSubValNo != nullptr);
+            auto P = addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo);
+            ShrinkB |= P.second;
+            if (P.first)
+              BSubValNo->def = ASubValNo->def;
+          },
+          Indexes, *TRI);
     }
     // Go over all subranges of IntB that have not been covered by IntA,
     // and delete the segments starting at CopyIdx. This can happen if
@@ -3240,16 +3263,29 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
                                           LaneBitmask LaneMask,
                                           CoalescerPair &CP) {
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
-  LI.refineSubRanges(Allocator, LaneMask,
-      [this,&Allocator,&ToMerge,&CP](LiveInterval::SubRange &SR) {
-    if (SR.empty()) {
-      SR.assign(ToMerge, Allocator);
-    } else {
-      // joinSubRegRange() destroys the merged range, so we need a copy.
-      LiveRange RangeCopy(ToMerge, Allocator);
-      joinSubRegRanges(SR, RangeCopy, SR.LaneMask, CP);
-    }
-  });
+  LI.refineSubRanges(
+      Allocator, LaneMask,
+      [this, &Allocator, &ToMerge, &CP](LiveInterval::SubRange &SR) {
+        if (SR.empty()) {
+          SR.assign(ToMerge, Allocator);
+        } else {
+          // joinSubRegRange() destroys the merged range, so we need a copy.
+          LiveRange RangeCopy(ToMerge, Allocator);
+          joinSubRegRanges(SR, RangeCopy, SR.LaneMask, CP);
+        }
+      },
+      *LIS->getSlotIndexes(), *TRI);
+}
+
+bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
+  if (LI.valnos.size() < LargeIntervalSizeThreshold)
+    return false;
+  auto &Counter = LargeLIVisitCounter[LI.reg];
+  if (Counter < LargeIntervalFreqThreshold) {
+    Counter++;
+    return false;
+  }
+  return true;
 }
 
 bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
@@ -3263,6 +3299,9 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
                    NewVNInfo, CP, LIS, TRI, false, TrackSubRegLiveness);
 
   LLVM_DEBUG(dbgs() << "\t\tRHS = " << RHS << "\n\t\tLHS = " << LHS << '\n');
+
+  if (isHighCostLiveInterval(LHS) || isHighCostLiveInterval(RHS))
+    return false;
 
   // First compute NewVNInfo and the simple value mappings.
   // Detect impossible conflicts early.
@@ -3619,6 +3658,7 @@ void RegisterCoalescer::releaseMemory() {
   WorkList.clear();
   DeadDefs.clear();
   InflateRegs.clear();
+  LargeLIVisitCounter.clear();
 }
 
 bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {

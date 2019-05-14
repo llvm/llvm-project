@@ -524,8 +524,7 @@ def parseOptionsAndInitTestdirs():
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
-        configuration.testdirs = list(
-            map(lambda x: os.path.realpath(os.path.abspath(x)), args.args))
+        configuration.testdirs = [os.path.realpath(os.path.abspath(x)) for x in args.args]
         # Shut off multiprocessing mode when test directories are specified.
         configuration.no_multiprocess_test_runner = True
 
@@ -650,8 +649,11 @@ def get_llvm_bin_dirs():
         "llvm-build/Release/x86_64/bin",
         "llvm-build/Debug/x86_64/bin",
         "llvm-build/Ninja-DebugAssert/llvm-macosx-x86_64/bin",
+        "llvm-build/Ninja-DebugAssert+asan/llvm-macosx-x86_64/bin",
         "llvm-build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin",
+        "llvm-build/Ninja-ReleaseAssert+asan/llvm-macosx-x86_64/bin",
         "llvm-build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin",
+        "llvm-build/Ninja-RelWithDebInfoAssert+asan/llvm-macosx-x86_64/bin",
     ]
     for p in paths_to_try:
         path = os.path.join(lldb_root_path, p)

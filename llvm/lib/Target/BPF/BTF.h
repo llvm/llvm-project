@@ -55,6 +55,7 @@ enum {
   BTFEnumSize = 8,
   BTFMemberSize = 12,
   BTFParamSize = 8,
+  BTFDataSecVarSize = 12,
   SecFuncInfoSize = 8,
   SecLineInfoSize = 8,
   BPFFuncInfoSize = 8,
@@ -76,7 +77,7 @@ struct Header {
 };
 
 enum : uint32_t {
-  MAX_VLEN = 0xffff         ///< Max # of struct/union/enum members or func args
+  MAX_VLEN = 0xffff ///< Max # of struct/union/enum members or func args
 };
 
 enum TypeKinds : uint8_t {
@@ -103,7 +104,7 @@ struct CommonType {
   /// "Size" tells the size of the type it is describing.
   ///
   /// "Type" is used by PTR, TYPEDEF, VOLATILE, CONST, RESTRICT,
-  /// FUNC and FUNC_PROTO.
+  /// FUNC, FUNC_PROTO and VAR.
   /// "Type" is a type_id referring to another type.
   union {
     uint32_t Size;
@@ -121,7 +122,11 @@ struct CommonType {
 // BTF_INT_BITS(VAL) : ((VAL) & 0x000000ff)
 
 /// Attributes stored in the INT_ENCODING.
-enum : uint8_t { INT_SIGNED = (1 << 0), INT_CHAR = (1 << 1), INT_BOOL = (1 << 2) };
+enum : uint8_t {
+  INT_SIGNED = (1 << 0),
+  INT_CHAR = (1 << 1),
+  INT_BOOL = (1 << 2)
+};
 
 /// BTF_KIND_ENUM is followed by multiple "struct BTFEnum".
 /// The exact number of btf_enum is stored in the vlen (of the
@@ -160,6 +165,23 @@ struct BTFMember {
 struct BTFParam {
   uint32_t NameOff;
   uint32_t Type;
+};
+
+/// Variable scoping information.
+enum : uint8_t {
+  VAR_STATIC = 0,           ///< Linkage: InternalLinkage
+  VAR_GLOBAL_ALLOCATED = 1, ///< Linkage: ExternalLinkage
+  VAR_GLOBAL_TENTATIVE = 2, ///< Linkage: CommonLinkage
+  VAR_GLOBAL_EXTERNAL = 3,  ///< Linkage: ExternalLinkage
+};
+
+/// BTF_KIND_DATASEC are followed by multiple "struct BTFDataSecVar".
+/// The exist number of BTFDataSec is stored in the vlen (of the info
+/// in "struct CommonType").
+struct BTFDataSec {
+  uint32_t Type;   ///< A BTF_KIND_VAR type
+  uint32_t Offset; ///< In-section offset
+  uint32_t Size;   ///< Occupied memory size
 };
 
 /// The .BTF.ext section header definition.

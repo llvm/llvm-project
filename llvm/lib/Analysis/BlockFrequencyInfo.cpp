@@ -203,11 +203,12 @@ BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
 }
 
 Optional<uint64_t>
-BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB) const {
+BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
+                                         bool AllowSynthetic) const {
   if (!BFI)
     return None;
 
-  return BFI->getBlockProfileCount(*getFunction(), BB);
+  return BFI->getBlockProfileCount(*getFunction(), BB, AllowSynthetic);
 }
 
 Optional<uint64_t>

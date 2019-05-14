@@ -36,7 +36,6 @@ void AddOneLineSummary(TypeCategoryImpl::SharedPointer category_sp,
                        ConstString type_name, TypeSummaryImpl::Flags flags,
                        bool regex = false);
 
-#ifndef LLDB_DISABLE_PYTHON
 void AddCXXSummary(TypeCategoryImpl::SharedPointer category_sp,
                    CXXFunctionSummaryFormat::Callback funct,
                    const char *description, ConstString type_name,
@@ -52,7 +51,6 @@ void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
                std::vector<std::string> children, const char *description,
                ConstString type_name, ScriptedSyntheticChildren::Flags flags,
                bool regex = false);
-#endif
 
 size_t ExtractIndexFromString(const char *item_name);
 

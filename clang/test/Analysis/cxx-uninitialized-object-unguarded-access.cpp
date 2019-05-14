@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
-// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:IgnoreGuardedFields=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:IgnoreGuardedFields=true \
 // RUN:   -std=c++11 -verify  %s
 
 //===----------------------------------------------------------------------===//

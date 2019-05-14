@@ -11,7 +11,7 @@
 # RUN:   --globalize-symbol Global1 \
 # RUN:   --keep-global-symbol Global2 \
 # RUN:   %t.o %t.2.o
-# RUN: llvm-readobj --elf-output-style=GNU --symbols %t.2.o | FileCheck %s
+# RUN: llvm-readelf --symbols %t.2.o | FileCheck %s
 
 !ELF
 FileHeader:
@@ -24,21 +24,22 @@ Sections:
     Type:          SHT_PROGBITS
     Flags:         [ SHF_ALLOC, SHF_EXECINSTR ]
 Symbols:
-  Local:
-    - Name:        Local1
-      Section:     .text
-    - Name:        Local2
-      Section:     .text
-  Weak:
-    - Name:        Weak1
-      Section:     .text
-    - Name:        Weak2
-      Section:     .text
-  Global:
-    - Name:        Global1
-      Section:     .text
-    - Name:        Global2
-      Section:     .text
+  - Name:        Local1
+    Section:     .text
+  - Name:        Local2
+    Section:     .text
+  - Name:        Global1
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Global2
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Weak1
+    Section:     .text
+    Binding:     STB_WEAK
+  - Name:        Weak2
+    Section:     .text
+    Binding:     STB_WEAK
 
 # CHECK:      Symbol table '.symtab' contains 7 entries:
 # CHECK-NEXT:    Num: Value Size Type Bind Vis Ndx Name

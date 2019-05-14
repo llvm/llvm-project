@@ -28,6 +28,7 @@ using namespace llvm;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
+    Mode(MF.getFunction()),
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),
@@ -292,6 +293,11 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
 void SIMachineFunctionInfo::removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI) {
   for (auto &R : SGPRToVGPRSpills)
     MFI.RemoveStackObject(R.first);
+  // All other SPGRs must be allocated on the default stack, so reset
+  // the stack ID.
+  for (unsigned i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd();
+       i != e; ++i)
+    MFI.setStackID(i, 0);
 }
 
 
@@ -318,4 +324,45 @@ MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {
 
 MCPhysReg SIMachineFunctionInfo::getNextSystemSGPR() const {
   return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
+}
+
+static yaml::StringValue regToString(unsigned Reg,
+                                     const TargetRegisterInfo &TRI) {
+  yaml::StringValue Dest;
+  {
+    raw_string_ostream OS(Dest.Value);
+    OS << printReg(Reg, &TRI);
+  }
+  return Dest;
+}
+
+yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
+  const llvm::SIMachineFunctionInfo& MFI,
+  const TargetRegisterInfo &TRI)
+  : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
+    MaxKernArgAlign(MFI.getMaxKernArgAlign()),
+    LDSSize(MFI.getLDSSize()),
+    IsEntryFunction(MFI.isEntryFunction()),
+    NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
+    MemoryBound(MFI.isMemoryBound()),
+    WaveLimiter(MFI.needsWaveLimiter()),
+    ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
+    ScratchWaveOffsetReg(regToString(MFI.getScratchWaveOffsetReg(), TRI)),
+    FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
+    StackPtrOffsetReg(regToString(MFI.getStackPtrOffsetReg(), TRI)) {}
+
+void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
+  MappingTraits<SIMachineFunctionInfo>::mapping(YamlIO, *this);
+}
+
+bool SIMachineFunctionInfo::initializeBaseYamlFields(
+  const yaml::SIMachineFunctionInfo &YamlMFI) {
+  ExplicitKernArgSize = YamlMFI.ExplicitKernArgSize;
+  MaxKernArgAlign = YamlMFI.MaxKernArgAlign;
+  LDSSize = YamlMFI.LDSSize;
+  IsEntryFunction = YamlMFI.IsEntryFunction;
+  NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
+  MemoryBound = YamlMFI.MemoryBound;
+  WaveLimiter = YamlMFI.WaveLimiter;
+  return false;
 }

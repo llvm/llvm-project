@@ -1,6 +1,7 @@
 ; RUN: llc -relocation-model=static -verify-machineinstrs -O0 < %s -mcpu=ppc64 | FileCheck -check-prefix=OPT0 %s
 ; RUN: llc -relocation-model=static -verify-machineinstrs -O1 < %s -mcpu=ppc64 | FileCheck -check-prefix=OPT1 %s
 ; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=ppc32-- -mcpu=ppc | FileCheck -check-prefix=OPT0-PPC32 %s
+; RUN: llc -relocation-model=pic -verify-machineinstrs -O0 < %s -mtriple=ppc32-- -mcpu=ppc | FileCheck -check-prefix=OPT0-PPC32-PIC %s
 
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -24,7 +25,7 @@ entry:
 ; Test correct assembly code generation for thread-local storage
 ; using the initial-exec model.
 
-@a2 = external thread_local global i32
+@a2 = external thread_local(initialexec) global i32
 
 define signext i32 @main2() nounwind {
 entry:
@@ -44,3 +45,10 @@ entry:
 ;OPT0-PPC32:       addis [[REG1]], [[REG1]], _GLOBAL_OFFSET_TABLE_@ha
 ;OPT0-PPC32:       lwz [[REG2:[0-9]+]], a2@got@tprel@l([[REG1]])
 ;OPT0-PPC32:       add 3, [[REG2]], a2@tls
+
+;OPT0-PPC32-PIC-LABEL:  main2:
+;OPT0-PPC32-PIC:        .long _GLOBAL_OFFSET_TABLE_-{{.*}}
+;OPT0-PPC32-PIC-NOT:    li {{[0-9]+}}, _GLOBAL_OFFSET_TABLE_@l
+;OPT0-PPC32-PIC-NOT:    addis {{[0-9]+}}, {{[0-9+]}}, _GLOBAL_OFFSET_TABLE_@ha
+;OPT0-PPC32-PIC-NOT:    bl __tls_get_addr(a2@tlsgd)@PLT
+;OPT0-PPC32-PIC:        lwz {{[0-9]+}}, a2@got@tprel@l({{[0-9]+}})

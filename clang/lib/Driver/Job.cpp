@@ -99,7 +99,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
 }
 
 void Command::printArg(raw_ostream &OS, StringRef Arg, bool Quote) {
-  const bool Escape = Arg.find_first_of("\"\\$") != StringRef::npos;
+  const bool Escape = Arg.find_first_of(" \"\\$") != StringRef::npos;
 
   if (!Quote && !Escape) {
     OS << Arg;
@@ -250,8 +250,8 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
         }
       }
 
-      auto Found = std::find_if(InputFilenames.begin(), InputFilenames.end(),
-                                [&Arg](StringRef IF) { return IF == Arg; });
+      auto Found = llvm::find_if(InputFilenames,
+                                 [&Arg](StringRef IF) { return IF == Arg; });
       if (Found != InputFilenames.end() &&
           (i == 0 || StringRef(Args[i - 1]) != "-main-file-name")) {
         // Replace the input file name with the crashinfo's file name.

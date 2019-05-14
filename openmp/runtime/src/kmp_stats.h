@@ -69,7 +69,8 @@ enum stats_state_e {
   TASKYIELD,
   TASKGROUP,
   IMPLICIT_TASK,
-  EXPLICIT_TASK
+  EXPLICIT_TASK,
+  TEAMS_REGION
 };
 
 /*!
@@ -137,10 +138,14 @@ enum stats_state_e {
   macro (OMP_worker_thread_life, stats_flags_e::logEvent, arg)                 \
   macro (OMP_parallel, stats_flags_e::logEvent, arg)                           \
   macro (OMP_parallel_overhead, stats_flags_e::logEvent, arg)                  \
+  macro (OMP_teams, stats_flags_e::logEvent, arg)                              \
+  macro (OMP_teams_overhead, stats_flags_e::logEvent, arg)                     \
   macro (OMP_loop_static, 0, arg)                                              \
   macro (OMP_loop_static_scheduling, 0, arg)                                   \
   macro (OMP_loop_dynamic, 0, arg)                                             \
   macro (OMP_loop_dynamic_scheduling, 0, arg)                                  \
+  macro (OMP_distribute, 0, arg)                                               \
+  macro (OMP_distribute_scheduling, 0, arg)                                    \
   macro (OMP_critical, 0, arg)                                                 \
   macro (OMP_critical_wait, 0, arg)                                            \
   macro (OMP_single, 0, arg)                                                   \
@@ -163,7 +168,13 @@ enum stats_state_e {
          arg)                                                                  \
   macro (OMP_loop_static_iterations,                                           \
          stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
+  macro (OMP_loop_static_total_iterations,                                     \
+         stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
   macro (OMP_loop_dynamic_iterations,                                          \
+         stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
+  macro (OMP_loop_dynamic_total_iterations,                                    \
+         stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
+  macro (OMP_distribute_iterations,                                            \
          stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
   KMP_FOREACH_DEVELOPER_TIMER(macro, arg)
 // clang-format on
@@ -955,42 +966,40 @@ extern kmp_stats_output_module __kmp_stats_output;
 #define KMP_RESET_STATS() __kmp_reset_stats()
 
 #if (KMP_DEVELOPER_STATS)
-#define KMP_TIME_DEVELOPER_BLOCK(n) KMP_TIME_BLOCK(n)
 #define KMP_COUNT_DEVELOPER_VALUE(n, v) KMP_COUNT_VALUE(n, v)
 #define KMP_COUNT_DEVELOPER_BLOCK(n) KMP_COUNT_BLOCK(n)
-#define KMP_START_DEVELOPER_EXPLICIT_TIMER(n) KMP_START_EXPLICIT_TIMER(n)
-#define KMP_STOP_DEVELOPER_EXPLICIT_TIMER(n) KMP_STOP_EXPLICIT_TIMER(n)
 #define KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(n) KMP_TIME_PARTITIONED_BLOCK(n)
+#define KMP_PUSH_DEVELOPER_PARTITIONED_TIMER(n) KMP_PUSH_PARTITIONED_TIMER(n)
+#define KMP_POP_DEVELOPER_PARTITIONED_TIMER(n) KMP_POP_PARTITIONED_TIMER(n)
+#define KMP_EXCHANGE_DEVELOPER_PARTITIONED_TIMER(n)                            \
+  KMP_EXCHANGE_PARTITIONED_TIMER(n)
 #else
 // Null definitions
-#define KMP_TIME_DEVELOPER_BLOCK(n) ((void)0)
 #define KMP_COUNT_DEVELOPER_VALUE(n, v) ((void)0)
 #define KMP_COUNT_DEVELOPER_BLOCK(n) ((void)0)
-#define KMP_START_DEVELOPER_EXPLICIT_TIMER(n) ((void)0)
-#define KMP_STOP_DEVELOPER_EXPLICIT_TIMER(n) ((void)0)
 #define KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(n) ((void)0)
+#define KMP_PUSH_DEVELOPER_PARTITIONED_TIMER(n) ((void)0)
+#define KMP_POP_DEVELOPER_PARTITIONED_TIMER(n) ((void)0)
+#define KMP_EXCHANGE_DEVELOPER_PARTITIONED_TIMER(n) ((void)0)
 #endif
 
 #else // KMP_STATS_ENABLED
 
 // Null definitions
-#define KMP_TIME_BLOCK(n) ((void)0)
 #define KMP_COUNT_VALUE(n, v) ((void)0)
 #define KMP_COUNT_BLOCK(n) ((void)0)
-#define KMP_START_EXPLICIT_TIMER(n) ((void)0)
-#define KMP_STOP_EXPLICIT_TIMER(n) ((void)0)
 
 #define KMP_OUTPUT_STATS(heading_string) ((void)0)
 #define KMP_RESET_STATS() ((void)0)
 
-#define KMP_TIME_DEVELOPER_BLOCK(n) ((void)0)
 #define KMP_COUNT_DEVELOPER_VALUE(n, v) ((void)0)
 #define KMP_COUNT_DEVELOPER_BLOCK(n) ((void)0)
-#define KMP_START_DEVELOPER_EXPLICIT_TIMER(n) ((void)0)
-#define KMP_STOP_DEVELOPER_EXPLICIT_TIMER(n) ((void)0)
+#define KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(n) ((void)0)
+#define KMP_PUSH_DEVELOPER_PARTITIONED_TIMER(n) ((void)0)
+#define KMP_POP_DEVELOPER_PARTITIONED_TIMER(n) ((void)0)
+#define KMP_EXCHANGE_DEVELOPER_PARTITIONED_TIMER(n) ((void)0)
 #define KMP_INIT_PARTITIONED_TIMERS(name) ((void)0)
 #define KMP_TIME_PARTITIONED_BLOCK(name) ((void)0)
-#define KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(n) ((void)0)
 #define KMP_PUSH_PARTITIONED_TIMER(name) ((void)0)
 #define KMP_POP_PARTITIONED_TIMER() ((void)0)
 #define KMP_SET_THREAD_STATE(state_name) ((void)0)

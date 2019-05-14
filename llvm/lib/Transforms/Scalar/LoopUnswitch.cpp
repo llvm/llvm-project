@@ -657,7 +657,7 @@ bool LoopUnswitch::processCurrentLoop() {
   }
 
   // Do not do non-trivial unswitch while optimizing for size.
-  // FIXME: Use Function::optForSize().
+  // FIXME: Use Function::hasOptSize().
   if (OptimizeForSize ||
       loopHeader->getParent()->hasFnAttribute(Attribute::OptimizeForSize))
     return false;

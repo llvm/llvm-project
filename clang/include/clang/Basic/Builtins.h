@@ -242,13 +242,7 @@ private:
               const char *Fmt) const;
 };
 
-/// For a given BuiltinID, return the ID of the fortified variant function. For
-/// instance, if Builtin::BIsprintf is passed, this function will return
-/// Builtin::BI__builtin___sprintf_chk. If BuiltinID doesn't have a fortified
-/// variant, 0 is returned.
-unsigned getFortifiedVariantFunction(unsigned BuiltinID);
-
-} // end namespace Builtin
+}
 
 /// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {

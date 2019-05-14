@@ -1,4 +1,3 @@
-# RUN: llvm-objcopy -version | FileCheck %s
 # RUN: llvm-objcopy --version | FileCheck %s
 # RUN: llvm-objcopy -V | FileCheck %s
 

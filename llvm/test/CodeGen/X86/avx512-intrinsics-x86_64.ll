@@ -125,8 +125,8 @@ define i64 @test_x86_avx512_cvtsd2usi64(<2 x double> %a0) {
 ; CHECK-NEXT:    retq
 
   %res = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 4)
-  %res1 = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 3)
-  %res2 = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 1)
+  %res1 = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 11)
+  %res2 = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 9)
   %res3 = add i64 %res, %res1
   %res4 = add i64 %res3, %res2
   ret i64 %res4
@@ -144,8 +144,8 @@ define i64 @test_x86_avx512_cvtsd2si64(<2 x double> %a0) {
 ; CHECK-NEXT:    retq
 
   %res = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 4)
-  %res1 = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 3)
-  %res2 = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 1)
+  %res1 = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 11)
+  %res2 = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 9)
   %res3 = add i64 %res, %res1
   %res4 = add i64 %res3, %res2
   ret i64 %res4
@@ -163,8 +163,8 @@ define i64 @test_x86_avx512_cvtss2usi64(<4 x float> %a0) {
 ; CHECK-NEXT:    retq
 
   %res = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 4)
-  %res1 = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 3)
-  %res2 = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 1)
+  %res1 = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 11)
+  %res2 = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 9)
   %res3 = add i64 %res, %res1
   %res4 = add i64 %res3, %res2
   ret i64 %res4
@@ -182,8 +182,8 @@ define i64 @test_x86_avx512_cvtss2si64(<4 x float> %a0) {
 ; CHECK-NEXT:    retq
 
   %res = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 4)
-  %res1 = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 3)
-  %res2 = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 1)
+  %res1 = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 11)
+  %res2 = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 9)
   %res3 = add i64 %res, %res1
   %res4 = add i64 %res3, %res2
   ret i64 %res4
@@ -195,7 +195,7 @@ define <2 x double> @test_x86_avx512_cvtsi2sd64(<2 x double> %a, i64 %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvtsi2sdq %rdi, {rz-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.avx512.cvtsi2sd64(<2 x double> %a, i64 %b, i32 3) ; <<<2 x double>> [#uses=1]
+  %res = call <2 x double> @llvm.x86.avx512.cvtsi2sd64(<2 x double> %a, i64 %b, i32 11) ; <<<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
 declare <2 x double> @llvm.x86.avx512.cvtsi2sd64(<2 x double>, i64, i32) nounwind readnone
@@ -205,7 +205,7 @@ define <4 x float> @test_x86_avx512_cvtsi2ss64(<4 x float> %a, i64 %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvtsi2ssq %rdi, {rz-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.avx512.cvtsi2ss64(<4 x float> %a, i64 %b, i32 3) ; <<<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.avx512.cvtsi2ss64(<4 x float> %a, i64 %b, i32 11) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.avx512.cvtsi2ss64(<4 x float>, i64, i32) nounwind readnone
@@ -215,7 +215,7 @@ define <4 x float> @_mm_cvt_roundu64_ss (<4 x float> %a, i64 %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvtusi2ssq %rdi, {rd-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.avx512.cvtusi642ss(<4 x float> %a, i64 %b, i32 1) ; <<<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.avx512.cvtusi642ss(<4 x float> %a, i64 %b, i32 9) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 
@@ -234,7 +234,7 @@ define <2 x double> @test_x86_avx512_mm_cvtu64_sd(<2 x double> %a, i64 %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvtusi2sdq %rdi, {rd-sae}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.avx512.cvtusi642sd(<2 x double> %a, i64 %b, i32 1) ; <<<2 x double>> [#uses=1]
+  %res = call <2 x double> @llvm.x86.avx512.cvtusi642sd(<2 x double> %a, i64 %b, i32 9) ; <<<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
 

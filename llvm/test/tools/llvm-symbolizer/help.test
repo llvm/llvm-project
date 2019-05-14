@@ -1,0 +1,8 @@
+RUN: llvm-symbolizer -help | FileCheck %s --check-prefix=SYMBOLIZER
+RUN: llvm-addr2line -help | FileCheck %s --check-prefix=ADDR2LINE
+
+SYMBOLIZER: OVERVIEW: llvm-symbolizer
+SYMBOLIZER: USAGE: llvm-symbolizer{{(.exe)?}} [options] <input addresses>...
+
+ADDR2LINE: OVERVIEW: llvm-addr2line
+ADDR2LINE: USAGE: llvm-addr2line{{(.exe)?}} [options] <input addresses>...

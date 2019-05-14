@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 }
 
 
-// CHECK:      namespace `anonymous namespace' {
+// CHECK:      namespace  {
 // CHECK-NEXT:     typedef bool AnonNamespaceTypedef;
 // CHECK-NEXT: }
 // CHECK-NEXT: typedef unsigned long ULongArrayTypedef[10];

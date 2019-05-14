@@ -42,6 +42,8 @@ def find_shlibpath_var():
         yield 'DYLD_LIBRARY_PATH'
     elif platform.system() == 'Windows':
         yield 'PATH'
+    elif platform.system() == 'AIX':
+        yield 'LIBPATH'
 
 for shlibpath_var in find_shlibpath_var():
     # in stand-alone builds, shlibdir is clang's build tree

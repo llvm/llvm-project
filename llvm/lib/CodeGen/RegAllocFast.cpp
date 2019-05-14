@@ -203,6 +203,7 @@ namespace {
     }
 
     void allocVirtReg(MachineInstr &MI, LiveReg &LR, unsigned Hint);
+    void allocVirtRegUndef(MachineOperand &MO);
     MCPhysReg defineVirtReg(MachineInstr &MI, unsigned OpNum, unsigned VirtReg,
                             unsigned Hint);
     LiveReg &reloadVirtReg(MachineInstr &MI, unsigned OpNum, unsigned VirtReg,
@@ -566,7 +567,8 @@ void RegAllocFast::allocVirtReg(MachineInstr &MI, LiveReg &LR, unsigned Hint) {
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   LLVM_DEBUG(dbgs() << "Search register for " << printReg(VirtReg)
-                    << " in class " << TRI->getRegClassName(&RC) << '\n');
+                    << " in class " << TRI->getRegClassName(&RC)
+                    << " with hint " << printReg(Hint, TRI) << '\n');
 
   // Take hint when possible.
   if (TargetRegisterInfo::isPhysicalRegister(Hint) &&
@@ -581,17 +583,9 @@ void RegAllocFast::allocVirtReg(MachineInstr &MI, LiveReg &LR, unsigned Hint) {
     }
   }
 
-  // First try to find a completely free register.
-  ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
-  for (MCPhysReg PhysReg : AllocationOrder) {
-    if (PhysRegState[PhysReg] == regFree && !isRegUsedInInstr(PhysReg)) {
-      assignVirtToPhysReg(LR, PhysReg);
-      return;
-    }
-  }
-
   MCPhysReg BestReg = 0;
   unsigned BestCost = spillImpossible;
+  ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
   for (MCPhysReg PhysReg : AllocationOrder) {
     LLVM_DEBUG(dbgs() << "\tRegister: " << printReg(PhysReg, TRI) << ' ');
     unsigned Cost = calcSpillCost(PhysReg);
@@ -621,6 +615,31 @@ void RegAllocFast::allocVirtReg(MachineInstr &MI, LiveReg &LR, unsigned Hint) {
 
   definePhysReg(MI, BestReg, regFree);
   assignVirtToPhysReg(LR, BestReg);
+}
+
+void RegAllocFast::allocVirtRegUndef(MachineOperand &MO) {
+  assert(MO.isUndef() && "expected undef use");
+  unsigned VirtReg = MO.getReg();
+  assert(TargetRegisterInfo::isVirtualRegister(VirtReg) && "Expected virtreg");
+
+  LiveRegMap::const_iterator LRI = findLiveVirtReg(VirtReg);
+  MCPhysReg PhysReg;
+  if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
+    PhysReg = LRI->PhysReg;
+  } else {
+    const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
+    ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
+    assert(!AllocationOrder.empty() && "Allocation order must not be empty");
+    PhysReg = AllocationOrder[0];
+  }
+
+  unsigned SubRegIdx = MO.getSubReg();
+  if (SubRegIdx != 0) {
+    PhysReg = TRI->getSubReg(PhysReg, SubRegIdx);
+    MO.setSubReg(0);
+  }
+  MO.setReg(PhysReg);
+  MO.setIsRenamable(true);
 }
 
 /// Allocates a register for VirtReg and mark it as dirty.
@@ -940,17 +959,39 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
   // Second scan.
   // Allocate virtreg uses.
+  bool HasUndefUse = false;
   for (unsigned I = 0; I != VirtOpEnd; ++I) {
     MachineOperand &MO = MI.getOperand(I);
     if (!MO.isReg()) continue;
     unsigned Reg = MO.getReg();
     if (!TargetRegisterInfo::isVirtualRegister(Reg)) continue;
     if (MO.isUse()) {
+      if (MO.isUndef()) {
+        HasUndefUse = true;
+        // There is no need to allocate a register for an undef use.
+        continue;
+      }
       LiveReg &LR = reloadVirtReg(MI, I, Reg, CopyDstReg);
       MCPhysReg PhysReg = LR.PhysReg;
       CopySrcReg = (CopySrcReg == Reg || CopySrcReg == PhysReg) ? PhysReg : 0;
       if (setPhysReg(MI, MO, PhysReg))
         killVirtReg(LR);
+    }
+  }
+
+  // Allocate undef operands. This is a separate step because in a situation
+  // like  ` = OP undef %X, %X`    both operands need the same register assign
+  // so we should perform the normal assignment first.
+  if (HasUndefUse) {
+    for (MachineOperand &MO : MI.uses()) {
+      if (!MO.isReg() || !MO.isUse())
+        continue;
+      unsigned Reg = MO.getReg();
+      if (!TargetRegisterInfo::isVirtualRegister(Reg))
+        continue;
+
+      assert(MO.isUndef() && "Should only have undef virtreg uses left");
+      allocVirtRegUndef(MO);
     }
   }
 

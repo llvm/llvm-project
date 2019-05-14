@@ -1062,8 +1062,7 @@ void ItaniumVTableBuilder::AddThunk(const CXXMethodDecl *MD,
   SmallVectorImpl<ThunkInfo> &ThunksVector = Thunks[MD];
 
   // Check if we have this thunk already.
-  if (std::find(ThunksVector.begin(), ThunksVector.end(), Thunk) !=
-      ThunksVector.end())
+  if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
     return;
 
   ThunksVector.push_back(Thunk);
@@ -2452,8 +2451,7 @@ private:
     SmallVector<ThunkInfo, 1> &ThunksVector = Thunks[MD];
 
     // Check if we have this thunk already.
-    if (std::find(ThunksVector.begin(), ThunksVector.end(), Thunk) !=
-        ThunksVector.end())
+    if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
       return;
 
     ThunksVector.push_back(Thunk);
@@ -3190,8 +3188,8 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXMethodDecl *MD = MethodNameAndDecl.second;
 
       ThunkInfoVectorTy ThunksVector = Thunks[MD];
-      std::stable_sort(ThunksVector.begin(), ThunksVector.end(),
-                       [](const ThunkInfo &LHS, const ThunkInfo &RHS) {
+      llvm::stable_sort(ThunksVector, [](const ThunkInfo &LHS,
+                                         const ThunkInfo &RHS) {
         // Keep different thunks with the same adjustments in the order they
         // were put into the vector.
         return std::tie(LHS.This, LHS.Return) < std::tie(RHS.This, RHS.Return);

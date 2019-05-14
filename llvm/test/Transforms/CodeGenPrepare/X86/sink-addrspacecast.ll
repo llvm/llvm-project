@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @load_cast_gep
 ; GEP: [[CAST:%[0-9]+]] = addrspacecast i64* %base to i8 addrspace(1)*
-; GEP: getelementptr i8, i8 addrspace(1)* [[CAST]], i64 40
+; GEP: getelementptr inbounds i8, i8 addrspace(1)* [[CAST]], i64 40
 define void @load_cast_gep(i1 %cond, i64* %base) {
 entry:
   %addr = getelementptr inbounds i64, i64* %base, i64 5
@@ -23,7 +23,7 @@ fallthrough:
 
 ; CHECK-LABEL: @store_gep_cast
 ; GEP: [[CAST:%[0-9]+]] = addrspacecast i64* %base to i8 addrspace(1)*
-; GEP: getelementptr i8, i8 addrspace(1)* [[CAST]], i64 20
+; GEP: getelementptr inbounds i8, i8 addrspace(1)* [[CAST]], i64 20
 define void @store_gep_cast(i1 %cond, i64* %base) {
 entry:
   %casted = addrspacecast i64* %base to i32 addrspace(1)*

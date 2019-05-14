@@ -1185,6 +1185,10 @@ struct SemiNCAInfo {
       BUI.FuturePredecessors[U.getTo()].push_back({U.getFrom(), U.getKind()});
     }
 
+#if 0
+    // FIXME: The LLVM_DEBUG macro only plays well with a modular
+    // build of LLVM when the header is marked as textual, but doing
+    // so causes redefinition errors.
     LLVM_DEBUG(dbgs() << "About to apply " << NumLegalized << " updates\n");
     LLVM_DEBUG(if (NumLegalized < 32) for (const auto &U
                                            : reverse(BUI.Updates)) {
@@ -1193,6 +1197,7 @@ struct SemiNCAInfo {
       dbgs() << "\n";
     });
     LLVM_DEBUG(dbgs() << "\n");
+#endif
 
     // Recalculate the DominatorTree when the number of updates
     // exceeds a threshold, which usually makes direct updating slower than
@@ -1218,8 +1223,13 @@ struct SemiNCAInfo {
   static void ApplyNextUpdate(DomTreeT &DT, BatchUpdateInfo &BUI) {
     assert(!BUI.Updates.empty() && "No updates to apply!");
     UpdateT CurrentUpdate = BUI.Updates.pop_back_val();
+#if 0
+    // FIXME: The LLVM_DEBUG macro only plays well with a modular
+    // build of LLVM when the header is marked as textual, but doing
+    // so causes redefinition errors.
     LLVM_DEBUG(dbgs() << "Applying update: ");
     LLVM_DEBUG(CurrentUpdate.dump(); dbgs() << "\n");
+#endif
 
     // Move to the next snapshot of the CFG by removing the reverse-applied
     // current update. Since updates are performed in the same order they are

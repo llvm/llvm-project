@@ -455,7 +455,7 @@ define <4 x i32> @vec_sel_consts(<4 x i32> %a, <4 x i32> %b) {
 
 define <3 x i129> @vec_sel_consts_weird(<3 x i129> %a, <3 x i129> %b) {
 ; CHECK-LABEL: @vec_sel_consts_weird(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i129> [[B:%.*]], <3 x i129> [[A:%.*]], <3 x i32> <i32 3, i32 1, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i129> [[A:%.*]], <3 x i129> [[B:%.*]], <3 x i32> <i32 0, i32 4, i32 2>
 ; CHECK-NEXT:    ret <3 x i129> [[TMP1]]
 ;
   %and1 = and <3 x i129> %a, <i129 -1, i129 0, i129 -1>

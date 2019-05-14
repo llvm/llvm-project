@@ -25,14 +25,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformRemoteiOS::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -136,9 +132,7 @@ const char *PlatformRemoteiOS::GetDescriptionStatic() {
   return "Remote iOS platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformRemoteiOS::PlatformRemoteiOS()
     : PlatformRemoteDarwinDevice() {}
 

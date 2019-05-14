@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueMap.h"
 #include <map>
 
@@ -123,7 +122,7 @@ public:
   bool mayAlias(const MachineFrameInfo *) const override;
 };
 
-/// A specialized pseudo soruce value for holding GlobalValue values.
+/// A specialized pseudo source value for holding GlobalValue values.
 class GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
   const GlobalValue *GV;
 

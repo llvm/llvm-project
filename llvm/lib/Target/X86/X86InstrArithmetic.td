@@ -194,19 +194,22 @@ def IMUL64rm : RI<0xAF, MRMSrcMem, (outs GR64:$dst),
 
 // Surprisingly enough, these are not two address instructions!
 let Defs = [EFLAGS] in {
+// NOTE: These are order specific, we want the ri8 forms to be listed
+// first so that they are slightly preferred to the ri forms.
+
 // Register-Integer Signed Integer Multiply
-def IMUL16rri  : Ii16<0x69, MRMSrcReg,                      // GR16 = GR16*I16
-                      (outs GR16:$dst), (ins GR16:$src1, i16imm:$src2),
-                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                      [(set GR16:$dst, EFLAGS,
-                            (X86smul_flag GR16:$src1, imm:$src2))]>,
-                      Sched<[WriteIMul16Imm]>, OpSize16;
 def IMUL16rri8 : Ii8<0x6B, MRMSrcReg,                       // GR16 = GR16*I8
                      (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR16:$dst, EFLAGS,
                            (X86smul_flag GR16:$src1, i16immSExt8:$src2))]>,
                      Sched<[WriteIMul16Imm]>, OpSize16;
+def IMUL16rri  : Ii16<0x69, MRMSrcReg,                      // GR16 = GR16*I16
+                      (outs GR16:$dst), (ins GR16:$src1, i16imm:$src2),
+                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                      [(set GR16:$dst, EFLAGS,
+                            (X86smul_flag GR16:$src1, imm:$src2))]>,
+                      Sched<[WriteIMul16Imm]>, OpSize16;
 def IMUL32rri  : Ii32<0x69, MRMSrcReg,                      // GR32 = GR32*I32
                       (outs GR32:$dst), (ins GR32:$src1, i32imm:$src2),
                       "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -219,26 +222,20 @@ def IMUL32rri8 : Ii8<0x6B, MRMSrcReg,                       // GR32 = GR32*I8
                      [(set GR32:$dst, EFLAGS,
                            (X86smul_flag GR32:$src1, i32immSExt8:$src2))]>,
                      Sched<[WriteIMul32Imm]>, OpSize32;
-def IMUL64rri32 : RIi32S<0x69, MRMSrcReg,                    // GR64 = GR64*I32
-                         (outs GR64:$dst), (ins GR64:$src1, i64i32imm:$src2),
-                         "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                         [(set GR64:$dst, EFLAGS,
-                             (X86smul_flag GR64:$src1, i64immSExt32:$src2))]>,
-                         Sched<[WriteIMul64Imm]>;
 def IMUL64rri8 : RIi8<0x6B, MRMSrcReg,                      // GR64 = GR64*I8
                       (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
                       "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR64:$dst, EFLAGS,
                             (X86smul_flag GR64:$src1, i64immSExt8:$src2))]>,
                       Sched<[WriteIMul64Imm]>;
+def IMUL64rri32 : RIi32S<0x69, MRMSrcReg,                    // GR64 = GR64*I32
+                         (outs GR64:$dst), (ins GR64:$src1, i64i32imm:$src2),
+                         "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                         [(set GR64:$dst, EFLAGS,
+                             (X86smul_flag GR64:$src1, i64immSExt32:$src2))]>,
+                         Sched<[WriteIMul64Imm]>;
 
 // Memory-Integer Signed Integer Multiply
-def IMUL16rmi  : Ii16<0x69, MRMSrcMem,                     // GR16 = [mem16]*I16
-                      (outs GR16:$dst), (ins i16mem:$src1, i16imm:$src2),
-                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                      [(set GR16:$dst, EFLAGS,
-                            (X86smul_flag (loadi16 addr:$src1), imm:$src2))]>,
-                      Sched<[WriteIMul16Imm.Folded]>, OpSize16;
 def IMUL16rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR16 = [mem16]*I8
                      (outs GR16:$dst), (ins i16mem:$src1, i16i8imm :$src2),
                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -246,12 +243,12 @@ def IMUL16rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR16 = [mem16]*I8
                            (X86smul_flag (loadi16 addr:$src1),
                                          i16immSExt8:$src2))]>,
                      Sched<[WriteIMul16Imm.Folded]>, OpSize16;
-def IMUL32rmi  : Ii32<0x69, MRMSrcMem,                     // GR32 = [mem32]*I32
-                      (outs GR32:$dst), (ins i32mem:$src1, i32imm:$src2),
-                      "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                      [(set GR32:$dst, EFLAGS,
-                            (X86smul_flag (loadi32 addr:$src1), imm:$src2))]>,
-                      Sched<[WriteIMul32Imm.Folded]>, OpSize32;
+def IMUL16rmi  : Ii16<0x69, MRMSrcMem,                     // GR16 = [mem16]*I16
+                      (outs GR16:$dst), (ins i16mem:$src1, i16imm:$src2),
+                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                      [(set GR16:$dst, EFLAGS,
+                            (X86smul_flag (loadi16 addr:$src1), imm:$src2))]>,
+                      Sched<[WriteIMul16Imm.Folded]>, OpSize16;
 def IMUL32rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR32 = [mem32]*I8
                      (outs GR32:$dst), (ins i32mem:$src1, i32i8imm: $src2),
                      "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -259,13 +256,12 @@ def IMUL32rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR32 = [mem32]*I8
                            (X86smul_flag (loadi32 addr:$src1),
                                          i32immSExt8:$src2))]>,
                      Sched<[WriteIMul32Imm.Folded]>, OpSize32;
-def IMUL64rmi32 : RIi32S<0x69, MRMSrcMem,                   // GR64 = [mem64]*I32
-                         (outs GR64:$dst), (ins i64mem:$src1, i64i32imm:$src2),
-                         "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                         [(set GR64:$dst, EFLAGS,
-                              (X86smul_flag (loadi64 addr:$src1),
-                                            i64immSExt32:$src2))]>,
-                         Sched<[WriteIMul64Imm.Folded]>;
+def IMUL32rmi  : Ii32<0x69, MRMSrcMem,                     // GR32 = [mem32]*I32
+                      (outs GR32:$dst), (ins i32mem:$src1, i32imm:$src2),
+                      "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                      [(set GR32:$dst, EFLAGS,
+                            (X86smul_flag (loadi32 addr:$src1), imm:$src2))]>,
+                      Sched<[WriteIMul32Imm.Folded]>, OpSize32;
 def IMUL64rmi8 : RIi8<0x6B, MRMSrcMem,                      // GR64 = [mem64]*I8
                       (outs GR64:$dst), (ins i64mem:$src1, i64i8imm: $src2),
                       "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -273,6 +269,13 @@ def IMUL64rmi8 : RIi8<0x6B, MRMSrcMem,                      // GR64 = [mem64]*I8
                             (X86smul_flag (loadi64 addr:$src1),
                                           i64immSExt8:$src2))]>,
                       Sched<[WriteIMul64Imm.Folded]>;
+def IMUL64rmi32 : RIi32S<0x69, MRMSrcMem,                   // GR64 = [mem64]*I32
+                         (outs GR64:$dst), (ins i64mem:$src1, i64i32imm:$src2),
+                         "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                         [(set GR64:$dst, EFLAGS,
+                              (X86smul_flag (loadi64 addr:$src1),
+                                            i64immSExt32:$src2))]>,
+                         Sched<[WriteIMul64Imm.Folded]>;
 } // Defs = [EFLAGS]
 
 // unsigned division/remainder
@@ -602,16 +605,16 @@ def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
 
 
 def Xi8  : X86TypeInfo<i8, "b", GR8, loadi8, i8mem,
-                       Imm8, i8imm, imm8_su, i8imm, invalid_node,
+                       Imm8, i8imm, relocImm8_su, i8imm, invalid_node,
                        0, OpSizeFixed, 0>;
 def Xi16 : X86TypeInfo<i16, "w", GR16, loadi16, i16mem,
-                       Imm16, i16imm, imm16_su, i16i8imm, i16immSExt8_su,
+                       Imm16, i16imm, relocImm16_su, i16i8imm, i16immSExt8_su,
                        1, OpSize16, 0>;
 def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem,
-                       Imm32, i32imm, imm32_su, i32i8imm, i32immSExt8_su,
+                       Imm32, i32imm, relocImm32_su, i32i8imm, i32immSExt8_su,
                        1, OpSize32, 0>;
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem,
-                       Imm32S, i64i32imm, i64immSExt32_su, i64i8imm, i64immSExt8_su,
+                       Imm32S, i64i32imm, i64relocImmSExt32_su, i64i8imm, i64immSExt8_su,
                        1, OpSizeFixed, 1>;
 
 /// ITy - This instruction base class takes the type info for the instruction.

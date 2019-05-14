@@ -65,10 +65,6 @@ def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
   [SDTCisVT<0, i64>, SDTCisVT<1, i1>, SDTCisVT<2, i64>]
 >;
 
-def AMDGPUAddeSubeOp : SDTypeProfile<2, 3,
-  [SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisVT<0, i32>, SDTCisVT<1, i1>, SDTCisVT<4, i1>]
->;
-
 //===----------------------------------------------------------------------===//
 // AMDGPU DAG Nodes
 //
@@ -203,12 +199,6 @@ def AMDGPUcarry : SDNode<"AMDGPUISD::CARRY", SDTIntBinOp, []>;
 // out = (src1 > src0) ? 1 : 0
 def AMDGPUborrow : SDNode<"AMDGPUISD::BORROW", SDTIntBinOp, []>;
 
-// TODO: remove AMDGPUadde/AMDGPUsube when ADDCARRY/SUBCARRY get their own
-// nodes in TargetSelectionDAG.td.
-def AMDGPUadde : SDNode<"ISD::ADDCARRY", AMDGPUAddeSubeOp, []>;
-
-def AMDGPUsube : SDNode<"ISD::SUBCARRY", AMDGPUAddeSubeOp, []>;
-
 def AMDGPUSetCCOp : SDTypeProfile<1, 3, [        // setcc
   SDTCisVT<0, i64>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
 ]>;
@@ -249,7 +239,8 @@ def AMDGPUdiv_scale : SDNode<"AMDGPUISD::DIV_SCALE", AMDGPUDivScaleOp>;
 
 //  Special case divide FMA with scale and flags (src0 = Quotient,
 //  src1 = Denominator, src2 = Numerator).
-def AMDGPUdiv_fmas : SDNode<"AMDGPUISD::DIV_FMAS", AMDGPUFmasOp>;
+def AMDGPUdiv_fmas : SDNode<"AMDGPUISD::DIV_FMAS", AMDGPUFmasOp,
+                            [SDNPOptInGlue]>;
 
 // Single or double precision division fixup.
 // Special case divide fixup and flags(src0 = Quotient, src1 =

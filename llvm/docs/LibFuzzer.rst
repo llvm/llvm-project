@@ -258,6 +258,10 @@ The most important command line options are:
 ``-max_len``
   Maximum length of a test input. If 0 (the default), libFuzzer tries to guess
   a good value based on the corpus (and reports it).
+``len_control``
+  Try generating small inputs first, then try larger inputs over time.
+  Specifies the rate at which the length limit is increased (smaller == faster).
+  Default is 100. If 0, immediately try inputs with size up to max_len.
 ``-timeout``
   Timeout in seconds, default 1200. If an input takes longer than this timeout,
   the process is treated as a failure case.

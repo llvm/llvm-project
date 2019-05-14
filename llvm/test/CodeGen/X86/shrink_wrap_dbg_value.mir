@@ -142,7 +142,7 @@ body:             |
     DBG_VALUE %fixed-stack.0, 0, !16, !DIExpression(), debug-location !26
     DBG_VALUE %fixed-stack.1, 0, !15, !DIExpression(), debug-location !25
     CMP32rr $eax, killed $edx, implicit-def $eflags, debug-location !27
-    JL_1 %bb.4, implicit killed $eflags, debug-location !29
+    JCC_1 %bb.4, 12, implicit killed $eflags, debug-location !29
     JMP_1 %bb.1, debug-location !29
   
   bb.1.for.cond.preheader:
@@ -167,7 +167,7 @@ body:             |
     ADJCALLSTACKUP32 4, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !33
     $edi = INC32r killed $edi, implicit-def dead $eflags, debug-location !30
     CMP32rr $edi, $esi, implicit-def $eflags, debug-location !30
-    JL_1 %bb.2, implicit killed $eflags, debug-location !34
+    JCC_1 %bb.2, 12, implicit killed $eflags, debug-location !34
   
   bb.3:
     successors: %bb.4(0x80000000)

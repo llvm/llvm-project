@@ -46,6 +46,15 @@ public:
     for (auto I : Init)
       set(I);
   }
+
+  bool operator < (const FeatureBitset &Other) const {
+    for (unsigned I = 0, E = size(); I != E; ++I) {
+      bool LHS = test(I), RHS = Other.test(I);
+      if (LHS != RHS)
+        return LHS < RHS;
+    }
+    return false;
+  }
 };
 
 /// Class used to store the subtarget bits in the tables created by tablegen.

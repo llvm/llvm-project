@@ -71,7 +71,7 @@ static char lower(char C) { return C >= 'A' && C <= 'Z' ? C + ('a' - 'A') : C; }
 // Score field is 15 bits wide, min value is -2^14, we use half of that.
 static constexpr int AwfulScore = -(1 << 13);
 static bool isAwful(int S) { return S < AwfulScore / 2; }
-static constexpr int PerfectBonus = 3; // Perfect per-pattern-char score.
+static constexpr int PerfectBonus = 4; // Perfect per-pattern-char score.
 
 FuzzyMatcher::FuzzyMatcher(llvm::StringRef Pattern)
     : PatN(std::min<int>(MaxPat, Pattern.size())),
@@ -267,24 +267,31 @@ bool FuzzyMatcher::allowMatch(int P, int W, Action Last) const {
 }
 
 int FuzzyMatcher::skipPenalty(int W, Action Last) const {
-  int S = 0;
+  if (W == 0) // Skipping the first character.
+    return 3;
   if (WordRole[W] == Head) // Skipping a segment.
-    S += 1;
-  if (Last == Match) // Non-consecutive match.
-    S += 2;          // We'd rather skip a segment than split our match.
-  return S;
+    return 1; // We want to keep this lower than a consecutive match bonus.
+  // Instead of penalizing non-consecutive matches, we give a bonus to a
+  // consecutive match in matchBonus. This produces a better score distribution
+  // than penalties in case of small patterns, e.g. 'up' for 'unique_ptr'.
+  return 0;
 }
 
 int FuzzyMatcher::matchBonus(int P, int W, Action Last) const {
   assert(LowPat[P] == LowWord[W]);
   int S = 1;
-  // Bonus: pattern so far is a (case-insensitive) prefix of the word.
-  if (P == W) // We can't skip pattern characters, so we must have matched all.
-    ++S;
+  bool IsPatSingleCase =
+      (PatTypeSet == 1 << Lower) || (PatTypeSet == 1 << Upper);
   // Bonus: case matches, or a Head in the pattern aligns with one in the word.
-  if ((Pat[P] == Word[W] && ((PatTypeSet & 1 << Upper) || P == W)) ||
-      (PatRole[P] == Head && WordRole[W] == Head))
+  // Single-case patterns lack segmentation signals and we assume any character
+  // can be a head of a segment.
+  if (Pat[P] == Word[W] ||
+      (WordRole[W] == Head && (IsPatSingleCase || PatRole[P] == Head)))
     ++S;
+  // Bonus: a consecutive match. First character match also gets a bonus to
+  // ensure prefix final match score normalizes to 1.0.
+  if (W == 0 || Last == Match)
+    S += 2;
   // Penalty: matching inside a segment (and previous char wasn't matched).
   if (WordRole[W] == Tail && P && Last == Miss)
     S -= 3;

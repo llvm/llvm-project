@@ -124,9 +124,7 @@ TEST_F(HighlighterTest, DefaultHighlighterWithCursorOutOfBounds) {
   style.selected.Set("<c>", "</c>");
   EXPECT_EQ("a bc", highlightDefault("a bc", style, 4));
 }
-//------------------------------------------------------------------------------
 // Tests highlighting with the Clang highlighter.
-//------------------------------------------------------------------------------
 
 static std::string
 highlightC(llvm::StringRef code, HighlightStyle style,

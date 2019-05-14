@@ -188,6 +188,17 @@ def HF32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i64);
 }]>;
 
+// Negated variants.
+def NEGLH16 : SDNodeXForm<imm, [{
+  uint64_t Value = (-N->getZExtValue() & 0x00000000FFFF0000ULL) >> 16;
+  return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i64);
+}]>;
+
+def NEGLF32 : SDNodeXForm<imm, [{
+  uint64_t Value = -N->getZExtValue() & 0x00000000FFFFFFFFULL;
+  return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i64);
+}]>;
+
 // Truncate an immediate to a 8-bit signed quantity.
 def SIMM8 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(int8_t(N->getZExtValue()), SDLoc(N),
@@ -429,6 +440,15 @@ def imm64lf32c : Immediate<i64, [{
 def imm64hf32c : Immediate<i64, [{
   return SystemZ::isImmHF(uint64_t(~N->getZExtValue()));
 }], HF32, "U32Imm">;
+
+// Negated immediates that fit LF32 or LH16.
+def imm64lh16n : Immediate<i64, [{
+  return SystemZ::isImmLH(uint64_t(-N->getZExtValue()));
+}], NEGLH16, "U16Imm">;
+
+def imm64lf32n : Immediate<i64, [{
+  return SystemZ::isImmLF(uint64_t(-N->getZExtValue()));
+}], NEGLF32, "U32Imm">;
 
 // Short immediates.
 def imm64sx8 : Immediate<i64, [{

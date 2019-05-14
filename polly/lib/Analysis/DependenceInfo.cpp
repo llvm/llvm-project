@@ -26,15 +26,14 @@
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
 #include "llvm/Support/Debug.h"
-#include <isl/aff.h>
-#include <isl/ctx.h>
-#include <isl/flow.h>
-#include <isl/map.h>
-#include <isl/options.h>
-#include <isl/schedule.h>
-#include <isl/set.h>
-#include <isl/union_map.h>
-#include <isl/union_set.h>
+#include "isl/aff.h"
+#include "isl/ctx.h"
+#include "isl/flow.h"
+#include "isl/map.h"
+#include "isl/schedule.h"
+#include "isl/set.h"
+#include "isl/union_map.h"
+#include "isl/union_set.h"
 
 using namespace polly;
 using namespace llvm;

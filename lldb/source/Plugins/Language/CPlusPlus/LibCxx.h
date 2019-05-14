@@ -66,7 +66,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
   ~LibCxxMapIteratorSyntheticFrontEnd() override;
 
@@ -95,7 +95,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxSharedPtrSyntheticFrontEnd() override;
 

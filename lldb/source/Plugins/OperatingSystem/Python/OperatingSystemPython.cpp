@@ -81,8 +81,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
   TargetSP target_sp = process->CalculateTarget();
   if (!target_sp)
     return;
-  m_interpreter =
-      target_sp->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+  m_interpreter = target_sp->GetDebugger().GetScriptInterpreter();
   if (m_interpreter) {
 
     std::string os_plugin_class_name(
@@ -139,9 +138,7 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
   return m_register_info_up.get();
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString OperatingSystemPython::GetPluginName() {
   return GetPluginNameStatic();
 }

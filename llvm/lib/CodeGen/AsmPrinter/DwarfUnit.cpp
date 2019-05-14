@@ -46,21 +46,30 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
 
-DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU,
+DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP,
+                                       DwarfCompileUnit &CU,
                                        DIELoc &DIE)
-    : DwarfExpression(AP.getDwarfVersion()), AP(AP), DU(DU),
+    : DwarfExpression(AP.getDwarfVersion(), CU), AP(AP),
       DIE(DIE) {}
 
 void DIEDwarfExpression::emitOp(uint8_t Op, const char* Comment) {
-  DU.addUInt(DIE, dwarf::DW_FORM_data1, Op);
+  CU.addUInt(DIE, dwarf::DW_FORM_data1, Op);
 }
 
 void DIEDwarfExpression::emitSigned(int64_t Value) {
-  DU.addSInt(DIE, dwarf::DW_FORM_sdata, Value);
+  CU.addSInt(DIE, dwarf::DW_FORM_sdata, Value);
 }
 
 void DIEDwarfExpression::emitUnsigned(uint64_t Value) {
-  DU.addUInt(DIE, dwarf::DW_FORM_udata, Value);
+  CU.addUInt(DIE, dwarf::DW_FORM_udata, Value);
+}
+
+void DIEDwarfExpression::emitData1(uint8_t Value) {
+  CU.addUInt(DIE, dwarf::DW_FORM_data1, Value);
+}
+
+void DIEDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
+  CU.addBaseTypeRef(DIE, Idx);
 }
 
 bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
@@ -284,21 +293,21 @@ void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
     addUInt(Die, Attribute, dwarf::DW_FORM_data4, Integer);
 }
 
-MD5::MD5Result *DwarfUnit::getMD5AsBytes(const DIFile *File) const {
+Optional<MD5::MD5Result> DwarfUnit::getMD5AsBytes(const DIFile *File) const {
   assert(File);
   if (DD->getDwarfVersion() < 5)
-    return nullptr;
+    return None;
   Optional<DIFile::ChecksumInfo<StringRef>> Checksum = File->getChecksum();
   if (!Checksum || Checksum->Kind != DIFile::CSK_MD5)
-    return nullptr;
+    return None;
 
   // Convert the string checksum to an MD5Result for the streamer.
   // The verifier validates the checksum so we assume it's okay.
   // An MD5 checksum is 16 bytes.
   std::string ChecksumString = fromHex(Checksum->Value);
-  void *CKMem = Asm->OutStreamer->getContext().allocate(16, 1);
-  memcpy(CKMem, ChecksumString.data(), 16);
-  return reinterpret_cast<MD5::MD5Result *>(CKMem);
+  MD5::MD5Result CKMem;
+  std::copy(ChecksumString.begin(), ChecksumString.end(), CKMem.Bytes.data());
+  return CKMem;
 }
 
 unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
@@ -310,7 +319,9 @@ unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
     addSectionOffset(getUnitDie(), dwarf::DW_AT_stmt_list, 0);
   }
   return SplitLineTable->getFile(File->getDirectory(), File->getFilename(),
-                                 getMD5AsBytes(File), File->getSource());
+                                 getMD5AsBytes(File),
+                                 Asm->OutContext.getDwarfVersion(),
+                                 File->getSource());
 }
 
 void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
@@ -392,7 +403,6 @@ void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
     return;
 
   unsigned FileID = getOrCreateSourceID(File);
-  assert(FileID && "Invalid file id");
   addUInt(Die, dwarf::DW_AT_decl_file, None, FileID);
   addUInt(Die, dwarf::DW_AT_decl_line, None, Line);
 }
@@ -602,7 +612,7 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
   return getDIE(Context);
 }
 
-DIE *DwarfTypeUnit::createTypeDIE(const DICompositeType *Ty) {
+DIE *DwarfUnit::createTypeDIE(const DICompositeType *Ty) {
   auto *Context = resolve(Ty->getScope());
   DIE *ContextDIE = getOrCreateContextDIE(Context);
 
@@ -630,12 +640,16 @@ DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
   else if (auto *STy = dyn_cast<DISubroutineType>(Ty))
     constructTypeDIE(TyDIE, STy);
   else if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
-    if (DD->generateTypeUnits() && !Ty->isForwardDecl())
-      if (MDString *TypeId = CTy->getRawIdentifier()) {
+    if (DD->generateTypeUnits() && !Ty->isForwardDecl()) {
+      // Skip updating the accelerator tables since this is not the full type.
+      if (MDString *TypeId = CTy->getRawIdentifier())
         DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);
-        // Skip updating the accelerator tables since this is not the full type.
-        return &TyDIE;
+      else {
+        auto X = DD->enterNonTypeUnitContext();
+        finishNonUnitTypeDIE(TyDIE, CTy);
       }
+      return &TyDIE;
+    }
     constructTypeDIE(TyDIE, CTy);
   } else {
     constructTypeDIE(TyDIE, cast<DIDerivedType>(Ty));
@@ -684,7 +698,7 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
     DD->addAccelType(*CUNode, Ty->getName(), TyDIE, Flags);
 
     if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
-        isa<DINamespace>(Context))
+        isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
       addGlobalType(Ty, TyDIE, Context);
   }
 }
@@ -1267,6 +1281,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (SP->isMainSubprogram())
     addFlag(SPDie, dwarf::DW_AT_main_subprogram);
+  if (SP->isPure())
+    addFlag(SPDie, dwarf::DW_AT_pure);
+  if (SP->isElemental())
+    addFlag(SPDie, dwarf::DW_AT_elemental);
+  if (SP->isRecursive())
+    addFlag(SPDie, dwarf::DW_AT_recursive);
 }
 
 void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
@@ -1676,4 +1696,12 @@ void DwarfUnit::addLoclistsBase() {
   addSectionLabel(getUnitDie(), dwarf::DW_AT_loclists_base,
                   DU->getLoclistsTableBaseSym(),
                   TLOF.getDwarfLoclistsSection()->getBeginSymbol());
+}
+
+void DwarfTypeUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
+  addFlag(D, dwarf::DW_AT_declaration);
+  StringRef Name = CTy->getName();
+  if (!Name.empty())
+    addString(D, dwarf::DW_AT_name, Name);
+  getCU().createTypeDIE(CTy);
 }

@@ -361,9 +361,6 @@ defm CondStore64 : CondStores<GR64, nonvolatile_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-// Expands to LR, RISBHG or RISBLG, depending on the choice of registers.
-def LRMux : UnaryRRPseudo<"lr", null_frag, GRX32, GRX32>,
-            Requires<[FeatureHighWord]>;
 def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
 def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
 
@@ -1031,6 +1028,14 @@ let AddedComplexity = 1 in {
   def : Pat<(z_ssub GR64:$src1, imm64sx32n:$src2),
             (AGFI GR64:$src1, imm64sx32n:$src2)>;
 }
+
+// And vice versa in one special case, where we need to load a
+// constant into a register in any case, but the negated constant
+// requires fewer instructions to load.
+def : Pat<(z_saddo GR64:$src1, imm64lh16n:$src2),
+          (SGR GR64:$src1, (LLILH imm64lh16n:$src2))>;
+def : Pat<(z_saddo GR64:$src1, imm64lf32n:$src2),
+          (SGR GR64:$src1, (LLILF imm64lf32n:$src2))>;
 
 // Subtraction producing a carry.
 let Defs = [CC] in {
@@ -2183,6 +2188,22 @@ let AddedComplexity = 4 in {
 
   def : Pat<(rotl GR64:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
             (RLLG GR64:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
+}
+
+// Substitute (x*64-s) with (-s), since shift/rotate instructions only
+// use the last 6 bits of the second operand register (making it modulo 64).
+let AddedComplexity = 4 in {
+  def : Pat<(shl GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (SLLG GR64:$val, (LCR GR32:$shift), 0)>;
+
+  def : Pat<(sra GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (SRAG GR64:$val, (LCR GR32:$shift), 0)>;
+
+  def : Pat<(srl GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (SRLG GR64:$val, (LCR GR32:$shift), 0)>;
+
+  def : Pat<(rotl GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (RLLG GR64:$val, (LCR GR32:$shift), 0)>;
 }
 
 // Peepholes for turning scalar operations into block operations.

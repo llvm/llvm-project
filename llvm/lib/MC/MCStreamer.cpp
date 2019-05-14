@@ -107,6 +107,11 @@ raw_ostream &MCStreamer::GetCommentOS() {
   return nulls();
 }
 
+unsigned MCStreamer::getNumFrameInfos() { return DwarfFrameInfos.size(); }
+ArrayRef<MCDwarfFrameInfo> MCStreamer::getDwarfFrameInfos() const {
+  return DwarfFrameInfos;
+}
+
 void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
 void MCStreamer::addExplicitComment(const Twine &T) {}
@@ -135,10 +140,10 @@ void MCStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
 
 /// EmitULEB128IntValue - Special case of EmitULEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.
-void MCStreamer::EmitULEB128IntValue(uint64_t Value) {
+void MCStreamer::EmitULEB128IntValue(uint64_t Value, unsigned PadTo) {
   SmallString<128> Tmp;
   raw_svector_ostream OSE(Tmp);
-  encodeULEB128(Value, OSE);
+  encodeULEB128(Value, OSE, PadTo);
   EmitBytes(OSE.str());
 }
 
@@ -204,7 +209,7 @@ void MCStreamer::EmitZeros(uint64_t NumBytes) {
 Expected<unsigned>
 MCStreamer::tryEmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                       StringRef Filename,
-                                      MD5::MD5Result *Checksum,
+                                      Optional<MD5::MD5Result> Checksum,
                                       Optional<StringRef> Source,
                                       unsigned CUID) {
   return getContext().getDwarfFile(Directory, Filename, FileNo, Checksum,
@@ -213,7 +218,7 @@ MCStreamer::tryEmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
 
 void MCStreamer::emitDwarfFile0Directive(StringRef Directory,
                                          StringRef Filename,
-                                         MD5::MD5Result *Checksum,
+                                         Optional<MD5::MD5Result> Checksum,
                                          Optional<StringRef> Source,
                                          unsigned CUID) {
   getContext().setMCLineTableRootFile(CUID, Directory, Filename, Checksum,

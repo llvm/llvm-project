@@ -288,6 +288,7 @@ void MsanDeallocate(StackTrace *stack, void *ptr);
 void *msan_malloc(uptr size, StackTrace *stack);
 void *msan_calloc(uptr nmemb, uptr size, StackTrace *stack);
 void *msan_realloc(void *ptr, uptr size, StackTrace *stack);
+void *msan_reallocarray(void *ptr, uptr nmemb, uptr size, StackTrace *stack);
 void *msan_valloc(uptr size, StackTrace *stack);
 void *msan_pvalloc(uptr size, StackTrace *stack);
 void *msan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack);

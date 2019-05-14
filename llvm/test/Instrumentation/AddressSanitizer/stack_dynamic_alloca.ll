@@ -12,14 +12,14 @@ entry:
 ; CHECK: entry:
 ; CHECK: load i32, i32* @__asan_option_detect_stack_use_after_return
 
-; CHECK: <label>:[[UAR_ENABLED_BB:[0-9]+]]
+; CHECK: [[UAR_ENABLED_BB:^[0-9]+]]:
 ; CHECK: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_
 
-; CHECK: <label>:[[FAKE_STACK_BB:[0-9]+]]
+; CHECK: [[FAKE_STACK_BB:^[0-9]+]]:
 ; CHECK: [[FAKE_STACK:%[0-9]+]] = phi i64 [ 0, %entry ], [ [[FAKE_STACK_RT]], %[[UAR_ENABLED_BB]] ]
 ; CHECK: icmp eq i64 [[FAKE_STACK]], 0
 
-; CHECK: <label>:[[NO_FAKE_STACK_BB:[0-9]+]]
+; CHECK: [[NO_FAKE_STACK_BB:^[0-9]+]]:
 ; CHECK: %MyAlloca = alloca i8, i64
 ; CHECK: [[ALLOCA:%[0-9]+]] = ptrtoint i8* %MyAlloca
 

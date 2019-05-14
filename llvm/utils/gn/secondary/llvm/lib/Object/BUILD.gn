@@ -26,13 +26,16 @@ static_library("Object") {
     "IRSymtab.cpp",
     "MachOObjectFile.cpp",
     "MachOUniversal.cpp",
+    "Minidump.cpp",
     "ModuleSymbolTable.cpp",
     "Object.cpp",
     "ObjectFile.cpp",
     "RecordStreamer.cpp",
+    "RelocationResolver.cpp",
     "SymbolSize.cpp",
     "SymbolicFile.cpp",
     "WasmObjectFile.cpp",
     "WindowsResource.cpp",
+    "XCOFFObjectFile.cpp",
   ]
 }

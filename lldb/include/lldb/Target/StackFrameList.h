@@ -19,9 +19,7 @@ namespace lldb_private {
 
 class StackFrameList {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   StackFrameList(Thread &thread, const lldb::StackFrameListSP &prev_frames_sp,
                  bool show_inline_frames);
 

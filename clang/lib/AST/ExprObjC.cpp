@@ -377,6 +377,11 @@ Stmt::child_range ObjCMessageExpr::children() {
                      reinterpret_cast<Stmt **>(getArgs() + getNumArgs()));
 }
 
+Stmt::const_child_range ObjCMessageExpr::children() const {
+  auto Children = const_cast<ObjCMessageExpr *>(this)->children();
+  return const_child_range(Children.begin(), Children.end());
+}
+
 StringRef ObjCBridgedCastExpr::getBridgeKindName() const {
   switch (getBridgeKind()) {
   case OBC_Bridge:

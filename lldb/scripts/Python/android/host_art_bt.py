@@ -5,6 +5,8 @@
 #   'command script import host_art_bt.py'
 #   'host_art_bt'
 
+from __future__ import print_function
+
 import sys
 import re
 
@@ -27,7 +29,7 @@ def host_art_bt(debugger, command, result, internal_dict):
             # Get function/filename/lineno from symbol context
             symbol = frame.GetSymbol()
             if not symbol:
-                print 'No symbol info for compiled Java frame: ', frame
+                print('No symbol info for compiled Java frame: ', frame)
                 sys.exit(1)
             line_entry = frame.GetLineEntry()
             prettified_frames.append({
@@ -55,10 +57,10 @@ def host_art_bt(debugger, command, result, internal_dict):
                     art_method_name = process.ReadCStringFromMemory(
                         art_method_name_data, art_method_name_size + 1, error)
                     if not error.Success:
-                        print 'Failed to read method name'
+                        print('Failed to read method name')
                         sys.exit(1)
                     if art_method_name != symbol.GetName():
-                        print 'Function names in native symbol and art runtime stack do not match: ', symbol.GetName(), ' != ', art_method_name
+                        print('Function names in native symbol and art runtime stack do not match: ', symbol.GetName(), ' != ', art_method_name)
                     art_frame_index = art_frame_index + 1
                     break
                 art_frame_index = art_frame_index + 1
@@ -78,7 +80,7 @@ def host_art_bt(debugger, command, result, internal_dict):
                     while True:
                         lldb_frame_index = lldb_frame_index + 1
                         if lldb_frame_index >= thread.GetNumFrames():
-                            print 'ArtMethod::Invoke not found below art_quick_invoke_stub/art_quick_invoke_static_stub'
+                            print('ArtMethod::Invoke not found below art_quick_invoke_stub/art_quick_invoke_static_stub')
                             sys.exit(1)
                         frame = thread.GetFrameAtIndex(lldb_frame_index)
                         if frame.GetSymbol() and frame.GetSymbol().GetName(
@@ -86,7 +88,7 @@ def host_art_bt(debugger, command, result, internal_dict):
                             lldb_frame_index = lldb_frame_index + 1
                             break
                 else:
-                    print 'Invalid frame below compiled Java frame: ', frame
+                    print('Invalid frame below compiled Java frame: ', frame)
         elif frame.GetSymbol() and frame.GetSymbol().GetName() == 'art_quick_generic_jni_trampoline':
             # Interpreted JNI frame for x86_64
 
@@ -131,7 +133,7 @@ def host_art_bt(debugger, command, result, internal_dict):
                     while True:
                         lldb_frame_index = lldb_frame_index + 1
                         if lldb_frame_index >= thread.GetNumFrames():
-                            print 'ArtMethod::Invoke not found below art_quick_invoke_stub/art_quick_invoke_static_stub'
+                            print('ArtMethod::Invoke not found below art_quick_invoke_stub/art_quick_invoke_static_stub')
                             sys.exit(1)
                         frame = thread.GetFrameAtIndex(lldb_frame_index)
                         if frame.GetSymbol() and frame.GetSymbol().GetName(
@@ -139,14 +141,14 @@ def host_art_bt(debugger, command, result, internal_dict):
                             lldb_frame_index = lldb_frame_index + 1
                             break
                 else:
-                    print 'Invalid frame below compiled Java frame: ', frame
+                    print('Invalid frame below compiled Java frame: ', frame)
         elif frame.GetSymbol() and re.search(r'art::interpreter::', frame.GetSymbol().GetName()):
             # Interpreted Java frame
 
             while True:
                 lldb_frame_index = lldb_frame_index + 1
                 if lldb_frame_index >= thread.GetNumFrames():
-                    print 'art::interpreter::Execute not found in interpreter frame'
+                    print('art::interpreter::Execute not found in interpreter frame')
                     sys.exit(1)
                 frame = thread.GetFrameAtIndex(lldb_frame_index)
                 if frame.GetSymbol() and frame.GetSymbol().GetName(
@@ -188,7 +190,7 @@ def host_art_bt(debugger, command, result, internal_dict):
                     file_name = process.ReadCStringFromMemory(
                         file_name_data, file_name_size + 1, error)
                     if not error.Success():
-                        print 'Failed to read source file name'
+                        print('Failed to read source file name')
                         sys.exit(1)
 
                     prettified_frames.append({
@@ -205,7 +207,7 @@ def host_art_bt(debugger, command, result, internal_dict):
             while True:
                 lldb_frame_index = lldb_frame_index + 1
                 if lldb_frame_index >= thread.GetNumFrames():
-                    print 'Can not get past interpreter native frames'
+                    print('Can not get past interpreter native frames')
                     sys.exit(1)
                 frame = thread.GetFrameAtIndex(lldb_frame_index)
                 if frame.GetSymbol() and not re.search(
@@ -229,7 +231,7 @@ def host_art_bt(debugger, command, result, internal_dict):
                     })
 
     for prettified_frame in prettified_frames:
-        print prettified_frame['function'], prettified_frame['file'], prettified_frame['line']
+        print(prettified_frame['function'], prettified_frame['file'], prettified_frame['line'])
 
 
 def __lldb_init_module(debugger, internal_dict):

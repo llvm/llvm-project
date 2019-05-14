@@ -70,13 +70,16 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
 
   // If this is the address operand of a load or store, make it relative to SP
   // and fold the frame offset directly in.
-  if ((MI.mayLoad() && FIOperandNum == WebAssembly::LoadAddressOperandNo) ||
-      (MI.mayStore() && FIOperandNum == WebAssembly::StoreAddressOperandNo)) {
-    assert(FrameOffset >= 0 && MI.getOperand(FIOperandNum - 1).getImm() >= 0);
-    int64_t Offset = MI.getOperand(FIOperandNum - 1).getImm() + FrameOffset;
+  unsigned AddrOperandNum = WebAssembly::getNamedOperandIdx(
+      MI.getOpcode(), WebAssembly::OpName::addr);
+  if (AddrOperandNum == FIOperandNum) {
+    unsigned OffsetOperandNum = WebAssembly::getNamedOperandIdx(
+        MI.getOpcode(), WebAssembly::OpName::off);
+    assert(FrameOffset >= 0 && MI.getOperand(OffsetOperandNum).getImm() >= 0);
+    int64_t Offset = MI.getOperand(OffsetOperandNum).getImm() + FrameOffset;
 
     if (static_cast<uint64_t>(Offset) <= std::numeric_limits<uint32_t>::max()) {
-      MI.getOperand(FIOperandNum - 1).setImm(Offset);
+      MI.getOperand(OffsetOperandNum).setImm(Offset);
       MI.getOperand(FIOperandNum)
           .ChangeToRegister(FrameRegister, /*IsDef=*/false);
       return;

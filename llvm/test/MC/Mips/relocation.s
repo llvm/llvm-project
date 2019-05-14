@@ -5,7 +5,7 @@
 // RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux < %s \
 // RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELOC %s
 // RUN: llvm-mc -filetype=obj -triple mips-unknown-linux < %s \
-// RUN:     | llvm-readobj -sections -section-data \
+// RUN:     | llvm-readobj --sections --section-data \
 // RUN:     | FileCheck -check-prefix=DATA %s
 
 // Test that we produce the correct relocation.

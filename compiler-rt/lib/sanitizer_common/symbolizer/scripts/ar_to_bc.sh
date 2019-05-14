@@ -9,8 +9,8 @@ if [ "$#" -le 1 ]; then
   usage
 fi
 
-AR=$(readlink -f $AR)
-LINK=$(readlink -f $LINK)
+[[ $AR == /* ]] || AR=$PWD/$AR
+[[ $LINK == /* ]] || LINK=$PWD/$LINK
 
 INPUTS=
 OUTPUT=

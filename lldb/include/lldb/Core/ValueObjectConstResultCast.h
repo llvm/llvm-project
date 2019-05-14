@@ -34,7 +34,7 @@ namespace lldb_private {
 
 class ValueObjectConstResultCast : public ValueObjectCast {
 public:
-  ValueObjectConstResultCast(ValueObject &parent, const ConstString &name,
+  ValueObjectConstResultCast(ValueObject &parent, ConstString name,
                              const CompilerType &cast_type,
                              lldb::addr_t live_address = LLDB_INVALID_ADDRESS);
 

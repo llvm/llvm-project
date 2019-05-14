@@ -15,7 +15,7 @@
 #include <string>
 
 //===----------------------------------------------------------------------===//
-/// @class POSIXStopInfo
+/// \class POSIXStopInfo
 /// Simple base class for all POSIX-specific StopInfo objects.
 ///
 class POSIXStopInfo : public lldb_private::StopInfo {
@@ -25,7 +25,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @class POSIXLimboStopInfo
+/// \class POSIXLimboStopInfo
 /// Represents the stop state of a process ready to exit.
 ///
 class POSIXLimboStopInfo : public POSIXStopInfo {
@@ -44,7 +44,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @class POSIXNewThreadStopInfo
+/// \class POSIXNewThreadStopInfo
 /// Represents the stop state of process when a new thread is spawned.
 ///
 

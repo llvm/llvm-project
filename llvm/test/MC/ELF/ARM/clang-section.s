@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple arm-eabi %s -o - | llvm-readobj -s -t | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple arm-eabi %s -o - | llvm-readobj -S --symbols | FileCheck %s
 // Test that global variables and functions are assigned correct section.
 	.text
 	.syntax unified

@@ -23,9 +23,9 @@ def sync_source_lists():
                                        shell=os.name == 'nt').splitlines()
 
     # Matches e.g. |   "foo.cpp",|, captures |foo| in group 1.
-    gn_cpp_re = re.compile(r'^\s*"([^"]+\.(?:cpp|h))",$', re.MULTILINE)
+    gn_cpp_re = re.compile(r'^\s*"([^"]+\.(?:cpp|c|h|S))",$', re.MULTILINE)
     # Matches e.g. |   foo.cpp|, captures |foo| in group 1.
-    cmake_cpp_re = re.compile(r'^\s*([A-Za-z_0-9/-]+\.(?:cpp|h))$',
+    cmake_cpp_re = re.compile(r'^\s*([A-Za-z_0-9./-]+\.(?:cpp|c|h|S))$',
                               re.MULTILINE)
 
     for gn_file in gn_files:
@@ -61,7 +61,7 @@ def sync_unittests():
     # Matches e.g. |add_llvm_unittest_with_input_files|.
     unittest_re = re.compile(r'^add_\S+_unittest', re.MULTILINE)
 
-    checked = [ 'clang', 'lld', 'llvm' ]
+    checked = [ 'clang', 'clang-tools-extra', 'lld', 'llvm' ]
     for c in checked:
         for root, _, _ in os.walk(os.path.join(c, 'unittests')):
             cmake_file = os.path.join(root, 'CMakeLists.txt')

@@ -1,0 +1,8 @@
+# RUN: echo "" | not yaml2obj 2>&1 | FileCheck %s
+# RUN: echo -n "" | not yaml2obj 2>&1 | FileCheck %s
+# RUN: echo " " | not yaml2obj 2>&1 | FileCheck %s
+# RUN: echo "  " | not yaml2obj 2>&1 | FileCheck %s
+# CHECK: yaml2obj: Unknown document type!
+
+# RUN: echo -e -n "\xff" | not yaml2obj 2>&1 | FileCheck %s --check-prefix=INVALID
+# INVALID: yaml2obj: Failed to parse YAML file!

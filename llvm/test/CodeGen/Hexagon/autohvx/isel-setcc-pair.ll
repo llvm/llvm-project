@@ -11,7 +11,7 @@ define hidden fastcc void @fred(i32 %a0) #0 {
 b1:
   %v2 = insertelement <32 x i32> undef, i32 %a0, i32 0
   %v3 = shufflevector <32 x i32> %v2, <32 x i32> undef, <32 x i32> zeroinitializer
-  %v4 = icmp eq <32 x i32> %v3, undef
+  %v4 = icmp eq <32 x i32> %v2, %v3
   %v5 = and <32 x i1> undef, %v4
   br label %b6
 

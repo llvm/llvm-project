@@ -548,10 +548,10 @@ ByteArrayInfo *LowerTypeTestsModule::createByteArray(BitSetInfo &BSI) {
 }
 
 void LowerTypeTestsModule::allocateByteArrays() {
-  std::stable_sort(ByteArrayInfos.begin(), ByteArrayInfos.end(),
-                   [](const ByteArrayInfo &BAI1, const ByteArrayInfo &BAI2) {
-                     return BAI1.BitSize > BAI2.BitSize;
-                   });
+  llvm::stable_sort(ByteArrayInfos,
+                    [](const ByteArrayInfo &BAI1, const ByteArrayInfo &BAI2) {
+                      return BAI1.BitSize > BAI2.BitSize;
+                    });
 
   std::vector<uint64_t> ByteArrayOffsets(ByteArrayInfos.size());
 
@@ -1552,11 +1552,10 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 
   // Order the sets of indices by size. The GlobalLayoutBuilder works best
   // when given small index sets first.
-  std::stable_sort(
-      TypeMembers.begin(), TypeMembers.end(),
-      [](const std::set<uint64_t> &O1, const std::set<uint64_t> &O2) {
-        return O1.size() < O2.size();
-      });
+  llvm::stable_sort(TypeMembers, [](const std::set<uint64_t> &O1,
+                                    const std::set<uint64_t> &O2) {
+    return O1.size() < O2.size();
+  });
 
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as

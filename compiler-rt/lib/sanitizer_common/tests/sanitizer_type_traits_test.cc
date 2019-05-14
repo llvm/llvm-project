@@ -25,3 +25,8 @@ TEST(SanitizerCommon, IsSame) {
   ASSERT_FALSE((is_same<uptr, sptr>::value));
   ASSERT_FALSE((is_same<uptr, const uptr>::value));
 }
+
+TEST(SanitizerCommon, Conditional) {
+  ASSERT_TRUE((is_same<int, conditional<true, int, double>::type>::value));
+  ASSERT_TRUE((is_same<double, conditional<false, int, double>::type>::value));
+}

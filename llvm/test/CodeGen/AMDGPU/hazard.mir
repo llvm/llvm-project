@@ -81,7 +81,7 @@ body: |
     $vgpr5 = IMPLICIT_DEF
     $vgpr6 = IMPLICIT_DEF
     S_SENDMSG 3, implicit $exec, implicit $m0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard-lookahead-dbg-value
@@ -102,7 +102,7 @@ body: |
     DBG_VALUE 5
     DBG_VALUE 6
     S_SENDMSG 3, implicit $exec, implicit $m0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard-lookahead-dbg-label
@@ -123,5 +123,5 @@ body: |
     DBG_LABEL 5
     DBG_LABEL 6
     S_SENDMSG 3, implicit $exec, implicit $m0
-    S_ENDPGM
+    S_ENDPGM 0
 ...

@@ -185,6 +185,17 @@ void *lsan_realloc(void *p, uptr size, const StackTrace &stack) {
   return SetErrnoOnNull(Reallocate(stack, p, size, 1));
 }
 
+void *lsan_reallocarray(void *ptr, uptr nmemb, uptr size,
+                        const StackTrace &stack) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportReallocArrayOverflow(nmemb, size, &stack);
+  }
+  return lsan_realloc(ptr, nmemb * size, stack);
+}
+
 void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack) {
   return SetErrnoOnNull(Calloc(nmemb, size, stack));
 }

@@ -533,9 +533,7 @@ size_t ObjectFile::ReadSectionData(Section *section,
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Get the section data the file on disk
-//----------------------------------------------------------------------
 size_t ObjectFile::ReadSectionData(Section *section,
                                    DataExtractor &section_data) {
   // If some other objectfile owns this data, pass this to them.

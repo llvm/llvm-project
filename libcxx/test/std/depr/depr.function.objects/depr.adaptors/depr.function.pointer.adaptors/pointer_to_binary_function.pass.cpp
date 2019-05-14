@@ -11,6 +11,8 @@
 
 // pointer_to_binary_function
 
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <functional>
 #include <type_traits>
 #include <cassert>

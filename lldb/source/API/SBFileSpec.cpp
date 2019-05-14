@@ -13,7 +13,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -60,11 +59,29 @@ const SBFileSpec &SBFileSpec::operator=(const SBFileSpec &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
+}
+
+bool SBFileSpec::operator==(const SBFileSpec &rhs) const {
+  LLDB_RECORD_METHOD_CONST(bool, SBFileSpec, operator==,(const SBFileSpec &rhs),
+                           rhs);
+
+  return ref() == rhs.ref();
+}
+
+bool SBFileSpec::operator!=(const SBFileSpec &rhs) const {
+  LLDB_RECORD_METHOD_CONST(bool, SBFileSpec, operator!=,(const SBFileSpec &rhs),
+                           rhs);
+
+  return !(*this == rhs);
 }
 
 bool SBFileSpec::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFileSpec, IsValid);
+  return this->operator bool();
+}
+SBFileSpec::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFileSpec, operator bool);
 
   return m_opaque_up->operator bool();
 }
@@ -72,16 +89,7 @@ bool SBFileSpec::IsValid() const {
 bool SBFileSpec::Exists() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFileSpec, Exists);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  bool result = FileSystem::Instance().Exists(*m_opaque_up);
-
-  if (log)
-    log->Printf("SBFileSpec(%p)::Exists () => %s",
-                static_cast<void *>(m_opaque_up.get()),
-                (result ? "true" : "false"));
-
-  return result;
+  return FileSystem::Instance().Exists(*m_opaque_up);
 }
 
 bool SBFileSpec::ResolveExecutableLocation() {
@@ -105,19 +113,7 @@ int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
 const char *SBFileSpec::GetFilename() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFileSpec, GetFilename);
 
-  const char *s = m_opaque_up->GetFilename().AsCString();
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (s)
-      log->Printf("SBFileSpec(%p)::GetFilename () => \"%s\"",
-                  static_cast<void *>(m_opaque_up.get()), s);
-    else
-      log->Printf("SBFileSpec(%p)::GetFilename () => NULL",
-                  static_cast<void *>(m_opaque_up.get()));
-  }
-
-  return s;
+  return m_opaque_up->GetFilename().AsCString();
 }
 
 const char *SBFileSpec::GetDirectory() const {
@@ -125,16 +121,6 @@ const char *SBFileSpec::GetDirectory() const {
 
   FileSpec directory{*m_opaque_up};
   directory.GetFilename().Clear();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (directory)
-      log->Printf("SBFileSpec(%p)::GetDirectory () => \"%s\"",
-                  static_cast<void *>(m_opaque_up.get()),
-                  directory.GetCString());
-    else
-      log->Printf("SBFileSpec(%p)::GetDirectory () => NULL",
-                  static_cast<void *>(m_opaque_up.get()));
-  }
   return directory.GetCString();
 }
 
@@ -160,15 +146,7 @@ uint32_t SBFileSpec::GetPath(char *dst_path, size_t dst_len) const {
   LLDB_RECORD_METHOD_CONST(uint32_t, SBFileSpec, GetPath, (char *, size_t),
                            dst_path, dst_len);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   uint32_t result = m_opaque_up->GetPath(dst_path, dst_len);
-
-  if (log)
-    log->Printf("SBFileSpec(%p)::GetPath (dst_path=\"%.*s\", dst_len=%" PRIu64
-                ") => %u",
-                static_cast<void *>(m_opaque_up.get()), result, dst_path,
-                static_cast<uint64_t>(dst_len), result);
 
   if (result == 0 && dst_path && dst_len > 0)
     *dst_path = '\0';
@@ -208,4 +186,38 @@ void SBFileSpec::AppendPathComponent(const char *fn) {
   LLDB_RECORD_METHOD(void, SBFileSpec, AppendPathComponent, (const char *), fn);
 
   m_opaque_up->AppendPathComponent(fn);
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBFileSpec>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, (const lldb::SBFileSpec &));
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, (const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, (const char *, bool));
+  LLDB_REGISTER_METHOD(const lldb::SBFileSpec &,
+                       SBFileSpec, operator=,(const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBFileSpec, operator==,(const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBFileSpec, operator!=,(const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, Exists, ());
+  LLDB_REGISTER_METHOD(bool, SBFileSpec, ResolveExecutableLocation, ());
+  LLDB_REGISTER_STATIC_METHOD(int, SBFileSpec, ResolvePath,
+                              (const char *, char *, size_t));
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFileSpec, GetFilename, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFileSpec, GetDirectory, ());
+  LLDB_REGISTER_METHOD(void, SBFileSpec, SetFilename, (const char *));
+  LLDB_REGISTER_METHOD(void, SBFileSpec, SetDirectory, (const char *));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBFileSpec, GetPath, (char *, size_t));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, GetDescription,
+                             (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(void, SBFileSpec, AppendPathComponent, (const char *));
+}
+
+}
 }

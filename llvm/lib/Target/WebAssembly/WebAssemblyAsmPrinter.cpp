@@ -21,8 +21,10 @@
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
+#include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -31,6 +33,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -159,6 +162,7 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
 
   EmitProducerInfo(M);
+  EmitTargetFeatures(M);
 }
 
 void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
@@ -210,6 +214,56 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     }
     OutStreamer->PopSection();
   }
+}
+
+void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
+  struct FeatureEntry {
+    uint8_t Prefix;
+    StringRef Name;
+  };
+
+  // Read target features and linkage policies from module metadata
+  SmallVector<FeatureEntry, 4> EmittedFeatures;
+  for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+    std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
+    Metadata *Policy = M.getModuleFlag(MDKey);
+    if (Policy == nullptr)
+      continue;
+
+    FeatureEntry Entry;
+    Entry.Prefix = 0;
+    Entry.Name = KV.Key;
+
+    if (auto *MD = cast<ConstantAsMetadata>(Policy))
+      if (auto *I = cast<ConstantInt>(MD->getValue()))
+        Entry.Prefix = I->getZExtValue();
+
+    // Silently ignore invalid metadata
+    if (Entry.Prefix != wasm::WASM_FEATURE_PREFIX_USED &&
+        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_REQUIRED &&
+        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_DISALLOWED)
+      continue;
+
+    EmittedFeatures.push_back(Entry);
+  }
+
+  if (EmittedFeatures.size() == 0)
+    return;
+
+  // Emit features and linkage policies into the "target_features" section
+  MCSectionWasm *FeaturesSection = OutContext.getWasmSection(
+      ".custom_section.target_features", SectionKind::getMetadata());
+  OutStreamer->PushSection();
+  OutStreamer->SwitchSection(FeaturesSection);
+
+  OutStreamer->EmitULEB128IntValue(EmittedFeatures.size());
+  for (auto &F : EmittedFeatures) {
+    OutStreamer->EmitIntValue(F.Prefix, 1);
+    OutStreamer->EmitULEB128IntValue(F.Name.size());
+    OutStreamer->EmitBytes(F.Name);
+  }
+
+  OutStreamer->PopSection();
 }
 
 void WebAssemblyAsmPrinter::EmitConstantPool() {
@@ -333,14 +387,11 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
-                                            unsigned OpNo, unsigned AsmVariant,
+                                            unsigned OpNo,
                                             const char *ExtraCode,
                                             raw_ostream &OS) {
-  if (AsmVariant != 0)
-    report_fatal_error("There are no defined alternate asm variants");
-
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, AsmVariant, ExtraCode, OS))
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
     return false;
 
   if (!ExtraCode) {
@@ -356,8 +407,7 @@ bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
       OS << regToString(MO);
       return false;
     case MachineOperand::MO_GlobalAddress:
-      getSymbol(MO.getGlobal())->print(OS, MAI);
-      printOffset(MO.getOffset(), OS);
+      PrintSymbolOperand(MO, OS);
       return false;
     case MachineOperand::MO_ExternalSymbol:
       GetExternalSymbolSymbol(MO.getSymbolName())->print(OS, MAI);
@@ -376,19 +426,15 @@ bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
 
 bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                                   unsigned OpNo,
-                                                  unsigned AsmVariant,
                                                   const char *ExtraCode,
                                                   raw_ostream &OS) {
-  if (AsmVariant != 0)
-    report_fatal_error("There are no defined alternate asm variants");
-
   // The current approach to inline asm is that "r" constraints are expressed
   // as local indices, rather than values on the operand stack. This simplifies
   // using "r" as it eliminates the need to push and pop the values in a
   // particular order, however it also makes it impossible to have an "m"
   // constraint. So we don't support it.
 
-  return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, AsmVariant, ExtraCode, OS);
+  return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 }
 
 // Force static initialization.

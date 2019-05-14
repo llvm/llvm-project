@@ -23,19 +23,20 @@
 define i32 @test() nounwind {
 ; RV32I-LABEL: test:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw ra, 44(sp)
-; RV32I-NEXT:    sw s1, 40(sp)
-; RV32I-NEXT:    sw s2, 36(sp)
-; RV32I-NEXT:    sw s3, 32(sp)
-; RV32I-NEXT:    sw s4, 28(sp)
-; RV32I-NEXT:    sw s5, 24(sp)
-; RV32I-NEXT:    sw s6, 20(sp)
-; RV32I-NEXT:    sw s7, 16(sp)
-; RV32I-NEXT:    sw s8, 12(sp)
-; RV32I-NEXT:    sw s9, 8(sp)
-; RV32I-NEXT:    sw s10, 4(sp)
-; RV32I-NEXT:    sw s11, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -64
+; RV32I-NEXT:    sw ra, 60(sp)
+; RV32I-NEXT:    sw s0, 56(sp)
+; RV32I-NEXT:    sw s1, 52(sp)
+; RV32I-NEXT:    sw s2, 48(sp)
+; RV32I-NEXT:    sw s3, 44(sp)
+; RV32I-NEXT:    sw s4, 40(sp)
+; RV32I-NEXT:    sw s5, 36(sp)
+; RV32I-NEXT:    sw s6, 32(sp)
+; RV32I-NEXT:    sw s7, 28(sp)
+; RV32I-NEXT:    sw s8, 24(sp)
+; RV32I-NEXT:    sw s9, 20(sp)
+; RV32I-NEXT:    sw s10, 16(sp)
+; RV32I-NEXT:    sw s11, 12(sp)
 ; RV32I-NEXT:    lui s9, %hi(a)
 ; RV32I-NEXT:    lw a0, %lo(a)(s9)
 ; RV32I-NEXT:    beqz a0, .LBB0_11
@@ -43,23 +44,24 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lui s2, %hi(l)
 ; RV32I-NEXT:    lui s3, %hi(k)
 ; RV32I-NEXT:    lui s4, %hi(j)
-; RV32I-NEXT:    lui s5, %hi(i)
+; RV32I-NEXT:    lui s6, %hi(i)
+; RV32I-NEXT:    lui s5, %hi(h)
 ; RV32I-NEXT:    lui s7, %hi(g)
 ; RV32I-NEXT:    lui s8, %hi(f)
-; RV32I-NEXT:    lui s10, %hi(e)
-; RV32I-NEXT:    lui s1, %hi(d)
-; RV32I-NEXT:    lui s11, %hi(c)
-; RV32I-NEXT:    lui s6, %hi(b)
+; RV32I-NEXT:    lui s1, %hi(e)
+; RV32I-NEXT:    lui s0, %hi(d)
+; RV32I-NEXT:    lui s10, %hi(c)
+; RV32I-NEXT:    lui s11, %hi(b)
 ; RV32I-NEXT:  .LBB0_2: # %for.body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    lw a1, %lo(l)(s2)
 ; RV32I-NEXT:    beqz a1, .LBB0_4
 ; RV32I-NEXT:  # %bb.3: # %if.then
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; RV32I-NEXT:    lw a4, %lo(e)(s10)
-; RV32I-NEXT:    lw a3, %lo(d)(s1)
-; RV32I-NEXT:    lw a2, %lo(c)(s11)
-; RV32I-NEXT:    lw a1, %lo(b)(s6)
+; RV32I-NEXT:    lw a4, %lo(e)(s1)
+; RV32I-NEXT:    lw a3, %lo(d)(s0)
+; RV32I-NEXT:    lw a2, %lo(c)(s10)
+; RV32I-NEXT:    lw a1, %lo(b)(s11)
 ; RV32I-NEXT:    addi a5, zero, 32
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_4: # %if.end
@@ -69,10 +71,10 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:  # %bb.5: # %if.then3
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; RV32I-NEXT:    lw a4, %lo(f)(s8)
-; RV32I-NEXT:    lw a3, %lo(e)(s10)
-; RV32I-NEXT:    lw a2, %lo(d)(s1)
-; RV32I-NEXT:    lw a1, %lo(c)(s11)
-; RV32I-NEXT:    lw a0, %lo(b)(s6)
+; RV32I-NEXT:    lw a3, %lo(e)(s1)
+; RV32I-NEXT:    lw a2, %lo(d)(s0)
+; RV32I-NEXT:    lw a1, %lo(c)(s10)
+; RV32I-NEXT:    lw a0, %lo(b)(s11)
 ; RV32I-NEXT:    addi a5, zero, 64
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_6: # %if.end5
@@ -83,23 +85,22 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; RV32I-NEXT:    lw a4, %lo(g)(s7)
 ; RV32I-NEXT:    lw a3, %lo(f)(s8)
-; RV32I-NEXT:    lw a2, %lo(e)(s10)
-; RV32I-NEXT:    lw a1, %lo(d)(s1)
-; RV32I-NEXT:    lw a0, %lo(c)(s11)
+; RV32I-NEXT:    lw a2, %lo(e)(s1)
+; RV32I-NEXT:    lw a1, %lo(d)(s0)
+; RV32I-NEXT:    lw a0, %lo(c)(s10)
 ; RV32I-NEXT:    addi a5, zero, 32
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_8: # %if.end9
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; RV32I-NEXT:    lw a0, %lo(i)(s5)
+; RV32I-NEXT:    lw a0, %lo(i)(s6)
 ; RV32I-NEXT:    beqz a0, .LBB0_10
 ; RV32I-NEXT:  # %bb.9: # %if.then11
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; RV32I-NEXT:    lui a0, %hi(h)
-; RV32I-NEXT:    lw a4, %lo(h)(a0)
+; RV32I-NEXT:    lw a4, %lo(h)(s5)
 ; RV32I-NEXT:    lw a3, %lo(g)(s7)
 ; RV32I-NEXT:    lw a2, %lo(f)(s8)
-; RV32I-NEXT:    lw a1, %lo(e)(s10)
-; RV32I-NEXT:    lw a0, %lo(d)(s1)
+; RV32I-NEXT:    lw a1, %lo(e)(s1)
+; RV32I-NEXT:    lw a0, %lo(d)(s0)
 ; RV32I-NEXT:    addi a5, zero, 32
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_10: # %for.inc
@@ -110,19 +111,20 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    bnez a0, .LBB0_2
 ; RV32I-NEXT:  .LBB0_11: # %for.end
 ; RV32I-NEXT:    addi a0, zero, 1
-; RV32I-NEXT:    lw s11, 0(sp)
-; RV32I-NEXT:    lw s10, 4(sp)
-; RV32I-NEXT:    lw s9, 8(sp)
-; RV32I-NEXT:    lw s8, 12(sp)
-; RV32I-NEXT:    lw s7, 16(sp)
-; RV32I-NEXT:    lw s6, 20(sp)
-; RV32I-NEXT:    lw s5, 24(sp)
-; RV32I-NEXT:    lw s4, 28(sp)
-; RV32I-NEXT:    lw s3, 32(sp)
-; RV32I-NEXT:    lw s2, 36(sp)
-; RV32I-NEXT:    lw s1, 40(sp)
-; RV32I-NEXT:    lw ra, 44(sp)
-; RV32I-NEXT:    addi sp, sp, 48
+; RV32I-NEXT:    lw s11, 12(sp)
+; RV32I-NEXT:    lw s10, 16(sp)
+; RV32I-NEXT:    lw s9, 20(sp)
+; RV32I-NEXT:    lw s8, 24(sp)
+; RV32I-NEXT:    lw s7, 28(sp)
+; RV32I-NEXT:    lw s6, 32(sp)
+; RV32I-NEXT:    lw s5, 36(sp)
+; RV32I-NEXT:    lw s4, 40(sp)
+; RV32I-NEXT:    lw s3, 44(sp)
+; RV32I-NEXT:    lw s2, 48(sp)
+; RV32I-NEXT:    lw s1, 52(sp)
+; RV32I-NEXT:    lw s0, 56(sp)
+; RV32I-NEXT:    lw ra, 60(sp)
+; RV32I-NEXT:    addi sp, sp, 64
 ; RV32I-NEXT:    ret
 entry:
   %.pr = load i32, i32* @a, align 4

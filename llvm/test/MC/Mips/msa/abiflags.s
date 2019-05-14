@@ -3,7 +3,7 @@
 #
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mcpu=mips32r2 -mattr=+msa \
 # RUN:            -filetype=obj -o - \
-# RUN:   | llvm-readobj -sections -section-data -section-relocations - \
+# RUN:   | llvm-readobj --sections --section-data --section-relocations - \
 # RUN:   | FileCheck %s -check-prefix=CHECK-OBJ
 
 # CHECK-ASM: .module fp=32

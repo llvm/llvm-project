@@ -12,6 +12,10 @@ def : ProcessorModel<"generic", NoSchedModel,
   [FeatureWavefrontSize64]
 >;
 
+def : ProcessorModel<"generic-hsa", NoSchedModel,
+  [FeatureWavefrontSize64, FeatureFlatAddressSpace]
+>;
+
 //===------------------------------------------------------------===//
 // GCN GFX6 (Southern Islands (SI)).
 //===------------------------------------------------------------===//
@@ -160,3 +164,10 @@ def : ProcessorModel<"gfx909", SIQuarterSpeedModel,
   FeatureISAVersion9_0_9.Features
 >;
 
+//===----------------------------------------------------------------------===//
+// GCN GFX10.
+//===----------------------------------------------------------------------===//
+
+def : ProcessorModel<"gfx1010", GFX10SpeedModel,
+  FeatureISAVersion10_1_0.Features
+>;

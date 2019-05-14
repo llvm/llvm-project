@@ -28,9 +28,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-//----------------------------------------------------------------------
 // GDBRemoteRegisterContext constructor
-//----------------------------------------------------------------------
 GDBRemoteRegisterContext::GDBRemoteRegisterContext(
     ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
     GDBRemoteDynamicRegisterInfo &reg_info, bool read_all_at_once)
@@ -48,9 +46,7 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
   m_reg_data.SetByteOrder(thread.GetProcess()->GetByteOrder());
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteRegisterContext::~GDBRemoteRegisterContext() {}
 
 void GDBRemoteRegisterContext::InvalidateAllRegisters() {
@@ -257,10 +253,8 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
   }
 
   if (&data != &m_reg_data) {
-#if defined(LLDB_CONFIGURATION_DEBUG)
     assert(m_reg_data.GetByteSize() >=
            reg_info->byte_offset + reg_info->byte_size);
-#endif
     // If our register context and our register info disagree, which should
     // never happen, don't read past the end of the buffer.
     if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
@@ -313,10 +307,8 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
   GDBRemoteCommunicationClient &gdb_comm(
       ((ProcessGDBRemote *)process)->GetGDBRemote());
 
-#if defined(LLDB_CONFIGURATION_DEBUG)
   assert(m_reg_data.GetByteSize() >=
          reg_info->byte_offset + reg_info->byte_size);
-#endif
 
   // If our register context and our register info disagree, which should never
   // happen, don't overwrite past the end of the buffer.

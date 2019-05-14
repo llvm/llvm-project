@@ -11,22 +11,22 @@ define i32 @test(double* nocapture %A, i8* nocapture %B) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[B:%.*]] to <2 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> <i8 3, i8 3>, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 3, i8 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> undef, i8 [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i8> [[TMP4]], i8 [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sitofp <2 x i8> [[TMP6]] to <2 x double>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], <double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP9]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x double> [[TMP11]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP12]], <double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <2 x double> [[TMP13]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP14]], <double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP16:%.*]] = fmul <2 x double> [[TMP15]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[TMP16]], <double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP17]], <2 x double>* [[TMP18]], align 8
 ; CHECK-NEXT:    ret i32 undef

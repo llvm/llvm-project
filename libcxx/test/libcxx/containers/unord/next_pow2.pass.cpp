@@ -22,7 +22,6 @@
 #include <unordered_map>
 #include <cassert>
 
-#include <iostream>
 
 bool
 is_power_of_two(unsigned long n)

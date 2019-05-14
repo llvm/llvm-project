@@ -1,0 +1,15 @@
+REQUIRES: msan
+
+# Check that libFuzzer exits gracefully under SIGINT with MSan.
+RUN: rm -rf %t
+RUN: mkdir -p %t
+RUN: %msan_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGINT
+
+RUN: %run %t/LFSIGINT 2> %t/log & export PID=$!
+RUN: sleep 2
+RUN: kill -SIGINT $PID
+RUN: sleep 3
+RUN: cat %t/log | FileCheck %s
+
+CHECK: libFuzzer: run interrupted; exiting
+CHECK-NOT: WARNING: MemorySanitizer

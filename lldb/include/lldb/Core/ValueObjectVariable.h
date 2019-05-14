@@ -39,10 +39,8 @@ class SymbolContextScope;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A ValueObject that contains a root variable that may or may not
 // have children.
-//----------------------------------------------------------------------
 class ValueObjectVariable : public ValueObject {
 public:
   ~ValueObjectVariable() override;
@@ -91,9 +89,7 @@ protected:
 private:
   ValueObjectVariable(ExecutionContextScope *exe_scope,
                       const lldb::VariableSP &var_sp);
-  //------------------------------------------------------------------
   // For ValueObject only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ValueObjectVariable);
 };
 

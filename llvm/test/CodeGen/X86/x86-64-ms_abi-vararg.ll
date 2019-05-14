@@ -6,9 +6,9 @@
 define win64cc void @average_va(i32 %count, ...) nounwind {
 entry:
 ; CHECK: pushq
-; CHECK: movq   %r9, 40(%rsp)
-; CHECK: movq   %r8, 32(%rsp)
-; CHECK: movq   %rdx, 24(%rsp)
+; CHECK-DAG: movq   %r9, 40(%rsp)
+; CHECK-DAG: movq   %r8, 32(%rsp)
+; CHECK-DAG: movq   %rdx, 24(%rsp)
 ; CHECK: leaq   24(%rsp), %rax
 
   %ap = alloca i8*, align 8                       ; <i8**> [#uses=1]
@@ -59,8 +59,8 @@ entry:
 
 ; CHECK-LABEL: copy1:
 ; CHECK: leaq 32(%rsp), [[REG_copy1:%[a-z]+]]
-; CHECK: movq [[REG_copy1]], 8(%rsp)
-; CHECK: movq [[REG_copy1]], (%rsp)
+; CHECK-DAG: movq [[REG_copy1]], 8(%rsp)
+; CHECK-DAG: movq [[REG_copy1]], (%rsp)
 ; CHECK: ret
 define win64cc void @copy1(i64 %a0, ...) nounwind {
 entry:

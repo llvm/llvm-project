@@ -907,6 +907,11 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
   return msan_realloc(ptr, size, &stack);
 }
 
+INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
+  GET_MALLOC_STACK_TRACE;
+  return msan_reallocarray(ptr, nmemb, size, &stack);
+}
+
 INTERCEPTOR(void *, malloc, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!msan_inited))
@@ -1187,14 +1192,14 @@ INTERCEPTOR(int, fork, void) {
 // NetBSD ships with openpty(3) in -lutil, that needs to be prebuilt explicitly
 // with MSan.
 #if SANITIZER_LINUX
-INTERCEPTOR(int, openpty, int *amaster, int *aslave, char *name,
+INTERCEPTOR(int, openpty, int *aparent, int *aworker, char *name,
             const void *termp, const void *winp) {
   ENSURE_MSAN_INITED();
   InterceptorScope interceptor_scope;
-  int res = REAL(openpty)(amaster, aslave, name, termp, winp);
+  int res = REAL(openpty)(aparent, aworker, name, termp, winp);
   if (!res) {
-    __msan_unpoison(amaster, sizeof(*amaster));
-    __msan_unpoison(aslave, sizeof(*aslave));
+    __msan_unpoison(aparent, sizeof(*aparent));
+    __msan_unpoison(aworker, sizeof(*aworker));
   }
   return res;
 }
@@ -1206,13 +1211,13 @@ INTERCEPTOR(int, openpty, int *amaster, int *aslave, char *name,
 // NetBSD ships with forkpty(3) in -lutil, that needs to be prebuilt explicitly
 // with MSan.
 #if SANITIZER_LINUX
-INTERCEPTOR(int, forkpty, int *amaster, char *name, const void *termp,
+INTERCEPTOR(int, forkpty, int *aparent, char *name, const void *termp,
             const void *winp) {
   ENSURE_MSAN_INITED();
   InterceptorScope interceptor_scope;
-  int res = REAL(forkpty)(amaster, name, termp, winp);
+  int res = REAL(forkpty)(aparent, name, termp, winp);
   if (res != -1)
-    __msan_unpoison(amaster, sizeof(*amaster));
+    __msan_unpoison(aparent, sizeof(*aparent));
   return res;
 }
 #define MSAN_MAYBE_INTERCEPT_FORKPTY INTERCEPT_FUNCTION(forkpty)
@@ -1243,13 +1248,13 @@ int OnExit() {
 
 #define MSAN_INTERCEPT_FUNC(name)                                       \
   do {                                                                  \
-    if ((!INTERCEPT_FUNCTION(name) || !REAL(name)))                     \
+    if (!INTERCEPT_FUNCTION(name))                                      \
       VReport(1, "MemorySanitizer: failed to intercept '" #name "'\n"); \
   } while (0)
 
 #define MSAN_INTERCEPT_FUNC_VER(name, ver)                                    \
   do {                                                                        \
-    if ((!INTERCEPT_FUNCTION_VER(name, ver) || !REAL(name)))                  \
+    if (!INTERCEPT_FUNCTION_VER(name, ver))                                   \
       VReport(                                                                \
           1, "MemorySanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
   } while (0)
@@ -1597,6 +1602,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(realloc);
+  INTERCEPT_FUNCTION(reallocarray);
   INTERCEPT_FUNCTION(free);
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;

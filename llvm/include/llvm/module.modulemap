@@ -5,6 +5,7 @@ module LLVM_Analysis {
 
   // This is intended for (repeated) textual inclusion.
   textual header "Analysis/TargetLibraryInfo.def"
+  textual header "Analysis/VecFuncs.def"
 }
 
 module LLVM_AsmParser {
@@ -53,6 +54,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/Dwarf.def"
     textual header "BinaryFormat/DynamicTags.def"
     textual header "BinaryFormat/MachO.def"
+    textual header "BinaryFormat/MinidumpConstants.def"
     textual header "BinaryFormat/ELFRelocs/AArch64.def"
     textual header "BinaryFormat/ELFRelocs/AMDGPU.def"
     textual header "BinaryFormat/ELFRelocs/ARM.def"
@@ -235,6 +237,7 @@ module LLVM_intrinsic_gen {
   }
   module IR_IntrinsicInst { header "IR/IntrinsicInst.h" export * }
   module IR_PatternMatch { header "IR/PatternMatch.h" export * }
+  module IR_SafepointIRVerifier { header "IR/SafepointIRVerifier.h" export * }
   module IR_Statepoint { header "IR/Statepoint.h" export * }
 
   export *

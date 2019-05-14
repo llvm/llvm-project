@@ -58,6 +58,17 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
 /// Get info about symbols at \p Pos.
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);
 
+/// Find the record type references at \p Pos.
+const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos);
+
+/// Given a record type declaration, find its base (parent) types.
+std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD);
+
+/// Get type hierarchy information at \p Pos.
+llvm::Optional<TypeHierarchyItem>
+getTypeHierarchy(ParsedAST &AST, Position Pos, int Resolve,
+                 TypeHierarchyDirection Direction);
+
 } // namespace clangd
 } // namespace clang
 

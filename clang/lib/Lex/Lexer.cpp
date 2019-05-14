@@ -2072,7 +2072,7 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
 
   // Update the location of token as well as BufferPtr.
   const char *TokStart = BufferPtr;
-  FormTokenWithChars(Result, CurPtr, tok::angle_string_literal);
+  FormTokenWithChars(Result, CurPtr, tok::header_name);
   Result.setLiteralData(TokStart);
   return true;
 }
@@ -3465,7 +3465,9 @@ LexNextToken:
   case '"':
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
-    return LexStringLiteral(Result, CurPtr, tok::string_literal);
+    return LexStringLiteral(Result, CurPtr,
+                            ParsingFilename ? tok::header_name
+                                            : tok::string_literal);
 
   // C99 6.4.6: Punctuators.
   case '?':

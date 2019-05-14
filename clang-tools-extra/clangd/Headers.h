@@ -119,9 +119,12 @@ collectIncludeStructureCallback(const SourceManager &SM, IncludeStructure *Out);
 // Calculates insertion edit for including a new header in a file.
 class IncludeInserter {
 public:
+  // If \p HeaderSearchInfo is nullptr (e.g. when compile command is
+  // infeasible), this will only try to insert verbatim headers, and
+  // include path of non-verbatim header will not be shortened.
   IncludeInserter(StringRef FileName, StringRef Code,
                   const format::FormatStyle &Style, StringRef BuildDir,
-                  HeaderSearch &HeaderSearchInfo)
+                  HeaderSearch *HeaderSearchInfo)
       : FileName(FileName), Code(Code), BuildDir(BuildDir),
         HeaderSearchInfo(HeaderSearchInfo),
         Inserter(FileName, Code, Style.IncludeStyle) {}
@@ -134,25 +137,22 @@ public:
   ///   in \p Inclusions (including those included via different paths).
   ///   - \p DeclaringHeader or \p InsertedHeader is the same as \p File.
   ///
-  /// \param DeclaringHeader is the original header corresponding to \p
+  /// \param DeclaringHeader is path of the original header corresponding to \p
   /// InsertedHeader e.g. the header that declares a symbol.
   /// \param InsertedHeader The preferred header to be inserted. This could be
   /// the same as DeclaringHeader but must be provided.
-  bool shouldInsertInclude(const HeaderFile &DeclaringHeader,
+  bool shouldInsertInclude(PathRef DeclaringHeader,
                            const HeaderFile &InsertedHeader) const;
 
   /// Determines the preferred way to #include a file, taking into account the
   /// search path. Usually this will prefer a shorter representation like
   /// 'Foo/Bar.h' over a longer one like 'Baz/include/Foo/Bar.h'.
   ///
-  /// \param DeclaringHeader is the original header corresponding to \p
-  /// InsertedHeader e.g. the header that declares a symbol.
   /// \param InsertedHeader The preferred header to be inserted. This could be
   /// the same as DeclaringHeader but must be provided.
   ///
   /// \return A quoted "path" or <path> to be included.
-  std::string calculateIncludePath(const HeaderFile &DeclaringHeader,
-                                   const HeaderFile &InsertedHeader) const;
+  std::string calculateIncludePath(const HeaderFile &InsertedHeader) const;
 
   /// Calculates an edit that inserts \p VerbatimHeader into code. If the header
   /// is already included, this returns None.
@@ -162,7 +162,7 @@ private:
   StringRef FileName;
   StringRef Code;
   StringRef BuildDir;
-  HeaderSearch &HeaderSearchInfo;
+  HeaderSearch *HeaderSearchInfo = nullptr;
   llvm::StringSet<> IncludedHeaders; // Both written and resolved.
   tooling::HeaderIncludes Inserter;  // Computers insertion replacement.
 };

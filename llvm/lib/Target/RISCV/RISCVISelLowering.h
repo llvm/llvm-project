@@ -98,6 +98,10 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
+    return VT.isScalarInteger();
+  }
+
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
   }
@@ -105,6 +109,16 @@ public:
                                 AtomicOrdering Ord) const override;
   Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
+
+  ISD::NodeType getExtendForAtomicOps() const override {
+    return ISD::SIGN_EXTEND;
+  }
+
+  bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
+    if (DAG.getMachineFunction().getFunction().hasMinSize())
+      return false;
+    return true;
+  }
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
@@ -133,6 +147,10 @@ private:
                                          Type *Ty) const override {
     return true;
   }
+
+  template <class NodeTy>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG) const;
+
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
@@ -140,6 +158,8 @@ private:
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

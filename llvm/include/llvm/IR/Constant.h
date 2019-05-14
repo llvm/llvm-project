@@ -90,6 +90,10 @@ public:
   /// elements.
   bool containsUndefElement() const;
 
+  /// Return true if this is a vector constant that includes any constant
+  /// expressions.
+  bool containsConstantExpression() const;
+
   /// Return true if evaluation of this constant could trap. This is true for
   /// things like constant expressions that could divide by zero.
   bool canTrap() const;

@@ -21,8 +21,7 @@ body:             |
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @.str
     ; MIPS32: [[LUi1:%[0-9]+]]:gpr32 = LUi 18838
     ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi [[LUi1]], 722
-    ; MIPS32: [[LUi2:%[0-9]+]]:gpr32 = LUi 0
-    ; MIPS32: [[ORi1:%[0-9]+]]:gpr32 = ORi [[LUi2]], 0
+    ; MIPS32: [[ORi1:%[0-9]+]]:gpr32 = ORi $zero, 0
     ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; MIPS32: $a0 = COPY [[ADDiu]]
     ; MIPS32: $a1 = COPY [[ORi]]

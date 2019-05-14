@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %p/Inputs/shared.s -o %t-lib.o
 # RUN: ld.lld -shared %t-lib.o -o %t-lib.so
 # RUN: ld.lld %t-lib.so %t.o -o %t.exe
-# RUN: llvm-readobj -dyn-relocations %t.exe | FileCheck %s
+# RUN: llvm-readobj --dyn-relocations %t.exe | FileCheck %s
 
 ## Checks if got access to dynamic objects is done through a got relative
 ## dynamic relocation and not using plt relative (R_AARCH64_JUMP_SLOT).

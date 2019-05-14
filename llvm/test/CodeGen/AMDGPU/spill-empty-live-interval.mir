@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=1 -start-before=simple-register-coalescing -stop-after=greedy -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-dce-in-ra=0 -verify-machineinstrs -stress-regalloc=1 -start-before=simple-register-coalescing -stop-after=greedy -o - %s | FileCheck %s
 # https://bugs.llvm.org/show_bug.cgi?id=33620
 
 ---
@@ -19,6 +19,11 @@
 
 name: expecting_non_empty_interval
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchWaveOffsetReg: $sgpr4
+  frameOffsetReg: $sgpr5
+  stackPtrOffsetReg: $sgpr32
 body:             |
   bb.0:
     successors: %bb.1
@@ -49,6 +54,11 @@ body:             |
 # CHECK-NEXT: S_NOP 0, implicit %2.sub2
 name: rematerialize_empty_interval_has_reference
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchWaveOffsetReg: $sgpr4
+  frameOffsetReg: $sgpr5
+  stackPtrOffsetReg: $sgpr32
 body:             |
   bb.0:
     successors: %bb.1

@@ -34,7 +34,8 @@ entry:
 ; GCN-NOHSA: buffer_load_dwordx2 v
 ; GCN-HSA: flat_load_dwordx2 v
 
-; EGCM-DAG: VTX_READ_32 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
+; EGCM-DAG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
+; EGCM-DAG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 2, #1
 ; EGCM-DAG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 4, #1
 define amdgpu_kernel void @global_load_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> addrspace(1)* %in) {
 entry:
@@ -195,10 +196,9 @@ define amdgpu_kernel void @global_sextload_v2i16_to_v2i32(<2 x i32> addrspace(1)
 ; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}}
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}},
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9]\.[XYZW]}},
-; EGCM-DAG: VTX_READ_32 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 0, #1
-; EGCM-DAG: VTX_READ_16 [[DST_HI:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 4, #1
-; TODO: This should use DST, but for some there are redundant MOVs
-; EGCM: LSHR {{[* ]*}}[[ST_LO]].Y, {{T[0-9]\.[XYZW]}}, literal
+; EGCM-DAG: VTX_READ_16 [[ST_LO]].X, [[SRC:T[0-9]\.[XYZW]]], 0, #1
+; EGCM-DAG: VTX_READ_16 {{T[0-9]\.[XYZW]}}, [[SRC]], 2, #1
+; EGCM-DAG: VTX_READ_16 [[ST_HI]].X, [[SRC]], 4, #1
 ; EGCM: 16
 define amdgpu_kernel void @global_zextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(1)* %in) {
 entry:
@@ -216,11 +216,11 @@ entry:
 ; CM: MEM_RAT_CACHELESS STORE_DWORD [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}}
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9]\.[XYZW]}},
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9]\.[XYZW]}},
-; EGCM-DAG: VTX_READ_32 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9].[XYZW]}}, 0, #1
-; EGCM-DAG: VTX_READ_16 [[DST_HI:T[0-9]\.[XYZW]]], {{T[0-9].[XYZW]}}, 4, #1
-; TODO: This should use DST, but for some there are redundant MOVs
-; EGCM-DAG: ASHR {{[* ]*}}[[ST_LO]].Y, {{T[0-9]\.[XYZW]}}, literal
-; EGCM-DAG: BFE_INT {{[* ]*}}[[ST_LO]].X, {{T[0-9]\.[XYZW]}}, 0.0, literal
+; EGCM-DAG: VTX_READ_16 [[DST_LO:T[0-9]\.[XYZW]]], [[SRC:T[0-9].[XYZW]]], 0, #1
+; EGCM-DAG: VTX_READ_16 [[DST_MID:T[0-9]\.[XYZW]]], [[SRC]], 2, #1
+; EGCM-DAG: VTX_READ_16 [[DST_HI:T[0-9]\.[XYZW]]], [[SRC]], 4, #1
+; EGCM-DAG: BFE_INT {{[* ]*}}[[ST_LO]].X, [[DST_LO]], 0.0, literal
+; EGCM-DAG: BFE_INT {{[* ]*}}[[ST_LO]].Y, [[DST_MID]], 0.0, literal
 ; EGCM-DAG: BFE_INT {{[* ]*}}[[ST_HI]].X, [[DST_HI]], 0.0, literal
 ; EGCM-DAG: 16
 ; EGCM-DAG: 16

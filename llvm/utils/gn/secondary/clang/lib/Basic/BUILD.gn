@@ -34,7 +34,6 @@ static_library("Basic") {
     "FixedPoint.cpp",
     "IdentifierTable.cpp",
     "LangOptions.cpp",
-    "MemoryBufferCache.cpp",
     "Module.cpp",
     "ObjCRuntime.cpp",
     "OpenMPKinds.cpp",

@@ -20,30 +20,33 @@
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/ThreadPool.h"
 
 namespace llvm {
 namespace orc {
 
+class LLJITBuilderState;
+class LLLazyJITBuilderState;
+
 /// A pre-fabricated ORC JIT stack that can serve as an alternative to MCJIT.
+///
+/// Create instances using LLJITBuilder.
 class LLJIT {
+  template <typename, typename, typename> friend class LLJITBuilderSetters;
+
 public:
+  static Expected<std::unique_ptr<LLJIT>> Create(LLJITBuilderState &S);
 
   /// Destruct this instance. If a multi-threaded instance, waits for all
   /// compile threads to complete.
   ~LLJIT();
 
-  /// Create an LLJIT instance.
-  /// If NumCompileThreads is not equal to zero, creates a multi-threaded
-  /// LLJIT with the given number of compile threads.
-  static Expected<std::unique_ptr<LLJIT>>
-  Create(JITTargetMachineBuilder JTMB, DataLayout DL,
-         unsigned NumCompileThreads = 0);
-
   /// Returns the ExecutionSession for this instance.
   ExecutionSession &getExecutionSession() { return *ES; }
+
+  /// Returns a reference to the DataLayout for this instance.
+  const DataLayout &getDataLayout() const { return DL; }
 
   /// Returns a reference to the JITDylib representing the JIT'd main program.
   JITDylib &getMainJITDylib() { return Main; }
@@ -103,17 +106,14 @@ public:
   Error runDestructors() { return DtorRunner.run(); }
 
   /// Returns a reference to the ObjLinkingLayer
-  RTDyldObjectLinkingLayer &getObjLinkingLayer() { return ObjLinkingLayer; }
+  ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
 protected:
+  static std::unique_ptr<ObjectLayer>
+  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
 
   /// Create an LLJIT instance with a single compile thread.
-  LLJIT(std::unique_ptr<ExecutionSession> ES, std::unique_ptr<TargetMachine> TM,
-        DataLayout DL);
-
-  /// Create an LLJIT instance with multiple compile threads.
-  LLJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
-        DataLayout DL, unsigned NumCompileThreads);
+  LLJIT(LLJITBuilderState &S, Error &Err);
 
   std::string mangle(StringRef UnmangledName);
 
@@ -127,8 +127,8 @@ protected:
   DataLayout DL;
   std::unique_ptr<ThreadPool> CompileThreads;
 
-  RTDyldObjectLinkingLayer ObjLinkingLayer;
-  IRCompileLayer CompileLayer;
+  std::unique_ptr<ObjectLayer> ObjLinkingLayer;
+  std::unique_ptr<IRCompileLayer> CompileLayer;
 
   CtorDtorRunner CtorRunner, DtorRunner;
 };
@@ -136,25 +136,20 @@ protected:
 /// An extended version of LLJIT that supports lazy function-at-a-time
 /// compilation of LLVM IR.
 class LLLazyJIT : public LLJIT {
-public:
+  template <typename, typename, typename> friend class LLJITBuilderSetters;
 
-  /// Create an LLLazyJIT instance.
-  /// If NumCompileThreads is not equal to zero, creates a multi-threaded
-  /// LLLazyJIT with the given number of compile threads.
-  static Expected<std::unique_ptr<LLLazyJIT>>
-  Create(JITTargetMachineBuilder JTMB, DataLayout DL,
-         JITTargetAddress ErrorAddr, unsigned NumCompileThreads = 0);
+public:
 
   /// Set an IR transform (e.g. pass manager pipeline) to run on each function
   /// when it is compiled.
   void setLazyCompileTransform(IRTransformLayer::TransformFunction Transform) {
-    TransformLayer.setTransform(std::move(Transform));
+    TransformLayer->setTransform(std::move(Transform));
   }
 
   /// Sets the partition function.
   void
   setPartitionFunction(CompileOnDemandLayer::PartitionFunction Partition) {
-    CODLayer.setPartitionFunction(std::move(Partition));
+    CODLayer->setPartitionFunction(std::move(Partition));
   }
 
   /// Add a module to be lazily compiled to JITDylib JD.
@@ -168,23 +163,143 @@ public:
 private:
 
   // Create a single-threaded LLLazyJIT instance.
-  LLLazyJIT(std::unique_ptr<ExecutionSession> ES,
-            std::unique_ptr<TargetMachine> TM, DataLayout DL,
-            std::unique_ptr<LazyCallThroughManager> LCTMgr,
-            std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder);
-
-  // Create a multi-threaded LLLazyJIT instance.
-  LLLazyJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
-            DataLayout DL, unsigned NumCompileThreads,
-            std::unique_ptr<LazyCallThroughManager> LCTMgr,
-            std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder);
+  LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
-  std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder;
-
-  IRTransformLayer TransformLayer;
-  CompileOnDemandLayer CODLayer;
+  std::unique_ptr<IRTransformLayer> TransformLayer;
+  std::unique_ptr<CompileOnDemandLayer> CODLayer;
 };
+
+class LLJITBuilderState {
+public:
+  using CreateObjectLinkingLayerFunction =
+      std::function<std::unique_ptr<ObjectLayer>(ExecutionSession &)>;
+
+  std::unique_ptr<ExecutionSession> ES;
+  Optional<JITTargetMachineBuilder> JTMB;
+  CreateObjectLinkingLayerFunction CreateObjectLinkingLayer;
+  unsigned NumCompileThreads = 0;
+
+  /// Called prior to JIT class construcion to fix up defaults.
+  Error prepareForConstruction();
+};
+
+template <typename JITType, typename SetterImpl, typename State>
+class LLJITBuilderSetters {
+public:
+  /// Set the JITTargetMachineBuilder for this instance.
+  ///
+  /// If this method is not called, JITTargetMachineBuilder::detectHost will be
+  /// used to construct a default target machine builder for the host platform.
+  SetterImpl &setJITTargetMachineBuilder(JITTargetMachineBuilder JTMB) {
+    impl().JTMB = std::move(JTMB);
+    return impl();
+  }
+
+  /// Return a reference to the JITTargetMachineBuilder.
+  ///
+  Optional<JITTargetMachineBuilder> &getJITTargetMachineBuilder() {
+    return impl().JTMB;
+  }
+
+  /// Set an ObjectLinkingLayer creation function.
+  ///
+  /// If this method is not called, a default creation function will be used
+  /// that will construct an RTDyldObjectLinkingLayer.
+  SetterImpl &setCreateObjectLinkingLayer(
+      LLJITBuilderState::CreateObjectLinkingLayerFunction
+          CreateObjectLinkingLayer) {
+    impl().CreateObjectLinkingLayer = std::move(CreateObjectLinkingLayer);
+    return impl();
+  }
+
+  /// Set the number of compile threads to use.
+  ///
+  /// If set to zero, compilation will be performed on the execution thread when
+  /// JITing in-process. If set to any other number N, a thread pool of N
+  /// threads will be created for compilation.
+  ///
+  /// If this method is not called, behavior will be as if it were called with
+  /// a zero argument.
+  SetterImpl &setNumCompileThreads(unsigned NumCompileThreads) {
+    impl().NumCompileThreads = NumCompileThreads;
+    return impl();
+  }
+
+  /// Create an instance of the JIT.
+  Expected<std::unique_ptr<JITType>> create() {
+    if (auto Err = impl().prepareForConstruction())
+      return std::move(Err);
+
+    Error Err = Error::success();
+    std::unique_ptr<JITType> J(new JITType(impl(), Err));
+    if (Err)
+      return std::move(Err);
+    return std::move(J);
+  }
+
+protected:
+  SetterImpl &impl() { return static_cast<SetterImpl &>(*this); }
+};
+
+/// Constructs LLJIT instances.
+class LLJITBuilder
+    : public LLJITBuilderState,
+      public LLJITBuilderSetters<LLJIT, LLJITBuilder, LLJITBuilderState> {};
+
+class LLLazyJITBuilderState : public LLJITBuilderState {
+  friend class LLLazyJIT;
+
+public:
+  using IndirectStubsManagerBuilderFunction =
+      std::function<std::unique_ptr<IndirectStubsManager>()>;
+
+  Triple TT;
+  JITTargetAddress LazyCompileFailureAddr = 0;
+  std::unique_ptr<LazyCallThroughManager> LCTMgr;
+  IndirectStubsManagerBuilderFunction ISMBuilder;
+
+  Error prepareForConstruction();
+};
+
+template <typename JITType, typename SetterImpl, typename State>
+class LLLazyJITBuilderSetters
+    : public LLJITBuilderSetters<JITType, SetterImpl, State> {
+public:
+  /// Set the address in the target address to call if a lazy compile fails.
+  ///
+  /// If this method is not called then the value will default to 0.
+  SetterImpl &setLazyCompileFailureAddr(JITTargetAddress Addr) {
+    this->impl().LazyCompileFailureAddr = Addr;
+    return this->impl();
+  }
+
+  /// Set the lazy-callthrough manager.
+  ///
+  /// If this method is not called then a default, in-process lazy callthrough
+  /// manager for the host platform will be used.
+  SetterImpl &
+  setLazyCallthroughManager(std::unique_ptr<LazyCallThroughManager> LCTMgr) {
+    this->impl().LCTMgr = std::move(LCTMgr);
+    return this->impl();
+  }
+
+  /// Set the IndirectStubsManager builder function.
+  ///
+  /// If this method is not called then a default, in-process
+  /// IndirectStubsManager builder for the host platform will be used.
+  SetterImpl &setIndirectStubsManagerBuilder(
+      LLLazyJITBuilderState::IndirectStubsManagerBuilderFunction ISMBuilder) {
+    this->impl().ISMBuilder = std::move(ISMBuilder);
+    return this->impl();
+  }
+};
+
+/// Constructs LLLazyJIT instances.
+class LLLazyJITBuilder
+    : public LLLazyJITBuilderState,
+      public LLLazyJITBuilderSetters<LLLazyJIT, LLLazyJITBuilder,
+                                     LLLazyJITBuilderState> {};
 
 } // End namespace orc
 } // End namespace llvm

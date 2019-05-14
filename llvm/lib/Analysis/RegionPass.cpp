@@ -285,10 +285,10 @@ static std::string getDescription(const Region &R) {
 bool RegionPass::skipRegion(Region &R) const {
   Function &F = *R.getEntry()->getParent();
   OptPassGate &Gate = F.getContext().getOptPassGate();
-  if (Gate.isEnabled() && Gate.shouldRunPass(this, getDescription(R)))
+  if (Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(R)))
     return true;
 
-  if (F.hasFnAttribute(Attribute::OptimizeNone)) {
+  if (F.hasOptNone()) {
     // Report this only once per function.
     if (R.getEntry() == &F.getEntryBlock())
       LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName()

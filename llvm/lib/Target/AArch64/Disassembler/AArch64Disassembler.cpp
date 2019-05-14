@@ -219,11 +219,6 @@ static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodeSVEIncDecImm(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr, const void *Decoder);
 
-static DecodeStatus DecodeLoadAllocTagArrayInstruction(MCInst &Inst,
-                                                       uint32_t insn,
-                                                       uint64_t address,
-                                                       const void* Decoder);
-
 static bool Check(DecodeStatus &Out, DecodeStatus In) {
   switch (In) {
     case MCDisassembler::Success:
@@ -1850,26 +1845,4 @@ static DecodeStatus DecodeSVEIncDecImm(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr, const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(Imm + 1));
   return Success;
-}
-
-static DecodeStatus DecodeLoadAllocTagArrayInstruction(MCInst &Inst,
-                                                       uint32_t insn,
-                                                       uint64_t address,
-                                                       const void* Decoder) {
-  unsigned Rn = fieldFromInstruction(insn, 5, 5);
-  unsigned Rt = fieldFromInstruction(insn, 0, 5);
-
-  // Outputs
-  DecodeGPR64spRegisterClass(Inst, Rn, address, Decoder);
-  DecodeGPR64RegisterClass(Inst, Rt, address, Decoder);
-
-  // Input (Rn again)
-  Inst.addOperand(Inst.getOperand(0));
-
-  //Do this post decode since the raw number for xzr and sp is the same
-  if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg()) {
-    return SoftFail;
-  } else {
-    return Success;
-  }
 }

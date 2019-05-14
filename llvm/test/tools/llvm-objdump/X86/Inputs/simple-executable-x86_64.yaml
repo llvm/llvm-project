@@ -33,41 +33,43 @@ Sections:
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
     AddressAlign:    0x0000000000000001
     Content:         5562756E747520636C616E672076657273696F6E20332E352D317562756E74753120287472756E6B2920286261736564206F6E204C4C564D20332E352900
-Symbols:         
-  Local:           
-    - Type:            STT_SECTION
-      Section:         .text
-    - Type:            STT_SECTION
-      Section:         .anothertext
-      Value:           0x0000000000000010
-    - Type:            STT_SECTION
-      Section:         .eh_frame
-      Value:           0x0000000000000050
-    - Type:            STT_SECTION
-      Section:         .data
-      Value:           0x00000000000000A8
-    - Type:            STT_SECTION
-      Section:         .comment
-    - Name:            /tmp/a.c
-      Type:            STT_FILE
-    - Type:            STT_FILE
-  Global:          
-    - Name:            somedata
-      Type:            STT_OBJECT
-      Section:         .anothertext
-      Value:           0x0000000000000045
-    - Name:            main
-      Type:            STT_FUNC
-      Section:         .anothertext
-      Value:           0x0000000000000010
-      Size:            0x000000000000003F
-    - Name:            foo
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            a
-      Type:            STT_OBJECT
-      Section:         .data
-      Value:           0x00000000000000A8
-      Size:            0x0000000000000004
+Symbols:
+  - Type:            STT_SECTION
+    Section:         .text
+  - Type:            STT_SECTION
+    Section:         .anothertext
+    Value:           0x0000000000000010
+  - Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x0000000000000050
+  - Type:            STT_SECTION
+    Section:         .data
+    Value:           0x00000000000000A8
+  - Type:            STT_SECTION
+    Section:         .comment
+  - Name:            /tmp/a.c
+    Type:            STT_FILE
+  - Type:            STT_FILE          
+  - Name:            somedata
+    Type:            STT_OBJECT
+    Section:         .anothertext
+    Value:           0x0000000000000045
+    Binding:         STB_GLOBAL
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .anothertext
+    Value:           0x0000000000000010
+    Size:            0x000000000000003F
+    Binding:         STB_GLOBAL
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            a
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x00000000000000A8
+    Size:            0x0000000000000004
+    Binding:         STB_GLOBAL
 ...

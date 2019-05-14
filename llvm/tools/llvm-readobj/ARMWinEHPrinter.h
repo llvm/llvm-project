@@ -156,7 +156,7 @@ public:
   Decoder(ScopedPrinter &SW, bool isAArch64) : SW(SW),
                                                OS(SW.getOStream()),
                                                isAArch64(isAArch64) {}
-  std::error_code dumpProcedureData(const object::COFFObjectFile &COFF);
+  Error dumpProcedureData(const object::COFFObjectFile &COFF);
 };
 }
 }

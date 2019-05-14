@@ -42,8 +42,8 @@ declare void @f(double);
 
 ; CHECK-LABEL:     test_byval_8_bytes_alignment_fixed_arg:
 ; CHECK-NOT:   str     r1
-; CHECK:       str     r3, [sp, #12]
-; CHECK:       str     r2, [sp, #8]
+; CHECK-DAG:   str     r3, [sp, #12]
+; CHECK-DAG:   str     r2, [sp, #8]
 ; CHECK-NOT:   str     r1
 define void @test_byval_8_bytes_alignment_fixed_arg(i32 %n1, %struct_t* byval %val) nounwind {
 entry:

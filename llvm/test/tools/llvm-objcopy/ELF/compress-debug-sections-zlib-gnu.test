@@ -6,9 +6,9 @@
 
 # RUN: llvm-objdump -s %t.o --section=.debug_foo | FileCheck %s
 # RUN: llvm-objdump -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-COMPRESSED
-# RUN: llvm-readobj --relocations -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
-# RUN: llvm-readobj --relocations -s %t-decompressed.o | FileCheck %s --check-prefix=CHECK-HEADER
-# RUN: llvm-readobj --relocations -s %t.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-readobj --relocations -S %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
+# RUN: llvm-readobj --relocations -S %t-decompressed.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-readobj --relocations -S %t.o | FileCheck %s --check-prefix=CHECK-HEADER
 # RUN: llvm-objdump -s %t-decompressed.o --section=.debug_foo | FileCheck %s
 
 # CHECK: .debug_foo:
@@ -57,7 +57,8 @@
 
 # CHECK-FLAGS: Relocations [
 # CHECK-FLAGS-NEXT:   .rela.debug_foo {
-# CHECK-FLAGS-NEXT:     0x1 R_X86_64_32 - 0x0
+# CHECK-FLAGS-NEXT:     0x1 R_X86_64_32 .zdebug_foo 0x0
+# CHECK-FLAGS-NEXT:     0x2 R_X86_64_32 .notdebug_foo 0x0
 # CHECK-FLAGS-NEXT:   }
 # CHECK-FLAGS-NEXT: ]
 

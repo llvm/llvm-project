@@ -32,22 +32,21 @@ Sections:
   - Name:            .debug_bar
     Type:            SHT_PROGBITS
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     8
-    - Name:     bar
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1008
-      Size:     8
-    - Name:     baz
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1010
-      Size:     8
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1008
+    Size:     8
+  - Name:     baz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1010
+    Size:     8
 
 # CHECK:     Name: .text
 # CHECK:     Name: .gnu.warning.foo

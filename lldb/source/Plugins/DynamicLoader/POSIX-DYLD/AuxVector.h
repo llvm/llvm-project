@@ -17,7 +17,7 @@ namespace lldb_private {
 class DataExtractor;
 }
 
-/// @class AuxVector
+/// \class AuxVector
 /// Represents a processes auxiliary vector.
 ///
 /// When a process is loaded on Linux a vector of values is placed onto the

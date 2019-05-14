@@ -91,10 +91,10 @@ std::string rewriteExprFromNumberToTime(
     const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
     const Expr *Node);
 
-/// Return `true` if `E` is a either: not a macro at all; or an argument to
+/// Return `false` if `E` is a either: not a macro at all; or an argument to
 /// one.  In the both cases, we often want to do the transformation.
-bool isNotInMacro(const ast_matchers::MatchFinder::MatchResult &Result,
-                  const Expr *E);
+bool isInMacro(const ast_matchers::MatchFinder::MatchResult &Result,
+               const Expr *E);
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
                      DurationConversionFunction) {
@@ -122,6 +122,16 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
   return functionDecl(hasAnyName(
       "::absl::ToUnixHours", "::absl::ToUnixMinutes", "::absl::ToUnixSeconds",
       "::absl::ToUnixMillis", "::absl::ToUnixMicros", "::absl::ToUnixNanos"));
+}
+
+AST_MATCHER_FUNCTION_P(ast_matchers::internal::Matcher<Stmt>,
+                       comparisonOperatorWithCallee,
+                       ast_matchers::internal::Matcher<Decl>, funcDecl) {
+  using namespace clang::ast_matchers;
+  return binaryOperator(
+      anyOf(hasOperatorName(">"), hasOperatorName(">="), hasOperatorName("=="),
+            hasOperatorName("<="), hasOperatorName("<")),
+      hasEitherOperand(ignoringImpCasts(callExpr(callee(funcDecl)))));
 }
 
 } // namespace abseil

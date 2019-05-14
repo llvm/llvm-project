@@ -7,27 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBRemoteTestUtils.h"
-
-#if defined(_MSC_VER)
-#include "lldb/Host/windows/windows.h"
-#include <WinSock2.h>
-#endif
+#include "lldb/Host/Socket.h"
+#include "llvm/Testing/Support/Error.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
 
 void GDBRemoteTest::SetUpTestCase() {
-#if defined(_MSC_VER)
-  WSADATA data;
-  ::WSAStartup(MAKEWORD(2, 2), &data);
-#endif
+  ASSERT_THAT_ERROR(Socket::Initialize(), llvm::Succeeded());
 }
 
-void GDBRemoteTest::TearDownTestCase() {
-#if defined(_MSC_VER)
-  ::WSACleanup();
-#endif
-}
+void GDBRemoteTest::TearDownTestCase() { Socket::Terminate(); }
 
 } // namespace process_gdb_remote
 } // namespace lldb_private

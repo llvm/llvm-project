@@ -13,13 +13,6 @@
 #error This file must be included inside sanitizer_allocator.h
 #endif
 
-// Objects of this type should be used as local caches for SizeClassAllocator64
-// or SizeClassAllocator32. Since the typical use of this class is to have one
-// object per thread in TLS, is has to be POD.
-template<class SizeClassAllocator>
-struct SizeClassAllocatorLocalCache
-    : SizeClassAllocator::AllocatorCache {};
-
 // Cache used by SizeClassAllocator64.
 template <class SizeClassAllocator>
 struct SizeClassAllocator64LocalCache {

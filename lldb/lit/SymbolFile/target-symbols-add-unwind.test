@@ -1,0 +1,26 @@
+# TODO: When it's possible to run "image show-unwind" without a running
+# process, we can remove the unsupported line below, and hard-code an ELF
+# triple in the test.
+# UNSUPPORTED: system-windows, system-darwin
+
+# RUN: cd %T
+# RUN: %clang %S/Inputs/target-symbols-add-unwind.c -g \
+# RUN:   -fno-unwind-tables -o target-symbols-add-unwind.debug
+# RUN: llvm-objcopy --strip-debug target-symbols-add-unwind.debug \
+# RUN:   target-symbols-add-unwind.stripped
+# RUN: %lldb target-symbols-add-unwind.stripped -s %s -o quit | FileCheck %s
+
+process launch --stop-at-entry
+image show-unwind -n main
+# CHECK-LABEL: image show-unwind -n main
+# CHECK-NOT: debug_frame UnwindPlan:
+
+target symbols add -s target-symbols-add-unwind.stripped target-symbols-add-unwind.debug
+# CHECK-LABEL: target symbols add
+# CHECK: symbol file {{.*}} has been added to {{.*}}
+
+image show-unwind -n main
+# CHECK-LABEL: image show-unwind -n main
+# CHECK: debug_frame UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from DWARF CFI
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.

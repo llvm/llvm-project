@@ -520,17 +520,18 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(unsigned FromReg, unsigned ToReg,
       .addReg(FromReg, 0, SubIdx);
 
   BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
+  SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
-    SlotIndexes &Indexes = *LIS.getSlotIndexes();
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   } else {
     CopyMI->bundleWithPred();
   }
   LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubIdx);
   DestLI.refineSubRanges(Allocator, LaneMask,
-                         [Def, &Allocator](LiveInterval::SubRange& SR) {
-    SR.createDeadDef(Def, Allocator);
-  });
+                         [Def, &Allocator](LiveInterval::SubRange &SR) {
+                           SR.createDeadDef(Def, Allocator);
+                         },
+                         Indexes, TRI);
   return Def;
 }
 

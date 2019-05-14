@@ -21,9 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectScript
-//-------------------------------------------------------------------------
 
 CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter,
                                          ScriptLanguage script_lang)
@@ -52,7 +50,7 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
     return false;
   }
 
-  ScriptInterpreter *script_interpreter = m_interpreter.GetScriptInterpreter();
+  ScriptInterpreter *script_interpreter = GetDebugger().GetScriptInterpreter();
 
   if (script_interpreter == nullptr) {
     result.AppendError("no script interpreter");

@@ -50,7 +50,7 @@ void LLVMSetMetadata2(LLVMValueRef Inst, unsigned KindID, LLVMMetadataRef MD) {
   unwrap<Instruction>(Inst)->setMetadata(KindID, N);
 }
 
-void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Bref, unsigned Line,
+void LLVMGoSetCurrentDebugLocation(LLVMBuilderRef Bref, unsigned Line,
                                   unsigned Col, LLVMMetadataRef Scope,
                                   LLVMMetadataRef InlinedAt) {
   unwrap(Bref)->SetCurrentDebugLocation(
@@ -58,7 +58,7 @@ void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Bref, unsigned Line,
                     InlinedAt ? unwrap<MDNode>(InlinedAt) : nullptr));
 }
 
-LLVMDebugLocMetadata LLVMGetCurrentDebugLocation2(LLVMBuilderRef Bref) {
+LLVMDebugLocMetadata LLVMGoGetCurrentDebugLocation(LLVMBuilderRef Bref) {
   const auto& Loc = unwrap(Bref)->getCurrentDebugLocation();
   const auto* InlinedAt = Loc.getInlinedAt();
   const LLVMDebugLocMetadata md{

@@ -46,16 +46,16 @@ T tmain(T argc) {
   SST<T> sst;
 // CHECK: static T a;
 #pragma omp parallel private(g)
-#pragma omp single private(argc, b), firstprivate(c, d), nowait
+#pragma omp single private(argc, b), firstprivate(c, d), nowait allocate(d)
   foo();
   // CHECK: #pragma omp parallel private(g)
-  // CHECK-NEXT: #pragma omp single private(argc,b) firstprivate(c,d) nowait
+  // CHECK-NEXT: #pragma omp single private(argc,b) firstprivate(c,d) nowait allocate(d)
   // CHECK-NEXT: foo();
 #pragma omp parallel private(g)
-#pragma omp single private(argc, b), firstprivate(c, d), copyprivate(g)
+#pragma omp single allocate(argc) private(argc, b), firstprivate(c, d), copyprivate(g)
   foo();
   // CHECK-NEXT: #pragma omp parallel private(g)
-  // CHECK-NEXT: #pragma omp single private(argc,b) firstprivate(c,d) copyprivate(g)
+  // CHECK-NEXT: #pragma omp single allocate(argc) private(argc,b) firstprivate(c,d) copyprivate(g)
   // CHECK-NEXT: foo();
   return T();
 }

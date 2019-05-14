@@ -35,10 +35,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 -mattr=+code-object-v3,-xnack < %s | FileCheck --check-prefixes=NO-XNACK-GFX902 %s
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+code-object-v3,+sram-ecc < %s | FileCheck --check-prefixes=SRAM-ECC-GFX904 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,-sram-ecc < %s | FileCheck --check-prefixes=NO-SRAM-ECC-GFX906 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,+sram-ecc < %s | FileCheck --check-prefixes=SRAM-ECC-GFX906 %s
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+code-object-v3,+sram-ecc,+xnack < %s | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX904 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,+xnack < %s | FileCheck --check-prefixes=XNACK-GFX906 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,+sram-ecc,+xnack < %s | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX906 %s
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
@@ -54,16 +54,16 @@
 ; GFX900: .amdgcn_target "amdgcn-amd-amdhsa--gfx900"
 ; GFX902: .amdgcn_target "amdgcn-amd-amdhsa--gfx902+xnack"
 ; GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904"
-; GFX906: .amdgcn_target "amdgcn-amd-amdhsa--gfx906+sram-ecc"
+; GFX906: .amdgcn_target "amdgcn-amd-amdhsa--gfx906"
 
 ; XNACK-GFX900: .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack"
 ; NO-XNACK-GFX902: .amdgcn_target "amdgcn-amd-amdhsa--gfx902"
 
 ; SRAM-ECC-GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904+sram-ecc"
-; NO-SRAM-ECC-GFX906: "amdgcn-amd-amdhsa--gfx906"
+; SRAM-ECC-GFX906: "amdgcn-amd-amdhsa--gfx906+sram-ecc"
 
 ; SRAM-ECC-XNACK-GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904+xnack+sram-ecc"
-; XNACK-GFX906: .amdgcn_target "amdgcn-amd-amdhsa--gfx906+xnack+sram-ecc"
+; SRAM-ECC-XNACK-GFX906: .amdgcn_target "amdgcn-amd-amdhsa--gfx906+xnack+sram-ecc"
 
 define amdgpu_kernel void @directive_amdgcn_target() {
   ret void

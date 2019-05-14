@@ -259,12 +259,10 @@ Block *StackFrame::GetFrameBlock() {
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // Get the symbol context if we already haven't done so by resolving the
 // PC address as much as possible. This way when we pass around a
 // StackFrame object, everyone will have as much information as possible and no
 // one will ever have to look things up manually.
-//----------------------------------------------------------------------
 const SymbolContext &
 StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -642,7 +640,12 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         valobj_sp = valobj_sp->Dereference(deref_error);
         if (error.Fail()) {
           error.SetErrorStringWithFormatv(
-              "Failed to dereference sythetic value: %s", deref_error);
+              "Failed to dereference sythetic value: {0}", deref_error);
+          return ValueObjectSP();
+        }
+        // Some synthetic plug-ins fail to set the error in Dereference
+        if (!valobj_sp) {
+          error.SetErrorString("Failed to dereference sythetic value");
           return ValueObjectSP();
         }
         expr_is_ptr = false;
@@ -1448,33 +1451,31 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
   return GetValueForOffset(frame, pointee, offset);
 }
 
-//------------------------------------------------------------------
 /// Attempt to reconstruct the ValueObject for the address contained in a
 /// given register plus an offset.
 ///
-/// @params [in] frame
+/// \params [in] frame
 ///   The current stack frame.
 ///
-/// @params [in] reg
+/// \params [in] reg
 ///   The register.
 ///
-/// @params [in] offset
+/// \params [in] offset
 ///   The offset from the register.
 ///
-/// @param [in] disassembler
+/// \param [in] disassembler
 ///   A disassembler containing instructions valid up to the current PC.
 ///
-/// @param [in] variables
+/// \param [in] variables
 ///   The variable list from the current frame,
 ///
-/// @param [in] pc
+/// \param [in] pc
 ///   The program counter for the instruction considered the 'user'.
 ///
-/// @return
+/// \return
 ///   A string describing the base for the ExpressionPath.  This could be a
 ///     variable, a register value, an argument, or a function return value.
 ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-//------------------------------------------------------------------
 lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
                                    int64_t offset, Disassembler &disassembler,
                                    VariableList &variables, const Address &pc) {

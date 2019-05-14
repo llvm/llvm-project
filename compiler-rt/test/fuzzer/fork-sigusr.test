@@ -9,6 +9,6 @@ RUN: %run %t/ForkSIGUSR -fork=3 -rss_limit_mb=128 -ignore_crashes=1 2>  %t/log &
 RUN: sleep 3
 RUN: pkill -SIGUSR2 -f %t/ForkSIGUSR
 RUN: sleep 3
-RUN: cat %t/log | FileCheck %s
+RUN: cat %t/log | FileCheck %s --dump-input-on-failure
 
 CHECK: libFuzzer: {{.*}}exiting

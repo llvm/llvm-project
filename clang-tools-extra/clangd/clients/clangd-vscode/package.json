@@ -2,7 +2,7 @@
     "name": "vscode-clangd",
     "displayName": "vscode-clangd",
     "description": "Clang Language Server",
-    "version": "0.0.11",
+    "version": "0.0.12",
     "publisher": "llvm-vs-code-extensions",
     "homepage": "https://clang.llvm.org/extra/clangd.html",
     "engines": {
@@ -24,7 +24,8 @@
         "onLanguage:c",
         "onLanguage:cpp",
         "onLanguage:objective-c",
-        "onLanguage:objective-cpp"
+        "onLanguage:objective-cpp",
+        "onCommand:clangd-vscode.activate"
     ],
     "main": "./out/src/extension",
     "scripts": {
@@ -81,6 +82,10 @@
             {
                 "command": "clangd-vscode.switchheadersource",
                 "title": "Switch between Source/Header"
+            },
+            {
+                "command": "clangd-vscode.activate",
+                "title": "Manually activate clangd extension"
             }
         ],
         "keybindings": [

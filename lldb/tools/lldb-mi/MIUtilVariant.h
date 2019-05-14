@@ -116,12 +116,8 @@ private:
   CDataObjectBase *m_pDataObject;
 };
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CDataObject constructor.
 // Type:    Method.
 // Args:    T   - The object's type.
@@ -131,7 +127,6 @@ private:
 template <typename T> CMIUtilVariant::CDataObject<T>::CDataObject() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CDataObject constructor.
 // Type:    Method.
 // Args:    T       - The object's type.
@@ -145,7 +140,6 @@ CMIUtilVariant::CDataObject<T>::CDataObject(const T &vArg) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CDataObject destructor.
 // Type:    Overridden.
 // Args:    T   - The object's type.
@@ -157,7 +151,6 @@ template <typename T> CMIUtilVariant::CDataObject<T>::~CDataObject() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the data object hold by *this object wrapper.
 // Type:    Method.
 // Args:    T   - The object's type.
@@ -169,7 +162,6 @@ template <typename T> T &CMIUtilVariant::CDataObject<T>::GetDataObject() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Create a new copy of *this class.
 // Type:    Overridden.
 // Args:    T   - The object's type.
@@ -185,7 +177,6 @@ CMIUtilVariant::CDataObject<T>::CreateCopyOfSelf() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Determine if *this object is a derived from CDataObjectBase.
 // Type:    Overridden.
 // Args:    T   - The object's type.
@@ -199,7 +190,6 @@ bool CMIUtilVariant::CDataObject<T>::GetIsDerivedClass() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Perform a bitwise copy of *this object.
 // Type:    Overrideable.
 // Args:    T       - The object's type.
@@ -214,7 +204,6 @@ void CMIUtilVariant::CDataObject<T>::Duplicate(const CDataObject &vrOther) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release any resources used by *this object.
 // Type:    Overridden.
 // Args:    None.
@@ -225,12 +214,8 @@ template <typename T> void CMIUtilVariant::CDataObject<T>::Destroy() {
   CDataObjectBase::Destroy();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Assign to the variant an object of a specified type.
 // Type:    Template method.
 // Args:    T       - The object's type.
@@ -243,7 +228,6 @@ template <typename T> void CMIUtilVariant::Set(const T &vArg) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the data object from *this variant.
 // Type:    Template method.
 // Args:    T   - The object's type.

@@ -195,9 +195,7 @@ ABISysV_s390x::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABISysV_s390x::GetRedZoneSize() const { return 0; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_s390x::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -742,9 +740,7 @@ lldb_private::ConstString ABISysV_s390x::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_s390x::GetPluginName() {
   return GetPluginNameStatic();

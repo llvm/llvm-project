@@ -70,6 +70,7 @@ while.end:                                        ; preds = %while.cond
 
   bool PreserveLCSSA = L->isRecursivelyLCSSAForm(DT,LI);
 
-  bool ret = UnrollRuntimeLoopRemainder(L, 4, true, false, false, &LI, &SE, &DT, &AC, PreserveLCSSA);
+  bool ret = UnrollRuntimeLoopRemainder(L, 4, true, false, false, false, &LI,
+                                        &SE, &DT, &AC, PreserveLCSSA);
   EXPECT_FALSE(ret);
 }

@@ -18,8 +18,6 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
@@ -221,6 +219,9 @@ public:
 
   /// Return the size in bytes of the memory reference.
   uint64_t getSize() const { return Size; }
+
+  /// Return the size in bits of the memory reference.
+  uint64_t getSizeInBits() const { return Size * 8; }
 
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.

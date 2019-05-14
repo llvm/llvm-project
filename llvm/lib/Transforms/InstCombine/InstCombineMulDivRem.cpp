@@ -430,6 +430,14 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       }
     }
 
+    Value *Z;
+    if (match(&I, m_c_FMul(m_OneUse(m_FDiv(m_Value(X), m_Value(Y))),
+                           m_Value(Z)))) {
+      // Sink division: (X / Y) * Z --> (X * Z) / Y
+      Value *NewFMul = Builder.CreateFMulFMF(X, Z, &I);
+      return BinaryOperator::CreateFDivFMF(NewFMul, Y, &I);
+    }
+
     // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
     // nnan disallows the possibility of returning a number if both operands are
     // negative (in that case, we should return NaN).
@@ -439,6 +447,25 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       Value *XY = Builder.CreateFMulFMF(X, Y, &I);
       Value *Sqrt = Builder.CreateUnaryIntrinsic(Intrinsic::sqrt, XY, &I);
       return replaceInstUsesWith(I, Sqrt);
+    }
+
+    // Like the similar transform in instsimplify, this requires 'nsz' because
+    // sqrt(-0.0) = -0.0, and -0.0 * -0.0 does not simplify to -0.0.
+    if (I.hasNoNaNs() && I.hasNoSignedZeros() && Op0 == Op1 &&
+        Op0->hasNUses(2)) {
+      // Peek through fdiv to find squaring of square root:
+      // (X / sqrt(Y)) * (X / sqrt(Y)) --> (X * X) / Y
+      if (match(Op0, m_FDiv(m_Value(X),
+                            m_Intrinsic<Intrinsic::sqrt>(m_Value(Y))))) {
+        Value *XX = Builder.CreateFMulFMF(X, X, &I);
+        return BinaryOperator::CreateFDivFMF(XX, Y, &I);
+      }
+      // (sqrt(Y) / X) * (sqrt(Y) / X) --> Y / (X * X)
+      if (match(Op0, m_FDiv(m_Intrinsic<Intrinsic::sqrt>(m_Value(Y)),
+                            m_Value(X)))) {
+        Value *XX = Builder.CreateFMulFMF(X, X, &I);
+        return BinaryOperator::CreateFDivFMF(Y, XX, &I);
+      }
     }
 
     // exp(X) * exp(Y) -> exp(X + Y)
@@ -996,6 +1023,10 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
       (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
     return BinaryOperator::CreateNeg(Op0);
 
+  // X / INT_MIN --> X == INT_MIN
+  if (match(Op1, m_SignMask()))
+    return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
+
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
     // sdiv exact X, C  -->  ashr exact X, log2(C)
@@ -1020,21 +1051,24 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
       Value *NarrowOp = Builder.CreateSDiv(Op0Src, NarrowDivisor);
       return new SExtInst(NarrowOp, Op0->getType());
     }
-  }
 
-  if (Constant *RHS = dyn_cast<Constant>(Op1)) {
-    // X/INT_MIN -> X == INT_MIN
-    if (RHS->isMinSignedValue())
-      return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
-
-    // -X/C  -->  X/-C  provided the negation doesn't overflow.
-    Value *X;
-    if (match(Op0, m_NSWSub(m_Zero(), m_Value(X)))) {
-      auto *BO = BinaryOperator::CreateSDiv(X, ConstantExpr::getNeg(RHS));
+    // -X / C --> X / -C (if the negation doesn't overflow).
+    // TODO: This could be enhanced to handle arbitrary vector constants by
+    //       checking if all elements are not the min-signed-val.
+    if (!Op1C->isMinSignedValue() &&
+        match(Op0, m_NSWSub(m_Zero(), m_Value(X)))) {
+      Constant *NegC = ConstantInt::get(I.getType(), -(*Op1C));
+      Instruction *BO = BinaryOperator::CreateSDiv(X, NegC);
       BO->setIsExact(I.isExact());
       return BO;
     }
   }
+
+  // -X / Y --> -(X / Y)
+  Value *Y;
+  if (match(&I, m_SDiv(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+    return BinaryOperator::CreateNSWNeg(
+        Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a udiv.
@@ -1324,6 +1358,11 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
       return &I;
     }
   }
+
+  // -X srem Y --> -(X srem Y)
+  Value *X, *Y;
+  if (match(&I, m_SRem(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+    return BinaryOperator::CreateNSWNeg(Builder.CreateSRem(X, Y)); 
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a urem.

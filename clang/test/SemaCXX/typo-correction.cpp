@@ -678,7 +678,7 @@ namespace {
 struct a0is0 {};
 struct b0is0 {};
 int g() {
-  0 [                 // expected-error {{subscripted value is not an array}}
+  0 [
       sizeof(c0is0)]; // expected-error {{use of undeclared identifier}}
 };
 }

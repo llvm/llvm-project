@@ -73,7 +73,7 @@ declare i32 @doSomething(i32, i32*)
 ; CHECK-LABEL: freqSaveAndRestoreOutsideLoop:
 ;
 ; Shrink-wrapping allows to skip the prologue in the else case.
-; ENABLE: testl %edi, %edi  
+; ENABLE: testl %edi, %edi
 ; ENABLE: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -508,7 +508,7 @@ declare i32 @someVariadicFunc(i32, ...)
 declare hidden fastcc %struct.temp_slot* @find_temp_slot_from_address(%struct.rtx_def* readonly)
 
 ; CHECK-LABEL: useLEA:
-; DISABLE: pushq 
+; DISABLE: pushq
 ;
 ; CHECK: testq   %rdi, %rdi
 ; CHECK-NEXT: je      [[CLEANUP:LBB[0-9_]+]]
@@ -805,19 +805,9 @@ end:
 ; Create the zero value for the select assignment.
 ; CHECK: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
 ; CHECK-NEXT: cmpb $0, _b(%rip)
-; CHECK-NEXT: jne [[STOREC_LABEL:LBB[0-9_]+]]
-;
-; CHECK: movb $48, [[CMOVE_VAL:%al]]
-;
-; CHECK: [[STOREC_LABEL]]:
-;
-; ENABLE-NEXT: pushq
-; For the stack adjustment, we need to preserve the EFLAGS.
-; ENABLE-NEXT: leaq -16(%rsp), %rsp
-;
-; Technically, we should use CMOVE_VAL here or its subregister.
-; CHECK-NEXT: movb %al, _c(%rip)
-; testb set the EFLAGS read here.
+; CHECK-NEXT: movl $48, [[IMM_VAL:%ecx]]
+; CHECK-NEXT: cmovnel [[CMOVE_VAL]], [[IMM_VAL]]
+; CHECK-NEXT: movb %cl, _c(%rip)
 ; CHECK-NEXT: je [[VARFUNC_CALL:LBB[0-9_]+]]
 ;
 ; The code of the loop is not interesting.

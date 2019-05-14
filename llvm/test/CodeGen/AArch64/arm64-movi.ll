@@ -42,21 +42,19 @@ define i64 @test64_64_manybits() nounwind {
 }
 
 ; 64-bit immed with 64-bit pattern size, one bit.
-; FIXME: Prefer movz, so it prints as "mov".
 define i64 @test64_64_onebit() nounwind {
 ; CHECK-LABEL: test64_64_onebit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x0, xzr, #0x4000000000
+; CHECK-NEXT:    mov x0, #274877906944
 ; CHECK-NEXT:    ret
   ret i64 274877906944
 }
 
 ; 32-bit immed with 32-bit pattern size, rotated by 16.
-; FIXME: Prefer "movz" instead (so we print as "mov").
 define i32 @test32_32_rot16() nounwind {
 ; CHECK-LABEL: test32_32_rot16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w0, wzr, #0xff0000
+; CHECK-NEXT:    mov w0, #16711680
 ; CHECK-NEXT:    ret
   ret i32 16711680
 }

@@ -101,14 +101,16 @@ unsigned ObjectToIndex::GetIndexForObjectImpl(const void *object) {
   return m_mapping[object];
 }
 
-Recorder::Recorder(Serializer &serializer, Registry &registry,
-                   llvm::StringRef pretty_func)
-    : m_serializer(serializer), m_registry(registry),
-      m_pretty_func(pretty_func), m_local_boundary(false),
+Recorder::Recorder(llvm::StringRef pretty_func, std::string &&pretty_args)
+    : m_serializer(nullptr), m_pretty_func(pretty_func),
+      m_pretty_args(pretty_args), m_local_boundary(false),
       m_result_recorded(true) {
   if (!g_global_boundary) {
     g_global_boundary = true;
     m_local_boundary = true;
+
+    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0} ({1})",
+             m_pretty_func, m_pretty_args);
   }
 }
 

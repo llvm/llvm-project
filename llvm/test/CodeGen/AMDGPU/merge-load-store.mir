@@ -100,7 +100,7 @@ body:             |
     %4:vgpr_32 = DS_READ_B32 %1, 4, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.4)
     %5:vgpr_32 = V_ADD_I32_e32 killed %3, killed %4, implicit-def $vcc, implicit $exec
     DS_WRITE_B32 killed %1, %5, 0, 0, implicit killed $m0, implicit $exec :: (store 4 into %ir.ptr.0)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---

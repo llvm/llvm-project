@@ -36,7 +36,7 @@ public:
     return m_backend.GetChildAtIndex(idx, true);
   }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
     return m_backend.GetIndexOfChildWithName(name);
   }
 
@@ -283,7 +283,7 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
 }
 
 lldb::ValueObjectSP
-ValueObjectSynthetic::GetChildMemberWithName(const ConstString &name,
+ValueObjectSynthetic::GetChildMemberWithName(ConstString name,
                                              bool can_create) {
   UpdateValueIfNeeded();
 
@@ -295,7 +295,7 @@ ValueObjectSynthetic::GetChildMemberWithName(const ConstString &name,
   return GetChildAtIndex(index, can_create);
 }
 
-size_t ValueObjectSynthetic::GetIndexOfChildWithName(const ConstString &name) {
+size_t ValueObjectSynthetic::GetIndexOfChildWithName(ConstString name) {
   UpdateValueIfNeeded();
 
   uint32_t found_index = UINT32_MAX;

@@ -9,7 +9,7 @@ target triple = "wasm32-unknown-unknown"
 @foo = global %union.u1 zeroinitializer, align 1
 @bar = global %union.u1 zeroinitializer, align 1
 
-; CHECK:        - Type:            DATA
+; CHECK:        - Type:            DATA{{$}}
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
 ; CHECK-NEXT:         InitFlags:       0

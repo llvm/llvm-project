@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s
 
+extern int omp_default_mem_alloc;
 namespace X {
 int x;
 };
@@ -42,7 +43,7 @@ void test_linear_colons() {
 #pragma omp parallel for linear(B, ::z, X::x)
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp parallel for linear(::z)
+#pragma omp parallel for linear(::z) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     ;
 // expected-error@+1 {{expected variable name}}

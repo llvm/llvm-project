@@ -34,7 +34,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
   bool GetSummary(Stream &stream, const TypeSummaryOptions &options);
 
@@ -129,13 +129,12 @@ size_t LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
 }
 
 size_t LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
-  if (name == ConstString("ptr") || name == ConstString("pointer"))
+    ConstString name) {
+  if (name == "ptr" || name == "pointer")
     return 0;
-  if (name == ConstString("del") || name == ConstString("deleter"))
+  if (name == "del" || name == "deleter")
     return 1;
-  if (name == ConstString("obj") || name == ConstString("object") ||
-      name == ConstString("$$dereference$$"))
+  if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
   return UINT32_MAX;
 }

@@ -136,7 +136,15 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as speculatable.
   bool isSpeculatable;
 
-  enum ArgAttribute { NoCapture, Returned, ReadOnly, WriteOnly, ReadNone };
+  enum ArgAttribute {
+    NoCapture,
+    Returned,
+    ReadOnly,
+    WriteOnly,
+    ReadNone,
+    ImmArg
+  };
+
   std::vector<std::pair<unsigned, ArgAttribute>> ArgumentAttributes;
 
   bool hasProperty(enum SDNP Prop) const {

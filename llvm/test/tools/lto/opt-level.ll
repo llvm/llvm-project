@@ -1,8 +1,8 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -arch x86_64 -dylib -mllvm -O0 -o %t.dylib %t.o
-; RUN: llvm-nm -no-llvm-bc %t.dylib | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llvm-nm --no-llvm-bc %t.dylib | FileCheck --check-prefix=CHECK-O0 %s
 ; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -arch x86_64 -dylib -mllvm -O2 -o %t.dylib %t.o
-; RUN: llvm-nm -no-llvm-bc %t.dylib | FileCheck --check-prefix=CHECK-O2 %s
+; RUN: llvm-nm --no-llvm-bc %t.dylib | FileCheck --check-prefix=CHECK-O2 %s
 
 target triple = "x86_64-apple-macosx10.8.0"
 

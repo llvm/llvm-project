@@ -64,12 +64,6 @@ static cl::opt<unsigned> MaxVars("ppc-preinc-prep-max-vars",
 
 STATISTIC(PHINodeAlreadyExists, "PHI node already in pre-increment form");
 
-namespace llvm {
-
-  void initializePPCLoopPreIncPrepPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
   class PPCLoopPreIncPrep : public FunctionPass {

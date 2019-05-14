@@ -376,8 +376,7 @@ static int readPrefixes(struct InternalInstruction* insn) {
       if (byte == 0xf3 && (nextByte == 0x88 || nextByte == 0x89 ||
                            nextByte == 0xc6 || nextByte == 0xc7)) {
         insn->xAcquireRelease = true;
-        if (nextByte != 0x90) // PAUSE instruction support
-          break;
+        break;
       }
       if (isREX(insn, nextByte)) {
         uint8_t nnextByte;
@@ -1845,6 +1844,9 @@ static int readOperands(struct InternalInstruction* insn) {
     case ENCODING_Rv:
       if (readOpcodeRegister(insn, 0))
         return -1;
+      break;
+    case ENCODING_CC:
+      insn->immediates[1] = insn->opcode & 0xf;
       break;
     case ENCODING_FP:
       break;

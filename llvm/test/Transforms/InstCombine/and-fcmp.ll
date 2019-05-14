@@ -23,6 +23,64 @@ define <2 x i1> @PR1738_vec_undef(<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %or
 }
 
+define i1 @PR41069(i1 %z, float %c, float %d) {
+; CHECK-LABEL: @PR41069(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord float [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ord1 = fcmp arcp ord float %c, 0.0
+  %and = and i1 %ord1, %z
+  %ord2 = fcmp afn ord float %d, 0.0
+  %r = and i1 %and, %ord2
+  ret i1 %r
+}
+
+define i1 @PR41069_commute(i1 %z, float %c, float %d) {
+; CHECK-LABEL: @PR41069_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ninf ord float [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ord1 = fcmp ninf ord float %c, 0.0
+  %and = and i1 %ord1, %z
+  %ord2 = fcmp ninf reassoc ord float %d, 0.0
+  %r = and i1 %ord2, %and
+  ret i1 %r
+}
+
+; Commute differently and make sure vectors work.
+
+define <2 x i1> @PR41069_vec(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d) {
+; CHECK-LABEL: @PR41069_vec(
+; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ord <2 x double> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <2 x double> [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[ORD1]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ord1 = fcmp ord <2 x double> %a, %b
+  %ord2 = fcmp ord <2 x double> %c, <double 0.0, double undef>
+  %and = and <2 x i1> %ord1, %ord2
+  %ord3 = fcmp ord <2 x double> %d, zeroinitializer
+  %r = and <2 x i1> %and, %ord3
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @PR41069_vec_commute(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d) {
+; CHECK-LABEL: @PR41069_vec_commute(
+; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ord <2 x double> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <2 x double> [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[ORD1]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ord1 = fcmp ord <2 x double> %a, %b
+  %ord2 = fcmp ord <2 x double> %c, <double 0.0, double undef>
+  %and = and <2 x i1> %ord1, %ord2
+  %ord3 = fcmp ord <2 x double> %d, zeroinitializer
+  %r = and <2 x i1> %ord3, %and
+  ret <2 x i1> %r
+}
+
 define i1 @PR15737(float %a, double %b) {
 ; CHECK-LABEL: @PR15737(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[A:%.*]], 0.000000e+00

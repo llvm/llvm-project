@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Features.inc"
 #include "ClangdLSPServer.h"
+#include "CodeComplete.h"
+#include "Features.inc"
 #include "Path.h"
+#include "Protocol.h"
 #include "Trace.h"
 #include "Transport.h"
+#include "index/Background.h"
 #include "index/Serialization.h"
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -90,7 +94,7 @@ static llvm::cl::opt<Logger::Level> LogLevel(
 static llvm::cl::opt<bool>
     Test("lit-test",
          llvm::cl::desc("Abbreviation for -input-style=delimited -pretty "
-                        "-run-synchronously -enable-test-scheme. "
+                        "-run-synchronously -enable-test-scheme -log=verbose. "
                         "Intended to simplify lit tests."),
          llvm::cl::init(false), llvm::cl::Hidden);
 
@@ -152,6 +156,20 @@ static llvm::cl::opt<bool> ShowOrigins(
     "debug-origin", llvm::cl::desc("Show origins of completion items"),
     llvm::cl::init(CodeCompleteOptions().ShowOrigins), llvm::cl::Hidden);
 
+static llvm::cl::opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion(
+    "header-insertion",
+    llvm::cl::desc("Add #include directives when accepting code completions"),
+    llvm::cl::init(CodeCompleteOptions().InsertIncludes),
+    llvm::cl::values(
+        clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
+                   "Include what you use. "
+                   "Insert the owning header for top-level symbols, unless the "
+                   "header is already directly included or the symbol is "
+                   "forward-declared."),
+        clEnumValN(
+            CodeCompleteOptions::NeverInsert, "never",
+            "Never insert #include directives as part of code completion")));
+
 static llvm::cl::opt<bool> HeaderInsertionDecorators(
     "header-insertion-decorators",
     llvm::cl::desc("Prepend a circular dot or space before the completion "
@@ -211,13 +229,31 @@ static llvm::cl::opt<std::string> ClangTidyChecks(
 static llvm::cl::opt<bool> EnableClangTidy(
     "clang-tidy",
     llvm::cl::desc("Enable clang-tidy diagnostics."),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 static llvm::cl::opt<bool> SuggestMissingIncludes(
     "suggest-missing-includes",
     llvm::cl::desc("Attempts to fix diagnostic errors caused by missing "
                    "includes using index."),
     llvm::cl::init(true));
+
+static llvm::cl::opt<OffsetEncoding> ForceOffsetEncoding(
+    "offset-encoding",
+    llvm::cl::desc("Force the offsetEncoding used for character positions. "
+                   "This bypasses negotiation via client capabilities."),
+    llvm::cl::values(clEnumValN(OffsetEncoding::UTF8, "utf-8",
+                                "Offsets are in UTF-8 bytes"),
+                     clEnumValN(OffsetEncoding::UTF16, "utf-16",
+                                "Offsets are in UTF-16 code units")),
+    llvm::cl::init(OffsetEncoding::UnsupportedEncoding));
+
+static llvm::cl::opt<bool> AllowFallbackCompletion(
+    "allow-fallback-completion",
+    llvm::cl::desc(
+        "Allow falling back to code completion without compiling files (using "
+        "identifiers and symbol indexes), when file cannot be built or the "
+        "build is not ready."),
+    llvm::cl::init(false));
 
 namespace {
 
@@ -295,8 +331,10 @@ int main(int argc, char *argv[]) {
   if (Test) {
     RunSynchronously = true;
     InputStyle = JSONStreamStyle::Delimited;
+    LogLevel = Logger::Verbose;
     PrettyPrint = true;
-    preventThreadStarvationInTests(); // Ensure background index makes progress.
+    // Ensure background index makes progress.
+    BackgroundIndex::preventThreadStarvationInTests();
   }
   if (Test || EnableTestScheme) {
     static URISchemeRegistry::Add<TestScheme> X(
@@ -418,6 +456,7 @@ int main(int argc, char *argv[]) {
   CCOpts.Limit = LimitResults;
   CCOpts.BundleOverloads = CompletionStyle != Detailed;
   CCOpts.ShowOrigins = ShowOrigins;
+  CCOpts.InsertIncludes = HeaderInsertion;
   if (!HeaderInsertionDecorators) {
     CCOpts.IncludeIndicator.Insert.clear();
     CCOpts.IncludeIndicator.NoInsert.clear();
@@ -425,6 +464,7 @@ int main(int argc, char *argv[]) {
   CCOpts.SpeculativeIndexRequest = Opts.StaticIndex;
   CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   CCOpts.AllScopes = AllScopesCompletion;
+  CCOpts.AllowFallback = AllowFallbackCompletion;
 
   RealFileSystemProvider FSProvider;
   // Initialize and run ClangdLSPServer.
@@ -458,9 +498,13 @@ int main(int argc, char *argv[]) {
   }
   Opts.ClangTidyOptProvider = ClangTidyOptProvider.get();
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
+  llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
+  if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
+    OffsetEncodingFromFlag = ForceOffsetEncoding;
   ClangdLSPServer LSPServer(
       *TransportLayer, FSProvider, CCOpts, CompileCommandsDirPath,
-      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);
+      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
+      OffsetEncodingFromFlag, Opts);
   llvm::set_thread_name("clangd.main");
   return LSPServer.run() ? 0
                          : static_cast<int>(ErrorResultCode::NoShutdownRequest);

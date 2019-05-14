@@ -23,9 +23,7 @@ public:
 
   ~OptionValueBoolean() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeBoolean; }
 
@@ -48,25 +46,21 @@ public:
   size_t AutoComplete(CommandInterpreter &interpreter,
                       CompletionRequest &request) override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Convert to bool operator.
   ///
   /// This allows code to check a OptionValueBoolean in conditions.
   ///
-  /// @code
+  /// \code
   /// OptionValueBoolean bool_value(...);
   /// if (bool_value)
   /// { ...
-  /// @endcode
+  /// \endcode
   ///
-  /// @return
+  /// \return
   ///     /b True this object contains a valid namespace decl, \b
   ///     false otherwise.
-  //------------------------------------------------------------------
   explicit operator bool() const { return m_current_value; }
 
   const bool &operator=(bool b) {

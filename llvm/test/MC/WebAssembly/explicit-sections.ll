@@ -10,7 +10,7 @@ target triple = "wasm32-unknown-unknown"
 @global3 = global i32 8, align 8, section ".sec2"
 
 
-; CHECK:        - Type:            DATA
+; CHECK:        - Type:            DATA{{$}}
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
 ; CHECK-NEXT:         InitFlags:       0
