@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Module.h"
+#include "TargetInfo/AVRTargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 namespace llvm {
 Target &getTheAVRTarget() {
