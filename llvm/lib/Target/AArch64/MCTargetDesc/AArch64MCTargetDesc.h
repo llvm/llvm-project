@@ -38,7 +38,9 @@ class raw_pwrite_stream;
 
 Target &getTheAArch64leTarget();
 Target &getTheAArch64beTarget();
+Target &getTheAArch64_32Target();
 Target &getTheARM64Target();
+Target &getTheARM64_32Target();
 
 MCCodeEmitter *createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
                                           const MCRegisterInfo &MRI,
@@ -56,7 +58,8 @@ std::unique_ptr<MCObjectTargetWriter>
 createAArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32);
 
 std::unique_ptr<MCObjectTargetWriter>
-createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype);
+createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype,
+                              bool IsILP32);
 
 std::unique_ptr<MCObjectTargetWriter> createAArch64WinCOFFObjectWriter();
 

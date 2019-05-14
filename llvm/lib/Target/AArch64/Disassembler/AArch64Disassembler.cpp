@@ -286,10 +286,18 @@ extern "C" void LLVMInitializeAArch64Disassembler() {
                                        createAArch64ExternalSymbolizer);
   TargetRegistry::RegisterMCSymbolizer(getTheAArch64beTarget(),
                                        createAArch64ExternalSymbolizer);
+  TargetRegistry::RegisterMCDisassembler(getTheAArch64_32Target(),
+                                         createAArch64Disassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheAArch64_32Target(),
+                                       createAArch64ExternalSymbolizer);
 
   TargetRegistry::RegisterMCDisassembler(getTheARM64Target(),
                                          createAArch64Disassembler);
   TargetRegistry::RegisterMCSymbolizer(getTheARM64Target(),
+                                       createAArch64ExternalSymbolizer);
+  TargetRegistry::RegisterMCDisassembler(getTheARM64_32Target(),
+                                         createAArch64Disassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheARM64_32Target(),
                                        createAArch64ExternalSymbolizer);
 }
 

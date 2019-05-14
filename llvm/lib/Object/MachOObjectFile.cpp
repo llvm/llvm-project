@@ -1100,7 +1100,8 @@ static Error checkThreadCommand(const MachOObjectFile &Obj,
                               "flavor number " + Twine(nflavor) + " in " +
                               CmdName + " command");
       }
-    } else if (cputype == MachO::CPU_TYPE_ARM64) {
+    } else if (cputype == MachO::CPU_TYPE_ARM64 ||
+               cputype == MachO::CPU_TYPE_ARM64_32) {
       if (flavor == MachO::ARM_THREAD_STATE64) {
         if (count != MachO::ARM_THREAD_STATE64_COUNT)
           return malformedError("load command " + Twine(LoadCommandIndex) +
@@ -2170,7 +2171,8 @@ void MachOObjectFile::getRelocationTypeName(
         res = Table[RType];
       break;
     }
-    case Triple::aarch64: {
+    case Triple::aarch64:
+    case Triple::aarch64_32: {
       static const char *const Table[] = {
         "ARM64_RELOC_UNSIGNED",           "ARM64_RELOC_SUBTRACTOR",
         "ARM64_RELOC_BRANCH26",           "ARM64_RELOC_PAGE21",
@@ -2498,6 +2500,8 @@ StringRef MachOObjectFile::getFileFormatName() const {
       return "Mach-O 32-bit i386";
     case MachO::CPU_TYPE_ARM:
       return "Mach-O arm";
+    case MachO::CPU_TYPE_ARM64_32:
+      return "Mach-O arm64 (ILP32)";
     case MachO::CPU_TYPE_POWERPC:
       return "Mach-O 32-bit ppc";
     default:
@@ -2527,6 +2531,8 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType) {
     return Triple::arm;
   case MachO::CPU_TYPE_ARM64:
     return Triple::aarch64;
+  case MachO::CPU_TYPE_ARM64_32:
+    return Triple::aarch64_32;
   case MachO::CPU_TYPE_POWERPC:
     return Triple::ppc;
   case MachO::CPU_TYPE_POWERPC64:
@@ -2633,6 +2639,17 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
     default:
       return Triple();
     }
+  case MachO::CPU_TYPE_ARM64_32:
+    switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
+    case MachO::CPU_SUBTYPE_ARM64_32_V8:
+      if (McpuDefault)
+        *McpuDefault = "cyclone";
+      if (ArchFlag)
+        *ArchFlag = "arm64_32";
+      return Triple("arm64_32-apple-darwin");
+    default:
+      return Triple();
+    }
   case MachO::CPU_TYPE_POWERPC:
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_POWERPC_ALL:
@@ -2676,6 +2693,7 @@ bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
       .Case("armv7m", true)
       .Case("armv7s", true)
       .Case("arm64", true)
+      .Case("arm64_32", true)
       .Case("ppc", true)
       .Case("ppc64", true)
       .Default(false);

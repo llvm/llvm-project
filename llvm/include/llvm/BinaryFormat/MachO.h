@@ -1401,7 +1401,8 @@ inline void SET_COMM_ALIGN(uint16_t &n_desc, uint8_t align) {
 enum : uint32_t {
   // Capability bits used in the definition of cpu_type.
   CPU_ARCH_MASK = 0xff000000, // Mask for architecture bits
-  CPU_ARCH_ABI64 = 0x01000000 // 64 bit ABI
+  CPU_ARCH_ABI64 = 0x01000000, // 64 bit ABI
+  CPU_ARCH_ABI64_32 = 0x02000000, // ILP32 ABI on 64-bit hardware
 };
 
 // Constants for the cputype field.
@@ -1414,6 +1415,7 @@ enum CPUType {
   CPU_TYPE_MC98000 = 10, // Old Motorola PowerPC
   CPU_TYPE_ARM = 12,
   CPU_TYPE_ARM64 = CPU_TYPE_ARM | CPU_ARCH_ABI64,
+  CPU_TYPE_ARM64_32 = CPU_TYPE_ARM | CPU_ARCH_ABI64_32,
   CPU_TYPE_SPARC = 14,
   CPU_TYPE_POWERPC = 18,
   CPU_TYPE_POWERPC64 = CPU_TYPE_POWERPC | CPU_ARCH_ABI64
@@ -1486,6 +1488,8 @@ enum CPUSubTypeARM64 {
   CPU_SUBTYPE_ARM64_ALL = 0,
   CPU_SUBTYPE_ARM64E = 2,
 };
+
+enum CPUSubTypeARM64_32 { CPU_SUBTYPE_ARM64_32_V8 = 1 };
 
 enum CPUSubTypeSPARC { CPU_SUBTYPE_SPARC_ALL = 0 };
 
