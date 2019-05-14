@@ -264,7 +264,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         LLVM_FALLTHROUGH;
       case TargetLowering::Expand:
         Changed = true;
-        return LegalizeOp(ExpandLoad(Op));
+        return ExpandLoad(Op);
       }
     }
   } else if (Op.getOpcode() == ISD::STORE) {
@@ -289,7 +289,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       }
       case TargetLowering::Expand:
         Changed = true;
-        return LegalizeOp(ExpandStore(Op));
+        return ExpandStore(Op);
       }
     }
   }
@@ -331,6 +331,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FTRUNC:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FP_EXTEND:
     // These pseudo-ops get legalized as if they were their non-strict
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
@@ -1253,9 +1255,13 @@ SDValue VectorLegalizer::ExpandMULO(SDValue Op) {
   if (!TLI.expandMULO(Op.getNode(), Result, Overflow, DAG))
     std::tie(Result, Overflow) = DAG.UnrollVectorOverflowOp(Op.getNode());
 
-  AddLegalizedOperand(Op.getValue(0), Result);
-  AddLegalizedOperand(Op.getValue(1), Overflow);
-  return Op.getResNo() ? Overflow : Result;
+  if (Op.getResNo() == 0) {
+    AddLegalizedOperand(Op.getValue(1), LegalizeOp(Overflow));
+    return Result;
+  } else {
+    AddLegalizedOperand(Op.getValue(0), LegalizeOp(Result));
+    return Overflow;
+  }
 }
 
 SDValue VectorLegalizer::ExpandAddSubSat(SDValue Op) {
@@ -1297,7 +1303,7 @@ SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
 
       if (OperVT.isVector())
         Oper = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-                           EltVT, Oper, Idx);
+                           OperVT.getVectorElementType(), Oper, Idx);
 
       Opers.push_back(Oper);
     }

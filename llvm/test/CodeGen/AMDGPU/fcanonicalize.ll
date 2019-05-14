@@ -485,7 +485,7 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_flush_gfx8(<2 x half> a
 }
 
 ; GCN-LABEL:  {{^}}test_canonicalize_value_v2f16_flush_gfx9:
-; GCN-DAG: v_pk_mul_f16 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+; GCN-DAG: v_pk_mul_f16 v{{[0-9]+}}, 1.0, v{{[0-9]+}} op_sel_hi:[0,1]{{$}}
 define amdgpu_kernel void @test_canonicalize_value_v2f16_flush_gfx9(<2 x half> addrspace(1)* %arg, <2 x half> addrspace(1)* %out) #6 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %arg, i32 %id

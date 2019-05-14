@@ -237,7 +237,7 @@ body:             |
   
     %47:fp32bit = VL32 %64, 4, $noreg :: (load 4 from %ir.scevgep5)
     %25:gr64bit = LA %64, 4, $noreg
-    CEBR %47, undef %48:fp32bit, implicit-def $cc
+    CEBR %47, undef %48:fp32bit, implicit-def $cc, implicit $fpc
     %62:grx32bit = LOCRMux %62, %65, 15, 4, implicit $cc
     %61:grx32bit = LOCRMux %61, %10.subreg_l32, 15, 4, implicit killed $cc
     %65:grx32bit = AHIMux %65, 1, implicit-def dead $cc

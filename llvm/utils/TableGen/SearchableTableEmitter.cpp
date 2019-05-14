@@ -141,7 +141,7 @@ private:
   bool compareBy(Record *LHS, Record *RHS, const SearchIndex &Index);
 
   bool isIntegral(Init *I) {
-    return isa<BitsInit>(I) || isIntrinsic(I);
+    return isa<BitsInit>(I) || isa<CodeInit>(I) || isIntrinsic(I);
   }
 
   std::string searchableFieldType(const GenericField &Field, TypeContext Ctx) {

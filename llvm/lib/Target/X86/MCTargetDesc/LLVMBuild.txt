@@ -18,5 +18,5 @@
 type = Library
 name = X86Desc
 parent = X86
-required_libraries = MC MCDisassembler Object Support X86AsmPrinter X86Info
+required_libraries = MC MCDisassembler Object Support X86Info X86Utils
 add_to_library_groups = X86

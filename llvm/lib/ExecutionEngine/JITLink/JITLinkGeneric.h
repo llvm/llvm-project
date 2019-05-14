@@ -150,7 +150,7 @@ private:
       auto SegMem = Alloc.getWorkingMemory(
           static_cast<sys::Memory::ProtectionFlags>(Prot));
       char *LastAtomEnd = SegMem.data();
-      char *AtomDataPtr = nullptr;
+      char *AtomDataPtr = LastAtomEnd;
 
       LLVM_DEBUG({
         dbgs() << "  Processing segment "
@@ -162,8 +162,16 @@ private:
 
       for (auto &SI : SegLayout.ContentSections) {
         LLVM_DEBUG(dbgs() << "    " << SI.S->getName() << ":\n");
+
+        AtomDataPtr += alignmentAdjustment(AtomDataPtr, SI.S->getAlignment());
+
+        LLVM_DEBUG({
+          dbgs() << "      Bumped atom pointer to " << (const void *)AtomDataPtr
+                 << " to meet section alignment "
+                 << " of " << SI.S->getAlignment() << "\n";
+        });
+
         for (auto *DA : SI.Atoms) {
-          AtomDataPtr = LastAtomEnd;
 
           // Align.
           AtomDataPtr += alignmentAdjustment(AtomDataPtr, DA->getAlignment());
@@ -209,6 +217,7 @@ private:
 
           // Update atom end pointer.
           LastAtomEnd = AtomDataPtr + DA->getContent().size();
+          AtomDataPtr = LastAtomEnd;
         }
       }
 

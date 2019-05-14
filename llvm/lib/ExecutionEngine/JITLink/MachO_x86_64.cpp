@@ -399,7 +399,7 @@ public:
 private:
   Section &getGOTSection() {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", sys::Memory::MF_READ, false);
+      GOTSection = &G.createSection("$__GOT", 8, sys::Memory::MF_READ, false);
     return *GOTSection;
   }
 
@@ -407,7 +407,7 @@ private:
     if (!StubsSection) {
       auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
           sys::Memory::MF_READ | sys::Memory::MF_EXEC);
-      StubsSection = &G.createSection("$__STUBS", StubsProt, false);
+      StubsSection = &G.createSection("$__STUBS", 8, StubsProt, false);
     }
     return *StubsSection;
   }

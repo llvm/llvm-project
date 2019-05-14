@@ -14,6 +14,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTNodeTraverser.h"
 #include "clang/AST/DeclLookups.h"
+#include "clang/AST/JSONNodeDumper.h"
 #include "clang/AST/TextNodeDumper.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Module.h"
@@ -222,13 +223,21 @@ LLVM_DUMP_METHOD void Type::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void Decl::dump() const { dump(llvm::errs()); }
 
-LLVM_DUMP_METHOD void Decl::dump(raw_ostream &OS, bool Deserialize) const {
+LLVM_DUMP_METHOD void Decl::dump(raw_ostream &OS, bool Deserialize,
+                                 ASTDumpOutputFormat Format) const {
   const ASTContext &Ctx = getASTContext();
   const SourceManager &SM = Ctx.getSourceManager();
-  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &SM,
-              SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
-  P.setDeserialize(Deserialize);
-  P.Visit(this);
+
+  if (ADOF_JSON == Format) {
+    JSONDumper P(OS, SM, Ctx.getPrintingPolicy());
+    (void)Deserialize; // FIXME?
+    P.Visit(this);
+  } else {
+    ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &SM,
+                SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
+    P.setDeserialize(Deserialize);
+    P.Visit(this);
+  }
 }
 
 LLVM_DUMP_METHOD void Decl::dumpColor() const {

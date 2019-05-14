@@ -588,6 +588,10 @@ bool TargetLowering::SimplifyDemandedBits(
   // Don't know anything.
   Known = KnownBits(BitWidth);
 
+  // Undef operand.
+  if (Op.isUndef())
+    return false;
+
   if (Op.getOpcode() == ISD::Constant) {
     // We know all of the bits for a constant!
     Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
@@ -610,9 +614,7 @@ bool TargetLowering::SimplifyDemandedBits(
     DemandedElts = APInt::getAllOnesValue(NumElts);
   } else if (OriginalDemandedBits == 0 || OriginalDemandedElts == 0) {
     // Not demanding any bits/elts from Op.
-    if (!Op.isUndef())
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
-    return false;
+    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
   } else if (Depth == 6) { // Limit search depth.
     return false;
   }
@@ -1268,6 +1270,16 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::BITREVERSE: {
+    SDValue Src = Op.getOperand(0);
+    APInt DemandedSrcBits = DemandedBits.reverseBits();
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
+                             Depth + 1))
+      return true;
+    Known.One = Known2.One.reverseBits();
+    Known.Zero = Known2.Zero.reverseBits();
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -1357,6 +1369,30 @@ bool TargetLowering::SimplifyDemandedBits(
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
+      return true;
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+    assert(Known.getBitWidth() == InBits && "Src width has changed?");
+    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
+    break;
+  }
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    // TODO - merge this with ZERO_EXTEND above?
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    unsigned InBits = SrcVT.getScalarSizeInBits();
+    unsigned InElts = SrcVT.getVectorNumElements();
+
+    // If we only need the non-extended bits of the bottom element
+    // then we can just bitcast to the result.
+    if (DemandedBits.getActiveBits() <= InBits && DemandedElts == 1 &&
+        VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+        TLO.DAG.getDataLayout().isLittleEndian())
+      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+
+    APInt InDemandedBits = DemandedBits.trunc(InBits);
+    APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
+    if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
@@ -1571,12 +1607,36 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts,
                                KnownSrcBits, TLO, Depth + 1))
         return true;
+    } else if ((NumSrcEltBits % BitWidth) == 0 &&
+               TLO.DAG.getDataLayout().isLittleEndian()) {
+      unsigned Scale = NumSrcEltBits / BitWidth;
+      unsigned NumSrcElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
+      APInt DemandedSrcBits = APInt::getNullValue(NumSrcEltBits);
+      APInt DemandedSrcElts = APInt::getNullValue(NumSrcElts);
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i]) {
+          unsigned Offset = (i % Scale) * BitWidth;
+          DemandedSrcBits.insertBits(DemandedBits, Offset);
+          DemandedSrcElts.setBit(i / Scale);
+        }
+
+      if (SrcVT.isVector()) {
+        APInt KnownSrcUndef, KnownSrcZero;
+        if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
+                                       KnownSrcZero, TLO, Depth + 1))
+          return true;
+      }
+
+      KnownBits KnownSrcBits;
+      if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts,
+                               KnownSrcBits, TLO, Depth + 1))
+        return true;
     }
 
     // If this is a bitcast, let computeKnownBits handle it.  Only do this on a
     // recursive call where Known may be useful to the caller.
     if (Depth > 0) {
-      Known = TLO.DAG.computeKnownBits(Op, Depth);
+      Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
       return false;
     }
     break;
@@ -1688,7 +1748,8 @@ static APInt getKnownUndefForVectorBinop(SDValue BO, SelectionDAG &DAG,
                                          const APInt &UndefOp0,
                                          const APInt &UndefOp1) {
   EVT VT = BO.getValueType();
-  assert(ISD::isBinaryOp(BO.getNode()) && VT.isVector() && "Vector binop only");
+  assert(DAG.getTargetLoweringInfo().isBinOp(BO.getOpcode()) && VT.isVector() &&
+         "Vector binop only");
 
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElts = VT.getVectorNumElements();
@@ -3482,46 +3543,41 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   case 'i':    // Simple Integer or Relocatable Constant
   case 'n':    // Simple Integer
   case 's': {  // Relocatable Constant
-    // These operands are interested in values of the form (GV+C), where C may
-    // be folded in as an offset of GV, or it may be explicitly added.  Also, it
-    // is possible and fine if either GV or C are missing.
-    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op);
-    GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op);
 
-    // If we have "(add GV, C)", pull out GV/C
-    if (Op.getOpcode() == ISD::ADD) {
-      C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
-      GA = dyn_cast<GlobalAddressSDNode>(Op.getOperand(0));
-      if (!C || !GA) {
-        C = dyn_cast<ConstantSDNode>(Op.getOperand(0));
-        GA = dyn_cast<GlobalAddressSDNode>(Op.getOperand(1));
-      }
-      if (!C || !GA) {
-        C = nullptr;
-        GA = nullptr;
-      }
-    }
+    GlobalAddressSDNode *GA;
+    ConstantSDNode *C;
+    uint64_t Offset = 0;
 
-    // If we find a valid operand, map to the TargetXXX version so that the
-    // value itself doesn't get selected.
-    if (GA) {   // Either &GV   or   &GV+C
-      if (ConstraintLetter != 'n') {
-        int64_t Offs = GA->getOffset();
-        if (C) Offs += C->getZExtValue();
-        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(),
-                                                 C ? SDLoc(C) : SDLoc(),
-                                                 Op.getValueType(), Offs));
-      }
-      return;
-    }
-    if (C) {   // just C, no GV.
-      // Simple constants are not allowed for 's'.
-      if (ConstraintLetter != 's') {
-        // gcc prints these as sign extended.  Sign extend value to 64 bits
-        // now; without this it would get ZExt'd later in
-        // ScheduleDAGSDNodes::EmitNode, which is very generic.
-        Ops.push_back(DAG.getTargetConstant(C->getSExtValue(),
+    // Match (GA) or (C) or (GA+C) or (GA-C) or ((GA+C)+C) or (((GA+C)+C)+C),
+    // etc., since getelementpointer is variadic. We can't use
+    // SelectionDAG::FoldSymbolOffset because it expects the GA to be accessible
+    // while in this case the GA may be furthest from the root node which is
+    // likely an ISD::ADD.
+    while (1) {
+      if ((GA = dyn_cast<GlobalAddressSDNode>(Op)) && ConstraintLetter != 'n') {
+        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
+                                                 GA->getValueType(0),
+                                                 Offset + GA->getOffset()));
+        return;
+      } else if ((C = dyn_cast<ConstantSDNode>(Op)) &&
+                 ConstraintLetter != 's') {
+        Ops.push_back(DAG.getTargetConstant(Offset + C->getSExtValue(),
                                             SDLoc(C), MVT::i64));
+        return;
+      } else {
+        const unsigned OpCode = Op.getOpcode();
+        if (OpCode == ISD::ADD || OpCode == ISD::SUB) {
+          if ((C = dyn_cast<ConstantSDNode>(Op.getOperand(0))))
+            Op = Op.getOperand(1);
+          // Subtraction is not commutative.
+          else if (OpCode == ISD::ADD &&
+                   (C = dyn_cast<ConstantSDNode>(Op.getOperand(1))))
+            Op = Op.getOperand(0);
+          else
+            return;
+          Offset += (OpCode == ISD::ADD ? 1 : -1) * C->getSExtValue();
+          continue;
+        }
       }
       return;
     }

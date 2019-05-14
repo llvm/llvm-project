@@ -1695,8 +1695,6 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
 /// bitcast to pointer type.
 llvm::Constant *
 ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
-  auto offset = getOffset();
-
   // If we're producing a pointer, this is easy.
   auto destPtrTy = cast<llvm::PointerType>(destTy);
   if (Value.isNullPointer()) {
@@ -1708,7 +1706,7 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
   // to a pointer.
   // FIXME: signedness depends on the original integer type.
   auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
-  llvm::Constant *C = offset;
+  llvm::Constant *C;
   C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
                                          /*isSigned*/ false);
   C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);

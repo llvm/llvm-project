@@ -248,6 +248,7 @@ EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
 EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)
 EXTENSION(pragma_clang_attribute_external_declaration, true)
+EXTENSION(gnu_asm, LangOpts.GNUAsm)
 
 #undef EXTENSION
 #undef FEATURE

@@ -1,0 +1,74 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("HexagonGenAsmWriter") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../Hexagon.td"
+}
+
+tablegen("HexagonGenInstrInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-instr-info" ]
+  td_file = "../Hexagon.td"
+}
+
+tablegen("HexagonGenMCCodeEmitter") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-emitter" ]
+  td_file = "../Hexagon.td"
+}
+
+tablegen("HexagonGenRegisterInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-register-info" ]
+  td_file = "../Hexagon.td"
+}
+
+tablegen("HexagonGenSubtargetInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-subtarget" ]
+  td_file = "../Hexagon.td"
+}
+
+group("tablegen") {
+  visibility = [
+    ":MCTargetDesc",
+    "../TargetInfo",
+  ]
+  public_deps = [
+    ":HexagonGenInstrInfo",
+    ":HexagonGenRegisterInfo",
+    ":HexagonGenSubtargetInfo",
+  ]
+}
+
+static_library("MCTargetDesc") {
+  output_name = "LLVMHexagonDesc"
+  public_deps = [
+    ":tablegen",
+  ]
+  deps = [
+    ":HexagonGenAsmWriter",
+    ":HexagonGenMCCodeEmitter",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/Hexagon/TargetInfo",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "HexagonAsmBackend.cpp",
+    "HexagonELFObjectWriter.cpp",
+    "HexagonInstPrinter.cpp",
+    "HexagonMCAsmInfo.cpp",
+    "HexagonMCChecker.cpp",
+    "HexagonMCCodeEmitter.cpp",
+    "HexagonMCCompound.cpp",
+    "HexagonMCDuplexInfo.cpp",
+    "HexagonMCELFStreamer.cpp",
+    "HexagonMCExpr.cpp",
+    "HexagonMCInstrInfo.cpp",
+    "HexagonMCShuffler.cpp",
+    "HexagonMCTargetDesc.cpp",
+    "HexagonShuffler.cpp",
+  ]
+}

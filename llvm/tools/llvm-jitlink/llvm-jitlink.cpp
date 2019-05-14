@@ -104,10 +104,11 @@ namespace llvm {
 
 static raw_ostream &
 operator<<(raw_ostream &OS, const Session::MemoryRegionInfo &MRI) {
-  return OS << "target addr = " << format("0x%016" PRIx64, MRI.TargetAddress)
-            << ", content: " << (const void *)MRI.Content.data() << " -- "
-            << (const void *)(MRI.Content.data() + MRI.Content.size()) << " ("
-            << MRI.Content.size() << " bytes)";
+  return OS << "target addr = "
+            << format("0x%016" PRIx64, MRI.getTargetAddress())
+            << ", content: " << (const void *)MRI.getContent().data() << " -- "
+            << (const void *)(MRI.getContent().data() + MRI.getContent().size())
+            << " (" << MRI.getContent().size() << " bytes)";
 }
 
 static raw_ostream &

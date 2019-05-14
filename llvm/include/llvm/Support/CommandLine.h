@@ -66,7 +66,8 @@ namespace cl {
 bool ParseCommandLineOptions(int argc, const char *const *argv,
                              StringRef Overview = "",
                              raw_ostream *Errs = nullptr,
-                             const char *EnvVar = nullptr);
+                             const char *EnvVar = nullptr,
+                             bool LongOptionsUseDoubleDash = false);
 
 //===----------------------------------------------------------------------===//
 // ParseEnvironmentOptions - Environment variable option processing alternate

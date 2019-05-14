@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZAsmPrinter.h"
-#include "InstPrinter/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZInstPrinter.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMCInstLower.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"

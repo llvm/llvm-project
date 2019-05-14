@@ -26,12 +26,22 @@ STATISTIC(ReadOnlyLiveGVars,
 
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
+
 bool ValueInfo::isDSOLocal() const {
   // Need to check all summaries are local in case of hash collisions.
   return getSummaryList().size() &&
          llvm::all_of(getSummaryList(),
                       [](const std::unique_ptr<GlobalValueSummary> &Summary) {
                         return Summary->isDSOLocal();
+                      });
+}
+
+bool ValueInfo::canAutoHide() const {
+  // Can only auto hide if all copies are eligible to auto hide.
+  return getSummaryList().size() &&
+         llvm::all_of(getSummaryList(),
+                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return Summary->canAutoHide();
                       });
 }
 
@@ -399,6 +409,10 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
         if (Flags.Live && hasReadOnlyFlag(SummaryIt.second))
           A.addComment("immutable");
       }
+      if (Flags.DSOLocal)
+        A.addComment("dsoLocal");
+      if (Flags.CanAutoHide)
+        A.addComment("canAutoHide");
 
       auto VI = getValueInfo(SummaryIt.first);
       A.add("label", getNodeLabel(VI, SummaryIt.second));

@@ -286,6 +286,29 @@ entry:
   ret double %rem
 }
 
+; Verify that round(42.1) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+; CHECK-LABEL: @f21
+; COMMON: cvtsd2ss
+define float @f21() {
+entry:
+  %result = call float @llvm.experimental.constrained.fptrunc.f32.f64(
+                                               double 42.1,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict")
+  ret float %result
+}
+
+; CHECK-LABEL: @f22
+; COMMON: cvtss2sd
+define double @f22(float %x) {
+entry:
+  %result = call double @llvm.experimental.constrained.fpext.f64.f32(float %x,
+                                               metadata !"fpexcept.strict")
+  ret double %result
+}
+
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fsub.f64(double, double, metadata, metadata)
@@ -306,3 +329,6 @@ declare double @llvm.experimental.constrained.rint.f64(double, metadata, metadat
 declare double @llvm.experimental.constrained.nearbyint.f64(double, metadata, metadata)
 declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)
 declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+
