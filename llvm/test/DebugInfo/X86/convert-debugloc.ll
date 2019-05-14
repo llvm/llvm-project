@@ -11,9 +11,9 @@
 ; DW5-CHECK-NEXT:               DW_AT_str_offsets_base	(0x00000008)
 ; DW5-CHECK-NEXT:               DW_AT_stmt_list	(0x00000000)
 ; DW5-CHECK-NEXT:               DW_AT_comp_dir {{.*}}
-; DW5-CHECK-NEXT:               DW_AT_addr_base	(0x00000008)
 ; DW5-CHECK-NEXT:               DW_AT_low_pc	(0x0000000000000000)
 ; DW5-CHECK-NEXT:               DW_AT_high_pc	(0x0000000000000007)
+; DW5-CHECK-NEXT:               DW_AT_addr_base	(0x00000008)
 ; DW5-CHECK-NEXT:               DW_AT_loclists_base	(0x0000000c)
 ; DW5-CHECK-EMPTY:
 ; DW5-CHECK-NEXT: 0x00000027:   DW_TAG_base_type

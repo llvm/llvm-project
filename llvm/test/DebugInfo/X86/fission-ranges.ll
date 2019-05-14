@@ -12,6 +12,8 @@
 ; CHECK-NEXT: DW_AT_GNU_dwo_name
 ; CHECK-NEXT: DW_AT_GNU_dwo_id
 ; CHECK-NEXT: DW_AT_GNU_ranges_base
+; CHECK-NEXT: DW_AT_low_pc
+; CHECK-NEXT: DW_AT_high_pc
 ; CHECK-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]                   (0x00000000)
 
 ; CHECK: .debug_info.dwo contents:
