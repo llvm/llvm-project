@@ -1526,7 +1526,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
   for (InputFile *F : Files)
-    Symtab->addFile<ELFT>(F);
+    parseFile<ELFT>(F);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
