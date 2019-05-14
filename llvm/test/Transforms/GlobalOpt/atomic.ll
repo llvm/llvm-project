@@ -3,7 +3,7 @@
 @GV1 = internal global i64 1
 @GV2 = internal global i32 0
 
-; CHECK: @GV1 = internal unnamed_addr constant i64 1
+; CHECK: @GV1 = internal unnamed_addr global i64 1
 ; CHECK: @GV2 = internal unnamed_addr global i32 0
 
 define void @test1() {
@@ -22,4 +22,13 @@ define i32 @test2b() {
 entry:
   %atomic-load = load atomic i32, i32* @GV2 seq_cst, align 4
   ret i32 %atomic-load
+}
+
+
+define i64 @test3() {
+; CHECK-LABEL: @test3
+; CHECK: ret i64 1
+
+  %val = load atomic i64, i64* @GV1 acquire, align 8
+  ret i64 %val
 }
