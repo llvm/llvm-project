@@ -245,6 +245,7 @@ void ManualDWARFIndex::IndexUnitImpl(
       }
     }
 
+    DIERef ref(cu_offset, die.GetOffset());
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:
@@ -258,38 +259,30 @@ void ManualDWARFIndex::IndexUnitImpl(
             ConstString objc_fullname_no_category_name(
                 objc_method.GetFullNameWithoutCategory(true));
             ConstString objc_class_name_no_category(objc_method.GetClassName());
-            set.function_fullnames.Insert(ConstString(name),
-                                          DIERef(cu_offset, die.GetOffset()));
+            set.function_fullnames.Insert(ConstString(name), ref);
             if (objc_class_name_with_category)
-              set.objc_class_selectors.Insert(
-                  objc_class_name_with_category,
-                  DIERef(cu_offset, die.GetOffset()));
+              set.objc_class_selectors.Insert(objc_class_name_with_category,
+                                              ref);
             if (objc_class_name_no_category &&
                 objc_class_name_no_category != objc_class_name_with_category)
-              set.objc_class_selectors.Insert(
-                  objc_class_name_no_category,
-                  DIERef(cu_offset, die.GetOffset()));
+              set.objc_class_selectors.Insert(objc_class_name_no_category, ref);
             if (objc_selector_name)
-              set.function_selectors.Insert(objc_selector_name,
-                                            DIERef(cu_offset, die.GetOffset()));
+              set.function_selectors.Insert(objc_selector_name, ref);
             if (objc_fullname_no_category_name)
               set.function_fullnames.Insert(objc_fullname_no_category_name,
-                                            DIERef(cu_offset, die.GetOffset()));
+                                            ref);
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
           bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
           if (is_method)
-            set.function_methods.Insert(ConstString(name),
-                                        DIERef(cu_offset, die.GetOffset()));
+            set.function_methods.Insert(ConstString(name), ref);
           else
-            set.function_basenames.Insert(ConstString(name),
-                                          DIERef(cu_offset, die.GetOffset()));
+            set.function_basenames.Insert(ConstString(name), ref);
 
           if (!is_method && !mangled_cstr && !objc_method.IsValid(true))
-            set.function_fullnames.Insert(ConstString(name),
-                                          DIERef(cu_offset, die.GetOffset()));
+            set.function_fullnames.Insert(ConstString(name), ref);
         }
         if (mangled_cstr) {
           // Make sure our mangled name isn't the same string table entry as
@@ -299,8 +292,7 @@ void ManualDWARFIndex::IndexUnitImpl(
           if (name && name != mangled_cstr &&
               ((mangled_cstr[0] == '_') ||
                (::strcmp(name, mangled_cstr) != 0))) {
-            set.function_fullnames.Insert(ConstString(mangled_cstr),
-                                          DIERef(cu_offset, die.GetOffset()));
+            set.function_fullnames.Insert(ConstString(mangled_cstr), ref);
           }
         }
       }
@@ -318,22 +310,19 @@ void ManualDWARFIndex::IndexUnitImpl(
     case DW_TAG_union_type:
     case DW_TAG_unspecified_type:
       if (name && !is_declaration)
-        set.types.Insert(ConstString(name), DIERef(cu_offset, die.GetOffset()));
+        set.types.Insert(ConstString(name), ref);
       if (mangled_cstr && !is_declaration)
-        set.types.Insert(ConstString(mangled_cstr),
-                         DIERef(cu_offset, die.GetOffset()));
+        set.types.Insert(ConstString(mangled_cstr), ref);
       break;
 
     case DW_TAG_namespace:
       if (name)
-        set.namespaces.Insert(ConstString(name),
-                              DIERef(cu_offset, die.GetOffset()));
+        set.namespaces.Insert(ConstString(name), ref);
       break;
 
     case DW_TAG_variable:
       if (name && has_location_or_const_value && is_global_or_static_variable) {
-        set.globals.Insert(ConstString(name),
-                           DIERef(cu_offset, die.GetOffset()));
+        set.globals.Insert(ConstString(name), ref);
         // Be sure to include variables by their mangled and demangled names if
         // they have any since a variable can have a basename "i", a mangled
         // named "_ZN12_GLOBAL__N_11iE" and a demangled mangled name
@@ -345,8 +334,7 @@ void ManualDWARFIndex::IndexUnitImpl(
         // entries
         if (mangled_cstr && name != mangled_cstr &&
             ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0))) {
-          set.globals.Insert(ConstString(mangled_cstr),
-                             DIERef(cu_offset, die.GetOffset()));
+          set.globals.Insert(ConstString(mangled_cstr), ref);
         }
       }
       break;
