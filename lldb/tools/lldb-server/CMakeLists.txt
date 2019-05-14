@@ -68,3 +68,37 @@ add_dependencies(lldb-server
 )
 target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
+
+
+if(HAVE_LIBDPU)
+# Specialized lldb-server for DPU targets
+
+set(LLDB_PLUGINS)
+
+list(APPEND LLDB_PLUGINS lldbPluginProcessDpu)
+list(APPEND LLDB_PLUGINS lldbPluginObjectFileELF)
+
+add_lldb_tool(lldb-server-dpu INCLUDE_IN_SUITE
+    Acceptor.cpp
+    lldb-gdbserver.cpp
+    lldb-platform.cpp
+    lldb-server.cpp
+    LLDBServerUtilities.cpp
+    SystemInitializerLLGS.cpp
+
+    LINK_LIBS
+      lldbBase
+      lldbCore
+      lldbHost
+      lldbInitialization
+      lldbInterpreter
+      ${LLDB_PLUGINS}
+      ${LLDB_SYSTEM_LIBS}
+
+    LINK_COMPONENTS
+      Support
+)
+
+target_link_libraries(lldb-server-dpu PRIVATE ${LLDB_SYSTEM_LIBS} "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../backends/build/cni/libdpucni-2019.2.0.so")
+target_compile_options(lldb-server-dpu PRIVATE -DUSE_DPU)
+endif()
