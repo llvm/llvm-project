@@ -21,7 +21,7 @@
 class DNBError {
 public:
   typedef uint32_t ValueType;
-  typedef enum {
+  enum FlavorType {
     Generic = 0,
     MachKernel = 1,
     POSIX = 2
@@ -37,7 +37,7 @@ public:
     ,
     FrontBoard = 5
 #endif
-  } FlavorType;
+  };
 
   explicit DNBError(ValueType err = 0, FlavorType flavor = Generic)
       : m_err(err), m_flavor(flavor) {}

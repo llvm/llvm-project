@@ -75,14 +75,14 @@ protected:
   kern_return_t EnableHardwareSingleStep(bool enable);
   static bool FixGenericRegisterNumber(uint32_t &set, uint32_t &reg);
 
-  typedef enum RegisterSetTag {
+  enum RegisterSet {
     e_regSetALL = REGISTER_SET_ALL,
     e_regSetGPR, // ARM_THREAD_STATE64,
     e_regSetVFP, // ARM_NEON_STATE64,
     e_regSetEXC, // ARM_EXCEPTION_STATE64,
     e_regSetDBG, // ARM_DEBUG_STATE64,
     kNumRegisterSets
-  } RegisterSet;
+  };
 
   enum {
     e_regSetGPRCount = ARM_THREAD_STATE64_COUNT,

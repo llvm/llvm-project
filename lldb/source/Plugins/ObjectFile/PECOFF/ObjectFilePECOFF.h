@@ -16,7 +16,7 @@
 
 class ObjectFilePECOFF : public lldb_private::ObjectFile {
 public:
-  typedef enum MachineType {
+  enum MachineType {
     MachineUnknown = 0x0,
     MachineAm33 = 0x1d3,
     MachineAmd64 = 0x8664,
@@ -39,7 +39,7 @@ public:
     MachineSh5 = 0x1a8,
     MachineThumb = 0x1c2,
     MachineWcemIpsv2 = 0x169
-  } MachineType;
+  };
 
   ObjectFilePECOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
                    lldb::offset_t data_offset,
@@ -206,10 +206,10 @@ protected:
         data_dirs; // will contain num_data_dir_entries entries
   } coff_opt_header_t;
 
-  typedef enum coff_data_dir_type {
+  enum coff_data_dir_type {
     coff_data_dir_export_table = 0,
     coff_data_dir_import_table = 1,
-  } coff_data_dir_type;
+  };
 
   typedef struct section_header {
     char name[8];

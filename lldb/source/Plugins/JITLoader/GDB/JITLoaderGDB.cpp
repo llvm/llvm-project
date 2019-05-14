@@ -35,11 +35,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 // Debug Interface Structures
-typedef enum {
-  JIT_NOACTION = 0,
-  JIT_REGISTER_FN,
-  JIT_UNREGISTER_FN
-} jit_actions_t;
+enum jit_actions_t { JIT_NOACTION = 0, JIT_REGISTER_FN, JIT_UNREGISTER_FN };
 
 template <typename ptr_t> struct jit_code_entry {
   ptr_t next_entry;   // pointer

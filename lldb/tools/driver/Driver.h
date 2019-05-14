@@ -26,11 +26,11 @@
 
 class Driver : public lldb::SBBroadcaster {
 public:
-  typedef enum CommandPlacement {
+  enum CommandPlacement {
     eCommandPlacementBeforeFile,
     eCommandPlacementAfterFile,
     eCommandPlacementAfterCrash,
-  } CommandPlacement;
+  };
 
   Driver();
 

@@ -45,14 +45,14 @@ public:
 protected:
   kern_return_t EnableHardwareSingleStep(bool enable);
 
-  typedef enum RegisterSetTag {
+  enum RegisterSet {
     e_regSetALL = REGISTER_SET_ALL,
     e_regSetGPR,
     e_regSetFPR,
     e_regSetEXC,
     e_regSetVEC,
     kNumRegisterSets
-  } RegisterSet;
+  };
 
   typedef enum RegisterSetWordSizeTag {
     e_regSetWordSizeGPR = PPC_THREAD_STATE_COUNT,

@@ -22,11 +22,11 @@ std::thread g_thread_2;
 std::thread g_thread_3;
 std::mutex g_mask_mutex;
 
-typedef enum {
+enum MaskAction {
     eGet,
     eAssign,
     eClearBits
-} MaskAction;
+};
 
 uint32_t mask_access (MaskAction action, uint32_t mask = 0);
 

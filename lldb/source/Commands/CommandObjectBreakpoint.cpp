@@ -324,7 +324,7 @@ static constexpr OptionDefinition g_breakpoint_set_options[] = {
 
 class CommandObjectBreakpointSet : public CommandObjectParsed {
 public:
-  typedef enum BreakpointSetType {
+  enum BreakpointSetType {
     eSetTypeInvalid,
     eSetTypeFileAndLine,
     eSetTypeAddress,
@@ -333,7 +333,7 @@ public:
     eSetTypeSourceRegexp,
     eSetTypeException,
     eSetTypeScripted,
-  } BreakpointSetType;
+  };
 
   CommandObjectBreakpointSet(CommandInterpreter &interpreter)
       : CommandObjectParsed(
@@ -1420,10 +1420,7 @@ static constexpr OptionDefinition g_breakpoint_clear_options[] = {
 
 class CommandObjectBreakpointClear : public CommandObjectParsed {
 public:
-  typedef enum BreakpointClearType {
-    eClearTypeInvalid,
-    eClearTypeFileAndLine
-  } BreakpointClearType;
+  enum BreakpointClearType { eClearTypeInvalid, eClearTypeFileAndLine };
 
   CommandObjectBreakpointClear(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "breakpoint clear",

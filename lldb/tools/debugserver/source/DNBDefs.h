@@ -64,7 +64,7 @@ typedef uint32_t nub_bool_t;
 #define WATCH_TYPE_READ (1u << 0)
 #define WATCH_TYPE_WRITE (1u << 1)
 
-typedef enum {
+enum nub_state_t {
   eStateInvalid = 0,
   eStateUnloaded,
   eStateAttaching,
@@ -76,9 +76,9 @@ typedef enum {
   eStateDetached,
   eStateExited,
   eStateSuspended
-} nub_state_t;
+};
 
-typedef enum {
+enum nub_launch_flavor_t {
   eLaunchFlavorDefault = 0,
   eLaunchFlavorPosixSpawn = 1,
   eLaunchFlavorForkExec = 2,
@@ -91,7 +91,7 @@ typedef enum {
 #ifdef WITH_FBS
   eLaunchFlavorFBS = 5
 #endif
-} nub_launch_flavor_t;
+};
 
 #define NUB_STATE_IS_RUNNING(s)                                                \
   ((s) == eStateAttaching || (s) == eStateLaunching || (s) == eStateRunning || \

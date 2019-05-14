@@ -19,10 +19,10 @@ namespace lldb_private {
 
 class IOObject {
 public:
-  typedef enum {
+  enum FDType {
     eFDTypeFile,   // Other FD requiring read/write
     eFDTypeSocket, // Socket requiring send/recv
-  } FDType;
+  };
 
   // TODO: On Windows this should be a HANDLE, and wait should use
   // WaitForMultipleObjects

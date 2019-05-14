@@ -34,12 +34,12 @@ public:
   // Note:
   // eWatchRead == LLDB_WATCH_TYPE_READ; and
   // eWatchWrite == LLDB_WATCH_TYPE_WRITE
-  typedef enum WatchType {
+  enum WatchType {
     eWatchInvalid = 0,
     eWatchRead,
     eWatchWrite,
     eWatchReadWrite
-  } WatchType;
+  };
 
   WatchType watch_type;
   uint32_t watch_size;

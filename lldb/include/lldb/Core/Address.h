@@ -81,7 +81,7 @@ class Address {
 public:
   /// Dump styles allow the Address::Dump(Stream *,DumpStyle) const function
   /// to display Address contents in a variety of ways.
-  typedef enum {
+  enum DumpStyle {
     DumpStyleInvalid,           ///< Invalid dump style
     DumpStyleSectionNameOffset, ///< Display as the section name + offset.
                                 ///< \code
@@ -97,7 +97,7 @@ public:
     /// // address for printf in libSystem.B.dylib as a file address
     /// 0x000000000005dcff \endcode
     DumpStyleModuleWithFileAddress, ///< Display as the file address with the
-                                    ///module name prepended (if any).
+                                    /// module name prepended (if any).
                                     ///< \code
     /// // address for printf in libSystem.B.dylib as a file address
     /// libSystem.B.dylib[0x000000000005dcff] \endcode
@@ -106,22 +106,22 @@ public:
     /// // address for printf in libSystem.B.dylib as a load address
     /// 0x00007fff8306bcff \endcode
     DumpStyleResolvedDescription, ///< Display the details about what an address
-                                  ///resolves to. This can
+                                  /// resolves to. This can
     ///< be anything from a symbol context summary (module, function/symbol,
     ///< and file and line), to information about what the pointer points to
     ///< if the address is in a section (section of pointers, c strings, etc).
     DumpStyleResolvedDescriptionNoModule,
     DumpStyleResolvedDescriptionNoFunctionArguments,
     DumpStyleNoFunctionName, ///< Elide the function name; display an offset
-                             ///into the current function.
+                             /// into the current function.
                              ///< Used primarily in disassembly symbolication
     DumpStyleDetailedSymbolContext, ///< Detailed symbol context information for
-                                    ///an address for all symbol
+                                    /// an address for all symbol
                                     ///< context members.
     DumpStyleResolvedPointerDescription ///< Dereference a pointer at the
-                                        ///current address and then lookup the
+                                        /// current address and then lookup the
     ///< dereferenced address using DumpStyleResolvedDescription
-  } DumpStyle;
+  };
 
   /// Default constructor.
   ///
