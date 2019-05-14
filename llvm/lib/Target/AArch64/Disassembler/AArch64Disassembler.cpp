@@ -13,6 +13,7 @@
 #include "AArch64ExternalSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"

@@ -16,6 +16,7 @@
 #include "AArch64WinCOFFStreamer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
+#include "TargetInfo/AArch64TargetInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"

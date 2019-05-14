@@ -16,6 +16,7 @@
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "TargetInfo/AArch64TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
