@@ -1691,6 +1691,38 @@ multiclass sve_int_mlas_vvv_pred<bits<1> opc, string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE2 Integer Multiply-Add - Unpredicated Group
+//===----------------------------------------------------------------------===//
+
+class sve2_int_mla<bits<2> sz, bits<5> opc, string asm,
+                   ZPRRegOp zprty1, ZPRRegOp zprty2>
+: I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty2:$Zn, zprty2:$Zm),
+  asm, "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = Destructive;
+  let ElementSize = ElementSizeNone;
+}
+
+multiclass sve2_int_mla<bit S, string asm> {
+  def _B : sve2_int_mla<0b00, { 0b1110, S }, asm, ZPR8, ZPR8>;
+  def _H : sve2_int_mla<0b01, { 0b1110, S }, asm, ZPR16, ZPR16>;
+  def _S : sve2_int_mla<0b10, { 0b1110, S }, asm, ZPR32, ZPR32>;
+  def _D : sve2_int_mla<0b11, { 0b1110, S }, asm, ZPR64, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE2 Integer Multiply-Add - Indexed Group
 //===----------------------------------------------------------------------===//
 
