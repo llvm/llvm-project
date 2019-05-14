@@ -565,6 +565,21 @@ This channel has several bots.
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
 
+Meetups and social events
+-------------------------
+
+.. toctree::
+   :hidden:
+
+   MeetupGuidelines
+
+Besides developer `meetings and conferences <https://llvm.org/devmtg/>`_,
+there are several user groups called
+`LLVM Socials <https://www.meetup.com/pro/llvm/>`_. We greatly encourage you to
+join one in your city. Or start a new one if there is none:
+
+:doc:`MeetupGuidelines`
+
 Community wide proposals
 ------------------------
 
