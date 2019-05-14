@@ -26456,9 +26456,10 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
                                               Ops, MVT::i64,
                                               Node->getMemOperand());
 
-      // If this is a sequentially consistent store, also emit an mfence.
+      // If this is a sequentially consistent store, also emit an appropriate
+      // barrier.
       if (IsSeqCst)
-        Chain = DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Chain);
+        Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
 
       return Chain;
     }

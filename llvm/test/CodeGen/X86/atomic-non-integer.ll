@@ -710,7 +710,7 @@ define void @store_double_seq_cst(double* %fptr, double %v) {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
-; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    lock orl $0, (%esp)
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: store_double_seq_cst:
@@ -718,7 +718,7 @@ define void @store_double_seq_cst(double* %fptr, double %v) {
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
-; X86-AVX-NEXT:    mfence
+; X86-AVX-NEXT:    lock orl $0, (%esp)
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-NOSSE-LABEL: store_double_seq_cst:
