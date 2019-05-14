@@ -111,7 +111,7 @@ class BlockCoverage {
 class DataFlowTrace {
  public:
   void ReadCoverage(const std::string &DirPath);
-  void Init(const std::string &DirPath, std::string *FocusFunction,
+  bool Init(const std::string &DirPath, std::string *FocusFunction,
             Random &Rand);
   void Clear() { Traces.clear(); }
   const Vector<uint8_t> *Get(const std::string &InputSha1) const {

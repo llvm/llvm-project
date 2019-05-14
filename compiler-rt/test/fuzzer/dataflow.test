@@ -74,6 +74,11 @@ RUN:%libfuzzer_src/scripts/merge_data_flow.py  %t-merge-* | sort | FileCheck %s 
 # Test collect_data_flow
 RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/FUZZMU | sort | FileCheck %s --check-prefix=IN_FUZZMU
 
+# Test libFuzzer's built in DFT collection.
+RUN: rm -rf %t-DFT
+RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/FUZZMU
+RUN: cat %t-DFT/* | sort | FileCheck %s --check-prefix=IN_FUZZMU
+
 IN_FUZZMU: F0 1111001
 IN_FUZZMU: F1 0000100
 IN_FUZZMU: F2 0000011
@@ -88,10 +93,19 @@ RUN: %t-ExplodeDFSanLabelsTestDF 4 6  %t/IN/1234567890123456
 # Or we can use collect_data_flow
 RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ExplodeDFSanLabelsTestDF %t/IN/1234567890123456
 
+# Test libFuzzer's builtin collect_data_flow.
+RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/1234567890123456
+
 # Test that we can run collect_data_flow on the entire corpus dir
 RUN: rm -rf %t/OUT
 RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN %t/OUT
 RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
+
+RUN: rm -rf %t/OUT
+RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN
+RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
+
+
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: reading from {{.*}}/OUT
 USE_DATA_FLOW_TRACE-DAG: ca8eefe2fd5d6b32028f355fafa3e739a6bf5edc => |000001|
 USE_DATA_FLOW_TRACE-DAG: d28cb407e8e1a702c72d25473f0553d3ec172262 => |0000011|
@@ -99,12 +113,14 @@ USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: 6 trace files, 3 functions, 2 traces w
 USE_DATA_FLOW_TRACE: INFO: Focus function is set to 'Func2'
 
 # Test that we can run collect_data_flow on a long input (>2**16 bytes)
-RUN: rm -rf %t/OUT
 RUN: printf "%0.sA" {1..150001} > %t/IN/very_long_input
+RUN: rm -rf %t/OUT
 RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/very_long_input %t/OUT | FileCheck %s --check-prefix=COLLECT_TRACE_FOR_LONG_INPUT
+RUN: rm -rf %t/OUT
+RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN/very_long_input 2>&1 | FileCheck %s --check-prefix=COLLECT_TRACE_FOR_LONG_INPUT
 RUN: rm %t/IN/very_long_input
-COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[0, 150001]
-COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[75000, 150001]
-COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[112500, 150001]
-COLLECT_TRACE_FOR_LONG_INPUT: ******* Success:{{[ ]+}}[{{[0123456789]+}}, 150001]
-COLLECT_TRACE_FOR_LONG_INPUT: ******* Success:{{[ ]+}}[0, {{[0123456789]+}}]
+COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[0, 150001
+COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Trying:{{[ ]+}}[75000, 150001
+COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Trying:{{[ ]+}}[112500, 150001
+COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Success:{{[ ]+}}[{{[0123456789]+}}, 150001
+COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Success:{{[ ]+}}[0, {{[0123456789]+}}
