@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd February 26, 2019
+.Dd May 12, 2019
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -552,6 +552,14 @@ Sets the
 .Dv DYNAMIC
 section.
 Different loaders can decide how to handle this flag on their own.
+.It Cm ifunc-noplt
+Do not emit PLT entries for ifunc symbols.
+Instead, emit text relocations referencing the resolver.
+This is an experimental optimization and only suitable for standalone
+environments where text relocations do not have the usual drawbacks.
+This option must be combined with the
+.Fl z Li notext
+option.
 .It Cm initfirst
 Sets the
 .Dv DF_1_INITFIRST

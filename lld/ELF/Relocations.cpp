@@ -1066,7 +1066,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   // be resolved within the executable will actually be resolved that way at
   // runtime, because the main exectuable is always at the beginning of a search
   // list. We can leverage that fact.
-  if (!Sym.IsPreemptible && !Sym.isGnuIFunc()) {
+  if (!Sym.IsPreemptible && (!Sym.isGnuIFunc() || Config->ZIfuncNoplt)) {
     if (Expr == R_GOT_PC && !isAbsoluteValue(Sym))
       Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
     else
@@ -1091,6 +1091,14 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   if (unsigned Processed =
           handleTlsRelocation<ELFT>(Type, Sym, Sec, Offset, Addend, Expr)) {
     I += (Processed - 1);
+    return;
+  }
+
+  // We were asked not to generate PLT entries for ifuncs. Instead, pass the
+  // direct relocation on through.
+  if (Sym.isGnuIFunc() && Config->ZIfuncNoplt) {
+    Sym.ExportDynamic = true;
+    In.RelaDyn->addReloc(Type, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
     return;
   }
 
