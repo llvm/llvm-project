@@ -491,6 +491,30 @@ v_subrev_co_u32 v84, vcc, v13, v31 clamp
 // GFX9: v_subrev_co_u32_e64 v84, vcc, v13, v31 clamp ; encoding: [0x54,0xea,0x1b,0xd1,0x0d,0x3f,0x02,0x00]
 // NOVI: error:
 
+v_addc_co_u32 v84, vcc, v13, v31, vcc
+// GFX9: v_addc_co_u32_e32 v84, vcc, v13, v31, vcc ; encoding: [0x0d,0x3f,0xa8,0x38]
+// NOVI: error: instruction not supported on this GPU
+
+v_subb_co_u32 v84, vcc, v13, v31, vcc
+// GFX9: v_subb_co_u32_e32 v84, vcc, v13, v31, vcc ; encoding: [0x0d,0x3f,0xa8,0x3a]
+// NOVI: error: instruction not supported on this GPU
+
+v_subbrev_co_u32 v84, vcc, v13, v31, vcc
+// GFX9: v_subbrev_co_u32_e32 v84, vcc, v13, v31, vcc ; encoding: [0x0d,0x3f,0xa8,0x3c]
+// NOVI: error: instruction not supported on this GPU
+
+v_add_co_u32 v84, vcc, v13, v31
+// GFX9: v_add_co_u32_e32 v84, vcc, v13, v31 ; encoding: [0x0d,0x3f,0xa8,0x32]
+// NOVI: error: instruction not supported on this GPU
+
+v_sub_co_u32 v84, vcc, v13, v31
+// GFX9: v_sub_co_u32_e32 v84, vcc, v13, v31 ; encoding: [0x0d,0x3f,0xa8,0x34]
+// NOVI: error: instruction not supported on this GPU
+
+v_subrev_co_u32 v84, vcc, v13, v31
+// GFX9: v_subrev_co_u32_e32 v84, vcc, v13, v31 ; encoding: [0x0d,0x3f,0xa8,0x36]
+// NOVI: error: instruction not supported on this GPU
+
 //===----------------------------------------------------------------------===//
 // Validate register size checks (bug 37943)
 //===----------------------------------------------------------------------===//
