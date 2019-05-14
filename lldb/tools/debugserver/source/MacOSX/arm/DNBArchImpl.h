@@ -113,14 +113,14 @@ protected:
                                                          nub_addr_t *nextPC,
                                                          bool *nextPCIsThumb);
 
-  typedef enum RegisterSetTag {
+  enum RegisterSet {
     e_regSetALL = REGISTER_SET_ALL,
     e_regSetGPR, // ARM_THREAD_STATE
     e_regSetVFP, // ARM_VFP_STATE (ARM_NEON_STATE if defined __arm64__)
     e_regSetEXC, // ARM_EXCEPTION_STATE
     e_regSetDBG, // ARM_DEBUG_STATE (ARM_DEBUG_STATE32 if defined __arm64__)
     kNumRegisterSets
-  } RegisterSet;
+  };
 
   enum { Read = 0, Write = 1, kNumErrors = 2 };
 

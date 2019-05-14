@@ -19,14 +19,14 @@
 namespace lldb_private {
 
 // ARM shifter types
-typedef enum {
+enum ARM_ShifterType {
   SRType_LSL,
   SRType_LSR,
   SRType_ASR,
   SRType_ROR,
   SRType_RRX,
   SRType_Invalid
-} ARM_ShifterType;
+};
 
 // ARM conditions          // Meaning (integer)         Meaning (floating-point)
 // Condition flags

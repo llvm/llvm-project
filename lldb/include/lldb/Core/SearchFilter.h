@@ -59,11 +59,11 @@ namespace lldb_private {
 
 class Searcher {
 public:
-  typedef enum {
+  enum CallbackReturn {
     eCallbackReturnStop = 0, // Stop the iteration
     eCallbackReturnContinue, // Continue the iteration
     eCallbackReturnPop       // Pop one level up and continue iterating
-  } CallbackReturn;
+  };
 
   Searcher();
 

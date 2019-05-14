@@ -48,7 +48,7 @@ class DataExtractor {
 public:
   /// \typedef DataExtractor::Type
   /// Type enumerations used in the dump routines.
-  typedef enum {
+  enum Type {
     TypeUInt8,   ///< Format output as unsigned 8 bit integers
     TypeChar,    ///< Format output as characters
     TypeUInt16,  ///< Format output as unsigned 16 bit integers
@@ -57,7 +57,7 @@ public:
     TypePointer, ///< Format output as pointers
     TypeULEB128, ///< Format output as ULEB128 numbers
     TypeSLEB128  ///< Format output as SLEB128 numbers
-  } Type;
+  };
 
   /// Default constructor.
   ///
