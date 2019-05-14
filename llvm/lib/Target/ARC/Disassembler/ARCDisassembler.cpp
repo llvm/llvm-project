@@ -14,6 +14,7 @@
 #include "ARC.h"
 #include "ARCRegisterInfo.h"
 #include "MCTargetDesc/ARCMCTargetDesc.h"
+#include "TargetInfo/ARCTargetInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
