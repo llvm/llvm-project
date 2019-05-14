@@ -13,6 +13,7 @@
 #include "MCTargetDesc/ARMInstPrinter.h"
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
+#include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/None.h"

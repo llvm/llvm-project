@@ -16,6 +16,7 @@
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
+#include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
