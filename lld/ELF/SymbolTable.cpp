@@ -32,81 +32,6 @@ using namespace lld::elf;
 
 SymbolTable *elf::Symtab;
 
-static InputFile *getFirstElf() {
-  if (!ObjectFiles.empty())
-    return ObjectFiles[0];
-  if (!SharedFiles.empty())
-    return SharedFiles[0];
-  return BitcodeFiles[0];
-}
-
-// All input object files must be for the same architecture
-// (e.g. it does not make sense to link x86 object files with
-// MIPS object files.) This function checks for that error.
-static bool isCompatible(InputFile *F) {
-  if (!F->isElf() && !isa<BitcodeFile>(F))
-    return true;
-
-  if (F->EKind == Config->EKind && F->EMachine == Config->EMachine) {
-    if (Config->EMachine != EM_MIPS)
-      return true;
-    if (isMipsN32Abi(F) == Config->MipsN32Abi)
-      return true;
-  }
-
-  if (!Config->Emulation.empty())
-    error(toString(F) + " is incompatible with " + Config->Emulation);
-  else
-    error(toString(F) + " is incompatible with " + toString(getFirstElf()));
-  return false;
-}
-
-// Add symbols in File to the symbol table.
-template <class ELFT> void SymbolTable::addFile(InputFile *File) {
-  if (!isCompatible(File))
-    return;
-
-  // Binary file
-  if (auto *F = dyn_cast<BinaryFile>(File)) {
-    BinaryFiles.push_back(F);
-    F->parse();
-    return;
-  }
-
-  // .a file
-  if (auto *F = dyn_cast<ArchiveFile>(File)) {
-    F->parse<ELFT>();
-    return;
-  }
-
-  // Lazy object file
-  if (auto *F = dyn_cast<LazyObjFile>(File)) {
-    LazyObjFiles.push_back(F);
-    F->parse<ELFT>();
-    return;
-  }
-
-  if (Config->Trace)
-    message(toString(File));
-
-  // .so file
-  if (auto *F = dyn_cast<SharedFile>(File)) {
-    F->parse<ELFT>();
-    return;
-  }
-
-  // LLVM bitcode file
-  if (auto *F = dyn_cast<BitcodeFile>(File)) {
-    BitcodeFiles.push_back(F);
-    F->parse<ELFT>(ComdatGroups);
-    return;
-  }
-
-  // Regular object file
-  ObjectFiles.push_back(File);
-  cast<ObjFile<ELFT>>(File)->parse(ComdatGroups);
-}
-
 // This function is where all the optimizations of link-time
 // optimization happens. When LTO is in use, some input files are
 // not in native object file format but in the LLVM bitcode format.
@@ -539,7 +464,7 @@ void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &File,
   }
 
   if (InputFile *F = File.fetch(Sym))
-    addFile<ELFT>(F);
+    parseFile<ELFT>(F);
 }
 
 template <class ELFT>
@@ -563,19 +488,19 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &File) {
   }
 
   if (InputFile *F = File.fetch())
-    addFile<ELFT>(F);
+    parseFile<ELFT>(F);
 }
 
 template <class ELFT> void SymbolTable::fetchLazy(Symbol *Sym) {
   if (auto *S = dyn_cast<LazyArchive>(Sym)) {
     if (InputFile *File = S->fetch())
-      addFile<ELFT>(File);
+      parseFile<ELFT>(File);
     return;
   }
 
   auto *S = cast<LazyObject>(Sym);
   if (InputFile *File = cast<LazyObjFile>(S->File)->fetch())
-    addFile<ELFT>(File);
+    parseFile<ELFT>(File);
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol
@@ -738,11 +663,6 @@ void SymbolTable::scanVersionScript() {
   for (Symbol *Sym : SymVector)
     Sym->parseSymbolVersion();
 }
-
-template void SymbolTable::addFile<ELF32LE>(InputFile *);
-template void SymbolTable::addFile<ELF32BE>(InputFile *);
-template void SymbolTable::addFile<ELF64LE>(InputFile *);
-template void SymbolTable::addFile<ELF64BE>(InputFile *);
 
 template Symbol *SymbolTable::addUndefined<ELF32LE>(StringRef, uint8_t, uint8_t,
                                                     uint8_t, bool, InputFile *);
