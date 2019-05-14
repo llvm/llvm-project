@@ -1026,4 +1026,12 @@ let Predicates = [HasSVE2] in {
   // SVE2 integer multiply-add (indexed)
   defm MLA_ZZZI : sve2_int_mla_by_indexed_elem<0b01, 0b0, "mla">;
   defm MLS_ZZZI : sve2_int_mla_by_indexed_elem<0b01, 0b1, "mls">;
+
+  // SVE2 saturating multiply-add high (indexed)
+  defm SQRDMLAH_ZZZI : sve2_int_mla_by_indexed_elem<0b10, 0b0, "sqrdmlah">;
+  defm SQRDMLSH_ZZZI : sve2_int_mla_by_indexed_elem<0b10, 0b1, "sqrdmlsh">;
+
+  // SVE2 saturating multiply-add high (vectors, unpredicated)
+  defm SQRDMLAH_ZZZ : sve2_int_mla<0b0, "sqrdmlah">;
+  defm SQRDMLSH_ZZZ : sve2_int_mla<0b1, "sqrdmlsh">;
 }
