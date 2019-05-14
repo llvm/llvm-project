@@ -63,6 +63,8 @@ public:
     DIEInfo();
     DIEInfo(dw_offset_t c, dw_offset_t o, dw_tag_t t, uint32_t f, uint32_t h,
             uint64_t s = UINT64_MAX);
+
+    explicit operator DIERef() const { return {cu_offset, offset}; }
   };
 
   struct Atom {
