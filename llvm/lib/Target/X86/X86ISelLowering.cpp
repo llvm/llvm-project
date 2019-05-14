@@ -26292,13 +26292,23 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
   // here since it doesn't require an extra register.
   // 3) OR appears to be very slightly faster than ADD. (Though, the difference
   // is small enough it might just be measurement noise.)
-  // 4) For the moment, we are using top of stack.  This creates false sharing
-  // with actual stack access/call sequences, and it would be better to use a
-  // location within the redzone.  For the moment, this is still better than an
-  // mfence though.  TODO: Revise the offset used when we can assume a redzone.
+  // 4) When choosing offsets, there are several contributing factors:
+  //   a) If there's no redzone, we default to TOS.  (We could allocate a cache
+  //      line aligned stack object to improve this case.) 
+  //   b) To minimize our chances of introducing a false dependence, we prefer
+  //      to offset the stack usage from TOS slightly.  
+  //   c) To minimize concerns about cross thread stack usage - in particular,
+  //      the idiomatic MyThreadPool.run([&StackVars]() {...}) pattern which
+  //      captures state in the TOS frame and accesses it from many threads -
+  //      we want to use an offset such that the offset is in a distinct cache
+  //      line from the TOS frame.
   // 
   // For a general discussion of the tradeoffs and benchmark results, see:
   // https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
+
+  auto &MF = DAG.getMachineFunction();
+  auto &TFL = *Subtarget.getFrameLowering();
+  const unsigned SPOffset = TFL.has128ByteRedZone(MF) ? -64 : 0;
 
   if (Subtarget.is64Bit()) {
     SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
@@ -26306,7 +26316,7 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
       DAG.getRegister(X86::RSP, MVT::i64),                  // Base
       DAG.getTargetConstant(1, DL, MVT::i8),                // Scale
       DAG.getRegister(0, MVT::i64),                         // Index
-      DAG.getTargetConstant(0, DL, MVT::i32),               // Disp
+      DAG.getTargetConstant(SPOffset, DL, MVT::i32),        // Disp
       DAG.getRegister(0, MVT::i16),                         // Segment.
       Zero,
       Chain};
@@ -26320,7 +26330,7 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
     DAG.getRegister(X86::ESP, MVT::i32),            // Base
     DAG.getTargetConstant(1, DL, MVT::i8),          // Scale
     DAG.getRegister(0, MVT::i32),                   // Index
-    DAG.getTargetConstant(0, DL, MVT::i32),         // Disp
+    DAG.getTargetConstant(SPOffset, DL, MVT::i32),  // Disp
     DAG.getRegister(0, MVT::i16),                   // Segment.
     Zero,
     Chain
