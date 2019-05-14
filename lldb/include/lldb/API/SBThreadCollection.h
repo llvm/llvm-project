@@ -23,6 +23,8 @@ public:
 
   ~SBThreadCollection();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   size_t GetSize();

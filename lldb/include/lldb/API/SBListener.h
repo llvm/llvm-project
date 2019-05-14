@@ -29,6 +29,8 @@ public:
 
   void Clear();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   uint32_t StartListeningForEventClass(SBDebugger &debugger,

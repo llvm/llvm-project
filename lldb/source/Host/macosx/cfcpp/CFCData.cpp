@@ -8,19 +8,13 @@
 
 #include "CFCData.h"
 
-//----------------------------------------------------------------------
 // CFCData constructor
-//----------------------------------------------------------------------
 CFCData::CFCData(CFDataRef data) : CFCReleaser<CFDataRef>(data) {}
 
-//----------------------------------------------------------------------
 // CFCData copy constructor
-//----------------------------------------------------------------------
 CFCData::CFCData(const CFCData &rhs) : CFCReleaser<CFDataRef>(rhs) {}
 
-//----------------------------------------------------------------------
 // CFCData copy constructor
-//----------------------------------------------------------------------
 CFCData &CFCData::operator=(const CFCData &rhs)
 
 {
@@ -29,9 +23,7 @@ CFCData &CFCData::operator=(const CFCData &rhs)
   return *this;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 CFCData::~CFCData() {}
 
 CFIndex CFCData::GetLength() const {

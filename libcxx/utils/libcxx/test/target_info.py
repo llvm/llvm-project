@@ -156,15 +156,6 @@ class DarwinLocalTI(DefaultTargetInfo):
             env['DYLD_LIBRARY_PATH'] = ':'.join(library_paths)
 
     def allow_cxxabi_link(self):
-        # FIXME: PR27405
-        # libc++ *should* export all of the symbols found in libc++abi on OS X.
-        # For this reason LibcxxConfiguration will not link libc++abi in OS X.
-        # However __cxa_throw_bad_new_array_length doesn't get exported into
-        # libc++ yet so we still need to explicitly link libc++abi when testing
-        # libc++abi
-        # See PR22654.
-        if(self.full_config.get_lit_conf('name', '') == 'libc++abi'):
-            return True
         # Don't link libc++abi explicitly on OS X because the symbols
         # should be available in libc++ directly.
         return False
@@ -234,18 +225,13 @@ class LinuxLocalTI(DefaultTargetInfo):
                           self.full_config.config.available_features)
         llvm_unwinder = self.full_config.get_lit_bool('llvm_unwinder', False)
         shared_libcxx = self.full_config.get_lit_bool('enable_shared', True)
-        # FIXME: Remove the need to link -lrt in all the tests, and instead
-        # limit it only to the filesystem tests. This ensures we don't cause an
-        # implicit dependency on librt except when filesystem is needed.
-        enable_fs = self.full_config.get_lit_bool('enable_filesystem',
-                                                  default=False)
         flags += ['-lm']
         if not llvm_unwinder:
             flags += ['-lgcc_s', '-lgcc']
         if enable_threads:
             flags += ['-lpthread']
-            if not shared_libcxx or enable_fs:
-              flags += ['-lrt']
+            if not shared_libcxx:
+                flags += ['-lrt']
         flags += ['-lc']
         if llvm_unwinder:
             flags += ['-lunwind', '-ldl']

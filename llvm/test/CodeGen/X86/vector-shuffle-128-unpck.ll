@@ -221,3 +221,15 @@ define <16 x i8> @unpckl_unary_extracted_v32i8(<32 x i8> %x) {
   ret <16 x i8> %r
 }
 
+; This would infinite loop because we did not recognize the unpack shuffle mask in commuted form.
+
+define <8 x i32> @extract_unpckl_v8i32(<8 x i32> %a) {
+; ALL-LABEL: extract_unpckl_v8i32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; ALL-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 4, i32 undef, i32 5, i32 1, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x i32> %shuffle
+}
+

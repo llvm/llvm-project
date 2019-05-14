@@ -77,8 +77,8 @@ define void @PR25858_i64(%WideUInt64* sret, %WideUInt64*, %WideUInt64*) nounwind
 ; X86-NEXT:    movzbl %bl, %ecx
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    sbbl $0, %ebp
-; X86-NEXT:    movl %edi, 4(%eax)
 ; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ebp, 12(%eax)
 ; X86-NEXT:    popl %esi

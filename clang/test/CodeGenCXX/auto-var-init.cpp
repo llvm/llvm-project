@@ -64,7 +64,7 @@ struct smallpartinit { char c = 42, d; };
 // PATTERN-O1-NOT: @__const.test_nullinit_custom.custom
 struct nullinit { char* null = nullptr; };
 // PATTERN-O0: @__const.test_padded_uninit.uninit = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, align 4
-// PATTERN-O0: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] c"\AA\AA\AA", i32 13371337 }, align 4
+// PATTERN-O0: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, align 4
 // ZERO-O0: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, align 4
 // PATTERN-O1-NOT: @__const.test_padded_uninit.uninit
 // PATTERN-O1-NOT: @__const.test_padded_custom.custom
@@ -85,8 +85,10 @@ struct paddedpacked { char c; int i; } __attribute__((packed));
 // PATTERN: @__const.test_paddedpackedarray_custom.custom = private unnamed_addr constant %struct.paddedpackedarray { [2 x %struct.paddedpacked] [%struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }>] }, align 1
 // ZERO: @__const.test_paddedpackedarray_custom.custom = private unnamed_addr constant %struct.paddedpackedarray { [2 x %struct.paddedpacked] [%struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }>] }, align 1
 struct paddedpackedarray { struct paddedpacked p[2]; };
+// PATTERN-O0: @__const.test_unpackedinpacked_uninit.uninit = private unnamed_addr constant <{ { i8, [3 x i8], i32 }, i8 }> <{ { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, i8 -86 }>, align 1
+struct unpackedinpacked { padded a; char b; } __attribute__((packed));
 // PATTERN-O0: @__const.test_paddednested_uninit.uninit = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 } }, align 4
-// PATTERN: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] c"\AA\AA\AA", i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] c"\AA\AA\AA", i32 13371338 } }, align 4
+// PATTERN: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] zeroinitializer, i32 13371338 } }, align 4
 // ZERO: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] zeroinitializer, i32 13371338 } }, align 4
 struct paddednested { struct padded p1, p2; };
 // PATTERN-O0: @__const.test_paddedpackednested_uninit.uninit = private unnamed_addr constant %struct.paddedpackednested { %struct.paddedpacked <{ i8 -86, i32 -1431655766 }>, %struct.paddedpacked <{ i8 -86, i32 -1431655766 }> }, align 1
@@ -129,12 +131,11 @@ struct arraytail { int i; int arr[]; };
 // PATTERN-O1-NOT: @__const.test_bool4_custom.custom
 // ZERO-O1-NOT: @__const.test_bool4_custom.custom
 
-// PATTERN: @__const.test_intptr4_uninit.uninit = private unnamed_addr constant [4 x i32*] [i32* inttoptr (i64 -6148914691236517206 to i32*), i32* inttoptr (i64 -6148914691236517206 to i32*), i32* inttoptr (i64 -6148914691236517206 to i32*), i32* inttoptr (i64 -6148914691236517206 to i32*)], align 16
 // PATTERN: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x i32*] [i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*)], align 16
 // ZERO: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x i32*] [i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*)], align 16
 // PATTERN-O0: @__const.test_tailpad4_uninit.uninit = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }], align 16
 // PATTERN-O1-NOT: @__const.test_tailpad4_uninit.uninit
-// PATTERN: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }], align 16
+// PATTERN: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align 16
 // ZERO: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align 16
 struct tailpad { short s; char c; };
 // PATTERN-O0: @__const.test_atomicnotlockfree_uninit.uninit = private unnamed_addr constant %struct.notlockfree { [4 x i64] [i64 -6148914691236517206, i64 -6148914691236517206, i64 -6148914691236517206, i64 -6148914691236517206] }, align 8
@@ -779,6 +780,10 @@ TEST_CUSTOM(paddedpackedarray, paddedpackedarray, { {{ 42, 13371337 }, { 43, 133
 // CHECK-NEXT:  call void @llvm.memcpy{{.*}}({{.*}}@__const.test_paddedpackedarray_custom.custom
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
+TEST_UNINIT(unpackedinpacked, unpackedinpacked);
+// CHECK-LABEL: @test_unpackedinpacked_uninit()
+// PATTERN-O0:  call void @llvm.memcpy{{.*}}, i64 9, i1 false)
+
 TEST_UNINIT(paddednested, paddednested);
 // CHECK-LABEL: @test_paddednested_uninit()
 // CHECK:       %uninit = alloca %struct.paddednested, align
@@ -1019,13 +1024,20 @@ TEST_CUSTOM(bool4, bool[4], { true, true, true, true });
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
 TEST_UNINIT(intptr4, int*[4]);
-// CHECK-LABEL: @test_intptr4_uninit()
-// CHECK:       %uninit = alloca [4 x i32*], align
-// CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
-// PATTERN-LABEL: @test_intptr4_uninit()
-// PATTERN: call void @llvm.memcpy{{.*}} @__const.test_intptr4_uninit.uninit
-// ZERO-LABEL: @test_intptr4_uninit()
-// ZERO: call void @llvm.memset{{.*}}, i8 0,
+// CHECK-LABEL:      @test_intptr4_uninit()
+// CHECK:            %uninit = alloca [4 x i32*], align
+// CHECK-NEXT:       call void @{{.*}}used{{.*}}%uninit)
+// PATTERN-O1-LABEL: @test_intptr4_uninit()
+// PATTERN-O1:       %1 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 0
+// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %1, align 16
+// PATTERN-O1-NEXT:  %2 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 1
+// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %2, align 8
+// PATTERN-O1-NEXT:  %3 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 2
+// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %3, align 16
+// PATTERN-O1-NEXT:  %4 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 3
+// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %4, align 8
+// ZERO-LABEL:       @test_intptr4_uninit()
+// ZERO:             call void @llvm.memset{{.*}}, i8 0,
 
 TEST_BRACES(intptr4, int*[4]);
 // CHECK-LABEL: @test_intptr4_braces()
@@ -1124,7 +1136,7 @@ TEST_UNINIT(atomicnotlockfree, _Atomic(notlockfree));
 // PATTERN-LABEL: @test_atomicnotlockfree_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_atomicnotlockfree_uninit.uninit
 // PATTERN-O1: bitcast
-// PATTERN-O1: call void @llvm.memset{{.*}}({{.*}}0, i8 -86, i64 32
+// PATTERN-O1: call void @llvm.memset{{.*}}({{.*}}, i8 -86, i64 32
 // ZERO-LABEL: @test_atomicnotlockfree_uninit()
 // ZERO: call void @llvm.memset{{.*}}, i8 0,
 

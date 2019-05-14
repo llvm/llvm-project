@@ -113,7 +113,8 @@ private:
 public:
   RangeSet Intersect(BasicValueFactory &BV, Factory &F, llvm::APSInt Lower,
                      llvm::APSInt Upper) const;
-
+  RangeSet Intersect(BasicValueFactory &BV, Factory &F,
+                     const RangeSet &Other) const;
   RangeSet Negate(BasicValueFactory &BV, Factory &F) const;
 
   void print(raw_ostream &os) const;

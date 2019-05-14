@@ -788,31 +788,35 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   };
 
   // Case 1: The original expr is empty, so no deref is needed.
-  EXPECT_TRUE(hasADbgVal({DW_OP_dup, DW_OP_constu, 31, DW_OP_shr, DW_OP_lit0,
-                          DW_OP_not, DW_OP_mul, DW_OP_or, DW_OP_stack_value}));
+  EXPECT_TRUE(hasADbgVal({DW_OP_LLVM_convert, 32, DW_ATE_signed,
+                         DW_OP_LLVM_convert, 64, DW_ATE_signed,
+                         DW_OP_stack_value}));
 
   // Case 2: Perform an address calculation with the original expr, deref it,
   // then sign-extend the result.
-  EXPECT_TRUE(hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_deref, DW_OP_dup,
-                          DW_OP_constu, 31, DW_OP_shr, DW_OP_lit0, DW_OP_not,
-                          DW_OP_mul, DW_OP_or, DW_OP_stack_value}));
+  EXPECT_TRUE(hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_deref,
+                         DW_OP_LLVM_convert, 32, DW_ATE_signed,
+                         DW_OP_LLVM_convert, 64, DW_ATE_signed,
+                         DW_OP_stack_value}));
 
   // Case 3: Insert the sign-extension logic before the DW_OP_stack_value.
-  EXPECT_TRUE(hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_dup, DW_OP_constu, 31,
-                          DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_or,
-                          DW_OP_stack_value}));
+  EXPECT_TRUE(hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_LLVM_convert, 32,
+                         DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed,
+                         DW_OP_stack_value}));
 
   // Cases 4-6: Just like cases 1-3, but preserve the fragment at the end.
-  EXPECT_TRUE(hasADbgVal({DW_OP_dup, DW_OP_constu, 31, DW_OP_shr, DW_OP_lit0,
-                          DW_OP_not, DW_OP_mul, DW_OP_or, DW_OP_stack_value,
-                          DW_OP_LLVM_fragment, 0, 8}));
-  EXPECT_TRUE(
-      hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_deref, DW_OP_dup, DW_OP_constu,
-                  31, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_or,
-                  DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 8}));
-  EXPECT_TRUE(hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_dup, DW_OP_constu, 31,
-                          DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_or,
-                          DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 8}));
+  EXPECT_TRUE(hasADbgVal({DW_OP_LLVM_convert, 32, DW_ATE_signed,
+                         DW_OP_LLVM_convert, 64, DW_ATE_signed,
+                         DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 8}));
+
+  EXPECT_TRUE(hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_deref,
+                         DW_OP_LLVM_convert, 32, DW_ATE_signed,
+                         DW_OP_LLVM_convert, 64, DW_ATE_signed,
+                         DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 8}));
+
+  EXPECT_TRUE(hasADbgVal({DW_OP_lit0, DW_OP_mul, DW_OP_LLVM_convert, 32,
+                         DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed,
+                         DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 8}));
 
   verifyModule(*M, &errs(), &BrokenDebugInfo);
   ASSERT_FALSE(BrokenDebugInfo);

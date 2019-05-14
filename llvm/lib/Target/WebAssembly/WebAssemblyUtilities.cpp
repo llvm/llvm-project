@@ -64,6 +64,8 @@ bool WebAssembly::isCopy(const MachineInstr &MI) {
   case WebAssembly::COPY_F64_S:
   case WebAssembly::COPY_V128:
   case WebAssembly::COPY_V128_S:
+  case WebAssembly::COPY_EXCEPT_REF:
+  case WebAssembly::COPY_EXCEPT_REF_S:
     return true;
   default:
     return false;
@@ -266,5 +268,8 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   if (F->getName() == CxaBeginCatchFn || F->getName() == PersonalityWrapperFn ||
       F->getName() == ClangCallTerminateFn || F->getName() == StdTerminateFn)
     return false;
+
+  // TODO Can we exclude call instructions that are marked as 'nounwind' in the
+  // original LLVm IR? (Even when the callee may throw)
   return true;
 }

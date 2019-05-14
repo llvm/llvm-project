@@ -18,7 +18,7 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Content:         ''
 Symbols:
-  Global:
-    - Name:            bar
-      Type:            STT_TLS
-      Section:         .text
+  - Name:          bar
+    Type:          STT_TLS
+    Section:       .text
+    Binding:       STB_GLOBAL

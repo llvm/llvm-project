@@ -1,7 +1,21 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -x c %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -x c++ -analyzer-config c++-inlining=constructors %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -DINLINE -verify -x c %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -DINLINE -verify -x c++ -analyzer-config c++-inlining=constructors %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
+// RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -x c %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
+// RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -x c++ -std=c++14 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
+// RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -x c++ -std=c++17 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
+// RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -DINLINE -x c %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
+// RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -DINLINE -x c++ -std=c++14 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
+// RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -DINLINE -x c++ -std=c++17 %s
 
 void clang_analyzer_eval(int);
 
@@ -196,4 +210,49 @@ namespace EmptyClass {
   }
 }
 
+#if __cplusplus >= 201703L
+namespace aggregate_inheritance_cxx17 {
+struct A {
+  int x;
+};
+
+struct B {
+  int y;
+};
+
+struct C: B {
+  int z;
+};
+
+struct D: A, C {
+  int w;
+};
+
+void foo() {
+  D d{1, 2, 3, 4};
+  clang_analyzer_eval(d.x == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(d.y == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(d.z == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(d.w == 4); // expected-warning{{TRUE}}
+}
+} // namespace aggregate_inheritance_cxx17
+#endif
+
+namespace flex_array_inheritance_cxx17 {
+struct A {
+  int flexible_array[];
+};
+
+struct B {
+  long cookie;
+};
+
+struct C : B {
+  A a;
+};
+
+void foo() {
+  C c{}; // no-crash
+}
+} // namespace flex_array_inheritance_cxx17
 #endif

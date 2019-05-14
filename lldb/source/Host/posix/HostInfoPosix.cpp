@@ -120,43 +120,6 @@ uint32_t HostInfoPosix::GetEffectiveGroupID() { return getegid(); }
 
 FileSpec HostInfoPosix::GetDefaultShell() { return FileSpec("/bin/sh"); }
 
-bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
-                                                 llvm::StringRef dir) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-
-  FileSpec lldb_file_spec = GetShlibDir();
-  if (!lldb_file_spec)
-    return false;
-
-  std::string raw_path = lldb_file_spec.GetPath();
-  // drop library directory
-  llvm::StringRef parent_path = llvm::sys::path::parent_path(raw_path);
-
-  // Most Posix systems (e.g. Linux/*BSD) will attempt to replace a */lib with
-  // */bin as the base directory for helper exe programs.  This will fail if
-  // the /lib and /bin directories are rooted in entirely different trees.
-  if (log)
-    log->Printf("HostInfoPosix::ComputePathRelativeToLibrary() attempting to "
-                "derive the %s path from this path: %s",
-                dir.data(), raw_path.c_str());
-
-  if (!parent_path.empty()) {
-    // Now write in bin in place of lib.
-    raw_path = (parent_path + dir).str();
-
-    if (log)
-      log->Printf("Host::%s() derived the bin path as: %s", __FUNCTION__,
-                  raw_path.c_str());
-  } else {
-    if (log)
-      log->Printf("Host::%s() failed to find /lib/liblldb within the shared "
-                  "lib path, bailing on bin path construction",
-                  __FUNCTION__);
-  }
-  file_spec.GetDirectory().SetString(raw_path);
-  return (bool)file_spec.GetDirectory();
-}
-
 bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   return ComputePathRelativeToLibrary(file_spec, "/bin");
 }

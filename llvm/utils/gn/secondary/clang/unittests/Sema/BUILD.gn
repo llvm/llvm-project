@@ -10,6 +10,7 @@ unittest("SemaTests") {
     "//clang/lib/Sema",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "CodeCompleteTest.cpp",

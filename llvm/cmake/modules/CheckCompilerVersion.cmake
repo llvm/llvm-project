@@ -50,7 +50,7 @@ check_compiler_version("MSVC" "Visual Studio" ${MSVC_MIN} ${MSVC_SOFT_ERROR})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   if (CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
     if (CMAKE_CXX_SIMULATE_VERSION VERSION_LESS MSVC_MIN)
-      message(FATAL_ERROR "Host Clang must have at least -fms-compatibility-version=${MSVC_MIN}, your version is ${CMAKE_CXX_COMPILER_VERSION}.")
+      message(FATAL_ERROR "Host Clang must have at least -fms-compatibility-version=${MSVC_MIN}, your version is ${CMAKE_CXX_SIMULATE_VERSION}.")
     endif()
     set(CLANG_CL 1)
   elseif(NOT LLVM_ENABLE_LIBCXX)
@@ -58,6 +58,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
     set(OLD_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++0x")
+    # Test for libstdc++ version of at least 4.8 by checking for _ZNKSt17bad_function_call4whatEv.
+    # Note: We should check _GLIBCXX_RELEASE when possible (i.e., for GCC 7.1 and up).
     check_cxx_source_compiles("
 #include <iosfwd>
 #if defined(__GLIBCXX__)
@@ -65,18 +67,30 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 #error Unsupported libstdc++ version
 #endif
 #endif
-int main() { return 0; }
+#if defined(__GLIBCXX__)
+extern const char _ZNKSt17bad_function_call4whatEv[];
+const char *chk = _ZNKSt17bad_function_call4whatEv;
+#else
+const char *chk = \"\";
+#endif
+int main() { ++chk; return 0; }
 "
       LLVM_LIBSTDCXX_MIN)
     if(NOT LLVM_LIBSTDCXX_MIN)
       message(FATAL_ERROR "libstdc++ version must be at least ${GCC_MIN}.")
     endif()
+    # Test for libstdc++ version of at least 5.1 by checking for std::iostream_category().
+    # Note: We should check _GLIBCXX_RELEASE when possible (i.e., for GCC 7.1 and up).
     check_cxx_source_compiles("
 #include <iosfwd>
 #if defined(__GLIBCXX__)
 #if __GLIBCXX__ < ${GCC_SOFT_ERROR_DATE}
 #error Unsupported libstdc++ version
 #endif
+#endif
+#if defined(__GLIBCXX__)
+#include <ios>
+void foo(void) { (void) std::iostream_category(); }
 #endif
 int main() { return 0; }
 "

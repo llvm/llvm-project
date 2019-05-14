@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -x c -analyzer-checker=core -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -w -x c -analyzer-checker=core -analyzer-output=text\
+// RUN:     -verify %s
 
 typedef __typeof(sizeof(int)) size_t;
 void *memset(void *__s, int __c, size_t __n);
@@ -244,3 +245,12 @@ int useInitializeMaybeInStruct() {
   return z; // expected-warning{{Undefined or garbage value returned to caller}}
             // expected-note@-1{{Undefined or garbage value returned to caller}}
 }
+
+void test_implicit_function_decl(int *x) {
+  if (x) {} // expected-note{{Assuming 'x' is null}}
+            // expected-note@-1{{Taking false branch}}
+  implicit_function(x);
+  *x = 4; // expected-warning{{Dereference of null pointer (loaded from variable 'x')}}
+          // expected-note@-1{{Dereference of null pointer (loaded from variable 'x')}}
+}
+int implicit_function(int *y) {}

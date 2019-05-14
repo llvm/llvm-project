@@ -50,9 +50,7 @@ struct DeclStatus {
 
 class PdbAstBuilder {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   PdbAstBuilder(ObjectFile &obj, PdbIndex &index);
 
   clang::DeclContext &GetTranslationUnitDecl();
@@ -61,8 +59,6 @@ public:
   clang::DeclContext *GetOrCreateDeclContextForUid(PdbSymUid uid);
   clang::DeclContext *GetParentDeclContext(PdbSymUid uid);
 
-  clang::NamespaceDecl *GetOrCreateNamespaceDecl(llvm::StringRef name,
-                                                 clang::DeclContext &context);
   clang::FunctionDecl *GetOrCreateFunctionDecl(PdbCompilandSymId func_id);
   clang::BlockDecl *GetOrCreateBlockDecl(PdbCompilandSymId block_id);
   clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
@@ -115,6 +111,9 @@ private:
                                      clang::DeclContext &scope);
   clang::DeclContext *
   GetParentDeclContextForSymbol(const llvm::codeview::CVSymbol &sym);
+
+  clang::NamespaceDecl *GetOrCreateNamespaceDecl(const char *name,
+                                                 clang::DeclContext &context);
 
   void ParseAllNamespacesPlusChildrenOf(llvm::Optional<llvm::StringRef> parent);
   void ParseDeclsForSimpleContext(clang::DeclContext &context);

@@ -1,36 +1,30 @@
-RUN: not llvm-readobj -mips-plt-got %p/Inputs/relocs.obj.elf-mips 2>&1 | \
+RUN: not llvm-readobj --mips-plt-got %p/Inputs/relocs.obj.elf-mips 2>&1 | \
 RUN:   FileCheck %s -check-prefix GOT-OBJ
-RUN: llvm-readobj -mips-plt-got %p/Inputs/dynamic-table-exe.mips | \
+RUN: llvm-readobj --mips-plt-got %p/Inputs/dynamic-table-exe.mips | \
 RUN:   FileCheck %s -check-prefix GOT-EXE
-RUN: llvm-readobj -mips-plt-got %p/Inputs/dynamic-table-so.mips | \
+RUN: llvm-readobj --mips-plt-got %p/Inputs/dynamic-table-so.mips | \
 RUN:   FileCheck %s -check-prefix GOT-SO
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-tls.so.elf-mips64el | \
+RUN: llvm-readobj --mips-plt-got %p/Inputs/got-tls.so.elf-mips64el | \
 RUN:   FileCheck %s -check-prefix GOT-TLS
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-empty.exe.mipsel | \
+RUN: llvm-readobj --mips-plt-got %p/Inputs/got-empty.exe.mipsel | \
 RUN:   FileCheck %s -check-prefix GOT-EMPTY
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-static.exe.mips | \
+RUN: llvm-readobj --mips-plt-got %p/Inputs/got-static.exe.mips | \
 RUN:   FileCheck %s -check-prefix GOT-STATIC
 
-RUN: not llvm-readobj -mips-plt-got %p/Inputs/relocs.obj.elf-mips \
-RUN:                  --elf-output-style=GNU 2>&1 | \
+RUN: not llvm-readelf --mips-plt-got %p/Inputs/relocs.obj.elf-mips 2>&1 | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-OBJ
-RUN: llvm-readobj -mips-plt-got %p/Inputs/dynamic-table-exe.mips \
-RUN:                  --elf-output-style=GNU | \
+RUN: llvm-readelf --mips-plt-got %p/Inputs/dynamic-table-exe.mips | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-EXE
-RUN: llvm-readobj -mips-plt-got %p/Inputs/dynamic-table-so.mips \
-RUN:                  --elf-output-style=GNU | \
+RUN: llvm-readelf --mips-plt-got %p/Inputs/dynamic-table-so.mips | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-SO
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-tls.so.elf-mips64el \
-RUN:                  --elf-output-style=GNU | \
+RUN: llvm-readelf --mips-plt-got %p/Inputs/got-tls.so.elf-mips64el | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-TLS
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-empty.exe.mipsel \
-RUN:                  --elf-output-style=GNU | \
+RUN: llvm-readelf --mips-plt-got %p/Inputs/got-empty.exe.mipsel | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-EMPTY
-RUN: llvm-readobj -mips-plt-got %p/Inputs/got-static.exe.mips \
-RUN:                  --elf-output-style=GNU | \
+RUN: llvm-readelf --mips-plt-got %p/Inputs/got-static.exe.mips | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-STATIC
 
-GOT-OBJ: Error reading file: Cannot find .got section.
+GOT-OBJ: error: Cannot find .got section
 
 GOT-EXE:      Primary GOT {
 GOT-EXE-NEXT:   Canonical gp value: 0x418880
@@ -386,7 +380,7 @@ GOT-STATIC-NEXT:     }
 GOT-STATIC-NEXT:   ]
 GOT-STATIC-NEXT: }
 
-GNU-GOT-OBJ: Error reading file: Cannot find .got section.
+GNU-GOT-OBJ: error: Cannot find .got section
 
 GNU-GOT-EXE:      Primary GOT:
 GNU-GOT-EXE-NEXT:  Canonical gp value: 00418880

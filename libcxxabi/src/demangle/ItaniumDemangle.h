@@ -2794,11 +2794,13 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
 // <ctor-dtor-name> ::= C1  # complete object constructor
 //                  ::= C2  # base object constructor
 //                  ::= C3  # complete object allocating constructor
-//   extension      ::= C5    # ?
+//   extension      ::= C4  # gcc old-style "[unified]" constructor
+//   extension      ::= C5  # the COMDAT used for ctors
 //                  ::= D0  # deleting destructor
 //                  ::= D1  # complete object destructor
 //                  ::= D2  # base object destructor
-//   extension      ::= D5    # ?
+//   extension      ::= D4  # gcc old-style "[unified]" destructor
+//   extension      ::= D5  # the COMDAT used for dtors
 template <typename Derived, typename Alloc>
 Node *
 AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
@@ -2821,7 +2823,8 @@ AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
 
   if (consumeIf('C')) {
     bool IsInherited = consumeIf('I');
-    if (look() != '1' && look() != '2' && look() != '3' && look() != '5')
+    if (look() != '1' && look() != '2' && look() != '3' && look() != '4' &&
+        look() != '5')
       return nullptr;
     int Variant = look() - '0';
     ++First;
@@ -2830,15 +2833,15 @@ AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
       if (getDerived().parseName(State) == nullptr)
         return nullptr;
     }
-    return make<CtorDtorName>(SoFar, false, Variant);
+    return make<CtorDtorName>(SoFar, /*IsDtor=*/false, Variant);
   }
 
-  if (look() == 'D' &&
-      (look(1) == '0' || look(1) == '1' || look(1) == '2' || look(1) == '5')) {
+  if (look() == 'D' && (look(1) == '0' || look(1) == '1' || look(1) == '2' ||
+                        look(1) == '4' || look(1) == '5')) {
     int Variant = look(1) - '0';
     First += 2;
     if (State) State->CtorDtorConversion = true;
-    return make<CtorDtorName>(SoFar, true, Variant);
+    return make<CtorDtorName>(SoFar, /*IsDtor=*/true, Variant);
   }
 
   return nullptr;

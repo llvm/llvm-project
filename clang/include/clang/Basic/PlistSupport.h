@@ -127,7 +127,11 @@ inline void EmitRange(raw_ostream &o, const SourceManager &SM,
   assert(R.isCharRange() && "cannot handle a token range");
   Indent(o, indent) << "<array>\n";
   EmitLocation(o, SM, R.getBegin(), FM, indent + 1);
-  EmitLocation(o, SM, R.getEnd(), FM, indent + 1);
+
+  // The ".getLocWithOffset(-1)" emulates the behavior of an off-by-one bug
+  // in Lexer that is already fixed. It is here for backwards compatibility
+  // even though it is incorrect.
+  EmitLocation(o, SM, R.getEnd().getLocWithOffset(-1), FM, indent + 1);
   Indent(o, indent) << "</array>\n";
 }
 

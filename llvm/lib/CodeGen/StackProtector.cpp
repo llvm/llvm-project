@@ -514,7 +514,7 @@ BasicBlock *StackProtector::CreateFailBB() {
 }
 
 bool StackProtector::shouldEmitSDCheck(const BasicBlock &BB) const {
-  return HasPrologue && !HasIRCheck && dyn_cast<ReturnInst>(BB.getTerminator());
+  return HasPrologue && !HasIRCheck && isa<ReturnInst>(BB.getTerminator());
 }
 
 void StackProtector::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {

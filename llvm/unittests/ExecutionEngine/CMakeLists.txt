@@ -12,6 +12,7 @@ add_llvm_unittest(ExecutionEngineTests
   ExecutionEngineTest.cpp
   )
 
+add_subdirectory(JITLink)
 add_subdirectory(Orc)
 
 # Include MCJIT tests only if native arch is a built JIT target.

@@ -10,6 +10,16 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 // CHECK: [[PRIVATES:%.+]] = type { i8*, i8* }
 
 struct S {
@@ -31,7 +41,7 @@ int main(int argc, char **argv) {
   {
 #pragma omp taskgroup task_reduction(-:c, d)
 #pragma omp parallel
-#pragma omp task in_reduction(+:a) in_reduction(-:d)
+#pragma omp task in_reduction(+:a) in_reduction(-:d) allocate(omp_high_bw_mem_alloc: d)
     a += d[a];
   }
   return 0;

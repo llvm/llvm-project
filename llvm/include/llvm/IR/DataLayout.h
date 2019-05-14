@@ -108,6 +108,13 @@ struct PointerAlignElem {
 /// generating LLVM IR is required to generate the right target data for the
 /// target being codegen'd to.
 class DataLayout {
+public:
+  enum class FunctionPtrAlignType {
+    /// The function pointer alignment is independent of the function alignment.
+    Independent,
+    /// The function pointer alignment is a multiple of the function alignment.
+    MultipleOfFunctionAlign,
+  };
 private:
   /// Defaults to false.
   bool BigEndian;
@@ -115,6 +122,9 @@ private:
   unsigned AllocaAddrSpace;
   unsigned StackNaturalAlign;
   unsigned ProgramAddrSpace;
+
+  unsigned FunctionPtrAlign;
+  FunctionPtrAlignType TheFunctionPtrAlignType;
 
   enum ManglingModeT {
     MM_None,
@@ -199,6 +209,8 @@ public:
     BigEndian = DL.isBigEndian();
     AllocaAddrSpace = DL.AllocaAddrSpace;
     StackNaturalAlign = DL.StackNaturalAlign;
+    FunctionPtrAlign = DL.FunctionPtrAlign;
+    TheFunctionPtrAlignType = DL.TheFunctionPtrAlignType;
     ProgramAddrSpace = DL.ProgramAddrSpace;
     ManglingMode = DL.ManglingMode;
     LegalIntWidths = DL.LegalIntWidths;
@@ -255,6 +267,17 @@ public:
 
   unsigned getStackAlignment() const { return StackNaturalAlign; }
   unsigned getAllocaAddrSpace() const { return AllocaAddrSpace; }
+
+  /// Returns the alignment of function pointers, which may or may not be
+  /// related to the alignment of functions.
+  /// \see getFunctionPtrAlignType
+  unsigned getFunctionPtrAlign() const { return FunctionPtrAlign; }
+
+  /// Return the type of function pointer alignment.
+  /// \see getFunctionPtrAlign
+  FunctionPtrAlignType getFunctionPtrAlignType() const {
+    return TheFunctionPtrAlignType;
+  }
 
   unsigned getProgramAddressSpace() const { return ProgramAddrSpace; }
 

@@ -92,13 +92,16 @@ struct Configuration {
   llvm::StringRef Fini;
   llvm::StringRef Init;
   llvm::StringRef LTOAAPipeline;
+  llvm::StringRef LTOCSProfileFile;
   llvm::StringRef LTONewPmPasses;
   llvm::StringRef LTOObjPath;
   llvm::StringRef LTOSampleProfile;
   llvm::StringRef MapFile;
   llvm::StringRef OutputFile;
   llvm::StringRef OptRemarksFilename;
+  llvm::StringRef OptRemarksPasses;
   llvm::StringRef ProgName;
+  llvm::StringRef PrintSymbolOrder;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   llvm::StringRef ThinLTOCacheDir;
@@ -151,6 +154,7 @@ struct Configuration {
   bool HasDynSymTab;
   bool IgnoreDataAddressEquality;
   bool IgnoreFunctionAddressEquality;
+  bool LTOCSProfileGenerate;
   bool LTODebugPassManager;
   bool LTONewPassManager;
   bool MergeArmExidx;

@@ -347,8 +347,8 @@ uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
   if (Abs || Neg) {
     assert(!Sext &&
            "Float and integer src modifiers can't be set simulteniously");
-    Mods |= Abs ? SISrcMods::ABS : 0;
-    Mods ^= Neg ? SISrcMods::NEG : 0;
+    Mods |= Abs ? SISrcMods::ABS : 0u;
+    Mods ^= Neg ? SISrcMods::NEG : 0u;
   } else if (Sext) {
     Mods |= SISrcMods::SEXT;
   }

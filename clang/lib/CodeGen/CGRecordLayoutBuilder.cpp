@@ -273,7 +273,7 @@ void CGRecordLowering::lower(bool NVBaseType) {
     if (!NVBaseType)
       accumulateVBases();
   }
-  std::stable_sort(Members.begin(), Members.end());
+  llvm::stable_sort(Members);
   Members.push_back(StorageInfo(Size, getIntNType(8)));
   clipTailPadding();
   determinePacked(NVBaseType);
@@ -658,7 +658,7 @@ void CGRecordLowering::insertPadding() {
         Pad = Padding.begin(), PadEnd = Padding.end();
         Pad != PadEnd; ++Pad)
     Members.push_back(StorageInfo(Pad->first, getByteArrayType(Pad->second)));
-  std::stable_sort(Members.begin(), Members.end());
+  llvm::stable_sort(Members);
 }
 
 void CGRecordLowering::fillOutputFields() {

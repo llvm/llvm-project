@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,HSA %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-code-object-v3 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,HSA %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -mattr=-code-object-v3 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MESA %s
 
 ; GCN-LABEL: {{^}}kernel_implicitarg_ptr_empty:
 ; GCN: enable_sgpr_kernarg_segment_ptr = 1
@@ -162,15 +162,16 @@ define void @opencl_func_call_implicitarg_ptr_func() #0 {
 
 ; GCN-LABEL: {{^}}func_kernarg_implicitarg_ptr:
 ; GCN: s_waitcnt
-; MESA: v_mov_b32_e32 v0, s6
-; MESA: v_mov_b32_e32 v1, s7
-; MESA: v_mov_b32_e32 v2, s8
-; MESA: v_mov_b32_e32 v3, s9
-; MESA: buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; MESA-DAG: v_mov_b32_e32 v0, s6
+; MESA-DAG: v_mov_b32_e32 v1, s7
+; MESA-DAG: buffer_load_dword v0, v[0:1], s[12:15], 0 addr64
+; MESA: v_mov_b32_e32 v0, s8
+; MESA: v_mov_b32_e32 v1, s9
+; MESA: buffer_load_dword v0, v[0:1], s[12:15], 0 addr64
+
 ; HSA: v_mov_b32_e32 v0, s6
 ; HSA: v_mov_b32_e32 v1, s7
 ; HSA: flat_load_dword v0, v[0:1]
-; MESA: buffer_load_dword v0, v[2:3], s[8:11], 0 addr64
 ; HSA: v_mov_b32_e32 v0, s8
 ; HSA: v_mov_b32_e32 v1, s9
 ; HSA: flat_load_dword v0, v[0:1]
@@ -188,15 +189,18 @@ define void @func_kernarg_implicitarg_ptr() #0 {
 
 ; GCN-LABEL: {{^}}opencl_func_kernarg_implicitarg_ptr:
 ; GCN: s_waitcnt
-; MESA: v_mov_b32_e32 v0, s6
-; MESA: v_mov_b32_e32 v1, s7
-; MESA: v_mov_b32_e32 v2, s8
-; MESA: v_mov_b32_e32 v3, s9
-; MESA: buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; MESA-DAG: v_mov_b32_e32 v0, s6
+; MESA-DAG: v_mov_b32_e32 v1, s7
+; MESA: buffer_load_dword v0, v[0:1], s[12:15], 0 addr64
+; MESA-DAG: v_mov_b32_e32 v0, s8
+; MESA-DAG: v_mov_b32_e32 v1, s9
+; MESA: buffer_load_dword v0, v[0:1], s[12:15], 0 addr64
+
+
 ; HSA: v_mov_b32_e32 v0, s6
 ; HSA: v_mov_b32_e32 v1, s7
 ; HSA: flat_load_dword v0, v[0:1]
-; MESA: buffer_load_dword v0, v[2:3], s[8:11], 0 addr64
+
 ; HSA: v_mov_b32_e32 v0, s8
 ; HSA: v_mov_b32_e32 v1, s9
 ; HSA: flat_load_dword v0, v[0:1]

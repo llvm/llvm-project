@@ -113,7 +113,7 @@ define i32 @foo9(i32 %v) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo9:
 ; CHECK: cmp w0, #0
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x4
+; CHECK: mov w[[REG:[0-9]+]], #4
 ; CHECK: cinv w0, w[[REG]], eq
   %tobool = icmp ne i32 %v, 0
   %cond = select i1 %tobool, i32 4, i32 -5
@@ -124,7 +124,7 @@ define i64 @foo10(i64 %v) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo10:
 ; CHECK: cmp x0, #0
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x4
+; CHECK: mov w[[REG:[0-9]+]], #4
 ; CHECK: cinv x0, x[[REG]], eq
   %tobool = icmp ne i64 %v, 0
   %cond = select i1 %tobool, i64 4, i64 -5
@@ -135,7 +135,7 @@ define i32 @foo11(i32 %v) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo11:
 ; CHECK: cmp w0, #0
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x4
+; CHECK: mov w[[REG:[0-9]+]], #4
 ; CHECK: cneg w0, w[[REG]], eq
   %tobool = icmp ne i32 %v, 0
   %cond = select i1 %tobool, i32 4, i32 -4
@@ -146,7 +146,7 @@ define i64 @foo12(i64 %v) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo12:
 ; CHECK: cmp x0, #0
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x4
+; CHECK: mov w[[REG:[0-9]+]], #4
 ; CHECK: cneg x0, x[[REG]], eq
   %tobool = icmp ne i64 %v, 0
   %cond = select i1 %tobool, i64 4, i64 -4
@@ -179,7 +179,7 @@ define i32 @foo15(i32 %a, i32 %b) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo15:
 ; CHECK: cmp w0, w1
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[REG:[0-9]+]], #1
 ; CHECK: cinc w0, w[[REG]], gt
   %cmp = icmp sgt i32 %a, %b
   %. = select i1 %cmp, i32 2, i32 1
@@ -190,7 +190,7 @@ define i32 @foo16(i32 %a, i32 %b) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo16:
 ; CHECK: cmp w0, w1
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[REG:[0-9]+]], #1
 ; CHECK: cinc w0, w[[REG]], le
   %cmp = icmp sgt i32 %a, %b
   %. = select i1 %cmp, i32 1, i32 2
@@ -201,7 +201,7 @@ define i64 @foo17(i64 %a, i64 %b) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo17:
 ; CHECK: cmp x0, x1
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[REG:[0-9]+]], #1
 ; CHECK: cinc x0, x[[REG]], gt
   %cmp = icmp sgt i64 %a, %b
   %. = select i1 %cmp, i64 2, i64 1
@@ -212,7 +212,7 @@ define i64 @foo18(i64 %a, i64 %b) nounwind readnone optsize ssp {
 entry:
 ; CHECK-LABEL: foo18:
 ; CHECK: cmp x0, x1
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[REG:[0-9]+]], #1
 ; CHECK: cinc x0, x[[REG]], le
   %cmp = icmp sgt i64 %a, %b
   %. = select i1 %cmp, i64 1, i64 2
@@ -233,7 +233,7 @@ entry:
 define i32 @foo20(i32 %x) {
 ; CHECK-LABEL: foo20:
 ; CHECK: cmp w0, #5
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: mov w[[REG:[0-9]+]], #6
 ; CHECK: csinc w0, w[[REG]], wzr, eq
   %cmp = icmp eq i32 %x, 5
   %res = select i1 %cmp, i32 6, i32 1
@@ -243,7 +243,7 @@ define i32 @foo20(i32 %x) {
 define i64 @foo21(i64 %x) {
 ; CHECK-LABEL: foo21:
 ; CHECK: cmp x0, #5
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: mov w[[REG:[0-9]+]], #6
 ; CHECK: csinc x0, x[[REG]], xzr, eq
   %cmp = icmp eq i64 %x, 5
   %res = select i1 %cmp, i64 6, i64 1
@@ -253,7 +253,7 @@ define i64 @foo21(i64 %x) {
 define i32 @foo22(i32 %x) {
 ; CHECK-LABEL: foo22:
 ; CHECK: cmp w0, #5
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: mov w[[REG:[0-9]+]], #6
 ; CHECK: csinc w0, w[[REG]], wzr, ne
   %cmp = icmp eq i32 %x, 5
   %res = select i1 %cmp, i32 1, i32 6
@@ -263,7 +263,7 @@ define i32 @foo22(i32 %x) {
 define i64 @foo23(i64 %x) {
 ; CHECK-LABEL: foo23:
 ; CHECK: cmp x0, #5
-; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: mov w[[REG:[0-9]+]], #6
 ; CHECK: csinc x0, x[[REG]], xzr, ne
   %cmp = icmp eq i64 %x, 5
   %res = select i1 %cmp, i64 1, i64 6

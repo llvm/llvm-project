@@ -14,11 +14,13 @@ public:
     SBQueueItem ();
 
     SBQueueItem (const lldb::QueueItemSP& queue_item_sp);
-    
+
    ~SBQueueItem();
 
     bool
     IsValid() const;
+
+    explicit operator bool() const;
 
     void
     Clear ();

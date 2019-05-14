@@ -317,7 +317,13 @@ public:
   /// Adds instructions that are dead as a result of the combine
   /// into DeadInsts, which can include MI.
   bool tryCombineInstruction(MachineInstr &MI,
-                             SmallVectorImpl<MachineInstr *> &DeadInsts) {
+                             SmallVectorImpl<MachineInstr *> &DeadInsts,
+                             GISelObserverWrapper &WrapperObserver) {
+    // This might be a recursive call, and we might have DeadInsts already
+    // populated. To avoid bad things happening later with multiple vreg defs
+    // etc, process the dead instructions now if any.
+    if (!DeadInsts.empty())
+      deleteMarkedDeadInsts(DeadInsts, WrapperObserver);
     switch (MI.getOpcode()) {
     default:
       return false;
@@ -334,7 +340,7 @@ public:
     case TargetOpcode::G_TRUNC: {
       bool Changed = false;
       for (auto &Use : MRI.use_instructions(MI.getOperand(0).getReg()))
-        Changed |= tryCombineInstruction(Use, DeadInsts);
+        Changed |= tryCombineInstruction(Use, DeadInsts, WrapperObserver);
       return Changed;
     }
     }
@@ -393,6 +399,22 @@ private:
     }
     if (PrevMI == &DefMI && MRI.hasOneUse(DefMI.getOperand(0).getReg()))
       DeadInsts.push_back(&DefMI);
+  }
+
+  /// Erase the dead instructions in the list and call the observer hooks.
+  /// Normally the Legalizer will deal with erasing instructions that have been
+  /// marked dead. However, for the trunc(ext(x)) cases we can end up trying to
+  /// process instructions which have been marked dead, but otherwise break the
+  /// MIR by introducing multiple vreg defs. For those cases, allow the combines
+  /// to explicitly delete the instructions before we run into trouble.
+  void deleteMarkedDeadInsts(SmallVectorImpl<MachineInstr *> &DeadInsts,
+                             GISelObserverWrapper &WrapperObserver) {
+    for (auto *DeadMI : DeadInsts) {
+      LLVM_DEBUG(dbgs() << *DeadMI << "Is dead, eagerly deleting\n");
+      WrapperObserver.erasingInstr(*DeadMI);
+      DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
+    }
+    DeadInsts.clear();
   }
 
   /// Checks if the target legalizer info has specified anything about the

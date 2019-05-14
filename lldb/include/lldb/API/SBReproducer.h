@@ -18,6 +18,7 @@ namespace lldb {
 /// in the interface or implementation of this class.
 class LLDB_API SBReproducer {
 public:
+  static const char *Capture();
   static const char *Capture(const char *path);
   static const char *Replay(const char *path);
 };

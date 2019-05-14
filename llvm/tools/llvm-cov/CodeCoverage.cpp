@@ -1006,9 +1006,22 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
 int CodeCoverageTool::doExport(int argc, const char **argv,
                                CommandLineParserType commandLineParser) {
 
+  cl::OptionCategory ExportCategory("Exporting options");
+
+  cl::opt<bool> SkipExpansions("skip-expansions", cl::Optional,
+                               cl::desc("Don't export expanded source regions"),
+                               cl::cat(ExportCategory));
+
+  cl::opt<bool> SkipFunctions("skip-functions", cl::Optional,
+                              cl::desc("Don't export per-function data"),
+                              cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
+
+  ViewOpts.SkipExpansions = SkipExpansions;
+  ViewOpts.SkipFunctions = SkipFunctions;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {

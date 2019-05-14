@@ -254,8 +254,8 @@ declare void @_ZSt9terminatev()
 ; CHECK-THUMB-FP-ELIM:   .cfi_offset r6, -12
 ; CHECK-THUMB-FP-ELIM:   .cfi_offset r5, -16
 ; CHECK-THUMB-FP-ELIM:   .cfi_offset r4, -20
-; CHECK-THUMB-FP-ELIM:   sub    sp, #60
-; CHECK-THUMB-FP-ELIM:   .cfi_def_cfa_offset 80
+; CHECK-THUMB-FP-ELIM:   sub    sp, #52
+; CHECK-THUMB-FP-ELIM:   .cfi_def_cfa_offset 72
 ; CHECK-THUMB-FP-ELIM:   .cfi_endproc
 
 ; CHECK-THUMB-V7-FP-LABEL: _Z4testiiiiiddddd:

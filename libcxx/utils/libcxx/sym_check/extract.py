@@ -160,7 +160,7 @@ class ReadElfExtractor(object):
                 'type': parts[3],
                 'is_defined': (parts[6] != 'UND')
             }
-            assert new_sym['type'] in ['OBJECT', 'FUNC', 'NOTYPE']
+            assert new_sym['type'] in ['OBJECT', 'FUNC', 'NOTYPE', 'TLS']
             if new_sym['name'] in extract_ignore_names:
                 continue
             if new_sym['type'] == 'NOTYPE':

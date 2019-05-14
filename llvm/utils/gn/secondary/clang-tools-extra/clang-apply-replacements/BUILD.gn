@@ -1,4 +1,5 @@
 static_library("clang-apply-replacements") {
+  output_name = "clangApplyReplacements"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/AST",

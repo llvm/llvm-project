@@ -1,10 +1,10 @@
 // RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
-// RUN: llvm-readobj -elf-output-style=GNU -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
+// RUN: llvm-readelf -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // big endian not supported
-// XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
+// XFAIL: host-byteorder-big-endian
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
@@ -16,12 +16,12 @@
 // READOBJ: 0000000000000090 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 210
 
 // READOBJ: Symbol table '.symtab' contains {{[0-9]+}} entries:
-// READOBJ: {{[0-9]+}}: 0000000000000100  0 FUNC    LOCAL  DEFAULT 2 complete
-// READOBJ: {{[0-9]+}}: 0000000000000000  0 FUNC    LOCAL  DEFAULT 2 minimal
-// READOBJ: {{[0-9]+}}: 0000000000000200  0 FUNC    LOCAL  DEFAULT 2 special_sgpr
-// READOBJ: {{[0-9]+}}: 0000000000000040 64 OBJECT  GLOBAL DEFAULT 3 complete.kd
-// READOBJ: {{[0-9]+}}: 0000000000000000 64 OBJECT  GLOBAL DEFAULT 3 minimal.kd
-// READOBJ: {{[0-9]+}}: 0000000000000080 64 OBJECT  GLOBAL DEFAULT 3 special_sgpr.kd
+// READOBJ: {{[0-9]+}}: 0000000000000100  0 FUNC    LOCAL  PROTECTED 2 complete
+// READOBJ: {{[0-9]+}}: 0000000000000040 64 OBJECT  LOCAL  DEFAULT   3 complete.kd
+// READOBJ: {{[0-9]+}}: 0000000000000000  0 FUNC    LOCAL  PROTECTED 2 minimal
+// READOBJ: {{[0-9]+}}: 0000000000000000 64 OBJECT  LOCAL  DEFAULT   3 minimal.kd
+// READOBJ: {{[0-9]+}}: 0000000000000200  0 FUNC    LOCAL  PROTECTED 2 special_sgpr
+// READOBJ: {{[0-9]+}}: 0000000000000080 64 OBJECT  LOCAL  DEFAULT   3 special_sgpr.kd
 
 // OBJDUMP: Contents of section .rodata
 // Note, relocation for KERNEL_CODE_ENTRY_BYTE_OFFSET is not resolved here.
@@ -34,7 +34,7 @@
 // OBJDUMP-NEXT: 0040 01000000 01000000 00000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0070 c2500104 0f0f007f 7f000000 00000000
+// OBJDUMP-NEXT: 0070 c2500104 1f0f007f 7f000000 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -249,29 +249,29 @@ v_mov_b32_e32 v16, s3
       .max_flat_workgroup_size: 256
 .end_amdgpu_metadata
 
-// ASM: .amdgpu_metadata
-// ASM:    amdhsa.kernels:
-// ASM:  - .sgpr_count:     14
-// ASM:    .max_flat_workgroup_size: 256
-// ASM:    .symbol:         'amd_kernel_code_t_test_all@kd'
-// ASM:    .kernarg_segment_size: 8
-// ASM:    .group_segment_fixed_size: 16
-// ASM:    .private_segment_fixed_size: 32
-// ASM:    .vgpr_count:     40
-// ASM:    .kernarg_segment_align: 64
-// ASM:    .wavefront_size: 128
-// ASM:    .name:           amd_kernel_code_t_test_all
-// ASM:  - .sgpr_count:     14
-// ASM:    .max_flat_workgroup_size: 256
-// ASM:    .symbol:         'amd_kernel_code_t_minimal@kd'
-// ASM:    .kernarg_segment_size: 8
-// ASM:    .group_segment_fixed_size: 16
-// ASM:    .private_segment_fixed_size: 32
-// ASM:    .vgpr_count:     40
-// ASM:    .kernarg_segment_align: 64
-// ASM:    .wavefront_size: 128
-// ASM:    .name:           amd_kernel_code_t_minimal
-// ASM:    amdhsa.version:
-// ASM-NEXT: - 3
-// ASM-NEXT: - 0
-// ASM: .end_amdgpu_metadata
+// ASM:      	.amdgpu_metadata
+// ASM:      amdhsa.kernels:  
+// ASM:        - .group_segment_fixed_size: 16
+// ASM:          .kernarg_segment_align: 64
+// ASM:          .kernarg_segment_size: 8
+// ASM:          .max_flat_workgroup_size: 256
+// ASM:          .name:           amd_kernel_code_t_test_all
+// ASM:          .private_segment_fixed_size: 32
+// ASM:          .sgpr_count:     14
+// ASM:          .symbol:         'amd_kernel_code_t_test_all@kd'
+// ASM:          .vgpr_count:     40
+// ASM:          .wavefront_size: 128
+// ASM:        - .group_segment_fixed_size: 16
+// ASM:          .kernarg_segment_align: 64
+// ASM:          .kernarg_segment_size: 8
+// ASM:          .max_flat_workgroup_size: 256
+// ASM:          .name:           amd_kernel_code_t_minimal
+// ASM:          .private_segment_fixed_size: 32
+// ASM:          .sgpr_count:     14
+// ASM:          .symbol:         'amd_kernel_code_t_minimal@kd'
+// ASM:          .vgpr_count:     40
+// ASM:          .wavefront_size: 128
+// ASM:      amdhsa.version:  
+// ASM-NEXT:   - 3
+// ASM-NEXT:   - 0
+// ASM:      	.end_amdgpu_metadata

@@ -42,7 +42,14 @@
 
 #include "CoverageExporterJson.h"
 #include "CoverageReport.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
+#include <algorithm>
+#include <mutex>
+#include <utility>
 
 /// The semantic version combined as a string.
 #define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
@@ -127,13 +134,15 @@ json::Array renderFileSegments(const coverage::CoverageData &FileCoverage,
 json::Object renderFile(const coverage::CoverageMapping &Coverage,
                         const std::string &Filename,
                         const FileCoverageSummary &FileReport,
-                        bool ExportSummaryOnly) {
+                        const CoverageViewOptions &Options) {
   json::Object File({{"filename", Filename}});
-  if (!ExportSummaryOnly) {
+  if (!Options.ExportSummaryOnly) {
     // Calculate and render detailed coverage information for given file.
     auto FileCoverage = Coverage.getCoverageForFile(Filename);
     File["segments"] = renderFileSegments(FileCoverage, FileReport);
-    File["expansions"] = renderFileExpansions(FileCoverage, FileReport);
+    if (!Options.SkipExpansions) {
+      File["expansions"] = renderFileExpansions(FileCoverage, FileReport);
+    }
   }
   File["summary"] = renderSummary(FileReport);
   return File;
@@ -142,11 +151,28 @@ json::Object renderFile(const coverage::CoverageMapping &Coverage,
 json::Array renderFiles(const coverage::CoverageMapping &Coverage,
                         ArrayRef<std::string> SourceFiles,
                         ArrayRef<FileCoverageSummary> FileReports,
-                        bool ExportSummaryOnly) {
+                        const CoverageViewOptions &Options) {
+  auto NumThreads = Options.NumThreads;
+  if (NumThreads == 0) {
+    NumThreads = std::max(1U, std::min(llvm::heavyweight_hardware_concurrency(),
+                                       unsigned(SourceFiles.size())));
+  }
+  ThreadPool Pool(NumThreads);
   json::Array FileArray;
-  for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I)
-    FileArray.push_back(renderFile(Coverage, SourceFiles[I], FileReports[I],
-                                   ExportSummaryOnly));
+  std::mutex FileArrayMutex;
+
+  for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I) {
+    auto &SourceFile = SourceFiles[I];
+    auto &FileReport = FileReports[I];
+    Pool.async([&] {
+      auto File = renderFile(Coverage, SourceFile, FileReport, Options);
+      {
+        std::lock_guard<std::mutex> Lock(FileArrayMutex);
+        FileArray.push_back(std::move(File));
+      }
+    });
+  }
+  Pool.wait();
   return FileArray;
 }
 
@@ -177,12 +203,22 @@ void CoverageExporterJson::renderRoot(ArrayRef<std::string> SourceFiles) {
   FileCoverageSummary Totals = FileCoverageSummary("Totals");
   auto FileReports = CoverageReport::prepareFileReports(Coverage, Totals,
                                                         SourceFiles, Options);
-  auto Export =
-      json::Object({{"files", renderFiles(Coverage, SourceFiles, FileReports,
-                                          Options.ExportSummaryOnly)},
-                    {"totals", renderSummary(Totals)}});
-  // Skip functions-level information for summary-only export mode.
-  if (!Options.ExportSummaryOnly)
+  auto Files = renderFiles(Coverage, SourceFiles, FileReports, Options);
+  // Sort files in order of their names.
+  std::sort(Files.begin(), Files.end(),
+    [](const json::Value &A, const json::Value &B) {
+      const json::Object *ObjA = A.getAsObject();
+      const json::Object *ObjB = B.getAsObject();
+      assert(ObjA != nullptr && "Value A was not an Object");
+      assert(ObjB != nullptr && "Value B was not an Object");
+      const StringRef FilenameA = ObjA->getString("filename").getValue();
+      const StringRef FilenameB = ObjB->getString("filename").getValue();
+      return FilenameA.compare(FilenameB) < 0;
+    });
+  auto Export = json::Object(
+      {{"files", std::move(Files)}, {"totals", renderSummary(Totals)}});
+  // Skip functions-level information  if necessary.
+  if (!Options.ExportSummaryOnly && !Options.SkipFunctions)
     Export["functions"] = renderFunctions(Coverage.getCoveredFunctions());
 
   auto ExportArray = json::Array({std::move(Export)});

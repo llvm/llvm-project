@@ -150,6 +150,8 @@ public:
   bool doInitialization(Module &) override;
   bool doFinalization(Module &) override;
 
+  const LLVMTargetMachine &getTarget() const { return TM; }
+
   const MCContext &getContext() const { return Context; }
   MCContext &getContext() { return Context; }
 

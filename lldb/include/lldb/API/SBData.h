@@ -29,6 +29,8 @@ public:
 
   void Clear();
 
+  explicit operator bool() const;
+
   bool IsValid();
 
   size_t GetByteSize();

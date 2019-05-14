@@ -97,10 +97,9 @@ private:
 } // namespace
 
 void RedundantPreprocessorCheck::registerPPCallbacks(
-    CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      ::llvm::make_unique<RedundantPreprocessorCallbacks>(
-          *this, Compiler.getPreprocessor()));
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(
+      ::llvm::make_unique<RedundantPreprocessorCallbacks>(*this, *PP));
 }
 
 } // namespace readability

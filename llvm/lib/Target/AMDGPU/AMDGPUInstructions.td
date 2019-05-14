@@ -802,7 +802,7 @@ multiclass IntMed3Pat<Instruction med3Inst,
                  SDPatternOperator max_oneuse,
                  ValueType vt = i32> {
 
-  // This matches 16 permutations of 
+  // This matches 16 permutations of
   // min(max(a, b), max(min(a, b), c))
   def : AMDGPUPat <
   (min (max_oneuse vt:$src0, vt:$src1),
@@ -810,7 +810,7 @@ multiclass IntMed3Pat<Instruction med3Inst,
   (med3Inst vt:$src0, vt:$src1, vt:$src2)
 >;
 
-  // This matches 16 permutations of 
+  // This matches 16 permutations of
   // max(min(x, y), min(max(x, y), z))
   def : AMDGPUPat <
   (max (min_oneuse vt:$src0, vt:$src1),
@@ -818,7 +818,7 @@ multiclass IntMed3Pat<Instruction med3Inst,
   (med3Inst $src0, $src1, $src2)
 >;
 }
-  
+
 // Special conversion patterns
 
 def cvt_rpi_i32_f32 : PatFrag <

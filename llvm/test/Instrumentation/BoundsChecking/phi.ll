@@ -58,8 +58,6 @@ define void @f1_as1(i8 addrspace(1)* nocapture %c) {
 ; CHECK: @f1_as1
 ; no checks are possible here
 ; CHECK-NOT: trap
-; CHECK: add i16 undef, -1
-; CHECK-NOT: trap
 entry:
   %0 = load i8, i8 addrspace(1)* %c, align 1
   %tobool1 = icmp eq i8 %0, 0

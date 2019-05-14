@@ -96,14 +96,14 @@ body:             |
     %0.sub0 = COPY killed %12
     %21 = COPY killed %18
     %21.sub0 = COPY killed %15
-    %22 = S_LOAD_DWORD_IMM killed %21, 2, 0
+    %22 = S_LOAD_DWORD_IMM killed %21, 2, 0, 0
     %23 = S_MOV_B32 491436
     undef %24.sub0 = COPY killed %22
     %24.sub1 = COPY killed %23
-    %25 = S_LOAD_DWORDX4_IMM killed %24, 0, 0
+    %25 = S_LOAD_DWORDX4_IMM killed %24, 0, 0, 0
     %1 = COPY killed %25
-    %26 = S_LOAD_DWORDX2_IMM %0, 2, 0
-    dead %27 = S_LOAD_DWORD_IMM killed %26, 0, 0
+    %26 = S_LOAD_DWORDX2_IMM %0, 2, 0, 0
+    dead %27 = S_LOAD_DWORD_IMM killed %26, 0, 0, 0
     S_CBRANCH_SCC0 %bb.1, implicit undef $scc
 
   bb.5:
@@ -129,8 +129,8 @@ body:             |
   bb.2:
     %4 = COPY killed %59
     %3 = COPY killed %58
-    %39 = S_LOAD_DWORDX2_IMM killed %0, 6, 0
-    %40 = S_LOAD_DWORD_IMM killed %39, 0, 0
+    %39 = S_LOAD_DWORDX2_IMM killed %0, 6, 0, 0
+    %40 = S_LOAD_DWORD_IMM killed %39, 0, 0, 0
     %43 = V_MOV_B32_e32 -1102263091, implicit $exec
     %60 = COPY killed %4
     %61 = COPY killed %3
@@ -157,6 +157,6 @@ body:             |
 
   bb.4:
     EXP 32, undef %53, undef %54, killed %46, undef %55, 0, 0, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

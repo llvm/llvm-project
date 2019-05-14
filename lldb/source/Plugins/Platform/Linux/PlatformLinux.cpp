@@ -36,7 +36,6 @@ using namespace lldb_private::platform_linux;
 
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 
 PlatformSP PlatformLinux::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
@@ -118,9 +117,7 @@ void PlatformLinux::Terminate() {
   PlatformPOSIX::Terminate();
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformLinux::PlatformLinux(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
@@ -260,6 +257,25 @@ bool PlatformLinux::CanDebugProcess() {
   } else {
     // If we're connected, we can debug.
     return IsConnected();
+  }
+}
+
+std::vector<std::string>
+PlatformLinux::GetSystemIncludeDirectories(lldb::LanguageType lang) {
+  std::string sys_root = GetSDKRootDirectory().AsCString("");
+  switch (lang) {
+  case lldb::eLanguageTypeC:
+  case lldb::eLanguageTypeC89:
+  case lldb::eLanguageTypeC99:
+  case lldb::eLanguageTypeC11:
+  case lldb::eLanguageTypeC_plus_plus:
+  case lldb::eLanguageTypeC_plus_plus_03:
+  case lldb::eLanguageTypeC_plus_plus_11:
+  case lldb::eLanguageTypeC_plus_plus_14:
+  case lldb::eLanguageTypeObjC_plus_plus:
+    return {sys_root + "/usr/include/"};
+  default:
+    return {};
   }
 }
 

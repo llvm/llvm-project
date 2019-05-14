@@ -49,13 +49,8 @@ Optional<TypeIndex> AppendingTypeTableBuilder::getNext(TypeIndex Prev) {
   return Prev;
 }
 
-CVType AppendingTypeTableBuilder::getType(TypeIndex Index) {
-  CVType Type;
-  Type.RecordData = SeenRecords[Index.toArrayIndex()];
-  const RecordPrefix *P =
-      reinterpret_cast<const RecordPrefix *>(Type.RecordData.data());
-  Type.Type = static_cast<TypeLeafKind>(uint16_t(P->RecordKind));
-  return Type;
+CVType AppendingTypeTableBuilder::getType(TypeIndex Index){
+  return CVType(SeenRecords[Index.toArrayIndex()]);
 }
 
 StringRef AppendingTypeTableBuilder::getTypeName(TypeIndex Index) {

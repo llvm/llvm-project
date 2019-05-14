@@ -233,9 +233,35 @@ define amdgpu_ps void @buffer_store_x3_offset_merged3(<4 x i32> inreg %rsrc, <2 
   ret void
 }
 
+;CHECK-LABEL: {{^}}buffer_store_byte:
+;CHECK-NOT: s_waitcnt
+;CHECK-NEXT: %bb.
+;CHECK: buffer_store_byte v{{[0-9]}}, off, s[0:3], 0 offset:8
+define amdgpu_ps void @buffer_store_byte(<4 x i32> inreg %rsrc, float %v1) {
+main_body:
+  %v2 = fptoui float %v1 to i32
+  %v3 = trunc i32 %v2 to i8
+  call void @llvm.amdgcn.buffer.store.i8(i8 %v3, <4 x i32> %rsrc, i32 0, i32 8, i1 0, i1 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}buffer_store_short:
+;CHECK-NOT: s_waitcnt
+;CHECK-NEXT: %bb.
+;CHECK: buffer_store_short v{{[0-9]}}, off, s[0:3], 0 offset:16
+define amdgpu_ps void @buffer_store_short(<4 x i32> inreg %rsrc, float %v1) {
+main_body:
+  %v2 = fptoui float %v1 to i32
+  %v3 = trunc i32 %v2 to i16
+  call void @llvm.amdgcn.buffer.store.i16(i16 %v3, <4 x i32> %rsrc, i32 0, i32 16, i1 0, i1 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #0
 declare void @llvm.amdgcn.buffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i1, i1) #0
 declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #0
+declare void @llvm.amdgcn.buffer.store.i8(i8, <4 x i32>, i32, i32, i1, i1) #0
+declare void @llvm.amdgcn.buffer.store.i16(i16, <4 x i32>, i32, i32, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #1
 
 attributes #0 = { nounwind }

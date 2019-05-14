@@ -36,10 +36,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-vsx-copy"
 
-namespace llvm {
-  void initializePPCVSXCopyPass(PassRegistry&);
-}
-
 namespace {
   // PPCVSXCopy pass - For copies between VSX registers and non-VSX registers
   // (Altivec and scalar floating-point registers), we need to transform the

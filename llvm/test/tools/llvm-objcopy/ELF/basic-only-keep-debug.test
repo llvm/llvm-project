@@ -6,6 +6,8 @@
 # RUN: llvm-objcopy %t %t2
 # RUN: llvm-objcopy --only-keep-debug %t %t3
 # RUN: cmp %t2 %t3
+# RUN: llvm-strip --only-keep-debug --no-strip-all %t -o %t4
+# RUN: cmp %t2 %t4
 
 !ELF
 FileHeader:

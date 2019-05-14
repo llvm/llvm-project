@@ -44,10 +44,10 @@ body:             |
     liveins: $vgpr0, $sgpr4_sgpr5
 
     $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
     $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
-    $vgpr1 = V_CNDMASK_B32_e64 0, -1, killed $sgpr0_sgpr1, implicit $exec
+    $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
     $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
     SI_SPILL_S64_SAVE $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store 8 into %stack.0, align 4, addrspace 5)
     $sgpr2_sgpr3 = S_AND_B64 killed $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
@@ -74,7 +74,7 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
 
     $vcc = COPY $vgpr1
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -108,10 +108,10 @@ body:             |
     liveins: $vgpr0, $sgpr4_sgpr5
 
     $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
     $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
-    $vgpr1 = V_CNDMASK_B32_e64 0, -1, killed $sgpr0_sgpr1, implicit $exec
+    $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
     $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
     SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store 8 into %stack.0, align 4, addrspace 5)
@@ -138,6 +138,6 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
 
     $vcc = COPY $vgpr1
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

@@ -1,11 +1,11 @@
 # RUN: llvm-mc -triple=powerpc64-unknown-linux-gnu -filetype=obj %s | \
-# RUN: llvm-readobj -s -sr -sd | FileCheck %s -check-prefix=STATIC -check-prefix=STATIC-BE
+# RUN: llvm-readobj -S --sr --sd | FileCheck %s -check-prefix=STATIC -check-prefix=STATIC-BE
 # RUN: llvm-mc -triple=powerpc64-unknown-linux-gnu -filetype=obj %s | \
-# RUN: llvm-readobj -s -sr -sd | FileCheck %s -check-prefix=PIC -check-prefix=PIC-BE
+# RUN: llvm-readobj -S --sr --sd | FileCheck %s -check-prefix=PIC -check-prefix=PIC-BE
 # RUN: llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj %s | \
-# RUN: llvm-readobj -s -sr -sd | FileCheck %s -check-prefix=STATIC -check-prefix=STATIC-LE
+# RUN: llvm-readobj -S --sr --sd | FileCheck %s -check-prefix=STATIC -check-prefix=STATIC-LE
 # RUN: llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj %s | \
-# RUN: llvm-readobj -s -sr -sd | FileCheck %s -check-prefix=PIC -check-prefix=PIC-LE
+# RUN: llvm-readobj -S --sr --sd | FileCheck %s -check-prefix=PIC -check-prefix=PIC-LE
 
 _proc:
         .cfi_startproc

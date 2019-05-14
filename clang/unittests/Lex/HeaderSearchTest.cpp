@@ -11,12 +11,12 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -88,6 +88,22 @@ TEST_F(HeaderSearchTest, Dots) {
   addSearchDir("a/.././c/");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/m/n/./c/z",
                                                    /*WorkingDir=*/"/m/n/"),
+            "z");
+}
+
+#ifdef _WIN32
+TEST_F(HeaderSearchTest, BackSlash) {
+  addSearchDir("C:\\x\\y\\");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("C:\\x\\y\\z\\t",
+                                                   /*WorkingDir=*/""),
+            "z/t");
+}
+#endif
+
+TEST_F(HeaderSearchTest, DotDotsWithAbsPath) {
+  addSearchDir("/x/../y/");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/y/z",
+                                                   /*WorkingDir=*/""),
             "z");
 }
 

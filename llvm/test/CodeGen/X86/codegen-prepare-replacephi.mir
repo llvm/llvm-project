@@ -1,0 +1,47 @@
+# RUN: llc -run-pass=codegenprepare -o - %s | FileCheck %s
+
+# REQUIRES: default_triple
+
+# This testcase without the accompanying fix triggers the assert
+# "Replacement PHI node is already replaced."
+
+--- |
+  define void @f1() {
+  entry:
+    %arrayidx = getelementptr inbounds [2 x i16], [2 x i16]* undef, i16 0, i16 2
+    %0 = bitcast i16* %arrayidx to i32*
+    %1 = bitcast [2 x i16]* undef to i32*
+    br label %for.cond
+
+  for.cond:
+    %2 = phi i32* [ %0, %entry ], [ %7, %cleanup ]
+    %3 = phi i32* [ %0, %entry ], [ %9, %cleanup ]
+    br label %for.body
+
+  for.body:
+    %4 = phi i32* [ %3, %for.cond ], [ %9, %cleanup ]
+    %5 = phi i32* [ %2, %for.cond ], [ %9, %cleanup ]
+    %6 = phi i32* [ %2, %for.cond ], [ %9, %cleanup ]
+    br i1 false, label %for.cond2, label %if.then
+
+  if.then:
+    store i32 undef, i32* %4, align 1
+    unreachable
+
+  for.cond2:
+    %7 = phi i32* [ %6, %for.body ], [ %7, %if.then5 ], [ %1, %for.cond2 ]
+    %8 = phi i32* [ %5, %for.body ], [ %8, %if.then5 ], [ %1, %for.cond2 ]
+    %9 = phi i32* [ %4, %for.body ], [ %8, %if.then5 ], [ %1, %for.cond2 ]
+    br i1 undef, label %for.cond2, label %if.then5
+
+  if.then5:
+    br i1 undef, label %cleanup, label %for.cond2
+
+  cleanup:
+    br i1 true, label %for.cond, label %for.body
+  }
+
+...
+
+# Sanity check to verify that something got through.
+# CHECK-LABEL: entry:

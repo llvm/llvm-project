@@ -23,8 +23,11 @@ public:
   using MCInstPrinter::MCInstPrinter;
 
   virtual void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) = 0;
+  void printCondCode(const MCInst *MI, unsigned Op, raw_ostream &OS);
   void printSSEAVXCC(const MCInst *MI, unsigned Op, raw_ostream &OS);
-  void printXOPCC(const MCInst *MI, unsigned Op, raw_ostream &OS);
+  void printVPCOMMnemonic(const MCInst *MI, raw_ostream &OS);
+  void printVPCMPMnemonic(const MCInst *MI, raw_ostream &OS);
+  void printCMPMnemonic(const MCInst *MI, bool IsVCmp, raw_ostream &OS);
   void printRoundingControl(const MCInst *MI, unsigned Op, raw_ostream &O);
   void printPCRelImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 protected:

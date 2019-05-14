@@ -199,7 +199,7 @@ v_add_f32_e64 v1, v3, v5
 // VI:   v_add_f32_e64 v1, v3, v5 ; encoding: [0x01,0x00,0x01,0xd1,0x03,0x0b,0x02,0x00]
 
 
-// TODO: Modifier tests
+// TODO: Modifier tests (v_cndmask done)
 
 v_cndmask_b32 v1, v3, v5, s[4:5]
 // SICI: v_cndmask_b32_e64 v1, v3, v5, s[4:5] ; encoding: [0x01,0x00,0x00,0xd2,0x03,0x0b,0x12,0x00]
@@ -212,6 +212,18 @@ v_cndmask_b32_e64 v1, v3, v5, s[4:5]
 v_cndmask_b32_e64 v1, v3, v5, vcc
 // SICI: v_cndmask_b32_e64 v1, v3, v5, vcc ; encoding: [0x01,0x00,0x00,0xd2,0x03,0x0b,0xaa,0x01]
 // VI:   v_cndmask_b32_e64 v1, v3, v5, vcc ; encoding: [0x01,0x00,0x00,0xd1,0x03,0x0b,0xaa,0x01]
+
+v_cndmask_b32 v1, -v3, v5, s[4:5]
+// SICI: v_cndmask_b32_e64 v1, -v3, v5, s[4:5] ; encoding: [0x01,0x00,0x00,0xd2,0x03,0x0b,0x12,0x20]
+// VI:   v_cndmask_b32_e64 v1, -v3, v5, s[4:5] ; encoding: [0x01,0x00,0x00,0xd1,0x03,0x0b,0x12,0x20]
+
+v_cndmask_b32_e64 v1, v3, |v5|, s[4:5]
+// SICI: v_cndmask_b32_e64 v1, v3, |v5|, s[4:5] ; encoding: [0x01,0x02,0x00,0xd2,0x03,0x0b,0x12,0x00]
+// VI:   v_cndmask_b32_e64 v1, v3, |v5|, s[4:5] ; encoding: [0x01,0x02,0x00,0xd1,0x03,0x0b,0x12,0x00]
+
+v_cndmask_b32_e64 v1, -abs(v3), v5, vcc
+// SICI: v_cndmask_b32_e64 v1, -|v3|, v5, vcc ; encoding: [0x01,0x01,0x00,0xd2,0x03,0x0b,0xaa,0x21]
+// VI:   v_cndmask_b32_e64 v1, -|v3|, v5, vcc ; encoding: [0x01,0x01,0x00,0xd1,0x03,0x0b,0xaa,0x21]
 
 //TODO: readlane, writelane
 
@@ -270,6 +282,30 @@ v_mac_f16_e64 v0, -4.0, flat_scratch_lo
 v_mac_f16_e64 v0, flat_scratch_lo, -4.0
 // NOSICI: error:
 // VI: v_mac_f16_e64 v0, flat_scratch_lo, -4.0 ; encoding: [0x00,0x00,0x23,0xd1,0x66,0xee,0x01,0x00]
+
+v_add_u32 v84, vcc, v13, s31 clamp
+// NOSICI: error:
+// VI: v_add_u32_e64 v84, vcc, v13, s31 clamp ; encoding: [0x54,0xea,0x19,0xd1,0x0d,0x3f,0x00,0x00]
+
+v_sub_u32 v84, s[2:3], v13, s31 clamp
+// NOSICI: error:
+// VI: v_sub_u32_e64 v84, s[2:3], v13, s31 clamp ; encoding: [0x54,0x82,0x1a,0xd1,0x0d,0x3f,0x00,0x00]
+
+v_subrev_u32 v84, vcc, v13, s31 clamp
+// NOSICI: error:
+// VI: v_subrev_u32_e64 v84, vcc, v13, s31 clamp ; encoding: [0x54,0xea,0x1b,0xd1,0x0d,0x3f,0x00,0x00]
+
+v_addc_u32 v84, s[4:5], v13, v31, vcc clamp
+// NOSICI: error:
+// VI: v_addc_u32_e64 v84, s[4:5], v13, v31, vcc clamp ; encoding: [0x54,0x84,0x1c,0xd1,0x0d,0x3f,0xaa,0x01]
+
+v_subb_u32 v84, s[2:3], v13, v31, vcc clamp
+// NOSICI: error:
+// VI: v_subb_u32_e64 v84, s[2:3], v13, v31, vcc clamp ; encoding: [0x54,0x82,0x1d,0xd1,0x0d,0x3f,0xaa,0x01]
+
+v_subbrev_u32 v84, vcc, v13, v31, s[6:7] clamp
+// NOSICI: error:
+// VI: v_subbrev_u32_e64 v84, vcc, v13, v31, s[6:7] clamp ; encoding: [0x54,0xea,0x1e,0xd1,0x0d,0x3f,0x1a,0x00]
 
 ///===---------------------------------------------------------------------===//
 // VOP3 Instructions

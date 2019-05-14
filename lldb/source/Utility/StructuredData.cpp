@@ -22,9 +22,7 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Functions that use a JSONParser to parse JSON into StructuredData
-//----------------------------------------------------------------------
 static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser);

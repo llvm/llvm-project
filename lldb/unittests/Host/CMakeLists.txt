@@ -21,7 +21,6 @@ endif()
 add_lldb_unittest(HostTests
   ${FILES}
   LINK_LIBS
-    lldbCore
     lldbHost
     lldbUtilityHelpers
     LLVMTestingSupport

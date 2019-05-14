@@ -31,6 +31,8 @@ public:
 
   ~SBInstruction();
 
+  explicit operator bool() const;
+
   bool IsValid();
 
   SBAddress GetAddress();

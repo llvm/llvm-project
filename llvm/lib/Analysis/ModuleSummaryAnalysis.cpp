@@ -441,9 +441,11 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
                                     /* Live = */ false, A.isDSOLocal());
   auto AS = llvm::make_unique<AliasSummary>(Flags);
   auto *Aliasee = A.getBaseObject();
-  auto *AliaseeSummary = Index.getGlobalValueSummary(*Aliasee);
-  assert(AliaseeSummary && "Alias expects aliasee summary to be parsed");
-  AS->setAliasee(AliaseeSummary);
+  auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
+  assert(AliaseeVI && "Alias expects aliasee summary to be available");
+  assert(AliaseeVI.getSummaryList().size() == 1 &&
+         "Expected a single entry per aliasee in per-module index");
+  AS->setAliasee(AliaseeVI, AliaseeVI.getSummaryList()[0].get());
   if (NonRenamableLocal)
     CantBePromoted.insert(A.getGUID());
   Index.addGlobalValueSummary(A, std::move(AS));

@@ -116,7 +116,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 !18 = distinct !DISubprogram(name: "echo", linkageName: "_Z4echo5onion", scope: !3, file: !3, line: 14, type: !19, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !29)
 !19 = !DISubroutineType(types: !20)
 !20 = !{!6, !21}
-!21 = distinct !DICompositeType(tag: DW_TAG_union_type, name: "onion", file: !3, line: 1, size: 64, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !22, identifier: "_ZTS5onion")
+!21 = distinct !DICompositeType(tag: DW_TAG_union_type, name: "onion", file: !3, line: 1, size: 64, flags: DIFlagTypePassByValue, elements: !22, identifier: "_ZTS5onion")
 !22 = !{!23, !25}
 !23 = !DIDerivedType(tag: DW_TAG_member, name: "dd", scope: !21, file: !3, line: 2, baseType: !24, size: 64)
 !24 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)

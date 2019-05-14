@@ -247,11 +247,6 @@ getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(Mips::GP_64);
   }
 
-  if (Subtarget.isABI_O32() && !Subtarget.useOddSPReg()) {
-    for (const auto &Reg : Mips::OddSPRegClass)
-      Reserved.set(Reg);
-  }
-
   return Reserved;
 }
 
@@ -321,8 +316,8 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   unsigned FP = Subtarget.isGP32bit() ? Mips::FP : Mips::FP_64;
   unsigned BP = Subtarget.isGP32bit() ? Mips::S7 : Mips::S7_64;
 
-  // Support dynamic stack realignment only for targets with standard encoding.
-  if (!Subtarget.hasStandardEncoding())
+  // Support dynamic stack realignment for all targets except Mips16.
+  if (Subtarget.inMips16Mode())
     return false;
 
   // We can't perform dynamic stack realignment if we can't reserve the

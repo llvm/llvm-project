@@ -325,12 +325,12 @@ Watchpoint::WatchpointEventData::WatchpointEventData(
 
 Watchpoint::WatchpointEventData::~WatchpointEventData() = default;
 
-const ConstString &Watchpoint::WatchpointEventData::GetFlavorString() {
+ConstString Watchpoint::WatchpointEventData::GetFlavorString() {
   static ConstString g_flavor("Watchpoint::WatchpointEventData");
   return g_flavor;
 }
 
-const ConstString &Watchpoint::WatchpointEventData::GetFlavor() const {
+ConstString Watchpoint::WatchpointEventData::GetFlavor() const {
   return WatchpointEventData::GetFlavorString();
 }
 

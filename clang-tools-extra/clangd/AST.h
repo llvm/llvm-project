@@ -47,6 +47,12 @@ std::string printNamespaceScope(const DeclContext &DC);
 /// "(anonymous struct)" or "(anonymous namespace)".
 std::string printName(const ASTContext &Ctx, const NamedDecl &ND);
 
+/// Prints template arguments of a decl as written in the source code, including
+/// enclosing '<' and '>', e.g for a partial specialization like: template
+/// <typename U> struct Foo<int, U> will return '<int, U>'. Returns an empty
+/// string if decl is not a template specialization.
+std::string printTemplateSpecializationArgs(const NamedDecl &ND);
+
 /// Gets the symbol ID for a declaration, if possible.
 llvm::Optional<SymbolID> getSymbolID(const Decl *D);
 

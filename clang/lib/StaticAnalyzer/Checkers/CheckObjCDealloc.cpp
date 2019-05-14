@@ -1086,14 +1086,10 @@ bool ObjCDeallocChecker::isNibLoadedIvarWithoutRetain(
 }
 
 void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {
-  const LangOptions &LangOpts = Mgr.getLangOpts();
-  // These checker only makes sense under MRR.
-  if (LangOpts.getGC() == LangOptions::GCOnly || LangOpts.ObjCAutoRefCount)
-    return;
-
   Mgr.registerChecker<ObjCDeallocChecker>();
 }
 
 bool ento::shouldRegisterObjCDeallocChecker(const LangOptions &LO) {
-  return true;
+  // These checker only makes sense under MRR.
+  return LO.getGC() != LangOptions::GCOnly && !LO.ObjCAutoRefCount;
 }

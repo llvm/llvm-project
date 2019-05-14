@@ -1,3 +1,4 @@
+from __future__ import division
 import re
 import lldb.formatters.Logger
 
@@ -195,7 +196,7 @@ class StdVectorSynthProvider:
                 if (num_children % self.data_size) != 0:
                     return 0
                 else:
-                    num_children = num_children / self.data_size
+                    num_children = num_children // self.data_size
                 return num_children
             except:
                 return 0
@@ -257,7 +258,7 @@ class StdVectorSynthProvider:
                 return None
             element_type = self.start_p.GetType().GetPointeeType()
             element_bits = 8 * element_type.GetByteSize()
-            element_offset = (index / element_bits) * \
+            element_offset = (index // element_bits) * \
                 element_type.GetByteSize()
             bit_offset = index % element_bits
             element = self.start_p.CreateChildAtOffset(

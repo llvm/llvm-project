@@ -98,7 +98,7 @@ class ProcessHelper(object):
     Clients of the class should stick to the methods provided in this
     base class.
 
-    @see ProcessHelper.process_helper()
+    \see ProcessHelper.process_helper()
     """
 
     def __init__(self):

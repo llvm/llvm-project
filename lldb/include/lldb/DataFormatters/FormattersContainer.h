@@ -42,7 +42,7 @@ public:
 // match any type because of the way we strip qualifiers from typenames this
 // method looks for the case where the user is adding a "class","struct","enum"
 // or "union" Foo and strips the unnecessary qualifier
-static inline ConstString GetValidTypeName_Impl(const ConstString &type) {
+static inline ConstString GetValidTypeName_Impl(ConstString type) {
   if (type.IsEmpty())
     return type;
 
@@ -238,7 +238,7 @@ protected:
     m_format_map.Add(type, entry);
   }
 
-  void Add_Impl(const ConstString &type, const MapValueType &entry,
+  void Add_Impl(ConstString type, const MapValueType &entry,
                 ConstString *dummy) {
     m_format_map.Add(GetValidTypeName_Impl(type), entry);
   }

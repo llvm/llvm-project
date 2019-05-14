@@ -117,11 +117,9 @@ ConstrainUnpredictable(EmulateInstructionARM64::Unpredictable which) {
   return result;
 }
 
-//----------------------------------------------------------------------
 //
 // EmulateInstructionARM implementation
 //
-//----------------------------------------------------------------------
 
 void EmulateInstructionARM64::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -207,9 +205,7 @@ bool EmulateInstructionARM64::GetRegisterInfo(RegisterKind reg_kind,
 EmulateInstructionARM64::Opcode *
 EmulateInstructionARM64::GetOpcodeForInstruction(const uint32_t opcode) {
   static EmulateInstructionARM64::Opcode g_opcodes[] = {
-      //----------------------------------------------------------------------
       // Prologue instructions
-      //----------------------------------------------------------------------
 
       // push register(s)
       {0xff000000, 0xd1000000, No_VFP,

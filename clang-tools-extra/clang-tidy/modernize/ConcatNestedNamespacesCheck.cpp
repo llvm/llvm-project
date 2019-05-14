@@ -39,6 +39,7 @@ static bool alreadyConcatenated(std::size_t NumCandidates,
                                 const SourceRange &ReplacementRange,
                                 const SourceManager &Sources,
                                 const LangOptions &LangOpts) {
+  // FIXME: This logic breaks when there is a comment with ':'s in the middle.
   CharSourceRange TextRange =
       Lexer::getAsCharRange(ReplacementRange, Sources, LangOpts);
   StringRef CurrentNamespacesText =

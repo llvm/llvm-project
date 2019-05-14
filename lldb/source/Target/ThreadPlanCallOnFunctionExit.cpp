@@ -40,9 +40,7 @@ void ThreadPlanCallOnFunctionExit::DidPush() {
   );
 }
 
-// -------------------------------------------------------------------------
 // ThreadPlan API
-// -------------------------------------------------------------------------
 
 void ThreadPlanCallOnFunctionExit::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {

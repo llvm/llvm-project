@@ -31,9 +31,7 @@ public:
 
   ~ObjectContainerBSDArchive() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -56,9 +54,7 @@ public:
 
   static bool MagicBytesMatch(const lldb_private::DataExtractor &data);
 
-  //------------------------------------------------------------------
   // Member Functions
-  //------------------------------------------------------------------
   bool ParseHeader() override;
 
   size_t GetNumObjects() const override {
@@ -71,9 +67,7 @@ public:
 
   lldb::ObjectFileSP GetObjectFile(const lldb_private::FileSpec *file) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -136,7 +130,7 @@ protected:
 
     size_t ParseObjects();
 
-    Object *FindObject(const lldb_private::ConstString &object_name,
+    Object *FindObject(lldb_private::ConstString object_name,
                        const llvm::sys::TimePoint<> &object_mod_time);
 
     lldb::offset_t GetFileOffset() const { return m_file_offset; }
@@ -153,9 +147,7 @@ protected:
 
   protected:
     typedef lldb_private::UniqueCStringMap<uint32_t> ObjectNameToIndexMap;
-    //----------------------------------------------------------------------
     // Member Variables
-    //----------------------------------------------------------------------
     lldb_private::ArchSpec m_arch;
     llvm::sys::TimePoint<> m_time;
     lldb::offset_t m_file_offset;

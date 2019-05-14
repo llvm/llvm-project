@@ -47,7 +47,10 @@ define internal void @k(i32 %n) {
   call i8* @llvm.localrecover(i8* bitcast(void()* @f to i8*), i8* null, i32 %n)
   ret void
 }
-; CHECK: idx argument of llvm.localrecover must be a constant int
+
+; CHECK: immarg operand has non-immediate parameter
+; CHECK-NEXT: i32 %n
+; CHECK-NEXT: %1 = call i8* @llvm.localrecover(i8* bitcast (void ()* @f to i8*), i8* null, i32 %n)
 
 define internal void @l(i8* %b) {
   %a = alloca i8

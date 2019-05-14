@@ -24,7 +24,7 @@ define i32 @foo(i32* nocapture %A) #0 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_029:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[TMP4:%.*]], [[FOR_BODY]] ], [ [[TMP1]], [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP4]] = mul nsw <4 x i32> <i32 18, i32 19, i32 12, i32 9>, [[TMP3]]
+; CHECK-NEXT:    [[TMP4]] = mul nsw <4 x i32> [[TMP3]], <i32 18, i32 19, i32 12, i32 9>
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_029]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]

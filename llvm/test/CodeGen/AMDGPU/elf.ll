@@ -1,12 +1,12 @@
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs -filetype=obj | llvm-readobj -s -symbols -file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -march=amdgcn -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TYPICAL %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -s -symbols -file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TONGA %s
-; RUN: llc < %s -march=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -s -symbols -file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -march=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -march=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TYPICAL %s
 
 ; Test that we don't try to produce a COFF file on windows
-; RUN: llc < %s -mtriple=amdgcn-pc-mingw -verify-machineinstrs -filetype=obj | llvm-readobj -s -symbols -file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn-pc-mingw -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
 
 ; ELF: Format: ELF64-amdgpu
 ; ELF: OS/ABI: SystemV (0x0)

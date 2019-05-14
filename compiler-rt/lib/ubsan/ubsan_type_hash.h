@@ -64,6 +64,10 @@ const int VptrMaxOffsetToTop = 1<<20;
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 HashValue __ubsan_vptr_type_cache[VptrTypeCacheSize];
 
+/// \brief Do whatever is required by the ABI to check for std::type_info
+/// equivalence beyond simple pointer comparison.
+bool checkTypeInfoEquality(const void *TypeInfo1, const void *TypeInfo2);
+
 } // namespace __ubsan
 
 #endif // UBSAN_TYPE_HASH_H

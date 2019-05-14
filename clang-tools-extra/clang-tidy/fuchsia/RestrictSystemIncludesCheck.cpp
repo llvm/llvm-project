@@ -23,7 +23,7 @@ namespace fuchsia {
 class RestrictedIncludesPPCallbacks : public PPCallbacks {
 public:
   explicit RestrictedIncludesPPCallbacks(RestrictSystemIncludesCheck &Check,
-                                         SourceManager &SM)
+                                         const SourceManager &SM)
       : Check(Check), SM(SM) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -53,7 +53,7 @@ private:
   llvm::SmallDenseMap<FileID, FileIncludes> IncludeDirectives;
 
   RestrictSystemIncludesCheck &Check;
-  SourceManager &SM;
+  const SourceManager &SM;
 };
 
 void RestrictedIncludesPPCallbacks::InclusionDirective(
@@ -101,10 +101,9 @@ void RestrictedIncludesPPCallbacks::EndOfMainFile() {
 }
 
 void RestrictSystemIncludesCheck::registerPPCallbacks(
-    CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<RestrictedIncludesPPCallbacks>(
-          *this, Compiler.getSourceManager()));
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(
+      llvm::make_unique<RestrictedIncludesPPCallbacks>(*this, SM));
 }
 
 void RestrictSystemIncludesCheck::storeOptions(

@@ -21,7 +21,7 @@ TEST_F(GISelMITest, TestCSE) {
   auto MIBInput1 = B.buildInstr(TargetOpcode::G_TRUNC, {s16}, {Copies[1]});
   auto MIBAdd = B.buildInstr(TargetOpcode::G_ADD, {s16}, {MIBInput, MIBInput});
   GISelCSEInfo CSEInfo;
-  CSEInfo.setCSEConfig(make_unique<CSEConfig>());
+  CSEInfo.setCSEConfig(make_unique<CSEConfigFull>());
   CSEInfo.analyze(*MF);
   B.setCSEInfo(&CSEInfo);
   CSEMIRBuilder CSEB(B.getState());

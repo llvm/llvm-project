@@ -1,10 +1,10 @@
 
 # RUN: llvm-mc -triple powerpc-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -s -sd | FileCheck %s
+# RUN: llvm-readobj -S --sd | FileCheck %s
 # RUN: llvm-mc -triple powerpc64-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -s -sd | FileCheck %s
+# RUN: llvm-readobj -S --sd | FileCheck %s
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -s -sd | FileCheck %s
+# RUN: llvm-readobj -S --sd | FileCheck %s
 
 .data
 .llong 0

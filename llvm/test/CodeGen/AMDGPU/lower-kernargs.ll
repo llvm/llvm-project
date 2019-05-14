@@ -531,7 +531,10 @@ define amdgpu_kernel void @kern_lds_ptr(i32 addrspace(3)* %lds) #0 {
 define amdgpu_kernel void @kern_lds_ptr_si(i32 addrspace(3)* %lds) #2 {
 ; HSA-LABEL: @kern_lds_ptr_si(
 ; HSA-NEXT:    [[KERN_LDS_PTR_SI_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(8) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; HSA-NEXT:    store i32 0, i32 addrspace(3)* [[LDS:%.*]], align 4
+; HSA-NEXT:    [[LDS_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_LDS_PTR_SI_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[LDS_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[LDS_KERNARG_OFFSET]] to i32 addrspace(3)* addrspace(4)*
+; HSA-NEXT:    [[LDS_LOAD:%.*]] = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(4)* [[LDS_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    store i32 0, i32 addrspace(3)* [[LDS_LOAD]], align 4
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_lds_ptr_si(

@@ -200,6 +200,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervals>();
+    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveIntervals>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -654,8 +656,7 @@ void SIWholeQuadMode::toWWM(MachineBasicBlock &MBB,
   MachineInstr *MI;
 
   assert(SaveOrig);
-  MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::S_OR_SAVEEXEC_B64),
-               SaveOrig)
+  MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_WWM), SaveOrig)
            .addImm(-1);
   LIS->InsertMachineInstrInMaps(*MI);
 }
@@ -837,7 +838,23 @@ void SIWholeQuadMode::lowerCopyInstrs() {
   for (MachineInstr *MI : LowerToCopyInstrs) {
     for (unsigned i = MI->getNumExplicitOperands() - 1; i > 1; i--)
       MI->RemoveOperand(i);
-    MI->setDesc(TII->get(AMDGPU::COPY));
+
+    const unsigned Reg = MI->getOperand(0).getReg();
+
+    if (TRI->isVGPR(*MRI, Reg)) {
+      const TargetRegisterClass *regClass =
+          TargetRegisterInfo::isVirtualRegister(Reg)
+              ? MRI->getRegClass(Reg)
+              : TRI->getPhysRegClass(Reg);
+
+      const unsigned MovOp = TII->getMovOpcode(regClass);
+      MI->setDesc(TII->get(MovOp));
+
+      // And make it implicitly depend on exec (like all VALU movs should do).
+      MI->addOperand(MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+    } else {
+      MI->setDesc(TII->get(AMDGPU::COPY));
+    }
   }
 }
 

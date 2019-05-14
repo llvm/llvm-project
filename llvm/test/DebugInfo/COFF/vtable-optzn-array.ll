@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj -o - | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj -o - | llvm-readobj - --codeview | FileCheck %s
 
 ; We used to crash on this input because UnicodeString is a forward declaration
 ; with no size. Our array type logic wanted to assert the size of the elements

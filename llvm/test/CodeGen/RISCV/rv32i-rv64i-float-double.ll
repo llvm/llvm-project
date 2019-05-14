@@ -16,12 +16,12 @@ define float @float_test(float %a, float %b) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp)
-; RV32IF-NEXT:    sw s1, 8(sp)
-; RV32IF-NEXT:    mv s1, a1
+; RV32IF-NEXT:    sw s0, 8(sp)
+; RV32IF-NEXT:    mv s0, a1
 ; RV32IF-NEXT:    call __addsf3
-; RV32IF-NEXT:    mv a1, s1
+; RV32IF-NEXT:    mv a1, s0
 ; RV32IF-NEXT:    call __divsf3
-; RV32IF-NEXT:    lw s1, 8(sp)
+; RV32IF-NEXT:    lw s0, 8(sp)
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
@@ -30,16 +30,16 @@ define float @float_test(float %a, float %b) nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp)
-; RV64IF-NEXT:    sd s1, 0(sp)
+; RV64IF-NEXT:    sd s0, 0(sp)
 ; RV64IF-NEXT:    slli a0, a0, 32
 ; RV64IF-NEXT:    srli a0, a0, 32
 ; RV64IF-NEXT:    slli a1, a1, 32
-; RV64IF-NEXT:    srli s1, a1, 32
-; RV64IF-NEXT:    mv a1, s1
+; RV64IF-NEXT:    srli s0, a1, 32
+; RV64IF-NEXT:    mv a1, s0
 ; RV64IF-NEXT:    call __addsf3
-; RV64IF-NEXT:    mv a1, s1
+; RV64IF-NEXT:    mv a1, s0
 ; RV64IF-NEXT:    call __divsf3
-; RV64IF-NEXT:    ld s1, 0(sp)
+; RV64IF-NEXT:    ld s0, 0(sp)
 ; RV64IF-NEXT:    ld ra, 8(sp)
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
@@ -53,16 +53,16 @@ define double @double_test(double %a, double %b) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp)
-; RV32IF-NEXT:    sw s1, 8(sp)
-; RV32IF-NEXT:    sw s2, 4(sp)
-; RV32IF-NEXT:    mv s2, a3
+; RV32IF-NEXT:    sw s0, 8(sp)
+; RV32IF-NEXT:    sw s1, 4(sp)
+; RV32IF-NEXT:    mv s0, a3
 ; RV32IF-NEXT:    mv s1, a2
 ; RV32IF-NEXT:    call __adddf3
 ; RV32IF-NEXT:    mv a2, s1
-; RV32IF-NEXT:    mv a3, s2
+; RV32IF-NEXT:    mv a3, s0
 ; RV32IF-NEXT:    call __divdf3
-; RV32IF-NEXT:    lw s2, 4(sp)
-; RV32IF-NEXT:    lw s1, 8(sp)
+; RV32IF-NEXT:    lw s1, 4(sp)
+; RV32IF-NEXT:    lw s0, 8(sp)
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
@@ -71,12 +71,12 @@ define double @double_test(double %a, double %b) nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp)
-; RV64IF-NEXT:    sd s1, 0(sp)
-; RV64IF-NEXT:    mv s1, a1
+; RV64IF-NEXT:    sd s0, 0(sp)
+; RV64IF-NEXT:    mv s0, a1
 ; RV64IF-NEXT:    call __adddf3
-; RV64IF-NEXT:    mv a1, s1
+; RV64IF-NEXT:    mv a1, s0
 ; RV64IF-NEXT:    call __divdf3
-; RV64IF-NEXT:    ld s1, 0(sp)
+; RV64IF-NEXT:    ld s0, 0(sp)
 ; RV64IF-NEXT:    ld ra, 8(sp)
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret

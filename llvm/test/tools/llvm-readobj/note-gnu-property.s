@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t
-// RUN: llvm-readobj -elf-output-style GNU --notes %t | FileCheck %s --check-prefix=GNU
-// RUN: llvm-readobj -elf-output-style LLVM --notes %t | FileCheck %s --check-prefix=LLVM
+// RUN: llvm-readelf --notes %t | FileCheck %s --check-prefix=GNU
+// RUN: llvm-readobj --elf-output-style LLVM --notes %t | FileCheck %s --check-prefix=LLVM
 
 // GNU:      Displaying notes found at file offset 0x00000040 with length 0x000000f8:
 // GNU-NEXT:   Owner                 Data size       Description

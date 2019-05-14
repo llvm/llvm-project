@@ -1345,6 +1345,7 @@ CursorKind.DLLIMPORT_ATTR = CursorKind(419)
 CursorKind.CONVERGENT_ATTR = CursorKind(438)
 CursorKind.WARN_UNUSED_ATTR = CursorKind(439)
 CursorKind.WARN_UNUSED_RESULT_ATTR = CursorKind(440)
+CursorKind.ALIGNED_ATTR = CursorKind(441)
 
 ###
 # Preprocessing
@@ -2119,6 +2120,8 @@ TypeKind.OCLSAMPLER = TypeKind(157)
 TypeKind.OCLEVENT = TypeKind(158)
 TypeKind.OCLQUEUE = TypeKind(159)
 TypeKind.OCLRESERVEID = TypeKind(160)
+
+TypeKind.EXTVECTOR = TypeKind(176)
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""

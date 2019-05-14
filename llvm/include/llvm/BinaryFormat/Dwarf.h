@@ -129,7 +129,8 @@ enum LocationAtom {
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
-  DW_OP_LLVM_fragment = 0x1000 ///< Only used in LLVM metadata.
+  DW_OP_LLVM_fragment = 0x1000, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_convert  = 0x1001  ///< Only used in LLVM metadata.
 };
 
 enum TypeKind : uint8_t {

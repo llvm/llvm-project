@@ -429,13 +429,14 @@ bool FileManager::getStatValue(StringRef Path, llvm::vfs::Status &Status,
   // FIXME: FileSystemOpts shouldn't be passed in here, all paths should be
   // absolute!
   if (FileSystemOpts.WorkingDir.empty())
-    return FileSystemStatCache::get(Path, Status, isFile, F,StatCache.get(), *FS);
+    return bool(FileSystemStatCache::get(Path, Status, isFile, F,
+                                         StatCache.get(), *FS));
 
   SmallString<128> FilePath(Path);
   FixupRelativePath(FilePath);
 
-  return FileSystemStatCache::get(FilePath.c_str(), Status, isFile, F,
-                                  StatCache.get(), *FS);
+  return bool(FileSystemStatCache::get(FilePath.c_str(), Status, isFile, F,
+                                       StatCache.get(), *FS));
 }
 
 bool FileManager::getNoncachedStatValue(StringRef Path,

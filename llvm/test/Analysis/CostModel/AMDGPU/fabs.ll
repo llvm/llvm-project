@@ -27,6 +27,15 @@ define amdgpu_kernel void @fabs_v3f32(<3 x float> addrspace(1)* %out, <3 x float
   ret void
 }
 
+; CHECK: 'fabs_v5f32'
+; CHECK: estimated cost of 0 for {{.*}} call <5 x float> @llvm.fabs.v5f32
+define amdgpu_kernel void @fabs_v5f32(<5 x float> addrspace(1)* %out, <5 x float> addrspace(1)* %vaddr) #0 {
+  %vec = load <5 x float>, <5 x float> addrspace(1)* %vaddr
+  %fabs = call <5 x float> @llvm.fabs.v5f32(<5 x float> %vec) #1
+  store <5 x float> %fabs, <5 x float> addrspace(1)* %out
+  ret void
+}
+
 ; CHECK: 'fabs_f64'
 ; CHECK: estimated cost of 0 for {{.*}} call double @llvm.fabs.f64
 define amdgpu_kernel void @fabs_f64(double addrspace(1)* %out, double addrspace(1)* %vaddr) #0 {
@@ -84,6 +93,7 @@ define amdgpu_kernel void @fabs_v3f16(<3 x half> addrspace(1)* %out, <3 x half> 
 declare float @llvm.fabs.f32(float) #1
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>) #1
 declare <3 x float> @llvm.fabs.v3f32(<3 x float>) #1
+declare <5 x float> @llvm.fabs.v5f32(<5 x float>) #1
 
 declare double @llvm.fabs.f64(double) #1
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>) #1

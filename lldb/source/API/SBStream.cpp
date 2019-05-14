@@ -29,6 +29,10 @@ SBStream::~SBStream() {}
 
 bool SBStream::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, IsValid);
+  return this->operator bool();
+}
+SBStream::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, operator bool);
 
   return (m_opaque_up != NULL);
 }
@@ -172,4 +176,23 @@ void SBStream::Clear() {
     else
       static_cast<StreamString *>(m_opaque_up.get())->Clear();
   }
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBStream>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBStream, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBStream, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBStream, operator bool, ());
+  LLDB_REGISTER_METHOD(const char *, SBStream, GetData, ());
+  LLDB_REGISTER_METHOD(size_t, SBStream, GetSize, ());
+  LLDB_REGISTER_METHOD(void, SBStream, RedirectToFile, (const char *, bool));
+  LLDB_REGISTER_METHOD(void, SBStream, RedirectToFileHandle, (FILE *, bool));
+  LLDB_REGISTER_METHOD(void, SBStream, RedirectToFileDescriptor, (int, bool));
+  LLDB_REGISTER_METHOD(void, SBStream, Clear, ());
+}
+
+}
 }

@@ -125,6 +125,10 @@ uptr internal_filesize(fd_t fd) {
   return (uptr)st.st_size;
 }
 
+DECLARE__REAL_AND_INTERNAL(uptr, dup, int oldfd) {
+  return _REAL(dup)(oldfd);
+}
+
 DECLARE__REAL_AND_INTERNAL(uptr, dup2, int oldfd, int newfd) {
   return _REAL(dup2)(oldfd, newfd);
 }

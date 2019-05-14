@@ -113,7 +113,6 @@ defm : AtomWriteResPair<WriteIDiv64, [AtomPort01], [AtomPort01],130,130,[130],[1
 defm : X86WriteResPairUnsupported<WriteCRC32>;
 
 defm : AtomWriteResPair<WriteCMOV,  [AtomPort01], [AtomPort0]>;
-defm : AtomWriteResPair<WriteCMOV2, [AtomPort01], [AtomPort0]>;
 defm : X86WriteRes<WriteFCMOV, [AtomPort01], 9, [9], 1>; // x87 conditional move.
 
 def  : WriteRes<WriteSETCC, [AtomPort01]>;
@@ -741,7 +740,7 @@ def AtomWrite01_45 : SchedWriteRes<[AtomPort01]> {
   let Latency = 45;
   let ResourceCycles = [45];
 }
-def : InstRW<[AtomWrite01_45], (instrs MONITORrrr)>;
+def : InstRW<[AtomWrite01_45], (instrs MONITOR32rrr, MONITOR64rrr)>;
 
 def AtomWrite01_46 : SchedWriteRes<[AtomPort01]> {
   let Latency = 46;

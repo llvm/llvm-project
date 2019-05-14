@@ -10,7 +10,7 @@ define <8 x float> @fadd_fsub_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @fadd_fsub_v8f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <8 x float> [[A]], [[B]]
-; CHECK-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> [[TMP1]], <8 x i32> <i32 8, i32 1, i32 2, i32 11, i32 12, i32 5, i32 6, i32 15>
+; CHECK-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; CHECK-NEXT:    ret <8 x float> [[R7]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
@@ -52,7 +52,7 @@ define <8 x float> @fmul_fdiv_v8f32(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: @fmul_fdiv_v8f32(
 ; SSE-NEXT:    [[TMP1:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
 ; SSE-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
-; SSE-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> [[TMP1]], <8 x i32> <i32 8, i32 1, i32 2, i32 11, i32 12, i32 5, i32 6, i32 15>
+; SSE-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; SSE-NEXT:    ret <8 x float> [[R7]]
 ;
 ; SLM-LABEL: @fmul_fdiv_v8f32(
@@ -75,13 +75,13 @@ define <8 x float> @fmul_fdiv_v8f32(<8 x float> %a, <8 x float> %b) {
 ; AVX-LABEL: @fmul_fdiv_v8f32(
 ; AVX-NEXT:    [[TMP1:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
 ; AVX-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
-; AVX-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> [[TMP1]], <8 x i32> <i32 8, i32 1, i32 2, i32 11, i32 12, i32 5, i32 6, i32 15>
+; AVX-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; AVX-NEXT:    ret <8 x float> [[R7]]
 ;
 ; AVX512-LABEL: @fmul_fdiv_v8f32(
 ; AVX512-NEXT:    [[TMP1:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
 ; AVX512-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
-; AVX512-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> [[TMP1]], <8 x i32> <i32 8, i32 1, i32 2, i32 11, i32 12, i32 5, i32 6, i32 15>
+; AVX512-NEXT:    [[R7:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; AVX512-NEXT:    ret <8 x float> [[R7]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0

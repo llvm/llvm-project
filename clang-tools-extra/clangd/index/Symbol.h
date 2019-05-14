@@ -37,7 +37,7 @@ struct Symbol {
   /// The ID of the symbol.
   SymbolID ID;
   /// The symbol information, like symbol kind.
-  index::SymbolInfo SymInfo;
+  index::SymbolInfo SymInfo = index::SymbolInfo();
   /// The unqualified name of the symbol, e.g. "bar" (for ns::bar).
   llvm::StringRef Name;
   /// The containing namespace. e.g. "" (global), "ns::" (top-level namespace).
@@ -63,6 +63,10 @@ struct Symbol {
   /// candidate list. For example, "(X x, Y y) const" is a function signature.
   /// Only set when the symbol is indexed for completion.
   llvm::StringRef Signature;
+  /// Argument list in human-readable format, will be displayed to help
+  /// disambiguate between different specializations of a template. Empty for
+  /// non-specializations. Example: "<int, bool, 3>"
+  llvm::StringRef TemplateSpecializationArgs;
   /// What to insert when completing this symbol, after the symbol name.
   /// This is in LSP snippet syntax (e.g. "({$0})" for a no-args function).
   /// (When snippets are disabled, the symbol name alone is used).
@@ -143,6 +147,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, Symbol::SymbolFlag);
 template <typename Callback> void visitStrings(Symbol &S, const Callback &CB) {
   CB(S.Name);
   CB(S.Scope);
+  CB(S.TemplateSpecializationArgs);
   CB(S.Signature);
   CB(S.CompletionSnippetSuffix);
   CB(S.Documentation);

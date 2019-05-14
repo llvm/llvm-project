@@ -332,6 +332,15 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::ADDIStocHA:
   case PPC::ADDItocL:
   case PPC::LOAD_STACK_GUARD:
+  case PPC::XXLXORz:
+  case PPC::XXLXORspz:
+  case PPC::XXLXORdpz:
+  case PPC::V_SET0B:
+  case PPC::V_SET0H:
+  case PPC::V_SET0:
+  case PPC::V_SETALLONESB:
+  case PPC::V_SETALLONESH:
+  case PPC::V_SETALLONES:
     return true;
   }
   return false;
@@ -941,12 +950,16 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   } else if (PPC::G8RCRegClass.contains(SrcReg) &&
              PPC::VSFRCRegClass.contains(DestReg)) {
+    assert(Subtarget.hasDirectMove() &&
+           "Subtarget doesn't support directmove, don't know how to copy.");
     BuildMI(MBB, I, DL, get(PPC::MTVSRD), DestReg).addReg(SrcReg);
     NumGPRtoVSRSpill++;
     getKillRegState(KillSrc);
     return;
   } else if (PPC::VSFRCRegClass.contains(SrcReg) &&
              PPC::G8RCRegClass.contains(DestReg)) {
+    assert(Subtarget.hasDirectMove() &&
+           "Subtarget doesn't support directmove, don't know how to copy.");
     BuildMI(MBB, I, DL, get(PPC::MFVSRD), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
@@ -961,7 +974,6 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     getKillRegState(KillSrc);
     return;
   }
-
 
   unsigned Opc;
   if (PPC::GPRCRegClass.contains(DestReg, SrcReg))

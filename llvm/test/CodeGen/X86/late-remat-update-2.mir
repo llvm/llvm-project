@@ -38,7 +38,7 @@ body:             |
 
     %t1:gr64 = MOV64ri32 -11
     CMP64ri8 %t1, 1, implicit-def $eflags
-    JE_1 %bb.2, implicit killed $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
     JMP_1 %bb.1
 
   bb.1:
@@ -48,7 +48,7 @@ body:             |
     %t2:gr64 = ADD64ri8 %t2, 5, implicit-def $eflags
     $rax = COPY %t2
     CMP64ri8 %t2, 1, implicit-def $eflags
-    JE_1 %bb.1, implicit killed $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
     RET 0, $rax
 
   bb.2:

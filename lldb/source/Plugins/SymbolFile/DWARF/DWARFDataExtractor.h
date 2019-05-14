@@ -16,22 +16,18 @@ namespace lldb_private {
 
 class DWARFDataExtractor : public DataExtractor {
 public:
-  DWARFDataExtractor() : DataExtractor(), m_is_dwarf64(false) {}
+  DWARFDataExtractor() = default;
 
   DWARFDataExtractor(const DWARFDataExtractor &data, lldb::offset_t offset,
                      lldb::offset_t length)
-      : DataExtractor(data, offset, length), m_is_dwarf64(false) {}
+      : DataExtractor(data, offset, length) {}
 
   uint64_t GetDWARFInitialLength(lldb::offset_t *offset_ptr) const;
 
   dw_offset_t GetDWARFOffset(lldb::offset_t *offset_ptr) const;
 
-  size_t GetDWARFSizeofInitialLength() const { return m_is_dwarf64 ? 12 : 4; }
-  size_t GetDWARFSizeOfOffset() const { return m_is_dwarf64 ? 8 : 4; }
-  bool IsDWARF64() const { return m_is_dwarf64; }
-
-protected:
-  mutable bool m_is_dwarf64;
+  size_t GetDWARFSizeofInitialLength() const { return 4; }
+  size_t GetDWARFSizeOfOffset() const { return 4; }
 };
 }
 

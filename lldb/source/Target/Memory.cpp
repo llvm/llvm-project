@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Memory.h"
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/State.h"
 
 #include <cinttypes>
@@ -20,17 +19,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // MemoryCache constructor
-//----------------------------------------------------------------------
 MemoryCache::MemoryCache(Process &process)
     : m_mutex(), m_L1_cache(), m_L2_cache(), m_invalid_ranges(),
       m_process(process),
       m_L2_cache_line_byte_size(process.GetMemoryCacheLineSize()) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 MemoryCache::~MemoryCache() {}
 
 void MemoryCache::Clear(bool clear_invalid_ranges) {
@@ -147,7 +142,7 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     }
     AddrRange chunk_range(pos->first, pos->second->GetByteSize());
     if (chunk_range.Contains(read_range)) {
-      memcpy(dst, pos->second->GetBytes() + addr - chunk_range.GetRangeBase(),
+      memcpy(dst, pos->second->GetBytes() + (addr - chunk_range.GetRangeBase()),
              dst_len);
       return dst_len;
     }

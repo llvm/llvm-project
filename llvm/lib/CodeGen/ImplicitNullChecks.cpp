@@ -180,7 +180,8 @@ class ImplicitNullChecks : public MachineFunctionPass {
   /// Returns AR_NoAlias if \p MI memory operation does not alias with
   /// \p PrevMI, AR_MayAlias if they may alias and AR_WillAliasEverything if
   /// they may alias and any further memory operation may alias with \p PrevMI.
-  AliasResult areMemoryOpsAliased(MachineInstr &MI, MachineInstr *PrevMI);
+  AliasResult areMemoryOpsAliased(const MachineInstr &MI,
+                                  const MachineInstr *PrevMI) const;
 
   enum SuitabilityResult {
     SR_Suitable,
@@ -194,7 +195,8 @@ class ImplicitNullChecks : public MachineFunctionPass {
   /// no sense to continue lookup due to any other instruction will not be able
   /// to be used. \p PrevInsts is the set of instruction seen since
   /// the explicit null check on \p PointerReg.
-  SuitabilityResult isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
+  SuitabilityResult isSuitableMemoryOp(const MachineInstr &MI,
+                                       unsigned PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts);
 
   /// Return true if \p FaultingMI can be hoisted from after the
@@ -235,11 +237,8 @@ bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
   assert(!llvm::any_of(MI->operands(), IsRegMask) &&
          "Calls were filtered out above!");
 
-  // TODO: This should be isUnordered (see D57601) once test cases are written
-  // demonstrating that.
-  auto IsSimple = [](MachineMemOperand *MMO) {
-    return !MMO->isVolatile() && !MMO->isAtomic(); };
-  return llvm::all_of(MI->memoperands(), IsSimple);
+  auto IsUnordered = [](MachineMemOperand *MMO) { return MMO->isUnordered(); };
+  return llvm::all_of(MI->memoperands(), IsUnordered);
 }
 
 ImplicitNullChecks::DependenceResult
@@ -321,8 +320,8 @@ static bool AnyAliasLiveIn(const TargetRegisterInfo *TRI,
 }
 
 ImplicitNullChecks::AliasResult
-ImplicitNullChecks::areMemoryOpsAliased(MachineInstr &MI,
-                                        MachineInstr *PrevMI) {
+ImplicitNullChecks::areMemoryOpsAliased(const MachineInstr &MI,
+                                        const MachineInstr *PrevMI) const {
   // If it is not memory access, skip the check.
   if (!(PrevMI->mayStore() || PrevMI->mayLoad()))
     return AR_NoAlias;
@@ -359,10 +358,11 @@ ImplicitNullChecks::areMemoryOpsAliased(MachineInstr &MI,
 }
 
 ImplicitNullChecks::SuitabilityResult
-ImplicitNullChecks::isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
+ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
+                                       unsigned PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts) {
   int64_t Offset;
-  MachineOperand *BaseOp;
+  const MachineOperand *BaseOp;
 
   if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI) ||
       !BaseOp->isReg() || BaseOp->getReg() != PointerReg)

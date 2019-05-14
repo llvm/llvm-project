@@ -341,7 +341,6 @@ struct SrcHeaderBlockEntry {
   short Padding;                 // Pad to 4 bytes.
   char Reserved[8];
 };
-
 static_assert(sizeof(SrcHeaderBlockEntry) == 40, "Incorrect struct size!");
 
 } // namespace pdb

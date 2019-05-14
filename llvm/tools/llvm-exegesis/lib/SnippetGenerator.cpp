@@ -12,6 +12,7 @@
 #include "Assembler.h"
 #include "MCInstrDescView.h"
 #include "SnippetGenerator.h"
+#include "Target.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -50,7 +51,7 @@ SnippetGenerator::generateConfigurations(const Instruction &Instr) const {
         BenchmarkCode BC;
         BC.Info = CT.Info;
         for (InstructionTemplate &IT : CT.Instructions) {
-          randomizeUnsetVariables(ForbiddenRegs, IT);
+          randomizeUnsetVariables(State.getExegesisTarget(), ForbiddenRegs, IT);
           BC.Instructions.push_back(IT.build());
         }
         if (CT.ScratchSpacePointerInReg)
@@ -145,38 +146,16 @@ std::mt19937 &randomGenerator() {
   return RandomGenerator;
 }
 
-static size_t randomIndex(size_t Size) {
-  assert(Size > 0);
-  std::uniform_int_distribution<> Distribution(0, Size - 1);
+size_t randomIndex(size_t Max) {
+  std::uniform_int_distribution<> Distribution(0, Max);
   return Distribution(randomGenerator());
 }
 
 template <typename C>
 static auto randomElement(const C &Container) -> decltype(Container[0]) {
-  return Container[randomIndex(Container.size())];
-}
-
-static void randomize(const Instruction &Instr, const Variable &Var,
-                      llvm::MCOperand &AssignedValue,
-                      const llvm::BitVector &ForbiddenRegs) {
-  const Operand &Op = Instr.getPrimaryOperand(Var);
-  switch (Op.getExplicitOperandInfo().OperandType) {
-  case llvm::MCOI::OperandType::OPERAND_IMMEDIATE:
-    // FIXME: explore immediate values too.
-    AssignedValue = llvm::MCOperand::createImm(1);
-    break;
-  case llvm::MCOI::OperandType::OPERAND_REGISTER: {
-    assert(Op.isReg());
-    auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
-    assert(AllowedRegs.size() == ForbiddenRegs.size());
-    for (auto I : ForbiddenRegs.set_bits())
-      AllowedRegs.reset(I);
-    AssignedValue = llvm::MCOperand::createReg(randomBit(AllowedRegs));
-    break;
-  }
-  default:
-    break;
-  }
+  assert(!Container.empty() &&
+         "Can't pick a random element from an empty container)");
+  return Container[randomIndex(Container.size() - 1)];
 }
 
 static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
@@ -198,7 +177,7 @@ static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
 size_t randomBit(const llvm::BitVector &Vector) {
   assert(Vector.any());
   auto Itr = Vector.set_bits_begin();
-  for (size_t I = randomIndex(Vector.count()); I != 0; --I)
+  for (size_t I = randomIndex(Vector.count() - 1); I != 0; --I)
     ++Itr;
   return *Itr;
 }
@@ -212,12 +191,13 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
   setRegisterOperandValue(randomElement(RandomConf.Uses), UseIB);
 }
 
-void randomizeUnsetVariables(const llvm::BitVector &ForbiddenRegs,
+void randomizeUnsetVariables(const ExegesisTarget &Target,
+                             const llvm::BitVector &ForbiddenRegs,
                              InstructionTemplate &IT) {
   for (const Variable &Var : IT.Instr.Variables) {
     llvm::MCOperand &AssignedValue = IT.getValueFor(Var);
     if (!AssignedValue.isValid())
-      randomize(IT.Instr, Var, AssignedValue, ForbiddenRegs);
+      Target.randomizeMCOperand(IT.Instr, Var, AssignedValue, ForbiddenRegs);
   }
 }
 

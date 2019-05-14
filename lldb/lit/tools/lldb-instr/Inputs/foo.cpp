@@ -15,3 +15,12 @@ void Foo::G(const char *fmt...) {}
 Foo Foo::H() { return Foo(); }
 void Foo::I() const { MACRO_FOO; }
 Bar Foo::J() const { return MACRO_BAR(Bar()); }
+Bar Foo::K(void *v) const { return Bar(); }
+Bar &Foo::L() const {
+  Bar *b = new Bar();
+  return *b;
+};
+Bar *Foo::M() const {
+  Bar *b = new Bar();
+  return b;
+};

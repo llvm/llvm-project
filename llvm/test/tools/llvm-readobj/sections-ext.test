@@ -1,30 +1,30 @@
-RUN: llvm-readobj -s -st -sr -sd %p/Inputs/trivial.obj.coff-i386 \
+RUN: llvm-readobj -S --st --sr --sd %p/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF
-RUN: llvm-readobj -s -st -sr -sd %p/Inputs/trivial.obj.elf-i386 \
+RUN: llvm-readobj -S --st --sr --sd %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -s -st -sr -sd %p/Inputs/trivial.obj.macho-i386 \
+RUN: llvm-readobj -S --st --sr --sd %p/Inputs/trivial.obj.macho-i386 \
 RUN:   | FileCheck %s -check-prefix MACHO-I386
-RUN: llvm-readobj -s -st -sr -sd %p/Inputs/trivial.obj.macho-x86-64 \
+RUN: llvm-readobj -S --st --sr --sd %p/Inputs/trivial.obj.macho-x86-64 \
 RUN:   | FileCheck %s -check-prefix MACHO-X86-64
-RUN: llvm-readobj --expand-relocs -s -st -sr -sd %p/Inputs/trivial.obj.macho-ppc \
+RUN: llvm-readobj --expand-relocs -S --st --sr --sd %p/Inputs/trivial.obj.macho-ppc \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC
-RUN: llvm-readobj --expand-relocs -s -st -sr -sd %p/Inputs/trivial.obj.macho-ppc64 \
+RUN: llvm-readobj --expand-relocs -S --st --sr --sd %p/Inputs/trivial.obj.macho-ppc64 \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC64
-RUN: llvm-readobj -expand-relocs -s -st -sr -sd %p/Inputs/trivial.obj.macho-arm \
+RUN: llvm-readobj --expand-relocs -S --st --sr --sd %p/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
 
 # Check the two-letter aliases above (-st, -sr, -sd) are equivalent to their
 # full flag names.
-RUN: llvm-readobj -s -st %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-alias
-RUN: llvm-readobj -s --section-symbols %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-no-alias
+RUN: llvm-readobj -S --st %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-alias
+RUN: llvm-readobj -S --section-symbols %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-no-alias
 RUN: diff %t.readobj-st-alias %t.readobj-st-no-alias
 
-RUN: llvm-readobj -s -sr %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-alias
-RUN: llvm-readobj -s --section-relocations %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-no-alias
+RUN: llvm-readobj -S --sr %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-alias
+RUN: llvm-readobj -S --section-relocations %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-no-alias
 RUN: diff %t.readobj-sr-alias %t.readobj-sr-no-alias
 
-RUN: llvm-readobj -s -sd %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-alias
-RUN: llvm-readobj -s --section-data %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-no-alias
+RUN: llvm-readobj -S --sd %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-alias
+RUN: llvm-readobj -S --section-data %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-no-alias
 RUN: diff %t.readobj-sd-alias %t.readobj-sd-no-alias
 
 COFF:      Sections [

@@ -71,8 +71,7 @@ body:             |
   ; MIPS32:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
   ; MIPS32:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
   ; MIPS32:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32:   [[LUi:%[0-9]+]]:gpr32 = LUi 0
-  ; MIPS32:   [[ORi:%[0-9]+]]:gpr32 = ORi [[LUi]], 1
+  ; MIPS32:   [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
   ; MIPS32:   [[AND:%[0-9]+]]:gpr32 = AND [[COPY]], [[ORi]]
   ; MIPS32:   BNE [[AND]], $zero, %bb.1, implicit-def $at
   ; MIPS32:   J %bb.2, implicit-def $at

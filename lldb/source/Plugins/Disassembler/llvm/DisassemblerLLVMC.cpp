@@ -1196,6 +1196,11 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   if (triple.getArch() == llvm::Triple::aarch64)
     features_str += "+v8.2a";
 
+  if (triple.getArch() == llvm::Triple::aarch64
+      && triple.getVendor() == llvm::Triple::Apple) {
+    cpu = "apple-latest";
+  }
+
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
   // isn't good for some reason, we won't be valid and FindPlugin will fail and
   // we won't get used.
@@ -1428,9 +1433,7 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
   return NULL;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString DisassemblerLLVMC::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t DisassemblerLLVMC::GetPluginVersion() { return 1; }

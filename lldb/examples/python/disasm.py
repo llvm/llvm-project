@@ -15,12 +15,12 @@ import sys
 
 def disassemble_instructions(insts):
     for i in insts:
-        print i
+        print(i)
 
 
 def usage():
-    print "Usage: disasm.py [-n name] executable-image"
-    print "       By default, it breaks at and disassembles the 'main' function."
+    print("Usage: disasm.py [-n name] executable-image")
+    print("       By default, it breaks at and disassembles the 'main' function.")
     sys.exit(0)
 
 if len(sys.argv) == 2:
@@ -43,7 +43,7 @@ debugger = lldb.SBDebugger.Create()
 debugger.SetAsync(False)
 
 # Create a target from a file and arch
-print "Creating a target for '%s'" % exe
+print("Creating a target for '%s'" % exe)
 
 target = debugger.CreateTargetWithFileAndArch(exe, lldb.LLDB_ARCH_DEFAULT)
 
@@ -52,7 +52,7 @@ if target:
     main_bp = target.BreakpointCreateByName(
         fname, target.GetExecutable().GetFilename())
 
-    print main_bp
+    print(main_bp)
 
     # Launch the process. Since we specified synchronous mode, we won't return
     # from this function until we hit the breakpoint at main
@@ -62,24 +62,24 @@ if target:
     if process:
         # Print some simple process info
         state = process.GetState()
-        print process
+        print(process)
         if state == lldb.eStateStopped:
             # Get the first thread
             thread = process.GetThreadAtIndex(0)
             if thread:
                 # Print some simple thread info
-                print thread
+                print(thread)
                 # Get the first frame
                 frame = thread.GetFrameAtIndex(0)
                 if frame:
                     # Print some simple frame info
-                    print frame
+                    print(frame)
                     function = frame.GetFunction()
                     # See if we have debug info (a function)
                     if function:
                         # We do have a function, print some info for the
                         # function
-                        print function
+                        print(function)
                         # Now get all instructions for this function and print
                         # them
                         insts = function.GetInstructions(target)
@@ -91,35 +91,35 @@ if target:
                         if symbol:
                             # We do have a symbol, print some info for the
                             # symbol
-                            print symbol
+                            print(symbol)
                             # Now get all instructions for this symbol and
                             # print them
                             insts = symbol.GetInstructions(target)
                             disassemble_instructions(insts)
 
                     registerList = frame.GetRegisters()
-                    print "Frame registers (size of register set = %d):" % registerList.GetSize()
+                    print("Frame registers (size of register set = %d):" % registerList.GetSize())
                     for value in registerList:
                         # print value
-                        print "%s (number of children = %d):" % (value.GetName(), value.GetNumChildren())
+                        print("%s (number of children = %d):" % (value.GetName(), value.GetNumChildren()))
                         for child in value:
-                            print "Name: ", child.GetName(), " Value: ", child.GetValue()
+                            print("Name: ", child.GetName(), " Value: ", child.GetValue())
 
-            print "Hit the breakpoint at main, enter to continue and wait for program to exit or 'Ctrl-D'/'quit' to terminate the program"
+            print("Hit the breakpoint at main, enter to continue and wait for program to exit or 'Ctrl-D'/'quit' to terminate the program")
             next = sys.stdin.readline()
             if not next or next.rstrip('\n') == 'quit':
-                print "Terminating the inferior process..."
+                print("Terminating the inferior process...")
                 process.Kill()
             else:
                 # Now continue to the program exit
                 process.Continue()
                 # When we return from the above function we will hopefully be at the
                 # program exit. Print out some process info
-                print process
+                print(process)
         elif state == lldb.eStateExited:
-            print "Didn't hit the breakpoint at main, program has exited..."
+            print("Didn't hit the breakpoint at main, program has exited...")
         else:
-            print "Unexpected process state: %s, killing process..." % debugger.StateAsCString(state)
+            print("Unexpected process state: %s, killing process..." % debugger.StateAsCString(state))
             process.Kill()
 
 

@@ -12,6 +12,7 @@
 #include "../readability/NamespaceCommentCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
+#include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "TwineLocalCheck.h"
 
 namespace clang {
@@ -25,6 +26,8 @@ public:
     CheckFactories.registerCheck<IncludeOrderCheck>("llvm-include-order");
     CheckFactories.registerCheck<readability::NamespaceCommentCheck>(
         "llvm-namespace-comment");
+    CheckFactories.registerCheck<PreferIsaOrDynCastInConditionalsCheck>(
+        "llvm-prefer-isa-or-dyn-cast-in-conditionals");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
   }
 };

@@ -11,9 +11,6 @@
 using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {
-    {{"aranges"},
-     {"log the parsing of .debug_aranges"},
-     DWARF_LOG_DEBUG_ARANGES},
     {{"comp"},
      {"log insertions of object files into DWARF debug maps"},
      DWARF_LOG_TYPE_COMPLETION},
@@ -25,12 +22,6 @@ static constexpr Log::Category g_categories[] = {
     {{"map"},
      {"log struct/unions/class type completions"},
      DWARF_LOG_DEBUG_MAP},
-    {{"pubnames"},
-     {"log the parsing of .debug_pubnames"},
-     DWARF_LOG_DEBUG_PUBNAMES},
-    {{"pubtypes"},
-     {"log the parsing of .debug_pubtypes"},
-     DWARF_LOG_DEBUG_PUBTYPES},
 };
 
 Log::Channel LogChannelDWARF::g_channel(g_categories, DWARF_LOG_DEFAULT);

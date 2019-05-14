@@ -171,7 +171,7 @@ vpgatherdq      %xmm0, (%rax,%xmm1,2), %xmm2
 vpgatherdq      %ymm0, (%rax,%xmm1,2), %ymm2
 
 vpgatherqd      %xmm0, (%rax,%xmm1,2), %xmm2
-vpgatherqq      %ymm0, (%rax,%ymm1,2), %ymm2
+vpgatherqd      %xmm0, (%rax,%ymm1,2), %xmm2
 
 vpgatherqq      %xmm0, (%rax,%xmm1,2), %xmm2
 vpgatherqq      %ymm0, (%rax,%ymm1,2), %ymm2
@@ -573,7 +573,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  12     26    2.67    *                   vpgatherdq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  20     27    4.00    *                   vpgatherdq	%ymm0, (%rax,%xmm1,2), %ymm2
 # CHECK-NEXT:  22     25    5.00    *                   vpgatherqd	%xmm0, (%rax,%xmm1,2), %xmm2
-# CHECK-NEXT:  22     24    5.00    *                   vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
+# CHECK-NEXT:  22     28    5.00    *                   vpgatherqd	%xmm0, (%rax,%ymm1,2), %xmm2
 # CHECK-NEXT:  14     23    3.33    *                   vpgatherqq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  22     24    5.00    *                   vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
 # CHECK-NEXT:  3      3     2.00                        vphaddd	%ymm0, %ymm1, %ymm2
@@ -893,7 +893,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     4.00   1.50   1.00   1.00    -     3.50   1.00    -     vpgatherdq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  -      -     6.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherdq	%ymm0, (%rax,%xmm1,2), %ymm2
 # CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqd	%xmm0, (%rax,%xmm1,2), %xmm2
-# CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
+# CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqd	%xmm0, (%rax,%ymm1,2), %xmm2
 # CHECK-NEXT:  -      -     5.00   1.50   1.00   1.00    -     4.50   1.00    -     vpgatherqq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
 # CHECK-NEXT:  -      -      -     0.50    -      -      -     2.50    -      -     vphaddd	%ymm0, %ymm1, %ymm2

@@ -1,4 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI
 
 
 .globl global
@@ -40,9 +41,6 @@ s_mov_b32 s0, foo+2
 s_mov_b32 s0, foo+2
 // VI: s_mov_b32 s0, 514 ; encoding: [0xff,0x00,0x80,0xbe,0x02,0x02,0x00,0x00]
 
-v_mul_f32 v0, foo+2, v2
-// VI: v_mul_f32_e32 v0, 514, v2 ; encoding: [0xff,0x04,0x00,0x0a,0x02,0x02,0x00,0x00]
-
 BB1:
 v_nop_e64
 BB2:
@@ -57,3 +55,46 @@ s_sub_u32 s0, s0, -t
 t=-1
 s_sub_u32 s0, s0, -t
 // VI: s_sub_u32 s0, s0, 1             ; encoding: [0x00,0x81,0x80,0x80]
+
+s_sub_u32 s0, s0, -2+1
+// VI: s_sub_u32 s0, s0, -1            ; encoding: [0x00,0xc1,0x80,0x80]
+
+t=1
+s_sub_u32 s0, s0, -2+t
+// VI: s_sub_u32 s0, s0, -1            ; encoding: [0x00,0xc1,0x80,0x80]
+
+s_sub_u32 s0, s0, -1.0 + 10000000000
+// NOVI: error: invalid operand for instruction
+
+t=10000000000
+s_sub_u32 s0, s0, 1.0 + t
+// NOVI: error: invalid operand for instruction
+
+//===----------------------------------------------------------------------===//
+// Symbols may look like registers.
+// They should be allowed in expressions if there is no ambiguity.
+//===----------------------------------------------------------------------===//
+
+v=1
+v_sin_f32 v0, -v
+// NOVI: error: invalid operand for instruction
+
+v=1
+v_sin_f32 v0, -v[0]
+// VI: v_sin_f32_e64 v0, -v0           ; encoding: [0x00,0x00,0x69,0xd1,0x00,0x01,0x00,0x20]
+
+s=1
+s_not_b32 s0, -s
+// VI: s_not_b32 s0, -1                ; encoding: [0xc1,0x04,0x80,0xbe]
+
+s0=1
+s_not_b32 s0, -s0
+// VI: s_not_b32 s0, -1                ; encoding: [0xc1,0x04,0x80,0xbe]
+
+ttmp=1
+s_not_b32 s0, -ttmp
+// VI: s_not_b32 s0, -1                ; encoding: [0xc1,0x04,0x80,0xbe]
+
+ttmp0=1
+s_not_b32 s0, -[ttmp0]
+// VI: s_not_b32 s0, -1                ; encoding: [0xc1,0x04,0x80,0xbe]

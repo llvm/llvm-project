@@ -30,11 +30,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -52,6 +47,7 @@ namespace llvm {
 class BasicBlock;
 class BlockAddress;
 class DataLayout;
+class DebugLoc;
 class DIExpression;
 class DILocalVariable;
 class DILocation;
@@ -66,6 +62,7 @@ class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
+class MCSymbol;
 class Pass;
 class PseudoSourceValueManager;
 class raw_ostream;
@@ -324,6 +321,10 @@ class MachineFunction {
   /// CodeView label annotations.
   std::vector<std::pair<MCSymbol *, MDNode *>> CodeViewAnnotations;
 
+  /// CodeView heapallocsites.
+  std::vector<std::tuple<MCSymbol*, MCSymbol*, DIType*>>
+      CodeViewHeapAllocSites;
+
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
   bool HasEHScopes = false;
@@ -442,7 +443,6 @@ public:
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.
   const TargetSubtargetInfo &getSubtarget() const { return *STI; }
-  void setSubtarget(const TargetSubtargetInfo *ST) { STI = ST; }
 
   /// getSubtarget - This method returns a pointer to the specified type of
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
@@ -790,10 +790,7 @@ public:
     return FrameInstructions;
   }
 
-  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst) {
-    FrameInstructions.push_back(Inst);
-    return FrameInstructions.size() - 1;
-  }
+  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst);
 
   /// \name Exception Handling
   /// \{
@@ -910,6 +907,14 @@ public:
 
   ArrayRef<std::pair<MCSymbol *, MDNode *>> getCodeViewAnnotations() const {
     return CodeViewAnnotations;
+  }
+
+  /// Record heapallocsites
+  void addCodeViewHeapAllocSite(MachineInstr *I, MDNode *MD);
+
+  ArrayRef<std::tuple<MCSymbol*, MCSymbol*, DIType*>>
+      getCodeViewHeapAllocSites() const {
+    return CodeViewHeapAllocSites;
   }
 
   /// Return a reference to the C++ typeinfo for the current function.

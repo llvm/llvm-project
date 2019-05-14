@@ -109,7 +109,7 @@ FormatCache::FormatCache()
 {
 }
 
-FormatCache::Entry &FormatCache::GetEntry(const ConstString &type) {
+FormatCache::Entry &FormatCache::GetEntry(ConstString type) {
   auto i = m_map.find(type), e = m_map.end();
   if (i != e)
     return i->second;
@@ -117,7 +117,7 @@ FormatCache::Entry &FormatCache::GetEntry(const ConstString &type) {
   return m_map[type];
 }
 
-bool FormatCache::GetFormat(const ConstString &type,
+bool FormatCache::GetFormat(ConstString type,
                             lldb::TypeFormatImplSP &format_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   auto entry = GetEntry(type);
@@ -135,7 +135,7 @@ bool FormatCache::GetFormat(const ConstString &type,
   return false;
 }
 
-bool FormatCache::GetSummary(const ConstString &type,
+bool FormatCache::GetSummary(ConstString type,
                              lldb::TypeSummaryImplSP &summary_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   auto entry = GetEntry(type);
@@ -153,7 +153,7 @@ bool FormatCache::GetSummary(const ConstString &type,
   return false;
 }
 
-bool FormatCache::GetSynthetic(const ConstString &type,
+bool FormatCache::GetSynthetic(ConstString type,
                                lldb::SyntheticChildrenSP &synthetic_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   auto entry = GetEntry(type);
@@ -171,7 +171,7 @@ bool FormatCache::GetSynthetic(const ConstString &type,
   return false;
 }
 
-bool FormatCache::GetValidator(const ConstString &type,
+bool FormatCache::GetValidator(ConstString type,
                                lldb::TypeValidatorImplSP &validator_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   auto entry = GetEntry(type);
@@ -189,25 +189,25 @@ bool FormatCache::GetValidator(const ConstString &type,
   return false;
 }
 
-void FormatCache::SetFormat(const ConstString &type,
+void FormatCache::SetFormat(ConstString type,
                             lldb::TypeFormatImplSP &format_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   GetEntry(type).SetFormat(format_sp);
 }
 
-void FormatCache::SetSummary(const ConstString &type,
+void FormatCache::SetSummary(ConstString type,
                              lldb::TypeSummaryImplSP &summary_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   GetEntry(type).SetSummary(summary_sp);
 }
 
-void FormatCache::SetSynthetic(const ConstString &type,
+void FormatCache::SetSynthetic(ConstString type,
                                lldb::SyntheticChildrenSP &synthetic_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   GetEntry(type).SetSynthetic(synthetic_sp);
 }
 
-void FormatCache::SetValidator(const ConstString &type,
+void FormatCache::SetValidator(ConstString type,
                                lldb::TypeValidatorImplSP &validator_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   GetEntry(type).SetValidator(validator_sp);

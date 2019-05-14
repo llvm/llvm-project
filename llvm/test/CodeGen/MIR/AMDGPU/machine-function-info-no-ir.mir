@@ -1,0 +1,151 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
+
+
+---
+# ALL-LABEL: name: kernel0
+# FULL: machineFunctionInfo:
+# FULL-NEXT: explicitKernArgSize: 128
+# FULL-NEXT: maxKernArgAlign: 64
+# FULL-NEXT: ldsSize: 2048
+# FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: noSignedZerosFPMath: false
+# FULL-NEXT: memoryBound:     true
+# FULL-NEXT: waveLimiter:     true
+# FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
+# FULL-NEXT: scratchWaveOffsetReg:  '$sgpr12'
+# FULL-NEXT: frameOffsetReg:  '$sgpr12'
+# FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
+# FULL-NEXT: body:
+
+# SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: explicitKernArgSize: 128
+# SIMPLE-NEXT: maxKernArgAlign: 64
+# SIMPLE-NEXT: ldsSize: 2048
+# SIMPLE-NEXT: isEntryFunction: true
+# SIMPLE-NEXT: memoryBound: true
+# SIMPLE-NEXT: waveLimiter: true
+# SIMPLE-NEXT: scratchRSrcReg: '$sgpr8_sgpr9_sgpr10_sgpr11'
+# SIMPLE-NEXT: scratchWaveOffsetReg:  '$sgpr12'
+# SIMPLE-NEXT: frameOffsetReg:  '$sgpr12'
+# SIMPLE-NEXT: stackPtrOffsetReg:  '$sgpr13'
+# SIMPLE-NEXT: body:
+name: kernel0
+machineFunctionInfo:
+  explicitKernArgSize: 128
+  maxKernArgAlign: 64
+  ldsSize: 2048
+  isEntryFunction: true
+  noSignedZerosFPMath: false
+  memoryBound:     true
+  waveLimiter:     true
+  scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
+  scratchWaveOffsetReg:  '$sgpr12'
+  frameOffsetReg: '$sgpr12'
+  stackPtrOffsetReg:  '$sgpr13'
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+# FIXME: Should be able to not print section for simple
+---
+# ALL-LABEL: name: no_mfi
+# FULL: machineFunctionInfo:
+# FULL-NEXT: explicitKernArgSize: 0
+# FULL-NEXT: maxKernArgAlign: 0
+# FULL-NEXT: ldsSize: 0
+# FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: noSignedZerosFPMath: false
+# FULL-NEXT: memoryBound:     false
+# FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
+# FULL-NEXT: scratchWaveOffsetReg:  '$scratch_wave_offset_reg'
+# FULL-NEXT: frameOffsetReg:  '$fp_reg'
+# FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+
+# SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: body:
+
+name: no_mfi
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: empty_mfi
+# FULL: machineFunctionInfo:
+# FULL-NEXT: explicitKernArgSize: 0
+# FULL-NEXT: maxKernArgAlign: 0
+# FULL-NEXT: ldsSize: 0
+# FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: noSignedZerosFPMath: false
+# FULL-NEXT: memoryBound:     false
+# FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
+# FULL-NEXT: scratchWaveOffsetReg:  '$scratch_wave_offset_reg'
+# FULL-NEXT: frameOffsetReg:  '$fp_reg'
+# FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+
+# SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: body:
+
+name: empty_mfi
+machineFunctionInfo:
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: empty_mfi_entry_func
+# FULL: machineFunctionInfo:
+# FULL-NEXT: explicitKernArgSize: 0
+# FULL-NEXT: maxKernArgAlign: 0
+# FULL-NEXT: ldsSize: 0
+# FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: noSignedZerosFPMath: false
+# FULL-NEXT: memoryBound:     false
+# FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
+# FULL-NEXT: scratchWaveOffsetReg:  '$scratch_wave_offset_reg'
+# FULL-NEXT: frameOffsetReg:  '$fp_reg'
+# FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+
+# SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: isEntryFunction: true
+# SIMPLE-NEXT: body:
+
+name: empty_mfi_entry_func
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: default_regs_mfi
+
+# FULL: scratchRSrcReg:  '$private_rsrc_reg'
+# FULL-NEXT: scratchWaveOffsetReg:  '$scratch_wave_offset_reg'
+# FULL-NEXT: frameOffsetReg:  '$fp_reg'
+# FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+
+# SIMPLE-NOT: scratchRSrcReg
+# SIMPLE-NOT: scratchWaveOffsetReg
+# SIMPLE-NOT:: stackPtrOffsetReg
+name: default_regs_mfi
+machineFunctionInfo:
+  scratchRSrcReg:  '$private_rsrc_reg'
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...

@@ -102,3 +102,9 @@ class SymbolContextAPITestCase(TestBase):
         self.assertTrue(
             function.GetName() == symbol.GetName() and symbol.GetName() == 'c',
             "The symbol name should be 'c'")
+
+        sc_list = lldb.SBSymbolContextList()
+        sc_list.Append(context)
+        self.assertEqual(len(sc_list), 1)
+        for sc in sc_list:
+            self.assertEqual(lineEntry, sc.GetLineEntry())

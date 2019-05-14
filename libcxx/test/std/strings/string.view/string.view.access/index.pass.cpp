@@ -18,7 +18,10 @@
 
 template <typename CharT>
 void test ( const CharT *s, size_t len ) {
-    std::basic_string_view<CharT> sv ( s, len );
+    typedef std::basic_string_view<CharT> SV;
+    SV sv ( s, len );
+    ASSERT_SAME_TYPE(decltype(sv[0]), typename SV::const_reference);
+    LIBCPP_ASSERT_NOEXCEPT(   sv[0]);
     assert ( sv.length() == len );
     for ( size_t i = 0; i < len; ++i ) {
         assert ( sv[i] == s[i] );

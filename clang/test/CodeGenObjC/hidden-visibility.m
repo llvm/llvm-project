@@ -2,7 +2,7 @@
 // CHECK: @"OBJC_IVAR_$_I.P" = hidden
 // CHECK: @"OBJC_CLASS_$_I" = hidden
 // CHECK: @"OBJC_METACLASS_$_I" = hidden
-// CHECK: @"\01l_OBJC_PROTOCOL_$_Prot0" = weak hidden
+// CHECK: @"_OBJC_PROTOCOL_$_Prot0" = weak hidden
 
 @interface I {
   int P;

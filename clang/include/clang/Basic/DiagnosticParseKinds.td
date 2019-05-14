@@ -433,7 +433,7 @@ def err_objc_expected_property_attr : Error<"unknown property attribute %0">;
 def err_objc_properties_require_objc2 : Error<
   "properties are an Objective-C 2 feature">;
 def err_objc_unexpected_attr : Error<
-  "prefix attribute must be followed by an interface or protocol">;
+  "prefix attribute must be followed by an interface, protocol, or implementation">;
 def err_objc_postfix_attribute : Error <
   "postfix attributes are not allowed on Objective-C directives">;
 def err_objc_postfix_attribute_hint : Error <
@@ -683,6 +683,8 @@ def err_id_after_template_in_nested_name_spec : Error<
   "expected template name after 'template' keyword in nested name specifier">;
 def err_unexpected_template_in_unqualified_id : Error<
   "'template' keyword not permitted here">;
+def err_unexpected_template_after_using : Error<
+  "'template' keyword not permitted after 'using' keyword">;
 def err_two_right_angle_brackets_need_space : Error<
   "a space is required between consecutive right angle brackets (use '> >')">;
 def err_right_angle_bracket_equal_needs_space : Error<
@@ -1228,15 +1230,22 @@ def err_unexpected_module_decl : Error<
   "module declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
   "expected a module name after '%select{module|import}0'">;
-def err_module_implementation_partition : Error<
-  "module partition must be declared 'export'">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_attribute_not_import_attr : Error<
   "%0 attribute cannot be applied to a module import">;
 def err_module_expected_semi : Error<
   "expected ';' after module name">;
+def err_global_module_introducer_not_at_start : Error<
+  "'module;' introducing a global module fragment can appear only "
+  "at the start of the translation unit">;
+def err_module_fragment_exported : Error<
+  "%select{global|private}0 module fragment cannot be exported">;
+def err_private_module_fragment_expected_semi : Error<
+  "expected ';' after private module fragment declaration">;
 def err_missing_before_module_end : Error<"expected %0 at end of module">;
+def err_unsupported_module_partition : Error<
+  "sorry, module partitions are not yet supported">;
 
 def err_export_empty : Error<"export declaration cannot be empty">;
 }

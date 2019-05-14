@@ -14,7 +14,6 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -35,7 +34,7 @@ const SBSymbol &SBSymbol::operator=(const SBSymbol &rhs) {
                      SBSymbol, operator=,(const lldb::SBSymbol &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBSymbol::~SBSymbol() { m_opaque_ptr = NULL; }
@@ -46,6 +45,10 @@ void SBSymbol::SetSymbol(lldb_private::Symbol *lldb_object_ptr) {
 
 bool SBSymbol::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbol, IsValid);
+  return this->operator bool();
+}
+SBSymbol::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbol, operator bool);
 
   return m_opaque_ptr != NULL;
 }
@@ -57,10 +60,6 @@ const char *SBSymbol::GetName() const {
   if (m_opaque_ptr)
     name = m_opaque_ptr->GetName().AsCString();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBSymbol(%p)::GetName () => \"%s\"",
-                static_cast<void *>(m_opaque_ptr), name ? name : "");
   return name;
 }
 
@@ -73,10 +72,6 @@ const char *SBSymbol::GetDisplayName() const {
                .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
                .AsCString();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBSymbol(%p)::GetDisplayName () => \"%s\"",
-                static_cast<void *>(m_opaque_ptr), name ? name : "");
   return name;
 }
 
@@ -86,11 +81,6 @@ const char *SBSymbol::GetMangledName() const {
   const char *name = NULL;
   if (m_opaque_ptr)
     name = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBSymbol(%p)::GetMangledName () => \"%s\"",
-                static_cast<void *>(m_opaque_ptr), name ? name : "");
-
   return name;
 }
 
@@ -217,4 +207,38 @@ bool SBSymbol::IsSynthetic() {
   if (m_opaque_ptr)
     return m_opaque_ptr->IsSynthetic();
   return false;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBSymbol>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBSymbol, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBSymbol, (const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD(const lldb::SBSymbol &,
+                       SBSymbol, operator=,(const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetName, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetDisplayName, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetMangledName, ());
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBSymbol, operator==,(const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBSymbol, operator!=,(const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD(bool, SBSymbol, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
+                       (lldb::SBTarget));
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
+                       (lldb::SBTarget, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBSymbol, GetStartAddress, ());
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBSymbol, GetEndAddress, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBSymbol, GetPrologueByteSize, ());
+  LLDB_REGISTER_METHOD(lldb::SymbolType, SBSymbol, GetType, ());
+  LLDB_REGISTER_METHOD(bool, SBSymbol, IsExternal, ());
+  LLDB_REGISTER_METHOD(bool, SBSymbol, IsSynthetic, ());
+}
+
+}
 }

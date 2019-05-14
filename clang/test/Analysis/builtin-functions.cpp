@@ -65,19 +65,20 @@ void g(int i) {
   }
 }
 
-void test_constant_p() {
+void test_constant_p(void *ptr) {
   int i = 1;
   const int j = 2;
   constexpr int k = 3;
   clang_analyzer_eval(__builtin_constant_p(42) == 1); // expected-warning {{TRUE}}
-  clang_analyzer_eval(__builtin_constant_p(i) == 0); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(__builtin_constant_p(i) == 0); // expected-warning {{TRUE}}
   clang_analyzer_eval(__builtin_constant_p(j) == 1); // expected-warning {{TRUE}}
   clang_analyzer_eval(__builtin_constant_p(k) == 1); // expected-warning {{TRUE}}
-  clang_analyzer_eval(__builtin_constant_p(i + 42) == 0); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(__builtin_constant_p(i + 42) == 0); // expected-warning {{TRUE}}
   clang_analyzer_eval(__builtin_constant_p(j + 42) == 1); // expected-warning {{TRUE}}
   clang_analyzer_eval(__builtin_constant_p(k + 42) == 1); // expected-warning {{TRUE}}
   clang_analyzer_eval(__builtin_constant_p(" ") == 1); // expected-warning {{TRUE}}
-  clang_analyzer_eval(__builtin_constant_p(test_constant_p) == 0); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(__builtin_constant_p(test_constant_p) == 0); // expected-warning {{TRUE}}
   clang_analyzer_eval(__builtin_constant_p(k - 3) == 0); // expected-warning {{FALSE}}
   clang_analyzer_eval(__builtin_constant_p(k - 3) == 1); // expected-warning {{TRUE}}
+  clang_analyzer_eval(__builtin_constant_p(ptr == 0)); // expected-warning {{FALSE}}
 }

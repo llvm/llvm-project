@@ -56,8 +56,7 @@ fi
 
 OS_NAME=`uname -s`
 PYTHON=${PYTHON_EXECUTABLE:-/usr/bin/env python}
-PYTHON_VERSION=`${PYTHON} --version 2>&1 | sed -e 's,Python ,,' -e 's,[.][0-9],,2' -e 's,[a-z][a-z][0-9],,'`
-
+PYTHON_VERSION=`${PYTHON} -c 'import sys; print("{}.{}".format(sys.version_info.major, sys.version_info.minor))'`
 
 if [ $Debug -eq 1 ]
 then

@@ -37,7 +37,9 @@
 #include "llvm/ADT/StringSwitch.h"
 
 #if defined(__APPLE__)
+#ifndef HAVE_LIBCOMPRESSION
 #define HAVE_LIBCOMPRESSION
+#endif
 #include <compression.h>
 #endif
 
@@ -46,9 +48,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 using namespace std::chrono;
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationClient constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
     : GDBRemoteClientBase("gdb-remote.client", "gdb-remote.client.rx_packet"),
       m_supports_not_sending_acks(eLazyBoolCalculate),
@@ -103,9 +103,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supported_async_json_packets_sp(), m_qXfer_memory_map(),
       m_qXfer_memory_map_loaded(false) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationClient::~GDBRemoteCommunicationClient() {
   if (IsConnected())
     Disconnect();
@@ -2059,6 +2057,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
 
         assert(triple.getObjectFormat() != llvm::Triple::UnknownObjectFormat);
         assert(triple.getObjectFormat() != llvm::Triple::Wasm);
+        assert(triple.getObjectFormat() != llvm::Triple::XCOFF);
         switch (triple.getObjectFormat()) {
         case llvm::Triple::MachO:
           m_process_arch.SetArchitecture(eArchTypeMachO, cpu, sub);
@@ -2070,6 +2069,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           m_process_arch.SetArchitecture(eArchTypeCOFF, cpu, sub);
           break;
         case llvm::Triple::Wasm:
+        case llvm::Triple::XCOFF:
           if (log)
             log->Printf("error: not supported target architecture");
           return false;
@@ -3954,7 +3954,7 @@ Status GDBRemoteCommunicationClient::SendSignalsToIgnore(
 }
 
 Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
-    const ConstString &type_name, const StructuredData::ObjectSP &config_sp) {
+    ConstString type_name, const StructuredData::ObjectSP &config_sp) {
   Status error;
 
   if (type_name.GetLength() == 0) {

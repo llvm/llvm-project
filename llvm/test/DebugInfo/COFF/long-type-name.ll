@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -filetype=obj | llvm-readobj -codeview | FileCheck %s
+; RUN: llc %s -o - -filetype=obj | llvm-readobj --codeview | FileCheck %s
 
 ; CHECK: Struct (0x1000) {
 ; CHECK:   TypeLeafKind: LF_STRUCTURE (0x1505)

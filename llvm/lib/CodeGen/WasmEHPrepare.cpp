@@ -104,15 +104,14 @@ class WasmEHPrepare : public FunctionPass {
   Value *LSDAField = nullptr;      // lsda field
   Value *SelectorField = nullptr;  // selector
 
-  Function *ThrowF = nullptr;           // wasm.throw() intrinsic
-  Function *RethrowF = nullptr;         // wasm.rethrow() intrinsic
-  Function *LPadIndexF = nullptr;       // wasm.landingpad.index() intrinsic
-  Function *LSDAF = nullptr;            // wasm.lsda() intrinsic
-  Function *GetExnF = nullptr;          // wasm.get.exception() intrinsic
-  Function *ExtractExnF = nullptr;      // wasm.extract.exception() intrinsic
-  Function *GetSelectorF = nullptr;     // wasm.get.ehselector() intrinsic
+  Function *ThrowF = nullptr;       // wasm.throw() intrinsic
+  Function *LPadIndexF = nullptr;   // wasm.landingpad.index() intrinsic
+  Function *LSDAF = nullptr;        // wasm.lsda() intrinsic
+  Function *GetExnF = nullptr;      // wasm.get.exception() intrinsic
+  Function *ExtractExnF = nullptr;  // wasm.extract.exception() intrinsic
+  Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
   FunctionCallee CallPersonalityF =
-      nullptr;                          // _Unwind_CallPersonality() wrapper
+      nullptr; // _Unwind_CallPersonality() wrapper
 
   bool prepareEHPads(Function &F);
   bool prepareThrows(Function &F);
@@ -177,29 +176,23 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
 
   // wasm.throw() intinsic, which will be lowered to wasm 'throw' instruction.
   ThrowF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_throw);
-  // wasm.rethrow() intinsic, which will be lowered to wasm 'rethrow'
-  // instruction.
-  RethrowF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_rethrow);
-
-  // Insert an unreachable instruction after a call to @llvm.wasm.throw /
-  // @llvm.wasm.rethrow and delete all following instructions within the BB, and
-  // delete all the dead children of the BB as well.
-  for (auto L : {ThrowF->users(), RethrowF->users()}) {
-    for (User *U : L) {
-      // A call to @llvm.wasm.throw() is only generated from __cxa_throw()
-      // builtin call within libcxxabi, and cannot be an InvokeInst.
-      auto *ThrowI = cast<CallInst>(U);
-      if (ThrowI->getFunction() != &F)
-        continue;
-      Changed = true;
-      auto *BB = ThrowI->getParent();
-      SmallVector<BasicBlock *, 4> Succs(succ_begin(BB), succ_end(BB));
-      auto &InstList = BB->getInstList();
-      InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
-      IRB.SetInsertPoint(BB);
-      IRB.CreateUnreachable();
-      eraseDeadBBsAndChildren(Succs);
-    }
+  // Insert an unreachable instruction after a call to @llvm.wasm.throw and
+  // delete all following instructions within the BB, and delete all the dead
+  // children of the BB as well.
+  for (User *U : ThrowF->users()) {
+    // A call to @llvm.wasm.throw() is only generated from __cxa_throw()
+    // builtin call within libcxxabi, and cannot be an InvokeInst.
+    auto *ThrowI = cast<CallInst>(U);
+    if (ThrowI->getFunction() != &F)
+      continue;
+    Changed = true;
+    auto *BB = ThrowI->getParent();
+    SmallVector<BasicBlock *, 4> Succs(succ_begin(BB), succ_end(BB));
+    auto &InstList = BB->getInstList();
+    InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
+    IRB.SetInsertPoint(BB);
+    IRB.CreateUnreachable();
+    eraseDeadBBsAndChildren(Succs);
   }
 
   return Changed;

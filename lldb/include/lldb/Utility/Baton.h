@@ -20,8 +20,7 @@ class Stream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class Baton Baton.h "lldb/Core/Baton.h"
+/// \class Baton Baton.h "lldb/Core/Baton.h"
 /// A class designed to wrap callback batons so they can cleanup
 ///        any acquired resources
 ///
@@ -31,7 +30,6 @@ namespace lldb_private {
 ///
 /// The default behavior is to not free anything. Subclasses can free any
 /// needed resources in their destructors.
-//----------------------------------------------------------------------
 class Baton {
 public:
   Baton() {}

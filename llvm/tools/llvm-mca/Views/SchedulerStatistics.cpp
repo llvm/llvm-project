@@ -22,7 +22,6 @@ SchedulerStatistics::SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
     : SM(STI.getSchedModel()), LQResourceID(0), SQResourceID(0), NumIssued(0),
       NumCycles(0), MostRecentLoadDispatched(~0U),
       MostRecentStoreDispatched(~0U),
-      IssuedPerCycle(STI.getSchedModel().NumProcResourceKinds, 0),
       Usage(STI.getSchedModel().NumProcResourceKinds, {0, 0, 0}) {
   if (SM.hasExtraProcessorInfo()) {
     const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
@@ -43,9 +42,10 @@ SchedulerStatistics::SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
 // In future we should add a new "memory queue" event type, so that we stop
 // making assumptions on how LSUnit internally works (See PR39828).
 void SchedulerStatistics::onEvent(const HWInstructionEvent &Event) {
-  if (Event.Type == HWInstructionEvent::Issued)
-    ++NumIssued;
-  else if (Event.Type == HWInstructionEvent::Dispatched) {
+  if (Event.Type == HWInstructionEvent::Issued) {
+    const Instruction &Inst = *Event.IR.getInstruction();
+    NumIssued += Inst.getDesc().NumMicroOps;
+  } else if (Event.Type == HWInstructionEvent::Dispatched) {
     const Instruction &Inst = *Event.IR.getInstruction();
     const unsigned Index = Event.IR.getSourceIndex();
     if (LQResourceID && Inst.getDesc().MayLoad &&
@@ -95,29 +95,25 @@ void SchedulerStatistics::updateHistograms() {
     BU.MaxUsedSlots = std::max(BU.MaxUsedSlots, BU.SlotsInUse);
   }
 
-  IssuedPerCycle[NumIssued]++;
+  IssueWidthPerCycle[NumIssued]++;
   NumIssued = 0;
 }
 
 void SchedulerStatistics::printSchedulerStats(raw_ostream &OS) const {
   OS << "\n\nSchedulers - "
-     << "number of cycles where we saw N instructions issued:\n";
+     << "number of cycles where we saw N micro opcodes issued:\n";
   OS << "[# issued], [# cycles]\n";
 
-  const auto It =
-      std::max_element(IssuedPerCycle.begin(), IssuedPerCycle.end());
-  unsigned Index = std::distance(IssuedPerCycle.begin(), It);
-
   bool HasColors = OS.has_colors();
-  for (unsigned I = 0, E = IssuedPerCycle.size(); I < E; ++I) {
-    unsigned IPC = IssuedPerCycle[I];
-    if (!IPC)
-      continue;
-
-    if (I == Index && HasColors)
+  const auto It =
+      std::max_element(IssueWidthPerCycle.begin(), IssueWidthPerCycle.end());
+  for (const std::pair<unsigned, unsigned> &Entry : IssueWidthPerCycle) {
+    unsigned NumIssued = Entry.first;
+    if (NumIssued == It->first && HasColors)
       OS.changeColor(raw_ostream::SAVEDCOLOR, true, false);
 
-    OS << " " << I << ",          " << IPC << "  ("
+    unsigned IPC = Entry.second;
+    OS << " " << NumIssued << ",          " << IPC << "  ("
        << format("%.1f", ((double)IPC / NumCycles) * 100) << "%)\n";
     if (HasColors)
       OS.resetColor();

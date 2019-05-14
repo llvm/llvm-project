@@ -165,13 +165,13 @@ pxor        (%rax), %mm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      2     0.50    *      *      U     emms
-# CHECK-NEXT:  2      10    0.50                        movd	%eax, %mm2
+# CHECK-NEXT:  2      11    0.50                        movd	%eax, %mm2
 # CHECK-NEXT:  1      5     0.50    *                   movd	(%rax), %mm2
-# CHECK-NEXT:  1      10    1.00                        movd	%mm0, %ecx
+# CHECK-NEXT:  1      11    1.00                        movd	%mm0, %ecx
 # CHECK-NEXT:  1      2     1.00           *      U     movd	%mm0, (%rax)
-# CHECK-NEXT:  2      10    0.50                        movq	%rax, %mm2
+# CHECK-NEXT:  2      11    0.50                        movq	%rax, %mm2
 # CHECK-NEXT:  1      5     0.50    *                   movq	(%rax), %mm2
-# CHECK-NEXT:  1      10    1.00                        movq	%mm0, %rcx
+# CHECK-NEXT:  1      11    1.00                        movq	%mm0, %rcx
 # CHECK-NEXT:  1      2     1.00           *            movq	%mm0, (%rax)
 # CHECK-NEXT:  1      2     0.50                        packsswb	%mm0, %mm2
 # CHECK-NEXT:  1      7     0.50    *                   packsswb	(%rax), %mm2

@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 ; This test ensures that circular type references through pointer types don't
 ; cause infinite recursion. It also tests that we always refer to the forward

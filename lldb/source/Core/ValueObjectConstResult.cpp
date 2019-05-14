@@ -49,7 +49,7 @@ ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              const CompilerType &compiler_type,
-                                             const ConstString &name,
+                                             ConstString name,
                                              const DataExtractor &data,
                                              lldb::addr_t address) {
   return (new ValueObjectConstResult(exe_scope, compiler_type, name, data,
@@ -59,7 +59,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
 
 ValueObjectConstResult::ValueObjectConstResult(
     ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-    const ConstString &name, const DataExtractor &data, lldb::addr_t address)
+    ConstString name, const DataExtractor &data, lldb::addr_t address)
     : ValueObject(exe_scope), m_type_name(), m_byte_size(0),
       m_impl(this, address) {
   m_data = data;
@@ -81,7 +81,7 @@ ValueObjectConstResult::ValueObjectConstResult(
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              const CompilerType &compiler_type,
-                                             const ConstString &name,
+                                             ConstString name,
                                              const lldb::DataBufferSP &data_sp,
                                              lldb::ByteOrder data_byte_order,
                                              uint32_t data_addr_size,
@@ -93,14 +93,14 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              Value &value,
-                                             const ConstString &name,
+                                             ConstString name,
                                              Module *module) {
   return (new ValueObjectConstResult(exe_scope, value, name, module))->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(
     ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-    const ConstString &name, const lldb::DataBufferSP &data_sp,
+    ConstString name, const lldb::DataBufferSP &data_sp,
     lldb::ByteOrder data_byte_order, uint32_t data_addr_size,
     lldb::addr_t address)
     : ValueObject(exe_scope), m_type_name(), m_byte_size(0),
@@ -120,7 +120,7 @@ ValueObjectConstResult::ValueObjectConstResult(
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              const CompilerType &compiler_type,
-                                             const ConstString &name,
+                                             ConstString name,
                                              lldb::addr_t address,
                                              AddressType address_type,
                                              uint32_t addr_byte_size) {
@@ -131,7 +131,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
 
 ValueObjectConstResult::ValueObjectConstResult(
     ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-    const ConstString &name, lldb::addr_t address, AddressType address_type,
+    ConstString name, lldb::addr_t address, AddressType address_type,
     uint32_t addr_byte_size)
     : ValueObject(exe_scope), m_type_name(), m_byte_size(0),
       m_impl(this, address) {
@@ -175,7 +175,7 @@ ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
 
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
                                                const Value &value,
-                                               const ConstString &name,
+                                               ConstString name,
                                                Module *module)
     : ValueObject(exe_scope), m_type_name(), m_byte_size(0), m_impl(this) {
   m_value = value;

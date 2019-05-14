@@ -11,5 +11,5 @@
 // RUN:   -fsyntax-only
 
 // This testcase reproduces a use-after-free in when ModuleManager removes an
-// entry from the PCMCache without notifying its parent ASTReader.
+// entry from the ModuleCache without notifying its parent ASTReader.
 @import Cocoa;

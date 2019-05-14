@@ -13,9 +13,7 @@
 
 class CFCBundle : public CFCReleaser<CFBundleRef> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CFCBundle(const char *path = NULL);
   CFCBundle(CFURLRef url);
 

@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DISABLE_PYTHON
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-#endif
-
 #include "SBReproducerPrivate.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBHostOS.h"
@@ -20,7 +16,6 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #ifndef LLDB_DISABLE_PYTHON
@@ -109,18 +104,9 @@ SBFileSpec SBHostOS::GetUserHomeDirectory() {
 lldb::thread_t SBHostOS::ThreadCreate(const char *name,
                                       lldb::thread_func_t thread_function,
                                       void *thread_arg, SBError *error_ptr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf(
-        "SBHostOS::ThreadCreate (name=\"%s\", thread_function=%p, "
-        "thread_arg=%p, error_ptr=%p)",
-        name,
-        reinterpret_cast<void *>(reinterpret_cast<intptr_t>(thread_function)),
-        static_cast<void *>(thread_arg), static_cast<void *>(error_ptr));
-
-  // FIXME: You should log the return value?
-
+  LLDB_RECORD_DUMMY(lldb::thread_t, SBHostOS, ThreadCreate,
+                    (lldb::thread_func_t, void *, SBError *), name,
+                    thread_function, thread_arg, error_ptr);
   HostThread thread(ThreadLauncher::LaunchThread(
       name, thread_function, thread_arg, error_ptr ? error_ptr->get() : NULL));
   return thread.Release();
@@ -132,7 +118,7 @@ void SBHostOS::ThreadCreated(const char *name) {
 }
 
 bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
-  LLDB_RECORD_STATIC_METHOD(bool, SBHostOS, ThreadCancel,
+  LLDB_RECORD_DUMMY(bool, SBHostOS, ThreadCancel,
                             (lldb::thread_t, lldb::SBError *), thread,
                             error_ptr);
 
@@ -146,7 +132,7 @@ bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
 }
 
 bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
-  LLDB_RECORD_STATIC_METHOD(bool, SBHostOS, ThreadDetach,
+  LLDB_RECORD_DUMMY(bool, SBHostOS, ThreadDetach,
                             (lldb::thread_t, lldb::SBError *), thread,
                             error_ptr);
 
@@ -166,7 +152,7 @@ bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
 
 bool SBHostOS::ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
                           SBError *error_ptr) {
-  LLDB_RECORD_STATIC_METHOD(
+  LLDB_RECORD_DUMMY(
       bool, SBHostOS, ThreadJoin,
       (lldb::thread_t, lldb::thread_result_t *, lldb::SBError *), thread,
       result, error_ptr);
@@ -178,4 +164,23 @@ bool SBHostOS::ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
     error_ptr->SetError(error);
   host_thread.Release();
   return error.Success();
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBHostOS>(Registry &R) {
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS, GetProgramFileSpec,
+                              ());
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS, GetLLDBPythonPath,
+                              ());
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS, GetLLDBPath,
+                              (lldb::PathType));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS,
+                              GetUserHomeDirectory, ());
+  LLDB_REGISTER_STATIC_METHOD(void, SBHostOS, ThreadCreated, (const char *));
+}
+
+}
 }

@@ -68,10 +68,14 @@ int main(int, char**)
       typedef std::array<T, 0> C;
       C c = {};
       C const& cc = c;
-      static_assert((std::is_same<decltype(c.front()), T &>::value), "");
-      static_assert((std::is_same<decltype(cc.front()), const T &>::value), "");
-      static_assert((std::is_same<decltype(c.back()), T &>::value), "");
-      static_assert((std::is_same<decltype(cc.back()), const T &>::value), "");
+      ASSERT_SAME_TYPE(decltype( c.back()), typename C::reference);
+      ASSERT_SAME_TYPE(decltype(cc.back()), typename C::const_reference);
+      LIBCPP_ASSERT_NOEXCEPT(    c.back());
+      LIBCPP_ASSERT_NOEXCEPT(   cc.back());
+      ASSERT_SAME_TYPE(decltype( c.front()), typename C::reference);
+      ASSERT_SAME_TYPE(decltype(cc.front()), typename C::const_reference);
+      LIBCPP_ASSERT_NOEXCEPT(    c.front());
+      LIBCPP_ASSERT_NOEXCEPT(   cc.front());
       if (c.size() > (0)) { // always false
         TEST_IGNORE_NODISCARD c.front();
         TEST_IGNORE_NODISCARD c.back();
@@ -84,10 +88,14 @@ int main(int, char**)
       typedef std::array<const T, 0> C;
       C c = {{}};
       C const& cc = c;
-      static_assert((std::is_same<decltype(c.front()),  const T &>::value), "");
-      static_assert((std::is_same<decltype(cc.front()), const T &>::value), "");
-      static_assert((std::is_same<decltype(c.back()),   const T &>::value), "");
-      static_assert((std::is_same<decltype(cc.back()),  const T &>::value), "");
+      ASSERT_SAME_TYPE(decltype( c.back()), typename C::reference);
+      ASSERT_SAME_TYPE(decltype(cc.back()), typename C::const_reference);
+      LIBCPP_ASSERT_NOEXCEPT(    c.back());
+      LIBCPP_ASSERT_NOEXCEPT(   cc.back());
+      ASSERT_SAME_TYPE(decltype( c.front()), typename C::reference);
+      ASSERT_SAME_TYPE(decltype(cc.front()), typename C::const_reference);
+      LIBCPP_ASSERT_NOEXCEPT(    c.front());
+      LIBCPP_ASSERT_NOEXCEPT(   cc.front());
       if (c.size() > (0)) {
         TEST_IGNORE_NODISCARD c.front();
         TEST_IGNORE_NODISCARD c.back();

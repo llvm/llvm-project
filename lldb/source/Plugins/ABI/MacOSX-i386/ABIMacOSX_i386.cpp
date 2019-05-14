@@ -703,9 +703,7 @@ ABIMacOSX_i386::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABIMacOSX_i386::GetRedZoneSize() const { return 0; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABIMacOSX_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -1123,9 +1121,7 @@ lldb_private::ConstString ABIMacOSX_i386::GetPluginNameStatic() {
   return g_short_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABIMacOSX_i386::GetPluginName() {
   return GetPluginNameStatic();

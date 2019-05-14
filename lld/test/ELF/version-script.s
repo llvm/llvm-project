@@ -6,19 +6,19 @@
 # RUN: echo "{ global: foo1; foo3; local: *; };" > %t.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --version-script %t.script -shared %t.o %t2.so -o %t.so
-# RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=DSO %s
+# RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
 # RUN: echo "# comment" > %t3.script
 # RUN: echo "{ local: *; # comment" >> %t3.script
 # RUN: echo -n "}; # comment" >> %t3.script
 # RUN: ld.lld --version-script %t3.script -shared %t.o %t2.so -o %t3.so
-# RUN: llvm-readobj -dyn-symbols %t3.so | FileCheck --check-prefix=DSO2 %s
+# RUN: llvm-readobj --dyn-syms %t3.so | FileCheck --check-prefix=DSO2 %s
 
 ## Also check that both "global:" and "global :" forms are accepted
 # RUN: echo "VERSION_1.0 { global : foo1; local : *; };" > %t4.script
 # RUN: echo "VERSION_2.0 { global: foo3; local: *; };" >> %t4.script
 # RUN: ld.lld --version-script %t4.script -shared %t.o %t2.so -o %t4.so
-# RUN: llvm-readobj -dyn-symbols %t4.so | FileCheck --check-prefix=VERDSO %s
+# RUN: llvm-readobj --dyn-syms %t4.so | FileCheck --check-prefix=VERDSO %s
 
 # RUN: echo "VERSION_1.0 { global: foo1; local: *; };" > %t5.script
 # RUN: echo "{ global: foo3; local: *; };" >> %t5.script
@@ -46,7 +46,7 @@
 # RUN: echo "VERSION_1.0 { global : foo1; local : *; };" > %t7a.script
 # RUN: echo "VERSION_2.0 { global: foo3; local: *; };" > %t7b.script
 # RUN: ld.lld --version-script %t7a.script --version-script %t7b.script -shared %t.o %t2.so -o %t7.so
-# RUN: llvm-readobj -dyn-symbols %t7.so | FileCheck --check-prefix=VERDSO %s
+# RUN: llvm-readobj --dyn-syms %t7.so | FileCheck --check-prefix=VERDSO %s
 
 # DSO:      DynamicSymbols [
 # DSO-NEXT:   Symbol {
@@ -149,12 +149,12 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o %t2.so -o %t.so
-# RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=ALL %s
+# RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=ALL %s
 
 # RUN: echo "{ global: foo1; foo3; };" > %t2.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv --version-script %t2.script -shared %t.o %t2.so -o %t.so
-# RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=ALL %s
+# RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=ALL %s
 
 # ALL:      DynamicSymbols [
 # ALL-NEXT:   Symbol {

@@ -15,7 +15,7 @@ body: |
   bb.0:
     $m0 = S_MOV_B32 -1
     S_SENDMSG 3, implicit $exec, implicit $m0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 
@@ -30,7 +30,7 @@ body: |
   bb.0:
     $m0 = S_MOV_B32 -1
     S_SENDMSGHALT 3, implicit $exec, implicit $m0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 
@@ -45,5 +45,5 @@ body: |
   bb.0:
     $m0 = S_MOV_B32 -1
     S_TTRACEDATA implicit $m0
-    S_ENDPGM
+    S_ENDPGM 0
 ...

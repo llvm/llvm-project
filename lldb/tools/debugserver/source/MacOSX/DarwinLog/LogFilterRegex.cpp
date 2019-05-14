@@ -11,11 +11,9 @@
 #include "DNBLog.h"
 #include "LogMessage.h"
 
-//----------------------------------------------------------------------
 // Enable enhanced mode if it is available. This allows for things like
 // \d for digit, \s for space, and many more, but it isn't available
 // everywhere.
-//----------------------------------------------------------------------
 #if defined(REG_ENHANCED)
 #define DEFAULT_COMPILE_FLAGS (REG_ENHANCED | REG_EXTENDED)
 #else

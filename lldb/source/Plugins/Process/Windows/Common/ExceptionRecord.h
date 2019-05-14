@@ -18,12 +18,10 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // ExceptionRecord
 //
 // ExceptionRecord defines an interface which allows implementors to receive
 // notification of events that happen in a debugged process.
-//----------------------------------------------------------------------
 class ExceptionRecord {
 public:
   ExceptionRecord(const EXCEPTION_RECORD &record, lldb::tid_t thread_id) {
@@ -65,6 +63,8 @@ public:
   lldb::addr_t GetExceptionAddress() const { return m_exception_addr; }
 
   lldb::tid_t GetThreadID() const { return m_thread_id; }
+
+  const std::vector<ULONG_PTR>& GetExceptionArguments() const { return m_arguments; }
 
 private:
   DWORD m_code;

@@ -158,6 +158,178 @@ define amdgpu_kernel void @v_test_umin3_ult_i16(i16 addrspace(1)* %out, i16 addr
   ret void
 }
 
+; GCN-LABEL: {{^}}v_test_imin3_slt_i8:
+; SI: v_min3_i32
+
+; VI: v_min_i16
+; VI: v_min_i16
+
+; GFX9: v_min3_i16
+define amdgpu_kernel void @v_test_imin3_slt_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr, i8 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i8, i8 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i8, i8 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i8, i8 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i8, i8 addrspace(1)* %out, i32 %tid
+  %a = load i8, i8 addrspace(1)* %gep0
+  %b = load i8, i8 addrspace(1)* %gep1
+  %c = load i8, i8 addrspace(1)* %gep2
+  %icmp0 = icmp slt i8 %a, %b
+  %i0 = select i1 %icmp0, i8 %a, i8 %b
+  %icmp1 = icmp slt i8 %i0, %c
+  %i1 = select i1 %icmp1, i8 %i0, i8 %c
+  store i8 %i1, i8 addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_umin3_ult_i8:
+; SI: v_min3_u32
+
+; VI: v_min_u16
+; VI: v_min_u16
+
+; GFX9: v_min3_u16
+define amdgpu_kernel void @v_test_umin3_ult_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr, i8 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i8, i8 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i8, i8 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i8, i8 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i8, i8 addrspace(1)* %out, i32 %tid
+  %a = load i8, i8 addrspace(1)* %gep0
+  %b = load i8, i8 addrspace(1)* %gep1
+  %c = load i8, i8 addrspace(1)* %gep2
+  %icmp0 = icmp ult i8 %a, %b
+  %i0 = select i1 %icmp0, i8 %a, i8 %b
+  %icmp1 = icmp ult i8 %i0, %c
+  %i1 = select i1 %icmp1, i8 %i0, i8 %c
+  store i8 %i1, i8 addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_imin3_slt_i7:
+; SI: v_min3_i32
+
+; VI: v_min_i16
+; VI: v_min_i16
+
+; GFX9: v_min3_i16
+define amdgpu_kernel void @v_test_imin3_slt_i7(i7 addrspace(1)* %out, i7 addrspace(1)* %aptr, i7 addrspace(1)* %bptr, i7 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i7, i7 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i7, i7 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i7, i7 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i7, i7 addrspace(1)* %out, i32 %tid
+  %a = load i7, i7 addrspace(1)* %gep0
+  %b = load i7, i7 addrspace(1)* %gep1
+  %c = load i7, i7 addrspace(1)* %gep2
+  %icmp0 = icmp slt i7 %a, %b
+  %i0 = select i1 %icmp0, i7 %a, i7 %b
+  %icmp1 = icmp slt i7 %i0, %c
+  %i1 = select i1 %icmp1, i7 %i0, i7 %c
+  store i7 %i1, i7 addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_umin3_ult_i7:
+; SI: v_min3_u32
+
+; VI: v_min_u16
+; VI: v_min_u16
+
+; GFX9: v_min3_u16
+define amdgpu_kernel void @v_test_umin3_ult_i7(i7 addrspace(1)* %out, i7 addrspace(1)* %aptr, i7 addrspace(1)* %bptr, i7 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i7, i7 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i7, i7 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i7, i7 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i7, i7 addrspace(1)* %out, i32 %tid
+  %a = load i7, i7 addrspace(1)* %gep0
+  %b = load i7, i7 addrspace(1)* %gep1
+  %c = load i7, i7 addrspace(1)* %gep2
+  %icmp0 = icmp ult i7 %a, %b
+  %i0 = select i1 %icmp0, i7 %a, i7 %b
+  %icmp1 = icmp ult i7 %i0, %c
+  %i1 = select i1 %icmp1, i7 %i0, i7 %c
+  store i7 %i1, i7 addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_imin3_slt_i33:
+; GCN-NOT: v_min3
+define amdgpu_kernel void @v_test_imin3_slt_i33(i33 addrspace(1)* %out, i33 addrspace(1)* %aptr, i33 addrspace(1)* %bptr, i33 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i33, i33 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i33, i33 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i33, i33 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i33, i33 addrspace(1)* %out, i32 %tid
+  %a = load i33, i33 addrspace(1)* %gep0
+  %b = load i33, i33 addrspace(1)* %gep1
+  %c = load i33, i33 addrspace(1)* %gep2
+  %icmp0 = icmp slt i33 %a, %b
+  %i0 = select i1 %icmp0, i33 %a, i33 %b
+  %icmp1 = icmp slt i33 %i0, %c
+  %i1 = select i1 %icmp1, i33 %i0, i33 %c
+  store i33 %i1, i33 addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_umin3_ult_i33:
+; GCN-NOT: v_min3
+define amdgpu_kernel void @v_test_umin3_ult_i33(i33 addrspace(1)* %out, i33 addrspace(1)* %aptr, i33 addrspace(1)* %bptr, i33 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i33, i33 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i33, i33 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i33, i33 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i33, i33 addrspace(1)* %out, i32 %tid
+  %a = load i33, i33 addrspace(1)* %gep0
+  %b = load i33, i33 addrspace(1)* %gep1
+  %c = load i33, i33 addrspace(1)* %gep2
+  %icmp0 = icmp ult i33 %a, %b
+  %i0 = select i1 %icmp0, i33 %a, i33 %b
+  %icmp1 = icmp ult i33 %i0, %c
+  %i1 = select i1 %icmp1, i33 %i0, i33 %c
+  store i33 %i1, i33 addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_imin3_slt_i64:
+; GCN-NOT: v_min3
+define amdgpu_kernel void @v_test_imin3_slt_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr, i64 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i64, i64 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i64, i64 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
+  %a = load i64, i64 addrspace(1)* %gep0
+  %b = load i64, i64 addrspace(1)* %gep1
+  %c = load i64, i64 addrspace(1)* %gep2
+  %icmp0 = icmp slt i64 %a, %b
+  %i0 = select i1 %icmp0, i64 %a, i64 %b
+  %icmp1 = icmp slt i64 %i0, %c
+  %i1 = select i1 %icmp1, i64 %i0, i64 %c
+  store i64 %i1, i64 addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_umin3_ult_i64:
+; GCN-NOT: v_min3
+define amdgpu_kernel void @v_test_umin3_ult_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr, i64 addrspace(1)* %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i64, i64 addrspace(1)* %bptr, i32 %tid
+  %gep2 = getelementptr i64, i64 addrspace(1)* %cptr, i32 %tid
+  %outgep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
+  %a = load i64, i64 addrspace(1)* %gep0
+  %b = load i64, i64 addrspace(1)* %gep1
+  %c = load i64, i64 addrspace(1)* %gep2
+  %icmp0 = icmp ult i64 %a, %b
+  %i0 = select i1 %icmp0, i64 %a, i64 %b
+  %icmp1 = icmp ult i64 %i0, %c
+  %i1 = select i1 %icmp1, i64 %i0, i64 %c
+  store i64 %i1, i64 addrspace(1)* %outgep
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }

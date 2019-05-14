@@ -1,0 +1,202 @@
+# Used by llvm-readobj/elf-dynamic-tags-machine-specific.test and
+# llvm-objdump/elf-dynamic-section-machine-specific.test.
+
+# First document: Hexagon
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_HEXAGON
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x1000
+      - Tag:   DT_HEXAGON_SYMSZ
+        Value: 0x10
+      - Tag:   DT_HEXAGON_VER
+        Value: 0x1000
+      - Tag:   DT_HEXAGON_PLT
+        Value: 0x1000
+      - Tag:   0x1234abcd
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic
+
+# Second document: MIPS
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x1000
+      - Tag:   DT_MIPS_RLD_VERSION
+        Value: 0x12345678
+      - Tag:   DT_MIPS_TIME_STAMP
+        Value: 0x11223344
+      - Tag:   DT_MIPS_ICHECKSUM
+        Value: 0x11112222
+      - Tag:   DT_MIPS_IVERSION
+        Value: 0x1
+      - Tag:   DT_MIPS_FLAGS
+        Value: 0x11111111
+      - Tag:   DT_MIPS_BASE_ADDRESS
+        Value: 0x87654321
+      - Tag:   DT_MIPS_MSYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_CONFLICT
+        Value: 0x1000
+      - Tag:   DT_MIPS_LIBLIST
+        Value: 0x1000
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_CONFLICTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_LIBLISTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_SYMTABNO
+        Value: 0x1
+      - Tag:   DT_MIPS_UNREFEXTNO
+        Value: 0x0
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 0x0
+      - Tag:   DT_MIPS_HIPAGENO
+        Value: 0x88776655
+      - Tag:   DT_MIPS_RLD_MAP
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASS
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASS_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_INSTANCE
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_INSTANCE_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_RELOC
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_RELOC_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_SYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_SYM_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_CLASSSYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASSSYM_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_CXX_FLAGS
+        Value: 0x88887777
+      - Tag:   DT_MIPS_PIXIE_INIT
+        Value: 0x1000
+      - Tag:   DT_MIPS_LOCALPAGE_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_LOCAL_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_HIDDEN_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_PROTECTED_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_OPTIONS
+        Value: 0x1000
+      - Tag:   DT_MIPS_INTERFACE
+        Value: 0x1000
+      - Tag:   DT_MIPS_DYNSTR_ALIGN
+        Value: 0x88888888
+      - Tag:   DT_MIPS_INTERFACE_SIZE
+        Value: 0x10
+      - Tag:   DT_MIPS_RLD_TEXT_RESOLVE_ADDR
+        Value: 0x8
+      - Tag:   DT_MIPS_PERF_SUFFIX
+        Value: 0x0
+      - Tag:   DT_MIPS_COMPACT_SIZE
+        Value: 0x10
+      - Tag:   DT_MIPS_GP_VALUE
+        Value: 0x1
+      - Tag:   DT_MIPS_AUX_DYNAMIC
+        Value: 0x1000
+      - Tag:   DT_MIPS_PLTGOT
+        Value: 0x1000
+      - Tag:   DT_MIPS_RWPLT
+        Value: 0x1000
+      - Tag:   DT_MIPS_RLD_MAP_REL
+        Value: 0x1000
+      - Tag:   0x1234abcd
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic
+
+# Third document: PPC64
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_PPC64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x1000
+      - Tag:   DT_PPC64_GLINK
+        Value: 0x1000
+      - Tag:   0x1234abcd
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic

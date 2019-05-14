@@ -16,9 +16,7 @@
 #include "lldb/lldb-types.h"
 
 namespace lldb_private {
-//------------------------------------------------------------------
 // NativeThreadProtocol
-//------------------------------------------------------------------
 class NativeThreadProtocol {
 public:
   NativeThreadProtocol(NativeProcessProtocol &process, lldb::tid_t tid);
@@ -38,17 +36,13 @@ public:
 
   NativeProcessProtocol &GetProcess() { return m_process; }
 
-  // ---------------------------------------------------------------------
   // Thread-specific watchpoints
-  // ---------------------------------------------------------------------
   virtual Status SetWatchpoint(lldb::addr_t addr, size_t size,
                                uint32_t watch_flags, bool hardware) = 0;
 
   virtual Status RemoveWatchpoint(lldb::addr_t addr) = 0;
 
-  // ---------------------------------------------------------------------
   // Thread-specific Hardware Breakpoint routines
-  // ---------------------------------------------------------------------
   virtual Status SetHardwareBreakpoint(lldb::addr_t addr, size_t size) = 0;
 
   virtual Status RemoveHardwareBreakpoint(lldb::addr_t addr) = 0;

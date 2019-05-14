@@ -74,7 +74,7 @@
 ; MENU-NEXT: )
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-menu-bad-menuitem-id.rc 2>&1 | FileCheck %s --check-prefix BADID
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-menu-bad-menuitem-id.rc 2>&1 | FileCheck %s --check-prefix BADID
 
 ; BADID: llvm-rc: Error in MENU statement (ID 1):
 ; BADID-NEXT: MENUITEM action ID (100000) does not fit in 16 bits.

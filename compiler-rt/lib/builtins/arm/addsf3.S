@@ -1,16 +1,16 @@
-/*===-- addsf3.S - Adds two single precision floating pointer numbers-----===//
- *
- * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
- * See https://llvm.org/LICENSE.txt for license information.
- * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
- *
- *===----------------------------------------------------------------------===//
- *
- * This file implements the __addsf3 (single precision floating pointer number
- * addition with the IEEE-754 default rounding (to nearest, ties to even)
- * function for the ARM Thumb1 ISA.
- *
- *===----------------------------------------------------------------------===*/
+//===-- addsf3.S - Adds two single precision floating pointer numbers-----===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the __addsf3 (single precision floating pointer number
+// addition with the IEEE-754 default rounding (to nearest, ties to even)
+// function for the ARM Thumb1 ISA.
+//
+//===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
 #define significandBits 23
@@ -28,9 +28,9 @@ DEFINE_COMPILERRT_THUMB_FUNCTION(__addsf3)
   // Get the absolute value of a and b.
   lsls r2, r0, #1
   lsls r3, r1, #1
-  lsrs r2, r2, #1  /* aAbs */
+  lsrs r2, r2, #1  // aAbs
   beq  LOCAL_LABEL(a_zero_nan_inf)
-  lsrs r3, r3, #1  /* bAbs */
+  lsrs r3, r3, #1  // bAbs
   beq  LOCAL_LABEL(zero_nan_inf)
 
   // Detect if a or b is infinity or Nan.
@@ -54,9 +54,9 @@ LOCAL_LABEL(no_swap):
 
   // Get the significands and shift them to give us round, guard and sticky.
   lsls r4, r0, #(typeWidth - significandBits)
-  lsrs r4, r4, #(typeWidth - significandBits - 3) /* aSignificand << 3 */
+  lsrs r4, r4, #(typeWidth - significandBits - 3) // aSignificand << 3
   lsls r5, r1, #(typeWidth - significandBits)
-  lsrs r5, r5, #(typeWidth - significandBits - 3) /* bSignificand << 3 */
+  lsrs r5, r5, #(typeWidth - significandBits - 3) // bSignificand << 3
 
   // Get the implicitBit.
   movs r6, #1
@@ -198,7 +198,7 @@ LOCAL_LABEL(do_substraction):
   beq 1f
   movs r7, #1
 1:
-  lsrs r4, r6 /* aSignificand >> shift */
+  lsrs r4, r6 // aSignificand >> shift
   orrs r4, r7
   b LOCAL_LABEL(form_result)
 

@@ -36,6 +36,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
@@ -53,11 +54,17 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
+#include "ClangDiagnostic.h"
+#include "ClangExpressionParser.h"
+#include "ClangUserExpression.h"
+
+#include "ASTUtils.h"
 #include "ClangASTSource.h"
 #include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
 #include "ClangExpressionParser.h"
+#include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
 #include "IRForTarget.h"
@@ -210,15 +217,58 @@ private:
   std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
 };
 
+static void
+SetupModuleHeaderPaths(CompilerInstance *compiler,
+                       std::vector<ConstString> include_directories,
+                       lldb::TargetSP target_sp) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  HeaderSearchOptions &search_opts = compiler->getHeaderSearchOpts();
+
+  for (ConstString dir : include_directories) {
+    search_opts.AddPath(dir.AsCString(), frontend::System, false, true);
+    LLDB_LOG(log, "Added user include dir: {0}", dir);
+  }
+
+  llvm::SmallString<128> module_cache;
+  auto props = ModuleList::GetGlobalModuleListProperties();
+  props.GetClangModulesCachePath().GetPath(module_cache);
+  search_opts.ModuleCachePath = module_cache.str();
+  LLDB_LOG(log, "Using module cache path: {0}", module_cache.c_str());
+
+  FileSpec clang_resource_dir = GetClangResourceDir();
+  std::string resource_dir = clang_resource_dir.GetPath();
+  if (FileSystem::Instance().IsDirectory(resource_dir)) {
+    search_opts.ResourceDir = resource_dir;
+    std::string resource_include = resource_dir + "/include";
+    search_opts.AddPath(resource_include, frontend::System, false, true);
+
+    LLDB_LOG(log, "Added resource include dir: {0}", resource_include);
+  }
+
+  search_opts.ImplicitModuleMaps = true;
+
+  std::vector<std::string> system_include_directories =
+      target_sp->GetPlatform()->GetSystemIncludeDirectories(
+          lldb::eLanguageTypeC_plus_plus);
+
+  for (const std::string &include_dir : system_include_directories) {
+    search_opts.AddPath(include_dir, frontend::System, false, true);
+
+    LLDB_LOG(log, "Added system include dir: {0}", include_dir);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
 
-ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
-                                             Expression &expr,
-                                             bool generate_debug_info)
+ClangExpressionParser::ClangExpressionParser(
+    ExecutionContextScope *exe_scope, Expression &expr,
+    bool generate_debug_info, std::vector<ConstString> include_directories)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
-      m_pp_callbacks(nullptr) {
+      m_pp_callbacks(nullptr),
+      m_include_directories(std::move(include_directories)) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   // We can't compile expressions without a target.  So if the exe_scope is
@@ -259,8 +309,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   }
 
   // Make sure clang uses the same VFS as LLDB.
-  m_compiler->setVirtualFileSystem(
-      FileSystem::Instance().GetVirtualFileSystem());
+  m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
@@ -442,6 +491,31 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   // long time parsing and importing debug information.
   lang_opts.SpellChecking = false;
 
+  auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
+  if (clang_expr && clang_expr->DidImportCxxModules()) {
+    LLDB_LOG(log, "Adding lang options for importing C++ modules");
+
+    lang_opts.Modules = true;
+    // We want to implicitly build modules.
+    lang_opts.ImplicitModules = true;
+    // To automatically import all submodules when we import 'std'.
+    lang_opts.ModulesLocalVisibility = false;
+
+    // We use the @import statements, so we need this:
+    // FIXME: We could use the modules-ts, but that currently doesn't work.
+    lang_opts.ObjC = true;
+
+    // Options we need to parse libc++ code successfully.
+    // FIXME: We should ask the driver for the appropriate default flags.
+    lang_opts.GNUMode = true;
+    lang_opts.GNUKeywords = true;
+    lang_opts.DoubleSquareBracketAttributes = true;
+    lang_opts.CPlusPlus11 = true;
+
+    SetupModuleHeaderPaths(m_compiler.get(), m_include_directories,
+                           target_sp);
+  }
+
   if (process_sp && lang_opts.ObjC) {
     if (process_sp->GetObjCLanguageRuntime()) {
       if (process_sp->GetObjCLanguageRuntime()->GetRuntimeVersion() ==
@@ -522,17 +596,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   m_compiler->createASTContext();
   clang::ASTContext &ast_context = m_compiler->getASTContext();
 
-  ClangExpressionHelper *type_system_helper =
-      dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
-  ClangExpressionDeclMap *decl_map = type_system_helper->DeclMap();
-
-  if (decl_map) {
-    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source(
-        decl_map->CreateProxy());
-    decl_map->InstallASTContext(ast_context, m_compiler->getFileManager());
-    ast_context.setExternalSource(ast_source);
-  }
-
   m_ast_context.reset(
       new ClangASTContext(m_compiler->getTargetOpts().Triple.c_str()));
   m_ast_context->setASTContext(&ast_context);
@@ -550,13 +613,11 @@ ClangExpressionParser::~ClangExpressionParser() {}
 
 namespace {
 
-//----------------------------------------------------------------------
-/// @class CodeComplete
+/// \class CodeComplete
 ///
 /// A code completion consumer for the clang Sema that is responsible for
 /// creating the completion suggestions when a user requests completion
 /// of an incomplete `expr` invocation.
-//----------------------------------------------------------------------
 class CodeComplete : public CodeCompleteConsumer {
   CodeCompletionTUInfo m_info;
 
@@ -629,20 +690,20 @@ class CodeComplete : public CodeCompleteConsumer {
 
 public:
   /// Constructs a CodeComplete consumer that can be attached to a Sema.
-  /// @param[out] matches
+  /// \param[out] matches
   ///    The list of matches that the lldb completion API expects as a result.
   ///    This may already contain matches, so it's only allowed to append
   ///    to this variable.
-  /// @param[out] expr
+  /// \param[out] expr
   ///    The whole expression string that we are currently parsing. This
   ///    string needs to be equal to the input the user typed, and NOT the
   ///    final code that Clang is parsing.
-  /// @param[out] position
+  /// \param[out] position
   ///    The character position of the user cursor in the `expr` parameter.
   ///
   CodeComplete(CompletionRequest &request, clang::LangOptions ops,
                std::string expr, unsigned position)
-      : CodeCompleteConsumer(CodeCompleteOptions(), false),
+      : CodeCompleteConsumer(CodeCompleteOptions()),
         m_info(std::make_shared<GlobalCodeCompletionAllocator>()), m_expr(expr),
         m_position(position), m_request(request), m_desc_policy(ops) {
 
@@ -793,8 +854,8 @@ bool ClangExpressionParser::Complete(CompletionRequest &request, unsigned line,
   // To actually get the raw user input here, we have to cast our expression to
   // the LLVMUserExpression which exposes the right API. This should never fail
   // as we always have a ClangUserExpression whenever we call this.
-  LLVMUserExpression &llvm_expr = *static_cast<LLVMUserExpression *>(&m_expr);
-  CodeComplete CC(request, m_compiler->getLangOpts(), llvm_expr.GetUserText(),
+  ClangUserExpression *llvm_expr = cast<ClangUserExpression>(&m_expr);
+  CodeComplete CC(request, m_compiler->getLangOpts(), llvm_expr->GetUserText(),
                   typed_pos);
   // We don't need a code generator for parsing.
   m_code_generator.reset();
@@ -874,12 +935,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
 
-  ASTConsumer *ast_transformer =
-      type_system_helper->ASTTransformer(m_code_generator.get());
-
-  if (ClangExpressionDeclMap *decl_map = type_system_helper->DeclMap())
-    decl_map->InstallCodeGenerator(m_code_generator.get());
-
   // If we want to parse for code completion, we need to attach our code
   // completion consumer to the Sema and specify a completion position.
   // While parsing the Sema will call this consumer with the provided
@@ -894,17 +949,71 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     PP.SetCodeCompletionPoint(main_file, completion_line, completion_column);
   }
 
+  ASTConsumer *ast_transformer =
+      type_system_helper->ASTTransformer(m_code_generator.get());
+
+  std::unique_ptr<clang::ASTConsumer> Consumer;
   if (ast_transformer) {
-    ast_transformer->Initialize(m_compiler->getASTContext());
-    ParseAST(m_compiler->getPreprocessor(), ast_transformer,
-             m_compiler->getASTContext(), false, TU_Complete,
-             completion_consumer);
+    Consumer.reset(new ASTConsumerForwarder(ast_transformer));
+  } else if (m_code_generator) {
+    Consumer.reset(new ASTConsumerForwarder(m_code_generator.get()));
   } else {
-    m_code_generator->Initialize(m_compiler->getASTContext());
-    ParseAST(m_compiler->getPreprocessor(), m_code_generator.get(),
-             m_compiler->getASTContext(), false, TU_Complete,
-             completion_consumer);
+    Consumer.reset(new ASTConsumer());
   }
+
+  clang::ASTContext &ast_context = m_compiler->getASTContext();
+
+  m_compiler->setSema(new Sema(m_compiler->getPreprocessor(), ast_context,
+                               *Consumer, TU_Complete, completion_consumer));
+  m_compiler->setASTConsumer(std::move(Consumer));
+
+  if (ast_context.getLangOpts().Modules) {
+    m_compiler->createModuleManager();
+    m_ast_context->setSema(&m_compiler->getSema());
+  }
+
+  ClangExpressionDeclMap *decl_map = type_system_helper->DeclMap();
+  if (decl_map) {
+    decl_map->InstallCodeGenerator(&m_compiler->getASTConsumer());
+
+    clang::ExternalASTSource *ast_source = decl_map->CreateProxy();
+
+    if (ast_context.getExternalSource()) {
+      auto module_wrapper =
+          new ExternalASTSourceWrapper(ast_context.getExternalSource());
+
+      auto ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+
+      auto multiplexer =
+          new SemaSourceWithPriorities(*module_wrapper, *ast_source_wrapper);
+      IntrusiveRefCntPtr<ExternalASTSource> Source(multiplexer);
+      ast_context.setExternalSource(Source);
+    } else {
+      ast_context.setExternalSource(ast_source);
+    }
+    decl_map->InstallASTContext(ast_context, m_compiler->getFileManager());
+  }
+
+  // Check that the ASTReader is properly attached to ASTContext and Sema.
+  if (ast_context.getLangOpts().Modules) {
+    assert(m_compiler->getASTContext().getExternalSource() &&
+           "ASTContext doesn't know about the ASTReader?");
+    assert(m_compiler->getSema().getExternalSource() &&
+           "Sema doesn't know about the ASTReader?");
+  }
+
+  {
+    llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(
+        &m_compiler->getSema());
+    ParseAST(m_compiler->getSema(), false, false);
+  }
+
+  // Make sure we have no pointer to the Sema we are about to destroy.
+  if (ast_context.getLangOpts().Modules)
+    m_ast_context->setSema(nullptr);
+  // Destroy the Sema. This is necessary because we want to emulate the
+  // original behavior of ParseAST (which also destroys the Sema after parsing).
+  m_compiler->setSema(nullptr);
 
   diag_buf->EndSourceFile();
 

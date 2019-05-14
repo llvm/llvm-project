@@ -18,21 +18,18 @@
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // SymbolVendorMacOSX constructor
-//----------------------------------------------------------------------
 SymbolVendorMacOSX::SymbolVendorMacOSX(const lldb::ModuleSP &module_sp)
     : SymbolVendor(module_sp) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SymbolVendorMacOSX::~SymbolVendorMacOSX() {}
 
 static bool UUIDsMatch(Module *module, ObjectFile *ofile,
@@ -89,13 +86,11 @@ const char *SymbolVendorMacOSX::GetPluginDescriptionStatic() {
          "executables.";
 }
 
-//----------------------------------------------------------------------
 // CreateInstance
 //
 // Platforms can register a callback to use when creating symbol vendors to
 // allow for complex debug information file setups, and to also allow for
 // finding separate debug information files.
-//----------------------------------------------------------------------
 SymbolVendor *
 SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                    lldb_private::Stream *feedback_strm) {
@@ -142,7 +137,9 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
 
       ModuleSpec module_spec(file_spec, module_sp->GetArchitecture());
       module_spec.GetUUID() = module_sp->GetUUID();
-      dsym_fspec = Symbols::LocateExecutableSymbolFile(module_spec);
+      FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      dsym_fspec =
+          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
       if (module_spec.GetSourceMappingList().GetSize())
         module_sp->GetSourceMappingList().Append(
             module_spec.GetSourceMappingList(), true);
@@ -309,9 +306,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
   return symbol_vendor;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString SymbolVendorMacOSX::GetPluginName() {
   return GetPluginNameStatic();
 }

@@ -75,6 +75,8 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
+- `clang -dumpversion` now returns the version of Clang itself.
+
 - ...
 
 New Pragmas in Clang
@@ -156,7 +158,9 @@ release of Clang. Users of the build system should adjust accordingly.
 - In 8.0.0 and below, the install-clang-headers target would install clang's
   resource directory headers. This installation is now performed by the
   install-clang-resource-headers target. Users of the old install-clang-headers
-  target should switch to the new install-clang-resource-headers target.
+  target should switch to the new install-clang-resource-headers target. The
+  install-clang-headers target now installs clang's API headers (corresponding
+  to its libraries), which is consistent with the install-llvm-headers target.
 
 -  ...
 
@@ -168,8 +172,10 @@ AST Matchers
 clang-format
 ------------
 
-
-- ...
+- Add language support for clang-formatting C# files
+- Add Microsoft coding style to encapsulate default C# formatting style
+- Added new option `PPDIS_BeforeHash` (in configuration: `BeforeHash`) to
+  `IndentPPDirectives` which indents preprocessor directives before the hash.
 
 libclang
 --------
@@ -184,7 +190,8 @@ libclang
 Static Analyzer
 ---------------
 
-- ...
+- The UninitializedObject checker is now considered as stable.
+  (moved from the 'alpha.cplusplus' to the 'optin.cplusplus' package)
 
 ...
 

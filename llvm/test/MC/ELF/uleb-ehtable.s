@@ -1,7 +1,7 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu    %s -o - | llvm-readobj -s -sd | FileCheck %s -check-prefix=CHECK -check-prefix=ELF
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu  %s -o - | llvm-readobj -s -sd | FileCheck %s -check-prefix=CHECK -check-prefix=ELF
-// RUN: llvm-mc -filetype=obj -triple i386-apple-darwin9   %s -o - | llvm-readobj -s -sd | FileCheck %s -check-prefix=CHECK -check-prefix=MACHO
-// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin9 %s -o - | llvm-readobj -s -sd | FileCheck %s -check-prefix=CHECK -check-prefix=MACHO
+// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu    %s -o - | llvm-readobj -S --sd | FileCheck %s -check-prefix=CHECK -check-prefix=ELF
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu  %s -o - | llvm-readobj -S --sd | FileCheck %s -check-prefix=CHECK -check-prefix=ELF
+// RUN: llvm-mc -filetype=obj -triple i386-apple-darwin9   %s -o - | llvm-readobj -S --sd | FileCheck %s -check-prefix=CHECK -check-prefix=MACHO
+// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin9 %s -o - | llvm-readobj -S --sd | FileCheck %s -check-prefix=CHECK -check-prefix=MACHO
 
 // Test that we can assemble a GCC-like EH table that has 16381-16383 bytes of
 // non-padding data between .ttbaseref and .ttbase. The assembler must insert

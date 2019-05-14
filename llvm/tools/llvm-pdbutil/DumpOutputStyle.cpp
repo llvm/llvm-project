@@ -13,6 +13,7 @@
 #include "MinimalSymbolDumper.h"
 #include "MinimalTypeDumper.h"
 #include "StreamUtil.h"
+#include "TypeReferenceTracker.h"
 #include "llvm-pdbutil.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -60,7 +61,12 @@ using namespace llvm::msf;
 using namespace llvm::pdb;
 
 DumpOutputStyle::DumpOutputStyle(InputFile &File)
-    : File(File), P(2, false, outs()) {}
+    : File(File), P(2, false, outs()) {
+  if (opts::dump::DumpTypeRefStats)
+    RefTracker.reset(new TypeReferenceTracker(File));
+}
+
+DumpOutputStyle::~DumpOutputStyle() {}
 
 PDBFile &DumpOutputStyle::getPdb() { return File.pdb(); }
 object::COFFObjectFile &DumpOutputStyle::getObj() { return File.obj(); }
@@ -76,6 +82,10 @@ void DumpOutputStyle::printStreamNotPresent(StringRef StreamName) {
 }
 
 Error DumpOutputStyle::dump() {
+  // Walk symbols & globals if we are supposed to mark types referenced.
+  if (opts::dump::DumpTypeRefStats)
+    RefTracker->mark();
+
   if (opts::dump::DumpSummary) {
     if (auto EC = dumpFileSummary())
       return EC;
@@ -96,6 +106,12 @@ Error DumpOutputStyle::dump() {
 
   if (opts::dump::DumpUdtStats) {
     if (auto EC = dumpUdtStats())
+      return EC;
+    P.NewLine();
+  }
+
+  if (opts::dump::DumpTypeStats) {
+    if (auto EC = dumpTypeStats())
       return EC;
     P.NewLine();
   }
@@ -184,6 +200,11 @@ Error DumpOutputStyle::dump() {
   if (opts::dump::DumpSymbols) {
     auto EC = File.isPdb() ? dumpModuleSymsForPdb() : dumpModuleSymsForObj();
     if (EC)
+      return EC;
+  }
+
+  if (opts::dump::DumpTypeRefStats) {
+    if (auto EC = dumpTypeRefStats())
       return EC;
   }
 
@@ -292,18 +313,30 @@ static inline std::string formatModuleDetailKind(SymbolKind K) {
   return formatSymbolKind(K);
 }
 
+// Get the stats sorted by size, descending.
+std::vector<StatCollection::KindAndStat>
+StatCollection::getStatsSortedBySize() const {
+  std::vector<KindAndStat> SortedStats(Individual.begin(), Individual.end());
+  llvm::stable_sort(SortedStats,
+                    [](const KindAndStat &LHS, const KindAndStat &RHS) {
+                      return LHS.second.Size > RHS.second.Size;
+                    });
+  return SortedStats;
+}
+
 template <typename Kind>
 static void printModuleDetailStats(LinePrinter &P, StringRef Label,
                                    const StatCollection &Stats) {
   P.NewLine();
   P.formatLine("  {0}", Label);
   AutoIndent Indent(P);
-  P.formatLine("{0,40}: {1,7} entries ({2,8} bytes)", "Total",
+  P.formatLine("{0,40}: {1,7} entries ({2,12:N} bytes)", "Total",
                Stats.Totals.Count, Stats.Totals.Size);
   P.formatLine("{0}", fmt_repeat('-', 74));
-  for (const auto &K : Stats.Individual) {
+
+  for (const auto &K : Stats.getStatsSortedBySize()) {
     std::string KindName = formatModuleDetailKind(Kind(K.first));
-    P.formatLine("{0,40}: {1,7} entries ({2,8} bytes)", KindName,
+    P.formatLine("{0,40}: {1,7} entries ({2,12:N} bytes)", KindName,
                  K.second.Count, K.second.Size);
   }
 }
@@ -661,6 +694,35 @@ Error DumpOutputStyle::dumpSymbolStats() {
   return Error::success();
 }
 
+Error DumpOutputStyle::dumpTypeStats() {
+  printHeader(P, "Type Record Stats");
+
+  // Iterate the types, categorize by kind, accumulate size stats.
+  StatCollection TypeStats;
+  LazyRandomTypeCollection &Types = File.types();
+  for (Optional<TypeIndex> TI = Types.getFirst(); TI; TI = Types.getNext(*TI)) {
+    CVType Type = Types.getType(*TI);
+    TypeStats.update(uint32_t(Type.kind()), Type.length());
+  }
+
+  P.NewLine();
+  P.formatLine("  Types");
+  AutoIndent Indent(P);
+  P.formatLine("{0,14}: {1,7} entries ({2,12:N} bytes, {3,7} avg)", "Total",
+               TypeStats.Totals.Count, TypeStats.Totals.Size,
+               (double)TypeStats.Totals.Size / TypeStats.Totals.Count);
+  P.formatLine("{0}", fmt_repeat('-', 74));
+
+  for (const auto &K : TypeStats.getStatsSortedBySize()) {
+    P.formatLine("{0,14}: {1,7} entries ({2,12:N} bytes, {3,7} avg)",
+                 formatTypeLeafKind(TypeLeafKind(K.first)), K.second.Count,
+                 K.second.Size, (double)K.second.Size / K.second.Count);
+  }
+
+
+  return Error::success();
+}
+
 static bool isValidNamespaceIdentifier(StringRef S) {
   if (S.empty())
     return false;
@@ -805,7 +867,7 @@ Error DumpOutputStyle::dumpUdtStats() {
                fmt_align(SizeHeader, AlignStyle::Right, SD));
 
   P.formatLine("{0}", fmt_repeat('-', TableWidth));
-  for (const auto &Stat : UdtTargetStats.Individual) {
+  for (const auto &Stat : UdtTargetStats.getStatsSortedBySize()) {
     StringRef Label = getUdtStatLabel(Stat.first);
     P.formatLine("{0} | {1:N}  {2:N}",
                  fmt_align(Label, AlignStyle::Right, FieldWidth),
@@ -818,12 +880,25 @@ Error DumpOutputStyle::dumpUdtStats() {
                fmt_align(UdtStats.Totals.Count, AlignStyle::Right, CD),
                fmt_align(UdtStats.Totals.Size, AlignStyle::Right, SD));
   P.formatLine("{0}", fmt_repeat('-', TableWidth));
-  for (const auto &Stat : NamespacedStats) {
-    std::string Label = formatv("namespace '{0}'", Stat.getKey());
+  struct StrAndStat {
+    StringRef Key;
+    StatCollection::Stat Stat;
+  };
+
+  // Print namespace stats in descending order of size.
+  std::vector<StrAndStat> NamespacedStatsSorted;
+  for (const auto &Stat : NamespacedStats)
+    NamespacedStatsSorted.push_back({Stat.getKey(), Stat.second});
+  llvm::stable_sort(NamespacedStatsSorted,
+                    [](const StrAndStat &L, const StrAndStat &R) {
+                      return L.Stat.Size > R.Stat.Size;
+                    });
+  for (const auto &Stat : NamespacedStatsSorted) {
+    std::string Label = formatv("namespace '{0}'", Stat.Key);
     P.formatLine("{0} | {1:N}  {2:N}",
                  fmt_align(Label, AlignStyle::Right, FieldWidth),
-                 fmt_align(Stat.second.Count, AlignStyle::Right, CD),
-                 fmt_align(Stat.second.Size, AlignStyle::Right, SD));
+                 fmt_align(Stat.Stat.Count, AlignStyle::Right, CD),
+                 fmt_align(Stat.Stat.Size, AlignStyle::Right, SD));
   }
   return Error::success();
 }
@@ -1227,14 +1302,15 @@ static void buildDepSet(LazyRandomTypeCollection &Types,
 
 static void
 dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
-                   uint32_t NumTypeRecords, uint32_t NumHashBuckets,
+                   TypeReferenceTracker *RefTracker, uint32_t NumTypeRecords,
+                   uint32_t NumHashBuckets,
                    FixedStreamArray<support::ulittle32_t> HashValues,
                    TpiStream *Stream, bool Bytes, bool Extras) {
 
   Printer.formatLine("Showing {0:N} records", NumTypeRecords);
   uint32_t Width = NumDigits(TypeIndex::FirstNonSimpleIndex + NumTypeRecords);
 
-  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
+  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types, RefTracker,
                            NumHashBuckets, HashValues, Stream);
 
   if (auto EC = codeview::visitTypeStream(Types, V)) {
@@ -1245,12 +1321,13 @@ dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
 
 static void dumpPartialTypeStream(LinePrinter &Printer,
                                   LazyRandomTypeCollection &Types,
+                                  TypeReferenceTracker *RefTracker,
                                   TpiStream &Stream, ArrayRef<TypeIndex> TiList,
                                   bool Bytes, bool Extras, bool Deps) {
   uint32_t Width =
       NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
 
-  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
+  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types, RefTracker,
                            Stream.getNumHashBuckets(), Stream.getHashValues(),
                            &Stream);
 
@@ -1314,8 +1391,8 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     Types.reset(Reader, 100);
 
     if (opts::dump::DumpTypes) {
-      dumpFullTypeStream(P, Types, 0, 0, {}, nullptr, opts::dump::DumpTypeData,
-                         false);
+      dumpFullTypeStream(P, Types, RefTracker.get(), 0, 0, {}, nullptr,
+                         opts::dump::DumpTypeData, false);
     } else if (opts::dump::DumpTypeExtras) {
       auto LocalHashes = LocallyHashedType::hashTypeCollection(Types);
       auto GlobalHashes = GloballyHashedType::hashTypeCollection(Types);
@@ -1384,18 +1461,22 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   auto &Types = (StreamIdx == StreamTPI) ? File.types() : File.ids();
 
+  // Only emit notes about referenced/unreferenced for types.
+  TypeReferenceTracker *MaybeTracker =
+      (StreamIdx == StreamTPI) ? RefTracker.get() : nullptr;
+
   // Enable resolving forward decls.
   Stream.buildHashMap();
 
   if (DumpTypes || !Indices.empty()) {
     if (Indices.empty())
-      dumpFullTypeStream(P, Types, Stream.getNumTypeRecords(),
+      dumpFullTypeStream(P, Types, MaybeTracker, Stream.getNumTypeRecords(),
                          Stream.getNumHashBuckets(), Stream.getHashValues(),
                          &Stream, DumpBytes, DumpExtras);
     else {
       std::vector<TypeIndex> TiList(Indices.begin(), Indices.end());
-      dumpPartialTypeStream(P, Types, Stream, TiList, DumpBytes, DumpExtras,
-                            opts::dump::DumpTypeDependents);
+      dumpPartialTypeStream(P, Types, MaybeTracker, Stream, TiList, DumpBytes,
+                            DumpExtras, opts::dump::DumpTypeDependents);
     }
   }
 
@@ -1517,6 +1598,34 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
           return;
         }
       });
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpTypeRefStats() {
+  printHeader(P, "Type Reference Statistics");
+  AutoIndent Indent(P);
+
+  // Sum the byte size of all type records, and the size and count of all
+  // referenced records.
+  size_t TotalRecs = File.types().size();
+  size_t RefRecs = 0;
+  size_t TotalBytes = 0;
+  size_t RefBytes = 0;
+  auto &Types = File.types();
+  for (Optional<TypeIndex> TI = Types.getFirst(); TI; TI = Types.getNext(*TI)) {
+    CVType Type = File.types().getType(*TI);
+    TotalBytes += Type.length();
+    if (RefTracker->isTypeReferenced(*TI)) {
+      ++RefRecs;
+      RefBytes += Type.length();
+    }
+  }
+
+  P.formatLine("Records referenced: {0:N} / {1:N} {2:P}", RefRecs, TotalRecs,
+               (double)RefRecs / TotalRecs);
+  P.formatLine("Bytes referenced: {0:N} / {1:N} {2:P}", RefBytes, TotalBytes,
+               (double)RefBytes / TotalBytes);
+
   return Error::success();
 }
 

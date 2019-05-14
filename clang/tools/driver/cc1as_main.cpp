@@ -137,6 +137,10 @@ struct AssemblerInvocation {
   /// The name of the relocation model to use.
   std::string RelocationModel;
 
+  /// The ABI targeted by the backend. Specified using -target-abi. Empty
+  /// otherwise.
+  std::string TargetABI;
+
   /// @}
 
 public:
@@ -282,6 +286,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.NoExecStack = Args.hasArg(OPT_mno_exec_stack);
   Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
   Opts.RelocationModel = Args.getLastArgValue(OPT_mrelocation_model, "pic");
+  Opts.TargetABI = Args.getLastArgValue(OPT_target_abi);
   Opts.IncrementalLinkerCompatible =
       Args.hasArg(OPT_mincremental_linker_compatible);
   Opts.SymbolDefs = Args.getAllArgValues(OPT_defsym);
@@ -426,6 +431,9 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   raw_pwrite_stream *Out = FDOS.get();
   std::unique_ptr<buffer_ostream> BOS;
 
+  MCTargetOptions MCOptions;
+  MCOptions.ABIName = Opts.TargetABI;
+
   // FIXME: There is a bit of code duplication with addPassesToEmitFile.
   if (Opts.OutputType == AssemblerInvocation::FT_Asm) {
     MCInstPrinter *IP = TheTarget->createMCInstPrinter(
@@ -434,7 +442,6 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     std::unique_ptr<MCCodeEmitter> CE;
     if (Opts.ShowEncoding)
       CE.reset(TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
-    MCTargetOptions MCOptions;
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
 
@@ -455,7 +462,6 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
 
     std::unique_ptr<MCCodeEmitter> CE(
         TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
-    MCTargetOptions MCOptions;
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     std::unique_ptr<MCObjectWriter> OW =
@@ -489,9 +495,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
       createMCAsmParser(SrcMgr, Ctx, *Str.get(), *MAI));
 
   // FIXME: init MCTargetOptions from sanitizer flags here.
-  MCTargetOptions Options;
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(*STI, *Parser, *MCII, Options));
+      TheTarget->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
   if (!TAP)
     Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
 

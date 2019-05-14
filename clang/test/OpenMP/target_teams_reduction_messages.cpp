@@ -6,6 +6,16 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {
 }
 
@@ -112,7 +122,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target teams reduction(foo : argc) //expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   foo();
-#pragma omp target teams reduction(&& : argc)
+#pragma omp target teams reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   foo();
 #pragma omp target teams reduction(^ : T) // expected-error {{'T' does not refer to a value}}
   foo();
@@ -155,7 +165,7 @@ T tmain(T argc) {
 #pragma omp parallel for private(fl)
   for (int i = 0; i < 10; ++i)
   {}
-#pragma omp target teams reduction(+ : fl)
+#pragma omp target teams reduction(+ : fl) allocate(omp_thread_mem_alloc: fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target teams' directive}}
     foo();
 #pragma omp target teams
 #pragma omp parallel for reduction(- : fl)

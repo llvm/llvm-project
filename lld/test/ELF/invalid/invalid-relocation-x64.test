@@ -29,5 +29,5 @@ Sections:
         Symbol:          foo
         Type:            0x99
 Symbols:
-  Global:
-      - Name:            foo
+  - Name:            foo
+    Binding:         STB_GLOBAL

@@ -36,6 +36,8 @@ public:
 
   break_id_t GetID() const;
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   void ClearAllBreakpointSites();

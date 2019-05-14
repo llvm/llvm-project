@@ -151,3 +151,404 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 }
 
 declare void @llvm.masked.store.v32i16.p0v32i16(<32 x i16>, <32 x i16>*, i32, <32 x i1>)
+
+; Make sure we scalarize masked loads of f16.
+define <16 x half> @test_mask_load_16xf16(<16 x i1> %mask, <16 x half>* %addr, <16 x half> %val) {
+; CHECK-LABEL: test_mask_load_16xf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovb2m %xmm0, %k0
+; CHECK-NEXT:    kmovd %k0, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_1
+; CHECK-NEXT:  ## %bb.2: ## %cond.load
+; CHECK-NEXT:    movswl (%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm8
+; CHECK-NEXT:    jmp LBB12_3
+; CHECK-NEXT:  LBB12_1:
+; CHECK-NEXT:    vxorps %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:  LBB12_3: ## %else
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vxorps %xmm9, %xmm9, %xmm9
+; CHECK-NEXT:    kshiftrw $1, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_4
+; CHECK-NEXT:  ## %bb.5: ## %cond.load1
+; CHECK-NEXT:    movswl 2(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm1
+; CHECK-NEXT:    vmovaps %xmm2, %xmm7
+; CHECK-NEXT:    vmovaps %xmm2, %xmm6
+; CHECK-NEXT:    vmovaps %xmm2, %xmm5
+; CHECK-NEXT:    vmovaps %xmm2, %xmm4
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm16
+; CHECK-NEXT:    vmovaps %xmm2, %xmm15
+; CHECK-NEXT:    vmovaps %xmm2, %xmm14
+; CHECK-NEXT:    vmovaps %xmm2, %xmm13
+; CHECK-NEXT:    vmovaps %xmm2, %xmm12
+; CHECK-NEXT:    vmovaps %xmm2, %xmm11
+; CHECK-NEXT:    vmovaps %xmm2, %xmm10
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm2
+; CHECK-NEXT:    jmp LBB12_6
+; CHECK-NEXT:  LBB12_4:
+; CHECK-NEXT:    vmovaps %xmm2, %xmm1
+; CHECK-NEXT:    vmovaps %xmm2, %xmm7
+; CHECK-NEXT:    vmovaps %xmm2, %xmm6
+; CHECK-NEXT:    vmovaps %xmm2, %xmm5
+; CHECK-NEXT:    vmovaps %xmm2, %xmm4
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm16
+; CHECK-NEXT:    vmovaps %xmm2, %xmm15
+; CHECK-NEXT:    vmovaps %xmm2, %xmm14
+; CHECK-NEXT:    vmovaps %xmm2, %xmm13
+; CHECK-NEXT:    vmovaps %xmm2, %xmm12
+; CHECK-NEXT:    vmovaps %xmm2, %xmm11
+; CHECK-NEXT:    vmovaps %xmm2, %xmm10
+; CHECK-NEXT:  LBB12_6: ## %else2
+; CHECK-NEXT:    kshiftrw $2, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_8
+; CHECK-NEXT:  ## %bb.7: ## %cond.load4
+; CHECK-NEXT:    movswl 4(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm1
+; CHECK-NEXT:  LBB12_8: ## %else5
+; CHECK-NEXT:    kshiftrw $3, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_10
+; CHECK-NEXT:  ## %bb.9: ## %cond.load7
+; CHECK-NEXT:    movswl 6(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm7
+; CHECK-NEXT:  LBB12_10: ## %else8
+; CHECK-NEXT:    kshiftrw $4, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_12
+; CHECK-NEXT:  ## %bb.11: ## %cond.load10
+; CHECK-NEXT:    movswl 8(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm6
+; CHECK-NEXT:  LBB12_12: ## %else11
+; CHECK-NEXT:    kshiftrw $5, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_14
+; CHECK-NEXT:  ## %bb.13: ## %cond.load13
+; CHECK-NEXT:    movswl 10(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm5
+; CHECK-NEXT:  LBB12_14: ## %else14
+; CHECK-NEXT:    kshiftrw $6, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_16
+; CHECK-NEXT:  ## %bb.15: ## %cond.load16
+; CHECK-NEXT:    movswl 12(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm4
+; CHECK-NEXT:  LBB12_16: ## %else17
+; CHECK-NEXT:    kshiftrw $7, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_18
+; CHECK-NEXT:  ## %bb.17: ## %cond.load19
+; CHECK-NEXT:    movswl 14(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm3
+; CHECK-NEXT:  LBB12_18: ## %else20
+; CHECK-NEXT:    kshiftrw $8, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_20
+; CHECK-NEXT:  ## %bb.19: ## %cond.load22
+; CHECK-NEXT:    movswl 16(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm16
+; CHECK-NEXT:  LBB12_20: ## %else23
+; CHECK-NEXT:    kshiftrw $9, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_22
+; CHECK-NEXT:  ## %bb.21: ## %cond.load25
+; CHECK-NEXT:    movswl 18(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm15
+; CHECK-NEXT:  LBB12_22: ## %else26
+; CHECK-NEXT:    kshiftrw $10, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_24
+; CHECK-NEXT:  ## %bb.23: ## %cond.load28
+; CHECK-NEXT:    movswl 20(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm14
+; CHECK-NEXT:  LBB12_24: ## %else29
+; CHECK-NEXT:    kshiftrw $11, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_26
+; CHECK-NEXT:  ## %bb.25: ## %cond.load31
+; CHECK-NEXT:    movswl 22(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm13
+; CHECK-NEXT:  LBB12_26: ## %else32
+; CHECK-NEXT:    kshiftrw $12, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_28
+; CHECK-NEXT:  ## %bb.27: ## %cond.load34
+; CHECK-NEXT:    movswl 24(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm12
+; CHECK-NEXT:  LBB12_28: ## %else35
+; CHECK-NEXT:    kshiftrw $13, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_30
+; CHECK-NEXT:  ## %bb.29: ## %cond.load37
+; CHECK-NEXT:    movswl 26(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm11
+; CHECK-NEXT:  LBB12_30: ## %else38
+; CHECK-NEXT:    kshiftrw $14, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_32
+; CHECK-NEXT:  ## %bb.31: ## %cond.load40
+; CHECK-NEXT:    movswl 28(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm10
+; CHECK-NEXT:  LBB12_32: ## %else41
+; CHECK-NEXT:    kshiftrw $15, %k0, %k0
+; CHECK-NEXT:    kmovd %k0, %ecx
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    je LBB12_34
+; CHECK-NEXT:  ## %bb.33: ## %cond.load43
+; CHECK-NEXT:    movswl 30(%rsi), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm9
+; CHECK-NEXT:  LBB12_34: ## %else44
+; CHECK-NEXT:    vcvtps2ph $4, %xmm8, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, (%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm2, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 2(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 4(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm7, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 6(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm6, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 8(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm5, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 10(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm4, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 12(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm3, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 14(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm16, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 16(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm15, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 18(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm14, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 20(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm13, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 22(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm12, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 24(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm11, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 26(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm10, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 28(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm9, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movw %cx, 30(%rax)
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.masked.load.v16f16(<16 x half>* %addr, i32 4, <16 x i1>%mask, <16 x half> zeroinitializer)
+  ret <16 x half> %res
+}
+declare <16 x half> @llvm.masked.load.v16f16(<16 x half>*, i32, <16 x i1>, <16 x half>)
+
+; Make sure we scalarize masked stores of f16.
+define void @test_mask_store_16xf16(<16 x i1> %mask, <16 x half>* %addr, <16 x half> %val) {
+; CHECK-LABEL: test_mask_store_16xf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovb2m %xmm0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_2
+; CHECK-NEXT:  ## %bb.1: ## %cond.store
+; CHECK-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:  LBB13_2: ## %else
+; CHECK-NEXT:    kshiftrw $1, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_4
+; CHECK-NEXT:  ## %bb.3: ## %cond.store1
+; CHECK-NEXT:    vcvtps2ph $4, %xmm2, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 2(%rdi)
+; CHECK-NEXT:  LBB13_4: ## %else2
+; CHECK-NEXT:    kshiftrw $2, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_6
+; CHECK-NEXT:  ## %bb.5: ## %cond.store3
+; CHECK-NEXT:    vcvtps2ph $4, %xmm3, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 4(%rdi)
+; CHECK-NEXT:  LBB13_6: ## %else4
+; CHECK-NEXT:    kshiftrw $3, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_8
+; CHECK-NEXT:  ## %bb.7: ## %cond.store5
+; CHECK-NEXT:    vcvtps2ph $4, %xmm4, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 6(%rdi)
+; CHECK-NEXT:  LBB13_8: ## %else6
+; CHECK-NEXT:    kshiftrw $4, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_10
+; CHECK-NEXT:  ## %bb.9: ## %cond.store7
+; CHECK-NEXT:    vcvtps2ph $4, %xmm5, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 8(%rdi)
+; CHECK-NEXT:  LBB13_10: ## %else8
+; CHECK-NEXT:    kshiftrw $5, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_12
+; CHECK-NEXT:  ## %bb.11: ## %cond.store9
+; CHECK-NEXT:    vcvtps2ph $4, %xmm6, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 10(%rdi)
+; CHECK-NEXT:  LBB13_12: ## %else10
+; CHECK-NEXT:    kshiftrw $6, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_14
+; CHECK-NEXT:  ## %bb.13: ## %cond.store11
+; CHECK-NEXT:    vcvtps2ph $4, %xmm7, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 12(%rdi)
+; CHECK-NEXT:  LBB13_14: ## %else12
+; CHECK-NEXT:    kshiftrw $7, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_16
+; CHECK-NEXT:  ## %bb.15: ## %cond.store13
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 14(%rdi)
+; CHECK-NEXT:  LBB13_16: ## %else14
+; CHECK-NEXT:    kshiftrw $8, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_18
+; CHECK-NEXT:  ## %bb.17: ## %cond.store15
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 16(%rdi)
+; CHECK-NEXT:  LBB13_18: ## %else16
+; CHECK-NEXT:    kshiftrw $9, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_20
+; CHECK-NEXT:  ## %bb.19: ## %cond.store17
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 18(%rdi)
+; CHECK-NEXT:  LBB13_20: ## %else18
+; CHECK-NEXT:    kshiftrw $10, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_22
+; CHECK-NEXT:  ## %bb.21: ## %cond.store19
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 20(%rdi)
+; CHECK-NEXT:  LBB13_22: ## %else20
+; CHECK-NEXT:    kshiftrw $11, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_24
+; CHECK-NEXT:  ## %bb.23: ## %cond.store21
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 22(%rdi)
+; CHECK-NEXT:  LBB13_24: ## %else22
+; CHECK-NEXT:    kshiftrw $12, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_26
+; CHECK-NEXT:  ## %bb.25: ## %cond.store23
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 24(%rdi)
+; CHECK-NEXT:  LBB13_26: ## %else24
+; CHECK-NEXT:    kshiftrw $13, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_28
+; CHECK-NEXT:  ## %bb.27: ## %cond.store25
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 26(%rdi)
+; CHECK-NEXT:  LBB13_28: ## %else26
+; CHECK-NEXT:    kshiftrw $14, %k0, %k1
+; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_30
+; CHECK-NEXT:  ## %bb.29: ## %cond.store27
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 28(%rdi)
+; CHECK-NEXT:  LBB13_30: ## %else28
+; CHECK-NEXT:    kshiftrw $15, %k0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je LBB13_32
+; CHECK-NEXT:  ## %bb.31: ## %cond.store29
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 30(%rdi)
+; CHECK-NEXT:  LBB13_32: ## %else30
+; CHECK-NEXT:    retq
+  call void @llvm.masked.store.v16f16.p0v16f16(<16 x half> %val, <16 x half>* %addr, i32 4, <16 x i1>%mask)
+  ret void
+}
+declare void @llvm.masked.store.v16f16.p0v16f16(<16 x half>, <16 x half>*, i32, <16 x i1>)

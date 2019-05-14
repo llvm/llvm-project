@@ -1,0 +1,18 @@
+## Check we restrict placing local symbols after global in .symtab
+## We might want to change it later to allow doing that
+## for producing broken outputs.
+
+# RUN: not yaml2obj %s -o %t 2>&1 | FileCheck %s
+# CHECK: error: Local symbol 'bar' after global in Symbols list.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Symbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
+  - Name:    bar
+    Binding: STB_LOCAL

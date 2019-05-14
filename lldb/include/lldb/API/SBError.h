@@ -46,6 +46,8 @@ public:
   int SetErrorStringWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool GetDescription(lldb::SBStream &description);

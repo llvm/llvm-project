@@ -805,6 +805,13 @@ DISubprogram *DIBuilder::createMethod(
   return SP;
 }
 
+DICommonBlock *DIBuilder::createCommonBlock(
+    DIScope *Scope, DIGlobalVariable *Decl, StringRef Name, DIFile *File,
+    unsigned LineNo) {
+  return DICommonBlock::get(
+      VMContext, Scope, Decl, Name, File, LineNo);
+}
+
 DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
                                         bool ExportSymbols) {
 

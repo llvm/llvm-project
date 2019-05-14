@@ -222,6 +222,9 @@ DIScopeRef DIScope::getScope() const {
   if (auto *NS = dyn_cast<DINamespace>(this))
     return NS->getScope();
 
+  if (auto *CB = dyn_cast<DICommonBlock>(this))
+    return CB->getScope();
+
   if (auto *M = dyn_cast<DIModule>(this))
     return M->getScope();
 
@@ -237,6 +240,8 @@ StringRef DIScope::getName() const {
     return SP->getName();
   if (auto *NS = dyn_cast<DINamespace>(this))
     return NS->getName();
+  if (auto *CB = dyn_cast<DICommonBlock>(this))
+    return CB->getName();
   if (auto *M = dyn_cast<DIModule>(this))
     return M->getName();
   assert((isa<DILexicalBlockBase>(this) || isa<DIFile>(this) ||
@@ -694,6 +699,17 @@ DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DINamespace, (ExportSymbols), Ops);
 }
 
+DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
+                                      Metadata *Decl, MDString *Name,
+                                      Metadata *File, unsigned LineNo,
+                                      StorageType Storage, bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DICommonBlock, (Scope, Decl, Name, File, LineNo));
+  // The nullptr is for DIScope's File operand. This should be refactored.
+  Metadata *Ops[] = {Scope, Decl, Name, File};
+  DEFINE_GETIMPL_STORE(DICommonBlock, (LineNo), Ops);
+}
+
 DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *Scope,
                             MDString *Name, MDString *ConfigurationMacros,
                             MDString *IncludePath, MDString *ISysRoot,
@@ -813,9 +829,11 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
 
 unsigned DIExpression::ExprOperand::getSize() const {
   switch (getOp()) {
+  case dwarf::DW_OP_LLVM_convert:
   case dwarf::DW_OP_LLVM_fragment:
     return 3;
   case dwarf::DW_OP_constu:
+  case dwarf::DW_OP_deref_size:
   case dwarf::DW_OP_plus_uconst:
     return 2;
   default:
@@ -857,6 +875,7 @@ bool DIExpression::isValid() const {
         return false;
       break;
     }
+    case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
@@ -871,6 +890,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_shr:
     case dwarf::DW_OP_shra:
     case dwarf::DW_OP_deref:
+    case dwarf::DW_OP_deref_size:
     case dwarf::DW_OP_xderef:
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
@@ -879,6 +899,19 @@ bool DIExpression::isValid() const {
     }
   }
   return true;
+}
+
+bool DIExpression::isImplicit() const {
+  unsigned N = getNumElements();
+  if (isValid() && N > 0) {
+    switch (getElement(N-1)) {
+      case dwarf::DW_OP_stack_value: return true;
+      case dwarf::DW_OP_LLVM_fragment:
+        return N > 1 && getElement(N-2) == dwarf::DW_OP_stack_value;
+      default: break;
+    }
+  }
+  return false;
 }
 
 Optional<DIExpression::FragmentInfo>

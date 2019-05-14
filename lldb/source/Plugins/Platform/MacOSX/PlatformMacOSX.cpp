@@ -146,17 +146,13 @@ const char *PlatformMacOSX::GetDescriptionStatic(bool is_host) {
     return "Remote Mac OS X user platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformMacOSX::PlatformMacOSX(bool is_host) : PlatformDarwin(is_host) {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformMacOSX::~PlatformMacOSX() {}
 
 ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
@@ -168,7 +164,7 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
       std::string default_xcode_sdk;
       FileSpec fspec;
       uint32_t versions[2];
-      if (objfile->GetSDKVersion(versions, sizeof(versions))) {
+      if (objfile->GetSDKVersion(versions, 2)) {
         fspec = HostInfo::GetShlibDir();
         if (fspec) {
           std::string path;

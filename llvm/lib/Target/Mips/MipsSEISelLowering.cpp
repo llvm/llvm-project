@@ -213,6 +213,11 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
+  if (Subtarget.hasMips32r2() && !Subtarget.useSoftFloat() &&
+      !Subtarget.hasMips64()) {
+    setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+  }
+
   if (NoDPLoadStore) {
     setOperationAction(ISD::LOAD, MVT::f64, Custom);
     setOperationAction(ISD::STORE, MVT::f64, Custom);
@@ -462,6 +467,7 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
+  case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
@@ -1220,6 +1226,36 @@ SDValue MipsSETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
                       Nd.getMemOperand()->getFlags(), Nd.getAAInfo());
 }
 
+SDValue MipsSETargetLowering::lowerBITCAST(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT Src = Op.getOperand(0).getValueType().getSimpleVT();
+  MVT Dest = Op.getValueType().getSimpleVT();
+
+  // Bitcast i64 to double.
+  if (Src == MVT::i64 && Dest == MVT::f64) {
+    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
+                             Op.getOperand(0), DAG.getIntPtrConstant(0, DL));
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
+                             Op.getOperand(0), DAG.getIntPtrConstant(1, DL));
+    return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
+  }
+
+  // Bitcast double to i64.
+  if (Src == MVT::f64 && Dest == MVT::i64) {
+    SDValue Lo =
+        DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Op.getOperand(0),
+                    DAG.getConstant(0, DL, MVT::i32));
+    SDValue Hi =
+        DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Op.getOperand(0),
+                    DAG.getConstant(1, DL, MVT::i32));
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+  }
+
+  // Skip other cases of bitcast and use default lowering.
+  return SDValue();
+}
+
 SDValue MipsSETargetLowering::lowerMulDiv(SDValue Op, unsigned NewOpc,
                                           bool HasLo, bool HasHi,
                                           SelectionDAG &DAG) const {
@@ -1378,9 +1414,10 @@ static SDValue lowerMSASplatZExt(SDValue Op, unsigned OpNr, SelectionDAG &DAG) {
 
 static SDValue lowerMSASplatImm(SDValue Op, unsigned ImmOp, SelectionDAG &DAG,
                                 bool IsSigned = false) {
+  auto *CImm = cast<ConstantSDNode>(Op->getOperand(ImmOp));
   return DAG.getConstant(
       APInt(Op->getValueType(0).getScalarType().getSizeInBits(),
-            Op->getConstantOperandVal(ImmOp), IsSigned),
+            IsSigned ? CImm->getSExtValue() : CImm->getZExtValue(), IsSigned),
       SDLoc(Op), Op->getValueType(0));
 }
 

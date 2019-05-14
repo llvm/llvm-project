@@ -284,7 +284,9 @@ public:
     VK_Hexagon_IE,
     VK_Hexagon_IE_GOT,
 
-    VK_WebAssembly_TYPEINDEX,// Reference to a symbol's type (signature)
+    VK_WASM_TYPEINDEX, // Reference to a symbol's type (signature)
+    VK_WASM_MBREL,     // Memory address relative to memory base
+    VK_WASM_TBREL,     // Table index relative to table bare
 
     VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
     VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi

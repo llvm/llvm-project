@@ -44,15 +44,17 @@ enum OpenMPDirectiveKindEx {
   OMPD_mapper,
 };
 
-class ThreadprivateListParserHelper final {
+class DeclDirectiveListParserHelper final {
   SmallVector<Expr *, 4> Identifiers;
   Parser *P;
+  OpenMPDirectiveKind Kind;
 
 public:
-  ThreadprivateListParserHelper(Parser *P) : P(P) {}
+  DeclDirectiveListParserHelper(Parser *P, OpenMPDirectiveKind Kind)
+      : P(P), Kind(Kind) {}
   void operator()(CXXScopeSpec &SS, DeclarationNameInfo NameInfo) {
-    ExprResult Res =
-        P->getActions().ActOnOpenMPIdExpression(P->getCurScope(), SS, NameInfo);
+    ExprResult Res = P->getActions().ActOnOpenMPIdExpression(
+        P->getCurScope(), SS, NameInfo, Kind);
     if (Res.isUsable())
       Identifiers.push_back(Res.get());
   }
@@ -839,6 +841,10 @@ void Parser::ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind DKind,
 ///         annot_pragma_openmp 'threadprivate' simple-variable-list
 ///         annot_pragma_openmp_end
 ///
+///       allocate-directive:
+///         annot_pragma_openmp 'allocate' simple-variable-list [<clause>]
+///         annot_pragma_openmp_end
+///
 ///       declare-reduction-directive:
 ///        annot_pragma_openmp 'declare' 'reduction' [...]
 ///        annot_pragma_openmp_end
@@ -869,19 +875,66 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   switch (DKind) {
   case OMPD_threadprivate: {
     ConsumeToken();
-    ThreadprivateListParserHelper Helper(this);
-    if (!ParseOpenMPSimpleVarList(OMPD_threadprivate, Helper, true)) {
+    DeclDirectiveListParserHelper Helper(this, DKind);
+    if (!ParseOpenMPSimpleVarList(DKind, Helper,
+                                  /*AllowScopeSpecifier=*/true)) {
       // The last seen token is annot_pragma_openmp_end - need to check for
       // extra tokens.
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
         Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-            << getOpenMPDirectiveName(OMPD_threadprivate);
+            << getOpenMPDirectiveName(DKind);
         SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
       }
       // Skip the last annot_pragma_openmp_end.
       ConsumeAnnotationToken();
       return Actions.ActOnOpenMPThreadprivateDirective(Loc,
                                                        Helper.getIdentifiers());
+    }
+    break;
+  }
+  case OMPD_allocate: {
+    ConsumeToken();
+    DeclDirectiveListParserHelper Helper(this, DKind);
+    if (!ParseOpenMPSimpleVarList(DKind, Helper,
+                                  /*AllowScopeSpecifier=*/true)) {
+      SmallVector<OMPClause *, 1> Clauses;
+      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
+                    OMPC_unknown + 1>
+            FirstClauses(OMPC_unknown + 1);
+        while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+          OpenMPClauseKind CKind =
+              Tok.isAnnotation() ? OMPC_unknown
+                                 : getOpenMPClauseKind(PP.getSpelling(Tok));
+          Actions.StartOpenMPClause(CKind);
+          OMPClause *Clause = ParseOpenMPClause(OMPD_allocate, CKind,
+                                                !FirstClauses[CKind].getInt());
+          SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
+                    StopBeforeMatch);
+          FirstClauses[CKind].setInt(true);
+          if (Clause != nullptr)
+            Clauses.push_back(Clause);
+          if (Tok.is(tok::annot_pragma_openmp_end)) {
+            Actions.EndOpenMPClause();
+            break;
+          }
+          // Skip ',' if any.
+          if (Tok.is(tok::comma))
+            ConsumeToken();
+          Actions.EndOpenMPClause();
+        }
+        // The last seen token is annot_pragma_openmp_end - need to check for
+        // extra tokens.
+        if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+          Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
+              << getOpenMPDirectiveName(DKind);
+          SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
+        }
+      }
+      // Skip the last annot_pragma_openmp_end.
+      ConsumeAnnotationToken();
+      return Actions.ActOnOpenMPAllocateDirective(Loc, Helper.getIdentifiers(),
+                                                  Clauses);
     }
     break;
   }
@@ -900,9 +953,10 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
                                    ? OMPC_unknown
                                    : getOpenMPClauseKind(PP.getSpelling(Tok));
       Actions.StartOpenMPClause(CKind);
-      OMPClause *Clause =
-          ParseOpenMPClause(OMPD_requires, CKind, !FirstClauses[CKind].getInt());
-      SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end, StopBeforeMatch);
+      OMPClause *Clause = ParseOpenMPClause(OMPD_requires, CKind,
+                                            !FirstClauses[CKind].getInt());
+      SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
+                StopBeforeMatch);
       FirstClauses[CKind].setInt(true);
       if (Clause != nullptr)
         Clauses.push_back(Clause);
@@ -1098,6 +1152,10 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 ///         annot_pragma_openmp 'threadprivate' simple-variable-list
 ///         annot_pragma_openmp_end
 ///
+///       allocate-directive:
+///         annot_pragma_openmp 'allocate' simple-variable-list
+///         annot_pragma_openmp_end
+///
 ///       declare-reduction-directive:
 ///         annot_pragma_openmp 'declare' 'reduction' '(' <reduction_id> ':'
 ///         <type> {',' <type>} ':' <expression> ')' ['initializer' '('
@@ -1157,17 +1215,70 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
           << getOpenMPDirectiveName(DKind) << 0;
     }
     ConsumeToken();
-    ThreadprivateListParserHelper Helper(this);
-    if (!ParseOpenMPSimpleVarList(OMPD_threadprivate, Helper, false)) {
+    DeclDirectiveListParserHelper Helper(this, DKind);
+    if (!ParseOpenMPSimpleVarList(DKind, Helper,
+                                  /*AllowScopeSpecifier=*/false)) {
       // The last seen token is annot_pragma_openmp_end - need to check for
       // extra tokens.
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
         Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-            << getOpenMPDirectiveName(OMPD_threadprivate);
+            << getOpenMPDirectiveName(DKind);
         SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
       }
       DeclGroupPtrTy Res = Actions.ActOnOpenMPThreadprivateDirective(
           Loc, Helper.getIdentifiers());
+      Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
+    }
+    SkipUntil(tok::annot_pragma_openmp_end);
+    break;
+  }
+  case OMPD_allocate: {
+    // FIXME: Should this be permitted in C++?
+    if ((StmtCtx & ParsedStmtContext::AllowDeclarationsInC) ==
+        ParsedStmtContext()) {
+      Diag(Tok, diag::err_omp_immediate_directive)
+          << getOpenMPDirectiveName(DKind) << 0;
+    }
+    ConsumeToken();
+    DeclDirectiveListParserHelper Helper(this, DKind);
+    if (!ParseOpenMPSimpleVarList(DKind, Helper,
+                                  /*AllowScopeSpecifier=*/false)) {
+      SmallVector<OMPClause *, 1> Clauses;
+      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
+                    OMPC_unknown + 1>
+            FirstClauses(OMPC_unknown + 1);
+        while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+          OpenMPClauseKind CKind =
+              Tok.isAnnotation() ? OMPC_unknown
+                                 : getOpenMPClauseKind(PP.getSpelling(Tok));
+          Actions.StartOpenMPClause(CKind);
+          OMPClause *Clause = ParseOpenMPClause(OMPD_allocate, CKind,
+                                                !FirstClauses[CKind].getInt());
+          SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
+                    StopBeforeMatch);
+          FirstClauses[CKind].setInt(true);
+          if (Clause != nullptr)
+            Clauses.push_back(Clause);
+          if (Tok.is(tok::annot_pragma_openmp_end)) {
+            Actions.EndOpenMPClause();
+            break;
+          }
+          // Skip ',' if any.
+          if (Tok.is(tok::comma))
+            ConsumeToken();
+          Actions.EndOpenMPClause();
+        }
+        // The last seen token is annot_pragma_openmp_end - need to check for
+        // extra tokens.
+        if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+          Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
+              << getOpenMPDirectiveName(DKind);
+          SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
+        }
+      }
+      DeclGroupPtrTy Res = Actions.ActOnOpenMPAllocateDirective(
+          Loc, Helper.getIdentifiers(), Clauses);
       Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
     }
     SkipUntil(tok::annot_pragma_openmp_end);
@@ -1451,7 +1562,7 @@ bool Parser::ParseOpenMPSimpleVarList(
 ///       thread_limit-clause | priority-clause | grainsize-clause |
 ///       nogroup-clause | num_tasks-clause | hint-clause | to-clause |
 ///       from-clause | is_device_ptr-clause | task_reduction-clause |
-///       in_reduction-clause
+///       in_reduction-clause | allocator-clause | allocate-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -1480,6 +1591,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_grainsize:
   case OMPC_num_tasks:
   case OMPC_hint:
+  case OMPC_allocator:
     // OpenMP [2.5, Restrictions]
     //  At most one num_threads clause can appear on the directive.
     // OpenMP [2.8.1, simd construct, Restrictions]
@@ -1500,6 +1612,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     // At most one grainsize clause can appear on the directive.
     // OpenMP [2.9.2, taskloop Construct, Restrictions]
     // At most one num_tasks clause can appear on the directive.
+    // OpenMP [2.11.3, allocate Directive, Restrictions]
+    // At most one allocator clause can appear on the directive.
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
@@ -1594,6 +1708,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_allocate:
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
     break;
   case OMPC_unknown:
@@ -1665,6 +1780,9 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
 ///
 ///    hint-clause:
 ///      'hint' '(' expression ')'
+///
+///    allocator-clause:
+///      'allocator' '(' expression ')'
 ///
 OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                                bool ParseOnly) {
@@ -2188,6 +2306,31 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           ConsumeToken();
       }
     }
+  } else if (Kind == OMPC_allocate) {
+    // Handle optional allocator expression followed by colon delimiter.
+    ColonProtectionRAIIObject ColonRAII(*this);
+    TentativeParsingAction TPA(*this);
+    ExprResult Tail =
+        Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
+                                       /*DiscardedValue=*/false);
+    if (Tail.isUsable()) {
+      if (Tok.is(tok::colon)) {
+        Data.TailExpr = Tail.get();
+        Data.ColonLoc = ConsumeToken();
+        TPA.Commit();
+      } else {
+        // colon not found, no allocator specified, parse only list of
+        // variables.
+        TPA.Revert();
+      }
+    } else {
+      // Parsing was unsuccessfull, revert and skip to the end of clause or
+      // directive.
+      TPA.Revert();
+      SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                StopBeforeMatch);
+    }
   }
 
   bool IsComma =
@@ -2292,6 +2435,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///       'use_device_ptr' '(' list ')'
 ///    is_device_ptr-clause:
 ///       'is_device_ptr' '(' list ')'
+///    allocate-clause:
+///       'allocate' '(' [ allocator ':' ] list ')'
 ///
 /// For 'linear' clause linear-list may have the following forms:
 ///  list

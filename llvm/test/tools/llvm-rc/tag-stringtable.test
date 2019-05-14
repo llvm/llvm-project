@@ -81,7 +81,7 @@
 ; CHECK-NEXT: )
 
 
-; RUN: llvm-rc /N /FO %t0 %p/Inputs/tag-stringtable-basic.rc
+; RUN: llvm-rc /N /FO %t0 -- %p/Inputs/tag-stringtable-basic.rc
 ; RUN: llvm-readobj %t0 | FileCheck %s --check-prefix=NULL
 
 ; NULL:      Resource type (int): 6
@@ -166,5 +166,5 @@
 ; NULL-NEXT: )
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-stringtable-same-ids.rc 2>&1 | FileCheck %s --check-prefix SAMEIDS
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-stringtable-same-ids.rc 2>&1 | FileCheck %s --check-prefix SAMEIDS
 ; SAMEIDS: llvm-rc: Multiple STRINGTABLE strings located under ID 1

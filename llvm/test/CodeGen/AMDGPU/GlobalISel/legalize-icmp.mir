@@ -44,14 +44,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_icmp_s16
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C2]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[AND]](s32), [[AND1]]
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
@@ -74,14 +72,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_icmp_s8
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[C]](s32)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C2]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[AND]](s32), [[AND1]]
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)

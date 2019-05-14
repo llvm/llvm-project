@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -O2 -vectorize-loops -S < %s
+; RUN: opt -march=hexagon -O2 -S < %s
 ; REQUIRES: asserts
 ;
 ; -fvectorize-loops infinite compile/memory

@@ -17,8 +17,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#ifndef LLDB_DISABLE_PYTHON
-
 class ScriptedRecognizedStackFrame : public RecognizedStackFrame {
 public:
   ScriptedRecognizedStackFrame(ValueObjectListSP args) {
@@ -50,12 +48,10 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
       new ScriptedRecognizedStackFrame(args_synthesized));
 }
 
-#endif
-
 class StackFrameRecognizerManagerImpl {
 public:
   void AddRecognizer(StackFrameRecognizerSP recognizer,
-                     const ConstString &module, const ConstString &symbol,
+                     ConstString module, ConstString symbol,
                      bool first_instruction_only) {
     m_recognizers.push_front({(uint32_t)m_recognizers.size(), false, recognizer, false, module, RegularExpressionSP(),
                               symbol, RegularExpressionSP(),
@@ -158,8 +154,8 @@ StackFrameRecognizerManagerImpl &GetStackFrameRecognizerManagerImpl() {
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
-    StackFrameRecognizerSP recognizer, const ConstString &module,
-    const ConstString &symbol, bool first_instruction_only) {
+    StackFrameRecognizerSP recognizer, ConstString module,
+    ConstString symbol, bool first_instruction_only) {
   GetStackFrameRecognizerManagerImpl().AddRecognizer(recognizer, module, symbol,
                                                      first_instruction_only);
 }

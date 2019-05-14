@@ -150,6 +150,10 @@
 # CHECK-LE: slbia                           # encoding: [0xe4,0x03,0x00,0x7c]
             slbia
 
+# CHECK-BE: slbfee. 4, 5                    # encoding: [0x7c,0x80,0x2f,0xa7]
+# CHECK-LE: slbfee. 4, 5                    # encoding: [0xa7,0x2f,0x80,0x7c]
+            slbfee. %r4, %r5
+
 # CHECK-BE: tlbsync                         # encoding: [0x7c,0x00,0x04,0x6c]
 # CHECK-LE: tlbsync                         # encoding: [0x6c,0x04,0x00,0x7c]
             tlbsync

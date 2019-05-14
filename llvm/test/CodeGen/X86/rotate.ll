@@ -572,8 +572,8 @@ define void @rotr1_64_mem(i64* %Aptr) nounwind {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    shldl $31, %ecx, %esi
 ; X86-NEXT:    shldl $31, %edx, %ecx
-; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;

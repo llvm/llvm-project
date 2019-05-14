@@ -86,6 +86,8 @@ T tmain(T argc) {
   foo();
 #pragma omp target parallel map(l[:-1]) // expected-error 2 {{section length is evaluated to a negative value -1}}
   foo();
+#pragma omp target parallel map(l[true:true])
+  foo();
 #pragma omp target parallel map(x)
   foo();
 #pragma omp target parallel map(tofrom: t[:I])
@@ -204,6 +206,8 @@ int main(int argc, char **argv) {
 #pragma omp target parallel map(l[-1:]) // expected-error {{array section must be a subset of the original array}}
   foo();
 #pragma omp target parallel map(l[:-1]) // expected-error {{section length is evaluated to a negative value -1}}
+  foo();
+#pragma omp target parallel map(l[true:true])
   foo();
 #pragma omp target parallel map(x)
   foo();

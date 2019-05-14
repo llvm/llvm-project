@@ -36,11 +36,10 @@ entry:
 }
 ; CHECK-LABEL: test_args_sp
 ; Load `e`
-; CHECK:       ldr    r0, [sp, #40]
-; CHECK-NEXT:  mov    r5, sp
-; CHECK-NEXT:  str    r3, [r5]
+; CHECK:       ldr    r0, [sp, #32]
+; CHECK-NEXT:  str    r3, [sp]
 ; Pass `e` on stack
-; CHECK-NEXT:  str    r0, [r5, #4]
+; CHECK-NEXT:  str    r0, [sp, #4]
 ; CHECK:       bl    g
 
 ; int test_varargs_sp(int a, ...) {
@@ -92,10 +91,9 @@ entry:
 ; CHECK-NEXT:  mov  sp, r4
 ; Load `e` via FP
 ; CHECK:       ldr r0, [r7, #8]
-; CHECK-NEXT:  mov r5, sp
-; CHECK-NEXT:  str r3, [r5]
+; CHECK-NEXT:  str r3, [sp]
 ; Pass `e` as argument
-; CHECK-NEXT:  str r0, [r5, #4]
+; CHECK-NEXT:  str r0, [sp, #4]
 ; CHECK:       bl    g
 
 ; int test_varargs_realign(int a, ...) {
@@ -147,9 +145,9 @@ entry:
 ; CHECK:       sub sp, #4
 ; Load `e` via FP
 ; CHECK:       ldr r5, [r7, #8]
-; CHECK-NEXT:  mov r0, sp
 ; Pass `d` and `e` as arguments
-; CHECK-NEXT:  stm r0!, {r3, r5}
+; CHECK-NEXT:  str r3, [sp]
+; CHECK-NEXT:  str r5, [sp, #4]
 ; CHECK:       bl  g
 
 ; int test_varargs_vla(int a, ...) {
@@ -173,9 +171,9 @@ entry:
 ; Setup frame pointer
 ; CHECK:       add r7, sp, #8
 ; Register varargs stored via FP
-; CHECK:       str r3, [r7, #16]
-; CHECK-NEXT:  str r2, [r7, #12]
-; CHECK-NEXT:  str r1, [r7, #8]
+; CHECK-DAG:  str r3, [r7, #16]
+; CHECK-DAG:  str r2, [r7, #12]
+; CHECK-DAG:  str r1, [r7, #8]
 
 ; Moving SP, access via SP
 ; int test_args_moving_sp(int a, int b, int c, int d, int e) {

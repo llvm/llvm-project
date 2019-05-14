@@ -60,6 +60,44 @@ int chf1(int x);
 int fun_using_anon_struct(int);
 int other_macro_diag(int);
 
+extern const int extInt;
+namespace intns {
+extern const int extInt;
+}
+struct S {
+  int a;
+};
+extern const S extS;
+extern const int extHere;
+const int extHere = 6;
+struct A {
+  static const int a;
+};
+struct SC {
+  const int a;
+};
+extern SC extSC;
+struct ST {
+  static struct SC sc;
+};
+struct SCNest {
+  struct SCN {
+    const int a;
+  } scn;
+};
+extern SCNest extSCN;
+extern SCNest::SCN extSubSCN;
+struct SCC {
+  SCC(int c);
+  const int a;
+};
+extern SCC extSCC;
+union U {
+  const int a;
+  const unsigned int b;
+};
+extern U extU;
+
 int main() {
   clang_analyzer_eval(f(3) == 2); // expected-warning{{TRUE}}
   clang_analyzer_eval(f(4) == 3); // expected-warning{{TRUE}}
@@ -80,4 +118,16 @@ int main() {
   clang_analyzer_eval(other_macro_diag(1) == 1); // expected-warning{{TRUE}}
   // expected-warning@Inputs/ctu-other.cpp:80{{REACHABLE}}
   MACRODIAG(); // expected-warning{{REACHABLE}}
+
+  clang_analyzer_eval(extInt == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(intns::extInt == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(extS.a == 4); // expected-warning{{TRUE}}
+  clang_analyzer_eval(extHere == 6); // expected-warning{{TRUE}}
+  clang_analyzer_eval(A::a == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(extSC.a == 8); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ST::sc.a == 2); // expected-warning{{TRUE}}
+  // clang_analyzer_eval(extSCN.scn.a == 9); // TODO
+  clang_analyzer_eval(extSubSCN.a == 1); // expected-warning{{TRUE}}
+  // clang_analyzer_eval(extSCC.a == 7); // TODO
+  clang_analyzer_eval(extU.a == 4); // expected-warning{{TRUE}}
 }

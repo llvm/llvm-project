@@ -11,7 +11,6 @@
 #include "MICmnResources.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLogMediumFile constructor.
 // Type:    Method.
 // Args:    None.
@@ -29,7 +28,6 @@ CMICmnLogMediumFile::CMICmnLogMediumFile()
       m_fileHeaderTxt(MIRSRC(IDS_MEDIUMFILE_ERR_FILE_HEADER)) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLogMediumFile destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -39,7 +37,6 @@ CMICmnLogMediumFile::CMICmnLogMediumFile()
 CMICmnLogMediumFile::~CMICmnLogMediumFile() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the singleton instance of *this class.
 // Type:    Static.
 // Args:    None.
@@ -53,7 +50,6 @@ CMICmnLogMediumFile &CMICmnLogMediumFile::Instance() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize setup *this medium ready for use.
 // Type:    Overridden.
 // Args:    None.
@@ -67,7 +63,6 @@ bool CMICmnLogMediumFile::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unbind detach or release resources used by *this medium.
 // Type:    Method.
 // Args:    None.
@@ -83,7 +78,6 @@ bool CMICmnLogMediumFile::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the name of *this medium.
 // Type:    Overridden.
 // Args:    None.
@@ -95,7 +89,6 @@ const CMIUtilString &CMICmnLogMediumFile::GetName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The callee client calls the write function on the Logger. The data
 // to be
 //          written is given out to all the mediums registered. The verbosity
@@ -132,7 +125,6 @@ bool CMICmnLogMediumFile::Write(const CMIUtilString &vData,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve *this medium's last error condition.
 // Type:    Method.
 // Args:    None.
@@ -144,7 +136,6 @@ const CMIUtilString &CMICmnLogMediumFile::GetError() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the verbosity mode for this medium.
 // Type:    Method.
 // Args:    veType  - (R) Mask value.
@@ -158,7 +149,6 @@ bool CMICmnLogMediumFile::SetVerbosity(const MIuint veType) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Get the verbosity mode for this medium.
 // Type:    Method.
 // Args:    veType  - (R) Mask value.
@@ -168,7 +158,6 @@ bool CMICmnLogMediumFile::SetVerbosity(const MIuint veType) {
 MIuint CMICmnLogMediumFile::GetVerbosity() const { return m_eVerbosityType; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write data to a file English font.
 // Type:    Method.
 // Args:    vData   - (R) The data to write to the logger.
@@ -180,7 +169,6 @@ bool CMICmnLogMediumFile::FileWriteEnglish(const CMIUtilString &vData) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Determine and form the medium file's directory path and name.
 // Type:    Method.
 // Args:    None.
@@ -210,7 +198,6 @@ bool CMICmnLogMediumFile::FileFormFileNamePath() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the medium file's directory path and name.
 // Type:    Method.
 // Args:    None.
@@ -222,7 +209,6 @@ const CMIUtilString &CMICmnLogMediumFile::GetFileNamePath() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the medium file's name.
 // Type:    Method.
 // Args:    None.
@@ -234,7 +220,6 @@ const CMIUtilString &CMICmnLogMediumFile::GetFileName() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Massage the data to behave correct when submitted to file. Insert
 // extra log
 //          specific text. The veType is there to allow in the future to parse
@@ -272,7 +257,6 @@ CMICmnLogMediumFile::MassagedData(const CMIUtilString &vData,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Convert the Log's verbosity type number into a single char
 // character.
 // Type:    Method.
@@ -299,7 +283,6 @@ char CMICmnLogMediumFile::ConvertLogVerbosityTypeToId(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve state of whether the file medium is ok.
 // Type:    Method.
 // Args:    None.
@@ -310,7 +293,6 @@ char CMICmnLogMediumFile::ConvertLogVerbosityTypeToId(
 bool CMICmnLogMediumFile::IsOk() const { return m_file.IsOk(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Status on the file log medium existing already.
 // Type:    Method.
 // Args:    None.
@@ -323,7 +305,6 @@ bool CMICmnLogMediumFile::IsFileExist() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write the header text the logger file.
 // Type:    Method.
 // Args:    vText   - (R) Text.
@@ -336,7 +317,6 @@ bool CMICmnLogMediumFile::FileWriteHeader() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Convert any carriage line returns to be compatible with the platform
 // the
 //          Log file is being written to.
@@ -365,7 +345,6 @@ CMIUtilString CMICmnLogMediumFile::ConvertCr(const CMIUtilString &vData) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the header text that is written to the logger file at the
 // beginning.
 // Type:    Method.
@@ -381,7 +360,6 @@ bool CMICmnLogMediumFile::SetHeaderTxt(const CMIUtilString &vText) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the file current carriage line return characters used.
 // Type:    Method.
 // Args:    None.
@@ -393,7 +371,6 @@ const CMIUtilString &CMICmnLogMediumFile::GetLineReturn() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the directory to place the log file.
 // Type:    Method.
 // Args:    vPath   - (R) Path to log.

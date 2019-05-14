@@ -36,7 +36,7 @@ define i32 @foo(i32* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i32> [[TMP13]], i32 [[N]], i32 5
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i32> [[TMP14]], i32 [[N]], i32 6
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i32> [[TMP15]], i32 [[N]], i32 7
-; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[TMP8]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[ARRAYIDX]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> [[TMP17]], <8 x i32>* [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 8

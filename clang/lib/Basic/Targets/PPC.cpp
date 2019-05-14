@@ -30,6 +30,7 @@ const Builtin::Info PPCTargetInfo::BuiltinInfo[] = {
 /// configured set of features.
 bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                          DiagnosticsEngine &Diags) {
+  FloatABI = HardFloat;
   for (const auto &Feature : Features) {
     if (Feature == "+altivec") {
       HasAltivec = true;
@@ -53,6 +54,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFloat128 = true;
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
+    } else if (Feature == "-hard-float") {
+      FloatABI = SoftFloat;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -100,7 +103,9 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_CALL_LINUX", "1");
 
   // Subtarget options.
-  Builder.defineMacro("__NATURAL_ALIGNMENT__");
+  if (!getTriple().isOSAIX()){
+    Builder.defineMacro("__NATURAL_ALIGNMENT__");
+  }
   Builder.defineMacro("__REGISTER_PREFIX__", "");
 
   // FIXME: Should be controlled by command line option.
@@ -212,31 +217,26 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
 
-  if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "-vsx") !=
-      FeaturesVec.end()) {
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+power8-vector") !=
-        FeaturesVec.end()) {
+  if (llvm::find(FeaturesVec, "-vsx") != FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+power8-vector") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mpower8-vector"
                                                      << "-mno-vsx";
       return false;
     }
 
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+direct-move") !=
-        FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+direct-move") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mdirect-move"
                                                      << "-mno-vsx";
       return false;
     }
 
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+float128") !=
-        FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128"
                                                      << "-mno-vsx";
       return false;
     }
 
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+power9-vector") !=
-        FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+power9-vector") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mpower9-vector"
                                                      << "-mno-vsx";
       return false;
@@ -309,8 +309,7 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
 
   if (!(ArchDefs & ArchDefinePwr9) && (ArchDefs & ArchDefinePpcgr) &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "+float128") !=
-          FeaturesVec.end()) {
+      llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
     // We have __float128 on PPC but not power 9 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128" << CPU;
     return false;

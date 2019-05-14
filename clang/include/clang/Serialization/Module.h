@@ -174,7 +174,7 @@ public:
   unsigned Generation;
 
   /// The memory buffer that stores the data associated with
-  /// this AST file, owned by the PCMCache in the ModuleManager.
+  /// this AST file, owned by the InMemoryModuleCache.
   llvm::MemoryBuffer *Buffer;
 
   /// The size of this file, in bits.

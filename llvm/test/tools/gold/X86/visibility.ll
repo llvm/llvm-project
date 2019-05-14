@@ -5,7 +5,7 @@
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o %t2.o -o %t.so
-; RUN: llvm-readobj -t %t.so | FileCheck %s
+; RUN: llvm-readobj --symbols %t.so | FileCheck %s
 ; RUN: llvm-dis %t.so.0.2.internalize.bc -o - | FileCheck --check-prefix=IR %s
 
 ; CHECK:      Name: foo

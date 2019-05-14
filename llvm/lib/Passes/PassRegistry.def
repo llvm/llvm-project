@@ -197,8 +197,8 @@ FUNCTION_PASS("partially-inline-libcalls", PartiallyInlineLibCallsPass())
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("loop-data-prefetch", LoopDataPrefetchPass())
 FUNCTION_PASS("loop-load-elim", LoopLoadEliminationPass())
+FUNCTION_PASS("loop-fuse", LoopFusePass())
 FUNCTION_PASS("loop-distribute", LoopDistributePass())
-FUNCTION_PASS("loop-vectorize", LoopVectorizePass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
 FUNCTION_PASS("print", PrintFunctionPass(dbgs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
@@ -218,7 +218,6 @@ FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(dbgs()))
 FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("sccp", SCCPPass())
-FUNCTION_PASS("simplify-cfg", SimplifyCFGPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
@@ -231,6 +230,7 @@ FUNCTION_PASS("verify<domtree>", DominatorTreeVerifierPass())
 FUNCTION_PASS("verify<loops>", LoopVerifierPass())
 FUNCTION_PASS("verify<memoryssa>", MemorySSAVerifierPass())
 FUNCTION_PASS("verify<regions>", RegionInfoVerifierPass())
+FUNCTION_PASS("verify<safepoint-ir>", SafepointIRVerifierPass())
 FUNCTION_PASS("view-cfg", CFGViewerPass())
 FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
@@ -252,6 +252,16 @@ FUNCTION_PASS_WITH_PARAMS("msan",
                              return MemorySanitizerPass(Opts);
                            },
                            parseMSanPassOptions)
+FUNCTION_PASS_WITH_PARAMS("simplify-cfg",
+                           [](SimplifyCFGOptions Opts) {
+                             return SimplifyCFGPass(Opts);
+                           },
+                           parseSimplifyCFGOptions)
+FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
+                           [](LoopVectorizeOptions Opts) {
+                             return LoopVectorizePass(Opts);
+                           },
+                           parseLoopVectorizeOptions)
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS
@@ -280,8 +290,18 @@ LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("irce", IRCEPass())
 LOOP_PASS("unroll-and-jam", LoopUnrollAndJamPass())
 LOOP_PASS("unroll-full", LoopFullUnrollPass())
-LOOP_PASS("unswitch", SimpleLoopUnswitchPass())
 LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
 LOOP_PASS("print<ivusers>", IVUsersPrinterPass(dbgs()))
 LOOP_PASS("loop-predication", LoopPredicationPass())
+LOOP_PASS("guard-widening", GuardWideningPass())
 #undef LOOP_PASS
+
+#ifndef LOOP_PASS_WITH_PARAMS
+#define LOOP_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)
+#endif
+LOOP_PASS_WITH_PARAMS("unswitch",
+                           [](bool NonTrivial) {
+                             return SimpleLoopUnswitchPass(NonTrivial);
+                           },
+                           parseLoopUnswitchOptions)
+#undef LOOP_PASS_WITH_PARAMS

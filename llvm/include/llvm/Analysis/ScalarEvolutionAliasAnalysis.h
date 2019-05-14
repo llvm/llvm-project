@@ -30,7 +30,8 @@ public:
   explicit SCEVAAResult(ScalarEvolution &SE) : AAResultBase(), SE(SE) {}
   SCEVAAResult(SCEVAAResult &&Arg) : AAResultBase(std::move(Arg)), SE(Arg.SE) {}
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
+  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+                    AAQueryInfo &AAQI);
 
 private:
   Value *GetBaseValue(const SCEV *S);

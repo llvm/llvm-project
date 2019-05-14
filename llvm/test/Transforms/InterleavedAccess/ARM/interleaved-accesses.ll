@@ -352,9 +352,9 @@ define void @store_undef_mask_factor4(<16 x i32>* %ptr, <4 x i32> %v0, <4 x i32>
   ret void
 }
 
-define void @load_address_space(<4 x i32> addrspace(1)* %ptr) {
+define void @load_address_space(<8 x i32> addrspace(1)* %ptr) {
 ; NEON-LABEL:    @load_address_space(
-; NEON-NEXT:       [[TMP1:%.*]] = bitcast <4 x i32> addrspace(1)* %ptr to i8 addrspace(1)*
+; NEON-NEXT:       [[TMP1:%.*]] = bitcast <8 x i32> addrspace(1)* %ptr to i8 addrspace(1)*
 ; NEON-NEXT:       [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p1i8(i8 addrspace(1)* [[TMP1]], i32 0)
 ; NEON-NEXT:       [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 2
 ; NEON-NEXT:       [[TMP3:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 1
@@ -364,10 +364,10 @@ define void @load_address_space(<4 x i32> addrspace(1)* %ptr) {
 ; NO_NEON-NOT:     @llvm.arm.neon
 ; NO_NEON:         ret void
 ;
-  %interleaved.vec = load <4 x i32>, <4 x i32> addrspace(1)* %ptr
-  %v0 = shufflevector <4 x i32> %interleaved.vec, <4 x i32> undef, <2 x i32> <i32 0, i32 3>
-  %v1 = shufflevector <4 x i32> %interleaved.vec, <4 x i32> undef, <2 x i32> <i32 1, i32 4>
-  %v2 = shufflevector <4 x i32> %interleaved.vec, <4 x i32> undef, <2 x i32> <i32 2, i32 5>
+  %interleaved.vec = load <8 x i32>, <8 x i32> addrspace(1)* %ptr
+  %v0 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> undef, <2 x i32> <i32 0, i32 3>
+  %v1 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> undef, <2 x i32> <i32 1, i32 4>
+  %v2 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> undef, <2 x i32> <i32 2, i32 5>
   ret void
 }
 
@@ -881,5 +881,18 @@ define void @load_factor2_wide_pointer(<16 x i32*>* %ptr) {
   %interleaved.vec = load <16 x i32*>, <16 x i32*>* %ptr, align 4
   %v0 = shufflevector <16 x i32*> %interleaved.vec, <16 x i32*> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %v1 = shufflevector <16 x i32*> %interleaved.vec, <16 x i32*> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret void
+}
+
+; This would be a candidate for interleaving, except that load doesn't
+; actually load enough elements to satisfy the shuffle masks. (It would be
+; possible to produce a vld2.v2i32, but that currently isn't implemented.)
+define void @load_out_of_range(<4 x i32>* %ptr) {
+; ALL-LABEL: @load_out_of_range(
+; ALL-NOT:     @llvm.arm.neon
+; ALL:         ret void
+  %interleaved.vec = load <4 x i32>, <4 x i32>* %ptr, align 4
+  %v0 = shufflevector <4 x i32> %interleaved.vec, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
+  %v1 = shufflevector <4 x i32> %interleaved.vec, <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
   ret void
 }

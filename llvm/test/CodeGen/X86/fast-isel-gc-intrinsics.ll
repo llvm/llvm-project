@@ -17,6 +17,8 @@ define i1 @test_gcresult() gc "statepoint-example" {
 entry:
   %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0)
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  br label %exit
+exit:
   ret i1 %call1
 }
 
@@ -27,6 +29,8 @@ entry:
   %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %v)
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   %vnew = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token,  i32 7, i32 7)
+  br label %exit
+exit:
   ret i1 %call1
 }
 

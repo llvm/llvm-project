@@ -35,13 +35,11 @@ class SyntheticChildrenFrontEnd;
 }
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A ValueObject that obtains its children from some source other than
 // real information
 // This is currently used to implement Python-based children and filters but
 // you can bind it to any source of synthetic information and have it behave
 // accordingly
-//----------------------------------------------------------------------
 class ValueObjectSynthetic : public ValueObject {
 public:
   ~ValueObjectSynthetic() override;
@@ -62,10 +60,10 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(const ConstString &name,
+  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
                                              bool can_create) override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
   lldb::ValueObjectSP
   GetDynamicValue(lldb::DynamicValueType valueType) override;

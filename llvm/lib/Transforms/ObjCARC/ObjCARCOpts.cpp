@@ -73,6 +73,11 @@ using namespace llvm::objcarc;
 
 #define DEBUG_TYPE "objc-arc-opts"
 
+static cl::opt<unsigned> MaxPtrStates("arc-opt-max-ptr-states",
+    cl::Hidden,
+    cl::desc("Maximum number of ptr states the optimizer keeps track of"),
+    cl::init(4095));
+
 /// \defgroup ARCUtilities Utility declarations/definitions specific to ARC.
 /// @{
 
@@ -219,6 +224,10 @@ namespace {
       return !PerPtrTopDown.empty();
     }
 
+    unsigned top_down_ptr_list_size() const {
+      return std::distance(top_down_ptr_begin(), top_down_ptr_end());
+    }
+
     using bottom_up_ptr_iterator = decltype(PerPtrBottomUp)::iterator;
     using const_bottom_up_ptr_iterator =
         decltype(PerPtrBottomUp)::const_iterator;
@@ -235,6 +244,10 @@ namespace {
     }
     bool hasBottomUpPtrs() const {
       return !PerPtrBottomUp.empty();
+    }
+
+    unsigned bottom_up_ptr_list_size() const {
+      return std::distance(bottom_up_ptr_begin(), bottom_up_ptr_end());
     }
 
     /// Mark this block as being an entry block, which has one path from the
@@ -479,6 +492,10 @@ namespace {
 
     /// A flag indicating whether this optimization pass should run.
     bool Run;
+
+    /// A flag indicating whether the optimization that removes or moves
+    /// retain/release pairs should be performed.
+    bool DisableRetainReleasePairing = false;
 
     /// Flags which determine whether each of the interesting runtime functions
     /// is in fact used in the current function.
@@ -848,7 +865,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
 
     // For functions which can never be passed stack arguments, add
     // a tail keyword.
-    if (IsAlwaysTail(Class)) {
+    if (IsAlwaysTail(Class) && !cast<CallInst>(Inst)->isNoTailCall()) {
       Changed = true;
       LLVM_DEBUG(
           dbgs() << "Adding tail keyword to function since it can never be "
@@ -1272,6 +1289,13 @@ bool ObjCARCOpt::VisitBottomUp(BasicBlock *BB,
     LLVM_DEBUG(dbgs() << "    Visiting " << *Inst << "\n");
 
     NestingDetected |= VisitInstructionBottomUp(Inst, BB, Retains, MyStates);
+
+    // Bail out if the number of pointers being tracked becomes too large so
+    // that this pass can complete in a reasonable amount of time.
+    if (MyStates.bottom_up_ptr_list_size() > MaxPtrStates) {
+      DisableRetainReleasePairing = true;
+      return false;
+    }
   }
 
   // If there's a predecessor with an invoke, visit the invoke as if it were
@@ -1394,6 +1418,13 @@ ObjCARCOpt::VisitTopDown(BasicBlock *BB,
     LLVM_DEBUG(dbgs() << "    Visiting " << Inst << "\n");
 
     NestingDetected |= VisitInstructionTopDown(&Inst, Releases, MyStates);
+
+    // Bail out if the number of pointers being tracked becomes too large so
+    // that this pass can complete in a reasonable amount of time.
+    if (MyStates.top_down_ptr_list_size() > MaxPtrStates) {
+      DisableRetainReleasePairing = true;
+      return false;
+    }
   }
 
   LLVM_DEBUG(dbgs() << "\nState Before Checking for CFG Hazards:\n"
@@ -1500,13 +1531,19 @@ bool ObjCARCOpt::Visit(Function &F,
 
   // Use reverse-postorder on the reverse CFG for bottom-up.
   bool BottomUpNestingDetected = false;
-  for (BasicBlock *BB : llvm::reverse(ReverseCFGPostOrder))
+  for (BasicBlock *BB : llvm::reverse(ReverseCFGPostOrder)) {
     BottomUpNestingDetected |= VisitBottomUp(BB, BBStates, Retains);
+    if (DisableRetainReleasePairing)
+      return false;
+  }
 
   // Use reverse-postorder for top-down.
   bool TopDownNestingDetected = false;
-  for (BasicBlock *BB : llvm::reverse(PostOrder))
+  for (BasicBlock *BB : llvm::reverse(PostOrder)) {
     TopDownNestingDetected |= VisitTopDown(BB, BBStates, Releases);
+    if (DisableRetainReleasePairing)
+      return false;
+  }
 
   return TopDownNestingDetected && BottomUpNestingDetected;
 }
@@ -2001,6 +2038,9 @@ bool ObjCARCOpt::OptimizeSequences(Function &F) {
 
   // Analyze the CFG of the function, and all instructions.
   bool NestingDetected = Visit(F, BBStates, Retains, Releases);
+
+  if (DisableRetainReleasePairing)
+    return false;
 
   // Transform.
   bool AnyPairsCompletelyEliminated = PerformCodePlacement(BBStates, Retains,

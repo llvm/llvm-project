@@ -68,8 +68,18 @@ export function activate(context: vscode.ExtensionContext) {
     }
     const serverOptions: vscodelc.ServerOptions = clangd;
 
+    // Note that CUDA ('.cu') files are special. When opening files of all other
+    // extensions, VSCode would load clangd automatically. This is achieved by
+    // having a corresponding 'onLanguage:...' activation event in package.json.
+    // However, VSCode does not have CUDA as a supported language yet, so we
+    // cannot add a corresponding activationEvent for CUDA files and clangd will
+    // *not* load itself automatically on '.cu' files. When any of the files
+    // with other extensions are open, clangd will load itself and will also
+    // work on '.cu' files.
     const filePattern: string = '**/*.{' +
-        ['cpp', 'c', 'cc', 'cxx', 'c++', 'm', 'mm', 'h', 'hh', 'hpp', 'hxx', 'inc'].join() + '}';
+        ['cpp', 'c', 'cc', 'cu', 'cxx', 'c++', 'm', 'mm',
+            'h', 'hh', 'hpp', 'hxx', 'inc'].join()
+        + '}';
     const clientOptions: vscodelc.LanguageClientOptions = {
         // Register the server for C/C++ files
         documentSelector: [{ scheme: 'file', pattern: filePattern }],
@@ -92,27 +102,27 @@ export function activate(context: vscode.ExtensionContext) {
         revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
     };
 
-  const clangdClient = new vscodelc.LanguageClient('Clang Language Server', serverOptions, clientOptions);
-  console.log('Clang Language Server is now active!');
-  context.subscriptions.push(clangdClient.start());
-  context.subscriptions.push(vscode.commands.registerCommand(
-      'clangd-vscode.switchheadersource', async () => {
-        const uri =
-            vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
-        if (!uri) {
-          return;
-        }
-        const docIdentifier =
-            vscodelc.TextDocumentIdentifier.create(uri.toString());
-        const sourceUri = await clangdClient.sendRequest(
-            SwitchSourceHeaderRequest.type, docIdentifier);
-        if (!sourceUri) {
-          return;
-        }
-        const doc = await vscode.workspace.openTextDocument(
-            vscode.Uri.parse(sourceUri));
-        vscode.window.showTextDocument(doc);
-      }));
+    const clangdClient = new vscodelc.LanguageClient('Clang Language Server',serverOptions, clientOptions);
+    console.log('Clang Language Server is now active!');
+    context.subscriptions.push(clangdClient.start());
+    context.subscriptions.push(vscode.commands.registerCommand(
+        'clangd-vscode.switchheadersource', async () => {
+            const uri =
+                vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
+            if (!uri) {
+                return;
+            }
+            const docIdentifier =
+                vscodelc.TextDocumentIdentifier.create(uri.toString());
+            const sourceUri = await clangdClient.sendRequest(
+                SwitchSourceHeaderRequest.type, docIdentifier);
+            if (!sourceUri) {
+                return;
+            }
+            const doc = await vscode.workspace.openTextDocument(
+                vscode.Uri.parse(sourceUri));
+            vscode.window.showTextDocument(doc);
+        }));
     const status = new FileStatus();
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
         status.updateStatus();
@@ -129,4 +139,8 @@ export function activate(context: vscode.ExtensionContext) {
                 status.clear();
             }
         })
+    // An empty place holder for the activate command, otherwise we'll get an
+    // "command is not registered" error.
+    context.subscriptions.push(vscode.commands.registerCommand(
+            'clangd-vscode.activate', async () => {}));
 }

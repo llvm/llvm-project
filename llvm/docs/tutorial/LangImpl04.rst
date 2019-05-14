@@ -94,6 +94,14 @@ use, in the form of "passes".
 LLVM Optimization Passes
 ========================
 
+.. warning::
+
+   Due to the transition to the new PassManager infrastructure this tutorial
+   is based on ``llvm::legacy::FunctionPassManager`` which can be found in
+   `LegacyPassManager.h <http://llvm.org/doxygen/classllvm_1_1legacy_1_1FunctionPassManager.html>`_.
+   For the purpose of the this tutorial the above should be used until
+   the pass manager transition is complete.
+
 LLVM provides many optimization passes, which do many different sorts of
 things and have different tradeoffs. Unlike other systems, LLVM doesn't
 hold to the mistaken notion that one set of optimizations is right for

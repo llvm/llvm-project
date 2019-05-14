@@ -4,7 +4,7 @@
 ; format profile.
 ; It is expected to fail on certain architectures as gcc profile reader does
 ; not work.
-; XFAIL: powerpc64-, s390x, mips-, mips64-, sparc
+; XFAIL: host-byteorder-big-endian
 
 define void @test(void ()*) !dbg !3 {
   %2 = alloca void ()*

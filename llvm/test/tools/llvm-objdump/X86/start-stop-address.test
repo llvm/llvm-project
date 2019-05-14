@@ -4,6 +4,7 @@
 // RUN: llvm-objdump -d %t.out --start-address=0x40 --stop-address=0x47 | FileCheck %s --check-prefix "CROSSDATA"
 
 // CHECK:              Disassembly of section .anothertext:
+// CHECK-EMPTY:
 // CHECK-NEXT:         main:
 // CHECK-NEXT:         18:	48 8d 04 25 a8 00 00 00 	leaq	168, %rax
 // CHECK-NEXT:         20:	c7 45 fc 00 00 00 00 	movl	$0, -4(%rbp)
@@ -12,10 +13,13 @@
 // CHECK-NOT:          2f:
 
 // CROSSSECTION:       Disassembly of section .text:
+// CROSSSECTION-EMPTY:
 // CROSSSECTION-NEXT:  foo:
 // CROSSSECTION-NEXT:  c:	c3 	retq
 // CROSSSECTION-NEXT:  d:	0f 1f 00 	nopl	(%rax)
+// CROSSSECTION-EMPTY:
 // CROSSSECTION-NEXT:  Disassembly of section .anothertext:
+// CROSSSECTION-EMPTY:
 // CROSSSECTION-NEXT:  main:
 // CROSSSECTION-NEXT:  10:	55 	pushq	%rbp
 // CROSSSECTION-NOT:   11:

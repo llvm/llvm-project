@@ -36,17 +36,10 @@ define <4 x float> @signbits_sext_v4i64_sitofp_v4f32(i8 signext %a0, i16 signext
 ;
 ; X64-LABEL: signbits_sext_v4i64_sitofp_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movslq %esi, %rsi
-; X64-NEXT:    movslq %edx, %rdx
-; X64-NEXT:    movslq %ecx, %rcx
-; X64-NEXT:    vmovq %rcx, %xmm0
-; X64-NEXT:    vmovq %rdx, %xmm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X64-NEXT:    vmovq %rsi, %xmm1
-; X64-NEXT:    vmovq %rax, %xmm2
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
+; X64-NEXT:    vmovd %edi, %xmm0
+; X64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = sext i8 %a0 to i64
@@ -144,9 +137,9 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shrdl $30, %ecx, %eax
+; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    sarl $30, %ecx
+; X32-NEXT:    shll $2, %eax
 ; X32-NEXT:    vmovd %eax, %xmm0
 ; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; X32-NEXT:    vpsrlq $3, %xmm0, %xmm0
@@ -248,8 +241,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,8]
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    vmovq %rax, %xmm1
+; X64-NEXT:    vmovd %edi, %xmm1
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0

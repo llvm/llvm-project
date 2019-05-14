@@ -28,22 +28,22 @@ Sections:
     AddressAlign:    0x0000000000000010
     Content:         "00000000"
 Symbols:
-   Global:
-     - Name:     foo
-       Type:     STT_FUNC
-       Section:  .text
-       Value:    0x1004
-     - Name:     bar
-       Type:     STT_OBJECT
-       Section:  .text
-       Value:    0x1008
-   Local:
-     - Name:     lfoo
-       Type:     STT_FUNC
-       Section:  .text
-       Value:    0x1004
-     - Name:     lbar
-       Type:     STT_OBJECT
-       Section:  .text
-       Value:    0x1008
+  - Name:     lfoo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1004
+  - Name:     lbar
+    Type:     STT_OBJECT
+    Section:  .text
+    Value:    0x1008
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1004
+    Binding:  STB_GLOBAL
+  - Name:     bar
+    Type:     STT_OBJECT
+    Section:  .text
+    Value:    0x1008
+    Binding:  STB_GLOBAL
 

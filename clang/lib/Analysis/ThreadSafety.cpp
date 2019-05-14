@@ -1335,8 +1335,8 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
   // Generic lock removal doesn't care about lock kind mismatches, but
   // otherwise diagnose when the lock kinds are mismatched.
   if (ReceivedKind != LK_Generic && LDat->kind() != ReceivedKind) {
-    Handler.handleIncorrectUnlockKind(DiagKind, Cp.toString(),
-                                      LDat->kind(), ReceivedKind, UnlockLoc);
+    Handler.handleIncorrectUnlockKind(DiagKind, Cp.toString(), LDat->kind(),
+                                      ReceivedKind, LDat->loc(), UnlockLoc);
   }
 
   LDat->handleUnlock(FSet, FactMan, Cp, UnlockLoc, FullyRemove, Handler,

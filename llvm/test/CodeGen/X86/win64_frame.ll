@@ -29,9 +29,9 @@ define void @f2(i32 %p, ...) "no-frame-pointer-elim"="true" {
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    .seh_setframe 5, 0
 ; ALL-NEXT:    .seh_endprologue
-; ALL-NEXT:    movq %r9, 48(%rbp)
-; ALL-NEXT:    movq %r8, 40(%rbp)
 ; ALL-NEXT:    movq %rdx, 32(%rbp)
+; ALL-NEXT:    movq %r8, 40(%rbp)
+; ALL-NEXT:    movq %r9, 48(%rbp)
 ; ALL-NEXT:    leaq 32(%rbp), %rax
 ; ALL-NEXT:    movq %rax, (%rbp)
 ; ALL-NEXT:    addq $8, %rsp

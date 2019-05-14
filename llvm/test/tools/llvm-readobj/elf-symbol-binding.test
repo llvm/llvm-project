@@ -52,9 +52,8 @@ Sections:
     # Symbol with st_name = 19, binding = 0xf
     Content: "0000000000000000000000000000000001000000000000000000000030000000090000000000000000000000a0000000100000000000000000000000b0000000130000000000000000000000f0000000"
 Symbols:
-  Local:
-    - Name: local
-  Global:
-    - Name: global
-  Weak:
-    - Name: weak
+  - Name:    local
+  - Name:    global
+    Binding: STB_GLOBAL
+  - Name:    weak
+    Binding: STB_WEAK

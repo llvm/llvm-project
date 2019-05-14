@@ -1,6 +1,5 @@
 ; RUN: FileCheck -DVALUE=10 -input-file %s %s
 ; RUN: not FileCheck -DVALUE=20 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRMSG
-;
 ; RUN: not FileCheck -DVALUE=10 -check-prefix NOT -input-file %s %s 2>&1 | FileCheck %s -check-prefix NOT-ERRMSG
 ; RUN: FileCheck -DVALUE=20 -check-prefix NOT -input-file %s %s
 ; RUN: not FileCheck -DVALUE10 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIEQ1
@@ -9,6 +8,9 @@
 ; RUN: not FileCheck -D= -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIVAR2
 ; RUN: FileCheck -DVALUE= -check-prefix EMPTY -input-file %s %s 2>&1
 
+; RUN: not FileCheck -D10VALUE=10 -input-file %s %s 2>&1 | FileCheck %s --strict-whitespace -check-prefix ERRCLIFMT
+; RUN: not FileCheck -D@VALUE=10 -input-file %s %s 2>&1 | FileCheck %s --strict-whitespace -check-prefix ERRCLIPSEUDO
+; RUN: not FileCheck -D'VALUE + 2=10' -input-file %s %s 2>&1 | FileCheck %s --strict-whitespace -check-prefix ERRCLITRAIL
 Value = 10
 ; CHECK: Value = [[VALUE]]
 ; NOT-NOT: Value = [[VALUE]]
@@ -32,3 +34,15 @@ Value = 10
 
 Empty value = @@
 ; EMPTY: Empty value = @[[VALUE]]@
+
+; ERRCLIFMT: Global defines:1:19: error: invalid name for variable definition '10VALUE'
+; ERRCLIFMT-NEXT: Global define #1: 10VALUE=10
+; ERRCLIFMT-NEXT: {{^                  \^$}}
+
+; ERRCLIPSEUDO: Global defines:1:19: error: invalid name for variable definition '@VALUE'
+; ERRCLIPSEUDO-NEXT: Global define #1: @VALUE=10
+; ERRCLIPSEUDO-NEXT: {{^                  \^$}}
+
+; ERRCLITRAIL: Global defines:1:19: error: invalid name for variable definition 'VALUE + 2'
+; ERRCLITRAIL-NEXT: Global define #1: VALUE + 2=10
+; ERRCLITRAIL-NEXT: {{^                  \^$}}

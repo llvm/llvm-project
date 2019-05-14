@@ -93,7 +93,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_copy_condense
@@ -176,7 +176,7 @@ body:             |
 # GCN-NEXT: %3:vgpr_32 = COPY %0
 # GCN-NEXT: %0:vgpr_32 = COPY %1
 # GCN-NEXT: %1:vgpr_32 = COPY %2
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 
 ---
 name:            swap_virt_read_x
@@ -193,7 +193,7 @@ body:             |
     %3 = COPY %0
     %0 = COPY %1
     %1 = COPY %2
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_read_t_twice
@@ -203,7 +203,7 @@ body:             |
 # GCN-NEXT: %2:vgpr_32 = COPY %0
 # GCN-NEXT: %3:vgpr_32 = COPY %2
 # GCN-NEXT: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 
 ---
 name:            swap_virt_read_t_twice
@@ -220,7 +220,7 @@ body:             |
     %3 = COPY %2
     %0 = COPY %1
     %1 = COPY %2
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_clobber_y
@@ -231,7 +231,7 @@ body:             |
 # GCN-NEXT: %0:vgpr_32 = COPY %1
 # GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
 # GCN-NEXT: %1:vgpr_32 = COPY %2
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 
 ---
 name:            swap_virt_clobber_y
@@ -247,7 +247,7 @@ body:             |
     %0 = COPY %1
     %1 = IMPLICIT_DEF
     %1 = COPY %2
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_clobber_x1
@@ -258,7 +258,7 @@ body:             |
 # GCN-NEXT: %0:vgpr_32 = COPY %1
 # GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
 # GCN-NEXT: %1:vgpr_32 = COPY %2
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 
 ---
 name:            swap_virt_clobber_x1
@@ -274,7 +274,7 @@ body:             |
     %0 = COPY %1
     %0 = IMPLICIT_DEF
     %1 = COPY %2
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_clobber_x2
@@ -285,7 +285,7 @@ body:             |
 # GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
 # GCN-NEXT: %0:vgpr_32 = COPY %1
 # GCN-NEXT: %1:vgpr_32 = COPY %2
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 
 ---
 name:            swap_virt_clobber_x2
@@ -301,7 +301,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %0 = COPY %1
     %1 = COPY %2
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_clobber_t
@@ -312,7 +312,7 @@ body:             |
 # GCN-NEXT: %0:vgpr_32 = COPY %1
 # GCN-NEXT: %2:vgpr_32 = IMPLICIT_DEF
 # GCN-NEXT: %1:vgpr_32 = COPY %2
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 
 ---
 name:            swap_virt_clobber_t
@@ -328,7 +328,7 @@ body:             |
     %0 = COPY %1
     %2 = IMPLICIT_DEF
     %1 = COPY %2
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_copy_subreg_overlap_x_full
@@ -453,7 +453,7 @@ body:             |
 # GCN-NEXT: %1:vreg_128 = IMPLICIT_DEF
 # GCN-NEXT: %0.sub0:vreg_128, %1.sub0:vreg_128 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 # GCN-NEXT: %0.sub1:vreg_128, %1.sub1:vreg_128 = V_SWAP_B32 %1.sub1, %0.sub1, implicit $exec
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_b128_sub0_1
 registers:
@@ -467,7 +467,7 @@ body:             |
     %2.sub0_sub1 = COPY %0.sub0_sub1
     %0.sub0_sub1 = COPY %1.sub0_sub1
     %1.sub0_sub1 = COPY %2.sub0_sub1
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: swap_virt_b128_sub2_3
@@ -476,7 +476,7 @@ body:             |
 # GCN-NEXT: %1:vreg_128 = IMPLICIT_DEF
 # GCN-NEXT: %0.sub2:vreg_128, %1.sub2:vreg_128 = V_SWAP_B32 %1.sub2, %0.sub2, implicit $exec
 # GCN-NEXT: %0.sub3:vreg_128, %1.sub3:vreg_128 = V_SWAP_B32 %1.sub3, %0.sub3, implicit $exec
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_b128_sub2_3
 registers:
@@ -490,7 +490,7 @@ body:             |
     %2.sub2_sub3 = COPY %0.sub2_sub3
     %0.sub2_sub3 = COPY %1.sub2_sub3
     %1.sub2_sub3 = COPY %2.sub2_sub3
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 
@@ -544,7 +544,7 @@ body:             |
 # GCN-NEXT: %0.sub0:vreg_64 = COPY %1.sub0, implicit %0
 # GCN-NEXT: %0.sub1:vreg_64 = COPY %1.sub1
 # GCN-NEXT: %1.sub0:vreg_64 = COPY %2.sub0
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_copy_subreg_impuse_x
 registers:
@@ -560,5 +560,5 @@ body:             |
     %0.sub0 = COPY %1.sub0, implicit %0
     %0.sub1 = COPY %1.sub1
     %1.sub0 = COPY %2.sub0
-    S_ENDPGM
+    S_ENDPGM 0
 ...

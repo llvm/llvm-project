@@ -14,25 +14,29 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std;
 
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::Clear()
-//----------------------------------------------------------------------
 void DWARFAbbreviationDeclarationSet::Clear() {
   m_idx_offset = 0;
   m_decls.clear();
 }
 
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::Extract()
-//----------------------------------------------------------------------
-bool DWARFAbbreviationDeclarationSet::Extract(const DWARFDataExtractor &data,
-                                              lldb::offset_t *offset_ptr) {
+llvm::Error
+DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
+                                         lldb::offset_t *offset_ptr) {
   const lldb::offset_t begin_offset = *offset_ptr;
   m_offset = begin_offset;
   Clear();
   DWARFAbbreviationDeclaration abbrevDeclaration;
   dw_uleb128_t prev_abbr_code = 0;
-  while (abbrevDeclaration.Extract(data, offset_ptr)) {
+  DWARFEnumState state = DWARFEnumState::MoreItems;
+  while (state == DWARFEnumState::MoreItems) {
+    llvm::Expected<DWARFEnumState> es =
+        abbrevDeclaration.extract(data, offset_ptr);
+    if (!es)
+      return es.takeError();
+
+    state = *es;
     m_decls.push_back(abbrevDeclaration);
     if (m_idx_offset == 0)
       m_idx_offset = abbrevDeclaration.Code();
@@ -43,21 +47,10 @@ bool DWARFAbbreviationDeclarationSet::Extract(const DWARFDataExtractor &data,
     }
     prev_abbr_code = abbrevDeclaration.Code();
   }
-  return begin_offset != *offset_ptr;
+  return llvm::ErrorSuccess();
 }
 
-//----------------------------------------------------------------------
-// DWARFAbbreviationDeclarationSet::Dump()
-//----------------------------------------------------------------------
-void DWARFAbbreviationDeclarationSet::Dump(Stream *s) const {
-  std::for_each(
-      m_decls.begin(), m_decls.end(),
-      bind2nd(std::mem_fun_ref(&DWARFAbbreviationDeclaration::Dump), s));
-}
-
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration()
-//----------------------------------------------------------------------
 const DWARFAbbreviationDeclaration *
 DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
     dw_uleb128_t abbrCode) const {
@@ -76,29 +69,8 @@ DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
   return NULL;
 }
 
-//----------------------------------------------------------------------
-// DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential()
-//
-// Append an abbreviation declaration with a sequential code for O(n) lookups.
-// Handy when creating an DWARFAbbreviationDeclarationSet.
-//----------------------------------------------------------------------
-dw_uleb128_t DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential(
-    const DWARFAbbreviationDeclaration &abbrevDecl) {
-  // Get the next abbreviation code based on our current array size
-  dw_uleb128_t code = m_decls.size() + 1;
 
-  // Push the new declaration on the back
-  m_decls.push_back(abbrevDecl);
-
-  // Update the code for this new declaration
-  m_decls.back().SetCode(code);
-
-  return code; // return the new abbreviation code!
-}
-
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::GetUnsupportedForms()
-//----------------------------------------------------------------------
 void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
     std::set<dw_form_t> &invalid_forms) const {
   for (const auto &abbr_decl : m_decls) {
@@ -111,13 +83,11 @@ void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
   }
 }
 
-//----------------------------------------------------------------------
 // Encode
 //
 // Encode the abbreviation table onto the end of the buffer provided into a
 // byte representation as would be found in a ".debug_abbrev" debug information
 // section.
-//----------------------------------------------------------------------
 // void
 // DWARFAbbreviationDeclarationSet::Encode(BinaryStreamBuf& debug_abbrev_buf)
 // const
@@ -129,49 +99,29 @@ void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
 //  debug_abbrev_buf.Append8(0);
 //}
 
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev constructor
-//----------------------------------------------------------------------
 DWARFDebugAbbrev::DWARFDebugAbbrev()
     : m_abbrevCollMap(), m_prev_abbr_offset_pos(m_abbrevCollMap.end()) {}
 
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev::Parse()
-//----------------------------------------------------------------------
-void DWARFDebugAbbrev::Parse(const DWARFDataExtractor &data) {
+llvm::Error DWARFDebugAbbrev::parse(const DWARFDataExtractor &data) {
   lldb::offset_t offset = 0;
 
   while (data.ValidOffset(offset)) {
     uint32_t initial_cu_offset = offset;
     DWARFAbbreviationDeclarationSet abbrevDeclSet;
 
-    if (abbrevDeclSet.Extract(data, &offset))
-      m_abbrevCollMap[initial_cu_offset] = abbrevDeclSet;
-    else
-      break;
+    llvm::Error error = abbrevDeclSet.extract(data, &offset);
+    if (error)
+      return error;
+
+    m_abbrevCollMap[initial_cu_offset] = abbrevDeclSet;
   }
   m_prev_abbr_offset_pos = m_abbrevCollMap.end();
+  return llvm::ErrorSuccess();
 }
 
-//----------------------------------------------------------------------
-// DWARFDebugAbbrev::Dump()
-//----------------------------------------------------------------------
-void DWARFDebugAbbrev::Dump(Stream *s) const {
-  if (m_abbrevCollMap.empty()) {
-    s->PutCString("< EMPTY >\n");
-    return;
-  }
-
-  DWARFAbbreviationDeclarationCollMapConstIter pos;
-  for (pos = m_abbrevCollMap.begin(); pos != m_abbrevCollMap.end(); ++pos) {
-    s->Printf("Abbrev table for offset: 0x%8.8x\n", pos->first);
-    pos->second.Dump(s);
-  }
-}
-
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev::GetAbbreviationDeclarationSet()
-//----------------------------------------------------------------------
 const DWARFAbbreviationDeclarationSet *
 DWARFDebugAbbrev::GetAbbreviationDeclarationSet(
     dw_offset_t cu_abbr_offset) const {
@@ -190,9 +140,7 @@ DWARFDebugAbbrev::GetAbbreviationDeclarationSet(
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev::GetUnsupportedForms()
-//----------------------------------------------------------------------
 void DWARFDebugAbbrev::GetUnsupportedForms(
     std::set<dw_form_t> &invalid_forms) const {
   for (const auto &pair : m_abbrevCollMap)

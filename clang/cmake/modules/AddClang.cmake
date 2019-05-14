@@ -89,7 +89,7 @@ macro(add_clang_library name)
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
 
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libclang")
-
+      set(export_to_clangtargets)
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
           "clang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
           NOT LLVM_DISTRIBUTION_COMPONENTS)
@@ -137,6 +137,7 @@ macro(add_clang_tool name)
   add_dependencies(${name} clang-resource-headers)
 
   if (CLANG_BUILD_TOOLS)
+    set(export_to_clangtargets)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
         NOT LLVM_DISTRIBUTION_COMPONENTS)
       set(export_to_clangtargets EXPORT ClangTargets)

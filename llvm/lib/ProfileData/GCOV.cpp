@@ -396,10 +396,10 @@ void GCOVBlock::addCount(size_t DstEdgeNo, uint64_t N) {
 /// sortDstEdges - Sort destination edges by block number, nop if already
 /// sorted. This is required for printing branch info in the correct order.
 void GCOVBlock::sortDstEdges() {
-  if (!DstEdgesAreSorted) {
-    SortDstEdgesFunctor SortEdges;
-    std::stable_sort(DstEdges.begin(), DstEdges.end(), SortEdges);
-  }
+  if (!DstEdgesAreSorted)
+    llvm::stable_sort(DstEdges, [](const GCOVEdge *E1, const GCOVEdge *E2) {
+      return E1->Dst.Number < E2->Dst.Number;
+    });
 }
 
 /// collectLineCounts - Collect line counts. This must be used after

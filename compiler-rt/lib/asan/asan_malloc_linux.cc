@@ -165,6 +165,14 @@ INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   return asan_realloc(ptr, size, &stack);
 }
 
+#if SANITIZER_INTERCEPT_REALLOCARRAY
+INTERCEPTOR(void*, reallocarray, void *ptr, uptr nmemb, uptr size) {
+  ENSURE_ASAN_INITED();
+  GET_STACK_TRACE_MALLOC;
+  return asan_reallocarray(ptr, nmemb, size, &stack);
+}
+#endif  // SANITIZER_INTERCEPT_REALLOCARRAY
+
 #if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void*, memalign, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;

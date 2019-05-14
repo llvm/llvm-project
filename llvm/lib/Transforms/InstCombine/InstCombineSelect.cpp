@@ -622,11 +622,7 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
   return Builder.CreateOr(V, Y);
 }
 
-/// Transform patterns such as: (a > b) ? a - b : 0
-/// into: ((a > b) ? a : b) - b)
-/// This produces a canonical max pattern that is more easily recognized by the
-/// backend and converted into saturated subtraction instructions if those
-/// exist.
+/// Transform patterns such as (a > b) ? a - b : 0 into usub.sat(a, b).
 /// There are 8 commuted/swapped variants of this pattern.
 /// TODO: Also support a - UMIN(a,b) patterns.
 static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
@@ -668,11 +664,12 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   if (!TrueVal->hasOneUse())
     return nullptr;
 
-  // All checks passed, convert to canonical unsigned saturated subtraction
-  // form: sub(max()).
-  // (a > b) ? a - b : 0 -> ((a > b) ? a : b) - b)
-  Value *Max = Builder.CreateSelect(Builder.CreateICmp(Pred, A, B), A, B);
-  return IsNegative ? Builder.CreateSub(B, Max) : Builder.CreateSub(Max, B);
+  // (a > b) ? a - b : 0 -> usub.sat(a, b)
+  // (a > b) ? b - a : 0 -> -usub.sat(a, b)
+  Value *Result = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, B);
+  if (IsNegative)
+    Result = Builder.CreateNeg(Result);
+  return Result;
 }
 
 static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
@@ -689,15 +686,16 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   if (Pred == ICmpInst::ICMP_ULT &&
       match(TVal, m_Add(m_Value(X), m_APInt(C))) && X == Cmp0 &&
       match(FVal, m_AllOnes()) && match(Cmp1, m_APInt(CmpC)) && *CmpC == ~*C) {
-    // Commute compare predicate and select operands:
-    // (X u< ~C) ? (X + C) : -1 --> (X u> ~C) ? -1 : (X + C)
-    Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, X, Cmp1);
-    return Builder.CreateSelect(NewCmp, FVal, TVal);
+    // (X u< ~C) ? (X + C) : -1 --> uadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(
+        Intrinsic::uadd_sat, X, ConstantInt::get(X->getType(), *C));
   }
 
   // Match unsigned saturated add of 2 variables with an unnecessary 'not'.
   // There are 8 commuted variants.
-  // Canonicalize -1 (saturated result) to true value of the select.
+  // Canonicalize -1 (saturated result) to true value of the select. Just
+  // swapping the compare operands is legal, because the selected value is the
+  // same in case of equality, so we can interchange u< and u<=.
   if (match(FVal, m_AllOnes())) {
     std::swap(TVal, FVal);
     std::swap(Cmp0, Cmp1);
@@ -717,24 +715,19 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   Value *Y;
   if (match(Cmp0, m_Not(m_Value(X))) &&
       match(FVal, m_c_Add(m_Specific(X), m_Value(Y))) && Y == Cmp1) {
-    // Change the comparison to use the sum (false value of the select). That is
-    // a canonical pattern match form for uadd.with.overflow and eliminates a
-    // use of the 'not' op:
-    // (~X u< Y) ? -1 : (X + Y) --> ((X + Y) u< Y) ? -1 : (X + Y)
-    // (~X u< Y) ? -1 : (Y + X) --> ((Y + X) u< Y) ? -1 : (Y + X)
-    Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, FVal, Y);
-    return Builder.CreateSelect(NewCmp, TVal, FVal);
+    // (~X u< Y) ? -1 : (X + Y) --> uadd.sat(X, Y)
+    // (~X u< Y) ? -1 : (Y + X) --> uadd.sat(X, Y)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, X, Y);
   }
   // The 'not' op may be included in the sum but not the compare.
   X = Cmp0;
   Y = Cmp1;
   if (match(FVal, m_c_Add(m_Not(m_Specific(X)), m_Specific(Y)))) {
-    // Change the comparison to use the sum (false value of the select). That is
-    // a canonical pattern match form for uadd.with.overflow:
-    // (X u< Y) ? -1 : (~X + Y) --> ((~X + Y) u< Y) ? -1 : (~X + Y)
-    // (X u< Y) ? -1 : (Y + ~X) --> ((Y + ~X) u< Y) ? -1 : (Y + ~X)
-    Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, FVal, Y);
-    return Builder.CreateSelect(NewCmp, TVal, FVal);
+    // (X u< Y) ? -1 : (~X + Y) --> uadd.sat(~X, Y)
+    // (X u< Y) ? -1 : (Y + ~X) --> uadd.sat(Y, ~X)
+    BinaryOperator *BO = cast<BinaryOperator>(FVal);
+    return Builder.CreateBinaryIntrinsic(
+        Intrinsic::uadd_sat, BO->getOperand(0), BO->getOperand(1));
   }
 
   return nullptr;

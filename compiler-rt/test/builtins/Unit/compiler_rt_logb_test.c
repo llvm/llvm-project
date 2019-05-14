@@ -36,6 +36,10 @@ double cases[] = {
 };
 
 int main() {
+  // Do not the run the compiler-rt logb test case if using GLIBC version
+  // < 2.23. Older versions might not compute to the same value as the
+  // compiler-rt value.
+#if !defined(__GLIBC__) || (defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 23))
   const unsigned N = sizeof(cases) / sizeof(cases[0]);
   unsigned i;
   for (i = 0; i < N; ++i) {
@@ -57,6 +61,9 @@ int main() {
     if (test__compiler_rt_logb(fromRep(signBit ^ x))) return 1;
     x >>= 1;
   }
+#else
+  printf("skipped\n");
+#endif
 
   return 0;
 }

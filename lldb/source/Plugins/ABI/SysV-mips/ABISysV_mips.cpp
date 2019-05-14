@@ -549,9 +549,7 @@ ABISysV_mips::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABISysV_mips::GetRedZoneSize() const { return 0; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_mips::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -1062,9 +1060,7 @@ lldb_private::ConstString ABISysV_mips::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_mips::GetPluginName() {
   return GetPluginNameStatic();

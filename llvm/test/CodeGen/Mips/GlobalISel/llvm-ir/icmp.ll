@@ -4,11 +4,10 @@
 define i32 @eq(i32 %a, i32 %b){
 ; MIPS32-LABEL: eq:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    xor $4, $4, $5
-; MIPS32-NEXT:    sltiu $4, $4, 1
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    xor $1, $4, $5
+; MIPS32-NEXT:    sltiu $1, $1, 1
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -20,11 +19,10 @@ entry:
 define i32 @ne(i32 %a, i32 %b) {
 ; MIPS32-LABEL: ne:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    xor $4, $4, $5
-; MIPS32-NEXT:    sltu $4, $zero, $4
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    xor $1, $4, $5
+; MIPS32-NEXT:    sltu $1, $zero, $1
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -36,10 +34,9 @@ entry:
 define i32 @sgt(i32 %a, i32 %b) {
 ; MIPS32-LABEL: sgt:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $4, $5, $4
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    slt $1, $5, $4
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -51,11 +48,10 @@ entry:
 define i32 @sge(i32 %a, i32 %b) {
 ; MIPS32-LABEL: sge:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $4, $4, $5
-; MIPS32-NEXT:    xori $4, $4, 1
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    slt $1, $4, $5
+; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -67,10 +63,9 @@ entry:
 define i32 @slt(i32 %a, i32 %b) {
 ; MIPS32-LABEL: slt:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $4, $4, $5
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    slt $1, $4, $5
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -82,11 +77,10 @@ entry:
 define i32 @sle(i32 %a, i32 %b) {
 ; MIPS32-LABEL: sle:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $4, $5, $4
-; MIPS32-NEXT:    xori $4, $4, 1
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    slt $1, $5, $4
+; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -98,10 +92,9 @@ entry:
 define i32 @ugt(i32 %a, i32 %b) {
 ; MIPS32-LABEL: ugt:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $4, $5, $4
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    sltu $1, $5, $4
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -113,11 +106,10 @@ entry:
 define i32 @uge(i32 %a, i32 %b) {
 ; MIPS32-LABEL: uge:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $4, $4, $5
-; MIPS32-NEXT:    xori $4, $4, 1
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    sltu $1, $4, $5
+; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -129,10 +121,9 @@ entry:
 define i32 @ult(i32 %a, i32 %b) {
 ; MIPS32-LABEL: ult:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $4, $4, $5
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    sltu $1, $4, $5
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -144,11 +135,10 @@ entry:
 define i32 @ule(i32 %a, i32 %b) {
 ; MIPS32-LABEL: ule:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $4, $5, $4
-; MIPS32-NEXT:    xori $4, $4, 1
-; MIPS32-NEXT:    lui $5, 0
-; MIPS32-NEXT:    ori $5, $5, 1
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    sltu $1, $5, $4
+; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

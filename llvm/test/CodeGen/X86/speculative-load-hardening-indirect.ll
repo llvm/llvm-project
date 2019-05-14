@@ -53,7 +53,7 @@ define i32 @test_indirect_call(i32 ()** %ptr) nounwind {
 ; X64-PIC-NEXT:    movq %rsp, %rcx
 ; X64-PIC-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
 ; X64-PIC-NEXT:    sarq $63, %rcx
-; X64-PIC-NEXT:    leaq .Lslh_ret_addr0(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rbx, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -134,7 +134,7 @@ define i32 @test_indirect_call_global() nounwind {
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %rbx
 ; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    movq global_fnptr(%rip), %rcx
+; X64-NEXT:    movq {{.*}}(%rip), %rcx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
@@ -156,7 +156,7 @@ define i32 @test_indirect_call_global() nounwind {
 ; X64-PIC-NEXT:    movq %rsp, %rax
 ; X64-PIC-NEXT:    movq $-1, %rbx
 ; X64-PIC-NEXT:    sarq $63, %rax
-; X64-PIC-NEXT:    movq global_fnptr@GOTPCREL(%rip), %rcx
+; X64-PIC-NEXT:    movq global_fnptr@{{.*}}(%rip), %rcx
 ; X64-PIC-NEXT:    movq (%rcx), %rcx
 ; X64-PIC-NEXT:    orq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rax
@@ -166,7 +166,7 @@ define i32 @test_indirect_call_global() nounwind {
 ; X64-PIC-NEXT:    movq %rsp, %rcx
 ; X64-PIC-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
 ; X64-PIC-NEXT:    sarq $63, %rcx
-; X64-PIC-NEXT:    leaq .Lslh_ret_addr1(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rbx, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -180,7 +180,7 @@ define i32 @test_indirect_call_global() nounwind {
 ; X64-RETPOLINE-NEXT:    movq %rsp, %rax
 ; X64-RETPOLINE-NEXT:    movq $-1, %rbx
 ; X64-RETPOLINE-NEXT:    sarq $63, %rax
-; X64-RETPOLINE-NEXT:    movq global_fnptr(%rip), %r11
+; X64-RETPOLINE-NEXT:    movq {{.*}}(%rip), %r11
 ; X64-RETPOLINE-NEXT:    shlq $47, %rax
 ; X64-RETPOLINE-NEXT:    orq %rax, %rsp
 ; X64-RETPOLINE-NEXT:    callq __llvm_retpoline_r11
@@ -206,7 +206,7 @@ define i32 @test_indirect_tail_call_global() nounwind {
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %rcx
 ; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    movq global_fnptr(%rip), %rcx
+; X64-NEXT:    movq {{.*}}(%rip), %rcx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
@@ -217,7 +217,7 @@ define i32 @test_indirect_tail_call_global() nounwind {
 ; X64-PIC-NEXT:    movq %rsp, %rax
 ; X64-PIC-NEXT:    movq $-1, %rcx
 ; X64-PIC-NEXT:    sarq $63, %rax
-; X64-PIC-NEXT:    movq global_fnptr@GOTPCREL(%rip), %rcx
+; X64-PIC-NEXT:    movq global_fnptr@{{.*}}(%rip), %rcx
 ; X64-PIC-NEXT:    movq (%rcx), %rcx
 ; X64-PIC-NEXT:    orq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rax
@@ -229,7 +229,7 @@ define i32 @test_indirect_tail_call_global() nounwind {
 ; X64-RETPOLINE-NEXT:    movq %rsp, %rax
 ; X64-RETPOLINE-NEXT:    movq $-1, %rcx
 ; X64-RETPOLINE-NEXT:    sarq $63, %rax
-; X64-RETPOLINE-NEXT:    movq global_fnptr(%rip), %r11
+; X64-RETPOLINE-NEXT:    movq {{.*}}(%rip), %r11
 ; X64-RETPOLINE-NEXT:    shlq $47, %rax
 ; X64-RETPOLINE-NEXT:    orq %rax, %rsp
 ; X64-RETPOLINE-NEXT:    jmp __llvm_retpoline_r11 # TAILCALL
@@ -291,7 +291,7 @@ define i32 @test_indirectbr(i8** %ptr) nounwind {
 ; X64-PIC-NEXT:    jmpq *%rdx
 ; X64-PIC-NEXT:  .LBB4_1: # Block address taken
 ; X64-PIC-NEXT:    # %bb0
-; X64-PIC-NEXT:    leaq .LBB4_1(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -300,7 +300,7 @@ define i32 @test_indirectbr(i8** %ptr) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .LBB4_3: # Block address taken
 ; X64-PIC-NEXT:    # %bb2
-; X64-PIC-NEXT:    leaq .LBB4_3(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -309,7 +309,7 @@ define i32 @test_indirectbr(i8** %ptr) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .LBB4_4: # Block address taken
 ; X64-PIC-NEXT:    # %bb3
-; X64-PIC-NEXT:    leaq .LBB4_4(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -318,7 +318,7 @@ define i32 @test_indirectbr(i8** %ptr) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .LBB4_2: # Block address taken
 ; X64-PIC-NEXT:    # %bb1
-; X64-PIC-NEXT:    leaq .LBB4_2(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -394,13 +394,13 @@ define i32 @test_indirectbr_global(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    movq $-1, %rax
 ; X64-PIC-NEXT:    sarq $63, %rcx
 ; X64-PIC-NEXT:    movslq %edi, %rdx
-; X64-PIC-NEXT:    movq global_blockaddrs@GOTPCREL(%rip), %rsi
+; X64-PIC-NEXT:    movq global_blockaddrs@{{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    movq (%rsi,%rdx,8), %rdx
 ; X64-PIC-NEXT:    orq %rcx, %rdx
 ; X64-PIC-NEXT:    jmpq *%rdx
 ; X64-PIC-NEXT:  .Ltmp0: # Block address taken
 ; X64-PIC-NEXT:  .LBB5_1: # %bb0
-; X64-PIC-NEXT:    leaq .LBB5_1(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -409,7 +409,7 @@ define i32 @test_indirectbr_global(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .Ltmp1: # Block address taken
 ; X64-PIC-NEXT:  .LBB5_3: # %bb2
-; X64-PIC-NEXT:    leaq .LBB5_3(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -418,7 +418,7 @@ define i32 @test_indirectbr_global(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .Ltmp2: # Block address taken
 ; X64-PIC-NEXT:  .LBB5_4: # %bb3
-; X64-PIC-NEXT:    leaq .LBB5_4(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -427,7 +427,7 @@ define i32 @test_indirectbr_global(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .Ltmp3: # Block address taken
 ; X64-PIC-NEXT:  .LBB5_2: # %bb1
-; X64-PIC-NEXT:    leaq .LBB5_2(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -564,14 +564,14 @@ define i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-PIC-NEXT:  # %bb.1: # %entry
 ; X64-PIC-NEXT:    cmovaq %rax, %rcx
 ; X64-PIC-NEXT:    movl %edi, %edx
-; X64-PIC-NEXT:    leaq .LJTI6_0(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    movslq (%rsi,%rdx,4), %rdx
 ; X64-PIC-NEXT:    addq %rsi, %rdx
 ; X64-PIC-NEXT:    orq %rcx, %rdx
 ; X64-PIC-NEXT:    jmpq *%rdx
 ; X64-PIC-NEXT:  .LBB6_3: # Block address taken
 ; X64-PIC-NEXT:    # %bb1
-; X64-PIC-NEXT:    leaq .LBB6_3(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -586,7 +586,7 @@ define i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .LBB6_4: # Block address taken
 ; X64-PIC-NEXT:    # %bb2
-; X64-PIC-NEXT:    leaq .LBB6_4(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -595,7 +595,7 @@ define i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .LBB6_5: # Block address taken
 ; X64-PIC-NEXT:    # %bb3
-; X64-PIC-NEXT:    leaq .LBB6_5(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -604,7 +604,7 @@ define i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .LBB6_6: # Block address taken
 ; X64-PIC-NEXT:    # %bb5
-; X64-PIC-NEXT:    leaq .LBB6_6(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:    cmpq %rsi, %rdx
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
@@ -753,7 +753,7 @@ define i32 @test_switch_jumptable_fallthrough(i32 %idx, i32* %a.ptr, i32* %b.ptr
 ; X64-PIC-NEXT:    cmovaq %r10, %r9
 ; X64-PIC-NEXT:    xorl %eax, %eax
 ; X64-PIC-NEXT:    movl %edi, %esi
-; X64-PIC-NEXT:    leaq .LJTI7_0(%rip), %rdi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rdi
 ; X64-PIC-NEXT:    movslq (%rdi,%rsi,4), %rsi
 ; X64-PIC-NEXT:    addq %rdi, %rsi
 ; X64-PIC-NEXT:    orq %r9, %rsi
@@ -762,34 +762,34 @@ define i32 @test_switch_jumptable_fallthrough(i32 %idx, i32* %a.ptr, i32* %b.ptr
 ; X64-PIC-NEXT:    cmovbeq %r10, %r9
 ; X64-PIC-NEXT:    movl (%rsi), %eax
 ; X64-PIC-NEXT:    orl %r9d, %eax
-; X64-PIC-NEXT:    leaq .LBB7_3(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:  .LBB7_3: # Block address taken
 ; X64-PIC-NEXT:    # %bb1
-; X64-PIC-NEXT:    leaq .LBB7_3(%rip), %rdi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rdi
 ; X64-PIC-NEXT:    cmpq %rdi, %rsi
 ; X64-PIC-NEXT:    cmovneq %r10, %r9
 ; X64-PIC-NEXT:    addl (%rdx), %eax
 ; X64-PIC-NEXT:    orl %r9d, %eax
-; X64-PIC-NEXT:    leaq .LBB7_4(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:  .LBB7_4: # Block address taken
 ; X64-PIC-NEXT:    # %bb2
-; X64-PIC-NEXT:    leaq .LBB7_4(%rip), %rdx
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rdx
 ; X64-PIC-NEXT:    cmpq %rdx, %rsi
 ; X64-PIC-NEXT:    cmovneq %r10, %r9
 ; X64-PIC-NEXT:    addl (%rcx), %eax
 ; X64-PIC-NEXT:    orl %r9d, %eax
-; X64-PIC-NEXT:    leaq .LBB7_5(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:  .LBB7_5: # Block address taken
 ; X64-PIC-NEXT:    # %bb3
-; X64-PIC-NEXT:    leaq .LBB7_5(%rip), %rcx
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; X64-PIC-NEXT:    cmpq %rcx, %rsi
 ; X64-PIC-NEXT:    cmovneq %r10, %r9
 ; X64-PIC-NEXT:    addl (%r8), %eax
 ; X64-PIC-NEXT:    orl %r9d, %eax
-; X64-PIC-NEXT:    leaq .LBB7_6(%rip), %rsi
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rsi
 ; X64-PIC-NEXT:  .LBB7_6: # Block address taken
 ; X64-PIC-NEXT:    # %bb4
-; X64-PIC-NEXT:    leaq .LBB7_6(%rip), %rcx
+; X64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; X64-PIC-NEXT:    cmpq %rcx, %rsi
 ; X64-PIC-NEXT:    cmovneq %r10, %r9
 ; X64-PIC-NEXT:    shlq $47, %r9

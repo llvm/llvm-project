@@ -25,9 +25,7 @@ class ClangExpressionVariable;
 class ExpressionVariable
     : public std::enable_shared_from_this<ExpressionVariable> {
 public:
-  //----------------------------------------------------------------------
   // See TypeSystem.h for how to add subclasses to this.
-  //----------------------------------------------------------------------
   enum LLVMCastKind { eKindClang, eKindSwift, eKindGo, kNumKinds };
 
   LLVMCastKind getKind() const { return m_kind; }
@@ -38,7 +36,7 @@ public:
 
   size_t GetByteSize() { return m_frozen_sp->GetByteSize(); }
 
-  const ConstString &GetName() { return m_frozen_sp->GetName(); }
+  ConstString GetName() { return m_frozen_sp->GetName(); }
 
   lldb::ValueObjectSP GetValueObject() { return m_frozen_sp; }
 
@@ -61,7 +59,7 @@ public:
     m_frozen_sp->GetValue().SetCompilerType(compiler_type);
   }
 
-  void SetName(const ConstString &name) { m_frozen_sp->SetName(name); }
+  void SetName(ConstString name) { m_frozen_sp->SetName(name); }
 
   // this function is used to copy the address-of m_live_sp into m_frozen_sp
   // this is necessary because the results of certain cast and pointer-
@@ -118,18 +116,14 @@ public:
   LLVMCastKind m_kind;
 };
 
-//----------------------------------------------------------------------
-/// @class ExpressionVariableList ExpressionVariable.h
+/// \class ExpressionVariableList ExpressionVariable.h
 /// "lldb/Expression/ExpressionVariable.h"
 /// A list of variable references.
 ///
 /// This class stores variables internally, acting as the permanent store.
-//----------------------------------------------------------------------
 class ExpressionVariableList {
 public:
-  //----------------------------------------------------------------------
   /// Implementation of methods in ExpressionVariableListBase
-  //----------------------------------------------------------------------
   size_t GetSize() { return m_variables.size(); }
 
   lldb::ExpressionVariableSP GetVariableAtIndex(size_t index) {
@@ -160,17 +154,15 @@ public:
     return false;
   }
 
-  //----------------------------------------------------------------------
   /// Finds a variable by name in the list.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the requested variable.
   ///
-  /// @return
+  /// \return
   ///     The variable requested, or nullptr if that variable is not in the
   ///     list.
-  //----------------------------------------------------------------------
-  lldb::ExpressionVariableSP GetVariable(const ConstString &name) {
+  lldb::ExpressionVariableSP GetVariable(ConstString name) {
     lldb::ExpressionVariableSP var_sp;
     for (size_t index = 0, size = GetSize(); index < size; ++index) {
       var_sp = GetVariableAtIndex(index);
@@ -214,9 +206,7 @@ private:
 
 class PersistentExpressionState : public ExpressionVariableList {
 public:
-  //----------------------------------------------------------------------
   // See TypeSystem.h for how to add subclasses to this.
-  //----------------------------------------------------------------------
   enum LLVMCastKind { eKindClang, eKindSwift, eKindGo, kNumKinds };
 
   LLVMCastKind getKind() const { return m_kind; }
@@ -230,7 +220,7 @@ public:
 
   virtual lldb::ExpressionVariableSP
   CreatePersistentVariable(ExecutionContextScope *exe_scope,
-                           const ConstString &name, const CompilerType &type,
+                           ConstString name, const CompilerType &type,
                            lldb::ByteOrder byte_order,
                            uint32_t addr_byte_size) = 0;
 
@@ -244,7 +234,7 @@ public:
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;
 
-  virtual lldb::addr_t LookupSymbol(const ConstString &name);
+  virtual lldb::addr_t LookupSymbol(ConstString name);
 
   void RegisterExecutionUnit(lldb::IRExecutionUnitSP &execution_unit_sp);
 

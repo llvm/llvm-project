@@ -16,6 +16,7 @@ static_library("IR") {
     ":AttributesCompatFunc",
     "//llvm/include/llvm/IR:IntrinsicImpl",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Remarks",
     "//llvm/lib/Support",
   ]
   sources = [
@@ -63,6 +64,7 @@ static_library("IR") {
     "PassRegistry.cpp",
     "PassTimingInfo.cpp",
     "ProfileSummary.cpp",
+    "RemarkStreamer.cpp",
     "SafepointIRVerifier.cpp",
     "Statepoint.cpp",
     "Type.cpp",

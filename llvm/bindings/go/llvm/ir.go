@@ -1301,11 +1301,11 @@ type DebugLoc struct {
 	InlinedAt      Metadata
 }
 func (b Builder) SetCurrentDebugLocation(line, col uint, scope, inlinedAt Metadata) {
-	C.LLVMSetCurrentDebugLocation2(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
+	C.LLVMGoSetCurrentDebugLocation(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
 }
 // Get current debug location. Please do not call this function until setting debug location with SetCurrentDebugLocation()
 func (b Builder) GetCurrentDebugLocation() (loc DebugLoc) {
-	md := C.LLVMGetCurrentDebugLocation2(b.C)
+	md := C.LLVMGoGetCurrentDebugLocation(b.C)
 	loc.Line = uint(md.Line)
 	loc.Col = uint(md.Col)
 	loc.Scope = Metadata{C: md.Scope}

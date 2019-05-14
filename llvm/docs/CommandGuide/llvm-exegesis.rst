@@ -214,10 +214,17 @@ OPTIONS
  If non-empty, write inconsistencies found during analysis to this file. `-`
  prints to stdout. By default, this analysis is not run.
 
+.. option:: -analysis-clustering=[dbscan,naive]
+
+ Specify the clustering algorithm to use. By default DBSCAN will be used.
+ Naive clustering algorithm is better for doing further work on the
+ `-analysis-inconsistencies-output-file=` output, it will create one cluster
+ per opcode, and check that the cluster is stable (all points are neighbours).
+
 .. option:: -analysis-numpoints=<dbscan numPoints parameter>
 
  Specify the numPoints parameters to be used for DBSCAN clustering
- (`analysis` mode).
+ (`analysis` mode, DBSCAN only).
 
 .. option:: -analysis-clustering-epsilon=<dbscan epsilon parameter>
 
@@ -240,10 +247,16 @@ OPTIONS
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
- .. option:: -mcpu=<cpu name>
+.. option:: -mcpu=<cpu name>
 
-  If set, measure the cpu characteristics using the counters for this CPU. This
-  is useful when creating new sched models (the host CPU is unknown to LLVM).
+ If set, measure the cpu characteristics using the counters for this CPU. This
+ is useful when creating new sched models (the host CPU is unknown to LLVM).
+
+.. option:: --dump-object-to-disk=true
+
+ By default, llvm-exegesis will dump the generated code to a temporary file to
+ enable code inspection. You may disable it to speed up the execution and save
+ disk space.
 
 EXIT STATUS
 -----------

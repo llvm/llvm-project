@@ -99,9 +99,17 @@ public:
   /// function declaration. Asserts MightBeFunctionDecl.
   bool mightBeFunctionDefinition() const {
     assert(MightBeFunctionDecl);
-    // FIXME: Line.Last points to other characters than tok::semi
-    // and tok::lbrace.
-    return !Last->isOneOf(tok::semi, tok::comment);
+    // Try to determine if the end of a stream of tokens is either the
+    // Definition or the Declaration for a function. It does this by looking for
+    // the ';' in foo(); and using that it ends with a ; to know this is the
+    // Definition, however the line could end with
+    //    foo(); /* comment */
+    // or
+    //    foo(); // comment
+    // or
+    //    foo() // comment
+    // endsWith() ignores the comment.
+    return !endsWith(tok::semi);
   }
 
   /// \c true if this line starts a namespace definition.
@@ -163,6 +171,8 @@ private:
   /// Calculate the penalty for splitting before \c Tok.
   unsigned splitPenalty(const AnnotatedLine &Line, const FormatToken &Tok,
                         bool InFunctionDecl);
+
+  bool spaceRequiredBeforeParens(const FormatToken &Right) const;
 
   bool spaceRequiredBetween(const AnnotatedLine &Line, const FormatToken &Left,
                             const FormatToken &Right);

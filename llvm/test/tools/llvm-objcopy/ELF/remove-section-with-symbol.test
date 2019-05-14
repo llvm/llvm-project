@@ -16,17 +16,18 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
 Symbols:
-  Global:
-    - Name:     test
-      Type:     STT_FUNC
-      Section:  .test
-      Value:    0x1000
-      Size:     4
-    - Name:     test2
-      Type:     STT_FUNC
-      Section:  .test2
-      Value:    0x1000
-      Size:     4
+  - Name:     test
+    Type:     STT_FUNC
+    Section:  .test
+    Value:    0x1000
+    Size:     4
+    Binding:  STB_GLOBAL
+  - Name:     test2
+    Type:     STT_FUNC
+    Section:  .test2
+    Value:    0x1000
+    Size:     4
+    Binding:  STB_GLOBAL
 
 # The sections counted here should be .test, .symtab, .strtab, and .shstrtab.
 # The 5th section is the null section.

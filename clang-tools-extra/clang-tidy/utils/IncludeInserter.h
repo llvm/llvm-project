@@ -31,11 +31,11 @@ namespace utils {
 ///
 /// class MyCheck : public ClangTidyCheck {
 ///  public:
-///   void registerPPCallbacks(CompilerInstance& Compiler) override {
-///     Inserter = llvm::make_unique<IncludeInserter>(&Compiler.getSourceManager(),
-///                                                   &Compiler.getLangOpts());
-///     Compiler.getPreprocessor().addPPCallbacks(
-///         Inserter->CreatePPCallbacks());
+///   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+///                            Preprocessor *ModuleExpanderPP) override {
+///     Inserter = llvm::make_unique<IncludeInserter>(
+///         SM, getLangOpts(), utils::IncludeSorter::IS_Google);
+///     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 ///   }
 ///
 ///   void registerMatchers(ast_matchers::MatchFinder* Finder) override { ... }

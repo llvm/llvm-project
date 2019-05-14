@@ -8,7 +8,7 @@ void k() {
   h();
 }
 
-RUN: llvm-readobj -codeview %p/Inputs/codeview-inlinees.obj | FileCheck %s
+RUN: llvm-readobj --codeview %p/Inputs/codeview-inlinees.obj | FileCheck %s
 
 CHECK:    SubSectionType: InlineeLines (0xF6)
 CHECK:      Inlinee: f (0x1003)

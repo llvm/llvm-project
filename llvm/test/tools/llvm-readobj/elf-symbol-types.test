@@ -51,27 +51,37 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
 Symbols:
-  Global:
-    - Name: notype
-      Type: STT_NOTYPE
-    - Name: object
-      Type: STT_OBJECT
-    - Name: func
-      Type: STT_FUNC
-    - Name: .text
-      Type: STT_SECTION
-      Section: .text
-    - Name: file
-      Type: STT_FILE
-    - Name: common
-      Type: STT_COMMON
-    - Name: tls
-      Type: STT_TLS
-    - Name: gnu_ifunc
-      Type: STT_GNU_IFUNC
-    - Name: os_specific
-      Type: 11
-    - Name: proc_specific
-      Type: 13
-    - Name: unknown
-      Type: 7
+  - Name:    notype
+    Type:    STT_NOTYPE
+    Binding: STB_GLOBAL
+  - Name:    object
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+  - Name:    func
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
+    Binding: STB_GLOBAL
+  - Name:    file
+    Type:    STT_FILE
+    Binding: STB_GLOBAL
+  - Name:    common
+    Type:    STT_COMMON
+    Binding: STB_GLOBAL 
+  - Name:    tls
+    Type:    STT_TLS
+    Binding: STB_GLOBAL
+  - Name:    gnu_ifunc
+    Type:    STT_GNU_IFUNC
+    Binding: STB_GLOBAL
+  - Name:    os_specific
+    Type:    11
+    Binding: STB_GLOBAL
+  - Name:    proc_specific
+    Type:    13
+    Binding: STB_GLOBAL
+  - Name:    unknown
+    Type:    7
+    Binding: STB_GLOBAL

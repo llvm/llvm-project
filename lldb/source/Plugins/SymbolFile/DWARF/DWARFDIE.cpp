@@ -9,7 +9,6 @@
 #include "DWARFDIE.h"
 
 #include "DWARFASTParser.h"
-#include "DWARFDIECollection.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
@@ -17,20 +16,75 @@
 
 using namespace lldb_private;
 
-void DWARFDIE::ElaboratingDIEIterator::Next() {
-  assert(!m_worklist.empty() && "Incrementing end iterator?");
+namespace {
 
-  // Pop the current item from the list.
-  DWARFDIE die = m_worklist.back();
-  m_worklist.pop_back();
+/// Iterate through all DIEs elaborating (i.e. reachable by a chain of
+/// DW_AT_specification and DW_AT_abstract_origin attributes) a given DIE. For
+/// convenience, the starting die is included in the sequence as the first
+/// item.
+class ElaboratingDIEIterator
+    : public std::iterator<std::input_iterator_tag, DWARFDIE> {
 
-  // And add back any items that elaborate it.
-  for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
-    if (DWARFDIE d = die.GetReferencedDIE(attr))
-      if (m_seen.insert(die.GetID()).second)
-        m_worklist.push_back(d);
+  // The operating invariant is: top of m_worklist contains the "current" item
+  // and the rest of the list are items yet to be visited. An empty worklist
+  // means we've reached the end.
+  // Infinite recursion is prevented by maintaining a list of seen DIEs.
+  // Container sizes are optimized for the case of following DW_AT_specification
+  // and DW_AT_abstract_origin just once.
+  llvm::SmallVector<DWARFDIE, 2> m_worklist;
+  llvm::SmallSet<lldb::user_id_t, 3> m_seen;
+
+  void Next() {
+    assert(!m_worklist.empty() && "Incrementing end iterator?");
+
+    // Pop the current item from the list.
+    DWARFDIE die = m_worklist.back();
+    m_worklist.pop_back();
+
+    // And add back any items that elaborate it.
+    for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
+      if (DWARFDIE d = die.GetReferencedDIE(attr))
+        if (m_seen.insert(die.GetID()).second)
+          m_worklist.push_back(d);
+    }
   }
+
+public:
+  /// An iterator starting at die d.
+  explicit ElaboratingDIEIterator(DWARFDIE d) : m_worklist(1, d) {}
+
+  /// End marker
+  ElaboratingDIEIterator() {}
+
+  const DWARFDIE &operator*() const { return m_worklist.back(); }
+  ElaboratingDIEIterator &operator++() {
+    Next();
+    return *this;
+  }
+  ElaboratingDIEIterator operator++(int) {
+    ElaboratingDIEIterator I = *this;
+    Next();
+    return I;
+  }
+
+  friend bool operator==(const ElaboratingDIEIterator &a,
+                         const ElaboratingDIEIterator &b) {
+    if (a.m_worklist.empty() || b.m_worklist.empty())
+      return a.m_worklist.empty() == b.m_worklist.empty();
+    return a.m_worklist.back() == b.m_worklist.back();
+  }
+  friend bool operator!=(const ElaboratingDIEIterator &a,
+                         const ElaboratingDIEIterator &b) {
+    return !(a == b);
+  }
+};
+
+llvm::iterator_range<ElaboratingDIEIterator>
+elaborating_dies(const DWARFDIE &die) {
+  return llvm::make_range(ElaboratingDIEIterator(die),
+                          ElaboratingDIEIterator());
 }
+} // namespace
 
 DWARFDIE
 DWARFDIE::GetParent() const {
@@ -145,15 +199,18 @@ lldb_private::Type *DWARFDIE::ResolveTypeUID(const DIERef &die_ref) const {
     return nullptr;
 }
 
-void DWARFDIE::GetDeclContextDIEs(DWARFDIECollection &decl_context_dies) const {
-  if (IsValid()) {
-    DWARFDIE parent_decl_ctx_die =
-        m_die->GetParentDeclContextDIE(GetDWARF(), GetCU());
-    if (parent_decl_ctx_die && parent_decl_ctx_die.GetDIE() != GetDIE()) {
-      decl_context_dies.Append(parent_decl_ctx_die);
-      parent_decl_ctx_die.GetDeclContextDIEs(decl_context_dies);
-    }
+std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {
+  if (!IsValid())
+    return {};
+
+  std::vector<DWARFDIE> result;
+  DWARFDIE parent = GetParentDeclContextDIE();
+  while (parent.IsValid() && parent.GetDIE() != GetDIE()) {
+    result.push_back(std::move(parent));
+    parent = parent.GetParentDeclContextDIE();
   }
+
+  return result;
 }
 
 void DWARFDIE::GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const {
@@ -229,7 +286,7 @@ bool DWARFDIE::IsStructUnionOrClass() const {
 }
 
 bool DWARFDIE::IsMethod() const {
-  for (DWARFDIE d: elaborating_dies())
+  for (DWARFDIE d : elaborating_dies(*this))
     if (d.GetParent().IsStructUnionOrClass())
       return true;
   return false;

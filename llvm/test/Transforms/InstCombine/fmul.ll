@@ -383,10 +383,10 @@ define float @log2half(float %x, float %y) {
 
 define float @log2half_commute(float %x1, float %y) {
 ; CHECK-LABEL: @log2half_commute(
-; CHECK-NEXT:    [[X:%.*]] = fdiv float [[X1:%.*]], 7.000000e+00
 ; CHECK-NEXT:    [[LOG2:%.*]] = call fast float @llvm.log2.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[LOG2]], [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub fast float [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[LOG2]], [[X1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast float [[TMP1]], [[X1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[TMP2]], 0x3FC24924A0000000
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x = fdiv float %x1, 7.0 ; thwart complexity-based canonicalization
@@ -460,13 +460,28 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec_constexpr(<4 x float> %x)
   ret <4 x float> %t3
 }
 
-; Rule "X/C1 * C2 => X * (C2/C1) is not applicable if C2/C1 is abnormal
+; This shows that at least part of instcombine does not check constant
+; values to see if it is creating denorms (0x3800000000000000 is a denorm
+; for 32-bit float), so protecting against denorms in other parts is
+; probably not doing the intended job.
+
+define float @fmul_constant_reassociation(float %x) {
+; CHECK-LABEL: @fmul_constant_reassociation(
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], 0x3800000000000000
+; CHECK-NEXT:    ret float [[R]]
+;
+  %mul_flt_min = fmul reassoc nsz float %x, 0x3810000000000000
+  %r = fmul reassoc nsz float  %mul_flt_min, 0.5
+  ret float %r
+}
+
+; Canonicalization "X/C1 * C2 => X * (C2/C1)" still applies if C2/C1 is denormal
+; (otherwise, we should not have allowed the reassociation in the previous test).
 ; 0x3810000000000000 == FLT_MIN
 
 define float @fdiv_constant_denominator_fmul_denorm(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv float [[X:%.*]], 2.000000e+03
-; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T1]], 0x3810000000000000
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[X:%.*]], 0x3760620000000000
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv float %x, 2.0e+3
@@ -679,3 +694,85 @@ define float @common_factor(float %x, float %y) {
   ret float %add
 }
 
+define double @fmul_fdiv_factor_squared(double %x, double %y) {
+; CHECK-LABEL: @fmul_fdiv_factor_squared(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul fast double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %div = fdiv fast double %x, %y
+  %squared = fmul fast double %div, %div
+  ret double %squared
+}
+
+define double @fmul_fdivs_factor_common_denominator(double %x, double %y, double %z) {
+; CHECK-LABEL: @fmul_fdivs_factor_common_denominator(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast double [[Z:%.*]], [[Z]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv fast double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %div1 = fdiv double %x, %z
+  %div2 = fdiv double %y, %z
+  %mul = fmul fast double %div1, %div2
+  ret double %mul
+}
+
+define double @fmul_fdivs_factor(double %x, double %y, double %z, double %w) {
+; CHECK-LABEL: @fmul_fdivs_factor(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv reassoc double [[TMP1]], [[W:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv reassoc double [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %div1 = fdiv double %x, %y
+  %div2 = fdiv double %z, %w
+  %mul = fmul reassoc double %div1, %div2
+  ret double %mul
+}
+
+define double @fmul_fdiv_factor(double %x, double %y, double %z) {
+; CHECK-LABEL: @fmul_fdiv_factor(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv reassoc double [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %div = fdiv double %x, %y
+  %mul = fmul reassoc double %div, %z
+  ret double %mul
+}
+
+define double @fmul_fdiv_factor_constant1(double %x, double %y) {
+; CHECK-LABEL: @fmul_fdiv_factor_constant1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv reassoc double [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %div = fdiv double %x, %y
+  %mul = fmul reassoc double %div, 42.0
+  ret double %mul
+}
+
+define <2 x float> @fmul_fdiv_factor_constant2(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fmul_fdiv_factor_constant2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv reassoc <2 x float> [[TMP1]], <float 4.200000e+01, float 1.200000e+01>
+; CHECK-NEXT:    ret <2 x float> [[MUL]]
+;
+  %div = fdiv <2 x float> %x, <float 42.0, float 12.0>
+  %mul = fmul reassoc <2 x float> %div, %y
+  ret <2 x float> %mul
+}
+
+define float @fmul_fdiv_factor_extra_use(float %x, float %y) {
+; CHECK-LABEL: @fmul_fdiv_factor_extra_use(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    call void @use_f32(float [[DIV]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc float [[DIV]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %div = fdiv float %x, 42.0
+  call void @use_f32(float %div)
+  %mul = fmul reassoc float %div, %y
+  ret float %mul
+}

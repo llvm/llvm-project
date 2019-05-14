@@ -30,10 +30,6 @@ define i64 @test_mul_by_1(i64 %x) nounwind {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    movq %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_1:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 1
   ret i64 %mul
 }
@@ -64,10 +60,6 @@ define i64 @test_mul_by_2(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    leaq (%rdi,%rdi), %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_2:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 2
   ret i64 %mul
 }
@@ -99,10 +91,6 @@ define i64 @test_mul_by_3(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    leaq (%rdi,%rdi,2), %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_3:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 3
   ret i64 %mul
 }
@@ -133,10 +121,6 @@ define i64 @test_mul_by_4(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    leaq (,%rdi,4), %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_4:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (,%rdi,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 4
   ret i64 %mul
 }
@@ -168,10 +152,6 @@ define i64 @test_mul_by_5(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    leaq (%rdi,%rdi,4), %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_5:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 5
   ret i64 %mul
 }
@@ -204,11 +184,6 @@ define i64 @test_mul_by_6(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $6, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_6:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    addq %rdi, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 6
   ret i64 %mul
 }
@@ -242,11 +217,6 @@ define i64 @test_mul_by_7(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $7, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_7:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (,%rdi,8), %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 7
   ret i64 %mul
 }
@@ -277,10 +247,6 @@ define i64 @test_mul_by_8(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    leaq (,%rdi,8), %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_8:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (,%rdi,8), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 8
   ret i64 %mul
 }
@@ -312,10 +278,6 @@ define i64 @test_mul_by_9(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    leaq (%rdi,%rdi,8), %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_9:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 9
   ret i64 %mul
 }
@@ -348,11 +310,6 @@ define i64 @test_mul_by_10(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $10, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_10:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    addq %rdi, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 10
   ret i64 %mul
 }
@@ -397,11 +354,6 @@ define i64 @test_mul_by_11(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $11, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_11:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 11
   ret i64 %mul
 }
@@ -434,11 +386,6 @@ define i64 @test_mul_by_12(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $12, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_12:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    shlq $2, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 12
   ret i64 %mul
 }
@@ -483,11 +430,6 @@ define i64 @test_mul_by_13(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $13, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_13:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,2), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 13
   ret i64 %mul
 }
@@ -525,13 +467,6 @@ define i64 @test_mul_by_14(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $14, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_14:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $4, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 14
   ret i64 %mul
 }
@@ -565,11 +500,6 @@ define i64 @test_mul_by_15(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $15, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_15:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    leaq (%rax,%rax,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 15
   ret i64 %mul
 }
@@ -602,11 +532,6 @@ define i64 @test_mul_by_16(i64 %x) {
 ; X64-NOOPT-NEXT:    movq %rdi, %rax
 ; X64-NOOPT-NEXT:    shlq $4, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_16:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $4, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 16
   ret i64 %mul
 }
@@ -656,12 +581,6 @@ define i64 @test_mul_by_17(i64 %x) {
 ; X64-SLM-NEXT:    shlq $4, %rax
 ; X64-SLM-NEXT:    addq %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_17:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $4, %rax
-; X86-OPT-NEXT:    leaq (%rax,%rdi), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 17
   ret i64 %mul
 }
@@ -694,11 +613,6 @@ define i64 @test_mul_by_18(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $18, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_18:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    addq %rdi, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 18
   ret i64 %mul
 }
@@ -743,11 +657,6 @@ define i64 @test_mul_by_19(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $19, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_19:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 19
   ret i64 %mul
 }
@@ -780,11 +689,6 @@ define i64 @test_mul_by_20(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $20, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_20:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    shlq $2, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 20
   ret i64 %mul
 }
@@ -829,11 +733,6 @@ define i64 @test_mul_by_21(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $21, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_21:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 21
   ret i64 %mul
 }
@@ -881,12 +780,6 @@ define i64 @test_mul_by_22(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $22, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_22:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,4), %rax
-; X86-OPT-NEXT:    addq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 22
   ret i64 %mul
 }
@@ -934,12 +827,6 @@ define i64 @test_mul_by_23(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $23, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_23:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,2), %rax
-; X86-OPT-NEXT:    shlq $3, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 23
   ret i64 %mul
 }
@@ -972,11 +859,6 @@ define i64 @test_mul_by_24(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $24, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_24:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    shlq $3, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 24
   ret i64 %mul
 }
@@ -1010,11 +892,6 @@ define i64 @test_mul_by_25(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $25, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_25:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    leaq (%rax,%rax,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 25
   ret i64 %mul
 }
@@ -1062,12 +939,6 @@ define i64 @test_mul_by_26(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $26, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_26:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    leaq (%rax,%rax,4), %rax
-; X86-OPT-NEXT:    addq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 26
   ret i64 %mul
 }
@@ -1101,11 +972,6 @@ define i64 @test_mul_by_27(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $27, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_27:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    leaq (%rax,%rax,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 27
   ret i64 %mul
 }
@@ -1153,12 +1019,6 @@ define i64 @test_mul_by_28(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $28, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_28:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    leaq (%rax,%rax,2), %rax
-; X86-OPT-NEXT:    addq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 28
   ret i64 %mul
 }
@@ -1209,13 +1069,6 @@ define i64 @test_mul_by_29(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $29, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_29:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    leaq (%rax,%rax,2), %rax
-; X86-OPT-NEXT:    addq %rdi, %rax
-; X86-OPT-NEXT:    addq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 29
   ret i64 %mul
 }
@@ -1253,13 +1106,6 @@ define i64 @test_mul_by_30(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $30, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_30:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $5, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 30
   ret i64 %mul
 }
@@ -1295,12 +1141,6 @@ define i64 @test_mul_by_31(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $31, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_31:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $5, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 31
   ret i64 %mul
 }
@@ -1333,11 +1173,6 @@ define i64 @test_mul_by_32(i64 %x) {
 ; X64-NOOPT-NEXT:    movq %rdi, %rax
 ; X64-NOOPT-NEXT:    shlq $5, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_32:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $5, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 32
   ret i64 %mul
 }
@@ -1382,11 +1217,6 @@ define i64 @test_mul_by_37(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $37, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_37:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,4), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 37
   ret i64 %mul
 }
@@ -1431,11 +1261,6 @@ define i64 @test_mul_by_41(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $41, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_41:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,8), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 41
   ret i64 %mul
 }
@@ -1473,13 +1298,6 @@ define i64 @test_mul_by_62(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $62, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_62:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $6, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    subq %rdi, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 62
   ret i64 %mul
 }
@@ -1530,12 +1348,6 @@ define i64 @test_mul_by_66(i64 %x) {
 ; X64-SLM-NEXT:    addq %rdi, %rax
 ; X64-SLM-NEXT:    addq %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_66:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $6, %rax
-; X86-OPT-NEXT:    leaq (%rax,%rdi,2), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 66
   ret i64 %mul
 }
@@ -1580,11 +1392,6 @@ define i64 @test_mul_by_73(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $73, %rdi, %rax
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_73:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    leaq (%rdi,%rax,8), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 73
   ret i64 %mul
 }
@@ -1632,12 +1439,6 @@ define i64 @test_mul_by_520(i64 %x) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    imulq $520, %rdi, %rax # imm = 0x208
 ; X64-SLM-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_520:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    movq %rdi, %rax
-; X86-OPT-NEXT:    shlq $9, %rax
-; X86-OPT-NEXT:    leaq (%rax,%rdi,8), %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 520
   ret i64 %mul
 }
@@ -1683,12 +1484,6 @@ define i64 @test_mul_by_neg10(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $-10, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_neg10:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    addq %rdi, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    negq %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, -10
   ret i64 %mul
 }
@@ -1734,12 +1529,6 @@ define i64 @test_mul_by_neg36(i64 %x) {
 ; X64-NOOPT:       # %bb.0:
 ; X64-NOOPT-NEXT:    imulq $-36, %rdi, %rax
 ; X64-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_by_neg36:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    shlq $2, %rdi
-; X86-OPT-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X86-OPT-NEXT:    negq %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, -36
   ret i64 %mul
 }
@@ -1855,12 +1644,6 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; SLM-NOOPT-NEXT:    leaq 2(%rdi,%rdi,4), %rax
 ; SLM-NOOPT-NEXT:    imulq %rcx, %rax
 ; SLM-NOOPT-NEXT:    retq
-; X86-OPT-LABEL: test_mul_spec:
-; X86-OPT:       # %bb.0:
-; X86-OPT-NEXT:    leaq 42(%rdi,%rdi,8), %rcx
-; X86-OPT-NEXT:    leaq 2(%rdi,%rdi,4), %rax
-; X86-OPT-NEXT:    imulq %rcx, %rax
-; X86-OPT-NEXT:    retq
   %mul = mul nsw i64 %x, 9
   %add = add nsw i64 %mul, 42
   %mul2 = mul nsw i64 %x, 5

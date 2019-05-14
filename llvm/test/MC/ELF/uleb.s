@@ -1,7 +1,7 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_32 %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=ELF_64 %s
-// RUN: llvm-mc -filetype=obj -triple i386-apple-darwin9 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=MACHO_32 %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin9 %s -o - | llvm-readobj -s -sd | FileCheck -check-prefix=MACHO_64 %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_32 %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=ELF_64 %s
+// RUN: llvm-mc -filetype=obj -triple i386-apple-darwin9 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=MACHO_32 %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin9 %s -o - | llvm-readobj -S --sd | FileCheck -check-prefix=MACHO_64 %s
 
 	.text
 foo:

@@ -48,10 +48,12 @@ entry:
   ret i8* %x
 }
 
-; Always tail call objc_retainAutoreleasedReturnValue.
+; Always tail call objc_retainAutoreleasedReturnValue unless it's annotated with
+; notail.
 ; CHECK: define i8* @test3(i8* %x) [[NUW]] {
 ; CHECK: %tmp0 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %y) [[NUW]]
 ; CHECK: %tmp1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z) [[NUW]]
+; CHECK: %tmp2 = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z2) [[NUW]]
 ; CHECK: }
 define i8* @test3(i8* %x) nounwind {
 entry:
@@ -59,6 +61,8 @@ entry:
   %tmp0 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %y)
   %z = call i8* @tmp(i8* %x)
   %tmp1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z)
+  %z2 = call i8* @tmp(i8* %x)
+  %tmp2 = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z2)
   ret i8* %x
 }
 

@@ -56,7 +56,7 @@ private:
     optional<allocator_type> __alloc_;
 
     _LIBCPP_INLINE_VISIBILITY
-    void __release()
+    void __release_ptr()
     {
         __ptr_ = nullptr;
         __alloc_ = _VSTD::nullopt;

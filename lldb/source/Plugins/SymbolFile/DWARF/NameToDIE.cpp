@@ -25,11 +25,11 @@ void NameToDIE::Finalize() {
   m_map.SizeToFit();
 }
 
-void NameToDIE::Insert(const ConstString &name, const DIERef &die_ref) {
+void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
   m_map.Append(name, die_ref);
 }
 
-size_t NameToDIE::Find(const ConstString &name, DIEArray &info_array) const {
+size_t NameToDIE::Find(ConstString name, DIEArray &info_array) const {
   return m_map.GetValues(name, info_array);
 }
 

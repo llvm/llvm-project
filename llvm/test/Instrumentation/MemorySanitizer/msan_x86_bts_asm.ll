@@ -96,6 +96,6 @@ if.else:                                          ; preds = %entry
 ; CHECK: br i1 [[MSCMP]], label %[[IFTRUE:.*]], label {{.*}}
 
 ; If yes, raise a warning.
-; CHECK: <label>:[[IFTRUE]]
+; CHECK: [[IFTRUE]]:
 ; CHECK: call void @__msan_warning
 

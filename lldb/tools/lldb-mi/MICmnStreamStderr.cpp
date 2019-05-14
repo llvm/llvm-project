@@ -14,7 +14,6 @@
 #include "MIDriver.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnStreamStderr constructor.
 // Type:    Method.
 // Args:    None.
@@ -24,7 +23,6 @@
 CMICmnStreamStderr::CMICmnStreamStderr() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnStreamStderr destructor.
 // Type:    Overridable.
 // Args:    None.
@@ -34,7 +32,6 @@ CMICmnStreamStderr::CMICmnStreamStderr() {}
 CMICmnStreamStderr::~CMICmnStreamStderr() { Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize resources for *this stderr stream.
 // Type:    Method.
 // Args:    None.
@@ -64,7 +61,6 @@ bool CMICmnStreamStderr::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources for *this stderr stream.
 // Type:    Method.
 // Args:    None.
@@ -87,7 +83,6 @@ bool CMICmnStreamStderr::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write text data to stderr. Prefix the message with "MI:". The text
 // data does
 //          not need to include a carriage line return as this is added to the
@@ -114,7 +109,6 @@ bool CMICmnStreamStderr::Write(const CMIUtilString &vText,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write an LLDB text message to stderr.
 //          The text data does not need to include a carriage line return as
 //          this is added
@@ -141,7 +135,6 @@ bool CMICmnStreamStderr::WriteLLDBMsg(const CMIUtilString &vText,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write text data to stderr. The text data does not need to
 //          include a carriage line return as this is added to the text. The
 //          function also
@@ -188,7 +181,6 @@ bool CMICmnStreamStderr::WritePriv(const CMIUtilString &vText,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Lock the availability of the stream stderr. Other users of *this
 // stream will
 //          be stalled until it is available (Unlock()).
@@ -204,7 +196,6 @@ bool CMICmnStreamStderr::Lock() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release a previously locked stderr.
 // Type:    Method.
 // Args:    None.
@@ -218,7 +209,6 @@ bool CMICmnStreamStderr::Unlock() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Take MI Driver text message and send to the stderr stream. Also
 // output to the
 //           MI Log file.
@@ -237,7 +227,6 @@ bool CMICmnStreamStderr::TextToStderr(const CMIUtilString &vrTxt) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Take an LLDB message and send to the stderr stream. The message is
 // not always
 //          an error message. The user has typed a command in to the Eclipse

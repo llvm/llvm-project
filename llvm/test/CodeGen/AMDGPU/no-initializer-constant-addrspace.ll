@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -filetype=obj < %s | llvm-readobj -relocations -symbols | FileCheck %s -check-prefix=GCN
-; RUN: llc -march=amdgcn -mcpu=tonga -filetype=obj < %s | llvm-readobj -relocations -symbols | FileCheck %s -check-prefix=GCN
-; RUN: llc -march=r600 -mcpu=cypress -filetype=obj < %s | llvm-readobj -relocations -symbols | FileCheck %s -check-prefix=EG
+; RUN: llc -march=amdgcn -mcpu=tahiti -filetype=obj < %s | llvm-readobj -r --symbols | FileCheck %s -check-prefix=GCN
+; RUN: llc -march=amdgcn -mcpu=tonga -filetype=obj < %s | llvm-readobj -r --symbols | FileCheck %s -check-prefix=GCN
+; RUN: llc -march=r600 -mcpu=cypress -filetype=obj < %s | llvm-readobj -r --symbols | FileCheck %s -check-prefix=EG
 
 ; GCN: R_AMDGPU_REL32 extern_const_addrspace
 ; EG: R_AMDGPU_ABS32 extern_const_addrspace

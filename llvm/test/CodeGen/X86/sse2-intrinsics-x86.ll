@@ -423,10 +423,15 @@ define <4 x float> @test_x86_sse2_cvtsd2ss(<4 x float> %a0, <2 x double> %a1) {
 ; SSE-NEXT:    cvtsd2ss %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x5a,0xc1]
 ; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
 ;
-; AVX-LABEL: test_x86_sse2_cvtsd2ss:
-; AVX:       ## %bb.0:
-; AVX-NEXT:    vcvtsd2ss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0xc1]
-; AVX-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+; AVX1-LABEL: test_x86_sse2_cvtsd2ss:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vcvtsd2ss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0xc1]
+; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX512-LABEL: test_x86_sse2_cvtsd2ss:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcvtsd2ss %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5a,0xc1]
+; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -440,21 +445,32 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, <2 x double>* %
 ; X86-SSE-NEXT:    cvtsd2ss (%eax), %xmm0 ## encoding: [0xf2,0x0f,0x5a,0x00]
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; X86-AVX-LABEL: test_x86_sse2_cvtsd2ss_load:
-; X86-AVX:       ## %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x00]
-; X86-AVX-NEXT:    retl ## encoding: [0xc3]
+; X86-AVX1-LABEL: test_x86_sse2_cvtsd2ss_load:
+; X86-AVX1:       ## %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x00]
+; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX512-LABEL: test_x86_sse2_cvtsd2ss_load:
+; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5a,0x00]
+; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_x86_sse2_cvtsd2ss_load:
 ; X64-SSE:       ## %bb.0:
 ; X64-SSE-NEXT:    cvtsd2ss (%rdi), %xmm0 ## encoding: [0xf2,0x0f,0x5a,0x07]
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
-; X64-AVX-LABEL: test_x86_sse2_cvtsd2ss_load:
-; X64-AVX:       ## %bb.0:
-; X64-AVX-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x07]
-; X64-AVX-NEXT:    retq ## encoding: [0xc3]
+; X64-AVX1-LABEL: test_x86_sse2_cvtsd2ss_load:
+; X64-AVX1:       ## %bb.0:
+; X64-AVX1-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x07]
+; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_x86_sse2_cvtsd2ss_load:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5a,0x07]
+; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %a1 = load <2 x double>, <2 x double>* %p1
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -468,21 +484,32 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, <2 x do
 ; X86-SSE-NEXT:    cvtsd2ss (%eax), %xmm0 ## encoding: [0xf2,0x0f,0x5a,0x00]
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; X86-AVX-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
-; X86-AVX:       ## %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x00]
-; X86-AVX-NEXT:    retl ## encoding: [0xc3]
+; X86-AVX1-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
+; X86-AVX1:       ## %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x00]
+; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX512-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
+; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5a,0x00]
+; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
 ; X64-SSE:       ## %bb.0:
 ; X64-SSE-NEXT:    cvtsd2ss (%rdi), %xmm0 ## encoding: [0xf2,0x0f,0x5a,0x07]
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
-; X64-AVX-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
-; X64-AVX:       ## %bb.0:
-; X64-AVX-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x07]
-; X64-AVX-NEXT:    retq ## encoding: [0xc3]
+; X64-AVX1-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
+; X64-AVX1:       ## %bb.0:
+; X64-AVX1-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5a,0x07]
+; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5a,0x07]
+; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %a1 = load <2 x double>, <2 x double>* %p1
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -917,6 +944,48 @@ define <16 x i8> @test_x86_sse2_packuswb_128_fold() {
   %res = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> <i16 0, i16 255, i16 256, i16 65535, i16 -1, i16 -255, i16 -256, i16 -32678>, <8 x i16> zeroinitializer)
   ret <16 x i8> %res
 }
+
+
+define <16 x i8> @test_x86_sse2_pavg_b(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: test_x86_sse2_pavg_b:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    pavgb %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xe0,0xc1]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX1-LABEL: test_x86_sse2_pavg_b:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vpavgb %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe0,0xc1]
+; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX512-LABEL: test_x86_sse2_pavg_b:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vpavgb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe0,0xc1]
+; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>) nounwind readnone
+
+
+define <8 x i16> @test_x86_sse2_pavg_w(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: test_x86_sse2_pavg_w:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    pavgw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xe3,0xc1]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX1-LABEL: test_x86_sse2_pavg_w:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vpavgw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe3,0xc1]
+; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX512-LABEL: test_x86_sse2_pavg_w:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vpavgw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe3,0xc1]
+; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 
 define <4 x i32> @test_x86_sse2_pmadd_wd(<8 x i16> %a0, <8 x i16> %a1) {

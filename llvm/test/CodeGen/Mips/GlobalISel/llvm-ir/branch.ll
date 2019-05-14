@@ -30,8 +30,7 @@ define i32 @Conditional_branch(i1 %cond, i32 %a, i32 %b) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    lui $1, 0
-; MIPS32-NEXT:    ori $1, $1, 1
+; MIPS32-NEXT:    ori $1, $zero, 1
 ; MIPS32-NEXT:    and $1, $4, $1
 ; MIPS32-NEXT:    sw $5, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $6, 0($sp) # 4-byte Folded Spill

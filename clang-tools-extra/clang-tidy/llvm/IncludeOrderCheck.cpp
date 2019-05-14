@@ -20,7 +20,8 @@ namespace llvm {
 namespace {
 class IncludeOrderPPCallbacks : public PPCallbacks {
 public:
-  explicit IncludeOrderPPCallbacks(ClangTidyCheck &Check, SourceManager &SM)
+  explicit IncludeOrderPPCallbacks(ClangTidyCheck &Check,
+                                   const SourceManager &SM)
       : LookForMainModule(true), Check(Check), SM(SM) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -45,14 +46,14 @@ private:
   bool LookForMainModule;
 
   ClangTidyCheck &Check;
-  SourceManager &SM;
+  const SourceManager &SM;
 };
 } // namespace
 
-void IncludeOrderCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      ::llvm::make_unique<IncludeOrderPPCallbacks>(
-          *this, Compiler.getSourceManager()));
+void IncludeOrderCheck::registerPPCallbacks(const SourceManager &SM,
+                                            Preprocessor *PP,
+                                            Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(::llvm::make_unique<IncludeOrderPPCallbacks>(*this, SM));
 }
 
 static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {

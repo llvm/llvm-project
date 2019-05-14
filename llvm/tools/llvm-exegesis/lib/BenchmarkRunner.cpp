@@ -66,8 +66,9 @@ private:
       CounterName = CounterName.trim();
       pfm::PerfEvent PerfEvent(CounterName);
       if (!PerfEvent.valid())
-        llvm::report_fatal_error(
-            llvm::Twine("invalid perf event '").concat(CounterName).concat("'"));
+        llvm::report_fatal_error(llvm::Twine("invalid perf event '")
+                                     .concat(CounterName)
+                                     .concat("'"));
       pfm::Counter Counter(PerfEvent);
       Scratch->clear();
       {
@@ -96,7 +97,8 @@ private:
 
 InstructionBenchmark
 BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
-                                  unsigned NumRepetitions) const {
+                                  unsigned NumRepetitions,
+                                  bool DumpObjectToDisk) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = State.getTargetMachine().getTargetCPU();
@@ -129,15 +131,27 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  auto ObjectFilePath = writeObjectFile(
-      BC, GenerateInstructions(BC, InstrBenchmark.NumRepetitions));
-  if (llvm::Error E = ObjectFilePath.takeError()) {
-    InstrBenchmark.Error = llvm::toString(std::move(E));
-    return InstrBenchmark;
+  const auto Code = GenerateInstructions(BC, InstrBenchmark.NumRepetitions);
+
+  llvm::object::OwningBinary<llvm::object::ObjectFile> ObjectFile;
+  if (DumpObjectToDisk) {
+    auto ObjectFilePath = writeObjectFile(BC, Code);
+    if (llvm::Error E = ObjectFilePath.takeError()) {
+      InstrBenchmark.Error = llvm::toString(std::move(E));
+      return InstrBenchmark;
+    }
+    llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
+                 << *ObjectFilePath << "\n";
+    ObjectFile = getObjectFromFile(*ObjectFilePath);
+  } else {
+    llvm::SmallString<0> Buffer;
+    llvm::raw_svector_ostream OS(Buffer);
+    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
+                     BC.LiveIns, BC.RegisterInitialValues, Code, OS);
+    ObjectFile = getObjectFromBuffer(OS.str());
   }
-  llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
-               << *ObjectFilePath << "\n";
-  const FunctionExecutorImpl Executor(State, getObjectFromFile(*ObjectFilePath),
+
+  const FunctionExecutorImpl Executor(State, std::move(ObjectFile),
                                       Scratch.get());
   auto Measurements = runMeasurements(Executor);
   if (llvm::Error E = Measurements.takeError()) {

@@ -39,6 +39,7 @@ clang_Cursor_getSpellingNameRange
 clang_Cursor_getTranslationUnit
 clang_Cursor_getReceiverType
 clang_Cursor_isAnonymous
+clang_Cursor_isAnonymousRecordDecl
 clang_Cursor_isBitField
 clang_Cursor_isDynamicCall
 clang_Cursor_isExternalSymbol

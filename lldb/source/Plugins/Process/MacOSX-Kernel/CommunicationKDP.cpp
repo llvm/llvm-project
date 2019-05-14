@@ -28,9 +28,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // CommunicationKDP constructor
-//----------------------------------------------------------------------
 CommunicationKDP::CommunicationKDP(const char *comm_name)
     : Communication(comm_name), m_addr_byte_size(4),
       m_byte_order(eByteOrderLittle), m_packet_timeout(5), m_sequence_mutex(),
@@ -39,9 +37,7 @@ CommunicationKDP::CommunicationKDP(const char *comm_name)
       m_kdp_version_feature(0u), m_kdp_hostinfo_cpu_mask(0u),
       m_kdp_hostinfo_cpu_type(0u), m_kdp_hostinfo_cpu_subtype(0u) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 CommunicationKDP::~CommunicationKDP() {
   if (IsConnected()) {
     Disconnect();

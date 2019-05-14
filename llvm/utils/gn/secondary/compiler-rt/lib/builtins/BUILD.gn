@@ -1,0 +1,484 @@
+import("//compiler-rt/target.gni")
+import("//llvm/utils/gn/build/buildflags.gni")
+
+declare_args() {
+  # Skip the atomic builtin (these should normally be provided by a shared library)
+  compiler_rt_exclude_atomic_builtin = true
+
+  # Compile builtins for baremetal.
+  compiler_rt_baremetal_build = false
+}
+
+static_library("builtins") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.builtins$crt_current_target_suffix"
+  complete_static_lib = true
+  cflags = [
+    "-fPIC",
+    "-fno-builtin",
+  ]
+  if (target_os != "android") {
+    cflags += [ "-fvisibility=hidden" ]
+  }
+  if (!is_debug) {
+    cflags += [ "-fomit-frame-pointer" ]
+  }
+  cflags_c = [ "-std=c11" ]
+  configs -= [ "//llvm/utils/gn/build:thin_archive" ]
+
+  sources = [
+    "absvdi2.c",
+    "absvsi2.c",
+    "absvti2.c",
+    "adddf3.c",
+    "addsf3.c",
+    "addtf3.c",
+    "addvdi3.c",
+    "addvsi3.c",
+    "addvti3.c",
+    "apple_versioning.c",
+    "ashldi3.c",
+    "ashlti3.c",
+    "ashrdi3.c",
+    "ashrti3.c",
+    "bswapdi2.c",
+    "bswapsi2.c",
+    "clzdi2.c",
+    "clzsi2.c",
+    "clzti2.c",
+    "cmpdi2.c",
+    "cmpti2.c",
+    "comparedf2.c",
+    "comparesf2.c",
+    "ctzdi2.c",
+    "ctzsi2.c",
+    "ctzti2.c",
+    "divdc3.c",
+    "divdf3.c",
+    "divdi3.c",
+    "divmoddi4.c",
+    "divmodsi4.c",
+    "divsc3.c",
+    "divsf3.c",
+    "divsi3.c",
+    "divtc3.c",
+    "divtf3.c",
+    "divti3.c",
+    "extendhfsf2.c",
+    "extendsfdf2.c",
+    "ffsdi2.c",
+    "ffssi2.c",
+    "ffsti2.c",
+    "fixdfdi.c",
+    "fixdfsi.c",
+    "fixdfti.c",
+    "fixsfdi.c",
+    "fixsfsi.c",
+    "fixsfti.c",
+    "fixunsdfdi.c",
+    "fixunsdfsi.c",
+    "fixunsdfti.c",
+    "fixunssfdi.c",
+    "fixunssfsi.c",
+    "fixunssfti.c",
+    "floatdidf.c",
+    "floatdisf.c",
+    "floatsidf.c",
+    "floatsisf.c",
+    "floattidf.c",
+    "floattisf.c",
+    "floatundidf.c",
+    "floatundisf.c",
+    "floatunsidf.c",
+    "floatunsisf.c",
+    "floatuntidf.c",
+    "floatuntisf.c",
+    "int_util.c",
+    "lshrdi3.c",
+    "lshrti3.c",
+    "moddi3.c",
+    "modsi3.c",
+    "modti3.c",
+    "muldc3.c",
+    "muldf3.c",
+    "muldi3.c",
+    "mulodi4.c",
+    "mulosi4.c",
+    "muloti4.c",
+    "mulsc3.c",
+    "mulsf3.c",
+    "multf3.c",
+    "multi3.c",
+    "mulvdi3.c",
+    "mulvsi3.c",
+    "mulvti3.c",
+    "negdf2.c",
+    "negdi2.c",
+    "negsf2.c",
+    "negti2.c",
+    "negvdi2.c",
+    "negvsi2.c",
+    "negvti2.c",
+    "os_version_check.c",
+    "paritydi2.c",
+    "paritysi2.c",
+    "parityti2.c",
+    "popcountdi2.c",
+    "popcountsi2.c",
+    "popcountti2.c",
+    "powidf2.c",
+    "powisf2.c",
+    "powitf2.c",
+    "subdf3.c",
+    "subsf3.c",
+    "subtf3.c",
+    "subvdi3.c",
+    "subvsi3.c",
+    "subvti3.c",
+    "trampoline_setup.c",
+    "truncdfhf2.c",
+    "truncdfsf2.c",
+    "truncsfhf2.c",
+    "ucmpdi2.c",
+    "ucmpti2.c",
+    "udivdi3.c",
+    "udivmoddi4.c",
+    "udivmodsi4.c",
+    "udivmodti4.c",
+    "udivsi3.c",
+    "udivti3.c",
+    "umoddi3.c",
+    "umodsi3.c",
+    "umodti3.c",
+
+    # This depends on unwind.h which is present in Clang headers. We should
+    # reconsider this if we ever decide to support building builtins with
+    # other compilers.
+    "gcc_personality_v0.c",
+  ]
+
+  if (target_os != "fuchsia") {
+    sources += [
+      "emutls.c ",
+      "enable_execute_stack.c",
+      "eprintf.c",
+    ]
+  }
+
+  if (target_os != "fuchsia" && !compiler_rt_baremetal_build) {
+    sources += [
+      # This comment prevents `gn format` from putting the file on the same line
+      # as `sources +=`, for sync_source_lists_from_cmake.py.
+      "clear_cache.c",
+    ]
+  }
+
+  if (target_os == "mac") {
+    sources += [
+      "atomic_flag_clear.c",
+      "atomic_flag_clear_explicit.c",
+      "atomic_flag_test_and_set.c",
+      "atomic_flag_test_and_set_explicit.c",
+      "atomic_signal_fence.c",
+      "atomic_thread_fence.c",
+    ]
+  }
+
+  if (target_cpu == "x86" || target_cpu == "x64") {
+    sources += [
+      "cpu_model.c",
+      "divxc3.c",
+      "fixunsxfdi.c",
+      "fixunsxfsi.c",
+      "fixunsxfti.c",
+      "fixxfdi.c",
+      "fixxfti.c",
+      "floatdixf.c",
+      "floattixf.c",
+      "floatundixf.c",
+      "floatuntixf.c",
+      "mulxc3.c",
+      "powixf2.c",
+    ]
+  }
+  if (target_os == "x86") {
+    sources += [
+      "i386/ashldi3.S",
+      "i386/ashrdi3.S",
+      "i386/divdi3.S",
+      "i386/floatdidf.S",
+      "i386/floatdisf.S",
+      "i386/floatdixf.S",
+      "i386/floatundidf.S",
+      "i386/floatundisf.S",
+      "i386/floatundixf.S",
+      "i386/lshrdi3.S",
+      "i386/moddi3.S",
+      "i386/muldi3.S",
+      "i386/udivdi3.S",
+      "i386/umoddi3.S",
+    ]
+    if (target_os == "win") {
+      sources += [
+        "i386/chkstk.S",
+        "i386/chkstk2.S",
+      ]
+    }
+  } else if (target_cpu == "x64") {
+    sources += [
+      "x86_64/floatdidf.c",
+      "x86_64/floatdisf.c",
+      "x86_64/floatdixf.c",
+      "x86_64/floatundidf.S",
+      "x86_64/floatundisf.S",
+      "x86_64/floatundixf.S",
+    ]
+    if (target_os == "win") {
+      sources += [
+        "x86_64/chkstk.S",
+        "x86_64/chkstk2.S",
+      ]
+    }
+  }
+
+  if (target_cpu == "arm") {
+    sources += [
+      "arm/bswapdi2.S",
+      "arm/bswapsi2.S",
+      "arm/clzdi2.S",
+      "arm/clzsi2.S",
+      "arm/comparesf2.S",
+      "arm/divmodsi4.S",
+      "arm/divsi3.S",
+      "arm/modsi3.S",
+      "arm/sync_fetch_and_add_4.S",
+      "arm/sync_fetch_and_add_8.S",
+      "arm/sync_fetch_and_and_4.S",
+      "arm/sync_fetch_and_and_8.S",
+      "arm/sync_fetch_and_max_4.S",
+      "arm/sync_fetch_and_max_8.S",
+      "arm/sync_fetch_and_min_4.S",
+      "arm/sync_fetch_and_min_8.S",
+      "arm/sync_fetch_and_nand_4.S",
+      "arm/sync_fetch_and_nand_8.S",
+      "arm/sync_fetch_and_or_4.S",
+      "arm/sync_fetch_and_or_8.S",
+      "arm/sync_fetch_and_sub_4.S",
+      "arm/sync_fetch_and_sub_8.S",
+      "arm/sync_fetch_and_umax_4.S",
+      "arm/sync_fetch_and_umax_8.S",
+      "arm/sync_fetch_and_umin_4.S",
+      "arm/sync_fetch_and_umin_8.S",
+      "arm/sync_fetch_and_xor_4.S",
+      "arm/sync_fetch_and_xor_8.S",
+      "arm/udivmodsi4.S",
+      "arm/udivsi3.S",
+      "arm/umodsi3.S",
+    ]
+    if (target_os == "mingw") {
+      sources += [
+        "arm/aeabi_idivmod.S",
+        "arm/aeabi_ldivmod.S",
+        "arm/aeabi_uidivmod.S",
+        "arm/aeabi_uldivmod.S",
+        "arm/chkstk.S",
+        "divdi3.c",
+        "divmoddi4.c",
+        "divmodsi4.c",
+        "divsi3.c",
+        "emutls.c",
+        "fixdfdi.c",
+        "fixsfdi.c",
+        "fixunsdfdi.c",
+        "fixunssfdi.c",
+        "floatdidf.c",
+        "floatdisf.c",
+        "floatundidf.c",
+        "floatundisf.c",
+        "mingw_fixfloat.c",
+        "moddi3.c",
+        "udivmoddi4.c",
+        "udivmodsi4.c",
+        "udivsi3.c",
+        "umoddi3.c",
+      ]
+    }
+  }
+
+  if (target_cpu == "arm64") {
+    sources += [
+      "comparetf2.c",
+      "extenddftf2.c",
+      "extendsftf2.c",
+      "fixtfdi.c",
+      "fixtfsi.c",
+      "fixtfti.c",
+      "fixunstfdi.c",
+      "fixunstfsi.c",
+      "fixunstfti.c",
+      "floatditf.c",
+      "floatsitf.c",
+      "floattitf.c",
+      "floatunditf.c",
+      "floatunsitf.c",
+      "floatuntitf.c",
+      "multc3.c",
+      "trunctfdf2.c",
+      "trunctfsf2.c",
+    ]
+    if (target_os == "mingw") {
+      sources += [
+        # This comment prevents `gn format` from putting the file on the same
+        # line as `sources +=`, for sync_source_lists_from_cmake.py.
+        "aarch64/chkstk.S",
+      ]
+    }
+  }
+
+  if (target_cpu == "hexagon") {
+    sources += [
+      "hexagon/common_entry_exit_abi1.S",
+      "hexagon/common_entry_exit_abi2.S",
+      "hexagon/common_entry_exit_legacy.S",
+      "hexagon/dfaddsub.S",
+      "hexagon/dfdiv.S",
+      "hexagon/dffma.S",
+      "hexagon/dfminmax.S",
+      "hexagon/dfmul.S",
+      "hexagon/dfsqrt.S",
+      "hexagon/divdi3.S",
+      "hexagon/divsi3.S",
+      "hexagon/fabs_opt.S",
+      "hexagon/fastmath2_dlib_asm.S",
+      "hexagon/fastmath2_ldlib_asm.S",
+      "hexagon/fastmath_dlib_asm.S",
+      "hexagon/fma_opt.S",
+      "hexagon/fmax_opt.S",
+      "hexagon/fmin_opt.S",
+      "hexagon/memcpy_forward_vp4cp4n2.S",
+      "hexagon/memcpy_likely_aligned.S",
+      "hexagon/moddi3.S",
+      "hexagon/modsi3.S",
+      "hexagon/sfdiv_opt.S",
+      "hexagon/sfsqrt_opt.S",
+      "hexagon/udivdi3.S",
+      "hexagon/udivmoddi4.S",
+      "hexagon/udivmodsi4.S",
+      "hexagon/udivsi3.S",
+      "hexagon/umoddi3.S",
+      "hexagon/umodsi3.S",
+    ]
+  }
+
+  if (target_cpu == "ppc64") {
+    sources += [
+      "ppc/divtc3.c",
+      "ppc/fixtfdi.c",
+      "ppc/fixunstfdi.c",
+      "ppc/fixunstfti.c",
+      "ppc/floatditf.c",
+      "ppc/floattitf.c",
+      "ppc/floatunditf.c",
+      "ppc/gcc_qadd.c",
+      "ppc/gcc_qdiv.c",
+      "ppc/gcc_qmul.c",
+      "ppc/gcc_qsub.c",
+      "ppc/multc3.c",
+    ]
+  }
+
+  if (target_cpu == "riscv") {
+    sources += [
+      # This comment prevents `gn format` from putting the file on the same line
+      # as `sources +=`, for sync_source_lists_from_cmake.py.
+      "riscv/mulsi3.S",
+    ]
+  }
+
+  if (!compiler_rt_exclude_atomic_builtin) {
+    sources += [
+      # This comment prevents `gn format` from putting the file on the same line
+      # as `sources +=`, for sync_source_lists_from_cmake.py.
+      "atomic.c",
+    ]
+  }
+}
+
+# Currently unused but necessary to make the sync_source_lists_from_cmake.py happy.
+source_set("_unused") {
+  sources = [
+    # Thumb1
+    "arm/addsf3.S",
+    "arm/comparesf2.S",
+    "arm/divsi3.S",
+    "arm/udivsi3.S",
+
+    # EABI
+    "arm/aeabi_cdcmp.S",
+    "arm/aeabi_cdcmpeq_check_nan.c",
+    "arm/aeabi_cfcmp.S",
+    "arm/aeabi_cfcmpeq_check_nan.c",
+    "arm/aeabi_dcmp.S",
+    "arm/aeabi_div0.c",
+    "arm/aeabi_drsub.c",
+    "arm/aeabi_fcmp.S",
+    "arm/aeabi_frsub.c",
+    "arm/aeabi_idivmod.S",
+    "arm/aeabi_ldivmod.S",
+    "arm/aeabi_memcmp.S",
+    "arm/aeabi_memcpy.S",
+    "arm/aeabi_memmove.S",
+    "arm/aeabi_memset.S",
+    "arm/aeabi_uidivmod.S",
+    "arm/aeabi_uldivmod.S",
+
+    # Thumb1 JT
+    "arm/switch16.S",
+    "arm/switch32.S",
+    "arm/switch8.S",
+    "arm/switchu8.S",
+
+    # Thumb1 SjLj
+    "arm/restore_vfp_d8_d15_regs.S",
+    "arm/save_vfp_d8_d15_regs.S",
+
+    # Thumb1 VFPv2
+    "arm/adddf3vfp.S",
+    "arm/addsf3vfp.S",
+    "arm/divdf3vfp.S",
+    "arm/divsf3vfp.S",
+    "arm/eqdf2vfp.S",
+    "arm/eqsf2vfp.S",
+    "arm/extendsfdf2vfp.S",
+    "arm/fixdfsivfp.S",
+    "arm/fixsfsivfp.S",
+    "arm/fixunsdfsivfp.S",
+    "arm/fixunssfsivfp.S",
+    "arm/floatsidfvfp.S",
+    "arm/floatsisfvfp.S",
+    "arm/floatunssidfvfp.S",
+    "arm/floatunssisfvfp.S",
+    "arm/gedf2vfp.S",
+    "arm/gesf2vfp.S",
+    "arm/gtdf2vfp.S",
+    "arm/gtsf2vfp.S",
+    "arm/ledf2vfp.S",
+    "arm/lesf2vfp.S",
+    "arm/ltdf2vfp.S",
+    "arm/ltsf2vfp.S",
+    "arm/muldf3vfp.S",
+    "arm/mulsf3vfp.S",
+    "arm/nedf2vfp.S",
+    "arm/negdf2vfp.S",
+    "arm/negsf2vfp.S",
+    "arm/nesf2vfp.S",
+    "arm/subdf3vfp.S",
+    "arm/subsf3vfp.S",
+    "arm/truncdfsf2vfp.S",
+    "arm/unorddf2vfp.S",
+    "arm/unordsf2vfp.S",
+
+    # Thumb1 icache
+    "arm/sync_synchronize.S",
+  ]
+}
