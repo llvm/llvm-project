@@ -220,3 +220,31 @@ int func(Qptr qp) {
   qp->y = 10; // OK, the overloaded operator might have side-effects.
   qp->K = 10; //
 }
+
+namespace {
+  struct Anonymous {
+    static int I;
+  };
+}
+
+void use_anonymous() {
+  Anonymous Anon;
+  Anon.I;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
+  // CHECK-FIXES: {{^}}  Anonymous::I;{{$}}
+}
+
+namespace Outer {
+  inline namespace Inline {
+    struct S {
+      static int I;
+    };
+  }
+}
+
+void use_inline() {
+  Outer::S V;
+  V.I;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
+  // CHECK-FIXES: {{^}}  Outer::S::I;{{$}}
+}
