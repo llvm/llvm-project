@@ -31,6 +31,13 @@ class MiniDumpNewTestCase(TestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(MiniDumpNewTestCase, self).tearDown()
 
+    def process_from_yaml(self, yaml_file):
+        minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
+        self.yaml2obj(yaml_file, minidump_path)
+        self.target = self.dbg.CreateTarget(None)
+        self.process = self.target.LoadCore(minidump_path)
+        return self.process
+
     def check_state(self):
         with open(os.devnull) as devnul:
             # sanitize test output
@@ -61,17 +68,17 @@ class MiniDumpNewTestCase(TestBase):
 
     def test_loadcore_error_status(self):
         """Test the SBTarget.LoadCore(core, error) overload."""
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
+        minidump_path = self.getBuildArtifact("linux-x86_64.dmp")
+        self.yaml2obj("linux-x86_64.yaml", minidump_path)
+        self.target = self.dbg.CreateTarget(None)
         error = lldb.SBError()
-        self.process = self.target.LoadCore("linux-x86_64.dmp", error)
+        self.process = self.target.LoadCore(minidump_path, error)
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertTrue(error.Success())
 
     def test_loadcore_error_status_failure(self):
         """Test the SBTarget.LoadCore(core, error) overload."""
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
+        self.target = self.dbg.CreateTarget(None)
         error = lldb.SBError()
         self.process = self.target.LoadCore("non-existent.dmp", error)
         self.assertFalse(self.process, PROCESS_IS_VALID)
@@ -79,19 +86,14 @@ class MiniDumpNewTestCase(TestBase):
 
     def test_process_info_in_minidump(self):
         """Test that lldb can read the process information from the Minidump."""
-        # target create -c linux-x86_64.dmp
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-x86_64.dmp")
+        self.process_from_yaml("linux-x86_64.yaml")
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertEqual(self.process.GetNumThreads(), 1)
         self.assertEqual(self.process.GetProcessID(), self._linux_x86_64_pid)
         self.check_state()
 
     def test_memory_region_name(self):
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("regions-linux-map.dmp")
+        self.process_from_yaml("regions-linux-map.yaml")
         result = lldb.SBCommandReturnObject()
         addr_region_name_pairs = [
             ("0x400d9000", "/system/bin/app_process"),
@@ -118,63 +120,9 @@ class MiniDumpNewTestCase(TestBase):
                 region_name, command)
             self.assertTrue(region_name in result.GetOutput(), message)
 
-    def test_modules_in_mini_dump(self):
-        """Test that lldb can read the list of modules from the minidump."""
-        # target create -c linux-x86_64.dmp
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-x86_64.dmp")
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        expected_modules = [
-            {
-                'filename' : 'linux-x86_64',
-                'uuid' : 'E35C283B-C327-C287-62DB-788BF5A4078B-E2351448',
-            },
-            {
-                'filename' : 'libm-2.19.so',
-                'uuid' : 'D144258E-6149-00B2-55A3-1F3FD2283A87-8670D5BC',
-            },
-            {
-                'filename' : 'libgcc_s.so.1',
-                'uuid' : '36311B44-5771-0AE5-578C-4BF00791DED7-359DBB92',
-            },
-            {
-                'filename' : 'libstdc++.so.6.0.19',
-                'uuid' : '76190E92-2AF7-457D-078F-75C9B15FA184-E83EB506',
-            },
-            {
-                'filename' : 'libc-2.19.so',
-                'uuid' : 'CF699A15-CAAE-64F5-0311-FC4655B86DC3-9A479789',
-            },
-            {
-                'filename' : 'libpthread-2.19.so',
-                'uuid' : '31E9F21A-E8C1-0396-171F-1E13DA157809-86FA696C',
-            },
-            {
-                'filename' : 'libbreakpad.so',
-                'uuid' : '784FD549-332D-826E-D23F-18C17C6F320A',
-            },
-            {
-                'filename' : 'ld-2.19.so',
-                'uuid' : 'D0F53790-4076-D73F-29E4-A37341F8A449-E2EF6CD0',
-            },
-            {
-                'filename' : 'linux-gate.so',
-                'uuid' : '4EAD28F8-88EF-3520-872B-73C6F2FE7306-C41AF22F',
-            },
-        ]
-        self.assertEqual(self.target.GetNumModules(), len(expected_modules))
-        for module, expected in zip(self.target.modules, expected_modules):
-            self.assertTrue(module.IsValid())
-            self.assertEqual(module.file.basename, expected['filename'])
-            self.assertEqual(module.GetUUIDString(), expected['uuid'])
-
     def test_thread_info_in_minidump(self):
         """Test that lldb can read the thread information from the Minidump."""
-        # target create -c linux-x86_64.dmp
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("linux-x86_64.dmp")
+        self.process_from_yaml("linux-x86_64.yaml")
         self.check_state()
         # This process crashed due to a segmentation fault in its
         # one and only thread.
@@ -238,10 +186,7 @@ class MiniDumpNewTestCase(TestBase):
 
     def test_arm64_registers(self):
         """Test ARM64 registers from a breakpad created minidump."""
-        # target create -c arm64-macos.dmp
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("arm64-macos.dmp")
+        self.process_from_yaml("arm64-macos.yaml")
         self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
@@ -305,12 +250,10 @@ class MiniDumpNewTestCase(TestBase):
             Verify values of all ARM registers from a breakpad created
             minidump.
         """
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
         if apple:
-            self.process = self.target.LoadCore("arm-macos.dmp")
+            self.process_from_yaml("arm-macos.yaml")
         else:
-            self.process = self.target.LoadCore("arm-linux.dmp")
+            self.process_from_yaml("arm-linux.yaml")
         self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
@@ -451,10 +394,7 @@ class MiniDumpNewTestCase(TestBase):
 
     def test_memory_regions_in_minidump(self):
         """Test memory regions from a Minidump"""
-        # target create -c regions-linux-map.dmp
-        self.dbg.CreateTarget(None)
-        self.target = self.dbg.GetSelectedTarget()
-        self.process = self.target.LoadCore("regions-linux-map.dmp")
+        self.process_from_yaml("regions-linux-map.yaml")
         self.check_state()
 
         regions_count = 19
