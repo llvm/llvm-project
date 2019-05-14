@@ -613,41 +613,12 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
 static StorageClass getStorageClass(const Decl *D) {
   if (auto *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-  if (!D)
-    return SC_None;
-
-  if (auto *VD = dyn_cast<VarDecl>(D)) {
-    // Generally, the storage class is determined by the first declaration.
-    auto SC = VD->getCanonicalDecl()->getStorageClass();
-
-    // ... except that MSVC permits an 'extern' declaration to be redeclared
-    // 'static' as an extension.
-    if (SC == SC_Extern) {
-      for (auto *Redecl : VD->redecls()) {
-        if (Redecl->getStorageClass() == SC_Static)
-          return SC_Static;
-        if (Redecl->getStorageClass() != SC_Extern &&
-            !Redecl->isLocalExternDecl() && !Redecl->getFriendObjectKind())
-          break;
-      }
-    }
-    return SC;
+  if (D) {
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      return VD->getStorageClass();
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->getStorageClass();
   }
-
-  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    auto SC = FD->getCanonicalDecl()->getStorageClass();
-    if (SC == SC_Extern) {
-      for (auto *Redecl : FD->redecls()) {
-        if (Redecl->getStorageClass() == SC_Static)
-          return SC_Static;
-        if (Redecl->getStorageClass() != SC_Extern &&
-            !Redecl->isLocalExternDecl() && !Redecl->getFriendObjectKind())
-          break;
-      }
-    }
-    return SC;
-  }
-
   return SC_None;
 }
 
@@ -663,7 +634,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   A name having namespace scope (3.3.6) has internal linkage if it
   //   is the name of
 
-  if (getStorageClass(D) == SC_Static) {
+  if (getStorageClass(D->getCanonicalDecl()) == SC_Static) {
     // - a variable, variable template, function, or function template
     //   that is explicitly declared static; or
     // (This bullet corresponds to C99 6.2.2p3.)
