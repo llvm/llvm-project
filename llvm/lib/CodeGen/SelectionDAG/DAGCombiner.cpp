@@ -16173,7 +16173,7 @@ static SDValue scalarizeExtractedBinop(SDNode *ExtElt, SelectionDAG &DAG,
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
-  if (!IndexC || !TLI.isBinOp(Vec->getOpcode()) || !Vec.hasOneUse())
+  if (!IndexC || !TLI.isBinOp(Vec.getOpcode()) || !Vec.hasOneUse())
     return SDValue();
 
   // Targets may want to avoid this to prevent an expensive register transfer.
