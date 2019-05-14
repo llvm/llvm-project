@@ -241,25 +241,6 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
     // those as well.
     Language::ForEach(add_variant_funcs);
   }
-
-  // we need to do this because we don't have a proper parser for Swift
-  // function name syntax
-  // so we try to ensure that if we autocomplete to something, we'll look for
-  // its mangled
-  // equivalent and use the mangled version as a lookup as well - to avoid
-  // overhead
-  // only do it for mangled names that start with _T - i.e. Swift mangled
-  // names!
-  ConstString counterpart;
-  if (name.GetMangledCounterpart(counterpart)) {
-    if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetCString())) {
-      Module::LookupInfo lookup;
-      lookup.SetName(counterpart);
-      lookup.SetLookupName(counterpart);
-      lookup.SetNameTypeMask(eFunctionNameTypeAuto);
-      m_lookups.push_back(lookup);
-    }
-  }
 }
 
 // FIXME: Right now we look at the module level, and call the module's
