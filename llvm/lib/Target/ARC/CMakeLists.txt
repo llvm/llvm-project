@@ -27,6 +27,5 @@ add_llvm_target(ARCCodeGen
   )
 
 add_subdirectory(Disassembler)
-add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

@@ -1,4 +1,8 @@
 add_llvm_library(LLVMX86Desc
+  X86ATTInstPrinter.cpp
+  X86IntelInstPrinter.cpp
+  X86InstComments.cpp
+  X86InstPrinterCommon.cpp
   X86AsmBackend.cpp
   X86MCTargetDesc.cpp
   X86MCAsmInfo.cpp

@@ -10,7 +10,7 @@ if (llvm_targets_to_build == "host") {
     llvm_targets_to_build = [ "AArch64" ]
   } else if (host_cpu == "arm") {
     llvm_targets_to_build = [ "ARM" ]
-  } else if (host_cpu == "pcc" || host_cpu == "pcc64") {
+  } else if (host_cpu == "ppc" || host_cpu == "ppc64") {
     llvm_targets_to_build = [ "PowerPC" ]
   } else if (host_cpu == "x86" || host_cpu == "x64") {
     llvm_targets_to_build = [ "X86" ]
@@ -61,8 +61,8 @@ if (host_cpu == "arm64") {
   native_target = "AArch64"
 } else if (host_cpu == "arm") {
   native_target = "ARM"
-} else if (host_cpu == "pcc" || host_cpu == "pcc64") {
-  native_target = [ "PowerPC" ]
+} else if (host_cpu == "ppc" || host_cpu == "ppc64") {
+  native_target = "PowerPC"
 } else if (host_cpu == "x86" || host_cpu == "x64") {
   native_target = "X86"
 } else {

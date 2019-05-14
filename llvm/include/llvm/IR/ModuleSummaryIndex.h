@@ -197,6 +197,9 @@ struct ValueInfo {
   }
 
   bool isDSOLocal() const;
+
+  /// Checks if all copies are eligible for auto-hiding (have flag set).
+  bool canAutoHide() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -279,11 +282,23 @@ public:
     /// within the same linkage unit.
     unsigned DSOLocal : 1;
 
+    /// In the per-module summary, indicates that the global value is
+    /// linkonce_odr and global unnamed addr (so eligible for auto-hiding
+    /// via hidden visibility). In the combined summary, indicates that the
+    /// prevailing linkonce_odr copy can be auto-hidden via hidden visibility
+    /// when it is upgraded to weak_odr in the backend. This is legal when
+    /// all copies are eligible for auto-hiding (i.e. all copies were
+    /// linkonce_odr global unnamed addr. If any copy is not (e.g. it was
+    /// originally weak_odr, we cannot auto-hide the prevailing copy as it
+    /// means the symbol was externally visible.
+    unsigned CanAutoHide : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
-                     bool NotEligibleToImport, bool Live, bool IsLocal)
+                     bool NotEligibleToImport, bool Live, bool IsLocal,
+                     bool CanAutoHide)
         : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
-          Live(Live), DSOLocal(IsLocal) {}
+          Live(Live), DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
   };
 
 private:
@@ -363,6 +378,10 @@ public:
   void setDSOLocal(bool Local) { Flags.DSOLocal = Local; }
 
   bool isDSOLocal() const { return Flags.DSOLocal; }
+
+  void setCanAutoHide(bool CanAutoHide) { Flags.CanAutoHide = CanAutoHide; }
+
+  bool canAutoHide() const { return Flags.CanAutoHide; }
 
   /// Flag that this global value cannot be imported.
   void setNotEligibleToImport() { Flags.NotEligibleToImport = true; }
@@ -512,7 +531,8 @@ public:
     return FunctionSummary(
         FunctionSummary::GVFlags(
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
-            /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false),
+            /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
+            /*CanAutoHide=*/false),
         /*InsCount=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),

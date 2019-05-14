@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter TargetInfo MCTargetDesc Utils
+subdirectories = AsmParser Disassembler TargetInfo MCTargetDesc Utils
 
 [component_0]
 type = TargetGroup
@@ -29,6 +29,6 @@ has_disassembler = 1
 type = Library
 name = RISCVCodeGen
 parent = RISCV
-required_libraries = AsmPrinter Core CodeGen MC RISCVAsmPrinter RISCVDesc
+required_libraries = AsmPrinter Core CodeGen MC RISCVDesc
   RISCVInfo RISCVUtils SelectionDAG Support Target
 add_to_library_groups = RISCV

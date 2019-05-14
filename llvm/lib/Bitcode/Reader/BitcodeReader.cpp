@@ -893,8 +893,9 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   // values as live.
   bool Live = (RawFlags & 0x2) || Version < 3;
   bool Local = (RawFlags & 0x4);
+  bool AutoHide = (RawFlags & 0x8);
 
-  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live, Local);
+  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live, Local, AutoHide);
 }
 
 // Decode the flags for GlobalVariable in the summary

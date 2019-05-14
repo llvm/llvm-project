@@ -18,5 +18,5 @@
 type = Library
 name = ARCDesc
 parent = ARC
-required_libraries = MC Support ARCAsmPrinter ARCInfo
+required_libraries = MC Support ARCInfo
 add_to_library_groups = ARC

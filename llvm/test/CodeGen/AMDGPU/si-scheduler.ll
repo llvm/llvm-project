@@ -4,6 +4,7 @@
 ; is to specify -mattr=si-scheduler.  If we just pass --misched=si, the backend
 ; won't know what scheduler we are using.
 ; RUN: llc -march=amdgcn --misched=si -mattr=si-scheduler < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 --misched=si -mattr=si-scheduler < %s | FileCheck %s
 
 ; The test checks the "si" machine scheduler pass works correctly.
 
@@ -61,3 +62,31 @@ attributes #2 = { nounwind readonly }
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}
 !2 = !{!"tbaa root"}
+
+
+; CHECK-LABEL: amdgpu_ps_main:
+; CHECK s_buffer_load_dword
+define amdgpu_ps void @_amdgpu_ps_main(i32 %arg) local_unnamed_addr {
+.entry:
+  %tmp = insertelement <2 x i32> zeroinitializer, i32 %arg, i32 0
+  %tmp1 = bitcast <2 x i32> %tmp to i64
+  %tmp2 = inttoptr i64 %tmp1 to <4 x i32> addrspace(4)*
+  %tmp3 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp2, align 16
+  %tmp4 = tail call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %tmp3, i32 0, i32 0) #0
+  switch i32 %tmp4, label %bb [
+    i32 0, label %bb5
+    i32 1, label %bb6
+  ]
+
+bb:                                               ; preds = %.entry
+  unreachable
+
+bb5:                                              ; preds = %.entry
+  unreachable
+
+bb6:                                              ; preds = %.entry
+  unreachable
+}
+
+; Function Attrs: nounwind readnone
+declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #1

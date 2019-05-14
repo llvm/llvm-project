@@ -14,6 +14,8 @@
 #ifndef __SGXINTRIN_H
 #define __SGXINTRIN_H
 
+#if __has_extension(gnu_asm)
+
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS \
   __attribute__((__always_inline__, __nodebug__,  __target__("sgx")))
@@ -52,5 +54,7 @@ _enclv_u32(unsigned int __leaf, __SIZE_TYPE__ __d[])
 }
 
 #undef __DEFAULT_FN_ATTRS
+
+#endif /* __has_extension(gnu_asm) */
 
 #endif

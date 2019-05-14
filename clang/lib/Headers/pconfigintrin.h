@@ -16,6 +16,8 @@
 
 #define __PCONFIG_KEY_PROGRAM 0x00000001
 
+#if __has_extension(gnu_asm)
+
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS \
   __attribute__((__always_inline__, __nodebug__,  __target__("pconfig")))
@@ -32,5 +34,7 @@ _pconfig_u32(unsigned int __leaf, __SIZE_TYPE__ __d[])
 }
 
 #undef __DEFAULT_FN_ATTRS
+
+#endif /* __has_extension(gnu_asm) */
 
 #endif

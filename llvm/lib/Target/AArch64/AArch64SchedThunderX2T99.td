@@ -25,7 +25,7 @@ def ThunderX2T99Model : SchedMachineModel {
   let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
 
-  list<Predicate> UnsupportedFeatures = [HasSVE];
+  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;

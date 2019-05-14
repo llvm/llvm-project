@@ -37,17 +37,13 @@ EXTERN void omp_set_num_threads(int num) {
   PRINT(LD_IO, "call omp_set_num_threads(num %d)\n", num);
   if (num <= 0) {
     WARNING0(LW_INPUT, "expected positive num; ignore\n");
-  } else {
-    omptarget_nvptx_TaskDescr *currTaskDescr =
-        getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
-    currTaskDescr->NThreads() = num;
+  } else if (parallelLevel[GetWarpId()] == 0) {
+    nThreads = num;
   }
 }
 
 EXTERN int omp_get_num_threads(void) {
-  bool isSPMDExecutionMode = isSPMDMode();
-  int tid = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
-  int rc = GetNumberOfOmpThreads(tid, isSPMDExecutionMode);
+  int rc = GetNumberOfOmpThreads(isSPMDMode());
   PRINT(LD_IO, "call omp_get_num_threads() return %d\n", rc);
   return rc;
 }
@@ -56,12 +52,10 @@ EXTERN int omp_get_max_threads(void) {
   if (parallelLevel[GetWarpId()] > 0)
     // We're already in parallel region.
     return 1; // default is 1 thread avail
-  omptarget_nvptx_TaskDescr *currTaskDescr =
-      getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
-  ASSERT0(LT_FUSSY, !currTaskDescr->InParallelRegion(),
-          "Should no be in the parallel region");
   // Not currently in a parallel region, return what was set.
-  int rc = currTaskDescr->NThreads();
+  int rc = 1;
+  if (parallelLevel[GetWarpId()] == 0)
+    rc = nThreads;
   ASSERT0(LT_FUSSY, rc >= 0, "bad number of threads");
   PRINT(LD_IO, "call omp_get_max_threads() return %d\n", rc);
   return rc;
@@ -156,10 +150,7 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
   int rc = -1;
   // If level is 0 or all parallel regions are not active - return 0.
   unsigned parLevel = parallelLevel[GetWarpId()];
-  if (level == 0 || (level > 0 && parLevel < OMP_ACTIVE_PARALLEL_LEVEL &&
-                     level <= parLevel)) {
-    rc = 0;
-  } else if (level > 0) {
+  if (level == 1 && parLevel > OMP_ACTIVE_PARALLEL_LEVEL) {
     int totLevel = omp_get_level();
     if (level <= totLevel) {
       omptarget_nvptx_TaskDescr *currTaskDescr =
@@ -179,9 +170,8 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
                 (currTaskDescr->IsParallelConstruct() ? "par" : "task"),
                 (int)currTaskDescr->InParallelRegion(), (int)sched,
                 currTaskDescr->RuntimeChunkSize(),
-                (int)currTaskDescr->ThreadId(),
-                (int)currTaskDescr->ThreadsInTeam(),
-                (int)currTaskDescr->NThreads());
+                (int)currTaskDescr->ThreadId(), (int)threadsInTeam,
+                (int)nThreads);
         }
 
         if (currTaskDescr->IsParallelConstruct()) {
@@ -196,6 +186,12 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
       } while (currTaskDescr);
       ASSERT0(LT_FUSSY, !steps, "expected to find all steps");
     }
+  } else if (level == 0 ||
+             (level > 0 && parLevel < OMP_ACTIVE_PARALLEL_LEVEL &&
+              level <= parLevel) ||
+             (level > 1 && parLevel > OMP_ACTIVE_PARALLEL_LEVEL &&
+              level <= (parLevel - OMP_ACTIVE_PARALLEL_LEVEL))) {
+    rc = 0;
   }
   PRINT(LD_IO, "call omp_get_ancestor_thread_num(level %d) returns %d\n", level,
         rc)
@@ -208,30 +204,14 @@ EXTERN int omp_get_team_size(int level) {
   int rc = -1;
   unsigned parLevel = parallelLevel[GetWarpId()];
   // If level is 0 or all parallel regions are not active - return 1.
-  if (level == 0 || (level > 0 && parLevel < OMP_ACTIVE_PARALLEL_LEVEL &&
-                     level <= parLevel)) {
+  if (level == 1 && parLevel > OMP_ACTIVE_PARALLEL_LEVEL) {
+    rc = threadsInTeam;
+  } else if (level == 0 ||
+             (level > 0 && parLevel < OMP_ACTIVE_PARALLEL_LEVEL &&
+              level <= parLevel) ||
+             (level > 1 && parLevel > OMP_ACTIVE_PARALLEL_LEVEL &&
+              level <= (parLevel - OMP_ACTIVE_PARALLEL_LEVEL))) {
     rc = 1;
-  } else if (level > 0) {
-    int totLevel = omp_get_level();
-    if (level <= totLevel) {
-      omptarget_nvptx_TaskDescr *currTaskDescr =
-          getMyTopTaskDescriptor(/*isSPMDExecutionMode=*/false);
-      int steps = totLevel - level;
-      ASSERT0(LT_FUSSY, currTaskDescr,
-              "do not expect fct to be called in a non-active thread");
-      do {
-        if (currTaskDescr->IsParallelConstruct()) {
-          if (!steps) {
-            // found the level
-            rc = currTaskDescr->ThreadsInTeam();
-            break;
-          }
-          steps--;
-        }
-        currTaskDescr = currTaskDescr->GetPrevTaskDescr();
-      } while (currTaskDescr);
-      ASSERT0(LT_FUSSY, !steps, "expected to find all steps");
-    }
   }
   PRINT(LD_IO, "call omp_get_team_size(level %d) returns %d\n", level, rc)
   return rc;

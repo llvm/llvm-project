@@ -553,10 +553,17 @@ static Value *cloneConstantExprWithNewAddressSpace(
     if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
       IsNew = true;
       NewOperands.push_back(cast<Constant>(NewOperand));
-    } else {
-      // Otherwise, reuses the old operand.
-      NewOperands.push_back(Operand);
+      continue;
     }
+    if (auto CExpr = dyn_cast<ConstantExpr>(Operand))
+      if (Value *NewOperand = cloneConstantExprWithNewAddressSpace(
+              CExpr, NewAddrSpace, ValueWithNewAddrSpace)) {
+        IsNew = true;
+        NewOperands.push_back(cast<Constant>(NewOperand));
+        continue;
+      }
+    // Otherwise, reuses the old operand.
+    NewOperands.push_back(Operand);
   }
 
   // If !IsNew, we will replace the Value with itself. However, replaced values

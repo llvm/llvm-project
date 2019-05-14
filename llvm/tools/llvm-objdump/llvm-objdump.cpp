@@ -1686,20 +1686,38 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
       outs() << SectionName;
     }
 
-    outs() << '\t';
     if (Common || isa<ELFObjectFileBase>(O)) {
       uint64_t Val =
           Common ? Symbol.getAlignment() : ELFSymbolRef(Symbol).getSize();
-      outs() << format("\t %08" PRIx64 " ", Val);
+      outs() << format("\t%08" PRIx64, Val);
     }
 
-    if (Hidden)
-      outs() << ".hidden ";
+    if (isa<ELFObjectFileBase>(O)) {
+      uint8_t Other = ELFSymbolRef(Symbol).getOther();
+      switch (Other) {
+      case ELF::STV_DEFAULT:
+        break;
+      case ELF::STV_INTERNAL:
+        outs() << " .internal";
+        break;
+      case ELF::STV_HIDDEN:
+        outs() << " .hidden";
+        break;
+      case ELF::STV_PROTECTED:
+        outs() << " .protected";
+        break;
+      default:
+        outs() << format(" 0x%02x", Other);
+        break;
+      }
+    } else if (Hidden) {
+      outs() << " .hidden";
+    }
 
     if (Demangle)
-      outs() << demangle(Name) << '\n';
+      outs() << ' ' << demangle(Name) << '\n';
     else
-      outs() << Name << '\n';
+      outs() << ' ' << Name << '\n';
   }
 }
 

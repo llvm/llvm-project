@@ -2314,6 +2314,9 @@ def err_constexpr_redecl_mismatch : Error<
   "%select{non-constexpr declaration of %0 follows constexpr declaration"
   "|constexpr declaration of %0 follows non-constexpr declaration}1">;
 def err_constexpr_virtual : Error<"virtual function cannot be constexpr">;
+def warn_cxx17_compat_constexpr_virtual : Warning<
+  "virtual constexpr functions are incompatible with "
+  "C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
 def err_constexpr_virtual_base : Error<
   "constexpr %select{member function|constructor}0 not allowed in "
   "%select{struct|interface|class}1 with virtual base "

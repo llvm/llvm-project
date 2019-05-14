@@ -347,6 +347,7 @@ public:
   //     I          - Change was made, I is still valid, I may be dead though
   //   otherwise    - Change was made, replace I with returned instruction
   //
+  Instruction *visitFNeg(UnaryOperator &I);
   Instruction *visitAdd(BinaryOperator &I);
   Instruction *visitFAdd(BinaryOperator &I);
   Value *OptimizePointerDifference(Value *LHS, Value *RHS, Type *Ty);

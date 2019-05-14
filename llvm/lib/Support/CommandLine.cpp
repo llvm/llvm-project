@@ -105,6 +105,16 @@ static StringRef argPrefix(StringRef ArgName) {
   return ArgPrefixLong;
 }
 
+// Option predicates...
+static inline bool isGrouping(const Option *O) {
+  return O->getMiscFlags() & cl::Grouping;
+}
+static inline bool isPrefixedOrGrouping(const Option *O) {
+  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
+         O->getFormattingFlag() == cl::AlwaysPrefix;
+}
+
+
 namespace {
 
 class PrintArg {
@@ -148,7 +158,8 @@ public:
   void ResetAllOptionOccurrences();
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
-                               StringRef Overview, raw_ostream *Errs = nullptr);
+                               StringRef Overview, raw_ostream *Errs = nullptr,
+                               bool LongOptionsUseDoubleDash = false);
 
   void addLiteralOption(Option &Opt, SubCommand *SC, StringRef Name) {
     if (Opt.hasArgStr())
@@ -394,6 +405,13 @@ private:
   SubCommand *ActiveSubCommand;
 
   Option *LookupOption(SubCommand &Sub, StringRef &Arg, StringRef &Value);
+  Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
+                           bool LongOptionsUseDoubleDash, bool HaveDoubleDash) {
+    Option *Opt = LookupOption(Sub, Arg, Value);
+    if (Opt && LongOptionsUseDoubleDash && !HaveDoubleDash && !isGrouping(Opt))
+      return nullptr;
+    return Opt;
+  }
   SubCommand *LookupSubCommand(StringRef Name);
 };
 
@@ -679,15 +697,6 @@ static bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
   return ProvideOption(Handler, Handler->ArgStr, Arg, 0, nullptr, Dummy);
 }
 
-// Option predicates...
-static inline bool isGrouping(const Option *O) {
-  return O->getMiscFlags() & cl::Grouping;
-}
-static inline bool isPrefixedOrGrouping(const Option *O) {
-  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
-         O->getFormattingFlag() == cl::AlwaysPrefix;
-}
-
 // getOptionPred - Check to see if there are any options that satisfy the
 // specified predicate with names that are the prefixes in Name.  This is
 // checked by progressively stripping characters off of the name, checking to
@@ -697,8 +706,9 @@ static inline bool isPrefixedOrGrouping(const Option *O) {
 static Option *getOptionPred(StringRef Name, size_t &Length,
                              bool (*Pred)(const Option *),
                              const StringMap<Option *> &OptionsMap) {
-
   StringMap<Option *>::const_iterator OMI = OptionsMap.find(Name);
+  if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+    OMI = OptionsMap.end();
 
   // Loop while we haven't found an option and Name still has at least two
   // characters in it (so that the next iteration will not be the empty
@@ -706,6 +716,8 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   while (OMI == OptionsMap.end() && Name.size() > 1) {
     Name = Name.substr(0, Name.size() - 1); // Chop off the last character.
     OMI = OptionsMap.find(Name);
+    if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+      OMI = OptionsMap.end();
   }
 
   if (OMI != OptionsMap.end() && Pred(OMI->second)) {
@@ -1166,7 +1178,8 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
-                                 const char *EnvVar) {
+                                 const char *EnvVar,
+                                 bool LongOptionsUseDoubleDash) {
   SmallVector<const char *, 20> NewArgv;
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -1186,7 +1199,7 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
 
   // Parse all options.
   return GlobalParser->ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
-                                               Errs);
+                                               Errs, LongOptionsUseDoubleDash);
 }
 
 void CommandLineParser::ResetAllOptionOccurrences() {
@@ -1201,7 +1214,8 @@ void CommandLineParser::ResetAllOptionOccurrences() {
 bool CommandLineParser::ParseCommandLineOptions(int argc,
                                                 const char *const *argv,
                                                 StringRef Overview,
-                                                raw_ostream *Errs) {
+                                                raw_ostream *Errs,
+                                                bool LongOptionsUseDoubleDash) {
   assert(hasOptions() && "No options specified!");
 
   // Expand response files.
@@ -1311,6 +1325,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     std::string NearestHandlerString;
     StringRef Value;
     StringRef ArgName = "";
+    bool HaveDoubleDash = false;
 
     // Check to see if this is a positional argument.  This argument is
     // considered to be positional if it doesn't start with '-', if it is "-"
@@ -1349,25 +1364,30 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-')
+      if (!ArgName.empty() && ArgName[0] == '-') {
+        HaveDoubleDash = true;
         ArgName = ArgName.substr(1);
+      }
 
-      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
+      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
+                                 LongOptionsUseDoubleDash, HaveDoubleDash);
       if (!Handler || Handler->getFormattingFlag() != cl::Positional) {
         ProvidePositionalOption(ActivePositionalArg, StringRef(argv[i]), i);
         continue; // We are done!
       }
-
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-')
+      if (!ArgName.empty() && ArgName[0] == '-') {
+        HaveDoubleDash = true;
         ArgName = ArgName.substr(1);
+      }
 
-      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
+      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
+                                 LongOptionsUseDoubleDash, HaveDoubleDash);
 
       // Check to see if this "option" is really a prefixed or grouped argument.
-      if (!Handler)
+      if (!Handler && !(LongOptionsUseDoubleDash && HaveDoubleDash))
         Handler = HandlePrefixedOrGroupedOption(ArgName, Value, ErrorParsing,
                                                 OptionsMap);
 
