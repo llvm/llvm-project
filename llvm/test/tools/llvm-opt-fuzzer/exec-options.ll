@@ -3,6 +3,9 @@
 ; REQUIRES: static-libs
 ; REQUIRES: x86-registered-target
 
+; The above also applies if the binary is built with libc++.
+; UNSUPPORTED: libcxx-used
+
 ; This test is really flaky on Windows. On Windows, executables and DLLs cannot
 ; be deleted or written while they are loaded. The OS unlocks the file some
 ; time after the process terminates, so if 'rm' runs too quickly, it will fail
