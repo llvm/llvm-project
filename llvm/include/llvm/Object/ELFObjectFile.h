@@ -264,8 +264,8 @@ protected:
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
-  std::error_code getSectionContents(DataRefImpl Sec,
-                                     StringRef &Res) const override;
+  Expected<ArrayRef<uint8_t>>
+  getSectionContents(DataRefImpl Sec) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;
   bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
@@ -701,16 +701,15 @@ uint64_t ELFObjectFile<ELFT>::getSectionSize(DataRefImpl Sec) const {
 }
 
 template <class ELFT>
-std::error_code
-ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec,
-                                        StringRef &Result) const {
+Expected<ArrayRef<uint8_t>>
+ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   if (std::error_code EC =
           checkOffset(getMemoryBufferRef(),
                       (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
-    return EC;
-  Result = StringRef((const char *)base() + EShdr->sh_offset, EShdr->sh_size);
-  return std::error_code();
+    return errorCodeToError(EC);
+  return makeArrayRef((const uint8_t *)base() + EShdr->sh_offset,
+                      EShdr->sh_size);
 }
 
 template <class ELFT>
