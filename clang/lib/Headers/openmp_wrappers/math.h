@@ -7,9 +7,7 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef __cplusplus
 #include <__clang_openmp_math.h>
-#endif
 
 #ifndef __CLANG_NO_HOST_MATH__
 #include_next <math.h>

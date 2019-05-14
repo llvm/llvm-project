@@ -211,3 +211,94 @@ constexpr bool for_range_init() {
   return k == 6;
 }
 static_assert(for_range_init());
+
+namespace Virtual {
+  struct NonZeroOffset { int padding = 123; };
+
+  // Ensure that we pick the right final overrider during construction.
+  struct A {
+    virtual constexpr char f() const { return 'A'; }
+    char a = f();
+  };
+  struct NoOverrideA : A {};
+  struct B : NonZeroOffset, NoOverrideA {
+    virtual constexpr char f() const { return 'B'; }
+    char b = f();
+  };
+  struct NoOverrideB : B {};
+  struct C : NonZeroOffset, A {
+    virtual constexpr char f() const { return 'C'; }
+    A *pba;
+    char c = ((A*)this)->f();
+    char ba = pba->f();
+    constexpr C(A *pba) : pba(pba) {}
+  };
+  struct D : NonZeroOffset, NoOverrideB, C { // expected-warning {{inaccessible}}
+    virtual constexpr char f() const { return 'D'; }
+    char d = f();
+    constexpr D() : C((B*)this) {}
+  };
+  constexpr D d;
+  static_assert(((B&)d).a == 'A');
+  static_assert(((C&)d).a == 'A');
+  static_assert(d.b == 'B');
+  static_assert(d.c == 'C');
+  // During the construction of C, the dynamic type of B's A is B.
+  static_assert(d.ba == 'B');
+  static_assert(d.d == 'D');
+  static_assert(d.f() == 'D');
+  constexpr const A &a = (B&)d;
+  constexpr const B &b = d;
+  static_assert(a.f() == 'D');
+  static_assert(b.f() == 'D');
+
+  // FIXME: It is unclear whether this should be permitted.
+  D d_not_constexpr;
+  static_assert(d_not_constexpr.f() == 'D'); // expected-error {{constant expression}} expected-note {{virtual function called on object 'd_not_constexpr' whose dynamic type is not constant}}
+
+  // Check that we apply a proper adjustment for a covariant return type.
+  struct Covariant1 {
+    D d;
+    virtual const A *f() const;
+  };
+  template<typename T>
+  struct Covariant2 : Covariant1 {
+    virtual const T *f() const;
+  };
+  template<typename T>
+  struct Covariant3 : Covariant2<T> {
+    constexpr virtual const D *f() const { return &this->d; }
+  };
+
+  constexpr Covariant3<B> cb;
+  constexpr Covariant3<C> cc;
+
+  constexpr const Covariant1 *cb1 = &cb;
+  constexpr const Covariant2<B> *cb2 = &cb;
+  static_assert(cb1->f()->a == 'A');
+  static_assert(cb1->f() == (B*)&cb.d);
+  static_assert(cb1->f()->f() == 'D');
+  static_assert(cb2->f()->b == 'B');
+  static_assert(cb2->f() == &cb.d);
+  static_assert(cb2->f()->f() == 'D');
+
+  constexpr const Covariant1 *cc1 = &cc;
+  constexpr const Covariant2<C> *cc2 = &cc;
+  static_assert(cc1->f()->a == 'A');
+  static_assert(cc1->f() == (C*)&cc.d);
+  static_assert(cc1->f()->f() == 'D');
+  static_assert(cc2->f()->c == 'C');
+  static_assert(cc2->f() == &cc.d);
+  static_assert(cc2->f()->f() == 'D');
+
+  static_assert(cb.f()->d == 'D');
+  static_assert(cc.f()->d == 'D');
+
+  struct Abstract {
+    constexpr virtual void f() = 0; // expected-note {{declared here}}
+    constexpr Abstract() { do_it(); } // expected-note {{in call to}}
+    constexpr void do_it() { f(); } // expected-note {{pure virtual function 'Virtual::Abstract::f' called}}
+  };
+  struct PureVirtualCall : Abstract { void f(); }; // expected-note {{in call to 'Abstract}}
+  constexpr PureVirtualCall pure_virtual_call; // expected-error {{constant expression}} expected-note {{in call to 'PureVirtualCall}}
+}

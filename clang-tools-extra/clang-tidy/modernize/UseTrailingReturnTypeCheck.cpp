@@ -23,8 +23,7 @@ namespace modernize {
 namespace {
 struct UnqualNameVisitor : public RecursiveASTVisitor<UnqualNameVisitor> {
 public:
-  UnqualNameVisitor(const FunctionDecl &F, const SourceManager &SM)
-      : F(F), SM(SM) {}
+  UnqualNameVisitor(const FunctionDecl &F) : F(F) {}
 
   bool Collision = false;
 
@@ -96,7 +95,6 @@ public:
 
 private:
   const FunctionDecl &F;
-  const SourceManager &SM;
 };
 } // namespace
 
@@ -447,7 +445,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   // name, then we can either not perform a rewrite or explicitely qualify the
   // entity. Such entities could be function parameter names, (inherited) class
   // members, template parameters, etc.
-  UnqualNameVisitor UNV{*F, SM};
+  UnqualNameVisitor UNV{*F};
   UNV.TraverseTypeLoc(FTL.getReturnLoc());
   if (UNV.Collision) {
     diag(F->getLocation(), Message);

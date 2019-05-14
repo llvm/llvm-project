@@ -103,6 +103,21 @@ def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions">;
 
+def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
+  "Enable Scalable Vector Extension 2 (SVE2) instructions", [FeatureSVE]>;
+
+def FeatureSVE2AES : SubtargetFeature<"sve2-aes", "HasSVE2AES", "true",
+  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+
+def FeatureSVE2SM4 : SubtargetFeature<"sve2-sm4", "HasSVE2SM4", "true",
+  "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
+
+def FeatureSVE2SHA3 : SubtargetFeature<"sve2-sha3", "HasSVE2SHA3", "true",
+  "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
+
+def FeatureSVE2BitPerm : SubtargetFeature<"bitperm", "HasSVE2BitPerm", "true",
+  "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
+
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
 def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
@@ -395,6 +410,18 @@ def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
 //===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
+
+//===----------------------------------------------------------------------===//
+// Unsupported features to disable for scheduling models
+//===----------------------------------------------------------------------===//
+
+class AArch64Unsupported { list<Predicate> F; }
+
+def SVEUnsupported : AArch64Unsupported {
+  let F = [HasSVE, HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3,
+           HasSVE2BitPerm];
+}
+
 include "AArch64SchedA53.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"

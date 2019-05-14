@@ -1810,6 +1810,7 @@ void ASTStmtReader::VisitCXXFoldExpr(CXXFoldExpr *E) {
   E->LParenLoc = ReadSourceLocation();
   E->EllipsisLoc = ReadSourceLocation();
   E->RParenLoc = ReadSourceLocation();
+  E->NumExpansions = Record.readInt();
   E->SubExprs[0] = Record.readSubExpr();
   E->SubExprs[1] = Record.readSubExpr();
   E->Opcode = (BinaryOperatorKind)Record.readInt();

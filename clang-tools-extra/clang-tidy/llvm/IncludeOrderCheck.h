@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDE_ORDER_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDE_ORDER_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDEORDERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDEORDERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
-namespace llvm {
+namespace llvm_check {
 
 /// Checks the correct order of `#includes`.
 ///
@@ -26,8 +26,8 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
 };
 
-} // namespace llvm
+} // namespace llvm_check
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDE_ORDER_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INCLUDEORDERCHECK_H

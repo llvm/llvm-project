@@ -18,5 +18,5 @@
 type = Library
 name = SparcDesc
 parent = Sparc
-required_libraries = MC SparcAsmPrinter SparcInfo Support
+required_libraries = MC SparcInfo Support
 add_to_library_groups = Sparc

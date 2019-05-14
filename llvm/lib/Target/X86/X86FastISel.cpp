@@ -84,7 +84,7 @@ private:
   bool X86FastEmitCompare(const Value *LHS, const Value *RHS, EVT VT,
                           const DebugLoc &DL);
 
-  bool X86FastEmitLoad(EVT VT, X86AddressMode &AM, MachineMemOperand *MMO,
+  bool X86FastEmitLoad(MVT VT, X86AddressMode &AM, MachineMemOperand *MMO,
                        unsigned &ResultReg, unsigned Alignment = 1);
 
   bool X86FastEmitStore(EVT VT, const Value *Val, X86AddressMode &AM,
@@ -314,7 +314,7 @@ bool X86FastISel::isTypeLegal(Type *Ty, MVT &VT, bool AllowI1) {
 /// X86FastEmitLoad - Emit a machine instruction to load a value of type VT.
 /// The address is either pre-computed, i.e. Ptr, or a GlobalAddress, i.e. GV.
 /// Return true and the result register by reference if it is possible.
-bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
+bool X86FastISel::X86FastEmitLoad(MVT VT, X86AddressMode &AM,
                                   MachineMemOperand *MMO, unsigned &ResultReg,
                                   unsigned Alignment) {
   bool HasSSE41 = Subtarget->hasSSE41();
@@ -324,46 +324,38 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   bool HasVLX = Subtarget->hasVLX();
   bool IsNonTemporal = MMO && MMO->isNonTemporal();
 
+  // Treat i1 loads the same as i8 loads. Masking will be done when storing.
+  if (VT == MVT::i1)
+    VT = MVT::i8;
+
   // Get opcode and regclass of the output for the given load instruction.
   unsigned Opc = 0;
-  const TargetRegisterClass *RC = nullptr;
-  switch (VT.getSimpleVT().SimpleTy) {
+  switch (VT.SimpleTy) {
   default: return false;
-  case MVT::i1:
   case MVT::i8:
     Opc = X86::MOV8rm;
-    RC  = &X86::GR8RegClass;
     break;
   case MVT::i16:
     Opc = X86::MOV16rm;
-    RC  = &X86::GR16RegClass;
     break;
   case MVT::i32:
     Opc = X86::MOV32rm;
-    RC  = &X86::GR32RegClass;
     break;
   case MVT::i64:
     // Must be in x86-64 mode.
     Opc = X86::MOV64rm;
-    RC  = &X86::GR64RegClass;
     break;
   case MVT::f32:
-    if (X86ScalarSSEf32) {
+    if (X86ScalarSSEf32)
       Opc = HasAVX512 ? X86::VMOVSSZrm : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
-      RC  = HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp32m;
-      RC  = &X86::RFP32RegClass;
-    }
     break;
   case MVT::f64:
-    if (X86ScalarSSEf64) {
+    if (X86ScalarSSEf64)
       Opc = HasAVX512 ? X86::VMOVSDZrm : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
-      RC  = HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp64m;
-      RC  = &X86::RFP64RegClass;
-    }
     break;
   case MVT::f80:
     // No f80 support yet.
@@ -378,7 +370,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     else
       Opc = HasVLX ? X86::VMOVUPSZ128rm :
             HasAVX ? X86::VMOVUPSrm : X86::MOVUPSrm;
-    RC = HasVLX ? &X86::VR128XRegClass : &X86::VR128RegClass;
     break;
   case MVT::v2f64:
     if (IsNonTemporal && Alignment >= 16 && HasSSE41)
@@ -390,13 +381,12 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     else
       Opc = HasVLX ? X86::VMOVUPDZ128rm :
             HasAVX ? X86::VMOVUPDrm : X86::MOVUPDrm;
-    RC = HasVLX ? &X86::VR128XRegClass : &X86::VR128RegClass;
     break;
   case MVT::v4i32:
   case MVT::v2i64:
   case MVT::v8i16:
   case MVT::v16i8:
-    if (IsNonTemporal && Alignment >= 16)
+    if (IsNonTemporal && Alignment >= 16 && HasSSE41)
       Opc = HasVLX ? X86::VMOVNTDQAZ128rm :
             HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
     else if (Alignment >= 16)
@@ -405,7 +395,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     else
       Opc = HasVLX ? X86::VMOVDQU64Z128rm :
             HasAVX ? X86::VMOVDQUrm : X86::MOVDQUrm;
-    RC = HasVLX ? &X86::VR128XRegClass : &X86::VR128RegClass;
     break;
   case MVT::v8f32:
     assert(HasAVX);
@@ -417,7 +406,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
       Opc = HasVLX ? X86::VMOVAPSZ256rm : X86::VMOVAPSYrm;
     else
       Opc = HasVLX ? X86::VMOVUPSZ256rm : X86::VMOVUPSYrm;
-    RC = HasVLX ? &X86::VR256XRegClass : &X86::VR256RegClass;
     break;
   case MVT::v4f64:
     assert(HasAVX);
@@ -429,7 +417,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
       Opc = HasVLX ? X86::VMOVAPDZ256rm : X86::VMOVAPDYrm;
     else
       Opc = HasVLX ? X86::VMOVUPDZ256rm : X86::VMOVUPDYrm;
-    RC = HasVLX ? &X86::VR256XRegClass : &X86::VR256RegClass;
     break;
   case MVT::v8i32:
   case MVT::v4i64:
@@ -444,7 +431,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
       Opc = HasVLX ? X86::VMOVDQA64Z256rm : X86::VMOVDQAYrm;
     else
       Opc = HasVLX ? X86::VMOVDQU64Z256rm : X86::VMOVDQUYrm;
-    RC = HasVLX ? &X86::VR256XRegClass : &X86::VR256RegClass;
     break;
   case MVT::v16f32:
     assert(HasAVX512);
@@ -452,7 +438,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
       Opc = X86::VMOVNTDQAZrm;
     else
       Opc = (Alignment >= 64) ? X86::VMOVAPSZrm : X86::VMOVUPSZrm;
-    RC  = &X86::VR512RegClass;
     break;
   case MVT::v8f64:
     assert(HasAVX512);
@@ -460,7 +445,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
       Opc = X86::VMOVNTDQAZrm;
     else
       Opc = (Alignment >= 64) ? X86::VMOVAPDZrm : X86::VMOVUPDZrm;
-    RC  = &X86::VR512RegClass;
     break;
   case MVT::v8i64:
   case MVT::v16i32:
@@ -473,9 +457,10 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
       Opc = X86::VMOVNTDQAZrm;
     else
       Opc = (Alignment >= 64) ? X86::VMOVDQA64Zrm : X86::VMOVDQU64Zrm;
-    RC  = &X86::VR512RegClass;
     break;
   }
+
+  const TargetRegisterClass *RC = TLI.getRegClassFor(VT);
 
   ResultReg = createResultReg(RC);
   MachineInstrBuilder MIB =
@@ -2187,19 +2172,6 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   if (NeedSwap)
     std::swap(CmpLHS, CmpRHS);
 
-  // Choose the SSE instruction sequence based on data type (float or double).
-  static const uint16_t OpcTable[2][4] = {
-    { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
-    { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
-  };
-
-  const uint16_t *Opc = nullptr;
-  switch (RetVT.SimpleTy) {
-  default: return false;
-  case MVT::f32: Opc = &OpcTable[0][0]; break;
-  case MVT::f64: Opc = &OpcTable[1][0]; break;
-  }
-
   const Value *LHS = I->getOperand(1);
   const Value *RHS = I->getOperand(2);
 
@@ -2270,6 +2242,19 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), ResultReg).addReg(VBlendReg);
   } else {
+    // Choose the SSE instruction sequence based on data type (float or double).
+    static const uint16_t OpcTable[2][4] = {
+      { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
+      { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
+    };
+
+    const uint16_t *Opc = nullptr;
+    switch (RetVT.SimpleTy) {
+    default: return false;
+    case MVT::f32: Opc = &OpcTable[0][0]; break;
+    case MVT::f64: Opc = &OpcTable[1][0]; break;
+    }
+
     const TargetRegisterClass *VR128 = &X86::VR128RegClass;
     unsigned CmpReg = fastEmitInst_rri(Opc[0], RC, CmpLHSReg, CmpLHSIsKill,
                                        CmpRHSReg, CmpRHSIsKill, CC);
@@ -2296,8 +2281,10 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
   case MVT::i8:  Opc = X86::CMOV_GR8;  break;
   case MVT::i16: Opc = X86::CMOV_GR16; break;
   case MVT::i32: Opc = X86::CMOV_GR32; break;
-  case MVT::f32: Opc = X86::CMOV_FR32; break;
-  case MVT::f64: Opc = X86::CMOV_FR64; break;
+  case MVT::f32: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR32X
+                                              : X86::CMOV_FR32; break;
+  case MVT::f64: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR64X
+                                              : X86::CMOV_FR64; break;
   }
 
   const Value *Cond = I->getOperand(0);
@@ -2513,8 +2500,7 @@ bool X86FastISel::X86SelectFPExt(const Instruction *I) {
     unsigned Opc =
         HasAVX512 ? X86::VCVTSS2SDZrr
                   : Subtarget->hasAVX() ? X86::VCVTSS2SDrr : X86::CVTSS2SDrr;
-    return X86SelectFPExtOrFPTrunc(
-        I, Opc, HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass);
+    return X86SelectFPExtOrFPTrunc(I, Opc, TLI.getRegClassFor(MVT::f64));
   }
 
   return false;
@@ -2528,8 +2514,7 @@ bool X86FastISel::X86SelectFPTrunc(const Instruction *I) {
     unsigned Opc =
         HasAVX512 ? X86::VCVTSD2SSZrr
                   : Subtarget->hasAVX() ? X86::VCVTSD2SSrr : X86::CVTSD2SSrr;
-    return X86SelectFPExtOrFPTrunc(
-        I, Opc, HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass);
+    return X86SelectFPExtOrFPTrunc(I, Opc, TLI.getRegClassFor(MVT::f32));
   }
 
   return false;
@@ -3754,26 +3739,19 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   unsigned Opc = 0;
   bool HasAVX = Subtarget->hasAVX();
   bool HasAVX512 = Subtarget->hasAVX512();
-  const TargetRegisterClass *RC = nullptr;
   switch (VT.SimpleTy) {
   default: return 0;
   case MVT::f32:
-    if (X86ScalarSSEf32) {
+    if (X86ScalarSSEf32)
       Opc = HasAVX512 ? X86::VMOVSSZrm : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
-      RC = HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp32m;
-      RC = &X86::RFP32RegClass;
-    }
     break;
   case MVT::f64:
-    if (X86ScalarSSEf64) {
+    if (X86ScalarSSEf64)
       Opc = HasAVX512 ? X86::VMOVSDZrm : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
-      RC = HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp64m;
-      RC = &X86::RFP64RegClass;
-    }
     break;
   case MVT::f80:
     // No f80 support yet.
@@ -3799,7 +3777,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   // Create the load from the constant pool.
   unsigned CPI = MCP.getConstantPoolIndex(CFP, Align);
-  unsigned ResultReg = createResultReg(RC);
+  unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT.SimpleTy));
 
   if (CM == CodeModel::Large) {
     unsigned AddrReg = createResultReg(&X86::GR64RegClass);
@@ -3909,33 +3887,26 @@ unsigned X86FastISel::fastMaterializeFloatZero(const ConstantFP *CF) {
   // Get opcode and regclass for the given zero.
   bool HasAVX512 = Subtarget->hasAVX512();
   unsigned Opc = 0;
-  const TargetRegisterClass *RC = nullptr;
   switch (VT.SimpleTy) {
   default: return 0;
   case MVT::f32:
-    if (X86ScalarSSEf32) {
+    if (X86ScalarSSEf32)
       Opc = HasAVX512 ? X86::AVX512_FsFLD0SS : X86::FsFLD0SS;
-      RC  = HasAVX512 ? &X86::FR32XRegClass : &X86::FR32RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp032;
-      RC  = &X86::RFP32RegClass;
-    }
     break;
   case MVT::f64:
-    if (X86ScalarSSEf64) {
+    if (X86ScalarSSEf64)
       Opc = HasAVX512 ? X86::AVX512_FsFLD0SD : X86::FsFLD0SD;
-      RC  = HasAVX512 ? &X86::FR64XRegClass : &X86::FR64RegClass;
-    } else {
+    else
       Opc = X86::LD_Fp064;
-      RC  = &X86::RFP64RegClass;
-    }
     break;
   case MVT::f80:
     // No f80 support yet.
     return 0;
   }
 
-  unsigned ResultReg = createResultReg(RC);
+  unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg);
   return ResultReg;
 }

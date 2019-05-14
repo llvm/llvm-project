@@ -249,8 +249,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   uint16_t &NumThreadsClause =
       omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
 
-  uint16_t NumThreads = determineNumberOfThreads(
-      NumThreadsClause, currTaskDescr->NThreads(), threadLimit);
+  uint16_t NumThreads =
+      determineNumberOfThreads(NumThreadsClause, nThreads, threadLimit);
 
   if (NumThreadsClause != 0) {
     // Reset request to avoid propagating to successive #parallel
@@ -264,7 +264,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
 
   // Set number of threads on work descriptor.
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
-  workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr, NumThreads);
+  workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr);
+  threadsInTeam = NumThreads;
 }
 
 // All workers call this function.  Deactivate those not needed.
@@ -294,7 +295,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
   // Set to true for workers participating in the parallel region.
   bool isActive = false;
   // Initialize state for active threads.
-  if (threadId < workDescr.WorkTaskDescr()->ThreadsInTeam()) {
+  if (threadId < threadsInTeam) {
     // init work descriptor from workdesccr
     omptarget_nvptx_TaskDescr *newTaskDescr =
         omptarget_nvptx_threadPrivateContext->Level1TaskDescr(threadId);
@@ -307,10 +308,10 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
     PRINT(LD_PAR,
           "thread will execute parallel region with id %d in a team of "
           "%d threads\n",
-          (int)newTaskDescr->ThreadId(), (int)newTaskDescr->NThreads());
+          (int)newTaskDescr->ThreadId(), (int)nThreads);
 
     isActive = true;
-    IncParallelLevel(workDescr.WorkTaskDescr()->ThreadsInTeam() != 1);
+    IncParallelLevel(threadsInTeam != 1);
   }
 
   return isActive;
@@ -328,7 +329,7 @@ EXTERN void __kmpc_kernel_end_parallel() {
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
 
-  DecParallelLevel(currTaskDescr->ThreadsInTeam() != 1);
+  DecParallelLevel(threadsInTeam != 1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -367,7 +368,6 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   // - each thread becomes ID 0 in its serialized parallel, and
   // - there is only one thread per team
   newTaskDescr->ThreadId() = 0;
-  newTaskDescr->ThreadsInTeam() = 1;
 
   // set new task descriptor as top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,

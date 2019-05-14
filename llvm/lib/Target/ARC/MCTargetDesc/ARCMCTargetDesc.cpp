@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARCMCTargetDesc.h"
+#include "ARCInstPrinter.h"
 #include "ARCMCAsmInfo.h"
 #include "ARCTargetStreamer.h"
-#include "InstPrinter/ARCInstPrinter.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"

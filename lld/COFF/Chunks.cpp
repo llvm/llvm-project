@@ -586,7 +586,7 @@ StringRef SectionChunk::getDebugName() {
 
 ArrayRef<uint8_t> SectionChunk::getContents() const {
   ArrayRef<uint8_t> A;
-  File->getCOFFObj()->getSectionContents(Header, A);
+  cantFail(File->getCOFFObj()->getSectionContents(Header, A));
   return A;
 }
 

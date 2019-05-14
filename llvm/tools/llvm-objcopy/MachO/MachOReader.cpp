@@ -85,11 +85,12 @@ extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
     if (!SecRef)
       reportError(MachOObj.getFileName(), SecRef.takeError());
 
-    StringRef Content;
-    if (auto EC =
-            MachOObj.getSectionContents(SecRef->getRawDataRefImpl(), Content))
-      reportError(MachOObj.getFileName(), std::move(EC));
-    S.Content = Content;
+    if (Expected<ArrayRef<uint8_t>> E =
+            MachOObj.getSectionContents(SecRef->getRawDataRefImpl()))
+      S.Content =
+          StringRef(reinterpret_cast<const char *>(E->data()), E->size());
+    else
+      reportError(MachOObj.getFileName(), E.takeError());
 
     S.Relocations.reserve(S.NReloc);
     for (auto RI = MachOObj.section_rel_begin(SecRef->getRawDataRefImpl()),

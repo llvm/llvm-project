@@ -627,14 +627,12 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
 
   if (const Arg *A = Args.getLastArg(options::OPT_gz, options::OPT_gz_EQ)) {
     if (A->getOption().getID() == options::OPT_gz) {
-      CmdArgs.push_back("-compress-debug-sections");
+      CmdArgs.push_back("--compress-debug-sections");
     } else {
       StringRef Value = A->getValue();
-      if (Value == "none") {
-        CmdArgs.push_back("-compress-debug-sections=none");
-      } else if (Value == "zlib" || Value == "zlib-gnu") {
+      if (Value == "none" || Value == "zlib" || Value == "zlib-gnu") {
         CmdArgs.push_back(
-            Args.MakeArgString("-compress-debug-sections=" + Twine(Value)));
+            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
       } else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;

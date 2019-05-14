@@ -44,7 +44,6 @@ static_library("LLVMBPFCodeGen") {
     ":BPFGenGlobalISel",
     ":BPFGenMCPseudoLowering",
     ":BPFGenRegisterBank",
-    "InstPrinter",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -87,7 +86,6 @@ group("BPF") {
     ":LLVMBPFCodeGen",
     "AsmParser",
     "Disassembler",
-    "InstPrinter",
     "MCTargetDesc",
     "TargetInfo",
   ]

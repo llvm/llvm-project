@@ -1907,8 +1907,8 @@ uint64_t MachOObjectFile::getSectionSize(DataRefImpl Sec) const {
   return SectSize;
 }
 
-std::error_code MachOObjectFile::getSectionContents(DataRefImpl Sec,
-                                                    StringRef &Res) const {
+Expected<ArrayRef<uint8_t>>
+MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
   uint32_t Offset;
   uint64_t Size;
 
@@ -1922,8 +1922,7 @@ std::error_code MachOObjectFile::getSectionContents(DataRefImpl Sec,
     Size = Sect.size;
   }
 
-  Res = this->getData().substr(Offset, Size);
-  return std::error_code();
+  return arrayRefFromStringRef(getData().substr(Offset, Size));
 }
 
 uint64_t MachOObjectFile::getSectionAlignment(DataRefImpl Sec) const {
