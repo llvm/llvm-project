@@ -160,7 +160,7 @@ protected:
   ///
   /// This map provides for a given loop a llvm::Value that contains the current
   /// loop iteration.
-  LoopToScevMapT OutsideLoopIterations;
+  MapVector<const Loop *, const SCEV *> OutsideLoopIterations;
 
   // This maps an isl_id* to the Value* it has in the generated program. For now
   // on, the only isl_ids that are stored here are the newly calculated loop
