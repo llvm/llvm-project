@@ -2864,18 +2864,53 @@ public:
 private:
   void InitBuiltinType(CanQualType &R, BuiltinType::Kind K);
 
+  class ObjCEncOptions {
+    unsigned Bits;
+
+    ObjCEncOptions(unsigned Bits) : Bits(Bits) {}
+
+  public:
+    ObjCEncOptions() : Bits(0) {}
+    ObjCEncOptions(const ObjCEncOptions &RHS) : Bits(RHS.Bits) {}
+
+#define OPT_LIST(V)                                                            \
+  V(ExpandPointedToStructures, 0)                                              \
+  V(ExpandStructures, 1)                                                       \
+  V(IsOutermostType, 2)                                                        \
+  V(EncodingProperty, 3)                                                       \
+  V(IsStructField, 4)                                                          \
+  V(EncodeBlockParameters, 5)                                                  \
+  V(EncodeClassNames, 6)                                                       \
+  V(EncodePointerToObjCTypedef, 7)
+
+#define V(N,I) ObjCEncOptions& set##N() { Bits |= 1 << I; return *this; }
+OPT_LIST(V)
+#undef V
+
+#define V(N,I) bool N() const { return Bits & 1 << I; }
+OPT_LIST(V)
+#undef V
+
+#undef OPT_LIST
+
+    LLVM_NODISCARD ObjCEncOptions keepingOnly(ObjCEncOptions Mask) const {
+      return Bits & Mask.Bits;
+    }
+
+    LLVM_NODISCARD ObjCEncOptions forComponentType() const {
+      ObjCEncOptions Mask = ObjCEncOptions()
+                                .setIsOutermostType()
+                                .setIsStructField()
+                                .setEncodePointerToObjCTypedef();
+      return Bits & ~Mask.Bits;
+    }
+  };
+
   // Return the Objective-C type encoding for a given type.
   void getObjCEncodingForTypeImpl(QualType t, std::string &S,
-                                  bool ExpandPointedToStructures,
-                                  bool ExpandStructures,
+                                  ObjCEncOptions Options,
                                   const FieldDecl *Field,
-                                  bool OutermostType = false,
-                                  bool EncodingProperty = false,
-                                  bool StructField = false,
-                                  bool EncodeBlockParameters = false,
-                                  bool EncodeClassNames = false,
-                                  bool EncodePointerToObjCTypedef = false,
-                                  QualType *NotEncodedT=nullptr) const;
+                                  QualType *NotEncodedT = nullptr) const;
 
   // Adds the encoding of the structure's members.
   void getObjCEncodingForStructureImpl(RecordDecl *RD, std::string &S,
