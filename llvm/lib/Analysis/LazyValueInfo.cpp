@@ -893,7 +893,28 @@ bool LazyValueInfoImpl::solveBlockValueSelect(ValueLatticeElement &BBLV,
       return true;
     }
 
-    // TODO: ABS, NABS from the SelectPatternResult
+    if (SPR.Flavor == SPF_ABS) {
+      if (LHS == SI->getTrueValue()) {
+        BBLV = ValueLatticeElement::getRange(TrueCR.abs());
+        return true;
+      }
+      if (LHS == SI->getFalseValue()) {
+        BBLV = ValueLatticeElement::getRange(FalseCR.abs());
+        return true;
+      }
+    }
+
+    if (SPR.Flavor == SPF_NABS) {
+      ConstantRange Zero(APInt::getNullValue(TrueCR.getBitWidth()));
+      if (LHS == SI->getTrueValue()) {
+        BBLV = ValueLatticeElement::getRange(Zero.sub(TrueCR.abs()));
+        return true;
+      }
+      if (LHS == SI->getFalseValue()) {
+        BBLV = ValueLatticeElement::getRange(Zero.sub(FalseCR.abs()));
+        return true;
+      }
+    }
   }
 
   // Can we constrain the facts about the true and false values by using the

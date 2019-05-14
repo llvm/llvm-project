@@ -633,8 +633,7 @@ define void @abs1(i32 %a, i1* %p) {
 ; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sge i32 [[ABS]], 0
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
 ; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -684,8 +683,7 @@ define void @abs2(i32 %a, i1* %p) {
 ; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sge i32 [[ABS]], 0
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
 ; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -735,8 +733,7 @@ define void @nabs1(i32 %a, i1* %p) {
 ; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sle i32 [[NABS]], 0
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
 ; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -786,8 +783,7 @@ define void @nabs2(i32 %a, i1* %p) {
 ; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sle i32 [[NABS]], 0
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
 ; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
 ; CHECK-NEXT:    br label [[EXIT]]
