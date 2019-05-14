@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARC.h"
+#include "TargetInfo/ARCTargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
