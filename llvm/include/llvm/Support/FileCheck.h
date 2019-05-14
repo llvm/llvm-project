@@ -40,67 +40,20 @@ struct FileCheckRequest {
 // Numeric expression handling code.
 //===----------------------------------------------------------------------===//
 
-/// Class representing a numeric variable with a given value in a numeric
-/// expression.
-class FileCheckNumericVariable {
-private:
-  /// Name of the numeric variable.
-  StringRef Name;
-
-  /// Value of numeric variable, if defined, or None otherwise.
-  llvm::Optional<uint64_t> Value;
-
-public:
-  /// Constructor for numeric variable \p Name with a known \p Value at parse
-  /// time (e.g. the @LINE numeric variable).
-  FileCheckNumericVariable(StringRef Name, uint64_t Value)
-      : Name(Name), Value(Value) {}
-
-  /// \returns name of that numeric variable.
-  StringRef getName() const { return Name; }
-
-  /// \returns value of this numeric variable.
-  llvm::Optional<uint64_t> getValue() const { return Value; }
-
-  /// Sets value of this numeric variable if not defined. \returns whether the
-  /// variable was already defined.
-  bool setValue(uint64_t Value);
-
-  /// Clears value of this numeric variable. \returns whether the variable was
-  /// already undefined.
-  bool clearValue();
-};
-
-/// Type of functions evaluating a given binary operation.
-using binop_eval_t = uint64_t (*)(uint64_t, uint64_t);
-
-/// Class representing a numeric expression consisting of either a single
-/// numeric variable or a binary operation between a numeric variable and an
-/// immediate.
+/// Class representing a numeric expression.
 class FileCheckNumExpr {
 private:
-  /// Left operand.
-  FileCheckNumericVariable *LeftOp;
-
-  /// Right operand.
-  uint64_t RightOp;
-
-  /// Pointer to function that can evaluate this binary operation.
-  binop_eval_t EvalBinop;
+  /// Value of the numeric expression.
+  uint64_t Value;
 
 public:
-  FileCheckNumExpr(binop_eval_t EvalBinop,
-                   FileCheckNumericVariable *OperandLeft, uint64_t OperandRight)
-      : LeftOp(OperandLeft), RightOp(OperandRight), EvalBinop(EvalBinop) {}
+  /// Constructor for a numeric expression with a known value at parse time,
+  /// e.g. the implicit numeric expression defining the @LINE numeric pseudo
+  /// variable.
+  explicit FileCheckNumExpr(uint64_t Value) : Value(Value) {}
 
-  /// Evaluates the value of this numeric expression, using EvalBinop to
-  /// perform the binary operation it consists of. \returns None if the numeric
-  /// variable used is undefined, or the expression value otherwise.
-  llvm::Optional<uint64_t> eval() const;
-
-  /// \returns the name of the undefined variable used in this expression if
-  /// any or an empty string otherwise.
-  StringRef getUndefVarName() const;
+  /// \returns the value being matched against.
+  uint64_t getValue() const { return Value; }
 };
 
 class FileCheckPatternContext;
@@ -152,9 +105,9 @@ public:
   size_t getIndex() const { return InsertIdx; }
 
   /// \returns the result of the substitution represented by this class
-  /// instance or None if substitution failed. Numeric expressions are
-  /// substituted by their values. Pattern variables are simply replaced by the
-  /// text their definition matched.
+  /// instance or None if substitution failed. For a numeric expression we
+  /// substitute it by its value. For a pattern variable we simply replace it
+  /// by the text its definition matched.
   llvm::Optional<std::string> getResult() const;
 
   /// \returns the name of the undefined variable used in this substitution, if
@@ -222,35 +175,19 @@ private:
   /// Back-references are used for uses after any the other definition.
   StringMap<StringRef> GlobalVariableTable;
 
-  /// Map of all pattern variables defined so far. Used at parse time to detect
-  /// a name conflict between a numeric variable and a pattern variable when
-  /// the former is defined on a later line than the latter.
-  StringMap<bool> DefinedVariableTable;
-
-  /// When matching a given pattern, this holds the pointers to the classes
-  /// representing the last definitions of numeric variables defined in
-  /// previous patterns. Earlier definition of the variables, if any, have
-  /// their own class instance not referenced by this table.
-  StringMap<FileCheckNumericVariable *> GlobalNumericVariableTable;
-
   /// Vector holding pointers to all parsed numeric expressions. Used to
   /// automatically free the numeric expressions once they are guaranteed to no
   /// longer be used.
   std::vector<std::unique_ptr<FileCheckNumExpr>> NumExprs;
-
-  /// Vector holding pointers to all parsed numeric variables. Used to
-  /// automatically free them once they are guaranteed to no longer be used.
-  std::vector<std::unique_ptr<FileCheckNumericVariable>> NumericVariables;
 
 public:
   /// \returns the value of pattern variable \p VarName or None if no such
   /// variable has been defined.
   llvm::Optional<StringRef> getPatternVarValue(StringRef VarName);
 
-  /// Defines pattern and numeric variables from definitions given on the
-  /// command line, passed as a vector of [#]VAR=VAL strings in
-  /// \p CmdlineDefines. Reports any error to \p SM and \returns whether an
-  /// error occured.
+  /// Defines pattern variables from definitions given on the command line,
+  /// passed as a vector of VAR=VAL strings in \p CmdlineDefines. Reports any
+  /// error to \p SM and \returns whether an error occured.
   bool defineCmdlineVariables(std::vector<std::string> &CmdlineDefines,
                               SourceMgr &SM);
 
@@ -261,13 +198,7 @@ public:
 private:
   /// Makes a new numeric expression instance and registers it for destruction
   /// when the context is destroyed.
-  FileCheckNumExpr *makeNumExpr(binop_eval_t EvalBinop,
-                                FileCheckNumericVariable *OperandLeft,
-                                uint64_t OperandRight);
-
-  /// Makes a new numeric variable and registers it for destruction when the
-  /// context is destroyed.
-  FileCheckNumericVariable *makeNumericVariable(StringRef Name, uint64_t Value);
+  template <class... Types> FileCheckNumExpr *makeNumExpr(Types... Args);
 };
 
 class FileCheckPattern {
@@ -283,12 +214,12 @@ class FileCheckPattern {
 
   /// Entries in this vector represent uses of a pattern variable or a numeric
   /// expression in the pattern that need to be substituted in the regexp
-  /// pattern at match time, e.g. "foo[[bar]]baz[[#N+1]]". In this case, the
-  /// RegExStr will contain "foobaz" and we'll get two entries in this vector
-  /// that tells us to insert the value of pattern variable "bar" at offset 3
-  /// and the value of numeric expression "N+1" at offset 6. Uses are
-  /// represented by a FileCheckPatternSubstitution class to abstract whether
-  /// it is a pattern variable or a numeric expression.
+  /// pattern at match time, e.g. "foo[[bar]]baz[[#@LINE+1]]". In this case,
+  /// the RegExStr will contain "foobaz" and we'll get two entries in this
+  /// vector that tells us to insert the value of pattern variable "bar" at
+  /// offset 3 and the value of numeric expression "@LINE+1" at offset 6. Uses
+  /// are represented by a FileCheckPatternSubstitution class to abstract
+  /// whether it is a pattern variable or a numeric expression.
   std::vector<FileCheckPatternSubstitution> Substitutions;
 
   /// Maps names of pattern variables defined in a pattern to the parenthesized
@@ -302,12 +233,8 @@ class FileCheckPattern {
   /// iterating over values.
   std::map<StringRef, unsigned> VariableDefs;
 
-  /// Pointer to a class instance holding the global state shared by all
-  /// patterns:
-  /// - separate tables with the values of live pattern and numeric variables
-  ///   respectively at the start of any given CHECK line;
-  /// - table holding whether a pattern variable has been defined at any given
-  ///   point during the parsing phase.
+  /// Pointer to the class instance shared by all patterns holding a table with
+  /// the values of live variables at the start of any given CHECK line.
   FileCheckPatternContext *Context;
 
   Check::FileCheckType CheckTy;
@@ -335,13 +262,11 @@ public:
   /// character that is part of the variable name. Otherwise, only
   /// \returns true.
   static bool parseVariable(StringRef Str, bool &IsPseudo, unsigned &TrailIdx);
-  /// Parses a numeric expression involving (pseudo if \p IsPseudo is true)
-  /// variable \p Name with the string corresponding to the operation being
-  /// performed in \p Trailer. \returns the class representing the numeric
-  /// expression or nullptr if parsing fails in which case errors are reported
-  /// on \p SM.
-  FileCheckNumExpr *parseNumericExpression(StringRef Name, bool IsPseudo,
-                                           StringRef Trailer,
+  /// Parses a numeric expression involving pseudo variable \p Name with the
+  /// string corresponding to the operation being performed in \p Trailer.
+  /// \returns the class representing the numeric expression or nullptr if
+  /// parsing fails in which case errors are reported on \p SM.
+  FileCheckNumExpr *parseNumericExpression(StringRef Name, StringRef Trailer,
                                            const SourceMgr &SM) const;
   /// Parses the pattern in \p PatternStr and initializes this FileCheckPattern
   /// instance accordingly.

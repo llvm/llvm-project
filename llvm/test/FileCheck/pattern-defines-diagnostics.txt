@@ -28,7 +28,7 @@ ERRCLIVAR2: Missing pattern variable name in command-line definition '-D='
 RUN: not FileCheck -D10VALUE=10 --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace --check-prefix ERRCLIFMT
 
-ERRCLIFMT: Global defines:1:19: error: invalid name in pattern variable definition '10VALUE'
+ERRCLIFMT: Global defines:1:19: error: invalid name for variable definition '10VALUE'
 ERRCLIFMT-NEXT: Global define #1: 10VALUE=10
 ERRCLIFMT-NEXT: {{^                  \^$}}
 
@@ -36,7 +36,7 @@ ERRCLIFMT-NEXT: {{^                  \^$}}
 RUN: not FileCheck -D@VALUE=10 --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace --check-prefix ERRCLIPSEUDO
 
-ERRCLIPSEUDO: Global defines:1:19: error: invalid name in pattern variable definition '@VALUE'
+ERRCLIPSEUDO: Global defines:1:19: error: invalid name for variable definition '@VALUE'
 ERRCLIPSEUDO-NEXT: Global define #1: @VALUE=10
 ERRCLIPSEUDO-NEXT: {{^                  \^$}}
 
@@ -44,6 +44,6 @@ ERRCLIPSEUDO-NEXT: {{^                  \^$}}
 RUN: not FileCheck -D'VALUE + 2=10' --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace --check-prefix ERRCLITRAIL
 
-ERRCLITRAIL: Global defines:1:19: error: invalid name in pattern variable definition 'VALUE + 2'
+ERRCLITRAIL: Global defines:1:19: error: invalid name for variable definition 'VALUE + 2'
 ERRCLITRAIL-NEXT: Global define #1: VALUE + 2=10
 ERRCLITRAIL-NEXT: {{^                  \^$}}
