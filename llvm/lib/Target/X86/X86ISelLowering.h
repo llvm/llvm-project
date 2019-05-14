@@ -988,6 +988,9 @@ namespace llvm {
 
     bool isVectorShiftByScalarCheap(Type *Ty) const override;
 
+    /// Add x86-specific opcodes to the default list.
+    bool isBinOp(unsigned Opcode) const override;
+
     /// Returns true if the opcode is a commutative binary operation.
     bool isCommutativeBinOp(unsigned Opcode) const override;
 
