@@ -2,19 +2,19 @@
 // We run them under different optimizations and LTOs to ensure the IR is still
 // being instrumented properly.
 
-// RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=hwaddress %s | FileCheck %s --check-prefixes=CHECK,HWASAN,HWASAN-NOOPT
-// RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,HWASAN,HWASAN-NOOPT
-// RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=hwaddress -flto=thin %s | FileCheck %s --check-prefixes=CHECK,HWASAN,HWASAN-NOOPT
-// RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=hwaddress %s | FileCheck %s --check-prefixes=CHECK,HWASAN
-// RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,HWASAN
-// RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=hwaddress -flto=thin %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=hwaddress %s | FileCheck %s --check-prefixes=CHECK,HWASAN,HWASAN-NOOPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,HWASAN,HWASAN-NOOPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=hwaddress -flto=thin %s | FileCheck %s --check-prefixes=CHECK,HWASAN,HWASAN-NOOPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=hwaddress %s | FileCheck %s --check-prefixes=CHECK,HWASAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,HWASAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=hwaddress -flto=thin %s | FileCheck %s
 
-// RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress %s | FileCheck %s --check-prefixes=CHECK,KHWASAN,KHWASAN-NOOPT
-// RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,KHWASAN,KHWASAN-NOOPT
-// RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto=thin %s | FileCheck %s --check-prefixes=CHECK,KHWASAN,KHWASAN-NOOPT
-// RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress %s | FileCheck %s --check-prefixes=CHECK,KHWASAN
-// RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,KHWASAN
-// RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto=thin %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress %s | FileCheck %s --check-prefixes=CHECK,KHWASAN,KHWASAN-NOOPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,KHWASAN,KHWASAN-NOOPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto=thin %s | FileCheck %s --check-prefixes=CHECK,KHWASAN,KHWASAN-NOOPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress %s | FileCheck %s --check-prefixes=CHECK,KHWASAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto %s | FileCheck %s --check-prefixes=CHECK,KHWASAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=kernel-hwaddress -flto=thin %s | FileCheck %s
 
 int foo(int *a) { return *a; }
 
