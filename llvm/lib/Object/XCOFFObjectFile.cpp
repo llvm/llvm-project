@@ -137,10 +137,9 @@ uint64_t XCOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
   return toSection(Sec)->SectionSize;
 }
 
-std::error_code XCOFFObjectFile::getSectionContents(DataRefImpl Sec,
-                                                    StringRef &Res) const {
+Expected<ArrayRef<uint8_t>>
+XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
   llvm_unreachable("Not yet implemented!");
-  return std::error_code();
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {

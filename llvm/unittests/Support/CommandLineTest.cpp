@@ -1085,6 +1085,7 @@ public:
   // Return std::string because the output of a failing EXPECT check is
   // unreadable for StringRef. It also avoids any lifetime issues.
   template <typename... Ts> std::string runTest(Ts... OptionAttributes) {
+    outs().flush();  // flush any output from previous tests
     AutoDeleteFile File;
     {
       OutputRedirector Stdout(fileno(stdout));

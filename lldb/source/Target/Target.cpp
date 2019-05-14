@@ -3252,11 +3252,11 @@ static constexpr OptionEnumValueElement g_inline_breakpoint_enums[] = {
      "Always look for inline breakpoint locations when setting file and line "
      "breakpoints (slower but most accurate)."} };
 
-typedef enum x86DisassemblyFlavor {
+enum x86DisassemblyFlavor {
   eX86DisFlavorDefault,
   eX86DisFlavorIntel,
   eX86DisFlavorATT
-} x86DisassemblyFlavor;
+};
 
 static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
     {eX86DisFlavorDefault, "default", "Disassembler default (currently att)."},

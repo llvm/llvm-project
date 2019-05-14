@@ -1,0 +1,12 @@
+static_library("TargetInfo") {
+  output_name = "LLVMSparcInfo"
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/Sparc/MCTargetDesc",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "SparcTargetInfo.cpp",
+  ]
+}

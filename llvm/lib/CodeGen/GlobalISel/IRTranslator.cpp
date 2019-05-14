@@ -461,9 +461,12 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   ArrayRef<uint64_t> Offsets = *VMap.getOffsets(LI);
   unsigned Base = getOrCreateVReg(*LI.getPointerOperand());
 
+  Type *OffsetIRTy = DL->getIntPtrType(LI.getPointerOperandType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+
   for (unsigned i = 0; i < Regs.size(); ++i) {
     unsigned Addr = 0;
-    MIRBuilder.materializeGEP(Addr, Base, LLT::scalar(64), Offsets[i] / 8);
+    MIRBuilder.materializeGEP(Addr, Base, OffsetTy, Offsets[i] / 8);
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i] / 8);
     unsigned BaseAlign = getMemOpAlignment(LI);
@@ -490,9 +493,12 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
   unsigned Base = getOrCreateVReg(*SI.getPointerOperand());
 
+  Type *OffsetIRTy = DL->getIntPtrType(SI.getPointerOperandType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+
   for (unsigned i = 0; i < Vals.size(); ++i) {
     unsigned Addr = 0;
-    MIRBuilder.materializeGEP(Addr, Base, LLT::scalar(64), Offsets[i] / 8);
+    MIRBuilder.materializeGEP(Addr, Base, OffsetTy, Offsets[i] / 8);
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i] / 8);
     unsigned BaseAlign = getMemOpAlignment(SI);

@@ -703,3 +703,39 @@ define i32 @rotl_constant_expr(i32 %shamt) {
   %r = or i32 %shr, shl (i32 ptrtoint (i8* @external_global to i32), i32 11)
   ret i32 %r
 }
+
+; PR20750 - https://bugs.llvm.org/show_bug.cgi?id=20750
+; This IR corresponds to C source where the shift amount is a smaller type than the rotated value:
+; unsigned int rotate32_doubleand1(unsigned int v, unsigned char r) { r = r & 31; return (v << r) | (v >> (((32 - r)) & 31)); }
+
+define i32 @rotateleft32_doubleand1(i32 %v, i8 %r) {
+; CHECK-LABEL: @rotateleft32_doubleand1(
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[R:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[V:%.*]], i32 [[V]], i32 [[Z]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %m = and i8 %r, 31
+  %z = zext i8 %m to i32
+  %neg = sub nsw i32 0, %z
+  %and2 = and i32 %neg, 31
+  %shl = shl i32 %v, %z
+  %shr = lshr i32 %v, %and2
+  %or = or i32 %shr, %shl
+  ret i32 %or
+}
+
+define i32 @rotateright32_doubleand1(i32 %v, i16 %r) {
+; CHECK-LABEL: @rotateright32_doubleand1(
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[R:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshr.i32(i32 [[V:%.*]], i32 [[V]], i32 [[Z]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %m = and i16 %r, 31
+  %z = zext i16 %m to i32
+  %neg = sub nsw i32 0, %z
+  %and2 = and i32 %neg, 31
+  %shl = shl i32 %v, %and2
+  %shr = lshr i32 %v, %z
+  %or = or i32 %shr, %shl
+  ret i32 %or
+}

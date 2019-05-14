@@ -2835,6 +2835,11 @@ static const struct Extension {
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
     {"sve", {AArch64::FeatureSVE}},
+    {"sve2", {AArch64::FeatureSVE2}},
+    {"sve2-aes", {AArch64::FeatureSVE2AES}},
+    {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
+    {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
+    {"bitperm", {AArch64::FeatureSVE2BitPerm}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},

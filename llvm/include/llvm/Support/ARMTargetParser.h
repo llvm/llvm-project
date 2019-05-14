@@ -45,6 +45,11 @@ enum ArchExtKind : unsigned {
   AEK_AES     =     1 << 16,
   AEK_FP16FML =     1 << 17,
   AEK_SB      =     1 << 18,
+  AEK_SVE2 =        1 << 19,
+  AEK_SVE2AES =     1 << 20,
+  AEK_SVE2SM4 =     1 << 21,
+  AEK_SVE2SHA3 =    1 << 22,
+  AEK_BITPERM =     1 << 23,
   // Unsupported extensions.
   AEK_OS = 0x8000000,
   AEK_IWMMXT = 0x10000000,

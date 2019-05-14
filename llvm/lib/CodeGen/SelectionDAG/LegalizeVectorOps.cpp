@@ -331,6 +331,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FTRUNC:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FP_EXTEND:
     // These pseudo-ops get legalized as if they were their non-strict
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
@@ -1301,7 +1303,7 @@ SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
 
       if (OperVT.isVector())
         Oper = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-                           EltVT, Oper, Idx);
+                           OperVT.getVectorElementType(), Oper, Idx);
 
       Opers.push_back(Oper);
     }

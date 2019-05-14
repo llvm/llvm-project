@@ -7183,9 +7183,10 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
   }
 
   // Find all zeroable elements.
-  std::bitset<4> Zeroable;
-  for (int i=0; i < 4; ++i) {
-    SDValue Elt = Op->getOperand(i);
+  std::bitset<4> Zeroable, Undefs;
+  for (int i = 0; i < 4; ++i) {
+    SDValue Elt = Op.getOperand(i);
+    Undefs[i] = Elt.isUndef();
     Zeroable[i] = (Elt.isUndef() || X86::isZeroNode(Elt));
   }
   assert(Zeroable.size() - Zeroable.count() > 1 &&
@@ -7195,10 +7196,10 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
   // zeroable or extract_vector_elt with constant index.
   SDValue FirstNonZero;
   unsigned FirstNonZeroIdx;
-  for (unsigned i=0; i < 4; ++i) {
+  for (unsigned i = 0; i < 4; ++i) {
     if (Zeroable[i])
       continue;
-    SDValue Elt = Op->getOperand(i);
+    SDValue Elt = Op.getOperand(i);
     if (Elt.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
         !isa<ConstantSDNode>(Elt.getOperand(1)))
       return SDValue();
@@ -7237,10 +7238,12 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
 
   if (EltIdx == 4) {
     // Let the shuffle legalizer deal with blend operations.
-    SDValue VZero = getZeroVector(VT, Subtarget, DAG, SDLoc(Op));
+    SDValue VZeroOrUndef = (Zeroable == Undefs)
+                               ? DAG.getUNDEF(VT)
+                               : getZeroVector(VT, Subtarget, DAG, SDLoc(Op));
     if (V1.getSimpleValueType() != VT)
       V1 = DAG.getBitcast(VT, V1);
-    return DAG.getVectorShuffle(VT, SDLoc(V1), V1, VZero, Mask);
+    return DAG.getVectorShuffle(VT, SDLoc(V1), V1, VZeroOrUndef, Mask);
   }
 
   // See if we can lower this build_vector to a INSERTPS.
@@ -19033,16 +19036,11 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
   if (!IsFP && !Subtarget.hasSSSE3())
     return Op;
 
-  // Defer forming the minimal horizontal op if the vector source has more than
-  // the 2 extract element uses that we're matching here. In that case, we might
-  // form a horizontal op that includes more than 1 add/sub op.
+  // Extract from a common vector.
   if (LHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       RHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       LHS.getOperand(0) != RHS.getOperand(0) ||
-      !LHS.getOperand(0)->hasNUsesOfValue(2, 0))
-    return Op;
-
-  if (!isa<ConstantSDNode>(LHS.getOperand(1)) ||
+      !isa<ConstantSDNode>(LHS.getOperand(1)) ||
       !isa<ConstantSDNode>(RHS.getOperand(1)) ||
       !shouldUseHorizontalOp(true, DAG, Subtarget))
     return Op;
@@ -25850,12 +25848,13 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
       DAG.getTargetConstant(1, dl, MVT::i8),   // Scale
       DAG.getRegister(0, MVT::i32),            // Index
       DAG.getTargetConstant(0, dl, MVT::i32),  // Disp
-      DAG.getRegister(0, MVT::i32),            // Segment.
+      DAG.getRegister(0, MVT::i16),            // Segment.
       Zero,
       Chain
     };
-    SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, dl, MVT::Other, Ops);
-    return SDValue(Res, 0);
+    SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, dl, MVT::i32,
+                                     MVT::Other, Ops);
+    return SDValue(Res, 1);
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
@@ -26301,17 +26300,18 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
   // https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
 
   if (Subtarget.is64Bit()) {
-    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i8);
+    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
     SDValue Ops[] = {
       DAG.getRegister(X86::RSP, MVT::i64),                  // Base
       DAG.getTargetConstant(1, DL, MVT::i8),                // Scale
       DAG.getRegister(0, MVT::i64),                         // Index
       DAG.getTargetConstant(0, DL, MVT::i32),               // Disp
-      DAG.getRegister(0, MVT::i32),                         // Segment.
+      DAG.getRegister(0, MVT::i16),                         // Segment.
       Zero,
       Chain};
-    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::Other, Ops);
-    return SDValue(Res, 0);
+    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+                                     MVT::Other, Ops);
+    return SDValue(Res, 1);
   }
 
   SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
@@ -26320,12 +26320,13 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
     DAG.getTargetConstant(1, DL, MVT::i8),          // Scale
     DAG.getRegister(0, MVT::i32),                   // Index
     DAG.getTargetConstant(0, DL, MVT::i32),         // Disp
-    DAG.getRegister(0, MVT::i32),                   // Segment.
+    DAG.getRegister(0, MVT::i16),                   // Segment.
     Zero,
     Chain
   };
-  SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, DL, MVT::Other, Ops);
-  return SDValue(Res, 0);
+  SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+                                   MVT::Other, Ops);
+  return SDValue(Res, 1);
 }
 
 static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
@@ -26403,13 +26404,17 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
       // traffic.  This assumes that stack locations are very likely to be
       // accessed only by the owning thread. 
       SDValue NewChain = emitLockedStackOp(DAG, Subtarget, Chain, DL);
-      DAG.ReplaceAllUsesOfValueWith(N.getValue(1), NewChain);
-      return SDValue();
+      assert(!N->hasAnyUseOfValue(0));
+      // NOTE: The getUNDEF is needed to give something for the unused result 0.
+      return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(),
+                         DAG.getUNDEF(VT), NewChain);
     }
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
     SDValue NewChain = DAG.getNode(X86ISD::MEMBARRIER, DL, MVT::Other, Chain);
-    DAG.ReplaceAllUsesOfValueWith(N.getValue(1), NewChain);
-    return SDValue();
+    assert(!N->hasAnyUseOfValue(0));
+    // NOTE: The getUNDEF is needed to give something for the unused result 0.
+    return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(),
+                       DAG.getUNDEF(VT), NewChain);
   }
 
   SDValue LockOp = lowerAtomicArithWithLOCK(N, DAG, Subtarget);
@@ -26451,9 +26456,10 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
                                               Ops, MVT::i64,
                                               Node->getMemOperand());
 
-      // If this is a sequentially consistent store, also emit an mfence.
+      // If this is a sequentially consistent store, also emit an appropriate
+      // barrier.
       if (IsSeqCst)
-        Chain = DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Chain);
+        Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
 
       return Chain;
     }
@@ -28326,6 +28332,23 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
   // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
   // fully general vector.
   return true;
+}
+
+bool X86TargetLowering::isBinOp(unsigned Opcode) const {
+  switch (Opcode) {
+  case X86ISD::PMULUDQ:
+  case X86ISD::FMAX:
+  case X86ISD::FMIN:
+  case X86ISD::FMAXC:
+  case X86ISD::FMINC:
+  case X86ISD::FAND:
+  case X86ISD::FANDN:
+  case X86ISD::FOR:
+  case X86ISD::FXOR:
+    return true;
+  }
+
+  return TargetLoweringBase::isBinOp(Opcode);
 }
 
 bool X86TargetLowering::isCommutativeBinOp(unsigned Opcode) const {
@@ -35112,8 +35135,13 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // X86ISD::PEXTRW/X86ISD::PEXTRB in:
   // XFormVExtractWithShuffleIntoLoad, combineHorizontalPredicateResult and
   // combineBasicSADPattern.
-  if (IsPextr)
+  if (IsPextr) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (TLI.SimplifyDemandedBits(
+            SDValue(N, 0), APInt::getAllOnesValue(VT.getSizeInBits()), DCI))
+      return SDValue(N, 0);
     return SDValue();
+  }
 
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
@@ -44024,40 +44052,12 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
 
     // If we are in non-pic codegen mode, we allow the address of a global (with
     // an optional displacement) to be used with 'i'.
-    GlobalAddressSDNode *GA = nullptr;
-    int64_t Offset = 0;
-
-    // Match either (GA), (GA+C), (GA+C1+C2), etc.
-    while (1) {
-      if ((GA = dyn_cast<GlobalAddressSDNode>(Op))) {
-        Offset += GA->getOffset();
-        break;
-      } else if (Op.getOpcode() == ISD::ADD) {
-        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-          Offset += C->getZExtValue();
-          Op = Op.getOperand(0);
-          continue;
-        }
-      } else if (Op.getOpcode() == ISD::SUB) {
-        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-          Offset += -C->getZExtValue();
-          Op = Op.getOperand(0);
-          continue;
-        }
-      }
-
-      // Otherwise, this isn't something we can handle, reject it.
-      return;
-    }
-
-    const GlobalValue *GV = GA->getGlobal();
-    // If we require an extra load to get this address, as in PIC mode, we
-    // can't accept it.
-    if (isGlobalStubReference(Subtarget.classifyGlobalReference(GV)))
-      return;
-
-    Result = DAG.getTargetGlobalAddress(GV, SDLoc(Op),
-                                        GA->getValueType(0), Offset);
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Op))
+      // If we require an extra load to get this address, as in PIC mode, we
+      // can't accept it.
+      if (isGlobalStubReference(
+              Subtarget.classifyGlobalReference(GA->getGlobal())))
+        return;
     break;
   }
   }
