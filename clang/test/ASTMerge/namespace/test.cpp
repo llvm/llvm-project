@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-pch -std=c++1z -o %t.1.ast %S/Inputs/namespace1.cpp
 // RUN: %clang_cc1 -emit-pch -std=c++1z -o %t.2.ast %S/Inputs/namespace2.cpp
-// RUN: not %clang_cc1 -std=c++1z -ast-merge %t.1.ast -ast-merge %t.2.ast -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z -ast-merge %t.1.ast -ast-merge %t.2.ast -fsyntax-only %s 2>&1 | FileCheck %s
 
 static_assert(TestAliasName::z == 4);
 static_assert(ContainsInline::z == 10);
