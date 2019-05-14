@@ -1,0 +1,17 @@
+executable("clangd-indexer") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang-tools-extra/clangd",
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Index",
+    "//clang/lib/Lex",
+    "//clang/lib/Tooling",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "IndexerMain.cpp",
+  ]
+}

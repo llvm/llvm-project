@@ -35,6 +35,7 @@ preemptible:
  bl far_nonpreemptible_alias
  bx lr
 // CHECK1: Disassembly of section .text:
+// CHECK1-EMPTY:
 // CHECK1-NEXT: sym1:
 // CHECK1-NEXT:  2000000:       00 f0 00 d8     bl      #8388608
 // CHECK1-NEXT:  2000004:       00 f0 04 d8     bl      #8388616
@@ -84,6 +85,7 @@ far_nonpreemptible_alias:
 // CHECK3:  4000000:       00 f0 16 e8     blx     #44
 
 // CHECK4: Disassembly of section .plt:
+// CHECK4-EMPTY:
 // CHECK4-NEXT: $a:
 // CHECK4-NEXT:  4000010:	04 e0 2d e5 	str	lr, [sp, #-4]!
 // CHECK4-NEXT:  4000014:	00 e6 8f e2 	add	lr, pc, #0, #12

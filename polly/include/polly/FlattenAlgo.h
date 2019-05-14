@@ -14,7 +14,7 @@
 #ifndef POLLY_FLATTENALGO_H
 #define POLLY_FLATTENALGO_H
 
-#include "polly/Support/GICHelper.h"
+#include "isl/isl-noexceptions.h"
 
 namespace polly {
 /// Recursively flatten a schedule.

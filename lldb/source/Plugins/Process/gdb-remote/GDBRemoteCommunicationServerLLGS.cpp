@@ -51,9 +51,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 using namespace llvm;
 
-//----------------------------------------------------------------------
 // GDBRemote Errors
-//----------------------------------------------------------------------
 
 namespace {
 enum GDBRemoteServerError {
@@ -65,9 +63,7 @@ enum GDBRemoteServerError {
 };
 }
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationServerLLGS constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
     MainLoop &mainloop, const NativeProcessProtocol::Factory &process_factory)
     : GDBRemoteCommunicationServerCommon("gdb-remote.server",

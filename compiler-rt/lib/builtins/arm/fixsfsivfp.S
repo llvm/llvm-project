@@ -12,7 +12,7 @@
 // extern int __fixsfsivfp(float a);
 //
 // Converts single precision float to a 32-bit int rounding towards zero.
-// Uses Darwin calling convention where a single precision parameter is 
+// Uses Darwin calling convention where a single precision parameter is
 // passed in a GPR..
 //
 	.syntax unified

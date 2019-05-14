@@ -57,9 +57,8 @@ void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
 
 DWARFDebugLoc::LocationList const *
 DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
-  auto It = std::lower_bound(
-      Locations.begin(), Locations.end(), Offset,
-      [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
+  auto It = llvm::bsearch(
+      Locations, [=](const LocationList &L) { return Offset <= L.Offset; });
   if (It != Locations.end() && It->Offset == Offset)
     return &(*It);
   return nullptr;
@@ -213,9 +212,8 @@ void DWARFDebugLoclists::parse(DataExtractor data, unsigned Version) {
 
 DWARFDebugLoclists::LocationList const *
 DWARFDebugLoclists::getLocationListAtOffset(uint64_t Offset) const {
-  auto It = std::lower_bound(
-      Locations.begin(), Locations.end(), Offset,
-      [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
+  auto It = llvm::bsearch(
+      Locations, [=](const LocationList &L) { return Offset <= L.Offset; });
   if (It != Locations.end() && It->Offset == Offset)
     return &(*It);
   return nullptr;
@@ -225,6 +223,7 @@ void DWARFDebugLoclists::LocationList::dump(raw_ostream &OS, uint64_t BaseAddr,
                                             bool IsLittleEndian,
                                             unsigned AddressSize,
                                             const MCRegisterInfo *MRI,
+                                            DWARFUnit *U,
                                             unsigned Indent) const {
   for (const Entry &E : Entries) {
     switch (E.Kind) {
@@ -254,7 +253,7 @@ void DWARFDebugLoclists::LocationList::dump(raw_ostream &OS, uint64_t BaseAddr,
       llvm_unreachable("unreachable locations list kind");
     }
 
-    dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI, nullptr);
+    dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI, U);
   }
 }
 
@@ -263,7 +262,7 @@ void DWARFDebugLoclists::dump(raw_ostream &OS, uint64_t BaseAddr,
                               Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8x: ", L.Offset);
-    L.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, /*Indent=*/12);
+    L.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, nullptr, /*Indent=*/12);
     OS << "\n\n";
   };
 

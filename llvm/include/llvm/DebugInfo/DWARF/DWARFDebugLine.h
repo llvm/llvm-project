@@ -206,9 +206,9 @@ public:
 
     void reset();
 
-    static bool orderByLowPC(const Sequence &LHS, const Sequence &RHS) {
-      return std::tie(LHS.SectionIndex, LHS.LowPC) <
-             std::tie(RHS.SectionIndex, RHS.LowPC);
+    static bool orderByHighPC(const Sequence &LHS, const Sequence &RHS) {
+      return std::tie(LHS.SectionIndex, LHS.HighPC) <
+             std::tie(RHS.SectionIndex, RHS.HighPC);
     }
 
     bool isValid() const {
@@ -243,6 +243,9 @@ public:
     bool hasFileAtIndex(uint64_t FileIndex) const;
 
     /// Extracts filename by its index in filename table in prologue.
+    /// In Dwarf 4, the files are 1-indexed and the current compilation file
+    /// name is not represented in the list. In DWARF v5, the files are
+    /// 0-indexed and the primary source file has the index 0.
     /// Returns true on success.
     bool getFileNameByIndex(uint64_t FileIndex, const char *CompDir,
                             DILineInfoSpecifier::FileLineInfoKind Kind,
@@ -275,6 +278,8 @@ public:
     SequenceVector Sequences;
 
   private:
+    const llvm::DWARFDebugLine::FileNameEntry &
+    getFileNameEntry(uint64_t Index) const;
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           object::SectionedAddress Address) const;
     Optional<StringRef>
@@ -351,13 +356,10 @@ private:
     ParsingState(struct LineTable *LT);
 
     void resetRowAndSequence();
-    void appendRowToMatrix(uint32_t Offset);
+    void appendRowToMatrix();
 
     /// Line table we're currently parsing.
     struct LineTable *LineTable;
-    /// The row number that starts at zero for the prologue, and increases for
-    /// each row added to the matrix.
-    unsigned RowNumber = 0;
     struct Row Row;
     struct Sequence Sequence;
   };

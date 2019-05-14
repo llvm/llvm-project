@@ -36,9 +36,7 @@ namespace {
     return ConstString(FileSpec(path.GetStringRef()).GetPath());
   }
 }
-//----------------------------------------------------------------------
 // PathMappingList constructor
-//----------------------------------------------------------------------
 PathMappingList::PathMappingList()
     : m_pairs(), m_callback(nullptr), m_callback_baton(nullptr), m_mod_id(0) {}
 

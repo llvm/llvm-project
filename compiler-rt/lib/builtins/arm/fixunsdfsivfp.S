@@ -11,9 +11,9 @@
 //
 // extern unsigned int __fixunsdfsivfp(double a);
 //
-// Converts double precision float to a 32-bit unsigned int rounding towards 
+// Converts double precision float to a 32-bit unsigned int rounding towards
 // zero. All negative values become zero.
-// Uses Darwin calling convention where a double precision parameter is 
+// Uses Darwin calling convention where a double precision parameter is
 // passed in GPR register pair.
 //
 	.syntax unified

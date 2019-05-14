@@ -70,9 +70,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// 2 second timeout when running utility functions
-static constexpr std::chrono::seconds g_utility_function_timeout(2);
-
 static const char *g_get_dynamic_class_info_name =
     "__lldb_apple_objc_v2_get_dynamic_class_info";
 // Testing using the new C++11 raw string literals. If this breaks GCC then we
@@ -456,9 +453,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
   return !class_type_or_name.IsEmpty();
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,
                                                     LanguageType language) {
   // FIXME: This should be a MacOS or iOS process, and we need to look for the
@@ -788,9 +783,7 @@ lldb_private::ConstString AppleObjCRuntimeV2::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString AppleObjCRuntimeV2::GetPluginName() {
   return GetPluginNameStatic();
 }
@@ -871,20 +864,16 @@ size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
 
   const char *class_name = parent_ast_type.GetConstTypeName().AsCString();
   if (class_name && class_name[0] && ivar_name && ivar_name[0]) {
-    //----------------------------------------------------------------------
     // Make the objective C V2 mangled name for the ivar offset from the class
     // name and ivar name
-    //----------------------------------------------------------------------
     std::string buffer("OBJC_IVAR_$_");
     buffer.append(class_name);
     buffer.push_back('.');
     buffer.append(ivar_name);
     ConstString ivar_const_str(buffer.c_str());
 
-    //----------------------------------------------------------------------
     // Try to get the ivar offset address from the symbol table first using the
     // name we created above
-    //----------------------------------------------------------------------
     SymbolContextList sc_list;
     Target &target = m_process->GetTarget();
     target.GetImages().FindSymbolsWithNameAndType(ivar_const_str,
@@ -901,10 +890,8 @@ size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
             ivar_offset_symbol.symbol->GetLoadAddress(&target);
     }
 
-    //----------------------------------------------------------------------
     // If we didn't get the ivar offset address from the symbol table, fall
     // back to getting it from the runtime
-    //----------------------------------------------------------------------
     if (ivar_offset_address == LLDB_INVALID_ADDRESS)
       ivar_offset_address = LookupRuntimeSymbol(ivar_const_str);
 
@@ -1410,7 +1397,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     options.SetTryAllThreads(false);
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
-    options.SetTimeout(g_utility_function_timeout);
+    options.SetTimeout(process->GetUtilityExpressionTimeout());
     options.SetIsForUtilityExpr(true);
 
     Value return_value;
@@ -1661,7 +1648,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     options.SetTryAllThreads(false);
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
-    options.SetTimeout(g_utility_function_timeout);
+    options.SetTimeout(process->GetUtilityExpressionTimeout());
     options.SetIsForUtilityExpr(true);
 
     Value return_value;

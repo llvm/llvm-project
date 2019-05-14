@@ -28,10 +28,10 @@
 # Uncomment line below for debugging shell commands
 # SHELL = /bin/sh -x
 
-SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))/
+SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))
 BUILDDIR := $(shell pwd)
-THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
-LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
+THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))
+LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 
 #----------------------------------------------------------------------
 # If OS is not defined, use 'uname -s' to determine the OS name.
@@ -275,7 +275,7 @@ endif
 CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
 
 ifndef NO_TEST_COMMON_H
-  CFLAGS += -include $(THIS_FILE_DIR)test_common.h
+  CFLAGS += -include $(THIS_FILE_DIR)/test_common.h
 endif
 
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)

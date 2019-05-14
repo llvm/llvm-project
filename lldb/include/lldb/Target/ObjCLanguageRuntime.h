@@ -293,9 +293,7 @@ public:
                       uint64_t &size) override;
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from ObjCLanguageRuntime can see and modify these
-  //------------------------------------------------------------------
   ObjCLanguageRuntime(Process *process);
 
   virtual bool CalculateHasNewLiteralsAndIndexing() { return false; }

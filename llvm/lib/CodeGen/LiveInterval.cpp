@@ -296,9 +296,7 @@ private:
 
   iterator find(SlotIndex Pos) { return LR->find(Pos); }
 
-  iterator findInsertPos(Segment S) {
-    return std::upper_bound(LR->begin(), LR->end(), S.start);
-  }
+  iterator findInsertPos(Segment S) { return llvm::upper_bound(*LR, S.start); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -879,8 +877,53 @@ void LiveInterval::clearSubRanges() {
   SubRanges = nullptr;
 }
 
-void LiveInterval::refineSubRanges(BumpPtrAllocator &Allocator,
-    LaneBitmask LaneMask, std::function<void(LiveInterval::SubRange&)> Apply) {
+/// For each VNI in \p SR, check whether or not that value defines part
+/// of the mask describe by \p LaneMask and if not, remove that value
+/// from \p SR.
+static void stripValuesNotDefiningMask(unsigned Reg, LiveInterval::SubRange &SR,
+                                       LaneBitmask LaneMask,
+                                       const SlotIndexes &Indexes,
+                                       const TargetRegisterInfo &TRI) {
+  // Phys reg should not be tracked at subreg level.
+  // Same for noreg (Reg == 0).
+  if (!TargetRegisterInfo::isVirtualRegister(Reg) || !Reg)
+    return;
+  // Remove the values that don't define those lanes.
+  SmallVector<VNInfo *, 8> ToBeRemoved;
+  for (VNInfo *VNI : SR.valnos) {
+    if (VNI->isUnused())
+      continue;
+    // PHI definitions don't have MI attached, so there is nothing
+    // we can use to strip the VNI.
+    if (VNI->isPHIDef())
+      continue;
+    const MachineInstr *MI = Indexes.getInstructionFromIndex(VNI->def);
+    assert(MI && "Cannot find the definition of a value");
+    bool hasDef = false;
+    for (ConstMIBundleOperands MOI(*MI); MOI.isValid(); ++MOI) {
+      if (!MOI->isReg() || !MOI->isDef())
+        continue;
+      if (MOI->getReg() != Reg)
+        continue;
+      if ((TRI.getSubRegIndexLaneMask(MOI->getSubReg()) & LaneMask).none())
+        continue;
+      hasDef = true;
+      break;
+    }
+
+    if (!hasDef)
+      ToBeRemoved.push_back(VNI);
+  }
+  for (VNInfo *VNI : ToBeRemoved)
+    SR.removeValNo(VNI);
+
+  assert(!SR.empty() && "At least one value should be defined by this mask");
+}
+
+void LiveInterval::refineSubRanges(
+    BumpPtrAllocator &Allocator, LaneBitmask LaneMask,
+    std::function<void(LiveInterval::SubRange &)> Apply,
+    const SlotIndexes &Indexes, const TargetRegisterInfo &TRI) {
   LaneBitmask ToApply = LaneMask;
   for (SubRange &SR : subranges()) {
     LaneBitmask SRMask = SR.LaneMask;
@@ -898,6 +941,10 @@ void LiveInterval::refineSubRanges(BumpPtrAllocator &Allocator,
       SR.LaneMask = SRMask & ~Matching;
       // Create a new subrange for the matching part
       MatchingRange = createSubRangeFrom(Allocator, Matching, SR);
+      // Now that the subrange is split in half, make sure we
+      // only keep in the subranges the VNIs that touch the related half.
+      stripValuesNotDefiningMask(reg, *MatchingRange, Matching, Indexes, TRI);
+      stripValuesNotDefiningMask(reg, SR, SR.LaneMask, Indexes, TRI);
     }
     Apply(*MatchingRange);
     ToApply &= ~Matching;

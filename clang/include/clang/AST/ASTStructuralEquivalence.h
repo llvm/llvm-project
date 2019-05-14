@@ -111,6 +111,10 @@ struct StructuralEquivalenceContext {
   static llvm::Optional<unsigned>
   findUntaggedStructOrUnionIndex(RecordDecl *Anon);
 
+  // If ErrorOnTagTypeMismatch is set, return the the error, otherwise get the
+  // relevant warning for the input error diagnostic.
+  unsigned getApplicableDiagnostic(unsigned ErrorDiagnostic);
+
 private:
   /// Finish checking all of the structural equivalences.
   ///

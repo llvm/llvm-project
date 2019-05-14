@@ -45,7 +45,7 @@ body:             |
     $ebp = SHR32rCL killed $ebp, implicit-def dead $eflags, implicit $cl
     $ebp = XOR32rr killed $ebp, killed $ebx, implicit-def dead $eflags
     TEST32rr $edx, $edx, implicit-def $eflags
-    $cl = SETNEr implicit $eflags
+    $cl = SETCCr 5, implicit $eflags
     ; This %bl def is antidependent on the above use of $ebx
     $bl = MOV8rm $esp, 1, $noreg, 3, _ ; :: (load 1 from %stack.0)
     $cl = OR8rr killed $cl, $bl, implicit-def dead $eflags
@@ -54,20 +54,20 @@ body:             |
     $ecx = MOV32rm $esp, 1, $noreg, 24, _ ; :: (load 4 from %stack.2)
     $edx = SAR32rCL killed $edx, implicit-def dead $eflags, implicit $cl
     TEST32rr killed $edx, $edx, implicit-def $eflags
-    $cl = SETNEr implicit $eflags
+    $cl = SETCCr 5, implicit $eflags
     ; Verify that removal of the $bl antidependence does not use $ch
     ; as a replacement register.
     ; CHECK: $cl = AND8rr killed $cl, killed $b
     $cl = AND8rr killed $cl, killed $bl, implicit-def dead $eflags
     CMP32ri8 $ebp, -1, implicit-def $eflags
     $edx = MOV32ri 0
-    JE_1 %bb.3, implicit $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
 
   bb.2:
     liveins: $cl, $eax, $ebp, $esi
 
     OR32mr $esp, 1, $noreg, 8, $noreg, killed $eax, implicit-def $eflags ; :: (store 4 into %stack.1)
-    $dl = SETNEr implicit $eflags, implicit-def $edx
+    $dl = SETCCr 5, implicit $eflags, implicit-def $edx
 
   bb.3:
     liveins: $cl, $ebp, $edx, $esi

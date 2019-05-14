@@ -13,7 +13,6 @@
 #include "MICmnResources.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgSet constructor.
 // Type:    Method.
 // Args:    None.
@@ -24,7 +23,6 @@ CMICmdArgSet::CMICmdArgSet()
     : m_bIsArgsPresentButNotHandledByCmd(false), m_constStrCommaSpc(", ") {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgSet destructor.
 // Type:    Method.
 // Args:    None.
@@ -37,7 +35,6 @@ CMICmdArgSet::~CMICmdArgSet() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources used by *this container object.
 // Type:    Method.
 // Args:    None.
@@ -66,7 +63,6 @@ void CMICmdArgSet::Destroy() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the state flag indicating that the command set up ready to
 // parse
 //          command arguments or options found that one or more arguments was
@@ -83,7 +79,6 @@ bool CMICmdArgSet::IsArgsPresentButNotHandledByCmd() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add the list of command's arguments to parse and validate another
 // one.
 // Type:    Method.
@@ -94,7 +89,6 @@ bool CMICmdArgSet::IsArgsPresentButNotHandledByCmd() const {
 void CMICmdArgSet::Add(CMICmdArgValBase *vArg) { m_setCmdArgs.push_back(vArg); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: After validating an options line of text (the context) and there is
 // a failure,
 //          it is likely a mandatory command argument that is required is
@@ -110,7 +104,6 @@ const CMICmdArgSet::SetCmdArgs_t &CMICmdArgSet::GetArgsThatAreMissing() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: After validating an options line of text (the context) and there is
 // a failure,
 //          it may be because one or more arguments were unable to extract a
@@ -126,7 +119,6 @@ const CMICmdArgSet::SetCmdArgs_t &CMICmdArgSet::GetArgsThatInvalid() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The list of argument or option (objects) that were specified by the
 // command
 //          and so recognised when parsed but were not handled. Ideally the
@@ -148,7 +140,6 @@ const CMICmdArgSet::SetCmdArgs_t &CMICmdArgSet::GetArgsNotHandledByCmd() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given a set of command argument objects parse the context option
 // string to
 //          find those argument and retrieve their value. If the function fails
@@ -199,7 +190,6 @@ bool CMICmdArgSet::Validate(const CMIUtilString &vStrMiCmd,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Having validated the command's options text and failed for some
 // reason form
 //          the error message made up with the faults found.
@@ -310,7 +300,6 @@ bool CMICmdArgSet::ValidationFormErrorMessages(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Ask if the command's argument options text had any arguments.
 // Type:    Method.
 // Args:    None.
@@ -323,7 +312,6 @@ bool CMICmdArgSet::IsArgContextEmpty() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the number of arguments that are being used for the
 // command.
 // Type:    Method.
@@ -334,7 +322,6 @@ bool CMICmdArgSet::IsArgContextEmpty() const {
 size_t CMICmdArgSet::GetCount() const { return m_setCmdArgs.size(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given a set of command argument objects retrieve the argument with
 // the
 //          specified name.
@@ -364,7 +351,6 @@ bool CMICmdArgSet::GetArg(const CMIUtilString &vArgName,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write a warning message to the MI Log file about the command's
 // arguments or
 //          options that were found present but not handled.

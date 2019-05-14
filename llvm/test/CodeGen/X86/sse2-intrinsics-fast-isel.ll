@@ -333,28 +333,15 @@ define <2 x i64> @test_mm_avg_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ;
 ; AVX512-LABEL: test_mm_avg_epu8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxbw %xmm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x30,0xc0]
-; AVX512-NEXT:    # ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX512-NEXT:    vpmovzxbw %xmm1, %ymm1 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x30,0xc9]
-; AVX512-NEXT:    # ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfd,0xc1]
-; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1 # encoding: [0xc5,0xf5,0x76,0xc9]
-; AVX512-NEXT:    vpsubw %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xf9,0xc1]
-; AVX512-NEXT:    vpsrlw $1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x71,0xd0,0x01]
-; AVX512-NEXT:    vpmovwb %ymm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x30,0xc0]
-; AVX512-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; AVX512-NEXT:    vpavgb %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe0,0xc1]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %zext0 = zext <16 x i8> %arg0 to <16 x i16>
-  %zext1 = zext <16 x i8> %arg1 to <16 x i16>
-  %add = add <16 x i16> %zext0, %zext1
-  %add1 = add <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  %lshr = lshr <16 x i16> %add1, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  %res = trunc <16 x i16> %lshr to <16 x i8>
+  %res = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %arg0, <16 x i8> %arg1)
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
+declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %arg0, <16 x i8> %arg1) nounwind readnone
 
 define <2 x i64> @test_mm_avg_epu16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_mm_avg_epu16:
@@ -369,28 +356,15 @@ define <2 x i64> @test_mm_avg_epu16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ;
 ; AVX512-LABEL: test_mm_avg_epu16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxwd %xmm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x33,0xc0]
-; AVX512-NEXT:    # ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512-NEXT:    vpmovzxwd %xmm1, %ymm1 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x33,0xc9]
-; AVX512-NEXT:    # ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfe,0xc1]
-; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1 # encoding: [0xc5,0xf5,0x76,0xc9]
-; AVX512-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfa,0xc1]
-; AVX512-NEXT:    vpsrld $1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x72,0xd0,0x01]
-; AVX512-NEXT:    vpmovdw %ymm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x33,0xc0]
-; AVX512-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; AVX512-NEXT:    vpavgw %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe3,0xc1]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %zext0 = zext <8 x i16> %arg0 to <8 x i32>
-  %zext1 = zext <8 x i16> %arg1 to <8 x i32>
-  %add = add <8 x i32> %zext0, %zext1
-  %add1 = add <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %lshr = lshr <8 x i32> %add1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %res = trunc <8 x i32> %lshr to <8 x i16>
+  %res = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
+declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_bslli_si128(<2 x i64> %a0) nounwind {
 ; SSE-LABEL: test_mm_bslli_si128:

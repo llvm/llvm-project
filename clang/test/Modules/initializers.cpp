@@ -235,7 +235,6 @@ inline void use(bool b, ...) {
 
 // CHECK-IMPORT: define {{.*}} @[[TU_INIT]]()
 // CHECK-IMPORT: call void @[[A_INIT]]()
-// CHECK-IMPORT: call void @[[B_INIT]]()
 
 // CHECK-IMPORT: define {{.*}} @__tls_init()
 // CHECK-IMPORT: call void @[[C_INIT]]()

@@ -1,4 +1,4 @@
-// RUN: pp-trace -callbacks '*,-FileChanged,-MacroDefined' %s -x cl | FileCheck --strict-whitespace %s
+// RUN: pp-trace -callbacks '*,-FileChanged,-MacroDefined' %s -- -x cl | FileCheck --strict-whitespace %s
 
 #pragma OPENCL EXTENSION all : disable
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : disable

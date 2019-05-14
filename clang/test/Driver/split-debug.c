@@ -35,6 +35,12 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -c -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-OPTION < %t %s
 //
+// RUN: %clang -target x86_64-pc-freebsd12 -gsplit-dwarf -c -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-OPTION < %t %s
+//
+// RUN: %clang -target amdgcn-amd-amdhsa -gsplit-dwarf -c -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-OPTION < %t %s
+//
 // CHECK-OPTION: "-split-dwarf-file" "split-debug.dwo"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -S -### %s 2> %t
@@ -65,7 +71,7 @@
 // RUN: FileCheck -check-prefix=CHECK-SPLIT-WITH-GMLT < %t %s
 //
 // CHECK-SPLIT-WITH-GMLT: "-enable-split-dwarf"
-// CHECK-SPLIT-WITH-GMLT: "-debug-info-kind=line-tables-only"
+// CHECK-SPLIT-WITH-GMLT: "-debug-info-kind=limited"
 // CHECK-SPLIT-WITH-GMLT: "-split-dwarf-file"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -fno-split-dwarf-inlining -S -### %s 2> %t
@@ -97,12 +103,16 @@
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -g0 -S -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=split -g0 -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
 //
 // CHECK-G0-OVER-SPLIT-NOT: "-enable-split-dwarf"
 // CHECK-G0-OVER-SPLIT-NOT: "-debug-info-kind
 // CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-file"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -g0 -gsplit-dwarf -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-SPLIT-OVER-G0 < %t %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -g0 -gsplit-dwarf=split -S -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-SPLIT-OVER-G0 < %t %s
 //
 // CHECK-SPLIT-OVER-G0: "-enable-split-dwarf" "-debug-info-kind=limited"

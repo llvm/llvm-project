@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj -symbols - | FileCheck %s
+# RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
 !ELF
 FileHeader:
   Class: ELFCLASS64
@@ -18,13 +18,14 @@ Sections:
                       # when linked and run on x86_64, will go into an
                       # infloop.
 Symbols:
-  Global:
-    - Name: main
-      Type: STT_FUNC
-      Section: .text
-      Value: 0x1
-      Size: 2
-    - Name: undefined_symbol
+  - Name: main
+    Type: STT_FUNC
+    Section: .text
+    Value: 0x1
+    Size: 2
+    Binding: STB_GLOBAL
+  - Name: undefined_symbol
+    Binding: STB_GLOBAL
 
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {

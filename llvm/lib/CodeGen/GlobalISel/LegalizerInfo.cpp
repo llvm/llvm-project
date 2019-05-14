@@ -42,6 +42,45 @@ cl::opt<bool> llvm::DisableGISelLegalityCheck(
     cl::desc("Don't verify that MIR is fully legal between GlobalISel passes"),
     cl::Hidden);
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
+  switch (Action) {
+  case Legal:
+    OS << "Legal";
+    break;
+  case NarrowScalar:
+    OS << "NarrowScalar";
+    break;
+  case WidenScalar:
+    OS << "WidenScalar";
+    break;
+  case FewerElements:
+    OS << "FewerElements";
+    break;
+  case MoreElements:
+    OS << "MoreElements";
+    break;
+  case Lower:
+    OS << "Lower";
+    break;
+  case Libcall:
+    OS << "Libcall";
+    break;
+  case Custom:
+    OS << "Custom";
+    break;
+  case Unsupported:
+    OS << "Unsupported";
+    break;
+  case NotFound:
+    OS << "NotFound";
+    break;
+  case UseLegacyRules:
+    OS << "UseLegacyRules";
+    break;
+  }
+  return OS;
+}
+
 raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
   OS << Opcode << ", Tys={";
   for (const auto &Type : Types) {
@@ -149,7 +188,7 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
     if (Rule.match(Query)) {
       LLVM_DEBUG(dbgs() << ".. match\n");
       std::pair<unsigned, LLT> Mutation = Rule.determineMutation(Query);
-      LLVM_DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
+      LLVM_DEBUG(dbgs() << ".. .. " << Rule.getAction() << ", "
                         << Mutation.first << ", " << Mutation.second << "\n");
       assert(mutationIsSane(Rule, Query, Mutation) &&
              "legality mutation invalid for match");
@@ -402,9 +441,8 @@ LegalizerInfo::getAction(const LegalityQuery &Query) const {
   for (unsigned i = 0; i < Query.Types.size(); ++i) {
     auto Action = getAspectAction({Query.Opcode, i, Query.Types[i]});
     if (Action.first != Legal) {
-      LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i
-                        << " Action=" << (unsigned)Action.first << ", "
-                        << Action.second << "\n");
+      LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i << " Action="
+                        << Action.first << ", " << Action.second << "\n");
       return {Action.first, i, Action.second};
     } else
       LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i << " Legal\n");
@@ -506,11 +544,8 @@ LegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Size) {
   // Find the last element in Vec that has a bitsize equal to or smaller than
   // the requested bit size.
   // That is the element just before the first element that is bigger than Size.
-  auto VecIt = std::upper_bound(
-      Vec.begin(), Vec.end(), Size,
-      [](const uint32_t Size, const SizeAndAction lhs) -> bool {
-        return Size < lhs.first;
-      });
+  auto VecIt = llvm::bsearch(
+      Vec, [=](const SizeAndAction &A) { return Size < A.first; });
   assert(VecIt != Vec.begin() && "Does Vec not start with size 1?");
   --VecIt;
   int VecIdx = VecIt - Vec.begin();

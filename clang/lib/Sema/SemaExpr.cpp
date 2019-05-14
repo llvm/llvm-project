@@ -333,17 +333,6 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   return false;
 }
 
-/// Retrieve the message suffix that should be added to a
-/// diagnostic complaining about the given function being deleted or
-/// unavailable.
-std::string Sema::getDeletedOrUnavailableSuffix(const FunctionDecl *FD) {
-  std::string Message;
-  if (FD->getAvailability(&Message))
-    return ": " + Message;
-
-  return std::string();
-}
-
 /// DiagnoseSentinelCalls - This routine checks whether a call or
 /// message-send is to a declaration with the sentinel attribute, and
 /// if so, it checks that the requirements of the sentinel are
@@ -922,8 +911,9 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
     UnqualifiedId Name;
     Name.setIdentifier(PP.getIdentifierInfo("__builtin_trap"),
                        E->getBeginLoc());
-    ExprResult TrapFn = ActOnIdExpression(TUScope, SS, TemplateKWLoc,
-                                          Name, true, false);
+    ExprResult TrapFn = ActOnIdExpression(TUScope, SS, TemplateKWLoc, Name,
+                                          /*HasTrailingLParen=*/true,
+                                          /*IsAddressOfOperand=*/false);
     if (TrapFn.isInvalid())
       return ExprError();
 
@@ -1916,11 +1906,10 @@ static void emitEmptyLookupTypoDiagnostic(
 /// Diagnose an empty lookup.
 ///
 /// \return false if new lookup candidates were found
-bool
-Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
-                          std::unique_ptr<CorrectionCandidateCallback> CCC,
-                          TemplateArgumentListInfo *ExplicitTemplateArgs,
-                          ArrayRef<Expr *> Args, TypoExpr **Out) {
+bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
+                               CorrectionCandidateCallback &CCC,
+                               TemplateArgumentListInfo *ExplicitTemplateArgs,
+                               ArrayRef<Expr *> Args, TypoExpr **Out) {
   DeclarationName Name = R.getLookupName();
 
   unsigned diagnostic = diag::err_undeclared_var_use;
@@ -2009,7 +1998,7 @@ Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     assert(!ExplicitTemplateArgs &&
            "Diagnosing an empty lookup with explicit template args!");
     *Out = CorrectTypoDelayed(
-        R.getLookupNameInfo(), R.getLookupKind(), S, &SS, std::move(CCC),
+        R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
         [=](const TypoCorrection &TC) {
           emitEmptyLookupTypoDiagnostic(TC, *this, SS, Name, TypoLoc, Args,
                                         diagnostic, diagnostic_suggest);
@@ -2017,9 +2006,9 @@ Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
         nullptr, CTK_ErrorRecovery);
     if (*Out)
       return true;
-  } else if (S && (Corrected =
-                       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S,
-                                   &SS, std::move(CCC), CTK_ErrorRecovery))) {
+  } else if (S &&
+             (Corrected = CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(),
+                                      S, &SS, CCC, CTK_ErrorRecovery))) {
     std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
     bool DroppedSpecifier =
         Corrected.WillReplaceSpecifier() && Name.getAsString() == CorrectedStr;
@@ -2168,7 +2157,7 @@ ExprResult
 Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                         SourceLocation TemplateKWLoc, UnqualifiedId &Id,
                         bool HasTrailingLParen, bool IsAddressOfOperand,
-                        std::unique_ptr<CorrectionCandidateCallback> CCC,
+                        CorrectionCandidateCallback *CCC,
                         bool IsInlineAsmIdentifier, Token *KeywordReplacement) {
   assert(!(IsAddressOfOperand && HasTrailingLParen) &&
          "cannot be direct & operand and have a trailing lparen");
@@ -2290,9 +2279,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // If this name wasn't predeclared and if this is not a function
     // call, diagnose the problem.
     TypoExpr *TE = nullptr;
-    auto DefaultValidator = llvm::make_unique<CorrectionCandidateCallback>(
-        II, SS.isValid() ? SS.getScopeRep() : nullptr);
-    DefaultValidator->IsAddressOfOperand = IsAddressOfOperand;
+    DefaultFilterCCC DefaultValidator(II, SS.isValid() ? SS.getScopeRep()
+                                                       : nullptr);
+    DefaultValidator.IsAddressOfOperand = IsAddressOfOperand;
     assert((!CCC || CCC->IsAddressOfOperand == IsAddressOfOperand) &&
            "Typo correction callback misconfigured");
     if (CCC) {
@@ -2304,9 +2293,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // FIXME: DiagnoseEmptyLookup produces bad diagnostics if we're looking for
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
-    if (DiagnoseEmptyLookup(S, SS, R,
-                            CCC ? std::move(CCC) : std::move(DefaultValidator),
-                            nullptr, None, &TE)) {
+    if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
+                            None, &TE)) {
       if (TE && KeywordReplacement) {
         auto &State = getTypoExprState(TE);
         auto BestTC = State.Consumer->getNextCorrection();
@@ -2560,8 +2548,10 @@ Sema::LookupInObjCMethod(LookupResult &Lookup, Scope *S,
       SelfName.setKind(UnqualifiedIdKind::IK_ImplicitSelfParam);
       CXXScopeSpec SelfScopeSpec;
       SourceLocation TemplateKWLoc;
-      ExprResult SelfExpr = ActOnIdExpression(S, SelfScopeSpec, TemplateKWLoc,
-                                              SelfName, false, false);
+      ExprResult SelfExpr =
+          ActOnIdExpression(S, SelfScopeSpec, TemplateKWLoc, SelfName,
+                            /*HasTrailingLParen=*/false,
+                            /*IsAddressOfOperand=*/false);
       if (SelfExpr.isInvalid())
         return ExprError();
 
@@ -2585,11 +2575,9 @@ Sema::LookupInObjCMethod(LookupResult &Lookup, Scope *S,
             !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
           getCurFunction()->recordUseOfWeak(Result);
       }
-      if (getLangOpts().ObjCAutoRefCount) {
-        if (CurContext->isClosure())
-          Diag(Loc, diag::warn_implicitly_retains_self)
-            << FixItHint::CreateInsertion(Loc, "self->");
-      }
+      if (getLangOpts().ObjCAutoRefCount)
+        if (const BlockDecl *BD = CurContext->getInnermostBlockDecl())
+          ImplicitlyRetainedSelfLocs.push_back({Loc, BD});
 
       return Result;
     }
@@ -4108,6 +4096,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::Attributed:
     case Type::SubstTemplateTypeParm:
     case Type::PackExpansion:
+    case Type::MacroQualified:
       // Keep walking after single level desugaring.
       T = T.getSingleStepDesugaredType(Context);
       break;
@@ -4904,7 +4893,7 @@ Sema::getVariadicCallType(FunctionDecl *FDecl, const FunctionProtoType *Proto,
 }
 
 namespace {
-class FunctionCallCCC : public FunctionCallFilterCCC {
+class FunctionCallCCC final : public FunctionCallFilterCCC {
 public:
   FunctionCallCCC(Sema &SemaRef, const IdentifierInfo *FuncName,
                   unsigned NumArgs, MemberExpr *ME)
@@ -4920,6 +4909,10 @@ public:
     return FunctionCallFilterCCC::ValidateCandidate(candidate);
   }
 
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<FunctionCallCCC>(*this);
+  }
+
 private:
   const IdentifierInfo *const FunctionName;
 };
@@ -4932,11 +4925,10 @@ static TypoCorrection TryTypoCorrectionForCall(Sema &S, Expr *Fn,
   DeclarationName FuncName = FDecl->getDeclName();
   SourceLocation NameLoc = ME ? ME->getMemberLoc() : Fn->getBeginLoc();
 
+  FunctionCallCCC CCC(S, FuncName.getAsIdentifierInfo(), Args.size(), ME);
   if (TypoCorrection Corrected = S.CorrectTypo(
           DeclarationNameInfo(FuncName, NameLoc), Sema::LookupOrdinaryName,
-          S.getScopeForContext(S.CurContext), nullptr,
-          llvm::make_unique<FunctionCallCCC>(S, FuncName.getAsIdentifierInfo(),
-                                             Args.size(), ME),
+          S.getScopeForContext(S.CurContext), nullptr, CCC,
           Sema::CTK_ErrorRecovery)) {
     if (NamedDecl *ND = Corrected.getFoundDecl()) {
       if (Corrected.isOverloaded()) {
@@ -13704,8 +13696,8 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
   // Look for an explicit signature in that function type.
   FunctionProtoTypeLoc ExplicitSignature;
 
-  if ((ExplicitSignature =
-           Sig->getTypeLoc().getAsAdjusted<FunctionProtoTypeLoc>())) {
+  if ((ExplicitSignature = Sig->getTypeLoc()
+                               .getAsAdjusted<FunctionProtoTypeLoc>())) {
 
     // Check whether that explicit signature was synthesized by
     // GetTypeForDeclarator.  If so, don't save that as part of the
@@ -14868,7 +14860,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // Implicit instantiation of function templates and member functions of
   // class templates.
   if (Func->isImplicitlyInstantiable()) {
-    TemplateSpecializationKind TSK = Func->getTemplateSpecializationKind();
+    TemplateSpecializationKind TSK =
+        Func->getTemplateSpecializationKindForInstantiation();
     SourceLocation PointOfInstantiation = Func->getPointOfInstantiation();
     bool FirstInstantiation = PointOfInstantiation.isInvalid();
     if (FirstInstantiation) {
@@ -15697,7 +15690,12 @@ ExprResult Sema::ActOnConstantExpression(ExprResult Res) {
 }
 
 void Sema::CleanupVarDeclMarking() {
-  for (Expr *E : MaybeODRUseExprs) {
+  // Iterate through a local copy in case MarkVarDeclODRUsed makes a recursive
+  // call.
+  MaybeODRUseExprSet LocalMaybeODRUseExprs;
+  std::swap(LocalMaybeODRUseExprs, MaybeODRUseExprs);
+
+  for (Expr *E : LocalMaybeODRUseExprs) {
     VarDecl *Var;
     SourceLocation Loc;
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
@@ -15714,9 +15712,9 @@ void Sema::CleanupVarDeclMarking() {
                        /*MaxFunctionScopeIndex Pointer*/ nullptr);
   }
 
-  MaybeODRUseExprs.clear();
+  assert(MaybeODRUseExprs.empty() &&
+         "MarkVarDeclODRUsed failed to cleanup MaybeODRUseExprs?");
 }
-
 
 static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
                                     VarDecl *Var, Expr *E) {
@@ -16977,10 +16975,9 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
 
   StringRef Platform = getASTContext().getTargetInfo().getPlatformName();
 
-  auto Spec = std::find_if(AvailSpecs.begin(), AvailSpecs.end(),
-                           [&](const AvailabilitySpec &Spec) {
-                             return Spec.getPlatform() == Platform;
-                           });
+  auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
+    return Spec.getPlatform() == Platform;
+  });
 
   VersionTuple Version;
   if (Spec != AvailSpecs.end())

@@ -17,7 +17,6 @@
 
 namespace lldb_private {
 
-//------------------------------------------------------------------
 /// Converts a StateType to a C string.
 ///
 /// \param[in] state
@@ -27,10 +26,8 @@ namespace lldb_private {
 ///     A NULL terminated C string that describes \a state. The
 ///     returned string comes from constant string buffers and does
 ///     not need to be freed.
-//------------------------------------------------------------------
 const char *StateAsCString(lldb::StateType state);
 
-//------------------------------------------------------------------
 /// Check if a state represents a state where the process or thread
 /// is running.
 ///
@@ -40,10 +37,8 @@ const char *StateAsCString(lldb::StateType state);
 /// \return
 ///     \b true if the state represents a process or thread state
 ///     where the process or thread is running, \b false otherwise.
-//------------------------------------------------------------------
 bool StateIsRunningState(lldb::StateType state);
 
-//------------------------------------------------------------------
 /// Check if a state represents a state where the process or thread
 /// is stopped. Stopped can mean stopped when the process is still
 /// around, or stopped when the process has exited or doesn't exist
@@ -63,7 +58,6 @@ bool StateIsRunningState(lldb::StateType state);
 ///     \b true, then the process can't be exited or unloaded,
 ///     otherwise exited and unloaded or other states where the
 ///     process no longer exists are considered to be stopped.
-//------------------------------------------------------------------
 bool StateIsStoppedState(lldb::StateType state, bool must_exist);
 
 const char *GetPermissionsAsCString(uint32_t permissions);

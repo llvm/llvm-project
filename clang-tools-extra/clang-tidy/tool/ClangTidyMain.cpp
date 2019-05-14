@@ -304,11 +304,10 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
 }
 
 llvm::IntrusiveRefCntPtr<vfs::FileSystem>
-getVfsOverlayFromFile(const std::string &OverlayFile) {
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> OverlayFS(
-      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
+getVfsFromFile(const std::string &OverlayFile,
+               llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-      OverlayFS->getBufferForFile(OverlayFile);
+      BaseFS->getBufferForFile(OverlayFile);
   if (!Buffer) {
     llvm::errs() << "Can't load virtual filesystem overlay file '"
                  << OverlayFile << "': " << Buffer.getError().message()
@@ -323,19 +322,23 @@ getVfsOverlayFromFile(const std::string &OverlayFile) {
                  << OverlayFile << "'.\n";
     return nullptr;
   }
-  OverlayFS->pushOverlay(FS);
-  return OverlayFS;
+  return FS;
 }
 
 static int clangTidyMain(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   CommonOptionsParser OptionsParser(argc, argv, ClangTidyCategory,
                                     cl::ZeroOrMore);
-  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS(
-      VfsOverlay.empty() ? vfs::getRealFileSystem()
-                         : getVfsOverlayFromFile(VfsOverlay));
-  if (!BaseFS)
-    return 1;
+  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS(
+      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
+
+  if (!VfsOverlay.empty()) {
+    IntrusiveRefCntPtr<vfs::FileSystem> VfsFromFile =
+        getVfsFromFile(VfsOverlay, BaseFS);
+    if (!VfsFromFile)
+      return 1;
+    BaseFS->pushOverlay(VfsFromFile);
+  }
 
   auto OwningOptionsProvider = createOptionsProvider(BaseFS);
   auto *OptionsProvider = OwningOptionsProvider.get();

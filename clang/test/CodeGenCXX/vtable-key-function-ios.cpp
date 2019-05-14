@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple=armv7-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=armv7-apple-darwin -emit-llvm -o - | FileCheck -check-prefixes=CHECK,CHECK-UNIX %s
 // RUN: %clang_cc1 %s -triple=armv7-apple-darwin -emit-llvm -o - | FileCheck -check-prefix=CHECK-LATE %s
 
-// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-gnu -emit-llvm -o - | FileCheck -check-prefixes=CHECK,CHECK-MINGW %s
 // RUN: %clang_cc1 %s -triple=x86_64-pc-windows-gnu -emit-llvm -o - | FileCheck -check-prefix=CHECK-LATE %s
 
 // The 'a' variants ask for the vtable first.
@@ -29,7 +29,8 @@ struct Test0a {
 // V-table should be defined externally.
 Test0a::Test0a() { use(typeid(Test0a)); }
 // CHECK: @_ZTV6Test0a = external {{(dso_local )?}}unnamed_addr constant 
-// CHECK: @_ZTI6Test0a = external {{(dso_local )?}}constant
+// CHECK-UNIX: @_ZTI6Test0a = external {{(dso_local )?}}constant
+// CHECK-MINGW: @_ZTI6Test0a = linkonce_odr {{(dso_local )?}}constant
 
 // This is not a key function.
 void Test0a::foo() {}
@@ -48,7 +49,8 @@ void Test0b::foo() {}
 // V-table should be defined externally.
 Test0b::Test0b() { use(typeid(Test0b)); }
 // CHECK: @_ZTV6Test0b = external {{(dso_local )?}}unnamed_addr constant 
-// CHECK: @_ZTI6Test0b = external {{(dso_local )?}}constant
+// CHECK-UNIX: @_ZTI6Test0b = external {{(dso_local )?}}constant
+// CHECK-MINGW: @_ZTI6Test0b = linkonce_odr {{(dso_local )?}}constant
 
 /*** Test1a ******************************************************************/
 

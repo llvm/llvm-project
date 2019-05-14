@@ -31,7 +31,7 @@ public:
     SBInstructionList ();
 
     SBInstructionList (const SBInstructionList &rhs);
-    
+
     ~SBInstructionList ();
 
     bool
@@ -59,11 +59,16 @@ public:
 
     bool
     GetDescription (lldb::SBStream &description);
-    
+
     bool
     DumpEmulationForAllInstructions (const char *triple);
 
     %pythoncode %{
+        def __iter__(self):
+            '''Iterate over all instructions in a lldb.SBInstructionList
+            object.'''
+            return lldb_iter(self, 'GetSize', 'GetInstructionAtIndex')
+
         def __len__(self):
             '''Access len of the instruction list.'''
             return int(self.GetSize())
@@ -87,7 +92,7 @@ public:
                         return closest_inst
                     else:
                         closest_inst = inst
-            return None        
+            return None
     %}
 
 };

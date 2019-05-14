@@ -1,0 +1,23 @@
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir/obj
+# RUN: mkdir -p %t.dir/Foo/x86_64
+# RUN: llc %p/../Inputs/swift-interface.ll -filetype=obj -o %t.dir/obj/1.o
+# RUN: dsymutil -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/swift-interface.dSYM 2>&1 \
+# RUN:    | FileCheck %s --check-prefix=WARNINGS
+# RUN: echo "// module Foo" >%t.dir/Foo/x86_64.swiftinterface
+# RUN: dsymutil -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/swift-interface.dSYM
+# RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/x86_64/Foo.swiftinterface \
+# RUN:   | FileCheck %s --check-prefix=INTERFACE
+
+# WARNINGS: cannot copy parseable Swift interface
+# INTERFACE: module Foo
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: obj/1.o
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

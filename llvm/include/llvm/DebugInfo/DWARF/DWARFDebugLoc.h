@@ -86,7 +86,7 @@ public:
     SmallVector<Entry, 2> Entries;
     void dump(raw_ostream &OS, uint64_t BaseAddr, bool IsLittleEndian,
               unsigned AddressSize, const MCRegisterInfo *RegInfo,
-              unsigned Indent) const;
+              DWARFUnit *U, unsigned Indent) const;
   };
 
 private:

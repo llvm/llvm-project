@@ -548,7 +548,6 @@ uint32_t NativeThreadListDarwin::ProcessDidStop(NativeProcessDarwin &process) {
   return (uint32_t)m_threads.size();
 }
 
-//----------------------------------------------------------------------
 // Check each thread in our thread list to see if we should notify our client
 // of the current halt in execution.
 //
@@ -558,7 +557,6 @@ uint32_t NativeThreadListDarwin::ProcessDidStop(NativeProcessDarwin &process) {
 // RETURNS
 //    true if we should stop and notify our clients
 //    false if we should resume our child process and skip notification
-//----------------------------------------------------------------------
 bool NativeThreadListDarwin::ShouldStop(bool &step_more) {
   std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
   for (auto thread_sp : m_threads) {

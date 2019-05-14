@@ -185,6 +185,14 @@ bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType) const {
   return TTIImpl->isLegalMaskedScatter(DataType);
 }
 
+bool TargetTransformInfo::isLegalMaskedCompressStore(Type *DataType) const {
+  return TTIImpl->isLegalMaskedCompressStore(DataType);
+}
+
+bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType) const {
+  return TTIImpl->isLegalMaskedExpandLoad(DataType);
+}
+
 bool TargetTransformInfo::hasDivRemOp(Type *DataType, bool IsSigned) const {
   return TTIImpl->hasDivRemOp(DataType, IsSigned);
 }
@@ -572,6 +580,12 @@ int TargetTransformInfo::getAddressComputationCost(Type *Tp,
                                                    ScalarEvolution *SE,
                                                    const SCEV *Ptr) const {
   int Cost = TTIImpl->getAddressComputationCost(Tp, SE, Ptr);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+int TargetTransformInfo::getMemcpyCost(const Instruction *I) const {
+  int Cost = TTIImpl->getMemcpyCost(I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

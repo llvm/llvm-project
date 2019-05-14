@@ -12,10 +12,8 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/ObjectFile.h"
 
-//----------------------------------------------------------------------
 // This class needs to be hidden as eventually belongs in a plugin that
 // will export the ObjectFile protocol
-//----------------------------------------------------------------------
 class ObjectFileJIT : public lldb_private::ObjectFile {
 public:
   ObjectFileJIT(const lldb::ModuleSP &module_sp,
@@ -23,9 +21,7 @@ public:
 
   ~ObjectFileJIT() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -50,9 +46,7 @@ public:
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
 
-  //------------------------------------------------------------------
   // Member Functions
-  //------------------------------------------------------------------
   bool ParseHeader() override;
 
   bool SetLoadAddress(lldb_private::Target &target, lldb::addr_t value,
@@ -94,9 +88,7 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

@@ -10,8 +10,9 @@
 
 // <functional>
 
-// template <class F, class ...Args>
-// result_of_t<F&&(Args&&...)> invoke(F&&, Args&&...);
+// template<class F, class... Args>
+// invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) // C++17
+//     noexcept(is_nothrow_invocable_v<_Fn, _Args...>);
 
 /// C++14 [func.def] 20.9.0
 /// (1) The following definitions apply to this Clause:

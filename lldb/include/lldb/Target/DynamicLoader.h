@@ -44,7 +44,6 @@ class Thread;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class DynamicLoader DynamicLoader.h "lldb/Target/DynamicLoader.h"
 /// A plug-in interface definition class for dynamic loaders.
 ///
@@ -62,10 +61,8 @@ namespace lldb_private {
 /// boolean value that indicates if the process should continue or halt and
 /// should return the global setting for this using:
 /// DynamicLoader::StopWhenImagesChange() const.
-//----------------------------------------------------------------------
 class DynamicLoader : public PluginInterface {
 public:
-  //------------------------------------------------------------------
   /// Find a dynamic loader plugin for a given process.
   ///
   /// Scans the installed DynamicLoader plug-ins and tries to find an instance
@@ -78,48 +75,36 @@ public:
   /// \param[in] plugin_name
   ///     An optional name of a specific dynamic loader plug-in that
   ///     should be used. If NULL, pick the best plug-in.
-  //------------------------------------------------------------------
   static DynamicLoader *FindPlugin(Process *process, const char *plugin_name);
 
-  //------------------------------------------------------------------
   /// Construct with a process.
-  //------------------------------------------------------------------
   DynamicLoader(Process *process);
 
-  //------------------------------------------------------------------
   /// Destructor.
   ///
   /// The destructor is virtual since this class is designed to be inherited
   /// from by the plug-in instance.
-  //------------------------------------------------------------------
   virtual ~DynamicLoader() override;
 
-  //------------------------------------------------------------------
   /// Called after attaching a process.
   ///
   /// Allow DynamicLoader plug-ins to execute some code after attaching to a
   /// process.
-  //------------------------------------------------------------------
   virtual void DidAttach() = 0;
 
-  //------------------------------------------------------------------
   /// Called after launching a process.
   ///
   /// Allow DynamicLoader plug-ins to execute some code after the process has
   /// stopped for the first time on launch.
-  //------------------------------------------------------------------
   virtual void DidLaunch() = 0;
 
-  //------------------------------------------------------------------
   /// Helper function that can be used to detect when a process has called
   /// exec and is now a new and different process. This can be called when
   /// necessary to try and detect the exec. The process might be able to
   /// answer this question, but sometimes it might not be able and the dynamic
   /// loader often knows what the program entry point is. So the process and
   /// the dynamic loader can work together to detect this.
-  //------------------------------------------------------------------
   virtual bool ProcessDidExec() { return false; }
-  //------------------------------------------------------------------
   /// Get whether the process should stop when images change.
   ///
   /// When images (executables and shared libraries) get loaded or unloaded,
@@ -131,10 +116,8 @@ public:
   /// \return
   ///     Returns \b true if the process should stop when images
   ///     change, \b false if the process should resume.
-  //------------------------------------------------------------------
   bool GetStopWhenImagesChange() const;
 
-  //------------------------------------------------------------------
   /// Set whether the process should stop when images change.
   ///
   /// When images (executables and shared libraries) get loaded or unloaded,
@@ -146,10 +129,8 @@ public:
   /// \param[in] stop
   ///     Boolean value that indicates whether the process should stop
   ///     when images change.
-  //------------------------------------------------------------------
   void SetStopWhenImagesChange(bool stop);
 
-  //------------------------------------------------------------------
   /// Provides a plan to step through the dynamic loader trampoline for the
   /// current state of \a thread.
   ///
@@ -160,11 +141,9 @@ public:
   /// \return
   ///    A pointer to the plan (caller owned) or NULL if we are not at such
   ///    a trampoline.
-  //------------------------------------------------------------------
   virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                           bool stop_others) = 0;
 
-  //------------------------------------------------------------------
   /// Some dynamic loaders provide features where there are a group of symbols
   /// "equivalent to" a given symbol one of which will be chosen when the
   /// symbol is bound.  If you want to set a breakpoint on one of these
@@ -183,14 +162,12 @@ public:
   ///
   /// \return
   ///    Number of equivalent symbols found.
-  //------------------------------------------------------------------
   virtual size_t FindEquivalentSymbols(Symbol *original_symbol,
                                        ModuleList &module_list,
                                        SymbolContextList &equivalent_symbols) {
     return 0;
   }
 
-  //------------------------------------------------------------------
   /// Ask if it is ok to try and load or unload an shared library (image).
   ///
   /// The dynamic loader often knows when it would be ok to try and load or
@@ -201,10 +178,8 @@ public:
   /// \return
   ///     \b true if it is currently ok to try and load a shared
   ///     library into the process, \b false otherwise.
-  //------------------------------------------------------------------
   virtual Status CanLoadImage() = 0;
 
-  //------------------------------------------------------------------
   /// Ask if the eh_frame information for the given SymbolContext should be
   /// relied on even when it's the first frame in a stack unwind.
   ///
@@ -225,12 +200,10 @@ public:
   ///     unconditionally when unwinding from this frame.  Else \b false,
   ///     the normal lldb unwind behavior of only using eh_frame when the
   ///     function appears in the middle of the stack.
-  //------------------------------------------------------------------
   virtual bool AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
     return false;
   }
 
-  //------------------------------------------------------------------
   /// Retrieves the per-module TLS block for a given thread.
   ///
   /// \param[in] module
@@ -243,7 +216,6 @@ public:
   ///     If the given thread has TLS data allocated for the
   ///     module, the address of the TLS block. Otherwise
   ///     LLDB_INVALID_ADDRESS is returned.
-  //------------------------------------------------------------------
   virtual lldb::addr_t GetThreadLocalData(const lldb::ModuleSP module,
                                           const lldb::ThreadSP thread,
                                           lldb::addr_t tls_file_addr) {
@@ -257,7 +229,6 @@ public:
                                              lldb::addr_t base_addr,
                                              bool base_addr_is_offset);
 
-  //------------------------------------------------------------------
   /// Get information about the shared cache for a process, if possible.
   ///
   /// On some systems (e.g. Darwin based systems), a set of libraries that are
@@ -292,7 +263,6 @@ public:
   /// \return
   ///     Returns false if this DynamicLoader cannot gather information
   ///     about the shared cache / has no concept of a shared cache.
-  //------------------------------------------------------------------
   virtual bool GetSharedCacheInformation(lldb::addr_t &base_address, UUID &uuid,
                                          LazyBool &using_shared_cache,
                                          LazyBool &private_shared_cache) {
@@ -304,9 +274,7 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   // Utility methods for derived classes
-  //------------------------------------------------------------------
 
   /// Checks to see if the target module has changed, updates the target
   /// accordingly and returns the target executable module.
@@ -353,9 +321,7 @@ protected:
   void LoadOperatingSystemPlugin(bool flush);
 
 
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   Process
       *m_process; ///< The process that this dynamic loader plug-in is tracking.
 

@@ -62,7 +62,7 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
   for (size_t i = 0; i < NumVars; i++)
     Vars[i].Alignment = std::max(Vars[i].Alignment, kMinAlignment);
 
-  std::stable_sort(Vars.begin(), Vars.end(), CompareVars);
+  llvm::stable_sort(Vars, CompareVars);
 
   ASanStackFrameLayout Layout;
   Layout.Granularity = Granularity;

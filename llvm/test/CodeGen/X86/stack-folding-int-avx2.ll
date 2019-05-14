@@ -14,7 +14,7 @@ define <4 x double> @stack_fold_broadcastsd_ymm(<2 x double> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <2 x double> %a0, <2 x double> undef, <4 x i32> zeroinitializer
   ; fadd forces execution domain
-  %3 = fadd <4 x double> %2, <double 0x0, double 0x0, double 0x0, double 0x0>
+  %3 = fadd <4 x double> %2, <double 0x1, double 0x0, double 0x0, double 0x0>
   ret <4 x double> %3
 }
 
@@ -24,7 +24,7 @@ define <4 x float> @stack_fold_broadcastss(<4 x float> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x float> %a0, <4 x float> undef, <4 x i32> zeroinitializer
   ; fadd forces execution domain
-  %3 = fadd <4 x float> %2, <float 0x0, float 0x0, float 0x0, float 0x0>
+  %3 = fadd <4 x float> %2, <float 1.0, float 0x0, float 0x0, float 0x0>
   ret <4 x float> %3
 }
 
@@ -34,7 +34,7 @@ define <8 x float> @stack_fold_broadcastss_ymm(<4 x float> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x float> %a0, <4 x float> undef, <8 x i32> zeroinitializer
   ; fadd forces execution domain
-  %3 = fadd <8 x float> %2, <float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0>
+  %3 = fadd <8 x float> %2, <float 1.0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0>
   ret <8 x float> %3
 }
 
@@ -54,7 +54,7 @@ define <8 x i32> @stack_fold_inserti128(<4 x i32> %a0, <4 x i32> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 
@@ -215,7 +215,7 @@ define <32 x i8> @stack_fold_pand(<32 x i8> %a0, <32 x i8> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = and <32 x i8> %a0, %a1
   ; add forces execution domain
-  %3 = add <32 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %3 = add <32 x i8> %2, <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <32 x i8> %3
 }
 
@@ -226,7 +226,7 @@ define <32 x i8> @stack_fold_pandn(<32 x i8> %a0, <32 x i8> %a1) {
   %2 = xor <32 x i8> %a0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %3 = and <32 x i8> %2, %a1
   ; add forces execution domain
-  %4 = add <32 x i8> %3, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %4 = add <32 x i8> %3, <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <32 x i8> %4
 }
 
@@ -272,7 +272,7 @@ define <8 x i32> @stack_fold_pblendd_ymm(<8 x i32> %a0, <8 x i32> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <8 x i32> %a0, <8 x i32> %a1, <8 x i32> <i32 8, i32 9, i32 10, i32 3, i32 4, i32 5, i32 6, i32 7>
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 
@@ -315,7 +315,7 @@ define <4 x i32> @stack_fold_pbroadcastd(<4 x i32> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x i32> %a0, <4 x i32> undef, <4 x i32> zeroinitializer
   ; add forces execution domain
-  %3 = add <4 x i32> %2, <i32 1, i32 1, i32 1, i32 1>
+  %3 = add <4 x i32> %2, <i32 2, i32 1, i32 1, i32 1>
   ret <4 x i32> %3
 }
 
@@ -325,7 +325,7 @@ define <8 x i32> @stack_fold_pbroadcastd_ymm(<4 x i32> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x i32> %a0, <4 x i32> undef, <8 x i32> zeroinitializer
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 
@@ -335,7 +335,7 @@ define <2 x i64> @stack_fold_pbroadcastq(<2 x i64> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <2 x i64> %a0, <2 x i64> undef, <2 x i32> zeroinitializer
   ; add forces execution domain
-  %3 = add <2 x i64> %2, <i64 1, i64 1>
+  %3 = add <2 x i64> %2, <i64 2, i64 1>
   ret <2 x i64> %3
 }
 
@@ -345,7 +345,7 @@ define <4 x i64> @stack_fold_pbroadcastq_ymm(<2 x i64> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> zeroinitializer
   ; add forces execution domain
-  %3 = add <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>
+  %3 = add <4 x i64> %2, <i64 2, i64 1, i64 1, i64 1>
   ret <4 x i64> %3
 }
 
@@ -443,7 +443,7 @@ define <8 x i32> @stack_fold_perm2i128(<8 x i32> %a0, <8 x i32> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <8 x i32> %a0, <8 x i32> %a1, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 
@@ -453,7 +453,7 @@ define <8 x i32> @stack_fold_permd(<8 x i32> %a0, <8 x i32> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a1, <8 x i32> %a0)
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>) nounwind readonly
@@ -483,7 +483,7 @@ define <4 x i64> @stack_fold_permq(<4 x i64> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 3>
   ; add forces execution domain
-  %3 = add <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>
+  %3 = add <4 x i64> %2, <i64 2, i64 1, i64 1, i64 1>
   ret <4 x i64> %3
 }
 
@@ -844,7 +844,7 @@ define <32 x i8> @stack_fold_por(<32 x i8> %a0, <32 x i8> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = or <32 x i8> %a0, %a1
   ; add forces execution domain
-  %3 = add <32 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %3 = add <32 x i8> %2, <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <32 x i8> %3
 }
 
@@ -872,7 +872,7 @@ define <8 x i32> @stack_fold_pshufd(<8 x i32> %a0) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <8 x i32> %a0, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 
@@ -1163,7 +1163,7 @@ define <8 x i32> @stack_fold_punpckhdq(<8 x i32> %a0, <8 x i32> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <8 x i32> %a0, <8 x i32> %a1, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 
@@ -1173,7 +1173,7 @@ define <4 x i64> @stack_fold_punpckhqdq(<4 x i64> %a0, <4 x i64> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x i64> %a0, <4 x i64> %a1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ; add forces execution domain
-  %3 = add <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>
+  %3 = add <4 x i64> %2, <i64 2, i64 1, i64 1, i64 1>
   ret <4 x i64> %3
 }
 
@@ -1199,7 +1199,7 @@ define <8 x i32> @stack_fold_punpckldq(<8 x i32> %a0, <8 x i32> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <8 x i32> %a0, <8 x i32> %a1, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
   ; add forces execution domain
-  %3 = add <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %3 = add <8 x i32> %2, <i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %3
 }
 
@@ -1209,7 +1209,7 @@ define <4 x i64> @stack_fold_punpcklqdq(<4 x i64> %a0, <4 x i64> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x i64> %a0, <4 x i64> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ; add forces execution domain
-  %3 = add <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>
+  %3 = add <4 x i64> %2, <i64 2, i64 1, i64 1, i64 1>
   ret <4 x i64> %3
 }
 
@@ -1227,6 +1227,6 @@ define <32 x i8> @stack_fold_pxor(<32 x i8> %a0, <32 x i8> %a1) {
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = xor <32 x i8> %a0, %a1
   ; add forces execution domain
-  %3 = add <32 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %3 = add <32 x i8> %2, <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <32 x i8> %3
 }

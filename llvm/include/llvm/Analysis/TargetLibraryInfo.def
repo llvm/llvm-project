@@ -372,6 +372,15 @@ TLI_DEFINE_STRING_INTERNAL("__sinpi")
 /// float __sinpif(float x);
 TLI_DEFINE_ENUM_INTERNAL(sinpif)
 TLI_DEFINE_STRING_INTERNAL("__sinpif")
+/// int __small_fprintf(FILE *stream, const char *format, ...);
+TLI_DEFINE_ENUM_INTERNAL(small_fprintf)
+TLI_DEFINE_STRING_INTERNAL("__small_fprintf")
+/// int __small_printf(const char *format, ...);
+TLI_DEFINE_ENUM_INTERNAL(small_printf)
+TLI_DEFINE_STRING_INTERNAL("__small_printf")
+/// int __small_sprintf(char *str, const char *format, ...);
+TLI_DEFINE_ENUM_INTERNAL(small_sprintf)
+TLI_DEFINE_STRING_INTERNAL("__small_sprintf")
 /// double __sqrt_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(sqrt_finite)
 TLI_DEFINE_STRING_INTERNAL("__sqrt_finite")

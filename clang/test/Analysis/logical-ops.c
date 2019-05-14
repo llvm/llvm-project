@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -Wno-pointer-bool-conversion -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,debug.ExprInspection\
+// RUN:                    -analyzer-config eagerly-assume=false -verify %s
 
 void clang_analyzer_eval(int);
 
@@ -33,7 +34,21 @@ int between(char *x) {
   return x >= start && x < end;
 }
 
-int undef(void) {} // expected-warning{{control reaches end of non-void function}}
+int undef(void) {}
 void useUndef(void) { 0 || undef(); }
 
 void testPointer(void) { (void) (1 && testPointer && 0); }
+
+char *global_ap, *global_bp, *global_cp;
+void ambiguous_backtrack_1() {
+  for (;;) {
+    (global_bp - global_ap ? global_cp[global_bp - global_ap] : 0) || 1;
+    global_bp++;
+  }
+}
+
+int global_a, global_b;
+void ambiguous_backtrack_2(int x) {
+  global_a = x >= 2 ? 1 : x;
+  global_b == x && 9 || 2;
+}

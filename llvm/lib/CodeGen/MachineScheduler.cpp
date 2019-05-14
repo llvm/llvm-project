@@ -486,13 +486,17 @@ getSchedRegions(MachineBasicBlock *MBB,
       MachineInstr &MI = *std::prev(I);
       if (isSchedBoundary(&MI, &*MBB, MF, TII))
         break;
-      if (!MI.isDebugInstr())
+      if (!MI.isDebugInstr()) {
         // MBB::size() uses instr_iterator to count. Here we need a bundle to
         // count as a single instruction.
         ++NumRegionInstrs;
+      }
     }
 
-    Regions.push_back(SchedRegion(I, RegionEnd, NumRegionInstrs));
+    // It's possible we found a scheduling region that only has debug
+    // instructions. Don't bother scheduling these.
+    if (NumRegionInstrs != 0)
+      Regions.push_back(SchedRegion(I, RegionEnd, NumRegionInstrs));
   }
 
   if (RegionsTopDown)
@@ -603,23 +607,6 @@ LLVM_DUMP_METHOD void ReadyQueue::dump() const {
 
 // Provide a vtable anchor.
 ScheduleDAGMI::~ScheduleDAGMI() = default;
-
-bool ScheduleDAGMI::canAddEdge(SUnit *SuccSU, SUnit *PredSU) {
-  return SuccSU == &ExitSU || !Topo.IsReachable(PredSU, SuccSU);
-}
-
-bool ScheduleDAGMI::addEdge(SUnit *SuccSU, const SDep &PredDep) {
-  if (SuccSU != &ExitSU) {
-    // Do not use WillCreateCycle, it assumes SD scheduling.
-    // If Pred is reachable from Succ, then the edge creates a cycle.
-    if (Topo.IsReachable(PredDep.getSUnit(), SuccSU))
-      return false;
-    Topo.AddPred(SuccSU, PredDep.getSUnit());
-  }
-  SuccSU->addPred(PredDep, /*Required=*/!PredDep.isArtificial());
-  // Return true regardless of whether a new edge needed to be inserted.
-  return true;
-}
 
 /// ReleaseSucc - Decrement the NumPredsLeft count of a successor. When
 /// NumPredsLeft reaches zero, release the successor node.
@@ -760,8 +747,6 @@ void ScheduleDAGMI::schedule() {
 
   // Build the DAG.
   buildSchedGraph(AA);
-
-  Topo.InitDAGTopologicalSorting();
 
   postprocessDAG();
 
@@ -1211,8 +1196,6 @@ void ScheduleDAGMILive::schedule() {
   LLVM_DEBUG(SchedImpl->dumpPolicy());
   buildDAGWithRegPressure();
 
-  Topo.InitDAGTopologicalSorting();
-
   postprocessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
@@ -1483,10 +1466,10 @@ namespace {
 class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   struct MemOpInfo {
     SUnit *SU;
-    MachineOperand *BaseOp;
+    const MachineOperand *BaseOp;
     int64_t Offset;
 
-    MemOpInfo(SUnit *su, MachineOperand *Op, int64_t ofs)
+    MemOpInfo(SUnit *su, const MachineOperand *Op, int64_t ofs)
         : SU(su), BaseOp(Op), Offset(ofs) {}
 
     bool operator<(const MemOpInfo &RHS) const {
@@ -1532,7 +1515,7 @@ public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
 protected:
-  void clusterNeighboringMemOps(ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG);
+  void clusterNeighboringMemOps(ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG);
 };
 
 class StoreClusterMutation : public BaseMemOpClusterMutation {
@@ -1569,10 +1552,10 @@ createStoreClusterDAGMutation(const TargetInstrInfo *TII,
 } // end namespace llvm
 
 void BaseMemOpClusterMutation::clusterNeighboringMemOps(
-    ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG) {
+    ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
   for (SUnit *SU : MemOps) {
-    MachineOperand *BaseOp;
+    const MachineOperand *BaseOp;
     int64_t Offset;
     if (TII->getMemOperandWithOffset(*SU->getInstr(), BaseOp, Offset, TRI))
       MemOpRecords.push_back(MemOpInfo(SU, BaseOp, Offset));
@@ -1609,9 +1592,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 }
 
 /// Callback from DAG postProcessing to create cluster edges for loads.
-void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
-  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
-
+void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
   // Map DAG NodeNum to store chain ID.
   DenseMap<unsigned, unsigned> StoreChainIDs;
   // Map each store chain to a set of dependent MemOps.
@@ -2178,6 +2159,8 @@ void SchedBoundary::bumpNode(SUnit *SU) {
       HazardRec->Reset();
     }
     HazardRec->EmitInstruction(SU);
+    // Scheduling an instruction may have made pending instructions available.
+    CheckPending = true;
   }
   // checkHazard should prevent scheduling multiple instructions per cycle that
   // exceed the issue width.

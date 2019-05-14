@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_AVOIDUNDERSCOREINGOOGLETESTNAMECHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_AVOIDUNDERSCOREINGOOGLETESTNAMECHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -22,7 +22,8 @@ class AvoidUnderscoreInGoogletestNameCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
 
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
 };
 
 } // namespace readability

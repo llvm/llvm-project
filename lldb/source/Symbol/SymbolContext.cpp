@@ -586,10 +586,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
       curr_block->GetContainingInlinedBlock() != nullptr)
     isInlinedblock = true;
 
-  //----------------------------------------------------------------------
   // Find all types that match the current block if we have one and put them
   // first in the list. Keep iterating up through all blocks.
-  //----------------------------------------------------------------------
   while (curr_block != nullptr && !isInlinedblock) {
     type_map.ForEach(
         [curr_block, &type_list](const lldb::TypeSP &type_sp) -> bool {
@@ -607,10 +605,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
     });
     curr_block = curr_block->GetParent();
   }
-  //----------------------------------------------------------------------
   // Find all types that match the current function, if we have onem, and put
   // them next in the list.
-  //----------------------------------------------------------------------
   if (function != nullptr && !type_map.Empty()) {
     const size_t old_type_list_size = type_list.GetSize();
     type_map.ForEach([this, &type_list](const lldb::TypeSP &type_sp) -> bool {
@@ -628,10 +624,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
         type_map.Remove(type_list.GetTypeAtIndex(i));
     }
   }
-  //----------------------------------------------------------------------
   // Find all types that match the current compile unit, if we have one, and
   // put them next in the list.
-  //----------------------------------------------------------------------
   if (comp_unit != nullptr && !type_map.Empty()) {
     const size_t old_type_list_size = type_list.GetSize();
 
@@ -650,10 +644,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
         type_map.Remove(type_list.GetTypeAtIndex(i));
     }
   }
-  //----------------------------------------------------------------------
   // Find all types that match the current module, if we have one, and put them
   // next in the list.
-  //----------------------------------------------------------------------
   if (module_sp && !type_map.Empty()) {
     const size_t old_type_list_size = type_list.GetSize();
     type_map.ForEach([this, &type_list](const lldb::TypeSP &type_sp) -> bool {
@@ -670,9 +662,7 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
         type_map.Remove(type_list.GetTypeAtIndex(i));
     }
   }
-  //----------------------------------------------------------------------
   // Any types that are left get copied into the list an any order.
-  //----------------------------------------------------------------------
   if (!type_map.Empty()) {
     type_map.ForEach([&type_list](const lldb::TypeSP &type_sp) -> bool {
       type_list.Insert(type_sp);
@@ -949,11 +939,9 @@ SymbolContext::FindBestGlobalDataSymbol(ConstString name, Status &error) {
 }
 
 
-//----------------------------------------------------------------------
 //
 //  SymbolContextSpecifier
 //
-//----------------------------------------------------------------------
 
 SymbolContextSpecifier::SymbolContextSpecifier(const TargetSP &target_sp)
     : m_target_sp(target_sp), m_module_spec(), m_module_sp(), m_file_spec_up(),
@@ -1213,11 +1201,9 @@ void SymbolContextSpecifier::GetDescription(
   }
 }
 
-//----------------------------------------------------------------------
 //
 //  SymbolContextList
 //
-//----------------------------------------------------------------------
 
 SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 

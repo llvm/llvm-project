@@ -821,19 +821,23 @@ bool LLParser::ParseSummaryEntry() {
   if (!Index)
     return SkipModuleSummaryEntry();
 
+  bool result = false;
   switch (Lex.getKind()) {
   case lltok::kw_gv:
-    return ParseGVEntry(SummaryID);
+    result = ParseGVEntry(SummaryID);
+    break;
   case lltok::kw_module:
-    return ParseModuleEntry(SummaryID);
+    result = ParseModuleEntry(SummaryID);
+    break;
   case lltok::kw_typeid:
-    return ParseTypeIdEntry(SummaryID);
+    result = ParseTypeIdEntry(SummaryID);
     break;
   default:
-    return Error(Lex.getLoc(), "unexpected summary kind");
+    result = Error(Lex.getLoc(), "unexpected summary kind");
+    break;
   }
   Lex.setIgnoreColonInIdentifiers(false);
-  return false;
+  return result;
 }
 
 static bool isValidVisibilityForLinkage(unsigned V, unsigned L) {
@@ -2926,13 +2930,27 @@ BasicBlock *LLParser::PerFunctionState::GetBB(unsigned ID, LocTy Loc) {
 /// unnamed.  If there is an error, this returns null otherwise it returns
 /// the block being defined.
 BasicBlock *LLParser::PerFunctionState::DefineBB(const std::string &Name,
-                                                 LocTy Loc) {
+                                                 int NameID, LocTy Loc) {
   BasicBlock *BB;
-  if (Name.empty())
+  if (Name.empty()) {
+    if (NameID != -1 && unsigned(NameID) != NumberedVals.size()) {
+      P.Error(Loc, "label expected to be numbered '" +
+                       Twine(NumberedVals.size()) + "'");
+      return nullptr;
+    }
     BB = GetBB(NumberedVals.size(), Loc);
-  else
+    if (!BB) {
+      P.Error(Loc, "unable to create block numbered '" +
+                       Twine(NumberedVals.size()) + "'");
+      return nullptr;
+    }
+  } else {
     BB = GetBB(Name, Loc);
-  if (!BB) return nullptr; // Already diagnosed error.
+    if (!BB) {
+      P.Error(Loc, "unable to create block named '" + Name + "'");
+      return nullptr;
+    }
+  }
 
   // Move the block to the end of the function.  Forward ref'd blocks are
   // inserted wherever they happen to be referenced.
@@ -4650,6 +4668,24 @@ bool LLParser::ParseDILexicalBlockFile(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// ParseDICommonBlock:
+///   ::= !DICommonBlock(scope: !0, file: !2, name: "COMMON name", line: 9)
+bool LLParser::ParseDICommonBlock(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(scope, MDField, );                                                  \
+  OPTIONAL(declaration, MDField, );                                            \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );						       
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DICommonBlock,
+                           (Context, scope.Val, declaration.Val, name.Val,
+                            file.Val, line.Val));
+  return false;
+}
+
 /// ParseDINamespace:
 ///   ::= !DINamespace(scope: !0, file: !2, name: "SomeNamespace", line: 9)
 bool LLParser::ParseDINamespace(MDNode *&Result, bool IsDistinct) {
@@ -4836,6 +4872,15 @@ bool LLParser::ParseDIExpression(MDNode *&Result, bool IsDistinct) {
           continue;
         }
         return TokError(Twine("invalid DWARF op '") + Lex.getStrVal() + "'");
+      }
+
+      if (Lex.getKind() == lltok::DwarfAttEncoding) {
+        if (unsigned Op = dwarf::getAttributeEncoding(Lex.getStrVal())) {
+          Lex.Lex();
+          Elements.push_back(Op);
+          continue;
+        }
+        return TokError(Twine("invalid DWARF attribute encoding '") + Lex.getStrVal() + "'");
       }
 
       if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
@@ -5480,20 +5525,23 @@ bool LLParser::ParseFunctionBody(Function &Fn) {
 }
 
 /// ParseBasicBlock
-///   ::= LabelStr? Instruction*
+///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::ParseBasicBlock(PerFunctionState &PFS) {
   // If this basic block starts out with a name, remember it.
   std::string Name;
+  int NameID = -1;
   LocTy NameLoc = Lex.getLoc();
   if (Lex.getKind() == lltok::LabelStr) {
     Name = Lex.getStrVal();
     Lex.Lex();
+  } else if (Lex.getKind() == lltok::LabelID) {
+    NameID = Lex.getUIntVal();
+    Lex.Lex();
   }
 
-  BasicBlock *BB = PFS.DefineBB(Name, NameLoc);
+  BasicBlock *BB = PFS.DefineBB(Name, NameID, NameLoc);
   if (!BB)
-    return Error(NameLoc,
-                 "unable to create block named '" + Name + "'");
+    return true;
 
   std::string NameStr;
 

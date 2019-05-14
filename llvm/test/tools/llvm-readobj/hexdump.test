@@ -3,3 +3,30 @@ RUN: llvm-readobj -x .text %p/../../Object/Inputs/hello-world.elf-x86-64 | FileC
 
 CHECK: Hex dump of section '.text':
 CHECK-NEXT: {{^}}0x00400460
+
+// Test that the -x alias can be used flexibly. Create a baseline and ensure
+// all other combinations are identical.
+RUN: llvm-readelf --file-header --hex-dump=.text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.out
+RUN: llvm-readelf -h --hex-dump .text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.1
+RUN: llvm-readelf -h -x .text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.2
+RUN: llvm-readelf -h -x=.text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.3
+RUN: llvm-readelf -h -x.text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.4
+RUN: llvm-readelf -hx .text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.5
+RUN: llvm-readelf -hx=.text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.6
+RUN: llvm-readelf -hx.text \
+RUN:   %p/../../Object/Inputs/hello-world.elf-x86-64 > %t.hexdump.7
+
+RUN: cmp %t.hexdump.out %t.hexdump.1
+RUN: cmp %t.hexdump.out %t.hexdump.2
+RUN: cmp %t.hexdump.out %t.hexdump.3
+RUN: cmp %t.hexdump.out %t.hexdump.4
+RUN: cmp %t.hexdump.out %t.hexdump.5
+RUN: cmp %t.hexdump.out %t.hexdump.6
+RUN: cmp %t.hexdump.out %t.hexdump.7

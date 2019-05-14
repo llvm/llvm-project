@@ -114,7 +114,7 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
     : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
       RemoveKillFlags(RemoveKillFlags),
       UnknownValue(UndefValue::get(
-                             Type::getVoidTy(mf.getFunction().getContext()))) {
+                             Type::getVoidTy(mf.getFunction().getContext()))), Topo(SUnits, &ExitSU) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
@@ -968,6 +968,8 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   Uses.clear();
   CurrentVRegDefs.clear();
   CurrentVRegUses.clear();
+
+  Topo.InitDAGTopologicalSorting();
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const PseudoSourceValue* PSV) {
@@ -1144,6 +1146,23 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
 /// contains multiple scheduling regions. But it is fine for visualization.
 std::string ScheduleDAGInstrs::getDAGName() const {
   return "dag." + BB->getFullName();
+}
+
+bool ScheduleDAGInstrs::canAddEdge(SUnit *SuccSU, SUnit *PredSU) {
+  return SuccSU == &ExitSU || !Topo.IsReachable(PredSU, SuccSU);
+}
+
+bool ScheduleDAGInstrs::addEdge(SUnit *SuccSU, const SDep &PredDep) {
+  if (SuccSU != &ExitSU) {
+    // Do not use WillCreateCycle, it assumes SD scheduling.
+    // If Pred is reachable from Succ, then the edge creates a cycle.
+    if (Topo.IsReachable(PredDep.getSUnit(), SuccSU))
+      return false;
+    Topo.AddPred(SuccSU, PredDep.getSUnit());
+  }
+  SuccSU->addPred(PredDep, /*Required=*/!PredDep.isArtificial());
+  // Return true regardless of whether a new edge needed to be inserted.
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

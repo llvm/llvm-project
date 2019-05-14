@@ -3,8 +3,8 @@
 # RUN: lld-link %t.obj %p/Inputs/library.lib /subsystem:console \
 # RUN:   /entry:mainCRTStartup /alternatename:__delayLoadHelper2=mainCRTStartup \
 # RUN:   /delayload:library.dll /out:%t.exe
-# RUN: llvm-readobj -coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
-# RUN: llvm-readobj -coff-basereloc %t.exe | FileCheck -check-prefix=BASEREL %s
+# RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
+# RUN: llvm-readobj --coff-basereloc %t.exe | FileCheck -check-prefix=BASEREL %s
 # RUN: llvm-objdump -d %t.exe | FileCheck -check-prefix=DISASM %s
 
 # IMPORT:      Format: COFF-ARM

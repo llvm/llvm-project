@@ -151,6 +151,38 @@ define <32 x i8> @test_x86_avx2_packuswb_fold() {
 }
 
 
+define <32 x i8> @test_x86_avx2_pavg_b(<32 x i8> %a0, <32 x i8> %a1) {
+; AVX2-LABEL: test_x86_avx2_pavg_b:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpavgb %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0xe0,0xc1]
+; AVX2-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx2_pavg_b:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpavgb %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe0,0xc1]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
+  ret <32 x i8> %res
+}
+declare <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8>, <32 x i8>) nounwind readnone
+
+
+define <16 x i16> @test_x86_avx2_pavg_w(<16 x i16> %a0, <16 x i16> %a1) {
+; AVX2-LABEL: test_x86_avx2_pavg_w:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpavgw %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0xe3,0xc1]
+; AVX2-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx2_pavg_w:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpavgw %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe3,0xc1]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
+declare <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16>, <16 x i16>) nounwind readnone
+
+
 define <8 x i32> @test_x86_avx2_pmadd_wd(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX2-LABEL: test_x86_avx2_pmadd_wd:
 ; AVX2:       # %bb.0:

@@ -38,6 +38,7 @@ private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool materialize32BitImm(unsigned DestReg, APInt Imm,
                            MachineIRBuilder &B) const;
+  bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   const MipsTargetMachine &TM;
   const MipsSubtarget &STI;
@@ -75,15 +76,24 @@ MipsInstructionSelector::MipsInstructionSelector(
 {
 }
 
-static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
-                       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-                       const RegisterBankInfo &RBI) {
+bool MipsInstructionSelector::selectCopy(MachineInstr &I,
+                                         MachineRegisterInfo &MRI) const {
   unsigned DstReg = I.getOperand(0).getReg();
   if (TargetRegisterInfo::isPhysicalRegister(DstReg))
     return true;
 
-  const TargetRegisterClass *RC = &Mips::GPR32RegClass;
+  const RegisterBank *RegBank = RBI.getRegBank(DstReg, MRI, TRI);
+  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
 
+  const TargetRegisterClass *RC = &Mips::GPR32RegClass;
+  if (RegBank->getID() == Mips::FPRBRegBankID) {
+    if (DstSize == 32)
+      RC = &Mips::FGR32RegClass;
+    else if (DstSize == 64)
+      RC = STI.isFP64bit() ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;
+    else
+      llvm_unreachable("Unsupported destination size");
+  }
   if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
     LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
                       << " operand\n");
@@ -162,7 +172,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
 
   if (!isPreISelGenericOpcode(I.getOpcode())) {
     if (I.isCopy())
-      return selectCopy(I, TII, MRI, TRI, RBI);
+      return selectCopy(I, MRI);
 
     return true;
   }
@@ -306,6 +316,41 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     if (!materialize32BitImm(I.getOperand(0).getReg(),
                              I.getOperand(1).getCImm()->getValue(), B))
       return false;
+
+    I.eraseFromParent();
+    return true;
+  }
+  case G_FCONSTANT: {
+    const APFloat &FPimm = I.getOperand(1).getFPImm()->getValueAPF();
+    APInt APImm = FPimm.bitcastToAPInt();
+    unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
+
+    if (Size == 32) {
+      unsigned GPRReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      MachineIRBuilder B(I);
+      if (!materialize32BitImm(GPRReg, APImm, B))
+        return false;
+
+      MachineInstrBuilder MTC1 =
+          B.buildInstr(Mips::MTC1, {I.getOperand(0).getReg()}, {GPRReg});
+      if (!MTC1.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+    if (Size == 64) {
+      unsigned GPRRegHigh = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      unsigned GPRRegLow = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      MachineIRBuilder B(I);
+      if (!materialize32BitImm(GPRRegHigh, APImm.getHiBits(32).trunc(32), B))
+        return false;
+      if (!materialize32BitImm(GPRRegLow, APImm.getLoBits(32).trunc(32), B))
+        return false;
+
+      MachineInstrBuilder PairF64 = B.buildInstr(
+          STI.isFP64bit() ? Mips::BuildPairF64_64 : Mips::BuildPairF64,
+          {I.getOperand(0).getReg()}, {GPRRegLow, GPRRegHigh});
+      if (!PairF64.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
 
     I.eraseFromParent();
     return true;

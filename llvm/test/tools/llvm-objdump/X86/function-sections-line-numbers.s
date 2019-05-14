@@ -30,8 +30,7 @@
 _Z2f1v:                                 # @_Z2f1v
 .Lfunc_begin0:
 	.file	0 "/home/avl" "test.cpp" md5 0xefae234cc05b45384d782316d3a5d338
-	.file	1 "test.cpp" md5 0xefae234cc05b45384d782316d3a5d338
-	.loc	1 1 0                   # test.cpp:1:0
+	.loc	0 1 0                   # test.cpp:1:0
 	.cfi_startproc
 # %bb.0:                                # %entry
 	pushq	%rbp
@@ -40,7 +39,7 @@ _Z2f1v:                                 # @_Z2f1v
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 .Ltmp0:
-	.loc	1 1 12 prologue_end     # test.cpp:1:12
+	.loc	0 1 12 prologue_end     # test.cpp:1:12
 	popq	%rbp
 	.cfi_def_cfa %rsp, 8
 	retq
@@ -55,7 +54,7 @@ _Z2f1v:                                 # @_Z2f1v
 	.type	_Z2f2v,@function
 _Z2f2v:                                 # @_Z2f2v
 .Lfunc_begin1:
-	.loc	1 2 0                   # test.cpp:2:0
+	.loc	0 2 0                   # test.cpp:2:0
 	.cfi_startproc
 # %bb.0:                                # %entry
 	pushq	%rbp
@@ -64,7 +63,7 @@ _Z2f2v:                                 # @_Z2f2v
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 .Ltmp2:
-	.loc	1 2 12 prologue_end     # test.cpp:2:12
+	.loc	0 2 12 prologue_end     # test.cpp:2:12
 	popq	%rbp
 	.cfi_def_cfa %rsp, 8
 	retq

@@ -13,7 +13,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/ArchSpec.h"
 
-//------------------------------------------------------------------------------
 /// \class POSIXBreakpointProtocol
 ///
 /// Extends RegisterClass with a few virtual operations useful on POSIX.

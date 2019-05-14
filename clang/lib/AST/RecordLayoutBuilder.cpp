@@ -238,7 +238,7 @@ EmptySubobjectMap::CanPlaceSubobjectAtOffset(const CXXRecordDecl *RD,
     return true;
 
   const ClassVectorTy &Classes = I->second;
-  if (std::find(Classes.begin(), Classes.end(), RD) == Classes.end())
+  if (llvm::find(Classes, RD) == Classes.end())
     return true;
 
   // There is already an empty class of the same type at this offset.
@@ -3287,10 +3287,10 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     }
 
     // Sort nvbases by offset.
-    std::stable_sort(Bases.begin(), Bases.end(),
-                     [&](const CXXRecordDecl *L, const CXXRecordDecl *R) {
-      return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
-    });
+    llvm::stable_sort(
+        Bases, [&](const CXXRecordDecl *L, const CXXRecordDecl *R) {
+          return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
+        });
 
     // Dump (non-virtual) bases
     for (const CXXRecordDecl *Base : Bases) {

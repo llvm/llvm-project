@@ -28,10 +28,10 @@ define i16 @test(i32 %key) {
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    callq gen
-; CHECK-O0-NEXT:    movswl %ax, %edi
-; CHECK-O0-NEXT:    movsbl %dl, %ecx
-; CHECK-O0-NEXT:    addl %ecx, %edi
-; CHECK-O0-NEXT:    movw %di, %ax
+; CHECK-O0-NEXT:    movswl %ax, %ecx
+; CHECK-O0-NEXT:    movsbl %dl, %esi
+; CHECK-O0-NEXT:    addl %esi, %ecx
+; CHECK-O0-NEXT:    movw %cx, %ax
 ; CHECK-O0-NEXT:    popq %rcx
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -79,16 +79,16 @@ define i32 @test2(i32 %key) #0 {
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    movq %rsp, %rax
 ; CHECK-O0-NEXT:    callq gen2
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-O0-NEXT:    movl (%rsp), %esi
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %esi
+; CHECK-O0-NEXT:    movl (%rsp), %edi
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %r8d
-; CHECK-O0-NEXT:    addl %r8d, %esi
-; CHECK-O0-NEXT:    addl %edx, %esi
-; CHECK-O0-NEXT:    addl %ecx, %esi
-; CHECK-O0-NEXT:    addl %edi, %esi
-; CHECK-O0-NEXT:    movl %esi, %eax
+; CHECK-O0-NEXT:    addl %r8d, %edi
+; CHECK-O0-NEXT:    addl %esi, %edi
+; CHECK-O0-NEXT:    addl %edx, %edi
+; CHECK-O0-NEXT:    addl %ecx, %edi
+; CHECK-O0-NEXT:    movl %edi, %eax
 ; CHECK-O0-NEXT:    addq $24, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq

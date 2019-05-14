@@ -66,7 +66,7 @@ static cl::opt<std::string>
                   cl::cat(Options), cl::init(""));
 
 static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
-    "mode", cl::desc("the mode to run"), cl::cat(BenchmarkOptions),
+    "mode", cl::desc("the mode to run"), cl::cat(Options),
     cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency, "latency",
                           "Instruction Latency"),
                clEnumValN(exegesis::InstructionBenchmark::InverseThroughput,
@@ -89,14 +89,24 @@ static cl::opt<bool> IgnoreInvalidSchedClass(
     cl::desc("ignore instructions that do not define a sched class"),
     cl::cat(BenchmarkOptions), cl::init(false));
 
-static cl::opt<unsigned> AnalysisNumPoints(
+static cl::opt<exegesis::InstructionBenchmarkClustering::ModeE>
+    AnalysisClusteringAlgorithm(
+        "analysis-clustering", cl::desc("the clustering algorithm to use"),
+        cl::cat(AnalysisOptions),
+        cl::values(clEnumValN(exegesis::InstructionBenchmarkClustering::Dbscan,
+                              "dbscan", "use DBSCAN/OPTICS algorithm"),
+                   clEnumValN(exegesis::InstructionBenchmarkClustering::Naive,
+                              "naive", "one cluster per opcode")),
+        cl::init(exegesis::InstructionBenchmarkClustering::Dbscan));
+
+static cl::opt<unsigned> AnalysisDbscanNumPoints(
     "analysis-numpoints",
-    cl::desc("minimum number of points in an analysis cluster"),
+    cl::desc("minimum number of points in an analysis cluster (dbscan only)"),
     cl::cat(AnalysisOptions), cl::init(3));
 
 static cl::opt<float> AnalysisClusteringEpsilon(
     "analysis-clustering-epsilon",
-    cl::desc("dbscan epsilon for benchmark point clustering"),
+    cl::desc("epsilon for benchmark point clustering"),
     cl::cat(AnalysisOptions), cl::init(0.1));
 
 static cl::opt<float> AnalysisInconsistencyEpsilon(
@@ -126,6 +136,12 @@ static cl::opt<std::string> CpuName(
     "mcpu",
     cl::desc("cpu name to use for pfm counters, leave empty to autodetect"),
     cl::cat(Options), cl::init(""));
+
+static cl::opt<bool>
+    DumpObjectToDisk("dump-object-to-disk",
+                     cl::desc("dumps the generated benchmark object to disk "
+                              "and prints a message to access it"),
+                     cl::cat(BenchmarkOptions), cl::init(true));
 
 static ExitOnError ExitOnErr;
 
@@ -343,6 +359,11 @@ readSnippets(const LLVMState &State, llvm::StringRef Filename) {
 }
 
 void benchmarkMain() {
+#ifndef HAVE_LIBPFM
+  llvm::report_fatal_error(
+      "benchmarking unavaliable, LLVM was built without libpfm.");
+#endif
+
   if (exegesis::pfm::pfmInitialize())
     llvm::report_fatal_error("cannot initialize libpfm");
 
@@ -396,7 +417,7 @@ void benchmarkMain() {
 
   for (const BenchmarkCode &Conf : Configurations) {
     InstructionBenchmark Result =
-        Runner->runConfiguration(Conf, NumRepetitions);
+        Runner->runConfiguration(Conf, NumRepetitions, DumpObjectToDisk);
     ExitOnErr(Result.writeYaml(State, BenchmarkFile));
   }
   exegesis::pfm::pfmTerminate();
@@ -460,8 +481,8 @@ static void analysisMain() {
   std::unique_ptr<llvm::MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
 
   const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
-      Points, AnalysisNumPoints, AnalysisClusteringEpsilon,
-      InstrInfo->getNumOpcodes()));
+      Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,
+      AnalysisClusteringEpsilon, InstrInfo->getNumOpcodes()));
 
   const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
                           AnalysisInconsistencyEpsilon,

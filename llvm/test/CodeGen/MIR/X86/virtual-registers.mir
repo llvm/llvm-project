@@ -48,7 +48,7 @@ body: |
     ; CHECK-NEXT: %1:gr32 = SUB32ri8 %0, 10
     %0 = COPY $edi
     %1 = SUB32ri8 %0, 10, implicit-def $eflags
-    JG_1 %bb.2.exit, implicit $eflags
+    JCC_1 %bb.2.exit, 15, implicit $eflags
     JMP_1 %bb.1.less
 
   bb.1.less:
@@ -82,7 +82,7 @@ body: |
     ; CHECK-NEXT: %1:gr32 = SUB32ri8 %0, 10
     %2 = COPY $edi
     %0 = SUB32ri8 %2, 10, implicit-def $eflags
-    JG_1 %bb.2.exit, implicit $eflags
+    JCC_1 %bb.2.exit, 15, implicit $eflags
     JMP_1 %bb.1.less
 
   bb.1.less:

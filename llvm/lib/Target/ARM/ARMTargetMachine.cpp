@@ -270,7 +270,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   // Use the optminsize to identify the subtarget, but don't use it in the
   // feature string.
   std::string Key = CPU + FS;
-  if (F.optForMinSize())
+  if (F.hasMinSize())
     Key += "+minsize";
 
   auto &I = SubtargetMap[Key];
@@ -280,7 +280,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = llvm::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                        F.optForMinSize());
+                                        F.hasMinSize());
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -361,6 +361,8 @@ public:
   void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
 class ARMExecutionDomainFix : public ExecutionDomainFix {
@@ -383,6 +385,10 @@ INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
+}
+
+std::unique_ptr<CSEConfigBase> ARMPassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
 void ARMPassConfig::addIRPasses() {

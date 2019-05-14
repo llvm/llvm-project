@@ -918,6 +918,32 @@ define <8 x double> @combine_vpermi2var_vpermt2var_8f64_as_vperm2(<8 x double> %
   ret <8 x double> %res1
 }
 
+define <8 x double> @combine_vpermi2var_8f64_as_permpd(<8 x double> %x0, <8 x double> %x1, i64 %a2) {
+; X86-LABEL: combine_vpermi2var_8f64_as_permpd:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $2, %eax
+; X86-NEXT:    vmovd %eax, %xmm2
+; X86-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X86-NEXT:    vinserti128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
+; X86-NEXT:    vinserti64x4 $1, {{\.LCPI.*}}, %zmm2, %zmm2
+; X86-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm2
+; X86-NEXT:    vpermpd {{.*#+}} zmm0 = zmm2[2,3,1,1,6,7,5,5]
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_8f64_as_permpd:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovapd {{.*#+}} zmm2 = <u,2,1,3,4,6,5,7>
+; X64-NEXT:    vinsertf32x4 $0, {{.*}}(%rip), %zmm2, %zmm2
+; X64-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm2
+; X64-NEXT:    vpermpd {{.*#+}} zmm0 = zmm2[2,3,1,1,6,7,5,5]
+; X64-NEXT:    retq
+  %res0 = insertelement <8 x i64> <i64 0, i64 2, i64 1, i64 3, i64 4, i64 6, i64 5, i64 7>, i64 %a2, i32 0
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> %res0, <8 x double> %x1, i8 -1)
+  %res2 = shufflevector <8 x double> %res1, <8 x double> undef, <8 x i32> <i32 2, i32 3, i32 1, i32 1, i32 6, i32 7, i32 5, i32 5>
+  ret <8 x double> %res2
+}
+
 define <16 x i32> @combine_vpermi2var_vpermt2var_16i32_as_vpermd(<16 x i32> %x0, <16 x i32> %x1) {
 ; CHECK-LABEL: combine_vpermi2var_vpermt2var_16i32_as_vpermd:
 ; CHECK:       # %bb.0:

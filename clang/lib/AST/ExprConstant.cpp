@@ -7801,19 +7801,33 @@ EvaluateBuiltinClassifyType(const CallExpr *E, const LangOptions &LangOpts) {
 }
 
 /// EvaluateBuiltinConstantPForLValue - Determine the result of
-/// __builtin_constant_p when applied to the given lvalue.
+/// __builtin_constant_p when applied to the given pointer.
 ///
-/// An lvalue is only "constant" if it is a pointer or reference to the first
-/// character of a string literal.
-template<typename LValue>
-static bool EvaluateBuiltinConstantPForLValue(const LValue &LV) {
-  const Expr *E = LV.getLValueBase().template dyn_cast<const Expr*>();
-  return E && isa<StringLiteral>(E) && LV.getLValueOffset().isZero();
+/// A pointer is only "constant" if it is null (or a pointer cast to integer)
+/// or it points to the first character of a string literal.
+static bool EvaluateBuiltinConstantPForLValue(const APValue &LV) {
+  APValue::LValueBase Base = LV.getLValueBase();
+  if (Base.isNull()) {
+    // A null base is acceptable.
+    return true;
+  } else if (const Expr *E = Base.dyn_cast<const Expr *>()) {
+    if (!isa<StringLiteral>(E))
+      return false;
+    return LV.getLValueOffset().isZero();
+  } else {
+    // Any other base is not constant enough for GCC.
+    return false;
+  }
 }
 
 /// EvaluateBuiltinConstantP - Evaluate __builtin_constant_p as similarly to
 /// GCC as we can manage.
-static bool EvaluateBuiltinConstantP(ASTContext &Ctx, const Expr *Arg) {
+static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
+  // Constant-folding is always enabled for the operand of __builtin_constant_p
+  // (even when the enclosing evaluation context otherwise requires a strict
+  // language-specific constant expression).
+  FoldConstant Fold(Info, true);
+
   QualType ArgType = Arg->getType();
 
   // __builtin_constant_p always has one operand. The rules which gcc follows
@@ -7821,34 +7835,30 @@ static bool EvaluateBuiltinConstantP(ASTContext &Ctx, const Expr *Arg) {
   //
   //  - If the operand is of integral, floating, complex or enumeration type,
   //    and can be folded to a known value of that type, it returns 1.
-  //  - If the operand and can be folded to a pointer to the first character
-  //    of a string literal (or such a pointer cast to an integral type), it
-  //    returns 1.
+  //  - If the operand can be folded to a pointer to the first character
+  //    of a string literal (or such a pointer cast to an integral type)
+  //    or to a null pointer or an integer cast to a pointer, it returns 1.
   //
   // Otherwise, it returns 0.
   //
   // FIXME: GCC also intends to return 1 for literals of aggregate types, but
-  // its support for this does not currently work.
-  if (ArgType->isIntegralOrEnumerationType()) {
-    Expr::EvalResult Result;
-    if (!Arg->EvaluateAsRValue(Result, Ctx) || Result.HasSideEffects)
+  // its support for this did not work prior to GCC 9 and is not yet well
+  // understood.
+  if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
+      ArgType->isAnyComplexType() || ArgType->isPointerType() ||
+      ArgType->isNullPtrType()) {
+    APValue V;
+    if (!::EvaluateAsRValue(Info, Arg, V)) {
+      Fold.keepDiagnostics();
       return false;
+    }
 
-    APValue &V = Result.Val;
-    if (V.getKind() == APValue::Int)
-      return true;
+    // For a pointer (possibly cast to integer), there are special rules.
     if (V.getKind() == APValue::LValue)
       return EvaluateBuiltinConstantPForLValue(V);
-  } else if (ArgType->isFloatingType() || ArgType->isAnyComplexType()) {
-    return Arg->isEvaluatable(Ctx);
-  } else if (ArgType->isPointerType() || Arg->isGLValue()) {
-    LValue LV;
-    Expr::EvalStatus Status;
-    EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
-    if ((Arg->isGLValue() ? EvaluateLValue(Arg, LV, Info)
-                          : EvaluatePointer(Arg, LV, Info)) &&
-        !Status.HasSideEffects)
-      return EvaluateBuiltinConstantPForLValue(LV);
+
+    // Otherwise, any constant value is good enough.
+    return V.getKind() != APValue::Uninitialized;
   }
 
   // Anything else isn't considered to be sufficiently constant.
@@ -8258,19 +8268,19 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BI__builtin_constant_p: {
-    auto Arg = E->getArg(0);
-    if (EvaluateBuiltinConstantP(Info.Ctx, Arg))
+    const Expr *Arg = E->getArg(0);
+    if (EvaluateBuiltinConstantP(Info, Arg))
       return Success(true, E);
-    auto ArgTy = Arg->IgnoreImplicit()->getType();
-    if (!Info.InConstantContext && !Arg->HasSideEffects(Info.Ctx) &&
-        !ArgTy->isAggregateType() && !ArgTy->isPointerType()) {
-      // We can delay calculation of __builtin_constant_p until after
-      // inlining. Note: This diagnostic won't be shown to the user.
+    else if (Info.InConstantContext)
+      return Success(false, E);
+    else {
       Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
       return false;
     }
-    return Success(false, E);
   }
+
+  case Builtin::BI__builtin_is_constant_evaluated:
+    return Success(Info.InConstantContext, E);
 
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
@@ -11132,6 +11142,7 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
   EvalInfo::EvaluationMode EM = EvalInfo::EM_ConstantExpression;
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
+
   if (!::Evaluate(Result.Val, Info, this))
     return false;
 

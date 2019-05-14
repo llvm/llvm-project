@@ -22,6 +22,14 @@ static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
   return false;
 }
 
+uint16_t CompileUnit::getLanguage() {
+  if (!Language) {
+    DWARFDie CU = getOrigUnit().getUnitDIE();
+    Language = dwarf::toUnsigned(CU.find(dwarf::DW_AT_language), 0);
+  }
+  return Language;
+}
+
 void CompileUnit::markEverythingAsKept() {
   unsigned Idx = 0;
 

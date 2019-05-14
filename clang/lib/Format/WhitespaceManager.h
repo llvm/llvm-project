@@ -40,6 +40,8 @@ public:
                     bool UseCRLF)
       : SourceMgr(SourceMgr), Style(Style), UseCRLF(UseCRLF) {}
 
+  bool useCRLF() const { return UseCRLF; }
+
   /// Replaces the whitespace in front of \p Tok. Only call once for
   /// each \c AnnotatedToken.
   ///

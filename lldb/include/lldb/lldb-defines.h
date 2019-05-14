@@ -35,31 +35,23 @@
 #define UINT64_MAX 18446744073709551615ULL
 #endif
 
-//----------------------------------------------------------------------
 // LLDB version
 //
 // A build script phase can modify this version number if needed.
-//----------------------------------------------------------------------
 //#define LLDB_VERSION
 //#define LLDB_REVISION
 //#define LLDB_VERSION_STRING
 
-//----------------------------------------------------------------------
 // LLDB defines
-//----------------------------------------------------------------------
 #define LLDB_GENERIC_ERROR UINT32_MAX
 
-//----------------------------------------------------------------------
 // Breakpoints
-//----------------------------------------------------------------------
 #define LLDB_INVALID_BREAK_ID 0
 #define LLDB_DEFAULT_BREAK_SIZE 0
 #define LLDB_BREAK_ID_IS_VALID(bid) ((bid) != (LLDB_INVALID_BREAK_ID))
 #define LLDB_BREAK_ID_IS_INTERNAL(bid) ((bid) < 0)
 
-//----------------------------------------------------------------------
 // Watchpoints
-//----------------------------------------------------------------------
 #define LLDB_INVALID_WATCH_ID 0
 #define LLDB_WATCH_ID_IS_VALID(uid) ((uid) != (LLDB_INVALID_WATCH_ID))
 #define LLDB_WATCH_TYPE_READ (1u << 0)
@@ -67,9 +59,7 @@
 #define LLDB_WATCH_TYPE_IS_VALID(type)                                         \
   ((type | LLDB_WATCH_TYPE_READ) || (type | LLDB_WATCH_TYPE_WRITE))
 
-//----------------------------------------------------------------------
 // Generic Register Numbers
-//----------------------------------------------------------------------
 #define LLDB_REGNUM_GENERIC_PC 0    // Program Counter
 #define LLDB_REGNUM_GENERIC_SP 1    // Stack Pointer
 #define LLDB_REGNUM_GENERIC_FP 2    // Frame Pointer
@@ -91,9 +81,7 @@
   11 // The register that would contain pointer size or less argument 7 (if any)
 #define LLDB_REGNUM_GENERIC_ARG8                                               \
   12 // The register that would contain pointer size or less argument 8 (if any)
-//---------------------------------------------------------------------
 /// Invalid value definitions
-//----------------------------------------------------------------------
 #define LLDB_INVALID_ADDRESS UINT64_MAX
 #define LLDB_INVALID_INDEX32 UINT32_MAX
 #define LLDB_INVALID_IVAR_OFFSET UINT32_MAX
@@ -109,17 +97,13 @@
 #define LLDB_INVALID_LINE_NUMBER UINT32_MAX
 #define LLDB_INVALID_QUEUE_ID 0
 
-//----------------------------------------------------------------------
 /// CPU Type definitions
-//----------------------------------------------------------------------
 #define LLDB_ARCH_DEFAULT "systemArch"
 #define LLDB_ARCH_DEFAULT_32BIT "systemArch32"
 #define LLDB_ARCH_DEFAULT_64BIT "systemArch64"
 #define LLDB_INVALID_CPUTYPE (0xFFFFFFFEu)
 
-//----------------------------------------------------------------------
 /// Option Set definitions
-//----------------------------------------------------------------------
 // FIXME: I'm sure there's some #define magic that can create all 32 sets on the
 // fly.  That would have the added benefit of making this unreadable.
 #define LLDB_MAX_NUM_OPTION_SETS 32
@@ -151,11 +135,9 @@
 
 #if defined(__cplusplus)
 
-//----------------------------------------------------------------------
 /// \def DISALLOW_COPY_AND_ASSIGN(TypeName)
 ///     Macro definition for easily disallowing copy constructor and
 ///     assignment operators in C++ classes.
-//----------------------------------------------------------------------
 #define DISALLOW_COPY_AND_ASSIGN(TypeName)                                     \
   TypeName(const TypeName &) = delete;                                         \
   const TypeName &operator=(const TypeName &) = delete

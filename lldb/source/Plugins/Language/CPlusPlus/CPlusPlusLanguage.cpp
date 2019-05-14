@@ -56,9 +56,7 @@ lldb_private::ConstString CPlusPlusLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString CPlusPlusLanguage::GetPluginName() {
   return GetPluginNameStatic();
@@ -66,9 +64,7 @@ lldb_private::ConstString CPlusPlusLanguage::GetPluginName() {
 
 uint32_t CPlusPlusLanguage::GetPluginVersion() { return 1; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 Language *CPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
   if (Language::LanguageIsCPlusPlus(language))
@@ -490,7 +486,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
       "libc++ std::list synthetic children",
-      ConstString("^std::__[[:alnum:]]+::list<.+>(( )?&)?$"), stl_synth_flags,
+      ConstString("^std::__[[:alnum:]]+::list<.+>(( )?&)?$"), stl_deref_flags,
       true);
   AddCXXSynthetic(
       cpp_category_sp,

@@ -14,10 +14,12 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -49,17 +51,43 @@ public:
     ASSERT_GT(parser->GetData().size(), 0UL);
   }
 
-  void InvalidMinidump(const char *minidump_filename, uint64_t load_size) {
-    std::string filename = GetInputFilePath(minidump_filename);
-    auto BufferPtr =
-        FileSystem::Instance().CreateDataBuffer(filename, load_size, 0);
-    ASSERT_NE(BufferPtr, nullptr);
+  llvm::Error SetUpFromYaml(llvm::StringRef yaml) {
+    std::string data;
+    llvm::raw_string_ostream os(data);
+    if (llvm::Error E = llvm::MinidumpYAML::writeAsBinary(yaml, os))
+      return E;
 
-    EXPECT_THAT_EXPECTED(MinidumpParser::Create(BufferPtr), llvm::Failed());
+    os.flush();
+    auto data_buffer_sp =
+        std::make_shared<DataBufferHeap>(data.data(), data.size());
+    auto expected_parser = MinidumpParser::Create(std::move(data_buffer_sp));
+    if (!expected_parser)
+      return expected_parser.takeError();
+    parser = std::move(*expected_parser);
+    return llvm::Error::success();
   }
 
   llvm::Optional<MinidumpParser> parser;
 };
+
+TEST_F(MinidumpParserTest, InvalidMinidump) {
+  std::string duplicate_streams;
+  llvm::raw_string_ostream os(duplicate_streams);
+  ASSERT_THAT_ERROR(llvm::MinidumpYAML::writeAsBinary(R"(
+--- !minidump
+Streams:         
+  - Type:            LinuxAuxv
+    Content:         DEADBEEFBAADF00D
+  - Type:            LinuxAuxv
+    Content:         DEADBEEFBAADF00D
+  )",
+                                                      os),
+                    llvm::Succeeded());
+  os.flush();
+  auto data_buffer_sp = std::make_shared<DataBufferHeap>(
+      duplicate_streams.data(), duplicate_streams.size());
+  ASSERT_THAT_EXPECTED(MinidumpParser::Create(data_buffer_sp), llvm::Failed());
+}
 
 TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
   SetUpData("linux-x86_64.dmp");
@@ -98,30 +126,6 @@ TEST_F(MinidumpParserTest, GetThreadListPadded) {
   EXPECT_EQ(0x55667788UL, thread_list[1].thread_id);
 }
 
-TEST_F(MinidumpParserTest, GetModuleListNotPadded) {
-  // Verify that we can load a module list that doesn't have 4 bytes of padding
-  // after the module count.
-  SetUpData("module-list-not-padded.dmp");
-  auto module_list = parser->GetModuleList();
-  ASSERT_EQ(2UL, module_list.size());
-  EXPECT_EQ(0x1000UL, module_list[0].base_of_image);
-  EXPECT_EQ(0x2000UL, module_list[0].size_of_image);
-  EXPECT_EQ(0x5000UL, module_list[1].base_of_image);
-  EXPECT_EQ(0x3000UL, module_list[1].size_of_image);
-}
-
-TEST_F(MinidumpParserTest, GetModuleListPadded) {
-  // Verify that we can load a module list that has 4 bytes of padding
-  // after the module count as found in breakpad minidump files.
-  SetUpData("module-list-padded.dmp");
-  auto module_list = parser->GetModuleList();
-  ASSERT_EQ(2UL, module_list.size());
-  EXPECT_EQ(0x1000UL, module_list[0].base_of_image);
-  EXPECT_EQ(0x2000UL, module_list[0].size_of_image);
-  EXPECT_EQ(0x5000UL, module_list[1].base_of_image);
-  EXPECT_EQ(0x3000UL, module_list[1].size_of_image);
-}
-
 TEST_F(MinidumpParserTest, GetMemoryListNotPadded) {
   // Verify that we can load a memory list that doesn't have 4 bytes of padding
   // after the memory range count.
@@ -146,19 +150,23 @@ TEST_F(MinidumpParserTest, GetMemoryListPadded) {
   EXPECT_EQ((lldb::addr_t)0x8010, mem->start);
 }
 
-TEST_F(MinidumpParserTest, TruncatedMinidumps) {
-  InvalidMinidump("linux-x86_64.dmp", 32);
-  InvalidMinidump("linux-x86_64.dmp", 100);
-  InvalidMinidump("linux-x86_64.dmp", 20 * 1024);
-}
-
-TEST_F(MinidumpParserTest, IllFormedMinidumps) {
-  InvalidMinidump("bad_duplicate_streams.dmp", -1);
-  InvalidMinidump("bad_overlapping_streams.dmp", -1);
-}
-
 TEST_F(MinidumpParserTest, GetArchitecture) {
-  SetUpData("linux-x86_64.dmp");
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Processor Level: 6
+    Processor Revision: 16130
+    Number of Processors: 1
+    Platform ID:     Linux
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+...
+)"),
+                    llvm::Succeeded());
   ASSERT_EQ(llvm::Triple::ArchType::x86_64,
             parser->GetArchitecture().GetMachine());
   ASSERT_EQ(llvm::Triple::OSType::Linux,
@@ -186,49 +194,31 @@ TEST_F(MinidumpParserTest, GetPid) {
   ASSERT_EQ(16001UL, pid.getValue());
 }
 
-TEST_F(MinidumpParserTest, GetModuleList) {
-  SetUpData("linux-x86_64.dmp");
-  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
-  ASSERT_EQ(8UL, modules.size());
-  std::string module_names[8] = {
-      "/usr/local/google/home/dvlahovski/projects/test_breakpad/a.out",
-      "/lib/x86_64-linux-gnu/libm-2.19.so",
-      "/lib/x86_64-linux-gnu/libc-2.19.so",
-      "/lib/x86_64-linux-gnu/libgcc_s.so.1",
-      "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19",
-      "/lib/x86_64-linux-gnu/libpthread-2.19.so",
-      "/lib/x86_64-linux-gnu/ld-2.19.so",
-      "linux-gate.so",
-  };
-
-  for (int i = 0; i < 8; ++i) {
-    llvm::Optional<std::string> name =
-        parser->GetMinidumpString(modules[i].module_name_rva);
-    ASSERT_TRUE(name.hasValue());
-    EXPECT_EQ(module_names[i], name.getValue());
-  }
-}
-
 TEST_F(MinidumpParserTest, GetFilteredModuleList) {
-  SetUpData("linux-x86_64_not_crashed.dmp");
-  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
-  std::vector<const MinidumpModule *> filtered_modules =
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000400000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/test/linux-x86_64_not_crashed'
+        CodeView Record: 4C4570426CCF3F60FFA7CC4B86AE8FF44DB2576A68983611
+      - Base of Image:   0x0000000000600000
+        Size of Image:   0x00002000
+        Module Name:     '/tmp/test/linux-x86_64_not_crashed'
+        CodeView Record: 4C4570426CCF3F60FFA7CC4B86AE8FF44DB2576A68983611
+...
+)"),
+                    llvm::Succeeded());
+  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
+  std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
-  EXPECT_EQ(10UL, modules.size());
-  EXPECT_EQ(9UL, filtered_modules.size());
-  // EXPECT_GT(modules.size(), filtered_modules.size());
-  bool found = false;
-  for (size_t i = 0; i < filtered_modules.size(); ++i) {
-    llvm::Optional<std::string> name =
-        parser->GetMinidumpString(filtered_modules[i]->module_name_rva);
-    ASSERT_TRUE(name.hasValue());
-    if (name.getValue() == "/tmp/test/linux-x86_64_not_crashed") {
-      ASSERT_FALSE(found) << "There should be only one module with this name "
-                             "in the filtered module list";
-      found = true;
-      ASSERT_EQ(0x400000UL, filtered_modules[i]->base_of_image);
-    }
-  }
+  EXPECT_EQ(2u, modules.size());
+  ASSERT_EQ(1u, filtered_modules.size());
+  const minidump::Module &M = *filtered_modules[0];
+  EXPECT_THAT_EXPECTED(parser->GetMinidumpFile().getString(M.ModuleNameRVA),
+                       llvm::HasValue("/tmp/test/linux-x86_64_not_crashed"));
 }
 
 TEST_F(MinidumpParserTest, GetExceptionStream) {
@@ -403,15 +393,37 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
 }
 
 // Windows Minidump tests
-// fizzbuzz_no_heap.dmp is copied from the WinMiniDump tests
 TEST_F(MinidumpParserTest, GetArchitectureWindows) {
-  SetUpData("fizzbuzz_no_heap.dmp");
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  X86
+    Processor Level: 6
+    Processor Revision: 15876
+    Number of Processors: 32
+    Product type:    1
+    Major Version:   6
+    Minor Version:   1
+    Build Number:    7601
+    Platform ID:     Win32NT
+    CSD Version:     Service Pack 1
+    Suite Mask:      0x0100
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x000306E4
+      Feature Info:    0xBFEBFBFF
+      AMD Extended Features: 0x771EEC80
+...
+)"),
+                    llvm::Succeeded());
   ASSERT_EQ(llvm::Triple::ArchType::x86,
             parser->GetArchitecture().GetMachine());
   ASSERT_EQ(llvm::Triple::OSType::Win32,
             parser->GetArchitecture().GetTriple().getOS());
 }
 
+// fizzbuzz_no_heap.dmp is copied from the WinMiniDump tests
 TEST_F(MinidumpParserTest, GetLinuxProcStatusWindows) {
   SetUpData("fizzbuzz_no_heap.dmp");
   llvm::Optional<LinuxProcStatus> proc_status = parser->GetLinuxProcStatus();
@@ -440,37 +452,6 @@ TEST_F(MinidumpParserTest, GetPidWow64) {
   llvm::Optional<lldb::pid_t> pid = parser->GetPid();
   ASSERT_TRUE(pid.hasValue());
   ASSERT_EQ(7836UL, pid.getValue());
-}
-
-TEST_F(MinidumpParserTest, GetModuleListWow64) {
-  SetUpData("fizzbuzz_wow64.dmp");
-  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
-  ASSERT_EQ(16UL, modules.size());
-  std::string module_names[16] = {
-      R"(D:\src\llvm\llvm\tools\lldb\packages\Python\lldbsuite\test\functionalities\postmortem\wow64_minidump\fizzbuzz.exe)",
-      R"(C:\Windows\System32\ntdll.dll)",
-      R"(C:\Windows\System32\wow64.dll)",
-      R"(C:\Windows\System32\wow64win.dll)",
-      R"(C:\Windows\System32\wow64cpu.dll)",
-      R"(D:\src\llvm\llvm\tools\lldb\packages\Python\lldbsuite\test\functionalities\postmortem\wow64_minidump\fizzbuzz.exe)",
-      R"(C:\Windows\SysWOW64\ntdll.dll)",
-      R"(C:\Windows\SysWOW64\kernel32.dll)",
-      R"(C:\Windows\SysWOW64\KERNELBASE.dll)",
-      R"(C:\Windows\SysWOW64\advapi32.dll)",
-      R"(C:\Windows\SysWOW64\msvcrt.dll)",
-      R"(C:\Windows\SysWOW64\sechost.dll)",
-      R"(C:\Windows\SysWOW64\rpcrt4.dll)",
-      R"(C:\Windows\SysWOW64\sspicli.dll)",
-      R"(C:\Windows\SysWOW64\CRYPTBASE.dll)",
-      R"(C:\Windows\System32\api-ms-win-core-synch-l1-2-0.DLL)",
-  };
-
-  for (int i = 0; i < 16; ++i) {
-    llvm::Optional<std::string> name =
-        parser->GetMinidumpString(modules[i].module_name_rva);
-    ASSERT_TRUE(name.hasValue());
-    EXPECT_EQ(module_names[i], name.getValue());
-  }
 }
 
 // Register tests
@@ -576,40 +557,60 @@ TEST_F(MinidumpParserTest, GetThreadContext_x86_32_wow64) {
 }
 
 TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMinAddress) {
-  SetUpData("modules-dup-min-addr.dmp");
-  // Test that if we have two modules in the module list:
-  //    /tmp/a with range [0x2000-0x3000)
-  //    /tmp/a with range [0x1000-0x2000)
-  // That we end up with one module in the filtered list with the
-  // range [0x1000-0x2000). MinidumpParser::GetFilteredModuleList() is
-  // trying to ensure that if we have the same module mentioned more than
-  // one time, we pick the one with the lowest base_of_image.
-  std::vector<const MinidumpModule *> filtered_modules =
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000002000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/a'
+        CodeView Record: ''
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/a'
+        CodeView Record: ''
+...
+)"),
+                    llvm::Succeeded());
+  // If we have a module mentioned twice in the module list, the filtered
+  // module list should contain the instance with the lowest BaseOfImage.
+  std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
-  EXPECT_EQ(1u, filtered_modules.size());
-  EXPECT_EQ(0x0000000000001000u, filtered_modules[0]->base_of_image);
+  ASSERT_EQ(1u, filtered_modules.size());
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[0]->BaseOfImage);
 }
 
 TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
-  SetUpData("modules-order.dmp");
-  // Test that if we have two modules in the module list:
-  //    /tmp/a with range [0x2000-0x3000)
-  //    /tmp/b with range [0x1000-0x2000)
-  // That we end up with two modules in the filtered list with the same ranges
-  // and in the same order. Previous versions of the
-  // MinidumpParser::GetFilteredModuleList() function would sort all images
-  // by address and modify the order of the modules.
-  std::vector<const MinidumpModule *> filtered_modules =
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000002000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/a'
+        CodeView Record: ''
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/b'
+        CodeView Record: ''
+...
+)"),
+                    llvm::Succeeded());
+  // Test module filtering does not affect the overall module order.  Previous
+  // versions of the MinidumpParser::GetFilteredModuleList() function would sort
+  // all images by address and modify the order of the modules.
+  std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
-  llvm::Optional<std::string> name;
-  EXPECT_EQ(2u, filtered_modules.size());
-  EXPECT_EQ(0x0000000000002000u, filtered_modules[0]->base_of_image);
-  name = parser->GetMinidumpString(filtered_modules[0]->module_name_rva);
-  ASSERT_TRUE((bool)name);
-  EXPECT_EQ(std::string("/tmp/a"), *name);
-  EXPECT_EQ(0x0000000000001000u, filtered_modules[1]->base_of_image);
-  name = parser->GetMinidumpString(filtered_modules[1]->module_name_rva);
-  ASSERT_TRUE((bool)name);
-  EXPECT_EQ(std::string("/tmp/b"), *name);
+  ASSERT_EQ(2u, filtered_modules.size());
+  EXPECT_EQ(0x0000000000002000u, filtered_modules[0]->BaseOfImage);
+  EXPECT_THAT_EXPECTED(
+      parser->GetMinidumpFile().getString(filtered_modules[0]->ModuleNameRVA),
+      llvm::HasValue("/tmp/a"));
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[1]->BaseOfImage);
+  EXPECT_THAT_EXPECTED(
+      parser->GetMinidumpFile().getString(filtered_modules[1]->ModuleNameRVA),
+      llvm::HasValue("/tmp/b"));
 }
 

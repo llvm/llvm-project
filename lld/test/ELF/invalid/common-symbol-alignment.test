@@ -11,10 +11,10 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 Symbols:
-  Global:
-    - Name:            bar
-      Type:            STT_FUNC
-      Index:           SHN_COMMON
+  - Name:            bar
+    Type:            STT_FUNC
+    Index:           SHN_COMMON
+    Binding:         STB_GLOBAL
 
 ## If an object contains a common symbol with alignment greater
 ## than UINT32_MAX, check we report it.
@@ -29,8 +29,8 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 Symbols:
-  Global:
-    - Name:            bar
-      Type:            STT_FUNC
-      Index:           SHN_COMMON
-      Value:           0x0000003F3F3F3F3F
+  - Name:            bar
+    Type:            STT_FUNC
+    Index:           SHN_COMMON
+    Value:           0x0000003F3F3F3F3F
+    Binding:         STB_GLOBAL

@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_LAMBDAFUNCTIONNAMECHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_LAMBDAFUNCTIONNAMECHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -36,7 +36,8 @@ public:
   LambdaFunctionNameCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:

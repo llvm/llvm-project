@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTER_STRING_FIND_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTER_STRING_FIND_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 #include <string>
 #include <vector>

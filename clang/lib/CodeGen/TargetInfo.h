@@ -156,6 +156,12 @@ public:
     return "";
   }
 
+  /// Determine whether a call to objc_retainAutoreleasedReturnValue should be
+  /// marked as 'notail'.
+  virtual bool shouldSuppressTailCallsOfRetainAutoreleasedReturnValue() const {
+    return false;
+  }
+
   /// Return a constant used by UBSan as a signature to identify functions
   /// possessing type information, or 0 if the platform is unsupported.
   virtual llvm::Constant *
@@ -262,8 +268,10 @@ public:
                                                llvm::Type *DestTy) const;
 
   /// Get the syncscope used in LLVM IR.
-  virtual llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,
-                                                 llvm::LLVMContext &C) const;
+  virtual llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                                 SyncScope Scope,
+                                                 llvm::AtomicOrdering Ordering,
+                                                 llvm::LLVMContext &Ctx) const;
 
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {

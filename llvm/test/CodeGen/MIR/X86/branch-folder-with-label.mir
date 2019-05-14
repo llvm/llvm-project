@@ -235,8 +235,8 @@ body:             |
     renamable $edi = MOV32rm $rdi, 1, $noreg, 0, $noreg :: (load 4 from %ir.out)
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !9
     TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
-    JNS_1 %bb.2, implicit killed $eflags
-  ; CHECK: JS_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 9, implicit killed $eflags
+  ; CHECK: JCC_1 %bb.2, 8, implicit $eflags
   
   bb.1:
     successors: %bb.3(0x80000000)
@@ -321,8 +321,8 @@ body:             |
     renamable $rdi = LEA64r $rsp, 1, $noreg, 4, $noreg
     CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !22
     TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
-    JNS_1 %bb.2, implicit killed $eflags
-  ; CHECK: JS_1 %bb.5, implicit $eflags
+    JCC_1 %bb.2, 9, implicit killed $eflags
+  ; CHECK: JCC_1 %bb.5, 8, implicit $eflags
   
   bb.1:
     successors: %bb.5(0x80000000)
@@ -345,7 +345,7 @@ body:             |
     $rdi = COPY renamable $r14, debug-location !22
     CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !22
     TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
-    JNS_1 %bb.6, implicit killed $eflags
+    JCC_1 %bb.6, 9, implicit killed $eflags
   
   bb.4:
     successors: %bb.5(0x80000000)
@@ -368,7 +368,7 @@ body:             |
     liveins: $rbx, $r14
   
     CMP32mi8 $rsp, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (dereferenceable load 4 from %ir.idx)
-    JS_1 %bb.8, implicit killed $eflags
+    JCC_1 %bb.8, 8, implicit killed $eflags
     JMP_1 %bb.7
   
   bb.7.lor.rhs:
@@ -376,7 +376,7 @@ body:             |
     liveins: $rbx, $r14
   
     CMP32mi8 renamable $rbx, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.1)
-    JNE_1 %bb.3, implicit killed $eflags
+    JCC_1 %bb.3, 5, implicit killed $eflags
     JMP_1 %bb.8
   
   bb.8.do.body.backedge:
@@ -386,7 +386,7 @@ body:             |
     $rdi = COPY renamable $r14, debug-location !22
     CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !22
     TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
-    JNS_1 %bb.6, implicit killed $eflags
+    JCC_1 %bb.6, 9, implicit killed $eflags
   
   bb.9:
     successors: %bb.5(0x80000000)

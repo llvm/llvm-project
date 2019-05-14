@@ -9,6 +9,7 @@
 #include "InputFiles.h"
 #include "Chunks.h"
 #include "Config.h"
+#include "DebugTypes.h"
 #include "Driver.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -22,6 +23,7 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Casting.h"
@@ -129,6 +131,7 @@ void ObjFile::parse() {
   initializeChunks();
   initializeSymbols();
   initializeFlags();
+  initializeDependencies();
 }
 
 const coff_section* ObjFile::getSection(uint32_t I) {
@@ -165,14 +168,16 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   const coff_section *Sec = getSection(SectionNumber);
 
   StringRef Name;
-  if (auto EC = COFFObj->getSectionName(Sec, Name))
+  if (Expected<StringRef> E = COFFObj->getSectionName(Sec))
+    Name = *E;
+  else
     fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
-          EC.message());
+          toString(E.takeError()));
 
   if (Name == ".drectve") {
     ArrayRef<uint8_t> Data;
     COFFObj->getSectionContents(Sec, Data);
-    Directives = std::string((const char *)Data.data(), Data.size());
+    Directives = StringRef((const char *)Data.data(), Data.size());
     return nullptr;
   }
 
@@ -205,9 +210,9 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   // linked in the regular manner.
   if (C->isCodeView())
     DebugChunks.push_back(C);
-  else if (Config->GuardCF != GuardCFLevel::Off && Name == ".gfids$y")
+  else if (Name == ".gfids$y")
     GuardFidChunks.push_back(C);
-  else if (Config->GuardCF != GuardCFLevel::Off && Name == ".gljmp$y")
+  else if (Name == ".gljmp$y")
     GuardLJmpChunks.push_back(C);
   else if (Name == ".sxdata")
     SXDataChunks.push_back(C);
@@ -239,7 +244,8 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
     COFFObj->getSymbolName(Sym, Name);
 
     const coff_section *ParentSec = getSection(ParentIndex);
-    COFFObj->getSectionName(ParentSec, ParentName);
+    if (Expected<StringRef> E = COFFObj->getSectionName(ParentSec))
+      ParentName = *E;
     error(toString(this) + ": associative comdat " + Name + " (sec " +
           Twine(SectionNumber) + ") has invalid reference to section " +
           ParentName + " (sec " + Twine(ParentIndex) + ")");
@@ -656,6 +662,59 @@ void ObjFile::initializeFlags() {
   }
 }
 
+// Depending on the compilation flags, OBJs can refer to external files,
+// necessary to merge this OBJ into the final PDB. We currently support two
+// types of external files: Precomp/PCH OBJs, when compiling with /Yc and /Yu.
+// And PDB type servers, when compiling with /Zi. This function extracts these
+// dependencies and makes them available as a TpiSource interface (see
+// DebugTypes.h).
+void ObjFile::initializeDependencies() {
+  if (!Config->Debug)
+    return;
+
+  bool IsPCH = false;
+
+  ArrayRef<uint8_t> Data = getDebugSection(".debug$P");
+  if (!Data.empty())
+    IsPCH = true;
+  else
+    Data = getDebugSection(".debug$T");
+
+  if (Data.empty())
+    return;
+
+  CVTypeArray Types;
+  BinaryStreamReader Reader(Data, support::little);
+  cantFail(Reader.readArray(Types, Reader.getLength()));
+
+  CVTypeArray::Iterator FirstType = Types.begin();
+  if (FirstType == Types.end())
+    return;
+
+  DebugTypes.emplace(Types);
+
+  if (IsPCH) {
+    DebugTypesObj = makePrecompSource(this);
+    return;
+  }
+
+  if (FirstType->kind() == LF_TYPESERVER2) {
+    TypeServer2Record TS = cantFail(
+        TypeDeserializer::deserializeAs<TypeServer2Record>(FirstType->data()));
+    DebugTypesObj = makeUseTypeServerSource(this, &TS);
+    return;
+  }
+
+  if (FirstType->kind() == LF_PRECOMP) {
+    PrecompRecord Precomp = cantFail(
+        TypeDeserializer::deserializeAs<PrecompRecord>(FirstType->data()));
+    DebugTypesObj = makeUsePrecompSource(this, &Precomp);
+    return;
+  }
+
+  DebugTypesObj = makeTpiSource(this);
+}
+
 StringRef ltrim1(StringRef S, const char *Chars) {
   if (!S.empty() && strchr(Chars, S[0]))
     return S.substr(1);
@@ -713,9 +772,26 @@ void ImportFile::parse() {
         Name, cast_or_null<DefinedImportData>(ImpSym), Hdr->Machine);
 }
 
+BitcodeFile::BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
+                         uint64_t OffsetInArchive)
+    : InputFile(BitcodeKind, MB) {
+  std::string Path = MB.getBufferIdentifier().str();
+
+  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+  // name. If two archives define two members with the same name, this
+  // causes a collision which result in only one of the objects being taken
+  // into consideration at LTO time (which very likely causes undefined
+  // symbols later in the link stage). So we append file offset to make
+  // filename unique.
+  MemoryBufferRef MBRef(
+      MB.getBuffer(),
+      Saver.save(ArchiveName + Path +
+                 (ArchiveName.empty() ? "" : utostr(OffsetInArchive))));
+
+  Obj = check(lto::InputFile::create(MBRef));
+}
+
 void BitcodeFile::parse() {
-  Obj = check(lto::InputFile::create(MemoryBufferRef(
-      MB.getBuffer(), Saver.save(ParentName + MB.getBufferIdentifier()))));
   std::vector<std::pair<Symbol *, bool>> Comdat(Obj->getComdatTable().size());
   for (size_t I = 0; I != Obj->getComdatTable().size(); ++I)
     // FIXME: lto::InputFile doesn't keep enough data to do correct comdat
@@ -778,7 +854,7 @@ static StringRef getBasename(StringRef Path) {
 std::string lld::toString(const coff::InputFile *File) {
   if (!File)
     return "<internal>";
-  if (File->ParentName.empty())
+  if (File->ParentName.empty() || File->kind() == coff::InputFile::ImportKind)
     return File->getName();
 
   return (getBasename(File->ParentName) + "(" + getBasename(File->getName()) +

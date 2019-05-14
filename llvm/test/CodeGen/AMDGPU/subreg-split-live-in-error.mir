@@ -165,12 +165,12 @@ body: |
 
     %18:vgpr_32 = V_MAD_F32 0, %10.sub0, 0, target-flags(amdgpu-gotprel) 1073741824, 0, -1082130432, 0, 0, implicit $exec
     %19:vgpr_32 = V_MAD_F32 0, %12.sub0, 0, target-flags(amdgpu-gotprel) 0, 0, 0, 0, 0, implicit $exec
-    %20:sreg_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %21:sreg_128, 1040, 0 :: (dereferenceable invariant load 16)
+    %20:sreg_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %21:sreg_128, 1040, 0, 0 :: (dereferenceable invariant load 16)
     %22:vgpr_32 = V_ADD_F32_e32 0, %19, implicit $exec
     %23:vgpr_32 = V_MAD_F32 0, %18, 0, 0, 0, 0, 0, 0, implicit $exec
     %24:vgpr_32 = COPY %20.sub3
     %25:vgpr_32 = V_MUL_F32_e64 0, target-flags(amdgpu-gotprel32-lo) 0, 0, %20.sub1, 0, 0, implicit $exec
-    %26:sreg_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %27:sreg_128, 1056, 0 :: (dereferenceable invariant load 16)
+    %26:sreg_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %27:sreg_128, 1056, 0, 0 :: (dereferenceable invariant load 16)
     %28:vgpr_32 = V_MAD_F32 0, %18, 0, %26.sub0, 0, 0, 0, 0, implicit $exec
     %29:vgpr_32 = V_ADD_F32_e32 %28, %19, implicit $exec
     %30:vgpr_32 = V_RCP_F32_e32 %29, implicit $exec

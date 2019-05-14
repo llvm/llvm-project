@@ -18,13 +18,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // FindPlugin
 //
 // Platforms can register a callback to use when creating symbol vendors to
 // allow for complex debug information file setups, and to also allow for
 // finding separate debug information files.
-//----------------------------------------------------------------------
 SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
                                        lldb_private::Stream *feedback_strm) {
   std::unique_ptr<SymbolVendor> instance_up;
@@ -58,21 +56,15 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
   return instance_up.release();
 }
 
-//----------------------------------------------------------------------
 // SymbolVendor constructor
-//----------------------------------------------------------------------
 SymbolVendor::SymbolVendor(const lldb::ModuleSP &module_sp)
     : ModuleChild(module_sp), m_type_list(), m_compile_units(), m_sym_file_up(),
       m_symtab() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SymbolVendor::~SymbolVendor() {}
 
-//----------------------------------------------------------------------
 // Add a representation given an object file.
-//----------------------------------------------------------------------
 void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
@@ -488,9 +480,7 @@ void SymbolVendor::SectionFileAddressesChanged() {
   }
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString SymbolVendor::GetPluginName() {
   static ConstString g_name("vendor-default");
   return g_name;

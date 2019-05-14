@@ -15,7 +15,7 @@ namespace lldb_private {
 
 class ScriptInterpreterNone : public ScriptInterpreter {
 public:
-  ScriptInterpreterNone(CommandInterpreter &interpreter);
+  ScriptInterpreterNone(Debugger &debugger);
 
   ~ScriptInterpreterNone() override;
 
@@ -25,23 +25,18 @@ public:
 
   void ExecuteInterpreterLoop() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
 
-  static lldb::ScriptInterpreterSP
-  CreateInstance(CommandInterpreter &interpreter);
+  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
 
   static lldb_private::ConstString GetPluginNameStatic();
 
   static const char *GetPluginDescriptionStatic();
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

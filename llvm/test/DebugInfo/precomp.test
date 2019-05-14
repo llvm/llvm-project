@@ -5,8 +5,8 @@ RUN: obj2yaml %S/Inputs/precomp-a.obj > %t1/precomp-a.yaml
 RUN: obj2yaml %S/Inputs/precomp.obj > %t1/precomp.yaml
 RUN: yaml2obj %t1/precomp-a.yaml > %t1/a.obj
 RUN: yaml2obj %t1/precomp.yaml > %t1/precomp.obj
-RUN: llvm-readobj -codeview %t1/a.obj | FileCheck %s -check-prefix PRECOMP
-RUN: llvm-readobj -codeview %t1/precomp.obj | FileCheck %s -check-prefix ENDPRECOMP
+RUN: llvm-readobj --codeview %t1/a.obj | FileCheck %s -check-prefix PRECOMP
+RUN: llvm-readobj --codeview %t1/precomp.obj | FileCheck %s -check-prefix ENDPRECOMP
 RUN: llvm-pdbutil dump -types %t1/a.obj | FileCheck %s -check-prefix PDB-PRECOMP
 RUN: llvm-pdbutil dump -types %t1/precomp.obj | FileCheck %s -check-prefix PDB-ENDPRECOMP
 

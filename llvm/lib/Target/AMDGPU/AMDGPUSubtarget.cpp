@@ -45,7 +45,7 @@ GCNSubtarget::~GCNSubtarget() = default;
 R600Subtarget &
 R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                StringRef GPU, StringRef FS) {
-  SmallString<256> FullFS("+promote-alloca,+dx10-clamp,");
+  SmallString<256> FullFS("+promote-alloca,");
   FullFS += FS;
   ParseSubtargetFeatures(GPU, FullFS);
 
@@ -64,7 +64,7 @@ R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
 
 GCNSubtarget &
 GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
-                                                 StringRef GPU, StringRef FS) {
+                                              StringRef GPU, StringRef FS) {
   // Determine default and user-specified characteristics
   // On SI+, we want FP64 denormals to be on by default. FP32 denormals can be
   // enabled, but some instructions do not respect them and they run at the
@@ -77,7 +77,8 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
 
-  SmallString<256> FullFS("+promote-alloca,+dx10-clamp,+load-store-opt,");
+  // Assuming ECC is enabled is the conservative default.
+  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+sram-ecc,");
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
@@ -129,6 +130,14 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
 
+  // ECC is on by default, but turn it off if the hardware doesn't support it
+  // anyway. This matters for the gfx9 targets with d16 loads, but don't support
+  // ECC.
+  if (DoesNotSupportSRAMECC && EnableSRAMECC) {
+    ToggleFeature(AMDGPU::FeatureSRAMECC);
+    EnableSRAMECC = false;
+  }
+
   return *this;
 }
 
@@ -164,7 +173,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HalfRate64Ops(false),
 
     FP64FP16Denormals(false),
-    DX10Clamp(false),
     FlatForGlobal(false),
     AutoWaitcntBeforeBarrier(false),
     CodeObjectV3(false),
@@ -173,6 +181,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     HasApertureRegs(false),
     EnableXNACK(false),
+    EnableCuMode(false),
     TrapHandler(false),
 
     EnableHugePrivateBuffer(false),
@@ -186,8 +195,10 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FP64(false),
     GCN3Encoding(false),
     CIInsts(false),
-    VIInsts(false),
+    GFX8Insts(false),
     GFX9Insts(false),
+    GFX10Insts(false),
+    GFX7GFX8GFX9Insts(false),
     SGPRInitBug(false),
     HasSMemRealTime(false),
     HasIntClamp(false),
@@ -203,18 +214,36 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasSDWAOutModsVOPC(false),
     HasDPP(false),
     HasR128A16(false),
+    HasNSAEncoding(false),
     HasDLInsts(false),
     HasDot1Insts(false),
     HasDot2Insts(false),
     EnableSRAMECC(false),
+    DoesNotSupportSRAMECC(false),
+    HasNoSdstCMPX(false),
+    HasVscnt(false),
+    HasRegisterBanking(false),
+    HasVOP3Literal(false),
+    HasNoDataDepHazard(false),
     FlatAddressSpace(false),
     FlatInstOffsets(false),
     FlatGlobalInsts(false),
     FlatScratchInsts(false),
+    ScalarFlatScratchInsts(false),
     AddNoCarryInsts(false),
     HasUnpackedD16VMem(false),
+    LDSMisalignedBug(false),
 
     ScalarizeGlobal(false),
+
+    HasVcmpxPermlaneHazard(false),
+    HasVMEMtoScalarWriteHazard(false),
+    HasSMEMtoVectorWriteHazard(false),
+    HasInstFwdPrefetchBug(false),
+    HasVcmpxExecWARHazard(false),
+    HasLdsBranchVmemWARHazard(false),
+    HasNSAtoVMEMBug(false),
+    HasFlatSegmentOffsetBug(false),
 
     FeatureDisable(false),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
@@ -227,12 +256,34 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
 }
 
+unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
+  if (getGeneration() < GFX10)
+    return 1;
+
+  switch (Opcode) {
+  case AMDGPU::V_LSHLREV_B64:
+  case AMDGPU::V_LSHLREV_B64_gfx10:
+  case AMDGPU::V_LSHL_B64:
+  case AMDGPU::V_LSHRREV_B64:
+  case AMDGPU::V_LSHRREV_B64_gfx10:
+  case AMDGPU::V_LSHR_B64:
+  case AMDGPU::V_ASHRREV_I64:
+  case AMDGPU::V_ASHRREV_I64_gfx10:
+  case AMDGPU::V_ASHR_I64:
+    return 1;
+  }
+
+  return 2;
+}
+
 unsigned AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
   const Function &F) const {
   if (NWaves == 1)
     return getLocalMemorySize();
   unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
   unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
+  if (!WorkGroupsPerCu)
+    return 0;
   unsigned MaxWaves = getMaxWavesPerEU();
   return getLocalMemorySize() * MaxWaves / WorkGroupsPerCu / NWaves;
 }
@@ -241,6 +292,8 @@ unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
   const Function &F) const {
   unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
   unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
+  if (!WorkGroupsPerCu)
+    return 0;
   unsigned MaxWaves = getMaxWavesPerEU();
   unsigned Limit = getLocalMemorySize() * MaxWaves / WorkGroupsPerCu;
   unsigned NumWaves = Limit / (Bytes ? Bytes : 1u);
@@ -261,7 +314,8 @@ AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
-    return std::make_pair(getWavefrontSize() * 2, getWavefrontSize() * 4);
+    return std::make_pair(getWavefrontSize() * 2,
+                          std::max(getWavefrontSize() * 4, 256u));
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_LS:
   case CallingConv::AMDGPU_HS:
@@ -461,7 +515,6 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
   FMA(false),
   CaymanISA(false),
   CFALUBug(false),
-  DX10Clamp(false),
   HasVertexCache(false),
   R600ALUInst(false),
   FP64(false),
@@ -487,7 +540,14 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+bool GCNSubtarget::hasMadF16() const {
+  return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16) != -1;
+}
+
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
+  if (getGeneration() >= AMDGPUSubtarget::GFX10)
+    return 10;
+
   if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
     if (SGPRs <= 80)
       return 10;
@@ -534,6 +594,9 @@ unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  if (getGeneration() >= AMDGPUSubtarget::GFX10)
+    return 2; // VCC. FLAT_SCRATCH and XNACK are no longer in SGPRs.
+
   if (MFI.hasFlatScratchInit()) {
     if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return 6; // FLAT_SCRATCH, XNACK, VCC (in that order).
@@ -632,9 +695,7 @@ struct MemOpClusterMutation : ScheduleDAGMutation {
 
   MemOpClusterMutation(const SIInstrInfo *tii) : TII(tii) {}
 
-  void apply(ScheduleDAGInstrs *DAGInstrs) override {
-    ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
-
+  void apply(ScheduleDAGInstrs *DAG) override {
     SUnit *SUa = nullptr;
     // Search for two consequent memory operations and link them
     // to prevent scheduler from moving them apart.

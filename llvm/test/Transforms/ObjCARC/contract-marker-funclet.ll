@@ -48,8 +48,9 @@ declare dllimport i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
 
 declare dllimport void @llvm.objc.release(i8*)
 
-!clang.arc.retainAutoreleasedReturnValueMarker = !{!0}
-!0 = !{!"movl\09%ebp, %ebp\09\09// marker for objc_retainAutoreleaseReturnValue"}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 1, !"clang.arc.retainAutoreleasedReturnValueMarker", !"movl\09%ebp, %ebp\09\09// marker for objc_retainAutoreleaseReturnValue"}
 
 ; CHECK-LABEL: catch
 ; CHECK: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""() [ "funclet"(token %1) ]

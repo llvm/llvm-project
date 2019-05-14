@@ -1,15 +1,66 @@
-; RUN: FileCheck  -input-file %s %s
-; RUN: not FileCheck -check-prefix BAD -input-file %s %s
-3
-4 aaa
-5 bbb
-6 ccc
-7 CHECK: [[@LINE-3]] {{a}}aa
-8 CHECK: [[@LINE-3]] {{b}}bb
-9 CHECK: [[@LINE-3]] {{c}}cc
-10 foobar
-11 CHECK: [[@LINE-1]] {{foo}}bar
-12
-13 arst CHECK: [[@LINE]] {{a}}rst
-14
-15 BAD: [[@LINE:cant-have-regex]]
+; RUN: FileCheck -input-file %s %s
+; RUN: not FileCheck -check-prefix BAD1 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR1 %s
+; RUN: not FileCheck -check-prefix BAD2 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR2 %s
+; RUN: not FileCheck -check-prefix BAD3 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR3 %s
+; RUN: not FileCheck -check-prefix BAD4 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR4 %s
+; RUN: not FileCheck -check-prefix BAD5 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR5 %s
+; RUN: not FileCheck -check-prefix BAD6 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR6 %s
+; RUN: not FileCheck -check-prefix BAD7 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR7 %s
+; RUN: not FileCheck -check-prefix BAD8 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR8 %s
+; RUN: not FileCheck -check-prefix BAD9 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR9 %s
+; RUN: not FileCheck -check-prefix BAD10 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR10 %s
+; RUN: not FileCheck -check-prefix BAD11 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR11 %s
+13
+14 aaa
+15 bbb
+16 ccc
+17 CHECK: [[@LINE-3]] {{a}}aa
+18 CHECK: [[@LINE-3]] {{b}}bb
+19 CHECK: [[@LINE-3]] {{c}}cc
+20 foobar
+21 CHECK: [[@LINE-1]] {{foo}}bar
+22
+23 arst CHECK: [[@LINE]] {{a}}rst
+24
+25 BAD1: [[@LINE:cant-have-regex]]
+26 ERR1: line-count.txt:[[#@LINE-1]]:12: error: invalid name in pattern variable definition
+27
+28 BAD2: [[ @LINE]]
+29 ERR2: line-count.txt:[[#@LINE-1]]:12: error: unexpected whitespace
+30
+31 BAD3: [[@LINE ]]
+32 ERR3: line-count.txt:[[#@LINE-1]]:17: error: unexpected whitespace
+33
+34 BAD4: [[ @LINE-1]]
+35 ERR4: line-count.txt:[[#@LINE-1]]:12: error: unexpected whitespace
+36
+37 BAD5: [[@LINE -1]]
+38 ERR5: line-count.txt:[[#@LINE-1]]:17: error: unexpected whitespace
+39
+40 BAD6: [[@LINE- 1]]
+41 ERR6: line-count.txt:[[#@LINE-1]]:18: error: unexpected whitespace
+42
+43 BAD7: [[@LINE-1 ]]
+44 ERR7: line-count.txt:[[#@LINE-1]]:19: error: unexpected whitespace
+45
+46 BAD8: [[@LIN]]
+47 ERR8: line-count.txt:[[#@LINE-1]]:12: error: invalid pseudo numeric variable '@LIN'
+48
+49 BAD9: [[@LINE*2]]
+50 ERR9: line-count.txt:[[#@LINE-1]]:17: error: unsupported numeric operation '*'
+51
+52 BAD10: [[@LINE-x]]
+53 ERR10: line-count.txt:[[#@LINE-1]]:19: error: invalid offset in numeric expression 'x'
+54
+55 BAD11: [[@LINE-1x]]
+56 ERR11: line-count.txt:[[#@LINE-1]]:20: error: unexpected characters at end of numeric expression 'x'
+57
+58 CHECK: [[#@LINE]] CHECK
+59 CHECK: [[# @LINE]] CHECK
+60 CHECK: [[# @LINE ]] CHECK
+61
+62 CHECK: [[#@LINE-1]]
+63 CHECK: [[# @LINE-1]] CHECK
+64 CHECK: [[# @LINE -1]] CHECK
+65 CHECK: [[# @LINE - 1]] CHECK
+66 CHECK: [[# @LINE - 1 ]] CHECK

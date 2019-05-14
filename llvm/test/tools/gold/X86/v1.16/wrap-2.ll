@@ -9,14 +9,14 @@
 ; RUN-TODO: llvm-as %S/Inputs/wrap-bar.ll -o %t1.o
 ; RUN-TODO: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t.o %t1.o -shared -o %t.so -wrap=bar
 ; RUN-TODO: llvm-objdump -d %t.so | FileCheck %s
-; RUN-TODO: llvm-readobj -t %t.so | FileCheck -check-prefix=BIND %s
+; RUN-TODO: llvm-readobj --symbols %t.so | FileCheck -check-prefix=BIND %s
 
 ; ThinLTO
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %S/Inputs/wrap-bar.ll -o %t1.o
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t.o %t1.o -shared -o %t.so -wrap=bar
 ; RUN: llvm-objdump -d %t.so | FileCheck %s -check-prefix=THIN
-; RUN: llvm-readobj -t %t.so | FileCheck -check-prefix=BIND %s
+; RUN: llvm-readobj --symbols %t.so | FileCheck -check-prefix=BIND %s
 
 ; Make sure that calls in foo() are not eliminated and that bar is
 ; routed to __wrap_bar and __real_bar is routed to bar.

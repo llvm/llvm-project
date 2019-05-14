@@ -1,5 +1,5 @@
 RUN: yaml2obj %p/Inputs/dwarf-exprs.exe-x86-64.yaml > %t.exe
-RUN: llvm-readobj -unwind %t.exe | FileCheck %s
+RUN: llvm-readobj --unwind %t.exe | FileCheck %s
 
 CHECK:      EH_FRAME Header [
 CHECK-NEXT:  Address: 0x4013c0

@@ -7,6 +7,7 @@
 // Check that an IRELATIVE relocation is used for a non-preemptible ifunc
 // handler and a JUMP_SLOT is used for a preemptible ifunc
 // DISASM: Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: fct:
 // DISASM-NEXT:     1000:       c3      retq
 // DISASM:     fct2:
@@ -18,7 +19,9 @@
 // DISASM-NEXT:     1011:       c3      retq
 // DISASM:     f2:
 // DISASM-NEXT:     1012:       c3      retq
+// DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
+// DISASM-EMPTY:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:     1020:       ff 35 e2 1f 00 00       pushq   8162(%rip)
 // DISASM-NEXT:     1026:       ff 25 e4 1f 00 00       jmpq    *8164(%rip)

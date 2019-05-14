@@ -267,7 +267,7 @@ class MicrosoftCXXNameMangler {
   typedef llvm::DenseMap<const void *, unsigned> ArgBackRefMap;
   ArgBackRefMap TypeBackReferences;
 
-  typedef std::set<int> PassObjectSizeArgsSet;
+  typedef std::set<std::pair<int, bool>> PassObjectSizeArgsSet;
   PassObjectSizeArgsSet PassObjectSizeArgs;
 
   ASTContext &getASTContext() const { return Context.getASTContext(); }
@@ -1242,15 +1242,8 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
   case OO_Array_Delete: Out << "?_V"; break;
   // <operator-name> ::= ?__L # co_await
   case OO_Coawait: Out << "?__L"; break;
-
-  case OO_Spaceship: {
-    // FIXME: Once MS picks a mangling, use it.
-    DiagnosticsEngine &Diags = Context.getDiags();
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-      "cannot mangle this three-way comparison operator yet");
-    Diags.Report(Loc, DiagID);
-    break;
-  }
+  // <operator-name> ::= ?__M # <=>
+  case OO_Spaceship: Out << "?__M"; break;
 
   case OO_Conditional: {
     DiagnosticsEngine &Diags = Context.getDiags();
@@ -1268,8 +1261,7 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
 
 void MicrosoftCXXNameMangler::mangleSourceName(StringRef Name) {
   // <source name> ::= <identifier> @
-  BackRefVec::iterator Found =
-      std::find(NameBackReferences.begin(), NameBackReferences.end(), Name);
+  BackRefVec::iterator Found = llvm::find(NameBackReferences, Name);
   if (Found == NameBackReferences.end()) {
     if (NameBackReferences.size() < 10)
       NameBackReferences.push_back(Name);
@@ -1761,14 +1753,16 @@ void MicrosoftCXXNameMangler::mangleArgumentType(QualType T,
 void MicrosoftCXXNameMangler::manglePassObjectSizeArg(
     const PassObjectSizeAttr *POSA) {
   int Type = POSA->getType();
+  bool Dynamic = POSA->isDynamic();
 
-  auto Iter = PassObjectSizeArgs.insert(Type).first;
+  auto Iter = PassObjectSizeArgs.insert({Type, Dynamic}).first;
   auto *TypePtr = (const void *)&*Iter;
   ArgBackRefMap::iterator Found = TypeBackReferences.find(TypePtr);
 
   if (Found == TypeBackReferences.end()) {
-    mangleArtificialTagType(TTK_Enum, "__pass_object_size" + llvm::utostr(Type),
-                           {"__clang"});
+    std::string Name =
+        Dynamic ? "__pass_dynamic_object_size" : "__pass_object_size";
+    mangleArtificialTagType(TTK_Enum, Name + llvm::utostr(Type), {"__clang"});
 
     if (TypeBackReferences.size() < 10) {
       size_t Size = TypeBackReferences.size();
@@ -3460,8 +3454,7 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
     } else {
       const char SpecialChars[] = {',', '/',  '\\', ':',  '.',
                                    ' ', '\n', '\t', '\'', '-'};
-      const char *Pos =
-          std::find(std::begin(SpecialChars), std::end(SpecialChars), Byte);
+      const char *Pos = llvm::find(SpecialChars, Byte);
       if (Pos != std::end(SpecialChars)) {
         Mangler.getStream() << '?' << (Pos - std::begin(SpecialChars));
       } else {

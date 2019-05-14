@@ -29,6 +29,13 @@
   define void @store_gep_8_s32_fpr(i32* %addr) { ret void }
 
   define void @store_v2s32(i64 *%addr) { ret void }
+  define void @store_v2s64(i64 *%addr) { ret void }
+
+  define void @store_4xi16(<4 x i16> %v, <4 x i16>* %ptr) { ret void }
+  define void @store_4xi32(<4 x i32> %v, <4 x i32>* %ptr) { ret void }
+  define void @store_8xi16(<8 x i16> %v, <8 x i16>* %ptr) { ret void }
+  define void @store_16xi8(<16 x i8> %v, <16 x i8>* %ptr) { ret void }
+
 ...
 
 ---
@@ -416,5 +423,130 @@ body:             |
     %0(p0) = COPY $x0
     %1(<2 x s32>) = COPY $d1
     G_STORE  %1, %0 :: (store 8 into %ir.addr)
+
+...
+---
+name:            store_v2s64
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+body:             |
+  bb.0:
+    liveins: $x0, $d1
+    ; CHECK-LABEL: name: store_v2s64
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: STRQui [[COPY1]], [[COPY]], 0 :: (store 16 into %ir.addr, align 8)
+    %0(p0) = COPY $x0
+    %1(<2 x s64>) = COPY $q1
+    G_STORE %1, %0 :: (store 16 into %ir.addr, align 8)
+
+...
+---
+name:            store_4xi16
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $d0, $x0
+
+    ; CHECK-LABEL: name: store_4xi16
+    ; CHECK: liveins: $d0, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: STRDui [[COPY]], [[COPY1]], 0 :: (store 8 into %ir.ptr)
+    ; CHECK: RET_ReallyLR
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:gpr(p0) = COPY $x0
+    G_STORE %0(<4 x s16>), %1(p0) :: (store 8 into %ir.ptr)
+    RET_ReallyLR
+
+...
+---
+name:            store_4xi32
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0, $x0
+
+    ; CHECK-LABEL: name: store_4xi32
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store 16 into %ir.ptr)
+    ; CHECK: RET_ReallyLR
+    %0:fpr(<4 x s32>) = COPY $q0
+    %1:gpr(p0) = COPY $x0
+    G_STORE %0(<4 x s32>), %1(p0) :: (store 16 into %ir.ptr)
+    RET_ReallyLR
+
+...
+---
+name:            store_8xi16
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0, $x0
+
+    ; CHECK-LABEL: name: store_8xi16
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store 16 into %ir.ptr)
+    ; CHECK: RET_ReallyLR
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:gpr(p0) = COPY $x0
+    G_STORE %0(<8 x s16>), %1(p0) :: (store 16 into %ir.ptr)
+    RET_ReallyLR
+
+...
+---
+name:            store_16xi8
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0, $x0
+
+    ; CHECK-LABEL: name: store_16xi8
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store 16 into %ir.ptr)
+    ; CHECK: RET_ReallyLR
+    %0:fpr(<16 x s8>) = COPY $q0
+    %1:gpr(p0) = COPY $x0
+    G_STORE %0(<16 x s8>), %1(p0) :: (store 16 into %ir.ptr)
+    RET_ReallyLR
 
 ...

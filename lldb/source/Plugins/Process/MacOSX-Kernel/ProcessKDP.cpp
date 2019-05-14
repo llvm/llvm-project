@@ -143,9 +143,7 @@ bool ProcessKDP::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {
   return false;
 }
 
-//----------------------------------------------------------------------
 // ProcessKDP constructor
-//----------------------------------------------------------------------
 ProcessKDP::ProcessKDP(TargetSP target_sp, ListenerSP listener_sp)
     : Process(target_sp, listener_sp),
       m_comm("lldb.process.kdp-remote.communication"),
@@ -162,9 +160,7 @@ ProcessKDP::ProcessKDP(TargetSP target_sp, ListenerSP listener_sp)
     m_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ProcessKDP::~ProcessKDP() {
   Clear();
   // We need to call finalize on the process before destroying ourselves to
@@ -174,9 +170,7 @@ ProcessKDP::~ProcessKDP() {
   Finalize();
 }
 
-//----------------------------------------------------------------------
 // PluginInterface
-//----------------------------------------------------------------------
 lldb_private::ConstString ProcessKDP::GetPluginName() {
   return GetPluginNameStatic();
 }
@@ -369,9 +363,7 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
   return error;
 }
 
-//----------------------------------------------------------------------
 // Process Control
-//----------------------------------------------------------------------
 Status ProcessKDP::DoLaunch(Module *exe_module,
                             ProcessLaunchInfo &launch_info) {
   Status error;
@@ -595,17 +587,13 @@ Status ProcessKDP::DoDestroy() {
   return DoDetach(keep_stopped);
 }
 
-//------------------------------------------------------------------
 // Process Queries
-//------------------------------------------------------------------
 
 bool ProcessKDP::IsAlive() {
   return m_comm.IsConnected() && Process::IsAlive();
 }
 
-//------------------------------------------------------------------
 // Process Memory
-//------------------------------------------------------------------
 size_t ProcessKDP::DoReadMemory(addr_t addr, void *buf, size_t size,
                                 Status &error) {
   uint8_t *data_buffer = (uint8_t *)buf;

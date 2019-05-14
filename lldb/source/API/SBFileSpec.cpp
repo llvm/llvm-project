@@ -59,7 +59,21 @@ const SBFileSpec &SBFileSpec::operator=(const SBFileSpec &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
+}
+
+bool SBFileSpec::operator==(const SBFileSpec &rhs) const {
+  LLDB_RECORD_METHOD_CONST(bool, SBFileSpec, operator==,(const SBFileSpec &rhs),
+                           rhs);
+
+  return ref() == rhs.ref();
+}
+
+bool SBFileSpec::operator!=(const SBFileSpec &rhs) const {
+  LLDB_RECORD_METHOD_CONST(bool, SBFileSpec, operator!=,(const SBFileSpec &rhs),
+                           rhs);
+
+  return !(*this == rhs);
 }
 
 bool SBFileSpec::IsValid() const {
@@ -172,4 +186,38 @@ void SBFileSpec::AppendPathComponent(const char *fn) {
   LLDB_RECORD_METHOD(void, SBFileSpec, AppendPathComponent, (const char *), fn);
 
   m_opaque_up->AppendPathComponent(fn);
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBFileSpec>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, (const lldb::SBFileSpec &));
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, (const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBFileSpec, (const char *, bool));
+  LLDB_REGISTER_METHOD(const lldb::SBFileSpec &,
+                       SBFileSpec, operator=,(const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBFileSpec, operator==,(const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBFileSpec, operator!=,(const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, Exists, ());
+  LLDB_REGISTER_METHOD(bool, SBFileSpec, ResolveExecutableLocation, ());
+  LLDB_REGISTER_STATIC_METHOD(int, SBFileSpec, ResolvePath,
+                              (const char *, char *, size_t));
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFileSpec, GetFilename, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFileSpec, GetDirectory, ());
+  LLDB_REGISTER_METHOD(void, SBFileSpec, SetFilename, (const char *));
+  LLDB_REGISTER_METHOD(void, SBFileSpec, SetDirectory, (const char *));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBFileSpec, GetPath, (char *, size_t));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, GetDescription,
+                             (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(void, SBFileSpec, AppendPathComponent, (const char *));
+}
+
+}
 }

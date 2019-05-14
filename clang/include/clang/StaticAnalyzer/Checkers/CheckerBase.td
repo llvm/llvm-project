@@ -10,14 +10,46 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// Describes a checker or package option type. This is important for validating
+/// user supplied inputs.
+/// New option types can be added by modifying this enum. Note that this
+/// requires changes in the TableGen emitter file ClangSACheckersEmitter.cpp.
+class CmdLineOptionTypeEnum<bits<2> val> {
+  bits<2> Type = val;
+}
+def Integer : CmdLineOptionTypeEnum<0>;
+def String : CmdLineOptionTypeEnum<1>;
+def Boolean : CmdLineOptionTypeEnum<2>;
+
+class Type<CmdLineOptionTypeEnum val> {
+  bits<2> Type = val.Type;
+}
+
+/// Describes an option for a checker or a package.
+class CmdLineOption<CmdLineOptionTypeEnum type, string cmdFlag, string desc,
+                    string defaultVal> {
+  bits<2> Type = type.Type;
+  string CmdFlag = cmdFlag;
+  string Desc = desc;
+  string DefaultVal = defaultVal;
+}
+
+/// Describes a list of package options.
+class PackageOptions<list<CmdLineOption> opts> {
+  list<CmdLineOption> PackageOptions = opts;
+}
+
 /// Describes a package. Every checker is a part of a package, for example,
 /// 'NullDereference' is part of the 'core' package, hence it's full name is
 /// 'core.NullDereference'.
 /// Example:
 ///   def Core : Package<"core">;
 class Package<string name> {
-  string       PackageName = name;
-  Package ParentPackage;
+  string              PackageName = name;
+  // This field is optional.
+  list<CmdLineOption> PackageOptions;
+  Package             ParentPackage;
+  bit                 Hidden = 0;
 }
 
 /// Describes a 'super' package that holds another package inside it. This is
@@ -52,11 +84,20 @@ class Documentation<DocumentationEnum val> {
 ///   def DereferenceChecker : Checker<"NullDereference">,
 ///     HelpText<"Check for dereferences of null pointers">;
 class Checker<string name = ""> {
-  string        CheckerName = name;
-  string        HelpText;
-  list<Checker> Dependencies;
-  bits<2>       Documentation;
-  Package       ParentPackage;
+  string              CheckerName = name;
+  string              HelpText;
+  // This field is optional.
+  list<CmdLineOption> CheckerOptions;
+  // This field is optional.
+  list<Checker>       Dependencies;
+  bits<2>             Documentation;
+  Package             ParentPackage;
+  bit                 Hidden = 0;
+}
+
+/// Describes a list of checker options.
+class CheckerOptions<list<CmdLineOption> opts> {
+  list<CmdLineOption> CheckerOptions = opts;
 }
 
 /// Describes dependencies in between checkers. For example, InnerPointerChecker
@@ -69,3 +110,7 @@ class Checker<string name = ""> {
 class Dependencies<list<Checker> Deps = []> {
   list<Checker> Dependencies = Deps;
 }
+
+/// Marks a checker or a package hidden. Hidden entries won't be displayed in
+/// -analyzer-checker-help, which is desirable for alpha or modeling checkers.
+class Hidden { bit Hidden = 1; }

@@ -27,9 +27,7 @@ public:
 
   ~OptionValueFileSpec() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeFileSpec; }
 
@@ -56,9 +54,7 @@ public:
   size_t AutoComplete(CommandInterpreter &interpreter,
                       CompletionRequest &request) override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   FileSpec &GetCurrentValue() { return m_current_value; }
 

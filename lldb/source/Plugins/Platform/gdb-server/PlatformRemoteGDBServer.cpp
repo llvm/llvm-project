@@ -195,19 +195,15 @@ Status PlatformRemoteGDBServer::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformRemoteGDBServer::PlatformRemoteGDBServer()
     : Platform(false), // This is a remote platform
       m_gdb_client() {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformRemoteGDBServer::~PlatformRemoteGDBServer() {}
 
 bool PlatformRemoteGDBServer::GetSupportedArchitectureAtIndex(uint32_t idx,

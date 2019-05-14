@@ -206,9 +206,7 @@ static Status EnsureFDFlags(int fd, int flags) {
   return error;
 }
 
-// -----------------------------------------------------------------------------
 // Public Static Methods
-// -----------------------------------------------------------------------------
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
@@ -284,9 +282,7 @@ NativeProcessLinux::Factory::Attach(
       pid, -1, native_delegate, Info.GetArchitecture(), mainloop, *tids_or));
 }
 
-// -----------------------------------------------------------------------------
 // Public Instance Methods
-// -----------------------------------------------------------------------------
 
 NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
                                        NativeDelegate &delegate,

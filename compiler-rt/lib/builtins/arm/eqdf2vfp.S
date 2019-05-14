@@ -8,13 +8,12 @@
 
 #include "../assembly.h"
 
-//
 // extern int __eqdf2vfp(double a, double b);
 //
 // Returns one iff a == b and neither is NaN.
-// Uses Darwin calling convention where double precision arguments are passsed 
+// Uses Darwin calling convention where double precision arguments are passsed
 // like in GPR pairs.
-//
+
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__eqdf2vfp)
@@ -23,7 +22,7 @@ DEFINE_COMPILERRT_FUNCTION(__eqdf2vfp)
 #else
 	vmov	d6, r0, r1	// load r0/r1 pair in double register
 	vmov	d7, r2, r3	// load r2/r3 pair in double register
-	vcmp.f64 d6, d7		
+	vcmp.f64 d6, d7
 #endif
 	vmrs	apsr_nzcv, fpscr
 	ITE(eq)

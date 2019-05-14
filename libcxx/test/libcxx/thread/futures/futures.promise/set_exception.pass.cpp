@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: windows
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
@@ -27,7 +28,6 @@
 #include <exception>
 #include <cstdlib>
 #include <cassert>
-
 
 #include "debug_mode_helper.h"
 

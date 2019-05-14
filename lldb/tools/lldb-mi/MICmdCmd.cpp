@@ -14,7 +14,6 @@
 #include "MICmdCmd.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdEnablePrettyPrinting constructor.
 // Type:    Method.
 // Args:    None.
@@ -30,7 +29,6 @@ CMICmdCmdEnablePrettyPrinting::CMICmdCmdEnablePrettyPrinting() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdEnablePrettyPrinting destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -40,7 +38,6 @@ CMICmdCmdEnablePrettyPrinting::CMICmdCmdEnablePrettyPrinting() {
 CMICmdCmdEnablePrettyPrinting::~CMICmdCmdEnablePrettyPrinting() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -57,7 +54,6 @@ bool CMICmdCmdEnablePrettyPrinting::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -79,7 +75,6 @@ bool CMICmdCmdEnablePrettyPrinting::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -92,12 +87,8 @@ CMICmdBase *CMICmdCmdEnablePrettyPrinting::CreateSelf() {
   return new CMICmdCmdEnablePrettyPrinting();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdSource constructor.
 // Type:    Method.
 // Args:    None.
@@ -113,7 +104,6 @@ CMICmdCmdSource::CMICmdCmdSource() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdSource destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -123,7 +113,6 @@ CMICmdCmdSource::CMICmdCmdSource() {
 CMICmdCmdSource::~CMICmdCmdSource() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -140,7 +129,6 @@ bool CMICmdCmdSource::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -159,7 +147,6 @@ bool CMICmdCmdSource::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.

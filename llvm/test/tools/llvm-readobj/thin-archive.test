@@ -67,4 +67,4 @@
 # MISSING:     File: {{.*}}1.o
 # MISSING:     SectionHeaderCount: 10
 # MISSING-NOT: File: {{.*}}3.o
-# ERR: Error reading file: {{.*}}.a: '{{.*}}2.o': {{[Nn]}}o such file or directory
+# ERR: error: '{{.*}}.a': '{{.*}}2.o': {{[Nn]}}o such file or directory

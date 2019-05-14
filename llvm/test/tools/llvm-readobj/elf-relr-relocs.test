@@ -2,7 +2,7 @@
 # llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu Inputs/elf-relr-relocs1.s -o - | obj2yaml | grep Content:
 
 # RUN: yaml2obj -docnum 1 %s \
-# RUN:   | llvm-readobj -elf-output-style=LLVM -relocations -raw-relr - \
+# RUN:   | llvm-readobj --relocations --raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-LLVM1 %s
 # RAW-LLVM1:      Section (1) .relr.dyn {
 # RAW-LLVM1-NEXT:   0x10D60
@@ -13,7 +13,7 @@
 # RAW-LLVM1-NEXT: }
 
 # RUN: yaml2obj -docnum 1 %s \
-# RUN:   | llvm-readobj -elf-output-style=LLVM -relocations - \
+# RUN:   | llvm-readobj --relocations - \
 # RUN:   | FileCheck --check-prefix=LLVM1 %s
 # LLVM1:      Section (1) .relr.dyn {
 # LLVM1-NEXT:   0x10D60 R_X86_64_RELATIVE - 0x0
@@ -40,7 +40,7 @@
 # LLVM1-NEXT: }
 
 # RUN: yaml2obj -docnum 1 %s \
-# RUN:   | llvm-readobj -elf-output-style=GNU -relocations -raw-relr - \
+# RUN:   | llvm-readelf -relocations -raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-GNU1 %s
 # RAW-GNU1:      Relocation section '.relr.dyn' at offset 0x180 contains 5 entries:
 # RAW-GNU1:      0000000000010d60
@@ -50,7 +50,7 @@
 # RAW-GNU1-NEXT: 000a700550400009
 
 # RUN: yaml2obj -docnum 1 %s \
-# RUN:   | llvm-readobj -elf-output-style=GNU -relocations - \
+# RUN:   | llvm-readelf -relocations - \
 # RUN:   | FileCheck --check-prefix=GNU1 %s
 # GNU1:      Relocation section '.relr.dyn' at offset 0x180 contains 21 entries:
 # GNU1:      0000000000010d60  0000000000000008 R_X86_64_RELATIVE
@@ -94,7 +94,7 @@ Sections:
 ...
 
 # RUN: yaml2obj -docnum 2 %s \
-# RUN:   | llvm-readobj -elf-output-style=LLVM -relocations -raw-relr - \
+# RUN:   | llvm-readobj --relocations --raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-LLVM2 %s
 # RAW-LLVM2:      Section (1) .relr.dyn {
 # RAW-LLVM2-NEXT:   0x10D60
@@ -105,7 +105,7 @@ Sections:
 # RAW-LLVM2-NEXT: }
 
 # RUN: yaml2obj -docnum 2 %s \
-# RUN:   | llvm-readobj -elf-output-style=LLVM -relocations - \
+# RUN:   | llvm-readobj --relocations - \
 # RUN:   | FileCheck --check-prefix=LLVM2 %s
 # LLVM2:      Section (1) .relr.dyn {
 # LLVM2-NEXT:   0x10D60 R_386_RELATIVE - 0x0
@@ -125,7 +125,7 @@ Sections:
 # LLVM2-NEXT: }
 
 # RUN: yaml2obj -docnum 2 %s \
-# RUN:   | llvm-readobj -elf-output-style=GNU -relocations -raw-relr - \
+# RUN:   | llvm-readelf -relocations -raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-GNU2 %s
 # RAW-GNU2:      Relocation section '.relr.dyn' at offset 0xfc contains 5 entries:
 # RAW-GNU2:      00010d60
@@ -135,7 +135,7 @@ Sections:
 # RAW-GNU2-NEXT: 50400009
 
 # RUN: yaml2obj -docnum 2 %s \
-# RUN:   | llvm-readobj -elf-output-style=GNU -relocations - \
+# RUN:   | llvm-readelf -relocations - \
 # RUN:   | FileCheck --check-prefix=GNU2 %s
 # GNU2:      Relocation section '.relr.dyn' at offset 0xfc contains 14 entries:
 # GNU2:      00010d60  00000008 R_386_RELATIVE

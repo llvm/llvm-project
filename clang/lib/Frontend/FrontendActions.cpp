@@ -221,8 +221,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
 
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
-  if (!CI.getLangOpts().ModulesTS) {
-    CI.getDiagnostics().Report(diag::err_module_interface_requires_modules_ts);
+  if (!CI.getLangOpts().ModulesTS && !CI.getLangOpts().CPlusPlusModules) {
+    CI.getDiagnostics().Report(diag::err_module_interface_requires_cpp_modules);
     return false;
   }
 
@@ -239,7 +239,7 @@ GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
 
 bool GenerateHeaderModuleAction::PrepareToExecuteAction(
     CompilerInstance &CI) {
-  if (!CI.getLangOpts().Modules && !CI.getLangOpts().ModulesTS) {
+  if (!CI.getLangOpts().Modules) {
     CI.getDiagnostics().Report(diag::err_header_module_requires_modules);
     return false;
   }

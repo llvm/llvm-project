@@ -223,11 +223,11 @@ public:
   Expected<unsigned> tryEmitDwarfFileDirective(unsigned FileNo,
                                                StringRef Directory,
                                                StringRef Filename,
-                                               MD5::MD5Result *Checksum = 0,
+                                               Optional<MD5::MD5Result> Checksum = None,
                                                Optional<StringRef> Source = None,
                                                unsigned CUID = 0) override;
   void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
-                               MD5::MD5Result *Checksum,
+                               Optional<MD5::MD5Result> Checksum,
                                Optional<StringRef> Source,
                                unsigned CUID = 0) override;
   void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -1151,7 +1151,7 @@ void MCAsmStreamer::EmitFileDirective(StringRef Filename) {
 
 static void printDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                     StringRef Filename,
-                                    MD5::MD5Result *Checksum,
+                                    Optional<MD5::MD5Result> Checksum,
                                     Optional<StringRef> Source,
                                     bool UseDwarfDirectory,
                                     raw_svector_ostream &OS) {
@@ -1184,13 +1184,14 @@ static void printDwarfFileDirective(unsigned FileNo, StringRef Directory,
 
 Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
     unsigned FileNo, StringRef Directory, StringRef Filename,
-    MD5::MD5Result *Checksum, Optional<StringRef> Source, unsigned CUID) {
+    Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source, unsigned CUID) {
   assert(CUID == 0 && "multiple CUs not supported by MCAsmStreamer");
 
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   unsigned NumFiles = Table.getMCDwarfFiles().size();
   Expected<unsigned> FileNoOrErr =
-      Table.tryGetFile(Directory, Filename, Checksum, Source, FileNo);
+      Table.tryGetFile(Directory, Filename, Checksum, Source,
+                       getContext().getDwarfVersion(), FileNo);
   if (!FileNoOrErr)
     return FileNoOrErr.takeError();
   FileNo = FileNoOrErr.get();
@@ -1212,7 +1213,7 @@ Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
 
 void MCAsmStreamer::emitDwarfFile0Directive(StringRef Directory,
                                             StringRef Filename,
-                                            MD5::MD5Result *Checksum,
+                                            Optional<MD5::MD5Result> Checksum,
                                             Optional<StringRef> Source,
                                             unsigned CUID) {
   assert(CUID == 0);
@@ -1911,7 +1912,7 @@ void MCAsmStreamer::FinishImpl() {
   // Emit the label for the line table, if requested - since the rest of the
   // line table will be defined by .loc/.file directives, and not emitted
   // directly, the label is the only work required here.
-  auto &Tables = getContext().getMCDwarfLineTables();
+  const auto &Tables = getContext().getMCDwarfLineTables();
   if (!Tables.empty()) {
     assert(Tables.size() == 1 && "asm output only supports one line table");
     if (auto *Label = Tables.begin()->second.getLabel()) {

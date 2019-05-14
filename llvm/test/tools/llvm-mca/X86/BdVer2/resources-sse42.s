@@ -40,24 +40,24 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  3      3     2.00                        crc32b	%al, %ecx
-# CHECK-NEXT:  3      7     2.00    *                   crc32b	(%rax), %ecx
+# CHECK-NEXT:  3      2     2.00                        crc32b	%al, %ecx
+# CHECK-NEXT:  3      6     2.00    *                   crc32b	(%rax), %ecx
 # CHECK-NEXT:  7      6     2.00                        crc32l	%eax, %ecx
-# CHECK-NEXT:  3      7     2.00    *                   crc32l	(%rax), %ecx
+# CHECK-NEXT:  3      6     2.00    *                   crc32l	(%rax), %ecx
 # CHECK-NEXT:  5      5     2.00                        crc32w	%ax, %ecx
-# CHECK-NEXT:  3      7     2.00    *                   crc32w	(%rax), %ecx
-# CHECK-NEXT:  3      3     2.00                        crc32b	%al, %rcx
-# CHECK-NEXT:  3      7     2.00    *                   crc32b	(%rax), %rcx
+# CHECK-NEXT:  3      6     2.00    *                   crc32w	(%rax), %ecx
+# CHECK-NEXT:  3      2     2.00                        crc32b	%al, %rcx
+# CHECK-NEXT:  3      6     2.00    *                   crc32b	(%rax), %rcx
 # CHECK-NEXT:  11     10    2.00                        crc32q	%rax, %rcx
-# CHECK-NEXT:  3      7     2.00    *                   crc32q	(%rax), %rcx
-# CHECK-NEXT:  27     15    4.00                        pcmpestri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  28     20    4.50    *                   pcmpestri	$1, (%rax), %xmm2
+# CHECK-NEXT:  3      6     2.00    *                   crc32q	(%rax), %rcx
+# CHECK-NEXT:  27     14    4.00                        pcmpestri	$1, %xmm0, %xmm2
+# CHECK-NEXT:  28     19    4.50    *                   pcmpestri	$1, (%rax), %xmm2
 # CHECK-NEXT:  27     10    4.00                        pcmpestrm	$1, %xmm0, %xmm2
 # CHECK-NEXT:  28     15    4.50    *                   pcmpestrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  7      14    1.00                        pcmpistri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  8      19    1.00    *                   pcmpistri	$1, (%rax), %xmm2
-# CHECK-NEXT:  7      6     1.00                        pcmpistrm	$1, %xmm0, %xmm2
-# CHECK-NEXT:  9      11    1.00    *                   pcmpistrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  7      11    1.00                        pcmpistri	$1, %xmm0, %xmm2
+# CHECK-NEXT:  8      16    1.00    *                   pcmpistri	$1, (%rax), %xmm2
+# CHECK-NEXT:  7      7     1.00                        pcmpistrm	$1, %xmm0, %xmm2
+# CHECK-NEXT:  9      12    1.00    *                   pcmpistrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      2     0.50                        pcmpgtq	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   pcmpgtq	(%rax), %xmm2
 

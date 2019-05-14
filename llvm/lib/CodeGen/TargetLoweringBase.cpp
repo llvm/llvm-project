@@ -73,8 +73,8 @@ static cl::opt<unsigned> MinimumJumpTableEntries
    cl::desc("Set minimum number of entries to use a jump table."));
 
 static cl::opt<unsigned> MaximumJumpTableSize
-  ("max-jump-table-size", cl::init(0), cl::Hidden,
-   cl::desc("Set maximum size of jump tables; zero for no limit."));
+  ("max-jump-table-size", cl::init(UINT_MAX), cl::Hidden,
+   cl::desc("Set maximum size of jump tables."));
 
 /// Minimum jump table density for normal functions.
 static cl::opt<unsigned>
@@ -545,7 +545,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   JumpIsExpensive = JumpIsExpensiveOverride;
   PredictableSelectIsExpensive = false;
   EnableExtLdPromotion = false;
-  HasFloatingPointExceptions = true;
   StackPointerRegisterToSaveRestore = 0;
   BooleanContents = UndefinedBooleanContent;
   BooleanFloatContents = UndefinedBooleanContent;

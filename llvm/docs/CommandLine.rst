@@ -128,6 +128,7 @@ this:
   USAGE: compiler [options]
 
   OPTIONS:
+    -h                - Alias for -help
     -help             - display available options (-help-hidden for more)
     -o <filename>     - Specify output filename
 
@@ -194,6 +195,7 @@ declarations above, the ``-help`` option synopsis is now extended to:
   USAGE: compiler [options] <input file>
 
   OPTIONS:
+    -h                - Alias for -help
     -help             - display available options (-help-hidden for more)
     -o <filename>     - Specify output filename
 
@@ -1231,6 +1233,14 @@ specify boolean properties that modify the option.
   "``-foo=a,b,c``".  This option only makes sense to be used in a case where the
   option is allowed to accept one or more values (i.e. it is a `cl::list`_
   option).
+
+.. _cl::DefaultOption:
+
+* The **cl::DefaultOption** modifier is used to specify that the option is a
+  default that can be overridden by application specific parsers. For example,
+  the ``-help`` alias, ``-h``, is registered this way, so it can be overridden
+  by applications that need to use the ``-h`` option for another purpose,
+  either as a regular option or an alias for another option.
 
 .. _cl::PositionalEatsArgs:
 

@@ -756,7 +756,7 @@ bool PPCFrameLowering::stackUpdateCanBeMoved(MachineFunction &MF) const {
   if (FI->hasFastCall() || FI->usesPICBase())
     return false;
 
-  // Finally we can move the stack update if we do not require regiser
+  // Finally we can move the stack update if we do not require register
   // scavenging. Register scavenging can introduce more spills and so
   // may make the frame size larger than we have computed.
   return !RegInfo->requiresFrameIndexScavenging(MF);

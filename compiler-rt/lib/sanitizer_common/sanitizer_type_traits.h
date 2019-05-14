@@ -38,6 +38,25 @@ struct is_same : public false_type {};
 template <typename T>
 struct is_same<T, T> : public true_type {};
 
+// conditional<B, T, F>
+//
+// Defines type as T if B is true or as F otherwise.
+// E.g. the following is true
+//
+// ```
+// is_same<int, conditional<true, int, double>::type>::value
+// is_same<double, conditional<false, int, double>::type>::value
+// ```
+template <bool B, class T, class F>
+struct conditional {
+  using type = T;
+};
+
+template <class T, class F>
+struct conditional<false, T, F> {
+  using type = F;
+};
+
 }  // namespace __sanitizer
 
 #endif

@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i386-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t -shared
-// RUN: llvm-readobj -s -section-data %t | FileCheck %s
+// RUN: llvm-readobj -S --section-data %t | FileCheck %s
 
 // CHECK:      Name: .mysec
 // CHECK-NEXT: Type:

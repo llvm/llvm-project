@@ -122,6 +122,10 @@ public:
   child_range children() {
     return child_range(&SubExprs[BASE], &SubExprs[END_EXPR]);
   }
+
+  const_child_range children() const {
+    return const_child_range(&SubExprs[BASE], &SubExprs[END_EXPR]);
+  }
 };
 } // end namespace clang
 

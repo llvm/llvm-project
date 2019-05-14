@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupVariable
-//-------------------------------------------------------------------------
 
 class OptionGroupVariable : public OptionGroup {
 public:

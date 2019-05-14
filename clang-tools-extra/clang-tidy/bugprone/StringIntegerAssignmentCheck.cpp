@@ -45,38 +45,100 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static bool isLikelyCharExpression(const Expr *Argument,
-                                   const ASTContext &Ctx) {
-  const auto *BinOp = dyn_cast<BinaryOperator>(Argument);
-  if (!BinOp)
-    return false;
-  const auto *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
-  const auto *RHS = BinOp->getRHS()->IgnoreParenImpCasts();
-  // <expr> & <mask>, mask is a compile time constant.
-  Expr::EvalResult RHSVal;
-  if (BinOp->getOpcode() == BO_And &&
-      (RHS->EvaluateAsInt(RHSVal, Ctx, Expr::SE_AllowSideEffects) ||
-       LHS->EvaluateAsInt(RHSVal, Ctx, Expr::SE_AllowSideEffects)))
-    return true;
-  // <char literal> + (<expr> % <mod>), where <base> is a char literal.
-  const auto IsCharPlusModExpr = [](const Expr *L, const Expr *R) {
-    const auto *ROp = dyn_cast<BinaryOperator>(R);
-    return ROp && ROp->getOpcode() == BO_Rem && isa<CharacterLiteral>(L);
-  };
-  if (BinOp->getOpcode() == BO_Add) {
-    if (IsCharPlusModExpr(LHS, RHS) || IsCharPlusModExpr(RHS, LHS))
+class CharExpressionDetector {
+public:
+  CharExpressionDetector(QualType CharType, const ASTContext &Ctx)
+      : CharType(CharType), Ctx(Ctx) {}
+
+  bool isLikelyCharExpression(const Expr *E) const {
+    if (isCharTyped(E))
       return true;
+
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+      const auto *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
+      const auto *RHS = BinOp->getRHS()->IgnoreParenImpCasts();
+      // Handle both directions, e.g. `'a' + (i % 26)` and `(i % 26) + 'a'`.
+      if (BinOp->isAdditiveOp() || BinOp->isBitwiseOp())
+        return handleBinaryOp(BinOp->getOpcode(), LHS, RHS) ||
+               handleBinaryOp(BinOp->getOpcode(), RHS, LHS);
+      // Except in the case of '%'.
+      if (BinOp->getOpcode() == BO_Rem)
+        return handleBinaryOp(BinOp->getOpcode(), LHS, RHS);
+      return false;
+    }
+
+    // Ternary where at least one branch is a likely char expression, e.g.
+    //    i < 265 ? i : ' '
+    if (const auto *CondOp = dyn_cast<AbstractConditionalOperator>(E))
+      return isLikelyCharExpression(
+                 CondOp->getFalseExpr()->IgnoreParenImpCasts()) ||
+             isLikelyCharExpression(
+                 CondOp->getTrueExpr()->IgnoreParenImpCasts());
+    return false;
   }
-  return false;
-}
+
+private:
+  bool handleBinaryOp(clang::BinaryOperatorKind Opcode, const Expr *const LHS,
+                      const Expr *const RHS) const {
+    // <char_expr> <op> <char_expr> (c++ integer promotion rules make this an
+    // int), e.g.
+    //    'a' + c
+    if (isCharTyped(LHS) && isCharTyped(RHS))
+      return true;
+
+    // <expr> & <char_valued_constant> or <expr> % <char_valued_constant>, e.g.
+    //    i & 0xff
+    if ((Opcode == BO_And || Opcode == BO_Rem) && isCharValuedConstant(RHS))
+      return true;
+
+    // <char_expr> | <char_valued_constant>, e.g.
+    //    c | 0x80
+    if (Opcode == BO_Or && isCharTyped(LHS) && isCharValuedConstant(RHS))
+      return true;
+
+    // <char_constant> + <likely_char_expr>, e.g.
+    //    'a' + (i % 26)
+    if (Opcode == BO_Add)
+      return isCharConstant(LHS) && isLikelyCharExpression(RHS);
+
+    return false;
+  }
+
+  // Returns true if `E` is an character constant.
+  bool isCharConstant(const Expr *E) const {
+    return isCharTyped(E) && isCharValuedConstant(E);
+  };
+
+  // Returns true if `E` is an integer constant which fits in `CharType`.
+  bool isCharValuedConstant(const Expr *E) const {
+    if (E->isInstantiationDependent())
+      return false;
+    Expr::EvalResult EvalResult;
+    if (!E->EvaluateAsInt(EvalResult, Ctx, Expr::SE_AllowSideEffects))
+      return false;
+    return EvalResult.Val.getInt().getActiveBits() <= Ctx.getTypeSize(CharType);
+  };
+
+  // Returns true if `E` has the right character type.
+  bool isCharTyped(const Expr *E) const {
+    return E->getType().getCanonicalType().getTypePtr() ==
+           CharType.getTypePtr();
+  };
+
+  const QualType CharType;
+  const ASTContext &Ctx;
+};
 
 void StringIntegerAssignmentCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Argument = Result.Nodes.getNodeAs<Expr>("expr");
+  const auto CharType =
+      Result.Nodes.getNodeAs<QualType>("type")->getCanonicalType();
   SourceLocation Loc = Argument->getBeginLoc();
 
   // Try to detect a few common expressions to reduce false positives.
-  if (isLikelyCharExpression(Argument, *Result.Context))
+  if (CharExpressionDetector(CharType, *Result.Context)
+          .isLikelyCharExpression(Argument))
     return;
 
   auto Diag =
@@ -88,7 +150,6 @@ void StringIntegerAssignmentCheck::check(
   if (Loc.isMacroID())
     return;
 
-  auto CharType = *Result.Nodes.getNodeAs<QualType>("type");
   bool IsWideCharType = CharType->isWideCharType();
   if (!CharType->isCharType() && !IsWideCharType)
     return;

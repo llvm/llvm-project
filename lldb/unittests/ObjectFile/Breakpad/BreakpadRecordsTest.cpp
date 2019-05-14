@@ -19,20 +19,24 @@ TEST(Record, classify) {
   EXPECT_EQ(Record::File, Record::classify("FILE"));
   EXPECT_EQ(Record::Func, Record::classify("FUNC"));
   EXPECT_EQ(Record::Public, Record::classify("PUBLIC"));
-  EXPECT_EQ(Record::Stack, Record::classify("STACK"));
+  EXPECT_EQ(Record::StackCFI, Record::classify("STACK CFI"));
+
+  // Any obviously incorrect lines will be classified as such.
+  EXPECT_EQ(llvm::None, Record::classify("STACK"));
+  EXPECT_EQ(llvm::None, Record::classify("STACK CODE_ID"));
+  EXPECT_EQ(llvm::None, Record::classify("CODE_ID"));
 
   // Any line which does not start with a known keyword will be classified as a
   // line record, as those are the only ones that start without a keyword.
   EXPECT_EQ(Record::Line, Record::classify("deadbeef"));
   EXPECT_EQ(Record::Line, Record::classify("12"));
-  EXPECT_EQ(Record::Line, Record::classify("CODE_ID"));
 }
 
 TEST(ModuleRecord, parse) {
   EXPECT_EQ(ModuleRecord(llvm::Triple::Linux, llvm::Triple::x86_64,
                          UUID::fromData("@ABCDEFGHIJKLMNO", 16)),
             ModuleRecord::parse(
-                "MODULE Linux x86_64 434241404544474648494a4b4c4d4e4f0 a.out"));
+                "MODULE Linux x86_64 404142434445464748494a4b4c4d4e4f0 a.out"));
 
   EXPECT_EQ(llvm::None, ModuleRecord::parse("MODULE"));
   EXPECT_EQ(llvm::None, ModuleRecord::parse("MODULE Linux"));
@@ -91,4 +95,27 @@ TEST(PublicRecord, parse) {
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC 47"));
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC m"));
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC"));
+}
+
+TEST(StackCFIRecord, parse) {
+  EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: $esp 4 + $eip: .cfa 4 - ^"),
+            StackCFIRecord::parse(
+                "STACK CFI INIT 47 8 .cfa: $esp 4 + $eip: .cfa 4 - ^"));
+
+  EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: $esp 4 +"),
+            StackCFIRecord::parse("STACK CFI INIT 47 8 .cfa: $esp 4 +  "));
+
+  EXPECT_EQ(StackCFIRecord(0x47, llvm::None, ".cfa: $esp 4 +"),
+            StackCFIRecord::parse("STACK CFI 47 .cfa: $esp 4 +"));
+
+  // The validity of the register value expressions is not checked
+  EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: ^ ^ ^"),
+            StackCFIRecord::parse("STACK CFI INIT 47 8 .cfa: ^ ^ ^"));
+
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI INIT 47"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI INIT"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("FILE 47 foo"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("42 47"));
 }

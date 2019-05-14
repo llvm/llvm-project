@@ -21,15 +21,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ScriptInterpreter::ScriptInterpreter(CommandInterpreter &interpreter,
+ScriptInterpreter::ScriptInterpreter(Debugger &debugger,
                                      lldb::ScriptLanguage script_lang)
-    : m_interpreter(interpreter), m_script_lang(script_lang) {}
+    : m_debugger(debugger), m_script_lang(script_lang) {}
 
 ScriptInterpreter::~ScriptInterpreter() {}
-
-CommandInterpreter &ScriptInterpreter::GetCommandInterpreter() {
-  return m_interpreter;
-}
 
 void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
     std::vector<BreakpointOptions *> &bp_options_vec,

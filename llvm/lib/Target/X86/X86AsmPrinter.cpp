@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -103,16 +104,16 @@ void X86AsmPrinter::EmitFunctionBodyEnd() {
   }
 }
 
-/// printSymbolOperand - Print a raw symbol reference operand.  This handles
+/// PrintSymbolOperand - Print a raw symbol reference operand.  This handles
 /// jump tables, constant pools, global address and external symbols, all of
 /// which print to a label with various suffixes for relocation types etc.
-static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
-                               raw_ostream &O) {
+void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+                                       raw_ostream &O) {
   switch (MO.getType()) {
   default: llvm_unreachable("unknown symbol type!");
   case MachineOperand::MO_ConstantPoolIndex:
-    P.GetCPISymbol(MO.getIndex())->print(O, P.MAI);
-    P.printOffset(MO.getOffset(), O);
+    GetCPISymbol(MO.getIndex())->print(O, MAI);
+    printOffset(MO.getOffset(), O);
     break;
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
@@ -120,38 +121,37 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     MCSymbol *GVSym;
     if (MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY ||
         MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE)
-      GVSym = P.getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
+      GVSym = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
     else
-      GVSym = P.getSymbol(GV);
+      GVSym = getSymbol(GV);
 
     // Handle dllimport linkage.
     if (MO.getTargetFlags() == X86II::MO_DLLIMPORT)
-      GVSym =
-          P.OutContext.getOrCreateSymbol(Twine("__imp_") + GVSym->getName());
+      GVSym = OutContext.getOrCreateSymbol(Twine("__imp_") + GVSym->getName());
     else if (MO.getTargetFlags() == X86II::MO_COFFSTUB)
       GVSym =
-          P.OutContext.getOrCreateSymbol(Twine(".refptr.") + GVSym->getName());
+          OutContext.getOrCreateSymbol(Twine(".refptr.") + GVSym->getName());
 
     if (MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY ||
         MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE) {
-      MCSymbol *Sym = P.getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
+      MCSymbol *Sym = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
       MachineModuleInfoImpl::StubValueTy &StubSym =
-          P.MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(Sym);
+          MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(Sym);
       if (!StubSym.getPointer())
-        StubSym = MachineModuleInfoImpl::
-          StubValueTy(P.getSymbol(GV), !GV->hasInternalLinkage());
+        StubSym = MachineModuleInfoImpl::StubValueTy(getSymbol(GV),
+                                                     !GV->hasInternalLinkage());
     }
 
     // If the name begins with a dollar-sign, enclose it in parens.  We do this
     // to avoid having it look like an integer immediate to the assembler.
     if (GVSym->getName()[0] != '$')
-      GVSym->print(O, P.MAI);
+      GVSym->print(O, MAI);
     else {
       O << '(';
-      GVSym->print(O, P.MAI);
+      GVSym->print(O, MAI);
       O << ')';
     }
-    P.printOffset(MO.getOffset(), O);
+    printOffset(MO.getOffset(), O);
     break;
   }
   }
@@ -168,13 +168,13 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case X86II::MO_GOT_ABSOLUTE_ADDRESS:
     O << " + [.-";
-    P.MF->getPICBaseSymbol()->print(O, P.MAI);
+    MF->getPICBaseSymbol()->print(O, MAI);
     O << ']';
     break;
   case X86II::MO_PIC_BASE_OFFSET:
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:
     O << '-';
-    P.MF->getPICBaseSymbol()->print(O, P.MAI);
+    MF->getPICBaseSymbol()->print(O, MAI);
     break;
   case X86II::MO_TLSGD:     O << "@TLSGD";     break;
   case X86II::MO_TLSLD:     O << "@TLSLD";     break;
@@ -192,81 +192,91 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
   case X86II::MO_TLVP:      O << "@TLVP";      break;
   case X86II::MO_TLVP_PIC_BASE:
     O << "@TLVP" << '-';
-    P.MF->getPICBaseSymbol()->print(O, P.MAI);
+    MF->getPICBaseSymbol()->print(O, MAI);
     break;
   case X86II::MO_SECREL:    O << "@SECREL32";  break;
   }
 }
 
-static void printOperand(X86AsmPrinter &P, const MachineInstr *MI,
-                         unsigned OpNo, raw_ostream &O,
-                         const char *Modifier = nullptr, unsigned AsmVariant = 0);
+void X86AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNo,
+                                 raw_ostream &O) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  const bool IsATT = MI->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  switch (MO.getType()) {
+  default: llvm_unreachable("unknown operand type!");
+  case MachineOperand::MO_Register: {
+    if (IsATT)
+      O << '%';
+    O << X86ATTInstPrinter::getRegisterName(MO.getReg());
+    return;
+  }
 
-/// printPCRelImm - This is used to print an immediate value that ends up
+  case MachineOperand::MO_Immediate:
+    if (IsATT)
+      O << '$';
+    O << MO.getImm();
+    return;
+
+  case MachineOperand::MO_GlobalAddress: {
+    if (IsATT)
+      O << '$';
+    PrintSymbolOperand(MO, O);
+    break;
+  }
+  case MachineOperand::MO_BlockAddress: {
+    MCSymbol *Sym = GetBlockAddressSymbol(MO.getBlockAddress());
+    Sym->print(O, MAI);
+    break;
+  }
+  }
+}
+
+/// PrintModifiedOperand - Print subregisters based on supplied modifier,
+/// deferring to PrintOperand() if no modifier was supplied or if operand is not
+/// a register.
+void X86AsmPrinter::PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
+                                         raw_ostream &O, const char *Modifier) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  if (!Modifier || MO.getType() != MachineOperand::MO_Register)
+    return PrintOperand(MI, OpNo, O);
+  if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
+    O << '%';
+  unsigned Reg = MO.getReg();
+  if (strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
+    unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
+        (strcmp(Modifier+6,"32") == 0) ? 32 :
+        (strcmp(Modifier+6,"16") == 0) ? 16 : 8;
+    Reg = getX86SubSuperRegister(Reg, Size);
+  }
+  O << X86ATTInstPrinter::getRegisterName(Reg);
+}
+
+/// PrintPCRelImm - This is used to print an immediate value that ends up
 /// being encoded as a pc-relative value.  These print slightly differently, for
 /// example, a $ is not emitted.
-static void printPCRelImm(X86AsmPrinter &P, const MachineInstr *MI,
-                          unsigned OpNo, raw_ostream &O) {
+void X86AsmPrinter::PrintPCRelImm(const MachineInstr *MI, unsigned OpNo,
+                                  raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNo);
   switch (MO.getType()) {
   default: llvm_unreachable("Unknown pcrel immediate operand");
   case MachineOperand::MO_Register:
     // pc-relativeness was handled when computing the value in the reg.
-    printOperand(P, MI, OpNo, O);
+    PrintOperand(MI, OpNo, O);
     return;
   case MachineOperand::MO_Immediate:
     O << MO.getImm();
     return;
   case MachineOperand::MO_GlobalAddress:
-    printSymbolOperand(P, MO, O);
+    PrintSymbolOperand(MO, O);
     return;
   }
 }
 
-static void printOperand(X86AsmPrinter &P, const MachineInstr *MI,
-                         unsigned OpNo, raw_ostream &O, const char *Modifier,
-                         unsigned AsmVariant) {
-  const MachineOperand &MO = MI->getOperand(OpNo);
-  switch (MO.getType()) {
-  default: llvm_unreachable("unknown operand type!");
-  case MachineOperand::MO_Register: {
-    // FIXME: Enumerating AsmVariant, so we can remove magic number.
-    if (AsmVariant == 0) O << '%';
-    unsigned Reg = MO.getReg();
-    if (Modifier && strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
-      unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
-                      (strcmp(Modifier+6,"32") == 0) ? 32 :
-                      (strcmp(Modifier+6,"16") == 0) ? 16 : 8;
-      Reg = getX86SubSuperRegister(Reg, Size);
-    }
-    O << X86ATTInstPrinter::getRegisterName(Reg);
-    return;
-  }
-
-  case MachineOperand::MO_Immediate:
-    if (AsmVariant == 0) O << '$';
-    O << MO.getImm();
-    return;
-
-  case MachineOperand::MO_GlobalAddress: {
-    if (AsmVariant == 0) O << '$';
-    printSymbolOperand(P, MO, O);
-    break;
-  }
-  case MachineOperand::MO_BlockAddress: {
-    MCSymbol *Sym = P.GetBlockAddressSymbol(MO.getBlockAddress());
-    Sym->print(O, P.MAI);
-    break;
-  }
-  }
-}
-
-static void printLeaMemReference(X86AsmPrinter &P, const MachineInstr *MI,
-                                 unsigned Op, raw_ostream &O,
-                                 const char *Modifier = nullptr) {
-  const MachineOperand &BaseReg  = MI->getOperand(Op+X86::AddrBaseReg);
-  const MachineOperand &IndexReg = MI->getOperand(Op+X86::AddrIndexReg);
-  const MachineOperand &DispSpec = MI->getOperand(Op+X86::AddrDisp);
+void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
+                                         raw_ostream &O, const char *Modifier) {
+  const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
+  const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
+  const MachineOperand &DispSpec = MI->getOperand(OpNo + X86::AddrDisp);
 
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
@@ -288,7 +298,8 @@ static void printLeaMemReference(X86AsmPrinter &P, const MachineInstr *MI,
   }
   case MachineOperand::MO_GlobalAddress:
   case MachineOperand::MO_ConstantPoolIndex:
-    printSymbolOperand(P, DispSpec, O);
+    PrintSymbolOperand(DispSpec, O);
+    break;
   }
 
   if (Modifier && strcmp(Modifier, "H") == 0)
@@ -300,12 +311,12 @@ static void printLeaMemReference(X86AsmPrinter &P, const MachineInstr *MI,
 
     O << '(';
     if (HasBaseReg)
-      printOperand(P, MI, Op+X86::AddrBaseReg, O, Modifier);
+      PrintModifiedOperand(MI, OpNo + X86::AddrBaseReg, O, Modifier);
 
     if (IndexReg.getReg()) {
       O << ',';
-      printOperand(P, MI, Op+X86::AddrIndexReg, O, Modifier);
-      unsigned ScaleVal = MI->getOperand(Op+X86::AddrScaleAmt).getImm();
+      PrintModifiedOperand(MI, OpNo + X86::AddrIndexReg, O, Modifier);
+      unsigned ScaleVal = MI->getOperand(OpNo + X86::AddrScaleAmt).getImm();
       if (ScaleVal != 1)
         O << ',' << ScaleVal;
     }
@@ -313,31 +324,28 @@ static void printLeaMemReference(X86AsmPrinter &P, const MachineInstr *MI,
   }
 }
 
-static void printMemReference(X86AsmPrinter &P, const MachineInstr *MI,
-                              unsigned Op, raw_ostream &O,
-                              const char *Modifier = nullptr) {
-  assert(isMem(*MI, Op) && "Invalid memory reference!");
-  const MachineOperand &Segment = MI->getOperand(Op+X86::AddrSegmentReg);
+void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
+                                      raw_ostream &O, const char *Modifier) {
+  assert(isMem(*MI, OpNo) && "Invalid memory reference!");
+  const MachineOperand &Segment = MI->getOperand(OpNo + X86::AddrSegmentReg);
   if (Segment.getReg()) {
-    printOperand(P, MI, Op+X86::AddrSegmentReg, O, Modifier);
+    PrintModifiedOperand(MI, OpNo + X86::AddrSegmentReg, O, Modifier);
     O << ':';
   }
-  printLeaMemReference(P, MI, Op, O, Modifier);
+  PrintLeaMemReference(MI, OpNo, O, Modifier);
 }
 
-static void printIntelMemReference(X86AsmPrinter &P, const MachineInstr *MI,
-                                   unsigned Op, raw_ostream &O,
-                                   const char *Modifier = nullptr,
-                                   unsigned AsmVariant = 1) {
-  const MachineOperand &BaseReg  = MI->getOperand(Op+X86::AddrBaseReg);
-  unsigned ScaleVal = MI->getOperand(Op+X86::AddrScaleAmt).getImm();
-  const MachineOperand &IndexReg = MI->getOperand(Op+X86::AddrIndexReg);
-  const MachineOperand &DispSpec = MI->getOperand(Op+X86::AddrDisp);
-  const MachineOperand &SegReg   = MI->getOperand(Op+X86::AddrSegmentReg);
+void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
+                                           unsigned OpNo, raw_ostream &O) {
+  const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
+  unsigned ScaleVal = MI->getOperand(OpNo + X86::AddrScaleAmt).getImm();
+  const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
+  const MachineOperand &DispSpec = MI->getOperand(OpNo + X86::AddrDisp);
+  const MachineOperand &SegReg = MI->getOperand(OpNo + X86::AddrSegmentReg);
 
   // If this has a segment register, print it.
   if (SegReg.getReg()) {
-    printOperand(P, MI, Op+X86::AddrSegmentReg, O, Modifier, AsmVariant);
+    PrintOperand(MI, OpNo + X86::AddrSegmentReg, O);
     O << ':';
   }
 
@@ -345,7 +353,7 @@ static void printIntelMemReference(X86AsmPrinter &P, const MachineInstr *MI,
 
   bool NeedPlus = false;
   if (BaseReg.getReg()) {
-    printOperand(P, MI, Op+X86::AddrBaseReg, O, Modifier, AsmVariant);
+    PrintOperand(MI, OpNo + X86::AddrBaseReg, O);
     NeedPlus = true;
   }
 
@@ -353,13 +361,13 @@ static void printIntelMemReference(X86AsmPrinter &P, const MachineInstr *MI,
     if (NeedPlus) O << " + ";
     if (ScaleVal != 1)
       O << ScaleVal << '*';
-    printOperand(P, MI, Op+X86::AddrIndexReg, O, Modifier, AsmVariant);
+    PrintOperand(MI, OpNo + X86::AddrIndexReg, O);
     NeedPlus = true;
   }
 
   if (!DispSpec.isImm()) {
     if (NeedPlus) O << " + ";
-    printOperand(P, MI, Op+X86::AddrDisp, O, Modifier, AsmVariant);
+    PrintOperand(MI, OpNo + X86::AddrDisp, O);
   } else {
     int64_t DispVal = DispSpec.getImm();
     if (DispVal || (!IndexReg.getReg() && !BaseReg.getReg())) {
@@ -422,7 +430,6 @@ static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
 bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                    unsigned AsmVariant,
                                     const char *ExtraCode, raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
@@ -433,7 +440,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     switch (ExtraCode[0]) {
     default:
       // See if this is a generic print operand
-      return AsmPrinter::PrintAsmOperand(MI, OpNo, AsmVariant, ExtraCode, O);
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
     case 'a': // This is an address.  Currently only 'i' and 'r' are expected.
       switch (MO.getType()) {
       default:
@@ -446,13 +453,13 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       case MachineOperand::MO_ExternalSymbol:
         llvm_unreachable("unexpected operand type!");
       case MachineOperand::MO_GlobalAddress:
-        printSymbolOperand(*this, MO, O);
+        PrintSymbolOperand(MO, O);
         if (Subtarget->isPICStyleRIPRel())
           O << "(%rip)";
         return false;
       case MachineOperand::MO_Register:
         O << '(';
-        printOperand(*this, MI, OpNo, O);
+        PrintOperand(MI, OpNo, O);
         O << ')';
         return false;
       }
@@ -460,7 +467,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'c': // Don't print "$" before a global var name or constant.
       switch (MO.getType()) {
       default:
-        printOperand(*this, MI, OpNo, O);
+        PrintOperand(MI, OpNo, O);
         break;
       case MachineOperand::MO_Immediate:
         O << MO.getImm();
@@ -470,7 +477,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       case MachineOperand::MO_ExternalSymbol:
         llvm_unreachable("unexpected operand type!");
       case MachineOperand::MO_GlobalAddress:
-        printSymbolOperand(*this, MO, O);
+        PrintSymbolOperand(MO, O);
         break;
       }
       return false;
@@ -478,7 +485,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'A': // Print '*' before a register (it must be a register)
       if (MO.isReg()) {
         O << '*';
-        printOperand(*this, MI, OpNo, O);
+        PrintOperand(MI, OpNo, O);
         return false;
       }
       return true;
@@ -491,11 +498,11 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'V': // Print native register without '%'
       if (MO.isReg())
         return printAsmMRegister(*this, MO, ExtraCode[0], O);
-      printOperand(*this, MI, OpNo, O);
+      PrintOperand(MI, OpNo, O);
       return false;
 
     case 'P': // This is the operand of a call, treat specially.
-      printPCRelImm(*this, MI, OpNo, O);
+      PrintPCRelImm(MI, OpNo, O);
       return false;
 
     case 'n': // Negate the immediate or print a '-' before the operand.
@@ -509,16 +516,15 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     }
   }
 
-  printOperand(*this, MI, OpNo, O, /*Modifier*/ nullptr, AsmVariant);
+  PrintOperand(MI, OpNo, O);
   return false;
 }
 
-bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                          unsigned OpNo, unsigned AsmVariant,
+bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
-  if (AsmVariant) {
-    printIntelMemReference(*this, MI, OpNo, O);
+  if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
+    PrintIntelMemReference(MI, OpNo, O);
     return false;
   }
 
@@ -535,14 +541,14 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
       // These only apply to registers, ignore on mem.
       break;
     case 'H':
-      printMemReference(*this, MI, OpNo, O, "H");
+      PrintMemReference(MI, OpNo, O, "H");
       return false;
     case 'P': // Don't print @PLT, but do print as memory.
-      printMemReference(*this, MI, OpNo, O, "no-rip");
+      PrintMemReference(MI, OpNo, O, "no-rip");
       return false;
     }
   }
-  printMemReference(*this, MI, OpNo, O);
+  PrintMemReference(MI, OpNo, O, nullptr);
   return false;
 }
 

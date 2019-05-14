@@ -1,4 +1,5 @@
 ; RUN: opt %s -keep-loops=false -switch-to-lookup=true -simplifycfg -S | FileCheck %s
+; RUN: opt %s -passes='simplify-cfg<no-keep-loops;switch-to-lookup>' -S | FileCheck %s
 
 define void @f6() #0 {
 ; CHECK-LABEL: entry:

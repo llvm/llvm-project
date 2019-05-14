@@ -1,7 +1,7 @@
 # REQUIRES: mips
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
-# RUN: llvm-readobj -file-headers -sections -program-headers -symbols %t.exe \
+# RUN: llvm-readobj --file-headers --sections -l --symbols %t.exe \
 # RUN:   | FileCheck %s
 
 # Exits with return code 1 on Linux.

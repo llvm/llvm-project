@@ -488,6 +488,17 @@ protected:
   // SubclassData.  These are designed to fit within a uint16_t so they pack
   // with NodeType.
 
+#if defined(_AIX) && (!defined(__GNUC__) || defined(__ibmxl__))
+// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
+// and give the `pack` pragma push semantics.
+#define BEGIN_TWO_BYTE_PACK() _Pragma("pack(2)")
+#define END_TWO_BYTE_PACK() _Pragma("pack(pop)")
+#else
+#define BEGIN_TWO_BYTE_PACK()
+#define END_TWO_BYTE_PACK()
+#endif
+
+BEGIN_TWO_BYTE_PACK()
   class SDNodeBitfields {
     friend class SDNode;
     friend class MemIntrinsicSDNode;
@@ -560,6 +571,9 @@ protected:
     LoadSDNodeBitfields LoadSDNodeBits;
     StoreSDNodeBitfields StoreSDNodeBits;
   };
+END_TWO_BYTE_PACK()
+#undef BEGIN_TWO_BYTE_PACK
+#undef END_TWO_BYTE_PACK
 
   // RawSDNodeBits must cover the entirety of the union.  This means that all of
   // the union's members must have size <= RawSDNodeBits.  We write the RHS as
@@ -1485,14 +1499,16 @@ public:
 
   bool isSplat() const { return isSplatMask(Mask, getValueType(0)); }
 
-  int  getSplatIndex() const {
+  int getSplatIndex() const {
     assert(isSplat() && "Cannot get splat index for non-splat!");
     EVT VT = getValueType(0);
-    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
       if (Mask[i] >= 0)
         return Mask[i];
-    }
-    llvm_unreachable("Splat with all undef indices?");
+
+    // We can choose any index value here and be correct because all elements
+    // are undefined. Return 0 for better potential for callers to simplify.
+    return 0;
   }
 
   static bool isSplatMask(const int *Mask, EVT VT);
@@ -1625,6 +1641,10 @@ SDValue peekThroughBitcasts(SDValue V);
 /// If \p V is not a bitcasted one-use value, it is returned as-is.
 SDValue peekThroughOneUseBitcasts(SDValue V);
 
+/// Return the non-extracted vector source operand of \p V if it exists.
+/// If \p V is not an extracted subvector, it is returned as-is.
+SDValue peekThroughExtractSubvectors(SDValue V);
+
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.
 bool isBitwiseNot(SDValue V);
@@ -1708,13 +1728,14 @@ public:
 /// This SDNode is used for LIFETIME_START/LIFETIME_END values, which indicate
 /// the offet and size that are started/ended in the underlying FrameIndex.
 class LifetimeSDNode : public SDNode {
+  friend class SelectionDAG;
   int64_t Size;
   int64_t Offset; // -1 if offset is unknown.
-public:
+
   LifetimeSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl,
                  SDVTList VTs, int64_t Size, int64_t Offset)
       : SDNode(Opcode, Order, dl, VTs), Size(Size), Offset(Offset) {}
-
+public:
   int64_t getFrameIndex() const {
     return cast<FrameIndexSDNode>(getOperand(1))->getIndex();
   }
@@ -2567,8 +2588,7 @@ namespace ISD {
       cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
   }
 
-  /// Return true if the node is a math/logic binary operator. This corresponds
-  /// to the IR function of the same name.
+  /// Return true if the node is a math/logic binary operator.
   inline bool isBinaryOp(const SDNode *N) {
     auto Op = N->getOpcode();
     return (Op == ISD::ADD || Op == ISD::SUB || Op == ISD::MUL ||
@@ -2576,7 +2596,10 @@ namespace ISD {
             Op == ISD::SHL || Op == ISD::SRL || Op == ISD::SRA ||
             Op == ISD::SDIV || Op == ISD::UDIV || Op == ISD::SREM ||
             Op == ISD::UREM || Op == ISD::FADD || Op == ISD::FSUB ||
-            Op == ISD::FMUL || Op == ISD::FDIV || Op == ISD::FREM);
+            Op == ISD::FMUL || Op == ISD::FDIV || Op == ISD::FREM ||
+            Op == ISD::FMINNUM || Op == ISD::FMAXNUM ||
+            Op == ISD::FMINNUM_IEEE || Op == ISD::FMAXNUM_IEEE ||
+            Op == ISD::FMAXIMUM || Op == ISD::FMINIMUM);
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

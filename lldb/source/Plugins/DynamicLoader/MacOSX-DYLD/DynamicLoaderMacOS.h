@@ -34,9 +34,7 @@ public:
 
   virtual ~DynamicLoaderMacOS() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -48,12 +46,10 @@ public:
   static lldb_private::DynamicLoader *
   CreateInstance(lldb_private::Process *process, bool force);
 
-  //------------------------------------------------------------------
   /// Called after attaching a process.
   ///
   /// Allow DynamicLoader plug-ins to execute some code after
   /// attaching to a process.
-  //------------------------------------------------------------------
   bool ProcessDidExec() override;
 
   lldb_private::Status CanLoadImage() override;
@@ -63,9 +59,7 @@ public:
       lldb_private::LazyBool &using_shared_cache,
       lldb_private::LazyBool &private_shared_cache) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

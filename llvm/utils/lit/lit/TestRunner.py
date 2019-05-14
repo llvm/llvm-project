@@ -353,7 +353,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
             lit.util.mkdir_p(dir)
         else:
             try:
-                os.mkdir(dir)
+                lit.util.mkdir(dir)
             except OSError as err:
                 stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
                 exitCode = 1
@@ -613,7 +613,51 @@ def executeBuiltinRm(cmd, cmd_shenv):
                 if not recursive:
                     stderr.write("Error: %s is a directory\n" % path)
                     exitCode = 1
-                shutil.rmtree(path, onerror = on_rm_error if force else None)
+                if platform.system() == 'Windows':
+                    # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
+                    # use the NT style path to get access to long file paths which
+                    # cannot be removed otherwise.
+                    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
+                    from ctypes import addressof, byref, c_void_p, create_unicode_buffer
+                    from ctypes import Structure
+                    from ctypes import windll, WinError, POINTER
+
+                    class SHFILEOPSTRUCTW(Structure):
+                        _fields_ = [
+                                ('hWnd', HWND),
+                                ('wFunc', UINT),
+                                ('pFrom', LPCWSTR),
+                                ('pTo', LPCWSTR),
+                                ('fFlags', WORD),
+                                ('fAnyOperationsAborted', BOOL),
+                                ('hNameMappings', c_void_p),
+                                ('lpszProgressTitle', LPCWSTR),
+                        ]
+
+                    FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = range(1, 5)
+
+                    FOF_SILENT = 4
+                    FOF_NOCONFIRMATION = 16
+                    FOF_NOCONFIRMMKDIR = 512
+                    FOF_NOERRORUI = 1024
+
+                    FOF_NO_UI = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR
+
+                    SHFileOperationW = windll.shell32.SHFileOperationW
+                    SHFileOperationW.argtypes = [POINTER(SHFILEOPSTRUCTW)]
+
+                    path = os.path.abspath(path)
+
+                    pFrom = create_unicode_buffer(path, len(path) + 2)
+                    pFrom[len(path)] = pFrom[len(path) + 1] = '\0'
+                    operation = SHFILEOPSTRUCTW(wFunc=UINT(FO_DELETE),
+                                                pFrom=LPCWSTR(addressof(pFrom)),
+                                                fFlags=FOF_NO_UI)
+                    result = SHFileOperationW(byref(operation))
+                    if result:
+                        raise WinError(result)
+                else:
+                    shutil.rmtree(path, onerror = on_rm_error if force else None)
             else:
                 if force and not os.access(path, os.W_OK):
                     os.chmod(path,

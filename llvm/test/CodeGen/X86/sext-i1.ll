@@ -173,3 +173,21 @@ define i32 @select_0_or_1s_signext(i1 signext %cond) {
   ret i32 %sext
 }
 
+define i32 @zext_decrement_sext(i8 %x) {
+; X32-LABEL: zext_decrement_sext:
+; X32:       # %bb.0:
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    decl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: zext_decrement_sext:
+; X64:       # %bb.0:
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    decl %eax
+; X64-NEXT:    retq
+  %z = zext i8 %x to i16
+  %dec = add i16 %z, -1
+  %r = sext i16 %dec to i32
+  ret i32 %r
+}
+

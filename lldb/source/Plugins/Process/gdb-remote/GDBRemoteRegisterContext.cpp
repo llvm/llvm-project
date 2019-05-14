@@ -28,9 +28,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-//----------------------------------------------------------------------
 // GDBRemoteRegisterContext constructor
-//----------------------------------------------------------------------
 GDBRemoteRegisterContext::GDBRemoteRegisterContext(
     ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
     GDBRemoteDynamicRegisterInfo &reg_info, bool read_all_at_once)
@@ -48,9 +46,7 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
   m_reg_data.SetByteOrder(thread.GetProcess()->GetByteOrder());
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteRegisterContext::~GDBRemoteRegisterContext() {}
 
 void GDBRemoteRegisterContext::InvalidateAllRegisters() {

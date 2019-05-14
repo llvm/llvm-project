@@ -15,4 +15,4 @@ LLDB branch, according to the algorithm in scripts/Xcode/repo.py.
 For instructions to build LLDB on Linux, or more details about supported
 compiler versions, other dependencies, and build flags, see:
 
-    http://lldb.llvm.org/build.html
+    https://lldb.llvm.org/resources/build.html

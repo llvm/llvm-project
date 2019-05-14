@@ -20,6 +20,13 @@ struct SymbolLocation {
   // Specify a position (Line, Column) of symbol. Using Line/Column allows us to
   // build LSP responses without reading the file content.
   //
+  // clangd uses the following definitions, which differ slightly from LSP:
+  //  - Line is the number of newline characters (\n) before the point.
+  //  - Column is (by default) the number of UTF-16 code between the last \n
+  //    (or start of file) and the point.
+  //    If the `offsetEncoding` protocol extension is used to negotiate UTF-8,
+  //    then it is instead the number of *bytes* since the last \n.
+  //
   // Position is encoded into 32 bits to save space.
   // If Line/Column overflow, the value will be their maximum value.
   struct Position {
@@ -37,8 +44,7 @@ struct SymbolLocation {
     static constexpr uint32_t MaxColumn = (1 << 12) - 1;
 
   private:
-    uint32_t Line : 20; // 0-based
-    // Using UTF-16 code units.
+    uint32_t Line : 20;   // 0-based
     uint32_t Column : 12; // 0-based
   };
 

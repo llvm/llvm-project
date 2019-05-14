@@ -360,7 +360,7 @@ bool AtomicExpand::bracketInstWithFences(Instruction *I, AtomicOrdering Order) {
 /// Get the iX type with the same bitwidth as T.
 IntegerType *AtomicExpand::getCorrespondingIntegerType(Type *T,
                                                        const DataLayout &DL) {
-  EVT VT = TLI->getValueType(DL, T);
+  EVT VT = TLI->getMemValueType(DL, T);
   unsigned BitWidth = VT.getStoreSizeInBits();
   assert(BitWidth == VT.getSizeInBits() && "must be a power of two");
   return IntegerType::get(T->getContext(), BitWidth);
@@ -430,6 +430,9 @@ bool AtomicExpand::expandAtomicLoadToLL(LoadInst *LI) {
 bool AtomicExpand::expandAtomicLoadToCmpXchg(LoadInst *LI) {
   IRBuilder<> Builder(LI);
   AtomicOrdering Order = LI->getOrdering();
+  if (Order == AtomicOrdering::Unordered)
+    Order = AtomicOrdering::Monotonic;
+
   Value *Addr = LI->getPointerOperand();
   Type *Ty = cast<PointerType>(Addr->getType())->getElementType();
   Constant *DummyVal = Constant::getNullValue(Ty);
@@ -1108,11 +1111,11 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   bool HasReleasedLoadBB = !CI->isWeak() && ShouldInsertFencesForAtomic &&
                            SuccessOrder != AtomicOrdering::Monotonic &&
                            SuccessOrder != AtomicOrdering::Acquire &&
-                           !F->optForMinSize();
+                           !F->hasMinSize();
 
   // There's no overhead for sinking the release barrier in a weak cmpxchg, so
   // do it even on minsize.
-  bool UseUnconditionalReleaseBarrier = F->optForMinSize() && !CI->isWeak();
+  bool UseUnconditionalReleaseBarrier = F->hasMinSize() && !CI->isWeak();
 
   // Given: cmpxchg some_op iN* %addr, iN %desired, iN %new success_ord fail_ord
   //

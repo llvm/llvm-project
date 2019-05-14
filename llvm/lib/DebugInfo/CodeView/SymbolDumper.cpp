@@ -101,10 +101,10 @@ void CVSymbolDumperImpl::printTypeIndex(StringRef FieldName, TypeIndex TI) {
 }
 
 Error CVSymbolDumperImpl::visitSymbolBegin(CVSymbol &CVR) {
-  W.startLine() << getSymbolKindName(CVR.Type);
+  W.startLine() << getSymbolKindName(CVR.kind());
   W.getOStream() << " {\n";
   W.indent();
-  W.printEnum("Kind", unsigned(CVR.Type), getSymbolTypeNames());
+  W.printEnum("Kind", unsigned(CVR.kind()), getSymbolTypeNames());
   return Error::success();
 }
 

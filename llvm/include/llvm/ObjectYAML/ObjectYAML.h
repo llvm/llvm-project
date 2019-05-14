@@ -12,6 +12,7 @@
 #include "llvm/ObjectYAML/COFFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ObjectYAML/MachOYAML.h"
+#include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <memory>
@@ -26,6 +27,7 @@ struct YamlObjectFile {
   std::unique_ptr<COFFYAML::Object> Coff;
   std::unique_ptr<MachOYAML::Object> MachO;
   std::unique_ptr<MachOYAML::UniversalBinary> FatMachO;
+  std::unique_ptr<MinidumpYAML::Object> Minidump;
   std::unique_ptr<WasmYAML::Object> Wasm;
 };
 

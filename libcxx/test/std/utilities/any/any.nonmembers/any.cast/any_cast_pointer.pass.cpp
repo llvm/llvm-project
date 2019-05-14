@@ -22,6 +22,7 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
 #include "any_helpers.h"
 
 using std::any;
@@ -30,21 +31,21 @@ using std::any_cast;
 // Test that the operators are properly noexcept.
 void test_cast_is_noexcept() {
     any a;
-    static_assert(noexcept(any_cast<int>(&a)), "");
+    ASSERT_NOEXCEPT(any_cast<int>(&a));
 
     any const& ca = a;
-    static_assert(noexcept(any_cast<int>(&ca)), "");
+    ASSERT_NOEXCEPT(any_cast<int>(&ca));
 }
 
 // Test that the return type of any_cast is correct.
 void test_cast_return_type() {
     any a;
-    static_assert(std::is_same<decltype(any_cast<int>(&a)), int*>::value, "");
-    static_assert(std::is_same<decltype(any_cast<int const>(&a)), int const*>::value, "");
+    ASSERT_SAME_TYPE(decltype(any_cast<int>(&a)),       int*);
+    ASSERT_SAME_TYPE(decltype(any_cast<int const>(&a)), int const*);
 
     any const& ca = a;
-    static_assert(std::is_same<decltype(any_cast<int>(&ca)), int const*>::value, "");
-    static_assert(std::is_same<decltype(any_cast<int const>(&ca)), int const*>::value, "");
+    ASSERT_SAME_TYPE(decltype(any_cast<int>(&ca)),       int const*);
+    ASSERT_SAME_TYPE(decltype(any_cast<int const>(&ca)), int const*);
 }
 
 // Test that any_cast handles null pointers.
@@ -148,6 +149,15 @@ void test_cast_non_copyable_type()
     assert(std::any_cast<NoCopy>(&ca) == nullptr);
 }
 
+void test_cast_array() {
+    int arr[3];
+    std::any a(arr);
+    assert(a.type() == typeid(int*)); // contained value is decayed
+//  We can't get an array out
+    int (*p)[3] = std::any_cast<int[3]>(&a);
+    assert(p == nullptr);
+}
+
 void test_fn() {}
 
 void test_cast_function_pointer() {
@@ -168,6 +178,7 @@ int main(int, char**) {
     test_cast<small>();
     test_cast<large>();
     test_cast_non_copyable_type();
+    test_cast_array();
     test_cast_function_pointer();
 
   return 0;

@@ -242,7 +242,7 @@ void StackSlotColoring::InitializeSlots() {
   LLVM_DEBUG(dbgs() << '\n');
 
   // Sort them by weight.
-  std::stable_sort(SSIntervals.begin(), SSIntervals.end(), IntervalSorter());
+  llvm::stable_sort(SSIntervals, IntervalSorter());
 
   NextColors.resize(AllColors.size());
 
@@ -347,7 +347,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
     li->weight = SlotWeights[SS];
   }
   // Sort them by new weight.
-  std::stable_sort(SSIntervals.begin(), SSIntervals.end(), IntervalSorter());
+  llvm::stable_sort(SSIntervals, IntervalSorter());
 
 #ifndef NDEBUG
   for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i)

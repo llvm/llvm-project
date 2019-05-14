@@ -64,9 +64,7 @@ lldb::ByteOrder ABISysV_ppc64::GetByteOrder() const {
   return GetProcessSP()->GetByteOrder();
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_ppc64::CreateInstance(lldb::ProcessSP process_sp,
@@ -1086,9 +1084,7 @@ lldb_private::ConstString ABISysV_ppc64::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_ppc64::GetPluginName() {
   return GetPluginNameStatic();

@@ -1958,10 +1958,10 @@ static void setARCRuntimeFunctionLinkage(CodeGenModule &CGM,
 /// Perform an operation having the signature
 ///   i8* (i8*)
 /// where a null input causes a no-op and returns null.
-static llvm::Value *
-emitARCValueOperation(CodeGenFunction &CGF, llvm::Value *value,
-                      llvm::Type *returnType, llvm::Function *&fn,
-                      llvm::Intrinsic::ID IntID, bool isTailCall = false) {
+static llvm::Value *emitARCValueOperation(
+    CodeGenFunction &CGF, llvm::Value *value, llvm::Type *returnType,
+    llvm::Function *&fn, llvm::Intrinsic::ID IntID,
+    llvm::CallInst::TailCallKind tailKind = llvm::CallInst::TCK_None) {
   if (isa<llvm::ConstantPointerNull>(value))
     return value;
 
@@ -1976,8 +1976,7 @@ emitARCValueOperation(CodeGenFunction &CGF, llvm::Value *value,
 
   // Call the function.
   llvm::CallInst *call = CGF.EmitNounwindRuntimeCall(fn, value);
-  if (isTailCall)
-    call->setTailCall();
+  call->setTailCallKind(tailKind);
 
   // Cast the result back to the original type.
   return CGF.Builder.CreateBitCast(call, origType);
@@ -2162,14 +2161,10 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
     // with this marker yet, so leave a breadcrumb for the ARC
     // optimizer to pick up.
     } else {
-      llvm::NamedMDNode *metadata =
-        CGF.CGM.getModule().getOrInsertNamedMetadata(
-                            "clang.arc.retainAutoreleasedReturnValueMarker");
-      assert(metadata->getNumOperands() <= 1);
-      if (metadata->getNumOperands() == 0) {
-        auto &ctx = CGF.getLLVMContext();
-        metadata->addOperand(llvm::MDNode::get(ctx,
-                                     llvm::MDString::get(ctx, assembly)));
+      const char *markerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
+      if (!CGF.CGM.getModule().getModuleFlag(markerKey)) {
+        auto *str = llvm::MDString::get(CGF.getLLVMContext(), assembly);
+        CGF.CGM.getModule().addModuleFlag(llvm::Module::Error, markerKey, str);
       }
     }
   }
@@ -2187,9 +2182,15 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
 llvm::Value *
 CodeGenFunction::EmitARCRetainAutoreleasedReturnValue(llvm::Value *value) {
   emitAutoreleasedReturnValueMarker(*this);
-  return emitARCValueOperation(*this, value, nullptr,
-              CGM.getObjCEntrypoints().objc_retainAutoreleasedReturnValue,
-                           llvm::Intrinsic::objc_retainAutoreleasedReturnValue);
+  llvm::CallInst::TailCallKind tailKind =
+      CGM.getTargetCodeGenInfo()
+              .shouldSuppressTailCallsOfRetainAutoreleasedReturnValue()
+          ? llvm::CallInst::TCK_NoTail
+          : llvm::CallInst::TCK_None;
+  return emitARCValueOperation(
+      *this, value, nullptr,
+      CGM.getObjCEntrypoints().objc_retainAutoreleasedReturnValue,
+      llvm::Intrinsic::objc_retainAutoreleasedReturnValue, tailKind);
 }
 
 /// Claim a possibly-autoreleased return value at +0.  This is only
@@ -2326,7 +2327,7 @@ CodeGenFunction::EmitARCAutoreleaseReturnValue(llvm::Value *value) {
   return emitARCValueOperation(*this, value, nullptr,
                             CGM.getObjCEntrypoints().objc_autoreleaseReturnValue,
                                llvm::Intrinsic::objc_autoreleaseReturnValue,
-                               /*isTailCall*/ true);
+                               llvm::CallInst::TCK_Tail);
 }
 
 /// Do a fused retain/autorelease of the given object.
@@ -2336,7 +2337,7 @@ CodeGenFunction::EmitARCRetainAutoreleaseReturnValue(llvm::Value *value) {
   return emitARCValueOperation(*this, value, nullptr,
                      CGM.getObjCEntrypoints().objc_retainAutoreleaseReturnValue,
                              llvm::Intrinsic::objc_retainAutoreleaseReturnValue,
-                               /*isTailCall*/ true);
+                               llvm::CallInst::TCK_Tail);
 }
 
 /// Do a fused retain/autorelease of the given object.

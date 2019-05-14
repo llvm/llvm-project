@@ -42,6 +42,24 @@ public:
   /// \param Str the string to be interpreted.
   explicit APSInt(StringRef Str);
 
+  /// Determine sign of this APSInt.
+  ///
+  /// \returns true if this APSInt is negative, false otherwise
+  bool isNegative() const { return isSigned() && APInt::isNegative(); }
+
+  /// Determine if this APSInt Value is non-negative (>= 0)
+  ///
+  /// \returns true if this APSInt is non-negative, false otherwise
+  bool isNonNegative() const { return !isNegative(); }
+
+  /// Determine if this APSInt Value is positive.
+  ///
+  /// This tests if the value of this APSInt is positive (> 0). Note
+  /// that 0 is not a positive value.
+  ///
+  /// \returns true if this APSInt is positive.
+  bool isStrictlyPositive() const { return isNonNegative() && !isNullValue(); }
+
   APSInt &operator=(APInt RHS) {
     // Retain our current sign.
     APInt::operator=(std::move(RHS));

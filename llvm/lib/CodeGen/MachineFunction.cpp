@@ -43,6 +43,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -174,7 +175,7 @@ void MachineFunction::init() {
   Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
 
   // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
-  // FIXME: Use Function::optForSize().
+  // FIXME: Use Function::hasOptSize().
   if (!F.hasFnAttribute(Attribute::OptimizeForSize))
     Alignment = std::max(Alignment,
                          STI->getTargetLowering()->getPrefFunctionAlignment());
@@ -271,6 +272,12 @@ getOrCreateJumpTableInfo(unsigned EntryKind) {
 /// Should we be emitting segmented stack stuff for the function
 bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
+}
+
+LLVM_NODISCARD unsigned
+MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
+  FrameInstructions.push_back(Inst);
+  return FrameInstructions.size() - 1;
 }
 
 /// This discards all of the MachineBasicBlock numbers and recomputes them.
@@ -798,6 +805,16 @@ try_next:;
   FilterEnds.push_back(FilterIds.size());
   FilterIds.push_back(0); // terminator
   return FilterID;
+}
+
+void MachineFunction::addCodeViewHeapAllocSite(MachineInstr *I, MDNode *MD) {
+  MCSymbol *BeginLabel = Ctx.createTempSymbol("heapallocsite", true);
+  MCSymbol *EndLabel = Ctx.createTempSymbol("heapallocsite", true);
+  I->setPreInstrSymbol(*this, BeginLabel);
+  I->setPostInstrSymbol(*this, EndLabel);
+
+  DIType *DI = dyn_cast<DIType>(MD);
+  CodeViewHeapAllocSites.push_back(std::make_tuple(BeginLabel, EndLabel, DI));
 }
 
 /// \}

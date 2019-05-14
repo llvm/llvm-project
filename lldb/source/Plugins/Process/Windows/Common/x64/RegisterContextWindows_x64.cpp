@@ -172,9 +172,7 @@ RegisterSet g_register_sets[] = {
 };
 }
 
-//------------------------------------------------------------------
 // Constructors and Destructors
-//------------------------------------------------------------------
 RegisterContextWindows_x64::RegisterContextWindows_x64(
     Thread &thread, uint32_t concrete_frame_idx)
     : RegisterContextWindows(thread, concrete_frame_idx) {}

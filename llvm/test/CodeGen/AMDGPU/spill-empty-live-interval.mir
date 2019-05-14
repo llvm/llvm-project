@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=1 -start-before=simple-register-coalescing -stop-after=greedy -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-dce-in-ra=0 -verify-machineinstrs -stress-regalloc=1 -start-before=simple-register-coalescing -stop-after=greedy -o - %s | FileCheck %s
 # https://bugs.llvm.org/show_bug.cgi?id=33620
 
 ---

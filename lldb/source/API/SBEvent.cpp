@@ -55,7 +55,7 @@ const SBEvent &SBEvent::operator=(const SBEvent &rhs) {
     m_event_sp = rhs.m_event_sp;
     m_opaque_ptr = rhs.m_opaque_ptr;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBEvent::~SBEvent() {}
@@ -205,4 +205,38 @@ bool SBEvent::GetDescription(SBStream &description) const {
     strm.PutCString("No value");
 
   return true;
+}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBEvent>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (uint32_t, const char *, uint32_t));
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (lldb::EventSP &));
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (lldb_private::Event *));
+  LLDB_REGISTER_CONSTRUCTOR(SBEvent, (const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(const lldb::SBEvent &,
+                       SBEvent, operator=,(const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(const char *, SBEvent, GetDataFlavor, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBEvent, GetType, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBBroadcaster, SBEvent, GetBroadcaster,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBEvent, GetBroadcasterClass, ());
+  LLDB_REGISTER_METHOD(bool, SBEvent, BroadcasterMatchesPtr,
+                       (const lldb::SBBroadcaster *));
+  LLDB_REGISTER_METHOD(bool, SBEvent, BroadcasterMatchesRef,
+                       (const lldb::SBBroadcaster &));
+  LLDB_REGISTER_METHOD(void, SBEvent, Clear, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBEvent, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBEvent, operator bool, ());
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBEvent, GetCStringFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(bool, SBEvent, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBEvent, GetDescription,
+                             (lldb::SBStream &));
+}
+
+}
 }

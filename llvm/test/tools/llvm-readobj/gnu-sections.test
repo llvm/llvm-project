@@ -1,6 +1,6 @@
-RUN: llvm-readobj -s %p/Inputs/relocs.obj.elf-i386 --elf-output-style=GNU \
+RUN: llvm-readelf -S %p/Inputs/relocs.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF32
-RUN: llvm-readobj -S %p/Inputs/relocs.obj.elf-x86_64 --elf-output-style=GNU \
+RUN: llvm-readelf -S %p/Inputs/relocs.obj.elf-x86_64 \
 RUN:   | FileCheck %s -check-prefix ELF64
 RUN: llvm-readobj --wide --sections \
 RUN:   %p/Inputs/relocs.obj.elf-x86_64 --elf-output-style=GNU \

@@ -55,7 +55,7 @@ ARMCallLowering::ARMCallLowering(const ARMTargetLowering &TLI)
 static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
                             Type *T) {
   if (T->isArrayTy())
-    return true;
+    return isSupportedType(DL, TLI, T->getArrayElementType());
 
   if (T->isStructTy()) {
     // For now we only allow homogeneous structs that we can manipulate with
@@ -64,7 +64,7 @@ static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
     for (unsigned i = 1, e = StructT->getNumElements(); i != e; ++i)
       if (StructT->getElementType(i) != StructT->getElementType(0))
         return false;
-    return true;
+    return isSupportedType(DL, TLI, StructT->getElementType(0));
   }
 
   EVT VT = TLI.getValueType(DL, T, true);
@@ -300,6 +300,8 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
   IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                        CCAssignFn AssignFn)
       : ValueHandler(MIRBuilder, MRI, AssignFn) {}
+
+  bool isArgumentHandler() const override { return true; }
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {

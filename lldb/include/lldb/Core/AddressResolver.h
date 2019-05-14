@@ -24,19 +24,15 @@ class Stream;
 }
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class AddressResolver AddressResolver.h "lldb/Core/AddressResolver.h"
 /// This class works with SearchFilter to resolve function names and source
 /// file locations to their concrete addresses.
-//----------------------------------------------------------------------
 
-//----------------------------------------------------------------------
 /// General Outline:
 /// The AddressResolver is a Searcher.  In that protocol, the SearchFilter
 /// asks the question "At what depth of the symbol context descent do you want
 /// your callback to get called?" of the filter.  The resolver answers this
 /// question (in the GetDepth method) and provides the resolution callback.
-//----------------------------------------------------------------------
 
 class AddressResolver : public Searcher {
 public:

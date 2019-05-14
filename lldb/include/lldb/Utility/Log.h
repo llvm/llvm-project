@@ -31,9 +31,7 @@
 namespace llvm {
 class raw_ostream;
 }
-//----------------------------------------------------------------------
 // Logging Options
-//----------------------------------------------------------------------
 #define LLDB_LOG_OPTION_THREADSAFE (1u << 0)
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
 #define LLDB_LOG_OPTION_PREPEND_SEQUENCE (1u << 3)
@@ -44,9 +42,7 @@ class raw_ostream;
 #define LLDB_LOG_OPTION_APPEND (1U << 8)
 #define LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION (1U << 9)
 
-//----------------------------------------------------------------------
 // Logging Functions
-//----------------------------------------------------------------------
 namespace lldb_private {
 
 class Log final {
@@ -99,9 +95,7 @@ public:
 
   static void Initialize();
 
-  //------------------------------------------------------------------
   // Static accessors for logging channels
-  //------------------------------------------------------------------
   static void Register(llvm::StringRef name, Channel &channel);
   static void Unregister(llvm::StringRef name);
 
@@ -122,13 +116,11 @@ public:
 
   static void ListAllLogChannels(llvm::raw_ostream &stream);
 
-  //------------------------------------------------------------------
   // Member functions
   //
   // These functions are safe to call at any time you have a Log* obtained from
   // the Channel class. If logging is disabled between you obtaining the Log
   // object and writing to it, the output will be silently discarded.
-  //------------------------------------------------------------------
   Log(Channel &channel) : m_channel(channel) {}
   ~Log() = default;
 

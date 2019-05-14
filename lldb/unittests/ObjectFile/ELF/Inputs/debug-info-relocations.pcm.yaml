@@ -133,51 +133,50 @@ Sections:
         Symbol:          .text
         Type:            R_AARCH64_ABS64
 Symbols:         
-  Local:           
-    - Name:            reduced.h
-      Type:            STT_FILE
-    - Name:            '$d.1'
-      Section:         .debug_str
-    - Name:            '$d.2'
-      Section:         .debug_abbrev
-    - Name:            '$d.3'
-      Section:         .debug_info
-    - Name:            '$d.4'
-      Section:         .debug_macinfo
-    - Name:            '$d.5'
-      Section:         .debug_pubnames
-    - Name:            '$d.6'
-      Section:         .debug_pubtypes
-    - Name:            '$d.7'
-      Section:         .comment
-    - Name:            '$d.8'
-      Section:         .debug_frame
-    - Name:            '$d.9'
-      Section:         .debug_line
-    - Name:            '$x.0'
-      Section:         .text
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
-    - Name:            .debug_str
-      Type:            STT_SECTION
-      Section:         .debug_str
-    - Name:            .debug_abbrev
-      Type:            STT_SECTION
-      Section:         .debug_abbrev
-    - Name:            .debug_info
-      Type:            STT_SECTION
-      Section:         .debug_info
-    - Name:            .debug_frame
-      Type:            STT_SECTION
-      Section:         .debug_frame
-    - Name:            .debug_line
-      Type:            STT_SECTION
-      Section:         .debug_line
-  Global:          
-    - Name:            f
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x0000000000000008
+  - Name:            reduced.h
+    Type:            STT_FILE
+  - Name:            '$d.1'
+    Section:         .debug_str
+  - Name:            '$d.2'
+    Section:         .debug_abbrev
+  - Name:            '$d.3'
+    Section:         .debug_info
+  - Name:            '$d.4'
+    Section:         .debug_macinfo
+  - Name:            '$d.5'
+    Section:         .debug_pubnames
+  - Name:            '$d.6'
+    Section:         .debug_pubtypes
+  - Name:            '$d.7'
+    Section:         .comment
+  - Name:            '$d.8'
+    Section:         .debug_frame
+  - Name:            '$d.9'
+    Section:         .debug_line
+  - Name:            '$x.0'
+    Section:         .text
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_frame
+    Type:            STT_SECTION
+    Section:         .debug_frame
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            f
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x0000000000000008
+    Binding:         STB_GLOBAL
 DynamicSymbols:  
 ...

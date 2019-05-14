@@ -8,5 +8,12 @@ static_library("TextAPI") {
   sources = [
     "ELF/ELFStub.cpp",
     "ELF/TBEHandler.cpp",
+    "MachO/Architecture.cpp",
+    "MachO/ArchitectureSet.cpp",
+    "MachO/InterfaceFile.cpp",
+    "MachO/PackedVersion.cpp",
+    "MachO/Symbol.cpp",
+    "MachO/TextStub.cpp",
+    "MachO/TextStubCommon.cpp",
   ]
 }

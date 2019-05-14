@@ -11,4 +11,4 @@
 // bogus 'archaic' warnings with bad location info.
 <#methods#> // expected-error {{editor placeholder in source file}}
 
-@end // expected-error {{prefix attribute must be followed by an interface or protocol}} expected-error {{missing '@end'}}
+@end // expected-error {{prefix attribute must be followed by an interface, protocol, or implementation}} expected-error {{missing '@end'}}

@@ -130,6 +130,21 @@ template <> struct DenseMapInfo<SimpleValue> {
 
 } // end namespace llvm
 
+/// Match a 'select' including an optional 'not' of the condition.
+static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond,
+                                           Value *&T, Value *&F) {
+  if (match(V, m_Select(m_Value(Cond), m_Value(T), m_Value(F)))) {
+    // Look through a 'not' of the condition operand by swapping true/false.
+    Value *CondNot;
+    if (match(Cond, m_Not(m_Value(CondNot)))) {
+      Cond = CondNot;
+      std::swap(T, F);
+    }
+    return true;
+  }
+  return false;
+}
+
 unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
   Instruction *Inst = Val.Inst;
   // Hash in all of the operands as pointers.
@@ -171,6 +186,24 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
     return hash_combine(Inst->getOpcode(), SPF, A, B);
   }
 
+  // Hash general selects to allow matching commuted true/false operands.
+  Value *Cond, *TVal, *FVal;
+  if (matchSelectWithOptionalNotCond(Inst, Cond, TVal, FVal)) {
+    // If we do not have a compare as the condition, just hash in the condition.
+    CmpInst::Predicate Pred;
+    Value *X, *Y;
+    if (!match(Cond, m_Cmp(Pred, m_Value(X), m_Value(Y))))
+      return hash_combine(Inst->getOpcode(), Cond, TVal, FVal);
+
+    // Similar to cmp normalization (above) - canonicalize the predicate value:
+    // select (icmp Pred, X, Y), T, F --> select (icmp InvPred, X, Y), F, T
+    if (CmpInst::getInversePredicate(Pred) < Pred) {
+      Pred = CmpInst::getInversePredicate(Pred);
+      std::swap(TVal, FVal);
+    }
+    return hash_combine(Inst->getOpcode(), Pred, X, Y, TVal, FVal);
+  }
+
   if (CastInst *CI = dyn_cast<CastInst>(Inst))
     return hash_combine(CI->getOpcode(), CI->getType(), CI->getOperand(0));
 
@@ -183,8 +216,7 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
                         IVI->getOperand(1),
                         hash_combine_range(IVI->idx_begin(), IVI->idx_end()));
 
-  assert((isa<CallInst>(Inst) || isa<BinaryOperator>(Inst) ||
-          isa<GetElementPtrInst>(Inst) || isa<SelectInst>(Inst) ||
+  assert((isa<CallInst>(Inst) || isa<GetElementPtrInst>(Inst) ||
           isa<ExtractElementInst>(Inst) || isa<InsertElementInst>(Inst) ||
           isa<ShuffleVectorInst>(Inst)) &&
          "Invalid/unknown instruction");
@@ -245,6 +277,31 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
         return LHSA == RHSA && LHSB == RHSB;
       return ((LHSA == RHSA && LHSB == RHSB) ||
               (LHSA == RHSB && LHSB == RHSA));
+    }
+  }
+
+  // Selects can be non-trivially equivalent via inverted conditions and swaps.
+  Value *CondL, *CondR, *TrueL, *TrueR, *FalseL, *FalseR;
+  if (matchSelectWithOptionalNotCond(LHSI, CondL, TrueL, FalseL) &&
+      matchSelectWithOptionalNotCond(RHSI, CondR, TrueR, FalseR)) {
+    // select Cond, T, F <--> select not(Cond), F, T
+    if (CondL == CondR && TrueL == TrueR && FalseL == FalseR)
+      return true;
+
+    // If the true/false operands are swapped and the conditions are compares
+    // with inverted predicates, the selects are equal:
+    // select (icmp Pred, X, Y), T, F <--> select (icmp InvPred, X, Y), F, T
+    //
+    // This also handles patterns with a double-negation because we looked
+    // through a 'not' in the matching function and swapped T/F:
+    // select (cmp Pred, X, Y), T, F <--> select (not (cmp InvPred, X, Y)), T, F
+    if (TrueL == FalseR && FalseL == TrueR) {
+      CmpInst::Predicate PredL, PredR;
+      Value *X, *Y;
+      if (match(CondL, m_Cmp(PredL, m_Value(X), m_Value(Y))) &&
+          match(CondR, m_Cmp(PredR, m_Specific(X), m_Specific(Y))) &&
+          CmpInst::getInversePredicate(PredL) == PredR)
+        return true;
     }
   }
 

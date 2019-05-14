@@ -17,6 +17,9 @@ void h(char *p __attribute__((pass_object_size(0)))) {} //expected-error{{pass_o
 void i(char *p __attribute__((pass_object_size(0)))); // OK -- const is only necessary on definitions, not decls.
 void j(char *p __attribute__((pass_object_size(0), pass_object_size(1)))); //expected-error{{'pass_object_size' attribute can only be applied once per parameter}}
 
+void k(char *p __attribute__((pass_dynamic_object_size))); // expected-error {{'pass_dynamic_object_size' attribute takes one argument}}
+void l(int p __attribute__((pass_dynamic_object_size(0)))); // expected-error {{'pass_dynamic_object_size' attribute only applies to constant pointer arguments}}
+
 #define PS(N) __attribute__((pass_object_size(N)))
 #define overloaded __attribute__((overloadable))
 void Overloaded(void *p PS(0)) overloaded; //expected-note{{previous declaration is here}}
@@ -32,14 +35,17 @@ void TakeFnOvl(void (*)(void *)) overloaded;
 void TakeFnOvl(void (*)(int *)) overloaded;
 
 void NotOverloaded(void *p PS(0));
-void IsOverloaded(void *p PS(0)) overloaded;
-void IsOverloaded(char *p) overloaded; // char* inestead of void* is intentional
+void IsOverloaded(void *p PS(0)) overloaded; // expected-note 2 {{candidate address cannot be taken because parameter 1 has pass_object_size attribute}}
+
+// char* inestead of void* is intentional
+void IsOverloaded(char *p) overloaded; // expected-note{{passing argument to parameter 'p' here}} expected-note 2 {{type mismatch}}
+
 void FunctionPtrs() {
   void (*p)(void *) = NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
   void (*p2)(void *) = &NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
 
-  void (*p3)(void *) = IsOverloaded; //expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}} expected-note@-6{{candidate address cannot be taken because parameter 1 has pass_object_size attribute}} expected-note@-5{{type mismatch}}
-  void (*p4)(void *) = &IsOverloaded; //expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}} expected-note@-7{{candidate address cannot be taken because parameter 1 has pass_object_size attribute}} expected-note@-6{{type mismatch}}
+  void (*p3)(void *) = IsOverloaded; //expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}}
+  void (*p4)(void *) = &IsOverloaded; //expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}}
 
   void (*p5)(char *) = IsOverloaded;
   void (*p6)(char *) = &IsOverloaded;
@@ -52,5 +58,11 @@ void FunctionPtrs() {
 
   int P;
   (&NotOverloaded)(&P); //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
-  (&IsOverloaded)(&P); //expected-warning{{incompatible pointer types passing 'int *' to parameter of type 'char *'}} expected-note@36{{passing argument to parameter 'p' here}}
+  (&IsOverloaded)(&P); //expected-warning{{incompatible pointer types passing 'int *' to parameter of type 'char *'}}
 }
+
+void mismatch(void *p __attribute__((pass_object_size(0)))); // expected-note {{previous declaration is here}}
+void mismatch(void *p __attribute__((pass_dynamic_object_size(0)))); // expected-error {{conflicting pass_object_size attributes on parameters}}
+
+void mismatch2(void *p __attribute__((pass_dynamic_object_size(0)))); // expected-note {{previous declaration is here}}
+void mismatch2(void *p __attribute__((pass_dynamic_object_size(1)))); // expected-error {{conflicting pass_object_size attributes on parameters}}

@@ -1,4 +1,6 @@
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
+; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -70,7 +72,7 @@ rethrow:                                          ; preds = %catch.fallthrough
   call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
-try.cont:                                         ; preds = %entry, %catch, %catch2
+try.cont:                                         ; preds = %catch, %catch2, %entry
   ret void
 }
 
@@ -173,7 +175,7 @@ rethrow5:                                         ; preds = %catch.start3
   invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %9) ]
           to label %unreachable unwind label %ehcleanup9
 
-try.cont:                                         ; preds = %catch, %invoke.cont8
+try.cont:                                         ; preds = %invoke.cont8, %catch
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont11
 
@@ -181,7 +183,7 @@ rethrow:                                          ; preds = %catch.start
   call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
-try.cont11:                                       ; preds = %entry, %try.cont
+try.cont11:                                       ; preds = %try.cont, %entry
   ret void
 
 ehcleanup:                                        ; preds = %catch6
@@ -284,6 +286,334 @@ terminate:                                        ; preds = %ehcleanup
   %7 = call i8* @llvm.wasm.get.exception(token %6)
   call void @__clang_call_terminate(i8* %7) [ "funclet"(token %6) ]
   unreachable
+}
+
+; Tests if block and try markers are correctly placed. Even if two predecessors
+; of the EH pad are bb2 and bb3 and their nearest common dominator is bb1, the
+; TRY marker should be placed at bb0 because there's a branch from bb0 to bb2,
+; and scopes cannot be interleaved.
+
+; NOOPT-LABEL: test3
+; NOOPT: try
+; NOOPT:   block
+; NOOPT:     block
+; NOOPT:       block
+; NOOPT:       end_block
+; NOOPT:     end_block
+; NOOPT:     call      foo
+; NOOPT:   end_block
+; NOOPT:   call      bar
+; NOOPT: catch     {{.*}}
+; NOOPT: end_try
+define void @test3() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+bb0:
+  br i1 undef, label %bb1, label %bb2
+
+bb1:                                              ; preds = %bb0
+  br i1 undef, label %bb3, label %bb4
+
+bb2:                                              ; preds = %bb0
+  br label %try.cont
+
+bb3:                                              ; preds = %bb1
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+bb4:                                              ; preds = %bb1
+  invoke void @bar()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %bb4, %bb3
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start, %bb4, %bb3, %bb2
+  ret void
+}
+
+; Tests if try/end_try markers are placed correctly wrt loop/end_loop markers,
+; when try and loop markers are in the same BB and end_try and end_loop are in
+; another BB.
+; CHECK: loop
+; CHECK:   try
+; CHECK:     call      foo
+; CHECK:   catch
+; CHECK:   end_try
+; CHECK: end_loop
+define void @test4(i32* %p) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  store volatile i32 0, i32* %p
+  br label %loop
+
+loop:                                             ; preds = %try.cont, %entry
+  store volatile i32 1, i32* %p
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %loop
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start, %loop
+  br label %loop
+}
+
+; Some of test cases below are hand-tweaked by deleting some library calls to
+; simplify tests and changing the order of basic blocks to cause unwind
+; destination mismatches. And we use -wasm-disable-ehpad-sort to create maximum
+; number of mismatches in several tests below.
+
+; 'call bar''s original unwind destination was 'catch14', but after control flow
+; linearization, its unwind destination incorrectly becomes 'catch15'. We fix
+; this by wrapping the call with a nested try/catch/end_try and branching to the
+; right destination (label32).
+
+; NOSORT-LABEL: test5
+; NOSORT:   block
+; NOSORT:     try
+; NOSORT:       try
+; NOSORT:         call      foo
+; --- Nested try/catch/end_try starts
+; NOSORT:         try
+; NOSORT:           call      bar
+; NOSORT:         catch     $drop=
+; NOSORT:           br        2                        # 2: down to label32
+; NOSORT:         end_try
+; --- Nested try/catch/end_try ends
+; NOSORT:         br        2                          # 2: down to label31
+; NOSORT:       catch     $drop=                       # catch15:
+; NOSORT:         br        2                          # 2: down to label31
+; NOSORT:       end_try
+; NOSORT:     catch     $drop=                         # catch14:
+; NOSORT:     end_try                                  # label32:
+; NOSORT:   end_block                                  # label31:
+; NOSORT:   return
+
+define void @test5() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+bb0:
+  invoke void @foo()
+          to label %bb1 unwind label %catch.dispatch0
+
+bb1:                                              ; preds = %bb0
+  invoke void @bar()
+          to label %try.cont unwind label %catch.dispatch1
+
+catch.dispatch0:                                  ; preds = %bb0
+  %0 = catchswitch within none [label %catch.start0] unwind to caller
+
+catch.start0:                                     ; preds = %catch.dispatch0
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+catch.dispatch1:                                  ; preds = %bb1
+  %4 = catchswitch within none [label %catch.start1] unwind to caller
+
+catch.start1:                                     ; preds = %catch.dispatch1
+  %5 = catchpad within %4 [i8* null]
+  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %7 = call i32 @llvm.wasm.get.ehselector(token %5)
+  catchret from %5 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start1, %catch.start0, %bb1
+  ret void
+}
+
+; Two 'call bar''s original unwind destination was the caller, but after control
+; flow linearization, their unwind destination incorrectly becomes 'catch17'. We
+; fix this by wrapping the call with a nested try/catch/end_try and branching to
+; the right destination (label4), from which we rethrow the exception to the
+; caller.
+
+; NOSORT-LABEL: test6
+; NOSORT:   try
+; NOSORT:     call      foo
+; --- Nested try/catch/end_try starts
+; NOSORT:     try
+; NOSORT:       call      bar
+; NOSORT:       call      bar
+; NOSORT:     catch     $[[REG:[0-9]+]]=
+; NOSORT:       br        1                            # 1: down to label35
+; NOSORT:     end_try
+; --- Nested try/catch/end_try ends
+; NOSORT:     return
+; NOSORT:   catch     $drop=                           # catch17:
+; NOSORT:     return
+; NOSORT:   end_try                                    # label35:
+; NOSORT:   rethrow   $[[REG]]                         # to caller
+
+define void @test6() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+bb0:
+  invoke void @foo()
+          to label %bb1 unwind label %catch.dispatch0
+
+bb1:                                              ; preds = %bb0
+  call void @bar()
+  call void @bar()
+  ret void
+
+catch.dispatch0:                                  ; preds = %bb0
+  %0 = catchswitch within none [label %catch.start0] unwind to caller
+
+catch.start0:                                     ; preds = %catch.dispatch0
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start0
+  ret void
+}
+
+; If not for the unwind destination mismatch, the LOOP marker here would have an
+; i32 signature. But because we add a rethrow instruction at the end of the
+; appendix block, now the LOOP marker does not have a signature (= has a void
+; signature). Here the two calls two 'bar' are supposed to throw up to the
+; caller, but incorrectly unwind to 'catch19' after linearizing the CFG.
+
+; NOSORT-LABEL: test7
+; NOSORT: block
+; NOSORT-NOT: loop      i32
+; NOSORT:   loop                                       # label38:
+; NOSORT:     try
+; NOSORT:       call      foo
+; --- Nested try/catch/end_try starts
+; NOSORT:       try
+; NOSORT:         call      bar
+; NOSORT:         call      bar
+; NOSORT:       catch     $[[REG:[0-9]+]]=
+; NOSORT:         br        1                          # 1: down to label39
+; NOSORT:       end_try
+; --- Nested try/catch/end_try ends
+; NOSORT:       return    {{.*}}
+; NOSORT:     catch     $drop=                         # catch19:
+; NOSORT:       br        1                            # 1: up to label38
+; NOSORT:     end_try                                  # label39:
+; NOSORT:   end_loop
+; NOSORT: end_block
+; NOSORT: rethrow   $[[REG]]                           # to caller
+
+define i32 @test7(i32* %p) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  store volatile i32 0, i32* %p
+  br label %loop
+
+loop:                                             ; preds = %try.cont, %entry
+  store volatile i32 1, i32* %p
+  invoke void @foo()
+          to label %bb unwind label %catch.dispatch
+
+bb:                                               ; preds = %loop
+  call void @bar()
+  call void @bar()
+  ret i32 0
+
+catch.dispatch:                                   ; preds = %loop
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start
+  br label %loop
+}
+
+; When we have both kinds of EH pad unwind mismatches:
+; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
+;   CFG, when it is supposed to unwind to another EH pad.
+; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
+;   CFG, when it is supposed to unwind to the caller.
+
+; NOSORT-LABEL: test8
+; NOSORT: block
+; NOSORT:   block
+; NOSORT:     try
+; NOSORT:       try
+; NOSORT:         call      foo
+; --- Nested try/catch/end_try starts
+; NOSORT:         try
+; NOSORT:           call      bar
+; NOSORT:         catch     $[[REG0:[0-9]+]]=
+; NOSORT:           br        2                        # 2: down to label43
+; NOSORT:         end_try
+; --- Nested try/catch/end_try ends
+; NOSORT:         br        2                          # 2: down to label42
+; NOSORT:       catch     {{.*}}
+; NOSORT:         block     i32
+; NOSORT:           br_on_exn   0, {{.*}}              # 0: down to label46
+; --- Nested try/catch/end_try starts
+; NOSORT:           try
+; NOSORT:             rethrow   {{.*}}                 # down to catch24
+; NOSORT:           catch     $[[REG1:[0-9]+]]=        # catch24:
+; NOSORT:             br        5                      # 5: down to label41
+; NOSORT:           end_try
+; --- Nested try/catch/end_try ends
+; NOSORT:         end_block                            # label46:
+; NOSORT:         i32.call  $drop=, __cxa_begin_catch
+; --- Nested try/catch/end_try starts
+; NOSORT:         try
+; NOSORT:           call      __cxa_end_catch
+; NOSORT:         catch     $[[REG1]]=
+; NOSORT:           br        4                        # 4: down to label41
+; NOSORT:         end_try
+; --- Nested try/catch/end_try ends
+; NOSORT:         br        2                          # 2: down to label42
+; NOSORT:       end_try
+; NOSORT:     catch     $[[REG0]]=
+; NOSORT:     end_try                                  # label43:
+; NOSORT:     i32.call  $drop=, __cxa_begin_catch
+; NOSORT:     call      __cxa_end_catch
+; NOSORT:   end_block                                  # label42:
+; NOSORT:   return
+; NOSORT: end_block                                    # label41:
+; NOSORT: rethrow   $[[REG1]]                          # to caller
+define void @test8() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+bb0:
+  invoke void @foo()
+          to label %bb1 unwind label %catch.dispatch0
+
+bb1:                                              ; preds = %bb0
+  invoke void @bar()
+          to label %try.cont unwind label %catch.dispatch1
+
+catch.dispatch0:                                  ; preds = %bb0
+  %0 = catchswitch within none [label %catch.start0] unwind to caller
+
+catch.start0:                                     ; preds = %catch.dispatch0
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  call void @__cxa_end_catch() [ "funclet"(token %1) ]
+  catchret from %1 to label %try.cont
+
+catch.dispatch1:                                  ; preds = %bb1
+  %5 = catchswitch within none [label %catch.start1] unwind to caller
+
+catch.start1:                                     ; preds = %catch.dispatch1
+  %6 = catchpad within %5 [i8* null]
+  %7 = call i8* @llvm.wasm.get.exception(token %6)
+  %8 = call i32 @llvm.wasm.get.ehselector(token %6)
+  %9 = call i8* @__cxa_begin_catch(i8* %7) [ "funclet"(token %6) ]
+  call void @__cxa_end_catch() [ "funclet"(token %6) ]
+  catchret from %6 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start1, %catch.start0, %bb1
+  ret void
 }
 
 declare void @foo()

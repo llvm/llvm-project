@@ -92,8 +92,8 @@ constexpr int MAX_DENSITY_DEGRADATION = 8;
 constexpr uint64_t MAX_CLUSTER_SIZE = 1024 * 1024;
 } // end anonymous namespace
 
-typedef std::pair<const InputSectionBase *, const InputSectionBase *>
-    SectionPair;
+using SectionPair =
+    std::pair<const InputSectionBase *, const InputSectionBase *>;
 
 // Take the edge list in Config->CallGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
@@ -172,8 +172,8 @@ void CallGraphSort::groupClusters() {
     SecToCluster[I] = &Clusters[I];
   }
 
-  std::stable_sort(SortedSecs.begin(), SortedSecs.end(), [&](int A, int B) {
-    return Clusters[B].getDensity() < Clusters[A].getDensity();
+  llvm::stable_sort(SortedSecs, [&](int A, int B) {
+    return Clusters[A].getDensity() > Clusters[B].getDensity();
   });
 
   for (int SI : SortedSecs) {
@@ -209,10 +209,9 @@ void CallGraphSort::groupClusters() {
   });
 
   // Sort by density.
-  std::stable_sort(Clusters.begin(), Clusters.end(),
-                   [](const Cluster &A, const Cluster &B) {
-                     return A.getDensity() > B.getDensity();
-                   });
+  llvm::stable_sort(Clusters, [](const Cluster &A, const Cluster &B) {
+    return A.getDensity() > B.getDensity();
+  });
 }
 
 DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
@@ -225,6 +224,27 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   for (const Cluster &C : Clusters)
     for (int SecIndex : C.Sections)
       OrderMap[Sections[SecIndex]] = CurOrder++;
+
+  if (!Config->PrintSymbolOrder.empty()) {
+    std::error_code EC;
+    raw_fd_ostream OS(Config->PrintSymbolOrder, EC, sys::fs::F_None);
+    if (EC) {
+      error("cannot open " + Config->PrintSymbolOrder + ": " + EC.message());
+      return OrderMap;
+    }
+
+    // Print the symbols ordered by C3, in the order of increasing CurOrder
+    // Instead of sorting all the OrderMap, just repeat the loops above.
+    for (const Cluster &C : Clusters)
+      for (int SecIndex : C.Sections)
+        // Search all the symbols in the file of the section
+        // and find out a Defined symbol with name that is within the section.
+        for (Symbol *Sym: Sections[SecIndex]->File->getSymbols())
+          if (!Sym->isSection()) // Filter out section-type symbols here.
+            if (auto *D = dyn_cast<Defined>(Sym))
+              if (Sections[SecIndex] == D->Section)
+                OS << Sym->getName() << "\n";
+  }
 
   return OrderMap;
 }

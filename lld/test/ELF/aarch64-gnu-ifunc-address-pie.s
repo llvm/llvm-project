@@ -33,7 +33,9 @@ main:
 # CHECK-NEXT:    10008:	08 41 00 91 	add	x8, x8, #16
 # x8 = 0x10010 = .plt for myfunc
 # CHECK-NEXT:    1000c:	c0 03 5f d6 	ret
+# CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:
+# CHECK-EMPTY:
 # CHECK-NEXT: 0000000000010010 myfunc:
 # CHECK-NEXT:    10010:	10 01 00 90 	adrp	x16, #131072
 # CHECK-NEXT:    10014:	11 02 40 f9 	ldr	x17, [x16]

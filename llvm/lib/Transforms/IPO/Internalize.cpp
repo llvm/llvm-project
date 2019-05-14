@@ -27,11 +27,11 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
-#include <fstream>
-#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "internalize"
@@ -72,18 +72,15 @@ private:
 
   void LoadFile(StringRef Filename) {
     // Load the APIFile...
-    std::ifstream In(Filename.data());
-    if (!In.good()) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+        MemoryBuffer::getFile(Filename);
+    if (!Buf) {
       errs() << "WARNING: Internalize couldn't load file '" << Filename
              << "'! Continuing as if it's empty.\n";
       return; // Just continue as if the file were empty
     }
-    while (In) {
-      std::string Symbol;
-      In >> Symbol;
-      if (!Symbol.empty())
-        ExternalNames.insert(Symbol);
-    }
+    for (line_iterator I(*Buf->get(), true), E; I != E; ++I)
+      ExternalNames.insert(*I);
   }
 };
 } // end anonymous namespace
@@ -113,7 +110,7 @@ bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
 }
 
 bool InternalizePass::maybeInternalize(
-    GlobalValue &GV, const std::set<const Comdat *> &ExternalComdats) {
+    GlobalValue &GV, const DenseSet<const Comdat *> &ExternalComdats) {
   if (Comdat *C = GV.getComdat()) {
     if (ExternalComdats.count(C))
       return false;
@@ -140,7 +137,7 @@ bool InternalizePass::maybeInternalize(
 // If GV is part of a comdat and is externally visible, keep track of its
 // comdat so that we don't internalize any of its members.
 void InternalizePass::checkComdatVisibility(
-    GlobalValue &GV, std::set<const Comdat *> &ExternalComdats) {
+    GlobalValue &GV, DenseSet<const Comdat *> &ExternalComdats) {
   Comdat *C = GV.getComdat();
   if (!C)
     return;
@@ -157,7 +154,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   collectUsedGlobalVariables(M, Used, false);
 
   // Collect comdat visiblity information for the module.
-  std::set<const Comdat *> ExternalComdats;
+  DenseSet<const Comdat *> ExternalComdats;
   if (!M.getComdatSymbolTable().empty()) {
     for (Function &F : M)
       checkComdatVisibility(F, ExternalComdats);

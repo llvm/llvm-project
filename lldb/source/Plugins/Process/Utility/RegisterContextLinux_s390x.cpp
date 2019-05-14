@@ -12,9 +12,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_s390x to declare our g_register_infos_s390x structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_S390X_STRUCT
 #include "RegisterInfos_s390x.h"
 #undef DECLARE_REGISTER_INFOS_S390X_STRUCT

@@ -23,9 +23,7 @@ class PDBASTParser;
 
 class SymbolFilePDB : public lldb_private::SymbolFile {
 public:
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -39,9 +37,7 @@ public:
   static lldb_private::SymbolFile *
   CreateInstance(lldb_private::ObjectFile *obj_file);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolFilePDB(lldb_private::ObjectFile *ofile);
 
   ~SymbolFilePDB() override;
@@ -50,9 +46,7 @@ public:
 
   void InitializeObject() override;
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
 
   uint32_t GetNumCompileUnits() override;
 
@@ -252,7 +246,6 @@ private:
   std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;
   std::unique_ptr<llvm::pdb::PDBSymbolExe> m_global_scope_up;
   uint32_t m_cached_compile_unit_count;
-  std::unique_ptr<lldb_private::CompilerDeclContext> m_tu_decl_ctx_up;
 
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
   lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;

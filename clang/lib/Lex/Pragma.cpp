@@ -144,84 +144,72 @@ void Preprocessor::HandlePragmaDirective(SourceLocation IntroducerLoc,
     DiscardUntilEndOfDirective();
 }
 
-namespace {
-
-/// Helper class for \see Preprocessor::Handle_Pragma.
-class LexingFor_PragmaRAII {
-  Preprocessor &PP;
-  bool InMacroArgPreExpansion;
-  bool Failed = false;
-  Token &OutTok;
-  Token PragmaTok;
-
-public:
-  LexingFor_PragmaRAII(Preprocessor &PP, bool InMacroArgPreExpansion,
-                       Token &Tok)
-      : PP(PP), InMacroArgPreExpansion(InMacroArgPreExpansion), OutTok(Tok) {
-    if (InMacroArgPreExpansion) {
-      PragmaTok = OutTok;
-      PP.EnableBacktrackAtThisPos();
-    }
-  }
-
-  ~LexingFor_PragmaRAII() {
-    if (InMacroArgPreExpansion) {
-      // When committing/backtracking the cached pragma tokens in a macro
-      // argument pre-expansion we want to ensure that either the tokens which
-      // have been committed will be removed from the cache or that the tokens
-      // over which we just backtracked won't remain in the cache after they're
-      // consumed and that the caching will stop after consuming them.
-      // Otherwise the caching will interfere with the way macro expansion
-      // works, because we will continue to cache tokens after consuming the
-      // backtracked tokens, which shouldn't happen when we're dealing with
-      // macro argument pre-expansion.
-      auto CachedTokenRange = PP.LastCachedTokenRange();
-      if (Failed) {
-        PP.CommitBacktrackedTokens();
-      } else {
-        PP.Backtrack();
-        OutTok = PragmaTok;
-      }
-      PP.EraseCachedTokens(CachedTokenRange);
-    }
-  }
-
-  void failed() {
-    Failed = true;
-  }
-};
-
-} // namespace
-
 /// Handle_Pragma - Read a _Pragma directive, slice it up, process it, then
 /// return the first token after the directive.  The _Pragma token has just
 /// been read into 'Tok'.
 void Preprocessor::Handle_Pragma(Token &Tok) {
-  // This works differently if we are pre-expanding a macro argument.
-  // In that case we don't actually "activate" the pragma now, we only lex it
-  // until we are sure it is lexically correct and then we backtrack so that
-  // we activate the pragma whenever we encounter the tokens again in the token
-  // stream. This ensures that we will activate it in the correct location
-  // or that we will ignore it if it never enters the token stream, e.g:
+  // C11 6.10.3.4/3:
+  //   all pragma unary operator expressions within [a completely
+  //   macro-replaced preprocessing token sequence] are [...] processed [after
+  //   rescanning is complete]
   //
-  //     #define EMPTY(x)
-  //     #define INACTIVE(x) EMPTY(x)
-  //     INACTIVE(_Pragma("clang diagnostic ignored \"-Wconversion\""))
+  // This means that we execute _Pragma operators in two cases:
+  //
+  //  1) on token sequences that would otherwise be produced as the output of
+  //     phase 4 of preprocessing, and
+  //  2) on token sequences formed as the macro-replaced token sequence of a
+  //     macro argument
+  //
+  // Case #2 appears to be a wording bug: only _Pragmas that would survive to
+  // the end of phase 4 should actually be executed. Discussion on the WG14
+  // mailing list suggests that a _Pragma operator is notionally checked early,
+  // but only pragmas that survive to the end of phase 4 should be executed.
+  //
+  // In Case #2, we check the syntax now, but then put the tokens back into the
+  // token stream for later consumption.
 
-  LexingFor_PragmaRAII _PragmaLexing(*this, InMacroArgPreExpansion, Tok);
+  struct TokenCollector {
+    Preprocessor &Self;
+    bool Collect;
+    SmallVector<Token, 3> Tokens;
+    Token &Tok;
+
+    void lex() {
+      if (Collect)
+        Tokens.push_back(Tok);
+      Self.Lex(Tok);
+    }
+
+    void revert() {
+      assert(Collect && "did not collect tokens");
+      assert(!Tokens.empty() && "collected unexpected number of tokens");
+
+      // Push the ( "string" ) tokens into the token stream.
+      auto Toks = llvm::make_unique<Token[]>(Tokens.size());
+      std::copy(Tokens.begin() + 1, Tokens.end(), Toks.get());
+      Toks[Tokens.size() - 1] = Tok;
+      Self.EnterTokenStream(std::move(Toks), Tokens.size(),
+                            /*DisableMacroExpansion*/ true);
+
+      // ... and return the _Pragma token unchanged.
+      Tok = *Tokens.begin();
+    }
+  };
+
+  TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
 
   // Remember the pragma token location.
   SourceLocation PragmaLoc = Tok.getLocation();
 
   // Read the '('.
-  Lex(Tok);
+  Toks.lex();
   if (Tok.isNot(tok::l_paren)) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
-    return _PragmaLexing.failed();
+    return;
   }
 
   // Read the '"..."'.
-  Lex(Tok);
+  Toks.lex();
   if (!tok::isStringLiteral(Tok.getKind())) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
     // Skip bad tokens, and the ')', if present.
@@ -233,7 +221,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
       Lex(Tok);
     if (Tok.is(tok::r_paren))
       Lex(Tok);
-    return _PragmaLexing.failed();
+    return;
   }
 
   if (Tok.hasUDSuffix()) {
@@ -242,21 +230,24 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
     Lex(Tok);
     if (Tok.is(tok::r_paren))
       Lex(Tok);
-    return _PragmaLexing.failed();
+    return;
   }
 
   // Remember the string.
   Token StrTok = Tok;
 
   // Read the ')'.
-  Lex(Tok);
+  Toks.lex();
   if (Tok.isNot(tok::r_paren)) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
-    return _PragmaLexing.failed();
+    return;
   }
 
-  if (InMacroArgPreExpansion)
+  // If we're expanding a macro argument, put the tokens back.
+  if (InMacroArgPreExpansion) {
+    Toks.revert();
     return;
+  }
 
   SourceLocation RParenLoc = Tok.getLocation();
   std::string StrVal = getSpelling(StrTok);
@@ -486,7 +477,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     return;
 
   // If the next token wasn't a header-name, diagnose the error.
-  if (!FilenameTok.isOneOf(tok::angle_string_literal, tok::string_literal)) {
+  if (FilenameTok.isNot(tok::header_name)) {
     Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
     return;
   }
@@ -670,8 +661,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
 
   StringRef SourceFileName;
   SmallString<128> FileNameBuffer;
-  if (SourceFilenameTok.is(tok::string_literal) ||
-      SourceFilenameTok.is(tok::angle_string_literal)) {
+  if (SourceFilenameTok.is(tok::header_name)) {
     SourceFileName = getSpelling(SourceFilenameTok, FileNameBuffer);
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);
@@ -691,8 +681,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
     return;
 
   StringRef ReplaceFileName;
-  if (ReplaceFilenameTok.is(tok::string_literal) ||
-      ReplaceFilenameTok.is(tok::angle_string_literal)) {
+  if (ReplaceFilenameTok.is(tok::header_name)) {
     ReplaceFileName = getSpelling(ReplaceFilenameTok, FileNameBuffer);
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);
@@ -1021,7 +1010,7 @@ struct PragmaDebugHandler : public PragmaHandler {
   PragmaDebugHandler() : PragmaHandler("__debug") {}
 
   void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
-                    Token &DepToken) override {
+                    Token &DebugToken) override {
     Token Tok;
     PP.LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::identifier)) {
@@ -1083,6 +1072,22 @@ struct PragmaDebugHandler : public PragmaHandler {
       else
         PP.Diag(MacroName, diag::warn_pragma_debug_missing_argument)
             << II->getName();
+    } else if (II->isStr("module_map")) {
+      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 8>
+          ModuleName;
+      if (LexModuleName(PP, Tok, ModuleName))
+        return;
+      ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
+      Module *M = nullptr;
+      for (auto IIAndLoc : ModuleName) {
+        M = MM.lookupModuleQualified(IIAndLoc.first->getName(), M);
+        if (!M) {
+          PP.Diag(IIAndLoc.second, diag::warn_pragma_debug_unknown_module)
+              << IIAndLoc.first;
+          return;
+        }
+      }
+      M->dump();
     } else if (II->isStr("overflow_stack")) {
       DebugOverflowStack();
     } else if (II->isStr("handle_crash")) {

@@ -11,7 +11,6 @@
 #include "MICmdArgContext.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionLong constructor.
 // Type:    Method.
 // Args:    None.
@@ -22,7 +21,6 @@ CMICmdArgValOptionLong::CMICmdArgValOptionLong()
     : m_nExpectingNOptions(0), m_eExpectingOptionType(eArgValType_invalid) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionLong constructor.
 // Type:    Method.
 // Args:    vrArgName       - (R) Argument's name to search by.
@@ -40,7 +38,6 @@ CMICmdArgValOptionLong::CMICmdArgValOptionLong(const CMIUtilString &vrArgName,
       m_nExpectingNOptions(0), m_eExpectingOptionType(eArgValType_invalid) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionLong constructor.
 // Type:    Method.
 // Args:    vrArgName           - (R) Argument's name to search by.
@@ -65,7 +62,6 @@ CMICmdArgValOptionLong::CMICmdArgValOptionLong(const CMIUtilString &vrArgName,
       m_eExpectingOptionType(veType) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValOptionLong destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -78,7 +74,6 @@ CMICmdArgValOptionLong::~CMICmdArgValOptionLong() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Tear down resources used by *this object.
 // Type:    Method.
 // Args:    None.
@@ -99,7 +94,6 @@ void CMICmdArgValOptionLong::Destroy() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Parse the command's argument options string and try to extract the
 // long
 //          argument *this argument type is looking for.
@@ -167,7 +161,6 @@ bool CMICmdArgValOptionLong::Validate(CMICmdArgContext &vwArgContext) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Parse the text following *this argument and extract the options the
 // values of
 //          CMICmdArgValListBase::m_eArgType forming argument objects for each
@@ -228,7 +221,6 @@ bool CMICmdArgValOptionLong::ExtractExpectedOptions(CMICmdArgContext &vrwTxt,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Examine the string and determine if it is a valid long type option
 // argument.
 //          Long type argument looks like --someLongOption.
@@ -255,7 +247,6 @@ bool CMICmdArgValOptionLong::IsArgLongOption(const CMIUtilString &vrTxt) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Examine the string and determine if it is a valid long type option
 // argument.
 //          Long type argument looks like --someLongOption.
@@ -270,7 +261,6 @@ bool CMICmdArgValOptionLong::IsArgOptionCorrect(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Does the argument name of the argument being parsed ATM match the
 // name of
 //          *this argument object.
@@ -285,7 +275,6 @@ bool CMICmdArgValOptionLong::ArgNameMatch(const CMIUtilString &vrTxt) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the list of CMICmdArgValBase derived option objects found
 // following
 //          *this long option argument. For example "list-thread-groups [

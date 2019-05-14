@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple=i686-pc-win32 -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+# RUN: llvm-mc < %s -triple=i686-pc-win32 -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 # Based on the other cv-loc-unreachable-2.s, but with other code in the same
 # section afterwards. We had negative label difference assertions when .cv_loc

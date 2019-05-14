@@ -27,6 +27,7 @@
 # RUN: llvm-objdump -d %t-r6.exe | FileCheck --check-prefixes=CHECK,R6 %s
 
 # CHECK:     Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: __start:
 # CHECK-NEXT:    20000:       0c 00 80 0c     jal     131120 <__LA25Thunk_foo1a>
 # CHECK-NEXT:    20004:       00 00 00 00     nop
@@ -94,6 +95,7 @@
 # RUN: llvm-objdump -d %t.exe | FileCheck -check-prefixes=REVERSE,REV-R6 %s
 
 # REVERSE: Disassembly of section .text:
+# REVERSE-EMPTY:
 # REVERSE-NEXT: __LA25Thunk_foo1a:
 # REV-R2:          20000:       3c 19 00 02     lui     $25, 2
 # REV-R6:          20000:       3c 19 00 02     aui     $25, $zero, 2

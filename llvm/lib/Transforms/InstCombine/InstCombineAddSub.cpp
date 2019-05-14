@@ -1064,6 +1064,28 @@ static Instruction *canonicalizeLowbitMask(BinaryOperator &I,
   return BinaryOperator::CreateNot(NotMask, I.getName());
 }
 
+static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
+  assert(I.getOpcode() == Instruction::Add && "Expecting add instruction");
+  Type *Ty = I.getType();
+  auto getUAddSat = [&]() {
+    return Intrinsic::getDeclaration(I.getModule(), Intrinsic::uadd_sat, Ty);
+  };
+
+  // add (umin X, ~Y), Y --> uaddsat X, Y
+  Value *X, *Y;
+  if (match(&I, m_c_Add(m_c_UMin(m_Value(X), m_Not(m_Value(Y))),
+                        m_Deferred(Y))))
+    return CallInst::Create(getUAddSat(), { X, Y });
+
+  // add (umin X, ~C), C --> uaddsat X, C
+  const APInt *C, *NotC;
+  if (match(&I, m_Add(m_UMin(m_Value(X), m_APInt(NotC)), m_APInt(C))) &&
+      *C == ~*NotC)
+    return CallInst::Create(getUAddSat(), { X, ConstantInt::get(Ty, *C) });
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (Value *V = SimplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1265,6 +1287,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
   if (Instruction *V = canonicalizeLowbitMask(I, Builder))
     return V;
+
+  if (Instruction *SatAdd = foldToUnsignedSaturatedAdd(I))
+    return SatAdd;
 
   return Changed ? &I : nullptr;
 }
@@ -1667,9 +1692,15 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
                                   Builder.CreateNot(Y, Y->getName() + ".not"));
 
     // 0 - (X sdiv C)  -> (X sdiv -C)  provided the negation doesn't overflow.
-    if (match(Op1, m_SDiv(m_Value(X), m_Constant(C))) && match(Op0, m_Zero()) &&
-        C->isNotMinSignedValue() && !C->isOneValue())
-      return BinaryOperator::CreateSDiv(X, ConstantExpr::getNeg(C));
+    // TODO: This could be extended to match arbitrary vector constants.
+    const APInt *DivC;
+    if (match(Op0, m_Zero()) && match(Op1, m_SDiv(m_Value(X), m_APInt(DivC))) &&
+        !DivC->isMinSignedValue() && *DivC != 1) {
+      Constant *NegDivC = ConstantInt::get(I.getType(), -(*DivC));
+      Instruction *BO = BinaryOperator::CreateSDiv(X, NegDivC);
+      BO->setIsExact(cast<BinaryOperator>(Op1)->isExact());
+      return BO;
+    }
 
     // 0 - (X << Y)  -> (-X << Y)   when X is freely negatable.
     if (match(Op1, m_Shl(m_Value(X), m_Value(Y))) && match(Op0, m_Zero()))

@@ -42,7 +42,7 @@ class ELFDumper {
   ArrayRef<Elf_Word> ShndxTable;
 
   std::error_code dumpSymbols(const Elf_Shdr *Symtab,
-                              ELFYAML::LocalGlobalWeakSymbols &Symbols);
+                              std::vector<ELFYAML::Symbol> &Symbols);
   std::error_code dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                              StringRef StrTable, ELFYAML::Symbol &S);
   std::error_code dumpCommonSection(const Elf_Shdr *Shdr, ELFYAML::Section &S);
@@ -228,7 +228,7 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
 template <class ELFT>
 std::error_code
 ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
-                             ELFYAML::LocalGlobalWeakSymbols &Symbols) {
+                             std::vector<ELFYAML::Symbol> &Symbols) {
   if (!Symtab)
     return std::error_code();
 
@@ -241,30 +241,11 @@ ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
   if (!SymtabOrErr)
     return errorToErrorCode(SymtabOrErr.takeError());
 
-  bool IsFirstSym = true;
-  for (const auto &Sym : *SymtabOrErr) {
-    if (IsFirstSym) {
-      IsFirstSym = false;
-      continue;
-    }
-
+  for (const auto &Sym : (*SymtabOrErr).drop_front()) {
     ELFYAML::Symbol S;
     if (auto EC = dumpSymbol(&Sym, Symtab, StrTable, S))
       return EC;
-
-    switch (Sym.getBinding()) {
-    case ELF::STB_LOCAL:
-      Symbols.Local.push_back(S);
-      break;
-    case ELF::STB_GLOBAL:
-      Symbols.Global.push_back(S);
-      break;
-    case ELF::STB_WEAK:
-      Symbols.Weak.push_back(S);
-      break;
-    default:
-      llvm_unreachable("Unknown ELF symbol binding");
-    }
+    Symbols.push_back(S);
   }
 
   return std::error_code();
@@ -278,6 +259,7 @@ ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
   S.Value = Sym->st_value;
   S.Size = Sym->st_size;
   S.Other = Sym->st_other;
+  S.Binding = Sym->getBinding();
 
   Expected<StringRef> SymbolNameOrErr = getSymbolName(Sym, StrTable, SymTab);
   if (!SymbolNameOrErr)
@@ -603,46 +585,44 @@ ELFDumper<ELFT>::dumpVerneedSection(const Elf_Shdr *Shdr) {
 template <class ELFT>
 ErrorOr<ELFYAML::Group *> ELFDumper<ELFT>::dumpGroup(const Elf_Shdr *Shdr) {
   auto S = make_unique<ELFYAML::Group>();
-
   if (std::error_code EC = dumpCommonSection(Shdr, *S))
     return EC;
-  // Get sh_info which is the signature.
+
   auto SymtabOrErr = Obj.getSection(Shdr->sh_link);
   if (!SymtabOrErr)
     return errorToErrorCode(SymtabOrErr.takeError());
+  // Get symbol with index sh_info which name is the signature of the group.
   const Elf_Shdr *Symtab = *SymtabOrErr;
   auto SymOrErr = Obj.getSymbol(Symtab, Shdr->sh_info);
   if (!SymOrErr)
     return errorToErrorCode(SymOrErr.takeError());
-  const Elf_Sym *symbol = *SymOrErr;
   auto StrTabOrErr = Obj.getStringTableForSymtab(*Symtab);
   if (!StrTabOrErr)
     return errorToErrorCode(StrTabOrErr.takeError());
-  StringRef StrTab = *StrTabOrErr;
-  auto sectionContents = Obj.getSectionContents(Shdr);
-  if (!sectionContents)
-    return errorToErrorCode(sectionContents.takeError());
-  Expected<StringRef> symbolName = getSymbolName(symbol, StrTab, Symtab);
-  if (!symbolName)
-    return errorToErrorCode(symbolName.takeError());
-  S->Signature = *symbolName;
-  const Elf_Word *groupMembers =
-      reinterpret_cast<const Elf_Word *>(sectionContents->data());
-  const long count = (Shdr->sh_size) / sizeof(Elf_Word);
-  ELFYAML::SectionOrType s;
-  for (int i = 0; i < count; i++) {
-    if (groupMembers[i] == llvm::ELF::GRP_COMDAT) {
-      s.sectionNameOrType = "GRP_COMDAT";
-    } else {
-      auto sHdr = Obj.getSection(groupMembers[i]);
-      if (!sHdr)
-        return errorToErrorCode(sHdr.takeError());
-      auto sectionName = getUniquedSectionName(*sHdr);
-      if (!sectionName)
-        return errorToErrorCode(sectionName.takeError());
-      s.sectionNameOrType = *sectionName;
+
+  Expected<StringRef> SymbolName =
+      getSymbolName(*SymOrErr, *StrTabOrErr, Symtab);
+  if (!SymbolName)
+    return errorToErrorCode(SymbolName.takeError());
+  S->Signature = *SymbolName;
+
+  auto MembersOrErr = Obj.template getSectionContentsAsArray<Elf_Word>(Shdr);
+  if (!MembersOrErr)
+    return errorToErrorCode(MembersOrErr.takeError());
+
+  for (Elf_Word Member : *MembersOrErr) {
+    if (Member == llvm::ELF::GRP_COMDAT) {
+      S->Members.push_back({"GRP_COMDAT"});
+      continue;
     }
-    S->Members.push_back(s);
+
+    auto SHdrOrErr = Obj.getSection(Member);
+    if (!SHdrOrErr)
+      return errorToErrorCode(SHdrOrErr.takeError());
+    auto NameOrErr = getUniquedSectionName(*SHdrOrErr);
+    if (!NameOrErr)
+      return errorToErrorCode(NameOrErr.takeError());
+    S->Members.push_back({*NameOrErr});
   }
   return S.release();
 }

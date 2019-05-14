@@ -18,7 +18,10 @@ import os
 import signal
 import sys
 
-import Queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 import debuggerdriver
 import cui
@@ -54,7 +57,7 @@ def handle_args(driver, argv):
             pid = int(options.pid)
             driver.attachProcess(ui, pid)
         except ValueError:
-            print "Error: expecting integer PID, got '%s'" % options.pid
+            print("Error: expecting integer PID, got '%s'" % options.pid)
     elif options.core is not None:
         if not os.path.exists(options.core):
             raise Exception(
@@ -126,7 +129,7 @@ def main(screen):
     signal.signal(signal.SIGINT, sigint_handler)
 
     global event_queue
-    event_queue = Queue.Queue()
+    event_queue = queue.Queue()
 
     global debugger
     debugger = lldb.SBDebugger.Create()

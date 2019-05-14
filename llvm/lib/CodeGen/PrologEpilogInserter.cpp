@@ -218,8 +218,6 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
 
   RS = TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr;
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
-  FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
-    TRI->requiresFrameIndexReplacementScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
   // Calculate the MaxCallFrameSize and AdjustsStack variables for the
@@ -663,10 +661,13 @@ computeFreeStackSlots(MachineFrameInfo &MFI, bool StackGrowsDown,
   SmallVector<int, 16> AllocatedFrameSlots;
   // Add fixed objects.
   for (int i = MFI.getObjectIndexBegin(); i != 0; ++i)
-    AllocatedFrameSlots.push_back(i);
+    // StackSlot scavenging is only implemented for the default stack.
+    if (MFI.getStackID(i) == 0)
+      AllocatedFrameSlots.push_back(i);
   // Add callee-save objects.
   for (int i = MinCSFrameIndex; i <= (int)MaxCSFrameIndex; ++i)
-    AllocatedFrameSlots.push_back(i);
+    if (MFI.getStackID(i) == 0)
+      AllocatedFrameSlots.push_back(i);
 
   for (int i : AllocatedFrameSlots) {
     // These are converted from int64_t, but they should always fit in int
@@ -788,11 +789,21 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // Skew to be applied to alignment.
   unsigned Skew = TFI.getStackAlignmentSkew(MF);
 
+#ifdef EXPENSIVE_CHECKS
+  for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i)
+    if (!MFI.isDeadObjectIndex(i) && MFI.getStackID(i) == 0)
+      assert(MFI.getObjectAlignment(i) <= MFI.getMaxAlignment() &&
+             "MaxAlignment is invalid");
+#endif
+
   // If there are fixed sized objects that are preallocated in the local area,
   // non-fixed objects can't be allocated right at the start of local area.
   // Adjust 'Offset' to point to the end of last fixed sized preallocated
   // object.
   for (int i = MFI.getObjectIndexBegin(); i != 0; ++i) {
+    if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+      continue;
+
     int64_t FixedOff;
     if (StackGrowsDown) {
       // The maximum distance from the stack pointer is at lower address of
@@ -811,6 +822,9 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // callee saved registers.
   if (StackGrowsDown) {
     for (unsigned i = MinCSFrameIndex; i <= MaxCSFrameIndex; ++i) {
+      if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+        continue;
+
       // If the stack grows down, we need to add the size to find the lowest
       // address of the object.
       Offset += MFI.getObjectSize(i);
@@ -825,6 +839,9 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   } else if (MaxCSFrameIndex >= MinCSFrameIndex) {
     // Be careful about underflow in comparisons agains MinCSFrameIndex.
     for (unsigned i = MaxCSFrameIndex; i != MinCSFrameIndex - 1; --i) {
+      if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+        continue;
+
       if (MFI.isDeadObjectIndex(i))
         continue;
 
@@ -915,6 +932,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
       if (MFI.getStackProtectorIndex() == (int)i ||
           EHRegNodeFrameIndex == (int)i)
         continue;
+      if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+        continue;
 
       switch (MFI.getObjectSSPLayout(i)) {
       case MachineFrameInfo::SSPLK_None:
@@ -957,6 +976,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
         EHRegNodeFrameIndex == (int)i)
       continue;
     if (ProtectedObjs.count(i))
+      continue;
+    if (MFI.getStackID(i)) // Only allocate objects on the default stack.
       continue;
 
     // Add the objects that we need to allocate to our working set.
@@ -1074,8 +1095,16 @@ void PEI::insertPrologEpilogCode(MachineFunction &MF) {
 /// replaceFrameIndices - Replace all MO_FrameIndex operands with physical
 /// register references and actual offsets.
 void PEI::replaceFrameIndices(MachineFunction &MF) {
-  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
-  if (!TFI.needsFrameIndexResolution(MF)) return;
+  const auto &ST = MF.getSubtarget();
+  const TargetFrameLowering &TFI = *ST.getFrameLowering();
+  if (!TFI.needsFrameIndexResolution(MF))
+    return;
+
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+
+  // Allow the target to determine this after knowing the frame size.
+  FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
+    TRI->requiresFrameIndexReplacementScavenging(MF);
 
   // Store SPAdj at exit of a basic block.
   SmallVector<int, 8> SPState;
@@ -1143,12 +1172,26 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         assert(i == 0 && "Frame indices can only appear as the first "
                          "operand of a DBG_VALUE machine instruction");
         unsigned Reg;
+        unsigned FrameIdx = MI.getOperand(0).getIndex();
+        unsigned Size = MF.getFrameInfo().getObjectSize(FrameIdx);
+
         int64_t Offset =
-            TFI->getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg);
+            TFI->getFrameIndexReference(MF, FrameIdx, Reg);
         MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
         MI.getOperand(0).setIsDebug();
-        auto *DIExpr = DIExpression::prepend(MI.getDebugExpression(),
-                                             DIExpression::NoDeref, Offset);
+
+        const DIExpression *DIExpr = MI.getDebugExpression();
+        // If we have DBG_VALUE that is indirect and has a Implicit location
+        // expression need to insert a deref before prepending a Memory
+        // location expression. Also after doing this we change the DBG_VALUE
+        // to be direct.
+        if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
+          SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
+          DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, DIExpression::WithStackValue);
+          // Make the DBG_VALUE direct.
+          MI.getOperand(1).ChangeToRegister(0, false);
+        }
+        DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset);
         MI.getOperand(3).setMetadata(DIExpr);
         continue;
       }

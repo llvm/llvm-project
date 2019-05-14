@@ -22,7 +22,6 @@ class PDBSymbolData;
 }
 } // namespace llvm
 
-//------------------------------------------------------------------------------
 /// Converts a location information from a PDB symbol to a DWARF expression
 ///
 /// \param[in] module
@@ -40,7 +39,6 @@ class PDBSymbolData;
 ///
 /// \return
 ///     The DWARF expression corresponding to the location data of \a symbol.
-//------------------------------------------------------------------------------
 lldb_private::DWARFExpression
 ConvertPDBLocationToDWARFExpression(lldb::ModuleSP module,
                                     const llvm::pdb::PDBSymbolData &symbol,

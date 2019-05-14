@@ -7,7 +7,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o %t1.so %t2.so -o %t
-# RUN: llvm-readobj -V -sections -section-data -dyn-symbols -dynamic-table %t | FileCheck %s
+# RUN: llvm-readobj -V --sections --section-data --dyn-syms --dynamic-table %t | FileCheck %s
 
 # CHECK:        Section {
 # CHECK:          Index: 1
@@ -68,8 +68,8 @@
 # CHECK-NEXT:     AddressAlignment: 1
 # CHECK-NEXT:     EntrySize: 0
 # CHECK-NEXT:     SectionData (
-# CHECK-NEXT:       0000: 00663100 7665726E 65656431 2E736F2E  |.f1.verneed1.so.|
-# CHECK-NEXT:       0010: 30007633 00663200 76320067 31007665  |0.v3.f2.v2.g1.ve|
+# CHECK-NEXT:       0000: 00663100 66320067 31007665 726E6565  |.f1.f2.g1.vernee|
+# CHECK-NEXT:       0010: 64312E73 6F2E3000 76320076 33007665  |d1.so.0.v2.v3.ve|
 # CHECK-NEXT:       0020: 726E6565 64322E73 6F2E3000 763100    |rneed2.so.0.v1.|
 # CHECK-NEXT:     )
 # CHECK-NEXT:   }
@@ -148,29 +148,33 @@
 # CHECK-NEXT:      Version: 1
 # CHECK-NEXT:      Count: 2
 # CHECK-NEXT:      FileName: verneed1.so.0
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1938
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 3
-# CHECK-NEXT:        Name: v2
-# CHECK-NEXT:      }
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1939
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 2
-# CHECK-NEXT:        Name: v3
-# CHECK-NEXT:      }
+# CHECK-NEXT:      Entries [
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1938
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 3
+# CHECK-NEXT:          Name: v2
+# CHECK-NEXT:        }
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1939
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 2
+# CHECK-NEXT:          Name: v3
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:    Dependency {
 # CHECK-NEXT:      Version: 1
 # CHECK-NEXT:      Count: 1
 # CHECK-NEXT:      FileName: verneed2.so.0
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1937
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 4
-# CHECK-NEXT:        Name: v1
-# CHECK-NEXT:      }
+# CHECK-NEXT:      Entries [
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1937
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 4
+# CHECK-NEXT:          Name: v1
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 

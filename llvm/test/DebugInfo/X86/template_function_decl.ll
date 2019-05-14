@@ -64,7 +64,7 @@ define weak_odr dso_local void @_ZN1S5tmpfnIiEEvv() comdat align 2 !dbg !26 {
 !3 = !DIFile(filename: "foo.cpp", directory: "/home/evgeny/work/cpp_lexer/sample2")
 !4 = !{}
 !5 = !{!0}
-!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !7, line: 1, size: 8, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !4, identifier: "_ZTS1S")
+!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !7, line: 1, size: 8, flags: DIFlagTypePassByValue, elements: !4, identifier: "_ZTS1S")
 !7 = !DIFile(filename: "./inc1.h", directory: "/home/evgeny/work/cpp_lexer/sample2")
 !8 = !DIGlobalVariableExpression(var: !9, expr: !DIExpression())
 !9 = distinct !DIGlobalVariable(name: "x", scope: !10, file: !13, line: 2, type: !14, isLocal: false, isDefinition: true)

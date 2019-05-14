@@ -25,34 +25,40 @@ int GlobalVar = 0;
 
 // Cases to test composite type's triviality
 
-// CHECK-DAG: !DICompositeType({{.*}}, name: "Union",{{.*}}flags: {{.*}}DIFlagTrivial
+// CHECK-DAG:      {{.*}}!DIGlobalVariable(name: "Union",
+// CHECK-DAG-NEXT: {{^((?!\bDIFlagNonTrivial\b).)*$}}
 union Union {
   int a;
 } Union;
 
-// CHECK-DAG: !DICompositeType({{.*}}, name: "Trivial",{{.*}}flags: {{.*}}DIFlagTrivial
+// CHECK-DAG:      {{.*}}!DIGlobalVariable(name: "Trivial",
+// CHECK-DAG-NEXT: {{^((?!\bDIFlagNonTrivial\b).)*$}}
 struct Trivial {
   int i;
 } Trivial;
 
-// CHECK-DAG: !DICompositeType({{.*}}, name: "TrivialA",{{.*}}flags: {{.*}}DIFlagTrivial
+// CHECK-DAG:       {{.*}}!DIGlobalVariable(name: "TrivialA",
+// CHECK-DAG-NEXT:  {{^((?!\bDIFlagNonTrivial\b).)*$}}
 struct TrivialA {
   TrivialA() = default;
 } TrivialA;
 
-// CHECK-DAG: !DICompositeType({{.*}}, name: "TrivialB",{{.*}}flags: {{.*}}DIFlagTrivial
+// CHECK-DAG:       {{.*}}!DIGlobalVariable(name: "TrivialB",
+// CHECK-DAG-NEXT:  {{^((?!\bDIFlagNonTrivial\b).)*$}}
 struct TrivialB {
   int m;
   TrivialB(int x) { m = x; }
   TrivialB() = default;
 } TrivialB;
 
-// CHECK-DAG: !DICompositeType({{.*}}, name: "TrivialC",{{.*}}flags: {{.*}}DIFlagTrivial
+// CHECK-DAG:       {{.*}}!DIGlobalVariable(name: "TrivialC",
+// CHECK-DAG-NEXT:  {{^((?!\bDIFlagNonTrivial\b).)*$}}
 struct TrivialC {
   struct Trivial x;
 } TrivialC;
 
-// CHECK-DAG: !DICompositeType({{.*}}, name: "TrivialD",{{.*}}flags: {{.*}}DIFlagTrivial
+// CHECK-DAG:       {{.*}}!DIGlobalVariable(name: "TrivialD",
+// CHECK-DAG-NEXT:  {{^((?!\bDIFlagNonTrivial\b).)*$}}
 struct NT {
   NT() {};
 };

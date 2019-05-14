@@ -42,11 +42,9 @@ using namespace lldb_private;
 #define UInt(x) ((uint64_t)x)
 #define integer int64_t
 
-//----------------------------------------------------------------------
 //
 // EmulateInstructionMIPS64 implementation
 //
-//----------------------------------------------------------------------
 
 #ifdef __mips__
 extern "C" {
@@ -664,9 +662,7 @@ bool EmulateInstructionMIPS64::GetRegisterInfo(RegisterKind reg_kind,
 EmulateInstructionMIPS64::MipsOpcode *
 EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
   static EmulateInstructionMIPS64::MipsOpcode g_opcodes[] = {
-      //----------------------------------------------------------------------
       // Prologue/Epilogue instructions
-      //----------------------------------------------------------------------
       {"DADDiu", &EmulateInstructionMIPS64::Emulate_DADDiu,
        "DADDIU rt, rs, immediate"},
       {"ADDiu", &EmulateInstructionMIPS64::Emulate_DADDiu,
@@ -683,9 +679,7 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
        "ADDU   rd, rs, rt"},
       {"LUI", &EmulateInstructionMIPS64::Emulate_LUI, "LUI    rt, immediate"},
 
-      //----------------------------------------------------------------------
       // Load/Store  instructions
-      //----------------------------------------------------------------------
       /* Following list of emulated instructions are required by implementation
          of hardware watchpoint
          for MIPS in lldb. As we just need the address accessed by instructions,
@@ -791,9 +785,7 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
       {"SWXC1", &EmulateInstructionMIPS64::Emulate_LDST_Reg,
        "SWXC1 fs, index (base)"},
 
-      //----------------------------------------------------------------------
       // Branch instructions
-      //----------------------------------------------------------------------
       {"BEQ", &EmulateInstructionMIPS64::Emulate_BXX_3ops, "BEQ rs,rt,offset"},
       {"BEQ64", &EmulateInstructionMIPS64::Emulate_BXX_3ops, "BEQ rs,rt,offset"},
       {"BNE", &EmulateInstructionMIPS64::Emulate_BXX_3ops, "BNE rs,rt,offset"},

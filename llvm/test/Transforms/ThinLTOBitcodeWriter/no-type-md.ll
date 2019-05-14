@@ -27,6 +27,8 @@
 
 ; BCA: <GLOBALVAL_SUMMARY_BLOCK
 
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+
 ; CHECK: @g = global i8 42
 @g = global i8 42
 

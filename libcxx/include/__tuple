@@ -53,26 +53,23 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS tuple_size<volatile _Tp> : publ
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS tuple_size<const volatile _Tp> : public tuple_size<_Tp> {};
 #endif
 
-template <size_t _Ip, class _Tp> class _LIBCPP_TEMPLATE_VIS tuple_element;
+template <size_t _Ip, class _Tp> struct _LIBCPP_TEMPLATE_VIS tuple_element;
 
 template <size_t _Ip, class _Tp>
-class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const _Tp>
+struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const _Tp>
 {
-public:
     typedef typename add_const<typename tuple_element<_Ip, _Tp>::type>::type type;
 };
 
 template <size_t _Ip, class _Tp>
-class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, volatile _Tp>
+struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, volatile _Tp>
 {
-public:
     typedef typename add_volatile<typename tuple_element<_Ip, _Tp>::type>::type type;
 };
 
 template <size_t _Ip, class _Tp>
-class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp>
+struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp>
 {
-public:
     typedef typename add_cv<typename tuple_element<_Ip, _Tp>::type>::type type;
 };
 
@@ -281,9 +278,8 @@ using __type_pack_element = typename decltype(
 #endif
 
 template <size_t _Ip, class ..._Types>
-class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, __tuple_types<_Types...>>
+struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, __tuple_types<_Types...>>
 {
-public:
     static_assert(_Ip < sizeof...(_Types), "tuple_element index out of range");
     typedef __type_pack_element<_Ip, _Types...> type;
 };
@@ -456,9 +452,8 @@ struct __tuple_assignable<_Tp, _Up, true, true>
 
 
 template <size_t _Ip, class ..._Tp>
-class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, tuple<_Tp...> >
+struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, tuple<_Tp...> >
 {
-public:
     typedef typename tuple_element<_Ip, __tuple_types<_Tp...> >::type type;
 };
 

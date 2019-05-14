@@ -7,7 +7,7 @@
 name: foo
 body: |
   bb.0:
-    JE_1 %bb.3, implicit $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
   bb.1:
     CFI_INSTRUCTION def_cfa_offset 24
   bb.2:

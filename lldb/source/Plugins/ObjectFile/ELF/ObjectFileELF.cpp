@@ -57,7 +57,6 @@ const char *const LLDB_NT_OWNER_GNU = "GNU";
 const char *const LLDB_NT_OWNER_NETBSD = "NetBSD";
 const char *const LLDB_NT_OWNER_NETBSDCORE = "NetBSD-CORE";
 const char *const LLDB_NT_OWNER_OPENBSD = "OpenBSD";
-const char *const LLDB_NT_OWNER_CSR = "csr";
 const char *const LLDB_NT_OWNER_ANDROID = "Android";
 const char *const LLDB_NT_OWNER_CORE = "CORE";
 const char *const LLDB_NT_OWNER_LINUX = "LINUX";
@@ -274,27 +273,6 @@ bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   return true;
 }
 
-static uint32_t kalimbaVariantFromElfFlags(const elf::elf_word e_flags) {
-  const uint32_t dsp_rev = e_flags & 0xFF;
-  uint32_t kal_arch_variant = LLDB_INVALID_CPUTYPE;
-  switch (dsp_rev) {
-  // TODO(mg11) Support more variants
-  case 10:
-    kal_arch_variant = llvm::Triple::KalimbaSubArch_v3;
-    break;
-  case 14:
-    kal_arch_variant = llvm::Triple::KalimbaSubArch_v4;
-    break;
-  case 17:
-  case 20:
-    kal_arch_variant = llvm::Triple::KalimbaSubArch_v5;
-    break;
-  default:
-    break;
-  }
-  return kal_arch_variant;
-}
-
 static uint32_t mipsVariantFromElfFlags (const elf::ELFHeader &header) {
   const uint32_t mips_arch = header.e_flags & llvm::ELF::EF_MIPS_ARCH;
   uint32_t endian = header.e_ident[EI_DATA];
@@ -352,40 +330,13 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
     return mipsVariantFromElfFlags(header);
 
-  return llvm::ELF::EM_CSR_KALIMBA == header.e_machine
-             ? kalimbaVariantFromElfFlags(header.e_flags)
-             : LLDB_INVALID_CPUTYPE;
-}
-
-//! The kalimba toolchain identifies a code section as being
-//! one with the SHT_PROGBITS set in the section sh_type and the top
-//! bit in the 32-bit address field set.
-static lldb::SectionType
-kalimbaSectionType(const elf::ELFHeader &header,
-                   const elf::ELFSectionHeader &sect_hdr) {
-  if (llvm::ELF::EM_CSR_KALIMBA != header.e_machine) {
-    return eSectionTypeOther;
-  }
-
-  if (llvm::ELF::SHT_NOBITS == sect_hdr.sh_type) {
-    return eSectionTypeZeroFill;
-  }
-
-  if (llvm::ELF::SHT_PROGBITS == sect_hdr.sh_type) {
-    const lldb::addr_t KAL_CODE_BIT = 1 << 31;
-    return KAL_CODE_BIT & sect_hdr.sh_addr ? eSectionTypeCode
-                                           : eSectionTypeData;
-  }
-
-  return eSectionTypeOther;
+  return LLDB_INVALID_CPUTYPE;
 }
 
 // Arbitrary constant used as UUID prefix for core files.
 const uint32_t ObjectFileELF::g_core_uuid_magic(0xE210C);
 
-//------------------------------------------------------------------
 // Static methods.
-//------------------------------------------------------------------
 void ObjectFileELF::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,
@@ -758,17 +709,13 @@ size_t ObjectFileELF::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjectFileELF::GetPluginName() {
   return GetPluginNameStatic();
 }
 
 uint32_t ObjectFileELF::GetPluginVersion() { return m_plugin_version; }
-//------------------------------------------------------------------
 // ObjectFile protocol
-//------------------------------------------------------------------
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
                              DataBufferSP &data_sp, lldb::offset_t data_offset,
@@ -1056,9 +1003,7 @@ Address ObjectFileELF::GetBaseAddress() {
   return LLDB_INVALID_ADDRESS;
 }
 
-//----------------------------------------------------------------------
 // ParseDependentModules
-//----------------------------------------------------------------------
 size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();
@@ -1117,9 +1062,7 @@ size_t ObjectFileELF::ParseDependentModules() {
   return m_filespec_up->GetSize();
 }
 
-//----------------------------------------------------------------------
 // GetProgramHeaderInfo
-//----------------------------------------------------------------------
 size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
                                            DataExtractor &object_data,
                                            const ELFHeader &header) {
@@ -1154,9 +1097,7 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
   return program_headers.size();
 }
 
-//----------------------------------------------------------------------
 // ParseProgramHeaders
-//----------------------------------------------------------------------
 bool ObjectFileELF::ParseProgramHeaders() {
   return GetProgramHeaderInfo(m_program_headers, m_data, m_header) != 0;
 }
@@ -1336,21 +1277,6 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // Set the elf OS version to OpenBSD.  Also clear the vendor.
       arch_spec.GetTriple().setOS(llvm::Triple::OSType::OpenBSD);
       arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
-    }
-    // Process CSR kalimba notes
-    else if ((note.n_type == LLDB_NT_GNU_ABI_TAG) &&
-             (note.n_name == LLDB_NT_OWNER_CSR)) {
-      arch_spec.GetTriple().setOS(llvm::Triple::OSType::UnknownOS);
-      arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::CSR);
-
-      // TODO At some point the description string could be processed.
-      // It could provide a steer towards the kalimba variant which this ELF
-      // targets.
-      if (note.n_descsz) {
-        const char *cstr =
-            data.GetCStr(&offset, llvm::alignTo(note.n_descsz, 4));
-        (void)cstr;
-      }
     } else if (note.n_name == LLDB_NT_OWNER_ANDROID) {
       arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
       arch_spec.GetTriple().setEnvironment(
@@ -1364,8 +1290,6 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // the contents look like this in a 64 bit ELF core file: count     =
       // 0x000000000000000a (10) page_size = 0x0000000000001000 (4096) Index
       // start              end                file_ofs           path =====
-      // ------------------ ------------------ ------------------
-      // ------------------------------------- [  0] 0x0000000000400000
       // 0x0000000000401000 0x0000000000000000 /tmp/a.out [  1]
       // 0x0000000000600000 0x0000000000601000 0x0000000000000000 /tmp/a.out [
       // 2] 0x0000000000601000 0x0000000000602000 0x0000000000000001 /tmp/a.out
@@ -1489,9 +1413,7 @@ void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
   }
 }
 
-//----------------------------------------------------------------------
 // GetSectionHeaderInfo
-//----------------------------------------------------------------------
 size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                                            DataExtractor &object_data,
                                            const elf::ELFHeader &header,
@@ -1724,9 +1646,7 @@ ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
   return symbol_name.substr(0, pos);
 }
 
-//----------------------------------------------------------------------
 // ParseSectionHeaders
-//----------------------------------------------------------------------
 size_t ObjectFileELF::ParseSectionHeaders() {
   return GetSectionHeaderInfo(m_section_headers, m_data, m_header, m_uuid,
                               m_gnu_debuglink_file, m_gnu_debuglink_crc,
@@ -1808,14 +1728,7 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_DYNAMIC:
     return eSectionTypeELFDynamicLinkInfo;
   }
-  SectionType Type = GetSectionTypeFromName(H.section_name.GetStringRef());
-  if (Type == eSectionTypeOther) {
-    // the kalimba toolchain assumes that ELF section names are free-form.
-    // It does support linkscripts which (can) give rise to various
-    // arbitrarily named sections being "Code" or "Data".
-    Type = kalimbaSectionType(m_header, H);
-  }
-  return Type;
+  return GetSectionTypeFromName(H.section_name.GetStringRef());
 }
 
 static uint32_t GetTargetByteSize(SectionType Type, const ArchSpec &arch) {
@@ -2083,8 +1996,8 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   // custom extension and file name makes it highly unlikely that this will
   // collide with anything else.
   ConstString file_extension = m_file.GetFileNameExtension();
-  bool skip_oatdata_oatexec = file_extension == ConstString(".oat") ||
-                              file_extension == ConstString(".odex");
+  bool skip_oatdata_oatexec =
+      file_extension == ".oat" || file_extension == ".odex";
 
   ArchSpec arch = GetArchitecture();
   ModuleSP module_sp(GetModule());
@@ -3001,7 +2914,6 @@ bool ObjectFileELF::IsStripped() {
 //
 // Dump the specifics of the runtime file container (such as any headers
 // segments, sections, etc).
-//----------------------------------------------------------------------
 void ObjectFileELF::Dump(Stream *s) {
   ModuleSP module_sp(GetModule());
   if (!module_sp) {
@@ -3035,11 +2947,9 @@ void ObjectFileELF::Dump(Stream *s) {
   s->EOL();
 }
 
-//----------------------------------------------------------------------
 // DumpELFHeader
 //
 // Dump the ELF header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFHeader(Stream *s, const ELFHeader &header) {
   s->PutCString("ELF Header\n");
   s->Printf("e_ident[EI_MAG0   ] = 0x%2.2x\n", header.e_ident[EI_MAG0]);
@@ -3072,11 +2982,9 @@ void ObjectFileELF::DumpELFHeader(Stream *s, const ELFHeader &header) {
   s->Printf("e_shstrndx  = 0x%8.8x\n", header.e_shstrndx);
 }
 
-//----------------------------------------------------------------------
 // DumpELFHeader_e_type
 //
 // Dump an token value for the ELF header member e_type
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFHeader_e_type(Stream *s, elf_half e_type) {
   switch (e_type) {
   case ET_NONE:
@@ -3099,11 +3007,9 @@ void ObjectFileELF::DumpELFHeader_e_type(Stream *s, elf_half e_type) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFHeader_e_ident_EI_DATA
 //
 // Dump an token value for the ELF header member e_ident[EI_DATA]
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFHeader_e_ident_EI_DATA(Stream *s,
                                                   unsigned char ei_data) {
   switch (ei_data) {
@@ -3121,11 +3027,9 @@ void ObjectFileELF::DumpELFHeader_e_ident_EI_DATA(Stream *s,
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeader
 //
 // Dump a single ELF program header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeader(Stream *s,
                                          const ELFProgramHeader &ph) {
   DumpELFProgramHeader_p_type(s, ph.p_type);
@@ -3138,12 +3042,10 @@ void ObjectFileELF::DumpELFProgramHeader(Stream *s,
   s->Printf(") %8.8" PRIx64, ph.p_align);
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeader_p_type
 //
 // Dump an token value for the ELF program header member p_type which describes
 // the type of the program header
-// ----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeader_p_type(Stream *s, elf_word p_type) {
   const int kStrWidth = 15;
   switch (p_type) {
@@ -3162,11 +3064,9 @@ void ObjectFileELF::DumpELFProgramHeader_p_type(Stream *s, elf_word p_type) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeader_p_flags
 //
 // Dump an token value for the ELF program header member p_flags
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeader_p_flags(Stream *s, elf_word p_flags) {
   *s << ((p_flags & PF_X) ? "PF_X" : "    ")
      << (((p_flags & PF_X) && (p_flags & PF_W)) ? '+' : ' ')
@@ -3175,11 +3075,9 @@ void ObjectFileELF::DumpELFProgramHeader_p_flags(Stream *s, elf_word p_flags) {
      << ((p_flags & PF_R) ? "PF_R" : "    ");
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeaders
 //
 // Dump all of the ELF program header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeaders(Stream *s) {
   if (!ParseProgramHeaders())
     return;
@@ -3197,11 +3095,9 @@ void ObjectFileELF::DumpELFProgramHeaders(Stream *s) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeader
 //
 // Dump a single ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeader(Stream *s,
                                          const ELFSectionHeaderInfo &sh) {
   s->Printf("%8.8x ", sh.sh_name);
@@ -3214,12 +3110,10 @@ void ObjectFileELF::DumpELFSectionHeader(Stream *s,
   s->Printf(" %8.8" PRIx64 " %8.8" PRIx64, sh.sh_addralign, sh.sh_entsize);
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeader_sh_type
 //
 // Dump an token value for the ELF section header member sh_type which
 // describes the type of the section
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeader_sh_type(Stream *s, elf_word sh_type) {
   const int kStrWidth = 12;
   switch (sh_type) {
@@ -3245,11 +3139,9 @@ void ObjectFileELF::DumpELFSectionHeader_sh_type(Stream *s, elf_word sh_type) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeader_sh_flags
 //
 // Dump an token value for the ELF section header member sh_flags
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeader_sh_flags(Stream *s,
                                                   elf_xword sh_flags) {
   *s << ((sh_flags & SHF_WRITE) ? "WRITE" : "     ")
@@ -3259,11 +3151,9 @@ void ObjectFileELF::DumpELFSectionHeader_sh_flags(Stream *s,
      << ((sh_flags & SHF_EXECINSTR) ? "EXECINSTR" : "         ");
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeaders
 //
 // Dump all of the ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeaders(Stream *s) {
   if (!ParseSectionHeaders())
     return;

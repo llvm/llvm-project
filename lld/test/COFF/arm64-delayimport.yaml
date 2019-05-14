@@ -3,7 +3,7 @@
 # RUN: yaml2obj < %s > %t.obj
 # RUN: lld-link /entry:main /subsystem:console /out:%t.exe %t.obj %p/Inputs/library-arm64.lib /alternatename:__delayLoadHelper2=main /delayload:library.dll
 # RUN: llvm-objdump -d %t.exe | FileCheck %s -check-prefix DISASM
-# RUN: llvm-readobj -coff-imports %t.exe | FileCheck %s -check-prefix IMPORTS
+# RUN: llvm-readobj --coff-imports %t.exe | FileCheck %s -check-prefix IMPORTS
 
 # DISASM:  140001014:      11 00 00 d0     adrp    x17, #8192
 # DISASM:  140001018:      31 22 00 91     add     x17, x17, #8

@@ -30,7 +30,6 @@ class ClangExpressionDeclMap;
 class ExecutionContext;
 class Stream;
 
-//----------------------------------------------------------------------
 /// \class DynamicCheckerFunctions IRDynamicChecks.h
 /// "lldb/Expression/IRDynamicChecks.h" Encapsulates dynamic check functions
 /// used by expressions.
@@ -44,20 +43,14 @@ class Stream;
 ///
 /// The class installs each checker function into the target process and makes
 /// it available to IRDynamicChecks to use.
-//----------------------------------------------------------------------
 class DynamicCheckerFunctions {
 public:
-  //------------------------------------------------------------------
   /// Constructor
-  //------------------------------------------------------------------
   DynamicCheckerFunctions();
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~DynamicCheckerFunctions();
 
-  //------------------------------------------------------------------
   /// Install the utility functions into a process.  This binds the instance
   /// of DynamicCheckerFunctions to that process.
   ///
@@ -70,7 +63,6 @@ public:
   /// \return
   ///     True on success; false on failure, or if the functions have
   ///     already been installed.
-  //------------------------------------------------------------------
   bool Install(DiagnosticManager &diagnostic_manager,
                ExecutionContext &exe_ctx);
 
@@ -80,7 +72,6 @@ public:
   std::unique_ptr<UtilityFunction> m_objc_object_check;
 };
 
-//----------------------------------------------------------------------
 /// \class IRDynamicChecks IRDynamicChecks.h
 /// "lldb/Expression/IRDynamicChecks.h" Adds dynamic checks to a user-entered
 /// expression to reduce its likelihood of crashing
@@ -91,10 +82,8 @@ public:
 ///
 /// IRDynamicChecks adds calls to the functions in DynamicCheckerFunctions to
 /// appropriate locations in an expression's IR.
-//----------------------------------------------------------------------
 class IRDynamicChecks : public llvm::ModulePass {
 public:
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// \param[in] checker_functions
@@ -106,16 +95,12 @@ public:
   /// \param[in] decl_map
   ///     The mapping used to look up entities in the target process. In
   ///     this case, used to find objc_msgSend
-  //------------------------------------------------------------------
   IRDynamicChecks(DynamicCheckerFunctions &checker_functions,
                   const char *func_name = "$__lldb_expr");
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~IRDynamicChecks() override;
 
-  //------------------------------------------------------------------
   /// Run this IR transformer on a single module
   ///
   /// \param[in] M
@@ -125,28 +110,20 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool runOnModule(llvm::Module &M) override;
 
-  //------------------------------------------------------------------
   /// Interface stub
-  //------------------------------------------------------------------
   void assignPassManager(
       llvm::PMStack &PMS,
       llvm::PassManagerType T = llvm::PMT_ModulePassManager) override;
 
-  //------------------------------------------------------------------
   /// Returns PMT_ModulePassManager
-  //------------------------------------------------------------------
   llvm::PassManagerType getPotentialPassManagerType() const override;
 
 private:
-  //------------------------------------------------------------------
   /// A basic block-level pass to find all pointer dereferences and
   /// validate them before use.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] M
@@ -157,7 +134,6 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool FindDataLoads(llvm::Module &M, llvm::BasicBlock &BB);
 
   std::string m_func_name; ///< The name of the function to add checks to

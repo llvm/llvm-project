@@ -140,6 +140,7 @@ extern llvm::cl::opt<bool> DumpSummary;
 extern llvm::cl::opt<bool> DumpFpm;
 extern llvm::cl::opt<bool> DumpStreams;
 extern llvm::cl::opt<bool> DumpSymbolStats;
+extern llvm::cl::opt<bool> DumpTypeStats;
 extern llvm::cl::opt<bool> DumpUdtStats;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 
@@ -155,6 +156,7 @@ extern llvm::cl::opt<bool> DumpTypeData;
 extern llvm::cl::opt<bool> DumpTypeExtras;
 extern llvm::cl::list<uint32_t> DumpTypeIndex;
 extern llvm::cl::opt<bool> DumpTypeDependents;
+extern llvm::cl::opt<bool> DumpTypeRefStats;
 extern llvm::cl::opt<bool> DumpSectionHeaders;
 
 extern llvm::cl::opt<bool> DumpIds;

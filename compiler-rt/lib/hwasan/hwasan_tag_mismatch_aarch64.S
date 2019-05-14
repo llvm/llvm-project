@@ -68,9 +68,9 @@ __hwasan_tag_mismatch:
   // __hwasan_tag_mismatch. The frame pointer is already correctly setup
   // by __hwasan_check_*.
   add x29, sp, #232
-  CFI_DEF_CFA(w29, 16)
-  CFI_OFFSET(w30, -8)
-  CFI_OFFSET(w29, -16)
+  CFI_DEF_CFA(w29, 24)
+  CFI_OFFSET(w30, -16)
+  CFI_OFFSET(w29, -24)
 
   // Save the rest of the registers into the preallocated space left by
   // __hwasan_check.

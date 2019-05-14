@@ -79,9 +79,7 @@ public:
   using Elf_Relr_Range = typename ELFT::RelrRange;
   using Elf_Phdr_Range = typename ELFT::PhdrRange;
 
-  const uint8_t *base() const {
-    return reinterpret_cast<const uint8_t *>(Buf.data());
-  }
+  const uint8_t *base() const { return Buf.bytes_begin(); }
 
   size_t getBufSize() const { return Buf.size(); }
 

@@ -48,7 +48,6 @@ class StringRef;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class RegularExpression RegularExpression.h
 /// "lldb/Utility/RegularExpression.h"
 /// A C++ wrapper class for regex.
@@ -56,7 +55,6 @@ namespace lldb_private {
 /// This regular expression class wraps the posix regex functions \c
 /// regcomp(), \c regerror(), \c regexec(), and \c regfree() from the header
 /// file in \c /usr/include/regex\.h.
-//----------------------------------------------------------------------
 class RegularExpression {
 public:
   class Match {
@@ -94,29 +92,24 @@ public:
         m_matches; ///< Where parenthesized subexpressions results are stored
   };
 
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// The default constructor that initializes the object state such that it
   /// contains no compiled regular expression.
-  //------------------------------------------------------------------
   RegularExpression();
 
   explicit RegularExpression(llvm::StringRef string);
 
-  //------------------------------------------------------------------
   /// Destructor.
   ///
   /// Any previously compiled regular expression contained in this object will
   /// be freed.
-  //------------------------------------------------------------------
   ~RegularExpression();
 
   RegularExpression(const RegularExpression &rhs);
 
   const RegularExpression &operator=(const RegularExpression &rhs);
 
-  //------------------------------------------------------------------
   /// Compile a regular expression.
   ///
   /// Compile a regular expression using the supplied regular expression text.
@@ -132,11 +125,9 @@ public:
   /// \return
   ///     \b true if the regular expression compiles successfully,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool Compile(llvm::StringRef string);
   bool Compile(const char *) = delete;
 
-  //------------------------------------------------------------------
   /// Executes a regular expression.
   ///
   /// Execute a regular expression match using the compiled regular expression
@@ -156,21 +147,17 @@ public:
   /// \return
   ///     \b true if \a string matches the compiled regular
   ///     expression, \b false otherwise.
-  //------------------------------------------------------------------
   bool Execute(llvm::StringRef string, Match *match = nullptr) const;
   bool Execute(const char *, Match * = nullptr) = delete;
 
   size_t GetErrorAsCString(char *err_str, size_t err_str_max_len) const;
 
-  //------------------------------------------------------------------
   /// Free the compiled regular expression.
   ///
   /// If this object contains a valid compiled regular expression, this
   /// function will free any resources it was consuming.
-  //------------------------------------------------------------------
   void Free();
 
-  //------------------------------------------------------------------
   /// Access the regular expression text.
   ///
   /// Returns the text that was used to compile the current regular
@@ -179,10 +166,8 @@ public:
   /// \return
   ///     The NULL terminated C string that was used to compile the
   ///     current regular expression
-  //------------------------------------------------------------------
   llvm::StringRef GetText() const;
 
-  //------------------------------------------------------------------
   /// Test if valid.
   ///
   /// Test if this object contains a valid regular expression.
@@ -190,7 +175,6 @@ public:
   /// \return
   ///     \b true if the regular expression compiled and is ready
   ///     for execution, \b false otherwise.
-  //------------------------------------------------------------------
   bool IsValid() const;
 
   void Clear() {
@@ -204,9 +188,7 @@ public:
   bool operator<(const RegularExpression &rhs) const;
 
 private:
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   std::string m_re; ///< A copy of the original regular expression text
   int m_comp_err;   ///< Status code for the regular expression compilation
   regex_t m_preg;   ///< The compiled regular expression

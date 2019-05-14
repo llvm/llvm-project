@@ -15,7 +15,6 @@
 #include "MICmnMIValueList.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdSupportListFeatures constructor.
 // Type:    Method.
 // Args:    None.
@@ -31,7 +30,6 @@ CMICmdCmdSupportListFeatures::CMICmdCmdSupportListFeatures() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdSupportListFeatures destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -41,7 +39,6 @@ CMICmdCmdSupportListFeatures::CMICmdCmdSupportListFeatures() {
 CMICmdCmdSupportListFeatures::~CMICmdCmdSupportListFeatures() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -59,7 +56,6 @@ bool CMICmdCmdSupportListFeatures::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -87,7 +83,6 @@ bool CMICmdCmdSupportListFeatures::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.

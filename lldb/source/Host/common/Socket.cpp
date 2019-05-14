@@ -18,6 +18,9 @@
 #include "lldb/Utility/RegularExpression.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/WindowsError.h"
 
 #ifndef LLDB_DISABLE_POSIX
 #include "lldb/Host/posix/DomainSocket.h"
@@ -77,6 +80,31 @@ Socket::Socket(SocketProtocol protocol, bool should_close,
 
 Socket::~Socket() { Close(); }
 
+llvm::Error Socket::Initialize() {
+#if defined(_WIN32)
+  auto wVersion = WINSOCK_VERSION;
+  WSADATA wsaData;
+  int err = ::WSAStartup(wVersion, &wsaData);
+  if (err == 0) {
+    if (wsaData.wVersion < wVersion) {
+      WSACleanup();
+      return llvm::make_error<llvm::StringError>(
+          "WSASock version is not expected.", llvm::inconvertibleErrorCode());
+    }
+  } else {
+    return llvm::errorCodeToError(llvm::mapWindowsError(::WSAGetLastError()));
+  }
+#endif
+
+  return llvm::Error::success();
+}
+
+void Socket::Terminate() {
+#if defined(_WIN32)
+  ::WSACleanup();
+#endif
+}
+
 std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
                                        bool child_processes_inherit,
                                        Status &error) {
@@ -123,7 +151,7 @@ Status Socket::TcpConnect(llvm::StringRef host_and_port,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.data());
+                host_and_port.str().c_str());
 
   Status error;
   std::unique_ptr<Socket> connect_socket(
@@ -143,7 +171,7 @@ Status Socket::TcpListen(llvm::StringRef host_and_port,
                          Predicate<uint16_t> *predicate, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
-    log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.data());
+    log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.str().c_str());
 
   Status error;
   std::string host_str;
@@ -183,7 +211,7 @@ Status Socket::UdpConnect(llvm::StringRef host_and_port,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.data());
+                host_and_port.str().c_str());
 
   return UDPSocket::Connect(host_and_port, child_processes_inherit, socket);
 }
@@ -274,7 +302,8 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
       // port is too large
       if (error_ptr)
         error_ptr->SetErrorStringWithFormat(
-            "invalid host:port specification: '%s'", host_and_port.data());
+            "invalid host:port specification: '%s'",
+            host_and_port.str().c_str());
       return false;
     }
   }
@@ -292,7 +321,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
 
   if (error_ptr)
     error_ptr->SetErrorStringWithFormat("invalid host:port specification: '%s'",
-                                        host_and_port.data());
+                                        host_and_port.str().c_str());
   return false;
 }
 
@@ -450,9 +479,11 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   if (!child_processes_inherit) {
     flags |= SOCK_CLOEXEC;
   }
-  NativeSocket fd = ::accept4(sockfd, addr, addrlen, flags);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept4,
+      sockfd, addr, addrlen, flags);
 #else
-  NativeSocket fd = ::accept(sockfd, addr, addrlen);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept,
+      sockfd, addr, addrlen);
 #endif
   if (fd == kInvalidSocketValue)
     SetLastError(error);

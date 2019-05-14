@@ -21,7 +21,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_default(self):
         '''
@@ -41,7 +40,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_stopOnEntry(self):
         '''
@@ -63,7 +61,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test_cwd(self):
         '''
@@ -92,7 +90,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test_debuggerRoot(self):
         '''
@@ -122,7 +120,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_sourcePath(self):
         '''
@@ -150,7 +147,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_disableSTDIO(self):
         '''
@@ -167,7 +163,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
+    @skipIfLinux # shell argument expansion doesn't seem to work on Linux
     @expectedFailureNetBSD
     @no_debug_info_test
     def test_shellExpandArguments_enabled(self):
@@ -194,7 +190,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_shellExpandArguments_disabled(self):
         '''
@@ -222,7 +217,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_args(self):
         '''
@@ -250,7 +244,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_environment(self):
         '''
@@ -285,7 +278,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_commands(self):
         '''

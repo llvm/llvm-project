@@ -175,7 +175,10 @@ enum MiscFlags {             // Miscellaneous flags to adjust argument
   // If this is enabled, multiple letter options are allowed to bunch together
   // with only a single hyphen for the whole group.  This allows emulation
   // of the behavior that ls uses for example: ls -la === ls -l -a
-  Grouping = 0x08
+  Grouping = 0x08,
+
+  // Default option
+  DefaultOption = 0x10
 };
 
 //===----------------------------------------------------------------------===//
@@ -270,7 +273,7 @@ class Option {
   unsigned Value : 2;
   unsigned HiddenFlag : 2; // enum OptionHidden
   unsigned Formatting : 2; // enum FormattingFlags
-  unsigned Misc : 4;
+  unsigned Misc : 5;
   unsigned Position = 0;       // Position of last occurrence of the option
   unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.
 
@@ -306,6 +309,7 @@ public:
   bool hasArgStr() const { return !ArgStr.empty(); }
   bool isPositional() const { return getFormattingFlag() == cl::Positional; }
   bool isSink() const { return getMiscFlags() & cl::Sink; }
+  bool isDefaultOption() const { return getMiscFlags() & cl::DefaultOption; }
 
   bool isConsumeAfter() const {
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
@@ -382,7 +386,7 @@ public:
   }
 
   inline int getNumOccurrences() const { return NumOccurrences; }
-  inline void reset() { NumOccurrences = 0; }
+  void reset();
 };
 
 //===----------------------------------------------------------------------===//
@@ -969,6 +973,29 @@ public:
 extern template class basic_parser<unsigned>;
 
 //--------------------------------------------------
+// parser<unsigned long>
+//
+template <>
+class parser<unsigned long> final : public basic_parser<unsigned long> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // parse - Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, unsigned long &Val);
+
+  // getValueName - Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "ulong"; }
+
+  void printOptionDiff(const Option &O, unsigned long V, OptVal Default,
+                       size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+extern template class basic_parser<unsigned long>;
+
+//--------------------------------------------------
 // parser<unsigned long long>
 //
 template <>
@@ -982,7 +1009,7 @@ public:
              unsigned long long &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  StringRef getValueName() const override { return "uint"; }
+  StringRef getValueName() const override { return "ulong"; }
 
   void printOptionDiff(const Option &O, unsigned long long V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1398,6 +1425,8 @@ template <class DataType, class StorageClass> class list_storage {
 public:
   list_storage() = default;
 
+  void clear() {}
+
   bool setLocation(Option &O, StorageClass &L) {
     if (Location)
       return O.error("cl::location(x) specified more than once!");
@@ -1448,6 +1477,10 @@ public:
 
   reference operator[](size_type pos) { return Storage[pos]; }
   const_reference operator[](size_type pos) const { return Storage[pos]; }
+
+  void clear() {
+    Storage.clear();
+  }
 
   iterator erase(const_iterator pos) { return Storage.erase(pos); }
   iterator erase(const_iterator first, const_iterator last) {
@@ -1526,7 +1559,10 @@ class list : public Option, public list_storage<DataType, StorageClass> {
   void printOptionValue(size_t /*GlobalWidth*/, bool /*Force*/) const override {
   }
 
-  void setDefault() override {}
+  void setDefault() override {
+    Positions.clear();
+    list_storage<DataType, StorageClass>::clear();
+  }
 
   void done() {
     addArgument();
@@ -1732,7 +1768,10 @@ class alias : public Option {
       error("cl::alias must have argument name specified!");
     if (!AliasFor)
       error("cl::alias must have an cl::aliasopt(option) specified!");
+    if (!Subs.empty())
+      error("cl::alias must not have cl::sub(), aliased option's cl::sub() will be used!");
     Subs = AliasFor->Subs;
+    Category = AliasFor->Category;
     addArgument();
   }
 

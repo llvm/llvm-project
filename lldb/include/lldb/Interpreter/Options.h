@@ -46,7 +46,6 @@ static inline bool isprint8(int ch) {
   return isprint(ch);
 }
 
-//----------------------------------------------------------------------
 /// \class Options Options.h "lldb/Interpreter/Options.h"
 /// A command line option parsing protocol class.
 ///
@@ -60,7 +59,6 @@ static inline bool isprint8(int ch) {
 ///     *optstring, const struct option *longopts, int *longindex);
 /// \endcode
 ///
-//----------------------------------------------------------------------
 class Options {
 public:
   Options();
@@ -73,12 +71,10 @@ public:
 
   uint32_t NumCommandOptions();
 
-  //------------------------------------------------------------------
   /// Get the option definitions to use when parsing Args options.
   ///
   /// \see Args::ParseOptions (Options&)
   /// \see man getopt_long_only
-  //------------------------------------------------------------------
   Option *GetLongOptions();
 
   // This gets passed the short option as an integer...
@@ -114,7 +110,6 @@ public:
   // and subclasses shouldn't have to do it.
   void NotifyOptionParsingStarting(ExecutionContext *execution_context);
 
-  //------------------------------------------------------------------
   /// Parse the provided arguments.
   ///
   /// The parsed options are set via calls to SetOptionValue. In case of a
@@ -131,7 +126,6 @@ public:
   /// param[in] require_validation
   ///   When true, it will fail option parsing if validation could
   ///   not occur due to not having a platform.
-  //------------------------------------------------------------------
   llvm::Expected<Args> Parse(const Args &args,
                              ExecutionContext *execution_context,
                              lldb::PlatformSP platform_sp,
@@ -146,7 +140,6 @@ public:
 
   Status NotifyOptionParsingFinished(ExecutionContext *execution_context);
 
-  //------------------------------------------------------------------
   /// Set the value of an option.
   ///
   /// \param[in] option_idx
@@ -164,11 +157,9 @@ public:
   ///
   /// \see Args::ParseOptions (Options&)
   /// \see man getopt_long_only
-  //------------------------------------------------------------------
   virtual Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                                 ExecutionContext *execution_context) = 0;
 
-  //------------------------------------------------------------------
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
@@ -184,12 +175,10 @@ public:
   ///
   /// \return
   ///     \btrue if we were in an option, \bfalse otherwise.
-  //------------------------------------------------------------------
   bool HandleOptionCompletion(lldb_private::CompletionRequest &request,
                               OptionElementVector &option_map,
                               CommandInterpreter &interpreter);
 
-  //------------------------------------------------------------------
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
@@ -205,7 +194,6 @@ public:
   ///
   /// \return
   ///     \btrue if we were in an option, \bfalse otherwise.
-  //------------------------------------------------------------------
   virtual bool
   HandleOptionArgumentCompletion(lldb_private::CompletionRequest &request,
                                  OptionElementVector &opt_element_vector,
@@ -283,7 +271,6 @@ public:
 
   ~OptionGroupOptions() override = default;
 
-  //----------------------------------------------------------------------
   /// Append options from a OptionGroup class.
   ///
   /// Append all options from \a group using the exact same option groups that
@@ -292,10 +279,8 @@ public:
   /// \param[in] group
   ///     A group of options to take option values from and copy their
   ///     definitions into this class.
-  //----------------------------------------------------------------------
   void Append(OptionGroup *group);
 
-  //----------------------------------------------------------------------
   /// Append options from a OptionGroup class.
   ///
   /// Append options from \a group that have a usage mask that has any bits in
@@ -316,7 +301,6 @@ public:
   /// \param[in] dst_mask
   ///     Set the usage mask for any copied options to \a dst_mask after
   ///     copying the option definition.
-  //----------------------------------------------------------------------
   void Append(OptionGroup *group, uint32_t src_mask, uint32_t dst_mask);
 
   void Finalize();

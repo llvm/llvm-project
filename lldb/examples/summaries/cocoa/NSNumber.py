@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """
 # example summary provider for NSNumber
 # the real summary is now C++ code built into LLDB
+
+from __future__ import print_function
+
 import lldb
 import ctypes
 import lldb.runtime.objc.objc_runtime
@@ -250,7 +253,7 @@ def NSNumber_SummaryProvider(valobj, dict):
         try:
             summary = provider.value()
         except Exception as foo:
-            print foo
+            print(foo)
 #		except:
             summary = None
         logger >> "got summary " + str(summary)

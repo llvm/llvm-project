@@ -29,18 +29,43 @@ using namespace llvm;
 
 unsigned llvm::constrainRegToClass(MachineRegisterInfo &MRI,
                                    const TargetInstrInfo &TII,
-                                   const RegisterBankInfo &RBI,
-                                   MachineInstr &InsertPt, unsigned Reg,
+                                   const RegisterBankInfo &RBI, unsigned Reg,
                                    const TargetRegisterClass &RegClass) {
-  if (!RBI.constrainGenericRegister(Reg, RegClass, MRI)) {
-    unsigned NewReg = MRI.createVirtualRegister(&RegClass);
-    BuildMI(*InsertPt.getParent(), InsertPt, InsertPt.getDebugLoc(),
-            TII.get(TargetOpcode::COPY), NewReg)
-        .addReg(Reg);
-    return NewReg;
-  }
+  if (!RBI.constrainGenericRegister(Reg, RegClass, MRI))
+    return MRI.createVirtualRegister(&RegClass);
 
   return Reg;
+}
+
+unsigned llvm::constrainOperandRegClass(
+    const MachineFunction &MF, const TargetRegisterInfo &TRI,
+    MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
+    const RegisterBankInfo &RBI, MachineInstr &InsertPt,
+    const TargetRegisterClass &RegClass, const MachineOperand &RegMO,
+    unsigned OpIdx) {
+  unsigned Reg = RegMO.getReg();
+  // Assume physical registers are properly constrained.
+  assert(TargetRegisterInfo::isVirtualRegister(Reg) &&
+         "PhysReg not implemented");
+
+  unsigned ConstrainedReg = constrainRegToClass(MRI, TII, RBI, Reg, RegClass);
+  // If we created a new virtual register because the class is not compatible
+  // then create a copy between the new and the old register.
+  if (ConstrainedReg != Reg) {
+    MachineBasicBlock::iterator InsertIt(&InsertPt);
+    MachineBasicBlock &MBB = *InsertPt.getParent();
+    if (RegMO.isUse()) {
+      BuildMI(MBB, InsertIt, InsertPt.getDebugLoc(),
+              TII.get(TargetOpcode::COPY), ConstrainedReg)
+          .addReg(Reg);
+    } else {
+      assert(RegMO.isDef() && "Must be a definition");
+      BuildMI(MBB, std::next(InsertIt), InsertPt.getDebugLoc(),
+              TII.get(TargetOpcode::COPY), Reg)
+          .addReg(ConstrainedReg);
+    }
+  }
+  return ConstrainedReg;
 }
 
 unsigned llvm::constrainOperandRegClass(
@@ -81,7 +106,8 @@ unsigned llvm::constrainOperandRegClass(
     // and they never reach this function.
     return Reg;
   }
-  return constrainRegToClass(MRI, TII, RBI, InsertPt, Reg, *RegClass);
+  return constrainOperandRegClass(MF, TRI, MRI, TII, RBI, InsertPt, *RegClass,
+                                  RegMO, OpIdx);
 }
 
 bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,

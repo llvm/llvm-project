@@ -122,8 +122,13 @@ set(cuda_wrapper_files
   cuda_wrappers/new
 )
 
+set(ppc_wrapper_files
+  ppc_wrappers/mmintrin.h
+)
+
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
 set(out_files)
+set(generated_files)
 
 function(copy_header_to_output_dir src_dir file)
   set(src ${src_dir}/${file})
@@ -143,11 +148,13 @@ function(clang_generate_header td_option td_file out_file)
 
   copy_header_to_output_dir(${CMAKE_CURRENT_BINARY_DIR} ${out_file})
   set(out_files ${out_files} PARENT_SCOPE)
+  list(APPEND generated_files "${CMAKE_CURRENT_BINARY_DIR}/${out_file}")
+  set(generated_files ${generated_files} PARENT_SCOPE)
 endfunction(clang_generate_header)
 
 
 # Copy header files from the source directory to the build directory
-foreach( f ${files} ${cuda_wrapper_files} )
+foreach( f ${files} ${cuda_wrapper_files} ${ppc_wrapper_files} )
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -162,11 +169,21 @@ set_target_properties(clang-resource-headers PROPERTIES
   FOLDER "Misc"
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 
-set(header_install_dir lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})
+set(header_install_dir lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include)
 
 install(
-  DIRECTORY ${output_dir}
+  FILES ${files} ${generated_files}
   DESTINATION ${header_install_dir}
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${cuda_wrapper_files}
+  DESTINATION ${header_install_dir}/cuda_wrappers
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${ppc_wrapper_files}
+  DESTINATION ${header_install_dir}/ppc_wrappers
   COMPONENT clang-resource-headers)
 
 if (NOT LLVM_ENABLE_IDE)

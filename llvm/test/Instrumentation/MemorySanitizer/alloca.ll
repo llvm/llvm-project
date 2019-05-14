@@ -89,3 +89,132 @@ entry:
 ; KMSAN: call void @__msan_unpoison_alloca(i8* {{.*}}, i64 20)
 ; CHECK: ret void
 
+; Check that every llvm.lifetime.start() causes poisoning of locals.
+define void @lifetime_start() sanitize_memory {
+entry:
+  %x = alloca i32, align 4
+  %c = bitcast i32* %x to i8*
+  br label %another_bb
+
+another_bb:
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %c)
+  store i32 7, i32* %x
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %c)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %c)
+  store i32 8, i32* %x
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %c)
+  ret void
+}
+
+; CHECK-LABEL: define void @lifetime_start(
+; CHECK-LABEL: entry:
+; CHECK: %x = alloca i32
+; CHECK-LABEL: another_bb:
+
+; CHECK: call void @llvm.lifetime.start
+; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+
+; CHECK: call void @llvm.lifetime.start
+; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+; CHECK: ret void
+
+; Make sure variable-length arrays are handled correctly.
+define void @lifetime_start_var(i64 %cnt) sanitize_memory {
+entry:
+  %x = alloca i32, i64 %cnt, align 4
+  %c = bitcast i32* %x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %c)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %c)
+  ret void
+}
+
+; CHECK-LABEL: define void @lifetime_start_var(
+; CHECK-LABEL: entry:
+; CHECK: %x = alloca i32, i64 %cnt
+; CHECK: call void @llvm.lifetime.start
+; CHECK: %[[A:.*]] = mul i64 4, %cnt
+; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 %[[A]], i1 false)
+; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 %[[A]])
+; ORIGIN: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 %[[A]],
+; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 %[[A]],
+; CHECK: call void @llvm.lifetime.end
+; CHECK: ret void
+
+
+; If we can't trace one of the lifetime markers to a single alloca, fall back
+; to poisoning allocas at the beginning of the function.
+; Each alloca must be poisoned only once.
+define void @lifetime_no_alloca(i8 %v) sanitize_memory {
+entry:
+  %x = alloca i32, align 4
+  %y = alloca i32, align 4
+  %z = alloca i32, align 4
+  %cx = bitcast i32* %x to i8*
+  %cy = bitcast i32* %y to i8*
+  %cz = bitcast i32* %z to i8*
+  %tobool = icmp eq i8 %v, 0
+  %xy = select i1 %tobool, i32* %x, i32* %y
+  %cxcy = select i1 %tobool, i8* %cx, i8* %cy
+  br label %another_bb
+
+another_bb:
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %cz)
+  store i32 7, i32* %z
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %cz)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %cz)
+  store i32 7, i32* %z
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %cz)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %cxcy)
+  store i32 8, i32* %xy
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %cxcy)
+  ret void
+}
+
+; CHECK-LABEL: define void @lifetime_no_alloca(
+; CHECK-LABEL: entry:
+; CHECK: %x = alloca i32
+; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+; CHECK: %y = alloca i32
+; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+; CHECK: %z = alloca i32
+; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+
+; There're two lifetime intrinsics for %z, but we must instrument it only once.
+; INLINE-NOT: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL-NOT: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN-NOT: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN-NOT: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+; CHECK-LABEL: another_bb:
+
+; CHECK: call void @llvm.lifetime.start
+; INLINE-NOT: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL-NOT: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN-NOT: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN-NOT: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+; CHECK: call void @llvm.lifetime.end
+; CHECK: call void @llvm.lifetime.start
+; INLINE-NOT: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
+; CALL-NOT: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
+; ORIGIN-NOT: call void @__msan_set_alloca_origin4(i8* {{.*}}, i64 4,
+; KMSAN-NOT: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
+; CHECK: call void @llvm.lifetime.end
+
+
+
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)

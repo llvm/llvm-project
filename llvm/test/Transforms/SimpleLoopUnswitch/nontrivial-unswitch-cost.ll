@@ -1,6 +1,6 @@
 ; Specifically exercise the cost modeling for non-trivial loop unswitching.
 ;
-; RUN: opt -passes='loop(unswitch),verify<loops>' -enable-nontrivial-unswitch -unswitch-threshold=5 -S < %s | FileCheck %s
+; RUN: opt -passes='loop(unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S < %s | FileCheck %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -S < %s | FileCheck %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
 

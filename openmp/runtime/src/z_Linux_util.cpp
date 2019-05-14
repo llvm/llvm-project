@@ -1352,7 +1352,7 @@ void __kmp_suspend_initialize(void) {
   KMP_CHECK_SYSFAIL("pthread_condattr_init", status);
 }
 
-static void __kmp_suspend_initialize_thread(kmp_info_t *th) {
+void __kmp_suspend_initialize_thread(kmp_info_t *th) {
   ANNOTATE_HAPPENS_AFTER(&th->th.th_suspend_init_count);
   if (th->th.th_suspend_init_count <= __kmp_fork_count) {
     /* this means we haven't initialized the suspension pthread objects for this

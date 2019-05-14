@@ -1,1 +1,1 @@
-void _start() {}
+int main() {}

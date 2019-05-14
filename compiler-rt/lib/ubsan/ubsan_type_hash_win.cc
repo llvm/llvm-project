@@ -77,4 +77,8 @@ __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
                          "<unknown>");
 }
 
+bool __ubsan::checkTypeInfoEquality(const void *, const void *) {
+  return false;
+}
+
 #endif  // CAN_SANITIZE_UB && SANITIZER_WINDOWS

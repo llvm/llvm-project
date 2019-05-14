@@ -136,6 +136,7 @@ void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
+void initializeX86ExpandPseudoPass(PassRegistry&);
 void initializeX86CondBrFoldingPassPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);

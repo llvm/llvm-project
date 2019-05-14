@@ -74,7 +74,10 @@ bool ARCPassConfig::addInstSelector() {
 
 void ARCPassConfig::addPreEmitPass() { addPass(createARCBranchFinalizePass()); }
 
-void ARCPassConfig::addPreRegAlloc() { addPass(createARCExpandPseudosPass()); }
+void ARCPassConfig::addPreRegAlloc() {
+    addPass(createARCExpandPseudosPass());
+    addPass(createARCOptAddrMode());
+}
 
 // Force static initialization.
 extern "C" void LLVMInitializeARCTarget() {

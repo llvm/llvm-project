@@ -32,9 +32,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 #pragma mark CommandObjectSourceInfo
-//----------------------------------------------------------------------
 // CommandObjectSourceInfo - debug line entries dumping command
-//----------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_info_options[] = {
     // clang-format off
@@ -574,7 +572,7 @@ protected:
 
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target == nullptr) {
-      target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+      target = GetDebugger().GetSelectedTarget().get();
       if (target == nullptr) {
         result.AppendError("invalid target, create a debug target using the "
                            "'target create' command.");
@@ -644,9 +642,7 @@ protected:
 };
 
 #pragma mark CommandObjectSourceList
-//-------------------------------------------------------------------------
 // CommandObjectSourceList
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_list_options[] = {
     // clang-format off
@@ -1136,8 +1132,7 @@ protected:
               m_options.num_lines >= 10 ? 5 : m_options.num_lines / 2;
 
           const uint32_t column =
-              (m_interpreter.GetDebugger().GetStopShowColumn() !=
-               eStopShowColumnNone)
+              (GetDebugger().GetStopShowColumn() != eStopShowColumnNone)
                   ? sc.line_entry.column
                   : 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
@@ -1292,9 +1287,7 @@ protected:
 };
 
 #pragma mark CommandObjectMultiwordSource
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordSource
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordSource::CommandObjectMultiwordSource(
     CommandInterpreter &interpreter)

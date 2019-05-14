@@ -18,7 +18,6 @@ A default SBCommandInterpreterRunOptions object has:
     PrintResults:   true
     AddToHistory:   true
 
-
 ") SBCommandInterpreterRunOptions;
 class SBCommandInterpreterRunOptions
 {
@@ -115,8 +114,7 @@ python_api/interpreter/TestCommandInterpreterAPI.py),
 
 The HandleCommand() instance method takes two args: the command string and
 an SBCommandReturnObject instance which encapsulates the result of command
-execution.
-") SBCommandInterpreter;
+execution.") SBCommandInterpreter;
 class SBCommandInterpreter
 {
 public:

@@ -30,9 +30,7 @@ using namespace lldb_private;
 
 uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepOut: Step out of the current frame
-//----------------------------------------------------------------------
 ThreadPlanStepOut::ThreadPlanStepOut(
     Thread &thread, SymbolContext *context, bool first_insn, bool stop_others,
     Vote stop_vote, Vote run_vote, uint32_t frame_idx,

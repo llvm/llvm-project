@@ -137,9 +137,6 @@ public:
     return IndexStorage.get();
   }
 
-  // Creates or fetches to storage from cache for the specified CDB.
-  BackgroundIndexStorage *createStorage(llvm::StringRef CDBDirectory);
-
 private:
   std::unique_ptr<BackgroundIndexStorage> create(llvm::StringRef CDBDirectory) {
     if (CDBDirectory.empty())

@@ -18,7 +18,8 @@
 let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   // dcba/dcbf/dcbi/dcbst/dcbt/dcbz/dcbzl(PPC970) instructions.
   def int_ppc_dcba  : Intrinsic<[], [llvm_ptr_ty], []>;
-  def int_ppc_dcbf  : Intrinsic<[], [llvm_ptr_ty], []>;
+  def int_ppc_dcbf  : GCCBuiltin<"__builtin_dcbf">,
+                      Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbi  : Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbst : Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbt  : Intrinsic<[], [llvm_ptr_ty],
@@ -1166,4 +1167,9 @@ def int_ppc_ttest : GCCBuiltin<"__builtin_ttest">,
       Intrinsic<[llvm_i64_ty], [], []>;
 
 def int_ppc_cfence : Intrinsic<[], [llvm_anyint_ty], []>;
+
+// PowerPC set FPSCR Intrinsic Definitions.
+def int_ppc_setrnd : GCCBuiltin<"__builtin_setrnd">,
+      Intrinsic<[llvm_double_ty], [llvm_i32_ty], []>;
+
 }

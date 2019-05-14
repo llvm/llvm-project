@@ -1,6 +1,6 @@
-; RUN: llvm-as < %s > %t
-; RUN: llvm-nm -without-aliases - < %t | FileCheck %s
-; RUN: llvm-nm - < %t | FileCheck --check-prefix=WITH %s
+; RUN: llvm-as %s -o %t
+; RUN: llvm-nm --without-aliases %t | FileCheck %s
+; RUN: llvm-nm %t | FileCheck --check-prefix=WITH %s
 
 ; CHECK-NOT: T a0bar
 ; CHECK-NOT: T a0foo

@@ -1,4 +1,4 @@
-RUN: yaml2obj %p/Inputs/file-multiple-aux-records.yaml | llvm-readobj -t - | FileCheck %s
+RUN: yaml2obj %p/Inputs/file-multiple-aux-records.yaml | llvm-readobj --symbols - | FileCheck %s
 
 CHECK: Symbols [
 CHECK:   Symbol {

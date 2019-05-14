@@ -1,4 +1,4 @@
-RUN: llvm-readobj -coff-exports %p/Inputs/library.lib | FileCheck %s
+RUN: llvm-readobj --coff-exports %p/Inputs/library.lib | FileCheck %s
 
 CHECK: File: library.dll
 CHECK: Format: COFF-import-file

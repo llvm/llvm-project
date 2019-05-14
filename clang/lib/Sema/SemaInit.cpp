@@ -2208,7 +2208,7 @@ namespace {
 
 // Callback to only accept typo corrections that are for field members of
 // the given struct or union.
-class FieldInitializerValidatorCCC : public CorrectionCandidateCallback {
+class FieldInitializerValidatorCCC final : public CorrectionCandidateCallback {
  public:
   explicit FieldInitializerValidatorCCC(RecordDecl *RD)
       : Record(RD) {}
@@ -2216,6 +2216,10 @@ class FieldInitializerValidatorCCC : public CorrectionCandidateCallback {
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     FieldDecl *FD = candidate.getCorrectionDeclAs<FieldDecl>();
     return FD && FD->getDeclContext()->getRedeclContext()->Equals(Record);
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<FieldInitializerValidatorCCC>(*this);
   }
 
  private:
@@ -2420,10 +2424,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
         // Name lookup didn't find anything.
         // Determine whether this was a typo for another field name.
+        FieldInitializerValidatorCCC CCC(RT->getDecl());
         if (TypoCorrection Corrected = SemaRef.CorrectTypo(
                 DeclarationNameInfo(FieldName, D->getFieldLoc()),
-                Sema::LookupMemberName, /*Scope=*/nullptr, /*SS=*/nullptr,
-                llvm::make_unique<FieldInitializerValidatorCCC>(RT->getDecl()),
+                Sema::LookupMemberName, /*Scope=*/nullptr, /*SS=*/nullptr, CCC,
                 Sema::CTK_ErrorRecovery, RT->getDecl())) {
           SemaRef.diagnoseTypo(
               Corrected,
@@ -7317,9 +7321,19 @@ ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
 ExprResult Sema::PerformQualificationConversion(Expr *E, QualType Ty,
                                                 ExprValueKind VK,
                                                 CheckedConversionKind CCK) {
-  CastKind CK = (Ty.getAddressSpace() != E->getType().getAddressSpace())
-                    ? CK_AddressSpaceConversion
-                    : CK_NoOp;
+
+  CastKind CK = CK_NoOp;
+
+  if (VK == VK_RValue) {
+    auto PointeeTy = Ty->getPointeeType();
+    auto ExprPointeeTy = E->getType()->getPointeeType();
+    if (!PointeeTy.isNull() &&
+        PointeeTy.getAddressSpace() != ExprPointeeTy.getAddressSpace())
+      CK = CK_AddressSpaceConversion;
+  } else if (Ty.getAddressSpace() != E->getType().getAddressSpace()) {
+    CK = CK_AddressSpaceConversion;
+  }
+
   return ImpCastExprToType(E, Ty, CK, VK, /*BasePath=*/nullptr, CCK);
 }
 
@@ -8635,7 +8649,7 @@ bool InitializationSequence::Diagnose(Sema &S,
           = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
         if (Ovl != OR_Deleted) {
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
-            << true << DestType << ArgsRange;
+              << DestType << ArgsRange;
           llvm_unreachable("Inconsistent overload resolution?");
           break;
         }
@@ -8649,7 +8663,7 @@ bool InitializationSequence::Diagnose(Sema &S,
             << DestType << ArgsRange;
         else
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
-            << true << DestType << ArgsRange;
+              << DestType << ArgsRange;
 
         S.NoteDeletedFunction(Best->Function);
         break;

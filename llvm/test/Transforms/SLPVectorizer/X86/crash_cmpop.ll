@@ -68,12 +68,12 @@ define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
 ; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
 ; AVX-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP1]], i32 1
 ; AVX-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP5]], [[TMP7]]
-; AVX-NEXT:    [[TMP9:%.*]] = fmul <2 x float> zeroinitializer, [[TMP0]]
+; AVX-NEXT:    [[TMP9:%.*]] = fmul <2 x float> [[TMP0]], zeroinitializer
 ; AVX-NEXT:    [[TMP10:%.*]] = fadd <2 x float> [[TMP9]], [[TMP8]]
 ; AVX-NEXT:    [[TMP11:%.*]] = fcmp olt <2 x float> [[TMP10]], <float 1.000000e+00, float 1.000000e+00>
 ; AVX-NEXT:    [[TMP12:%.*]] = select <2 x i1> [[TMP11]], <2 x float> [[TMP10]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
 ; AVX-NEXT:    [[TMP13:%.*]] = fcmp olt <2 x float> [[TMP12]], <float -1.000000e+00, float -1.000000e+00>
-; AVX-NEXT:    [[TMP14:%.*]] = fmul <2 x float> zeroinitializer, [[TMP12]]
+; AVX-NEXT:    [[TMP14:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; AVX-NEXT:    [[TMP15:%.*]] = select <2 x i1> [[TMP13]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, <2 x float> [[TMP14]]
 ; AVX-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP15]], i32 0
 ; AVX-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP15]], i32 1

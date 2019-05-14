@@ -20,7 +20,6 @@ class DataExtractor;
 class ExecutionContextScope;
 class Stream;
 
-//------------------------------------------------------------------
 /// Dumps \a item_count objects into the stream \a s.
 ///
 /// Dumps \a item_count objects using \a item_format, each of which
@@ -79,7 +78,6 @@ class Stream;
 ///
 /// \return
 ///     The offset at which dumping ended.
-//------------------------------------------------------------------
 lldb::offset_t
 DumpDataExtractor(const DataExtractor &DE, Stream *s, lldb::offset_t offset,
                   lldb::Format item_format, size_t item_byte_size,

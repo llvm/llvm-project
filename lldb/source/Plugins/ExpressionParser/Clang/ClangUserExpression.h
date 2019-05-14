@@ -28,7 +28,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class ClangUserExpression ClangUserExpression.h
 /// "lldb/Expression/ClangUserExpression.h" Encapsulates a single expression
 /// for use with Clang
@@ -37,7 +36,6 @@ namespace lldb_private {
 /// and as a backend for the expr command.  ClangUserExpression encapsulates
 /// the objects needed to parse and interpret or JIT an expression.  It uses
 /// the Clang parser to produce LLVM IR from the expression.
-//----------------------------------------------------------------------
 class ClangUserExpression : public LLVMUserExpression {
 public:
   /// LLVM-style RTTI support.
@@ -54,10 +52,8 @@ public:
 
     ~ClangUserExpressionHelper() override = default;
 
-    //------------------------------------------------------------------
     /// Return the object that the parser should use when resolving external
     /// values.  May be NULL if everything should be self-contained.
-    //------------------------------------------------------------------
     ClangExpressionDeclMap *DeclMap() override {
       return m_expr_decl_map_up.get();
     }
@@ -69,14 +65,12 @@ public:
                       bool keep_result_in_memory,
                       ValueObject *ctx_obj);
 
-    //------------------------------------------------------------------
     /// Return the object that the parser should allow to access ASTs. May be
     /// NULL if the ASTs do not need to be transformed.
     ///
     /// \param[in] passthrough
     ///     The ASTConsumer that the returned transformer should send
     ///     the ASTs to after transformation.
-    //------------------------------------------------------------------
     clang::ASTConsumer *
     ASTTransformer(clang::ASTConsumer *passthrough) override;
 
@@ -93,7 +87,6 @@ public:
     bool m_top_level;
   };
 
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// \param[in] expr
@@ -116,7 +109,6 @@ public:
   ///     The object (if any) in which context the expression
   ///     must be evaluated. For details see the comment to
   ///     `UserExpression::Evaluate`.
-  //------------------------------------------------------------------
   ClangUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
                       llvm::StringRef prefix, lldb::LanguageType language,
                       ResultType desired_type,
@@ -125,7 +117,6 @@ public:
 
   ~ClangUserExpression() override;
 
-  //------------------------------------------------------------------
   /// Parse the expression
   ///
   /// \param[in] diagnostic_manager
@@ -145,7 +136,6 @@ public:
   ///
   /// \return
   ///     True on success (no errors); false otherwise.
-  //------------------------------------------------------------------
   bool Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
              lldb_private::ExecutionPolicy execution_policy,
              bool keep_result_in_memory, bool generate_debug_info) override;
@@ -175,10 +165,8 @@ public:
   bool DidImportCxxModules() const { return m_imported_cpp_modules; }
 
 private:
-  //------------------------------------------------------------------
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the
   /// environment.
-  //------------------------------------------------------------------
 
   void ScanContext(ExecutionContext &exe_ctx,
                    lldb_private::Status &err) override;
@@ -190,11 +178,12 @@ private:
   std::vector<std::string> GetModulesToImport(ExecutionContext &exe_ctx);
   void UpdateLanguageForExpr(DiagnosticManager &diagnostic_manager,
                              ExecutionContext &exe_ctx,
-                             std::vector<std::string> modules_to_import);
+                             std::vector<std::string> modules_to_import,
+                             bool for_completion);
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx);
   bool PrepareForParsing(DiagnosticManager &diagnostic_manager,
-                         ExecutionContext &exe_ctx);
+                         ExecutionContext &exe_ctx, bool for_completion);
 
   ClangUserExpressionHelper m_type_system_helper;
 

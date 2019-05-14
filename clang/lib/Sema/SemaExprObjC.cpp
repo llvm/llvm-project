@@ -1946,11 +1946,10 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
   }
 
   // Attempt to correct for typos in property names.
-  if (TypoCorrection Corrected =
-          CorrectTypo(DeclarationNameInfo(MemberName, MemberLoc),
-                      LookupOrdinaryName, nullptr, nullptr,
-                      llvm::make_unique<DeclFilterCCC<ObjCPropertyDecl>>(),
-                      CTK_ErrorRecovery, IFace, false, OPT)) {
+  DeclFilterCCC<ObjCPropertyDecl> CCC{};
+  if (TypoCorrection Corrected = CorrectTypo(
+          DeclarationNameInfo(MemberName, MemberLoc), LookupOrdinaryName,
+          nullptr, nullptr, CCC, CTK_ErrorRecovery, IFace, false, OPT)) {
     DeclarationName TypoResult = Corrected.getCorrection();
     if (TypoResult.isIdentifier() &&
         TypoResult.getAsIdentifierInfo() == Member) {
@@ -2107,7 +2106,7 @@ ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
 
 namespace {
 
-class ObjCInterfaceOrSuperCCC : public CorrectionCandidateCallback {
+class ObjCInterfaceOrSuperCCC final : public CorrectionCandidateCallback {
  public:
   ObjCInterfaceOrSuperCCC(ObjCMethodDecl *Method) {
     // Determine whether "super" is acceptable in the current context.
@@ -2118,6 +2117,10 @@ class ObjCInterfaceOrSuperCCC : public CorrectionCandidateCallback {
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     return candidate.getCorrectionDeclAs<ObjCInterfaceDecl>() ||
         candidate.isKeyword("super");
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<ObjCInterfaceOrSuperCCC>(*this);
   }
 };
 
@@ -2194,9 +2197,9 @@ Sema::ObjCMessageKind Sema::getObjCMessageKind(Scope *S,
   }
   }
 
+  ObjCInterfaceOrSuperCCC CCC(getCurMethodDecl());
   if (TypoCorrection Corrected = CorrectTypo(
-          Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr,
-          llvm::make_unique<ObjCInterfaceOrSuperCCC>(getCurMethodDecl()),
+          Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr, CCC,
           CTK_ErrorRecovery, nullptr, false, nullptr, false)) {
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be

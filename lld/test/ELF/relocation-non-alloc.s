@@ -2,12 +2,12 @@
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 // RUN: ld.lld %t -o %t2 -shared --apply-dynamic-relocs
-// RUN: llvm-readobj -s -section-data -r %t2 | FileCheck -check-prefix CHECK -check-prefix APPLYDYNREL %s
+// RUN: llvm-readobj -S --section-data -r %t2 | FileCheck -check-prefix CHECK -check-prefix APPLYDYNREL %s
 
 // RUN: ld.lld %t -o %t2 -shared
-// RUN: llvm-readobj -s -section-data -r %t2 | FileCheck -check-prefix CHECK -check-prefix NOAPPLYDYNREL %s
+// RUN: llvm-readobj -S --section-data -r %t2 | FileCheck -check-prefix CHECK -check-prefix NOAPPLYDYNREL %s
 // RUN: ld.lld %t -o %t2 -shared --no-apply-dynamic-relocs
-// RUN: llvm-readobj -s -section-data -r %t2 | FileCheck -check-prefix CHECK -check-prefix NOAPPLYDYNREL %s
+// RUN: llvm-readobj -S --section-data -r %t2 | FileCheck -check-prefix CHECK -check-prefix NOAPPLYDYNREL %s
 
 // APPLYDYNREL:      Name: .data
 // APPLYDYNREL-NEXT: Type: SHT_PROGBITS

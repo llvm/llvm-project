@@ -28,6 +28,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -456,6 +457,49 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
+}
+
+// Update profile weight for call instruction by scaling it using the ratio
+// of S/T. The meaning of "branch_weights" meta data for call instruction is
+// transfered to represent call count.
+void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
+  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (ProfileData == nullptr)
+    return;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
+                        !ProfDataName->getString().equals("VP")))
+    return;
+
+  MDBuilder MDB(getContext());
+  SmallVector<Metadata *, 3> Vals;
+  Vals.push_back(ProfileData->getOperand(0));
+  APInt APS(128, S), APT(128, T);
+  if (ProfDataName->getString().equals("branch_weights") &&
+      ProfileData->getNumOperands() > 0) {
+    // Using APInt::div may be expensive, but most cases should fit 64 bits.
+    APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
+                       ->getValue()
+                       .getZExtValue());
+    Val *= APS;
+    Vals.push_back(MDB.createConstant(ConstantInt::get(
+        Type::getInt64Ty(getContext()), Val.udiv(APT).getLimitedValue())));
+  } else if (ProfDataName->getString().equals("VP"))
+    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
+      // The first value is the key of the value profile, which will not change.
+      Vals.push_back(ProfileData->getOperand(i));
+      // Using APInt::div may be expensive, but most cases should fit 64 bits.
+      APInt Val(128,
+                mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
+                    ->getValue()
+                    .getZExtValue());
+      Val *= APS;
+      Vals.push_back(MDB.createConstant(
+          ConstantInt::get(Type::getInt64Ty(getContext()),
+                           Val.udiv(APT).getLimitedValue())));
+    }
+  setMetadata(LLVMContext::MD_prof, MDNode::get(getContext(), Vals));
 }
 
 /// IsConstantOne - Return true only if val is constant int 1
@@ -1748,6 +1792,25 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
   Op<1>() = V2;
   Op<2>() = Mask;
   setName(Name);
+}
+
+void ShuffleVectorInst::commute() {
+  int NumOpElts = Op<0>()->getType()->getVectorNumElements();
+  int NumMaskElts = getMask()->getType()->getVectorNumElements();
+  SmallVector<Constant*, 16> NewMask(NumMaskElts);
+  Type *Int32Ty = Type::getInt32Ty(getContext());
+  for (int i = 0; i != NumMaskElts; ++i) {
+    int MaskElt = getMaskValue(i);
+    if (MaskElt == -1) {
+      NewMask[i] = UndefValue::get(Int32Ty);
+      continue;
+    }
+    assert(MaskElt >= 0 && MaskElt < 2 * NumOpElts && "Out-of-range mask");
+    MaskElt = (MaskElt < NumOpElts) ? MaskElt + NumOpElts : MaskElt - NumOpElts;
+    NewMask[i] = ConstantInt::get(Int32Ty, MaskElt);
+  }
+  Op<2>() = ConstantVector::get(NewMask);
+  Op<0>().swap(Op<1>());
 }
 
 bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,

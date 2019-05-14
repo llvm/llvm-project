@@ -24,15 +24,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // SymbolVendorELF constructor
-//----------------------------------------------------------------------
 SymbolVendorELF::SymbolVendorELF(const lldb::ModuleSP &module_sp)
     : SymbolVendor(module_sp) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SymbolVendorELF::~SymbolVendorELF() {}
 
 void SymbolVendorELF::Initialize() {
@@ -54,13 +50,11 @@ const char *SymbolVendorELF::GetPluginDescriptionStatic() {
          "executables.";
 }
 
-//----------------------------------------------------------------------
 // CreateInstance
 //
 // Platforms can register a callback to use when creating symbol vendors to
 // allow for complex debug information file setups, and to also allow for
 // finding separate debug information files.
-//----------------------------------------------------------------------
 SymbolVendor *
 SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                 lldb_private::Stream *feedback_strm) {
@@ -162,9 +156,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   return NULL;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString SymbolVendorELF::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t SymbolVendorELF::GetPluginVersion() { return 1; }

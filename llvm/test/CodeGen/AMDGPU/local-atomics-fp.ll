@@ -34,7 +34,7 @@ define void @lds_atomic_fadd_noret_f32(float addrspace(3)* %ptr) nounwind {
 ; HAS-ATOMICS-DAG: v_mov_b32_e32 [[V0:v[0-9]+]], 0x42280000
 ; HAS-ATOMICS: ds_add_rtn_f32 [[V2:v[0-9]+]], [[V1:v[0-9]+]], [[V0]] offset:32
 ; HAS-ATOMICS: ds_add_f32 [[V3:v[0-9]+]], [[V0]] offset:64
-; HAS-ATOMICS: s_waitcnt lgkmcnt(1)
+; HAS-ATOMICS: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; HAS-ATOMICS: ds_add_rtn_f32 {{v[0-9]+}}, {{v[0-9]+}}, [[V2]]
 define amdgpu_kernel void @lds_ds_fadd(float addrspace(1)* %out, float addrspace(3)* %ptrf, i32 %idx) {
   %idx.add = add nuw i32 %idx, 4
@@ -45,6 +45,27 @@ define amdgpu_kernel void @lds_ds_fadd(float addrspace(1)* %out, float addrspace
   %a1 = atomicrmw fadd float addrspace(3)* %ptr0, float 4.2e+1 seq_cst
   %a2 = atomicrmw fadd float addrspace(3)* %ptr1, float 4.2e+1 seq_cst
   %a3 = atomicrmw fadd float addrspace(3)* %ptrf, float %a1 seq_cst
+  store float %a3, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}lds_ds_fadd_one_as:
+; VI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+; HAS-ATOMICS-DAG: v_mov_b32_e32 [[V0:v[0-9]+]], 0x42280000
+; HAS-ATOMICS: ds_add_rtn_f32 [[V2:v[0-9]+]], [[V1:v[0-9]+]], [[V0]] offset:32
+; HAS-ATOMICS: ds_add_f32 [[V3:v[0-9]+]], [[V0]] offset:64
+; HAS-ATOMICS: s_waitcnt lgkmcnt(1)
+; HAS-ATOMICS: ds_add_rtn_f32 {{v[0-9]+}}, {{v[0-9]+}}, [[V2]]
+define amdgpu_kernel void @lds_ds_fadd_one_as(float addrspace(1)* %out, float addrspace(3)* %ptrf, i32 %idx) {
+  %idx.add = add nuw i32 %idx, 4
+  %shl0 = shl i32 %idx.add, 3
+  %shl1 = shl i32 %idx.add, 4
+  %ptr0 = inttoptr i32 %shl0 to float addrspace(3)*
+  %ptr1 = inttoptr i32 %shl1 to float addrspace(3)*
+  %a1 = atomicrmw fadd float addrspace(3)* %ptr0, float 4.2e+1 syncscope("one-as") seq_cst
+  %a2 = atomicrmw fadd float addrspace(3)* %ptr1, float 4.2e+1 syncscope("one-as") seq_cst
+  %a3 = atomicrmw fadd float addrspace(3)* %ptrf, float %a1 syncscope("one-as") seq_cst
   store float %a3, float addrspace(1)* %out
   ret void
 }

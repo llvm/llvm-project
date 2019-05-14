@@ -20,7 +20,7 @@ void test0(__weak id *wp, __weak volatile id *wvp) {
   // TODO: in the non-volatile case, we do not need to be reloading.
 
   // CHECK:      [[T0:%.*]] = call i8* @_Z12test0_helperv()
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
   // CHECK-NEXT: [[T2:%.*]] = load i8**, i8*** {{%.*}}, align 8
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
   // CHECK-NEXT: [[T4:%.*]] = call i8* @llvm.objc.retain(i8* [[T3]])
@@ -29,7 +29,7 @@ void test0(__weak id *wp, __weak volatile id *wvp) {
   id x = *wp = test0_helper();
 
   // CHECK:      [[T0:%.*]] = call i8* @_Z12test0_helperv()
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
   // CHECK-NEXT: [[T2:%.*]] = load i8**, i8*** {{%.*}}, align 8
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
   // CHECK-NEXT: [[T4:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T2]])
@@ -224,7 +224,7 @@ template void test37<Test37>(Test37 *a);
 // CHECK-LABEL: define weak_odr void @_Z6test37I6Test37EvPT_(
 // CHECK:      [[T0:%.*]] = call [[NSARRAY]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to [[NSARRAY]]* (i8*, i8*)*)(
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[NSARRAY]]* [[T0]] to i8*
-// CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+// CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT: [[COLL:%.*]] = bitcast i8* [[T2]] to [[NSARRAY]]*
 
 // Make sure it's not immediately released before starting the iteration.

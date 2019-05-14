@@ -24,5 +24,5 @@ int main() {
 // $ clang++ -g dwarfdump-test-zlib.cc -Wl,--compress-debug-sections=zlib -o dwarfdump-test-zlib.elf-x86-64
 // $ clang++ -g dwarfdump-test-zlib.cc -Wa,--compress-debug-sections=zlib -c -o dwarfdump-test-zlib.o.elf-x86-64
 // $ clang++ -g dwarfdump-test-zlib.cc -Wl,--compress-debug-sections=zlib-gnu -o dwarfdump-test-zlibgnu.elf-x86-64
-// llvm-readobj -sections can be used to see that outputs really contain the compressed sections, also output in both
+// llvm-readobj --sections can be used to see that outputs really contain the compressed sections, also output in both
 //   cases is slightly smaller, that is because of compression.

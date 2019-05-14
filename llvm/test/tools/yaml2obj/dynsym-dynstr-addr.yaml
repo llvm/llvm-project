@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -sections %t | FileCheck %s
+# RUN: llvm-readobj --sections %t | FileCheck %s
 
 ## Check yaml2obj does not ignore the address of the
 ## explicitly listed .dynstr and .dynsym sections.
@@ -36,5 +36,5 @@ Sections:
     Address:      0x2000
     EntSize:      0x18
 DynamicSymbols:
-  Global:
-    - Name: foo
+  - Name:    foo
+    Binding: STB_GLOBAL

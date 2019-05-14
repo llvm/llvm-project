@@ -67,6 +67,6 @@ Sections:
           - VERSION_2
           - VERSION_3
 DynamicSymbols:
-  Global:
-    - Name:            foo
+  - Name:    foo
+    Binding: STB_GLOBAL
 ...

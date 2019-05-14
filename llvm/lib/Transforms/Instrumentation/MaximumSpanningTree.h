@@ -67,8 +67,7 @@ namespace llvm {
     /// MaximumSpanningTree() - Takes a vector of weighted edges and returns a
     /// spanning tree.
     MaximumSpanningTree(EdgeWeights &EdgeVector) {
-
-      std::stable_sort(EdgeVector.begin(), EdgeVector.end(), EdgeWeightCompare());
+      llvm::stable_sort(EdgeVector, EdgeWeightCompare());
 
       // Create spanning tree, Forest contains a special data structure
       // that makes checking if two nodes are already in a common (sub-)tree

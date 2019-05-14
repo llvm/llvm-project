@@ -295,7 +295,7 @@ namespace HexagonISD {
 
     EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
         unsigned SrcAlign, bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-        MachineFunction &MF) const override;
+        const AttributeList &FuncAttributes) const override;
 
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
         unsigned Align, bool *Fast) const override;

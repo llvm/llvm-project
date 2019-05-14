@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #include "ASTReaderInternals.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cstdio>
 using namespace clang;
 using namespace serialization;
@@ -126,6 +128,7 @@ GlobalModuleIndex::GlobalModuleIndex(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                                      llvm::BitstreamCursor Cursor)
     : Buffer(std::move(Buffer)), IdentifierIndex(), NumIdentifierLookups(),
       NumIdentifierLookupHits() {
+  llvm::TimeTraceScope TimeScope("Module LoadIndex", StringRef(""));
   // Read the global index.
   bool InGlobalIndexBlock = false;
   bool Done = false;
@@ -739,6 +742,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
   }
 
   using namespace llvm;
+  llvm::TimeTraceScope TimeScope("Module WriteIndex", StringRef(""));
 
   // Emit the file header.
   Stream.Emit((unsigned)'B', 8);

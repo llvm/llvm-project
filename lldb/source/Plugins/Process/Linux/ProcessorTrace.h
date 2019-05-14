@@ -23,7 +23,6 @@ namespace lldb_private {
 
 namespace process_linux {
 
-// ---------------------------------------------------------------------
 // This class keeps track of one tracing instance of
 // Intel(R) Processor Trace on Linux OS. There is a map keeping track
 // of different tracing instances on each thread, which enables trace
@@ -36,7 +35,6 @@ namespace process_linux {
 // The trace id could map to trace instances for a group of threads
 // (spanning to all the threads in the process) or a single thread.
 // The kernel interface for us is the perf_event_open.
-// ---------------------------------------------------------------------
 
 class ProcessorTraceMonitor;
 typedef std::unique_ptr<ProcessorTraceMonitor> ProcessorTraceMonitorUP;
@@ -115,7 +113,6 @@ public:
 
   Status GetTraceConfig(TraceOptions &config) const;
 
-  // ---------------------------------------------------------------------
   /// Read data from a cyclic buffer
   ///
   /// \param[in] [out] buf
@@ -130,7 +127,6 @@ public:
   ///
   /// \param[in] offset
   ///     The offset to begin reading the data in the cyclic buffer.
-  // ---------------------------------------------------------------------
   static void ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
                                llvm::MutableArrayRef<uint8_t> src,
                                size_t src_cyc_index, size_t offset);

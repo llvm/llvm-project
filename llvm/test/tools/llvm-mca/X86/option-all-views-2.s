@@ -42,7 +42,7 @@ add %eax, %eax
 # ALL-NEXT:         1,              62  (60.2%)
 # ALL-NEXT:         2,              19  (18.4%)
 
-# ALL:             Schedulers - number of cycles where we saw N instructions issued:
+# ALL:             Schedulers - number of cycles where we saw N micro opcodes issued:
 # ALL-NEXT:        [# issued], [# cycles]
 # ALL-NEXT:         0,          3  (2.9%)
 # ALL-NEXT:         1,          100  (97.1%)

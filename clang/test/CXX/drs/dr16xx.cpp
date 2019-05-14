@@ -284,6 +284,54 @@ namespace dr1687 { // dr1687: 7
 #endif
 }
 
+namespace dr1690 { // dr1690: 9
+  // See also the various tests in "CXX/basic/basic.lookup/basic.lookup.argdep".
+#if __cplusplus >= 201103L
+  namespace N {
+    static auto lambda = []() { struct S {} s; return s; };
+    void f(decltype(lambda()));
+  }
+
+  void test() {
+    auto s = N::lambda();
+    f(s); // ok
+  }
+#endif
+}
+
+namespace dr1691 { // dr1691: 9
+#if __cplusplus >= 201103L
+  namespace N {
+    namespace M {
+      enum E : int;
+      void f(E);
+    }
+    enum M::E : int {};
+    void g(M::E); // expected-note {{declared here}}
+  }
+  void test() {
+    N::M::E e;
+    f(e); // ok
+    g(e); // expected-error {{use of undeclared}}
+  }
+#endif
+}
+
+namespace dr1692 { // dr1692: 9
+  namespace N {
+    struct A {
+      struct B {
+        struct C {};
+      };
+    };
+    void f(A::B::C);
+  }
+  void test() {
+    N::A::B::C c;
+    f(c); // ok
+  }
+}
+
 namespace dr1696 { // dr1696: 7
   namespace std_examples {
 #if __cplusplus >= 201402L

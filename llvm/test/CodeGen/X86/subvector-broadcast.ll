@@ -874,8 +874,9 @@ define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
 ;
 ; X32-AVX512-LABEL: fallback_broadcast_v4i64_to_v8i64:
 ; X32-AVX512:       # %bb.0: # %entry
-; X32-AVX512-NEXT:    vpaddq {{\.LCPI.*}}, %ymm0, %ymm0
-; X32-AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,2,0,3,0,4,0,1,0,2,0,3,0,4,0]
+; X32-AVX512-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,0,2,0,3,0,4,0]
+; X32-AVX512-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X32-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
 ; X32-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; X32-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
 ; X32-AVX512-NEXT:    vmovdqu %ymm0, ga4

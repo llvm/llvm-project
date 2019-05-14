@@ -13,9 +13,7 @@
 #include "lldb/Interpreter/Options.h"
 
 namespace lldb_private {
-//-------------------------------------------------------------------------
 // OptionGroupBoolean
-//-------------------------------------------------------------------------
 
 class OptionGroupBoolean : public OptionGroup {
 public:

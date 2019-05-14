@@ -13,6 +13,7 @@
 # correct symbol.
 
 # DISASM: Disassembly of section .text:
+# DISASM-EMPTY:
 # DISASM-NEXT: $x.0:
 # DISASM-NEXT:   10000:       28 00 10 58     ldr     x8, #131076
 

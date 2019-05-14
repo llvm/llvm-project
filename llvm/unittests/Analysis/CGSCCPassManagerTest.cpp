@@ -1255,26 +1255,30 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
   MPM.run(*M, MAM);
 
   // We run over four SCCs the first time. But then we split an SCC into three.
-  // And then we merge those three back into one.
-  EXPECT_EQ(4 + 3 + 1, SCCAnalysisRuns);
+  // And then we merge those three back into one. However, this also
+  // invalidates all three SCCs further down in the PO walk.
+  EXPECT_EQ(4 + 3 + 1 + 3, SCCAnalysisRuns);
   // The module analysis pass should be run three times.
   EXPECT_EQ(3, ModuleAnalysisRuns);
   // We run over four SCCs the first time. Then over the two new ones. Then the
   // entire module is invalidated causing a full run over all seven. Then we
-  // fold three SCCs back to one, and then run over the whole module again.
-  EXPECT_EQ(4 + 2 + 7 + 1 + 4, IndirectSCCAnalysisRuns);
-  EXPECT_EQ(4 + 2 + 7 + 1 + 4, DoublyIndirectSCCAnalysisRuns);
+  // fold three SCCs back to one, re-compute for it and the two SCCs above it
+  // in the graph, and then run over the whole module again.
+  EXPECT_EQ(4 + 2 + 7 + 1 + 3 + 4, IndirectSCCAnalysisRuns);
+  EXPECT_EQ(4 + 2 + 7 + 1 + 3 + 4, DoublyIndirectSCCAnalysisRuns);
 
   // First we run over all six functions. Then we re-run it over three when we
   // split their SCCs. Then we re-run over the whole module. Then we re-run
-  // over three functions merged back into a single SCC, and then over the
-  // whole module again.
-  EXPECT_EQ(6 + 3 + 6 + 3 + 6, FunctionAnalysisRuns);
+  // over three functions merged back into a single SCC, then those three
+  // functions again, the two functions in SCCs above it in the graph, and then
+  // over the whole module again.
+  EXPECT_EQ(6 + 3 + 6 + 3 + 3 + 2 + 6, FunctionAnalysisRuns);
 
   // Re run the function analysis over the entire module, and then re-run it
   // over the `(h3, h1, h2)` SCC due to invalidation. Then we re-run it over
   // the entire module, then the three functions merged back into a single SCC,
-  // and then over the whole module.
-  EXPECT_EQ(6 + 3 + 6 + 3 + 6, IndirectFunctionAnalysisRuns);
+  // those three functions again, then the two functions in SCCs above it in
+  // the graph, and then over the whole module.
+  EXPECT_EQ(6 + 3 + 6 + 3 + 3 + 2 + 6, IndirectFunctionAnalysisRuns);
 }
 }

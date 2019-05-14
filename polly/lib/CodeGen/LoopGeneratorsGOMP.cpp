@@ -11,13 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/CodeGen/LoopGeneratorsGOMP.h"
-#include "polly/ScopDetection.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 using namespace polly;

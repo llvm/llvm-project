@@ -64,7 +64,7 @@ struct smallpartinit { char c = 42, d; };
 // PATTERN-O1-NOT: @__const.test_nullinit_custom.custom
 struct nullinit { char* null = nullptr; };
 // PATTERN-O0: @__const.test_padded_uninit.uninit = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, align 4
-// PATTERN-O0: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] c"\AA\AA\AA", i32 13371337 }, align 4
+// PATTERN-O0: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, align 4
 // ZERO-O0: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, align 4
 // PATTERN-O1-NOT: @__const.test_padded_uninit.uninit
 // PATTERN-O1-NOT: @__const.test_padded_custom.custom
@@ -88,7 +88,7 @@ struct paddedpackedarray { struct paddedpacked p[2]; };
 // PATTERN-O0: @__const.test_unpackedinpacked_uninit.uninit = private unnamed_addr constant <{ { i8, [3 x i8], i32 }, i8 }> <{ { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, i8 -86 }>, align 1
 struct unpackedinpacked { padded a; char b; } __attribute__((packed));
 // PATTERN-O0: @__const.test_paddednested_uninit.uninit = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 } }, align 4
-// PATTERN: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] c"\AA\AA\AA", i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] c"\AA\AA\AA", i32 13371338 } }, align 4
+// PATTERN: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] zeroinitializer, i32 13371338 } }, align 4
 // ZERO: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] zeroinitializer, i32 13371338 } }, align 4
 struct paddednested { struct padded p1, p2; };
 // PATTERN-O0: @__const.test_paddedpackednested_uninit.uninit = private unnamed_addr constant %struct.paddedpackednested { %struct.paddedpacked <{ i8 -86, i32 -1431655766 }>, %struct.paddedpacked <{ i8 -86, i32 -1431655766 }> }, align 1
@@ -135,7 +135,7 @@ struct arraytail { int i; int arr[]; };
 // ZERO: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x i32*] [i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*)], align 16
 // PATTERN-O0: @__const.test_tailpad4_uninit.uninit = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }], align 16
 // PATTERN-O1-NOT: @__const.test_tailpad4_uninit.uninit
-// PATTERN: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] c"\AA" }], align 16
+// PATTERN: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align 16
 // ZERO: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align 16
 struct tailpad { short s; char c; };
 // PATTERN-O0: @__const.test_atomicnotlockfree_uninit.uninit = private unnamed_addr constant %struct.notlockfree { [4 x i64] [i64 -6148914691236517206, i64 -6148914691236517206, i64 -6148914691236517206, i64 -6148914691236517206] }, align 8

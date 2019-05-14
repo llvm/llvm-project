@@ -1,7 +1,7 @@
-RUN: yaml2obj %p/Inputs/ELF/LE64.yaml | llvm-readobj -file-headers - | FileCheck %s --check-prefix LE64
-RUN: yaml2obj %p/Inputs/ELF/BE64.yaml | llvm-readobj -file-headers - | FileCheck %s --check-prefix BE64
-RUN: yaml2obj %p/Inputs/ELF/LE32.yaml | llvm-readobj -file-headers - | FileCheck %s --check-prefix LE32
-RUN: yaml2obj %p/Inputs/ELF/BE32.yaml | llvm-readobj -file-headers - | FileCheck %s --check-prefix BE32
+RUN: yaml2obj %p/Inputs/ELF/LE64.yaml | llvm-readobj --file-headers - | FileCheck %s --check-prefix LE64
+RUN: yaml2obj %p/Inputs/ELF/BE64.yaml | llvm-readobj --file-headers - | FileCheck %s --check-prefix BE64
+RUN: yaml2obj %p/Inputs/ELF/LE32.yaml | llvm-readobj --file-headers - | FileCheck %s --check-prefix LE32
+RUN: yaml2obj %p/Inputs/ELF/BE32.yaml | llvm-readobj --file-headers - | FileCheck %s --check-prefix BE32
 
 LE64:      Class: 64-bit (0x2)
 LE64-NEXT: DataEncoding: LittleEndian (0x1)

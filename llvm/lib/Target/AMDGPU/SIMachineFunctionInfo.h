@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -148,6 +149,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
   AMDGPUFunctionArgInfo ArgInfo;
 
+  // State of MODE register, assumed FP mode.
+  AMDGPU::SIModeRegisterDefaults Mode;
+
   // Graphics info.
   unsigned PSInputAddr = 0;
   unsigned PSInputEnable = 0;
@@ -256,6 +260,10 @@ public:
     SGPRSpillVGPRCSR(unsigned V, Optional<int> F) : VGPR(V), FI(F) {}
   };
 
+  SparseBitVector<> WWMReservedRegs;
+
+  void ReserveWWMRegister(unsigned reg) { WWMReservedRegs.set(reg); }
+
 private:
   // SGPR->VGPR spilling support.
   using SpillRegMask = std::pair<unsigned, unsigned>;
@@ -279,6 +287,10 @@ public:
 
   ArrayRef<SGPRSpillVGPRCSR> getSGPRSpillVGPRs() const {
     return SpillVGPRs;
+  }
+
+  AMDGPU::SIModeRegisterDefaults getMode() const {
+    return Mode;
   }
 
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);

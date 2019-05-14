@@ -462,7 +462,10 @@ cl::opt<bool> DumpSymbolStats(
     "sym-stats",
     cl::desc("Dump a detailed breakdown of symbol usage/size for each module"),
     cl::cat(MsfOptions), cl::sub(DumpSubcommand));
-
+cl::opt<bool> DumpTypeStats(
+    "type-stats",
+    cl::desc("Dump a detailed breakdown of type usage/size"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpUdtStats(
     "udt-stats",
     cl::desc("Dump a detailed breakdown of S_UDT record usage / stats"),
@@ -476,6 +479,11 @@ cl::opt<bool> DumpTypeData(
     "type-data",
     cl::desc("dump CodeView type record raw bytes from TPI stream"),
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
+cl::opt<bool>
+    DumpTypeRefStats("type-ref-stats",
+                     cl::desc("dump statistics on the number and size of types "
+                              "transitively referenced by symbol records"),
+                     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> DumpTypeExtras("type-extras",
                              cl::desc("dump type hashes and index offsets"),

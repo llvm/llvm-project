@@ -90,17 +90,13 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
   return false;
 }
 
-//----------------------------------------------------------------------
 // ProcessElfCore constructor
-//----------------------------------------------------------------------
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
     : Process(target_sp, listener_sp), m_core_file(core_file) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ProcessElfCore::~ProcessElfCore() {
   Clear();
   // We need to call finalize on the process before destroying ourselves to
@@ -110,9 +106,7 @@ ProcessElfCore::~ProcessElfCore() {
   Finalize();
 }
 
-//----------------------------------------------------------------------
 // PluginInterface
-//----------------------------------------------------------------------
 ConstString ProcessElfCore::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ProcessElfCore::GetPluginVersion() { return 1; }
@@ -146,9 +140,7 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
   return addr;
 }
 
-//----------------------------------------------------------------------
 // Process Control
-//----------------------------------------------------------------------
 Status ProcessElfCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
@@ -244,7 +236,8 @@ Status ProcessElfCore::DoLoadCore() {
       exe_module_spec.GetFileSpec().SetFile(
           m_nt_file_entries[0].path.GetCString(), FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
-        exe_module_sp = GetTarget().GetSharedModule(exe_module_spec);
+        exe_module_sp = GetTarget().GetOrCreateModule(exe_module_spec, 
+                                                      true /* notify */);
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
@@ -278,15 +271,11 @@ void ProcessElfCore::RefreshStateAfterStop() {}
 
 Status ProcessElfCore::DoDestroy() { return Status(); }
 
-//------------------------------------------------------------------
 // Process Queries
-//------------------------------------------------------------------
 
 bool ProcessElfCore::IsAlive() { return true; }
 
-//------------------------------------------------------------------
 // Process Memory
-//------------------------------------------------------------------
 size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                   Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
@@ -628,6 +617,32 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
             llvm::inconvertibleErrorCode());
 
       switch (GetArchitecture().GetMachine()) {
+      case llvm::Triple::aarch64: {
+        // Assume order PT_GETREGS, PT_GETFPREGS
+        if (note.info.n_type == NETBSD::AARCH64::NT_REGS) {
+          // If this is the next thread, push the previous one first.
+          if (had_nt_regs) {
+            m_thread_data.push_back(thread_data);
+            thread_data = ThreadData();
+            had_nt_regs = false;
+          }
+
+          thread_data.gpregset = note.data;
+          thread_data.tid = tid;
+          if (thread_data.gpregset.GetByteSize() == 0)
+            return llvm::make_error<llvm::StringError>(
+                "Could not find general purpose registers note in core file.",
+                llvm::inconvertibleErrorCode());
+          had_nt_regs = true;
+        } else if (note.info.n_type == NETBSD::AARCH64::NT_FPREGS) {
+          if (!had_nt_regs || tid != thread_data.tid)
+            return llvm::make_error<llvm::StringError>(
+                "Error parsing NetBSD core(5) notes: Unexpected order "
+                "of NOTEs PT_GETFPREG before PT_GETREG",
+                llvm::inconvertibleErrorCode());
+          thread_data.notes.push_back(note);
+        }
+      } break;
       case llvm::Triple::x86_64: {
         // Assume order PT_GETREGS, PT_GETFPREGS
         if (note.info.n_type == NETBSD::AMD64::NT_REGS) {

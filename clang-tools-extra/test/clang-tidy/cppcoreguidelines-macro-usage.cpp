@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-macro-usage %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-macro-usage %t -- -header-filter=.* -system-headers --
 
 #ifndef INCLUDE_GUARD
 #define INCLUDE_GUARD

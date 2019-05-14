@@ -1665,6 +1665,12 @@ static enum CXChildVisitResult PrintType(CXCursor cursor, CXCursor p,
       }
     }
 
+    /* Print if it is an anonymous record decl */
+    {
+      unsigned isAnonRecDecl = clang_Cursor_isAnonymousRecordDecl(cursor);
+      printf(" [isAnonRecDecl=%d]", isAnonRecDecl);
+    }
+
     printf("\n");
   }
   return CXChildVisit_Recurse;

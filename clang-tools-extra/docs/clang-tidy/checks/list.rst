@@ -178,6 +178,7 @@ Clang-Tidy Checks
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
+   llvm-prefer-isa-or-dyn-cast-in-conditionals
    llvm-twine-local
    misc-definitions-in-headers
    misc-misplaced-const
@@ -227,6 +228,9 @@ Clang-Tidy Checks
    objc-avoid-spinlock
    objc-forbidden-subclassing
    objc-property-declaration
+   objc-super-self
+   openmp-exception-escape
+   openmp-use-default-none
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-conversion-in-loop

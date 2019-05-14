@@ -128,10 +128,8 @@ protected:
 
   lldb::TypeSP ParseTypeFromDWO(const DWARFDIE &die, lldb_private::Log *log);
 
-  //----------------------------------------------------------------------
   // Return true if this type is a declaration to a type in an external
   // module.
-  //----------------------------------------------------------------------
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
   typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;

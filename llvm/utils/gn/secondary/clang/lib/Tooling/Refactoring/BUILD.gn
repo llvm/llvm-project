@@ -25,5 +25,8 @@ static_library("Refactoring") {
     "Rename/USRFinder.cpp",
     "Rename/USRFindingAction.cpp",
     "Rename/USRLocFinder.cpp",
+    "SourceCode.cpp",
+    "Stencil.cpp",
+    "Transformer.cpp",
   ]
 }

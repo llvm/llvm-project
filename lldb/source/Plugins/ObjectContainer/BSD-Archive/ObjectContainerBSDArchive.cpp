@@ -436,9 +436,7 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjectContainerBSDArchive::GetPluginName() {
   return GetPluginNameStatic();
 }

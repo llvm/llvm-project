@@ -15,6 +15,7 @@
 ; CHECK-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]                   (0x00000000)
 
 ; CHECK: .debug_info.dwo contents:
+; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[P:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[A:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[E:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[B:0x[0-9a-z]*]]
@@ -27,24 +28,31 @@
 ; Don't assume these locations are entirely correct - feel free to update them
 ; if they've changed due to a bugfix, change in register allocation, etc.
 
+; CHECK:      [[P]]:
+; CHECK-NEXT:   Addr idx 1 (w/ length 204): DW_OP_consts +1, DW_OP_stack_value
 ; CHECK:      [[A]]:
 ; CHECK-NEXT:   Addr idx 2 (w/ length 169): DW_OP_consts +0, DW_OP_stack_value
-; CHECK-NEXT:   Addr idx 3 (w/ length 25): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 3 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 4 (w/ length 6): DW_OP_breg7 RSP-8
+; CHECK-NEXT:   Addr idx 5 (w/ length 4): DW_OP_reg0 RAX
 ; CHECK:      [[E]]:
-; CHECK-NEXT:   Addr idx 4 (w/ length 19): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 6 (w/ length 9): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 7 (w/ length 98): DW_OP_breg7 RSP-44
 ; CHECK:      [[B]]:
-; CHECK-NEXT:   Addr idx 5 (w/ length 17): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 8 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 9 (w/ length 66): DW_OP_breg7 RSP-32
 ; CHECK:      [[D]]:
-; CHECK-NEXT:   Addr idx 6 (w/ length 17): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 10 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 11 (w/ length 42): DW_OP_breg7 RSP-20
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Make sure we have enough stuff in the debug_addr to cover the address indexes
-; (6 is the last index in debug_loc.dwo, making 7 entries of 8 bytes each, 7 * 8
-; == 56 base 10 == 38 base 16)
+; (11 is the last index in debug_loc.dwo, making 12 entries of 8 bytes each,
+; 12 * 8 == 96 base 10 == 60 base 16)
 
-; HDR: .debug_addr 00000038
+; HDR: .debug_addr 00000060
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Check for the existence of a DWARF v5-style range list table in the .debug_rnglists

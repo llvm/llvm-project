@@ -12,6 +12,7 @@
 
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 namespace tooling {
@@ -40,11 +41,21 @@ Diagnostic::Diagnostic(llvm::StringRef DiagnosticName,
 
 Diagnostic::Diagnostic(llvm::StringRef DiagnosticName,
                        const DiagnosticMessage &Message,
-                       const llvm::StringMap<Replacements> &Fix,
                        const SmallVector<DiagnosticMessage, 1> &Notes,
                        Level DiagLevel, llvm::StringRef BuildDirectory)
-    : DiagnosticName(DiagnosticName), Message(Message), Fix(Fix), Notes(Notes),
+    : DiagnosticName(DiagnosticName), Message(Message), Notes(Notes),
       DiagLevel(DiagLevel), BuildDirectory(BuildDirectory) {}
+
+const llvm::StringMap<Replacements> *selectFirstFix(const Diagnostic& D) {
+   if (!D.Message.Fix.empty())
+    return &D.Message.Fix;
+  auto Iter = llvm::find_if(D.Notes, [](const tooling::DiagnosticMessage &D) {
+    return !D.Fix.empty();
+  });
+  if (Iter != D.Notes.end())
+    return &Iter->Fix;
+  return nullptr;
+}
 
 } // end namespace tooling
 } // end namespace clang

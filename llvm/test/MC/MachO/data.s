@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -file-headers -s -macho-segment | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --file-headers -S --macho-segment | FileCheck %s
 
         .data
         .ascii "hello"

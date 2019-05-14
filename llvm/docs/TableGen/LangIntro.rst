@@ -189,6 +189,10 @@ supported include:
     More than two arguments are accepted with the result being the concatenation
     of all the lists given.
 
+``!listsplat(a, size)``
+    A list value that contains the value ``a`` ``size`` times.
+    Example: ``!listsplat(0, 2)`` results in ``[0, 0]``.
+
 ``!strconcat(a, b, ...)``
     A string value that is the result of concatenating the 'a' and 'b' strings.
     More than two arguments are accepted with the result being the concatenation

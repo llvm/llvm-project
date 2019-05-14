@@ -124,10 +124,10 @@ static cl::opt<bool> ClEnableKhwasan(
 // is accessed. The shadow mapping looks like:
 //    Shadow = (Mem >> scale) + offset
 
-static cl::opt<unsigned long long> ClMappingOffset(
-    "hwasan-mapping-offset",
-    cl::desc("HWASan shadow mapping offset [EXPERIMENTAL]"), cl::Hidden,
-    cl::init(0));
+static cl::opt<uint64_t>
+    ClMappingOffset("hwasan-mapping-offset",
+                    cl::desc("HWASan shadow mapping offset [EXPERIMENTAL]"),
+                    cl::Hidden, cl::init(0));
 
 static cl::opt<bool>
     ClWithIfunc("hwasan-with-ifunc",
@@ -159,10 +159,6 @@ static cl::opt<bool>
 static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
                                        cl::desc("inline all checks"),
                                        cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClAllowIfunc("hwasan-allow-ifunc",
-                                  cl::desc("allow the use of ifunc"),
-                                  cl::Hidden, cl::init(false));
 
 namespace {
 
@@ -836,7 +832,7 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
   if (!Mapping.InTls)
     return getDynamicShadowNonTls(IRB);
 
-  if (ClAllowIfunc && !WithFrameRecord && TargetTriple.isAndroid())
+  if (!WithFrameRecord && TargetTriple.isAndroid())
     return getDynamicShadowIfunc(IRB);
 
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);

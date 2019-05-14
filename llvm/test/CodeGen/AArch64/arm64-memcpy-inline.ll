@@ -61,7 +61,7 @@ entry:
 define void @t4(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t4:
-; CHECK: orr [[REG5:w[0-9]+]], wzr, #0x20
+; CHECK: mov [[REG5:w[0-9]+]], #32
 ; CHECK: strh [[REG5]], [x0, #16]
 ; CHECK: ldr [[REG6:q[0-9]+]], [x{{[0-9]+}}]
 ; CHECK: str [[REG6]], [x0]

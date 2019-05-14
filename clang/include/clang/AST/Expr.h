@@ -1870,6 +1870,11 @@ public:
     return child_range(getTrailingObjects<Stmt *>(),
                        getTrailingObjects<Stmt *>() + hasFunctionName());
   }
+
+  const_child_range children() const {
+    return const_child_range(getTrailingObjects<Stmt *>(),
+                             getTrailingObjects<Stmt *>() + hasFunctionName());
+  }
 };
 
 /// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This

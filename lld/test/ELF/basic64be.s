@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t
 # RUN: ld.lld -discard-all %t -o %t2
-# RUN: llvm-readobj -file-headers -sections -section-data -program-headers %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections --section-data -l %t2 | FileCheck %s
 
 # exits with return code 42 on linux
 .text

@@ -2281,12 +2281,12 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // come from a pointer that cannot overlap with dynamically-allocated
     // memory within the lifetime of the current function (allocas, byval
     // arguments, globals), then determine the comparison result here.
-    SmallVector<Value *, 8> LHSUObjs, RHSUObjs;
+    SmallVector<const Value *, 8> LHSUObjs, RHSUObjs;
     GetUnderlyingObjects(LHS, LHSUObjs, DL);
     GetUnderlyingObjects(RHS, RHSUObjs, DL);
 
     // Is the set of underlying objects all noalias calls?
-    auto IsNAC = [](ArrayRef<Value *> Objects) {
+    auto IsNAC = [](ArrayRef<const Value *> Objects) {
       return all_of(Objects, isNoAliasCall);
     };
 
@@ -2296,8 +2296,8 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // live with the compared-to allocation). For globals, we exclude symbols
     // that might be resolve lazily to symbols in another dynamically-loaded
     // library (and, thus, could be malloc'ed by the implementation).
-    auto IsAllocDisjoint = [](ArrayRef<Value *> Objects) {
-      return all_of(Objects, [](Value *V) {
+    auto IsAllocDisjoint = [](ArrayRef<const Value *> Objects) {
+      return all_of(Objects, [](const Value *V) {
         if (const AllocaInst *AI = dyn_cast<AllocaInst>(V))
           return AI->getParent() && AI->getFunction() && AI->isStaticAlloca();
         if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))
@@ -3045,8 +3045,15 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     std::swap(LHS, RHS);
     Pred = CmpInst::getSwappedPredicate(Pred);
   }
+  assert(!isa<UndefValue>(LHS) && "Unexpected icmp undef,%X");
 
   Type *ITy = GetCompareTy(LHS); // The return type.
+
+  // For EQ and NE, we can always pick a value for the undef to make the
+  // predicate pass or fail, so we can return undef.
+  // Matches behavior in llvm::ConstantFoldCompareInstruction.
+  if (isa<UndefValue>(RHS) && ICmpInst::isEquality(Pred))
+    return UndefValue::get(ITy);
 
   // icmp X, X -> true/false
   // icmp X, undef -> true/false because undef could be X.
@@ -4628,22 +4635,6 @@ static Value *SimplifyRelativeLoad(Constant *Ptr, Constant *Offset,
   return ConstantExpr::getBitCast(LoadedLHSPtr, Int8PtrTy);
 }
 
-static bool maskIsAllZeroOrUndef(Value *Mask) {
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
-    return true;
-  for (unsigned I = 0, E = ConstMask->getType()->getVectorNumElements(); I != E;
-       ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
-        continue;
-    return false;
-  }
-  return true;
-}
-
 static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
                                      const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.
@@ -4694,6 +4685,22 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
         match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0),
                                                m_Value(X)))) return X;
     break;
+  case Intrinsic::floor:
+  case Intrinsic::trunc:
+  case Intrinsic::ceil:
+  case Intrinsic::round:
+  case Intrinsic::nearbyint:
+  case Intrinsic::rint: {
+    // floor (sitofp x) -> sitofp x
+    // floor (uitofp x) -> uitofp x
+    //
+    // Converting from int always results in a finite integral number or
+    // infinity. For either of those inputs, these rounding functions always
+    // return the same value, so the rounding can be eliminated.
+    if (match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+      return Op0;
+    break;
+  }
   default:
     break;
   }
@@ -4853,7 +4860,8 @@ static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
-  case Intrinsic::masked_load: {
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_gather: {
     Value *MaskArg = ArgBegin[2];
     Value *PassthruArg = ArgBegin[3];
     // If the mask is all zeros or undef, the "passthru" argument is the result.

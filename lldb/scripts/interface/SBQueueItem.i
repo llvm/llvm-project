@@ -14,7 +14,7 @@ public:
     SBQueueItem ();
 
     SBQueueItem (const lldb::QueueItemSP& queue_item_sp);
-    
+
    ~SBQueueItem();
 
     bool

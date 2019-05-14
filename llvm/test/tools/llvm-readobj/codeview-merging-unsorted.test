@@ -1,5 +1,5 @@
-; RUN: llvm-readobj -codeview %S/Inputs/codeview-unsorted.obj | FileCheck %s
-; RUN: llvm-readobj -codeview-merged-types %S/Inputs/codeview-unsorted.obj | FileCheck %s --check-prefix=MERGED
+; RUN: llvm-readobj --codeview %S/Inputs/codeview-unsorted.obj | FileCheck %s
+; RUN: llvm-readobj --codeview-merged-types %S/Inputs/codeview-unsorted.obj | FileCheck %s --check-prefix=MERGED
 
 ; The input type stream has records that refer to later type indices in the same
 ; stream:

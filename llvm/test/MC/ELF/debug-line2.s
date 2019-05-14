@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s -sd | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck %s
 
 // Test that two subsequent .loc directives generate two
 // distinct line table entries.

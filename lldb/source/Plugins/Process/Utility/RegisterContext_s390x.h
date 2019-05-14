@@ -9,9 +9,7 @@
 #ifndef liblldb_RegisterContext_s390x_h_
 #define liblldb_RegisterContext_s390x_h_
 
-//---------------------------------------------------------------------------
 // SystemZ ehframe, dwarf regnums
-//---------------------------------------------------------------------------
 
 // EHFrame and DWARF Register numbers (eRegisterKindEHFrame &
 // eRegisterKindDWARF)

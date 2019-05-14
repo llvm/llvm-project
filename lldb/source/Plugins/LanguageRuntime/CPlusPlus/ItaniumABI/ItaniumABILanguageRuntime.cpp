@@ -313,9 +313,7 @@ bool ItaniumABILanguageRuntime::IsVTableName(const char *name) {
   return strstr(name, "_vptr$") == name;
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 LanguageRuntime *
 ItaniumABILanguageRuntime::CreateInstance(Process *process,
                                           lldb::LanguageType language) {
@@ -427,9 +425,7 @@ lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginName() {
   return GetPluginNameStatic();
 }
@@ -567,7 +563,7 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
   options.SetStopOthers(true);
-  options.SetTimeout(std::chrono::milliseconds(500));
+  options.SetTimeout(m_process->GetUtilityExpressionTimeout());
   options.SetTryAllThreads(false);
   thread_sp->CalculateExecutionContext(exe_ctx);
 

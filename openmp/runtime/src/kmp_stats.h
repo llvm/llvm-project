@@ -69,7 +69,8 @@ enum stats_state_e {
   TASKYIELD,
   TASKGROUP,
   IMPLICIT_TASK,
-  EXPLICIT_TASK
+  EXPLICIT_TASK,
+  TEAMS_REGION
 };
 
 /*!
@@ -137,10 +138,14 @@ enum stats_state_e {
   macro (OMP_worker_thread_life, stats_flags_e::logEvent, arg)                 \
   macro (OMP_parallel, stats_flags_e::logEvent, arg)                           \
   macro (OMP_parallel_overhead, stats_flags_e::logEvent, arg)                  \
+  macro (OMP_teams, stats_flags_e::logEvent, arg)                              \
+  macro (OMP_teams_overhead, stats_flags_e::logEvent, arg)                     \
   macro (OMP_loop_static, 0, arg)                                              \
   macro (OMP_loop_static_scheduling, 0, arg)                                   \
   macro (OMP_loop_dynamic, 0, arg)                                             \
   macro (OMP_loop_dynamic_scheduling, 0, arg)                                  \
+  macro (OMP_distribute, 0, arg)                                               \
+  macro (OMP_distribute_scheduling, 0, arg)                                    \
   macro (OMP_critical, 0, arg)                                                 \
   macro (OMP_critical_wait, 0, arg)                                            \
   macro (OMP_single, 0, arg)                                                   \
@@ -163,7 +168,13 @@ enum stats_state_e {
          arg)                                                                  \
   macro (OMP_loop_static_iterations,                                           \
          stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
+  macro (OMP_loop_static_total_iterations,                                     \
+         stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
   macro (OMP_loop_dynamic_iterations,                                          \
+         stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
+  macro (OMP_loop_dynamic_total_iterations,                                    \
+         stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
+  macro (OMP_distribute_iterations,                                            \
          stats_flags_e::noUnits | stats_flags_e::noTotal, arg)                 \
   KMP_FOREACH_DEVELOPER_TIMER(macro, arg)
 // clang-format on

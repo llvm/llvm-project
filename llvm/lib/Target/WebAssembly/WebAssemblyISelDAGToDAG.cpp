@@ -51,8 +51,7 @@ public:
                          "********** Function: "
                       << MF.getName() << '\n');
 
-    ForCodeSize = MF.getFunction().hasFnAttribute(Attribute::OptimizeForSize) ||
-                  MF.getFunction().hasFnAttribute(Attribute::MinSize);
+    ForCodeSize = MF.getFunction().hasOptSize();
     Subtarget = &MF.getSubtarget<WebAssemblySubtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }

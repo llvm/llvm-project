@@ -14,7 +14,6 @@
 #include "MIUtilDateTimeStd.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLog constructor.
 // Type:    Method.
 // Args:    None.
@@ -26,7 +25,6 @@ CMICmnLog::CMICmnLog() : m_bEnabled(false), m_bInitializingATM(false) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnLog destructor.
 // Type:    Method.
 // Args:    None.
@@ -36,7 +34,6 @@ CMICmnLog::CMICmnLog() : m_bEnabled(false), m_bInitializingATM(false) {
 CMICmnLog::~CMICmnLog() { Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize resources for *this Logger.
 // Type:    Method.
 // Args:    None.
@@ -94,7 +91,6 @@ bool CMICmnLog::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources for *this Logger.
 // Type:    Method.
 // Args:    None.
@@ -119,7 +115,6 @@ bool CMICmnLog::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Enabled or disable *this Logger from writing any data to registered
 // clients.
 // Type:    Method.
@@ -135,7 +130,6 @@ bool CMICmnLog::SetEnabled(const bool vbYes) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve state whether *this Logger is enabled writing data to
 // registered clients.
 // Type:    Method.
@@ -147,7 +141,6 @@ bool CMICmnLog::SetEnabled(const bool vbYes) {
 bool CMICmnLog::GetEnabled() const { return m_bEnabled; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unregister all the Mediums registered with *this Logger.
 // Type:    Method.
 // Args:    None.
@@ -168,7 +161,6 @@ bool CMICmnLog::UnregisterMediumAll() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Register a Medium with *this Logger.
 // Type:    Method.
 // Args:    vrMedium    - (R) The medium to register.
@@ -197,7 +189,6 @@ bool CMICmnLog::RegisterMedium(const IMedium &vrMedium) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Query the Logger to see if a medium is already registered.
 // Type:    Method.
 // Args:    vrMedium    - (R) The medium to query.
@@ -212,7 +203,6 @@ bool CMICmnLog::HaveMediumAlready(const IMedium &vrMedium) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Unregister a medium from the Logger.
 // Type:    Method.
 // Args:    vrMedium    - (R) The medium to unregister.
@@ -228,7 +218,6 @@ bool CMICmnLog::UnregisterMedium(const IMedium &vrMedium) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The callee client uses this function to write to the Logger. The
 // data to be
 //          written is given out to all the mediums registered. The verbosity
@@ -293,7 +282,6 @@ bool CMICmnLog::Write(const CMIUtilString &vData, const ELogVerbosity veType) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Short cut function call to write only to the Log file.
 //          The logger must be initialized successfully before a write to any
 //          registered
@@ -309,7 +297,6 @@ bool CMICmnLog::WriteLog(const CMIUtilString &vData) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve a string detailing the last error.
 // Type:    Method.
 // Args:    None,
@@ -321,7 +308,6 @@ const CMIUtilString &CMICmnLog::GetErrorDescription() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Set the internal description of the last error.
 // Type:    Method.
 // Args:    (R) String containing a description of the last error.
@@ -333,7 +319,6 @@ void CMICmnLog::SetErrorDescription(const CMIUtilString &vrTxt) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Clear the last error.
 // Type:    None.
 // Args:    None.

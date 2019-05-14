@@ -17,18 +17,14 @@ namespace lldb_private {
 class RegisterContext : public std::enable_shared_from_this<RegisterContext>,
                         public ExecutionContextScope {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   RegisterContext(Thread &thread, uint32_t concrete_frame_idx);
 
   ~RegisterContext() override;
 
   void InvalidateIfNeeded(bool force);
 
-  //------------------------------------------------------------------
   // Subclasses must override these functions
-  //------------------------------------------------------------------
   virtual void InvalidateAllRegisters() = 0;
 
   virtual size_t GetRegisterCount() = 0;
@@ -75,7 +71,6 @@ public:
 
   bool CopyFromRegisterContext(lldb::RegisterContextSP context);
 
-  //------------------------------------------------------------------
   /// Convert from a given register numbering scheme to the lldb register
   /// numbering scheme
   ///
@@ -109,13 +104,10 @@ public:
   /// \return
   ///     The equivalent register number in the eRegisterKindLLDB
   ///     numbering scheme, if possible, else LLDB_INVALID_REGNUM.
-  //------------------------------------------------------------------
   virtual uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                        uint32_t num) = 0;
 
-  //------------------------------------------------------------------
   // Subclasses can override these functions if desired
-  //------------------------------------------------------------------
   virtual uint32_t NumSupportedHardwareBreakpoints();
 
   virtual uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size);
@@ -141,9 +133,7 @@ public:
                              lldb::addr_t dst_addr, uint32_t dst_len,
                              const RegisterValue &reg_value);
 
-  //------------------------------------------------------------------
   // Subclasses should not override these
-  //------------------------------------------------------------------
   virtual lldb::tid_t GetThreadID() const;
 
   virtual Thread &GetThread() { return m_thread; }
@@ -188,9 +178,7 @@ public:
                                    lldb::RegisterKind target_rk,
                                    uint32_t &target_regnum);
 
-  //------------------------------------------------------------------
   // lldb::ExecutionContextScope pure virtual functions
-  //------------------------------------------------------------------
   lldb::TargetSP CalculateTarget() override;
 
   lldb::ProcessSP CalculateProcess() override;
@@ -206,17 +194,13 @@ public:
   void SetStopID(uint32_t stop_id) { m_stop_id = stop_id; }
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from RegisterContext can see and modify these
-  //------------------------------------------------------------------
   Thread &m_thread; // The thread that this register context belongs to.
   uint32_t m_concrete_frame_idx; // The concrete frame index for this register
                                  // context
   uint32_t m_stop_id; // The stop ID that any data in this context is valid for
 private:
-  //------------------------------------------------------------------
   // For RegisterContext only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(RegisterContext);
 };
 

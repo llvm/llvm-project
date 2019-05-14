@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: ld.lld --hash-style=sysv -shared %t.o -o %t
-// RUN: llvm-readobj -r -s %t | FileCheck %s
+// RUN: llvm-readobj -r -S %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Name: .got
@@ -22,6 +22,7 @@
 // 0x1007 + 4249 = 0x20A0
 // 0x100e + 4250 = 0x20A8
 // DISASM:      Disassembly of section .text:
+// DISASM-EMPTY:
 // DISASM-NEXT: .text:
 // DISASM-NEXT:  1000: {{.*}} addq 4249(%rip), %rax
 // DISASM-NEXT:  1007: {{.*}} addq 4250(%rip), %rax

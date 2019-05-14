@@ -259,6 +259,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Paren:
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
+    case Type::MacroQualified:
       CanPrefixQualifiers = false;
       break;
 
@@ -963,6 +964,21 @@ void TypePrinter::printTypedefBefore(const TypedefType *T, raw_ostream &OS) {
   printTypeSpec(T->getDecl(), OS);
 }
 
+void TypePrinter::printMacroQualifiedBefore(const MacroQualifiedType *T,
+                                            raw_ostream &OS) {
+  StringRef MacroName = T->getMacroIdentifier()->getName();
+  OS << MacroName << " ";
+
+  // Since this type is meant to print the macro instead of the whole attribute,
+  // we trim any attributes and go directly to the original modified type.
+  printBefore(T->getModifiedType(), OS);
+}
+
+void TypePrinter::printMacroQualifiedAfter(const MacroQualifiedType *T,
+                                           raw_ostream &OS) {
+  printAfter(T->getModifiedType(), OS);
+}
+
 void TypePrinter::printTypedefAfter(const TypedefType *T, raw_ostream &OS) {}
 
 void TypePrinter::printTypeOfExprBefore(const TypeOfExprType *T,
@@ -1632,6 +1648,19 @@ static const TemplateArgument &getArgument(const TemplateArgumentLoc &A) {
   return A.getArgument();
 }
 
+static void printArgument(const TemplateArgument &A, const PrintingPolicy &PP,
+                          llvm::raw_ostream &OS) {
+  A.print(PP, OS);
+}
+
+static void printArgument(const TemplateArgumentLoc &A,
+                          const PrintingPolicy &PP, llvm::raw_ostream &OS) {
+  const TemplateArgument::ArgKind &Kind = A.getArgument().getKind();
+  if (Kind == TemplateArgument::ArgKind::Type)
+    return A.getTypeSourceInfo()->getType().print(OS, PP);
+  return A.getArgument().print(PP, OS);
+}
+
 template<typename TA>
 static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
                     const PrintingPolicy &Policy, bool SkipBrackets) {
@@ -1653,7 +1682,8 @@ static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
     } else {
       if (!FirstArg)
         OS << Comma;
-      Argument.print(Policy, ArgOS);
+      // Tries to print the argument with location info if exists.
+      printArgument(Arg, Policy, ArgOS);
     }
     StringRef ArgString = ArgOS.str();
 

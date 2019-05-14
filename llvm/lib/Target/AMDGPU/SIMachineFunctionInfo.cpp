@@ -28,6 +28,7 @@ using namespace llvm;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
+    Mode(MF.getFunction()),
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),
@@ -292,6 +293,11 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
 void SIMachineFunctionInfo::removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI) {
   for (auto &R : SGPRToVGPRSpills)
     MFI.RemoveStackObject(R.first);
+  // All other SPGRs must be allocated on the default stack, so reset
+  // the stack ID.
+  for (unsigned i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd();
+       i != e; ++i)
+    MFI.setStackID(i, 0);
 }
 
 

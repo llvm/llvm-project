@@ -51,7 +51,7 @@ public:
 
   unsigned SectionKind : 3;
 
-  // The next three bit fields are only used by InputSectionBase, but we
+  // The next four bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
   // The garbage collector sets sections' Live bits.
@@ -72,6 +72,9 @@ public:
   unsigned Assigned : 1;
 
   unsigned Bss : 1;
+
+  // True if this is a debuginfo section.
+  unsigned Debug : 1;
 
   // Set for sections that should not be folded by ICF.
   unsigned KeepUnique : 1;
@@ -100,8 +103,9 @@ protected:
               uint64_t Entsize, uint64_t Alignment, uint32_t Type,
               uint32_t Info, uint32_t Link)
       : Name(Name), Repl(this), SectionKind(SectionKind), Live(false),
-        Assigned(false), Bss(false), KeepUnique(false), Alignment(Alignment),
-        Flags(Flags), Entsize(Entsize), Type(Type), Link(Link), Info(Info) {}
+        Assigned(false), Bss(false), Debug(false), KeepUnique(false),
+        Alignment(Alignment), Flags(Flags), Entsize(Entsize), Type(Type),
+        Link(Link), Info(Info) {}
 };
 
 // This corresponds to a section of an input file.
@@ -223,13 +227,12 @@ protected:
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t Off, uint32_t Hash, bool Live)
-      : InputOff(Off), Hash(Hash), OutputOff(0),
-        Live(Live || !Config->GcSections) {}
+      : InputOff(Off), Live(Live || !Config->GcSections), Hash(Hash >> 1) {}
 
   uint32_t InputOff;
-  uint32_t Hash;
-  int64_t OutputOff : 63;
-  uint64_t Live : 1;
+  uint32_t Live : 1;
+  uint32_t Hash : 31;
+  uint64_t OutputOff = 0;
 };
 
 static_assert(sizeof(SectionPiece) == 16, "SectionPiece is too big");

@@ -143,6 +143,16 @@ template <class X, class Y> LLVM_NODISCARD inline bool isa(const Y &Val) {
                        typename simplify_type<const Y>::SimpleType>::doit(Val);
 }
 
+// isa_and_nonnull<X> - Functionally identical to isa, except that a null value
+// is accepted.
+//
+template <class X, class Y>
+LLVM_NODISCARD inline bool isa_and_nonnull(const Y &Val) {
+  if (!Val)
+    return false;
+  return isa<X>(Val);
+}
+
 //===----------------------------------------------------------------------===//
 //                          cast<x> Support Templates
 //===----------------------------------------------------------------------===//

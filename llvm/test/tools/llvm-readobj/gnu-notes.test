@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t.so
-# RUN: llvm-readobj -elf-output-style GNU --notes %t.so | FileCheck %s --check-prefix=GNU
-# RUN: llvm-readobj -elf-output-style LLVM --notes %t.so | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --notes %t.so | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --elf-output-style LLVM --notes %t.so | FileCheck %s --check-prefix=LLVM
 
 # GNU:      Displaying notes found at file offset 0x00000340 with length 0x00000020:
 # GNU-NEXT:   Owner                 Data size       Description
@@ -101,20 +101,22 @@ Sections:
     AddressAlign:    0x0000000000000004
     Content:         040000000900000004000000474E5500676F6C6420312E3131000000
 Symbols:
-  Local:
-    - Name:            reduced.c
-      Type:            STT_FILE
-    - Type:            STT_FILE
-  Global:
-    - Name:            main
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000400140
-      Size:            0x0000000000000003
-    - Name:            _edata
-      Value:           0x0000000000401000
-    - Name:            __bss_start
-      Value:           0x0000000000401000
-    - Name:            _end
-      Value:           0x0000000000401000
+  - Name:            reduced.c
+    Type:            STT_FILE
+  - Type:            STT_FILE
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400140
+    Size:            0x0000000000000003
+    Binding: STB_GLOBAL
+  - Name:            _edata
+    Value:           0x0000000000401000
+    Binding: STB_GLOBAL
+  - Name:            __bss_start
+    Value:           0x0000000000401000
+    Binding: STB_GLOBAL
+  - Name:            _end
+    Value:           0x0000000000401000
+    Binding: STB_GLOBAL
 ...

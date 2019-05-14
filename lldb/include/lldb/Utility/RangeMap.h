@@ -21,15 +21,11 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // Templatized classes for dealing with generic ranges and also collections of
 // ranges, or collections of ranges that have associated data.
-//----------------------------------------------------------------------
 
-//----------------------------------------------------------------------
 // A simple range class where you get to define the type of the range
 // base "B", and the type used for the range byte size "S".
-//----------------------------------------------------------------------
 template <typename B, typename S> struct Range {
   typedef B BaseType;
   typedef S SizeType;
@@ -126,10 +122,8 @@ template <typename B, typename S> struct Range {
   }
 };
 
-//----------------------------------------------------------------------
 // A range array class where you get to define the type of the ranges
 // that the collection contains.
-//----------------------------------------------------------------------
 
 template <typename B, typename S, unsigned N> class RangeArray {
 public:
@@ -591,11 +585,9 @@ protected:
   Collection m_entries;
 };
 
-//----------------------------------------------------------------------
 // A simple range  with data class where you get to define the type of
 // the range base "B", the type used for the range byte size "S", and the type
 // for the associated data "T".
-//----------------------------------------------------------------------
 template <typename B, typename S, typename T>
 struct RangeData : public Range<B, S> {
   typedef T DataType;
@@ -632,6 +624,7 @@ struct RangeData : public Range<B, S> {
 template <typename B, typename S, typename T, unsigned N = 0>
 class RangeDataVector {
 public:
+  typedef lldb_private::Range<B, S> Range;
   typedef RangeData<B, S, T> Entry;
   typedef llvm::SmallVector<Entry, N> Collection;
 
@@ -824,11 +817,9 @@ protected:
   Collection m_entries;
 };
 
-//----------------------------------------------------------------------
 // A simple range  with data class where you get to define the type of
 // the range base "B", the type used for the range byte size "S", and the type
 // for the associated data "T".
-//----------------------------------------------------------------------
 template <typename B, typename T> struct AddressData {
   typedef B BaseType;
   typedef T DataType;

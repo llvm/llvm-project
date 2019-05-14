@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld -pie %t.o -o %t.pie
-# RUN: llvm-readobj -r -dyn-symbols %t.pie | FileCheck %s
+# RUN: llvm-readobj -r --dyn-syms %t.pie | FileCheck %s
 
 ## Test that we create R_X86_64_RELATIVE relocations with -pie.
 # CHECK:      Relocations [

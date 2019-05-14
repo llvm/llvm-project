@@ -170,6 +170,55 @@ define amdgpu_kernel void @v_uaddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_uaddo_clamp_bit:
+; GCN: v_add_{{i|u|co_u}}32_e32
+; GCN: s_endpgm
+define amdgpu_kernel void @s_uaddo_clamp_bit(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) #0 {
+entry:
+  %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %uadd, 0
+  %carry = extractvalue { i32, i1 } %uadd, 1
+  %c2 = icmp eq i1 %carry, false
+  %cc = icmp eq i32 %a, %b
+  br i1 %cc, label %exit, label %if
+
+if:
+  br label %exit
+
+exit:
+  %cout = phi i1 [false, %entry], [%c2, %if]
+  store i32 %val, i32 addrspace(1)* %out, align 4
+  store i1 %cout, i1 addrspace(1)* %carryout
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_uaddo_clamp_bit:
+; GCN: v_add_{{i|u|co_u}}32_e64
+; GCN: s_endpgm
+define amdgpu_kernel void @v_uaddo_clamp_bit(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = sext i32 %tid to i64
+  %a.gep = getelementptr inbounds i32, i32 addrspace(1)* %a.ptr
+  %b.gep = getelementptr inbounds i32, i32 addrspace(1)* %b.ptr
+  %a = load i32, i32 addrspace(1)* %a.gep
+  %b = load i32, i32 addrspace(1)* %b.gep
+  %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %uadd, 0
+  %carry = extractvalue { i32, i1 } %uadd, 1
+  %c2 = icmp eq i1 %carry, false
+  %cc = icmp eq i32 %a, %b
+  br i1 %cc, label %exit, label %if
+
+if:
+  br label %exit
+
+exit:
+  %cout = phi i1 [false, %entry], [%c2, %if]
+  store i32 %val, i32 addrspace(1)* %out, align 4
+  store i1 %cout, i1 addrspace(1)* %carryout
+  ret void
+}
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16) #1

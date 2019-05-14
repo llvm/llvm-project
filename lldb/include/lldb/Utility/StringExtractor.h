@@ -19,18 +19,14 @@
 class StringExtractor {
 public:
   enum { BigEndian = 0, LittleEndian = 1 };
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   StringExtractor();
   StringExtractor(llvm::StringRef packet_str);
   StringExtractor(const char *packet_cstr);
   StringExtractor(const StringExtractor &rhs);
   virtual ~StringExtractor();
 
-  //------------------------------------------------------------------
   // Operators
-  //------------------------------------------------------------------
   const StringExtractor &operator=(const StringExtractor &rhs);
 
   void Reset(llvm::StringRef str) {
@@ -121,9 +117,7 @@ protected:
     m_index = UINT64_MAX;
     return false;
   }
-  //------------------------------------------------------------------
   // For StringExtractor only
-  //------------------------------------------------------------------
   std::string m_packet; // The string in which to extract data.
   uint64_t m_index;     // When extracting data from a packet, this index
                         // will march along as things get extracted. If set to

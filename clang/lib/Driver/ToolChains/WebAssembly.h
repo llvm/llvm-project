@@ -23,6 +23,7 @@ public:
   explicit Linker(const ToolChain &TC);
   bool isLinkJob() const override;
   bool hasIntegratedCPP() const override;
+  std::string getLinkerPath(const llvm::opt::ArgList &Args) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,

@@ -1730,6 +1730,9 @@ public:
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
+  /// Updates profile metadata by scaling it by \p S / \p T.
+  void updateProfWeight(uint64_t S, uint64_t T);
+
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
@@ -2042,6 +2045,10 @@ public:
   void *operator new(size_t s) {
     return User::operator new(s, 3);
   }
+
+  /// Swap the first 2 operands and adjust the mask to preserve the semantics
+  /// of the instruction.
+  void commute();
 
   /// Return true if a shufflevector instruction can be
   /// formed with the specified operands.

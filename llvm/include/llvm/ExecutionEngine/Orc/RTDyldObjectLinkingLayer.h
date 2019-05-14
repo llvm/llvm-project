@@ -43,21 +43,33 @@ public:
                          const RuntimeDyld::LoadedObjectInfo &)>;
 
   /// Functor for receiving finalization notifications.
-  using NotifyEmittedFunction = std::function<void(VModuleKey)>;
+  using NotifyEmittedFunction =
+      std::function<void(VModuleKey, std::unique_ptr<MemoryBuffer>)>;
 
   using GetMemoryManagerFunction =
       std::function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyEmitted functors.
-  RTDyldObjectLinkingLayer(
-      ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager,
-      NotifyLoadedFunction NotifyLoaded = NotifyLoadedFunction(),
-      NotifyEmittedFunction NotifyEmitted = NotifyEmittedFunction());
+  RTDyldObjectLinkingLayer(ExecutionSession &ES,
+                           GetMemoryManagerFunction GetMemoryManager);
 
   /// Emit the object.
   void emit(MaterializationResponsibility R,
             std::unique_ptr<MemoryBuffer> O) override;
+
+  /// Set the NotifyLoaded callback.
+  RTDyldObjectLinkingLayer &setNotifyLoaded(NotifyLoadedFunction NotifyLoaded) {
+    this->NotifyLoaded = std::move(NotifyLoaded);
+    return *this;
+  }
+
+  /// Set the NotifyEmitted callback.
+  RTDyldObjectLinkingLayer &
+  setNotifyEmitted(NotifyEmittedFunction NotifyEmitted) {
+    this->NotifyEmitted = std::move(NotifyEmitted);
+    return *this;
+  }
 
   /// Set the 'ProcessAllSections' flag.
   ///
@@ -108,7 +120,8 @@ private:
                   std::map<StringRef, JITEvaluatedSymbol> Resolved,
                   std::set<StringRef> &InternalSymbols);
 
-  void onObjEmit(VModuleKey K, MaterializationResponsibility &R, Error Err);
+  void onObjEmit(VModuleKey K, std::unique_ptr<MemoryBuffer> ObjBuffer,
+                 MaterializationResponsibility &R, Error Err);
 
   mutable std::mutex RTDyldLayerMutex;
   GetMemoryManagerFunction GetMemoryManager;

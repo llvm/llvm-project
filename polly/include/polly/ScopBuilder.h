@@ -20,30 +20,6 @@
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVector.h"
-#include <algorithm>
-#include <memory>
-#include <utility>
-
-namespace llvm {
-
-class AssumptionCache;
-class BasicBlock;
-class DataLayout;
-class DominatorTree;
-class Instruction;
-class LoopInfo;
-class PassRegistry;
-class PHINode;
-class Region;
-class ScalarEvolution;
-class SCEV;
-class Type;
-class Value;
-
-void initializeScopInfoRegionPassPass(PassRegistry &);
-void initializeScopInfoWrapperPassPass(PassRegistry &);
-} // end namespace llvm
 
 namespace polly {
 

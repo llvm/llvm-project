@@ -77,15 +77,6 @@ namespace llvm {
       /// Same as call except it adds the NoTrack prefix.
       NT_CALL,
 
-      /// This operation implements the lowering for readcyclecounter.
-      RDTSC_DAG,
-
-      /// X86 Read Time-Stamp Counter and Processor ID.
-      RDTSCP_DAG,
-
-      /// X86 Read Performance Monitoring Counters.
-      RDPMC_DAG,
-
       /// X86 compare and logical compare instructions.
       CMP, COMI, UCOMI,
 
@@ -547,6 +538,12 @@ namespace llvm {
       // indicate whether it is valid in CF.
       RDSEED,
 
+      // Protection keys
+      // RDPKRU - Operand 0 is chain. Operand 1 is value for ECX.
+      // WRPKRU - Operand 0 is chain. Operand 1 is value for EDX. Operand 2 is
+      // value for ECX.
+      RDPKRU, WRPKRU,
+
       // SSE42 string comparisons.
       // These nodes produce 3 results, index, mask, and flags. X86ISelDAGToDAG
       // will emit one or two instructions based on which results are used. If
@@ -593,6 +590,9 @@ namespace llvm {
       // Load, scalar_to_vector, and zero extend.
       VZEXT_LOAD,
 
+      // extract_vector_elt, store.
+      VEXTRACT_STORE,
+
       // Store FP control world into i16 memory.
       FNSTCW16m,
 
@@ -611,16 +611,22 @@ namespace llvm {
       FILD,
       FILD_FLAG,
 
+      /// This instruction implements a fp->int store from FP stack
+      /// slots. This corresponds to the fist instruction. It takes a
+      /// chain operand, value to store, address, and glue. The memory VT
+      /// specifies the type to store as.
+      FIST,
+
       /// This instruction implements an extending load to FP stack slots.
       /// This corresponds to the X86::FLD32m / X86::FLD64m. It takes a chain
       /// operand, and ptr to load from. The memory VT specifies the type to
       /// load from.
       FLD,
 
-      /// This instruction implements a truncating store to FP stack
+      /// This instruction implements a truncating store from FP stack
       /// slots. This corresponds to the X86::FST32m / X86::FST64m. It takes a
-      /// chain operand, value to store, and address. The memory VT specifies
-      /// the type to store as.
+      /// chain operand, value to store, address, and glue. The memory VT
+      /// specifies the type to store as.
       FST,
 
       /// This instruction grabs the address of the next argument
@@ -707,7 +713,7 @@ namespace llvm {
     /// target-independent logic.
     EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
                             bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-                            MachineFunction &MF) const override;
+                            const AttributeList &FuncAttributes) const override;
 
     /// Returns true if it's safe to use load / store of the
     /// specified type to expand memcpy / memset inline. This is mostly true
@@ -811,7 +817,10 @@ namespace llvm {
 
     bool hasAndNot(SDValue Y) const override;
 
-    bool preferShiftsToClearExtremeBits(SDValue Y) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
+                                           CombineLevel Level) const override;
+
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
     bool
     shouldTransformSignedTruncationCheck(EVT XVT,
@@ -832,7 +841,7 @@ namespace llvm {
     }
 
     bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
-      if (DAG.getMachineFunction().getFunction().optForMinSize())
+      if (DAG.getMachineFunction().getFunction().hasMinSize())
         return false;
       return true;
     }
@@ -966,6 +975,9 @@ namespace llvm {
 
     bool isVectorShiftByScalarCheap(Type *Ty) const override;
 
+    /// Returns true if the opcode is a commutative binary operation.
+    bool isCommutativeBinOp(unsigned Opcode) const override;
+
     /// Return true if it's free to truncate a value of
     /// type Ty1 to type Ty2. e.g. On x86 it's free to truncate a i32 value in
     /// register EAX to i16 by referencing its sub-register AX.
@@ -1073,6 +1085,12 @@ namespace llvm {
     /// the vector equivalent, so this always makes sense if the scalar op is
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
+
+    /// Extract of a scalar FP value from index 0 of a vector is free.
+    bool isExtractVecEltCheap(EVT VT, unsigned Index) const override {
+      EVT EltVT = VT.getScalarType();
+      return (EltVT == MVT::f32 || EltVT == MVT::f64) && Index == 0;
+    }
 
     /// Overflow nodes should get combined/lowered to optimal instructions
     /// (they should allow eliminating explicit compares by getting flags from
@@ -1582,10 +1600,10 @@ namespace llvm {
   void scaleShuffleMask(int Scale, ArrayRef<T> Mask,
                         SmallVectorImpl<T> &ScaledMask) {
     assert(0 < Scale && "Unexpected scaling factor");
-    int NumElts = Mask.size();
-    ScaledMask.assign(static_cast<size_t>(NumElts * Scale), -1);
+    size_t NumElts = Mask.size();
+    ScaledMask.assign(NumElts * Scale, -1);
 
-    for (int i = 0; i != NumElts; ++i) {
+    for (int i = 0; i != (int)NumElts; ++i) {
       int M = Mask[i];
 
       // Repeat sentinel values in every mask element.

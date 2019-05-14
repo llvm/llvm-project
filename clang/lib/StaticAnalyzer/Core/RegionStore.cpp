@@ -1655,7 +1655,7 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
     const VarDecl *VD = VR->getDecl();
     // Either the array or the array element has to be const.
     if (VD->getType().isConstQualified() || R->getElementType().isConstQualified()) {
-      if (const Expr *Init = VD->getInit()) {
+      if (const Expr *Init = VD->getAnyInitializer()) {
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           // The array index has to be known.
           if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
@@ -1745,7 +1745,7 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
     unsigned Index = FD->getFieldIndex();
     // Either the record variable or the field has to be const qualified.
     if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
-      if (const Expr *Init = VD->getInit())
+      if (const Expr *Init = VD->getAnyInitializer())
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           if (Index < InitList->getNumInits()) {
             if (const Expr *FieldInit = InitList->getInit(Index))
@@ -1927,7 +1927,10 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
                                           const VarRegion *R) {
 
   // Check if the region has a binding.
-  if (const Optional<SVal> &V = B.getDirectBinding(R))
+  if (Optional<SVal> V = B.getDirectBinding(R))
+    return *V;
+
+  if (Optional<SVal> V = B.getDefaultBinding(R))
     return *V;
 
   // Lazily derive a value for the VarRegion.
@@ -1940,7 +1943,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
   // Is 'VD' declared constant?  If so, retrieve the constant value.
   if (VD->getType().isConstQualified()) {
-    if (const Expr *Init = VD->getInit()) {
+    if (const Expr *Init = VD->getAnyInitializer()) {
       if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
 
@@ -2358,7 +2361,14 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
   // In C++17 aggregates may have base classes, handle those as well.
   // They appear before fields in the initializer list / compound value.
   if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD)) {
-    assert(CRD->isAggregate() &&
+    // If the object was constructed with a constructor, its value is a
+    // LazyCompoundVal. If it's a raw CompoundVal, it means that we're
+    // performing aggregate initialization. The only exception from this
+    // rule is sending an Objective-C++ message that returns a C++ object
+    // to a nil receiver; in this case the semantics is to return a
+    // zero-initialized object even if it's a C++ object that doesn't have
+    // this sort of constructor; the CompoundVal is empty in this case.
+    assert((CRD->isAggregate() || (Ctx.getLangOpts().ObjC && VI == VE)) &&
            "Non-aggregates are constructed with a constructor!");
 
     for (const auto &B : CRD->bases()) {

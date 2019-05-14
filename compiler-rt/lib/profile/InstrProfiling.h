@@ -15,7 +15,7 @@
 #include "InstrProfData.inc"
 
 enum ValueKind {
-#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
 #include "InstrProfData.inc"
 };
 

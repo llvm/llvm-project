@@ -54,7 +54,9 @@ void IntegerTypesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
   // Find all TypeLocs. The relevant Style Guide rule only applies to C++.
-  if (!getLangOpts().CPlusPlus)
+  // This check is also not applied in Objective-C++ sources as Objective-C
+  // often uses built-in integer types other than `int`.
+  if (!getLangOpts().CPlusPlus || getLangOpts().ObjC)
     return;
   // Match any integer types, unless they are passed to a printf-based API:
   //

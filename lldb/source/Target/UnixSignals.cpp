@@ -57,9 +57,7 @@ lldb::UnixSignalsSP UnixSignals::CreateForHost() {
   return s_unix_signals_sp;
 }
 
-//----------------------------------------------------------------------
 // UnixSignals constructor
-//----------------------------------------------------------------------
 UnixSignals::UnixSignals() { Reset(); }
 
 UnixSignals::UnixSignals(const UnixSignals &rhs) : m_signals(rhs.m_signals) {}

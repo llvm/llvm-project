@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-linux-gnu -g %s -o - \
-# RUN:   | llvm-readobj -s | FileCheck %s
+# RUN:   | llvm-readobj -S | FileCheck %s
 
 # CHECK:      Section {
 # CHECK:        Name: .debug_line

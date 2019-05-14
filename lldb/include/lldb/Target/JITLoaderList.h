@@ -16,11 +16,9 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class JITLoaderList JITLoaderList.h "lldb/Target/JITLoaderList.h"
 ///
 /// Class used by the Process to hold a list of its JITLoaders.
-//----------------------------------------------------------------------
 class JITLoaderList {
 public:
   JITLoaderList();

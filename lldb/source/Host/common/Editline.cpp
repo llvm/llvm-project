@@ -260,9 +260,7 @@ protected:
 }
 }
 
-//------------------------------------------------------------------
 // Editline private methods
-//------------------------------------------------------------------
 
 void Editline::SetBaseLineNumber(int line_number) {
   std::stringstream line_number_stream;
@@ -856,10 +854,8 @@ unsigned char Editline::BufferEndCommand(int ch) {
   return CC_NEWLINE;
 }
 
-//------------------------------------------------------------------------------
 /// Prints completions and their descriptions to the given file. Only the
 /// completions in the interval [start, end) are printed.
-//------------------------------------------------------------------------------
 static void PrintCompletion(FILE *output_file, size_t start, size_t end,
                             StringList &completions, StringList &descriptions) {
   // This is an 'int' because of printf.
@@ -1144,9 +1140,7 @@ void Editline::ConfigureEditor(bool multiline) {
   }
 }
 
-//------------------------------------------------------------------
 // Editline public methods
-//------------------------------------------------------------------
 
 Editline *Editline::InstanceFor(EditLine *editline) {
   Editline *editor;
@@ -1221,9 +1215,13 @@ void Editline::TerminalSizeChanged() {
   if (m_editline != nullptr) {
     el_resize(m_editline);
     int columns;
-    // Despite the man page claiming non-zero indicates success, it's actually
-    // zero
-    if (el_get(m_editline, EL_GETTC, "co", &columns) == 0) {
+    // This function is documenting as taking (const char *, void *) for the
+    // vararg part, but in reality in was consuming arguments until the first
+    // null pointer. This was fixed in libedit in April 2019
+    // <http://mail-index.netbsd.org/source-changes/2019/04/26/msg105454.html>,
+    // but we're keeping the workaround until a version with that fix is more
+    // widely available.
+    if (el_get(m_editline, EL_GETTC, "co", &columns, nullptr) == 0) {
       m_terminal_width = columns;
       if (m_current_line_rows != -1) {
         const LineInfoW *info = el_wline(m_editline);

@@ -77,6 +77,9 @@ private:
 // unit tests.
 std::mt19937 &randomGenerator();
 
+// Picks a random unsigned integer from 0 to Max (inclusive).
+size_t randomIndex(size_t Max);
+
 // Picks a random bit among the bits set in Vector and returns its index.
 // Precondition: Vector must have at least one bit set.
 size_t randomBit(const llvm::BitVector &Vector);
@@ -88,7 +91,8 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
 
 // Assigns a Random Value to all Variables in IT that are still Invalid.
 // Do not use any of the registers in `ForbiddenRegs`.
-void randomizeUnsetVariables(const llvm::BitVector &ForbiddenRegs,
+void randomizeUnsetVariables(const ExegesisTarget &Target,
+                             const llvm::BitVector &ForbiddenRegs,
                              InstructionTemplate &IT);
 
 } // namespace exegesis

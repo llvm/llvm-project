@@ -489,6 +489,13 @@ void lambda_expression_with_macro_test(){
   // CHECK-FIXES: []() BODY;
 }
 
+namespace qqq {
+void foo() BODY
+void bar(void) BODY;
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant void argument list in function definition
+// CHECK-FIXES: void bar() BODY;
+}
+
 struct S_1 {
   void g_1(void) const {
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
