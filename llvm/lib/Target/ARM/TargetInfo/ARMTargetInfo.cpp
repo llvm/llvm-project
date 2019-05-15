@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/ARMMCTargetDesc.h"
+#include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 

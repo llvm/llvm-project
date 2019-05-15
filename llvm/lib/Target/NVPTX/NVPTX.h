@@ -54,9 +54,6 @@ BasicBlockPass *createNVPTXLowerAllocaPass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 
-Target &getTheNVPTXTarget32();
-Target &getTheNVPTXTarget64();
-
 namespace NVPTX {
 enum DrvInterface {
   NVCL,

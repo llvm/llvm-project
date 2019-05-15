@@ -12,6 +12,7 @@
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
+#include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -539,15 +540,6 @@ static DecodeStatus DecodeMovePRegPair(MCInst &Inst, unsigned RegPair,
 
 static DecodeStatus DecodeMovePOperands(MCInst &Inst, unsigned Insn,
                                         uint64_t Address, const void *Decoder);
-
-namespace llvm {
-
-Target &getTheMipselTarget();
-Target &getTheMipsTarget();
-Target &getTheMips64Target();
-Target &getTheMips64elTarget();
-
-} // end namespace llvm
 
 static MCDisassembler *createMipsDisassembler(
                        const Target &T,

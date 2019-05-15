@@ -1052,7 +1052,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
                                      OPT_compress_debug_sections_EQ)) {
     if (A->getOption().getID() == OPT_compress_debug_sections) {
-      Opts.setCompressDebugSections(llvm::DebugCompressionType::Z);
+      // TODO: be more clever about the compression type auto-detection
+      Opts.setCompressDebugSections(llvm::DebugCompressionType::GNU);
     } else {
       auto DCT = llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
                      .Case("none", llvm::DebugCompressionType::None)

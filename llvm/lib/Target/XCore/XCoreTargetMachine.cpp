@@ -11,6 +11,7 @@
 
 #include "XCoreTargetMachine.h"
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
+#include "TargetInfo/XCoreTargetInfo.h"
 #include "XCore.h"
 #include "XCoreTargetObjectFile.h"
 #include "XCoreTargetTransformInfo.h"

@@ -152,9 +152,6 @@ ModulePass *createInstrProfilingLegacyPass(
 
 ModulePass *createInstrOrderFilePass();
 
-FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
-                                           bool Recover = false);
-
 // Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
 ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),

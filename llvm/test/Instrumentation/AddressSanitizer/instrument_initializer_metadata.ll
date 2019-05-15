@@ -26,7 +26,7 @@ entry:
   ret void
 }
 
-@llvm.global_ctors = appending global [2 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @__late_ctor }, { i32, void ()* } { i32 0, void ()* @__early_ctor }]
+@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @__late_ctor, i8* null }, { i32, void ()*, i8* } { i32 0, void ()* @__early_ctor, i8* null }]
 
 define internal void @__late_ctor() sanitize_address section ".text.startup" {
 entry:
