@@ -42,8 +42,6 @@ public:
   BroadcastEventSpec(ConstString broadcaster_class, uint32_t event_bits)
       : m_broadcaster_class(broadcaster_class), m_event_bits(event_bits) {}
 
-  BroadcastEventSpec(const BroadcastEventSpec &rhs);
-
   ~BroadcastEventSpec() = default;
 
   ConstString GetBroadcasterClass() const { return m_broadcaster_class; }
