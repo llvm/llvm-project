@@ -2794,8 +2794,14 @@ Error BitcodeReader::globalCleanup() {
   }
 
   // Look for global variables which need to be renamed.
+  std::vector<std::pair<GlobalVariable *, GlobalVariable *>> UpgradedVariables;
   for (GlobalVariable &GV : TheModule->globals())
-    UpgradeGlobalVariable(&GV);
+    if (GlobalVariable *Upgraded = UpgradeGlobalVariable(&GV))
+      UpgradedVariables.emplace_back(&GV, Upgraded);
+  for (auto &Pair : UpgradedVariables) {
+    Pair.first->eraseFromParent();
+    TheModule->getGlobalList().push_back(Pair.second);
+  }
 
   // Force deallocation of memory for these vectors to favor the client that
   // want lazy deserialization.
