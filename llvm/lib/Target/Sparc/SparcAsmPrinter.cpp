@@ -17,6 +17,7 @@
 #include "Sparc.h"
 #include "SparcInstrInfo.h"
 #include "SparcTargetMachine.h"
+#include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"

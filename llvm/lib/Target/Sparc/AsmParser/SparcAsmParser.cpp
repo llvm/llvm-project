@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/SparcMCExpr.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

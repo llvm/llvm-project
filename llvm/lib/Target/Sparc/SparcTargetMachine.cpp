@@ -13,6 +13,7 @@
 #include "LeonPasses.h"
 #include "Sparc.h"
 #include "SparcTargetObjectFile.h"
+#include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
