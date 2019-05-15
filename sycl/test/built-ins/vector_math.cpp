@@ -150,5 +150,57 @@ int main() {
     assert(i2 == 2.0f);
   }
 
+  // lgamma with private memory
+  {
+    s::cl_float2 r{ 0, 0 };
+    {
+      s::buffer<s::cl_float2, 1> BufR(&r, s::range<1>(1));
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
+        auto AccR = BufR.get_access<s::access::mode::read_write>(cgh);
+        cgh.single_task<class lgamma_rF2>([=]() {
+          AccR[0] = s::lgamma(s::cl_float2{ 10.f, -2.4f });
+        });
+      });
+    }
+
+    s::cl_float r1 = r.x();
+    s::cl_float r2 = r.y();
+
+    assert(r1 > 12.8017f && r1 < 12.8019f); // ~12.8018
+    assert(r2 > 0.1024f && r2 < 0.1026f);   // ~0.102583
+  }
+
+  // lgamma_r with private memory
+  {
+    s::cl_float2 r{ 0, 0 };
+    s::cl_int2 i{ 0, 0 };
+    {
+      s::buffer<s::cl_float2, 1> BufR(&r, s::range<1>(1));
+      s::buffer<s::cl_int2, 1> BufI(&i, s::range<1>(1));
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
+        auto AccR = BufR.get_access<s::access::mode::read_write>(cgh);
+        auto AccI = BufI.get_access<s::access::mode::read_write>(cgh);
+        cgh.single_task<class lgamma_rF2PF2>([=]() {
+          s::cl_int2 temp(0.0);
+          s::private_ptr<s::cl_int2> Iptr(&temp);
+          AccR[0] = s::lgamma_r(s::cl_float2{ 10.f, -2.4f }, Iptr);
+          AccI[0] = *Iptr;
+        });
+      });
+    }
+
+    s::cl_float r1 = r.x();
+    s::cl_float r2 = r.y();
+    s::cl_int i1 = i.x();
+    s::cl_int i2 = i.y();
+
+    assert(r1 > 12.8017f && r1 < 12.8019f); // ~12.8018
+    assert(r2 > 0.1024f && r2 < 0.1026f);   // ~0.102583
+    assert(i1 == 1);                        // tgamma of 10 is ~362880.0
+    assert(i2 == -1); // tgamma of -2.4 is ~-1.1080299470333461
+  }
+
   return 0;
 }

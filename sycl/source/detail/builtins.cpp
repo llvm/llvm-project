@@ -409,6 +409,12 @@ template <typename T> T inline __fract(T x, T *iptr) {
   return std::fmin(x - f, nextafter(T(1.0), T(0.0)));
 }
 
+template <typename T> inline T __lgamma_r(T x, s::cl_int *signp) {
+  T g = std::tgamma(x);
+  *signp = std::signbit(g) ? -1 : 1;
+  return std::log(std::abs(g));
+}
+
 template <typename T> inline T __mad(T a, T b, T c) { return (a * b) + c; }
 
 template <typename T> inline T __maxmag(T x, T y) {
@@ -1167,13 +1173,13 @@ MAKE_1V(lgamma, s::cl_half, s::cl_half)
 
 // lgamma_r
 cl_float lgamma_r(s::cl_float x, s::cl_int *signp) __NOEXC {
-  return ::lgamma_r(x, signp);
+  return __lgamma_r(x, signp);
 }
 cl_double lgamma_r(s::cl_double x, s::cl_int *signp) __NOEXC {
-  return ::lgamma_r(x, signp);
+  return __lgamma_r(x, signp);
 }
 cl_half lgamma_r(s::cl_half x, s::cl_int *signp) __NOEXC {
-  return ::lgamma_r(x, signp);
+  return __lgamma_r(x, signp);
 }
 MAKE_1V_2P(lgamma_r, s::cl_float, s::cl_float, s::cl_int)
 MAKE_1V_2P(lgamma_r, s::cl_double, s::cl_double, s::cl_int)

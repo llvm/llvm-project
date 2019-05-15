@@ -540,6 +540,86 @@ int main() {
     assert(i == 1.0f);
   }
 
+  // lgamma with private memory
+  {
+    s::cl_float r{ 0 };
+    {
+      s::buffer<s::cl_float, 1> BufR(&r, s::range<1>(1));
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
+        auto AccR = BufR.get_access<s::access::mode::read_write>(cgh);
+        cgh.single_task<class lgammaF1>([=]() {
+          AccR[0] = s::lgamma(s::cl_float{ 10.f });
+        });
+      });
+    }
+    assert(r > 12.8017f && r < 12.8019f); // ~12.8018
+  }
+
+  // lgamma with private memory
+  {
+    s::cl_float r{ 0 };
+    {
+      s::buffer<s::cl_float, 1> BufR(&r, s::range<1>(1));
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
+        auto AccR = BufR.get_access<s::access::mode::read_write>(cgh);
+        cgh.single_task<class lgammaF1_neg>([=]() {
+          AccR[0] = s::lgamma(s::cl_float{ -2.4f });
+        });
+      });
+    }
+    assert(r > 0.1024f && r < 0.1026f); // ~0.102583
+  }
+
+  // lgamma_r with private memory
+  {
+    s::cl_float r{ 0 };
+    s::cl_int i{ 999 };
+    {
+      s::buffer<s::cl_float, 1> BufR(&r, s::range<1>(1));
+      s::buffer<s::cl_int, 1> BufI(&i, s::range<1>(1),
+                                   { s::property::buffer::use_host_ptr() });
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
+        auto AccR = BufR.get_access<s::access::mode::read_write>(cgh);
+        auto AccI = BufI.get_access<s::access::mode::read_write>(cgh);
+        cgh.single_task<class lgamma_rF1PI1>([=]() {
+          s::cl_int temp(0.0);
+          s::private_ptr<s::cl_int> Iptr(&temp);
+          AccR[0] = s::lgamma_r(s::cl_float{ 10.f }, Iptr);
+          AccI[0] = *Iptr;
+        });
+      });
+    }
+    assert(r > 12.8017f && r < 12.8019f); // ~12.8018
+    assert(i == 1);                       // tgamma of 10 is ~362880.0
+  }
+
+  // lgamma_r with private memory
+  {
+    s::cl_float r{ 0 };
+    s::cl_int i{ 999 };
+    {
+      s::buffer<s::cl_float, 1> BufR(&r, s::range<1>(1));
+      s::buffer<s::cl_int, 1> BufI(&i, s::range<1>(1),
+                                   { s::property::buffer::use_host_ptr() });
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
+        auto AccR = BufR.get_access<s::access::mode::read_write>(cgh);
+        auto AccI = BufI.get_access<s::access::mode::read_write>(cgh);
+        cgh.single_task<class lgamma_rF1PI1_neg>([=]() {
+          s::cl_int temp(0.0);
+          s::private_ptr<s::cl_int> Iptr(&temp);
+          AccR[0] = s::lgamma_r(s::cl_float{ -2.4f }, Iptr);
+          AccI[0] = *Iptr;
+        });
+      });
+    }
+    assert(r > 0.1024f && r < 0.1026f); // ~0.102583
+    assert(i == -1); // tgamma of -2.4 is ~-1.1080299470333461
+  }
+
   // nan
   {
     s::cl_double r{ 0 };
