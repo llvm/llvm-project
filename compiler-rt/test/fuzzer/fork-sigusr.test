@@ -5,7 +5,7 @@ RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/ShallowOOMDeepCrash.cpp -o %t/ForkSIGUSR
 
-RUN: %run %t/ForkSIGUSR -fork=3 -rss_limit_mb=128 -ignore_crashes=1 2>  %t/log & export PID=$!
+RUN: %run %t/ForkSIGUSR -fork=3 -rss_limit_mb=128 -ignore_crashes=1 2>&1 | tee %t/log & :
 RUN: sleep 3
 RUN: pkill -SIGUSR2 -f %t/ForkSIGUSR
 RUN: sleep 6
