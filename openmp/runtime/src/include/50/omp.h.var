@@ -149,6 +149,7 @@
 
     /* OpenMP 5.0 */
     extern int   __KAI_KMPC_CONVENTION  omp_get_device_num (void);
+    typedef void * omp_depend_t;
 
     /* kmp API functions */
     extern int    __KAI_KMPC_CONVENTION  kmp_get_stacksize          (void);
