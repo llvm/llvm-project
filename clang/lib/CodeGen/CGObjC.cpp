@@ -2065,8 +2065,7 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
                                            llvm::Value *value,
                                            llvm::Type *returnType,
                                            llvm::Constant *&fn,
-                                           StringRef fnName,
-                                           bool MayThrow) {
+                                           StringRef fnName) {
   if (isa<llvm::ConstantPointerNull>(value))
     return value;
 
@@ -2086,11 +2085,7 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
   value = CGF.Builder.CreateBitCast(value, CGF.Int8PtrTy);
 
   // Call the function.
-  llvm::Instruction *Inst = nullptr;
-  if (MayThrow)
-    Inst = CGF.EmitCallOrInvoke(fn, value).getInstruction();
-  else
-    Inst = CGF.EmitNounwindRuntimeCall(fn, value);
+  llvm::Instruction *Inst = CGF.EmitCallOrInvoke(fn, value).getInstruction();
 
   // Cast the result back to the original type.
   return CGF.Builder.CreateBitCast(Inst, origType);
@@ -2543,7 +2538,7 @@ llvm::Value *CodeGenFunction::EmitObjCAlloc(llvm::Value *value,
                                             llvm::Type *resultType) {
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_alloc,
-                                "objc_alloc", /*MayThrow=*/true);
+                                "objc_alloc");
 }
 
 /// Allocate the given objc object.
@@ -2552,14 +2547,14 @@ llvm::Value *CodeGenFunction::EmitObjCAllocWithZone(llvm::Value *value,
                                                     llvm::Type *resultType) {
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_allocWithZone,
-                                "objc_allocWithZone", /*MayThrow=*/true);
+                                "objc_allocWithZone");
 }
 
 llvm::Value *CodeGenFunction::EmitObjCAllocInit(llvm::Value *value,
                                                 llvm::Type *resultType) {
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_alloc_init,
-                                "objc_alloc_init", /*MayThrow=*/true);
+                                "objc_alloc_init");
 }
 
 /// Produce the code to do a primitive release.
@@ -2603,7 +2598,7 @@ llvm::Value *CodeGenFunction::EmitObjCAutorelease(llvm::Value *value,
   return emitObjCValueOperation(
       *this, value, returnType,
       CGM.getObjCEntrypoints().objc_autoreleaseRuntimeFunction,
-      "objc_autorelease", /*MayThrow=*/false);
+      "objc_autorelease");
 }
 
 /// Retain the given object, with normal retain semantics.
@@ -2612,8 +2607,7 @@ llvm::Value *CodeGenFunction::EmitObjCRetainNonBlock(llvm::Value *value,
                                                      llvm::Type *returnType) {
   return emitObjCValueOperation(
       *this, value, returnType,
-      CGM.getObjCEntrypoints().objc_retainRuntimeFunction, "objc_retain",
-      /*MayThrow=*/false);
+      CGM.getObjCEntrypoints().objc_retainRuntimeFunction, "objc_retain");
 }
 
 /// Release the given object.
