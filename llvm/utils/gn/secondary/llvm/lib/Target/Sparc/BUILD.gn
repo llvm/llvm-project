@@ -32,15 +32,15 @@ static_library("LLVMSparcCodeGen") {
     "DelaySlotFiller.cpp",
     "LeonPasses.cpp",
     "SparcAsmPrinter.cpp",
-    "SparcInstrInfo.cpp",
+    "SparcFrameLowering.cpp",
     "SparcISelDAGToDAG.cpp",
     "SparcISelLowering.cpp",
-    "SparcFrameLowering.cpp",
+    "SparcInstrInfo.cpp",
+    "SparcMCInstLower.cpp",
     "SparcMachineFunctionInfo.cpp",
     "SparcRegisterInfo.cpp",
     "SparcSubtarget.cpp",
     "SparcTargetMachine.cpp",
-    "SparcMCInstLower.cpp",
     "SparcTargetObjectFile.cpp",
   ]
 }
