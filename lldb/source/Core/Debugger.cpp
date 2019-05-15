@@ -11,7 +11,6 @@
 #include <map>
 #include <mutex>
 
-#include "swift/Basic/Version.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"

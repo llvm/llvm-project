@@ -55,9 +55,6 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
-#include "swift/Basic/LangOptions.h"
-#include "swift/Frontend/Frontend.h"
-#include "swift/Serialization/Validation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
