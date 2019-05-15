@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZ.h"
+#include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;

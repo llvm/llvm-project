@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUTargetMachine.h"
+#include "TargetInfo/AMDGPUTargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;

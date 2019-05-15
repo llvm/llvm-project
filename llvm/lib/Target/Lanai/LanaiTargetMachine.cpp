@@ -15,6 +15,7 @@
 #include "Lanai.h"
 #include "LanaiTargetObjectFile.h"
 #include "LanaiTargetTransformInfo.h"
+#include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"

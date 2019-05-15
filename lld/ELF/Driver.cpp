@@ -309,6 +309,9 @@ static void checkOptions() {
   if (!Config->Relocatable && !Config->DefineCommon)
     error("-no-define-common not supported in non relocatable output");
 
+  if (Config->ZText && Config->ZIfuncNoplt)
+    error("-z text and -z ifunc-noplt may not be used together");
+
   if (Config->Relocatable) {
     if (Config->Shared)
       error("-r and -shared may not be used together");
@@ -358,7 +361,7 @@ static bool getZFlag(opt::InputArgList &Args, StringRef K1, StringRef K2,
 static bool isKnownZFlag(StringRef S) {
   return S == "combreloc" || S == "copyreloc" || S == "defs" ||
          S == "execstack" || S == "global" || S == "hazardplt" ||
-         S == "initfirst" || S == "interpose" ||
+         S == "ifunc-noplt" || S == "initfirst" || S == "interpose" ||
          S == "keep-text-section-prefix" || S == "lazy" || S == "muldefs" ||
          S == "nocombreloc" || S == "nocopyreloc" || S == "nodefaultlib" ||
          S == "nodelete" || S == "nodlopen" || S == "noexecstack" ||
@@ -896,6 +899,7 @@ static void readConfigs(opt::InputArgList &Args) {
   Config->ZExecstack = getZFlag(Args, "execstack", "noexecstack", false);
   Config->ZGlobal = hasZOption(Args, "global");
   Config->ZHazardplt = hasZOption(Args, "hazardplt");
+  Config->ZIfuncNoplt = hasZOption(Args, "ifunc-noplt");
   Config->ZInitfirst = hasZOption(Args, "initfirst");
   Config->ZInterpose = hasZOption(Args, "interpose");
   Config->ZKeepTextSectionPrefix = getZFlag(
@@ -1526,7 +1530,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
   for (InputFile *F : Files)
-    Symtab->addFile<ELFT>(F);
+    parseFile<ELFT>(F);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.

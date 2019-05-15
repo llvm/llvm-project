@@ -29,8 +29,6 @@ class MCObjectTargetWriter;
 class MCStreamer;
 class MCTargetStreamer;
 
-Target &getTheMSP430Target();
-
 /// Creates a machine code emitter for MSP430.
 MCCodeEmitter *createMSP430MCCodeEmitter(const MCInstrInfo &MCII,
                                          const MCRegisterInfo &MRI,
