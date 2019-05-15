@@ -38,41 +38,21 @@
 #include <stdint.h>
 #include <stdio.h>
 
-namespace lldb_private {
-class AddressRange;
-}
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Debugger;
-}
-namespace lldb_private {
-class Disassembler;
-}
-namespace lldb_private {
-class Module;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class SymbolContext;
-}
-namespace lldb_private {
-class SymbolContextList;
-}
-namespace lldb_private {
-class Target;
-}
-namespace lldb_private {
-struct RegisterInfo;
-}
 namespace llvm {
 template <typename T> class SmallVectorImpl;
 }
 
 namespace lldb_private {
+class AddressRange;
+class DataExtractor;
+class Debugger;
+class Disassembler;
+class Module;
+class Stream;
+class SymbolContext;
+class SymbolContextList;
+class Target;
+struct RegisterInfo;
 
 class Instruction {
 public:
