@@ -124,7 +124,9 @@
 #include <dev/isa/isvio.h>
 #include <dev/isa/wtreg.h>
 #include <dev/iscsi/iscsi_ioctl.h>
+#if 0
 #include <dev/nvmm/nvmm_ioctl.h>
+#endif
 #include <dev/ofw/openfirmio.h>
 #include <dev/pci/amrio.h>
 #include <dev/pci/mlyreg.h>
