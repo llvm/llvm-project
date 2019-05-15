@@ -325,14 +325,13 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
 #endif
 
-    if (STI.dumpCode()) {
-      // Disassemble instruction/operands to text.
+    if (DumpCodeInstEmitter) {
+      // Disassemble instruction/operands to text
       DisasmLines.resize(DisasmLines.size() + 1);
       std::string &DisasmLine = DisasmLines.back();
       raw_string_ostream DisasmStream(DisasmLine);
 
-      AMDGPUInstPrinter InstPrinter(*TM.getMCAsmInfo(),
-                                    *STI.getInstrInfo(),
+      AMDGPUInstPrinter InstPrinter(*TM.getMCAsmInfo(), *STI.getInstrInfo(),
                                     *STI.getRegisterInfo());
       InstPrinter.printInst(&TmpInst, DisasmStream, StringRef(), STI);
 
@@ -341,10 +340,8 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<char, 16> CodeBytes;
       raw_svector_ostream CodeStream(CodeBytes);
 
-      auto &ObjStreamer = static_cast<MCObjectStreamer&>(*OutStreamer);
-      MCCodeEmitter &InstEmitter = ObjStreamer.getAssembler().getEmitter();
-      InstEmitter.encodeInstruction(TmpInst, CodeStream, Fixups,
-                                    MF->getSubtarget<MCSubtargetInfo>());
+      DumpCodeInstEmitter->encodeInstruction(
+          TmpInst, CodeStream, Fixups, MF->getSubtarget<MCSubtargetInfo>());
       HexLines.resize(HexLines.size() + 1);
       std::string &HexLine = HexLines.back();
       raw_string_ostream HexStream(HexLine);

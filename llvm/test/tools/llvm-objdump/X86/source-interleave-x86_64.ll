@@ -1,5 +1,4 @@
-;  REQUIRES: shell
-;  RUN: sed -e "s,SRC_COMPDIR,%p/Inputs,g" %s > %t.ll
+;  RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %s > %t.ll
 ;  RUN: llc  -o %t.o -filetype=obj -mtriple=x86_64-pc-linux  %t.ll
 ;  RUN: llvm-objdump -d -l %t.o >%t0
 ;  RUN: llvm-objdump -dl %t.o >%t1

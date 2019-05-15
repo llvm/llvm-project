@@ -36,10 +36,6 @@ class Triple;
 class StringRef;
 class raw_pwrite_stream;
 
-Target &getThePPC32Target();
-Target &getThePPC64Target();
-Target &getThePPC64LETarget();
-
 MCCodeEmitter *createPPCMCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,
                                       MCContext &Ctx);

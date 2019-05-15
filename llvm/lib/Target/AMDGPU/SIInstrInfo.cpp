@@ -2523,6 +2523,9 @@ bool SIInstrInfo::mayReadEXEC(const MachineRegisterInfo &MRI,
 
 bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
   switch (Imm.getBitWidth()) {
+  case 1: // This likely will be a condition code mask.
+    return true;
+
   case 32:
     return AMDGPU::isInlinableLiteral32(Imm.getSExtValue(),
                                         ST.hasInv2PiInlineImm());

@@ -23,7 +23,10 @@ if (llvm_targets_to_build == "host") {
     "AArch64",
     "ARM",
     "BPF",
+    "Hexagon",
+    "Lanai",
     "PowerPC",
+    "Sparc",
     "WebAssembly",
     "X86",
   ]
@@ -44,8 +47,14 @@ foreach(target, llvm_targets_to_build) {
     llvm_build_ARM = true
   } else if (target == "BPF") {
     llvm_build_BPF = true
+  } else if (target == "Hexagon") {
+    # Nothing to do.
+  } else if (target == "Lanai") {
+    # Nothing to do.
   } else if (target == "PowerPC") {
     llvm_build_PowerPC = true
+  } else if (target == "Sparc") {
+    # Nothing to do.
   } else if (target == "WebAssembly") {
     llvm_build_WebAssembly = true
   } else if (target == "X86") {

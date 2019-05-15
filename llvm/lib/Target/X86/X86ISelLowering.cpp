@@ -5021,11 +5021,12 @@ bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
           (N->getOpcode() == ISD::SRL &&
            N->getOperand(0).getOpcode() == ISD::SHL)) &&
          "Expected shift-shift mask");
-
-  if (Subtarget.hasFastVectorShiftMasks() && N->getValueType(0).isVector()) {
+  EVT VT = N->getValueType(0);
+  if ((Subtarget.hasFastVectorShiftMasks() && VT.isVector()) ||
+      (Subtarget.hasFastScalarShiftMasks() && !VT.isVector())) {
     // Only fold if the shift values are equal - so it folds to AND.
-    // TODO - we should fold if either is non-uniform but we don't do the
-    // fold for non-splats yet.
+    // TODO - we should fold if either is a non-uniform vector but we don't do
+    // the fold for non-splats yet.
     return N->getOperand(1) == N->getOperand(0).getOperand(1);
   }
   return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N, Level);
@@ -22129,7 +22130,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(2);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Op.getOperand(1),
@@ -22161,7 +22162,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(3);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Op.getOperand(1), Src2,
@@ -22202,7 +22203,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Src1, Src2, Src3,
@@ -22227,7 +22228,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return getVectorMaskingNode(
               DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
@@ -22269,7 +22270,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (Op.getNumOperands() == (5U + HasRounding)) {
         if (HasRounding) {
           SDValue Rnd = Op.getOperand(5);
-          unsigned RC;
+          unsigned RC = 0;
           if (isRoundModeSAEToX(Rnd, RC))
             return getScalarMaskingNode(
                 DAG.getNode(IntrWithRoundingModeOpcode, dl, VT, Src1, Src2,
@@ -22306,7 +22307,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Rnd = Op.getOperand(5);
 
       SDValue NewOp;
-      unsigned RC;
+      unsigned RC = 0;
       if (isRoundModeCurDirection(Rnd))
         NewOp = DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2);
       else if (isRoundModeSAEToX(Rnd, RC))
@@ -22342,7 +22343,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue NewOp;
       if (IntrData->Opc1 != 0) {
         SDValue Rnd = Op.getOperand(5);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           NewOp = DAG.getNode(IntrData->Opc1, dl, VT, Src1, Src2,
                               DAG.getTargetConstant(RC, dl, MVT::i32));
@@ -26291,13 +26292,23 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
   // here since it doesn't require an extra register.
   // 3) OR appears to be very slightly faster than ADD. (Though, the difference
   // is small enough it might just be measurement noise.)
-  // 4) For the moment, we are using top of stack.  This creates false sharing
-  // with actual stack access/call sequences, and it would be better to use a
-  // location within the redzone.  For the moment, this is still better than an
-  // mfence though.  TODO: Revise the offset used when we can assume a redzone.
+  // 4) When choosing offsets, there are several contributing factors:
+  //   a) If there's no redzone, we default to TOS.  (We could allocate a cache
+  //      line aligned stack object to improve this case.) 
+  //   b) To minimize our chances of introducing a false dependence, we prefer
+  //      to offset the stack usage from TOS slightly.  
+  //   c) To minimize concerns about cross thread stack usage - in particular,
+  //      the idiomatic MyThreadPool.run([&StackVars]() {...}) pattern which
+  //      captures state in the TOS frame and accesses it from many threads -
+  //      we want to use an offset such that the offset is in a distinct cache
+  //      line from the TOS frame.
   // 
   // For a general discussion of the tradeoffs and benchmark results, see:
   // https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
+
+  auto &MF = DAG.getMachineFunction();
+  auto &TFL = *Subtarget.getFrameLowering();
+  const unsigned SPOffset = TFL.has128ByteRedZone(MF) ? -64 : 0;
 
   if (Subtarget.is64Bit()) {
     SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
@@ -26305,7 +26316,7 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
       DAG.getRegister(X86::RSP, MVT::i64),                  // Base
       DAG.getTargetConstant(1, DL, MVT::i8),                // Scale
       DAG.getRegister(0, MVT::i64),                         // Index
-      DAG.getTargetConstant(0, DL, MVT::i32),               // Disp
+      DAG.getTargetConstant(SPOffset, DL, MVT::i32),        // Disp
       DAG.getRegister(0, MVT::i16),                         // Segment.
       Zero,
       Chain};
@@ -26319,7 +26330,7 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
     DAG.getRegister(X86::ESP, MVT::i32),            // Base
     DAG.getTargetConstant(1, DL, MVT::i8),          // Scale
     DAG.getRegister(0, MVT::i32),                   // Index
-    DAG.getTargetConstant(0, DL, MVT::i32),         // Disp
+    DAG.getTargetConstant(SPOffset, DL, MVT::i32),  // Disp
     DAG.getRegister(0, MVT::i16),                   // Segment.
     Zero,
     Chain
@@ -26456,9 +26467,10 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
                                               Ops, MVT::i64,
                                               Node->getMemOperand());
 
-      // If this is a sequentially consistent store, also emit an mfence.
+      // If this is a sequentially consistent store, also emit an appropriate
+      // barrier.
       if (IsSeqCst)
-        Chain = DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Chain);
+        Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
 
       return Chain;
     }
@@ -28331,6 +28343,23 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
   // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
   // fully general vector.
   return true;
+}
+
+bool X86TargetLowering::isBinOp(unsigned Opcode) const {
+  switch (Opcode) {
+  case X86ISD::PMULUDQ:
+  case X86ISD::FMAX:
+  case X86ISD::FMIN:
+  case X86ISD::FMAXC:
+  case X86ISD::FMINC:
+  case X86ISD::FAND:
+  case X86ISD::FANDN:
+  case X86ISD::FOR:
+  case X86ISD::FXOR:
+    return true;
+  }
+
+  return TargetLoweringBase::isBinOp(Opcode);
 }
 
 bool X86TargetLowering::isCommutativeBinOp(unsigned Opcode) const {

@@ -246,6 +246,7 @@ else()
   set(ALL_FUZZER_SUPPORTED_ARCH ${X86_64} ${ARM64})
 endif()
 
+set(ALL_GWP_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM64} ${ARM32})
 if(APPLE)
   set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64})
 else()
@@ -445,6 +446,9 @@ if(APPLE)
   list_intersect(DFSAN_SUPPORTED_ARCH
     ALL_DFSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(GWP_ASAN_SUPPORTED_ARCH
+    ALL_GWP_ASAN_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(LSAN_SUPPORTED_ARCH
     ALL_LSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
@@ -513,6 +517,7 @@ else()
   filter_available_targets(XRAY_SUPPORTED_ARCH ${ALL_XRAY_SUPPORTED_ARCH})
   filter_available_targets(SHADOWCALLSTACK_SUPPORTED_ARCH
     ${ALL_SHADOWCALLSTACK_SUPPORTED_ARCH})
+  filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
 endif()
 
 if (MSVC)
@@ -534,7 +539,7 @@ if(COMPILER_RT_SUPPORTED_ARCH)
 endif()
 message(STATUS "Compiler-RT supported architectures: ${COMPILER_RT_SUPPORTED_ARCH}")
 
-set(ALL_SANITIZERS asan;dfsan;msan;hwasan;tsan;safestack;cfi;scudo;ubsan_minimal)
+set(ALL_SANITIZERS asan;dfsan;msan;hwasan;tsan;safestack;cfi;scudo;ubsan_minimal;gwp_asan)
 set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
@@ -678,3 +683,13 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND SHADOWCALLSTACK_SUPPORTED_ARCH AND
 else()
   set(COMPILER_RT_HAS_SHADOWCALLSTACK FALSE)
 endif()
+
+# Note: Fuchsia and Windows are not currently supported by GWP-ASan. Support
+# is planned for these platforms. Darwin is also not supported due to TLS
+# calling malloc on first use.
+if (GWP_ASAN_SUPPORTED_ARCH AND OS_NAME MATCHES "Android|Linux")
+  set(COMPILER_RT_HAS_GWP_ASAN TRUE)
+else()
+  set(COMPILER_RT_HAS_GWP_ASAN FALSE)
+endif()
+pythonize_bool(COMPILER_RT_HAS_GWP_ASAN)

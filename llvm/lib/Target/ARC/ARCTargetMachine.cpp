@@ -12,6 +12,7 @@
 #include "ARCTargetMachine.h"
 #include "ARC.h"
 #include "ARCTargetTransformInfo.h"
+#include "TargetInfo/ARCTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"

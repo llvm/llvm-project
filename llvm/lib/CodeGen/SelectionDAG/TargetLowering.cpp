@@ -1748,7 +1748,8 @@ static APInt getKnownUndefForVectorBinop(SDValue BO, SelectionDAG &DAG,
                                          const APInt &UndefOp0,
                                          const APInt &UndefOp1) {
   EVT VT = BO.getValueType();
-  assert(ISD::isBinaryOp(BO.getNode()) && VT.isVector() && "Vector binop only");
+  assert(DAG.getTargetLoweringInfo().isBinOp(BO.getOpcode()) && VT.isVector() &&
+         "Vector binop only");
 
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElts = VT.getVectorNumElements();

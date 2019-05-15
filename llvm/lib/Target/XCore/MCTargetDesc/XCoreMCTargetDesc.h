@@ -17,8 +17,6 @@ namespace llvm {
 
 class Target;
 
-Target &getTheXCoreTarget();
-
 } // end namespace llvm
 
 // Defines symbolic names for XCore registers.  This defines a mapping from
