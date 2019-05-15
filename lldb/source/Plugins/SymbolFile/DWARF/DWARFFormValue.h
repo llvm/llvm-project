@@ -14,6 +14,7 @@
 
 class DWARFUnit;
 class SymbolFileDWARF;
+class DWARFDIE;
 
 class DWARFFormValue {
 public:
@@ -58,7 +59,6 @@ public:
   DWARFFormValue(const DWARFUnit *unit) : m_unit(unit) {}
   DWARFFormValue(const DWARFUnit *unit, dw_form_t form)
       : m_unit(unit), m_form(form) {}
-  const DWARFUnit *GetUnit() const { return m_unit; }
   void SetUnit(const DWARFUnit *unit) { m_unit = unit; }
   dw_form_t Form() const { return m_form; }
   dw_form_t& FormRef() { return m_form; }
@@ -71,7 +71,7 @@ public:
   bool ExtractValue(const lldb_private::DWARFDataExtractor &data,
                     lldb::offset_t *offset_ptr);
   const uint8_t *BlockData() const;
-  uint64_t Reference() const;
+  DWARFDIE Reference() const;
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.value.uval != 0; }
   uint64_t Unsigned() const { return m_value.value.uval; }
@@ -94,6 +94,8 @@ public:
   static bool FormIsSupported(dw_form_t form);
 
 protected:
+  // Compile unit where m_value was located.
+  // It may be different from compile unit where m_value refers to.
   const DWARFUnit *m_unit = nullptr; // Unit for this form
   dw_form_t m_form = 0;              // Form for this value
   ValueType m_value;            // Contains all data for the form
