@@ -139,12 +139,14 @@ if (CLANG_ENABLE_STATIC_ANALYZER)
   # check-all would launch those tests via check-clang.
   set(EXCLUDE_FROM_ALL ON)
 
+  add_subdirectory(Analysis/plugins)
+  list(APPEND CLANG_TEST_DEPS clang-analyzer-plugin)
+
   add_lit_testsuite(check-clang-analyzer "Running the Clang analyzer tests"
     ${CMAKE_CURRENT_BINARY_DIR}/Analysis
     PARAMS ${ANALYZER_TEST_PARAMS}
     DEPENDS ${CLANG_TEST_DEPS})
   set_target_properties(check-clang-analyzer PROPERTIES FOLDER "Clang tests")
-
 
   if (LLVM_WITH_Z3)
     add_lit_testsuite(check-clang-analyzer-z3 "Running the Clang analyzer tests, using Z3 as a solver"
