@@ -27,15 +27,8 @@
 
 namespace lldb_private {
 class Connection;
-}
-namespace lldb_private {
 class ConstString;
-}
-namespace lldb_private {
 class Status;
-}
-
-namespace lldb_private {
 
 /// \class Communication Communication.h "lldb/Core/Communication.h" An
 /// abstract communications class.

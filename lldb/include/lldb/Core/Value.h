@@ -26,20 +26,10 @@
 
 namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class ExecutionContext;
-}
-namespace lldb_private {
 class Module;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class Type;
-}
-namespace lldb_private {
 class Variable;
 }
 

@@ -26,14 +26,8 @@
 
 namespace lldb_private {
 class Broadcaster;
-}
-namespace lldb_private {
 class EventData;
-}
-namespace lldb_private {
 class Listener;
-}
-namespace lldb_private {
 class Stream;
 }
 

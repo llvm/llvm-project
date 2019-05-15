@@ -19,36 +19,15 @@
 
 namespace lldb_private {
 class Block;
-}
-namespace lldb_private {
 class CompileUnit;
-}
-namespace lldb_private {
 class ExecutionContextScope;
-}
-namespace lldb_private {
 class Function;
-}
-namespace lldb_private {
 class SectionList;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class Symbol;
-}
-namespace lldb_private {
 class SymbolContext;
-}
-namespace lldb_private {
 class Target;
-}
-namespace lldb_private {
 struct LineEntry;
-}
-
-namespace lldb_private {
 
 /// \class Address Address.h "lldb/Core/Address.h"
 /// A section + offset based address class.

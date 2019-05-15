@@ -17,15 +17,8 @@
 
 namespace lldb_private {
 class SectionList;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class Target;
-}
-
-namespace lldb_private {
 
 /// \class AddressRange AddressRange.h "lldb/Core/AddressRange.h"
 /// A section + offset based address range class.

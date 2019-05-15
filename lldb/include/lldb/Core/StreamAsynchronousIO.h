@@ -17,9 +17,6 @@
 
 namespace lldb_private {
 class Debugger;
-}
-
-namespace lldb_private {
 
 class StreamAsynchronousIO : public Stream {
 public:

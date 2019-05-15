@@ -23,20 +23,10 @@
 
 namespace lldb_private {
 class Address;
-}
-namespace lldb_private {
 class ExecutionContext;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class StringList;
-}
-namespace lldb_private {
 class SymbolContext;
-}
-namespace lldb_private {
 class ValueObject;
 }
 namespace llvm {
