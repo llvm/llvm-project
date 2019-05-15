@@ -19,7 +19,6 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 
 using namespace lldb;
 using namespace lldb_private;
