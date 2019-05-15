@@ -13,7 +13,7 @@ class BreakpointSetRestart(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     BREAKPOINT_TEXT = 'Set a breakpoint here'
 
-    @expectedFlakeyNetBSD
+    @skipIfNetBSD
     def test_breakpoint_set_restart(self):
         self.build()
 
