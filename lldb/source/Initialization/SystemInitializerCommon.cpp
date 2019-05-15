@@ -11,7 +11,6 @@
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
-#include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
 #include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
@@ -103,8 +102,6 @@ llvm::Error SystemInitializerCommon::Initialize() {
   // Initialize plug-ins
   ClangASTContext::Initialize();
 
-  SwiftREPL::Initialize();
-
   ObjectContainerBSDArchive::Initialize();
 
   EmulateInstructionARM::Initialize();
@@ -132,8 +129,6 @@ void SystemInitializerCommon::Terminate() {
   ObjectContainerBSDArchive::Terminate();
 
   ClangASTContext::Terminate();
-
-  SwiftREPL::Terminate();
 
   EmulateInstructionARM::Terminate();
   EmulateInstructionMIPS::Terminate();
