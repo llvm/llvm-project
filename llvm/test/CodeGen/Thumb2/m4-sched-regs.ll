@@ -10,22 +10,20 @@ target triple = "thumbv7em-arm-none-eabi"
 define void @test(%struct.a* nocapture %dhcp, i16 zeroext %value) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    ldrh r3, [r0, #20]
-; CHECK-NEXT:    ldr.w lr, [r0, #16]
-; CHECK-NEXT:    lsr.w r12, r1, #8
-; CHECK-NEXT:    adds r2, r3, #1
-; CHECK-NEXT:    strh r2, [r0, #20]
-; CHECK-NEXT:    add.w r2, lr, r3
-; CHECK-NEXT:    strb.w r12, [r2, #240]
 ; CHECK-NEXT:    ldrh r2, [r0, #20]
-; CHECK-NEXT:    ldr.w r12, [r0, #16]
 ; CHECK-NEXT:    adds r3, r2, #1
 ; CHECK-NEXT:    strh r3, [r0, #20]
-; CHECK-NEXT:    add.w r0, r12, r2
+; CHECK-NEXT:    ldr r3, [r0, #16]
+; CHECK-NEXT:    add r2, r3
+; CHECK-NEXT:    lsrs r3, r1, #8
+; CHECK-NEXT:    strb.w r3, [r2, #240]
+; CHECK-NEXT:    ldrh r2, [r0, #20]
+; CHECK-NEXT:    adds r3, r2, #1
+; CHECK-NEXT:    strh r3, [r0, #20]
+; CHECK-NEXT:    ldr r0, [r0, #16]
+; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    strb.w r1, [r0, #240]
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    bx lr
 entry:
   %shr = lshr i16 %value, 8
   %conv1 = trunc i16 %shr to i8
