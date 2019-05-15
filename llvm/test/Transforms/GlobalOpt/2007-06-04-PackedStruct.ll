@@ -9,8 +9,8 @@ target triple = "i686-pc-linux-gnu"
 	%"struct.std::_Rb_tree_node_base" = type { i32, %"struct.std::_Rb_tree_node_base"*, %"struct.std::_Rb_tree_node_base"*, %"struct.std::_Rb_tree_node_base"* }
 	%"struct.std::map<int,int,std::less<int>,std::allocator<std::pair<const int, int> > >" = type { %"struct.std::_Rb_tree<int,std::pair<const int, int>,std::_Select1st<std::pair<const int, int> >,std::less<int>,std::allocator<std::pair<const int, int> > >" }
 @someMap = global %"struct.std::map<int,int,std::less<int>,std::allocator<std::pair<const int, int> > >" zeroinitializer		; <%"struct.std::map<int,int,std::less<int>,std::allocator<std::pair<const int, int> > >"*> [#uses=1]
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [ { i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_someMap } ]		; <[1 x { i32, void ()* }]*> [#uses=0]
-@llvm.global_dtors = appending global [1 x { i32, void ()* }] [ { i32, void ()* } { i32 65535, void ()* @_GLOBAL__D_someMap } ]		; <[1 x { i32, void ()* }]*> [#uses=0]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_someMap, i8* null } ]		; <[1 x { i32, void ()*, i8* }]*> [#uses=0]
+@llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__D_someMap, i8* null } ]		; <[1 x { i32, void ()*, i8* }]*> [#uses=0]
 
 define void @_GLOBAL__I_someMap() {
 entry:

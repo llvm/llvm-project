@@ -3,8 +3,8 @@
 @G1 = global i32 zeroinitializer
 @G2 = global i32 zeroinitializer
 @g = global <2 x i32*> zeroinitializer
-%0 = type { i32, void ()* }
-@llvm.global_ctors = appending global [1 x %0] [%0 { i32 65535, void ()* @test }]
+%0 = type { i32, void ()*, i8* }
+@llvm.global_ctors = appending global [1 x %0] [%0 { i32 65535, void ()* @test, i8* null }]
 define internal void @test() {
   %A = insertelement <2 x i32*> undef, i32* @G1, i32 0
   %B = insertelement <2 x i32*> %A,  i32* @G2, i32 1

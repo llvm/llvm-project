@@ -1,12 +1,12 @@
 ; RUN: opt -globalopt -S < %s | FileCheck %s
 ; PR10047
 
-%0 = type { i32, void ()* }
+%0 = type { i32, void ()*, i8* }
 %struct.A = type { [100 x i32] }
 
 ; CHECK: @a
 @a = global %struct.A zeroinitializer, align 4
-@llvm.global_ctors = appending global [2 x %0] [%0 { i32 65535, void ()* @_GLOBAL__I_a }, %0 { i32 65535, void ()* @_GLOBAL__I_b }]
+@llvm.global_ctors = appending global [2 x %0] [%0 { i32 65535, void ()* @_GLOBAL__I_a, i8* null }, %0 { i32 65535, void ()* @_GLOBAL__I_b, i8* null }]
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 

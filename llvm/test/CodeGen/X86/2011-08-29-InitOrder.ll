@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin | FileCheck %s --check-prefix=CHECK-DARWIN
 ; PR5329
 
-@llvm.global_ctors = appending global [3 x { i32, void ()* }] [{ i32, void ()* } { i32 2000, void ()* @construct_2 }, { i32, void ()* } { i32 3000, void ()* @construct_3 }, { i32, void ()* } { i32 1000, void ()* @construct_1 }]
+@llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 2000, void ()* @construct_2, i8* null }, { i32, void ()*, i8* } { i32 3000, void ()* @construct_3, i8* null }, { i32, void ()*, i8* } { i32 1000, void ()* @construct_1, i8* null }]
 ; CHECK-DEFAULT: .section        .ctors.64535,"aw",@progbits
 ; CHECK-DEFAULT: .long construct_1
 ; CHECK-DEFAULT: .section        .ctors.63535,"aw",@progbits
@@ -14,7 +14,7 @@
 ; CHECK-DARWIN-NEXT: .long _construct_2
 ; CHECK-DARWIN-NEXT: .long _construct_3
 
-@llvm.global_dtors = appending global [3 x { i32, void ()* }] [{ i32, void ()* } { i32 2000, void ()* @destruct_2 }, { i32, void ()* } { i32 1000, void ()* @destruct_1 }, { i32, void ()* } { i32 3000, void ()* @destruct_3 }]
+@llvm.global_dtors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 2000, void ()* @destruct_2, i8* null }, { i32, void ()*, i8* } { i32 1000, void ()* @destruct_1, i8* null }, { i32, void ()*, i8* } { i32 3000, void ()* @destruct_3, i8* null }]
 ; CHECK-DEFAULT: .section        .dtors.64535,"aw",@progbits
 ; CHECK-DEFAULT: .long destruct_1
 ; CHECK-DEFAULT: .section        .dtors.63535,"aw",@progbits

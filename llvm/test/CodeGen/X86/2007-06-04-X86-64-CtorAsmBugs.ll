@@ -3,7 +3,7 @@
 
 	%struct.A = type { [1024 x i8] }
 @_ZN1A1aE = global %struct.A zeroinitializer, align 32		; <%struct.A*> [#uses=1]
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [ { i32, void ()* } { i32 65535, void ()* @_GLOBAL__I__ZN1A1aE } ]		; <[1 x { i32, void ()* }]*> [#uses=0]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I__ZN1A1aE, i8* null } ]		; <[1 x { i32, void ()*, i8* null }]*> [#uses=0]
 
 define internal void @_GLOBAL__I__ZN1A1aE() section "__TEXT,__StaticInit,regular,pure_instructions" {
 entry:

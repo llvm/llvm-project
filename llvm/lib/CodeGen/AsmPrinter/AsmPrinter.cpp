@@ -1966,7 +1966,7 @@ struct Structor {
 /// priority.
 void AsmPrinter::EmitXXStructorList(const DataLayout &DL, const Constant *List,
                                     bool isCtor) {
-  // Should be an array of '{ int, void ()* }' structs.  The first value is the
+  // Should be an array of '{ i32, void ()*, i8* }' structs.  The first value is the
   // init priority.
   if (!isa<ConstantArray>(List)) return;
 
@@ -1974,12 +1974,10 @@ void AsmPrinter::EmitXXStructorList(const DataLayout &DL, const Constant *List,
   const ConstantArray *InitList = dyn_cast<ConstantArray>(List);
   if (!InitList) return; // Not an array!
   StructType *ETy = dyn_cast<StructType>(InitList->getType()->getElementType());
-  // FIXME: Only allow the 3-field form in LLVM 4.0.
-  if (!ETy || ETy->getNumElements() < 2 || ETy->getNumElements() > 3)
-    return; // Not an array of two or three elements!
-  if (!isa<IntegerType>(ETy->getTypeAtIndex(0U)) ||
-      !isa<PointerType>(ETy->getTypeAtIndex(1U))) return; // Not (int, ptr).
-  if (ETy->getNumElements() == 3 && !isa<PointerType>(ETy->getTypeAtIndex(2U)))
+  if (!ETy || ETy->getNumElements() != 3 ||
+      !isa<IntegerType>(ETy->getTypeAtIndex(0U)) ||
+      !isa<PointerType>(ETy->getTypeAtIndex(1U)) ||
+      !isa<PointerType>(ETy->getTypeAtIndex(2U)))
     return; // Not (int, ptr, ptr).
 
   // Gather the structors in a form that's convenient for sorting by priority.
@@ -1995,7 +1993,7 @@ void AsmPrinter::EmitXXStructorList(const DataLayout &DL, const Constant *List,
     Structor &S = Structors.back();
     S.Priority = Priority->getLimitedValue(65535);
     S.Func = CS->getOperand(1);
-    if (ETy->getNumElements() == 3 && !CS->getOperand(2)->isNullValue())
+    if (!CS->getOperand(2)->isNullValue())
       S.ComdatKey =
           dyn_cast<GlobalValue>(CS->getOperand(2)->stripPointerCasts());
   }

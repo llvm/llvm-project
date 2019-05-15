@@ -10,7 +10,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 %struct.CS = type { i32 }
 
 @_ZL3glb = internal global [1 x %struct.CS] zeroinitializer, align 4
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
 
 define internal void @__cxx_global_var_init() section ".text.startup" {
 entry:

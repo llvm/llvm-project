@@ -2,7 +2,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
-%0 = type { i32, void ()* }
+%0 = type { i32, void ()*, i8* }
 %struct.foo = type { i32* }
 %struct.bar = type { i128 }
 
@@ -10,7 +10,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 @H = global i32 0, align 4
 @X = global %struct.foo zeroinitializer, align 8
 @X2 = global %struct.bar zeroinitializer, align 8
-@llvm.global_ctors = appending global [2 x %0] [%0 { i32 65535, void ()* @init1 }, %0 { i32 65535, void ()* @init2 }]
+@llvm.global_ctors = appending global [2 x %0] [%0 { i32 65535, void ()* @init1, i8* null }, %0 { i32 65535, void ()* @init2, i8* null }]
 
 ; PR8710 - GlobalOpt shouldn't change the global's initializer to have this
 ; arbitrary constant expression, the code generator can't handle it.

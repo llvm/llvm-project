@@ -9,7 +9,7 @@
 ; BCA-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
 ; CHECK: @llvm.global_ctors = appending global
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @f }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @f, i8* null }]
 
 ; CHECK: @g = internal global i8 42, !type !0
 @g = internal global i8 42, !type !0

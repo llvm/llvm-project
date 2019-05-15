@@ -94,10 +94,10 @@ define internal void @test6() {
 }
 
 @llvm.global_ctors = appending constant
-  [6 x { i32, void ()* }]
-  [{ i32, void ()* } { i32 65535, void ()* @test1 },
-   { i32, void ()* } { i32 65535, void ()* @test2 },
-   { i32, void ()* } { i32 65535, void ()* @test3 },
-   { i32, void ()* } { i32 65535, void ()* @test4 },
-   { i32, void ()* } { i32 65535, void ()* @test5 },
-   { i32, void ()* } { i32 65535, void ()* @test6 }]
+  [6 x { i32, void ()*, i8* }]
+  [{ i32, void ()*, i8* } { i32 65535, void ()* @test1, i8* null },
+   { i32, void ()*, i8* } { i32 65535, void ()* @test2, i8* null },
+   { i32, void ()*, i8* } { i32 65535, void ()* @test3, i8* null },
+   { i32, void ()*, i8* } { i32 65535, void ()* @test4, i8* null },
+   { i32, void ()*, i8* } { i32 65535, void ()* @test5, i8* null },
+   { i32, void ()*, i8* } { i32 65535, void ()* @test6, i8* null }]

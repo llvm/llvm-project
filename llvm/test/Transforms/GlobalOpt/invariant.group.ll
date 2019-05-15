@@ -11,7 +11,7 @@
 @tmp3 = global i32 0
 @ptrToTmp3 = global i32* null
 
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
 
 define i32 @TheAnswerToLifeTheUniverseAndEverything() {
   ret i32 42
