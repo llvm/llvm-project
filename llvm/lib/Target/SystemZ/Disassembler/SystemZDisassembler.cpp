@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZ.h"
+#include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
