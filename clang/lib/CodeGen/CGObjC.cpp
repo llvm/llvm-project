@@ -2639,7 +2639,8 @@ void CodeGenFunction::EmitObjCRelease(llvm::Value *value,
   value = Builder.CreateBitCast(value, Int8PtrTy);
 
   // Call objc_release.
-  llvm::CallBase *call = EmitCallOrInvoke(fn, value);
+  llvm::CallBase *call =
+      cast<llvm::CallBase>(EmitCallOrInvoke(fn, value).getInstruction());
 
   if (precise == ARCImpreciseLifetime) {
     call->setMetadata("clang.imprecise_release",
