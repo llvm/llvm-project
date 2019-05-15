@@ -7585,7 +7585,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
             state.getDeclarator().isPrototypeContext() &&
             !hasOuterPointerLikeChunk(state.getDeclarator(), endIndex);
         if (checkNullabilityTypeSpecifier(
-              state, 
+              state,
               type,
               attr,
               allowOnArrayType)) {
