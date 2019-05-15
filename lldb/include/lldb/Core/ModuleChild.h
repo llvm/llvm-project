@@ -25,12 +25,6 @@ public:
   ///     class.
   ModuleChild(const lldb::ModuleSP &module_sp);
 
-  /// Copy constructor.
-  ///
-  /// \param[in] rhs
-  ///     A const ModuleChild class reference to copy.
-  ModuleChild(const ModuleChild &rhs);
-
   /// Destructor.
   ~ModuleChild();
 

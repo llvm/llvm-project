@@ -88,13 +88,9 @@ public:
   ///    The Target that provides the module list to search.
   SearchFilter(const lldb::TargetSP &target_sp);
 
-  SearchFilter(const SearchFilter &rhs);
-
   SearchFilter(const lldb::TargetSP &target_sp, unsigned char filterType);
 
   virtual ~SearchFilter();
-
-  SearchFilter &operator=(const SearchFilter &rhs);
 
   /// Call this method with a file spec to see if that spec passes the filter.
   ///
@@ -317,11 +313,7 @@ public:
   ///    The Module that limits the search.
   SearchFilterByModule(const lldb::TargetSP &targetSP, const FileSpec &module);
 
-  SearchFilterByModule(const SearchFilterByModule &rhs);
-
   ~SearchFilterByModule() override;
-
-  SearchFilterByModule &operator=(const SearchFilterByModule &rhs);
 
   bool ModulePasses(const lldb::ModuleSP &module_sp) override;
 
