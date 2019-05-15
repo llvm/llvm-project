@@ -151,6 +151,12 @@ variables to cmake to change build behavior. If LLDB is built as a part of
 LLVM, then you can pass LLVM-specific CMake variables to cmake when building
 LLDB.
 
+If you are building both Clang and LLDB together, be sure to also add libc++,
+which is currently required for testing on macOS:
+
+::
+
+  > cmake -D LLVM_ENABLE_PROJECTS='clang;lldb;libcxx' $PATH_TO_LLVM -G Ninja
 
 Here are some commonly used LLDB-specific CMake variables:
 

@@ -805,9 +805,35 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn) {
   return Upgraded;
 }
 
-bool llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
-  // Nothing to do yet.
-  return false;
+GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
+  if (!(GV->hasName() && (GV->getName() == "llvm.global_ctors" ||
+                          GV->getName() == "llvm.global_dtors")) ||
+      !GV->hasInitializer())
+    return nullptr;
+  ArrayType *ATy = dyn_cast<ArrayType>(GV->getValueType());
+  if (!ATy)
+    return nullptr;
+  StructType *STy = dyn_cast<StructType>(ATy->getElementType());
+  if (!STy || STy->getNumElements() != 2)
+    return nullptr;
+
+  LLVMContext &C = GV->getContext();
+  IRBuilder<> IRB(C);
+  auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
+                               IRB.getInt8PtrTy());
+  Constant *Init = GV->getInitializer();
+  unsigned N = Init->getNumOperands();
+  std::vector<Constant *> NewCtors(N);
+  for (unsigned i = 0; i != N; ++i) {
+    auto Ctor = cast<Constant>(Init->getOperand(i));
+    NewCtors[i] = ConstantStruct::get(
+        EltTy, Ctor->getAggregateElement(0u), Ctor->getAggregateElement(1),
+        Constant::getNullValue(IRB.getInt8PtrTy()));
+  }
+  Constant *NewInit = ConstantArray::get(ArrayType::get(EltTy, N), NewCtors);
+
+  return new GlobalVariable(NewInit->getType(), false, GV->getLinkage(),
+                            NewInit, GV->getName());
 }
 
 // Handles upgrading SSE2/AVX2/AVX512BW PSLLDQ intrinsics by converting them

@@ -1103,7 +1103,8 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
 const CommandObject::ArgumentTableEntry *CommandObject::GetArgumentTable() {
   // If this assertion fires, then the table above is out of date with the
   // CommandArgumentType enumeration
-  assert((sizeof(CommandObject::g_arguments_data) /
-          sizeof(CommandObject::ArgumentTableEntry)) == eArgTypeLastArg);
+  static_assert((sizeof(CommandObject::g_arguments_data) /
+                 sizeof(CommandObject::ArgumentTableEntry)) == eArgTypeLastArg,
+                "");
   return CommandObject::g_arguments_data;
 }

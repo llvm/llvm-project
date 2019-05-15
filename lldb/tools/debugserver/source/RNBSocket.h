@@ -59,8 +59,7 @@ public:
                              int option_value);
 
 private:
-  // Outlaw some constructors
-  RNBSocket(const RNBSocket &);
+  RNBSocket(const RNBSocket &) = delete;
 
 protected:
   rnb_err_t ClosePort(int &fd, bool save_errno);

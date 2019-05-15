@@ -104,7 +104,10 @@ private:
   // variants of the same symbol with different signatures.
   llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> SymVariants;
 
-  llvm::DenseSet<llvm::CachedHashStringRef> Comdats;
+  // Comdat groups define "link once" sections. If two comdat groups have the
+  // same name, only one of them is linked, and the other is ignored. This set
+  // is used to uniquify them.
+  llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
 
   // For LTO.
   std::unique_ptr<BitcodeCompiler> LTO;
