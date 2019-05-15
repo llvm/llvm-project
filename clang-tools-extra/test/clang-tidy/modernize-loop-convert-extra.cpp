@@ -776,20 +776,17 @@ void different_type() {
   // CHECK-FIXES: for (auto P : *Ps)
   // CHECK-FIXES-NEXT: printf("s has value %d\n", P.X);
 
+  // V.begin() returns a user-defined type 'iterator' which, since it's
+  // different from const_iterator, disqualifies these loops from
+  // transformation.
   dependent<int> V;
   for (dependent<int>::const_iterator It = V.begin(); It != V.end(); ++It) {
     printf("Fibonacci number is %d\n", *It);
   }
-  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int It : V)
-  // CHECK-FIXES-NEXT: printf("Fibonacci number is %d\n", It);
 
   for (dependent<int>::const_iterator It(V.begin()); It != V.end(); ++It) {
     printf("Fibonacci number is %d\n", *It);
   }
-  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int It : V)
-  // CHECK-FIXES-NEXT: printf("Fibonacci number is %d\n", It);
 }
 
 } // namespace SingleIterator
@@ -994,26 +991,18 @@ void iterators() {
   // CHECK-FIXES: for (int & I : Dep)
   // CHECK-FIXES-NEXT: auto H2 = [&]() { int R = I + 2; };
 
+  // FIXME: It doesn't work with const iterators.
   for (dependent<int>::const_iterator I = Dep.begin(), E = Dep.end();
        I != E; ++I)
     auto H3 = [I]() { int R = *I; };
-  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int I : Dep)
-  // CHECK-FIXES-NEXT: auto H3 = [&I]() { int R = I; };
 
   for (dependent<int>::const_iterator I = Dep.begin(), E = Dep.end();
        I != E; ++I)
     auto H4 = [&]() { int R = *I + 1; };
-  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int I : Dep)
-  // CHECK-FIXES-NEXT: auto H4 = [&]() { int R = I + 1; };
 
   for (dependent<int>::const_iterator I = Dep.begin(), E = Dep.end();
        I != E; ++I)
     auto H5 = [=]() { int R = *I; };
-  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int R : Dep)
-  // CHECK-FIXES-NEXT: auto H5 = [=]() { };
 }
 
 void captureByValue() {
