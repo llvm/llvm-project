@@ -25872,7 +25872,7 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
       DAG.getRegister(0, MVT::i16),                         // Segment.
       Zero,
       Chain};
-    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+    SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, DL, MVT::i32,
                                      MVT::Other, Ops);
     return SDValue(Res, 1);
   }
@@ -25887,7 +25887,7 @@ static SDValue emitLockedStackOp(SelectionDAG &DAG,
     Zero,
     Chain
   };
-  SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+  SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, DL, MVT::i32,
                                    MVT::Other, Ops);
   return SDValue(Res, 1);
 }
