@@ -22,23 +22,24 @@ namespace library {
 #endif
 char global_buf[64];
 
-void *Thread1(void *x) {
-  barrier_wait(&barrier);
+void *Thread1(void *arg) {
+  auto barrier_wait = (void (*)())arg;
+  barrier_wait();
   strcpy(global_buf, "hello world");  // NOLINT
   return NULL;
 }
 
-void *Thread2(void *x) {
+void *Thread2(void *arg) {
+  auto barrier_wait = (void (*)())arg;
   strcpy(global_buf, "world hello");  // NOLINT
-  barrier_wait(&barrier);
+  barrier_wait();
   return NULL;
 }
 
-void Race() {
-  barrier_init(&barrier, 2);
+void Race(void (*barrier_wait)()) {
   pthread_t t[2];
-  pthread_create(&t[0], NULL, Thread1, NULL);
-  pthread_create(&t[1], NULL, Thread2, NULL);
+  pthread_create(&t[0], NULL, Thread1, (void *)barrier_wait);
+  pthread_create(&t[1], NULL, Thread2, (void *)barrier_wait);
   pthread_join(t[0], NULL);
   pthread_join(t[1], NULL);
 }
@@ -48,18 +49,27 @@ void Race() {
 
 #ifndef LIBRARY
 namespace library {
-  void Race();
+  void Race(void (*barrier_wait)());
+}
+
+// Pass pointer to this function to un-instrumented library, so it can access
+// TSan-invisible barriers.
+void my_barrier_wait() {
+  barrier_wait(&barrier);
 }
 
 int main(int argc, char *argv[]) {
   fprintf(stderr, "Hello world.\n");
 
   // Race in un-instrumented library
-  library::Race();
+  barrier_init(&barrier, 2);
+  library::Race(my_barrier_wait);
 
   // Race in user code, if requested
-  if (argc > 1 && strcmp(argv[1], "race") == 0)
-    Race();
+  if (argc > 1 && strcmp(argv[1], "race") == 0) {
+    barrier_init(&barrier, 2);
+    Race(my_barrier_wait);
+  }
 
   fprintf(stderr, "Done.\n");
 }
