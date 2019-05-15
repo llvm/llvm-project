@@ -2134,6 +2134,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.C99 = Std.isC99();
   Opts.C11 = Std.isC11();
   Opts.C17 = Std.isC17();
+  Opts.C2x = Std.isC2x();
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
   Opts.CPlusPlus14 = Std.isCPlusPlus14();
@@ -2200,6 +2201,9 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.AlignedAllocation = Opts.CPlusPlus17;
 
   Opts.DollarIdents = !Opts.AsmPreprocessor;
+
+  // Enable [[]] attributes in C++11 and C2x by default.
+  Opts.DoubleSquareBracketAttributes = Opts.CPlusPlus11 || Opts.C2x;
 }
 
 /// Attempt to parse a visibility value out of the given argument.
@@ -2605,10 +2609,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.BlocksRuntimeOptional = Args.hasArg(OPT_fblocks_runtime_optional);
   Opts.Coroutines = Opts.CPlusPlus2a || Args.hasArg(OPT_fcoroutines_ts);
 
-  // Enable [[]] attributes in C++11 by default.
   Opts.DoubleSquareBracketAttributes =
       Args.hasFlag(OPT_fdouble_square_bracket_attributes,
-                   OPT_fno_double_square_bracket_attributes, Opts.CPlusPlus11);
+                   OPT_fno_double_square_bracket_attributes,
+                   Opts.DoubleSquareBracketAttributes);
 
   Opts.CPlusPlusModules = Opts.CPlusPlus2a;
   Opts.ModulesTS = Args.hasArg(OPT_fmodules_ts);

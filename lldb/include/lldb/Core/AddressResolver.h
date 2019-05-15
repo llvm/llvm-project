@@ -36,7 +36,7 @@ namespace lldb_private {
 
 class AddressResolver : public Searcher {
 public:
-  typedef enum { Exact, Regexp, Glob } MatchType;
+  enum MatchType { Exact, Regexp, Glob };
 
   AddressResolver();
 

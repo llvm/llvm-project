@@ -5021,11 +5021,12 @@ bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
           (N->getOpcode() == ISD::SRL &&
            N->getOperand(0).getOpcode() == ISD::SHL)) &&
          "Expected shift-shift mask");
-
-  if (Subtarget.hasFastVectorShiftMasks() && N->getValueType(0).isVector()) {
+  EVT VT = N->getValueType(0);
+  if ((Subtarget.hasFastVectorShiftMasks() && VT.isVector()) ||
+      (Subtarget.hasFastScalarShiftMasks() && !VT.isVector())) {
     // Only fold if the shift values are equal - so it folds to AND.
-    // TODO - we should fold if either is non-uniform but we don't do the
-    // fold for non-splats yet.
+    // TODO - we should fold if either is a non-uniform vector but we don't do
+    // the fold for non-splats yet.
     return N->getOperand(1) == N->getOperand(0).getOperand(1);
   }
   return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N, Level);
@@ -22129,7 +22130,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(2);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Op.getOperand(1),
@@ -22161,7 +22162,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(3);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Op.getOperand(1), Src2,
@@ -22202,7 +22203,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Src1, Src2, Src3,
@@ -22227,7 +22228,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           return getVectorMaskingNode(
               DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
@@ -22269,7 +22270,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (Op.getNumOperands() == (5U + HasRounding)) {
         if (HasRounding) {
           SDValue Rnd = Op.getOperand(5);
-          unsigned RC;
+          unsigned RC = 0;
           if (isRoundModeSAEToX(Rnd, RC))
             return getScalarMaskingNode(
                 DAG.getNode(IntrWithRoundingModeOpcode, dl, VT, Src1, Src2,
@@ -22306,7 +22307,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Rnd = Op.getOperand(5);
 
       SDValue NewOp;
-      unsigned RC;
+      unsigned RC = 0;
       if (isRoundModeCurDirection(Rnd))
         NewOp = DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2);
       else if (isRoundModeSAEToX(Rnd, RC))
@@ -22342,7 +22343,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue NewOp;
       if (IntrData->Opc1 != 0) {
         SDValue Rnd = Op.getOperand(5);
-        unsigned RC;
+        unsigned RC = 0;
         if (isRoundModeSAEToX(Rnd, RC))
           NewOp = DAG.getNode(IntrData->Opc1, dl, VT, Src1, Src2,
                               DAG.getTargetConstant(RC, dl, MVT::i32));
@@ -26456,9 +26457,10 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
                                               Ops, MVT::i64,
                                               Node->getMemOperand());
 
-      // If this is a sequentially consistent store, also emit an mfence.
+      // If this is a sequentially consistent store, also emit an appropriate
+      // barrier.
       if (IsSeqCst)
-        Chain = DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Chain);
+        Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
 
       return Chain;
     }

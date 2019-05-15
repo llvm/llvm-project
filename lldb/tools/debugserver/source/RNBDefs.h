@@ -75,7 +75,7 @@ extern "C" const double CONCAT(DEBUGSERVER_PROGRAM_SYMBOL, VersionNumber);
 class RNBRemote;
 typedef std::shared_ptr<RNBRemote> RNBRemoteSP;
 
-typedef enum { rnb_success = 0, rnb_err = 1, rnb_not_connected = 2 } rnb_err_t;
+enum rnb_err_t { rnb_success = 0, rnb_err = 1, rnb_not_connected = 2 };
 
 // Log bits
 // reserve low bits for DNB

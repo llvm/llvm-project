@@ -18,21 +18,34 @@ Target &getTheAArch64beTarget() {
   static Target TheAArch64beTarget;
   return TheAArch64beTarget;
 }
+Target &getTheAArch64_32Target() {
+  static Target TheAArch64leTarget;
+  return TheAArch64leTarget;
+}
 Target &getTheARM64Target() {
   static Target TheARM64Target;
   return TheARM64Target;
+}
+Target &getTheARM64_32Target() {
+  static Target TheARM64_32Target;
+  return TheARM64_32Target;
 }
 } // namespace llvm
 
 extern "C" void LLVMInitializeAArch64TargetInfo() {
   // Now register the "arm64" name for use with "-march". We don't want it to
-  // take possession of the Triple::aarch64 tag though.
+  // take possession of the Triple::aarch64 tags though.
   TargetRegistry::RegisterTarget(getTheARM64Target(), "arm64",
                                  "ARM64 (little endian)", "AArch64",
+                                 [](Triple::ArchType) { return false; }, true);
+  TargetRegistry::RegisterTarget(getTheARM64_32Target(), "arm64_32",
+                                 "ARM64 (little endian ILP32)", "AArch64",
                                  [](Triple::ArchType) { return false; }, true);
 
   RegisterTarget<Triple::aarch64, /*HasJIT=*/true> Z(
       getTheAArch64leTarget(), "aarch64", "AArch64 (little endian)", "AArch64");
   RegisterTarget<Triple::aarch64_be, /*HasJIT=*/true> W(
       getTheAArch64beTarget(), "aarch64_be", "AArch64 (big endian)", "AArch64");
+  RegisterTarget<Triple::aarch64_32, /*HasJIT=*/true> X(
+      getTheAArch64_32Target(), "aarch64_32", "AArch64 (little endian ILP32)", "AArch64");
 }

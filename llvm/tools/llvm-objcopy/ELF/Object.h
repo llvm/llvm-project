@@ -18,7 +18,6 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/JamCRC.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -703,11 +702,11 @@ private:
   StringRef FileName;
   uint32_t CRC32;
 
-  void init(StringRef File, StringRef Data);
+  void init(StringRef File);
 
 public:
   // If we add this section from an external source we can use this ctor.
-  explicit GnuDebugLinkSection(StringRef File);
+  explicit GnuDebugLinkSection(StringRef File, uint32_t PrecomputedCRC);
   void accept(SectionVisitor &Visitor) const override;
   void accept(MutableSectionVisitor &Visitor) override;
 };

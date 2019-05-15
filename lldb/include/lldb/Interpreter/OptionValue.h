@@ -22,7 +22,7 @@ namespace lldb_private {
 // OptionValue
 class OptionValue {
 public:
-  typedef enum {
+  enum Type {
     eTypeInvalid = 0,
     eTypeArch,
     eTypeArgs,
@@ -43,7 +43,7 @@ public:
     eTypeUInt64,
     eTypeUUID,
     eTypeFormatEntity
-  } Type;
+  };
 
   enum {
     eDumpOptionName = (1u << 0),

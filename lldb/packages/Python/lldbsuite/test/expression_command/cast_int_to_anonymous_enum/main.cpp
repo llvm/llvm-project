@@ -1,6 +1,6 @@
-typedef enum {
+enum flow_e {
     A=0,
-} flow_e;
+};
 
 int main() {
    flow_e f;

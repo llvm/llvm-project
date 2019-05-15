@@ -2712,6 +2712,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Get an X86_MMX-sized vector type.
   Type *getMMXVectorTy(unsigned EltSizeInBits) {
     const unsigned X86_MMXSizeInBits = 64;
+    assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
+           "Illegal MMX vector element size");
     return VectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
                            X86_MMXSizeInBits / EltSizeInBits);
   }

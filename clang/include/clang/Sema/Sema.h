@@ -7420,8 +7420,10 @@ public:
     SourceRange InstantiationRange;
 
     CodeSynthesisContext()
-      : Kind(TemplateInstantiation), Entity(nullptr), Template(nullptr),
-        TemplateArgs(nullptr), NumTemplateArgs(0), DeductionInfo(nullptr) {}
+        : Kind(TemplateInstantiation),
+          SavedInNonInstantiationSFINAEContext(false), Entity(nullptr),
+          Template(nullptr), TemplateArgs(nullptr), NumTemplateArgs(0),
+          DeductionInfo(nullptr) {}
 
     /// Determines whether this template is an actual instantiation
     /// that should be counted toward the maximum instantiation depth.
