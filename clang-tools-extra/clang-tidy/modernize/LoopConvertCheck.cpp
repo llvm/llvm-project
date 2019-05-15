@@ -791,6 +791,11 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
               CanonicalBeginType->getPointeeType(),
               CanonicalInitVarType->getPointeeType()))
         return false;
+    } else if (!Context->hasSameType(CanonicalInitVarType,
+                                     CanonicalBeginType)) {
+      // Check for qualified types to avoid conversions from non-const to const
+      // iterator types.
+      return false;
     }
   } else if (FixerKind == LFK_PseudoArray) {
     // This call is required to obtain the container.

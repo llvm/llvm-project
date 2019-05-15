@@ -253,15 +253,3 @@ below ends up being performed at the `safe` level.
       flag = true;
     }
   }
-
-OpenMP
-^^^^^^
-
-As range-based for loops are only available since OpenMP 5, this check should
-not been used on code with a compatibility requirements of OpenMP prior to
-version 5. It is **intentional** that this check does not make any attempts to
-exclude incorrect diagnostics on OpenMP for loops prior to OpenMP 5.
-
-To prevent this check to be applied (and to break) OpenMP for loops but still be
-applied to non-OpenMP for loops the usage of ``NOLINT`` (see
-:ref:`clang-tidy-nolint`) on the specific for loops is recommended.
