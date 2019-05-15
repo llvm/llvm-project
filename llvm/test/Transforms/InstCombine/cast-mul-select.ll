@@ -13,8 +13,6 @@ define i32 @mul(i32 %x, i32 %y) {
 ; we preserve the debug information in the resulting
 ; instruction.
 ; DBGINFO-LABEL: @mul(
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 %x
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 %y
 ; DBGINFO-NEXT:    [[C:%.*]] = mul i32 {{.*}}
 ; DBGINFO-NEXT:    [[D:%.*]] = and i32 {{.*}}
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[C]]

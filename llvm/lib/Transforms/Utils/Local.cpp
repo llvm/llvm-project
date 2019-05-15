@@ -1690,27 +1690,8 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
     // No-op casts and zexts are irrelevant for debug info.
     if (CI->isNoopCast(DL) || isa<ZExtInst>(&I))
       return SrcDIExpr;
-
-    Type *Type = CI->getType();
-    // Casts other than Trunc or SExt to scalar types cannot be salvaged.
-    if (Type->isVectorTy() || (!isa<TruncInst>(&I) && !isa<SExtInst>(&I)))
-      return nullptr;
-
-    Value *FromValue = CI->getOperand(0);
-    unsigned FromTypeBitSize = FromValue->getType()->getScalarSizeInBits();
-
-    unsigned ToTypeBitSize = Type->getScalarSizeInBits();
-
-    // The result of the cast will be sign extended iff the instruction is a
-    // SExt; signedness is otherwise irrelevant on the expression stack.
-    unsigned Encoding =
-        isa<SExtInst>(&I) ? dwarf::DW_ATE_signed : dwarf::DW_ATE_unsigned;
-
-    return applyOps({dwarf::DW_OP_LLVM_convert, FromTypeBitSize, Encoding,
-                     dwarf::DW_OP_LLVM_convert, ToTypeBitSize, Encoding});
-  }
-
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    return nullptr;
+  } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
         M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
     // Rewrite a constant GEP into a DIExpression.
