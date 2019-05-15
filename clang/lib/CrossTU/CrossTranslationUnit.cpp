@@ -398,7 +398,7 @@ CrossTranslationUnitContext::importDefinitionImpl(const T *D) {
   assert(hasBodyOrInit(D) && "Decls to be imported should have body or init.");
 
   ASTImporter &Importer = getOrCreateASTImporter(D->getASTContext());
-  auto ToDeclOrError = Importer.Import_New(D);
+  auto ToDeclOrError = Importer.Import(D);
   if (!ToDeclOrError) {
     handleAllErrors(ToDeclOrError.takeError(),
                     [&](const ImportError &IE) {
