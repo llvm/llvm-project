@@ -177,12 +177,53 @@ float test_cannot_message_return_float(C *c) {
 
 @class Ety;
 
-// CHECK-LABEL: define {{.*}}void @testException
-void testException(NSObject *a) {
+// CHECK-LABEL: define {{.*}}void @testException_release
+void testException_release(NSObject *a) {
   // MSGS: {{invoke.*@objc_msgSend}}
   // CALLS: invoke{{.*}}void @objc_release(i8* %
   @try {
     [a release];
+  } @catch (Ety *e) {
+  }
+}
+
+// CHECK-LABEL: define {{.*}}void @testException_autorelease
+void testException_autorelease(NSObject *a) {
+  @try {
+    // MSGS: {{invoke.*@objc_msgSend}}
+    // CALLS: invoke{{.*}}objc_autorelease(i8* %
+    [a autorelease];
+  } @catch (Ety *e) {
+  }
+}
+
+// CHECK-LABEL: define {{.*}}void @testException_retain
+void testException_retain(NSObject *a) {
+  @try {
+    // MSGS: {{invoke.*@objc_msgSend}}
+    // CALLS: invoke{{.*}}@objc_retain(i8* %
+    [a retain];
+  } @catch (Ety *e) {
+  }
+}
+
+
+// CHECK-LABEL: define {{.*}}void @testException_alloc(
+void testException_alloc() {
+  @try {
+    // MSGS: {{invoke.*@objc_msgSend}}
+    // CALLS: invoke{{.*}}@objc_alloc(i8* %
+    [A alloc];
+  } @catch (Ety *e) {
+  }
+}
+
+// CHECK-LABEL: define {{.*}}void @testException_allocWithZone
+void testException_allocWithZone() {
+  @try {
+    // MSGS: {{invoke.*@objc_msgSend}}
+    // CALLS: invoke{{.*}}@objc_allocWithZone(i8* %
+    [A allocWithZone:nil];
   } @catch (Ety *e) {
   }
 }
