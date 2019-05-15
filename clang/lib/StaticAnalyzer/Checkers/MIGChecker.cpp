@@ -112,7 +112,7 @@ public:
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, bool)
 // A set of parameters for which the check is suppressed because
 // reference counting is being performed.
-REGISTER_SET_WITH_PROGRAMSTATE(RefCountedParameters, const ParmVarDecl *);
+REGISTER_SET_WITH_PROGRAMSTATE(RefCountedParameters, const ParmVarDecl *)
 
 static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
                                          bool IncludeBaseRegions = false) {
