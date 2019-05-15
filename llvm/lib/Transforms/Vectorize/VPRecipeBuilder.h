@@ -29,9 +29,6 @@ class VPRecipeBuilder {
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
 
-  /// Target Transform Info.
-  const TargetTransformInfo *TTI;
-
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
@@ -104,11 +101,9 @@ public:
 
 public:
   VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
-                  const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM, VPBuilder &Builder)
-      : OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Builder(Builder) {}
+      : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
 
   /// Check if a recipe can be create for \p I withing the given VF \p Range.
   /// If a recipe can be created, it adds it to \p VPBB.
