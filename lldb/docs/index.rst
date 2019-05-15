@@ -12,9 +12,10 @@ Project, such as the Clang expression parser and LLVM disassembler.
 LLDB is the default debugger in Xcode on macOS and supports debugging C,
 Objective-C and C++ on the desktop and iOS devices and simulator.
 
-All of the code in the LLDB project is available under the standard
-`LLVM License <http://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents>`__,
-an open source "BSD-style" license.
+All of the code in the LLDB project is available under the
+`"Apache 2.0 License with LLVM exceptions"`_.
+
+.. _"Apache 2.0 License with LLVM exceptions": http://llvm.org/docs/DeveloperPolicy.html#new-llvm-project-license-framework
 
 Why a New Debugger?
 -------------------
