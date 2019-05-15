@@ -15,6 +15,7 @@
 #include "AVRMCInstLower.h"
 #include "AVRSubtarget.h"
 #include "MCTargetDesc/AVRInstPrinter.h"
+#include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"

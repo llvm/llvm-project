@@ -248,7 +248,7 @@ ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
       return EndianKind::LITTLE;
   }
 
-  if (Arch.startswith("aarch64"))
+  if (Arch.startswith("aarch64") || Arch.startswith("aarch64_32"))
     return EndianKind::LITTLE;
 
   return EndianKind::INVALID;
@@ -289,8 +289,12 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   StringRef Error = "";
 
   // Begins with "arm" / "thumb", move past it.
-  if (A.startswith("arm64"))
+  if (A.startswith("arm64_32"))
+    offset = 8;
+  else if (A.startswith("arm64"))
     offset = 5;
+  else if (A.startswith("aarch64_32"))
+    offset = 10;
   else if (A.startswith("arm"))
     offset = 3;
   else if (A.startswith("thumb"))

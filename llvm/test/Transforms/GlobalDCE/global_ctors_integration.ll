@@ -9,7 +9,7 @@
 
 @foo = global %class.Foo zeroinitializer, align 4
 @_ZN3Bar18LINKER_INITIALIZEDE = external constant i32
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
 
 define internal void @__cxx_global_var_init() section "__TEXT,__StaticInit,regular,pure_instructions" {
   %1 = load i32, i32* @_ZN3Bar18LINKER_INITIALIZEDE, align 4

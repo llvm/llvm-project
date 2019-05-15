@@ -205,7 +205,7 @@ define void @or32_nouse_acq_rel(i32* %p) {
 define void @or32_nouse_seq_cst(i32* %p) {
 ; X64-LABEL: or32_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, (%rsp)
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: or32_nouse_seq_cst:
@@ -220,7 +220,7 @@ define void @or32_nouse_seq_cst(i32* %p) {
 define void @or64_nouse_seq_cst(i64* %p) {
 ; X64-LABEL: or64_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, (%rsp)
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: or64_nouse_seq_cst:
@@ -294,7 +294,7 @@ define void @or128_nouse_seq_cst(i128* %p) {
 define void @or16_nouse_seq_cst(i16* %p) {
 ; X64-LABEL: or16_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, (%rsp)
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: or16_nouse_seq_cst:
@@ -308,7 +308,7 @@ define void @or16_nouse_seq_cst(i16* %p) {
 define void @or8_nouse_seq_cst(i8* %p) {
 ; X64-LABEL: or8_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, (%rsp)
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: or8_nouse_seq_cst:

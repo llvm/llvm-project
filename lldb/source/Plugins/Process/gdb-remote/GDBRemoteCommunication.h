@@ -29,14 +29,14 @@
 namespace lldb_private {
 namespace process_gdb_remote {
 
-typedef enum {
+enum GDBStoppointType {
   eStoppointInvalid = -1,
   eBreakpointSoftware = 0,
   eBreakpointHardware,
   eWatchpointWrite,
   eWatchpointRead,
   eWatchpointReadWrite
-} GDBStoppointType;
+};
 
 enum class CompressionType {
   None = 0,    // no compression

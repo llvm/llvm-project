@@ -4418,9 +4418,9 @@ APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
     return;
   }
   if (usesLayout<DoubleAPFloat>(Semantics)) {
-    new (&Double)
-        DoubleAPFloat(Semantics, APFloat(std::move(F), F.getSemantics()),
-                      APFloat(semIEEEdouble));
+    const fltSemantics IEEESemantics = F.getSemantics();
+    new (&Double) DoubleAPFloat(Semantics, APFloat(std::move(F), IEEESemantics),
+                                APFloat(semIEEEdouble));
     return;
   }
   llvm_unreachable("Unexpected semantics");

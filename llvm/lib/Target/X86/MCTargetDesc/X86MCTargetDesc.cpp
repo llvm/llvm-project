@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCTargetDesc.h"
+#include "TargetInfo/X86TargetInfo.h"
 #include "X86ATTInstPrinter.h"
 #include "X86BaseInfo.h"
 #include "X86IntelInstPrinter.h"

@@ -755,7 +755,7 @@ void Section::initialize(SectionTableRef SecTable) {
 
 void Section::finalize() { this->Link = LinkSection ? LinkSection->Index : 0; }
 
-void GnuDebugLinkSection::init(StringRef File, StringRef Data) {
+void GnuDebugLinkSection::init(StringRef File) {
   FileName = sys::path::filename(File);
   // The format for the .gnu_debuglink starts with the file name and is
   // followed by a null terminator and then the CRC32 of the file. The CRC32
@@ -770,21 +770,12 @@ void GnuDebugLinkSection::init(StringRef File, StringRef Data) {
   // establish the order that sections should go in. By using the maximum
   // possible offset we cause this section to wind up at the end.
   OriginalOffset = std::numeric_limits<uint64_t>::max();
-  JamCRC CRC;
-  CRC.update(ArrayRef<char>(Data.data(), Data.size()));
-  // The CRC32 value needs to be complemented because the JamCRC dosn't
-  // finalize the CRC32 value. It also dosn't negate the initial CRC32 value
-  // but it starts by default at 0xFFFFFFFF which is the complement of zero.
-  CRC32 = ~CRC.getCRC();
 }
 
-GnuDebugLinkSection::GnuDebugLinkSection(StringRef File) : FileName(File) {
-  // Read in the file to compute the CRC of it.
-  auto DebugOrErr = MemoryBuffer::getFile(File);
-  if (!DebugOrErr)
-    error("'" + File + "': " + DebugOrErr.getError().message());
-  auto Debug = std::move(*DebugOrErr);
-  init(File, Debug->getBuffer());
+GnuDebugLinkSection::GnuDebugLinkSection(StringRef File,
+                                         uint32_t PrecomputedCRC)
+    : FileName(File), CRC32(PrecomputedCRC) {
+  init(File);
 }
 
 template <class ELFT>

@@ -33,9 +33,6 @@ class Target;
 class Triple;
 class raw_pwrite_stream;
 
-Target &getTheAMDGPUTarget();
-Target &getTheGCNTarget();
-
 MCCodeEmitter *createR600MCCodeEmitter(const MCInstrInfo &MCII,
                                        const MCRegisterInfo &MRI,
                                        MCContext &Ctx);

@@ -576,14 +576,14 @@ the need for consecutive registers to be used.
 The syntax to check a numeric expression constraint is
 ``[[#<NUMVAR><op><offset>]]`` where:
 
-*``<NUMVAR>`` is the name of a numeric variable defined on the command line.
+* ``<NUMVAR>`` is the name of a numeric variable defined on the command line.
 
-*``<op>`` is an optional numeric operation to perform on the value of
-``<NUMVAR>``. Currently supported numeric operations are ``+`` and ``-``.
+* ``<op>`` is an optional numeric operation to perform on the value of
+  ``<NUMVAR>``. Currently supported numeric operations are ``+`` and ``-``.
 
-*``<offset>`` is the immediate value that constitutes the second operand of
-the numeric operation <op>. It must be present if ``<op>`` is present,
-absent otherwise.
+* ``<offset>`` is the immediate value that constitutes the second operand of
+  the numeric operation <op>. It must be present if ``<op>`` is present,
+  absent otherwise.
 
 For example:
 

@@ -315,12 +315,16 @@ public:
   /// not have the "fast-math" property. Such operation requires a relaxed FP
   /// mode.
   bool hasUnsafeAlgebra() {
-    return InductionBinOp && !cast<FPMathOperator>(InductionBinOp)->isFast();
+    return (IK == IK_FpInduction) && InductionBinOp &&
+           !cast<FPMathOperator>(InductionBinOp)->isFast();
   }
 
   /// Returns induction operator that does not have "fast-math" property
   /// and requires FP unsafe mode.
   Instruction *getUnsafeAlgebraInst() {
+    if (IK != IK_FpInduction)
+      return nullptr;
+
     if (!InductionBinOp || cast<FPMathOperator>(InductionBinOp)->isFast())
       return nullptr;
     return InductionBinOp;

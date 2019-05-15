@@ -685,7 +685,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   }
 
   if (!Config.AddGnuDebugLink.empty())
-    Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
+    Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink,
+                                        Config.GnuDebugLinkCRC32);
 
   for (const NewSymbolInfo &SI : Config.SymbolsToAdd) {
     SectionBase *Sec = Obj.findSection(SI.SectionName);
