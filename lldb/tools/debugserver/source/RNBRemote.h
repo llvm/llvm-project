@@ -264,8 +264,7 @@ public:
   RNBSocket &Comm() { return m_comm; }
 
 private:
-  // Outlaw some constructors
-  RNBRemote(const RNBRemote &);
+  RNBRemote(const RNBRemote &) = delete;
 
 protected:
   rnb_err_t GetCommData();
