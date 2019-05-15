@@ -3309,7 +3309,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             }
           } break;
           case DW_AT_specification:
-            spec_die = GetDIE(DIERef(form_value));
+            spec_die = form_value.Reference();
             break;
           case DW_AT_start_scope: {
             if (form_value.Form() == DW_FORM_sec_offset) {
@@ -3584,12 +3584,11 @@ SymbolFileDWARF::FindBlockContainingSpecification(
     case DW_TAG_subprogram:
     case DW_TAG_inlined_subroutine:
     case DW_TAG_lexical_block: {
-      if (die.GetAttributeValueAsReference(
-              DW_AT_specification, DW_INVALID_OFFSET) == spec_block_die_offset)
+      if (die.GetReferencedDIE(DW_AT_specification).GetOffset() ==
+          spec_block_die_offset)
         return die;
 
-      if (die.GetAttributeValueAsReference(DW_AT_abstract_origin,
-                                           DW_INVALID_OFFSET) ==
+      if (die.GetReferencedDIE(DW_AT_abstract_origin).GetOffset() ==
           spec_block_die_offset)
         return die;
     } break;

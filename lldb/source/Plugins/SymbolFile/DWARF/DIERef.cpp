@@ -16,12 +16,13 @@
 DIERef::DIERef(const DWARFFormValue &form_value)
     : cu_offset(DW_INVALID_OFFSET), die_offset(DW_INVALID_OFFSET) {
   if (form_value.IsValid()) {
-    if (const DWARFUnit *unit = form_value.GetUnit()) {
-      if (unit->GetBaseObjOffset() != DW_INVALID_OFFSET)
-        cu_offset = unit->GetBaseObjOffset();
+    DWARFDIE die = form_value.Reference();
+    die_offset = die.GetOffset();
+    if (die) {
+      if (die.GetCU()->GetBaseObjOffset() != DW_INVALID_OFFSET)
+        cu_offset = die.GetCU()->GetBaseObjOffset();
       else
-        cu_offset = unit->GetOffset();
+        cu_offset = die.GetCU()->GetOffset();
     }
-    die_offset = form_value.Reference();
   }
 }

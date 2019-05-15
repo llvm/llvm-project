@@ -56,15 +56,6 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsUnsigned(const dw_attr_t attr,
     return fail_value;
 }
 
-uint64_t DWARFBaseDIE::GetAttributeValueAsReference(const dw_attr_t attr,
-                                                uint64_t fail_value) const {
-  if (IsValid())
-    return m_die->GetAttributeValueAsReference(GetDWARF(), GetCU(), attr,
-                                               fail_value);
-  else
-    return fail_value;
-}
-
 uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
                                               uint64_t fail_value) const {
   if (IsValid())

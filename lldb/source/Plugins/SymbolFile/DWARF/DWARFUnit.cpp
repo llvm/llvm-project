@@ -541,12 +541,10 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
         if (die_offset == (*pos).GetOffset())
           return DWARFDIE(this, &(*pos));
       }
-    } else {
-      // Don't specify the compile unit offset as we don't know it because the
-      // DIE belongs to
-      // a different compile unit in the same symbol file.
-      return m_dwarf->DebugInfo()->GetDIEForDIEOffset(die_offset);
-    }
+    } else
+      GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+          "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
+          die_offset, GetOffset());
   }
   return DWARFDIE(); // Not found
 }
