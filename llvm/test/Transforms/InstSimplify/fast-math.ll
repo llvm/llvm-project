@@ -56,8 +56,8 @@ define float @no_mul_zero_3(float %a) {
 
 ; -X + X --> 0.0 (with nnan on the fadd)
 
-define float @fadd_fnegx(float %x) {
-; CHECK-LABEL: @fadd_fnegx(
+define float @fadd_binary_fnegx(float %x) {
+; CHECK-LABEL: @fadd_binary_fnegx(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %negx = fsub float -0.0, %x
@@ -65,13 +65,31 @@ define float @fadd_fnegx(float %x) {
   ret float %r
 }
 
+define float @fadd_unary_fnegx(float %x) {
+; CHECK-LABEL: @fadd_unary_fnegx(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %negx = fneg float %x
+  %r = fadd nnan float %negx, %x
+  ret float %r
+}
+
 ; X + -X --> 0.0 (with nnan on the fadd)
 
-define <2 x float> @fadd_fnegx_commute_vec(<2 x float> %x) {
-; CHECK-LABEL: @fadd_fnegx_commute_vec(
+define <2 x float> @fadd_binary_fnegx_commute_vec(<2 x float> %x) {
+; CHECK-LABEL: @fadd_binary_fnegx_commute_vec(
 ; CHECK-NEXT:    ret <2 x float> zeroinitializer
 ;
   %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %r = fadd nnan <2 x float> %x, %negx
+  ret <2 x float> %r
+}
+
+define <2 x float> @fadd_unary_fnegx_commute_vec(<2 x float> %x) {
+; CHECK-LABEL: @fadd_unary_fnegx_commute_vec(
+; CHECK-NEXT:    ret <2 x float> zeroinitializer
+;
+  %negx = fneg <2 x float> %x
   %r = fadd nnan <2 x float> %x, %negx
   ret <2 x float> %r
 }

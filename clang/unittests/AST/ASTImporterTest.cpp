@@ -40,7 +40,7 @@ class TestImportBase : public CompilerOptionSpecificTest,
     createVirtualFileIfNeeded(To, FromFileName,
                               From->getBufferForFile(FromFileName));
 
-    auto Imported = Importer.Import_New(Node);
+    auto Imported = Importer.Import(Node);
 
     if (Imported) {
       // This should dump source locations and assert if some source locations
