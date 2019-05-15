@@ -13,6 +13,7 @@
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "RISCVTargetObjectFile.h"
+#include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
