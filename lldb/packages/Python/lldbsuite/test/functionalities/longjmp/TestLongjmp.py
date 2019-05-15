@@ -33,7 +33,7 @@ class LongjmpTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr17214
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20231")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    @expectedFlakeyNetBSD
+    @skipIfNetBSD
     def test_step_over(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-over a longjmp."""
         self.build()
