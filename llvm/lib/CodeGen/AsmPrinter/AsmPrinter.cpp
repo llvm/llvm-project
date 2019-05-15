@@ -1073,6 +1073,7 @@ void AsmPrinter::EmitFunctionBody() {
       case TargetOpcode::LOCAL_ESCAPE:
         emitFrameAlloc(MI);
         break;
+      case TargetOpcode::ANNOTATION_LABEL:
       case TargetOpcode::EH_LABEL:
       case TargetOpcode::GC_LABEL:
         OutStreamer->EmitLabel(MI.getOperand(0).getMCSymbol());
