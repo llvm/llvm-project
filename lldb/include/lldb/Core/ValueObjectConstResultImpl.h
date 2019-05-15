@@ -19,14 +19,8 @@
 #include <stdint.h>
 namespace lldb_private {
 class CompilerType;
-}
-namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class Status;
-}
-namespace lldb_private {
 class ValueObject;
 }
 

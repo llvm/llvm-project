@@ -18,9 +18,6 @@
 
 namespace lldb_private {
 class ValueObject;
-}
-
-namespace lldb_private {
 
 // A collection of ValueObject values that
 class ValueObjectList {

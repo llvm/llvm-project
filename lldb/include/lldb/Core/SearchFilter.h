@@ -19,32 +19,14 @@
 
 namespace lldb_private {
 class Address;
-}
-namespace lldb_private {
 class Breakpoint;
-}
-namespace lldb_private {
 class CompileUnit;
-}
-namespace lldb_private {
 class Status;
-}
-namespace lldb_private {
 class Function;
-}
-namespace lldb_private {
 class ModuleList;
-}
-namespace lldb_private {
 class SearchFilter;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class SymbolContext;
-}
-namespace lldb_private {
 class Target;
 }
 
