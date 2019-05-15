@@ -258,6 +258,8 @@ An overview of all the command-line options:
           value:           'some value'
       ...
 
+.. _clang-tidy-nolint:
+
 Suppressing Undesired Diagnostics
 =================================
 
