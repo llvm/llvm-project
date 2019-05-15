@@ -630,6 +630,18 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           AnnotationSym &Annot) {
+  W.printHex("Offset", Annot.CodeOffset);
+  W.printHex("Segment", Annot.Segment);
+
+  ListScope S(W, "Strings");
+  for (StringRef Str : Annot.Strings)
+    W.printString(Str);
+
+  return Error::success();
+}
+
 Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
   W.printNumber("Length", CVR.length());
   return Error::success();
