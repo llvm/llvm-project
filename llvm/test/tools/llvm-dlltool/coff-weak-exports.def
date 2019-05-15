@@ -1,5 +1,6 @@
 ; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
 ; RUN: llvm-nm %t.a | FileCheck %s
+; RUN: llvm-readobj %t.a | FileCheck -check-prefix=ARCH %s
 
 LIBRARY test.dll
 EXPORTS
@@ -26,3 +27,5 @@ ImpLibName3 = kernel32.Sleep
 ; CHECK-NEXT: W __imp_ImpLibName2
 ; CHECK:      T ImpLibName3
 ; CHECK-NEXT: T __imp_ImpLibName3
+
+; ARCH-NOT: unknown arch

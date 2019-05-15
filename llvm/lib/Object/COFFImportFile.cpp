@@ -496,7 +496,7 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 
   // COFF Header
   coff_file_header Header{
-      u16(0),
+      u16(Machine),
       u16(NumberOfSections),
       u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section))),
