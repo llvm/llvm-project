@@ -544,11 +544,11 @@ class MergedBlockName {
 
 public:
   explicit MergedBlockName(ArrayRef<BCECmpBlock> Comparisons)
-      : Name(makeTwine(Comparisons)) {}
-  const Twine Name;
+      : Name(makeName(Comparisons)) {}
+  const StringRef Name;
 
 private:
-  Twine makeTwine(ArrayRef<BCECmpBlock> Comparisons) {
+  StringRef makeName(ArrayRef<BCECmpBlock> Comparisons) {
     assert(!Comparisons.empty() && "no basic block");
     // Fast path: only one block, or no names at all.
     if (Comparisons.size() == 1)
@@ -558,7 +558,7 @@ private:
                                        return i + Cmp.BB->getName().size();
                                      });
     if (size == 0)
-      return Twine();
+      return StringRef("", 0);
 
     // Slow path: at least two blocks, at least one block with a name.
     Scratch.clear();
@@ -576,7 +576,7 @@ private:
         append(BB->getName());
       }
     }
-    return Twine(Scratch);
+    return StringRef(Scratch);
   }
 };
 } // namespace
