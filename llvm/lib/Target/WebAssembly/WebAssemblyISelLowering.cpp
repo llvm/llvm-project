@@ -669,13 +669,16 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg) {
     // Outgoing non-fixed arguments are placed in a buffer. First
     // compute their offsets and the total amount of buffer space needed.
-    for (SDValue Arg :
-         make_range(OutVals.begin() + NumFixedArgs, OutVals.end())) {
+    for (unsigned I = NumFixedArgs; I < Outs.size(); ++I) {
+      const ISD::OutputArg &Out = Outs[I];
+      SDValue &Arg = OutVals[I];
       EVT VT = Arg.getValueType();
       assert(VT != MVT::iPTR && "Legalized args should be concrete");
       Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+      unsigned Align = std::max(Out.Flags.getOrigAlign(),
+                                Layout.getABITypeAlignment(Ty));
       unsigned Offset = CCInfo.AllocateStack(Layout.getTypeAllocSize(Ty),
-                                             Layout.getABITypeAlignment(Ty));
+                                             Align);
       CCInfo.addLoc(CCValAssign::getMem(ArgLocs.size(), VT.getSimpleVT(),
                                         Offset, VT.getSimpleVT(),
                                         CCValAssign::Full));

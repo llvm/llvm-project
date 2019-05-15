@@ -163,6 +163,32 @@ define void @nonlegal_fixed(fp128 %x, ...) nounwind {
   ret void
 }
 
+; Test that an fp128 argument is properly aligned and allocated
+; within a vararg buffer.
+
+; CHECK-LABEL: call_fp128_alignment:
+; CHECK:      global.get      $push7=, __stack_pointer
+; CHECK-NEXT: i32.const       $push8=, 32
+; CHECK-NEXT: i32.sub         $push12=, $pop7, $pop8
+; CHECK-NEXT: local.tee       $push11=, $1=, $pop12
+; CHECK-NEXT: global.set      __stack_pointer@GLOBAL, $pop11
+; CHECK-NEXT: i32.const       $push0=, 24
+; CHECK-NEXT: i32.add         $push1=, $1, $pop0
+; CHECK-NEXT: i64.const       $push2=, -9223372036854775808
+; CHECK-NEXT: i64.store       0($pop1), $pop2
+; CHECK-NEXT: i32.const       $push3=, 16
+; CHECK-NEXT: i32.add         $push4=, $1, $pop3
+; CHECK-NEXT: i64.const       $push5=, 1
+; CHECK-NEXT: i64.store       0($pop4), $pop5
+; CHECK-NEXT: i32.const       $push6=, 7
+; CHECK-NEXT: i32.store       0($1), $pop6
+; CHECK-NEXT: call            callee@FUNCTION, $1
+define void @call_fp128_alignment(i8* %p) {
+entry:
+  call void (...) @callee(i8 7, fp128 0xL00000000000000018000000000000000)
+  ret void
+}
+
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)
 declare void @llvm.va_copy(i8*, i8*)
