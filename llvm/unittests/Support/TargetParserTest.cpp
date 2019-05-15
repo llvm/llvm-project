@@ -658,12 +658,15 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
   }
 
   EXPECT_EQ(ARM::EndianKind::LITTLE, ARM::parseArchEndian("aarch64"));
+  EXPECT_EQ(ARM::EndianKind::LITTLE, ARM::parseArchEndian("arm64_32"));
   EXPECT_EQ(ARM::EndianKind::BIG, ARM::parseArchEndian("aarch64_be"));
 
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64"));
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64_be"));
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64"));
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64_be"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64_32"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64_32"));
 }
 
 TEST(TargetParserTest, ARMparseArchProfile) {

@@ -552,6 +552,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::OpenEmbedded, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_TRUE(T.isArch64Bit());
+
+  T = Triple("arm64_32-apple-ios");
+  EXPECT_EQ(Triple::aarch64_32, T.getArch());
+  EXPECT_EQ(Triple::IOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_TRUE(T.isArch32Bit());
 
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
@@ -1456,6 +1463,10 @@ TEST(TripleTest, ParseARMArch) {
   {
     Triple T = Triple("arm64");
     EXPECT_EQ(Triple::aarch64, T.getArch());
+  }
+  {
+    Triple T = Triple("arm64_32");
+    EXPECT_EQ(Triple::aarch64_32, T.getArch());
   }
   {
     Triple T = Triple("aarch64");
