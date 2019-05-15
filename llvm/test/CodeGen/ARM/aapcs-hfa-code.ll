@@ -76,8 +76,8 @@ define arm_aapcs_vfpcc void @test_1double_nosplit([4 x float], [4 x double], [3 
 
 ; CHECK-M4F-LABEL: test_1double_nosplit:
 ; CHECK-M4F: movs [[ONEHI:r[0-9]+]], #0
-; CHECK-M4F: movs [[ONELO:r[0-9]+]], #0
 ; CHECK-M4F: movt [[ONEHI]], #16368
+; CHECK-M4F: movs [[ONELO:r[0-9]+]], #0
 ; CHECK-M4F: strd [[ONELO]], [[ONEHI]], [sp]
 ; CHECK-M4F: bl test_1double_nosplit
   call arm_aapcs_vfpcc void @test_1double_nosplit([4 x float] undef, [4 x double] undef, [3 x float] undef, double 1.0)
@@ -97,8 +97,8 @@ define arm_aapcs_vfpcc void @test_1double_misaligned([4 x double], [4 x double],
 
 ; CHECK-M4F-LABEL: test_1double_misaligned:
 ; CHECK-M4F: movs [[ONEHI:r[0-9]+]], #0
-; CHECK-M4F: movs [[ONELO:r[0-9]+]], #0
 ; CHECK-M4F: movt [[ONEHI]], #16368
+; CHECK-M4F: movs [[ONELO:r[0-9]+]], #0
 ; CHECK-M4F: strd [[ONELO]], [[ONEHI]], [sp, #8]
 ; CHECK-M4F: bl test_1double_misaligned
 

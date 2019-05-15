@@ -978,21 +978,27 @@ def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureAvoidPartialCPSR]>;
 
-def : ProcessorModel<"cortex-m3", CortexM3Model,        [ARMv7m,
+def : ProcessorModel<"cortex-m3",   CortexM4Model,      [ARMv7m,
                                                          ProcM3,
                                                          FeaturePrefLoopAlign32,
+                                                         FeatureUseMISched,
+                                                         FeatureUseAA,
                                                          FeatureHasNoBranchPredictor]>;
 
-def : ProcessorModel<"sc300",     CortexM3Model,        [ARMv7m,
+def : ProcessorModel<"sc300",       CortexM4Model,      [ARMv7m,
                                                          ProcM3,
+                                                         FeatureUseMISched,
+                                                         FeatureUseAA,
                                                          FeatureHasNoBranchPredictor]>;
 
-def : ProcessorModel<"cortex-m4", CortexM3Model,        [ARMv7em,
+def : ProcessorModel<"cortex-m4",   CortexM4Model,      [ARMv7em,
                                                          FeatureVFP4,
                                                          FeatureVFPOnlySP,
                                                          FeatureD16,
                                                          FeaturePrefLoopAlign32,
                                                          FeatureHasSlowFPVMLx,
+                                                         FeatureUseMISched,
+                                                         FeatureUseAA,
                                                          FeatureHasNoBranchPredictor]>;
 
 def : ProcNoItin<"cortex-m7",                           [ARMv7em,
@@ -1002,22 +1008,26 @@ def : ProcNoItin<"cortex-m7",                           [ARMv7em,
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
                                                          FeatureNoMovt]>;
 
-def : ProcessorModel<"cortex-m33", CortexM3Model,       [ARMv8mMainline,
+def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8,
                                                          FeatureD16,
                                                          FeatureVFPOnlySP,
                                                          FeaturePrefLoopAlign32,
                                                          FeatureHasSlowFPVMLx,
+                                                         FeatureUseMISched,
+                                                         FeatureUseAA,
                                                          FeatureHasNoBranchPredictor]>;
 
-def : ProcessorModel<"cortex-m35p", CortexM3Model,      [ARMv8mMainline,
+def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8,
                                                          FeatureD16,
                                                          FeatureVFPOnlySP,
                                                          FeaturePrefLoopAlign32,
                                                          FeatureHasSlowFPVMLx,
+                                                         FeatureUseMISched,
+                                                         FeatureUseAA,
                                                          FeatureHasNoBranchPredictor]>;
 
 
