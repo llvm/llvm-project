@@ -2209,25 +2209,31 @@ ValueObjectSP Thread::GetCurrentException() {
       if (auto e = recognized_frame->GetExceptionObject())
         return e;
 
-  // FIXME: For now, only ObjC exceptions are supported. This should really
-  // iterate over all language runtimes and ask them all to give us the current
-  // exception.
-  if (auto runtime = GetProcess()->GetObjCLanguageRuntime())
-    if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
-      return e;
+  // NOTE: Even though this behavior is generalized, only ObjC is actually
+  // supported at the moment.
+  for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes; lang++) {
+    if (auto runtime = GetProcess()->GetLanguageRuntime(
+            static_cast<lldb::LanguageType>(lang)))
+      if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
+        return e;
+  }
 
   return ValueObjectSP();
 }
 
 ThreadSP Thread::GetCurrentExceptionBacktrace() {
   ValueObjectSP exception = GetCurrentException();
-  if (!exception) return ThreadSP();
+  if (!exception)
+    return ThreadSP();
 
-  // FIXME: For now, only ObjC exceptions are supported. This should really
-  // iterate over all language runtimes and ask them all to give us the current
-  // exception.
-  auto runtime = GetProcess()->GetObjCLanguageRuntime();
-  if (!runtime) return ThreadSP();
+  // NOTE: Even though this behavior is generalized, only ObjC is actually
+  // supported at the moment.
+  for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes; lang++) {
+    if (auto runtime = GetProcess()->GetLanguageRuntime(
+            static_cast<lldb::LanguageType>(lang)))
+      if (auto bt = runtime->GetBacktraceThreadFromException(exception))
+        return bt;
+  }
 
-  return runtime->GetBacktraceThreadFromException(exception);
+  return ThreadSP();
 }

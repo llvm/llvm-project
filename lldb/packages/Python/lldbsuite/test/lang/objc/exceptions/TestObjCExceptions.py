@@ -196,11 +196,12 @@ class ObjCExceptionsTestCase(TestBase):
         self.expect("thread list",
             substrs=['stopped', 'stop reason = signal SIGABRT'])
 
-        self.expect('thread exception', substrs=[])
+        self.expect('thread exception', substrs=['exception ='])
 
         process = self.dbg.GetSelectedTarget().process
         thread = process.GetSelectedThread()
 
-        # C++ exceptions are not exposed in the API (yet).
-        self.assertFalse(thread.GetCurrentException().IsValid())
+        self.assertTrue(thread.GetCurrentException().IsValid())
+
+        # C++ exception backtraces are not exposed in the API (yet).
         self.assertFalse(thread.GetCurrentExceptionBacktrace().IsValid())
