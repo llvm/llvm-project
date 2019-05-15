@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.14 -darwin-target-variant-triple x86_64-apple-ios12-macabi -fblocks -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple x86_64-apple-ios12-macabi -darwin-target-variant-triple x86_64-apple-macos10.14 -fblocks -fsyntax-only -verify -D INVERTED %s
 
-// XFAIL: *
 
+// XFAIL: *
 #define AVAILABLE_PREV_MAC __attribute__((availability(macos, introduced = 10.13)))
 #define AVAILABLE_CURRENT_MAC __attribute__((availability(macos, introduced = 10.14)))
 #define AVAILABLE_NEXT_MAC __attribute__((availability(macos, introduced = 10.15)))
