@@ -22,7 +22,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
@@ -103,7 +102,6 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
   // Initialize plug-ins
   ClangASTContext::Initialize();
-  SwiftASTContext::Initialize();
 
   SwiftREPL::Initialize();
 
@@ -134,7 +132,6 @@ void SystemInitializerCommon::Terminate() {
   ObjectContainerBSDArchive::Terminate();
 
   ClangASTContext::Terminate();
-  SwiftASTContext::Terminate();
 
   SwiftREPL::Terminate();
 
